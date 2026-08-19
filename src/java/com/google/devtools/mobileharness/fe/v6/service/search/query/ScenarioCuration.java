@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 
 /**
  * The per-deployment curation of fleet search keys: which keys to promote in the query bar, which
@@ -78,6 +79,16 @@ public interface ScenarioCuration {
    * mapping is scenario aware, so the same key can rank differently in different deployments.
    */
   int keyPriority(String keyId);
+
+  /**
+   * The suggester ranking for {@code keyId} in the given {@code entity}: a higher value means the
+   * key is offered earlier. Defaults to the device ranking ({@link #keyPriority(String)}) so an
+   * impl that has not been taught the host entity still compiles and ranks host keys reasonably; a
+   * deployment overrides this to route through the host tier table.
+   */
+  default int keyPriority(String keyId, SearchEntity entity) {
+    return keyPriority(keyId);
+  }
 
   /**
    * Whether the search page shows a landing page before the first query. A deployment whose fleet

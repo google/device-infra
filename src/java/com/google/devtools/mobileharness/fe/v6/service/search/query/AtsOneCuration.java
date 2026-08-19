@@ -29,6 +29,7 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.index.Fleet
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetKeyPriority.Scenario;
 import javax.inject.Inject;
 
@@ -106,6 +107,11 @@ public final class AtsOneCuration implements ScenarioCuration {
   @Override
   public int keyPriority(String keyId) {
     return FleetKeyPriority.priority(keyId, Scenario.ATS_ONE);
+  }
+
+  @Override
+  public int keyPriority(String keyId, SearchEntity entity) {
+    return FleetKeyPriority.priority(keyId, Scenario.ATS_ONE, entity);
   }
 
   @Override

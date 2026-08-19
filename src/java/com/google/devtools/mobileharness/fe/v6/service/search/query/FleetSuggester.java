@@ -22,6 +22,11 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.index.Fleet
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_STATUS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_TYPE;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_UUID;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_CONNECTIVITY;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DEVICE_COUNT;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_TYPE;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_NAME;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_STATUS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.IDENTIFIER_KEYS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.MULTI_VALUE_KEYS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PLAIN_VALUE_KEYS;
@@ -49,6 +54,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggest
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetViewExisting;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.NoValue;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextSegment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
@@ -131,6 +137,15 @@ public final class FleetSuggester {
           "dim::pool",
           FIELD_TYPE);
 
+  /**
+   * Group-by candidates for a bare {@code group by} prefix in the host entity. Ported from the
+   * prototype's {@code HOST_GROUP_BY_ROW} (the 1p host branch), the richest host group-by candidate
+   * pool; scenario awareness comes from the entity-aware key priority that reorders these and from
+   * dropping any candidate absent from the fleet, exactly as the device pool does.
+   */
+  private static final ImmutableList<String> HOST_GROUP_BY_CANDIDATES =
+      ImmutableList.of(HOST_LAB_TYPE, HOST_RELEASE_STATUS);
+
   /** A grouping needs at least two buckets to be worth offering ({@code GROUP_SUGGEST_MIN}). */
   private static final int GROUP_SUGGEST_MIN = 2;
 
@@ -158,6 +173,15 @@ public final class FleetSuggester {
           "dim::pool",
           "dim::os",
           "dim::quarantined");
+
+  /**
+   * Curated starter keys offered for an empty query in the host entity. Ported from the prototype's
+   * host empty state, which offers the host {@code HOST_FILTER_BY_ROW} keys (the 1p host branch);
+   * keys absent from the fleet are skipped, exactly as the device empty state skips absent keys.
+   */
+  private static final ImmutableList<String> HOST_EMPTY_STATE_KEYS =
+      ImmutableList.of(
+          HOST_NAME, HOST_LAB_TYPE, HOST_RELEASE_STATUS, HOST_CONNECTIVITY, HOST_DEVICE_COUNT);
 
   private static final int DEFAULT_LIMIT = 12;
 
@@ -256,8 +280,13 @@ public final class FleetSuggester {
     Fleet fleet = request.getFleet();
     ScenarioCuration curation =
         curations.get(fleet == Fleet.FLEET_UNSPECIFIED ? Fleet.FLEET_SELF : fleet);
+    // The key ranking is entity aware: host keys rank by the host tier table, devices by the device
+    // one. For the device entity the entity-aware curation call resolves to the same device
+    // ranking,
+    // so device suggestions are unchanged.
+    SearchEntity entity = corpus.entity();
     ToIntFunction<String> keyPriority =
-        keyId -> (curation == null || keyId == null) ? 0 : curation.keyPriority(keyId);
+        keyId -> (curation == null || keyId == null) ? 0 : curation.keyPriority(keyId, entity);
 
     Context context =
         new Context(
@@ -610,7 +639,7 @@ public final class FleetSuggester {
     List<String> candidates = new ArrayList<>();
     Map<String, Integer> matchRank = new HashMap<>();
     if (term.isEmpty()) {
-      candidates.addAll(GROUP_BY_CANDIDATES);
+      candidates.addAll(groupByCandidates(context.corpus()));
     } else {
       String normTerm = normalize(term);
       for (String keyId : resolveKey(index, term)) {
@@ -678,7 +707,7 @@ public final class FleetSuggester {
     FleetSuggestionResponse.Builder response = FleetSuggestionResponse.newBuilder();
     int emitted = 0;
     // Personalization is deferred, so no recent conditions are offered; only curated starter keys.
-    for (String keyId : EMPTY_STATE_KEYS) {
+    for (String keyId : emptyStateKeys(context.corpus())) {
       if (emitted >= limit) {
         break;
       }
@@ -1269,6 +1298,28 @@ public final class FleetSuggester {
 
   // ---- Small utilities ----
 
+  /**
+   * The bare {@code group by} candidate pool for the corpus's entity: the host pool for host
+   * search, the device pool otherwise. The device branch returns the same {@link
+   * #GROUP_BY_CANDIDATES} constant, so device group-by suggestions are unchanged.
+   */
+  private static ImmutableList<String> groupByCandidates(SearchCorpus corpus) {
+    return corpus.entity() == SearchEntity.SEARCH_ENTITY_HOST
+        ? HOST_GROUP_BY_CANDIDATES
+        : GROUP_BY_CANDIDATES;
+  }
+
+  /**
+   * The empty-query starter keys for the corpus's entity: the host keys for host search, the device
+   * keys otherwise. The device branch returns the same {@link #EMPTY_STATE_KEYS} constant, so the
+   * device empty state is unchanged.
+   */
+  private static ImmutableList<String> emptyStateKeys(SearchCorpus corpus) {
+    return corpus.entity() == SearchEntity.SEARCH_ENTITY_HOST
+        ? HOST_EMPTY_STATE_KEYS
+        : EMPTY_STATE_KEYS;
+  }
+
   private static Optional<String> groupByPrefix(String query) {
     String low = Ascii.toLowerCase(query);
     for (String prefix : GROUP_BY_PREFIXES) {
@@ -1417,6 +1468,9 @@ public final class FleetSuggester {
     addAliases(map, "host::lab_server_version", "lab server version");
     addAliases(map, "host::release_type", "release type", "host release type");
     addAliases(map, "host::ats_controller", "controller", "ats controller", "ats lab");
+    // Host device-count aliases. host::device_count is a host-only key, absent from the device
+    // index, so these resolve to nothing under device search and only take effect for host search.
+    addAliases(map, HOST_DEVICE_COUNT, "device count", "device_count", "devices");
 
     ImmutableMap.Builder<String, ImmutableList<String>> built = ImmutableMap.builder();
     for (Map.Entry<String, Collection<String>> entry : map.asMap().entrySet()) {
