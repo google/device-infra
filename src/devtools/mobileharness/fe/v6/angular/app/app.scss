@@ -501,6 +501,13 @@ app-root {
     }
   }
 
+  .embedded-content {
+    flex: 1;
+    overflow: auto;
+    background-color: $labconsole-bg;
+    @include common.shared-scrollbar-style();
+  }
+
   footer {
     color: #787878;
     flex: none;

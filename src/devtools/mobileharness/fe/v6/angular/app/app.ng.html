@@ -156,7 +156,9 @@
     </mat-sidenav-container>
   } @else {
     <!--Embedded mode, only show the routed content(main conent), and hide the toolbar, footer, and sidenav.-->
-    <router-outlet></router-outlet>
+    <div class="embedded-content">
+      <router-outlet></router-outlet>
+    </div>
   }
 }
 
