@@ -442,6 +442,17 @@ export class FakeDeviceService extends DeviceService {
     };
   }
 
+  /**
+   * Retrieves fake device test history for testing.
+   *
+   * @param id The device ID.
+   * @param pageToken The pagination token (optional).
+   * @return An Observable emitting the fake test history response.
+   *
+   * Explanation: This function returns mock data for the device test history table,
+   * simulating pagination and delay. It has been updated to include jobId in the
+   * link target to support direct linking to test details.
+   */
   override getDeviceTestHistory(
     id: string,
     pageToken = '',
@@ -466,7 +477,9 @@ export class FakeDeviceService extends DeviceService {
           {
             link: {
               text: 'fake-test-0001',
-              target: {test: {testId: 'fake-test-0001'}},
+              target: {
+                test: {testId: 'fake-test-0001', jobId: 'fake-job-0001'},
+              },
             },
           },
           {text: {value: 'com.google.example.SampleTest#testMethod0'}},
@@ -486,7 +499,9 @@ export class FakeDeviceService extends DeviceService {
           {
             link: {
               text: 'fake-test-0002',
-              target: {test: {testId: 'fake-test-0002'}},
+              target: {
+                test: {testId: 'fake-test-0002', jobId: 'fake-job-0002'},
+              },
             },
           },
           {text: {value: 'com.google.example.SampleTest#testMethod1'}},

@@ -145,10 +145,23 @@ export class TestHistoryTab implements OnInit {
     return row.cells?.[index];
   }
 
-  /** The test detail link for a Test ID cell: http://mhfe/<test_id>. */
+  /**
+   * Generates the URL for the test detail page in legacy MHFE.
+   *
+   * @param link The LinkCell containing the test and job IDs.
+   * @return The absolute URL to the legacy MHFE test detail view.
+   *
+   * Explanation: This function extracts jobId and testId from the LinkCell target
+   * to construct a direct link to the test detail page (hosted in legacy UI).
+   * If either ID is missing, it logs an error to the console.
+   */
   linkHref(link: LinkCell): string {
     const testId = link.target?.test?.testId ?? '';
-    return `http://mhfe/${testId}`;
+    const jobId = link.target?.test?.jobId ?? '';
+    if (!testId || !jobId) {
+      console.error('Missing testId or jobId for link:', link);
+    }
+    return `http://mhfe/testdetailview/${jobId}/${testId}`;
   }
 
   /** Maps a semantic indicator to a chip style class. */

@@ -20,7 +20,7 @@ const FIRST_PAGE: DeviceTestHistoryResponse = {
     {
       id: 't1',
       cells: [
-        {link: {text: 't1', target: {test: {testId: 't1'}}}},
+        {link: {text: 't1', target: {test: {testId: 't1', jobId: 'j1'}}}},
         {status: {text: 'Pass', indicator: 'INDICATOR_OK'}},
         {text: {value: '1700000000000'}},
         {text: {value: '125000'}},
@@ -64,10 +64,13 @@ describe('TestHistoryTab Component', () => {
     expect(component.canPrev()).toBeFalse();
   });
 
-  it('builds the test detail link as http://mhfe/<test_id>', () => {
+  it('builds the test detail link as http://mhfe/testdetailview/<job_id>/<test_id>', () => {
     expect(
-      component.linkHref({text: 't1', target: {test: {testId: 't1'}}}),
-    ).toBe('http://mhfe/t1');
+      component.linkHref({
+        text: 't1',
+        target: {test: {testId: 't1', jobId: 'j1'}},
+      }),
+    ).toBe('http://mhfe/testdetailview/j1/t1');
   });
 
   it('formats duration and start time text cells', () => {
