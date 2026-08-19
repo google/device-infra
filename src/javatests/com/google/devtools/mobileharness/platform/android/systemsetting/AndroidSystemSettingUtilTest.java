@@ -472,7 +472,7 @@ public class AndroidSystemSettingUtilTest {
   }
 
   @Test
-  public void getBatteryHealth() throws Exception {
+  public void getBatteryState() throws Exception {
     when(adbUtil.dumpSys(DEVICE_ID, DumpSysType.BATTERY))
         .thenReturn(
             """
@@ -491,7 +491,27 @@ public class AndroidSystemSettingUtilTest {
               technology: Li-ion\
             """);
 
-    assertThat(settingUtil.getBatteryHealth(DEVICE_ID)).hasValue(2);
+    BatteryState batteryState = settingUtil.getBatteryState(DEVICE_ID);
+    assertThat(batteryState.level()).hasValue(98);
+    assertThat(batteryState.temperature()).hasValue(36);
+    assertThat(batteryState.health()).hasValue(2);
+  }
+
+  @Test
+  public void getBatteryState_invalidOutput() throws Exception {
+    when(adbUtil.dumpSys(DEVICE_ID, DumpSysType.BATTERY))
+        .thenReturn(
+            """
+            Current Battery Service state:
+              level: invalid
+              temperature: abc
+              health: xyz\
+            """);
+
+    BatteryState batteryState = settingUtil.getBatteryState(DEVICE_ID);
+    assertThat(batteryState.level()).isEmpty();
+    assertThat(batteryState.temperature()).isEmpty();
+    assertThat(batteryState.health()).isEmpty();
   }
 
   @Test

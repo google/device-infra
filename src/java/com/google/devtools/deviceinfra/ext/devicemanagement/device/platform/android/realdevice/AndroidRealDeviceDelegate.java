@@ -81,6 +81,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.UsbDeviceL
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.shared.constant.PackageConstants;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
+import com.google.devtools.mobileharness.platform.android.systemsetting.BatteryState;
 import com.google.devtools.mobileharness.platform.android.systemsetting.PostSettingDeviceOp;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
@@ -2105,11 +2106,14 @@ public abstract class AndroidRealDeviceDelegate {
     if (!device.getDimension("characteristics").contains("tv")
         && !AndroidSystemSpecUtil.isAutomotiveDeviceByCheckingDimensions(
             device.info().dimensions().supported().getAll())) {
-      logger.atInfo().log("Checking device %s battery level...", deviceId);
+      logger.atInfo().log("Checking device %s battery state...", deviceId);
       Optional<Integer> batteryLevel = Optional.empty();
+      Optional<Integer> batteryTemperature = Optional.empty();
+      Optional<Integer> batteryHealth = Optional.empty();
       String batteryStatus = "unknown";
       try {
-        batteryLevel = systemSettingUtil.getBatteryLevel(deviceId);
+        BatteryState batteryState = systemSettingUtil.getBatteryState(deviceId);
+        batteryLevel = batteryState.level();
         if (batteryLevel.isPresent()) {
           logger.atInfo().log("Device %s battery level: %d", deviceId, batteryLevel.get());
           if (batteryLevel.map(level -> level < 20).orElse(false)) {
@@ -2120,24 +2124,23 @@ public abstract class AndroidRealDeviceDelegate {
         } else {
           logger.atInfo().log("Device %s battery level is not available", deviceId);
         }
-      } catch (MobileHarnessException e) {
-        logger.atWarning().log(
-            "Failed to get device %s battery level: %s",
-            deviceId, MoreThrowables.shortDebugString(e));
-      }
-      logger.atInfo().log("Checking device %s battery temperature...", deviceId);
-      int batteryTemperature = 0;
-      try {
-        Optional<Integer> temperature = systemSettingUtil.getBatteryTemperature(deviceId);
-        if (temperature.isPresent()) {
-          batteryTemperature = temperature.get();
-          logger.atInfo().log("Device %s battery temperature: %d", deviceId, batteryTemperature);
+
+        batteryTemperature = batteryState.temperature();
+        if (batteryTemperature.isPresent()) {
+          logger.atInfo().log(
+              "Device %s battery temperature: %d", deviceId, batteryTemperature.get());
+        }
+
+        batteryHealth = batteryState.health();
+        if (batteryHealth.isPresent()) {
+          logger.atInfo().log("Device %s battery health: %d", deviceId, batteryHealth.get());
         }
       } catch (MobileHarnessException e) {
         logger.atWarning().log(
-            "Failed to get device %s battery temperature: %s",
+            "Failed to get device %s battery state: %s",
             deviceId, MoreThrowables.shortDebugString(e));
       }
+
       logger.atInfo().log("Checking device %s battery cycle count...", deviceId);
       Optional<Integer> batteryCycleCount = Optional.empty();
       try {
@@ -2154,25 +2157,14 @@ public abstract class AndroidRealDeviceDelegate {
             deviceId, MoreThrowables.shortDebugString(e));
       }
 
-      logger.atInfo().log("Checking device %s battery health...", deviceId);
-      Optional<Integer> batteryHealth = Optional.empty();
-      try {
-        batteryHealth = systemSettingUtil.getBatteryHealth(deviceId);
-        if (batteryHealth.isPresent()) {
-          logger.atInfo().log("Device %s battery health: %d", deviceId, batteryHealth.get());
-        }
-      } catch (MobileHarnessException e) {
-        logger.atWarning().log(
-            "Failed to get device %s battery health: %s",
-            deviceId, MoreThrowables.shortDebugString(e));
-      }
       isDimensionChanged |= device.updateDimension(Dimension.Name.BATTERY_STATUS, batteryStatus);
       isDimensionChanged |=
           device.updateDimension(
               Dimension.Name.BATTERY_LEVEL, batteryLevel.map(String::valueOf).orElse("-1"));
       isDimensionChanged |=
           device.updateDimension(
-              Dimension.Name.BATTERY_TEMPERATURE, String.valueOf(batteryTemperature));
+              Dimension.Name.BATTERY_TEMPERATURE,
+              batteryTemperature.map(String::valueOf).orElse("-1"));
       isDimensionChanged |=
           device.updateDimension(
               Dimension.Name.BATTERY_CYCLE_COUNT,

@@ -936,7 +936,7 @@ public class AndroidSystemSettingUtil {
     return Optional.empty();
   }
 
-  private String getBatteryDumpSysOutput(String serial, AndroidErrorId errorId)
+  private String getBatteryDumpSysOutput(String serial)
       throws MobileHarnessException, InterruptedException {
     // Run dumpSys adb command to get battery state. A sample output:
     // Current Battery Service state:
@@ -953,7 +953,8 @@ public class AndroidSystemSettingUtil {
     try {
       return adbUtil.dumpSys(serial, DumpSysType.BATTERY);
     } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(errorId, e.getMessage(), e);
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_BATTERY_STATE_ERROR, e.getMessage(), e);
     }
   }
 
@@ -967,26 +968,12 @@ public class AndroidSystemSettingUtil {
    *     the battery level from command output.
    * @throws MobileHarnessException if some error occurs in executing system commands
    * @throws InterruptedException if current thread is interrupted during this method
+   * @deprecated Use {@link #getBatteryState(String)} instead.
    */
+  @Deprecated
   public Optional<Integer> getBatteryLevel(String serial)
       throws MobileHarnessException, InterruptedException {
-    String output =
-        getBatteryDumpSysOutput(
-            serial, AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_BATTERY_LEVEL_ERROR);
-
-    Matcher matcher = PATTERN_BATTERY_LEVEL.matcher(output);
-    if (!matcher.find()) {
-      logger.atWarning().log("Failed to parse battery level for device %s:\n%s", serial, output);
-      return Optional.empty();
-    }
-    String level = matcher.group(1);
-    try {
-      return Optional.of(Integer.parseInt(level));
-    } catch (NumberFormatException e) {
-      logger.atWarning().withCause(e).log(
-          "Failed to parse battery level for device %s, invalid level value: %s", serial, level);
-      return Optional.empty();
-    }
+    return getBatteryState(serial).level();
   }
 
   /**
@@ -999,61 +986,74 @@ public class AndroidSystemSettingUtil {
    *     battery temperature from command output.
    * @throws MobileHarnessException if some error occurs in executing system commands
    * @throws InterruptedException if current thread is interrupted during this method
+   * @deprecated Use {@link #getBatteryState(String)} instead.
    */
+  @Deprecated
   public Optional<Integer> getBatteryTemperature(String serial)
       throws MobileHarnessException, InterruptedException {
-    String output =
-        getBatteryDumpSysOutput(
-            serial, AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_BATTERY_TEMP_ERROR);
-
-    Matcher matcher = PATTERN_BATTERY_TEMPERATURE.matcher(output);
-    if (!matcher.find()) {
-      logger.atWarning().log(
-          "Failed to parse battery temperature for device %s:\n%s", serial, output);
-      return Optional.empty();
-    }
-    String temperature = matcher.group(1);
-    try {
-      // The temperature is in tenths of a degree Celsius.
-      return Optional.of(Integer.parseInt(temperature) / 10);
-    } catch (NumberFormatException e) {
-      logger.atWarning().withCause(e).log(
-          "Failed to parse battery temperature for device %s, invalid temperature value: %s",
-          serial, temperature);
-      return Optional.empty();
-    }
+    return getBatteryState(serial).temperature();
   }
 
   /**
-   * Gets the battery health of the device.
+   * Gets the battery state of the device.
    *
-   * <p>It executes "dumpsys battery" and parses the output to get the battery health.
+   * <p>It executes "dumpsys battery" and parses the output to get the battery level, temperature
+   * and health.
    *
    * @param serial the serial number of the device
-   * @return battery health code (e.g., 2 for BATTERY_HEALTH_GOOD), or {@link Optional#empty()} if
-   *     it failed to parse the battery health from command output.
+   * @return battery state of the device
    * @throws MobileHarnessException if some error occurs in executing system commands
    * @throws InterruptedException if current thread is interrupted during this method
    */
-  public Optional<Integer> getBatteryHealth(String serial)
+  public BatteryState getBatteryState(String serial)
       throws MobileHarnessException, InterruptedException {
-    String output =
-        getBatteryDumpSysOutput(
-            serial, AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_BATTERY_HEALTH_ERROR);
+    String output = getBatteryDumpSysOutput(serial);
+    BatteryState.Builder batteryState = BatteryState.builder();
 
-    Matcher matcher = PATTERN_BATTERY_HEALTH.matcher(output);
-    if (!matcher.find()) {
+    Matcher levelMatcher = PATTERN_BATTERY_LEVEL.matcher(output);
+    if (levelMatcher.find()) {
+      String level = levelMatcher.group(1);
+      try {
+        batteryState.setLevel(Integer.parseInt(level));
+      } catch (NumberFormatException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to parse battery level for device %s, invalid level value: %s", serial, level);
+      }
+    } else {
+      logger.atWarning().log("Failed to parse battery level for device %s:\n%s", serial, output);
+    }
+
+    Matcher tempMatcher = PATTERN_BATTERY_TEMPERATURE.matcher(output);
+    if (tempMatcher.find()) {
+      String temperature = tempMatcher.group(1);
+      try {
+        // The temperature is in tenths of a degree Celsius.
+        batteryState.setTemperature(Integer.parseInt(temperature) / 10);
+      } catch (NumberFormatException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to parse battery temperature for device %s, invalid temperature value: %s",
+            serial, temperature);
+      }
+    } else {
+      logger.atWarning().log(
+          "Failed to parse battery temperature for device %s:\n%s", serial, output);
+    }
+
+    Matcher healthMatcher = PATTERN_BATTERY_HEALTH.matcher(output);
+    if (healthMatcher.find()) {
+      String health = healthMatcher.group(1);
+      try {
+        batteryState.setHealth(Integer.parseInt(health));
+      } catch (NumberFormatException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to parse battery health for device %s, invalid health value: %s",
+            serial, health);
+      }
+    } else {
       logger.atWarning().log("Failed to parse battery health for device %s:\n%s", serial, output);
-      return Optional.empty();
     }
-    String health = matcher.group(1);
-    try {
-      return Optional.of(Integer.parseInt(health));
-    } catch (NumberFormatException e) {
-      logger.atWarning().withCause(e).log(
-          "Failed to parse battery health for device %s, invalid health value: %s", serial, health);
-      return Optional.empty();
-    }
+
+    return batteryState.build();
   }
 
   /**
