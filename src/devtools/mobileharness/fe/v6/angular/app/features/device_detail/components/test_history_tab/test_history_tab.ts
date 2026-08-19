@@ -25,6 +25,11 @@ import {
 } from '../../../../core/models/device_test_history';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 
+interface LoadAction {
+  token: string;
+  direction: 'next' | 'prev' | 'reset';
+}
+
 /**
  * Device Detail "Test history" tab.
  *
@@ -50,7 +55,7 @@ export class TestHistoryTab implements OnInit {
 
   private readonly deviceService = inject(DEVICE_SERVICE);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly loadTrigger$ = new Subject<string>();
+  private readonly loadTrigger$ = new Subject<LoadAction>();
 
   readonly columns = signal<TableColumn[]>([]);
   readonly rows = signal<TableRow[]>([]);
@@ -74,21 +79,15 @@ export class TestHistoryTab implements OnInit {
   ngOnInit(): void {
     this.loadTrigger$
       .pipe(
-        switchMap((token) => {
+        switchMap(({token, direction}) => {
           this.loading.set(true);
           this.error.set('');
-          if (token === '') {
-            this.prevTokens.length = 0;
-            this.canPrev.set(false);
-          }
           return this.deviceService
             .getDeviceTestHistory(this.deviceId, token)
             .pipe(
-              map((response) => ({token, response})),
+              map((response) => ({token, response, direction})),
               catchError(() => {
                 this.error.set('Failed to load test history.');
-                this.rows.set([]);
-                this.hasNextPage.set(false);
                 this.loading.set(false);
                 return EMPTY;
               }),
@@ -96,22 +95,31 @@ export class TestHistoryTab implements OnInit {
         }),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe(({token, response}) => {
+      .subscribe(({token, response, direction}) => {
+        if (direction === 'next') {
+          this.prevTokens.push(this.currentToken);
+        } else if (direction === 'prev') {
+          this.prevTokens.pop();
+        } else if (direction === 'reset') {
+          this.prevTokens.length = 0;
+        }
+
         this.currentToken = token;
         this.columns.set(response.columns ?? []);
         this.rows.set(response.rows ?? []);
         this.nextToken = response.nextPageToken ?? '';
         this.hasNextPage.set(this.nextToken !== '');
+        this.canPrev.set(this.prevTokens.length > 0);
         this.loading.set(false);
       });
 
-    this.loadPage('');
+    this.loadPage('', 'reset');
 
     if (this.refreshTrigger$) {
       this.refreshTrigger$
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe(() => {
-          this.loadPage('');
+          this.loadPage('', 'reset');
         });
     }
   }
@@ -123,9 +131,7 @@ export class TestHistoryTab implements OnInit {
     if (!this.nextToken || this.loading()) {
       return;
     }
-    this.prevTokens.push(this.currentToken);
-    this.canPrev.set(true);
-    this.loadPage(this.nextToken);
+    this.loadPage(this.nextToken, 'next');
   }
 
   /**
@@ -135,9 +141,8 @@ export class TestHistoryTab implements OnInit {
     if (this.prevTokens.length === 0 || this.loading()) {
       return;
     }
-    const token = this.prevTokens.pop() ?? '';
-    this.canPrev.set(this.prevTokens.length > 0);
-    this.loadPage(token);
+    const token = this.prevTokens[this.prevTokens.length - 1] ?? '';
+    this.loadPage(token, 'prev');
   }
 
   /** The cell for a given column index in a row (cells are parallel to columns). */
@@ -201,7 +206,7 @@ export class TestHistoryTab implements OnInit {
    *
    * @param token The pagination token for the requested page (empty for first page).
    */
-  private loadPage(token: string): void {
-    this.loadTrigger$.next(token);
+  private loadPage(token: string, direction: 'next' | 'prev' | 'reset'): void {
+    this.loadTrigger$.next({token, direction});
   }
 }
