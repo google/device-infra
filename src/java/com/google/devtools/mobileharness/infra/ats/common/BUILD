@@ -29,16 +29,6 @@ package(
 )
 
 java_library(
-    name = "ats_session_plugin_util",
-    srcs = ["AtsSessionPluginUtil.java"],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_constants",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
     name = "device_details",
     srcs = ["DeviceDetails.java"],
     deps = [

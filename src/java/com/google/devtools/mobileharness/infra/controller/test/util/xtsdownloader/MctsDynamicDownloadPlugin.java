@@ -19,8 +19,6 @@ package com.google.devtools.mobileharness.infra.controller.test.util.xtsdownload
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
-import static org.apache.commons.lang3.SerializationUtils.deserialize;
-import static org.apache.commons.lang3.SerializationUtils.serialize;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
@@ -56,7 +54,6 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.Serializable;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -66,7 +63,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -185,7 +181,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   @Override
   @SuppressWarnings("BeforeSnippet")
-  public XtsDynamicDownloadInfo parse(LocalTestStartingEvent event) throws MobileHarnessException {
+  public XtsDynamicDownloadInfo parse(LocalTestStartingEvent event)
+      throws MobileHarnessException, InterruptedException {
     TestInfo test = event.getTest();
     String aospVersion = getAospVersion(event);
     ListMultimap<String, String> mctsNamesOfAllModules =
@@ -271,8 +268,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       downloadUrlList.remove(1);
     }
 
-    // Download the MCTS files for dynamic download mcts job.
-    logger.atInfo().log("Start to download files for dynamic download MCTS job...");
+    // Download the MCTS files.
+    logger.atInfo().log("Start to download files for dynamic MCTS...");
     Set<String> allTestModules = new HashSet<>();
     Set<String> excludeTestModules = new HashSet<>();
     // Get the exclude test modules.
@@ -482,95 +479,60 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
    *   <li>For {@link #NON_PRELOADED_KEY}, the values are strings representing the mctsName.
    * </ul>
    *
-   * <p>The return value is cached as part of the test properties. If a subsequent invocation of
-   * this method encounters an exception (e.g., device goes offline), the cached value from the test
-   * properties will be returned, allowing the plugin to proceed.
-   *
-   * @param event The test starting event, used to access test properties and device information.
+   * @param event The test starting event, used to access device information.
    * @param aospVersion The AOSP version of the device.
    */
   private ListMultimap<String, String> getMctsNamesOfAllMainlineModules(
-      LocalTestStartingEvent event, String aospVersion) throws MobileHarnessException {
-    TestInfo testInfo = event.getTest();
+      LocalTestStartingEvent event, String aospVersion)
+      throws MobileHarnessException, InterruptedException {
+    String configFilePath =
+        resUtil.getResourceFile(
+            getClass(),
+            "/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs/module_info_map.textpb");
+    String configTextProto = fileUtil.readFile(configFilePath);
+    ModuleInfoMap.Builder moduleInfoMapBuilder = ModuleInfoMap.newBuilder();
     try {
-      String configFilePath =
-          resUtil.getResourceFile(
-              getClass(),
-              "/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs/module_info_map.textpb");
-      String configTextProto = fileUtil.readFile(configFilePath);
-      ModuleInfoMap.Builder moduleInfoMapBuilder = ModuleInfoMap.newBuilder();
-      try {
-        TextFormat.merge(configTextProto, moduleInfoMapBuilder);
-      } catch (IOException e) {
-        throw new MobileHarnessException(
-            AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_CONFIG_READER_ERROR,
-            "Failed to read the Mainline module info map for xts dynamic downloader.",
-            e);
-      }
-      ModuleInfoMap moduleInfoMap = moduleInfoMapBuilder.build();
-      // To save two lists, one contains all the mcts names of preloaded modules, the other contain
-      // the ones of non-preloaded modules.
-      ListMultimap<String, String> mctsNamesOfAllModules = ArrayListMultimap.create();
-      Set<String> preloadedModulesMcts = new HashSet<>(); // Track modules added to 'preloaded'
-      Set<String> preloadedModulesMctsAndVersioncode = new HashSet<>();
-      Map<String, String> modulePackageToModuleInfoMap =
-          moduleInfoMap.getModulePackageToModuleInfoMap();
-      String deviceId = getDeviceId(event);
-      ImmutableList<String> preloadedMainlineModules = getPreloadedMainlineModules(deviceId);
-      for (String moduleName : preloadedMainlineModules) {
-        if (modulePackageToModuleInfoMap.containsKey(moduleName)) {
-          String mctsName = modulePackageToModuleInfoMap.get(moduleName);
-          if (preloadedModulesMcts.add(mctsName)) {
-            String moduleVersion =
-                Integer.toString(androidPackageManagerUtil.getAppVersionCode(deviceId, moduleName));
-            // Only parse the module versioncode released start from Android V (35+).
-            String moduleVersioncode =
-                processModuleVersion(
-                    moduleVersion, moduleName, MAINLINE_AOSP_VERSION_KEY, aospVersion);
-            preloadedModulesMctsAndVersioncode.add(mctsName + ':' + moduleVersioncode);
-          }
+      TextFormat.merge(configTextProto, moduleInfoMapBuilder);
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_CONFIG_READER_ERROR,
+          "Failed to read the Mainline module info map for xts dynamic downloader.",
+          e);
+    }
+    ModuleInfoMap moduleInfoMap = moduleInfoMapBuilder.build();
+    // To save two lists, one contains all the mcts names of preloaded modules, the other contain
+    // the ones of non-preloaded modules.
+    ListMultimap<String, String> mctsNamesOfAllModules = ArrayListMultimap.create();
+    Set<String> preloadedModulesMcts = new HashSet<>(); // Track modules added to 'preloaded'
+    Set<String> preloadedModulesMctsAndVersioncode = new HashSet<>();
+    Map<String, String> modulePackageToModuleInfoMap =
+        moduleInfoMap.getModulePackageToModuleInfoMap();
+    String deviceId = getDeviceId(event);
+    ImmutableList<String> preloadedMainlineModules = getPreloadedMainlineModules(deviceId);
+    for (String moduleName : preloadedMainlineModules) {
+      if (modulePackageToModuleInfoMap.containsKey(moduleName)) {
+        String mctsName = modulePackageToModuleInfoMap.get(moduleName);
+        if (preloadedModulesMcts.add(mctsName)) {
+          String moduleVersion =
+              Integer.toString(androidPackageManagerUtil.getAppVersionCode(deviceId, moduleName));
+          // Only parse the module versioncode released start from Android V (35+).
+          String moduleVersioncode =
+              processModuleVersion(
+                  moduleVersion, moduleName, MAINLINE_AOSP_VERSION_KEY, aospVersion);
+          preloadedModulesMctsAndVersioncode.add(mctsName + ':' + moduleVersioncode);
         }
       }
-      // Put the preloaded modules on the preloaded list with the format: "mctsName:versioncode".
-      mctsNamesOfAllModules.putAll(PRELOADED_KEY, preloadedModulesMctsAndVersioncode);
-      // Put the non-preloaded modules on the non-preloaded list with the format: "mctsName".
-      Set<String> nonPreloadMctsList = new HashSet<>();
-      nonPreloadMctsList.addAll(modulePackageToModuleInfoMap.values());
-      nonPreloadMctsList.removeAll(preloadedModulesMcts);
-      mctsNamesOfAllModules.putAll(NON_PRELOADED_KEY, nonPreloadMctsList);
-
-      // Save as part of the test properties.
-      String serializedMctsModulesInfo =
-          Base64.getEncoder().encodeToString(serialize((Serializable) mctsNamesOfAllModules));
-      testInfo
-          .properties()
-          .add(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY, serializedMctsModulesInfo);
-      logger.atInfo().log("Read device MCTS modules info: %s", mctsNamesOfAllModules);
-      return mctsNamesOfAllModules;
-    } catch (MobileHarnessException | InterruptedException e) {
-      logger.atInfo().withCause(e).log(
-          "Failed to get device MCTS modules info. Will try to read from test properties.");
-      return testInfo
-          .properties()
-          .getOptional(XtsConstants.DEVICE_MCTS_MODULES_INFO_PROPERTY_KEY)
-          .map(
-              serializedMctsModulesInfo -> {
-                // Safe because we are deserializing data serialized from a
-                // ListMultimap<String, String> in this class.
-                @SuppressWarnings("unchecked")
-                ListMultimap<String, String> mctsModulesInfo =
-                    (ListMultimap<String, String>)
-                        deserialize(Base64.getDecoder().decode(serializedMctsModulesInfo));
-                logger.atInfo().log(
-                    "Read device MCTS modules info from test properties: %s.", mctsModulesInfo);
-                return mctsModulesInfo;
-              })
-          .orElseThrow(
-              () ->
-                  new MobileHarnessException(
-                      AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_DEVICE_INFO_NOT_FOUND,
-                      "Did not get device MCTS modules info from test properties."));
     }
+    // Put the preloaded modules on the preloaded list with the format: "mctsName:versioncode".
+    mctsNamesOfAllModules.putAll(PRELOADED_KEY, preloadedModulesMctsAndVersioncode);
+    // Put the non-preloaded modules on the non-preloaded list with the format: "mctsName".
+    Set<String> nonPreloadMctsList = new HashSet<>();
+    nonPreloadMctsList.addAll(modulePackageToModuleInfoMap.values());
+    nonPreloadMctsList.removeAll(preloadedModulesMcts);
+    mctsNamesOfAllModules.putAll(NON_PRELOADED_KEY, nonPreloadMctsList);
+
+    logger.atInfo().log("Read device MCTS modules info: %s", mctsNamesOfAllModules);
+    return mctsNamesOfAllModules;
   }
 
   private String getPreloadedMainlineVersion(String versionCode, String moduleName)
@@ -734,92 +696,35 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     return testModules;
   }
 
-  @FunctionalInterface
-  private interface DeviceInfoSupplier {
-    String get(String deviceId) throws MobileHarnessException, InterruptedException;
-  }
-
-  private String getOrFetchStringDeviceInfo(
-      LocalTestStartingEvent event,
-      String propertyKey,
-      String propertyDisplayName,
-      DeviceInfoSupplier supplier)
-      throws MobileHarnessException {
-    TestInfo testInfo = event.getTest();
-    try {
-      String deviceId = getDeviceId(event);
-      String value = supplier.get(deviceId);
-      testInfo.properties().add(propertyKey, value);
-      logger.atInfo().log("Read device %s %s: %s", deviceId, propertyDisplayName, value);
-      return value;
-    } catch (MobileHarnessException | InterruptedException e) {
-      logger.atInfo().withCause(e).log(
-          "Failed to get device %s. Will try to read from test properties.", propertyDisplayName);
-      return testInfo
-          .properties()
-          .getOptional(propertyKey)
-          .map(
-              value -> {
-                logger.atInfo().log(
-                    "Read device %s from test properties: %s", propertyDisplayName, value);
-                return value;
-              })
-          .orElseThrow(
-              () ->
-                  new MobileHarnessException(
-                      AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_DEVICE_INFO_NOT_FOUND,
-                      String.format(
-                          "Did not get device %s from test properties.", propertyDisplayName)));
-    }
-  }
-
   /**
    * Gets the AOSP version (Android SDK level) of the device.
    *
-   * <p>This method first attempts to fetch the SDK version directly from the device using ADB. If
-   * successful, the value is cached in the test properties for future use. If a subsequent
-   * invocation of this method encounters an exception (e.g., device goes offline), the cached value
-   * from the test properties will be returned, allowing the plugin to proceed.
-   *
-   * @throws MobileHarnessException if the AOSP version cannot be fetched from the device and is not
-   *     found in the test properties.
+   * @throws MobileHarnessException if the AOSP version cannot be fetched from the device.
    */
-  private String getAospVersion(LocalTestStartingEvent event) throws MobileHarnessException {
-    return getOrFetchStringDeviceInfo(
-        event,
-        XtsConstants.DEVICE_AOSP_VERSION_PROPERTY_KEY,
-        "AOSP version",
-        (d) -> {
-          String sdkVersion = adbUtil.getProperty(d, AndroidProperty.SDK_VERSION);
-          // For Android 36+, there will be minor SDK bumps, e.g. 36.0 -> 36.1.
-          try {
-            if (Integer.parseInt(sdkVersion) >= 36) {
-              return adbUtil.getProperty(d, AndroidProperty.SDK_FULL_VERSION);
-            }
-          } catch (NumberFormatException e) {
-            // Return sdkVersion if it is not a number.
-          }
-          return sdkVersion;
-        });
+  private String getAospVersion(LocalTestStartingEvent event)
+      throws MobileHarnessException, InterruptedException {
+    String deviceId = getDeviceId(event);
+    String sdkVersion = adbUtil.getProperty(deviceId, AndroidProperty.SDK_VERSION);
+    // For Android 36+, there will be minor SDK bumps, e.g. 36.0 -> 36.1.
+    try {
+      if (Integer.parseInt(sdkVersion) >= 36) {
+        return adbUtil.getProperty(deviceId, AndroidProperty.SDK_FULL_VERSION);
+      }
+    } catch (NumberFormatException e) {
+      // Return sdkVersion if it is not a number.
+    }
+    return sdkVersion;
   }
 
   /**
    * Gets the ABI version of the device.
    *
-   * <p>This method first attempts to fetch the ABI version directly from the device using ADB. If
-   * successful, the value is cached in the test properties for future use. If a subsequent
-   * invocation of this method encounters an exception (e.g., device goes offline), the cached value
-   * from the test properties will be returned, allowing the plugin to proceed.
-   *
-   * @throws MobileHarnessException if the ABI version cannot be fetched from the device and is not
-   *     found in the test properties.
+   * @throws MobileHarnessException if the ABI version cannot be fetched from the device.
    */
-  private String getAbiVersion(LocalTestStartingEvent event) throws MobileHarnessException {
-    return getOrFetchStringDeviceInfo(
-        event,
-        XtsConstants.DEVICE_ABI_PROPERTY_KEY,
-        "ABI version",
-        (d) -> adbUtil.getProperty(d, AndroidProperty.ABI));
+  private String getAbiVersion(LocalTestStartingEvent event)
+      throws MobileHarnessException, InterruptedException {
+    String deviceId = getDeviceId(event);
+    return adbUtil.getProperty(deviceId, AndroidProperty.ABI);
   }
 
   private static boolean isProductionReleaseVersion(String moduleVersionNumber) {
@@ -858,30 +763,19 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   /**
    * Gets the Train Version Package (TVP) version from the device.
    *
-   * <p>This method first attempts to fetch the TVP version directly from the device using ADB. If
-   * successful, the value is cached in the test properties for future use. If a subsequent
-   * invocation of this method encounters an exception (e.g., device goes offline), the cached value
-   * from the test properties will be returned, allowing the plugin to proceed.
-   *
-   * @throws MobileHarnessException if the TVP version cannot be fetched from the device and is not
-   *     found in the test properties.
+   * @throws MobileHarnessException if the TVP version cannot be fetched from the device.
    */
-  private String getTvpVersion(LocalTestStartingEvent event) throws MobileHarnessException {
-    return getOrFetchStringDeviceInfo(
-        event,
-        XtsConstants.DEVICE_TVP_VERSION_PROPERTY_KEY,
-        "TVP version",
-        (d) -> {
-          ImmutableList<String> preloadedMainlineModules = getPreloadedMainlineModules(d);
-          // if the TVP version is 310000000, that means all the mainline modules were built
-          // from source, rather than prebuilt dropped. 310000000 is just the default value in
-          // http://ac/vendor/unbundled_google/modules/ModuleMetadataGoogle/Primary_AndroidManifest.xml
-          // We will only support Android V train for downloading train MCTS, otherwise will
-          // download
-          // from aosp.
-          return preloadedMainlineModules.contains(MAINLINE_TVP_PKG)
-              ? Integer.toString(androidPackageManagerUtil.getAppVersionCode(d, MAINLINE_TVP_PKG))
-              : "310000000";
-        });
+  private String getTvpVersion(LocalTestStartingEvent event)
+      throws MobileHarnessException, InterruptedException {
+    String deviceId = getDeviceId(event);
+    ImmutableList<String> preloadedMainlineModules = getPreloadedMainlineModules(deviceId);
+    // If the TVP version is 310000000, that means all the mainline modules were built
+    // from source, rather than prebuilt dropped. 310000000 is just the default value in
+    // http://ac/vendor/unbundled_google/modules/ModuleMetadataGoogle/Primary_AndroidManifest.xml
+    // We will only support Android V train for downloading train MCTS, otherwise will
+    // download from aosp.
+    return preloadedMainlineModules.contains(MAINLINE_TVP_PKG)
+        ? Integer.toString(androidPackageManagerUtil.getAppVersionCode(deviceId, MAINLINE_TVP_PKG))
+        : "310000000";
   }
 }

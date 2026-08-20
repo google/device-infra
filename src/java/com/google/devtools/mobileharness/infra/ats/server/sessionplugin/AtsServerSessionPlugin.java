@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.google.devtools.mobileharness.infra.ats.common.AtsSessionPluginUtil.copyTestPropertiesForDynamicDownloadJobs;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.util.concurrent.TimeUnit.HOURS;
@@ -619,24 +618,6 @@ final class AtsServerSessionPlugin {
     logger.atInfo().log(
         "Session [%s]: Adding next tradefed job [%s] to session.",
         sessionInfo.getSessionId(), nextJob.locator().getId());
-    if (nextJob
-        .properties()
-        .getBoolean(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED)
-        .orElse(false)) {
-      // Copy test properties needed by xTS dynamic download jobs from the current test to
-      // the next tests.
-      completedJob.tests().getAll().values().stream()
-          .findFirst()
-          .ifPresent(
-              currentTest ->
-                  nextJob
-                      .tests()
-                      .getAll()
-                      .values()
-                      .forEach(
-                          nextTest ->
-                              copyTestPropertiesForDynamicDownloadJobs(currentTest, nextTest)));
-    }
     sessionInfo.addJob(nextJob);
   }
 

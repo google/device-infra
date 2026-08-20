@@ -54,7 +54,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
@@ -63,7 +62,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
-        "@maven//:org_apache_commons_commons_lang3",
         "@protobuf//:protobuf_java",
     ],
 )

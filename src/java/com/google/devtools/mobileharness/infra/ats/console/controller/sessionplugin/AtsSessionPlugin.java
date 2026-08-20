@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.sessionpl
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.google.devtools.mobileharness.infra.ats.common.AtsSessionPluginUtil.copyTestPropertiesForDynamicDownloadJobs;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
@@ -452,7 +451,6 @@ public class AtsSessionPlugin {
           // Add the device ids of the current job to the sub device specs of the next tradefed job.
           addDeviceIdsToSubDeviceSpecs(
               nextJobToAdd.subDeviceSpecs().getAllSubDevices(), devicesOfCurrentJob);
-          copyDynamicDownloadProperties(currentJob, nextJobToAdd);
           addAndTrackTradefedJobs(ImmutableList.of(nextJobToAdd));
         }
 
@@ -872,25 +870,6 @@ public class AtsSessionPlugin {
       if (!addMainNonTradefedJobs()) {
         addTeardownJobIfAny();
       }
-    }
-  }
-
-  private static void copyDynamicDownloadProperties(JobInfo currentJob, JobInfo nextJob) {
-    if (nextJob
-        .properties()
-        .getBoolean(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED)
-        .orElse(false)) {
-      currentJob.tests().getAll().values().stream()
-          .findFirst()
-          .ifPresent(
-              currentTest ->
-                  nextJob
-                      .tests()
-                      .getAll()
-                      .values()
-                      .forEach(
-                          nextTest ->
-                              copyTestPropertiesForDynamicDownloadJobs(currentTest, nextTest)));
     }
   }
 
