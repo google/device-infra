@@ -44,7 +44,6 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDir
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.protobuf.TextFormat;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
@@ -52,6 +51,7 @@ import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestSta
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -62,7 +62,10 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
@@ -88,6 +91,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   private static final String PRELOADED_KEY = "preloaded";
 
   private static final String NON_PRELOADED_KEY = "non-preloaded";
+
+  private static final Duration STALE_SESSION_DIR_EXPIRATION_TIME = Duration.ofDays(14);
 
   // Only consider the Module released in Android V+ and not beta version.
   // Version scheme v2: For the month of platform initial release ONLY, 5th digit >= 4 indicates
@@ -386,6 +391,51 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     } catch (MobileHarnessException | InterruptedException e) {
       logger.atWarning().withCause(e).log("Failed to clean up MCTS work dir");
     }
+    cleanUpStaleSessionDirs();
+  }
+
+  private void cleanUpStaleSessionDirs() {
+    Path dynamicDownloadRootDir = XtsDirUtil.getXtsDynamicDownloadRootDir();
+    if (!fileUtil.isDirExist(dynamicDownloadRootDir)) {
+      return;
+    }
+    try {
+      File[] sessionDirs =
+          fileUtil.listDirs(
+              dynamicDownloadRootDir.toString(), dir -> dir.getName().startsWith("ats_session_"));
+      Instant now = Instant.now();
+      Arrays.stream(sessionDirs)
+          .filter(
+              sessionDir -> {
+                try {
+                  return fileUtil
+                      .getFileLastModifiedTime(sessionDir.toPath())
+                      .plus(STALE_SESSION_DIR_EXPIRATION_TIME)
+                      .isBefore(now);
+                } catch (MobileHarnessException e) {
+                  logger.atWarning().withCause(e).log(
+                      "Failed to get last modified time for MCTS dynamic download session dir: %s",
+                      sessionDir.getAbsolutePath());
+                  return false;
+                }
+              })
+          .forEach(
+              sessionDir -> {
+                try {
+                  logger.atInfo().log(
+                      "Cleaning up stale MCTS dynamic download session dir: %s",
+                      sessionDir.getAbsolutePath());
+                  fileUtil.removeFileOrDir(sessionDir.toPath());
+                } catch (MobileHarnessException | InterruptedException e) {
+                  logger.atWarning().withCause(e).log(
+                      "Failed to clean up stale MCTS dynamic download session dir: %s",
+                      sessionDir.getAbsolutePath());
+                }
+              });
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to list MCTS dynamic download root dir: %s", dynamicDownloadRootDir);
+    }
   }
 
   private String getDeviceId(LocalTestStartingEvent event)
@@ -589,7 +639,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     synchronized (lock) {
       // e.g.
       // <xts_res_dir_root>/mcts_dynamic_download/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
-      String dynamicDownloadDir = Flags.xtsResDirRoot.getNonNull() + "/mcts_dynamic_download";
+      String dynamicDownloadDir = XtsDirUtil.getXtsDynamicDownloadRootDir().toString();
       String filePath = PathUtil.join(dynamicDownloadDir, subDirName);
       URLConnection connection = null;
       try {

@@ -58,7 +58,11 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -314,9 +318,25 @@ public final class MctsDynamicDownloadPluginTest {
   }
 
   @Test
-  public void onTestStarting_teardownJob_cleansUpWorkDir() throws Exception {
+  public void onTestStarting_teardownJob_cleansUpWorkDirAndStaleSessionDirs() throws Exception {
     Path sessionDir = XtsDirUtil.getXtsDynamicDownloadDir("test_session_id");
     localFileUtil.prepareDir(sessionDir.resolve("testcases").toString());
+
+    Path staleSessionDir = XtsDirUtil.getXtsDynamicDownloadDir("stale_session_id");
+    localFileUtil.prepareDir(staleSessionDir.resolve("testcases").toString());
+    Files.setLastModifiedTime(
+        staleSessionDir, FileTime.from(Instant.now().minus(Duration.ofDays(15))));
+
+    Path recentSessionDir = XtsDirUtil.getXtsDynamicDownloadDir("recent_session_id");
+    localFileUtil.prepareDir(recentSessionDir.resolve("testcases").toString());
+    Files.setLastModifiedTime(
+        recentSessionDir, FileTime.from(Instant.now().minus(Duration.ofDays(1))));
+
+    Path nonSessionDir = XtsDirUtil.getXtsDynamicDownloadRootDir().resolve("android/xts/mcts");
+    localFileUtil.prepareDir(nonSessionDir.toString());
+    Files.setLastModifiedTime(
+        nonSessionDir, FileTime.from(Instant.now().minus(Duration.ofDays(15))));
+
     when(jobProperties.get(XtsConstants.XTS_JOB_NAME)).thenReturn(XtsConstants.TEARDOWN_JOB_NAME);
     when(jobProperties.getOptional(XtsConstants.XTS_JOB_NAME))
         .thenReturn(Optional.of(XtsConstants.TEARDOWN_JOB_NAME));
@@ -324,6 +344,12 @@ public final class MctsDynamicDownloadPluginTest {
     spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
 
     assertThat(localFileUtil.isDirExist(sessionDir.toString())).isFalse();
+    assertThat(localFileUtil.isDirExist(staleSessionDir.toString())).isFalse();
+    assertThat(localFileUtil.isDirExist(recentSessionDir.toString())).isTrue();
+    assertThat(localFileUtil.isDirExist(nonSessionDir.toString())).isTrue();
+
+    localFileUtil.removeFileOrDir(recentSessionDir.toString());
+    localFileUtil.removeFileOrDir(nonSessionDir.toString());
   }
 
   @Test
@@ -478,7 +504,6 @@ public final class MctsDynamicDownloadPluginTest {
     Mockito.doReturn(zipFile)
         .when(spyMctsDynamicDownloadPlugin)
         .downloadPublicUrlFiles(argThat(arg -> Pattern.matches(regexPatternUrl, arg)), any());
-    ;
   }
 
   /**

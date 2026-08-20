@@ -33,6 +33,13 @@ public final class XtsDirUtilTest {
   private static final String SESSION_ID = "test_session_123";
 
   @Test
+  public void getXtsDynamicDownloadRootDir() {
+    setFlags.set("xts_res_dir_root", "/flag/xts/root");
+    assertThat(XtsDirUtil.getXtsDynamicDownloadRootDir())
+        .isEqualTo(Path.of("/flag/xts/root/mcts_dynamic_download"));
+  }
+
+  @Test
   public void getXtsDynamicDownloadDir() {
     setFlags.set("xts_res_dir_root", "/flag/xts/root");
     assertThat(XtsDirUtil.getXtsDynamicDownloadDir(SESSION_ID))

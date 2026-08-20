@@ -79,11 +79,14 @@ public class XtsDirUtil {
     return xtsRootDir.resolve(String.format("android-%s/tools", toLowerCase(xtsType)));
   }
 
+  /** Gets the dynamic download root directory. */
+  public static Path getXtsDynamicDownloadRootDir() {
+    return Path.of(Flags.xtsResDirRoot.getNonNull()).resolve("mcts_dynamic_download");
+  }
+
   /** Gets the dynamic download root directory for the given {@code sessionId}. */
   public static Path getXtsDynamicDownloadDir(String sessionId) {
-    return Path.of(Flags.xtsResDirRoot.getNonNull())
-        .resolve("mcts_dynamic_download")
-        .resolve(String.format("ats_session_%s", sessionId));
+    return getXtsDynamicDownloadRootDir().resolve(String.format("ats_session_%s", sessionId));
   }
 
   /** Gets the dynamic download test cases directory for the given {@code sessionId}. */
