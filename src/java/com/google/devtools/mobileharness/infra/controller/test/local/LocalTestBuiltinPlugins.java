@@ -45,7 +45,7 @@ class LocalTestBuiltinPlugins {
       throws MobileHarnessException {
     // Loads built-in plugins.
     ImmutableList.Builder<PluginItem<?>> builtinPluginsBuilder = ImmutableList.builder();
-    if (isXtsDynamicDownloaderEnabled(testInfo)) {
+    if (shouldAddMctsDynamicDownloadPlugin(testInfo.jobInfo())) {
       builtinPluginsBuilder.add(
           PluginItem.create(
               createBuiltinPlugin(
@@ -152,12 +152,16 @@ class LocalTestBuiltinPlugins {
     }
   }
 
-  private static boolean isXtsDynamicDownloaderEnabled(TestInfo testInfo) {
-    return testInfo
-        .jobInfo()
+  private static boolean shouldAddMctsDynamicDownloadPlugin(JobInfo jobInfo) {
+    if (!jobInfo
         .properties()
         .getBoolean(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED)
-        .orElse(false);
+        .orElse(false)) {
+      return false;
+    }
+    String xtsJobName = jobInfo.properties().get(XtsConstants.XTS_JOB_NAME);
+    return Objects.equals(xtsJobName, XtsConstants.SETUP_JOB_NAME)
+        || Objects.equals(xtsJobName, XtsConstants.TEARDOWN_JOB_NAME);
   }
 
   private static boolean isMoblyResultstoreUploadEnabled(JobInfo jobInfo) {

@@ -67,6 +67,7 @@ import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
@@ -265,11 +266,6 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       downloadUrlList.remove(1);
     }
 
-    // If the job type is static, skip downloading the MCTS files.
-    if (isStaticXtsJob(testInfo)) {
-      return;
-    }
-
     // Download the MCTS files for dynamic download mcts job.
     logger.atInfo().log("Start to download files for dynamic download MCTS job...");
     Set<String> allTestModules = new HashSet<>();
@@ -336,6 +332,12 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   @Subscribe
   void onTestStarting(LocalTestStartingEvent event) throws InterruptedException, SkipTestException {
+    TestInfo testInfo = event.getTest();
+    if (isTeardownJob(testInfo)) {
+      cleanUpWorkDir(testInfo);
+      return;
+    }
+
     try {
       logger
           .atInfo()
@@ -367,13 +369,23 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     }
   }
 
-  private boolean isStaticXtsJob(TestInfo testInfo) {
-    return testInfo
-        .jobInfo()
-        .properties()
-        .getOptional(XtsConstants.XTS_JOB_NAME)
-        .orElse("")
-        .equals(XtsConstants.STATIC_XTS_JOB_NAME);
+  private boolean isTeardownJob(TestInfo testInfo) {
+    return Objects.equals(
+        testInfo.jobInfo().properties().get(XtsConstants.XTS_JOB_NAME),
+        XtsConstants.TEARDOWN_JOB_NAME);
+  }
+
+  private void cleanUpWorkDir(TestInfo testInfo) {
+    logger.atInfo().log("Teardown job: cleaning up MCTS dynamic download work dir.");
+    try {
+      String sessionId = getSessionId(testInfo);
+      Path sessionDir = XtsDirUtil.getXtsDynamicDownloadDir(sessionId);
+      if (fileUtil.isDirExist(sessionDir)) {
+        fileUtil.removeFileOrDir(sessionDir);
+      }
+    } catch (MobileHarnessException | InterruptedException e) {
+      logger.atWarning().withCause(e).log("Failed to clean up MCTS work dir");
+    }
   }
 
   private String getDeviceId(LocalTestStartingEvent event)

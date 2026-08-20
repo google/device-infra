@@ -561,13 +561,17 @@ public abstract class XtsJobCreator {
       return Optional.empty();
     }
     ImmutableList<PreconditionDecorator> preconditionDecorators =
-        parsePreconditionDecorators(sessionRequestInfo).stream()
-            .filter(d -> !DriverDecoratorMetadata.isTeardownOnlyDecorator(d.getDecoratorName()))
-            .collect(toImmutableList());
-    if (preconditionDecorators.isEmpty()) {
+        shouldAttachPreconditionDecorators(sessionRequestInfo)
+            ? parsePreconditionDecorators(sessionRequestInfo).stream()
+                .filter(d -> !DriverDecoratorMetadata.isTeardownOnlyDecorator(d.getDecoratorName()))
+                .collect(toImmutableList())
+            : ImmutableList.of();
+    boolean isDynamicMctsEnabled = isDynamicMctsEnabled(sessionRequestInfo);
+    if (preconditionDecorators.isEmpty() && !isDynamicMctsEnabled) {
       return Optional.empty();
     }
-    return Optional.of(createSetUpJob(sessionRequestInfo, preconditionDecorators));
+    return Optional.of(
+        createSetUpJob(sessionRequestInfo, preconditionDecorators, isDynamicMctsEnabled));
   }
 
   /**
@@ -580,13 +584,17 @@ public abstract class XtsJobCreator {
       return Optional.empty();
     }
     ImmutableList<PreconditionDecorator> preconditionDecorators =
-        parsePreconditionDecorators(sessionRequestInfo).stream()
-            .filter(d -> !DriverDecoratorMetadata.isSetupOnlyDecorator(d.getDecoratorName()))
-            .collect(toImmutableList());
-    if (preconditionDecorators.isEmpty()) {
+        shouldAttachPreconditionDecorators(sessionRequestInfo)
+            ? parsePreconditionDecorators(sessionRequestInfo).stream()
+                .filter(d -> !DriverDecoratorMetadata.isSetupOnlyDecorator(d.getDecoratorName()))
+                .collect(toImmutableList())
+            : ImmutableList.of();
+    boolean isDynamicMctsEnabled = isDynamicMctsEnabled(sessionRequestInfo);
+    if (preconditionDecorators.isEmpty() && !isDynamicMctsEnabled) {
       return Optional.empty();
     }
-    return Optional.of(createTearDownJob(sessionRequestInfo, preconditionDecorators));
+    return Optional.of(
+        createTearDownJob(sessionRequestInfo, preconditionDecorators, isDynamicMctsEnabled));
   }
 
   /**
@@ -594,9 +602,16 @@ public abstract class XtsJobCreator {
    *
    * <p>Precondition (setup and teardown) jobs are created when:
    * <li>Module sharding is enabled
-   * <li>or the session contains only non-Tradefed (e.g., Mobly) jobs.
+   * <li>or the session contains only non-Tradefed (e.g., Mobly) jobs
+   * <li>or dynamic MCTS is enabled.
    */
   private boolean shouldCreatePreconditionJobs(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException {
+    return shouldAttachPreconditionDecorators(sessionRequestInfo)
+        || isDynamicMctsEnabled(sessionRequestInfo);
+  }
+
+  private boolean shouldAttachPreconditionDecorators(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException {
     if (SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)) {
       return true;
@@ -625,13 +640,16 @@ public abstract class XtsJobCreator {
    * (equivalent to Tradefed's target preparers tearDown).
    */
   private JobInfo createTearDownJob(
-      SessionRequestInfo sessionRequestInfo, ImmutableList<PreconditionDecorator> decorators)
+      SessionRequestInfo sessionRequestInfo,
+      ImmutableList<PreconditionDecorator> decorators,
+      boolean isDynamicMctsEnabled)
       throws MobileHarnessException, InterruptedException {
     return createPreconditionJob(
         sessionRequestInfo,
         decorators,
         XtsConstants.TEARDOWN_JOB_NAME,
-        PhaseSkippableDecoratorConstants.ExecutionMode.TEARDOWN_ONLY);
+        PhaseSkippableDecoratorConstants.ExecutionMode.TEARDOWN_ONLY,
+        isDynamicMctsEnabled);
   }
 
   /**
@@ -639,20 +657,24 @@ public abstract class XtsJobCreator {
    * (equivalent to Tradefed's target preparers setUp).
    */
   private JobInfo createSetUpJob(
-      SessionRequestInfo sessionRequestInfo, ImmutableList<PreconditionDecorator> decorators)
+      SessionRequestInfo sessionRequestInfo,
+      ImmutableList<PreconditionDecorator> decorators,
+      boolean isDynamicMctsEnabled)
       throws MobileHarnessException, InterruptedException {
     return createPreconditionJob(
         sessionRequestInfo,
         decorators,
         XtsConstants.SETUP_JOB_NAME,
-        PhaseSkippableDecoratorConstants.ExecutionMode.SETUP_ONLY);
+        PhaseSkippableDecoratorConstants.ExecutionMode.SETUP_ONLY,
+        isDynamicMctsEnabled);
   }
 
   private JobInfo createPreconditionJob(
       SessionRequestInfo sessionRequestInfo,
       ImmutableList<PreconditionDecorator> decorators,
       String name,
-      PhaseSkippableDecoratorConstants.ExecutionMode executionMode)
+      PhaseSkippableDecoratorConstants.ExecutionMode executionMode,
+      boolean isDynamicMctsEnabled)
       throws MobileHarnessException, InterruptedException {
     ImmutableList<JobConfig.SubDeviceSpec> subDeviceSpecList =
         sessionRequestHandlerUtil
@@ -718,6 +740,9 @@ public abstract class XtsJobCreator {
     jobInfo.properties().add(SessionHandlerHelper.XTS_MODULE_NAME_PROP, name);
     jobInfo.properties().add(Job.IS_XTS_NON_TF_JOB, "true");
     jobInfo.properties().add(XtsConstants.XTS_JOB_NAME, name);
+    if (isDynamicMctsEnabled) {
+      jobInfo.properties().add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
+    }
     if (sessionRequestInfo.hasSessionId()) {
       jobInfo.properties().add(Job.SESSION_ID, sessionRequestInfo.getSessionId());
     }

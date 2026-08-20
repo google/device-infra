@@ -910,4 +910,114 @@ public final class ConsoleJobCreatorTest {
                 .getOptional(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE))
         .isEmpty();
   }
+
+  @Test
+  public void createXtsSetupAndTearDownJob_dynamicMctsEnabled_createsJobsWithoutDecorators()
+      throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setXtsType("cts")
+                .setIsXtsDynamicDownloadEnabled(true));
+
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(sessionRequestInfo)).thenReturn(false);
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo))
+        .thenReturn(ImmutableList.of("CtsSampleDeviceTestCases"));
+    when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(any())).thenReturn(Path.of("/tmp/tmp"));
+
+    Optional<JobInfo> setupJobOpt = jobCreator.createXtsSetupJob(sessionRequestInfo);
+    assertThat(setupJobOpt).isPresent();
+    JobInfo setupJob = setupJobOpt.get();
+    assertThat(setupJob.locator().getName()).isEqualTo(XtsConstants.SETUP_JOB_NAME);
+    assertThat(setupJob.properties().get(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED))
+        .isEqualTo("true");
+    assertThat(setupJob.properties().get(XtsConstants.XTS_JOB_NAME))
+        .isEqualTo(XtsConstants.SETUP_JOB_NAME);
+    assertThat(setupJob.subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll()).isEmpty();
+
+    Optional<JobInfo> teardownJobOpt = jobCreator.createXtsTearDownJob(sessionRequestInfo);
+    assertThat(teardownJobOpt).isPresent();
+    JobInfo teardownJob = teardownJobOpt.get();
+    assertThat(teardownJob.locator().getName()).isEqualTo(XtsConstants.TEARDOWN_JOB_NAME);
+    assertThat(teardownJob.properties().get(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED))
+        .isEqualTo("true");
+    assertThat(teardownJob.properties().get(XtsConstants.XTS_JOB_NAME))
+        .isEqualTo(XtsConstants.TEARDOWN_JOB_NAME);
+    assertThat(teardownJob.subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
+        .isEmpty();
+  }
+
+  @Test
+  public void createXtsSetupAndTearDownJob_retryCtsPlan_createsJobs() throws Exception {
+    Path testReportPropertiesFile = folder.newFile("test-report-retry-cts.properties").toPath();
+    Properties testReportProperties = new Properties();
+    testReportProperties.setProperty(SuiteCommon.TEST_REPORT_PROPERTY_TEST_PLAN, "cts");
+    try (FileOutputStream outputStream = new FileOutputStream(testReportPropertiesFile.toFile())) {
+      testReportProperties.store(outputStream, null);
+    }
+    when(previousResultLoader.getPrevSessionTestReportProperties(any(Path.class), anyInt(), any()))
+        .thenReturn(Optional.of(testReportPropertiesFile));
+
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("retry")
+                .setCommandLineArgs("retry --retry 0")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setXtsType("cts")
+                .setRetrySessionIndex(0)
+                .setIsXtsDynamicDownloadEnabled(true));
+
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(sessionRequestInfo)).thenReturn(false);
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo))
+        .thenReturn(ImmutableList.of("ModuleA"));
+    when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(any())).thenReturn(Path.of("/tmp/tmp"));
+
+    Optional<JobInfo> setupJobOpt = jobCreator.createXtsSetupJob(sessionRequestInfo);
+    assertThat(setupJobOpt).isPresent();
+    assertThat(setupJobOpt.get().properties().get(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED))
+        .isEqualTo("true");
+
+    Optional<JobInfo> teardownJobOpt = jobCreator.createXtsTearDownJob(sessionRequestInfo);
+    assertThat(teardownJobOpt).isPresent();
+    assertThat(teardownJobOpt.get().properties().get(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED))
+        .isEqualTo("true");
+  }
+
+  @Test
+  public void createXtsSetupAndTearDownJob_retryNonCtsPlan_doesNotCreateJobs() throws Exception {
+    Path testReportPropertiesFile = folder.newFile("test-report-retry-non-cts.properties").toPath();
+    Properties testReportProperties = new Properties();
+    testReportProperties.setProperty(SuiteCommon.TEST_REPORT_PROPERTY_TEST_PLAN, "cts-camera");
+    try (FileOutputStream outputStream = new FileOutputStream(testReportPropertiesFile.toFile())) {
+      testReportProperties.store(outputStream, null);
+    }
+    when(previousResultLoader.getPrevSessionTestReportProperties(any(Path.class), anyInt(), any()))
+        .thenReturn(Optional.of(testReportPropertiesFile));
+
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("retry")
+                .setCommandLineArgs("retry --retry 0")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setXtsType("cts")
+                .setRetrySessionIndex(0)
+                .setIsXtsDynamicDownloadEnabled(true));
+
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(sessionRequestInfo)).thenReturn(false);
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo))
+        .thenReturn(ImmutableList.of("ModuleA"));
+
+    Optional<JobInfo> setupJobOpt = jobCreator.createXtsSetupJob(sessionRequestInfo);
+    assertThat(setupJobOpt).isEmpty();
+
+    Optional<JobInfo> teardownJobOpt = jobCreator.createXtsTearDownJob(sessionRequestInfo);
+    assertThat(teardownJobOpt).isEmpty();
+  }
 }
