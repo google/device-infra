@@ -281,7 +281,7 @@ export declare interface ReleaseLabServerRequest {
  * Response for RunTroubleshootScript API.
  */
 export declare interface RunTroubleshootScriptResponse {
-  readonly exitCode: number;
+  readonly exitCode?: number;
   readonly stdout: string;
   readonly stderr: string;
 }

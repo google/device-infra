@@ -112,8 +112,8 @@
                   <pre class="terminal-content">{{ executionResult()!.stderr }}</pre>
                 </div>
               }
-              <div class="terminal-status" [class.success]="executionResult()!.exitCode === 0" [class.failure]="executionResult()!.exitCode !== 0">
-                Exit code: {{ executionResult()!.exitCode }}
+              <div class="terminal-status" [class.success]="isSuccess()" [class.failure]="!isSuccess()">
+                Exit code: {{ exitCode() }}
               </div>
             </div>
           }
@@ -124,7 +124,7 @@
 
   <ng-template #actionsTemplate>
     @if (currentStep() === 3 && !isExecuting() && executionResult()) {
-      @if (executionResult()!.exitCode === 0) {
+      @if (isSuccess()) {
         <span class="status-text success">
           <mat-icon>check_circle</mat-icon> Operation completed successfully
         </span>

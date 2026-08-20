@@ -525,7 +525,10 @@ message RunTroubleshootScriptRequest {
 
 // Response message for RunTroubleshootScript.
 message RunTroubleshootScriptResponse {
-  int32 exit_code = 1;
+  // Mark as optional to enable field presence tracking (Proto3).
+  // This ensures that exit_code: 0 is explicitly emitted in JSON payloads,
+  // preventing it from being omitted as a default value.
+  optional int32 exit_code = 1;
   string stdout = 2;
   string stderr = 3;
 }

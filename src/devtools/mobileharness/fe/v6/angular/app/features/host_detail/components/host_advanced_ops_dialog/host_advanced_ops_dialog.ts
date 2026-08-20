@@ -69,6 +69,13 @@ export class HostAdvancedOpsDialog implements OnInit {
   readonly selectedScript = signal<TroubleshootScriptAction | null>(null);
   readonly executionResult = signal<RunTroubleshootScriptResponse | null>(null);
 
+  // Proto3 JSON serialization omits primitive fields with default values (like 0).
+  // If the request succeeds but exitCode is missing/undefined in the response JSON,
+  // it means the exit code was 0 (Success). We default to 0 here to keep the UI resilient.
+  // This will NOT mask non-zero failure codes, as they are never omitted by the serializer.
+  readonly exitCode = computed(() => this.executionResult()?.exitCode ?? 0);
+  readonly isSuccess = computed(() => this.exitCode() === 0);
+
   readonly dialogTitle = computed(() => {
     const step = this.currentStep();
     const script = this.selectedScript();

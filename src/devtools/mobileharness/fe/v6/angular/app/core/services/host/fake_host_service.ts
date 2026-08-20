@@ -745,6 +745,23 @@ TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0`,
         stderr: `[Fake Host Service Error] Failed to execute ${script} on ${hostName}.\nError: USB port reset operation timed out after 5000ms.\nDevice smart hub not responding on bus 001.`,
       }).pipe(delay(1500));
     }
+
+    // Simulate Proto3 default omission where exitCode 0 is missing from JSON
+    if (hostName.toLowerCase().includes('missing-exit-code')) {
+      const omitExitCode = Math.random() < 0.5;
+      const response: RunTroubleshootScriptResponse = omitExitCode
+        ? {
+            stdout: `[Fake Host Service] Successfully executed ${script} on ${hostName}.\nOmitted exitCode simulated: true`,
+            stderr: '',
+          }
+        : {
+            exitCode: 0,
+            stdout: `[Fake Host Service] Successfully executed ${script} on ${hostName}.\nOmitted exitCode simulated: false`,
+            stderr: '',
+          };
+      return of(response).pipe(delay(1500));
+    }
+
     return of({
       exitCode: 0,
       stdout: `[Fake Host Service] Successfully executed ${script} on ${hostName}.\nAll 8 downstream USB ports enumerated successfully.`,
