@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.infra.controller.plugin;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.util.stream.Collectors.groupingBy;
 
 import com.google.common.cache.Cache;
 import com.google.common.collect.ImmutableList;
@@ -47,20 +46,28 @@ import io.github.classgraph.ScanResult;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.NotThreadSafe;
+import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 
 /**
  * Plugin loader for loading classes from the jar files.
@@ -137,11 +144,6 @@ public class PluginCreator implements AutoCloseable {
   @Nullable
   private ClassLoader classLoader;
 
-  /** The scan result of the plugin jars. */
-  @GuardedBy("lock")
-  @Nullable
-  private ScanResult scanResult;
-
   /**
    * Creates a plugin loader.
    *
@@ -163,7 +165,7 @@ public class PluginCreator implements AutoCloseable {
       @Nullable LogCollector<?> log,
       Module... systemModules) {
     checkArgument(
-        !PluginType.UNSPECIFIED.equals(pluginType),
+        !pluginType.equals(PluginType.UNSPECIFIED),
         "Plugin type should not be %s",
         PluginType.UNSPECIFIED);
     this.jarUris = jarPaths.stream().map(File::new).map(File::toURI).collect(toImmutableList());
@@ -247,10 +249,6 @@ public class PluginCreator implements AutoCloseable {
   public void close() {
     synchronized (lock) {
       isClosed = true;
-      if (scanResult != null) {
-        scanResult.close();
-        scanResult = null;
-      }
       if (classLoader != null) {
         clearEventBusSubscriberCache(classLoader);
         try {
@@ -309,32 +307,48 @@ public class PluginCreator implements AutoCloseable {
     }
   }
 
-  /** Scans the target jars. Handles creation-specific exceptions explicitly. */
-  private void scanJars(List<URL> jarUrls) throws MobileHarnessException {
-    synchronized (lock) {
-      if (isClosed) {
-        logInfo("Plugin creator is closed, skip scanning all jars: [%s]", jarUrls);
-        return;
+  private static final String PLUGIN_ANNOTATION_DESCRIPTOR = Type.getDescriptor(Plugin.class);
+  private static final String PLUGIN_MODULE_ANNOTATION_DESCRIPTOR =
+      Type.getDescriptor(PluginModule.class);
+
+  @Nullable
+  @SuppressWarnings("GoogleOpcodes")
+  private static List<String> findCandidateClasses(URL jarUrl, String targetAnnotationDescriptor) {
+    List<String> candidateClassNames = new ArrayList<>();
+    try {
+      File file = new File(jarUrl.toURI());
+      try (JarFile jarFile = new JarFile(file)) {
+        Enumeration<JarEntry> entries = jarFile.entries();
+        while (entries.hasMoreElements()) {
+          JarEntry entry = entries.nextElement();
+          String name = entry.getName();
+          if (name.endsWith(".class") && !entry.isDirectory()) {
+            try (InputStream is = jarFile.getInputStream(entry)) {
+              ClassReader classReader = new ClassReader(is);
+              boolean[] isAnnotated = new boolean[1];
+              classReader.accept(
+                  new ClassVisitor(Opcodes.ASM9) {
+                    @Override
+                    public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+                      if (targetAnnotationDescriptor.equals(descriptor)) {
+                        isAnnotated[0] = true;
+                      }
+                      return null;
+                    }
+                  },
+                  ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+              if (isAnnotated[0]) {
+                candidateClassNames.add(classReader.getClassName().replace('/', '.'));
+              }
+            }
+          }
+        }
       }
-      if (scanResult != null) {
-        logInfo("Plugin creator has already scanned all jars: [%s]", jarUrls);
-        return;
-      }
-      try {
-        scanResult =
-            new ClassGraph()
-                .overrideClassLoaders(classLoader)
-                .enableAnnotationInfo() // module scanning is enabled by default
-                .ignoreClassVisibility()
-                .scan();
-      } catch (Exception e) {
-        close();
-        throw new MobileHarnessException(
-            BasicErrorId.PLUGIN_LOADER_FAILED_TO_SCAN_CLASS_GRAPH_IN_JAR,
-            String.format("Error scanning class graph in plugin jar [%s]", jarUrls),
-            e);
-      }
+    } catch (Exception e) {
+      // Fallback to unconstrained ClassGraph scan if fast bytecode inspection encounters an error.
+      return null;
     }
+    return candidateClassNames;
   }
 
   /**
@@ -350,35 +364,51 @@ public class PluginCreator implements AutoCloseable {
         logInfo(
             "No plugin module class name given, scanning the jars to search plugin module classes"
                 + " by plugin module annotation");
-        scanJars(jarUrls);
-        if (scanResult == null) {
-          logInfo("Failed to scan the jars: [%s]", jarUrls);
-          return moduleClasses;
-        }
-        // Group class metadata from ScanResult by their originating JAR URL
-        Map<URL, List<ClassInfo>> classesByJar =
-            scanResult.getClassesWithAnnotation(PluginModule.class).stream()
-                .collect(groupingBy(ClassInfo::getClasspathElementURL));
-        // Evaluate the fallback rules independently for each JAR.
-        for (var entry : classesByJar.entrySet()) {
-          final URL jarUrl = entry.getKey();
+        for (URL jarUrl : jarUrls) {
           logInfo("Searching plugin module classes in jar [%s]", jarUrl);
-          final List<ClassInfo> classInfos = entry.getValue();
-          PluginModuleClassProvider moduleClassProvider =
-              new RetryPluginModuleClassProvider(
-                  new AnnotatedPluginModuleClassProvider(
-                      classInfos, log, /* warnUnmatchedTypes= */ true, pluginType),
-                  new AnnotatedPluginModuleClassProvider(
-                      classInfos, log, /* warnUnmatchedTypes= */ false, PluginType.UNSPECIFIED));
-          Set<Class<? extends Module>> newModuleClasses;
-          try {
-            newModuleClasses = moduleClassProvider.getPluginModuleClasses();
+          List<String> candidates =
+              findCandidateClasses(jarUrl, PLUGIN_MODULE_ANNOTATION_DESCRIPTOR);
+          if (candidates != null && candidates.isEmpty()) {
+            logInfo("Get plugin module classes [] from jar [%s]", jarUrl);
+            continue;
+          }
+          ClassGraph classGraph =
+              new ClassGraph()
+                  .overrideClasspath(jarUrl)
+                  .overrideClassLoaders(classLoader)
+                  .ignoreParentClassLoaders()
+                  .enableAnnotationInfo()
+                  .ignoreClassVisibility();
+          if (candidates != null) {
+            classGraph.acceptClasses(candidates.toArray(new String[0]));
+          }
+          try (ScanResult scanResult = classGraph.scan()) {
+            List<ClassInfo> classInfos = scanResult.getClassesWithAnnotation(PluginModule.class);
+            PluginModuleClassProvider moduleClassProvider =
+                new RetryPluginModuleClassProvider(
+                    new AnnotatedPluginModuleClassProvider(
+                        classInfos, log, /* warnUnmatchedTypes= */ true, pluginType),
+                    new AnnotatedPluginModuleClassProvider(
+                        classInfos, log, /* warnUnmatchedTypes= */ false, PluginType.UNSPECIFIED));
+            Set<Class<? extends Module>> newModuleClasses;
+            try {
+              newModuleClasses = moduleClassProvider.getPluginModuleClasses();
+            } catch (MobileHarnessException e) {
+              close();
+              throw e;
+            }
+            logInfo("Get plugin module classes %s from jar [%s]", newModuleClasses, jarUrl);
+            moduleClasses.addAll(newModuleClasses);
           } catch (MobileHarnessException e) {
             close();
             throw e;
+          } catch (RuntimeException e) {
+            close();
+            throw new MobileHarnessException(
+                BasicErrorId.PLUGIN_LOADER_FAILED_TO_SCAN_CLASS_GRAPH_IN_JAR,
+                String.format("Error scanning class graph in plugin jar [%s]", jarUrl),
+                e);
           }
-          logInfo("Get plugin module classes %s from jar [%s]", newModuleClasses, jarUrl);
-          moduleClasses.addAll(newModuleClasses);
         }
       } else {
         logInfo("Searching plugin module classes in all jars by names %s", moduleClassNames);
@@ -406,38 +436,53 @@ public class PluginCreator implements AutoCloseable {
       Set<Class<?>> classes = new HashSet<>();
       if (classNames == null) {
         logInfo("No plugin class name given, searching plugin class by plugin annotation");
-        scanJars(jarUrls);
-        if (scanResult == null) {
-          logInfo("Failed to scan the jars: [%s]", jarUrls);
-          return classes;
-        }
-        // Group class metadata from ScanResult by their originating JAR URL
-        Map<URL, List<ClassInfo>> classesByJar =
-            scanResult.getClassesWithAnnotation(Plugin.class).stream()
-                .collect(groupingBy(ClassInfo::getClasspathElementURL));
-        // Evaluate the fallback rules independently for each JAR.
-        for (var entry : classesByJar.entrySet()) {
-          final URL jarUrl = entry.getKey();
+        for (URL jarUrl : jarUrls) {
           logInfo("Searching plugin classes in jar [%s]", jarUrl);
-          final List<ClassInfo> classInfos = entry.getValue();
-          PluginClassProvider classProvider =
-              new RetryPluginClassProvider(
-                  new AnnotatedPluginClassProvider(
-                      classInfos, log, /* warnUnmatchedTypes= */ true, pluginType),
-                  new AnnotatedPluginClassProvider(
-                      classInfos, log, /* warnUnmatchedTypes= */ false, PluginType.UNSPECIFIED));
-          Set<Class<?>> newClasses;
-          try {
-            newClasses = classProvider.getPluginClasses();
+          List<String> candidates = findCandidateClasses(jarUrl, PLUGIN_ANNOTATION_DESCRIPTOR);
+          if (candidates != null && candidates.isEmpty()) {
+            logInfo("Get plugin classes [] from jar [%s]", jarUrl);
+            continue;
+          }
+          ClassGraph classGraph =
+              new ClassGraph()
+                  .overrideClasspath(jarUrl)
+                  .overrideClassLoaders(classLoader)
+                  .ignoreParentClassLoaders()
+                  .enableAnnotationInfo()
+                  .ignoreClassVisibility();
+          if (candidates != null) {
+            classGraph.acceptClasses(candidates.toArray(new String[0]));
+          }
+          try (ScanResult scanResult = classGraph.scan()) {
+            List<ClassInfo> classInfos = scanResult.getClassesWithAnnotation(Plugin.class);
+            PluginClassProvider classProvider =
+                new RetryPluginClassProvider(
+                    new AnnotatedPluginClassProvider(
+                        classInfos, log, /* warnUnmatchedTypes= */ true, pluginType),
+                    new AnnotatedPluginClassProvider(
+                        classInfos, log, /* warnUnmatchedTypes= */ false, PluginType.UNSPECIFIED));
+            Set<Class<?>> newClasses;
+            try {
+              newClasses = classProvider.getPluginClasses();
+            } catch (MobileHarnessException e) {
+              close();
+              throw e;
+            }
+            logInfo("Get plugin classes %s from jar [%s]", newClasses, jarUrl);
+            if (newClasses.size() > 1) {
+              logWarning("Get more than one plugin class from jar [%s]: %s", jarUrl, newClasses);
+            }
+            classes.addAll(newClasses);
           } catch (MobileHarnessException e) {
             close();
             throw e;
+          } catch (RuntimeException e) {
+            close();
+            throw new MobileHarnessException(
+                BasicErrorId.PLUGIN_LOADER_FAILED_TO_SCAN_CLASS_GRAPH_IN_JAR,
+                String.format("Error scanning class graph in plugin jar [%s]", jarUrl),
+                e);
           }
-          logInfo("Get plugin classes %s from jar [%s]", newClasses, jarUrl);
-          if (newClasses.size() > 1) {
-            logWarning("Get more than one plugin class from jar [%s]: %s", jarUrl, newClasses);
-          }
-          classes.addAll(newClasses);
         }
       } else {
         logInfo("Searching plugin classes in all jars by names %s", classNames);
