@@ -147,8 +147,9 @@ public abstract class XtsJobCreator {
             : ImmutableList.of(
                 XtsConstants.STATIC_XTS_JOB_NAME, XtsConstants.DYNAMIC_MCTS_JOB_NAME);
 
+    boolean isDynamicMctsEnabled = isDynamicMctsEnabled(sessionRequestInfo);
     for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
-      if (shouldCreateDynamicDownloadJobs(tradefedJobInfo, sessionRequestInfo)) {
+      if (isDynamicMctsEnabled) {
         for (String jobName : allDynamicDownloadJobNames) {
           jobInfos.add(createDynamicJobInfo(sessionRequestInfo, tradefedJobInfo, jobName));
         }
@@ -226,7 +227,6 @@ public abstract class XtsJobCreator {
         SubPlan runRetryTfSubPlan = prepareRunRetrySubPlan(sessionRequestInfo, /* forTf= */ true);
         String prevSessionXtsTestPlan = runRetryTfSubPlan.getPreviousSessionXtsTestPlan();
         driverParams.put("prev_session_xts_test_plan", prevSessionXtsTestPlan);
-        extraJobProperties.put(Job.PREV_SESSION_XTS_TEST_PLAN, prevSessionXtsTestPlan);
         injectBuildFingerprint(extraJobProperties, runRetryTfSubPlan);
         Path runRetryTfSubPlanXmlFile =
             prepareRunRetryTfSubPlanXmlFile(sessionRequestInfo, runRetryTfSubPlan);
@@ -860,11 +860,11 @@ public abstract class XtsJobCreator {
         Job.PREV_SESSION_DEVICE_VENDOR_BUILD_FINGERPRINT, prevSessionDeviceVendorBuildFingerprint);
   }
 
-  private boolean shouldCreateDynamicDownloadJobs(
-      TradefedJobInfo tradefedJobInfo, SessionRequestInfo sessionRequestInfo) {
+  private boolean isDynamicMctsEnabled(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException {
     return sessionRequestInfo.getIsXtsDynamicDownloadEnabled()
         // Only enable dynamic download for CTS test plan currently.
-        && isDynamicMctsSupportedCtsTestPlan(tradefedJobInfo.extraJobProperties())
+        && isDynamicMctsSupportedCtsTestPlan(sessionRequestInfo)
         // Disable dynamic download if the job is for module sharding.
         && !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo);
   }
@@ -904,16 +904,27 @@ public abstract class XtsJobCreator {
     return dynamicDownloadJobInfo;
   }
 
-  private boolean isDynamicMctsSupportedCtsTestPlan(
-      ImmutableMap<XtsPropertyName, String> extraJobProperties) {
-    if (extraJobProperties.getOrDefault(Job.IS_RUN_RETRY, "").equals("true")) {
-      // check the previous session test plan
-      return DYNAMIC_MCTS_SUPPORTED_CTS_TEST_PLANS.contains(
-          extraJobProperties.getOrDefault(Job.PREV_SESSION_XTS_TEST_PLAN, ""));
-    } else {
-      return DYNAMIC_MCTS_SUPPORTED_CTS_TEST_PLANS.contains(
-          extraJobProperties.getOrDefault(Job.XTS_TEST_PLAN, ""));
+  private boolean isDynamicMctsSupportedCtsTestPlan(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException {
+    String testPlan = sessionRequestInfo.getTestPlan();
+    if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
+      return getPrevSessionTestPlan(sessionRequestInfo)
+          .map(DYNAMIC_MCTS_SUPPORTED_CTS_TEST_PLANS::contains)
+          .orElse(false);
     }
+    return DYNAMIC_MCTS_SUPPORTED_CTS_TEST_PLANS.contains(testPlan);
+  }
+
+  private Optional<String> getPrevSessionTestPlan(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException {
+    Optional<Path> testReportPropertiesFile =
+        getPrevSessionTestReportProperties(sessionRequestInfo);
+    if (testReportPropertiesFile.isEmpty()) {
+      return Optional.empty();
+    }
+    Properties testReportProperties =
+        TestReportPropertiesUtil.loadTestReportProperties(testReportPropertiesFile.get());
+    return TestReportPropertiesUtil.getTestPlan(testReportProperties);
   }
 
   private void injectSuiteVersion(

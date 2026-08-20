@@ -515,7 +515,9 @@ public class SessionResultHandlerUtil {
           /* testRecord= */ null,
           /* includeHtmlInZip= */ sessionRequestInfo.getHtmlInZip(),
           /* testPlan= */ sessionRequestInfo.getTestPlan(),
-          testReportProperties.buildOrThrow(),
+          testReportProperties
+              .put(SuiteCommon.TEST_REPORT_PROPERTY_TEST_PLAN, sessionRequestInfo.getTestPlan())
+              .buildOrThrow(),
           extraFilesOrDirsToZip);
     } else if (isRunRetry) {
       if (testReportHasTfModule && !curSessionHasTfJob) {
@@ -626,7 +628,9 @@ public class SessionResultHandlerUtil {
             /* testRecord= */ null,
             /* includeHtmlInZip= */ sessionRequestInfo.getHtmlInZip(),
             /* testPlan= */ previousTestPlanForRetry,
-            testReportProperties.buildOrThrow(),
+            testReportProperties
+                .put(SuiteCommon.TEST_REPORT_PROPERTY_TEST_PLAN, previousTestPlanForRetry)
+                .buildOrThrow(),
             extraFilesOrDirsToZip);
       }
     } else {

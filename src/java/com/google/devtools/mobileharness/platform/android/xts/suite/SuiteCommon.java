@@ -41,6 +41,15 @@ public final class SuiteCommon {
 
   public static final String TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE = "has_non_tf_module";
 
+  /**
+   * Property key in {@code test-report.properties} storing the xTS test plan (e.g., "cts",
+   * "cts-camera").
+   *
+   * <p>For an initial session run, this is the session's test plan. For a retry session, this is
+   * the original test plan of the previous session being retried rather than the literal "retry".
+   */
+  public static final String TEST_REPORT_PROPERTY_TEST_PLAN = "test_plan";
+
   public static final String MODULE_CHECKER_PRE = "PreModuleChecker";
   public static final String MODULE_CHECKER_POST = "PostModuleChecker";
 

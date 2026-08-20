@@ -143,6 +143,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__subpackages__",

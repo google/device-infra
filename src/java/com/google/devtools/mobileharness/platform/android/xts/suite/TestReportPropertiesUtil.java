@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 
 /** Utilities for reading and writing {@code test-report.properties} files. */
@@ -90,5 +91,15 @@ public final class TestReportPropertiesUtil {
   public static boolean hasNonTfModule(Properties properties) {
     return Boolean.parseBoolean(
         properties.getProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE));
+  }
+
+  /**
+   * Returns the xTS test plan stored in properties, if present.
+   *
+   * <p>For an initial session run, this is the session's test plan. For a retry session, this is
+   * the original test plan of the previous session being retried rather than the literal "retry".
+   */
+  public static Optional<String> getTestPlan(Properties properties) {
+    return Optional.ofNullable(properties.getProperty(SuiteCommon.TEST_REPORT_PROPERTY_TEST_PLAN));
   }
 }

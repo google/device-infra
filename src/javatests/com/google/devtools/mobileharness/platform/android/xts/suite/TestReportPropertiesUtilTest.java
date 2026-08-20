@@ -41,7 +41,8 @@ public final class TestReportPropertiesUtilTest {
     ImmutableMap<String, String> propertiesMap =
         ImmutableMap.of(
             SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE, "true",
-            SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE, "false");
+            SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE, "false",
+            SuiteCommon.TEST_REPORT_PROPERTY_TEST_PLAN, "cts");
 
     TestReportPropertiesUtil.writeTestReportProperties(propertiesMap, parentDir);
 
@@ -52,6 +53,7 @@ public final class TestReportPropertiesUtilTest {
 
     assertThat(TestReportPropertiesUtil.hasTfModule(loadedProperties)).isTrue();
     assertThat(TestReportPropertiesUtil.hasNonTfModule(loadedProperties)).isFalse();
+    assertThat(TestReportPropertiesUtil.getTestPlan(loadedProperties)).hasValue("cts");
   }
 
   @Test

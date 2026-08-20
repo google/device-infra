@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.D
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader.TradefedResultFilesBundle;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
@@ -66,6 +67,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import javax.inject.Inject;
@@ -562,6 +564,48 @@ public final class ConsoleJobCreatorTest {
             "prev_session_xts_test_plan",
             "cts");
     assertThat(driverParamsMap.get("subplan_xml")).startsWith(xtsRootDir.getAbsolutePath());
+  }
+
+  @Test
+  public void createXtsTradefedTestJobInfo_withPrevSessionTestPlanInTestReportProperties()
+      throws Exception {
+    SubPlan subPlan = new SubPlan();
+    subPlan.setPreviousSessionDeviceBuildFingerprint("[fake device build fingerprint]");
+    subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
+    File xtsRootDir = folder.newFolder("xts_root_dir_test_report_prop");
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
+            .setTestPlan("retry")
+            .setCommandLineArgs("retry --retry 0")
+            .setXtsType("cts")
+            .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .setRetrySessionIndex(0)
+            .setIsXtsDynamicDownloadEnabled(true)
+            .setEnableDefaultLogs(false);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
+
+    Path testReportPropertiesFile = folder.newFile("test-report-prev-plan.properties").toPath();
+    Properties testReportProperties = new Properties();
+    testReportProperties.setProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE, "true");
+    testReportProperties.setProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE, "false");
+    testReportProperties.setProperty(SuiteCommon.TEST_REPORT_PROPERTY_TEST_PLAN, "cts");
+    try (FileOutputStream outputStream = new FileOutputStream(testReportPropertiesFile.toFile())) {
+      testReportProperties.store(outputStream, null);
+    }
+    when(previousResultLoader.getPrevSessionTestReportProperties(any(Path.class), anyInt(), any()))
+        .thenReturn(Optional.of(testReportPropertiesFile));
+    when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
+    doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
+        .thenReturn(JobConfig.getDefaultInstance());
+
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
+
+    assertThat(tradefedJobInfoList).hasSize(1);
+    assertThat(tradefedJobInfoList.get(0).extraJobProperties())
+        .containsEntry(Job.IS_RUN_RETRY, "true");
   }
 
   @Test
