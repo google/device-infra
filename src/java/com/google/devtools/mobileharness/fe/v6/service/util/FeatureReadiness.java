@@ -92,6 +92,6 @@ public class FeatureReadiness {
   }
 
   public boolean isAdvancedOperationsReady() {
-    return false;
+    return true;
   }
 }

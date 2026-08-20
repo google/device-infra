@@ -110,6 +110,6 @@ public final class FeatureReadinessTest {
 
   @Test
   public void isAdvancedOperationsReady_returnsFalse() {
-    assertThat(featureReadiness.isAdvancedOperationsReady()).isFalse();
+    assertThat(featureReadiness.isAdvancedOperationsReady()).isTrue();
   }
 }
