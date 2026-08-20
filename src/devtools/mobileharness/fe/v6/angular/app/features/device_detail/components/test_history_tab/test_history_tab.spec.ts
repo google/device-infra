@@ -2,6 +2,7 @@ import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {of, Subject} from 'rxjs';
 
+import {DebugService} from '@deviceinfra/app/core/services/debug_service';
 import {DeviceTestHistoryResponse} from '../../../../core/models/device_test_history';
 import {
   DEVICE_SERVICE,
@@ -34,6 +35,7 @@ describe('TestHistoryTab Component', () => {
   let fixture: ComponentFixture<TestHistoryTab>;
   let component: TestHistoryTab;
   let deviceServiceSpy: jasmine.SpyObj<DeviceService>;
+  let debugServiceSpy: jasmine.SpyObj<DebugService>;
 
   beforeEach(async () => {
     deviceServiceSpy = jasmine.createSpyObj<DeviceService>('DeviceService', [
@@ -41,9 +43,17 @@ describe('TestHistoryTab Component', () => {
     ]);
     deviceServiceSpy.getDeviceTestHistory.and.returnValue(of(FIRST_PAGE));
 
+    debugServiceSpy = jasmine.createSpyObj<DebugService>('DebugService', [
+      'isDebug',
+    ]);
+    debugServiceSpy.isDebug.and.returnValue(false);
+
     await TestBed.configureTestingModule({
       imports: [TestHistoryTab, NoopAnimationsModule],
-      providers: [{provide: DEVICE_SERVICE, useValue: deviceServiceSpy}],
+      providers: [
+        {provide: DEVICE_SERVICE, useValue: deviceServiceSpy},
+        {provide: DebugService, useValue: debugServiceSpy},
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TestHistoryTab);
@@ -64,13 +74,68 @@ describe('TestHistoryTab Component', () => {
     expect(component.canPrev()).toBeFalse();
   });
 
-  it('builds the test detail link as http://mhfe/testdetailview/<job_id>/<test_id>', () => {
+  it('builds the test nav link config', () => {
     expect(
-      component.linkHref({
+      component.getNavLinkConfig({
         text: 't1',
         target: {test: {testId: 't1', jobId: 'j1'}},
       }),
-    ).toBe('http://mhfe/testdetailview/j1/t1');
+    ).toEqual({
+      type: 'test',
+      jobId: 'j1',
+      testId: 't1',
+    });
+  });
+
+  it('builds the job nav link config', () => {
+    expect(
+      component.getNavLinkConfig({
+        text: 'j1',
+        target: {job: {jobId: 'j1'}},
+      }),
+    ).toEqual({
+      type: 'job',
+      jobId: 'j1',
+    });
+  });
+
+  it('builds the host nav link config', () => {
+    expect(
+      component.getNavLinkConfig({
+        text: 'h1',
+        target: {host: {hostName: 'h1', hostIp: '1.1.1.1'}},
+      }),
+    ).toEqual({
+      type: 'host',
+      hostName: 'h1',
+      hostIp: '1.1.1.1',
+    });
+  });
+
+  it('builds the device nav link config', () => {
+    expect(
+      component.getNavLinkConfig({
+        text: 'd1',
+        target: {device: {id: 'd1', hostName: 'h1', hostIp: '1.1.1.1'}},
+      }),
+    ).toEqual({
+      type: 'device',
+      hostName: 'h1',
+      hostIp: '1.1.1.1',
+      deviceId: 'd1',
+    });
+  });
+
+  it('builds the session nav link config', () => {
+    expect(
+      component.getNavLinkConfig({
+        text: 's1',
+        target: {session: {sessionId: 's1'}},
+      }),
+    ).toEqual({
+      type: 'session',
+      sessionId: 's1',
+    });
   });
 
   it('formats duration and start time text cells', () => {
