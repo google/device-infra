@@ -25,27 +25,22 @@ java_library(
     testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
-        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
-        "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
-        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search:search_service_logic_impl",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index_builder",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:fleet_data_source",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:scenario_curation_module",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:fleet_snapshot_store",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_source",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_source",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_registry",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
-        "@maven//:com_google_inject_guice",
+        "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:junit_junit",
     ],
 )
 
 junit_test_suites(
     name = "gen_tests",
-    sizes = [
-        "small",
-    ],
+    sizes = ["small"],
     deps = [":tests"],
 )

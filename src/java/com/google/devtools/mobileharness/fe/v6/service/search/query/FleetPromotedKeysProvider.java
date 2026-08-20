@@ -242,18 +242,7 @@ public final class FleetPromotedKeysProvider {
    * Mirrors the derivation in {@link FleetChipResolver} and {@link FleetIndexBuilder}.
    */
   private static String displayName(FleetIndex index, String keyId) {
-    return index.displayNames().getOrDefault(keyId, deriveDisplayName(keyId));
-  }
-
-  private static String deriveDisplayName(String keyId) {
-    int separator = keyId.indexOf("::");
-    String namespace = separator >= 0 ? keyId.substring(0, separator) : "";
-    String name = separator >= 0 ? keyId.substring(separator + 2) : keyId;
-    return switch (namespace) {
-      case "dim" -> "Dimension " + name;
-      case "prop" -> "Host Property " + name;
-      default -> name;
-    };
+    return index.displayName(keyId);
   }
 
   /** Distinct value-combination count for a key plus whether some device in the set lacks it. */

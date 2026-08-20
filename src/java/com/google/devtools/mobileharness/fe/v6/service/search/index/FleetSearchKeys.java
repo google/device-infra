@@ -64,6 +64,21 @@ public final class FleetSearchKeys {
 
   public static final String DIM_QUARANTINED = "dim::quarantined";
 
+  /**
+   * The 8 built-in core dimensions pulled eagerly during the full fleet refresh. All other
+   * dimensions are long-tail and pulled on-demand via {@code DimensionOverlayStore}.
+   */
+  public static final ImmutableSet<String> CORE_DIMENSION_NAMES =
+      ImmutableSet.of(
+          "model",
+          "version",
+          "sdk_version",
+          "device_type",
+          "pool",
+          "host_group",
+          "sub_device_type",
+          "run_target");
+
   // ---- Built-in host keys ----
 
   public static final String HOST_NAME = "host::host_name";

@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetCountedNoValueEntry;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetCountedValue;
@@ -26,7 +25,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPlainVa
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPlainValueList;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListResponse;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
@@ -73,9 +72,9 @@ public final class FleetValueLister {
   public FleetValueListResponse listValues(
       SearchCorpus corpus, String keyId, List<Filter> filters) {
     FleetIndex index = corpus.index();
-    LazyPostings postings = corpus.postings();
+    Postings postings = corpus.postings();
     boolean knownKey = index.keyIds().contains(keyId);
-    ImmutableList<String> values = index.sortedValues().getOrDefault(keyId, ImmutableList.of());
+    ImmutableList<String> values = index.sortedValues(keyId);
 
     // The filtered set drops this key's own chip. With no other filters this is the whole fleet, so
     // every value's filtered count equals its total, which is exactly the prototype's behavior.
@@ -96,7 +95,7 @@ public final class FleetValueLister {
       SearchCorpus corpus,
       BitSet filteredSet,
       boolean knownKey,
-      LazyPostings postings) {
+      Postings postings) {
     // Collect in the index's ascending value order so equal filtered counts stay value-ascending
     // after the stable sort below.
     List<FleetCountedValue> entries = new ArrayList<>();
@@ -152,14 +151,7 @@ public final class FleetValueLister {
 
   /** The value's original-casing display, falling back to the normalized value when absent. */
   private static String displayFor(FleetIndex index, String keyId, String normalizedValue) {
-    ImmutableMap<String, String> displays = index.valueDisplays().get(keyId);
-    if (displays != null) {
-      String display = displays.get(normalizedValue);
-      if (display != null) {
-        return display;
-      }
-    }
-    return normalizedValue;
+    return index.valueDisplays(keyId).getOrDefault(normalizedValue, normalizedValue);
   }
 
   /** Number of devices in {@code posting} that are also in the filtered set. */
@@ -174,19 +166,19 @@ public final class FleetValueLister {
   }
 
   /** Fleet-wide count of devices that lack the key entirely. */
-  private static int noValueTotal(SearchCorpus corpus, LazyPostings postings, String keyId) {
+  private static int noValueTotal(SearchCorpus corpus, Postings postings, String keyId) {
     return corpus.recordCount() - devicesWithKey(postings, keyId).cardinality();
   }
 
   /** Count of devices in the filtered set that lack the key entirely. */
-  private static int noValueFiltered(LazyPostings postings, String keyId, BitSet filteredSet) {
+  private static int noValueFiltered(Postings postings, String keyId, BitSet filteredSet) {
     BitSet lacking = (BitSet) filteredSet.clone();
     lacking.andNot(devicesWithKey(postings, keyId));
     return lacking.cardinality();
   }
 
   /** Union of every posting list for the key: the devices that carry at least one value for it. */
-  private static BitSet devicesWithKey(LazyPostings postings, String keyId) {
+  private static BitSet devicesWithKey(Postings postings, String keyId) {
     BitSet withKey = new BitSet();
     for (int[] posting : postings.forKey(keyId).values()) {
       for (int deviceIndex : posting) {
