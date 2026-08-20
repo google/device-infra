@@ -63,7 +63,7 @@ java_library(
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_service_java_grpc",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_tjs_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/grpc:fe_grpc_invoker",
-        "@grpc-java//core",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/tjs:tjs_search_logic",
         "@grpc-java//stub",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
@@ -79,6 +79,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:lab_info_fleet_puller",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:scenario_curation_module",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:fleet_search_data_module",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/tjs:noop_tjs_search_logic",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/tjs:tjs_search_logic",
         "@maven//:com_google_inject_guice",
     ],
 )
