@@ -31,17 +31,25 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>Built once per {@link FleetSnapshot} lifetime and discarded when the snapshot is replaced by
  * the refresh cycle. A key's posting lists are constructed on first access by scanning the forward
- * store (O(N) per key, roughly 1 to 2 ms for 152K devices) and cached for subsequent lookups.
+ * store (O(N) per key: roughly 1 to 2 ms for 152K devices, and less than 1 ms for 43K hosts) and
+ * cached for subsequent lookups.
  *
  * <p>The forward store is supplied as a record-agnostic {@link RecordValues}, so the same posting
- * machinery serves the device index (backed by {@link DeviceValueExtractor}) and the host index
- * (backed by {@link HostValueExtractor}). The scan visits records in ascending index order, so a
- * posting list is always sorted, and the record index is stable across lookups.
+ * machinery serves both:
+ *
+ * <ul>
+ *   <li>Device search (via {@link #LazyPostings(ImmutableList)}, backed by {@link
+ *       DeviceValueExtractor})
+ *   <li>Host search (via {@link #forHosts(ImmutableList)}, backed by {@link HostValueExtractor})
+ * </ul>
+ *
+ * The scan visits records in ascending index order, so a posting list is always sorted, and the
+ * record index is stable across lookups.
  *
  * <p>Thread safety is provided by {@link ConcurrentHashMap#computeIfAbsent}, which guarantees that
  * at most one thread builds the posting lists for a given key.
  */
-public final class LazyPostings {
+public final class LazyPostings implements Postings {
 
   private static final int[] EMPTY = new int[0];
 
@@ -98,6 +106,7 @@ public final class LazyPostings {
   }
 
   /** Returns the posting list for (key, value), or an empty array if absent. */
+  @Override
   public int[] get(String keyId, String value) {
     ImmutableMap<String, int[]> keyPostings = forKey(keyId);
     int[] posting = keyPostings.get(value);
@@ -105,6 +114,7 @@ public final class LazyPostings {
   }
 
   /** Builds or returns cached posting lists for all values of a key. */
+  @Override
   public ImmutableMap<String, int[]> forKey(String keyId) {
     return cache.computeIfAbsent(keyId, this::buildKeyPostings);
   }

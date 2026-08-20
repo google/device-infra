@@ -28,7 +28,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnC
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogSection;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
@@ -121,7 +121,7 @@ public final class FleetColumnCataloger {
 
     Comparator<String> byCoverage =
         Comparator.<String>comparingInt(keyId -> -deviceCounts.getOrDefault(keyId, 0))
-            .thenComparing(keyId -> Ascii.toLowerCase(displayName(index, keyId)));
+            .thenComparing(keyId -> Ascii.toLowerCase(index.displayName(keyId)));
 
     // Partition the present keys into the browse buckets, matching the prototype's namespace split:
     // dim:: keys are dimensions (unless redundant), prop:: keys are host properties, and everything
@@ -140,7 +140,7 @@ public final class FleetColumnCataloger {
         builtin.add(keyId);
       }
     }
-    builtin.sort(Comparator.comparing(keyId -> displayName(index, keyId)));
+    builtin.sort(Comparator.comparing(index::displayName));
     dimensions.sort(byCoverage);
     properties.sort(byCoverage);
 
@@ -262,7 +262,7 @@ public final class FleetColumnCataloger {
       if (redundant.contains(keyId)) {
         continue;
       }
-      if (norm(displayName(index, keyId)).contains(normalizedQuery)
+      if (norm(index.displayName(keyId)).contains(normalizedQuery)
           || norm(bareName(keyId)).contains(normalizedQuery)) {
         hits.add(keyId);
       }
@@ -332,7 +332,7 @@ public final class FleetColumnCataloger {
    * the prototype's precomputed {@code key_device_count}.
    */
   private static ImmutableMap<String, Integer> keyDeviceCounts(
-      FleetIndex index, LazyPostings postings) {
+      FleetIndex index, Postings postings) {
     ImmutableMap.Builder<String, Integer> counts = ImmutableMap.builder();
     for (String keyId : index.keyIds()) {
       BitSet devices = new BitSet();
@@ -350,26 +350,10 @@ public final class FleetColumnCataloger {
       String keyId, FleetIndex index, ImmutableMap<String, Integer> deviceCounts, String reason) {
     return FleetColumnCatalogEntry.newBuilder()
         .setKey(keyId)
-        .setDisplayName(displayName(index, keyId))
+        .setDisplayName(index.displayName(keyId))
         .setDeviceCount(deviceCounts.getOrDefault(keyId, 0))
         .setReason(reason)
         .build();
-  }
-
-  /** The full key display name, falling back to a namespace-derived name when absent. */
-  private static String displayName(FleetIndex index, String keyId) {
-    return index.displayNames().getOrDefault(keyId, deriveDisplayName(keyId));
-  }
-
-  private static String deriveDisplayName(String keyId) {
-    int separator = keyId.indexOf("::");
-    String namespace = separator >= 0 ? keyId.substring(0, separator) : "";
-    String name = bareName(keyId);
-    return switch (namespace) {
-      case "dim" -> "Dimension " + name;
-      case "prop" -> "Host Property " + name;
-      default -> name;
-    };
   }
 
   /** The bare name of a namespaced key: the segment after the last {@code ::}. */
