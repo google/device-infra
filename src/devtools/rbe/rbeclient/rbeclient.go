@@ -24,6 +24,8 @@ type Opts struct {
 	CASConcurrency int
 	// RPCTimeouts is default RPC timeout.
 	RPCTimeouts map[string]time.Duration
+	// NoSecurity indicates that insecure/plaintext credentials should be used (e.g. in tests or local proxy).
+	NoSecurity bool
 }
 
 // New creates a new RBE client with given options.
@@ -38,6 +40,7 @@ func New(ctx context.Context, clientOpts Opts) (*client.Client, error) {
 
 	newClient, err := client.NewClient(ctx, clientOpts.Instance, client.DialParams{
 		Service:               clientOpts.ServiceAddress,
+		NoSecurity:            clientOpts.NoSecurity,
 		CredFile:              clientOpts.ServiceAccountJSON,
 		UseApplicationDefault: clientOpts.UseApplicationDefault,
 		MaxConcurrentRequests: client.DefaultMaxConcurrentRequests,
