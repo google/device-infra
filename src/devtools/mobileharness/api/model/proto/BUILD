@@ -92,6 +92,14 @@ java_proto_library(
     deps = [":test_proto"],
 )
 
+kt_jvm_proto_library(
+    name = "test_kt_proto",
+    visibility = [
+        "//java/com/google/android/libraries/communications/conference:__subpackages__",
+    ],
+    deps = [":test_proto"],
+)
+
 proto_library(
     name = "universe_proto",
     srcs = ["universe.proto"],
