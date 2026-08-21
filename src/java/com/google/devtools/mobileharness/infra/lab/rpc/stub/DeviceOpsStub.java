@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.infra.lab.rpc.stub;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
+import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.ConnectToDefaultWifiRequest;
+import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.ConnectToDefaultWifiResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.GetDeviceDebugInfoRequest;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.GetDeviceDebugInfoResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.GetDeviceLogRequest;
@@ -98,4 +100,25 @@ public interface DeviceOpsStub extends NonThrowingAutoCloseable {
   /** Runs a troubleshoot script asynchronously. */
   ListenableFuture<RunTroubleshootScriptResponse> runTroubleshootScriptAsync(
       RunTroubleshootScriptRequest request);
+
+  default ConnectToDefaultWifiResponse connectToDefaultWifi(ConnectToDefaultWifiRequest request)
+      throws RpcExceptionWithErrorId {
+    throw new UnsupportedOperationException();
+  }
+
+  default ConnectToDefaultWifiResponse connectToDefaultWifi(
+      ConnectToDefaultWifiRequest request, @Nullable String impersonationUser)
+      throws RpcExceptionWithErrorId {
+    return connectToDefaultWifi(request);
+  }
+
+  default ListenableFuture<ConnectToDefaultWifiResponse> connectToDefaultWifiAsync(
+      ConnectToDefaultWifiRequest request) {
+    throw new UnsupportedOperationException();
+  }
+
+  default ListenableFuture<ConnectToDefaultWifiResponse> connectToDefaultWifiAsync(
+      ConnectToDefaultWifiRequest request, boolean useClientRpcAuthority) {
+    return connectToDefaultWifiAsync(request);
+  }
 }
