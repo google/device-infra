@@ -48,14 +48,10 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 /**
@@ -136,9 +132,6 @@ public class AndroidAdbUtil {
 
   /** Output of the "{@code adb shell getprop <KEY>}" command if {@code <KEY>} not found. */
   @VisibleForTesting static final String OUTPUT_KEY_NOT_FOUND = "not found";
-
-  /** Pattern for parsing lines from `adb shell getprop`, like `[ro.product.model]: [Pixel 6]`. */
-  private static final Pattern GETPROP_LINE_PATTERN = Pattern.compile("\\[(.+?)\\]: \\[(.+?)\\]");
 
   /** Short timeout for quick operations. */
   @VisibleForTesting static final Duration SHORT_COMMAND_TIMEOUT = Duration.ofSeconds(5);
@@ -649,14 +642,7 @@ public class AndroidAdbUtil {
           "Failed to get all properties: " + e.getMessage(),
           e);
     }
-    Map<String, String> properties = new HashMap<>();
-    for (String line : LINE_SPLITTER.split(rawProps)) {
-      Matcher matcher = GETPROP_LINE_PATTERN.matcher(line.trim());
-      if (matcher.matches()) {
-        properties.put(matcher.group(1), matcher.group(2));
-      }
-    }
-    return ImmutableMap.copyOf(properties);
+    return AndroidPropertyParser.parse(rawProps);
   }
 
   /**

@@ -608,6 +608,13 @@ public class Flags {
   public static final Flag<Duration> dispatchDeviceInterval = DurationFlag.seconds(1L);
 
   @FlagSpec(
+      name = "enable_android_device_property_batch_detection",
+      help =
+          "Whether to enable batch getprop to detect Android device properties in"
+              + " AndroidDeviceHelper.")
+  public static final Flag<Boolean> enableAndroidDevicePropertyBatchDetection = Flag.value(false);
+
+  @FlagSpec(
       name = "enable_android_device_ready_check",
       help = "Whether to enable android device ready check.")
   public static final Flag<Boolean> enableAndroidDeviceReadyCheck = Flag.value(true);

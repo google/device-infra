@@ -23,10 +23,14 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -41,6 +45,7 @@ import org.mockito.junit.MockitoRule;
 public final class AndroidDeviceHelperTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+  @Rule public final SetFlags flags = new SetFlags();
 
   @Mock private BaseDevice device;
   @Mock private AndroidAdbUtil androidAdbUtil;
@@ -112,11 +117,13 @@ public final class AndroidDeviceHelperTest {
     verify(device)
         .updateDimension(
             Ascii.toLowerCase(AndroidProperty.SERIAL.name()),
-            new String[] {DEVICE_ID, Ascii.toLowerCase(DEVICE_ID)});
+            DEVICE_ID,
+            Ascii.toLowerCase(DEVICE_ID));
     verify(device)
         .updateDimension(
             Ascii.toLowerCase(AndroidProperty.BUILD.name()),
-            new String[] {deviceBuild, Ascii.toLowerCase(deviceBuild)});
+            deviceBuild,
+            Ascii.toLowerCase(deviceBuild));
   }
 
   @Test
@@ -127,9 +134,8 @@ public final class AndroidDeviceHelperTest {
 
     verify(device)
         .updateDimension(
-            Ascii.toLowerCase(AndroidProperty.RELEASE_VERSION.name()),
-            new String[] {RELEASE_VERSION});
-    verify(device).updateDimension(Dimension.Name.RELEASE_VERSION_MAJOR, new String[] {"6.0"});
+            Ascii.toLowerCase(AndroidProperty.RELEASE_VERSION.name()), RELEASE_VERSION);
+    verify(device).updateDimension(Dimension.Name.RELEASE_VERSION_MAJOR, "6.0");
   }
 
   @Test
@@ -167,30 +173,36 @@ public final class AndroidDeviceHelperTest {
   private void mockCommonSetupSteps(String sdkVersion, String releaseVersion) throws Exception {
     for (AndroidProperty key : AndroidProperty.values()) {
       switch (key) {
-        case SDK_VERSION:
-          when(androidAdbUtil.getProperty(DEVICE_ID, key)).thenReturn(sdkVersion);
-          break;
-        case SCREEN_DENSITY:
-          when(androidAdbUtil.getProperty(DEVICE_ID, key))
-              .thenReturn(String.valueOf(SCREEN_DENSITY));
-          break;
-        case ABI:
-          when(androidAdbUtil.getProperty(DEVICE_ID, key)).thenReturn(ABI);
-          break;
-        case MODEL:
-          when(androidAdbUtil.getProperty(DEVICE_ID, key)).thenReturn("nexus 5");
-          break;
-        case RELEASE_VERSION:
-          when(androidAdbUtil.getProperty(DEVICE_ID, key)).thenReturn(releaseVersion);
-          break;
-        case SERIAL:
-          when(androidAdbUtil.getProperty(DEVICE_ID, key)).thenReturn(DEVICE_ID);
-          break;
-        default:
-          when(androidAdbUtil.getProperty(DEVICE_ID, key)).thenReturn(key.name());
+        case SDK_VERSION -> when(androidAdbUtil.getProperty(DEVICE_ID, key)).thenReturn(sdkVersion);
+        case SCREEN_DENSITY ->
+            when(androidAdbUtil.getProperty(DEVICE_ID, key))
+                .thenReturn(String.valueOf(SCREEN_DENSITY));
+        case ABI -> when(androidAdbUtil.getProperty(DEVICE_ID, key)).thenReturn(ABI);
+        case MODEL -> when(androidAdbUtil.getProperty(DEVICE_ID, key)).thenReturn("nexus 5");
+        case RELEASE_VERSION ->
+            when(androidAdbUtil.getProperty(DEVICE_ID, key)).thenReturn(releaseVersion);
+        case SERIAL -> when(androidAdbUtil.getProperty(DEVICE_ID, key)).thenReturn(DEVICE_ID);
+        default -> when(androidAdbUtil.getProperty(DEVICE_ID, key)).thenReturn(key.name());
       }
       when(device.getDimension(Ascii.toLowerCase(key.name())))
           .thenReturn(ImmutableList.of(key.name()));
     }
+  }
+
+  private ImmutableMap<String, String> createCommonBatchProperties(
+      String sdkVersion, String releaseVersion) {
+    Map<String, String> map = new HashMap<>();
+    for (AndroidProperty key : AndroidProperty.values()) {
+      switch (key) {
+        case SDK_VERSION -> map.put(key.getPrimaryPropertyKey(), sdkVersion);
+        case SCREEN_DENSITY -> map.put(key.getPrimaryPropertyKey(), String.valueOf(SCREEN_DENSITY));
+        case ABI -> map.put(key.getPrimaryPropertyKey(), ABI);
+        case MODEL -> map.put(key.getPrimaryPropertyKey(), "nexus 5");
+        case RELEASE_VERSION -> map.put(key.getPrimaryPropertyKey(), releaseVersion);
+        case SERIAL -> map.put(key.getPrimaryPropertyKey(), DEVICE_ID);
+        default -> map.putIfAbsent(key.getPrimaryPropertyKey(), key.name());
+      }
+    }
+    return ImmutableMap.copyOf(map);
   }
 }

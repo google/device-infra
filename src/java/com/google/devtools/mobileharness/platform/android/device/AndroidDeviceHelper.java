@@ -22,6 +22,7 @@ import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -29,6 +30,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty.DoNotAddToDimension;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty.KeepDimensionValueCase;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidPropertyParser;
 import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -37,6 +39,8 @@ import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 import java.lang.annotation.Annotation;
+import java.util.Map;
+import javax.annotation.Nullable;
 
 /** Helper class for Android Device. */
 public class AndroidDeviceHelper {
@@ -75,6 +79,79 @@ public class AndroidDeviceHelper {
   @CanIgnoreReturnValue
   public boolean updateAndroidPropertyDimensions(BaseDevice device)
       throws MobileHarnessException, InterruptedException {
+    if (Flags.enableAndroidDevicePropertyBatchDetection.getNonNull()) {
+      return updateAndroidPropertyDimensionsBatch(device);
+    } else {
+      return updateAndroidPropertyDimensionsLegacy(device);
+    }
+  }
+
+  private boolean updateAndroidPropertyDimensionsBatch(BaseDevice device)
+      throws MobileHarnessException, InterruptedException {
+    String deviceId = device.getDeviceId();
+    ImmutableMap<String, String> allProperties = androidAdbUtil.getAllProperties(deviceId);
+    boolean isDimensionChanged = false;
+    for (AndroidProperty key : AndroidProperty.values()) {
+      if (PROP_NOT_SET_AS_DIMENSION.contains(key)) {
+        continue;
+      }
+      ImmutableSet<String> oldValues =
+          ImmutableSet.copyOf(device.getDimension(Ascii.toLowerCase(key.name())));
+      String value = AndroidPropertyParser.getPropertyValue(allProperties, key);
+      if (!value.isEmpty()) {
+        ImmutableSet<String> values = maybeLowerCaseProperty(key, value);
+
+        if (!oldValues.equals(values)) {
+          logger.atInfo().log(
+              "Dimension %s=%s (was: %s), device_id=%s",
+              Ascii.toLowerCase(key.name()), values, oldValues, deviceId);
+          device.updateDimension(Ascii.toLowerCase(key.name()), values.toArray(new String[0]));
+          isDimensionChanged = true;
+        }
+      }
+
+      switch (key) {
+        case ABI -> device.setProperty(PROPERTY_NAME_CACHED_ABI, value);
+        case RELEASE_VERSION -> {
+          // Expose major version as a dimension, as many clients do not care about minor version.
+          String majorVersion = extractMajorVersionFromFullVersion(value);
+          logger.atInfo().log(
+              "Dimension %s=%s, device_id=%s",
+              Ascii.toLowerCase(Dimension.Name.RELEASE_VERSION_MAJOR.toString()),
+              Ascii.toLowerCase(majorVersion),
+              deviceId);
+          device.updateDimension(
+              Dimension.Name.RELEASE_VERSION_MAJOR, Ascii.toLowerCase(majorVersion));
+        }
+        case SCREEN_DENSITY -> {
+          try {
+            device.setProperty(
+                PROPERTY_NAME_CACHED_SCREEN_DENSITY, Integer.toString(Integer.parseInt(value)));
+          } catch (NumberFormatException e) {
+            logger.atWarning().log(
+                "Failed to parse device %s screen density '%s' from device property: %s",
+                deviceId, value, MoreThrowables.shortDebugString(e));
+          }
+        }
+        case SDK_VERSION -> {
+          try {
+            device.setProperty(
+                PROPERTY_NAME_CACHED_SDK_VERSION, Integer.toString(Integer.parseInt(value)));
+          } catch (NumberFormatException e) {
+            logger.atWarning().log(
+                "Failed to parse device %s sdk version '%s' from device property: %s",
+                deviceId, value, MoreThrowables.shortDebugString(e));
+          }
+        }
+        default -> {}
+      }
+    }
+    isDimensionChanged |= updatePersistTestHarnessRequiredDimension(device, allProperties);
+    return isDimensionChanged;
+  }
+
+  private boolean updateAndroidPropertyDimensionsLegacy(BaseDevice device)
+      throws MobileHarnessException, InterruptedException {
     String deviceId = device.getDeviceId();
     boolean isDimensionChanged = false;
     for (AndroidProperty key : AndroidProperty.values()) {
@@ -97,10 +174,8 @@ public class AndroidDeviceHelper {
       }
 
       switch (key) {
-        case ABI:
-          device.setProperty(PROPERTY_NAME_CACHED_ABI, value);
-          break;
-        case RELEASE_VERSION:
+        case ABI -> device.setProperty(PROPERTY_NAME_CACHED_ABI, value);
+        case RELEASE_VERSION -> {
           // Expose major version as a dimension, as many clients do not care about minor version.
           String majorVersion = extractMajorVersionFromFullVersion(value);
           logger.atInfo().log(
@@ -110,8 +185,8 @@ public class AndroidDeviceHelper {
               deviceId);
           device.updateDimension(
               Dimension.Name.RELEASE_VERSION_MAJOR, Ascii.toLowerCase(majorVersion));
-          break;
-        case SCREEN_DENSITY:
+        }
+        case SCREEN_DENSITY -> {
           try {
             device.setProperty(
                 PROPERTY_NAME_CACHED_SCREEN_DENSITY, Integer.toString(Integer.parseInt(value)));
@@ -120,8 +195,8 @@ public class AndroidDeviceHelper {
                 "Failed to parse device %s screen density '%s' from device property: %s",
                 deviceId, value, MoreThrowables.shortDebugString(e));
           }
-          break;
-        case SDK_VERSION:
+        }
+        case SDK_VERSION -> {
           try {
             device.setProperty(
                 PROPERTY_NAME_CACHED_SDK_VERSION, Integer.toString(Integer.parseInt(value)));
@@ -130,9 +205,8 @@ public class AndroidDeviceHelper {
                 "Failed to parse device %s sdk version '%s' from device property: %s",
                 deviceId, value, MoreThrowables.shortDebugString(e));
           }
-          break;
-        default:
-          break;
+        }
+        default -> {}
       }
     }
     isDimensionChanged |= updatePersistTestHarnessRequiredDimension(device);
@@ -156,16 +230,29 @@ public class AndroidDeviceHelper {
   @CanIgnoreReturnValue
   public boolean updatePersistTestHarnessRequiredDimension(BaseDevice device)
       throws InterruptedException, MobileHarnessException {
+    return updatePersistTestHarnessRequiredDimension(device, /* allProperties= */ null);
+  }
+
+  /**
+   * Updates the required dimension persist_test_harness:false based on the device property
+   * persist.sys.test_harness, using the provided properties map in memory if available.
+   */
+  @CanIgnoreReturnValue
+  public boolean updatePersistTestHarnessRequiredDimension(
+      BaseDevice device, @Nullable Map<String, String> allProperties)
+      throws InterruptedException, MobileHarnessException {
     boolean isDimensionChanged = false;
     if (Flags.keepTestHarnessFalse.getNonNull()) {
       String deviceId = device.getDeviceId();
 
       String key = Ascii.toLowerCase(AndroidProperty.PERSIST_TEST_HARNESS.name());
       ImmutableSet<String> oldValues = ImmutableSet.copyOf(device.getRequiredDimension(key));
-      boolean value =
-          convertPropertyValueToBoolean(
-                  getPropertyValue(deviceId, AndroidProperty.PERSIST_TEST_HARNESS))
-              .orElse(false);
+      String propertyValue =
+          allProperties != null
+              ? AndroidPropertyParser.getPropertyValue(
+                  allProperties, AndroidProperty.PERSIST_TEST_HARNESS)
+              : getPropertyValue(deviceId, AndroidProperty.PERSIST_TEST_HARNESS);
+      boolean value = convertPropertyValueToBoolean(propertyValue).orElse(false);
       if (value) {
         if (!oldValues.isEmpty()) {
           device.info().dimensions().required().remove(key);
@@ -242,9 +329,5 @@ public class AndroidDeviceHelper {
               }
             })
         .collect(toImmutableSet());
-  }
-
-  private static String normalizeSize(String size) {
-    return Ascii.toLowerCase(size.trim()).replace(" ", "").replace("gib", "gb");
   }
 }

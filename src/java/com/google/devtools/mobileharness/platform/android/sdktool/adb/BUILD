@@ -134,6 +134,7 @@ java_library(
     ],
     deps = [
         ":adb_internal_util",
+        ":android_property_parser",
         ":enums",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -147,6 +148,16 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/shell",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:base",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "android_property_parser",
+    srcs = ["AndroidPropertyParser.java"],
+    deps = [
+        ":enums",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],

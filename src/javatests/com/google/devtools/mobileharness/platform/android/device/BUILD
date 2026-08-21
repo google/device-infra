@@ -28,6 +28,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/device:android_device_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:base_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
