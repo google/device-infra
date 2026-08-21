@@ -612,7 +612,7 @@ public class Flags {
       help =
           "Whether to enable batch getprop to detect Android device properties in"
               + " AndroidDeviceHelper.")
-  public static final Flag<Boolean> enableAndroidDevicePropertyBatchDetection = Flag.value(false);
+  public static final Flag<Boolean> enableAndroidDevicePropertyBatchDetection = Flag.value(true);
 
   @FlagSpec(
       name = "enable_android_device_ready_check",

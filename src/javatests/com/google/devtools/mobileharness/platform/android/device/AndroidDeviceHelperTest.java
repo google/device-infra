@@ -105,6 +105,11 @@ public final class AndroidDeviceHelperTest {
   public void updateAndroidPropertyDimensions_retainPropertyOriginalValue() throws Exception {
     String deviceBuild = "RD1A.200810.022.A4";
     mockCommonSetupSteps(String.valueOf(SDK_VERSION), RELEASE_VERSION);
+    Map<String, String> batchProperties =
+        new HashMap<>(createCommonBatchProperties(String.valueOf(SDK_VERSION), RELEASE_VERSION));
+    batchProperties.put(AndroidProperty.BUILD.getPrimaryPropertyKey(), deviceBuild);
+    when(androidAdbUtil.getAllProperties(DEVICE_ID))
+        .thenReturn(ImmutableMap.copyOf(batchProperties));
     when(device.getDimension(Ascii.toLowerCase(AndroidProperty.SERIAL.name())))
         .thenReturn(ImmutableList.of());
     when(device.getDimension(Ascii.toLowerCase(AndroidProperty.BUILD.name())))
@@ -171,6 +176,8 @@ public final class AndroidDeviceHelperTest {
   }
 
   private void mockCommonSetupSteps(String sdkVersion, String releaseVersion) throws Exception {
+    when(androidAdbUtil.getAllProperties(DEVICE_ID))
+        .thenReturn(createCommonBatchProperties(sdkVersion, releaseVersion));
     for (AndroidProperty key : AndroidProperty.values()) {
       switch (key) {
         case SDK_VERSION -> when(androidAdbUtil.getProperty(DEVICE_ID, key)).thenReturn(sdkVersion);
