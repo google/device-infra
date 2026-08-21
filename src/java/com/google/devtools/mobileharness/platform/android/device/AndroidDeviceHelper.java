@@ -95,55 +95,9 @@ public class AndroidDeviceHelper {
       if (PROP_NOT_SET_AS_DIMENSION.contains(key)) {
         continue;
       }
-      ImmutableSet<String> oldValues =
-          ImmutableSet.copyOf(device.getDimension(Ascii.toLowerCase(key.name())));
       String value = AndroidPropertyParser.getPropertyValue(allProperties, key);
-      if (!value.isEmpty()) {
-        ImmutableSet<String> values = maybeLowerCaseProperty(key, value);
-
-        if (!oldValues.equals(values)) {
-          logger.atInfo().log(
-              "Dimension %s=%s (was: %s), device_id=%s",
-              Ascii.toLowerCase(key.name()), values, oldValues, deviceId);
-          device.updateDimension(Ascii.toLowerCase(key.name()), values.toArray(new String[0]));
-          isDimensionChanged = true;
-        }
-      }
-
-      switch (key) {
-        case ABI -> device.setProperty(PROPERTY_NAME_CACHED_ABI, value);
-        case RELEASE_VERSION -> {
-          // Expose major version as a dimension, as many clients do not care about minor version.
-          String majorVersion = extractMajorVersionFromFullVersion(value);
-          logger.atInfo().log(
-              "Dimension %s=%s, device_id=%s",
-              Ascii.toLowerCase(Dimension.Name.RELEASE_VERSION_MAJOR.toString()),
-              Ascii.toLowerCase(majorVersion),
-              deviceId);
-          device.updateDimension(
-              Dimension.Name.RELEASE_VERSION_MAJOR, Ascii.toLowerCase(majorVersion));
-        }
-        case SCREEN_DENSITY -> {
-          try {
-            device.setProperty(
-                PROPERTY_NAME_CACHED_SCREEN_DENSITY, Integer.toString(Integer.parseInt(value)));
-          } catch (NumberFormatException e) {
-            logger.atWarning().log(
-                "Failed to parse device %s screen density '%s' from device property: %s",
-                deviceId, value, MoreThrowables.shortDebugString(e));
-          }
-        }
-        case SDK_VERSION -> {
-          try {
-            device.setProperty(
-                PROPERTY_NAME_CACHED_SDK_VERSION, Integer.toString(Integer.parseInt(value)));
-          } catch (NumberFormatException e) {
-            logger.atWarning().log(
-                "Failed to parse device %s sdk version '%s' from device property: %s",
-                deviceId, value, MoreThrowables.shortDebugString(e));
-          }
-        }
-        default -> {}
+      if (updateSinglePropertyDimension(device, deviceId, key, value)) {
+        isDimensionChanged = true;
       }
     }
     isDimensionChanged |= updatePersistTestHarnessRequiredDimension(device, allProperties);
@@ -158,58 +112,68 @@ public class AndroidDeviceHelper {
       if (PROP_NOT_SET_AS_DIMENSION.contains(key)) {
         continue;
       }
-      ImmutableSet<String> oldValues =
-          ImmutableSet.copyOf(device.getDimension(Ascii.toLowerCase(key.name())));
       String value = getPropertyValue(deviceId, key);
-      if (!value.isEmpty()) {
-        ImmutableSet<String> values = maybeLowerCaseProperty(key, value);
-
-        if (!oldValues.equals(values)) {
-          logger.atInfo().log(
-              "Dimension %s=%s (was: %s), device_id=%s",
-              Ascii.toLowerCase(key.name()), values, oldValues, deviceId);
-          device.updateDimension(Ascii.toLowerCase(key.name()), values.toArray(new String[0]));
-          isDimensionChanged = true;
-        }
-      }
-
-      switch (key) {
-        case ABI -> device.setProperty(PROPERTY_NAME_CACHED_ABI, value);
-        case RELEASE_VERSION -> {
-          // Expose major version as a dimension, as many clients do not care about minor version.
-          String majorVersion = extractMajorVersionFromFullVersion(value);
-          logger.atInfo().log(
-              "Dimension %s=%s, device_id=%s",
-              Ascii.toLowerCase(Dimension.Name.RELEASE_VERSION_MAJOR.toString()),
-              Ascii.toLowerCase(majorVersion),
-              deviceId);
-          device.updateDimension(
-              Dimension.Name.RELEASE_VERSION_MAJOR, Ascii.toLowerCase(majorVersion));
-        }
-        case SCREEN_DENSITY -> {
-          try {
-            device.setProperty(
-                PROPERTY_NAME_CACHED_SCREEN_DENSITY, Integer.toString(Integer.parseInt(value)));
-          } catch (NumberFormatException e) {
-            logger.atWarning().log(
-                "Failed to parse device %s screen density '%s' from device property: %s",
-                deviceId, value, MoreThrowables.shortDebugString(e));
-          }
-        }
-        case SDK_VERSION -> {
-          try {
-            device.setProperty(
-                PROPERTY_NAME_CACHED_SDK_VERSION, Integer.toString(Integer.parseInt(value)));
-          } catch (NumberFormatException e) {
-            logger.atWarning().log(
-                "Failed to parse device %s sdk version '%s' from device property: %s",
-                deviceId, value, MoreThrowables.shortDebugString(e));
-          }
-        }
-        default -> {}
+      if (updateSinglePropertyDimension(device, deviceId, key, value)) {
+        isDimensionChanged = true;
       }
     }
     isDimensionChanged |= updatePersistTestHarnessRequiredDimension(device);
+    return isDimensionChanged;
+  }
+
+  @CanIgnoreReturnValue
+  private boolean updateSinglePropertyDimension(
+      BaseDevice device, String deviceId, AndroidProperty key, String value) {
+    boolean isDimensionChanged = false;
+    if (!value.isEmpty()) {
+      ImmutableSet<String> values = maybeLowerCaseProperty(key, value);
+
+      ImmutableSet<String> oldValues =
+          ImmutableSet.copyOf(device.getDimension(Ascii.toLowerCase(key.name())));
+      if (!oldValues.equals(values)) {
+        logger.atInfo().log(
+            "Dimension %s=%s (was: %s), device_id=%s",
+            Ascii.toLowerCase(key.name()), values, oldValues, deviceId);
+        device.updateDimension(Ascii.toLowerCase(key.name()), values.toArray(new String[0]));
+        isDimensionChanged = true;
+      }
+    }
+
+    switch (key) {
+      case ABI -> device.setProperty(PROPERTY_NAME_CACHED_ABI, value);
+      case RELEASE_VERSION -> {
+        // Expose major version as a dimension, as many clients do not care about minor version.
+        String majorVersion = extractMajorVersionFromFullVersion(value);
+        logger.atInfo().log(
+            "Dimension %s=%s, device_id=%s",
+            Ascii.toLowerCase(Dimension.Name.RELEASE_VERSION_MAJOR.toString()),
+            Ascii.toLowerCase(majorVersion),
+            deviceId);
+        device.updateDimension(
+            Dimension.Name.RELEASE_VERSION_MAJOR, Ascii.toLowerCase(majorVersion));
+      }
+      case SCREEN_DENSITY -> {
+        try {
+          device.setProperty(
+              PROPERTY_NAME_CACHED_SCREEN_DENSITY, Integer.toString(Integer.parseInt(value)));
+        } catch (NumberFormatException e) {
+          logger.atWarning().log(
+              "Failed to parse device %s screen density '%s' from device property: %s",
+              deviceId, value, MoreThrowables.shortDebugString(e));
+        }
+      }
+      case SDK_VERSION -> {
+        try {
+          device.setProperty(
+              PROPERTY_NAME_CACHED_SDK_VERSION, Integer.toString(Integer.parseInt(value)));
+        } catch (NumberFormatException e) {
+          logger.atWarning().log(
+              "Failed to parse device %s sdk version '%s' from device property: %s",
+              deviceId, value, MoreThrowables.shortDebugString(e));
+        }
+      }
+      default -> {}
+    }
     return isDimensionChanged;
   }
 
