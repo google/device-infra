@@ -145,8 +145,8 @@ public class SessionRequestHandlerUtil {
       Pattern.compile(".*\\[(?<moduleParam>.*)]$");
 
   private static final Duration JOB_TEST_TIMEOUT_DIFF = Duration.ofMinutes(1L);
-  private static final Duration DEFAULT_TRADEFED_JOB_TIMEOUT = Duration.ofDays(15L);
-  private static final Duration DEFAULT_TRADEFED_START_TIMEOUT = Duration.ofDays(14L);
+  public static final Duration DEFAULT_TRADEFED_JOB_TIMEOUT = Duration.ofDays(15L);
+  public static final Duration DEFAULT_TRADEFED_START_TIMEOUT = Duration.ofDays(14L);
   private static final Duration DEFAULT_NON_TRADEFED_JOB_TIMEOUT = Duration.ofDays(5L);
   private static final Duration DEFAULT_NON_TRADEFED_START_TIMEOUT = Duration.ofDays(4L);
 
