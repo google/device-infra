@@ -73,6 +73,12 @@
   }
 }
 
+.link-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .test-link {
   color: #1a73e8;
   text-decoration: none;
@@ -81,6 +87,29 @@
 
   &:hover {
     text-decoration: underline;
+  }
+}
+
+.accessory-link {
+  color: #5f6368;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: #f1f3f4;
+    color: #3c4043;
+  }
+
+  .open-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
   }
 }
 

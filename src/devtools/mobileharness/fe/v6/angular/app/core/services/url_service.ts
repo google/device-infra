@@ -28,7 +28,9 @@ export interface ExternalUrlResponse {
  */
 export interface NavigatedMessage {
   type: 'NAVIGATED';
-  page: 'host_details' | 'device_details' | 'job_details' | 'test_details';
+  // no need to notify for other types of pages as of now, as NO
+  // parent frame supports them.
+  page: 'host_details' | 'device_details';
   params: Record<string, string>;
 }
 
@@ -150,13 +152,33 @@ export class UrlService implements OnDestroy {
   }
 
   /**
+   * Returns whether the application is running in standalone mode (not embedded in an iframe).
+   *
+   * Input: None.
+   * Output: boolean (true if standalone, false if embedded).
+   * Explanation: Checks the internal `isEmbeddedMode` flag to determine if the
+   * app is running independently or inside a parent frame.
+   */
+  isStandalone(): boolean {
+    return !this.isEmbeddedMode;
+  }
+
+  /**
    * Notifies the parent window that a navigation has occurred in the iframe.
    *
    * @param page The identifier of the page (e.g., 'host_details', 'device_details').
    * @param params Parameters for the current page.
+   *
+   * Input:
+   *   - page: 'host_details' | 'device_details' identifying the target page.
+   *   - params: Record<string, string> containing route parameters.
+   * Output: None.
+   * Explanation: Sends a `NAVIGATED` message to the parent window via `postMessage`
+   * to keep the parent application's URL or state synchronized with the iframe's
+   * internal navigation. Only takes effect in embedded mode.
    */
   notifyNavigated(
-    page: 'host_details' | 'device_details' | 'job_details' | 'test_details',
+    page: 'host_details' | 'device_details',
     params: Record<string, string>,
   ) {
     if (!this.isEmbeddedMode || !this.win) {

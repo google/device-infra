@@ -16,7 +16,10 @@ describe('NavLink', () => {
       'getExternalUrl',
       'isInEmbeddedMode',
       'notifyNavigated',
+      'isStandalone',
     ]);
+    mockUrlService.isInEmbeddedMode.and.returnValue(false);
+    mockUrlService.isStandalone.and.returnValue(true);
 
     await TestBed.configureTestingModule({
       imports: [NavLink],
@@ -82,6 +85,7 @@ describe('NavLink', () => {
 
     expect(event.preventDefault).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/hosts/host1'], {
+      queryParams: {'host_name': null},
       queryParamsHandling: '',
     });
   });
@@ -103,7 +107,7 @@ describe('NavLink', () => {
 
     expect(event.preventDefault).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/hosts/host1'], {
-      queryParams: {universe: 'my_universe'},
+      queryParams: {universe: 'my_universe', 'host_name': null},
       queryParamsHandling: '',
     });
   });
@@ -125,6 +129,7 @@ describe('NavLink', () => {
 
     expect(event.preventDefault).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/hosts/host1'], {
+      queryParams: {'host_name': null},
       queryParamsHandling: 'merge',
     });
   });
@@ -137,6 +142,7 @@ describe('NavLink', () => {
     });
     mockUrlService.getExternalUrl.and.returnValue(of('http://parent/host1'));
     mockUrlService.isInEmbeddedMode.and.returnValue(true);
+    mockUrlService.isStandalone.and.returnValue(false);
     fixture.detectChanges();
 
     const event = new MouseEvent('click');
@@ -145,6 +151,7 @@ describe('NavLink', () => {
 
     expect(event.preventDefault).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/hosts/host1'], {
+      queryParams: {'host_name': null},
       queryParamsHandling: '',
     });
   });
@@ -203,7 +210,7 @@ describe('NavLink', () => {
 
     fixture.detectChanges();
 
-    expect(component.fullPageLink).toBe('/hosts/host1?param1=value1');
+    expect(component.fullPageLink()).toBe('/hosts/host1?param1=value1');
   });
 
   it('should keep local URL on getExternalUrl failure in embedded mode', () => {
@@ -217,10 +224,11 @@ describe('NavLink', () => {
     });
     mockUrlService.getExternalUrl.and.returnValue(error$);
     mockUrlService.isInEmbeddedMode.and.returnValue(true);
+    mockUrlService.isStandalone.and.returnValue(false);
 
     fixture.detectChanges();
 
-    expect(component.fullPageLink).toContain('/hosts/host1');
+    expect(component.fullPageLink()).toContain('/hosts/host1');
   });
 
   it('should notify parent window immediately on client-side navigation', async () => {
@@ -231,6 +239,7 @@ describe('NavLink', () => {
     });
     mockUrlService.getExternalUrl.and.returnValue(of('http://parent/host1'));
     mockUrlService.isInEmbeddedMode.and.returnValue(true);
+    mockUrlService.isStandalone.and.returnValue(false);
     (router.navigate as jasmine.Spy).and.returnValue(Promise.resolve(true));
     fixture.detectChanges();
 
@@ -250,6 +259,7 @@ describe('NavLink', () => {
 
   it('should include device_uuid when fetching external URL in embedded mode for device', () => {
     mockUrlService.isInEmbeddedMode.and.returnValue(true);
+    mockUrlService.isStandalone.and.returnValue(false);
     mockUrlService.getExternalUrl.and.returnValue(of('http://parent/dev1'));
 
     fixture.componentRef.setInput('config', {
@@ -268,7 +278,7 @@ describe('NavLink', () => {
         'device_uuid': 'dev1',
       }),
     );
-    expect(component.fullPageLink).toBe('http://parent/dev1');
+    expect(component.fullPageLink()).toBe('http://parent/dev1');
   });
 
   it('should include uuid in notification on client-side navigation for device', async () => {
@@ -280,6 +290,7 @@ describe('NavLink', () => {
     });
     mockUrlService.getExternalUrl.and.returnValue(of('http://parent/dev1'));
     mockUrlService.isInEmbeddedMode.and.returnValue(true);
+    mockUrlService.isStandalone.and.returnValue(false);
     fixture.detectChanges();
 
     const event = new MouseEvent('click');
@@ -295,6 +306,7 @@ describe('NavLink', () => {
       },
     );
     expect(router.navigate).toHaveBeenCalledWith(['/devices/dev1'], {
+      queryParams: {'host_name': 'host1'},
       queryParamsHandling: '',
     });
   });
@@ -304,23 +316,19 @@ describe('NavLink', () => {
       type: 'job',
       jobId: 'job_123',
     });
-    mockUrlService.getExternalUrl.and.returnValue(of('http://parent/job_123'));
     mockUrlService.isInEmbeddedMode.and.returnValue(true);
+    mockUrlService.isStandalone.and.returnValue(false);
     fixture.detectChanges();
 
     expect(component.routerLink).toBe('/jobs/job_123');
-    expect(mockUrlService.getExternalUrl).toHaveBeenCalledWith('job_details', {
-      'job_id': 'job_123',
-    });
 
     const event = new MouseEvent('click');
     component.handleClick(event);
     await fixture.whenStable();
 
-    expect(mockUrlService.notifyNavigated).toHaveBeenCalledWith('job_details', {
-      'job_id': 'job_123',
-    });
+    expect(mockUrlService.notifyNavigated).not.toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/jobs/job_123'], {
+      queryParams: {'host_name': null},
       queryParamsHandling: '',
     });
   });
@@ -331,30 +339,44 @@ describe('NavLink', () => {
       jobId: 'job_123',
       testId: 'test_456',
     });
-    mockUrlService.getExternalUrl.and.returnValue(of('http://parent/test_456'));
     mockUrlService.isInEmbeddedMode.and.returnValue(true);
+    mockUrlService.isStandalone.and.returnValue(false);
     fixture.detectChanges();
 
     expect(component.routerLink).toBe('/jobs/job_123/tests/test_456');
-    expect(mockUrlService.getExternalUrl).toHaveBeenCalledWith('test_details', {
-      'job_id': 'job_123',
-      'test_id': 'test_456',
-    });
 
     const event = new MouseEvent('click');
     component.handleClick(event);
     await fixture.whenStable();
 
-    expect(mockUrlService.notifyNavigated).toHaveBeenCalledWith(
-      'test_details',
-      {
-        'job_id': 'job_123',
-        'test_id': 'test_456',
-      },
-    );
+    expect(mockUrlService.notifyNavigated).not.toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(
       ['/jobs/job_123/tests/test_456'],
-      {queryParamsHandling: ''},
+      {
+        queryParams: {'host_name': null},
+        queryParamsHandling: '',
+      },
     );
+  });
+
+  it('should generate correct routerLink and navigation params for session', async () => {
+    fixture.componentRef.setInput('config', {
+      type: 'session',
+      sessionId: 'session_123',
+    });
+    mockUrlService.isInEmbeddedMode.and.returnValue(true);
+    fixture.detectChanges();
+
+    expect(component.routerLink).toBe('/sessions/session_123');
+
+    const event = new MouseEvent('click');
+    component.handleClick(event);
+    await fixture.whenStable();
+
+    expect(mockUrlService.notifyNavigated).not.toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/sessions/session_123'], {
+      queryParams: {'host_name': null},
+      queryParamsHandling: '',
+    });
   });
 });

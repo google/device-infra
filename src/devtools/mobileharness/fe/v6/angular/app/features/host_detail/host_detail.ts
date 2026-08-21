@@ -35,6 +35,7 @@ import {
 
 import {HostOverviewPageData} from '../../core/models/host_overview';
 import {HOST_SERVICE} from '../../core/services/host/host_service';
+import {OpenInNewTabButton} from '../../shared/components/open_in_new_tab_button/open_in_new_tab_button';
 import {ClipboardService} from '../../shared/services/clipboard_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
 import {getErrorMessage} from '../../shared/utils/error_utils';
@@ -64,6 +65,7 @@ interface HostPageData {
     HostActionBar,
     MatMenuModule,
     RouterModule,
+    OpenInNewTabButton,
   ],
   host: {
     '[class.has-background]': 'hasBackground',
