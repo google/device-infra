@@ -1,5 +1,12 @@
 import {DOCUMENT} from '@angular/common';
-import {Component, inject, input, OnDestroy, OnInit} from '@angular/core';
+import {
+  Component,
+  inject,
+  input,
+  OnDestroy,
+  OnInit,
+  signal,
+} from '@angular/core';
 import {Router} from '@angular/router';
 import {ReplaySubject} from 'rxjs';
 import {takeUntil} from 'rxjs/operators';
@@ -18,20 +25,39 @@ export type NavLinkConfig =
       deviceId: string;
       universe?: string;
     }
+  // we don't have universe for job/test/session, but since TJS only exist
+  // for google_1p, so we can know that the universe is google_1p. And when
+  // navigating back from TJS to device/host detail page, we can still know
+  // the universe is google_1p, as only google_1p has TJS.
   | {type: 'job'; jobId: string}
-  | {type: 'test'; jobId: string; testId: string};
+  | {type: 'test'; jobId: string; testId: string}
+  | {type: 'session'; sessionId: string};
 
 /**
  * A customized link component to centralize navigation behavior.
  * For detailed design doc, including the behavior matrix and resolution logic,
  * please see java/com/google/devtools/mobileharness/fe/v6/knowledge/link_in_iframe_behavior.md
+ * We have 3 parts of parameter to merge for the final link:
+ *   1. query params in current browser window. Could contain `host_name`, `universe`, etc.
+ *     Note: during the merge process, `host_name` will be cleared.
+ *   2. custom query params in NavLinkConfig. Any additional parameter we want to pass to the link.
+ *     Note: this part is of higher priority than the first part.
+ *   3. NavLinkConfig could contain the hostName in host/device detail page.
+ *     Note: the hostName will be kept in the final URL if the link is for device detail page.
+ *
+ * Rules are as follows:
+ *
+ *   - if the link is for device detail page, we will always keep the `host_name` in the URL.
+ *   - if the link is for host detail page, we will keep the `host_name` if it is in the current
+ *     browser window, otherwise we will remove it.
+ *   - for other pages, we will always remove the `host_name`.
  */
 @Component({
   selector: 'a[app-nav-link]',
   template: '<ng-content></ng-content>',
   standalone: true,
   host: {
-    '[attr.href]': 'fullPageLink',
+    '[attr.href]': 'fullPageLink()',
     '(click)': 'handleClick($event)',
   },
 })
@@ -56,35 +82,61 @@ export class NavLink implements OnInit, OnDestroy {
   private readonly document = inject(DOCUMENT);
   private readonly destroyed = new ReplaySubject<void>(1);
 
-  /** Local route for client-side navigation within the V6 application. */
+  /**
+   *  Local route for client-side navigation within the V6 application.
+   *  take effect when render link in current page.
+   * Note: routerLink does NOT include query params.
+   */
   routerLink = '';
 
   /**
+   * Take effect when render link in a new browser tab.
    * External URL for server-side navigation (e.g., when running embedded in
    * Arsenal). This is bound to the 'href' attribute to allow native behavior
    * (right-click, ctrl-click) to work correctly.
+   * User scenario:
+   *   - when running in standalone mode, fullPageLink is the same as routerLink.
+   *   - when running in embedded mode, fullPageLink is the external URL(the
+   * parent window URL). Say in MTT, I clicked a device detail link in a host
+   * detial page with ctrl key pressed, then it will open a new tab and visit
+   * the MTT URL of the device detail page, which will embed the V6 device
+   * detail page in it.
+   *
    */
-  fullPageLink = '';
+  fullPageLink = signal<string>('');
 
   ngOnInit() {
     this.routerLink = this.getRouterLink();
+    // query params in current browser window.
     const search = this.document.defaultView?.location.search || '';
 
-    // Merge custom query parameters
     const urlParams = new URLSearchParams(search);
-    for (const [key, value] of Object.entries(this.customQueryParams())) {
-      urlParams.set(key, value);
+    // Merge unified query parameters with existing query parameters in current
+    // browser window.
+    const navQueryParams = this.getNavQueryParams();
+    for (const [key, value] of Object.entries(navQueryParams)) {
+      if (value === null) {
+        urlParams.delete(key);
+      } else {
+        urlParams.set(key, value);
+      }
     }
-    const cfg = this.config();
-    if ((cfg.type === 'host' || cfg.type === 'device') && cfg.universe) {
-      urlParams.set('universe', cfg.universe);
-    }
-    const newSearch = urlParams.toString();
 
-    // Set the fullPageLink to the routerLink by default, and update it to the
+    const cfg = this.config();
+
+    const newSearch = urlParams.toString();
+    // Set the fullPageLink to the routerLink by default, and the `fetchFullPageLink` will update it to the
     // full page link from the parent window if available.
-    this.fullPageLink = `${this.routerLink}${newSearch ? '?' + newSearch : ''}`;
-    this.fetchFullPageLink();
+    this.fullPageLink.set(
+      `${this.routerLink}${newSearch ? '?' + newSearch : ''}`,
+    );
+    console.log('init fullPageLink: ', this.fullPageLink());
+
+    // only host and device detail pages will run in embedded mode, so
+    // only fetch the full page link for host and device detail pages.
+    if (cfg.type === 'host' || cfg.type === 'device') {
+      this.fetchFullPageLink();
+    }
   }
 
   ngOnDestroy() {
@@ -92,6 +144,9 @@ export class NavLink implements OnInit, OnDestroy {
     this.destroyed.complete();
   }
 
+  /**
+   * Returns the router link in V6.
+   */
   private getRouterLink(): string {
     const cfg = this.config();
     if (cfg.type === 'host') {
@@ -100,13 +155,42 @@ export class NavLink implements OnInit, OnDestroy {
       return `/devices/${cfg.deviceId}`;
     } else if (cfg.type === 'job') {
       return `/jobs/${cfg.jobId}`;
+    } else if (cfg.type === 'session') {
+      return `/sessions/${cfg.sessionId}`;
     } else {
+      // for test
       return `/jobs/${cfg.jobId}/tests/${cfg.testId}`;
     }
   }
 
+  private getNavQueryParams(): Record<string, string | null> {
+    const cfg = this.config();
+    const queryParams: Record<string, string | null> = {
+      ...this.customQueryParams(),
+    };
+
+    if ((cfg.type === 'host' || cfg.type === 'device') && cfg.universe) {
+      queryParams['universe'] = cfg.universe;
+    }
+
+    if (cfg.type === 'device') {
+      queryParams['host_name'] = cfg.hostName;
+    } else {
+      queryParams['host_name'] = null;
+    }
+
+    return queryParams;
+  }
+
+  /**
+   * Fetches the full page link from the parent window.
+   * Only work in embedded mode with host or device type
+   */
   private fetchFullPageLink() {
-    if (!this.urlService.isInEmbeddedMode()) {
+    // no need to fetch if running in standalone mode, in which case the
+    // fullPageLink is already set to the routerLink, and there is no parent
+    // window.
+    if (this.urlService.isStandalone()) {
       return;
     }
 
@@ -122,8 +206,8 @@ export class NavLink implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroyed))
       .subscribe({
         next: (url: string) => {
-          this.fullPageLink = url;
-          console.log('fullPageLink', this.fullPageLink);
+          this.fullPageLink.set(url);
+          console.log('receivedfullPageLink', this.fullPageLink());
         },
         error: () => {
           console.warn(
@@ -149,6 +233,7 @@ export class NavLink implements OnInit, OnDestroy {
       event.button === 1 ||
       this.target() === '_blank'
     ) {
+      // in this case, the fullPageLink will be used by the browser.
       console.log(
         'handleClick executed, returning early to keep the default behavior',
       );
@@ -163,26 +248,32 @@ export class NavLink implements OnInit, OnDestroy {
     //- if NOT running in embedded mode, always choose routerLink using CSN.
     //- if running in embedded mode, choose routerLink too, using CSN.
     event.preventDefault();
+    // in this case, the routerLink will be used by the router.
     console.log(
       'handleClick executed, client-side navigating to',
       this.routerLink,
     );
+    // since the routerLink itself does not contain query params, we will use
+    // the router.navigate() method to navigate to the routerLink with query
+    // params.
 
-    const {page, params} = this.getNavParams();
     const cfg = this.config();
-    // Use uuid for navigation notification to match Arsenal's expectation.
-    if (cfg.type === 'device') {
-      params['uuid'] = cfg.deviceId;
-    }
-    // We notify immediately to speed up the synchronization with parent window.
-    this.urlService.notifyNavigated(page, params);
 
-    const queryParams: Record<string, string> = {
-      ...this.customQueryParams(),
-    };
-    if ((cfg.type === 'host' || cfg.type === 'device') && cfg.universe) {
-      queryParams['universe'] = cfg.universe;
+    // Only notify parent window for host and device pages, as currently
+    // no parent page support other types of pages.
+    if (cfg.type === 'host' || cfg.type === 'device') {
+      const {page, params} = this.getNavParams();
+      // Use uuid for navigation notification to match Arsenal's expectation.
+      if (cfg.type === 'device') {
+        params['uuid'] = cfg.deviceId;
+      }
+      this.urlService.notifyNavigated(
+        page as 'host_details' | 'device_details',
+        params,
+      );
     }
+
+    const queryParams = this.getNavQueryParams();
 
     this.router.navigate([this.routerLink], {
       ...(Object.keys(queryParams).length > 0 ? {queryParams} : {}),
@@ -191,7 +282,12 @@ export class NavLink implements OnInit, OnDestroy {
   }
 
   private getNavParams(): {
-    page: 'host_details' | 'device_details' | 'job_details' | 'test_details';
+    page:
+      | 'host_details'
+      | 'device_details'
+      | 'job_details'
+      | 'test_details'
+      | 'session_details';
     params: Record<string, string>;
   } {
     const cfg = this.config();
@@ -209,6 +305,14 @@ export class NavLink implements OnInit, OnDestroy {
         params: {
           'job_id': cfg.jobId,
           'test_id': cfg.testId,
+          ...this.customQueryParams(),
+        },
+      };
+    } else if (cfg.type === 'session') {
+      return {
+        page: 'session_details',
+        params: {
+          'session_id': cfg.sessionId,
           ...this.customQueryParams(),
         },
       };

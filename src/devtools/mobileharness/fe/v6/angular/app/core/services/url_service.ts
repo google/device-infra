@@ -28,7 +28,9 @@ export interface ExternalUrlResponse {
  */
 export interface NavigatedMessage {
   type: 'NAVIGATED';
-  page: 'host_details' | 'device_details' | 'job_details' | 'test_details';
+  // no need to notify for other types of pages as of now, as NO
+  // parent frame supports them.
+  page: 'host_details' | 'device_details';
   params: Record<string, string>;
 }
 
@@ -149,6 +151,10 @@ export class UrlService implements OnDestroy {
     return this.isEmbeddedMode;
   }
 
+  isStandalone(): boolean {
+    return !this.isEmbeddedMode;
+  }
+
   /**
    * Notifies the parent window that a navigation has occurred in the iframe.
    *
@@ -156,7 +162,7 @@ export class UrlService implements OnDestroy {
    * @param params Parameters for the current page.
    */
   notifyNavigated(
-    page: 'host_details' | 'device_details' | 'job_details' | 'test_details',
+    page: 'host_details' | 'device_details',
     params: Record<string, string>,
   ) {
     if (!this.isEmbeddedMode || !this.win) {

@@ -16,6 +16,11 @@ import {MatTableModule} from '@angular/material/table';
 import {EMPTY, Observable, Subject} from 'rxjs';
 import {catchError, map, switchMap} from 'rxjs/operators';
 
+import {DebugService} from '@deviceinfra/app/core/services/debug_service';
+import {
+  NavLink,
+  NavLinkConfig,
+} from '@deviceinfra/app/shared/components/nav_link/nav_link';
 import {
   Indicator,
   LinkCell,
@@ -40,7 +45,13 @@ import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
   templateUrl: './test_history_tab.ng.html',
   styleUrl: './test_history_tab.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, MatIconModule, MatProgressBarModule, MatTableModule],
+  imports: [
+    CommonModule,
+    MatIconModule,
+    MatProgressBarModule,
+    MatTableModule,
+    NavLink,
+  ],
 })
 export class TestHistoryTab implements OnInit {
   /** The device ID to fetch test history for. */
@@ -49,6 +60,7 @@ export class TestHistoryTab implements OnInit {
   @Input() refreshTrigger$?: Observable<void>;
 
   private readonly deviceService = inject(DEVICE_SERVICE);
+  readonly debugService = inject(DebugService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly loadTrigger$ = new Subject<string>();
 
@@ -147,13 +159,9 @@ export class TestHistoryTab implements OnInit {
 
   /**
    * Generates the URL for the test detail page in legacy MHFE.
-   *
+   * TODO: remove this non-debug branch after we release the TJS formally.
    * @param link The LinkCell containing the test and job IDs.
    * @return The absolute URL to the legacy MHFE test detail view.
-   *
-   * Explanation: This function extracts jobId and testId from the LinkCell target
-   * to construct a direct link to the test detail page (hosted in legacy UI).
-   * If either ID is missing, it logs an error to the console.
    */
   linkHref(link: LinkCell): string {
     const testId = link.target?.test?.testId ?? '';
@@ -162,6 +170,69 @@ export class TestHistoryTab implements OnInit {
       console.error('Missing testId or jobId for link:', link);
     }
     return `http://mhfe/testdetailview/${jobId}/${testId}`;
+  }
+
+  /**
+   * Generates the NavLinkConfig for a LinkCell.
+   *
+   * @param link The LinkCell containing the navigation target.
+   * @return The NavLinkConfig or null if target is missing.
+   */
+  getNavLinkConfig(link: LinkCell): NavLinkConfig | null {
+    const target = link.target;
+    if (!target) return null;
+
+    if (target.test) {
+      if (!target.test.jobId || !target.test.testId) {
+        console.error('Missing testId or jobId for link:', link);
+      }
+      return {
+        type: 'test',
+        jobId: target.test.jobId || '',
+        testId: target.test.testId || '',
+      };
+    }
+    if (target.job) {
+      if (!target.job.jobId) {
+        console.error('Missing jobId for link:', link);
+      }
+      return {
+        type: 'job',
+        jobId: target.job.jobId || '',
+      };
+    }
+    if (target.session) {
+      if (!target.session.sessionId) {
+        console.error('Missing sessionId for link:', link);
+      }
+      return {
+        type: 'session',
+        sessionId: target.session.sessionId || '',
+      };
+    }
+    if (target.host) {
+      if (!target.host.hostName) {
+        console.error('Missing hostName for link:', link);
+      }
+      return {
+        type: 'host',
+        hostName: target.host.hostName || '',
+        hostIp: target.host.hostIp || '',
+      };
+    }
+    if (target.device) {
+      if (!target.device.id) {
+        console.error('Missing deviceId for link:', link);
+      }
+      return {
+        type: 'device',
+        hostName: target.device.hostName || '',
+        hostIp: target.device.hostIp || '',
+        deviceId: target.device.id || '',
+      };
+    }
+    console.error('Unsupported link target:', link);
+    return null;
   }
 
   /** Maps a semantic indicator to a chip style class. */
