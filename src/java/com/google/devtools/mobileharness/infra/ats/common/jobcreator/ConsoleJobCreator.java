@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryA
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
 import java.nio.file.Path;
 import java.util.Map;
@@ -58,8 +59,14 @@ public class ConsoleJobCreator extends XtsJobCreator {
       LocalFileUtil localFileUtil,
       PreviousResultLoader previousResultLoader,
       RetryGenerator retryGenerator,
-      ModuleShardingArgsGenerator moduleShardingArgsGenerator) {
-    super(sessionRequestHandlerUtil, localFileUtil, retryGenerator, moduleShardingArgsGenerator);
+      ModuleShardingArgsGenerator moduleShardingArgsGenerator,
+      SystemUtil systemUtil) {
+    super(
+        sessionRequestHandlerUtil,
+        localFileUtil,
+        retryGenerator,
+        moduleShardingArgsGenerator,
+        systemUtil);
 
     this.previousResultLoader = previousResultLoader;
   }

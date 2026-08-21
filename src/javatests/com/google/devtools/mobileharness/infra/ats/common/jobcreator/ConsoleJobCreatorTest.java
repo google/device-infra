@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.common.jobcreator;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,6 +33,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.in.Timeout;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.TradefedJobInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfoUtil;
@@ -49,6 +51,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryG
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -65,6 +68,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -108,6 +112,7 @@ public final class ConsoleJobCreatorTest {
   @Bind @Mock private PreviousResultLoader previousResultLoader;
   @Bind @Mock private RetryGenerator retryGenerator;
   @Bind @Mock private ModuleShardingArgsGenerator moduleShardingArgsGenerator;
+  @Bind @Mock private SystemUtil systemUtil;
 
   @Inject private ConsoleJobCreator jobCreator;
 
@@ -116,6 +121,7 @@ public final class ConsoleJobCreatorTest {
     flags.setAll(ImmutableMap.of("enable_ats_mode", "true", "use_tf_retry", "false"));
 
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    when(systemUtil.isBlazeTest()).thenReturn(false);
     when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any(), anyBoolean()))
         .thenReturn(MOCK_SUB_DEVICE_SPEC_LIST);
   }
@@ -760,6 +766,7 @@ public final class ConsoleJobCreatorTest {
     assertThat(setupJob.properties().get(PhaseSkippableDecoratorConstants.PROP_EXECUTION_MODE))
         .isEqualTo(PhaseSkippableDecoratorConstants.ExecutionMode.SETUP_ONLY.name());
     assertThat(setupJob.type().getDriver()).isEqualTo("NoOpDriver");
+    assertThat(setupJob.setting().getNewTimeout().jobTimeout()).isEqualTo(Duration.ofMinutes(5));
     assertThat(setupJob.subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
         .containsExactly(
             "AndroidCleanAppsDecorator",
@@ -992,6 +999,11 @@ public final class ConsoleJobCreatorTest {
     assertThat(setupJob.properties().get(XtsConstants.XTS_JOB_NAME))
         .isEqualTo(XtsConstants.SETUP_JOB_NAME);
     assertThat(setupJob.subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll()).isEmpty();
+    assertThat(setupJob.setting().getNewTimeout().jobTimeout()).isEqualTo(Timeout.MAX_JOB_TIMEOUT);
+    assertThat(setupJob.setting().getNewTimeout().testTimeout())
+        .isEqualTo(Timeout.MAX_TEST_TIMEOUT);
+    assertThat(setupJob.setting().getNewTimeout().startTimeout())
+        .isEqualTo(Timeout.MAX_JOB_TIMEOUT.minusMinutes(1));
 
     Optional<JobInfo> teardownJobOpt = jobCreator.createXtsTearDownJob(sessionRequestInfo);
     assertThat(teardownJobOpt).isPresent();
@@ -1003,6 +1015,41 @@ public final class ConsoleJobCreatorTest {
         .isEqualTo(XtsConstants.TEARDOWN_JOB_NAME);
     assertThat(teardownJob.subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
         .isEmpty();
+    assertThat(teardownJob.setting().getNewTimeout().jobTimeout())
+        .isEqualTo(Timeout.MAX_JOB_TIMEOUT);
+    assertThat(teardownJob.setting().getNewTimeout().testTimeout())
+        .isEqualTo(Timeout.MAX_TEST_TIMEOUT);
+    assertThat(teardownJob.setting().getNewTimeout().startTimeout())
+        .isEqualTo(Timeout.MAX_JOB_TIMEOUT.minusMinutes(1));
+  }
+
+  @Test
+  public void createXtsSetupAndTearDownJob_dynamicMctsEnabledWithCustomTimeout_usesCustomTimeout()
+      throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setXtsType("cts")
+                .setIsXtsDynamicDownloadEnabled(true)
+                .setJobTimeout(toProtoDuration(Duration.ofHours(2)))
+                .setStartTimeout(toProtoDuration(Duration.ofHours(1))));
+
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(sessionRequestInfo)).thenReturn(false);
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo))
+        .thenReturn(ImmutableList.of("CtsSampleDeviceTestCases"));
+    when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(any())).thenReturn(Path.of("/tmp/tmp"));
+
+    Optional<JobInfo> setupJobOpt = jobCreator.createXtsSetupJob(sessionRequestInfo);
+    assertThat(setupJobOpt).isPresent();
+    JobInfo setupJob = setupJobOpt.get();
+    assertThat(setupJob.setting().getNewTimeout().jobTimeout()).isEqualTo(Duration.ofHours(2));
+    assertThat(setupJob.setting().getNewTimeout().testTimeout())
+        .isEqualTo(Duration.ofHours(2).minusMinutes(1));
+    assertThat(setupJob.setting().getNewTimeout().startTimeout()).isEqualTo(Duration.ofHours(1));
   }
 
   @Test
