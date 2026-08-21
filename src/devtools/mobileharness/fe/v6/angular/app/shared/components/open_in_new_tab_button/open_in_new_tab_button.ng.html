@@ -1,0 +1,9 @@
+@if (debugService.isDebug() && urlService.isInEmbeddedMode()) {
+  <button
+    class="title-action-btn"
+    title="Open in new tab"
+    (click)="openInNewTab()"
+  >
+    <mat-icon class="title-action-icon">open_in_new</mat-icon>
+  </button>
+}

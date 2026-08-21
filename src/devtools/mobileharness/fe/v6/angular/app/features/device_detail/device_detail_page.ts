@@ -41,6 +41,7 @@ import {DeviceOverviewPageData} from '../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../core/services/device/device_service';
 import {EnvUniverseService} from '../../core/services/env_universe_service';
 import {NavLink} from '../../shared/components/nav_link/nav_link';
+import {OpenInNewTabButton} from '../../shared/components/open_in_new_tab_button/open_in_new_tab_button';
 import {ClipboardService} from '../../shared/services/clipboard_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
 import {getErrorMessage} from '../../shared/utils/error_utils';
@@ -74,6 +75,7 @@ declare interface DevicePageData {
     TestHistoryTab,
     MatTooltipModule,
     NavLink,
+    OpenInNewTabButton,
   ],
   templateUrl: './device_detail_page.ng.html',
   styleUrl: './device_detail_page.scss',
