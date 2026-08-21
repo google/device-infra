@@ -9,16 +9,7 @@ bool isTickSafe(uint16_t tick, uint16_t minTick, uint16_t maxTick) {
 }
 
 ServoTicks defaultTicksForChannel(uint8_t channel) {
-  switch (channel % 4) {
-    case 0:
-      return {kPowerServoPress, kPowerServoRelease};
-    case 1:
-      return {kVolumeUpServoPress, kVolumeUpServoRelease};
-    case 2:
-      return {kVolumeDownServoPress, kVolumeDownServoRelease};
-    default:
-      return {kPowerServoPress, kPowerServoRelease};
-  }
+  return {300, 360};
 }
 
 void buildCalKey(char* out, size_t cap, uint8_t boardAddr, uint8_t channel) {

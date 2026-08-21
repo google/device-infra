@@ -6,13 +6,6 @@
 
 namespace recoverbot {
 
-constexpr uint16_t kPowerServoPress = 360;
-constexpr uint16_t kPowerServoRelease = 300;
-constexpr uint16_t kVolumeUpServoPress = 360;
-constexpr uint16_t kVolumeUpServoRelease = 300;
-constexpr uint16_t kVolumeDownServoPress = 360;
-constexpr uint16_t kVolumeDownServoRelease = 300;
-
 struct ServoTicks {
   uint16_t press;
   uint16_t release;
