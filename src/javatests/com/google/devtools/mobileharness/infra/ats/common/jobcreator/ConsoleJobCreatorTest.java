@@ -912,6 +912,60 @@ public final class ConsoleJobCreatorTest {
   }
 
   @Test
+  public void createXtsSetupJob_subPlanWithNonTfOnly_createsSetupJob() throws Exception {
+    File xtsRootDir = folder.newFolder("xts_root_subplan_non_tf");
+    File subplansDir = folder.newFolder("xts_root_subplan_non_tf", "android-cts", "subplans");
+    Path subPlanPath = new File(subplansDir, "npu.xml").toPath();
+    Files.writeString(
+        subPlanPath,
+        """
+        <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <subPlan>
+            <Entry include="arm64-v8a CtsNpuManagerMoblyTestCases CtsNpuManagerTest#test_foreground_app_finishes_first"/>
+        </subPlan>
+        """);
+
+    File toolsDir = folder.newFolder("xts_root_subplan_non_tf", "android-cts", "tools");
+    File jarFile = new File(toolsDir, "cts-tradefed.jar");
+    try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(jarFile))) {
+      zos.putNextEntry(new ZipEntry("cts-preconditions.configv2"));
+      String xml =
+          """
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration description="CTS precondition v2 configs">
+              <target_preparer class="com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidCleanAppsDecorator"/>
+          </configuration>
+          """;
+      zos.write(xml.getBytes(UTF_8));
+      zos.closeEntry();
+    }
+    when(localFileUtil.isFileExist(eq(jarFile.toPath()))).thenReturn(true);
+    when(localFileUtil.isDirExist(any(Path.class))).thenReturn(true);
+
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts-system")
+                .setCommandLineArgs("cts-system --subplan npu")
+                .setXtsRootDir(xtsRootDir.getAbsolutePath())
+                .setXtsType("cts")
+                .setSubPlanName("npu"));
+
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(sessionRequestInfo)).thenReturn(true);
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo))
+        .thenReturn(ImmutableList.of("CtsSampleDeviceTestCases"));
+    when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any(), anyBoolean()))
+        .thenReturn(MOCK_SUB_DEVICE_SPEC_LIST);
+    when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(any())).thenReturn(Path.of("/tmp/tmp"));
+
+    Optional<JobInfo> setupJobOpt = jobCreator.createXtsSetupJob(sessionRequestInfo);
+    assertThat(setupJobOpt).isPresent();
+    assertThat(setupJobOpt.get().subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
+        .containsExactly("AndroidCleanAppsDecorator");
+  }
+
+  @Test
   public void createXtsSetupAndTearDownJob_dynamicMctsEnabled_createsJobsWithoutDecorators()
       throws Exception {
     SessionRequestInfo sessionRequestInfo =

@@ -606,33 +606,54 @@ public abstract class XtsJobCreator {
    * <li>or dynamic MCTS is enabled.
    */
   private boolean shouldCreatePreconditionJobs(SessionRequestInfo sessionRequestInfo)
-      throws MobileHarnessException {
+      throws MobileHarnessException, InterruptedException {
     return shouldAttachPreconditionDecorators(sessionRequestInfo)
         || isDynamicMctsEnabled(sessionRequestInfo);
   }
 
   private boolean shouldAttachPreconditionDecorators(SessionRequestInfo sessionRequestInfo)
-      throws MobileHarnessException {
+      throws MobileHarnessException, InterruptedException {
     if (SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)) {
       return true;
     }
     if (!sessionRequestHandlerUtil.canCreateNonTradefedJobs(sessionRequestInfo)) {
       return false;
     }
+    return !hasTradefedJobs(sessionRequestInfo);
+  }
 
-    boolean hasTradefedJobs = true;
+  private boolean hasTradefedJobs(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException, InterruptedException {
+    if (sessionRequestInfo.getExcludeRunnersList().stream()
+        .anyMatch(runner -> ConfigurationUtil.getSimpleClassName(runner).equals("TradefedTest"))) {
+      return false;
+    }
+
     try {
       ImmutableList<String> tfModules =
           sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo);
-      hasTradefedJobs = tfModules != null && !tfModules.isEmpty();
-    } catch (MobileHarnessException e) {
-      if (e.getErrorId() == InfraErrorId.XTS_NO_MATCHED_TRADEFED_MODULES) {
-        hasTradefedJobs = false;
-      } else {
-        throw e;
+      if (sessionRequestInfo.hasSubPlanName()) {
+        Path subPlanPath =
+            prepareSubPlanPath(
+                Path.of(sessionRequestInfo.getXtsRootDir()),
+                sessionRequestInfo.getXtsType(),
+                sessionRequestInfo.getSubPlanName(),
+                sessionRequestInfo);
+        SubPlan subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
+        if (!subPlan.hasAnyTfIncludeFilters() && !subPlan.hasAnyTfExcludeFilters()) {
+          return false;
+        }
+        String filteredTradefedModules = filterTradefedModulesBySubPlan(tfModules, subPlan);
+        return !filteredTradefedModules.isEmpty();
       }
+      return tfModules != null && !tfModules.isEmpty();
+    } catch (MobileHarnessException e) {
+      if (e.getErrorId() == InfraErrorId.XTS_NO_MATCHED_TRADEFED_MODULES
+          || e.getErrorId() == InfraErrorId.OLCS_NO_CORRESPONDING_FILTER_FOUND_IN_SUBPLAN) {
+        return false;
+      }
+      throw e;
     }
-    return !hasTradefedJobs;
   }
 
   /**
