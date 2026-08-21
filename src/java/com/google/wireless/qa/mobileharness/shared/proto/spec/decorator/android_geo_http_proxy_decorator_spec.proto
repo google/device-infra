@@ -25,7 +25,7 @@ option java_multiple_files = true;
 option java_outer_classname = "AndroidGeoHttpProxyDecoratorSpecProto";
 
 // Specs for {@link AndroidGeoHttpProxyDecorator}.
-// Next tag: 3
+// Next tag: 5
 message AndroidGeoHttpProxyDecoratorSpec {
   extend DecoratorSpec {
     optional AndroidGeoHttpProxyDecoratorSpec ext = 1019;
@@ -39,5 +39,15 @@ message AndroidGeoHttpProxyDecoratorSpec {
   optional string credentials_file = 2 [(field_detail) = {
     is_required: false,
     help: "Optional path to the credentials file for the proxy."
+  }];
+
+  optional bool enable_network_logging = 3 [(field_detail) = {
+    is_required: false,
+    help: "Whether to enable network logging extension in Extensible VPN."
+  }];
+
+  optional bool enable_dns_blocking = 4 [(field_detail) = {
+    is_required: false,
+    help: "Whether to enable DNS blocking extension in Extensible VPN."
   }];
 }
