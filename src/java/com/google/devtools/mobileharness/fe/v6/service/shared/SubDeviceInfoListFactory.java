@@ -33,6 +33,7 @@ import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.proto.Device.SubDeviceDimensions;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -93,6 +94,9 @@ public class SubDeviceInfoListFactory {
                         .setName(strPair.getName())
                         .setValue(strPair.getValue())
                         .build())
+            .sorted(
+                Comparator.comparing(DeviceDimension::getName)
+                    .thenComparing(DeviceDimension::getValue))
             .collect(toImmutableList()));
 
     // Extract types

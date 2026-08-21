@@ -57,6 +57,7 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceInfoUtil;
 import com.google.devtools.mobileharness.fe.v6.service.shared.SubDeviceInfoListFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.time.Duration;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -345,15 +346,11 @@ public final class GetDeviceOverviewHandler {
         deviceInfo.getDeviceFeature().getCompositeDimension().getRequiredDimensionList();
 
     ImmutableList<DeviceDimension> detectedSupported =
-        allSupported.stream()
-            .filter(d -> !configDims.contains(d))
-            .map(this::convertToFeDimension)
-            .collect(toImmutableList());
+        convertToFeDimensions(
+            allSupported.stream().filter(d -> !configDims.contains(d)).collect(toImmutableList()));
     ImmutableList<DeviceDimension> detectedRequired =
-        allRequired.stream()
-            .filter(d -> !configDims.contains(d))
-            .map(this::convertToFeDimension)
-            .collect(toImmutableList());
+        convertToFeDimensions(
+            allRequired.stream().filter(d -> !configDims.contains(d)).collect(toImmutableList()));
 
     String detectedSourceKey =
         deviceData.managementMode() == ManagementMode.NOT_SUPPORTED
@@ -379,7 +376,11 @@ public final class GetDeviceOverviewHandler {
 
   private ImmutableList<DeviceDimension> convertToFeDimensions(
       List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> dimensions) {
-    return dimensions.stream().map(this::convertToFeDimension).collect(toImmutableList());
+    return dimensions.stream()
+        .map(this::convertToFeDimension)
+        .sorted(
+            Comparator.comparing(DeviceDimension::getName).thenComparing(DeviceDimension::getValue))
+        .collect(toImmutableList());
   }
 
   private DeviceDimension convertToFeDimension(
