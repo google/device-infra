@@ -53,6 +53,11 @@ import javax.annotation.Nullable;
  *
  * <p>A {@code UsmfBinary} intercepts CLI process invocations and delegates them to an embedded
  * execution stub that evaluates Python-like Starlark scripting rules.
+ *
+ * <p>For mocking Android Debug Bridge ({@code adb}) in integration tests, prefer using the
+ * high-level {@code com.google.devtools.mobileharness.shared.usmf.builtin.adb.MockAdbController}
+ * and {@code com.google.devtools.mobileharness.shared.usmf.builtin.adb.MockAndroidDevice} APIs,
+ * which provide out-of-the-box multi-device state management and ADB CLI emulation.
  */
 public final class UsmfBinary {
 

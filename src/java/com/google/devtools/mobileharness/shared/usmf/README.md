@@ -241,6 +241,15 @@ jitter), a built-in utility `rand()` is provided:
 
 ## 6. Java SDK Programmatic DSL Manual
 
+> **Tip**: For Android testing in Mobile Harness, you typically do not need to
+> write low-level Starlark rules manually with `UsmfBinary`. USMF includes
+> out-of-the-box high-level abstractions
+> ([`MockAdbController` & `MockAndroidDevice`](#out-of-the-box-android-testing-utilities))
+> preloaded with standard ADB behavior. The examples in this chapter illustrate
+> raw `UsmfBinary` usage; see
+> [Chapter 10](#out-of-the-box-android-testing-utilities) for the recommended
+> Android testing utilities.
+
 Test hosts configure, deploy, and verify mock binaries programmatically in Java.
 
 ### Example: Stateful ADB Mocking
@@ -293,6 +302,13 @@ public class LabServerIntegrationTest {
 --------------------------------------------------------------------------------
 
 ## 7. End-to-End Stateful Interception Showcase
+
+> **Note**: The `adb_rules.star` script below is a minimal, illustrative
+> showcase designed to demonstrate raw Starlark rule scripting and state machine
+> mechanics. For actual Android real device testing in Mobile Harness, it is
+> strongly recommended to use the out-of-the-box
+> [`MockAdbController`](#out-of-the-box-android-testing-utilities) instead (see
+> [Chapter 10](#out-of-the-box-android-testing-utilities)).
 
 The following example demonstrates a fully stateful mock `adb` binary
 configuration script managing device serialization, getprop properties, package
@@ -417,16 +433,284 @@ and diagnostic traces:
 
 --------------------------------------------------------------------------------
 
-## 10. Implementation Details
+<a id="out-of-the-box-android-testing-utilities"></a>
 
-### 10.1. Double-Layer Interception: Wrapper + Go Stub
+## 10. Out-of-the-Box Android Testing Utilities (`MockAdbController` & `MockAndroidDevice`)
+
+While USMF is a generic framework capable of mocking any CLI tool via Starlark
+rules, the vast majority of Mobile Harness and ATS integration tests interact
+with Android devices via `adb`.
+
+To eliminate repetitive rule scripting, USMF provides a high-level,
+batteries-included Android testing suite under package
+`com.google.devtools.mobileharness.shared.usmf.builtin.adb`:
+
+*   **`MockAdbController`**: High-level test controller managing multi-device
+    topologies, runtime connection lifecycles (online/offline/disconnected),
+    system property mutations (`getprop`/`setprop`), and package installations.
+*   **`MockAndroidDevice`**: Immutable model representing an Android device,
+    including serial number, `DeviceStatus`, system properties map, and
+    installed packages set, with out-of-the-box hardware presets (`pixel7`,
+    `defaultDevice`).
+*   **`mock_adb_rules.star`**: Standard embedded Starlark rule suite supporting
+    over 20 common `adb` subcommands and options out-of-the-box.
+
+### 10.1. Standard Starlark Rule Suite (`mock_adb_rules.star`)
+
+USMF bundles `mock_adb_rules.star` directly into the Java classpath, providing
+instant, zero-configuration support for the following ADB command categories:
+
+| Command Category        | Supported Commands &     | Simulated Behavior      |
+:                         : Arguments                :                         :
+| :---------------------- | :----------------------- | :---------------------- |
+| **Daemon & Version**    | `adb version`, `adb      | Returns Android Debug   |
+:                         : --version`,              : Bridge version strings; :
+:                         : `start-server`,          : no-op server life       :
+:                         : `kill-server`            : cycle.                  :
+| **Device Discovery**    | `adb devices`, `adb      | Formats attached        |
+:                         : devices -l`, `adb        : devices dynamically     :
+:                         : get-state`               : based on active state;  :
+:                         :                          : filters out             :
+:                         :                          : disconnected devices;   :
+:                         :                          : populates               :
+:                         :                          : model/product/transport :
+:                         :                          : ID for `-l`.            :
+| **Synchronization**     | `adb wait-for-device`,   | Validates               |
+:                         : `adb                     : online/disconnected     :
+:                         : wait-for-disconnect`,    : state; returns exit     :
+:                         : `wait-for-local-device`, : code `0` when satisfied :
+:                         : etc.                     : or error code `1` if    :
+:                         :                          : condition is not met.   :
+| **System Properties**   | `adb shell getprop       | Queries single property |
+:                         : [key]`, `adb getprop     : or outputs full         :
+:                         : [key]`, `adb shell       : formatted `[key]\:      :
+:                         : setprop <key> <val>`     : [val]` list; updates    :
+:                         :                          : state database          :
+:                         :                          : dynamically upon        :
+:                         :                          : `setprop`.              :
+| **Package Management**  | `adb shell pm list       | Dynamically tracks      |
+:                         : packages [-f]`, `adb     : installed packages in   :
+:                         : shell pm path <pkg>`,    : state; simulates        :
+:                         : `adb install [-r]        : streaming APK install   :
+:                         : <path>`, `adb uninstall  : and uninstall           :
+:                         : <pkg>`                   : sequences.              :
+| **Filesystem & IO**     | `adb push <local>        | Simulates file          |
+:                         : <remote>`, `adb pull     : transfer; writes mock   :
+:                         : <remote> <local>`        : file content to host    :
+:                         :                          : path on `pull` via USMF :
+:                         :                          : `WriteFile`             :
+:                         :                          : side-effect.            :
+| **Diagnostics & Logs**  | `adb logcat`, `adb       | Returns realistic       |
+:                         : bugreport`               : logcat buffers and      :
+:                         :                          : dumpstate headers.      :
+| **Port & Network**      | `adb forward`, `adb      | Manages port forwarding |
+:                         : reverse`, `adb tcpip     : registrations and TCP   :
+:                         : <port>`, `adb connect    : network device          :
+:                         : <host>`, `adb disconnect : connectivity.           :
+:                         : <host>`                  :                         :
+| **Privileges & System** | `adb root`, `adb         | Handles adbd privilege  |
+:                         : unroot`, `adb remount`,  : switching and device    :
+:                         : `adb reboot`, `adb       : reconnection back to    :
+:                         : reconnect`               : `device` state.         :
+| **Generic Shell**       | `adb shell <cmd>`        | Returns realistic       |
+:                         : (`dumpsys battery`,      : outputs for common      :
+:                         : `which`, `id`, `whoami`, : diagnostic shell        :
+:                         : `echo`, `wm size`, `wm   : queries.                :
+:                         : density`, `uptime`,      :                         :
+:                         : `uname`)                 :                         :
+
+### 10.2. Android Device Modeling with `MockAndroidDevice`
+
+`MockAndroidDevice` represents an individual device instance in the mock sandbox
+state.
+
+#### Device Status Lifecycle
+
+A device's connection and authorization state is controlled via `DeviceStatus`:
+
+*   `DeviceStatus.DEVICE` (`"device"`): Device is online, authorized, and
+    accepting commands.
+*   `DeviceStatus.OFFLINE` (`"offline"`): Device is detected by `adb devices`
+    but commands fail with `error: device offline`.
+*   `DeviceStatus.UNAUTHORIZED` (`"unauthorized"`): Device is unauthorized;
+    commands fail with `error: device unauthorized`.
+*   `DeviceStatus.DISCONNECTED` (`"disconnected"`): Device is completely
+    detached from the host; omitted from `adb devices` and target calls fail
+    with `error: device '<serial>' not found`.
+
+#### Built-in Device Presets
+
+USMF provides production-realistic presets preloaded with typical Android 14
+(SDK 34) userdebug system properties and core packages:
+
+```java
+// Generic Android 14 emulator (sdk_gphone64_x86_64)
+MockAndroidDevice emulator = MockAndroidDevice.defaultDevice("emulator-5554");
+
+// Google Pixel 7 (panther, Android 14, build UQ1A.240105.004)
+MockAndroidDevice pixel7 = MockAndroidDevice.pixel7("emulator-5554");
+```
+
+#### Custom Device Configuration
+
+Custom devices can be constructed fluently using `MockAndroidDevice.builder`:
+
+```java
+MockAndroidDevice customDevice =
+    MockAndroidDevice.builder("device-custom-01")
+        .setStatus(DeviceStatus.DEVICE)
+        .setProperty("ro.product.model", "Custom Testbed")
+        .setProperty("ro.product.brand", "google")
+        .setProperty("ro.build.version.sdk", "35")
+        .setProperty("sys.boot_completed", "1")
+        .addPackage("com.google.android.apps.messaging")
+        .addPackage("com.google.android.youtube")
+        .build();
+```
+
+### 10.3. High-Level Controller Management with `MockAdbController`
+
+`MockAdbController` deploys the mock `adb` binary, preloads the Starlark rule
+engine, and exposes rich programmatic APIs to manipulate the sandbox at runtime.
+
+#### Deployment and Setup
+
+```java
+@Rule public final UsmfEnvironment usmfEnvironment = new UsmfEnvironment();
+@Rule public final SetFlags flags = new SetFlags();
+
+@Before
+public void setUp() throws Exception {
+  // 1. Build and deploy controller with target devices:
+  MockAdbController adbController =
+      MockAdbController.builder(usmfEnvironment)
+          .addDevice(MockAndroidDevice.pixel7("emulator-5554"))
+          .addDevice(MockAndroidDevice.defaultDevice("emulator-5556"))
+          .buildAndDeploy();
+
+  // 2. Redirect Mobile Harness / Tradefed / host tools to the mock ADB binary:
+  flags.set("adb", adbController.getAdbPath());
+}
+```
+
+#### Runtime Topology & Connection Mutations
+
+Simulate hardware unplugs, reconnects, or flakiness without touching physical
+USB hubs:
+
+```java
+// Simulate pulling the USB cable:
+adbController.disconnectDevice("emulator-5554");
+
+// Simulate plugging the device back in:
+adbController.reconnectDevice("emulator-5554");
+
+// Toggle device online / offline:
+adbController.setDeviceOnline("emulator-5554", false);
+
+// Explicitly set authorization state:
+adbController.setDeviceStatus("emulator-5554", DeviceStatus.UNAUTHORIZED);
+
+// Dynamically add a new device discovered mid-test:
+adbController.addDevice(MockAndroidDevice.defaultDevice("emulator-5558"));
+
+// Remove a device permanently:
+adbController.removeDevice("emulator-5558");
+```
+
+#### Runtime Property Mutations
+
+```java
+// Override or add system properties:
+adbController.setDeviceProperty("emulator-5554", "ro.product.model", "Lab Pixel");
+```
+
+#### State & Invocation Audit Inspection
+
+```java
+// Query all configured devices in the active state database:
+ImmutableMap<String, MockAndroidDevice> devices = adbController.getAllDevices();
+
+// Query a single device:
+Optional<MockAndroidDevice> dev = adbController.getDevice("emulator-5554");
+
+// Read raw low-level JSON state database if needed:
+JsonObject state = adbController.getUsmfBinary().readState();
+
+// Audit all chronological command invocations executed against this mock adb:
+ImmutableList<CommandInvocation> history = adbController.readCommandInvocations();
+```
+
+### 10.4. Complete End-to-End Integration Test Example
+
+The following example demonstrates verifying a Mobile Harness multi-device
+failover scenario using `MockAdbController` and `AndroidAdbInternalUtil`:
+
+```java
+@RunWith(JUnit4.class)
+public final class MultiDeviceFailoverIntegrationTest {
+
+  @Rule public final UsmfEnvironment usmfEnvironment = new UsmfEnvironment();
+  @Rule public final SetFlags flags = new SetFlags();
+
+  private AndroidAdbInternalUtil adbUtil;
+
+  @Before
+  public void setUp() {
+    AdbInitializer.resetForTest();
+    adbUtil = new AndroidAdbInternalUtil();
+  }
+
+  @Test
+  public void testDeviceDisconnectionAndDynamicRecovery() throws Exception {
+    // 1. Deploy mock ADB with two devices:
+    MockAdbController controller =
+        MockAdbController.builder(usmfEnvironment)
+            .addDevice(MockAndroidDevice.pixel7("emulator-5554"))
+            .addDevice(MockAndroidDevice.defaultDevice("emulator-5556"))
+            .buildAndDeploy();
+
+    flags.set("adb", controller.getAdbPath());
+
+    // 2. Verify initial multi-device discovery:
+    Map<String, DeviceState> devices = adbUtil.getDeviceSerialsAsMap();
+    assertThat(devices)
+        .containsExactly(
+            "emulator-5554", DeviceState.DEVICE,
+            "emulator-5556", DeviceState.DEVICE);
+
+    // 3. Inject transient hardware disconnection:
+    controller.disconnectDevice("emulator-5554");
+    assertThat(adbUtil.getDeviceSerialsAsMap())
+        .containsExactly("emulator-5556", DeviceState.DEVICE);
+
+    // 4. Reconnect device and verify recovery:
+    controller.reconnectDevice("emulator-5554");
+    assertThat(adbUtil.getDeviceSerialsAsMap())
+        .containsExactly(
+            "emulator-5554", DeviceState.DEVICE,
+            "emulator-5556", DeviceState.DEVICE);
+
+    // 5. Assert on captured command invocations:
+    ImmutableList<CommandInvocation> invocations = controller.readCommandInvocations();
+    assertThat(invocations.stream().map(CommandInvocation::getCommand))
+        .contains("devices");
+  }
+}
+```
+
+--------------------------------------------------------------------------------
+
+## 11. Implementation Details
+
+### 11.1. Double-Layer Interception: Wrapper + Go Stub
 
 USMF relies on a shell wrapper redirection directing dispatches to the
 Go-compiled `usmf_stub`. Since Go has a minor scheduler start cost (~7ms), it
 maintains a low-latency process footprint suitable for bulk unit intercept
 testing.
 
-### 10.2. Rationale for File-Based IPC and JSON Database
+### 11.2. Rationale for File-Based IPC and JSON Database
 
 To cross process sandboxes safely on parallel Forge/TAP nodes without port
 conflicts or heavy dependencies (like gRPC runtimes), USMF uses standard

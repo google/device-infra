@@ -50,6 +50,10 @@ import org.junit.runner.Description;
  * directory into a single {@code summary.json} file. However, if a fallback local temporary folder
  * is used, this summary generation and writing is skipped since the temporary folder is purged on
  * completion.
+ *
+ * <p>To construct a mock {@code adb} controller using this environment, pass this rule instance to
+ * {@code
+ * com.google.devtools.mobileharness.shared.usmf.builtin.adb.MockAdbController#builder(UsmfEnvironment)}.
  */
 public final class UsmfEnvironment extends TestWatcher {
 
