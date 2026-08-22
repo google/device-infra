@@ -16,8 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.client.api.util.stub;
 
+import com.google.devtools.mobileharness.infra.lab.rpc.stub.DeviceOpsStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.ExecTestStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
+import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.DeviceOpsGrpcStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.ExecTestGrpcStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.PrepareTestGrpcStub;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelManager;
@@ -60,5 +62,10 @@ public class GrpcStubManager {
   public ExecTestStub getExecTestGrpcStub(String grpcTarget) {
     return channelManager.createStub(
         grpcTarget, () -> managedChannelSupplier.apply(grpcTarget), ExecTestGrpcStub::new);
+  }
+
+  public DeviceOpsStub getDeviceOpsStub(String grpcTarget) {
+    return channelManager.createStub(
+        grpcTarget, () -> managedChannelSupplier.apply(grpcTarget), DeviceOpsGrpcStub::new);
   }
 }

@@ -17,20 +17,24 @@
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.client.api.util.stub.GrpcStubManager;
+import com.google.devtools.mobileharness.infra.lab.rpc.stub.DeviceOpsStub;
 import com.google.devtools.mobileharness.platform.android.lightning.networkconnector.NetworkConnector;
 import com.google.devtools.mobileharness.platform.android.lightning.networkconnector.WifiConnectArgs;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.ConnectToDefaultWifiRequest;
+import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.ConnectToDefaultWifiResponse;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.SetupOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
-import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidSetWifiDecoratorSpec;
@@ -61,6 +65,11 @@ public class AndroidSetWifiDecorator extends SetupOnlyDecorator
     this.networkConnector = networkConnector;
   }
 
+  @VisibleForTesting
+  DeviceOpsStub getDeviceOpsStub(String labIp, int rpcPort) {
+    return GrpcStubManager.getInstance().getDeviceOpsStub(labIp + ":" + rpcPort);
+  }
+
   @Override
   protected SetupResult setUp(SetupContext context)
       throws MobileHarnessException, InterruptedException {
@@ -74,39 +83,32 @@ public class AndroidSetWifiDecorator extends SetupOnlyDecorator
     int retryNum = spec.getWifiRetryNum();
     boolean wifiSsidOptional = spec.getWifiSsidOptional();
     if (spec.getUseDefaultSsid()) {
-      // Get the wifi config from the device property.
-      wifiSsid =
-          device.getProperty(
-              Ascii.toLowerCase(Test.AndroidSetWifiDecorator.DEFAULT_WIFI_SSID.name()));
-      wifiPsk =
-          device.getProperty(
-              Ascii.toLowerCase(Test.AndroidSetWifiDecorator.DEFAULT_WIFI_PSK.name()));
-      if (Strings.isNullOrEmpty(wifiSsid)) {
-        if (!wifiSsidOptional) {
-          // Failed to get default ssid for the device.
-          testInfo
-              .log()
-              .atInfo()
-              .alsoTo(logger)
-              .log(
-                  "Could not get default ssid for the device %s from device properties. Have you"
-                      + " set the default ssid in the device config? If you have reset the default"
-                      + " wifi recently, it may have not taken effective.",
-                  deviceId);
+      // Direct the lab server to connect to default wifi via gRPC.
+      String labIp = "localhost";
+      int rpcPort = Flags.rpcPort.getNonNull();
+      if (rpcPort > 0 && labIp != null && !labIp.isEmpty()) {
+        try {
+          DeviceOpsStub stub = getDeviceOpsStub(labIp, rpcPort);
+          ConnectToDefaultWifiResponse response =
+              stub.connectToDefaultWifi(
+                  ConnectToDefaultWifiRequest.newBuilder().setDeviceId(deviceId).build());
+          if (response.getSuccess()) {
+            return SetupResult.continueDecorated();
+          } else {
+            throw new MobileHarnessException(
+                AndroidErrorId.ANDROID_SET_WIFI_DECORATOR_WIFI_CONNECT_ERROR,
+                "Failed to connect to default Wi-Fi: Lab Server returned failure.");
+          }
+        } catch (RpcExceptionWithErrorId e) {
           throw new MobileHarnessException(
-              AndroidErrorId.ANDROID_SET_WIFI_DECORATOR_GET_DEFAULT_SSID_ERROR,
-              "Failed to get default SSID for the device " + deviceId);
-        } else {
-          testInfo
-              .log()
-              .atWarning()
-              .alsoTo(logger)
-              .log(
-                  "Could not get default ssid for the device %s from device properties. Skipping"
-                      + " wifi setup.",
-                  deviceId);
-          return SetupResult.continueDecorated();
+              AndroidErrorId.ANDROID_SET_WIFI_DECORATOR_WIFI_CONNECT_ERROR,
+              "Failed to connect to default lab WiFi via gRPC for device " + deviceId,
+              e);
         }
+      } else {
+        throw new MobileHarnessException(
+            AndroidErrorId.ANDROID_SET_WIFI_DECORATOR_WIFI_CONNECT_ERROR,
+            "Lab server IP or RPC port is unavailable for use_default_ssid on device " + deviceId);
       }
     } else {
       // Get the wifi config from the spec.
