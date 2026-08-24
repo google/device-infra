@@ -16,6 +16,11 @@ import {MatTableModule} from '@angular/material/table';
 import {EMPTY, Observable, Subject} from 'rxjs';
 import {catchError, map, switchMap} from 'rxjs/operators';
 
+import {DebugService} from '@deviceinfra/app/core/services/debug_service';
+import {
+  NavLink,
+  NavLinkConfig,
+} from '@deviceinfra/app/shared/components/nav_link/nav_link';
 import {
   Indicator,
   LinkCell,
@@ -40,7 +45,13 @@ import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
   templateUrl: './test_history_tab.ng.html',
   styleUrl: './test_history_tab.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, MatIconModule, MatProgressBarModule, MatTableModule],
+  imports: [
+    CommonModule,
+    MatIconModule,
+    MatProgressBarModule,
+    MatTableModule,
+    NavLink,
+  ],
 })
 export class TestHistoryTab implements OnInit {
   /** The device ID to fetch test history for. */
@@ -50,6 +61,7 @@ export class TestHistoryTab implements OnInit {
   @Input() hostName = '';
 
   private readonly deviceService = inject(DEVICE_SERVICE);
+  readonly debugService = inject(DebugService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly loadTrigger$ = new Subject<string>();
 
@@ -148,10 +160,12 @@ export class TestHistoryTab implements OnInit {
 
   /**
    * Generates the URL for the test detail page in legacy MHFE.
-   *
+   * TODO: remove this non-debug branch after we release the TJS formally.
    * @param link The LinkCell containing the test and job IDs.
    * @return The absolute URL to the legacy MHFE test detail view.
    *
+   * Input: link (LinkCell) containing the test and job IDs.
+   * Output: string representing the absolute URL to legacy MHFE.
    * Explanation: This function extracts jobId and testId from the LinkCell target
    * to construct a direct link to the test detail page (hosted in legacy UI).
    * If either ID is missing, it logs an error to the console.
@@ -163,6 +177,37 @@ export class TestHistoryTab implements OnInit {
       console.error('Missing testId or jobId for link:', link);
     }
     return `http://mhfe/testdetailview/${jobId}/${testId}`;
+  }
+
+  /**
+   * Generates the NavLinkConfig for a LinkCell.
+   *
+   * @param link The LinkCell containing the navigation target.
+   * @return The NavLinkConfig or null if target is missing.
+   *
+   * Input: link (LinkCell) containing navigation target.
+   * Output: NavLinkConfig | null containing instructions for NavLink.
+   * Explanation: This function converts a generic LinkCell from the backend into
+   * a specific NavLinkConfig understood by the app-nav-link component.
+   * It specifically expects and handles test targets, as only test links are
+   * returned for device test history.
+   */
+  getNavLinkConfig(link: LinkCell): NavLinkConfig | null {
+    const target = link.target;
+    if (!target) return null;
+
+    if (target.test) {
+      if (!target.test.jobId || !target.test.testId) {
+        console.error('Missing testId or jobId for link:', link);
+      }
+      return {
+        type: 'test',
+        jobId: target.test.jobId || '',
+        testId: target.test.testId || '',
+      };
+    }
+    console.error('Unsupported link target:', link);
+    return null;
   }
 
   /** Maps a semantic indicator to a chip style class. */
