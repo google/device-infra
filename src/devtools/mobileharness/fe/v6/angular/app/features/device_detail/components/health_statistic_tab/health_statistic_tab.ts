@@ -120,19 +120,25 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
           dateUtils.formatDateRange(range.start, range.end),
         );
       }),
-      switchMap((range) =>
-        this.deviceService
-          .getDeviceHealthinessStats(
-            this.deviceId,
-            dateUtils.toGoogleDate(range.start),
-            dateUtils.toGoogleDate(range.end),
-          )
-          .pipe(
-            catchError(() => of(null)),
-            finalize(() => {
-              this.loadingHealth.set(false);
-            }),
-          ),
+      switchMap(
+        /**
+         * Fetches healthiness statistics for the device.
+         * @param range The date range for the statistics.
+         * @return Observable of HealthinessStats.
+         */
+        (range) =>
+          this.deviceService
+            .getDeviceHealthinessStats(
+              this.deviceId,
+              dateUtils.toGoogleDate(range.start),
+              dateUtils.toGoogleDate(range.end),
+            )
+            .pipe(
+              catchError(() => of(null)),
+              finalize(() => {
+                this.loadingHealth.set(false);
+              }),
+            ),
       ),
     ),
     {initialValue: null},
@@ -203,19 +209,25 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
           dateUtils.formatDateRange(range.start, range.end),
         );
       }),
-      switchMap((range) =>
-        this.deviceService
-          .getDeviceTestResultStats(
-            this.deviceId,
-            dateUtils.toGoogleDate(range.start),
-            dateUtils.toGoogleDate(range.end),
-          )
-          .pipe(
-            catchError(() => of(null)),
-            finalize(() => {
-              this.loadingTest.set(false);
-            }),
-          ),
+      switchMap(
+        /**
+         * Fetches test result statistics for the device.
+         * @param range The date range for the statistics.
+         * @return Observable of TestResultStats.
+         */
+        (range) =>
+          this.deviceService
+            .getDeviceTestResultStats(
+              this.deviceId,
+              dateUtils.toGoogleDate(range.start),
+              dateUtils.toGoogleDate(range.end),
+            )
+            .pipe(
+              catchError(() => of(null)),
+              finalize(() => {
+                this.loadingTest.set(false);
+              }),
+            ),
       ),
     ),
     {initialValue: null},
@@ -266,19 +278,25 @@ export class HealthStatisticTab implements OnInit, OnDestroy {
           dateUtils.formatDateRange(range.start, range.end),
         );
       }),
-      switchMap((range) =>
-        this.deviceService
-          .getDeviceRecoveryTaskStats(
-            this.deviceId,
-            dateUtils.toGoogleDate(range.start),
-            dateUtils.toGoogleDate(range.end),
-          )
-          .pipe(
-            catchError(() => of(null)),
-            finalize(() => {
-              this.loadingRecovery.set(false);
-            }),
-          ),
+      switchMap(
+        /**
+         * Fetches recovery task statistics for the device.
+         * @param range The date range for the statistics.
+         * @return Observable of RecoveryTaskStats.
+         */
+        (range) =>
+          this.deviceService
+            .getDeviceRecoveryTaskStats(
+              this.deviceId,
+              dateUtils.toGoogleDate(range.start),
+              dateUtils.toGoogleDate(range.end),
+            )
+            .pipe(
+              catchError(() => of(null)),
+              finalize(() => {
+                this.loadingRecovery.set(false);
+              }),
+            ),
       ),
     ),
     {initialValue: null},

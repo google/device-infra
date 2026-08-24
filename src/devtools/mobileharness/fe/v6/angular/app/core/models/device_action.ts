@@ -121,6 +121,8 @@ export declare interface RemoteControlResponse {
 export declare interface QuarantineDeviceRequest {
   /** The timestamp in ISO 8601 format with UTC timezone when the quarantine should expire. */
   endTime: string;
+  /** Host name to disambiguate devices with the same ID. */
+  hostName: string;
 }
 
 /**
@@ -157,8 +159,9 @@ export declare interface FlashDialogData {
 export declare interface QuarantineDialogData {
   deviceId: string;
   isUpdate: boolean;
-  currentExpiry?: string;
   title: string;
   description: string;
   confirmText: string;
+  currentExpiry?: string;
+  hostName: string;
 }

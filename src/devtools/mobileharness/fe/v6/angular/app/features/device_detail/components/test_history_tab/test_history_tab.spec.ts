@@ -49,6 +49,7 @@ describe('TestHistoryTab Component', () => {
     fixture = TestBed.createComponent(TestHistoryTab);
     component = fixture.componentInstance;
     component.deviceId = 'device-1';
+    component.hostName = 'host-1';
     fixture.detectChanges();
   });
 
@@ -57,6 +58,7 @@ describe('TestHistoryTab Component', () => {
     // detectChanges in beforeEach) has already populated the signals.
     expect(deviceServiceSpy.getDeviceTestHistory).toHaveBeenCalledWith(
       'device-1',
+      'host-1',
       '',
     );
     expect(component.rows().length).toBe(1);
@@ -91,6 +93,7 @@ describe('TestHistoryTab Component', () => {
     const testFixture = TestBed.createComponent(TestHistoryTab);
     const testComponent = testFixture.componentInstance;
     testComponent.deviceId = 'device-1';
+    testComponent.hostName = 'host-1';
     const refreshSubject = new Subject<void>();
     testComponent.refreshTrigger$ = refreshSubject.asObservable();
     testFixture.detectChanges();
@@ -100,6 +103,7 @@ describe('TestHistoryTab Component', () => {
 
     expect(deviceServiceSpy.getDeviceTestHistory).toHaveBeenCalledWith(
       'device-1',
+      'host-1',
       '',
     );
     expect(testComponent.canPrev()).toBeFalse();

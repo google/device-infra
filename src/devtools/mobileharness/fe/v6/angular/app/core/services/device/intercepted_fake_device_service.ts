@@ -28,8 +28,17 @@ export class InterceptedFakeDeviceService extends FakeDeviceService {
     this.forcedButtons = forceDeviceReady ? forceDeviceReady.split(',') : [];
   }
 
-  override getDeviceHeaderInfo(id: string): Observable<DeviceHeaderInfo> {
-    return super.getDeviceHeaderInfo(id).pipe(
+  /**
+   * Retrieves the header information for a specific device, supporting forced ready states.
+   * @param id The ID of the device.
+   * @param hostName The name of the host.
+   * @return An Observable emitting the DeviceHeaderInfo.
+   */
+  override getDeviceHeaderInfo(
+    id: string,
+    hostName: string,
+  ): Observable<DeviceHeaderInfo> {
+    return super.getDeviceHeaderInfo(id, hostName).pipe(
       map((body) => {
         if (this.forcedButtons.length > 0) {
           return modifyDeviceHeaderInfo(body, this.forcedButtons);

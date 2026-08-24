@@ -37,6 +37,7 @@ describe('QuarantineDialog', () => {
     title: 'Update Quarantine',
     description: 'Update duration',
     confirmText: 'Update',
+    hostName: 'test-host',
   };
 
   const detectChanges = () => {
@@ -181,7 +182,7 @@ describe('QuarantineDialog', () => {
 
     expect(deviceService.quarantineDevice).toHaveBeenCalledWith(
       mockDialogData.deviceId,
-      {endTime: expectedISOString},
+      {endTime: expectedISOString, hostName: 'test-host'},
     );
 
     restoreTime();
@@ -208,7 +209,7 @@ describe('QuarantineDialog', () => {
 
     expect(deviceService.quarantineDevice).toHaveBeenCalledWith(
       mockDialogData.deviceId,
-      {endTime: expectedISOString},
+      {endTime: expectedISOString, hostName: 'test-host'},
     );
 
     restoreTime();

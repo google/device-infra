@@ -76,7 +76,16 @@ export class FakeDeviceService extends DeviceService {
     }
   }
 
-  override getDeviceHeaderInfo(id: string): Observable<DeviceHeaderInfo> {
+  /**
+   * Retrieves the header information for a specific device.
+   * @param id The ID of the device.
+   * @param hostName The name of the host.
+   * @return An Observable emitting the DeviceHeaderInfo.
+   */
+  override getDeviceHeaderInfo(
+    id: string,
+    hostName: string,
+  ): Observable<DeviceHeaderInfo> {
     const wrapper = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
     const scenario = wrapper?.factory(this.getDeviceOverviewCallCount);
     if (scenario) {
@@ -93,6 +102,7 @@ export class FakeDeviceService extends DeviceService {
    * @param id The device ID.
    * @param startDate The start date of the range.
    * @param endDate The end date of the range.
+   * @return An Observable emitting the HealthinessStats.
    */
   override getDeviceHealthinessStats(
     id: string,
@@ -118,6 +128,7 @@ export class FakeDeviceService extends DeviceService {
    * @param id The device ID.
    * @param startDate The start date of the range.
    * @param endDate The end date of the range.
+   * @return An Observable emitting the TestResultStats.
    */
   override getDeviceTestResultStats(
     id: string,
@@ -142,6 +153,7 @@ export class FakeDeviceService extends DeviceService {
    * @param id The device ID.
    * @param startDate The start date of the range.
    * @param endDate The end date of the range.
+   * @return An Observable emitting the RecoveryTaskStats.
    */
   override getDeviceRecoveryTaskStats(
     id: string,
@@ -162,7 +174,16 @@ export class FakeDeviceService extends DeviceService {
     }
   }
 
-  override takeScreenshot(id: string): Observable<TakeScreenshotResponse> {
+  /**
+   * Simulates taking a screenshot of a device.
+   * @param id The ID of the device.
+   * @param hostName The name of the host.
+   * @return An Observable emitting the TakeScreenshotResponse.
+   */
+  override takeScreenshot(
+    id: string,
+    hostName: string,
+  ): Observable<TakeScreenshotResponse> {
     console.log(`FakeService: Taking screenshot for ${id}`);
     if (id.includes('permission-denied')) {
       return throwError(
@@ -211,7 +232,16 @@ export class FakeDeviceService extends DeviceService {
     }).pipe(delay(1000));
   }
 
-  override getLogcat(id: string): Observable<GetLogcatResponse> {
+  /**
+   * Simulates getting the logcat of a device.
+   * @param id The ID of the device.
+   * @param hostName The name of the host.
+   * @return An Observable emitting the GetLogcatResponse.
+   */
+  override getLogcat(
+    id: string,
+    hostName: string,
+  ): Observable<GetLogcatResponse> {
     console.log(`FakeService: Getting logcat for ${id}`);
     if (id.includes('permission-denied')) {
       return throwError(
@@ -275,7 +305,13 @@ export class FakeDeviceService extends DeviceService {
     return of({quarantineExpiry: req.endTime}).pipe(delay(1000));
   }
 
-  override unquarantineDevice(id: string): Observable<void> {
+  /**
+   * Simulates unquarantining a device.
+   * @param id The ID of the device.
+   * @param hostName The name of the host.
+   * @return An Observable that completes when the operation finishes.
+   */
+  override unquarantineDevice(id: string, hostName: string): Observable<void> {
     console.log(`FakeService: Unquarantining ${id}`);
     return of(undefined).pipe(delay(1000));
   }
@@ -284,9 +320,10 @@ export class FakeDeviceService extends DeviceService {
    * Prepares the device (Fake implementation).
    *
    * @param id The ID of the device to prepare.
+   * @param hostName The name of the host.
    * @return An Observable that completes after a delay.
    */
-  override prepareDevice(id: string): Observable<void> {
+  override prepareDevice(id: string, hostName: string): Observable<void> {
     console.log(`FakeService: Preparing device ${id}`);
     return of(undefined).pipe(delay(1000));
   }
@@ -301,7 +338,16 @@ export class FakeDeviceService extends DeviceService {
   //   }).pipe(delay(1000));
   // }
 
-  override getTestbedConfig(id: string): Observable<TestbedConfig> {
+  /**
+   * Retrieves the testbed configuration for a device.
+   * @param id The ID of the device.
+   * @param hostName The name of the host.
+   * @return An Observable emitting the TestbedConfig.
+   */
+  override getTestbedConfig(
+    id: string,
+    hostName: string,
+  ): Observable<TestbedConfig> {
     console.log(`FakeService: Getting testbed config for ${id}`);
     const wrapper = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
     const scenario = wrapper?.factory(this.getDeviceOverviewCallCount);
@@ -446,6 +492,7 @@ export class FakeDeviceService extends DeviceService {
    * Retrieves fake device test history for testing.
    *
    * @param id The device ID.
+   * @param hostName The name of the host.
    * @param pageToken The pagination token (optional).
    * @return An Observable emitting the fake test history response.
    *
@@ -455,6 +502,7 @@ export class FakeDeviceService extends DeviceService {
    */
   override getDeviceTestHistory(
     id: string,
+    hostName: string,
     pageToken = '',
   ): Observable<DeviceTestHistoryResponse> {
     const columns = [

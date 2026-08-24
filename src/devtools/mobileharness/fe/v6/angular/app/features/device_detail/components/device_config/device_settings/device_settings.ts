@@ -121,6 +121,7 @@ export class DeviceSettings implements OnInit {
     deviceId: string;
     config: DeviceConfig;
     universe?: string;
+    hostName?: string;
   } | null;
 
   private readonly configService = inject(CONFIG_SERVICE);
@@ -128,12 +129,16 @@ export class DeviceSettings implements OnInit {
 
   readonly deviceIdInput = input<string>('', {alias: 'deviceId'});
   readonly universeInput = input<string>('', {alias: 'universe'});
+  readonly hostNameInput = input<string>('', {alias: 'hostName'});
 
   readonly deviceId = computed(
     () => this.dialogData?.deviceId || this.deviceIdInput(),
   );
   readonly universe = computed(
     () => this.dialogData?.universe || this.universeInput(),
+  );
+  readonly hostName = computed(
+    () => this.dialogData?.hostName || this.hostNameInput(),
   );
 
   configInternal: DeviceConfig = DEFAULT_DEVICE_CONFIG;

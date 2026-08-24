@@ -134,6 +134,7 @@
                           @for (dev of devices; track dev.id) {
                             <a app-nav-link
                               [config]="universe ? {type: 'device', hostName: host.name, hostIp: host.ip, deviceId: dev.id, universe: universe} : {type: 'device', hostName: host.name, hostIp: host.ip, deviceId: dev.id}"
+                              [customQueryParams]="{'host_name': host.name}"
                               queryParamsHandling="merge"
                               class="grid-link-value"
                               [matTooltip]="'View Device Details: ' + dev.id"

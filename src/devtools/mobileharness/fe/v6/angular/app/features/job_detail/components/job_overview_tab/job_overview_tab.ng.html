@@ -149,7 +149,8 @@
                   <div class="value-stack-container">
                     @for (dev of devList; track dev) {
                       <a app-nav-link
-                        [config]="{type: 'device', hostName: '', hostIp: '', deviceId: dev}"
+                        [config]="{type: 'device', hostName: test.host?.name || '', hostIp: test.host?.ip || '', deviceId: dev}"
+                        [customQueryParams]="test.host?.name ? {'host_name': test.host.name} : {}"
                         queryParamsHandling="merge"
                         class="text-truncate"
                         [matTooltip]="'View Device Details: ' + dev"

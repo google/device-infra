@@ -19,7 +19,7 @@
       </app-permissions>
     </ng-template>
     <ng-template #wifi>
-      <app-wifi [(wifi)]="config.wifi!" workflow="wizard"></app-wifi>
+      <app-wifi [(wifi)]="config.wifi!" [hostName]="data.hostName" workflow="wizard"></app-wifi>
     </ng-template>
     <ng-template #dimensions>
       <app-dimensions

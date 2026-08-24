@@ -54,12 +54,12 @@ describe('HttpConfigService', () => {
       },
     } as GetDeviceConfigResult;
 
-    service.getDeviceConfig('test-device').subscribe((config) => {
+    service.getDeviceConfig('test-device', 'test-host').subscribe((config) => {
       expect(config).toEqual(mockDeviceConfig);
     });
 
     const req = httpMock.expectOne(
-      'http://testdomain.com/v6/devices/test-device/config',
+      'http://testdomain.com/v6/devices/test-device/config?host_name=test-host',
     );
     expect(req.request.method).toBe('GET');
     req.flush(mockDeviceConfig);

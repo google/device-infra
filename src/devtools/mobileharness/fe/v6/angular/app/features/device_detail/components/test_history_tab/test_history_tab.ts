@@ -47,6 +47,7 @@ export class TestHistoryTab implements OnInit {
   @Input({required: true}) deviceId!: string;
   /** Optional observable trigger to reload the first page of test history. */
   @Input() refreshTrigger$?: Observable<void>;
+  @Input() hostName = '';
 
   private readonly deviceService = inject(DEVICE_SERVICE);
   private readonly destroyRef = inject(DestroyRef);
@@ -82,7 +83,7 @@ export class TestHistoryTab implements OnInit {
             this.canPrev.set(false);
           }
           return this.deviceService
-            .getDeviceTestHistory(this.deviceId, token)
+            .getDeviceTestHistory(this.deviceId, this.hostName, token)
             .pipe(
               map((response) => ({token, response})),
               catchError(() => {

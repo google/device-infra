@@ -1016,12 +1016,20 @@ export class HostOverviewPage {
     }
   }
 
+  /**
+   * Takes a screenshot of the device.
+   * @param element The summary of the device.
+   */
   takeScreenshot(element: DeviceSummary): void {
-    this.deviceActions.takeScreenshot(element.id);
+    this.deviceActions.takeScreenshot(element.id, this.localHost().hostName);
   }
 
+  /**
+   * Retrieves logcat from the device.
+   * @param element The summary of the device.
+   */
   getLogcat(element: DeviceSummary): void {
-    this.deviceActions.getLogcat(element.id);
+    this.deviceActions.getLogcat(element.id, this.localHost().hostName);
   }
 
   flashDevice(element: DeviceSummary): void {
@@ -1032,11 +1040,16 @@ export class HostOverviewPage {
     );
   }
 
+  /**
+   * Quarantines the device.
+   * @param element The summary of the device.
+   */
   quarantineDevice(element: DeviceSummary): void {
     this.deviceActions.quarantineDevice(element.id, {
       onSuccess: () => {
         this.loadDevices();
       },
+      hostName: this.localHost().hostName,
     });
   }
 
@@ -1055,6 +1068,6 @@ export class HostOverviewPage {
    * @param element The summary of the device to prepare.
    */
   prepareDevice(element: DeviceSummary): void {
-    this.deviceActions.prepareDevice(element.id);
+    this.deviceActions.prepareDevice(element.id, this.localHost().hostName);
   }
 }

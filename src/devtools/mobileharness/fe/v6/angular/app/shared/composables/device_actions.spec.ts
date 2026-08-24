@@ -72,7 +72,7 @@ describe('useDeviceActions', () => {
       expect(loading()).toBeFalse();
 
       // 2. Action started -> true
-      takeScreenshot('device-1');
+      takeScreenshot('device-1', 'host-1');
       expect(loading()).toBeTrue();
 
       // 3. Action completed -> false
@@ -96,7 +96,7 @@ describe('useDeviceActions', () => {
 
       const loading = isRunning('screenshot');
 
-      takeScreenshot('device-1');
+      takeScreenshot('device-1', 'host-1');
       expect(loading()).toBeTrue();
 
       // Action errored -> false
@@ -279,9 +279,12 @@ describe('useDeviceActions', () => {
       const loading = isRunning('logcat');
       expect(loading()).toBeFalse();
 
-      getLogcat('device-1');
+      getLogcat('device-1', 'host-1');
       expect(loading()).toBeTrue();
-      expect(actionServiceSpy.getLogcat).toHaveBeenCalledWith('device-1');
+      expect(actionServiceSpy.getLogcat).toHaveBeenCalledWith(
+        'device-1',
+        'host-1',
+      );
 
       logcatSubject.next({
         logUrl: 'http://mock-log-url',
@@ -365,6 +368,7 @@ describe('useDeviceActions', () => {
       quarantineDevice('device-1', {
         quarantineInfo: {isQuarantined: false},
         onSuccess: onSuccessSpy,
+        hostName: 'host-1',
       });
 
       expect(loading()).toBeTrue();
@@ -387,10 +391,11 @@ describe('useDeviceActions', () => {
     TestBed.runInInjectionContext(() => {
       const {changeQuarantine} = useDeviceActions();
 
-      changeQuarantine('device-1', 'expiry-time');
+      changeQuarantine('device-1', 'host-1', 'expiry-time');
 
       expect(actionServiceSpy.changeQuarantine).toHaveBeenCalledWith(
         'device-1',
+        'host-1',
         'expiry-time',
       );
     });
@@ -405,7 +410,7 @@ describe('useDeviceActions', () => {
     TestBed.runInInjectionContext(() => {
       const {takeScreenshot} = useDeviceActions();
 
-      takeScreenshot('device-1');
+      takeScreenshot('device-1', 'host-1');
       expect(screenshotSubject.observers.length).toBeGreaterThan(0); // Active subscription exists!
     });
 
@@ -458,7 +463,7 @@ describe('useDeviceActions', () => {
       const loading = isRunning('quarantine');
       expect(loading()).toBeFalse();
 
-      quarantineDevice('device-1');
+      quarantineDevice('device-1', {hostName: 'host-1'});
       expect(loading()).toBeTrue();
 
       quarantineSubject.next(true);
@@ -565,7 +570,7 @@ describe('useDeviceActions', () => {
       const {changeQuarantine} = useDeviceActions();
 
       expect(() => {
-        changeQuarantine('device-1', 'expiry-time');
+        changeQuarantine('device-1', 'host-1');
       }).not.toThrow();
     });
   });

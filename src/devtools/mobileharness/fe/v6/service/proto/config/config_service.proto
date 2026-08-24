@@ -111,6 +111,9 @@ message GetDeviceConfigRequest {
 
   // The universe the device belongs to.
   string universe = 2;
+
+  // The host name of the lab the device connects to.
+  string host_name = 3;
 }
 
 // Response for GetDeviceConfig.

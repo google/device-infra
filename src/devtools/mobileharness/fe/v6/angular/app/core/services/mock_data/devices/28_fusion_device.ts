@@ -88,7 +88,7 @@ const SCENARIO_FUSION_DEVICE_DATA: MockDeviceScenario = {
  * Returns the mock scenario for a Fusion device.
  *
  * @param callCount Optional parameter indicating how many times this has been called (not used in this mock).
- * @returns The MockDeviceScenario representing a Fusion device with metrics URL and fusion dimensions.
+ * @return The MockDeviceScenario representing a Fusion device with metrics URL and fusion dimensions.
  */
 export function scenarioFusionDevice(callCount?: number): MockDeviceScenario {
   return SCENARIO_FUSION_DEVICE_DATA;

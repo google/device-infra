@@ -34,15 +34,19 @@ export abstract class ConfigService {
    * Retrieves the configuration for a specific device.
    * Also returns metadata about host management.
    * @param deviceId The unique identifier of the device.
-   * @returns An Observable emitting the device configuration result.
+   * @param hostName The host name to disambiguate devices with same ID under different hosts.
+   * @return An Observable emitting the device configuration result.
    */
-  abstract getDeviceConfig(deviceId: string): Observable<GetDeviceConfigResult>;
+  abstract getDeviceConfig(
+    deviceId: string,
+    hostName: string, // hostName is required to disambiguate devices.
+  ): Observable<GetDeviceConfigResult>;
 
   /**
    * Checks if the current authenticated user has permission to write/modify
    * the configuration of the specified device.
    * @param deviceId The unique identifier of the device.
-   * @returns An Observable emitting the permission check result.
+   * @return An Observable emitting the permission check result.
    */
   abstract checkDeviceWritePermission(
     deviceId: string,
@@ -53,7 +57,7 @@ export abstract class ConfigService {
    * Updates the configuration for a specific device.
    * This method handles self-lockout prevention checks on the backend.
    * @param request The update request object.
-   * @returns An Observable emitting the result of the update operation.
+   * @return An Observable emitting the result of the update operation.
    */
   abstract updateDeviceConfig(
     request: UpdateDeviceConfigRequest,
@@ -70,7 +74,7 @@ export abstract class ConfigService {
   /**
    * Retrieves the default DeviceConfig set at the host level.
    * @param hostName The name of the host.
-   * @returns An Observable emitting the host's default DeviceConfig, or null if not set.
+   * @return An Observable emitting the host's default DeviceConfig, or null if not set.
    */
   abstract getHostDefaultDeviceConfig(
     hostName: string,
@@ -79,7 +83,7 @@ export abstract class ConfigService {
   /**
    * Retrieves the configuration and UI control status for a specific host.
    * @param hostName The name of the host.
-   * @returns An Observable emitting the host configuration result.
+   * @return An Observable emitting the host configuration result.
    */
   abstract getHostConfig(hostName: string): Observable<GetHostConfigResult>;
 
@@ -87,7 +91,7 @@ export abstract class ConfigService {
    * Checks if the current authenticated user has permission to write/modify
    * the configuration of the specified host.
    * @param hostName The name of the host.
-   * @returns An Observable emitting the permission check result.
+   * @return An Observable emitting the permission check result.
    */
   abstract checkHostWritePermission(
     hostName: string,
@@ -98,7 +102,7 @@ export abstract class ConfigService {
    * Updates the configuration for a specific host.
    * This method handles self-lockout prevention checks on the backend.
    * @param request The update request object.
-   * @returns An Observable emitting the result of the update operation.
+   * @return An Observable emitting the result of the update operation.
    */
   abstract updateHostConfig(
     request: UpdateHostConfigRequest,
@@ -107,7 +111,7 @@ export abstract class ConfigService {
   /**
    * Unlocks the host properties for a specific host by disabling Config Pusher management.
    * @param hostName The name of the host.
-   * @returns An Observable emitting the result of the unlock operation.
+   * @return An Observable emitting the result of the unlock operation.
    */
   abstract unlockHostProperties(
     hostName: string,

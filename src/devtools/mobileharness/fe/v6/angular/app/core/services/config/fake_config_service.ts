@@ -107,8 +107,16 @@ export class FakeConfigService extends ConfigService {
 
   // ===== Device Config Methods =====
 
+  /**
+   * Retrieves the configuration for a specific device from fake data.
+   *
+   * @param deviceId The unique identifier of the device.
+   * @param hostName The host name to simulate host-managed config.
+   * @return An Observable emitting the fake device configuration result.
+   */
   override getDeviceConfig(
     deviceId: string,
+    hostName: string, // hostName is required to disambiguate devices.
   ): Observable<GetDeviceConfigResult> {
     const scenario = this.mockDeviceScenarios.find((s) => s.id === deviceId);
     if (!scenario) {
@@ -119,7 +127,7 @@ export class FakeConfigService extends ConfigService {
 
     // Simulate host-managed scenario
     const isHostManaged = scenario.overview.host.name === 'host-x.example.com';
-    const hostName = scenario.overview.host.name;
+    const scenarioHostName = scenario.overview.host.name;
 
     let uiStatus: Partial<DeviceConfigUiStatus> | undefined = {
       permissions: {visible: true, editability: {editable: true}},
@@ -139,7 +147,7 @@ export class FakeConfigService extends ConfigService {
     return of({
       deviceConfig: scenario.config,
       isHostManaged,
-      hostName,
+      hostName: scenarioHostName,
       uiStatus,
     }).pipe(delay(1000));
   }
