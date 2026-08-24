@@ -337,14 +337,16 @@ public final class DeviceConditionUtil {
     // TODO: Only support Android devices in the short term. Need to expand to
     // non-Android devices.
     boolean isSupported =
-        types.stream().anyMatch(t -> t.contains("Android") || t.equals("DisconnectedDevice"));
+        types.stream()
+            .anyMatch(
+                t -> t.contains("Android") || t.contains("Ios") || t.equals("DisconnectedDevice"));
     if (!isSupported) {
       return HealthCategory.HEALTH_CATEGORY_UNSPECIFIED;
     }
 
     // 1. In Service
     if ((status == DeviceStatus.IDLE || status == DeviceStatus.BUSY)
-        && types.contains(ANDROID_REAL_DEVICE_TYPE)) {
+        && (types.contains(ANDROID_REAL_DEVICE_TYPE) || types.contains(IOS_REAL_DEVICE_TYPE))) {
       return HealthCategory.HEALTH_CATEGORY_IN_SERVICE;
     }
 

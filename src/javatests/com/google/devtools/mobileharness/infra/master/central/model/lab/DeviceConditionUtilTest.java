@@ -593,10 +593,37 @@ public class DeviceConditionUtilTest {
   }
 
   @Test
-  public void calculateHealthCategory_nonAndroid_returnsUnspecified() {
-    DeviceDao device = createDevice(DeviceStatus.IDLE, ImmutableList.of("IosRealDevice"));
+  public void calculateHealthCategory_nonAndroidNonIos_returnsUnspecified() {
+    DeviceDao device = createDevice(DeviceStatus.IDLE, ImmutableList.of("WindowsDevice"));
     assertThat(DeviceConditionUtil.calculateHealthCategory(device))
         .isEqualTo(HealthCategory.HEALTH_CATEGORY_UNSPECIFIED);
+  }
+
+  @Test
+  public void calculateHealthCategory_iosIdle_returnsInService() {
+    DeviceDao device = createDevice(DeviceStatus.IDLE, ImmutableList.of("IosRealDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_SERVICE);
+  }
+
+  @Test
+  public void calculateHealthCategory_iosBusy_returnsInService() {
+    DeviceDao device =
+        createDevice(
+            DeviceStatus.BUSY,
+            ImmutableList.of("IosRealDevice"),
+            TestLocator.newBuilder()
+                .setJobLocator(JobLocator.newBuilder().setName("some_job").build())
+                .build());
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_SERVICE);
+  }
+
+  @Test
+  public void calculateHealthCategory_iosInit_returnsTransition() {
+    DeviceDao device = createDevice(DeviceStatus.INIT, ImmutableList.of("IosRealDevice"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_TRANSITION);
   }
 
   @Test
