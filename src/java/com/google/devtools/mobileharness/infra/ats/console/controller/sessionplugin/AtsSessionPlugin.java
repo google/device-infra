@@ -842,34 +842,32 @@ public class AtsSessionPlugin {
    * <p>If no Tradefed jobs could be started, falls back to adding non-Tradefed jobs.
    */
   private void addMainJobs() {
-    boolean startedTfJobs = false;
-    if (tradefedJobs.size() <= 1) {
-      startedTfJobs = addAndTrackTradefedJobs(tradefedJobs);
-    } else {
-      Map<Boolean, List<JobInfo>> partitionedJobs =
-          tradefedJobs.stream()
-              .collect(
-                  partitioningBy(
-                      job -> job.locator().getName().contains(XtsConstants.STATIC_XTS_JOB_NAME)));
-
-      List<JobInfo> staticXtsJobs = partitionedJobs.get(true);
-      additionalTradefedJobs.addAll(partitionedJobs.get(false));
-
-      if (!staticXtsJobs.isEmpty()) {
-        startedTfJobs = addAndTrackTradefedJobs(staticXtsJobs);
-      } else {
-        JobInfo nextJob = additionalTradefedJobs.poll();
-        if (nextJob != null) {
-          startedTfJobs = addAndTrackTradefedJobs(ImmutableList.of(nextJob));
-        }
-      }
-    }
-
-    if (!startedTfJobs) {
+    List<JobInfo> initialJobsToStart = prepareTradefedJobsToStart();
+    if (!addAndTrackTradefedJobs(initialJobsToStart)) {
       logger.atInfo().log("No tradefed job was added, trying to add non-tradefed jobs if needed.");
       if (!addMainNonTradefedJobs()) {
         addTeardownJobIfAny();
       }
+    }
+  }
+
+  private List<JobInfo> prepareTradefedJobsToStart() {
+    Map<Boolean, List<JobInfo>> partitionedJobs =
+        tradefedJobs.stream()
+            .collect(
+                partitioningBy(
+                    job -> job.locator().getName().contains(XtsConstants.STATIC_XTS_JOB_NAME)));
+    List<JobInfo> staticXtsJobs = partitionedJobs.get(true);
+    List<JobInfo> nonStaticXtsJobs = partitionedJobs.get(false);
+
+    if (!staticXtsJobs.isEmpty()) {
+      additionalTradefedJobs.addAll(nonStaticXtsJobs);
+      return staticXtsJobs;
+    } else if (nonStaticXtsJobs.size() <= 1) {
+      return nonStaticXtsJobs;
+    } else {
+      additionalTradefedJobs.addAll(nonStaticXtsJobs.subList(1, nonStaticXtsJobs.size()));
+      return nonStaticXtsJobs.subList(0, 1);
     }
   }
 
