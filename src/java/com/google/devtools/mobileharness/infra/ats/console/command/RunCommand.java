@@ -37,6 +37,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
@@ -319,6 +320,10 @@ public final class RunCommand implements Callable<Integer> {
       runCommand.setPythonPkgIndexUrl(consoleInfo.getPythonPackageIndexUrl().get());
     }
     runCommand.setEnableTokenSharding(options.enableTokenSharding);
+    if (options.shardingMode != null
+        && options.shardingMode != ShardingMode.SHARDING_MODE_UNSPECIFIED) {
+      runCommand.setShardingMode(options.shardingMode);
+    }
 
     runCommand
         .setTestPlan(options.config)

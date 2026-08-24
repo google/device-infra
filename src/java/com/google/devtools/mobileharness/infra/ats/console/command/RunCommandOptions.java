@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.command.picocli.parameterpreprocessor.MapPreprocessor;
 import com.google.devtools.mobileharness.infra.ats.console.command.picocli.parameterpreprocessor.MultimapPreprocessor;
@@ -332,6 +333,13 @@ class RunCommandOptions {
       paramLabel = "<enable_token_sharding>",
       description = "Automatically matches the test that requires respective SIM type")
   boolean enableTokenSharding = false;
+
+  @Option(
+      names = {"--sharding-mode"},
+      paramLabel = "<sharding_mode>",
+      description =
+          "Sharding mode to use for running tests. Supported values: ${COMPLETION-CANDIDATES}")
+  ShardingMode shardingMode = ShardingMode.RUNNER;
 
   @ArgGroup(exclusive = true, multiplicity = "0..1")
   DeviceTypeOptionsGroup deviceTypeOptionsGroup;

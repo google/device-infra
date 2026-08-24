@@ -26,6 +26,7 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         "//src/devtools/mobileharness/infra/ats/common/proto:session_request_info_java_proto",
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/parser:command_line_parser",

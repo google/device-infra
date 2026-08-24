@@ -23,6 +23,7 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfoUtil;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import java.util.Optional;
 import org.junit.Before;
@@ -66,6 +67,30 @@ public final class CommandLineParserTest {
                 ? Optional.of(requestInfo1.getShardCount())
                 : Optional.empty())
         .hasValue(1);
+    assertThat(requestInfo1.getShardingMode()).isEqualTo(ShardingMode.RUNNER);
+  }
+
+  @Test
+  public void parseCommandLine_withShardingMode_success() throws Exception {
+    String tfCommand1 = "cts -m module1 --shard-count 1 --sharding-mode MODULE";
+    SessionRequestInfo.Builder requestInfoBuilder1 = commandLineParser.parseCommandLine(tfCommand1);
+
+    // Fill required fields in order to build the builder.
+    SessionRequestInfo requestInfo1 =
+        SessionRequestInfoUtil.buildAndValidate(
+            requestInfoBuilder1
+                .setCommandLineArgs(tfCommand1)
+                .setXtsRootDir("xts_root_dir")
+                .setXtsType("cts"));
+
+    assertThat(requestInfo1.getTestPlan()).isEqualTo("cts");
+    assertThat(requestInfo1.getModuleNamesList()).containsExactly("module1");
+    assertThat(
+            requestInfo1.hasShardCount()
+                ? Optional.of(requestInfo1.getShardCount())
+                : Optional.empty())
+        .hasValue(1);
+    assertThat(requestInfo1.getShardingMode()).isEqualTo(ShardingMode.MODULE);
   }
 
   @Test

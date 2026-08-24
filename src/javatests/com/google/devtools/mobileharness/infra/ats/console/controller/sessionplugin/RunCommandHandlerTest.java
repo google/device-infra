@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUt
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.DeviceType;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
@@ -197,6 +198,7 @@ public final class RunCommandHandlerTest {
             .setMaxSdkLevel(35)
             .setEnableTokenSharding(true)
             .setBusinessLogicUrl("business_logic_url")
+            .setShardingMode(ShardingMode.MODULE)
             .build();
 
     SessionRequestInfo sessionRequestInfo = runCommandHandler.generateSessionRequestInfo(command);
@@ -283,6 +285,17 @@ public final class RunCommandHandlerTest {
                 ? Optional.of(sessionRequestInfo.getBusinessLogicUrl())
                 : Optional.empty())
         .hasValue("business_logic_url");
+    assertThat(sessionRequestInfo.getShardingMode()).isEqualTo(ShardingMode.MODULE);
+  }
+
+  @Test
+  public void generateSessionRequestInfo_defaultShardingMode_isRunner() throws Exception {
+    RunCommand command =
+        RunCommand.newBuilder().setXtsType("cts").setXtsRootDir("xts_root_dir").build();
+
+    SessionRequestInfo sessionRequestInfo = runCommandHandler.generateSessionRequestInfo(command);
+
+    assertThat(sessionRequestInfo.getShardingMode()).isEqualTo(ShardingMode.RUNNER);
   }
 
   @Test

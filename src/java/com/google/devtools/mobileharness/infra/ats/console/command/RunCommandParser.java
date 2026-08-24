@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.proto.FilterValues;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunCommandParsingResultFuture;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
@@ -138,6 +139,11 @@ public class RunCommandParser implements Callable<Integer> {
       sessionRequestBuilder.setEnableDefaultLogs(options.enableDefaultLogs);
     }
     sessionRequestBuilder.setEnableTokenSharding(options.enableTokenSharding);
+    sessionRequestBuilder.setShardingMode(
+        options.shardingMode != null
+                && options.shardingMode != ShardingMode.SHARDING_MODE_UNSPECIFIED
+            ? options.shardingMode
+            : ShardingMode.RUNNER);
 
     return sessionRequestBuilder
         .addAllModuleArgs(moduleArgs)

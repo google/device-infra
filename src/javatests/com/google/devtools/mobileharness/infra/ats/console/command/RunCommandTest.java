@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerEnvironmentPreparer.ServerEnvironment;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.GuiceFactory;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
@@ -401,5 +402,41 @@ public final class RunCommandTest {
             .RunCommand
         runCmd = atsSessionPluginConfigCaptor.getValue().getRunCommand();
     assertThat(runCmd.getEnableTokenSharding()).isTrue();
+  }
+
+  @Test
+  public void parseArgs_defaultShardingMode_isRunner() throws Exception {
+    when(commandHelper.getXtsType()).thenReturn("cts");
+    when(atsSessionStub.runSession(any(), any()))
+        .thenReturn(immediateFuture(AtsSessionPluginOutput.getDefaultInstance()));
+
+    commandLine.parseArgs("cts");
+    var unused = runCommand.runWithCommand(ImmutableList.of("run", "cts"));
+
+    verify(atsSessionStub)
+        .runSession(
+            eq(RunCommand.RUN_COMMAND_SESSION_NAME), atsSessionPluginConfigCaptor.capture());
+    com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto
+            .RunCommand
+        runCmd = atsSessionPluginConfigCaptor.getValue().getRunCommand();
+    assertThat(runCmd.getShardingMode()).isEqualTo(ShardingMode.RUNNER);
+  }
+
+  @Test
+  public void parseArgs_explicitShardingModeModule() throws Exception {
+    when(commandHelper.getXtsType()).thenReturn("cts");
+    when(atsSessionStub.runSession(any(), any()))
+        .thenReturn(immediateFuture(AtsSessionPluginOutput.getDefaultInstance()));
+
+    commandLine.parseArgs("cts", "--sharding-mode", "module");
+    var unused = runCommand.runWithCommand(ImmutableList.of("run", "cts"));
+
+    verify(atsSessionStub)
+        .runSession(
+            eq(RunCommand.RUN_COMMAND_SESSION_NAME), atsSessionPluginConfigCaptor.capture());
+    com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto
+            .RunCommand
+        runCmd = atsSessionPluginConfigCaptor.getValue().getRunCommand();
+    assertThat(runCmd.getShardingMode()).isEqualTo(ShardingMode.MODULE);
   }
 }

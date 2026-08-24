@@ -32,6 +32,7 @@ java_library(
     ],
     deps = [
         ":console_command_test_module",
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:flags_string",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/constant:builtin_flags",

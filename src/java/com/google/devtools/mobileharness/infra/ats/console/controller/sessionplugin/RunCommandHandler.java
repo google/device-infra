@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.infra.ats.common.proto.FilterValues;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
@@ -409,7 +410,12 @@ class RunCommandHandler {
         .setEnableDefaultLogs(runCommand.getEnableDefaultLogs())
         .setEnableTokenSharding(runCommand.getEnableTokenSharding())
         .setIgnoreBusinessLogicFailure(runCommand.getIgnoreBusinessLogicFailure())
-        .setSessionId(sessionInfo.getSessionId());
+        .setSessionId(sessionInfo.getSessionId())
+        .setShardingMode(
+            runCommand.hasShardingMode()
+                    && runCommand.getShardingMode() != ShardingMode.SHARDING_MODE_UNSPECIFIED
+                ? runCommand.getShardingMode()
+                : ShardingMode.RUNNER);
 
     sessionInfo
         .getSessionProperty(SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID)

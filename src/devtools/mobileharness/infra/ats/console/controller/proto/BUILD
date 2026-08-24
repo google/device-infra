@@ -38,6 +38,7 @@ proto_library(
     name = "session_plugin_proto",
     srcs = ["session_plugin.proto"],
     deps = [
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_proto",
         "@protobuf//:duration_proto",
         "@protobuf//:timestamp_proto",
     ],
