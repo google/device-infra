@@ -32,10 +32,10 @@ public final class ExecModeUtil {
   private static final String EXEC_MODE_CLASS_SUFFIX = "Mode";
 
   private static final String EXEC_MODE_PACKAGE_NAME_PRIMARY =
-      "com.google.wireless.qa.mobileharness.client.api.mode";
+      "com.google.devtools.mobileharness.infra.client.api.mode";
 
   private static final String EXEC_MODE_PACKAGE_NAME_SECONDARY =
-      "com.google.devtools.mobileharness.infra.client.api.mode";
+      "com.google.wireless.qa.mobileharness.client.api.mode";
 
   /**
    * Creates {@code ExecMode} instance according to the exec mode name. Supposes exec mode name is

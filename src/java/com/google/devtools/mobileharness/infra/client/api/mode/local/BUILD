@@ -24,6 +24,7 @@ java_library(
         "LocalModeModule.java",
     ],
     visibility = [
+        "//:deviceinfra_all_pkg",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/local:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
