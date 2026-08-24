@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubP
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -73,8 +74,14 @@ public class ServerJobCreator extends XtsJobCreator {
       PreviousResultLoader previousResultLoader,
       RetryGenerator retryGenerator,
       ModuleShardingArgsGenerator moduleShardingArgsGenerator,
-      AtsServerSessionUtil atsServerSessionUtil) {
-    super(sessionRequestHandlerUtil, localFileUtil, retryGenerator, moduleShardingArgsGenerator);
+      AtsServerSessionUtil atsServerSessionUtil,
+      SystemUtil systemUtil) {
+    super(
+        sessionRequestHandlerUtil,
+        localFileUtil,
+        retryGenerator,
+        moduleShardingArgsGenerator,
+        systemUtil);
 
     this.previousResultLoader = previousResultLoader;
     this.atsServerSessionUtil = atsServerSessionUtil;

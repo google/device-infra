@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.infra.ats.common.jobcreator;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.primitives.Ints.saturatedCast;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -53,6 +55,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubP
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.PhaseSkippableDecoratorConstants;
@@ -68,6 +71,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Locale;
@@ -102,16 +106,19 @@ public abstract class XtsJobCreator {
   protected final LocalFileUtil localFileUtil;
   private final RetryGenerator retryGenerator;
   private final ModuleShardingArgsGenerator moduleShardingArgsGenerator;
+  private final SystemUtil systemUtil;
 
   protected XtsJobCreator(
       SessionRequestHandlerUtil sessionRequestHandlerUtil,
       LocalFileUtil localFileUtil,
       RetryGenerator retryGenerator,
-      ModuleShardingArgsGenerator moduleShardingArgsGenerator) {
+      ModuleShardingArgsGenerator moduleShardingArgsGenerator,
+      SystemUtil systemUtil) {
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
     this.localFileUtil = localFileUtil;
     this.retryGenerator = retryGenerator;
     this.moduleShardingArgsGenerator = moduleShardingArgsGenerator;
+    this.systemUtil = systemUtil;
   }
 
   public static boolean isSkippableException(MobileHarnessException e) {
@@ -717,13 +724,35 @@ public abstract class XtsJobCreator {
                         .build())
             .collect(toImmutableList());
 
+    // Dynamic MCTS downloads large artifacts, requiring standard Tradefed timeouts.
+    Duration jobTimeout;
+    Duration testTimeout;
+    Duration startTimeout;
+    if (isDynamicMctsEnabled) {
+      jobTimeout =
+          (sessionRequestInfo.getJobTimeout().getSeconds() == 0
+                  && sessionRequestInfo.getJobTimeout().getNanos() == 0)
+              ? SessionRequestHandlerUtil.DEFAULT_TRADEFED_JOB_TIMEOUT
+              : toJavaDuration(sessionRequestInfo.getJobTimeout());
+      testTimeout = SessionRequestHandlerUtil.calculateTestTimeout(jobTimeout);
+      startTimeout =
+          (sessionRequestInfo.getStartTimeout().getSeconds() == 0
+                  && sessionRequestInfo.getStartTimeout().getNanos() == 0)
+              ? SessionRequestHandlerUtil.DEFAULT_TRADEFED_START_TIMEOUT
+              : toJavaDuration(sessionRequestInfo.getStartTimeout());
+    } else {
+      jobTimeout = Duration.ofMinutes(5);
+      testTimeout = Duration.ofMinutes(5);
+      startTimeout = Duration.ofMinutes(5);
+    }
+
     JobConfig jobConfig =
         JobConfig.newBuilder()
             .setName(name)
             .setExecMode("local")
-            .setJobTimeoutSec(300)
-            .setTestTimeoutSec(300)
-            .setStartTimeoutSec(300)
+            .setJobTimeoutSec(saturatedCast(jobTimeout.toSeconds()))
+            .setTestTimeoutSec(saturatedCast(testTimeout.toSeconds()))
+            .setStartTimeoutSec(startTimeout.toSeconds())
             .setPriority(Priority.HIGH)
             .setTestAttempts(1)
             .setTests(StringList.newBuilder().addContent(name))
@@ -737,7 +766,8 @@ public abstract class XtsJobCreator {
             jobConfig,
             /* nonstandardFlags= */ ImmutableList.of(),
             sessionRequestHandlerUtil.createJobGenDir(name).toString(),
-            sessionRequestHandlerUtil.createJobTmpDir(name).toString());
+            sessionRequestHandlerUtil.createJobTmpDir(name).toString(),
+            systemUtil);
 
     if (decorators.stream()
         .anyMatch(d -> DriverDecoratorMetadata.isPhaseSkippableDecorator(d.getDecoratorName()))) {
