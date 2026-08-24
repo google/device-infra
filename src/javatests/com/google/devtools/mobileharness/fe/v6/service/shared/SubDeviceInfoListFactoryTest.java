@@ -90,17 +90,17 @@ public final class SubDeviceInfoListFactoryTest {
                 .setId("sub_device_1")
                 .addTypes(DeviceType.newBuilder().setType("AndroidRealDevice").setIsAbnormal(false))
                 .addDimensions(
+                    DeviceDimension.newBuilder().setName("DEVICE_SUPPORTS_MORETO").setValue("true"))
+                .addDimensions(DeviceDimension.newBuilder().setName("battery_level").setValue("85"))
+                .addDimensions(DeviceDimension.newBuilder().setName("internet").setValue("true"))
+                .addDimensions(
                     DeviceDimension.newBuilder()
                         .setName("mh_device_type")
                         .setValue("AndroidRealDevice"))
                 .addDimensions(DeviceDimension.newBuilder().setName("model").setValue("pixel 5"))
                 .addDimensions(
                     DeviceDimension.newBuilder().setName("release_version").setValue("11"))
-                .addDimensions(DeviceDimension.newBuilder().setName("battery_level").setValue("85"))
                 .addDimensions(DeviceDimension.newBuilder().setName("wifi_rssi").setValue("-50"))
-                .addDimensions(DeviceDimension.newBuilder().setName("internet").setValue("true"))
-                .addDimensions(
-                    DeviceDimension.newBuilder().setName("DEVICE_SUPPORTS_MORETO").setValue("true"))
                 .setModel("pixel 5")
                 .setVersion("11")
                 .setBatteryLevel(85)

@@ -309,13 +309,13 @@ public final class GetDeviceOverviewHandlerTest {
                 .addDimensions(
                     com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
-                        .setName("detected_supported")
-                        .setValue("val1"))
+                        .setName("config_supported")
+                        .setValue("val3"))
                 .addDimensions(
                     com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
-                        .setName("config_supported")
-                        .setValue("val3"))
+                        .setName("detected_supported")
+                        .setValue("val1"))
                 .build());
     ImmutableMap<String, DimensionSourceGroup> expectedRequired =
         ImmutableMap.of(
@@ -324,13 +324,13 @@ public final class GetDeviceOverviewHandlerTest {
                 .addDimensions(
                     com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
-                        .setName("detected_required")
-                        .setValue("val2"))
+                        .setName("config_required")
+                        .setValue("val4"))
                 .addDimensions(
                     com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
-                        .setName("config_required")
-                        .setValue("val4"))
+                        .setName("detected_required")
+                        .setValue("val2"))
                 .build());
 
     assertThat(response.getDimensions().getSupportedMap())
@@ -543,13 +543,13 @@ public final class GetDeviceOverviewHandlerTest {
                 .addDimensions(
                     com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
-                        .setName("detected_supported")
-                        .setValue("val1"))
+                        .setName("config_supported")
+                        .setValue("val3"))
                 .addDimensions(
                     com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension
                         .newBuilder()
-                        .setName("config_supported")
-                        .setValue("val3"))
+                        .setName("detected_supported")
+                        .setValue("val1"))
                 .build());
   }
 
