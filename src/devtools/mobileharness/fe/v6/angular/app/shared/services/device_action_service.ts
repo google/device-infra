@@ -439,9 +439,12 @@ export class DeviceActionService {
         return this.deviceService.prepareDevice(deviceId, hostName);
       }),
       tap(() => {
-        // TODO: check if we need to refresh the device status, or give a hint that it may take some minutes for it to take effect at the UI side.
+        // It may take around 10 minutes for the device to be prepared.
+        // But when we show this snackbar, device preparation is still in progress,
+        // so there is no need to refresh the device status, and we can NOT tell the user
+        // that the device is prepared successfully yet. Thus we use the following message.
         this.snackBar.showSuccess(
-          `Device ${deviceId} prepared successfully. It may take a few minutes to take effect on the UI side.`,
+          `Device ${deviceId} preparation is in progress. It may take several minutes to take effect on the UI side.`,
         );
       }),
       catchError((err) =>
