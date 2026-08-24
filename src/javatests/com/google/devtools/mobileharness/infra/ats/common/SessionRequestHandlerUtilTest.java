@@ -42,6 +42,7 @@ import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
 import com.google.devtools.mobileharness.infra.ats.common.proto.FilterValues;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
@@ -707,6 +708,25 @@ public final class SessionRequestHandlerUtilTest {
         .containsExactly(
             subDeviceSpecWithDimension("id", "device_id_1"),
             subDeviceSpecWithDimension("id", "device_id_2"));
+  }
+
+  @Test
+  public void getSessionSubDeviceSpecList_consoleRequest_forSingleDeviceJob_allocatesSingleDevice()
+      throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .addAllDeviceSerials(ImmutableList.of("device_id_1", "device_id_2"))
+                .setShardingMode(ShardingMode.MODULE));
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo, /* forMultiDeviceJob= */ false);
+    JobConfig jobConfig =
+        sessionRequestHandlerUtil.initializeJobConfig(
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
+
+    assertThat(jobConfig.getDevice().getSubDeviceSpecList())
+        .containsExactly(subDeviceSpecWithDimension("id", "regex:(device_id_1|device_id_2)"));
   }
 
   @Test

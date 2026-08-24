@@ -237,6 +237,14 @@ public class SessionRequestHandlerUtil {
     int shardCount = max(requestedShardCount, minDeviceCount);
     ImmutableSet<DeviceDetails> availableDevices =
         localDeviceUtil.getLocalAvailableDevices(sessionRequestInfo);
+    // For single-device jobs (e.g. MODULE sharding mode), allocate exactly one device matching
+    // any of the available devices so multiple shards can run concurrently on separate devices.
+    if (!forMultiDeviceJob) {
+      return pickAndroidOnlineDevices(
+          sessionRequestInfo,
+          availableDevices.stream().map(DeviceDetails::id).collect(toImmutableSet()),
+          /* shardCount= */ 1);
+    }
     if (sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
       return pickAndroidOnlineDevices(
           sessionRequestInfo,

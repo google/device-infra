@@ -56,6 +56,8 @@ import com.google.protobuf.Any;
 import com.google.protobuf.TextFormat;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -63,6 +65,8 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import java.util.Optional;
@@ -683,5 +687,85 @@ public final class AtsSessionPluginTest {
     // TF job 2 ends -> Teardown scheduled
     atsSessionPlugin.onJobEnd(new JobEndEvent(tfJob2, /* jobError= */ null));
     verify(sessionInfo).addJob(teardownJob);
+  }
+
+  @Test
+  public void onJobEnd_runnerSharding_addsDeviceIdsToSubDeviceSpecs() throws Exception {
+    RunCommand runCommand = RunCommand.getDefaultInstance();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
+                .build());
+    when(runCommandHandler.shouldEnableModuleSharding()).thenReturn(false);
+    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    JobInfo currentJob = mock(JobInfo.class);
+    when(currentJob.locator())
+        .thenReturn(new JobLocator("tf_job_1", "tf_job_1_" + XtsConstants.STATIC_XTS_JOB_NAME));
+    when(currentJob.properties()).thenReturn(new Properties(new Timing()));
+    TestInfos testInfos = mock(TestInfos.class);
+    TestInfo testInfo = mock(TestInfo.class);
+    Properties testProperties = new Properties(new Timing());
+    testProperties.add(PropertyName.Test.DEVICE_ID_LIST, "device_1");
+    when(testInfo.properties()).thenReturn(testProperties);
+    when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
+    when(currentJob.tests()).thenReturn(testInfos);
+
+    JobInfo nextJob = mock(JobInfo.class);
+    when(nextJob.locator())
+        .thenReturn(new JobLocator("tf_job_2", "tf_job_2_" + XtsConstants.DYNAMIC_MCTS_JOB_NAME));
+    when(nextJob.properties()).thenReturn(new Properties(new Timing()));
+    SubDeviceSpecs subDeviceSpecs = new SubDeviceSpecs(new Params(new Timing()), new Timing());
+    subDeviceSpecs.addSubDevice("AndroidDevice");
+    when(nextJob.subDeviceSpecs()).thenReturn(subDeviceSpecs);
+
+    when(runCommandHandler.createTradefedJobs(runCommand))
+        .thenReturn(ImmutableList.of(currentJob, nextJob));
+    when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
+    when(runCommandHandler.createSetupJob()).thenReturn(Optional.empty());
+    when(runCommandHandler.createTeardownJob()).thenReturn(Optional.empty());
+
+    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+
+    // Current static job ends -> Next dynamic job scheduled WITH device IDs relayed to subdevice
+    // specs
+    atsSessionPlugin.onJobEnd(new JobEndEvent(currentJob, /* jobError= */ null));
+    verify(sessionInfo).addJob(nextJob);
+    assertThat(subDeviceSpecs.getAllSubDevices().get(0).dimensions().get(Name.ID.lowerCaseName()))
+        .isEqualTo("device_1");
+  }
+
+  @Test
+  public void addMainJobs_moduleSharding_addsAllTradefedJobsDirectly() throws Exception {
+    RunCommand runCommand = RunCommand.getDefaultInstance();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
+                .build());
+    when(runCommandHandler.shouldEnableModuleSharding()).thenReturn(true);
+    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    JobInfo tfJob1 = mock(JobInfo.class);
+    when(tfJob1.locator()).thenReturn(new JobLocator("tf_job_1", "module_1_job_STATIC_XTS"));
+    when(tfJob1.properties()).thenReturn(new Properties(new Timing()));
+
+    JobInfo tfJob2 = mock(JobInfo.class);
+    when(tfJob2.locator()).thenReturn(new JobLocator("tf_job_2", "module_1_job_MCTS"));
+    when(tfJob2.properties()).thenReturn(new Properties(new Timing()));
+
+    when(runCommandHandler.createTradefedJobs(runCommand))
+        .thenReturn(ImmutableList.of(tfJob1, tfJob2));
+    when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
+    when(runCommandHandler.createSetupJob()).thenReturn(Optional.empty());
+    when(runCommandHandler.createTeardownJob()).thenReturn(Optional.empty());
+
+    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+
+    verify(sessionInfo).addJob(tfJob1);
+    verify(sessionInfo).addJob(tfJob2);
   }
 }

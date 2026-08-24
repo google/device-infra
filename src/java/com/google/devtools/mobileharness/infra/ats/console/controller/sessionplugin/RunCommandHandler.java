@@ -180,6 +180,11 @@ class RunCommandHandler {
     return xtsJobCreator.createXtsTearDownJob(sessionRequestInfo);
   }
 
+  /** Returns whether the current session's run command enables MODULE sharding mode. */
+  boolean shouldEnableModuleSharding() {
+    return initialized && SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo);
+  }
+
   /**
    * Copies xTS tradefed and non-tradefed generated logs/results into proper locations within the
    * given xts root dir.

@@ -447,10 +447,17 @@ public class AtsSessionPlugin {
         // Add the additional tradefed jobs if needed.
         JobInfo nextJobToAdd = additionalTradefedJobs.poll();
         if (nextJobToAdd != null) {
-          ImmutableSet<String> devicesOfCurrentJob = getDeviceSerials(currentJob);
-          // Add the device ids of the current job to the sub device specs of the next tradefed job.
-          addDeviceIdsToSubDeviceSpecs(
-              nextJobToAdd.subDeviceSpecs().getAllSubDevices(), devicesOfCurrentJob);
+          // In MODULE sharding mode, each job has a SubDeviceSpec matching any available device
+          // (via regex), allowing the scheduler to dynamically allocate whichever device is free.
+          // In RUNNER sharding mode, pin the sub-device specs to the exact device IDs used by the
+          // completed static job so that the subsequent dynamic job runs on the same devices.
+          if (!runCommandHandler.shouldEnableModuleSharding()) {
+            ImmutableSet<String> devicesOfCurrentJob = getDeviceSerials(currentJob);
+            // Add the device ids of the current job to the sub device specs of the next tradefed
+            // job.
+            addDeviceIdsToSubDeviceSpecs(
+                nextJobToAdd.subDeviceSpecs().getAllSubDevices(), devicesOfCurrentJob);
+          }
           addAndTrackTradefedJobs(ImmutableList.of(nextJobToAdd));
         }
 
@@ -829,14 +836,15 @@ public class AtsSessionPlugin {
   }
 
   /**
-   * Adds main Tradefed jobs to the session.
-   *
-   * <p>If multiple Tradefed jobs exist, they are partitioned:
+   * Adds main Tradefed jobs to the session based on the sharding mode:
    *
    * <ul>
-   *   <li><b>Static xTS jobs</b> are prioritized and added immediately to run concurrently.
-   *   <li><b>Additional Tradefed jobs</b> are queued in {@code additionalTradefedJobs} to execute
-   *       sequentially as previous jobs finish in {@link #onJobEnd}.
+   *   <li>In <b>MODULE sharding mode</b>, each module-level job requires only one device. All
+   *       module jobs (both static and dynamic) are added directly to the session to run
+   *       concurrently across all available devices.
+   *   <li>In <b>RUNNER sharding mode</b> (default), the static xTS job is started first using all
+   *       allocated devices, and dynamic MCTS jobs in {@code additionalTradefedJobs} execute after
+   *       the static job completes in {@link #onJobEnd}.
    * </ul>
    *
    * <p>If no Tradefed jobs could be started, falls back to adding non-Tradefed jobs.
@@ -852,6 +860,15 @@ public class AtsSessionPlugin {
   }
 
   private List<JobInfo> prepareTradefedJobsToStart() {
+    if (runCommandHandler.shouldEnableModuleSharding()) {
+      // In MODULE sharding mode, each job requires a single device. All jobs can be scheduled
+      // concurrently across all available devices.
+      return tradefedJobs;
+    }
+
+    // In RUNNER (or default) sharding mode:
+    // Partition jobs into static xTS jobs and dynamic MCTS jobs. Start the static job first,
+    // and queue the dynamic job to execute sequentially in onJobEnd using the same devices.
     Map<Boolean, List<JobInfo>> partitionedJobs =
         tradefedJobs.stream()
             .collect(
