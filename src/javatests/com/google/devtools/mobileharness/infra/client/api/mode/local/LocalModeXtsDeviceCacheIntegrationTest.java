@@ -109,6 +109,10 @@ public class LocalModeXtsDeviceCacheIntegrationTest {
         ImmutableMap.<String, String>builder()
             .put("adb", mockAdbController.getAdbPath())
             .put("aapt", mockAapt.getPath())
+            .put("always_use_oss_detector_and_dispatcher", "true")
+            .put("detect_device_interval_sec", "0")
+            .put("dispatch_device_interval_sec", "0")
+            .put("check_device_interval", "0")
             .put("enable_android_device_ready_check", "false")
             .put("enable_emulator_detection", "false")
             .put("enable_fastboot_detector", "false")
@@ -144,7 +148,8 @@ public class LocalModeXtsDeviceCacheIntegrationTest {
   }
 
   @Test
-  public void runJob_keepXtsCache_deviceAllocatedAfterAdbOffline() throws Exception {
+  public void runJob_keepXtsCache_deviceAllocatedAfterAdbOfflineAndUndetectedAfterCacheInvalidated()
+      throws Exception {
     // Runs the first job with a plugin that keeps the device cached in XtsDeviceCache while ADB
     // goes offline.
     JobInfo jobInfo1 = createJobInfo("job_with_xts_cache", Duration.ofSeconds(30L));
@@ -169,22 +174,9 @@ public class LocalModeXtsDeviceCacheIntegrationTest {
 
     // Verifies that the second job succeeds because the device was retained by XtsDeviceCache.
     assertThat(jobInfo2.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
-  }
 
-  @Test
-  public void runJob_withoutXtsCache_deviceUndetectedAfterAdbOffline() throws Exception {
-    // Runs the first job with a plugin that does not retain XtsDeviceCache and takes ADB offline.
-    JobInfo jobInfo1 = createJobInfo("job_without_xts_cache", Duration.ofSeconds(30L));
-    TestPluginWithoutXtsCache plugin = new TestPluginWithoutXtsCache(mockAdbController);
-
-    clientApi.startJob(jobInfo1, localMode, ImmutableList.of(plugin));
-    clientApi.waitForJob(jobInfo1.locator().getId());
-
-    // Verifies that the first job passes.
-    assertThat(jobInfo1.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
-
-    // Verifies that neither XtsDeviceCache nor general DeviceCache retains the device cache.
-    XtsDeviceCache xtsDeviceCache = new XtsDeviceCache();
+    // Explicitly invalidates XtsDeviceCache and verifies that neither cache retains the device.
+    xtsDeviceCache.invalidateCache(SERIAL);
     assertThat(xtsDeviceCache.isCached(SERIAL)).isFalse();
     assertThat(DeviceCache.getInstance().isCached(SERIAL)).isFalse();
 
@@ -259,36 +251,6 @@ public class LocalModeXtsDeviceCacheIntegrationTest {
     public void onTestEnded(LocalTestEndedEvent event) {
       logger.atInfo().log("TestPluginForKeepingXtsCache.onTestEnded");
       // Invalidates only the general DeviceCache, leaving XtsDeviceCache active.
-      DeviceCache.getInstance().invalidateCache(event.getLocalDevice().getDeviceControlId());
-    }
-  }
-
-  private static class TestPluginWithoutXtsCache {
-    private final MockAdbController mockAdbController;
-
-    private TestPluginWithoutXtsCache(MockAdbController mockAdbController) {
-      this.mockAdbController = mockAdbController;
-    }
-
-    @Subscribe
-    public void onTestStarting(LocalTestStartingEvent event) {
-      logger.atInfo().log("TestPluginWithoutXtsCache.onTestStarting");
-      String deviceControlId = event.getLocalDevice().getDeviceControlId();
-      // Caches the device only in general DeviceCache without XtsDeviceCache.
-      DeviceCache.getInstance().cache(deviceControlId, DEVICE_TYPE, Duration.ofMinutes(5L));
-
-      // Simulates ADB disconnect by marking the device offline in mock ADB.
-      try {
-        mockAdbController.setDeviceOnline(deviceControlId, false);
-      } catch (IOException e) {
-        throw new IllegalStateException("Failed to update mock adb state", e);
-      }
-    }
-
-    @Subscribe
-    public void onTestEnded(LocalTestEndedEvent event) {
-      logger.atInfo().log("TestPluginWithoutXtsCache.onTestEnded");
-      // Invalidates the general DeviceCache on test end.
       DeviceCache.getInstance().invalidateCache(event.getLocalDevice().getDeviceControlId());
     }
   }
