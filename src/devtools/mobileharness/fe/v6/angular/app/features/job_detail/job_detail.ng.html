@@ -3,7 +3,10 @@
     <div class="error-message">
       <mat-icon class="error-icon">error_outline</mat-icon>
       <p>{{ error }}</p>
+      <!-- TODO: Re-design the error page, including below error link. -->
+      <!--
       <a routerLink="/dev/device-harness" class="m3-button">Back to Harness</a>
+      -->
     </div>
   } @else if (job(); as job) {
     <div class="main-card">
