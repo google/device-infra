@@ -1,0 +1,9 @@
+@if (shouldShow()) {
+  <div class="legacy-page-banner">
+    <mat-icon class="legacy-page-banner-icon">info</mat-icon>
+    <span>
+      This is the new OmniLab Console. If needed, you can
+      <a [href]="legacyUrl()" target="_blank" class="legacy-link">view this {{bannerType()}} in the legacy page</a>.
+    </span>
+  </div>
+}

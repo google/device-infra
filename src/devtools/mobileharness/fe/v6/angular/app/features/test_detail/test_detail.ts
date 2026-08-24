@@ -17,12 +17,14 @@ import {NavLink} from '@deviceinfra/app/shared/components/nav_link/nav_link';
 import {useCopyToClipboard} from '@deviceinfra/app/shared/composables/copy';
 import {usePageTitle} from '@deviceinfra/app/shared/composables/page_title';
 import {useSilentResource} from '@deviceinfra/app/shared/composables/silent_resource';
+import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
 import {
   GetTestRequest,
   TestResult,
   TestStatus,
 } from '../../core/models/test_overview';
 import {TEST_SERVICE} from '../../core/services/test/test_service';
+import {LegacyConsoleBanner} from '../../shared/components/legacy_console_banner/legacy_console_banner';
 import {TooltipIfTruncatedDirective} from '../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
 import {TestFilesTab} from './components/test_files_tab/test_files_tab';
 import {TestLogTab} from './components/test_log_tab/test_log_tab';
@@ -56,11 +58,14 @@ import {
     TestFilesTab,
     NavLink,
     TooltipIfTruncatedDirective,
+    LegacyConsoleBanner,
   ],
 })
 export class TestDetail {
   private readonly route = inject(ActivatedRoute);
   private readonly testService = inject(TEST_SERVICE);
+  private readonly appData = inject(APP_DATA);
+  readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
   readonly copyToClipboard = useCopyToClipboard();
 
   readonly testId = toSignal(

@@ -26,6 +26,10 @@
       </header>
 
       <div class="card-body">
+        <app-legacy-console-banner
+          [legacyUrl]="legacyFeUrl + '/testdetailview/' + jobId() + '/' + test.id"
+          bannerType="test">
+        </app-legacy-console-banner>
         <!-- Test Title Bar -->
         <div class="device-title-bar">
             <div class="title-left-section">

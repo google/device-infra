@@ -33,8 +33,10 @@ import {
   throttleTime,
 } from 'rxjs/operators';
 
+import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
 import {HostOverviewPageData} from '../../core/models/host_overview';
 import {HOST_SERVICE} from '../../core/services/host/host_service';
+import {LegacyConsoleBanner} from '../../shared/components/legacy_console_banner/legacy_console_banner';
 import {OpenInNewTabButton} from '../../shared/components/open_in_new_tab_button/open_in_new_tab_button';
 import {ClipboardService} from '../../shared/services/clipboard_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
@@ -65,6 +67,7 @@ interface HostPageData {
     HostActionBar,
     MatMenuModule,
     RouterModule,
+    LegacyConsoleBanner,
     OpenInNewTabButton,
   ],
   host: {
@@ -82,6 +85,8 @@ export class HostDetail implements OnInit, OnDestroy {
   private readonly destroyed = new ReplaySubject<void>(1);
   private readonly clipboardService = inject(ClipboardService);
   private readonly snackBar = inject(SnackBarService);
+  private readonly appData = inject(APP_DATA);
+  readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
   /**
    * Subject to trigger a data refresh.
    */

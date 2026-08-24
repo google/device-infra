@@ -75,32 +75,6 @@ $labconsole-font: Roboto, sans-serif;
   padding: 1.5rem; // p-6
 }
 
-.legacy-page-banner {
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  padding: 0.75rem;
-  background-color: #eff6ff;
-  color: #1967d2;
-  border: 1px solid #bfdbfe;
-  border-radius: 0.5rem;
-  display: flex;
-  align-items: center;
-  margin-bottom: 1.5rem;
-
-  .legacy-page-banner-icon {
-    font-size: 1.25rem;
-    height: 1.25rem;
-    width: 1.25rem;
-    margin-right: 0.5rem;
-  }
-
-  .legacy-link {
-    color: #1967d2;
-    font-weight: 500;
-    text-decoration: underline;
-  }
-}
-
 .device-title-bar {
   margin-bottom: 1.5rem; // mb-6
 

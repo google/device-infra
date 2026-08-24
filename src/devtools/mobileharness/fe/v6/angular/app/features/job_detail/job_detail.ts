@@ -15,6 +15,7 @@ import {ActivatedRoute, RouterModule} from '@angular/router';
 import {of} from 'rxjs';
 import {catchError, map, take} from 'rxjs/operators';
 import {JOB_ACTION_UI_CONFIG} from '../../core/constants/action_bar_config';
+import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
 import {
   GetJobRequest,
   JobOverviewData,
@@ -24,6 +25,7 @@ import {
 import {JOB_SERVICE} from '../../core/services/job/job_service';
 import {ActionButton} from '../../shared/components/action_button/action_button';
 import {ConfirmDialog} from '../../shared/components/confirm_dialog/confirm_dialog';
+import {LegacyConsoleBanner} from '../../shared/components/legacy_console_banner/legacy_console_banner';
 import {useCopyToClipboard} from '../../shared/composables/copy';
 import {usePageTitle} from '../../shared/composables/page_title';
 import {useSilentResource} from '../../shared/composables/silent_resource';
@@ -58,6 +60,7 @@ import {JobPageData} from './models/job_page_ui';
     JobFilesTab,
     ActionButton,
     TooltipIfTruncatedDirective,
+    LegacyConsoleBanner,
   ],
 })
 export class JobDetail {
@@ -66,6 +69,8 @@ export class JobDetail {
   private readonly snackBar = inject(SnackBarService);
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly dialog = inject(MatDialog);
+  private readonly appData = inject(APP_DATA);
+  readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
   readonly copyToClipboard = useCopyToClipboard();
 
   readonly jobActionUiConfig = JOB_ACTION_UI_CONFIG;

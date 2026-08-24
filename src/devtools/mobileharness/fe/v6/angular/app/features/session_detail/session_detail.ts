@@ -13,8 +13,10 @@ import {ActivatedRoute, RouterModule} from '@angular/router';
 import {Observable, of} from 'rxjs';
 import {catchError, map} from 'rxjs/operators';
 
+import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
 import {SessionStatus} from '../../core/models/common_models';
 import {SESSION_SERVICE} from '../../core/services/session/session_service';
+import {LegacyConsoleBanner} from '../../shared/components/legacy_console_banner/legacy_console_banner';
 import {useCopyToClipboard} from '../../shared/composables/copy';
 import {usePageTitle} from '../../shared/composables/page_title';
 import {useSilentResource} from '../../shared/composables/silent_resource';
@@ -41,11 +43,14 @@ import {SessionPageData} from './models/session_page_ui';
     SessionLogTab,
     SessionFilesTab,
     TooltipIfTruncatedDirective,
+    LegacyConsoleBanner,
   ],
 })
 export class SessionDetailPage {
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly sessionService = inject(SESSION_SERVICE);
+  private readonly appData = inject(APP_DATA);
+  readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
   readonly copyToClipboard = useCopyToClipboard();
 
   readonly activeTab = signal<'overview' | 'log' | 'files'>('overview');

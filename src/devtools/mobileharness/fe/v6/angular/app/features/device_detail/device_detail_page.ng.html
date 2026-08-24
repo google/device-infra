@@ -28,23 +28,10 @@
         <div class="card-body">
           <!-- TODO: remove it when we don't need this banner anymore -->
           <!-- Legacy Console Banner -->
-          @if (legacyFeUrl) {
-            <!-- always hide the banner as we decided to show it in arsenal instead -->
-            <div class="legacy-page-banner" style="display: none;">
-              <mat-icon class="legacy-page-banner-icon">info</mat-icon>
-              <span>
-                  This is the new OmniLab Console. If needed, you can
-                <a
-                  href="{{legacyFeUrl}}/devicedetailview/{{device.host.name}}/{{device.host.ip}}/{{device.id}}"
-                  id="legacy-link"
-                  target="_blank"
-                  class="legacy-link"
-                  >
-                  view this device in the legacy page
-                  </a>.
-              </span>
-            </div>
-          }
+          <app-legacy-console-banner
+            [legacyUrl]="legacyFeUrl + '/devicedetailview/' + device.host.name + '/' + device.host.ip + '/' + device.id"
+            bannerType="device">
+          </app-legacy-console-banner>
 
           <!-- Device Title Bar -->
           <div class="device-title-bar">

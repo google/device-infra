@@ -32,6 +32,10 @@
       </header>
 
       <div class="card-body">
+        <app-legacy-console-banner
+          [legacyUrl]="legacyFeUrl + '/sessiondetailview/' + session.id"
+          bannerType="session">
+        </app-legacy-console-banner>
         <!-- Session Title Bar / Identity Area -->
         <div class="session-title-bar">
           <div class="title-bar-content-wrapper">

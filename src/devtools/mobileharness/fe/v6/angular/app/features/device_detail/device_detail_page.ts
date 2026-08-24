@@ -40,6 +40,7 @@ import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
 import {DeviceOverviewPageData} from '../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../core/services/device/device_service';
 import {EnvUniverseService} from '../../core/services/env_universe_service';
+import {LegacyConsoleBanner} from '../../shared/components/legacy_console_banner/legacy_console_banner';
 import {NavLink} from '../../shared/components/nav_link/nav_link';
 import {OpenInNewTabButton} from '../../shared/components/open_in_new_tab_button/open_in_new_tab_button';
 import {ClipboardService} from '../../shared/services/clipboard_service';
@@ -75,6 +76,7 @@ declare interface DevicePageData {
     TestHistoryTab,
     MatTooltipModule,
     NavLink,
+    LegacyConsoleBanner,
     OpenInNewTabButton,
   ],
   templateUrl: './device_detail_page.ng.html',

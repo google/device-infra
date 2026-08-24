@@ -1,6 +1,7 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
+import {APP_DATA} from '../../core/models/app_data';
 import {FakeHostService} from '../../core/services/host/fake_host_service';
 import {HOST_SERVICE} from '../../core/services/host/host_service';
 import {ClipboardService} from '../../shared/services/clipboard_service';
@@ -33,6 +34,7 @@ describe('HostDetail Component', () => {
         {provide: HOST_SERVICE, useClass: FakeHostService},
         {provide: SnackBarService, useValue: mockSnackBarService},
         {provide: ClipboardService, useValue: mockClipboardService},
+        {provide: APP_DATA, useValue: {applicationId: 'arsenal'}},
       ],
     }).compileComponents();
 

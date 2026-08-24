@@ -45,6 +45,10 @@
         </header>
 
         <div class="card-body">
+          <app-legacy-console-banner
+            [legacyUrl]="legacyFeUrl + '/jobdetailview/' + job.id"
+            bannerType="job">
+          </app-legacy-console-banner>
           <!-- Job Title Bar / Identity Area -->
           <div class="job-title-bar">
             <div class="title-bar-content-wrapper">

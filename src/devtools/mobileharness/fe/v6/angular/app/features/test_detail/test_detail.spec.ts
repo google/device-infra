@@ -12,6 +12,7 @@ import {
 } from '@angular/router';
 import {of} from 'rxjs';
 
+import {APP_DATA} from '../../core/models/app_data';
 import {
   JobResult,
   JobStatus,
@@ -113,6 +114,7 @@ describe('TestDetail Component', () => {
         {provide: SnackBarService, useValue: mockSnackBarService},
         {provide: LoadingService, useValue: mockLoadingService},
         {provide: ActivatedRoute, useValue: mockActivatedRoute},
+        {provide: APP_DATA, useValue: {applicationId: 'arsenal'}},
       ],
     }).compileComponents();
 
