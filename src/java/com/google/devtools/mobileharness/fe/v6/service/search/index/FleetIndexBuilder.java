@@ -718,12 +718,12 @@ public final class FleetIndexBuilder {
         names.put(keyId, displayName(keyId));
       }
 
-      return FleetIndex.builder()
-          .setValueCounts(ImmutableMap.copyOf(countsMap))
-          .setSortedValues(ImmutableMap.copyOf(sortedMap))
-          .setValueDisplays(ImmutableMap.copyOf(displaysMap))
+      return CoreFleetIndex.builder()
+          .setValueCountsMap(ImmutableMap.copyOf(countsMap))
+          .setSortedValuesMap(ImmutableMap.copyOf(sortedMap))
+          .setValueDisplaysMap(ImmutableMap.copyOf(displaysMap))
           .setKeyIds(ImmutableSet.copyOf(keyIds))
-          .setDisplayNames(names.buildOrThrow())
+          .setDisplayNamesMap(names.buildOrThrow())
           .setSemanticGlobalSorted(ImmutableList.copyOf(semanticPairs))
           .setGlobalExact(frozenGlobalExact.buildOrThrow())
           .build();

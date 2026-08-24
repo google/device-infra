@@ -28,7 +28,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceValueE
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -59,12 +59,12 @@ public final class DeviceCorpus implements SearchCorpus {
           "FASTBOOTDMODE");
 
   private final FleetSnapshot snapshot;
-  private final LazyPostings postings;
+  private final Postings postings;
   @Nullable private final ScenarioCuration curation;
   private final FleetCellMapper cellMapper = new FleetCellMapper();
 
   public DeviceCorpus(
-      FleetSnapshot snapshot, LazyPostings postings, @Nullable ScenarioCuration curation) {
+      FleetSnapshot snapshot, Postings postings, @Nullable ScenarioCuration curation) {
     this.snapshot = snapshot;
     this.postings = postings;
     this.curation = curation;
@@ -76,7 +76,7 @@ public final class DeviceCorpus implements SearchCorpus {
   }
 
   @Override
-  public LazyPostings postings() {
+  public Postings postings() {
     return postings;
   }
 

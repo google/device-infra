@@ -94,7 +94,10 @@ java_library(
 
 java_library(
     name = "fleet_index",
-    srcs = ["FleetIndex.java"],
+    srcs = [
+        "CoreFleetIndex.java",
+        "FleetIndex.java",
+    ],
     deps = [
         ":key_count",
         ":value_key_pair",
@@ -124,6 +127,12 @@ java_library(
 )
 
 java_library(
+    name = "postings",
+    srcs = ["Postings.java"],
+    deps = ["@maven//:com_google_guava_guava"],
+)
+
+java_library(
     name = "lazy_postings",
     srcs = ["LazyPostings.java"],
     deps = [
@@ -131,6 +140,7 @@ java_library(
         ":device_value_extractor",
         ":host_record",
         ":host_value_extractor",
+        ":postings",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -170,5 +180,33 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "overlay_view",
+    srcs = ["OverlayView.java"],
+    deps = ["@maven//:com_google_guava_guava"],
+)
+
+java_library(
+    name = "composite_fleet_index",
+    srcs = ["CompositeFleetIndex.java"],
+    deps = [
+        ":fleet_index",
+        ":key_count",
+        ":overlay_view",
+        ":value_key_pair",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "composite_postings",
+    srcs = ["CompositePostings.java"],
+    deps = [
+        ":overlay_view",
+        ":postings",
+        "@maven//:com_google_guava_guava",
     ],
 )

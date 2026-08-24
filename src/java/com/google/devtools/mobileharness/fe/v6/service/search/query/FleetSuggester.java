@@ -59,7 +59,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextSegment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.KeyCount;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.ValueKeyPair;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -555,8 +555,7 @@ public final class FleetSuggester {
 
     // 3. Identifier collapse (PLAIN_VALUE_KEYS, one collapsed suggestion per key).
     for (String identKey : PLAIN_VALUE_KEYS) {
-      ImmutableList<String> keyValues =
-          index.sortedValues().getOrDefault(identKey, ImmutableList.of());
+      ImmutableList<String> keyValues = index.sortedValues(identKey);
       if (keyValues.isEmpty()) {
         continue;
       }
@@ -978,12 +977,11 @@ public final class FleetSuggester {
 
   private static ImmutableList<Match> matchValues(
       FleetIndex index, String keyId, String query, boolean allowContains) {
-    ImmutableList<String> sorted = index.sortedValues().getOrDefault(keyId, ImmutableList.of());
+    ImmutableList<String> sorted = index.sortedValues(keyId);
     if (sorted.isEmpty() || query.isEmpty()) {
       return ImmutableList.of();
     }
-    ImmutableMap<String, Integer> counts =
-        index.valueCounts().getOrDefault(keyId, ImmutableMap.of());
+    ImmutableMap<String, Integer> counts = index.valueCounts(keyId);
     List<Match> out = new ArrayList<>();
     Set<String> exactHits = new HashSet<>();
     // Full match, normalizing space and underscore both ways (spec section 2.3).
@@ -1015,8 +1013,7 @@ public final class FleetSuggester {
 
   /** Top values of a key by global count, used to offer ready-to-apply conditions. */
   private static List<Match> topValues(Context context, String keyId, int n) {
-    ImmutableMap<String, Integer> counts =
-        context.index().valueCounts().getOrDefault(keyId, ImmutableMap.of());
+    ImmutableMap<String, Integer> counts = context.index().valueCounts(keyId);
     List<Match> all = new ArrayList<>();
     for (Map.Entry<String, Integer> entry : counts.entrySet()) {
       if (entry.getValue() > 0) {
@@ -1192,18 +1189,7 @@ public final class FleetSuggester {
   }
 
   private static String displayName(FleetIndex index, String keyId) {
-    return index.displayNames().getOrDefault(keyId, deriveDisplayName(keyId));
-  }
-
-  private static String deriveDisplayName(String keyId) {
-    int separator = keyId.indexOf("::");
-    String namespace = separator >= 0 ? keyId.substring(0, separator) : "";
-    String name = separator >= 0 ? keyId.substring(separator + 2) : keyId;
-    return switch (namespace) {
-      case "dim" -> "Dimension " + name;
-      case "prop" -> "Host Property " + name;
-      default -> name;
-    };
+    return index.displayName(keyId);
   }
 
   private static String pillKey(FleetIndex index, String keyId) {
@@ -1223,14 +1209,7 @@ public final class FleetSuggester {
   }
 
   private static String displayValue(FleetIndex index, String keyId, String valueLower) {
-    ImmutableMap<String, String> displays = index.valueDisplays().get(keyId);
-    if (displays != null) {
-      String display = displays.get(valueLower);
-      if (display != null) {
-        return display;
-      }
-    }
-    return valueLower;
+    return index.valueDisplays(keyId).getOrDefault(valueLower, valueLower);
   }
 
   /**
@@ -1388,7 +1367,7 @@ public final class FleetSuggester {
     return others.build();
   }
 
-  private static BitSet devicesWithKey(LazyPostings postings, String keyId) {
+  private static BitSet devicesWithKey(Postings postings, String keyId) {
     BitSet withKey = new BitSet();
     for (int[] posting : postings.forKey(keyId).values()) {
       for (int deviceIndex : posting) {
@@ -1565,7 +1544,7 @@ public final class FleetSuggester {
       ImmutableList<Integer> current,
       BitSet currentBits,
       ToIntFunction<String> keyPriority,
-      LazyPostings postings) {}
+      Postings postings) {}
 
   /**
    * A candidate suggestion before ranking. Holds the partially built proto (label, main text, and

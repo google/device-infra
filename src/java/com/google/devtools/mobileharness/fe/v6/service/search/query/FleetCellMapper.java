@@ -95,7 +95,7 @@ public final class FleetCellMapper {
    * present in the fleet, and falls back to a name derived from the key namespace otherwise.
    */
   public Column column(String keyId, FleetSnapshot snapshot) {
-    String display = snapshot.index().displayNames().getOrDefault(keyId, deriveDisplayName(keyId));
+    String display = snapshot.index().displayName(keyId);
     return Column.newBuilder().setKey(keyId).setDisplayName(display).build();
   }
 
@@ -209,8 +209,7 @@ public final class FleetCellMapper {
                 ImmutableList.of(
                     snapshot
                         .index()
-                        .valueDisplays()
-                        .getOrDefault(HOST_ATS_CONTROLLER, ImmutableMap.of())
+                        .valueDisplays(HOST_ATS_CONTROLLER)
                         .getOrDefault(Ascii.toLowerCase(id), id)))
         .orElse(ImmutableList.of());
   }
@@ -230,20 +229,5 @@ public final class FleetCellMapper {
 
   private static ImmutableList<String> singleton(String value) {
     return value.isEmpty() ? ImmutableList.of() : ImmutableList.of(value);
-  }
-
-  /**
-   * Derives a display name from a key id for keys absent from the fleet index. Mirrors the
-   * namespace derivation the index builder applies to discovered dimensions and host properties.
-   */
-  private static String deriveDisplayName(String keyId) {
-    int separator = keyId.indexOf("::");
-    String namespace = separator >= 0 ? keyId.substring(0, separator) : "";
-    String name = separator >= 0 ? keyId.substring(separator + 2) : keyId;
-    return switch (namespace) {
-      case "dim" -> "Dimension " + name;
-      case "prop" -> "Host Property " + name;
-      default -> name;
-    };
   }
 }
