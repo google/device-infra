@@ -96,6 +96,7 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
   private boolean deviceTypeSupported = false;
   private Set<String> unsupportedDecorators;
   private Map<String, String> unsupportedDimensions;
+  private final Map<String, Set<String>> actualValuesForUnsupportedDimensions = new HashMap<>();
   private Multimap<String, String> unsatisfiedDimensions;
 
   private boolean idle = false;
@@ -159,10 +160,17 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
       unsupportedDecorators = device.decorators().getUnsupported(unsupportedDecorators);
     }
     if (!unsupportedDimensions.isEmpty()) {
-      unsupportedDimensions =
+      Map<String, String> newUnsupportedDimensions =
           device
               .dimensions()
               .getUnsupportedJobDimensions(unsupportedDimensions, /* failFast= */ false);
+      for (String dimName : newUnsupportedDimensions.keySet()) {
+        Set<String> actualValues =
+            actualValuesForUnsupportedDimensions.computeIfAbsent(dimName, k -> new HashSet<>());
+        actualValues.addAll(device.dimensions().supported().get(dimName));
+        actualValues.addAll(device.dimensions().required().get(dimName));
+      }
+      unsupportedDimensions = newUnsupportedDimensions;
     }
     for (String sharedDimensionName : requestedSharedDimensionNames) {
       Stream.concat(
@@ -258,6 +266,10 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
     } else {
       return Collections.unmodifiableMap(unsupportedDimensions);
     }
+  }
+
+  public Map<String, Set<String>> getActualValuesForUnsupportedDimensions() {
+    return Collections.unmodifiableMap(actualValuesForUnsupportedDimensions);
   }
 
   public Multimap<String, String> getSupportedSharedDimensions() {

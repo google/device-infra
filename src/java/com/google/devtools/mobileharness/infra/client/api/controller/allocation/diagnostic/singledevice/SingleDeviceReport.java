@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.singledevice;
 
+import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ArrayListMultimap;
@@ -34,6 +35,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -176,11 +178,13 @@ public class SingleDeviceReport implements Report {
                 getDiagnosticCandidateFilterSuffix()));
       }
       if (!overallAssessment.isDimensionsSupported()) {
+        List<String> dimErrors =
+            getDimensionErrorMessages(overallAssessment, /* isOverall= */ true);
         String msg =
             String.format(
-                "No %s can support job dimensions %s%s.\n",
+                "No %s can support job dimensions: %s%s.\n",
                 jobType.getDevice(),
-                overallAssessment.getUnsupportedDimensions(),
+                Joiner.on(", ").join(dimErrors),
                 getDiagnosticCandidateFilterSuffix());
         report.append(msg);
         if (cause == null) { // Do not override the cause
@@ -209,7 +213,7 @@ public class SingleDeviceReport implements Report {
     }
 
     // Checks whether there are any devices can support all requirements.
-    Collection<String> goodIds = scoresToDeviceIds.get(SingleDeviceAssessment.MAX_SCORE);
+    List<String> goodIds = scoresToDeviceIds.get(SingleDeviceAssessment.MAX_SCORE);
     if (!goodIds.isEmpty()) {
       if (job.setting().getTimeout().getStartTimeoutMs() < Duration.ofSeconds(60).toMillis()) {
         return Result.create(
@@ -256,7 +260,7 @@ public class SingleDeviceReport implements Report {
     for (int score = SingleDeviceAssessment.MAX_SCORE - 1;
         score >= SingleDeviceAssessment.MIN_SCORE;
         score--) {
-      Collection<String> ids = scoresToDeviceIds.get(score);
+      List<String> ids = scoresToDeviceIds.get(score);
       if (ids.isEmpty()) {
         continue;
       }
@@ -314,10 +318,9 @@ public class SingleDeviceReport implements Report {
                     Report.DECORATORS_NOT_SUPPORTED, assessment.getUnsupportedDecorators()));
           }
           if (!assessment.isDimensionsSupported()) {
-            error.append(
-                String.format(
-                    "\n - %s: %s",
-                    Report.DIMENSIONS_NOT_SUPPORTED, assessment.getUnsupportedDimensions()));
+            error.append(String.format("\n - %s: ", Report.DIMENSIONS_NOT_SUPPORTED));
+            List<String> dimErrors = getDimensionErrorMessages(assessment, /* isOverall= */ false);
+            Joiner.on(", ").appendTo(error, dimErrors);
           }
           if (!assessment.isDimensionsSatisfied()) {
             error.append(
@@ -388,6 +391,35 @@ public class SingleDeviceReport implements Report {
       report.append("\n==== (truncated other candidate devices) ====");
     }
     return Result.create(InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR, report.toString(), cause);
+  }
+
+  private static List<String> getDimensionErrorMessages(
+      SingleDeviceAssessment assessment, boolean isOverall) {
+    String deviceDesc = isOverall ? "Physical devices have" : "Device has";
+    List<String> dimErrors = new ArrayList<>();
+    for (Map.Entry<String, String> entry : assessment.getUnsupportedDimensions().entrySet()) {
+      String dimName = entry.getKey();
+      String requestedValue = entry.getValue();
+      Map<String, ? extends Set<String>> actualValuesMap =
+          assessment.getActualValuesForUnsupportedDimensions();
+      Set<String> actualValues = actualValuesMap.get(dimName);
+      if (actualValues != null && !actualValues.isEmpty()) {
+        boolean caseMismatch =
+            actualValues.stream().anyMatch(val -> Ascii.equalsIgnoreCase(val, requestedValue));
+        if (caseMismatch) {
+          dimErrors.add(
+              String.format(
+                  "%s=%s (%s: %s, case mismatch!)",
+                  dimName, requestedValue, deviceDesc, actualValues));
+        } else {
+          dimErrors.add(
+              String.format("%s=%s (%s: %s)", dimName, requestedValue, deviceDesc, actualValues));
+        }
+      } else {
+        dimErrors.add(String.format("%s=%s", dimName, requestedValue));
+      }
+    }
+    return dimErrors;
   }
 
   /** A postfix about diagnostic candidate filter in the report. */
