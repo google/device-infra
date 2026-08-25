@@ -27,9 +27,11 @@ import type {DeviceOverview} from '../../../../core/models/device_overview';
 import {
   DeviceDimension,
   DimensionSourceGroup,
+  HealthAndActivityInfo,
   HealthState,
   SubDeviceInfo,
   TestbedConfig,
+  UiState,
 } from '../../../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 import {Environment} from '../../../../core/services/environment';
@@ -283,6 +285,85 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
           isSpinning: false,
         };
       case 'OUT_OF_SERVICE_NEEDS_FIXING':
+      default:
+        return {
+          icon: 'error',
+          iconColorClass: 'text-red-600',
+          iconBgColorClass: 'bg-red-100',
+          borderColorClass: 'border-l-red-500',
+          isSpinning: false,
+        };
+    }
+  }
+
+  /**
+   * Resolves the card's icon/color treatment. Prefers the presentation-only
+   * `uiState`; falls back to the transitional `state` when talking to an older
+   * backend that does not set `uiState`.
+   */
+  getHealthUI(health: HealthAndActivityInfo): HealthStateUI {
+    if (health.uiState && health.uiState !== 'UI_STATE_UNSPECIFIED') {
+      return this.getUiStateUI(health.uiState);
+    }
+    return this.getHealthStateUI(health.state);
+  }
+
+  /**
+   * Whether the device is actively serving (idle or busy). Used to hide the
+   * "Last in service" timestamp for serving devices.
+   */
+  isInService(health: HealthAndActivityInfo): boolean {
+    if (health.uiState && health.uiState !== 'UI_STATE_UNSPECIFIED') {
+      return health.uiState === 'HEALTHY' || health.uiState === 'BUSY';
+    }
+    return health.state === 'IN_SERVICE_IDLE' || health.state === 'IN_SERVICE_BUSY';
+  }
+
+  // Map UiState (presentation intent) to UI properties.
+  private getUiStateUI(uiState: UiState): HealthStateUI {
+    switch (uiState) {
+      case 'HEALTHY':
+        return {
+          icon: 'check_circle',
+          iconColorClass: 'text-green-600',
+          iconBgColorClass: 'bg-green-100',
+          borderColorClass: 'border-l-green-500',
+          isSpinning: false,
+        };
+      case 'BUSY':
+        return {
+          icon: 'sync',
+          iconColorClass: 'text-blue-600',
+          iconBgColorClass: 'bg-blue-100',
+          borderColorClass: 'border-l-blue-500',
+          isSpinning: true,
+        };
+      case 'TRANSITIONING':
+        return {
+          icon: 'warning',
+          iconColorClass: 'text-amber-600',
+          iconBgColorClass: 'bg-amber-100',
+          borderColorClass: 'border-l-amber-500',
+          isSpinning: false,
+        };
+      case 'RECOVERING':
+        return {
+          icon: 'autorenew',
+          iconColorClass: 'text-amber-600',
+          iconBgColorClass: 'bg-amber-100',
+          borderColorClass: 'border-l-amber-500',
+          isSpinning: true,
+        };
+      case 'BLOCKED':
+        return {
+          icon: 'block',
+          iconColorClass: 'text-red-600',
+          iconBgColorClass: 'bg-red-100',
+          borderColorClass: 'border-l-red-500',
+          isSpinning: false,
+        };
+      case 'ERROR':
+      case 'UI_STATE_UNSPECIFIED':
       default:
         return {
           icon: 'error',

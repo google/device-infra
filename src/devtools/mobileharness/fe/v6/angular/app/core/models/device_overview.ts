@@ -106,6 +106,20 @@ export type HealthState =
   | 'UNKNOWN'; // Fallback for unexpected states.
 
 /**
+ * Presentation intent for the Health & Activity card. The frontend maps each
+ * value to an icon/color/spin treatment; it carries no business semantics. The
+ * semantic health category is conveyed via `title`.
+ */
+export type UiState =
+  | 'UI_STATE_UNSPECIFIED'
+  | 'HEALTHY' // Healthy and idle.
+  | 'BUSY' // Healthy and running a task.
+  | 'TRANSITIONING' // Temporarily unavailable, expected to self-recover.
+  | 'RECOVERING' // An automated recovery task is running.
+  | 'ERROR' // Broken; needs a human.
+  | 'BLOCKED'; // Withheld from tests (e.g. quarantined).
+
+/**
  * Contains all data related to the device's health, status, and current activity.
  */
 export declare interface HealthAndActivityInfo {
@@ -124,10 +138,17 @@ export declare interface HealthAndActivityInfo {
   subtitle: string;
 
   /**
-   * The high-level health state category. The frontend uses this to select
-   * appropriate icons, color schemes, and animations.
+   * Transitional presentation signal. Superseded by `uiState`; still sent by the
+   * backend during the release transition and read only as a fallback when
+   * `uiState` is unset (older backend). Removed by a follow-up cleanup CL.
    */
   state: HealthState;
+
+  /**
+   * Presentation intent that tells the frontend how to render the card
+   * (icon/color/spin). The semantic health category is conveyed via `title`.
+   */
+  uiState?: UiState;
 
   /** The raw device status from the underlying system. */
   deviceStatus: {

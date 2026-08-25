@@ -18,7 +18,7 @@
         </div>
       }
       <div class="info-card-content">
-        @let healthUI = getHealthStateUI(device.healthAndActivity.state);
+        @let healthUI = getHealthUI(device.healthAndActivity);
         <div class="health-summary">
           <div [class]="'summary-icon-bg ' + healthUI.iconBgColorClass">
             <mat-icon
@@ -32,8 +32,7 @@
               {{ device.healthAndActivity.title }}
             </h3>
             <p class="health-subtitle">{{ device.healthAndActivity.subtitle }}</p>
-            @if ( device.healthAndActivity.state !== 'IN_SERVICE_IDLE' && device.healthAndActivity.state
-            !== 'IN_SERVICE_BUSY' ) {
+            @if (!isInService(device.healthAndActivity)) {
               <div class="last-in-service">
                 <span class="font-medium">Last in service:</span>
                 {{ dateUtils.format(device.healthAndActivity.lastInServiceTime) }}
