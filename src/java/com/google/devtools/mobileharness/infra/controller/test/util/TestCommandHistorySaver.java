@@ -34,8 +34,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.Duration;
-import java.time.Instant;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.List;
@@ -70,12 +69,16 @@ public class TestCommandHistorySaver {
 
   private static final String FILE_NAME = "command_history.txt";
 
-  private static final String FIRST_LINE = "start_time(sec) end_time(sec) exit_code command";
+  private static final String FIRST_LINE = "start_time end_time exit_code command";
+
   private static final String SECOND_LINE = "0.000 NA NA # testInfo startTime ";
 
-  // ISO_INSTANT formatter which always emits milliseconds, even when zero.
-  private static final DateTimeFormatter FORMATTER =
+  private static final DateTimeFormatter UTC_FORMATTER =
       new DateTimeFormatterBuilder().appendInstant(3).toFormatter();
+
+  private static final DateTimeFormatter TIMESTAMP_FORMATTER =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+          .withZone(ZoneId.of("America/Los_Angeles"));
 
   private final CommandHistory commandHistory;
   private final boolean saveAllHistory;
@@ -113,35 +116,28 @@ public class TestCommandHistorySaver {
                                             .anyMatch(command::contains))));
     ImmutableList<String> result =
         testCommands.stream()
-            .map(
-                commandRecord ->
-                    TestCommandHistorySaver.formatCommandRecord(
-                        commandRecord, testInfo.timing().getStartTime()))
+            .map(TestCommandHistorySaver::formatCommandRecord)
             .collect(toImmutableList());
     Files.write(
         Paths.get(testInfo.getGenFileDir(), FILE_NAME),
         Iterables.concat(
             ImmutableList.of(
-                FIRST_LINE, SECOND_LINE + FORMATTER.format(testInfo.timing().getStartTime())),
+                FIRST_LINE, SECOND_LINE + UTC_FORMATTER.format(testInfo.timing().getStartTime())),
             result));
   }
 
-  private static String formatCommandRecord(CommandRecord commandRecord, Instant testStartTime) {
+  private static String formatCommandRecord(CommandRecord commandRecord) {
     Stream.Builder<String> builder = Stream.builder();
-    builder.add(formatCommandTime(Duration.between(testStartTime, commandRecord.startTime())));
+    builder.add("[" + TIMESTAMP_FORMATTER.format(commandRecord.startTime()) + "]");
     builder.add(
         commandRecord
             .endTime()
-            .map(endTime -> formatCommandTime(Duration.between(testStartTime, endTime)))
-            .orElse("NA"));
+            .map(endTime -> "[" + TIMESTAMP_FORMATTER.format(endTime) + "]")
+            .orElse("[NA]"));
     builder.add(
         commandRecord.result().map(result -> Integer.toString(result.exitCode())).orElse("NA"));
     return Stream.concat(builder.build(), formatCommand(commandRecord.command()))
         .collect(joining(" "));
-  }
-
-  private static String formatCommandTime(Duration relativeCommandTime) {
-    return String.format("%.3f", relativeCommandTime.toMillis() / 1_000.0);
   }
 
   private static Stream<String> formatCommand(List<String> command) {
