@@ -88,7 +88,8 @@ public final class MoblyResultstoreUploadPluginTest {
 
     String content = localFileUtil.readFile(reportLogFile);
     JsonObject jsonObject = JsonParser.parseString(content).getAsJsonObject();
-    assertThat(jsonObject.get("resultstore_link").getAsString()).isEqualTo(RESULTSTORE_LINK);
+    assertThat(jsonObject.get(MoblyResultstoreUploadPlugin.RESULTSTORE_LINK_KEY).getAsString())
+        .isEqualTo(RESULTSTORE_LINK);
   }
 
   @Test
@@ -107,7 +108,8 @@ public final class MoblyResultstoreUploadPluginTest {
     String content = localFileUtil.readFile(reportLogFile);
     JsonObject mergedJson = JsonParser.parseString(content).getAsJsonObject();
     assertThat(mergedJson.get("existing_metric_key").getAsString()).isEqualTo("metric_value");
-    assertThat(mergedJson.get("resultstore_link").getAsString()).isEqualTo(RESULTSTORE_LINK);
+    assertThat(mergedJson.get(MoblyResultstoreUploadPlugin.RESULTSTORE_LINK_KEY).getAsString())
+        .isEqualTo(RESULTSTORE_LINK);
   }
 
   @Test
@@ -117,7 +119,8 @@ public final class MoblyResultstoreUploadPluginTest {
     Path reportLogFile = reportLogDir.resolve(MODULE_NAME + ".reportlog.json");
 
     JsonObject initialJson = new JsonObject();
-    initialJson.addProperty("resultstore_link", "https://old-link.com");
+    initialJson.addProperty(
+        MoblyResultstoreUploadPlugin.RESULTSTORE_LINK_KEY, "https://old-link.com");
     initialJson.addProperty("custom_data", "123");
     localFileUtil.writeToFile(reportLogFile.toString(), new Gson().toJson(initialJson));
 
@@ -126,7 +129,8 @@ public final class MoblyResultstoreUploadPluginTest {
     String content = localFileUtil.readFile(reportLogFile);
     JsonObject mergedJson = JsonParser.parseString(content).getAsJsonObject();
     assertThat(mergedJson.get("custom_data").getAsString()).isEqualTo("123");
-    assertThat(mergedJson.get("resultstore_link").getAsString()).isEqualTo(RESULTSTORE_LINK);
+    assertThat(mergedJson.get(MoblyResultstoreUploadPlugin.RESULTSTORE_LINK_KEY).getAsString())
+        .isEqualTo(RESULTSTORE_LINK);
   }
 
   @Test
@@ -141,7 +145,8 @@ public final class MoblyResultstoreUploadPluginTest {
 
     String content = localFileUtil.readFile(reportLogFile);
     JsonObject jsonObject = JsonParser.parseString(content).getAsJsonObject();
-    assertThat(jsonObject.get("resultstore_link").getAsString()).isEqualTo(RESULTSTORE_LINK);
+    assertThat(jsonObject.get(MoblyResultstoreUploadPlugin.RESULTSTORE_LINK_KEY).getAsString())
+        .isEqualTo(RESULTSTORE_LINK);
   }
 
   @Test

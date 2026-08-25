@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException.DesiredTestResult;
+import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.testbed.mobly.MoblyConstant;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyPythonVenvUtil;
@@ -177,7 +178,8 @@ public final class MoblyResultstoreUploadPlugin {
                   "--label",
                   event.getTest().locator().getId())
               .timeout(UPLOAD_TIMEOUT);
-      String moduleName = event.getTest().jobInfo().properties().get("xts_module_name");
+      String moduleName =
+          event.getTest().jobInfo().properties().get(SessionHandlerHelper.XTS_MODULE_NAME_PROP);
       if (moduleName != null) {
         uploadCmd = uploadCmd.argsAppended("--label", moduleName);
       }
