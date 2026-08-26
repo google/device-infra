@@ -394,10 +394,11 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
     if (isXtsDynamicDownloaderEnabled(testInfo)) {
       Set<String> xtsDynamicDownloadTestList = new HashSet<>();
       Set<String> missingTestList = new HashSet<>(DYNAMIC_JOB_TEST_DEPENDENCIES);
-      String testListProperty =
-          testInfo.properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_LIST_PROPERTY_KEY);
-      if (testListProperty != null && localFileUtil.isFileOrDirExist(testListProperty)) {
-        xtsDynamicDownloadTestList.addAll(getStringSetFromResourceFile(testListProperty));
+      String testModulesProperty =
+          testInfo.properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_TEST_MODULES_PROPERTY_KEY);
+      if (testModulesProperty != null) {
+        xtsDynamicDownloadTestList.addAll(
+            Splitter.on(',').trimResults().omitEmptyStrings().splitToList(testModulesProperty));
       } else {
         xtsDynamicDownloadTestList.addAll(
             getStringSetFromResourceFile(getStaticMctsListFilePath()));

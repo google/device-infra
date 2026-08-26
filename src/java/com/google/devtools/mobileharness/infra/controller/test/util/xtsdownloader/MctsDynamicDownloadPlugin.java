@@ -257,11 +257,16 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           downloadPublicUrlFiles(
               mctsFullTestListUrl, mctsFullTestListUrl.replace("https://dl.google.com/dl", ""));
       if (mctsFullTestListFilePath != null) {
+        ImmutableList<String> mctsTestModules =
+            fileUtil.readLineListFromFile(mctsFullTestListFilePath).stream()
+                .map(String::trim)
+                .filter(line -> !line.isEmpty())
+                .collect(toImmutableList());
         testInfo
             .properties()
             .add(
-                XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_LIST_PROPERTY_KEY,
-                mctsFullTestListFilePath);
+                XtsConstants.XTS_DYNAMIC_DOWNLOAD_TEST_MODULES_PROPERTY_KEY,
+                String.join(",", mctsTestModules));
         String targetFileName =
             String.format(
                 "%s_%s",

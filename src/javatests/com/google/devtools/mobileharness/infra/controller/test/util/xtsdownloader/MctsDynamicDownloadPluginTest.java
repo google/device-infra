@@ -102,6 +102,7 @@ public final class MctsDynamicDownloadPluginTest {
         .thenReturn(ImmutableSet.of("device_id"));
     when(mockTestInfo.jobInfo()).thenReturn(mockJobInfo);
     when(mockTestInfo.getTmpFileDir()).thenReturn("/tmp");
+    when(mockTestInfo.getGenFileDir()).thenReturn("/tmp");
     when(mockTestInfo.properties()).thenReturn(testProperties);
     when(mockTestInfo.jobInfo().properties()).thenReturn(jobProperties);
     when(jobProperties.getOptional(PropertyName.Job.SESSION_ID))
@@ -267,6 +268,31 @@ public final class MctsDynamicDownloadPluginTest {
     verifyDownloadAndUnzipFile();
     localFileUtil.removeFileOrDir(
         XtsDirUtil.getXtsDynamicDownloadDir("test_session_id").toString());
+  }
+
+  @Test
+  public void onTestStarting_setupJob_setsDynamicDownloadTestModulesProperty() throws Exception {
+    when(jobProperties.getOptional(XtsConstants.XTS_JOB_NAME))
+        .thenReturn(Optional.of(XtsConstants.SETUP_JOB_NAME));
+    generateTestZipFilesForDynamicJob();
+    Path testListFile = Path.of("/tmp/mcts_test_list.txt");
+    localFileUtil.writeToFile(testListFile.toString(), "module_1\nmodule_2\n");
+    Mockito.doReturn(testListFile.toString())
+        .when(spyMctsDynamicDownloadPlugin)
+        .downloadPublicUrlFiles(
+            "https://dl.google.com/dl/android/xts/mcts/2024-10/arm64/mcts_test_list.txt",
+            "/android/xts/mcts/2024-10/arm64/mcts_test_list.txt");
+
+    try {
+      spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
+
+      verify(testProperties)
+          .add(XtsConstants.XTS_DYNAMIC_DOWNLOAD_TEST_MODULES_PROPERTY_KEY, "module_1,module_2");
+    } finally {
+      localFileUtil.removeFileOrDir(testListFile.toString());
+      localFileUtil.removeFileOrDir(
+          XtsDirUtil.getXtsDynamicDownloadDir("test_session_id").toString());
+    }
   }
 
   @Test
