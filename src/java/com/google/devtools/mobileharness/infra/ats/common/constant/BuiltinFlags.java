@@ -48,6 +48,7 @@ public final class BuiltinFlags {
           // keep-sorted start
           .put("adb_dont_kill_server", "true")
           .put("adb_max_no_device_detection_rounds", "1200")
+          .put("always_use_oss_detector_and_dispatcher", "true")
           .put("android_device_daemon", "false")
           .put("cache_installed_apks", "false")
           .put("check_android_device_sim_card_type", "true")
@@ -79,6 +80,7 @@ public final class BuiltinFlags {
           // keep-sorted start
           .put("adb_dont_kill_server", "true")
           .put("adb_max_no_device_detection_rounds", "1200")
+          .put("always_use_oss_detector_and_dispatcher", "true")
           .put("android_device_daemon", "false")
           .put("cache_installed_apks", "false")
           .put("check_device_interval", "1h")
