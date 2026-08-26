@@ -16,6 +16,7 @@
 
 package com.android.tradefed.invoker;
 
+import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.DEVICE_ID_TO_SIMULATE_NON_XTS;
 import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.DEVICE_ID_TO_TRIGGER_CHECKED_INVOCATION_EXCEPTION;
 import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.DEVICE_ID_TO_TRIGGER_UNCHECKED_INVOCATION_EXCEPTION;
 import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.INVOCATION_CHECKED_EXCEPTION_MESSAGE;
@@ -41,6 +42,39 @@ public class TestInvocation {
     if (context.getSerials().contains(DEVICE_ID_TO_TRIGGER_CHECKED_INVOCATION_EXCEPTION)) {
       new CollectingTestListener()
           .invocationFailed(new InterruptedException(INVOCATION_CHECKED_EXCEPTION_MESSAGE));
+    }
+
+    if (context.getSerials().contains(DEVICE_ID_TO_SIMULATE_NON_XTS)) {
+      // Simulate Non-XTS execution: testRunStarted/testStarted/testEnded/testRunEnded are called
+      // without testModuleStarted.
+      for (Object listener : config.getTestInvocationListeners()) {
+        listener
+            .getClass()
+            .getMethod("testRunStarted", String.class, int.class)
+            .invoke(listener, "run1", 2);
+        listener.getClass().getMethod("testStarted", Object.class).invoke(listener, "test1");
+        listener
+            .getClass()
+            .getMethod("testEnded", Object.class, Object.class)
+            .invoke(listener, "test1", null);
+        listener.getClass().getMethod("testStarted", Object.class).invoke(listener, "test2");
+        listener
+            .getClass()
+            .getMethod("testFailed", Object.class, String.class)
+            .invoke(listener, "test2", "Fake failure");
+        listener
+            .getClass()
+            .getMethod("testEnded", Object.class, Object.class)
+            .invoke(listener, "test2", null);
+        listener
+            .getClass()
+            .getMethod("testRunEnded", long.class, Object.class)
+            .invoke(listener, 1000L, null);
+      }
+      Thread.sleep(1_000L);
+      status = "running";
+      status = "finished";
+      return;
     }
 
     // Simulate module execution

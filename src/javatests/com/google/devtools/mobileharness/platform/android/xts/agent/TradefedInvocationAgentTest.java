@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.truth.Correspondence.transforming;
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.DEVICE_ID_TO_SIMULATE_NON_XTS;
 import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.DEVICE_ID_TO_TRIGGER_CHECKED_INVOCATION_EXCEPTION;
 import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.DEVICE_ID_TO_TRIGGER_UNCHECKED_INVOCATION_EXCEPTION;
 import static com.google.devtools.mobileharness.platform.android.xts.agent.testdata.FakeTradefed.INVOCATION_CHECKED_EXCEPTION_MESSAGE;
@@ -319,6 +320,39 @@ public class TradefedInvocationAgentTest {
     // invocation context.
     assertThat(invocations.get(0).deviceIds()).isEmpty();
     assertThat(invocations.get(0).errorMessage()).contains(INVOCATION_CHECKED_EXCEPTION_MESSAGE);
+    assertThat(invocations.get(0).isRunning()).isFalse();
+  }
+
+  @Test
+  public void premain_nonXtsWithoutModuleStart_doesNotThrow() throws Exception {
+    Path runtimeInfoFilePath = tempFolder.newFolder().toPath().resolve("runtime_info_file.txt");
+    Path testModuleResultsFilePath =
+        tempFolder.newFolder().toPath().resolve("test_module_results_file.txt");
+
+    CommandProcess commandProcess =
+        commandExecutor.start(
+            Command.of(
+                    systemUtil
+                        .getJavaCommandCreator()
+                        .createJavaCommand(
+                            FAKE_TRADEFED_PATH,
+                            // Specifying the non-xTS device ID to simulate test execution without
+                            // testModuleStarted:
+                            ImmutableList.of("-s", DEVICE_ID_TO_SIMULATE_NON_XTS),
+                            ImmutableList.of(
+                                String.format(
+                                    "-javaagent:%s=%s:%s",
+                                    AGENT_PATH, runtimeInfoFilePath, testModuleResultsFilePath))))
+                .showFullResultInException(true));
+
+    List<XtsTradefedRuntimeInfo> runtimeInfos =
+        monitorRuntimeInfoFile(runtimeInfoFilePath, commandProcess);
+    CommandResult commandResult = commandProcess.await();
+    assertThat(commandResult.exitCode()).isEqualTo(0);
+    List<TradefedInvocation> invocations = Iterables.getLast(runtimeInfos).invocations();
+    assertThat(invocations).hasSize(1);
+    assertThat(invocations.get(0).deviceIds()).containsExactly(DEVICE_ID_TO_SIMULATE_NON_XTS);
+    assertThat(invocations.get(0).errorMessage()).contains("Fake error message");
     assertThat(invocations.get(0).isRunning()).isFalse();
   }
 

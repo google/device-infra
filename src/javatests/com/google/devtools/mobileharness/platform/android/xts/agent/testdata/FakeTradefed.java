@@ -31,6 +31,7 @@ public class FakeTradefed {
       "device_id_to_trigger_invocation_checked_exception";
   public static final String DEVICE_ID_TO_TRIGGER_UNCHECKED_INVOCATION_EXCEPTION =
       "device_id_to_trigger_invocation_unchecked_exception";
+  public static final String DEVICE_ID_TO_SIMULATE_NON_XTS = "device_id_to_simulate_non_xts";
   public static final String INVOCATION_CHECKED_EXCEPTION_MESSAGE =
       "Fake tradefed invocation checked exception.";
   public static final String INVOCATION_UNCHECKED_EXCEPTION_MESSAGE =

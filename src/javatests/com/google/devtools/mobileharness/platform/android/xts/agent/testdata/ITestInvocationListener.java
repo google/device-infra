@@ -20,4 +20,20 @@ public interface ITestInvocationListener {
   default void testModuleStarted(Object moduleContext) {}
 
   default void testModuleEnded() {}
+
+  default void testRunStarted(String runName, int testCount) {}
+
+  default void testRunEnded(long elapsedTime, Object runMetrics) {}
+
+  default void testStarted(Object test) {}
+
+  default void testEnded(Object test, Object testMetrics) {}
+
+  default void testFailed(Object test, String trace) {}
+
+  default void testAssumptionFailure(Object test, String trace) {}
+
+  default void testIgnored(Object test) {}
+
+  default void testSkipped(Object test, Object skipReason) {}
 }

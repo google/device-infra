@@ -242,11 +242,13 @@ public class TradefedInvocationAgent {
             "testIgnored",
             "testSkipped" -> {
           // For these methods, args[0] is `TestDescription`
-          XtsTradefedTestModuleResultsMonitor.getInstance()
-              .onTestEvent(
-                  invocationId,
-                  /* eventType= */ method.getName(),
-                  /* testId= */ args[0].toString());
+          if (invocationId != null && args != null && args.length >= 1 && args[0] != null) {
+            XtsTradefedTestModuleResultsMonitor.getInstance()
+                .onTestEvent(
+                    invocationId,
+                    /* eventType= */ method.getName(),
+                    /* testId= */ args[0].toString());
+          }
         }
         default -> {}
       }
