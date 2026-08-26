@@ -44,11 +44,13 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSearchR
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.pull.FleetDataSource;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.ScenarioCurationModule;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.FleetSnapshotStore;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.multibindings.MapBinder;
 import java.time.Instant;
 import org.junit.Before;
 import org.junit.Test;
@@ -84,6 +86,7 @@ public final class SearchServiceLogicImplTest {
               @Override
               protected void configure() {
                 bind(ListeningExecutorService.class).toInstance(newDirectExecutorService());
+                MapBinder.newMapBinder(binder(), Fleet.class, FleetDataSource.class);
               }
             });
     FleetSnapshotStore store = injector.getInstance(FleetSnapshotStore.class);

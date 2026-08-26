@@ -32,6 +32,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search:search_service_logic_impl",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index_builder",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:fleet_data_source",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:scenario_curation_module",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:fleet_snapshot_store",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",

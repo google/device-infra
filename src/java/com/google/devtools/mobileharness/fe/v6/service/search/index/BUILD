@@ -184,9 +184,24 @@ java_library(
 )
 
 java_library(
+    name = "dimension_overlay",
+    srcs = ["DimensionOverlay.java"],
+    deps = [
+        ":fleet_snapshot",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:dimension_overlay_raw",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "overlay_view",
     srcs = ["OverlayView.java"],
-    deps = ["@maven//:com_google_guava_guava"],
+    deps = [
+        ":dimension_overlay",
+        ":fleet_snapshot",
+        "@maven//:com_google_guava_guava",
+    ],
 )
 
 java_library(

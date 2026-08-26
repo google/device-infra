@@ -432,11 +432,37 @@ public final class FleetSuggester {
 
     String value = Ascii.toLowerCase(stripQuotes(rawValue.trim()));
     for (String keyId : keyIds) {
+      boolean hadMatches = false;
       for (Match match : matchValues(context.index(), keyId, value, /* allowContains= */ true)) {
         Cand cand = condition(context, keyId, match.value(), match.tier(), exclude);
         if (cand != null) {
           out.add(cand);
+          hadMatches = true;
         }
+      }
+      // Cold long-tail fallback: if the key is valid but has no index entries in core/overlay,
+      // and is not already in active filters, emit a ready-to-apply filter condition with no count.
+      if (!hadMatches && !value.isEmpty() && !context.activeKeys().contains(keyId)) {
+        String display = context.index().displayName(keyId);
+        String op = exclude ? "is not" : "is";
+        ImmutableList<TextSegment> mainText = segments(display + " " + op + " ", rawValue.trim());
+        Filter filter =
+            Filter.newBuilder()
+                .setKey(keyId)
+                .setSimple(
+                    SimpleMatch.newBuilder()
+                        .addValues(FilterValue.newBuilder().setValue(rawValue.trim()))
+                        .setNegated(exclude))
+                .build();
+        FleetSuggestion.Builder builder =
+            FleetSuggestion.newBuilder()
+                .setLabel("Add filter")
+                .addAllMainText(mainText)
+                .setApplyFilter(applyFilter(context.index(), keyId, filter));
+        Cand cand = new Cand(Kind.CONDITION, keyId, 1.0, builder, mainTextString(mainText));
+        cand.needsCount = false;
+        cand.noCount = true;
+        out.add(cand);
       }
     }
     return out;

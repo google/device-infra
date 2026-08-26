@@ -21,15 +21,27 @@ package(
 )
 
 java_library(
+    name = "dimension_overlay_raw",
+    srcs = ["DimensionOverlayRaw.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "lab_info_fleet_puller",
     srcs = ["LabInfoFleetPuller.java"],
     deps = [
+        ":dimension_overlay_raw",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:javax_inject_jsr330_api",
     ],
 )
@@ -38,6 +50,7 @@ java_library(
     name = "fleet_data_source",
     srcs = ["FleetDataSource.java"],
     deps = [
+        ":dimension_overlay_raw",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_raw_data",
         "@maven//:com_google_guava_guava",
@@ -48,6 +61,7 @@ java_library(
     name = "ats_one_fleet_data_source",
     srcs = ["AtsOneFleetDataSource.java"],
     deps = [
+        ":dimension_overlay_raw",
         ":fleet_data_source",
         ":lab_info_fleet_puller",
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",

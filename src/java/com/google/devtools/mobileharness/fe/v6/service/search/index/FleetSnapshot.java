@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.index;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import java.time.Instant;
 
 /**
@@ -50,6 +51,9 @@ public abstract class FleetSnapshot {
   /** Inverted index and value index over {@link #hosts()}. */
   public abstract FleetIndex hostIndex();
 
+  /** Map from device UUID to integer index in {@link #devices()}, used for overlay alignment. */
+  public abstract ImmutableMap<String, Integer> uuidToIndex();
+
   /** Convenience: number of devices in this snapshot. */
   public int deviceCount() {
     return devices().size();
@@ -62,7 +66,7 @@ public abstract class FleetSnapshot {
 
   /** Creates a new builder. */
   public static Builder builder() {
-    return new AutoValue_FleetSnapshot.Builder();
+    return new AutoValue_FleetSnapshot.Builder().setUuidToIndex(ImmutableMap.of());
   }
 
   /** An empty snapshot, used as the initial state before the first refresh completes. */
@@ -73,6 +77,7 @@ public abstract class FleetSnapshot {
         .setHosts(ImmutableList.of())
         .setIndex(CoreFleetIndex.empty())
         .setHostIndex(CoreFleetIndex.empty())
+        .setUuidToIndex(ImmutableMap.of())
         .build();
   }
 
@@ -88,6 +93,8 @@ public abstract class FleetSnapshot {
     public abstract Builder setIndex(FleetIndex index);
 
     public abstract Builder setHostIndex(FleetIndex hostIndex);
+
+    public abstract Builder setUuidToIndex(ImmutableMap<String, Integer> uuidToIndex);
 
     public abstract FleetSnapshot build();
   }

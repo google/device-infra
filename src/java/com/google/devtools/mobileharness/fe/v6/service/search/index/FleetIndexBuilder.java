@@ -262,9 +262,17 @@ public final class FleetIndexBuilder {
     // Phase 2: flatten + merge T accumulators (not 43K).
     List<DeviceRecord> allDevices = new ArrayList<>();
     ImmutableList.Builder<HostRecord> allHosts = ImmutableList.builder();
+    ImmutableMap.Builder<String, Integer> uuidToIndex = ImmutableMap.builder();
+    int devIdx = 0;
     for (HostDevices hd : hostDevices) {
       allHosts.add(hd.host());
-      allDevices.addAll(hd.devices());
+      for (DeviceRecord device : hd.devices()) {
+        allDevices.add(device);
+        if (!device.deviceId().isEmpty()) {
+          uuidToIndex.put(device.deviceId(), devIdx);
+        }
+        devIdx++;
+      }
     }
 
     Accumulator merged = new Accumulator();
@@ -283,6 +291,7 @@ public final class FleetIndexBuilder {
         .setHosts(allHosts.build())
         .setIndex(merged.toIndex())
         .setHostIndex(hostMerged.toIndex())
+        .setUuidToIndex(uuidToIndex.buildKeepingLast())
         .build();
   }
 
