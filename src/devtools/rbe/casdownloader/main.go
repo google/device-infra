@@ -20,6 +20,7 @@ import (
 	"flag"
 	
 	log "github.com/golang/glog"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	repb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/google/device-infra/src/devtools/rbe/casdownloader/cache"
 	"github.com/google/device-infra/src/devtools/rbe/casdownloader/download"
@@ -75,6 +76,7 @@ var (
 	// Flags for RBE CAS configurations
 	casInstance    = flag.String("cas-instance", "", "RBE instance")
 	casAddr        = flag.String("cas-addr", "remotebuildexecution.googleapis.com:443", "RBE server addr")
+	casProxyAddr   = flag.String("cas-proxy-addr", "", "Local proxy address of the remote execution CAS server. If specified, dialing will use plaintext (insecure) gRPC bypass.")
 	serviceAccount = flag.String("service-account-json", "", "Path to JSON file with service account credentials to use.")
 	useADC         = flag.Bool("use-adc", false, "True to use Application Default Credentials (ADC).")
 
@@ -285,6 +287,11 @@ func run(ctx context.Context) error {
 		return err
 	}
 
+	if *casProxyAddr != "" {
+		ctx = metadata.AppendToOutgoingContext(ctx, "x-cas-upstream-address", *casAddr)
+		ctx = metadata.AppendToOutgoingContext(ctx, "x-cas-upstream-instance", *casInstance)
+	}
+
 	setMemoryLimit(*memoryLimit)
 
 	rpcTimeouts := map[string]time.Duration{
@@ -302,19 +309,54 @@ func run(ctx context.Context) error {
 	clientOpts := rbeclient.Opts{
 		Instance:              *casInstance,
 		ServiceAddress:        *casAddr,
+		ProxyAddress:          *casProxyAddr,
 		ServiceAccountJSON:    *serviceAccount,
 		UseApplicationDefault: *useADC,
 		CASConcurrency:        *casConcurrency,
 		RPCTimeouts:           rpcTimeouts,
 	}
-	client, err := rbeclient.New(ctx, clientOpts)
-	if err != nil {
-		if strings.Contains(err.Error(), "rpc error: code = PermissionDenied") && *useADC == true {
-			logAdcCredentials()
+
+	useProxy := *casProxyAddr != ""
+	proxyStatus := "unspecified"
+	var rbeClient *client.Client
+	var err error
+
+	// 1. Try to connect to CAS proxy first if configured
+	if useProxy {
+		log.InfoContextf(ctx, "Attempting to connect to CAS proxy at %s...", *casProxyAddr)
+
+		rbeClient, err = rbeclient.New(ctx, clientOpts)
+
+		if err != nil {
+			log.WarningContextf(ctx, "Failed to connect to CAS proxy at %s: %v. Falling back to direct RBE connection...", *casProxyAddr, err)
+			if rbeClient != nil {
+				rbeClient.Close()
+				rbeClient = nil
+			}
+			useProxy = false // Disable proxy usage for the rest of the run
+			proxyStatus = fmt.Sprintf("unavailable: %v", err)
+		} else {
+			proxyStatus = "success"
 		}
-		return err
 	}
-	defer client.Close()
+
+	// 2. Direct connection (Fallback / Default path if proxy was not set or failed to connect)
+	if !useProxy {
+		clientOpts.ProxyAddress = "" // Force direct RBE connection
+		rbeClient, err = rbeclient.New(ctx, clientOpts)
+		if err != nil {
+			if strings.Contains(err.Error(), "rpc error: code = PermissionDenied") && *useADC == true {
+				logAdcCredentials()
+			}
+			return err
+		}
+	}
+
+	defer func() {
+		if rbeClient != nil {
+			rbeClient.Close()
+		}
+	}()
 
 	cache, err := createCache(*disableCache, *cacheDir, *cacheMaxSize, *enableCacheLock, *useHardlink)
 	if err != nil {
@@ -322,11 +364,12 @@ func run(ctx context.Context) error {
 	}
 
 	d := download.DownloadJob{
-		Client:          client,
+		Client:          rbeClient,
 		Digest:          *rootDigest,
 		Dir:             *dir,
 		DumpJSON:        *dumpJSON,
 		Cache:           cache,
+		CASProxyStatus:  proxyStatus,
 		IncludeFilters:  includeFilters,
 		ExcludeFilters:  excludeFilters,
 		KeepChunks:      *keepChunks,
@@ -338,6 +381,45 @@ func run(ctx context.Context) error {
 
 	start := time.Now()
 	err = d.DoDownload(ctx)
+
+	// 3. Download-time fallback: If download fails and we were actively using the proxy
+	if err != nil && useProxy {
+		proxyErr := err
+		log.WarningContextf(ctx, "Download failed mid-run using CAS proxy: %v. Falling back to direct RBE CAS connection...", proxyErr)
+
+		// Close dead proxy client
+		rbeClient.Close()
+		rbeClient = nil
+
+		// NOTE: When falling back from proxy to direct RBE, DoDownload applies a new per-attempt
+		// timeout. Under worst-case proxy failure near the deadline, total elapsed time may reach
+		// up to ~2x DownloadTimeout. We preserve this behavior for simplicity during fallback.
+
+		// Re-initialize direct RBE client (ignoring proxy)
+		clientOpts.ProxyAddress = ""
+		rbeClient, err = rbeclient.New(ctx, clientOpts)
+		if err != nil {
+			return fmt.Errorf("direct RBE fallback client initialization failed: %w", err)
+		}
+
+		// Ensure the old cache is closed to release any file locks before re-creating.
+		if d.Cache != nil {
+			_ = d.Cache.Close()
+		}
+
+		// Re-initialize cache since the previous attempt closed it.
+		cache, err = createCache(*disableCache, *cacheDir, *cacheMaxSize, *enableCacheLock, *useHardlink)
+		if err != nil {
+			return fmt.Errorf("failed to re-initialize cache for direct RBE fallback: %w", err)
+		}
+
+		// Reassign client, cache, and updated proxy status to download job
+		d.Client = rbeClient
+		d.Cache = cache
+		d.CASProxyStatus = fmt.Sprintf("fallback: %v", proxyErr)
+
+		err = d.DoDownload(ctx)
+	}
 	duration := time.Since(start)
 
 	downloadSuccess := (err == nil)

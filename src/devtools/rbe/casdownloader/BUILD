@@ -40,6 +40,7 @@ go_binary(
         "//src/devtools/rbe/rbeclient",
         "@org_golang_google_grpc//status",
         "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:remote_execution_go_proto",
+        "@com_github_bazelbuild_remote_apis_sdks//go/pkg/client",
         "@com_github_golang_glog//:glog",
         "@org_golang_google_grpc//metadata",
         "@org_golang_google_protobuf//proto",

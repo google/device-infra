@@ -42,29 +42,30 @@ type DownloadJob struct {
 	ChunksOnly      bool
 	MinDownloadMbps int64
 	DownloadTimeout time.Duration
+	CASProxyStatus  string
 }
 
 // Stats holds the telemetry data for a download job.
 type Stats struct {
-	SizeCold           int64  `json:"size_cold"`
-	SizeHot            int64  `json:"size_hot"`
-	CountCold          int    `json:"count_cold"`
-	CountHot           int    `json:"count_hot"`
-	E2ETimeMS          int64  `json:"e2e_time_ms"`
-	DirRetrieveTimeMS  int64  `json:"dir_retrieve_time_ms"`
-	DirPrepareTimeMS   int64  `json:"dir_prepare_time_ms"`
-	FileDownloadTimeMS int64  `json:"file_download_time_ms"`
-	ChunkRestoreTimeMS int64  `json:"chunk_restore_time_ms"`
-	CacheLockWaitTimeMS int64 `json:"cache_lock_wait_time_ms"`
-	DownloadError      string `json:"download_error"`
-	Notes              string `json:"notes"`
+	SizeCold            int64  `json:"size_cold"`
+	SizeHot             int64  `json:"size_hot"`
+	CountCold           int    `json:"count_cold"`
+	CountHot            int    `json:"count_hot"`
+	E2ETimeMS           int64  `json:"e2e_time_ms"`
+	DirRetrieveTimeMS   int64  `json:"dir_retrieve_time_ms"`
+	DirPrepareTimeMS    int64  `json:"dir_prepare_time_ms"`
+	FileDownloadTimeMS  int64  `json:"file_download_time_ms"`
+	ChunkRestoreTimeMS  int64  `json:"chunk_restore_time_ms"`
+	CacheLockWaitTimeMS int64  `json:"cache_lock_wait_time_ms"`
+	DownloadError       string `json:"download_error"`
+	Notes               string `json:"notes"`
+	CASProxy            string `json:"casproxy,omitempty"`
 }
 
 // Stats returns the download stats for the job.
 func (d *DownloadJob) Stats() *Stats {
 	return d.DownloadStats
 }
-
 
 // prepareSymLinksAndDirs creates directories and symbolic links. It is executed before checking
 // with cache or downloading files from remote since the TreeOutput contains information of
@@ -102,6 +103,13 @@ func prepareSymLinksAndDirs(root string, outputs []*client.TreeOutput) ([]*clien
 		}
 		if output.SymlinkTarget != "" {
 			if err := os.Symlink(output.SymlinkTarget, output.Path); err != nil {
+				if os.IsExist(err) {
+					_ = os.Remove(output.Path)
+					if err := os.Symlink(output.SymlinkTarget, output.Path); err == nil {
+						numSymLink++
+						continue
+					}
+				}
 				return nil, fmt.Errorf("failed to create symlink to %s: %w", output.Path, err)
 			}
 			numSymLink++
@@ -461,7 +469,9 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 //   - Copy duplicates files to target locations
 //   - Dump downloadStats
 func (d *DownloadJob) DoDownload(ctx context.Context) error {
-	d.DownloadStats = &Stats{}
+	d.DownloadStats = &Stats{
+		CASProxy: d.CASProxyStatus,
+	}
 	if d.DownloadTimeout > 0 {
 		var cancel context.CancelFunc
 		// Apply the fixed download timeout as a parent context.
@@ -638,4 +648,3 @@ func (d *DownloadJob) TotalSize() int64 {
 	}
 	return d.DownloadStats.SizeCold + d.DownloadStats.SizeHot
 }
-
