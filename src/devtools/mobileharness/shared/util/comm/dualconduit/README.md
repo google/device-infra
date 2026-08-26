@@ -25,13 +25,13 @@ This guide explains how to use DualConduit to establish communication pathways.
 The Acceptor listens for incoming connections from the Dialer and manages the
 mesh network (xDS server).
 
-1.  Build and load the Acceptor Docker image: `bash bazel run
+1.  Build and load the Acceptor Docker image: `bazel run
     //src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/acceptor:acceptor_load`
 
-2.  Create a Docker network to allow containers to communicate: `bash docker
+2.  Create a Docker network to allow containers to communicate: `docker
     network create dualconduit-net`
 
-3.  Run the Acceptor container: `bash docker run -d --name acceptor --network
+3.  Run the Acceptor container: `docker run -d --name acceptor --network
     dualconduit-net -p 7878:7878 -p 18000:18000 dualconduit/acceptor:latest`
 
     *   Port `7878` is the RSocket server port.
@@ -41,10 +41,10 @@ mesh network (xDS server).
 
 The Dialer connects to the Acceptor and can establish conduits.
 
-1.  Build and load the Dialer Docker image: `bash bazel run
+1.  Build and load the Dialer Docker image: `bazel run
     //src/devtools/mobileharness/shared/util/comm/dualconduit/cmd/dialer:dialer_load`
 
-2.  Run the Dialer container on the same network: `bash docker run -d --name
+2.  Run the Dialer container on the same network: `docker run -d --name
     dialer --network dualconduit-net -p 50051:50051 dualconduit/dialer:latest
     --acceptor_target=acceptor:7878`
 
@@ -76,15 +76,15 @@ dialer using the `-L` flag.
 docker run -d --name dialer --network dualconduit-net dualconduit/dialer:latest --acceptor_target=acceptor:7878 --forward_address=0.0.0.0 -L entry_port:destination_endpoint
 ```
 
-*   `entry_port`: The port on the Acceptor side that will be forwarded.
-*   `destination_endpoint`: The target endpoint reachable from the Dialer side.
+*   `entry_port`: The port on the Dialer side to listen for incoming connections.
+*   `destination_endpoint`: The target endpoint reachable from the Acceptor side.
 
 > [!TIP] When running in a shared Docker network, specify
 > `--forward_address=0.0.0.0` so that other containers in the network can
 > communicate with the forwarded `entry_port` on the Dialer.
 
-Example: `bash -L 8080:localhost:80` This will forward traffic arriving at port
-`8080` on the Acceptor side to `localhost:80` on the Dialer side.
+Example: `-L 8080:localhost:80` This will forward traffic arriving at port
+`8080` on the Dialer side to `localhost:80` on the Acceptor side.
 
 #### 2. Via gRPC
 
