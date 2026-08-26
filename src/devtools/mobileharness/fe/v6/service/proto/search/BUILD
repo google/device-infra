@@ -50,6 +50,19 @@ java_proto_library(
     deps = [":search_fleet_proto"],
 )
 
+# --- Home page global summary types ---
+
+proto_library(
+    name = "search_summary_proto",
+    srcs = ["search_summary.proto"],
+    deps = [":search_fleet_proto"],
+)
+
+java_proto_library(
+    name = "search_summary_java_proto",
+    deps = [":search_summary_proto"],
+)
+
 # --- Test/Job/Session (TJS) search types ---
 
 proto_library(
@@ -73,6 +86,7 @@ proto_library(
     srcs = ["search_service.proto"],
     deps = [
         ":search_fleet_proto",
+        ":search_summary_proto",
         ":search_tjs_proto",
         "@googleapis//google/api:annotations_proto",
     ],

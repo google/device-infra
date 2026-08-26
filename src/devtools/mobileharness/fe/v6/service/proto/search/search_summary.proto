@@ -1,0 +1,137 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.search;
+
+import "src/devtools/mobileharness/fe/v6/service/proto/search/search_fleet.proto";
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.search";
+option java_multiple_files = true;
+option java_outer_classname = "SearchSummaryProto";
+
+// =============================================================================
+// Home page global summary ("OmniLab Summary" card).
+//
+// A read-only fleet overview: First-Party host/device totals with a device
+// utilization breakdown, plus an aggregate over the partner ATS labs and a
+// per-controller breakdown.
+//
+// Every displayed number that the user can click is a drill-down into Fleet
+// Search. The backend returns both the number and the exact query that produces
+// it (FleetSubset), so the count shown on the card and the count seen after
+// clicking through can never disagree. Reuses the Fleet Search query contract
+// (SearchEntity, Fleet, Filter from search_fleet.proto).
+// =============================================================================
+
+// A drill-down into Fleet Search: which entity to search, which fleet, and the
+// filter conditions to pre-load. Mirrors the FleetSearchRequest query contract
+// minus the view, so the frontend hands it straight to the search page.
+message FleetSearchTarget {
+  SearchEntity entity = 1;
+  Fleet fleet = 2;
+
+  // Filter conditions to pre-apply. Empty means "browse the whole fleet".
+  repeated Filter filters = 3;
+}
+
+// A filter-defined portion of the fleet together with its size. `count` is
+// exactly the number of entities `search` returns, so the number rendered on
+// the card and the result of clicking through stay in lockstep. Clicking
+// navigates to `search`.
+message FleetSubset {
+  FleetSearchTarget search = 1;
+
+  // Number of entities in this subset (equal to the result count of `search`).
+  int64 count = 2;
+}
+
+// Device status distribution for one fleet scope, rendered as the utilization
+// bar. Percentages are derived by the frontend from the counts.
+message DeviceUtilization {
+  // In service and running a customer's test.
+  FleetSubset busy = 1;
+
+  // In service, healthy, and available for tests.
+  FleetSubset idle = 2;
+
+  // Everything else: offline, in maintenance, error, quarantined, etc.
+  FleetSubset others = 3;
+}
+
+// First-Party (Google-internal) OmniLab summary.
+message FirstPartySummary {
+  // All First-Party hosts.
+  FleetSubset hosts = 1;
+
+  // All First-Party devices.
+  FleetSubset devices = 2;
+
+  // Device utilization across all First-Party devices.
+  DeviceUtilization utilization = 3;
+}
+
+// Summary for one partner ATS lab (a single ATS controller).
+message PartnerAtsLab {
+  // Controller identifier, used in the host::ats_controller drill-down filter.
+  string controller_id = 1;
+
+  // User-facing controller / lab name.
+  string display_name = 2;
+
+  // Hosts in this controller.
+  FleetSubset hosts = 3;
+
+  // Devices in this controller.
+  FleetSubset devices = 4;
+
+  // Device utilization within this controller.
+  DeviceUtilization utilization = 5;
+}
+
+// Summary for the partner ATS labs: an aggregate across all controllers plus a
+// per-controller breakdown.
+message PartnerAtsLabsSummary {
+  // Number of ATS controllers (labs). Not a drill-down: labs are not searchable
+  // as entities, and this number is not clickable in the UI.
+  int32 lab_count = 1;
+
+  // All hosts aggregated across every ATS controller.
+  FleetSubset hosts = 2;
+
+  // All devices aggregated across every ATS controller.
+  FleetSubset devices = 3;
+
+  // Device utilization aggregated across every ATS controller.
+  DeviceUtilization utilization = 4;
+
+  // Per-controller breakdown.
+  repeated PartnerAtsLab labs = 5;
+}
+
+// Request for the Home page global summary. Carries no parameters; it is a
+// named message rather than google.protobuf.Empty so fields can be added later
+// without breaking the RPC signature.
+message GetGlobalSummaryRequest {}
+
+// The Home page global summary. Each section is optional: an OSS / ATS
+// standalone deployment has no First-Party fleet and populates only what
+// applies to its own controller.
+message GlobalSummary {
+  FirstPartySummary first_party = 1;
+  PartnerAtsLabsSummary partner_ats_labs = 2;
+}

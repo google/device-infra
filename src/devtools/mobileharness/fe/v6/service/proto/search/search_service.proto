@@ -20,6 +20,7 @@ package devtools.mobileharness.fe.v6.service.proto.search;
 
 import "google/api/annotations.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/search/search_fleet.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/search/search_summary.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/search/search_tjs.proto";
 
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.search";
@@ -157,6 +158,24 @@ service SearchService {
     option (google.api.http) = {
       post: "/v6/tjs-search/resolve-chips"
       body: "*"
+    };
+  }
+
+  // ===========================================================================
+  // Home page global summary — 1 RPC
+  // ===========================================================================
+
+  // Returns the Home page global summary ("OmniLab Summary" card): First-Party
+  // host/device totals with device utilization, plus the partner ATS labs
+  // aggregate and per-controller breakdown. Every clickable number carries a
+  // FleetSearchTarget drill-down. Called once when the Home page loads.
+  //
+  // Implemented only in the internal build; the OSS / ATS build serves a NoOp
+  // (UNIMPLEMENTED), since a standalone ATS controller has no First-Party
+  // fleet.
+  rpc GetGlobalSummary(GetGlobalSummaryRequest) returns (GlobalSummary) {
+    option (google.api.http) = {
+      get: "/v6/fleet-search/global-summary"
     };
   }
 }
