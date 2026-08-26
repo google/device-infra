@@ -35,6 +35,8 @@ message XtsDynamicDownloadInfo {
   Project project = 2;
   // The download urls for all the dynamic downloaded files.
   repeated string download_url = 3;
+  // The preloaded mainline version.
+  string preloaded_mainline_version = 4;
 }
 
 message ModuleInfoMap {

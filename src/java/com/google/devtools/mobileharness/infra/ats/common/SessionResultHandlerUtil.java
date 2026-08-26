@@ -291,6 +291,7 @@ public class SessionResultHandlerUtil {
     boolean previousSessionHasNonTfModule = false;
     boolean previousSessionHasTfModule = false;
     List<Path> extraFilesOrDirsToZip = new ArrayList<>();
+    addExtraFilesToResultDir(extraFilesOrDirsToZip, sessionAllJobs);
 
     // Copies tradefed test relevant log and result files to dedicated locations
     for (Entry<JobInfo, Optional<TestInfo>> testEntry : tradefedTests.entrySet()) {
@@ -301,8 +302,6 @@ public class SessionResultHandlerUtil {
       }
       curSessionHasTfJob = true;
       TestInfo test = testEntry.getValue().get();
-
-      addExtraFilesToResultDir(extraFilesOrDirsToZip, test);
 
       if (!previousSessionHasNonTfModule) {
         previousSessionHasNonTfModule =
@@ -1280,23 +1279,21 @@ public class SessionResultHandlerUtil {
             || sessionRequestInfo.hasRetrySessionResultDirName());
   }
 
-  private void addExtraFilesToResultDir(List<Path> extraFilesOrDirsToZip, TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
-    String testListProperty =
-        testInfo.properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_LIST_PROPERTY_KEY);
-    String preloadMainlineVersion =
-        testInfo.properties().get(XtsConstants.PRELOAD_MAINLINE_VERSION_TEST_PROPERTY_KEY);
-    if (testListProperty != null && preloadMainlineVersion != null) {
-      if (localFileUtil.isFileOrDirExist(testListProperty)) {
-        // Make a copy of the test list file with the preload mainline version as the prefix.
-        String testListPath =
-            PathUtil.dirname(testListProperty)
-                + "/"
-                + preloadMainlineVersion
-                + "_"
-                + PathUtil.basename(testListProperty);
-        localFileUtil.copyFileOrDir(testListProperty, testListPath);
-        extraFilesOrDirsToZip.add(Path.of(testListPath));
+  /** Adds extra files (e.g. downloaded MCTS test list) to the result directory. */
+  private void addExtraFilesToResultDir(
+      List<Path> extraFilesOrDirsToZip, List<JobInfo> sessionAllJobs) {
+    for (JobInfo jobInfo : sessionAllJobs) {
+      for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
+        try {
+          ImmutableList<Path> genFiles = getGenFilesFromTest(testInfo);
+          genFiles.stream()
+              .filter(file -> file.getFileName().toString().endsWith("mcts_test_list.txt"))
+              .forEach(extraFilesOrDirsToZip::add);
+        } catch (MobileHarnessException e) {
+          logger.atWarning().withCause(e).log(
+              "Failed to find test list file in gen files of test [%s]",
+              testInfo.locator().getId());
+        }
       }
     }
   }

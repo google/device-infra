@@ -284,7 +284,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
   @Override
   public ImmutableMap<String, String> getEnvironment(
       Path workDir, TradefedTestDriverSpec spec, Device device, String envPath)
-      throws MobileHarnessException, InterruptedException {
+      throws MobileHarnessException {
     Map<String, String> environmentToTradefedConsole = new HashMap<>();
     environmentToTradefedConsole.put("LD_LIBRARY_PATH", getConcatenatedLdLibraryPath(workDir));
     environmentToTradefedConsole.put("PATH", envPath);
@@ -396,20 +396,8 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
       Set<String> missingTestList = new HashSet<>(DYNAMIC_JOB_TEST_DEPENDENCIES);
       String testListProperty =
           testInfo.properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_LIST_PROPERTY_KEY);
-      String preloadMainlineVersion =
-          testInfo.properties().get(XtsConstants.PRELOAD_MAINLINE_VERSION_TEST_PROPERTY_KEY);
-      if (testListProperty != null && preloadMainlineVersion != null) {
-        if (localFileUtil.isFileOrDirExist(testListProperty)) {
-          xtsDynamicDownloadTestList.addAll(getStringSetFromResourceFile(testListProperty));
-          // Save the test list file to the test gen file dir and further in xts/logs.
-          localFileUtil.copyFileOrDir(
-              testListProperty,
-              testInfo.getGenFileDir()
-                  + "/"
-                  + preloadMainlineVersion
-                  + "_"
-                  + PathUtil.basename(testListProperty));
-        }
+      if (testListProperty != null && localFileUtil.isFileOrDirExist(testListProperty)) {
+        xtsDynamicDownloadTestList.addAll(getStringSetFromResourceFile(testListProperty));
       } else {
         xtsDynamicDownloadTestList.addAll(
             getStringSetFromResourceFile(getStaticMctsListFilePath()));

@@ -183,7 +183,6 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   @SuppressWarnings("BeforeSnippet")
   public XtsDynamicDownloadInfo parse(LocalTestStartingEvent event)
       throws MobileHarnessException, InterruptedException {
-    TestInfo test = event.getTest();
     String aospVersion = getAospVersion(event);
     ListMultimap<String, String> mctsNamesOfAllModules =
         getMctsNamesOfAllMainlineModules(event, aospVersion);
@@ -196,6 +195,10 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           "The ABI of device is not compatible with the xts dynamic downloader.");
     }
 
+    XtsDynamicDownloadInfo.Builder downloadInfoBuilder =
+        XtsDynamicDownloadInfo.newBuilder()
+            .setXtsType("cts")
+            .setProject(XtsDynamicDownloadInfo.Project.MAINLINE);
     List<String> downloadLinkUrls = new ArrayList<>();
     // Add the Lorry download link url of MCTS file for preloaded mainline modules. For example:
     // https://dl.google.com/dl/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
@@ -203,8 +206,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       String versioncode = getTvpVersion(event);
       String preloadedMainlineVersion =
           processModuleVersion(versioncode, MAINLINE_TVP_PKG, aospVersion, aospVersion);
-      test.properties()
-          .add(XtsConstants.PRELOAD_MAINLINE_VERSION_TEST_PROPERTY_KEY, preloadedMainlineVersion);
+      downloadInfoBuilder.setPreloadedMainlineVersion(preloadedMainlineVersion);
       // Add the MCTS exclude file link url to the front of the list.
       downloadLinkUrls.add(
           String.format(
@@ -238,11 +240,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
               aospVersion, deviceAbi, mctsName);
       downloadLinkUrls.add(downloadUrl);
     }
-    return XtsDynamicDownloadInfo.newBuilder()
-        .setXtsType("cts")
-        .setProject(XtsDynamicDownloadInfo.Project.MAINLINE)
-        .addAllDownloadUrl(downloadLinkUrls)
-        .build();
+    return downloadInfoBuilder.addAllDownloadUrl(downloadLinkUrls).build();
   }
 
   @Override
@@ -264,6 +262,14 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
             .add(
                 XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_LIST_PROPERTY_KEY,
                 mctsFullTestListFilePath);
+        String targetFileName =
+            String.format(
+                "%s_%s",
+                xtsDynamicDownloadInfo.getPreloadedMainlineVersion(),
+                PathUtil.basename(mctsFullTestListFilePath));
+        // Copies the downloaded test list to the test gen files directory.
+        fileUtil.copyFileOrDir(
+            mctsFullTestListFilePath, Path.of(testInfo.getGenFileDir(), targetFileName).toString());
       }
       downloadUrlList.remove(1);
     }
