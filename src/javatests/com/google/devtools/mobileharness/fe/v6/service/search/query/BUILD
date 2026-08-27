@@ -31,7 +31,6 @@ java_library(
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:core_fleet_raw_data",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:device_enrichment",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index_builder",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:host_enrichment",

@@ -76,7 +76,8 @@ public final class FleetFilterEngineTest {
 
   @Test
   public void simpleMatch_singleValue() {
-    assertThat(engine.match(corpus, ImmutableList.of(simple("field::status", false, "IDLE"))))
+    assertThat(
+            engine.match(corpus, ImmutableList.of(simple("device_field::status", false, "IDLE"))))
         .containsExactly(0, 2)
         .inOrder();
   }
@@ -84,7 +85,8 @@ public final class FleetFilterEngineTest {
   @Test
   public void simpleMatch_multipleValues_ored() {
     assertThat(
-            engine.match(corpus, ImmutableList.of(simple("field::owner", false, "alice", "bob"))))
+            engine.match(
+                corpus, ImmutableList.of(simple("device_field::owner", false, "alice", "bob"))))
         .containsExactly(0, 1, 2)
         .inOrder();
   }
@@ -92,21 +94,23 @@ public final class FleetFilterEngineTest {
   @Test
   public void simpleMatch_caseInsensitiveValue() {
     // The index stores values lowercased; the engine lowercases the query value before lookup.
-    assertThat(engine.match(corpus, ImmutableList.of(simple("field::status", false, "idle"))))
+    assertThat(
+            engine.match(corpus, ImmutableList.of(simple("device_field::status", false, "idle"))))
         .containsExactly(0, 2)
         .inOrder();
   }
 
   @Test
   public void simpleMatch_negated() {
-    assertThat(engine.match(corpus, ImmutableList.of(simple("field::status", true, "IDLE"))))
+    assertThat(engine.match(corpus, ImmutableList.of(simple("device_field::status", true, "IDLE"))))
         .containsExactly(1);
   }
 
   @Test
   public void simpleMatch_noValue() {
     // device-2 has no model dimension.
-    assertThat(engine.match(corpus, ImmutableList.of(noValue("dim::model")))).containsExactly(2);
+    assertThat(engine.match(corpus, ImmutableList.of(noValue("dimension::model"))))
+        .containsExactly(2);
   }
 
   @Test
@@ -114,7 +118,7 @@ public final class FleetFilterEngineTest {
     // "Pixel 8" OR (no value) picks up device-0 and device-2.
     Filter filter =
         Filter.newBuilder()
-            .setKey("dim::model")
+            .setKey("dimension::model")
             .setSimple(
                 SimpleMatch.newBuilder()
                     .addValues(FilterValue.newBuilder().setValue("Pixel 8"))
@@ -125,34 +129,34 @@ public final class FleetFilterEngineTest {
 
   @Test
   public void startsWith_prefixOverSortedValues() {
-    assertThat(engine.match(corpus, ImmutableList.of(startsWith("dim::model", "Pixel"))))
+    assertThat(engine.match(corpus, ImmutableList.of(startsWith("dimension::model", "Pixel"))))
         .containsExactly(0, 1)
         .inOrder();
   }
 
   @Test
   public void startsWith_narrowerPrefix() {
-    assertThat(engine.match(corpus, ImmutableList.of(startsWith("dim::model", "pixel 8"))))
+    assertThat(engine.match(corpus, ImmutableList.of(startsWith("dimension::model", "pixel 8"))))
         .containsExactly(0);
   }
 
   @Test
   public void containsSubstring() {
-    assertThat(engine.match(corpus, ImmutableList.of(contains("dim::model", "8", false))))
+    assertThat(engine.match(corpus, ImmutableList.of(contains("dimension::model", "8", false))))
         .containsExactly(0);
   }
 
   @Test
   public void containsSubstring_negated_excludesMatchesButKeepsNoValue() {
     // Devices whose model does not contain "8": device-1 (Pixel 7) and device-2 (no model).
-    assertThat(engine.match(corpus, ImmutableList.of(contains("dim::model", "8", true))))
+    assertThat(engine.match(corpus, ImmutableList.of(contains("dimension::model", "8", true))))
         .containsExactly(1, 2)
         .inOrder();
   }
 
   @Test
   public void matchesRegex() {
-    assertThat(engine.match(corpus, ImmutableList.of(regex("dim::os", "^android$", false))))
+    assertThat(engine.match(corpus, ImmutableList.of(regex("dimension::os", "^android$", false))))
         .containsExactly(0, 1)
         .inOrder();
   }
@@ -160,42 +164,46 @@ public final class FleetFilterEngineTest {
   @Test
   public void matchesRegex_caseInsensitive() {
     // Uppercase pattern still matches the lowercased index values.
-    assertThat(engine.match(corpus, ImmutableList.of(regex("dim::os", "ANDROID", false))))
+    assertThat(engine.match(corpus, ImmutableList.of(regex("dimension::os", "ANDROID", false))))
         .containsExactly(0, 1)
         .inOrder();
   }
 
   @Test
   public void matchesRegex_negated() {
-    assertThat(engine.match(corpus, ImmutableList.of(regex("dim::os", "^android$", true))))
+    assertThat(engine.match(corpus, ImmutableList.of(regex("dimension::os", "^android$", true))))
         .containsExactly(2);
   }
 
   @Test
   public void matchesExactly_fullSetEquality() {
     // device-2 owners == {alice, carol}; device-0 owner alice only, so it is excluded.
-    assertThat(engine.match(corpus, ImmutableList.of(exactly("field::owner", "alice", "carol"))))
+    assertThat(
+            engine.match(
+                corpus, ImmutableList.of(exactly("device_field::owner", "alice", "carol"))))
         .containsExactly(2);
   }
 
   @Test
   public void matchesExactly_singleValueExcludesSuperset() {
     // Only devices whose entire owner set is exactly {alice}: device-0. device-2 also has carol.
-    assertThat(engine.match(corpus, ImmutableList.of(exactly("field::owner", "alice"))))
+    assertThat(engine.match(corpus, ImmutableList.of(exactly("device_field::owner", "alice"))))
         .containsExactly(0);
   }
 
   @Test
   public void matchesAtLeast_superset() {
     // Devices whose owner set contains alice: device-0 and device-2.
-    assertThat(engine.match(corpus, ImmutableList.of(atLeast("field::owner", "alice"))))
+    assertThat(engine.match(corpus, ImmutableList.of(atLeast("device_field::owner", "alice"))))
         .containsExactly(0, 2)
         .inOrder();
   }
 
   @Test
   public void matchesAtLeast_multipleValues() {
-    assertThat(engine.match(corpus, ImmutableList.of(atLeast("field::owner", "alice", "carol"))))
+    assertThat(
+            engine.match(
+                corpus, ImmutableList.of(atLeast("device_field::owner", "alice", "carol"))))
         .containsExactly(2);
   }
 
@@ -206,7 +214,8 @@ public final class FleetFilterEngineTest {
             engine.match(
                 corpus,
                 ImmutableList.of(
-                    simple("field::status", false, "IDLE"), simple("dim::os", false, "android"))))
+                    simple("device_field::status", false, "IDLE"),
+                    simple("dimension::os", false, "android"))))
         .containsExactly(0);
   }
 

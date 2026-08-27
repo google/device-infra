@@ -25,7 +25,6 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.HostValueExtractor;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
 import java.util.List;
 import java.util.Optional;
@@ -35,9 +34,10 @@ import javax.annotation.Nullable;
  * The host projection of a {@link FleetSnapshot} for the query classes.
  *
  * <p>Records are the snapshot's hosts, identified by host name. The value projection delegates to
- * {@link HostValueExtractor} (lowercased sets) and {@link HostCellMapper} (display values, headers,
- * typed cells), so it mirrors exactly what the host index builder recorded. Utilization is a device
- * concept, so a host group carries no utilization breakdown and {@link #utilization} returns empty.
+ * {@link HostRecord#normalizedValues} (lowercased sets) and {@link HostCellMapper} (display values,
+ * headers, typed cells), so it mirrors exactly what the host index builder recorded. Utilization is
+ * a device concept, so a host group carries no utilization breakdown and {@link #utilization}
+ * returns empty.
  */
 public final class HostCorpus implements SearchCorpus {
 
@@ -90,7 +90,7 @@ public final class HostCorpus implements SearchCorpus {
 
   @Override
   public ImmutableSet<String> valuesForKey(int index, String keyId) {
-    return HostValueExtractor.valuesForKey(snapshot.hosts().get(index), keyId);
+    return snapshot.hosts().get(index).normalizedValues(keyId);
   }
 
   @Override

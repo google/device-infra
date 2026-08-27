@@ -17,107 +17,65 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.index;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 
 /**
- * The single source of truth for fleet search key ids and their deployment-independent properties.
- *
- * <p>A key id is a namespaced string such as {@code field::status}, {@code dim::pool}, {@code
- * host::host_name}, or {@code config::wifi_ssid}. These ids flow through the whole search stack:
- * the index builder records them, the filter engine matches them, and the cell mapper, value
- * lister, chip resolver, suggester, column cataloger, and group searcher all read them back.
- * Defining each id and each cross-cutting key set once here prevents the silent drift that a
- * mistyped literal in any one of those files would otherwise cause (an empty column, a broken
- * filter) with no compile error.
- *
- * <p>Only facts that are true of a key in every deployment live here (its id, its namespace,
- * whether its values are plural, opaque, multi-valued, or free-form identifiers). Per-scenario
- * curation (which keys to promote, the suggestion priority tiers, the empty-state seed) is
- * deployment dependent and lives behind the scenario curation abstraction instead.
+ * Common fleet search key constants reading directly from the authoritative {@code schema/} layer.
  */
-// TODO: Revisit this file before finalizing the search stack. Also
-// audit the rest of the stack for plain key-string literals (e.g. "dim::os",
-// "dim::model", "dim::uuid") that should reference the constants defined here
-// instead of duplicating the raw strings, to prevent silent drift.
 public final class FleetSearchKeys {
 
   private FleetSearchKeys() {}
 
   // ---- Namespace prefixes ----
 
-  public static final String FIELD_PREFIX = "field::";
-  public static final String DIM_PREFIX = "dim::";
-  public static final String PROP_PREFIX = "prop::";
-  public static final String HOST_PREFIX = "host::";
-  public static final String CONFIG_PREFIX = "config::";
+  public static final String FIELD_PREFIX = DeviceKeys.PREFIX_DEVICE_FIELD;
+  public static final String DIM_PREFIX = DeviceKeys.PREFIX_DIMENSION;
+  public static final String PROP_PREFIX = HostKeys.PREFIX_HOST_PROPERTY;
+  public static final String HOST_PREFIX = HostKeys.PREFIX_HOST_FIELD;
+  public static final String CONFIG_PREFIX = DeviceKeys.PREFIX_DEVICE_CONFIG;
 
   // ---- Built-in device field keys ----
 
-  public static final String FIELD_UUID = "field::uuid";
-  public static final String FIELD_STATUS = "field::status";
-  public static final String FIELD_TYPE = "field::type";
-  public static final String FIELD_OWNER = "field::owner";
-  public static final String FIELD_DRIVER = "field::driver";
-  public static final String FIELD_DECORATOR = "field::decorator";
-  public static final String FIELD_EXECUTOR = "field::executor";
+  public static final String FIELD_UUID = DeviceKeys.UUID.id();
+  public static final String FIELD_STATUS = DeviceKeys.STATUS.id();
+  public static final String FIELD_TYPE = DeviceKeys.TYPE.id();
+  public static final String FIELD_OWNER = DeviceKeys.PREFIX_DEVICE_FIELD + "owner";
+  public static final String FIELD_DRIVER = DeviceKeys.DRIVER.id();
+  public static final String FIELD_DECORATOR = DeviceKeys.DECORATOR.id();
+  public static final String FIELD_EXECUTOR = DeviceKeys.PREFIX_DEVICE_FIELD + "executor";
 
-  // ---- Built-in dimension keys referenced by logic (others are discovered from data) ----
+  // ---- Built-in dimension keys referenced by logic ----
 
-  public static final String DIM_QUARANTINED = "dim::quarantined";
-
-  /**
-   * The 8 built-in core dimensions pulled eagerly during the full fleet refresh. All other
-   * dimensions are long-tail and pulled on-demand via {@code DimensionOverlayStore}.
-   */
-  public static final ImmutableSet<String> CORE_DIMENSION_NAMES =
-      ImmutableSet.of(
-          "model",
-          "version",
-          "sdk_version",
-          "device_type",
-          "pool",
-          "host_group",
-          "sub_device_type",
-          "run_target");
+  public static final String DIM_QUARANTINED = DeviceKeys.PREFIX_DEVICE_FIELD + "quarantined";
 
   // ---- Built-in host keys ----
 
-  public static final String HOST_NAME = "host::host_name";
-  public static final String HOST_IP = "host::host_ip";
-  public static final String HOST_LAB_TYPE = "host::lab_type";
-  public static final String HOST_OS = "host::host_os";
-  public static final String HOST_CONNECTIVITY = "host::connectivity";
-  public static final String HOST_DAEMON_STATUS = "host::daemon_status";
-  public static final String HOST_RELEASE_STATUS = "host::release_status";
-  public static final String HOST_RELEASE_TYPE = "host::release_type";
-  public static final String HOST_LAB_SERVER_VERSION = "host::lab_server_version";
-  public static final String HOST_ATS_CONTROLLER = "host::ats_controller";
-  public static final String HOST_DEVICE_COUNT = "host::device_count";
+  public static final String HOST_NAME = HostKeys.HOST_NAME.id();
+  public static final String HOST_IP = HostKeys.HOST_IP.id();
+  public static final String HOST_LAB_TYPE = HostKeys.PREFIX_HOST_FIELD + "lab_type";
+  public static final String HOST_OS = HostKeys.HOST_OS.id();
+  public static final String HOST_CONNECTIVITY = HostKeys.CONNECTIVITY.id();
+  public static final String HOST_DAEMON_STATUS = HostKeys.PREFIX_HOST_FIELD + "daemon_status";
+  public static final String HOST_RELEASE_STATUS = HostKeys.PREFIX_HOST_FIELD + "release_status";
+  public static final String HOST_RELEASE_TYPE = HostKeys.PREFIX_HOST_FIELD + "release_type";
+  public static final String HOST_LAB_SERVER_VERSION = HostKeys.LAB_SERVER_VERSION.id();
+  public static final String HOST_ATS_CONTROLLER = HostKeys.PREFIX_HOST_FIELD + "ats_controller";
+  public static final String HOST_DEVICE_COUNT = HostKeys.DEVICE_COUNT.id();
 
   // ---- Built-in config keys ----
 
-  public static final String CONFIG_WIFI_SSID = "config::wifi_ssid";
+  public static final String CONFIG_WIFI_SSID = AtsDeviceKeys.WIFI_SSID.id();
 
   // ---- Cross-cutting key sets (deployment independent) ----
 
-  /**
-   * Keys rendered with a plural label ("Owners", not "Owner"), because a device carries a set of
-   * values for them. Used when composing chip and suggestion text.
-   */
   public static final ImmutableSet<String> PLURAL_DISPLAY_KEYS =
       ImmutableSet.of(FIELD_OWNER, FIELD_DRIVER, FIELD_DECORATOR, FIELD_EXECUTOR);
 
-  /**
-   * Keys whose raw stored value differs from the label an operator sees, so advanced (raw value)
-   * matching would confuse rather than help. The value list and cell renderer show the per-value
-   * display for these instead of the raw term.
-   */
   public static final ImmutableSet<String> VALUE_DISPLAY_KEYS =
       ImmutableSet.of(HOST_ATS_CONTROLLER);
 
-  /**
-   * Keys that carry a set of values, so "empty" / "not empty" filters are meaningful. Single-valued
-   * keys such as Status never qualify, and raw discovered dimensions are absent by design.
-   */
   public static final ImmutableSet<String> MULTI_VALUE_KEYS =
       ImmutableSet.of(
           FIELD_TYPE,
@@ -125,65 +83,37 @@ public final class FleetSearchKeys {
           FIELD_DRIVER,
           FIELD_DECORATOR,
           FIELD_EXECUTOR,
-          "dim::os",
-          "dim::model",
-          "dim::sdk_version",
-          "dim::software_version",
+          DeviceKeys.OS.id(),
+          DeviceKeys.MODEL.id(),
+          DeviceKeys.SDK_VERSION.id(),
+          DeviceKeys.SOFTWARE_VERSION.id(),
           HOST_LAB_TYPE);
 
-  /**
-   * Identifier keys whose values are free-form and effectively unique per device (UUIDs, serials,
-   * MAC and network addresses), so a value picker with facet counts is pointless. The value list
-   * omits these. The suggestion engine collapses these into one suggestion per key ("UUID starts
-   * with 'pixel' (10,234)") instead of generating individual per-value suggestions.
-   *
-   * <p>Verified from prod data 2026-08-08 (152K devices): each of these dimensions has a distinct
-   * value / device ratio above 0.8, meaning values are effectively per-device identifiers.
-   */
   public static final ImmutableSet<String> PLAIN_VALUE_KEYS =
       ImmutableSet.of(
           FIELD_UUID,
-          "dim::uuid",
-          "dim::id",
-          "dim::serial",
-          "dim::control_id",
-          "dim::mac_address",
-          "dim::bluetooth_mac_address",
-          "dim::soc_id",
-          "dim::network_address",
-          "dim::gservices_android_id",
-          "dim::iccid",
-          "dim::iccids",
-          "dim::imei",
-          "dim::ecid",
-          "dim::wifi_address",
-          "dim::testbed_name");
+          DeviceKeys.PREFIX_DIMENSION + "uuid",
+          DeviceKeys.PREFIX_DIMENSION + "id",
+          DeviceKeys.PREFIX_DIMENSION + "serial",
+          DeviceKeys.PREFIX_DIMENSION + "control_id",
+          DeviceKeys.PREFIX_DIMENSION + "mac_address",
+          DeviceKeys.PREFIX_DIMENSION + "bluetooth_mac_address",
+          DeviceKeys.PREFIX_DIMENSION + "soc_id",
+          DeviceKeys.PREFIX_DIMENSION + "network_address",
+          DeviceKeys.PREFIX_DIMENSION + "gservices_android_id",
+          DeviceKeys.PREFIX_DIMENSION + "iccid",
+          DeviceKeys.PREFIX_DIMENSION + "iccids",
+          DeviceKeys.PREFIX_DIMENSION + "imei",
+          DeviceKeys.PREFIX_DIMENSION + "ecid",
+          DeviceKeys.PREFIX_DIMENSION + "wifi_address",
+          DeviceKeys.PREFIX_DIMENSION + "testbed_name");
 
-  /**
-   * Host-entity keys whose values are identifier-like, so the host value list shows no facet
-   * counts. The host name is unique per host, and the device count is a numeric string that reads
-   * as an identifier rather than a facet. This is the host-index analogue of {@link
-   * #PLAIN_VALUE_KEYS}.
-   */
   public static final ImmutableSet<String> HOST_PLAIN_VALUE_KEYS =
       ImmutableSet.of(HOST_NAME, HOST_DEVICE_COUNT);
 
-  /**
-   * Keys treated as device identifiers when routing a typed query to a key (UUID like or host
-   * addressing). This is {@link #PLAIN_VALUE_KEYS} plus the host name and host ip, which the value
-   * list still offers a picker for but the suggester routes as identifiers.
-   */
   public static final ImmutableSet<String> IDENTIFIER_KEYS =
       ImmutableSet.<String>builder().addAll(PLAIN_VALUE_KEYS).add(HOST_NAME).add(HOST_IP).build();
 
-  /**
-   * Dimension names excluded from indexing entirely. These dimensions carry non-textual data
-   * (serialized protos, binary blobs) that have no search, filter, column, or group-by value. The
-   * index builder skips them: no counts, no sorted values, no posting lists.
-   *
-   * <p>Verified from prod data 2026-08-08: {@code subdevice_dimensions} carries base64-encoded
-   * serialized proto data (~4.5K devices), completely unsearchable.
-   */
   public static final ImmutableSet<String> EXCLUDED_DIMENSIONS =
       ImmutableSet.of("subdevice_dimensions");
 }

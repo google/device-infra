@@ -29,12 +29,12 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextCell;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.CompositeFleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.CompositePostings;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceRecord;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceValueExtractor;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.OverlayView;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -43,8 +43,9 @@ import javax.annotation.Nullable;
  * The device projection of a {@link FleetSnapshot} for the query classes.
  *
  * <p>Records are the snapshot's devices, identified by device UUID. The value projection delegates
- * to {@link DeviceValueExtractor} (lowercased sets) and {@link FleetCellMapper} (display values,
- * headers, typed cells), falling back to {@link OverlayView} for on-demand long-tail dimensions.
+ * to {@link DeviceRecord#normalizedValues} (lowercased sets) and {@link FleetCellMapper} (display
+ * values, headers, typed cells), falling back to {@link OverlayView} for on-demand long-tail
+ * dimensions.
  */
 public final class DeviceCorpus implements SearchCorpus {
 
@@ -127,7 +128,7 @@ public final class DeviceCorpus implements SearchCorpus {
     if (overlayView.containsKey(keyId)) {
       return overlayView.valuesForKey(index, keyId);
     }
-    return DeviceValueExtractor.valuesForKey(snapshot.devices().get(index), keyId);
+    return snapshot.devices().get(index).normalizedValues(keyId);
   }
 
   @Override
@@ -196,11 +197,13 @@ public final class DeviceCorpus implements SearchCorpus {
    * not available capacity however idle it looks.
    */
   private static UtilBucket utilBucket(DeviceRecord device) {
-    String status = Ascii.toUpperCase(device.status());
-    if ((!status.equals("IDLE") && !status.equals("BUSY")) || device.types().isEmpty()) {
+    ImmutableList<String> statusVals = device.values(DeviceKeys.STATUS.id());
+    String status = statusVals.isEmpty() ? "" : Ascii.toUpperCase(statusVals.get(0));
+    ImmutableList<String> types = device.values(DeviceKeys.TYPE.id());
+    if ((!status.equals("IDLE") && !status.equals("BUSY")) || types.isEmpty()) {
       return UtilBucket.OTHER;
     }
-    for (String type : device.types()) {
+    for (String type : types) {
       String upper = Ascii.toUpperCase(type);
       for (String keyword : ABNORMAL_TYPE_KEYWORDS) {
         if (upper.contains(keyword)) {
@@ -208,8 +211,11 @@ public final class DeviceCorpus implements SearchCorpus {
         }
       }
     }
+    boolean isQuarantined =
+        device.values(DeviceKeys.PREFIX_DEVICE_FIELD + "quarantined").stream()
+            .anyMatch(v -> Ascii.equalsIgnoreCase(v, "yes") || Ascii.equalsIgnoreCase(v, "true"));
     if (status.equals("IDLE")) {
-      return device.quarantined() ? UtilBucket.OTHER : UtilBucket.IDLE;
+      return isQuarantined ? UtilBucket.OTHER : UtilBucket.IDLE;
     }
     return UtilBucket.BUSY;
   }

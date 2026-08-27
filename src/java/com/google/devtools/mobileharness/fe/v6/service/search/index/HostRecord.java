@@ -16,17 +16,19 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.index;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import java.util.Optional;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * One host's indexed fields in the forward store.
  *
- * <p>Used by the host-entity search index. Fields come from two data sources: LabInfoService
- * (always available) and HostInfoService (available in the multi-controller internal build only).
- * Fields from HostInfoService are Optional and empty when that source is unavailable.
+ * <p>Used by the host-entity search index. Keyed by canonical namespaced key IDs (e.g. {@code
+ * host_field::*}, {@code host_property::*}).
  */
 @AutoValue
 public abstract class HostRecord {
@@ -34,90 +36,32 @@ public abstract class HostRecord {
   /** Host name. Primary identifier. */
   public abstract String hostName();
 
-  /** Host IP from LabLocator. */
-  public abstract String hostIp();
-
-  /** Host connectivity status (e.g. "LAB_RUNNING", "LAB_MISSING"). From LabInfo.lab_status. */
-  public abstract String labStatus();
-
   /**
-   * Host operating system. Sourced from the {@code host_os} host property, defaulting to "Unknown"
-   * when the property is absent, matching the host detail page.
+   * Unified key-to-values forward store.
+   *
+   * <p>Keyed by canonical namespaced key IDs (e.g. {@code host_field::*}, {@code
+   * host_property::*}).
    */
-  public abstract String hostOs();
+  public abstract ImmutableMap<String, ImmutableList<String>> values();
 
-  /**
-   * Host lab server connectivity, bucketed from the lab status the same way as the host detail page
-   * (for example "Running", "Missing").
-   */
-  public abstract String hostConnectivity();
+  /** Returns the list of display values for the given canonical key ID, or empty list if absent. */
+  public ImmutableList<String> values(String keyId) {
+    return values().getOrDefault(keyId, ImmutableList.of());
+  }
 
-  /** Host properties from LabInfo (key-value pairs). */
-  public abstract ImmutableMap<String, String> hostProperties();
+  /** Returns the lowercased normalized value set for indexing and search matching. */
+  public ImmutableSet<String> normalizedValues(String keyId) {
+    return values(keyId).stream()
+        .filter(value -> !value.isEmpty())
+        .map(Ascii::toLowerCase)
+        .collect(toImmutableSet());
+  }
 
   /** Number of devices on this host. Computed from LabInfo device list. */
   public abstract int deviceCount();
 
-  /**
-   * User-facing lab types (multi-valued, e.g. ["Core", "Satellite"]). Derived from host properties
-   * and HostInfoService lab type enum, combined by the same logic as HostTypes.determineUiLabTypes.
-   */
-  public abstract ImmutableList<String> labTypes();
-
-  // --- Fields from HostInfoService (absent in OSS / ats-all) ---
-
-  /** Lab server release status (e.g. "RUNNING", "DRAINING"). From HostInfoService. */
-  public abstract Optional<String> releaseStatus();
-
-  /** Host release type (raw LabType enum name). From HostInfoService. */
-  public abstract Optional<String> releaseType();
-
-  /** Daemon server status (e.g. "RUNNING", "MISSING"). From HostInfoService. */
-  public abstract Optional<String> daemonStatus();
-
-  /** Lab server version string. From host_properties "host_version" or HostInfoService. */
-  public abstract Optional<String> labServerVersion();
-
-  /**
-   * The ATS controller this host belongs to. Present only in the ats-all deployment. Absent in
-   * ats-one and 1p.
-   */
-  public abstract Optional<String> atsController();
-
-  /** Creates a new builder. */
-  public static Builder builder() {
-    return new AutoValue_HostRecord.Builder().setAtsController(Optional.empty());
-  }
-
-  /** Builder for {@link HostRecord}. */
-  @AutoValue.Builder
-  public abstract static class Builder {
-    public abstract Builder setHostName(String hostName);
-
-    public abstract Builder setHostIp(String hostIp);
-
-    public abstract Builder setLabStatus(String labStatus);
-
-    public abstract Builder setHostOs(String hostOs);
-
-    public abstract Builder setHostConnectivity(String hostConnectivity);
-
-    public abstract Builder setHostProperties(ImmutableMap<String, String> hostProperties);
-
-    public abstract Builder setDeviceCount(int deviceCount);
-
-    public abstract Builder setLabTypes(ImmutableList<String> labTypes);
-
-    public abstract Builder setReleaseStatus(Optional<String> releaseStatus);
-
-    public abstract Builder setReleaseType(Optional<String> releaseType);
-
-    public abstract Builder setDaemonStatus(Optional<String> daemonStatus);
-
-    public abstract Builder setLabServerVersion(Optional<String> labServerVersion);
-
-    public abstract Builder setAtsController(Optional<String> atsController);
-
-    public abstract HostRecord build();
+  public static HostRecord create(
+      String hostName, ImmutableMap<String, ImmutableList<String>> values, int deviceCount) {
+    return new AutoValue_HostRecord(hostName, values, deviceCount);
   }
 }

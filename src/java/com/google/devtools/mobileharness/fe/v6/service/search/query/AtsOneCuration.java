@@ -50,7 +50,12 @@ public final class AtsOneCuration implements ScenarioCuration {
   @Override
   public ImmutableList<String> deviceFilterByRow() {
     return ImmutableList.of(
-        FIELD_UUID, HOST_NAME, FIELD_STATUS, "dim::model", "dim::sdk_version", CONFIG_WIFI_SSID);
+        FIELD_UUID,
+        HOST_NAME,
+        FIELD_STATUS,
+        "dimension::model",
+        "dimension::sdk_version",
+        CONFIG_WIFI_SSID);
   }
 
   @Override
@@ -61,7 +66,7 @@ public final class AtsOneCuration implements ScenarioCuration {
   @Override
   public ImmutableList<String> deviceDefaultColumns() {
     return ImmutableList.of(
-        FIELD_UUID, HOST_NAME, FIELD_STATUS, "dim::model", "dim::os", CONFIG_WIFI_SSID);
+        FIELD_UUID, HOST_NAME, FIELD_STATUS, "dimension::model", "dimension::os", CONFIG_WIFI_SSID);
   }
 
   @Override
@@ -70,10 +75,10 @@ public final class AtsOneCuration implements ScenarioCuration {
         HOST_NAME,
         FIELD_STATUS,
         FIELD_TYPE,
-        "dim::model",
-        "dim::sdk_version",
-        "dim::device_class_name",
-        "dim::manufacturer",
+        "dimension::model",
+        "dimension::sdk_version",
+        "dimension::device_class_name",
+        "dimension::manufacturer",
         CONFIG_WIFI_SSID);
   }
 
@@ -94,14 +99,13 @@ public final class AtsOneCuration implements ScenarioCuration {
 
   @Override
   public ImmutableList<String> hostDefaultColumns() {
-    return ImmutableList.of(
-        HOST_NAME, HOST_CONNECTIVITY, HOST_DEVICE_COUNT, HOST_IP, HOST_LAB_SERVER_VERSION);
+    return ImmutableList.of(HOST_NAME, HOST_CONNECTIVITY, HOST_DEVICE_COUNT, HOST_OS);
   }
 
   @Override
   public ImmutableList<String> hostRecommendedColumns() {
     return ImmutableList.of(
-        HOST_CONNECTIVITY, HOST_DEVICE_COUNT, HOST_OS, HOST_LAB_SERVER_VERSION, HOST_IP);
+        HOST_NAME, HOST_CONNECTIVITY, HOST_DEVICE_COUNT, HOST_OS, HOST_LAB_SERVER_VERSION, HOST_IP);
   }
 
   @Override

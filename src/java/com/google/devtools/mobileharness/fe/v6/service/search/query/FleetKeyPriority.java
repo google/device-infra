@@ -78,16 +78,16 @@ public final class FleetKeyPriority {
           FIELD_UUID,
           FIELD_STATUS,
           FIELD_TYPE,
-          "dim::model",
-          "dim::os",
-          "dim::sdk_version",
+          "dimension::model",
+          "dimension::os",
+          "dimension::sdk_version",
           HOST_NAME,
-          "dim::device_class_name",
-          "dim::manufacturer",
+          "dimension::device_class_name",
+          "dimension::manufacturer",
           FIELD_OWNER,
           DIM_QUARANTINED,
           HOST_LAB_TYPE,
-          "host::release_status");
+          HOST_RELEASE_STATUS);
 
   /**
    * The secondary device keys: useful but ranked below tier 1. These are the finer-grained lab,
@@ -98,15 +98,15 @@ public final class FleetKeyPriority {
           FIELD_DRIVER,
           FIELD_DECORATOR,
           HOST_IP,
-          "host::host_os",
-          "host::connectivity",
-          "host::lab_server_version",
+          HOST_OS,
+          HOST_CONNECTIVITY,
+          HOST_LAB_SERVER_VERSION,
           FIELD_EXECUTOR,
-          "dim::software_version",
-          "dim::device_form",
-          "host::lab_server_activity",
-          "host::daemon_status",
-          "host::release_type");
+          "dimension::software_version",
+          "dimension::device_form",
+          "host_field::lab_server_activity",
+          HOST_DAEMON_STATUS,
+          HOST_RELEASE_TYPE);
 
   /**
    * The most important host keys: always ranked highest for the host entity. Ported from the
@@ -121,7 +121,7 @@ public final class FleetKeyPriority {
           HOST_LAB_SERVER_VERSION,
           HOST_LAB_TYPE,
           HOST_RELEASE_STATUS,
-          "host::lab_server_activity");
+          "host_field::lab_server_activity");
 
   /**
    * The secondary host keys: useful but ranked below host tier 1. Ported from the prototype's

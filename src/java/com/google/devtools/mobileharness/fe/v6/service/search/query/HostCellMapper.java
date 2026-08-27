@@ -16,22 +16,10 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_ATS_CONTROLLER;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_CONNECTIVITY;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DAEMON_STATUS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DEVICE_COUNT;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_IP;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_SERVER_VERSION;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_TYPE;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_NAME;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_OS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_STATUS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_TYPE;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PROP_PREFIX;
-
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Cell;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Column;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.HostRef;
@@ -40,6 +28,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.LinkCell;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.NavTarget;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.StatusCell;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextCell;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.HostRecord;
 import javax.inject.Inject;
@@ -47,28 +36,34 @@ import javax.inject.Inject;
 /**
  * Turns indexed host records into result-table {@link Column}s and typed {@link Cell}s.
  *
- * <p>This is the host-entity analogue of {@link FleetCellMapper}. It builds the same typed {@code
- * Cell} oneof (TextCell, LinkCell, StatusCell) the frontend renders generically, but projects a
- * {@link HostRecord} onto host-name identity, host connectivity status, and the host device count
- * rather than the device projection. Value extraction mirrors the host key namespaces stamped by
- * {@code FleetIndexBuilder.indexHost} and read back by {@link HostValueExtractor}, but reads
- * display-cased values straight from the {@link HostRecord} forward store rather than the
- * lowercased index terms.
+ * <p>Mirrors {@link FleetCellMapper} for host-entity search, rendering:
+ *
+ * <ul>
+ *   <li>{@code host::host_name} as a {@link LinkCell} to the host page;
+ *   <li>{@code host::connectivity} as a {@link StatusCell} with semantic color indicator;
+ *   <li>all remaining host fields and host properties as comma-joined {@link TextCell}s.
+ * </ul>
+ *
+ * <p>Original value casing for per-value display maps (such as ATS controller display names) is
+ * read from {@link FleetSnapshot#hostIndex()}'s {@link
+ * com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex#valueDisplays(String)},
+ * identical to the device path.
  */
 public final class HostCellMapper {
 
   /**
-   * Host connectivity value to semantic indicator. The connectivity text is uppercased before
-   * lookup, so it matches the bucketed titles the host detail page uses (for example "Running",
-   * "Missing"). Any value not listed here maps to {@link Indicator#INDICATOR_NEUTRAL}, which covers
-   * the "Unknown" bucket. This ports the prototype's {@code HOST_CONNECTIVITY_SEVERITY} (Running ->
-   * ok, Missing -> error, Unknown -> neutral) into the shared indicator vocabulary, matching {@link
-   * FleetCellMapper}'s device status mapping style.
+   * Host connectivity status name to semantic indicator. Matches {@link
+   * com.google.devtools.mobileharness.fe.v6.service.host.util.HostConnectivityStatuses#getTitle()}
+   * and {@link
+   * com.google.devtools.mobileharness.fe.v6.service.host.util.HostConnectivityStatuses#getIndicator()},
+   * following {@link FleetCellMapper}'s device status mapping style.
    */
   private static final ImmutableMap<String, Indicator> CONNECTIVITY_INDICATORS =
       ImmutableMap.<String, Indicator>builder()
           .put("RUNNING", Indicator.INDICATOR_OK)
+          .put("CONNECTED", Indicator.INDICATOR_OK)
           .put("MISSING", Indicator.INDICATOR_ERROR)
+          .put("DISCONNECTED", Indicator.INDICATOR_ERROR)
           .put("UNKNOWN", Indicator.INDICATOR_NEUTRAL)
           .buildOrThrow();
 
@@ -86,26 +81,29 @@ public final class HostCellMapper {
 
   /** Builds a typed cell for a host and column key. */
   public Cell cell(String keyId, HostRecord host, FleetSnapshot snapshot) {
-    return switch (keyId) {
-      case HOST_NAME -> Cell.newBuilder().setLink(hostLink(host)).build();
-      case HOST_CONNECTIVITY ->
-          Cell.newBuilder().setStatus(statusCell(host.hostConnectivity())).build();
-      // The device count is a numeric string, rendered as a plain TextCell. All remaining host keys
-      // (including the multi-valued lab type, comma-joined like device type/owner) and host
-      // properties also render as TextCell.
-      default -> Cell.newBuilder().setText(textCell(displayValues(host, keyId, snapshot))).build();
-    };
+    if (keyId.equals(FleetSearchKeys.HOST_NAME)) {
+      return Cell.newBuilder().setLink(hostLink(host)).build();
+    }
+    if (keyId.equals(FleetSearchKeys.HOST_CONNECTIVITY)) {
+      String connectivity = firstValue(host.values(FleetSearchKeys.HOST_CONNECTIVITY));
+      return Cell.newBuilder().setStatus(statusCell(connectivity)).build();
+    }
+    // The device count is a numeric string, rendered as a plain TextCell. All remaining host keys
+    // (including the multi-valued lab type, comma-joined like device type/owner) and host
+    // properties also render as TextCell.
+    return Cell.newBuilder().setText(textCell(displayValues(host, keyId, snapshot))).build();
   }
 
   private static LinkCell hostLink(HostRecord host) {
     // TODO: For ats-all multi-controller routing, consider populating
     // universe/ats_controller on HostRef once HostRecord.atsController is indexed.
+    String hostName = host.hostName();
+    String hostIp = firstValue(host.values(FleetSearchKeys.HOST_IP));
     return LinkCell.newBuilder()
-        .setText(host.hostName())
+        .setText(hostName)
         .setTarget(
             NavTarget.newBuilder()
-                .setHost(
-                    HostRef.newBuilder().setHostName(host.hostName()).setHostIp(host.hostIp())))
+                .setHost(HostRef.newBuilder().setHostName(hostName).setHostIp(hostIp)))
         .build();
   }
 
@@ -123,56 +121,36 @@ public final class HostCellMapper {
   /**
    * The host's display-cased values for a key, in the same key-namespace scheme the host index
    * builder uses. A single-valued key yields a one-element list (or an empty list when the value is
-   * absent); a multi-valued key yields all its values. This mirrors {@link HostValueExtractor} but
-   * keeps the original casing, so the searcher reuses it to derive sort values.
+   * absent); a multi-valued key yields all its values. The searcher reuses it to derive sort
+   * values.
    */
   static ImmutableList<String> displayValues(
       HostRecord host, String keyId, FleetSnapshot snapshot) {
-    return switch (keyId) {
-      case HOST_NAME -> singleton(host.hostName());
-      case HOST_IP -> singleton(host.hostIp());
-      case HOST_OS -> singleton(host.hostOs());
-      case HOST_CONNECTIVITY -> singleton(host.hostConnectivity());
-      case HOST_LAB_TYPE -> host.labTypes();
-      case HOST_DAEMON_STATUS ->
-          host.daemonStatus().map(ImmutableList::of).orElse(ImmutableList.of());
-      case HOST_RELEASE_STATUS ->
-          host.releaseStatus().map(ImmutableList::of).orElse(ImmutableList.of());
-      case HOST_RELEASE_TYPE ->
-          host.releaseType().map(ImmutableList::of).orElse(ImmutableList.of());
-      case HOST_LAB_SERVER_VERSION ->
-          host.labServerVersion().map(ImmutableList::of).orElse(ImmutableList.of());
-      // The host stores the raw controller id; show the friendly display from the host index's
-      // per-value display map, falling back to the id itself when the registry has no entry.
-      case HOST_ATS_CONTROLLER -> atsControllerValues(host, snapshot);
-      case HOST_DEVICE_COUNT -> ImmutableList.of(String.valueOf(host.deviceCount()));
-      default -> prefixedValues(host, keyId);
-    };
+    if (keyId.equals(FleetSearchKeys.HOST_ATS_CONTROLLER)) {
+      return atsControllerValues(host, snapshot);
+    }
+    return host.values(keyId);
   }
 
   private static ImmutableList<String> atsControllerValues(
       HostRecord host, FleetSnapshot snapshot) {
-    return host.atsController()
-        .filter(id -> !id.isEmpty())
-        .map(
-            id ->
-                ImmutableList.of(
-                    snapshot
-                        .hostIndex()
-                        .valueDisplays(HOST_ATS_CONTROLLER)
-                        .getOrDefault(Ascii.toLowerCase(id), id)))
-        .orElse(ImmutableList.of());
-  }
-
-  private static ImmutableList<String> prefixedValues(HostRecord host, String keyId) {
-    if (keyId.startsWith(PROP_PREFIX)) {
-      String value = host.hostProperties().get(keyId.substring(PROP_PREFIX.length()));
-      return value == null ? ImmutableList.of() : singleton(value);
+    ImmutableList<String> vals = host.values(FleetSearchKeys.HOST_ATS_CONTROLLER);
+    if (vals.isEmpty()) {
+      return ImmutableList.of();
     }
-    return ImmutableList.of();
+    String id = vals.get(0);
+    if (id.isEmpty()) {
+      return ImmutableList.of();
+    }
+    String display =
+        snapshot
+            .hostIndex()
+            .valueDisplays(FleetSearchKeys.HOST_ATS_CONTROLLER)
+            .getOrDefault(Ascii.toLowerCase(id), id);
+    return ImmutableList.of(display);
   }
 
-  private static ImmutableList<String> singleton(String value) {
-    return value.isEmpty() ? ImmutableList.of() : ImmutableList.of(value);
+  private static String firstValue(ImmutableList<String> list) {
+    return Iterables.getFirst(list, "");
   }
 }

@@ -89,31 +89,30 @@ public final class HostSuggesterTest {
     }
     assertThat(keys.build())
         .containsExactly(
-            "host::host_name", "host::lab_type", "host::connectivity", "host::device_count")
+            "host_field::host_name",
+            "host_field::lab_type",
+            "host_field::connectivity",
+            "host_field::device_count")
         .inOrder();
   }
 
   @Test
   public void valueSuggestion_offersHostKeyConditionWithCount() {
-    // "debian" is the host_os value on lab-a and lab-b. It resolves onto host::host_os, a host tier
+    // "debian" is the host_os value on lab-a and lab-b. It resolves onto host_property::host_os, a
+    // host tier
     // 1 key, so it is offered first with the two matching hosts as its count.
     FleetSuggestionResponse response = suggester.suggest(corpus, request("debian"));
 
-    FleetSuggestion hostOs = firstApplyFilter(response, "host::host_os");
+    FleetSuggestion hostOs = firstApplyFilter(response, "host_property::host_os");
     assertThat(hostOs.getApplyFilter().getResultingFilter().getSimple().getValues(0).getValue())
         .isEqualTo("debian");
     assertThat(hostOs.getCount()).isEqualTo(2);
     assertThat(response.getItems(0).getApplyFilter().getResultingFilter().getKey())
-        .isEqualTo("host::host_os");
+        .isEqualTo("host_property::host_os");
   }
 
   @Test
   public void keyName_ranksHostTier1KeyAboveTier2Key() {
-    // "host" matches host::host_name and host::host_os (host tier 1, priority 3) and host::host_ip
-    // (host tier 2, priority 1). Priority is the primary sort, so the tier 1 keys are offered
-    // before
-    // the tier 2 key. A generous limit keeps the low-priority tier 2 key from being trimmed so the
-    // relative order can be asserted.
     FleetSuggestionResponse response =
         suggester.suggest(
             corpus,
@@ -123,21 +122,18 @@ public final class HostSuggesterTest {
                 .setLimit(50)
                 .build());
 
-    int nameIndex = openPickerIndex(response, "host::host_name");
-    int osIndex = openPickerIndex(response, "host::host_os");
-    int ipIndex = openPickerIndex(response, "host::host_ip");
+    int nameIndex = openPickerIndex(response, "host_field::host_name");
+    int osIndex = openPickerIndex(response, "host_property::host_os");
+    int ipIndex = openPickerIndex(response, "host_field::host_ip");
     assertThat(nameIndex).isLessThan(ipIndex);
     assertThat(osIndex).isLessThan(ipIndex);
   }
 
   @Test
   public void groupBy_offersHostGroupByCandidates() {
-    // A bare "group by" prefix offers the curated host group-by candidates. host::lab_type yields
-    // two buckets (lab-a's lab types plus the "(no value)" bucket for lab-b and lab-c); the other
-    // candidate host::release_status is absent from the fleet and is dropped.
     FleetSuggestionResponse response = suggester.suggest(corpus, request("group by"));
 
-    FleetSuggestion labType = firstAddGroupBy(response, "host::lab_type");
+    FleetSuggestion labType = firstAddGroupBy(response, "host_field::lab_type");
     assertThat(labType.getLabel()).isEqualTo("Group by");
     assertThat(labType.getCountUnit()).isEqualTo("groups");
     assertThat(labType.getCount()).isEqualTo(2);
@@ -148,8 +144,8 @@ public final class HostSuggesterTest {
     // Typing the alias "device count" resolves onto the host device-count key, offering its picker.
     FleetSuggestionResponse response = suggester.suggest(corpus, request("device count"));
 
-    FleetSuggestion deviceCount = firstOpenPicker(response, "host::device_count");
-    assertThat(deviceCount.getOpenPicker().getKey()).isEqualTo("host::device_count");
+    FleetSuggestion deviceCount = firstOpenPicker(response, "host_field::device_count");
+    assertThat(deviceCount.getOpenPicker().getKey()).isEqualTo("host_field::device_count");
   }
 
   // --- Helpers ---

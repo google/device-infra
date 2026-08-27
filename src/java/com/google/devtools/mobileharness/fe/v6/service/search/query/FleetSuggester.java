@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import static com.google.common.primitives.Booleans.falseFirst;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.DIM_PREFIX;
+import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.DIM_QUARANTINED;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_OWNER;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_STATUS;
 import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_TYPE;
@@ -167,12 +168,12 @@ public final class FleetSuggester {
   private static final ImmutableList<String> EMPTY_STATE_KEYS =
       ImmutableList.of(
           FIELD_STATUS,
-          "dim::model",
+          "dimension::model",
           FIELD_TYPE,
           FIELD_OWNER,
-          "dim::pool",
-          "dim::os",
-          "dim::quarantined");
+          "dimension::pool",
+          "dimension::os",
+          DIM_QUARANTINED);
 
   /**
    * Curated starter keys offered for an empty query in the host entity. Ported from the prototype's

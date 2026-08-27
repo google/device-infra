@@ -73,7 +73,7 @@ public final class LazyPostings implements Postings {
     this.source = source;
   }
 
-  /** Builds posting lists over a device forward store using {@link DeviceValueExtractor}. */
+  /** Builds posting lists over a device forward store. */
   public LazyPostings(ImmutableList<DeviceRecord> devices) {
     this(
         new RecordValues() {
@@ -84,12 +84,12 @@ public final class LazyPostings implements Postings {
 
           @Override
           public ImmutableSet<String> valuesForKey(int index, String keyId) {
-            return DeviceValueExtractor.valuesForKey(devices.get(index), keyId);
+            return devices.get(index).normalizedValues(keyId);
           }
         });
   }
 
-  /** Builds posting lists over a host forward store using {@link HostValueExtractor}. */
+  /** Builds posting lists over a host forward store. */
   public static LazyPostings forHosts(ImmutableList<HostRecord> hosts) {
     return new LazyPostings(
         new RecordValues() {
@@ -100,7 +100,7 @@ public final class LazyPostings implements Postings {
 
           @Override
           public ImmutableSet<String> valuesForKey(int index, String keyId) {
-            return HostValueExtractor.valuesForKey(hosts.get(index), keyId);
+            return hosts.get(index).normalizedValues(keyId);
           }
         });
   }

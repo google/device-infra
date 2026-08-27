@@ -70,11 +70,12 @@ public final class HostSearchConfigProviderTest {
     }
     assertThat(keys)
         .containsExactly(
-            "host::connectivity",
-            "host::device_count",
-            "host::host_os",
-            "host::lab_server_version",
-            "host::host_ip")
+            "host_field::host_name",
+            "host_field::connectivity",
+            "host_field::device_count",
+            "host_property::host_os",
+            "host_field::lab_server_version",
+            "host_field::host_ip")
         .inOrder();
   }
 
@@ -89,16 +90,15 @@ public final class HostSearchConfigProviderTest {
     }
     assertThat(keys)
         .containsExactly(
-            "host::host_name",
-            "host::connectivity",
-            "host::device_count",
-            "host::host_ip",
-            "host::lab_server_version")
+            "host_field::host_name",
+            "host_field::connectivity",
+            "host_field::device_count",
+            "host_property::host_os")
         .inOrder();
 
     // The host name is the host identifier column, so it is locked; every other column is
     // removable.
-    assertThat(defaults.get(0).getKey()).isEqualTo("host::host_name");
+    assertThat(defaults.get(0).getKey()).isEqualTo("host_field::host_name");
     assertThat(defaults.get(0).getLocked()).isTrue();
     assertThat(defaults.get(1).getLocked()).isFalse();
     assertThat(defaults.get(2).getLocked()).isFalse();

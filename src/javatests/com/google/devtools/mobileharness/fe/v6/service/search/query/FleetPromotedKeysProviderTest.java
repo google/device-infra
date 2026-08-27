@@ -79,12 +79,12 @@ public final class FleetPromotedKeysProviderTest {
     // Every curated 1p filter key is present in this fleet, so the whole anchor row shows in order.
     assertThat(filterKeys(response))
         .containsExactly(
-            "field::status",
-            "dim::model",
-            "field::type",
-            "field::owner",
-            "dim::pool",
-            "host::host_name")
+            "device_field::status",
+            "dimension::model",
+            "device_field::type",
+            "device_field::owner",
+            "dimension::pool",
+            "host_field::host_name")
         .inOrder();
   }
 
@@ -98,10 +98,10 @@ public final class FleetPromotedKeysProviderTest {
     //   owner:  {alice,bob}, {alice}      -> kept.
     //   host_name: lab-a, lab-b           -> kept.
     FleetPromotedKeysResponse response =
-        provider.getPromotedKeys(corpus, request(simple("field::status", "IDLE")));
+        provider.getPromotedKeys(corpus, request(simple("device_field::status", "IDLE")));
 
     assertThat(filterKeys(response))
-        .containsExactly("dim::model", "field::owner", "host::host_name")
+        .containsExactly("dimension::model", "device_field::owner", "host_field::host_name")
         .inOrder();
   }
 
@@ -110,13 +110,13 @@ public final class FleetPromotedKeysProviderTest {
     FleetPromotedKeysResponse response = provider.getPromotedKeys(corpus, request());
 
     // Owner is multi-valued: verb agreement is plural. Its display name is the built-in "Owners".
-    FleetPromotedFilterKey owner = filterKey(response, "field::owner");
+    FleetPromotedFilterKey owner = filterKey(response, "device_field::owner");
     assertThat(owner.getMetadata().getIsPlural()).isTrue();
     assertThat(owner.getMetadata().getCanUseAdvanced()).isTrue();
     assertThat(owner.getMetadata().getKeyDisplayName()).isEqualTo("Owners");
 
     // Model is single-valued: verb agreement is singular, and advanced mode is available.
-    FleetPromotedFilterKey model = filterKey(response, "dim::model");
+    FleetPromotedFilterKey model = filterKey(response, "dimension::model");
     assertThat(model.getMetadata().getIsPlural()).isFalse();
     assertThat(model.getMetadata().getCanUseAdvanced()).isTrue();
     assertThat(model.getMetadata().getKeyDisplayName()).isEqualTo("Model");
@@ -126,24 +126,30 @@ public final class FleetPromotedKeysProviderTest {
   public void groupByKeys_curatedOrderCountsAndDisplayNames() {
     FleetPromotedKeysResponse response = provider.getPromotedKeys(corpus, request());
 
-    // host::lab_type is absent from this fleet and is skipped; the rest keep the curated order.
-    // An identifier key such as field::uuid is never in the group-by row.
+    // host_field::lab_type is absent from this fleet and is skipped; the rest keep the curated
+    // order.
+    // An identifier key such as device_field::uuid is never in the group-by row.
     assertThat(groupByKeys(response))
-        .containsExactly("dim::lab_location", "field::type", "field::status", "host::host_name")
+        .containsExactly(
+            "dimension::lab_location",
+            "device_field::type",
+            "device_field::status",
+            "host_field::host_name")
         .inOrder();
-    assertThat(groupByKeys(response)).doesNotContain("field::uuid");
+    assertThat(groupByKeys(response)).doesNotContain("device_field::uuid");
 
     // lab_location has two values (mtv, nyc) plus the "(no value)" bucket for device-3: 3 groups.
-    FleetPromotedGroupByKey labLocation = groupByKey(response, "dim::lab_location");
+    FleetPromotedGroupByKey labLocation = groupByKey(response, "dimension::lab_location");
     assertThat(labLocation.getGroupCount()).isEqualTo(3);
     assertThat(labLocation.getDisplayName()).isEqualTo("Dimension lab_location");
 
     // The other keys have two values each and no missing devices.
-    assertThat(groupByKey(response, "field::type").getGroupCount()).isEqualTo(2);
-    assertThat(groupByKey(response, "field::type").getDisplayName()).isEqualTo("Type");
-    assertThat(groupByKey(response, "field::status").getGroupCount()).isEqualTo(2);
-    assertThat(groupByKey(response, "host::host_name").getGroupCount()).isEqualTo(2);
-    assertThat(groupByKey(response, "host::host_name").getDisplayName()).isEqualTo("Host Name");
+    assertThat(groupByKey(response, "device_field::type").getGroupCount()).isEqualTo(2);
+    assertThat(groupByKey(response, "device_field::type").getDisplayName()).isEqualTo("Type");
+    assertThat(groupByKey(response, "device_field::status").getGroupCount()).isEqualTo(2);
+    assertThat(groupByKey(response, "host_field::host_name").getGroupCount()).isEqualTo(2);
+    assertThat(groupByKey(response, "host_field::host_name").getDisplayName())
+        .isEqualTo("Host Name");
   }
 
   @Test
@@ -153,11 +159,11 @@ public final class FleetPromotedKeysProviderTest {
             corpus,
             FleetPromotedKeysRequest.newBuilder()
                 .setFleet(Fleet.FLEET_SELF)
-                .addGroupBy("field::status")
+                .addGroupBy("device_field::status")
                 .build());
 
     assertThat(groupByKeys(response))
-        .containsExactly("dim::lab_location", "field::type", "host::host_name")
+        .containsExactly("dimension::lab_location", "device_field::type", "host_field::host_name")
         .inOrder();
   }
 
@@ -168,9 +174,9 @@ public final class FleetPromotedKeysProviderTest {
             corpus,
             FleetPromotedKeysRequest.newBuilder()
                 .setFleet(Fleet.FLEET_SELF)
-                .addGroupBy("field::type")
-                .addGroupBy("field::status")
-                .addGroupBy("host::host_name")
+                .addGroupBy("device_field::type")
+                .addGroupBy("device_field::status")
+                .addGroupBy("host_field::host_name")
                 .build());
 
     assertThat(response.getGroupByKeysList()).isEmpty();
@@ -184,13 +190,13 @@ public final class FleetPromotedKeysProviderTest {
     //   lab_location: mtv plus device-3's "(no value)" bucket -> two buckets, kept.
     //   host_name: lab-a, lab-b       -> two buckets, kept.
     FleetPromotedKeysResponse response =
-        provider.getPromotedKeys(corpus, request(simple("field::owner", "alice")));
+        provider.getPromotedKeys(corpus, request(simple("device_field::owner", "alice")));
 
     assertThat(groupByKeys(response))
-        .containsExactly("dim::lab_location", "host::host_name")
+        .containsExactly("dimension::lab_location", "host_field::host_name")
         .inOrder();
-    assertThat(groupByKey(response, "dim::lab_location").getGroupCount()).isEqualTo(2);
-    assertThat(groupByKey(response, "host::host_name").getGroupCount()).isEqualTo(2);
+    assertThat(groupByKey(response, "dimension::lab_location").getGroupCount()).isEqualTo(2);
+    assertThat(groupByKey(response, "host_field::host_name").getGroupCount()).isEqualTo(2);
   }
 
   // --- Helpers ---
@@ -249,18 +255,22 @@ public final class FleetPromotedKeysProviderTest {
     @Override
     public ImmutableList<String> deviceFilterByRow() {
       return ImmutableList.of(
-          "field::status",
-          "dim::model",
-          "field::type",
-          "field::owner",
-          "dim::pool",
-          "host::host_name");
+          "device_field::status",
+          "dimension::model",
+          "device_field::type",
+          "device_field::owner",
+          "dimension::pool",
+          "host_field::host_name");
     }
 
     @Override
     public ImmutableList<String> deviceGroupByRow() {
       return ImmutableList.of(
-          "host::lab_type", "dim::lab_location", "field::type", "field::status", "host::host_name");
+          "host_field::lab_type",
+          "dimension::lab_location",
+          "device_field::type",
+          "device_field::status",
+          "host_field::host_name");
     }
 
     @Override

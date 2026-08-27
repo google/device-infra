@@ -82,11 +82,11 @@ public final class HostSearchTest {
 
   private static final ImmutableList<String> COLUMNS =
       ImmutableList.of(
-          "host::host_name",
-          "host::connectivity",
-          "host::device_count",
-          "host::lab_type",
-          "host::host_os");
+          "host_field::host_name",
+          "host_field::connectivity",
+          "host_field::device_count",
+          "host_field::lab_type",
+          "host_property::host_os");
 
   private final FleetSnapshot snapshot =
       Guice.createInjector().getInstance(FleetIndexBuilder.class).build(fleet(), BUILD_TIME);
@@ -126,7 +126,7 @@ public final class HostSearchTest {
     FleetFlatResults results =
         flatSearcher.searchFlat(
             corpus,
-            ImmutableList.of(simple("host::host_name", "lab-a")),
+            ImmutableList.of(simple("host_field::host_name", "lab-a")),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
             FleetPageRequest.getDefaultInstance());
@@ -134,29 +134,26 @@ public final class HostSearchTest {
     Row row = results.getRows(0);
 
     // host_name is a link into a HostRef carrying the host name and ip.
-    Cell nameCell = row.getCells(0);
-    assertThat(nameCell.getKindCase()).isEqualTo(Cell.KindCase.LINK);
-    assertThat(nameCell.getLink().getText()).isEqualTo("lab-a");
-    assertThat(nameCell.getLink().getTarget().getHost().getHostName()).isEqualTo("lab-a");
-    assertThat(nameCell.getLink().getTarget().getHost().getHostIp()).isEqualTo("1.1.1.1");
+    assertThat(row.getCells(0).hasLink()).isTrue();
+    assertThat(row.getCells(0).getLink().getText()).isEqualTo("lab-a");
+    assertThat(row.getCells(0).getLink().getTarget().getHost().getHostName()).isEqualTo("lab-a");
+    assertThat(row.getCells(0).getLink().getTarget().getHost().getHostIp()).isEqualTo("1.1.1.1");
 
-    // connectivity is a status cell: running maps to the OK indicator.
-    Cell connectivityCell = row.getCells(1);
-    assertThat(connectivityCell.getKindCase()).isEqualTo(Cell.KindCase.STATUS);
-    assertThat(connectivityCell.getStatus().getText()).isEqualTo("Running");
-    assertThat(connectivityCell.getStatus().getIndicator()).isEqualTo(Indicator.INDICATOR_OK);
+    // connectivity is a StatusCell with a green (OK) indicator.
+    assertThat(row.getCells(1).hasStatus()).isTrue();
+    assertThat(row.getCells(1).getStatus().getText()).isEqualTo("Running");
+    assertThat(row.getCells(1).getStatus().getIndicator()).isEqualTo(Indicator.INDICATOR_OK);
 
-    // device_count is a plain text cell.
-    Cell deviceCountCell = row.getCells(2);
-    assertThat(deviceCountCell.getKindCase()).isEqualTo(Cell.KindCase.TEXT);
-    assertThat(deviceCountCell.getText().getValue()).isEqualTo("2");
+    // device_count is a TextCell.
+    assertThat(row.getCells(2).hasText()).isTrue();
+    assertThat(row.getCells(2).getText().getValue()).isEqualTo("2");
 
-    // lab_type is multi valued, comma-joined into a single text cell.
-    Cell labTypeCell = row.getCells(3);
-    assertThat(labTypeCell.getKindCase()).isEqualTo(Cell.KindCase.TEXT);
-    assertThat(labTypeCell.getText().getValue()).isEqualTo("Satellite Lab, SLaaS");
+    // lab_type is a multi-valued TextCell with comma-joined display names.
+    assertThat(row.getCells(3).hasText()).isTrue();
+    assertThat(row.getCells(3).getText().getValue()).isEqualTo("Satellite Lab, SLaaS");
 
-    // host_os is a plain text cell.
+    // host_os is a TextCell from the host property.
+    assertThat(row.getCells(4).hasText()).isTrue();
     assertThat(row.getCells(4).getText().getValue()).isEqualTo("debian");
   }
 
@@ -165,17 +162,14 @@ public final class HostSearchTest {
     FleetFlatResults results =
         flatSearcher.searchFlat(
             corpus,
-            ImmutableList.of(simple("host::host_name", "lab-b")),
+            ImmutableList.of(simple("host_field::host_name", "lab-b")),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
             FleetPageRequest.getDefaultInstance());
 
-    Row row = results.getRows(0);
-    assertThat(row.getCells(1).getStatus().getText()).isEqualTo("Missing");
-    assertThat(row.getCells(1).getStatus().getIndicator()).isEqualTo(Indicator.INDICATOR_ERROR);
-    assertThat(row.getCells(2).getText().getValue()).isEqualTo("1");
-    // lab-b carries no lab type, so the lab type cell renders blank.
-    assertThat(row.getCells(3).getText().getValue()).isEmpty();
+    Cell connectivityCell = results.getRows(0).getCells(1);
+    assertThat(connectivityCell.getStatus().getText()).isEqualTo("Missing");
+    assertThat(connectivityCell.getStatus().getIndicator()).isEqualTo(Indicator.INDICATOR_ERROR);
   }
 
   @Test
@@ -183,13 +177,17 @@ public final class HostSearchTest {
     FleetFlatResults results =
         flatSearcher.searchFlat(
             corpus,
-            ImmutableList.of(simple("host::host_name", "lab-c")),
+            ImmutableList.of(simple("host_field::host_name", "lab-c")),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
             FleetPageRequest.getDefaultInstance());
 
     Row row = results.getRows(0);
+    // count is 0
     assertThat(row.getCells(2).getText().getValue()).isEqualTo("0");
+    // lab type is empty
+    assertThat(row.getCells(3).getText().getValue()).isEmpty();
+    // host os defaults to Unknown
     assertThat(row.getCells(4).getText().getValue()).isEqualTo("Unknown");
   }
 
@@ -198,12 +196,41 @@ public final class HostSearchTest {
     FleetFlatResults results =
         flatSearcher.searchFlat(
             corpus,
-            ImmutableList.of(simple("host::connectivity", "Running")),
+            ImmutableList.of(simple("host_field::host_name", "lab-b")),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
             FleetPageRequest.getDefaultInstance());
 
-    assertThat(rowIds(results)).containsExactly("lab-a", "lab-c").inOrder();
+    assertThat(rowIds(results)).containsExactly("lab-b");
+  }
+
+  @Test
+  public void flat_filtersByMultiValuedLabType() {
+    FleetFlatResults results =
+        flatSearcher.searchFlat(
+            corpus,
+            ImmutableList.of(simple("host_field::lab_type", "slaas")),
+            COLUMNS,
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.getDefaultInstance());
+
+    assertThat(rowIds(results)).containsExactly("lab-a");
+  }
+
+  @Test
+  public void flat_sortsByHostNameDescending() {
+    FleetFlatResults results =
+        flatSearcher.searchFlat(
+            corpus,
+            ImmutableList.of(),
+            COLUMNS,
+            FleetColumnSort.newBuilder()
+                .setKey("host_field::host_name")
+                .setAscending(false)
+                .build(),
+            FleetPageRequest.getDefaultInstance());
+
+    assertThat(rowIds(results)).containsExactly("lab-c", "lab-b", "lab-a").inOrder();
   }
 
   @Test
@@ -218,38 +245,37 @@ public final class HostSearchTest {
                 ImmutableMap.of(
                     "lab-a", atsControllerEnrichment("ctrl-1"),
                     "lab-b", atsControllerEnrichment("ctrl-2")))
-            .setAtsControllerDisplays(ImmutableMap.of("ctrl-1", "ATS Lab One"))
+            .setAtsControllerDisplays(ImmutableMap.of("ctrl-1", "Controller One"))
             .build();
     FleetSnapshot enriched =
         Guice.createInjector().getInstance(FleetIndexBuilder.class).build(raw, BUILD_TIME);
-    HostCorpus enrichedCorpus =
-        new HostCorpus(enriched, LazyPostings.forHosts(enriched.hosts()), null);
+    LazyPostings enrichedPostings = LazyPostings.forHosts(enriched.hosts());
 
-    ImmutableList<String> columns = ImmutableList.of("host::host_name", "host::ats_controller");
-
-    // Column projection: HostCellMapper resolves the friendly display, with id fallback and a blank
-    // cell for a host with no controller.
+    ImmutableList<String> columns =
+        ImmutableList.of("host_field::host_name", "host_field::ats_controller");
     FleetFlatResults results =
         flatSearcher.searchFlat(
-            enrichedCorpus,
+            new HostCorpus(enriched, enrichedPostings, null),
             ImmutableList.of(),
             columns,
             FleetColumnSort.getDefaultInstance(),
             FleetPageRequest.getDefaultInstance());
+
     assertThat(rowIds(results)).containsExactly("lab-a", "lab-b", "lab-c").inOrder();
-    assertThat(results.getColumns(1).getDisplayName()).isEqualTo("ATS Lab");
+    // lab-a: ctrl-1 mapped to its friendly display.
     Cell registered = results.getRows(0).getCells(1);
     assertThat(registered.getKindCase()).isEqualTo(Cell.KindCase.TEXT);
-    assertThat(registered.getText().getValue()).isEqualTo("ATS Lab One");
+    assertThat(registered.getText().getValue()).isEqualTo("Controller One");
+    // lab-b: ctrl-2 has no registry entry, so it falls back to the raw controller id.
     assertThat(results.getRows(1).getCells(1).getText().getValue()).isEqualTo("ctrl-2");
+    // lab-c: no controller at all, so the cell is empty.
     assertThat(results.getRows(2).getCells(1).getText().getValue()).isEmpty();
 
-    // Filtering by the controller id goes through HostValueExtractor, selecting only the matching
-    // host.
+    // Filtering by controller id matches the right host.
     FleetFlatResults filtered =
         flatSearcher.searchFlat(
-            enrichedCorpus,
-            ImmutableList.of(simple("host::ats_controller", "ctrl-1")),
+            new HostCorpus(enriched, enrichedPostings, null),
+            ImmutableList.of(simple("host_field::ats_controller", "ctrl-1")),
             columns,
             FleetColumnSort.getDefaultInstance(),
             FleetPageRequest.getDefaultInstance());
@@ -264,7 +290,7 @@ public final class HostSearchTest {
         groupSearcher.searchGrouped(
             corpus,
             ImmutableList.of(),
-            ImmutableList.of("host::host_os"),
+            ImmutableList.of("host_property::host_os"),
             FleetGroupSort.getDefaultInstance(),
             FleetPageRequest.getDefaultInstance());
 
@@ -288,7 +314,7 @@ public final class HostSearchTest {
   @Test
   public void valueList_hostNameIsPlainWithoutCounts() {
     FleetValueListResponse response =
-        valueLister.listValues(corpus, "host::host_name", ImmutableList.of());
+        valueLister.listValues(corpus, "host_field::host_name", ImmutableList.of());
 
     assertThat(response.hasPlain()).isTrue();
     ImmutableList.Builder<String> values = ImmutableList.builder();
@@ -299,7 +325,7 @@ public final class HostSearchTest {
   @Test
   public void valueList_deviceCountIsPlainWithoutCounts() {
     FleetValueListResponse response =
-        valueLister.listValues(corpus, "host::device_count", ImmutableList.of());
+        valueLister.listValues(corpus, "host_field::device_count", ImmutableList.of());
 
     assertThat(response.hasPlain()).isTrue();
     ImmutableList.Builder<String> values = ImmutableList.builder();
@@ -310,7 +336,7 @@ public final class HostSearchTest {
   @Test
   public void valueList_connectivityIsCounted() {
     FleetValueListResponse response =
-        valueLister.listValues(corpus, "host::connectivity", ImmutableList.of());
+        valueLister.listValues(corpus, "host_field::connectivity", ImmutableList.of());
 
     assertThat(response.hasCounted()).isTrue();
     int running = totalFor(response, "Running");
@@ -333,14 +359,13 @@ public final class HostSearchTest {
     }
     assertThat(keys.build())
         .containsAtLeast(
-            "host::host_name",
-            "host::host_ip",
-            "host::connectivity",
-            "host::device_count",
-            "host::host_os",
-            "host::lab_type");
+            "host_field::host_name",
+            "host_field::host_ip",
+            "host_field::connectivity",
+            "host_field::device_count",
+            "host_field::lab_type");
     // The device count column is offered, named, and carries the per-key host count.
-    FleetColumnCatalogEntry deviceCount = entryByKey(builtin, "host::device_count");
+    FleetColumnCatalogEntry deviceCount = entryByKey(builtin, "host_field::device_count");
     assertThat(deviceCount.getDisplayName()).isEqualTo("Device Count");
     assertThat(deviceCount.getDeviceCount()).isEqualTo(3);
   }

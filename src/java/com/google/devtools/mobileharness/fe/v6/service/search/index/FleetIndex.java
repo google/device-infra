@@ -77,8 +77,8 @@ public interface FleetIndex {
     String namespace = separator >= 0 ? keyId.substring(0, separator) : "";
     String name = separator >= 0 ? keyId.substring(separator + 2) : keyId;
     return switch (namespace) {
-      case "dim" -> "Dimension " + name;
-      case "prop" -> "Host Property " + name;
+      case "dim", "dimension" -> "Dimension " + name;
+      case "prop", "host_property" -> "Host Property " + name;
       default -> name;
     };
   }

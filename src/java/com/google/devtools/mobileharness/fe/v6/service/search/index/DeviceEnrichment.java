@@ -36,26 +36,15 @@ public abstract class DeviceEnrichment {
    */
   public abstract Optional<String> wifiSsid();
 
-  /**
-   * The ATS controller this device belongs to. Present only in the ats-all deployment, where the
-   * fan-out records which controller each device came from. Absent in ats-one and 1p, where the
-   * fleet is a single controller or the 1P master.
-   */
-  public abstract Optional<String> atsController();
-
   /** Creates a new builder. */
   public static Builder builder() {
-    return new AutoValue_DeviceEnrichment.Builder()
-        .setWifiSsid(Optional.empty())
-        .setAtsController(Optional.empty());
+    return new AutoValue_DeviceEnrichment.Builder().setWifiSsid(Optional.empty());
   }
 
   /** Builder for {@link DeviceEnrichment}. */
   @AutoValue.Builder
   public abstract static class Builder {
     public abstract Builder setWifiSsid(Optional<String> wifiSsid);
-
-    public abstract Builder setAtsController(Optional<String> atsController);
 
     public abstract DeviceEnrichment build();
   }

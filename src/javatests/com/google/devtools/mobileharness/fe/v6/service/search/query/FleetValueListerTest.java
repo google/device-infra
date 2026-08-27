@@ -71,7 +71,7 @@ public final class FleetValueListerTest {
   @Test
   public void countedKey_noFilters_filteredEqualsTotal() {
     FleetValueListResponse response =
-        lister.listValues(corpus, "field::status", ImmutableList.of());
+        lister.listValues(corpus, "device_field::status", ImmutableList.of());
 
     assertThat(response.getKindCase()).isEqualTo(FleetValueListResponse.KindCase.COUNTED);
     FleetCountedValueList counted = response.getCounted();
@@ -91,7 +91,9 @@ public final class FleetValueListerTest {
   public void countedKey_otherFilterApplied_filteredBelowTotal() {
     FleetValueListResponse response =
         lister.listValues(
-            corpus, "field::status", ImmutableList.of(simple("field::owner", "alice")));
+            corpus,
+            "device_field::status",
+            ImmutableList.of(simple("device_field::owner", "alice")));
 
     FleetCountedValueList counted = response.getCounted();
     // Owner alice covers device-0, device-1, device-3, all IDLE.
@@ -112,7 +114,9 @@ public final class FleetValueListerTest {
     // Filtering on the same key must not collapse its own picker to the selected value.
     FleetValueListResponse response =
         lister.listValues(
-            corpus, "field::status", ImmutableList.of(simple("field::status", "BUSY")));
+            corpus,
+            "device_field::status",
+            ImmutableList.of(simple("device_field::status", "BUSY")));
 
     FleetCountedValueList counted = response.getCounted();
     assertThat(valuesOf(counted)).containsExactly("IDLE", "BUSY").inOrder();
@@ -123,7 +127,8 @@ public final class FleetValueListerTest {
 
   @Test
   public void noValueEntry_presentWhenSomeDevicesLackKey() {
-    FleetValueListResponse response = lister.listValues(corpus, "dim::os", ImmutableList.of());
+    FleetValueListResponse response =
+        lister.listValues(corpus, "dimension::os", ImmutableList.of());
 
     FleetCountedValueList counted = response.getCounted();
     assertThat(valuesOf(counted)).containsExactly("android", "ios").inOrder();
@@ -139,7 +144,8 @@ public final class FleetValueListerTest {
   @Test
   public void noValueEntry_filteredBelowTotalUnderOtherFilter() {
     FleetValueListResponse response =
-        lister.listValues(corpus, "dim::os", ImmutableList.of(simple("field::status", "BUSY")));
+        lister.listValues(
+            corpus, "dimension::os", ImmutableList.of(simple("device_field::status", "BUSY")));
 
     FleetCountedValueList counted = response.getCounted();
     // Only device-2 (BUSY, os=ios) survives the filter.
@@ -156,7 +162,8 @@ public final class FleetValueListerTest {
 
   @Test
   public void identifierKey_returnsPlainListSortedByValue() {
-    FleetValueListResponse response = lister.listValues(corpus, "field::uuid", ImmutableList.of());
+    FleetValueListResponse response =
+        lister.listValues(corpus, "device_field::uuid", ImmutableList.of());
 
     assertThat(response.getKindCase()).isEqualTo(FleetValueListResponse.KindCase.PLAIN);
     ImmutableList.Builder<String> values = ImmutableList.builder();
@@ -173,7 +180,7 @@ public final class FleetValueListerTest {
   @Test
   public void unknownKey_returnsEmptyCountedListWithoutNoValueEntry() {
     FleetValueListResponse response =
-        lister.listValues(corpus, "dim::does_not_exist", ImmutableList.of());
+        lister.listValues(corpus, "dimension::does_not_exist", ImmutableList.of());
 
     assertThat(response.getKindCase()).isEqualTo(FleetValueListResponse.KindCase.COUNTED);
     assertThat(response.getCounted().getValuesList()).isEmpty();

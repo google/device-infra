@@ -83,10 +83,13 @@ public final class HostPromotedKeysProviderTest {
     // order.
     assertThat(filterKeys(response))
         .containsExactly(
-            "host::host_name", "host::connectivity", "host::device_count", "host::host_os")
+            "host_field::host_name",
+            "host_field::connectivity",
+            "host_field::device_count",
+            "host_property::host_os")
         .inOrder();
     // The host device-count key is named through the host index, not the device one.
-    assertThat(filterKey(response, "host::device_count").getMetadata().getKeyDisplayName())
+    assertThat(filterKey(response, "host_field::device_count").getMetadata().getKeyDisplayName())
         .isEqualTo("Device Count");
   }
 
@@ -94,11 +97,13 @@ public final class HostPromotedKeysProviderTest {
   public void groupByKeys_followsHostCuratedOrderWithCounts() {
     FleetPromotedKeysResponse response = provider.getPromotedKeys(corpus, request());
 
-    assertThat(groupByKeys(response)).containsExactly("host::host_os", "host::lab_type").inOrder();
+    assertThat(groupByKeys(response))
+        .containsExactly("host_property::host_os", "host_field::lab_type")
+        .inOrder();
     // host_os has two values (debian, Unknown) and no missing hosts: two groups.
-    assertThat(groupByKey(response, "host::host_os").getGroupCount()).isEqualTo(2);
+    assertThat(groupByKey(response, "host_property::host_os").getGroupCount()).isEqualTo(2);
     // lab_type is present on lab-a only, so lab-b and lab-c form a "(no value)" bucket: two groups.
-    assertThat(groupByKey(response, "host::lab_type").getGroupCount()).isEqualTo(2);
+    assertThat(groupByKey(response, "host_field::lab_type").getGroupCount()).isEqualTo(2);
   }
 
   @Test
@@ -109,10 +114,11 @@ public final class HostPromotedKeysProviderTest {
     //   device_count: 2, 0                -> kept.
     //   host_os:      debian, Unknown     -> kept.
     FleetPromotedKeysResponse response =
-        provider.getPromotedKeys(corpus, request(simple("host::connectivity", "Running")));
+        provider.getPromotedKeys(corpus, request(simple("host_field::connectivity", "Running")));
 
     assertThat(filterKeys(response))
-        .containsExactly("host::host_name", "host::device_count", "host::host_os")
+        .containsExactly(
+            "host_field::host_name", "host_field::device_count", "host_property::host_os")
         .inOrder();
   }
 
@@ -199,12 +205,15 @@ public final class HostPromotedKeysProviderTest {
     @Override
     public ImmutableList<String> hostFilterByRow() {
       return ImmutableList.of(
-          "host::host_name", "host::connectivity", "host::device_count", "host::host_os");
+          "host_field::host_name",
+          "host_field::connectivity",
+          "host_field::device_count",
+          "host_property::host_os");
     }
 
     @Override
     public ImmutableList<String> hostGroupByRow() {
-      return ImmutableList.of("host::host_os", "host::lab_type");
+      return ImmutableList.of("host_property::host_os", "host_field::lab_type");
     }
 
     @Override

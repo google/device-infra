@@ -32,19 +32,19 @@ public final class AtsOneCurationTest {
   public void deviceFilterByRow_isAtsOneList() {
     assertThat(curation.deviceFilterByRow())
         .containsExactly(
-            "field::uuid",
-            "host::host_name",
-            "field::status",
-            "dim::model",
-            "dim::sdk_version",
-            "config::wifi_ssid")
+            "device_field::uuid",
+            "host_field::host_name",
+            "device_field::status",
+            "dimension::model",
+            "dimension::sdk_version",
+            "device_config::wifi_ssid")
         .inOrder();
   }
 
   @Test
   public void deviceGroupByRow_isAtsOneList() {
     assertThat(curation.deviceGroupByRow())
-        .containsExactly("host::host_name", "config::wifi_ssid")
+        .containsExactly("host_field::host_name", "device_config::wifi_ssid")
         .inOrder();
   }
 
@@ -52,12 +52,12 @@ public final class AtsOneCurationTest {
   public void deviceDefaultColumns_isAtsOneList() {
     assertThat(curation.deviceDefaultColumns())
         .containsExactly(
-            "field::uuid",
-            "host::host_name",
-            "field::status",
-            "dim::model",
-            "dim::os",
-            "config::wifi_ssid")
+            "device_field::uuid",
+            "host_field::host_name",
+            "device_field::status",
+            "dimension::model",
+            "dimension::os",
+            "device_config::wifi_ssid")
         .inOrder();
   }
 
@@ -65,26 +65,26 @@ public final class AtsOneCurationTest {
   public void deviceRecommendedColumns_isAtsOneList() {
     assertThat(curation.deviceRecommendedColumns())
         .containsExactly(
-            "host::host_name",
-            "field::status",
-            "field::type",
-            "dim::model",
-            "dim::sdk_version",
-            "dim::device_class_name",
-            "dim::manufacturer",
-            "config::wifi_ssid")
+            "host_field::host_name",
+            "device_field::status",
+            "device_field::type",
+            "dimension::model",
+            "dimension::sdk_version",
+            "dimension::device_class_name",
+            "dimension::manufacturer",
+            "device_config::wifi_ssid")
         .inOrder();
   }
 
   @Test
   public void keyPriority_delegatesToAtsOneScenario() {
     // A tier 2 key ranks 1 in ats-one, distinguishing it from 1p and ats-all (which rank it 2).
-    assertThat(curation.keyPriority("field::driver"))
-        .isEqualTo(FleetKeyPriority.priority("field::driver", Scenario.ATS_ONE));
-    assertThat(curation.keyPriority("field::driver")).isEqualTo(1);
+    assertThat(curation.keyPriority("device_field::driver"))
+        .isEqualTo(FleetKeyPriority.priority("device_field::driver", Scenario.ATS_ONE));
+    assertThat(curation.keyPriority("device_field::driver")).isEqualTo(1);
     // The WiFi SSID key is promoted in ats-one.
-    assertThat(curation.keyPriority("config::wifi_ssid"))
-        .isEqualTo(FleetKeyPriority.priority("config::wifi_ssid", Scenario.ATS_ONE));
+    assertThat(curation.keyPriority("device_config::wifi_ssid"))
+        .isEqualTo(FleetKeyPriority.priority("device_config::wifi_ssid", Scenario.ATS_ONE));
   }
 
   @Test

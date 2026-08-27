@@ -72,7 +72,7 @@ public final class FleetChipResolverTest {
   public void simpleSingleValue_pillAndMetadata() {
     // A lowercase input value proves the resolver looks up original casing via valueDisplays.
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(simple("field::status", "idle")));
+        resolver.resolve(snapshot, request(simple("device_field::status", "idle")));
 
     assertThat(response.getFilterChipsCount()).isEqualTo(1);
     FleetResolvedFilterChip chip = response.getFilterChips(0);
@@ -86,7 +86,7 @@ public final class FleetChipResolverTest {
   @Test
   public void simpleMultiValue_showsCount() {
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(simple("field::status", "idle", "busy")));
+        resolver.resolve(snapshot, request(simple("device_field::status", "idle", "busy")));
 
     assertThat(response.getFilterChips(0).getPillCondition()).isEqualTo("2");
   }
@@ -94,7 +94,7 @@ public final class FleetChipResolverTest {
   @Test
   public void negatedSingleValue_notEqualValue() {
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(simpleNegated("field::status", "idle")));
+        resolver.resolve(snapshot, request(simpleNegated("device_field::status", "idle")));
 
     assertThat(response.getFilterChips(0).getPillCondition()).isEqualTo("\u2260 IDLE");
   }
@@ -102,7 +102,7 @@ public final class FleetChipResolverTest {
   @Test
   public void negatedMultiValue_notEqualCount() {
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(simpleNegated("field::status", "idle", "busy")));
+        resolver.resolve(snapshot, request(simpleNegated("device_field::status", "idle", "busy")));
 
     assertThat(response.getFilterChips(0).getPillCondition()).isEqualTo("\u2260 2");
   }
@@ -111,13 +111,13 @@ public final class FleetChipResolverTest {
   public void noValueEntry_emptyText() {
     assertThat(
             resolver
-                .resolve(snapshot, request(noValue("dim::os", false)))
+                .resolve(snapshot, request(noValue("dimension::os", false)))
                 .getFilterChips(0)
                 .getPillCondition())
         .isEqualTo("empty");
     assertThat(
             resolver
-                .resolve(snapshot, request(noValue("dim::os", true)))
+                .resolve(snapshot, request(noValue("dimension::os", true)))
                 .getFilterChips(0)
                 .getPillCondition())
         .isEqualTo("not empty");
@@ -127,7 +127,7 @@ public final class FleetChipResolverTest {
   public void pluralKey_owner_isPluralMetadata() {
     // The compact condition text does not carry a verb; is_plural is metadata for the frontend.
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(simpleNegated("field::owner", "alice")));
+        resolver.resolve(snapshot, request(simpleNegated("device_field::owner", "alice")));
 
     FleetResolvedFilterChip chip = response.getFilterChips(0);
     assertThat(chip.getPillKey()).isEqualTo("Owners");
@@ -138,7 +138,7 @@ public final class FleetChipResolverTest {
   @Test
   public void complexContains_conditionText() {
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(contains("dim::model", "pix")));
+        resolver.resolve(snapshot, request(contains("dimension::model", "pix")));
 
     FleetResolvedFilterChip chip = response.getFilterChips(0);
     assertThat(chip.getPillKey()).isEqualTo("Model");
@@ -149,7 +149,7 @@ public final class FleetChipResolverTest {
   public void complexMatchesExactly_singleValueOriginalCasing() {
     // A lowercase input resolves back to its original casing "Pixel 8".
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(exactly("dim::model", "pixel 8")));
+        resolver.resolve(snapshot, request(exactly("dimension::model", "pixel 8")));
 
     assertThat(response.getFilterChips(0).getPillCondition()).isEqualTo("is exactly Pixel 8");
   }
@@ -157,7 +157,7 @@ public final class FleetChipResolverTest {
   @Test
   public void complexMatchesExactly_multipleValuesShowCount() {
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(exactly("dim::model", "pixel 8", "galaxy")));
+        resolver.resolve(snapshot, request(exactly("dimension::model", "pixel 8", "galaxy")));
 
     assertThat(response.getFilterChips(0).getPillCondition()).isEqualTo("is exactly 2");
   }
@@ -165,7 +165,7 @@ public final class FleetChipResolverTest {
   @Test
   public void atsControllerKey_cannotUseAdvanced() {
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(simple("host::ats_controller", "controller-a")));
+        resolver.resolve(snapshot, request(simple("host_field::ats_controller", "controller-a")));
 
     assertThat(response.getFilterChips(0).getMetadata().getCanUseAdvanced()).isFalse();
   }
@@ -176,8 +176,8 @@ public final class FleetChipResolverTest {
         resolver.resolve(
             snapshot,
             FleetChipResolverRequest.newBuilder()
-                .addGroupByKeys("dim::model")
-                .addGroupByKeys("host::host_name")
+                .addGroupByKeys("dimension::model")
+                .addGroupByKeys("host_field::host_name")
                 .build());
 
     assertThat(response.getGroupByChipsCount()).isEqualTo(2);
@@ -195,10 +195,10 @@ public final class FleetChipResolverTest {
         resolver.resolve(
             snapshot,
             FleetChipResolverRequest.newBuilder()
-                .addFilters(simple("field::status", "idle"))
-                .addFilters(simple("field::owner", "alice"))
-                .addFilters(contains("dim::model", "pix"))
-                .addGroupByKeys("dim::os")
+                .addFilters(simple("device_field::status", "idle"))
+                .addFilters(simple("device_field::owner", "alice"))
+                .addFilters(contains("dimension::model", "pix"))
+                .addGroupByKeys("dimension::os")
                 .build());
 
     assertThat(response.getFilterChipsCount()).isEqualTo(3);

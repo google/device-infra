@@ -97,14 +97,14 @@ public final class FleetColumnCatalogerTest {
     FleetColumnCatalogSection builtin = section(response, "Built-in fields");
     assertThat(keys(builtin))
         .containsExactly(
-            "host::host_ip",
-            "host::connectivity",
-            "host::host_name",
-            "host::host_os",
-            "field::owner",
-            "field::status",
-            "field::type",
-            "field::uuid")
+            "host_field::host_ip",
+            "host_field::connectivity",
+            "host_field::host_name",
+            "device_field::owner",
+            "device_field::quarantined",
+            "device_field::status",
+            "device_field::type",
+            "device_field::uuid")
         .inOrder();
     // A full section reports no total.
     assertThat(builtin.getTotalAvailable()).isEqualTo(0);
@@ -116,15 +116,16 @@ public final class FleetColumnCatalogerTest {
         cataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
 
     FleetColumnCatalogSection dimensions = section(response, "Dimensions");
-    // dim::host_name is present in the fleet but restates host::host_name on every device, so it is
+    // dimension::host_name is present in the fleet but restates host_field::host_name on every
+    // device, so it is
     // detected as redundant and dropped from the dimensions section.
-    assertThat(snapshot.index().keyIds()).contains("dim::host_name");
-    assertThat(keys(dimensions)).doesNotContain("dim::host_name");
+    assertThat(snapshot.index().keyIds()).contains("dimension::host_name");
+    assertThat(keys(dimensions)).doesNotContain("dimension::host_name");
 
-    // The non-redundant dimensions are model, pool, quarantined, and the ten fillers: thirteen in
+    // The non-redundant dimensions are model, pool, quarantined, and the ten fillers: twelve in
     // all. The section is cut to the browse top-N of ten, and total_available carries the full
-    // count so the frontend can show "showing 10 of 13".
-    assertThat(dimensions.getTotalAvailable()).isEqualTo(13);
+    // count so the frontend can show "showing 10 of 12".
+    assertThat(dimensions.getTotalAvailable()).isEqualTo(12);
     assertThat(dimensions.getEntriesCount()).isEqualTo(10);
   }
 
@@ -134,13 +135,16 @@ public final class FleetColumnCatalogerTest {
         cataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
 
     // Status is carried by all three devices.
-    assertThat(entryFor(section(response, "Built-in fields"), "field::status").getDeviceCount())
+    assertThat(
+            entryFor(section(response, "Built-in fields"), "device_field::status").getDeviceCount())
         .isEqualTo(3);
     // model is carried by all three devices (pixel on two, iphone on one).
-    assertThat(entryFor(section(response, "Dimensions"), "dim::model").getDeviceCount())
+    assertThat(entryFor(section(response, "Dimensions"), "dimension::model").getDeviceCount())
         .isEqualTo(3);
     // The location host property is carried by both hosts, so all three devices.
-    assertThat(entryFor(section(response, "Host properties"), "prop::location").getDeviceCount())
+    assertThat(
+            entryFor(section(response, "Host properties"), "host_property::location")
+                .getDeviceCount())
         .isEqualTo(3);
   }
 
@@ -148,8 +152,8 @@ public final class FleetColumnCatalogerTest {
   public void suggested_fromActiveFiltersAndRecentKeys() {
     FleetColumnCatalogRequest request =
         FleetColumnCatalogRequest.newBuilder()
-            .addFilters(Filter.newBuilder().setKey("dim::model"))
-            .addRecentKeys("field::status")
+            .addFilters(Filter.newBuilder().setKey("dimension::model"))
+            .addRecentKeys("device_field::status")
             .build();
 
     FleetColumnCatalogResponse response = cataloger.getColumnCatalog(corpus, request);
@@ -157,9 +161,12 @@ public final class FleetColumnCatalogerTest {
     // The suggested section leads, before the browse sections.
     assertThat(headings(response).get(0)).isEqualTo("Suggested for you");
     FleetColumnCatalogSection suggested = section(response, "Suggested for you");
-    assertThat(keys(suggested)).containsExactly("dim::model", "field::status").inOrder();
-    assertThat(entryFor(suggested, "dim::model").getReason()).isEqualTo("in your active filters");
-    assertThat(entryFor(suggested, "field::status").getReason()).isEqualTo("recently used");
+    assertThat(keys(suggested))
+        .containsExactly("dimension::model", "device_field::status")
+        .inOrder();
+    assertThat(entryFor(suggested, "dimension::model").getReason())
+        .isEqualTo("in your active filters");
+    assertThat(entryFor(suggested, "device_field::status").getReason()).isEqualTo("recently used");
     // The suggested section reports no total.
     assertThat(suggested.getTotalAvailable()).isEqualTo(0);
   }
@@ -179,7 +186,7 @@ public final class FleetColumnCatalogerTest {
             corpus, FleetColumnCatalogRequest.newBuilder().setQuery("model").build());
 
     FleetColumnCatalogSection search = section(withQuery, "Search results");
-    assertThat(keys(search)).contains("dim::model");
+    assertThat(keys(search)).contains("dimension::model");
     assertThat(search.getTotalAvailable()).isEqualTo(1);
 
     // With no query there is no search section.

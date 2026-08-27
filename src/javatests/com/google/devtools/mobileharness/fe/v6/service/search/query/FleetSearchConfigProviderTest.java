@@ -77,12 +77,16 @@ public final class FleetSearchConfigProviderTest {
 
         @Override
         public ImmutableList<String> deviceDefaultColumns() {
-          return ImmutableList.of("field::uuid", "host::host_name", "field::status", "dim::model");
+          return ImmutableList.of(
+              "device_field::uuid",
+              "host_field::host_name",
+              "device_field::status",
+              "dimension::model");
         }
 
         @Override
         public ImmutableList<String> deviceRecommendedColumns() {
-          return ImmutableList.of("field::status", "field::type", "dim::model");
+          return ImmutableList.of("device_field::status", "device_field::type", "dimension::model");
         }
 
         @Override
@@ -106,7 +110,9 @@ public final class FleetSearchConfigProviderTest {
       keys.add(descriptor.getKey());
       assertThat(descriptor.getDisplayName()).isNotEmpty();
     }
-    assertThat(keys).containsExactly("field::status", "field::type", "dim::model").inOrder();
+    assertThat(keys)
+        .containsExactly("device_field::status", "device_field::type", "dimension::model")
+        .inOrder();
     assertThat(recommended.get(0).getDisplayName()).isEqualTo("Status");
     assertThat(recommended.get(1).getDisplayName()).isEqualTo("Type");
     assertThat(recommended.get(2).getDisplayName()).isEqualTo("Model");
@@ -122,7 +128,11 @@ public final class FleetSearchConfigProviderTest {
       keys.add(descriptor.getKey());
     }
     assertThat(keys)
-        .containsExactly("field::uuid", "host::host_name", "field::status", "dim::model")
+        .containsExactly(
+            "device_field::uuid",
+            "host_field::host_name",
+            "device_field::status",
+            "dimension::model")
         .inOrder();
 
     assertThat(defaults.get(0).getDisplayName()).isEqualTo("UUID");

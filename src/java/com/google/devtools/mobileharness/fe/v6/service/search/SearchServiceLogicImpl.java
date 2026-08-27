@@ -326,7 +326,7 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
   }
 
   private static boolean isOverlayKey(String keyId) {
-    return keyId != null && keyId.startsWith("dim::");
+    return keyId != null && (keyId.startsWith("dimension::") || keyId.startsWith("dim::"));
   }
 
   private static Fleet normalize(Fleet fleet) {

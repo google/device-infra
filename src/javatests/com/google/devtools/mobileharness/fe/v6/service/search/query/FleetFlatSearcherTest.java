@@ -46,7 +46,6 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.Indicator;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Row;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceEnrichment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.HostEnrichment;
@@ -65,7 +64,8 @@ public final class FleetFlatSearcherTest {
   private static final Instant BUILD_TIME = Instant.ofEpochSecond(1_700_000_000L);
 
   private static final ImmutableList<String> COLUMNS =
-      ImmutableList.of("field::uuid", "host::host_name", "field::status", "dim::os");
+      ImmutableList.of(
+          "device_field::uuid", "host_field::host_name", "device_field::status", "dimension::os");
 
   // Synthetic fleet built through the real index builder:
   //   device-0: host lab1 (1.1.1.1), IDLE, owner alice, dim os=android, dim model="Pixel 8".
@@ -103,7 +103,7 @@ public final class FleetFlatSearcherTest {
     FleetFlatResults results =
         searcher.searchFlat(
             corpus,
-            ImmutableList.of(simple("field::status", "IDLE")),
+            ImmutableList.of(simple("device_field::status", "IDLE")),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
             FleetPageRequest.getDefaultInstance());
@@ -123,7 +123,8 @@ public final class FleetFlatSearcherTest {
             FleetPageRequest.getDefaultInstance());
 
     assertThat(columnKeys(results))
-        .containsExactly("field::uuid", "host::host_name", "field::status", "dim::os")
+        .containsExactly(
+            "device_field::uuid", "host_field::host_name", "device_field::status", "dimension::os")
         .inOrder();
     assertThat(results.getColumns(0).getDisplayName()).isEqualTo("UUID");
     assertThat(results.getColumns(1).getDisplayName()).isEqualTo("Host Name");
@@ -136,7 +137,7 @@ public final class FleetFlatSearcherTest {
     FleetFlatResults results =
         searcher.searchFlat(
             corpus,
-            ImmutableList.of(simple("field::uuid", "device-0")),
+            ImmutableList.of(simple("device_field::uuid", "device-0")),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
             FleetPageRequest.getDefaultInstance());
@@ -170,7 +171,7 @@ public final class FleetFlatSearcherTest {
     FleetFlatResults results =
         searcher.searchFlat(
             corpus,
-            ImmutableList.of(simple("field::uuid", "device-1")),
+            ImmutableList.of(simple("device_field::uuid", "device-1")),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
             FleetPageRequest.getDefaultInstance());
@@ -185,8 +186,8 @@ public final class FleetFlatSearcherTest {
     FleetFlatResults results =
         searcher.searchFlat(
             corpus,
-            ImmutableList.of(simple("field::uuid", "device-2")),
-            ImmutableList.of("field::owner"),
+            ImmutableList.of(simple("device_field::uuid", "device-2")),
+            ImmutableList.of("device_field::owner"),
             FleetColumnSort.getDefaultInstance(),
             FleetPageRequest.getDefaultInstance());
 
@@ -202,7 +203,7 @@ public final class FleetFlatSearcherTest {
             corpus,
             ImmutableList.of(),
             COLUMNS,
-            FleetColumnSort.newBuilder().setKey("field::status").setAscending(true).build(),
+            FleetColumnSort.newBuilder().setKey("device_field::status").setAscending(true).build(),
             FleetPageRequest.getDefaultInstance());
 
     // BUSY sorts before IDLE; the two IDLE devices tie-break by UUID ascending.
@@ -216,7 +217,7 @@ public final class FleetFlatSearcherTest {
             corpus,
             ImmutableList.of(),
             COLUMNS,
-            FleetColumnSort.newBuilder().setKey("field::status").setAscending(false).build(),
+            FleetColumnSort.newBuilder().setKey("device_field::status").setAscending(false).build(),
             FleetPageRequest.getDefaultInstance());
 
     // Descending reverses the whole ordering, tie-break included.
@@ -252,18 +253,18 @@ public final class FleetFlatSearcherTest {
 
   @Test
   public void atsControllerColumn_showsFriendlyDisplayWithIdFallback() {
-    // Enrich the same fleet with per-device ATS controllers and a controller-display registry that
+    // Enrich the fleet with per-host ATS controllers and a controller-display registry that
     // only covers ctrl-1, so the cell shows the friendly display for ctrl-1 and falls back to the
     // raw id for the unregistered ctrl-2.
     CoreFleetRawData raw =
         CoreFleetRawData.builder()
-            .setLabData(fleet())
-            .setDeviceEnrichments(
+            .setLabData(atsControllerFleet())
+            .setHostEnrichments(
                 ImmutableMap.of(
-                    "device-0",
-                    DeviceEnrichment.builder().setAtsController(Optional.of("ctrl-1")).build(),
-                    "device-1",
-                    DeviceEnrichment.builder().setAtsController(Optional.of("ctrl-2")).build()))
+                    "lab1",
+                    HostEnrichment.builder().setAtsController(Optional.of("ctrl-1")).build(),
+                    "lab2",
+                    HostEnrichment.builder().setAtsController(Optional.of("ctrl-2")).build()))
             .setAtsControllerDisplays(ImmutableMap.of("ctrl-1", "ATS Lab One"))
             .build();
     FleetSnapshot enriched =
@@ -273,7 +274,7 @@ public final class FleetFlatSearcherTest {
         searcher.searchFlat(
             new DeviceCorpus(enriched, postings, null),
             ImmutableList.of(),
-            ImmutableList.of("field::uuid", "host::ats_controller"),
+            ImmutableList.of("device_field::uuid", "host_field::ats_controller"),
             FleetColumnSort.getDefaultInstance(),
             FleetPageRequest.getDefaultInstance());
 
@@ -311,7 +312,11 @@ public final class FleetFlatSearcherTest {
     LazyPostings enrichedPostings = new LazyPostings(enriched.devices());
 
     ImmutableList<String> columns =
-        ImmutableList.of("field::uuid", "host::lab_type", "host::host_os", "host::release_status");
+        ImmutableList.of(
+            "device_field::uuid",
+            "host_field::lab_type",
+            "host_property::host_os",
+            "host_field::release_status");
     FleetFlatResults results =
         searcher.searchFlat(
             new DeviceCorpus(enriched, enrichedPostings, null),
@@ -345,7 +350,8 @@ public final class FleetFlatSearcherTest {
             .getInstance(FleetIndexBuilder.class)
             .build(CoreFleetRawData.builder().setLabData(hostAttributeFleet()).build(), BUILD_TIME);
     LazyPostings enrichedPostings = new LazyPostings(enriched.devices());
-    ImmutableList<String> columns = ImmutableList.of("field::uuid", "host::host_os");
+    ImmutableList<String> columns =
+        ImmutableList.of("device_field::uuid", "host_property::host_os");
 
     // debian (lab1) sorts before macos (lab2); the two lab1 devices tie-break by UUID ascending.
     FleetFlatResults ascending =
@@ -353,7 +359,10 @@ public final class FleetFlatSearcherTest {
             new DeviceCorpus(enriched, enrichedPostings, null),
             ImmutableList.of(),
             columns,
-            FleetColumnSort.newBuilder().setKey("host::host_os").setAscending(true).build(),
+            FleetColumnSort.newBuilder()
+                .setKey("host_property::host_os")
+                .setAscending(true)
+                .build(),
             FleetPageRequest.getDefaultInstance());
     assertThat(rowIds(ascending)).containsExactly("device-0", "device-1", "device-2").inOrder();
 
@@ -363,7 +372,10 @@ public final class FleetFlatSearcherTest {
             new DeviceCorpus(enriched, enrichedPostings, null),
             ImmutableList.of(),
             columns,
-            FleetColumnSort.newBuilder().setKey("host::host_os").setAscending(false).build(),
+            FleetColumnSort.newBuilder()
+                .setKey("host_property::host_os")
+                .setAscending(false)
+                .build(),
             FleetPageRequest.getDefaultInstance());
     assertThat(rowIds(descending)).containsExactly("device-2", "device-1", "device-0").inOrder();
   }
@@ -416,6 +428,17 @@ public final class FleetFlatSearcherTest {
                 .setLabTotalCount(2)
                 .addLabData(labData("lab1", "1.1.1.1", device0(), device1()))
                 .addLabData(labData("lab2", "2.2.2.2", device2())))
+        .build();
+  }
+
+  private static LabQueryResult atsControllerFleet() {
+    return LabQueryResult.newBuilder()
+        .setLabView(
+            LabQueryResult.LabView.newBuilder()
+                .setLabTotalCount(3)
+                .addLabData(labData("lab1", "1.1.1.1", device0()))
+                .addLabData(labData("lab2", "2.2.2.2", device1()))
+                .addLabData(labData("lab3", "3.3.3.3", device2())))
         .build();
   }
 

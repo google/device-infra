@@ -16,31 +16,10 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.CONFIG_WIFI_SSID;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.DIM_PREFIX;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.DIM_QUARANTINED;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_DECORATOR;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_DRIVER;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_EXECUTOR;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_OWNER;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_STATUS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_TYPE;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_UUID;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_ATS_CONTROLLER;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_CONNECTIVITY;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DAEMON_STATUS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_IP;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_SERVER_VERSION;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_TYPE;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_NAME;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_OS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_STATUS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_TYPE;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PROP_PREFIX;
-
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Cell;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Column;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.DeviceRef;
@@ -52,31 +31,15 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.Row;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.StatusCell;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextCell;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceRecord;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import java.util.List;
 import javax.inject.Inject;
 
-/**
- * Turns indexed device records into result-table {@link Column}s and typed {@link Cell}s.
- *
- * <p>This is the Java port of the search prototype's {@code _cell} and column builders, adapted to
- * the typed {@code Cell} oneof (TextCell, LinkCell, StatusCell). The backend decides the cell type
- * per column so the frontend renders generically via {@code switch(cell.kind)} without
- * entity-specific logic.
- *
- * <p>Value extraction mirrors the key namespaces recorded by {@code FleetIndexBuilder} and matched
- * by {@code FleetFilterEngine} ({@code field::}, {@code dim::}, {@code prop::}, {@code host::},
- * {@code config::}), but reads display-cased values straight from the {@link DeviceRecord} forward
- * store rather than the lowercased index terms.
- */
+/** Turns indexed device records into result-table {@link Column}s and typed {@link Cell}s. */
 public final class FleetCellMapper {
 
-  /**
-   * Device status name to semantic indicator. The status text is uppercased before lookup. Any
-   * status not listed here maps to {@link Indicator#INDICATOR_NEUTRAL}, which covers transitional
-   * states such as NEW and PREPPING that carry no health judgment. This follows the adaptation
-   * guide: OK is green, ACTIVE is blue (in-progress), ERROR is red, NEUTRAL is gray.
-   */
+  /** Device status name to semantic indicator. */
   private static final ImmutableMap<String, Indicator> STATUS_INDICATORS =
       ImmutableMap.<String, Indicator>builder()
           .put("IDLE", Indicator.INDICATOR_OK)
@@ -90,10 +53,7 @@ public final class FleetCellMapper {
   @Inject
   FleetCellMapper() {}
 
-  /**
-   * Builds the header for a column key. The display name comes from the fleet index when the key is
-   * present in the fleet, and falls back to a name derived from the key namespace otherwise.
-   */
+  /** Builds the header for a column key. */
   public Column column(String keyId, FleetSnapshot snapshot) {
     String display = snapshot.index().displayName(keyId);
     return Column.newBuilder().setKey(keyId).setDisplayName(display).build();
@@ -110,21 +70,22 @@ public final class FleetCellMapper {
 
   /** Builds a typed cell for a device and column key. */
   public Cell cell(String keyId, DeviceRecord device, FleetSnapshot snapshot) {
-    return switch (keyId) {
-      case FIELD_UUID -> Cell.newBuilder().setLink(deviceLink(device)).build();
-      case HOST_NAME -> Cell.newBuilder().setLink(hostLink(device)).build();
-      case FIELD_STATUS -> Cell.newBuilder().setStatus(statusCell(device.status())).build();
-      // TODO: dim::quarantined renders as a plain "Yes"/"No" TextCell for now. It may become a
-      // StatusCell (e.g. quarantined -> ERROR) once the frontend design settles.
-      // TODO: multi-value tag keys (owners, types, labels, ...) are comma-joined into a single
-      // TextCell here. Some may become ChipsCell later; the adaptation guide reserves ChipsCell for
-      // standalone tags, so it is deliberately not used yet.
-      default ->
-          Cell.newBuilder().setText(textCell(displayValues(device, keyId, snapshot))).build();
-    };
+    if (keyId.equals(FleetSearchKeys.FIELD_UUID)) {
+      return Cell.newBuilder().setLink(deviceLink(device)).build();
+    }
+    if (keyId.equals(FleetSearchKeys.HOST_NAME)) {
+      return Cell.newBuilder().setLink(hostLink(device)).build();
+    }
+    if (keyId.equals(FleetSearchKeys.FIELD_STATUS)) {
+      String status = firstValue(device.values(FleetSearchKeys.FIELD_STATUS));
+      return Cell.newBuilder().setStatus(statusCell(status)).build();
+    }
+    return Cell.newBuilder().setText(textCell(displayValues(device, keyId, snapshot))).build();
   }
 
   private static LinkCell deviceLink(DeviceRecord device) {
+    String hostName = firstValue(device.values(FleetSearchKeys.HOST_NAME));
+    String hostIp = firstValue(device.values(FleetSearchKeys.HOST_IP));
     return LinkCell.newBuilder()
         .setText(device.deviceId())
         .setTarget(
@@ -132,18 +93,19 @@ public final class FleetCellMapper {
                 .setDevice(
                     DeviceRef.newBuilder()
                         .setId(device.deviceId())
-                        .setHostName(device.hostName())
-                        .setHostIp(device.hostIp())))
+                        .setHostName(hostName)
+                        .setHostIp(hostIp)))
         .build();
   }
 
   private static LinkCell hostLink(DeviceRecord device) {
+    String hostName = firstValue(device.values(FleetSearchKeys.HOST_NAME));
+    String hostIp = firstValue(device.values(FleetSearchKeys.HOST_IP));
     return LinkCell.newBuilder()
-        .setText(device.hostName())
+        .setText(hostName)
         .setTarget(
             NavTarget.newBuilder()
-                .setHost(
-                    HostRef.newBuilder().setHostName(device.hostName()).setHostIp(device.hostIp())))
+                .setHost(HostRef.newBuilder().setHostName(hostName).setHostIp(hostIp)))
         .build();
   }
 
@@ -165,69 +127,31 @@ public final class FleetCellMapper {
    */
   static ImmutableList<String> displayValues(
       DeviceRecord device, String keyId, FleetSnapshot snapshot) {
-    return switch (keyId) {
-      case FIELD_UUID -> singleton(device.deviceId());
-      case FIELD_STATUS -> singleton(device.status());
-      case FIELD_TYPE -> device.types();
-      case FIELD_OWNER -> device.owners();
-      case FIELD_DRIVER -> device.drivers();
-      case FIELD_DECORATOR -> device.decorators();
-      case FIELD_EXECUTOR -> device.executors();
-      case DIM_QUARANTINED -> ImmutableList.of(device.quarantined() ? "Yes" : "No");
-      case HOST_NAME -> singleton(device.hostName());
-      case HOST_IP -> singleton(device.hostIp());
-      case CONFIG_WIFI_SSID -> device.wifiSsid().map(ImmutableList::of).orElse(ImmutableList.of());
-      // The device stores the raw controller id; show the friendly display from the index's
-      // per-value display map, falling back to the id itself when the registry has no entry.
-      case HOST_ATS_CONTROLLER -> atsControllerValues(device, snapshot);
-      // Cross-entity host attributes stamped onto each device. These mirror the value sets recorded
-      // by DeviceValueExtractor.valuesForKey: lab type is multi valued, the rest single valued,
-      // with
-      // the optionals collapsing to an empty list when absent so the column renders blank.
-      case HOST_LAB_TYPE -> device.labTypes();
-      case HOST_OS -> singleton(device.hostOs());
-      case HOST_CONNECTIVITY -> singleton(device.hostConnectivity());
-      case HOST_DAEMON_STATUS ->
-          device.daemonStatus().map(ImmutableList::of).orElse(ImmutableList.of());
-      case HOST_RELEASE_STATUS ->
-          device.releaseStatus().map(ImmutableList::of).orElse(ImmutableList.of());
-      case HOST_RELEASE_TYPE ->
-          device.releaseType().map(ImmutableList::of).orElse(ImmutableList.of());
-      case HOST_LAB_SERVER_VERSION ->
-          device.labServerVersion().map(ImmutableList::of).orElse(ImmutableList.of());
-      default -> prefixedValues(device, keyId);
-    };
+    if (keyId.equals(FleetSearchKeys.HOST_ATS_CONTROLLER)) {
+      return atsControllerValues(device, snapshot);
+    }
+    return device.values(keyId);
   }
 
   private static ImmutableList<String> atsControllerValues(
       DeviceRecord device, FleetSnapshot snapshot) {
-    return device
-        .atsController()
-        .filter(id -> !id.isEmpty())
-        .map(
-            id ->
-                ImmutableList.of(
-                    snapshot
-                        .index()
-                        .valueDisplays(HOST_ATS_CONTROLLER)
-                        .getOrDefault(Ascii.toLowerCase(id), id)))
-        .orElse(ImmutableList.of());
+    ImmutableList<String> vals = device.values(FleetSearchKeys.HOST_ATS_CONTROLLER);
+    if (vals.isEmpty()) {
+      return ImmutableList.of();
+    }
+    String id = vals.get(0);
+    if (id.isEmpty()) {
+      return ImmutableList.of();
+    }
+    String display =
+        snapshot
+            .index()
+            .valueDisplays(FleetSearchKeys.HOST_ATS_CONTROLLER)
+            .getOrDefault(Ascii.toLowerCase(id), id);
+    return ImmutableList.of(display);
   }
 
-  private static ImmutableList<String> prefixedValues(DeviceRecord device, String keyId) {
-    if (keyId.startsWith(DIM_PREFIX)) {
-      return device
-          .dimensions()
-          .getOrDefault(keyId.substring(DIM_PREFIX.length()), ImmutableList.of());
-    }
-    if (keyId.startsWith(PROP_PREFIX)) {
-      String value = device.hostProperties().get(keyId.substring(PROP_PREFIX.length()));
-      return value == null ? ImmutableList.of() : singleton(value);
-    }
-    return ImmutableList.of();
-  }
-
-  private static ImmutableList<String> singleton(String value) {
-    return value.isEmpty() ? ImmutableList.of() : ImmutableList.of(value);
+  private static String firstValue(ImmutableList<String> list) {
+    return Iterables.getFirst(list, "");
   }
 }

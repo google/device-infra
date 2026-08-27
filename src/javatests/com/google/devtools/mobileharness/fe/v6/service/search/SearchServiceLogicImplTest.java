@@ -110,7 +110,7 @@ public final class SearchServiceLogicImplTest {
     // The ats-one curation's default columns lead with the device identifier, which is locked.
     assertThat(config.getColumns().getDefaultsList()).isNotEmpty();
     FleetColumnDescriptor first = config.getColumns().getDefaults(0);
-    assertThat(first.getKey()).isEqualTo("field::uuid");
+    assertThat(first.getKey()).isEqualTo("device_field::uuid");
     assertThat(first.getLocked()).isTrue();
     assertThat(config.getColumns().getRecommendedList()).isNotEmpty();
     // The synthetic fleet has three devices, and the ats-one build browses directly (no landing).
@@ -128,8 +128,8 @@ public final class SearchServiceLogicImplTest {
                     .setFleet(Fleet.FLEET_SELF)
                     .setFlat(
                         FleetFlatView.newBuilder()
-                            .addColumns("field::uuid")
-                            .addColumns("field::status"))
+                            .addColumns("device_field::uuid")
+                            .addColumns("device_field::status"))
                     .build())
             .get();
 
@@ -164,7 +164,7 @@ public final class SearchServiceLogicImplTest {
             .searchFleet(
                 FleetSearchRequest.newBuilder()
                     .setEntity(SearchEntity.SEARCH_ENTITY_DEVICE)
-                    .setFlat(FleetFlatView.newBuilder().addColumns("field::uuid"))
+                    .setFlat(FleetFlatView.newBuilder().addColumns("device_field::uuid"))
                     .build())
             .get();
 

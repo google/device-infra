@@ -25,8 +25,8 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetInd
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.HostRecord;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import java.time.Instant;
-import java.util.Optional;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -38,27 +38,32 @@ public final class FleetSnapshotStoreTest {
   private final FleetSnapshotStore store = new FleetSnapshotStore();
 
   @Test
-  public void get_beforeAnyPublish_returnsEmpty() {
+  public void get_emptyBeforePublish_returnsEmptySnapshotWithEpochBuildTime() {
     FleetSnapshot snapshot = store.get(Fleet.FLEET_SELF);
 
-    assertThat(snapshot.deviceCount()).isEqualTo(0);
-    assertThat(snapshot.hostCount()).isEqualTo(0);
     assertThat(snapshot.buildTime()).isEqualTo(Instant.EPOCH);
+    assertThat(snapshot.devices()).isEmpty();
+    assertThat(snapshot.hosts()).isEmpty();
+    assertThat(snapshot.index().keyIds()).isEmpty();
+    assertThat(snapshot.hostIndex().keyIds()).isEmpty();
   }
 
   @Test
-  public void publish_thenGet_returnsPublishedSnapshot() {
-    FleetSnapshot published = snapshotAt(1_700_000_000L);
+  public void publish_and_get_updatesSnapshot() {
+    FleetSnapshot snapshot1 = snapshotAt(1_700_000_000L);
+    FleetSnapshot snapshot2 = snapshotAt(1_700_000_100L);
 
-    store.publish(Fleet.FLEET_SELF, published);
+    store.publish(Fleet.FLEET_SELF, snapshot1);
+    assertThat(store.get(Fleet.FLEET_SELF)).isSameInstanceAs(snapshot1);
 
-    assertThat(store.get(Fleet.FLEET_SELF)).isSameInstanceAs(published);
+    store.publish(Fleet.FLEET_SELF, snapshot2);
+    assertThat(store.get(Fleet.FLEET_SELF)).isSameInstanceAs(snapshot2);
   }
 
   @Test
-  public void publish_twoFleets_areIndependent() {
+  public void publish_distinctFleets_storedSeparately() {
     FleetSnapshot selfSnapshot = snapshotAt(1_700_000_000L);
-    FleetSnapshot atsSnapshot = snapshotAt(1_800_000_000L);
+    FleetSnapshot atsSnapshot = snapshotAt(1_700_000_200L);
 
     store.publish(Fleet.FLEET_SELF, selfSnapshot);
     store.publish(Fleet.FLEET_ATS, atsSnapshot);
@@ -90,9 +95,9 @@ public final class FleetSnapshotStoreTest {
     // The host postings are keyed by host index in hosts() order and resolve the host-only device
     // count key as well as the host name.
     LazyPostings hostPostings = store.hostPostings(Fleet.FLEET_SELF);
-    assertThat(hostPostings.get("host::device_count", "2")).asList().containsExactly(0);
-    assertThat(hostPostings.get("host::device_count", "1")).asList().containsExactly(1);
-    assertThat(hostPostings.get("host::host_name", "lab2")).asList().containsExactly(1);
+    assertThat(hostPostings.get("host_field::device_count", "2")).asList().containsExactly(0);
+    assertThat(hostPostings.get("host_field::device_count", "1")).asList().containsExactly(1);
+    assertThat(hostPostings.get("host_field::host_name", "lab2")).asList().containsExactly(1);
   }
 
   private static FleetSnapshot snapshotAt(long epochSecond) {
@@ -106,19 +111,11 @@ public final class FleetSnapshotStoreTest {
   }
 
   private static HostRecord host(String hostName, int deviceCount) {
-    return HostRecord.builder()
-        .setHostName(hostName)
-        .setHostIp("0.0.0.0")
-        .setLabStatus("LAB_RUNNING")
-        .setHostOs("Unknown")
-        .setHostConnectivity("Running")
-        .setHostProperties(ImmutableMap.of())
-        .setDeviceCount(deviceCount)
-        .setLabTypes(ImmutableList.of())
-        .setReleaseStatus(Optional.empty())
-        .setReleaseType(Optional.empty())
-        .setDaemonStatus(Optional.empty())
-        .setLabServerVersion(Optional.empty())
-        .build();
+    return HostRecord.create(
+        hostName,
+        ImmutableMap.of(
+            HostKeys.HOST_NAME.id(), ImmutableList.of(hostName),
+            HostKeys.DEVICE_COUNT.id(), ImmutableList.of(String.valueOf(deviceCount))),
+        deviceCount);
   }
 }

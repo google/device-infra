@@ -81,7 +81,7 @@ public final class FleetSuggesterTest {
     // "pix" prefix-matches the model value "pixel"; nothing else in the fleet starts with it.
     FleetSuggestionResponse response = suggester.suggest(corpus, request("pix"));
 
-    FleetSuggestion pixel = firstApplyFilter(response, "dim::model");
+    FleetSuggestion pixel = firstApplyFilter(response, "dimension::model");
     assertThat(pixel.getApplyFilter().getResultingFilter().getSimple().getValues(0).getValue())
         .isEqualTo("pixel");
     // Two devices (device-0, device-1) carry model pixel.
@@ -101,7 +101,7 @@ public final class FleetSuggesterTest {
     // identifier detector.
     FleetSuggestionResponse response = suggester.suggest(corpus, request("device-2"));
 
-    FleetSuggestion uuid = firstApplyFilter(response, "field::uuid");
+    FleetSuggestion uuid = firstApplyFilter(response, "device_field::uuid");
     assertThat(uuid.getApplyFilter().getResultingFilter().getSimple().getValues(0).getValue())
         .isEqualTo("device-2");
     assertThat(uuid.getCount()).isEqualTo(1);
@@ -112,7 +112,7 @@ public final class FleetSuggesterTest {
     // Typing a user name resolves onto the Owners key, again through value search.
     FleetSuggestionResponse response = suggester.suggest(corpus, request("alice"));
 
-    FleetSuggestion owner = firstApplyFilter(response, "field::owner");
+    FleetSuggestion owner = firstApplyFilter(response, "device_field::owner");
     assertThat(owner.getApplyFilter().getResultingFilter().getSimple().getValues(0).getValue())
         .isEqualTo("alice");
     // Owner is multi-valued, so the verb reads "are".
@@ -130,11 +130,11 @@ public final class FleetSuggesterTest {
     // ready-to-apply values.
     FleetSuggestionResponse response = suggester.suggest(corpus, request("status"));
 
-    FleetSuggestion keyOnly = firstOpenPicker(response, "field::status");
+    FleetSuggestion keyOnly = firstOpenPicker(response, "device_field::status");
     assertThat(keyOnly.getOpenPicker().hasNewChip()).isTrue();
     assertThat(keyOnly.getMainText(0).getText()).isEqualTo("Status");
     // The value conditions for the same key are also present (IDLE, BUSY).
-    assertThat(firstApplyFilter(response, "field::status")).isNotNull();
+    assertThat(firstApplyFilter(response, "device_field::status")).isNotNull();
   }
 
   @Test
@@ -142,9 +142,9 @@ public final class FleetSuggesterTest {
     // A chip already filters model=pixel. Typing another model value offers a modify: stage the
     // value in the picker, with the count shown as a "+" delta.
     FleetSuggestionResponse response =
-        suggester.suggest(corpus, request("nexus", simple("dim::model", "pixel")));
+        suggester.suggest(corpus, request("nexus", simple("dimension::model", "pixel")));
 
-    FleetSuggestion modify = firstOpenPicker(response, "dim::model");
+    FleetSuggestion modify = firstOpenPicker(response, "dimension::model");
     assertThat(modify.getLabel()).isEqualTo("Modify Model");
     assertThat(modify.getOpenPicker().getStagedModify().getValuesList()).containsExactly("nexus");
     assertThat(modify.getCountPrefix()).isEqualTo("+");
@@ -169,7 +169,7 @@ public final class FleetSuggesterTest {
         suggester.suggest(
             new DeviceCorpus(manyPools, manyPoolsPostings, null), request("group by pool"));
 
-    FleetSuggestion group = firstAddGroupBy(response, "dim::pool");
+    FleetSuggestion group = firstAddGroupBy(response, "dimension::pool");
     assertThat(group.getLabel()).isEqualTo("Group by");
     assertThat(group.getCountUnit()).isEqualTo("groups");
     assertThat(group.getCount()).isEqualTo(60);
@@ -191,14 +191,15 @@ public final class FleetSuggesterTest {
 
     assertThat(response.getItemsCount()).isAtLeast(2);
     assertThat(response.getItems(0).getApplyFilter().getResultingFilter().getKey())
-        .isEqualTo("dim::model");
+        .isEqualTo("dimension::model");
   }
 
   @Test
   public void emptyQuery_returnsCuratedStarterKeysAsOpenPickers() {
     FleetSuggestionResponse response = suggester.suggest(corpus, request(""));
 
-    // The curated starter keys present in this fleet, in their fixed order. dim::os is absent from
+    // The curated starter keys present in this fleet, in their fixed order. dimension::os is absent
+    // from
     // the fleet, so it is skipped; every entry opens the value picker.
     ImmutableList.Builder<String> keys = ImmutableList.builder();
     for (FleetSuggestion item : response.getItemsList()) {
@@ -207,12 +208,12 @@ public final class FleetSuggesterTest {
     }
     assertThat(keys.build())
         .containsExactly(
-            "field::status",
-            "dim::model",
-            "field::type",
-            "field::owner",
-            "dim::pool",
-            "dim::quarantined")
+            "device_field::status",
+            "dimension::model",
+            "device_field::type",
+            "device_field::owner",
+            "dimension::pool",
+            "device_field::quarantined")
         .inOrder();
   }
 

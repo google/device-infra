@@ -23,7 +23,12 @@ package(
 java_library(
     name = "fleet_search_keys",
     srcs = ["FleetSearchKeys.java"],
-    deps = ["@maven//:com_google_guava_guava"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:ats_device_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
+        "@maven//:com_google_guava_guava",
+    ],
 )
 
 java_library(
@@ -107,26 +112,6 @@ java_library(
 )
 
 java_library(
-    name = "device_value_extractor",
-    srcs = ["DeviceValueExtractor.java"],
-    deps = [
-        ":device_record",
-        ":fleet_search_keys",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "host_value_extractor",
-    srcs = ["HostValueExtractor.java"],
-    deps = [
-        ":fleet_search_keys",
-        ":host_record",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
     name = "postings",
     srcs = ["Postings.java"],
     deps = ["@maven//:com_google_guava_guava"],
@@ -137,9 +122,7 @@ java_library(
     srcs = ["LazyPostings.java"],
     deps = [
         ":device_record",
-        ":device_value_extractor",
         ":host_record",
-        ":host_value_extractor",
         ":postings",
         "@maven//:com_google_guava_guava",
     ],
@@ -165,7 +148,6 @@ java_library(
         ":device_enrichment",
         ":device_record",
         ":fleet_index",
-        ":fleet_search_keys",
         ":fleet_snapshot",
         ":host_enrichment",
         ":host_record",
@@ -177,8 +159,10 @@ java_library(
         "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:host_connectivity_statuses",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:host_types",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:ats_device_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
         "@maven//:com_google_guava_guava",
-        "@maven//:com_google_protobuf_protobuf_java",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

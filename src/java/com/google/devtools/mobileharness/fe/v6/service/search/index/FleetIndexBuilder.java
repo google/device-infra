@@ -18,36 +18,11 @@ package com.google.devtools.mobileharness.fe.v6.service.search.index;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.CONFIG_WIFI_SSID;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.DIM_PREFIX;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.DIM_QUARANTINED;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.EXCLUDED_DIMENSIONS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_DECORATOR;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_DRIVER;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_EXECUTOR;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_OWNER;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_STATUS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_TYPE;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_UUID;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_ATS_CONTROLLER;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_CONNECTIVITY;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DAEMON_STATUS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DEVICE_COUNT;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_IP;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_SERVER_VERSION;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_TYPE;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_NAME;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_OS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_STATUS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_TYPE;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PLAIN_VALUE_KEYS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PROP_PREFIX;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.LinkedHashMultimap;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
@@ -63,13 +38,15 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostConnectivityStatuses;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UiLabType;
-import com.google.protobuf.Timestamp;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -81,82 +58,76 @@ import java.util.stream.Stream;
 import javax.inject.Inject;
 
 /**
- * Builds an immutable {@link FleetSnapshot} (forward store plus {@link FleetIndex}) from a {@code
- * LabQueryResult}.
+ * Builds an immutable {@link FleetSnapshot} (forward store with unified values map plus {@link
+ * FleetIndex}) from {@link CoreFleetRawData}.
  *
- * <p>This is a pure function: proto in, snapshot out, no RPC. That keeps it unit-testable and
- * scenario-agnostic. It indexes every dimension it sees, with no curated allowlist. It is the Java
- * port of the search prototype's {@code _extract} plus the per-key half of {@code
- * _finalize_indexes}.
- *
- * <p>Values are normalized to lowercase for the index terms so lookups are case-insensitive. The
- * first-seen original casing of each value is retained in {@link FleetIndex#valueDisplays} for
- * presentation. Counts are distinct-device counts: a device that lists the same value twice (for
- * example the same dimension as both supported and required) contributes one.
- *
- * <p>Posting lists are not built at index time. They are built lazily by {@link LazyPostings} on
- * first access, keeping the build under 2 seconds for 152K devices.
+ * <p>This is a pure function: raw data in, snapshot out, no RPC. Keyed by canonical namespaced key
+ * IDs (e.g. {@code device_field::*}, {@code dimension::*}, {@code host_field::*}, {@code
+ * host_property::*}, {@code device_config::*}).
  */
 public final class FleetIndexBuilder {
 
   /** Host property that carries the lab server version, when present. */
   private static final String HOST_VERSION_PROPERTY = "host_version";
 
-  /**
-   * Display names for the built-in device, host, and config keys. Discovered {@code dim::} and
-   * {@code prop::} keys derive their display name from their raw name (see {@link #displayName}).
-   */
+  // Standard 1P canonical key IDs used during forward values synthesis.
+  public static final String DEVICE_FIELD_OWNER = DeviceKeys.PREFIX_DEVICE_FIELD + "owner";
+  public static final String DEVICE_FIELD_EXECUTOR = DeviceKeys.PREFIX_DEVICE_FIELD + "executor";
+  public static final String DEVICE_FIELD_QUARANTINED =
+      DeviceKeys.PREFIX_DEVICE_FIELD + "quarantined";
+  public static final String HOST_FIELD_LAB_TYPE = HostKeys.PREFIX_HOST_FIELD + "lab_type";
+  public static final String HOST_FIELD_DAEMON_STATUS =
+      HostKeys.PREFIX_HOST_FIELD + "daemon_status";
+  public static final String HOST_FIELD_RELEASE_STATUS =
+      HostKeys.PREFIX_HOST_FIELD + "release_status";
+  public static final String HOST_FIELD_RELEASE_TYPE = HostKeys.PREFIX_HOST_FIELD + "release_type";
+  public static final String HOST_FIELD_ATS_CONTROLLER =
+      HostKeys.PREFIX_HOST_FIELD + "ats_controller";
+
+  /** Display names for built-in keys across universal, ATS, partner, and 1P scopes. */
   private static final ImmutableMap<String, String> BUILTIN_DISPLAY_NAMES =
       ImmutableMap.<String, String>builder()
-          .put(FIELD_UUID, "UUID")
-          .put(FIELD_TYPE, "Type")
-          .put(FIELD_STATUS, "Status")
-          .put(FIELD_OWNER, "Owners")
-          .put(FIELD_DRIVER, "Supported Drivers")
-          .put(FIELD_DECORATOR, "Supported Decorators")
-          .put(FIELD_EXECUTOR, "Executors")
-          .put("dim::os", "OS")
-          .put("dim::model", "Model")
-          .put("dim::sdk_version", "SDK Version")
-          .put("dim::software_version", "Software Version")
-          .put("dim::device_form", "Form")
-          .put(DIM_QUARANTINED, "Quarantine")
-          .put("dim::device_class_name", "Device Class")
-          .put("dim::manufacturer", "Manufacturer")
-          .put(CONFIG_WIFI_SSID, "Wi-Fi SSID")
-          .put(HOST_NAME, "Host Name")
-          .put(HOST_IP, "Host IP")
-          .put(HOST_OS, "Host OS")
-          .put(HOST_LAB_TYPE, "Host Lab Type")
-          .put(HOST_CONNECTIVITY, "Host Lab Server Connectivity")
-          .put("host::lab_server_activity", "Host Lab Server Activity")
-          .put(HOST_DAEMON_STATUS, "Host Daemon Server Status")
-          .put(HOST_RELEASE_STATUS, "Host Release Status")
-          .put(HOST_LAB_SERVER_VERSION, "Host Lab Server Version")
-          .put(HOST_RELEASE_TYPE, "Host Release Type")
-          .put(HOST_ATS_CONTROLLER, "ATS Lab")
-          .put(HOST_DEVICE_COUNT, "Device Count")
+          .put(DeviceKeys.UUID.id(), "UUID")
+          .put(DeviceKeys.STATUS.id(), "Status")
+          .put(DeviceKeys.TYPE.id(), "Type")
+          .put(DeviceKeys.DRIVER.id(), "Supported Drivers")
+          .put(DeviceKeys.DECORATOR.id(), "Supported Decorators")
+          .put(DEVICE_FIELD_OWNER, "Owners")
+          .put(DEVICE_FIELD_EXECUTOR, "Executors")
+          .put(DEVICE_FIELD_QUARANTINED, "Quarantine")
+          .put(DeviceKeys.MODEL.id(), "Model")
+          .put(DeviceKeys.OS.id(), "OS")
+          .put(DeviceKeys.SDK_VERSION.id(), "SDK Version")
+          .put(DeviceKeys.SOFTWARE_VERSION.id(), "Software Version")
+          .put(DeviceKeys.DEVICE_FORM.id(), "Form")
+          .put(DeviceKeys.DEVICE_CLASS_NAME.id(), "Device Class")
+          .put(DeviceKeys.MANUFACTURER.id(), "Manufacturer")
+          .put(AtsDeviceKeys.WIFI_SSID.id(), "Wi-Fi SSID")
+          .put(HostKeys.HOST_NAME.id(), "Host Name")
+          .put(HostKeys.HOST_IP.id(), "Host IP")
+          .put(HostKeys.CONNECTIVITY.id(), "Host Lab Server Connectivity")
+          .put(HostKeys.HOST_OS.id(), "Host OS")
+          .put(HostKeys.LAB_SERVER_VERSION.id(), "Host Lab Server Version")
+          .put(HostKeys.DEVICE_COUNT.id(), "Device Count")
+          .put(HOST_FIELD_LAB_TYPE, "Host Lab Type")
+          .put(HOST_FIELD_DAEMON_STATUS, "Host Daemon Server Status")
+          .put(HOST_FIELD_RELEASE_STATUS, "Host Release Status")
+          .put(HOST_FIELD_RELEASE_TYPE, "Host Release Type")
+          .put(HOST_FIELD_ATS_CONTROLLER, "ATS Lab")
           .buildOrThrow();
+
+  private static final ImmutableSet<String> PLAIN_VALUE_KEYS =
+      ImmutableSet.of(DeviceKeys.UUID.id(), HostKeys.HOST_NAME.id(), HostKeys.HOST_IP.id());
 
   @Inject
   FleetIndexBuilder() {}
 
-  /**
-   * Builds a snapshot from lab data alone, with no host or device enrichment. Used by sources that
-   * carry only a lab query result, such as the aggregated ATS fan-out, and by tests.
-   */
+  /** Builds a snapshot from lab data alone, with no host or device enrichment. */
   public FleetSnapshot build(LabQueryResult labData, Instant buildTime) {
     return build(CoreFleetRawData.ofLabData(labData), buildTime);
   }
 
-  /**
-   * Builds a snapshot from the raw data, stamping the given build time.
-   *
-   * <p>{@link CoreFleetRawData#labData()} provides the base device and host records. Per-device and
-   * per-host enrichment, when present, adds the WiFi SSID, the host lab types, and the host
-   * release, daemon, and version attributes. A device or host with no enrichment entry behaves
-   * exactly as if only lab data were supplied.
-   */
+  /** Builds a snapshot from the raw data, stamping the given build time. */
   public FleetSnapshot build(CoreFleetRawData raw, Instant buildTime) {
     LabQueryResult labResult = raw.labData();
     ImmutableMap<String, String> atsControllerDisplays = raw.atsControllerDisplays();
@@ -166,16 +137,9 @@ public final class FleetIndexBuilder {
             ? ImmutableList.copyOf(labResult.getLabView().getLabDataList())
             : ImmutableList.of();
 
-    // Phase 1: parallel per-host processing with per-thread Accumulator.
-    // Each ForkJoinPool thread reuses ONE Accumulator across all hosts it processes,
-    // reducing merge from 43K per-host accumulators to T per-thread accumulators.
     record HostDevices(HostRecord host, List<DeviceRecord> devices) {}
 
     ConcurrentMap<Thread, Accumulator> accumulatorsByThread = new ConcurrentHashMap<>();
-
-    // A parallel per-thread accumulator builds the host index over host records, independent of the
-    // device accumulator above. The two are kept separate so the device index stays a pure index
-    // over devices and the host index a pure index over hosts.
     ConcurrentMap<Thread, Accumulator> hostAccumulatorsByThread = new ConcurrentHashMap<>();
 
     List<HostDevices> hostDevices =
@@ -186,19 +150,13 @@ public final class FleetIndexBuilder {
                   LabLocator locator = labInfo.getLabLocator();
                   String hostName = locator.getHostName();
                   String hostIp = locator.getIp();
-                  Optional<String> masterDetectedIp =
-                      locator.hasMasterDetectedIp()
-                          ? Optional.of(locator.getMasterDetectedIp())
-                          : Optional.empty();
-                  String labStatus = labInfo.getLabStatus().name();
+                  if (hostIp.isEmpty() && locator.hasMasterDetectedIp()) {
+                    hostIp = locator.getMasterDetectedIp();
+                  }
                   ImmutableMap<String, String> hostProperties = extractHostProperties(labInfo);
                   Optional<HostEnrichment> hostEnrichment =
                       Optional.ofNullable(raw.hostEnrichments().get(hostName));
-                  // Lab type is the composite of the LabInfo host properties (lab_type, dm_type)
-                  // and the HostInfoService release enum, matching the host detail page. It is
-                  // empty
-                  // for any host with no lab type (every ATS host), which keeps the key internal
-                  // only and data driven. UNKNOWN is treated as no lab type so it never surfaces.
+
                   Optional<String> releaseTypeOpt =
                       hostEnrichment.flatMap(HostEnrichment::releaseType);
                   ImmutableList<String> labTypes =
@@ -206,8 +164,6 @@ public final class FleetIndexBuilder {
                           .filter(labType -> labType != UiLabType.UNKNOWN)
                           .map(HostTypes::labTypeDisplayName)
                           .collect(toImmutableList());
-                  // Host OS mirrors the host detail page default of "Unknown" when the property is
-                  // absent. Connectivity uses the same LabStatus bucketing as the detail page.
                   String hostOs = hostProperties.getOrDefault("host_os", "Unknown");
                   String hostConnectivity =
                       HostConnectivityStatuses.create(Optional.of(labInfo)).getTitle();
@@ -217,7 +173,6 @@ public final class FleetIndexBuilder {
                       buildHostRecord(
                           hostName,
                           hostIp,
-                          labStatus,
                           hostProperties,
                           deviceList,
                           labTypes,
@@ -229,9 +184,6 @@ public final class FleetIndexBuilder {
                           Thread.currentThread(), t -> new Accumulator());
                   indexHost(hostAccum, hostRecord, atsControllerDisplays);
 
-                  // TODO: Consider refactoring thread-identity partitioned
-                  // accumulators to a standard Stream collect/reduce or manual list chunking
-                  // pattern if parallel collection semantics need modernization.
                   Accumulator accum =
                       accumulatorsByThread.computeIfAbsent(
                           Thread.currentThread(), t -> new Accumulator());
@@ -241,17 +193,7 @@ public final class FleetIndexBuilder {
                     Optional<DeviceEnrichment> deviceEnrichment =
                         Optional.ofNullable(raw.deviceEnrichments().get(deviceId));
                     DeviceRecord record =
-                        buildDeviceRecord(
-                            deviceInfo,
-                            hostName,
-                            hostIp,
-                            labStatus,
-                            masterDetectedIp,
-                            hostProperties,
-                            hostRecord,
-                            hostOs,
-                            hostConnectivity,
-                            deviceEnrichment);
+                        buildDeviceRecord(deviceInfo, hostRecord, deviceEnrichment);
                     devices.add(record);
                     indexDevice(accum, record, atsControllerDisplays);
                   }
@@ -259,7 +201,6 @@ public final class FleetIndexBuilder {
                 })
             .toList();
 
-    // Phase 2: flatten + merge T accumulators (not 43K).
     List<DeviceRecord> allDevices = new ArrayList<>();
     ImmutableList.Builder<HostRecord> allHosts = ImmutableList.builder();
     ImmutableMap.Builder<String, Integer> uuidToIndex = ImmutableMap.builder();
@@ -298,117 +239,150 @@ public final class FleetIndexBuilder {
   private static HostRecord buildHostRecord(
       String hostName,
       String hostIp,
-      String labStatus,
       ImmutableMap<String, String> hostProperties,
       DeviceList deviceList,
       ImmutableList<String> labTypes,
       String hostOs,
       String hostConnectivity,
       Optional<HostEnrichment> enrichment) {
-    return HostRecord.builder()
-        .setHostName(hostName)
-        .setHostIp(hostIp)
-        .setLabStatus(labStatus)
-        .setHostOs(hostOs)
-        .setHostConnectivity(hostConnectivity)
-        .setHostProperties(hostProperties)
-        .setDeviceCount(deviceList.getDeviceInfoCount())
-        .setLabTypes(labTypes)
-        .setReleaseStatus(enrichment.flatMap(HostEnrichment::releaseStatus))
-        .setReleaseType(enrichment.flatMap(HostEnrichment::releaseType))
-        .setDaemonStatus(enrichment.flatMap(HostEnrichment::daemonStatus))
-        // The enrichment source wins when it carries a version; otherwise fall back to the
-        // host_version property that LabInfo reports.
-        .setLabServerVersion(
-            enrichment
-                .flatMap(HostEnrichment::labServerVersion)
-                .or(() -> hostVersion(hostProperties)))
-        .setAtsController(enrichment.flatMap(HostEnrichment::atsController))
-        .build();
+    ImmutableMap.Builder<String, ImmutableList<String>> values = ImmutableMap.builder();
+
+    if (!hostName.isEmpty()) {
+      values.put(HostKeys.HOST_NAME.id(), ImmutableList.of(hostName));
+    }
+    if (!hostIp.isEmpty()) {
+      values.put(HostKeys.HOST_IP.id(), ImmutableList.of(hostIp));
+    }
+    values
+        .put(HostKeys.HOST_OS.id(), ImmutableList.of(hostOs))
+        .put(HostKeys.CONNECTIVITY.id(), ImmutableList.of(hostConnectivity));
+    if (!labTypes.isEmpty()) {
+      values.put(HOST_FIELD_LAB_TYPE, labTypes);
+    }
+    enrichment
+        .flatMap(HostEnrichment::daemonStatus)
+        .filter(s -> !s.isEmpty())
+        .ifPresent(s -> values.put(HOST_FIELD_DAEMON_STATUS, ImmutableList.of(s)));
+    enrichment
+        .flatMap(HostEnrichment::releaseStatus)
+        .filter(s -> !s.isEmpty())
+        .ifPresent(s -> values.put(HOST_FIELD_RELEASE_STATUS, ImmutableList.of(s)));
+    enrichment
+        .flatMap(HostEnrichment::releaseType)
+        .filter(s -> !s.isEmpty())
+        .ifPresent(s -> values.put(HOST_FIELD_RELEASE_TYPE, ImmutableList.of(s)));
+    Optional<String> labServerVersion =
+        enrichment.flatMap(HostEnrichment::labServerVersion).or(() -> hostVersion(hostProperties));
+    labServerVersion
+        .filter(v -> !v.isEmpty())
+        .ifPresent(v -> values.put(HostKeys.LAB_SERVER_VERSION.id(), ImmutableList.of(v)));
+    enrichment
+        .flatMap(HostEnrichment::atsController)
+        .filter(c -> !c.isEmpty())
+        .ifPresent(c -> values.put(HOST_FIELD_ATS_CONTROLLER, ImmutableList.of(c)));
+    values.put(
+        HostKeys.DEVICE_COUNT.id(),
+        ImmutableList.of(String.valueOf(deviceList.getDeviceInfoCount())));
+
+    for (Map.Entry<String, String> entry : hostProperties.entrySet()) {
+      if (entry.getKey().equals("host_os")) {
+        continue;
+      }
+      values.put(
+          HostKeys.PREFIX_HOST_PROPERTY + entry.getKey(), ImmutableList.of(entry.getValue()));
+    }
+
+    return HostRecord.create(hostName, values.buildOrThrow(), deviceList.getDeviceInfoCount());
   }
 
   private static DeviceRecord buildDeviceRecord(
-      DeviceInfo deviceInfo,
-      String hostName,
-      String hostIp,
-      String labStatus,
-      Optional<String> masterDetectedIp,
-      ImmutableMap<String, String> hostProperties,
-      HostRecord host,
-      String hostOs,
-      String hostConnectivity,
-      Optional<DeviceEnrichment> enrichment) {
+      DeviceInfo deviceInfo, HostRecord host, Optional<DeviceEnrichment> enrichment) {
     DeviceFeature feature = deviceInfo.getDeviceFeature();
     DeviceCondition condition = deviceInfo.getDeviceCondition();
+    String deviceId = deviceInfo.getDeviceLocator().getId();
 
-    Optional<Instant> lastHealthyTime =
-        condition.hasLastHealthyTime()
-            ? Optional.of(toInstant(condition.getLastHealthyTime()))
-            : Optional.empty();
+    ImmutableMap.Builder<String, ImmutableList<String>> values = ImmutableMap.builder();
 
-    return DeviceRecord.builder()
-        .setDeviceId(deviceInfo.getDeviceLocator().getId())
-        .setHostName(hostName)
-        .setStatus(deviceInfo.getDeviceStatus().name())
-        .setTypes(ImmutableList.copyOf(feature.getTypeList()))
-        .setOwners(ImmutableList.copyOf(feature.getOwnerList()))
-        .setDrivers(ImmutableList.copyOf(feature.getDriverList()))
-        .setDecorators(ImmutableList.copyOf(feature.getDecoratorList()))
-        .setExecutors(ImmutableList.copyOf(feature.getExecutorList()))
-        .setDimensions(mergeDimensions(feature.getCompositeDimension()))
-        .setQuarantined(isQuarantined(condition))
-        .setLastHealthyTime(lastHealthyTime)
-        .setHostIp(hostIp)
-        .setLabStatus(labStatus)
-        .setMasterDetectedIp(masterDetectedIp)
-        .setHostProperties(hostProperties)
-        .setWifiSsid(enrichment.flatMap(DeviceEnrichment::wifiSsid))
-        .setAtsController(enrichment.flatMap(DeviceEnrichment::atsController))
-        .setLabTypes(host.labTypes())
-        .setHostOs(hostOs)
-        .setHostConnectivity(hostConnectivity)
-        .setDaemonStatus(host.daemonStatus())
-        .setReleaseStatus(host.releaseStatus())
-        .setReleaseType(host.releaseType())
-        .setLabServerVersion(host.labServerVersion())
-        .build();
-  }
-
-  /**
-   * Merges supported and required dimensions into one name to values map, deduping values per name
-   * while preserving first-seen order. Supported and required share one namespace: both mean the
-   * device offers the value, which is what a search over the dimension asks about.
-   */
-  private static ImmutableMap<String, ImmutableList<String>> mergeDimensions(
-      DeviceCompositeDimension composite) {
-    // LinkedHashMultimap dedups values and preserves first-seen order for both names and values,
-    // matching what a search over the dimension asks about.
-    LinkedHashMultimap<String, String> merged = LinkedHashMultimap.create();
-    addDimensions(merged, composite.getSupportedDimensionList());
-    addDimensions(merged, composite.getRequiredDimensionList());
-
-    ImmutableMap.Builder<String, ImmutableList<String>> result = ImmutableMap.builder();
-    for (Map.Entry<String, Collection<String>> entry : merged.asMap().entrySet()) {
-      result.put(entry.getKey(), ImmutableList.copyOf(entry.getValue()));
+    if (!deviceId.isEmpty()) {
+      values.put(DeviceKeys.UUID.id(), ImmutableList.of(deviceId));
     }
-    return result.buildOrThrow();
-  }
+    String status = deviceInfo.getDeviceStatus().name();
+    if (!status.isEmpty()) {
+      values.put(DeviceKeys.STATUS.id(), ImmutableList.of(status));
+    }
+    ImmutableList<String> types = nonEmptyList(feature.getTypeList());
+    if (!types.isEmpty()) {
+      values.put(DeviceKeys.TYPE.id(), types);
+    }
+    ImmutableList<String> owners = nonEmptyList(feature.getOwnerList());
+    if (!owners.isEmpty()) {
+      values.put(DEVICE_FIELD_OWNER, owners);
+    }
+    ImmutableList<String> drivers = nonEmptyList(feature.getDriverList());
+    if (!drivers.isEmpty()) {
+      values.put(DeviceKeys.DRIVER.id(), drivers);
+    }
+    ImmutableList<String> decorators = nonEmptyList(feature.getDecoratorList());
+    if (!decorators.isEmpty()) {
+      values.put(DeviceKeys.DECORATOR.id(), decorators);
+    }
+    ImmutableList<String> executors = nonEmptyList(feature.getExecutorList());
+    if (!executors.isEmpty()) {
+      values.put(DEVICE_FIELD_EXECUTOR, executors);
+    }
 
-  private static void addDimensions(
-      LinkedHashMultimap<String, String> merged, List<DeviceDimension> dimensions) {
-    for (DeviceDimension dimension : dimensions) {
-      String name = dimension.getName();
-      if (name.isEmpty()) {
+    values.put(DEVICE_FIELD_QUARANTINED, ImmutableList.of(isQuarantined(condition) ? "Yes" : "No"));
+
+    // Dimensions: append supported and required directly without deduplicating.
+    addDimensions(values, feature.getCompositeDimension());
+
+    // Host attributes projected onto device.
+    for (Map.Entry<String, ImmutableList<String>> entry : host.values().entrySet()) {
+      String keyId = entry.getKey();
+      // device_count is host-only and deliberately not projected to device.
+      if (keyId.equals(HostKeys.DEVICE_COUNT.id())) {
         continue;
       }
-      merged.put(name, dimension.getValue());
+      values.put(keyId, entry.getValue());
+    }
+
+    enrichment
+        .flatMap(DeviceEnrichment::wifiSsid)
+        .filter(s -> !s.isEmpty())
+        .ifPresent(s -> values.put(AtsDeviceKeys.WIFI_SSID.id(), ImmutableList.of(s)));
+
+    return DeviceRecord.create(deviceId, values.buildOrThrow());
+  }
+
+  /** Appends all supported and required dimensions without deduplication. */
+  private static void addDimensions(
+      ImmutableMap.Builder<String, ImmutableList<String>> valuesBuilder,
+      DeviceCompositeDimension composite) {
+    Map<String, List<String>> dimMap = new LinkedHashMap<>();
+    for (DeviceDimension dim : composite.getSupportedDimensionList()) {
+      String name = dim.getName();
+      String val = dim.getValue();
+      if (!name.isEmpty() && !val.isEmpty()) {
+        dimMap.computeIfAbsent(DeviceKeys.PREFIX_DIMENSION + name, k -> new ArrayList<>()).add(val);
+      }
+    }
+    for (DeviceDimension dim : composite.getRequiredDimensionList()) {
+      String name = dim.getName();
+      String val = dim.getValue();
+      if (!name.isEmpty() && !val.isEmpty()) {
+        dimMap.computeIfAbsent(DeviceKeys.PREFIX_DIMENSION + name, k -> new ArrayList<>()).add(val);
+      }
+    }
+    for (Map.Entry<String, List<String>> entry : dimMap.entrySet()) {
+      valuesBuilder.put(entry.getKey(), ImmutableList.copyOf(entry.getValue()));
     }
   }
 
-  /**
-   * Quarantine matches the FE v6 detail page (DeviceHeaderInfoBuilder): a temp dimension named
-   * exactly "quarantined" whose value equals "true" ignoring case.
-   */
+  private static ImmutableList<String> nonEmptyList(List<String> list) {
+    return list.stream().filter(s -> !s.isEmpty()).collect(toImmutableList());
+  }
+
+  /** Quarantine check: temp dimension named "quarantined" with value "true" (case-insensitive). */
   private static boolean isQuarantined(DeviceCondition condition) {
     for (TempDimension tempDimension : condition.getTempDimensionList()) {
       DeviceDimension dimension = tempDimension.getDimension();
@@ -440,127 +414,36 @@ public final class FleetIndexBuilder {
       DeviceRecord record,
       ImmutableMap<String, String> atsControllerDisplays) {
     Set<String> seen = new HashSet<>();
-
-    if (!record.deviceId().isEmpty()) {
-      accumulator.add(seen, FIELD_UUID, record.deviceId());
-    }
-    accumulator.add(seen, FIELD_STATUS, record.status());
-    for (String value : record.types()) {
-      accumulator.add(seen, FIELD_TYPE, value);
-    }
-    for (String value : record.owners()) {
-      accumulator.add(seen, FIELD_OWNER, value);
-    }
-    for (String value : record.drivers()) {
-      accumulator.add(seen, FIELD_DRIVER, value);
-    }
-    for (String value : record.decorators()) {
-      accumulator.add(seen, FIELD_DECORATOR, value);
-    }
-    for (String value : record.executors()) {
-      accumulator.add(seen, FIELD_EXECUTOR, value);
-    }
-    for (Map.Entry<String, ImmutableList<String>> entry : record.dimensions().entrySet()) {
-      String dimName = entry.getKey();
-      if (EXCLUDED_DIMENSIONS.contains(dimName)) {
-        continue;
-      }
-      String keyId = DIM_PREFIX + dimName;
+    for (Map.Entry<String, ImmutableList<String>> entry : record.values().entrySet()) {
+      String keyId = entry.getKey();
+      boolean isController = keyId.equals(HOST_FIELD_ATS_CONTROLLER);
       for (String value : entry.getValue()) {
-        accumulator.add(seen, keyId, value);
+        if (isController) {
+          accumulator.add(seen, keyId, value, atsControllerDisplays.getOrDefault(value, value));
+        } else {
+          accumulator.add(seen, keyId, value);
+        }
       }
     }
-    accumulator.add(seen, DIM_QUARANTINED, record.quarantined() ? "Yes" : "No");
-    for (Map.Entry<String, String> entry : record.hostProperties().entrySet()) {
-      accumulator.add(seen, PROP_PREFIX + entry.getKey(), entry.getValue());
-    }
-    if (!record.hostName().isEmpty()) {
-      accumulator.add(seen, HOST_NAME, record.hostName());
-    }
-    if (!record.hostIp().isEmpty()) {
-      accumulator.add(seen, HOST_IP, record.hostIp());
-    }
-    // Stamp the cross-entity host attributes onto each device so devices are filterable, facetable,
-    // and groupable by a host attribute. The empty-value skip in Accumulator.add gates these to the
-    // data that exists: HostInfoService-sourced values are absent in ATS and simply do not appear,
-    // and a host with no lab type contributes no lab type value.
-    for (String labType : record.labTypes()) {
-      accumulator.add(seen, HOST_LAB_TYPE, labType);
-    }
-    accumulator.add(seen, HOST_OS, record.hostOs());
-    accumulator.add(seen, HOST_CONNECTIVITY, record.hostConnectivity());
-    record.daemonStatus().ifPresent(value -> accumulator.add(seen, HOST_DAEMON_STATUS, value));
-    record.releaseStatus().ifPresent(value -> accumulator.add(seen, HOST_RELEASE_STATUS, value));
-    record.releaseType().ifPresent(value -> accumulator.add(seen, HOST_RELEASE_TYPE, value));
-    record
-        .labServerVersion()
-        .ifPresent(value -> accumulator.add(seen, HOST_LAB_SERVER_VERSION, value));
-    // TODO: index host::lab_server_activity once the lab activity source is wired into the fleet
-    // pull. It is the only cross-entity host attribute still deferred.
-    record
-        .wifiSsid()
-        .filter(ssid -> !ssid.isEmpty())
-        .ifPresent(ssid -> accumulator.add(seen, CONFIG_WIFI_SSID, ssid));
-    // The controller id is the stored/filter term; the display is the friendly name from the
-    // ats-all registry, falling back to the id itself when the registry has no entry.
-    record
-        .atsController()
-        .filter(id -> !id.isEmpty())
-        .ifPresent(
-            id ->
-                accumulator.add(
-                    seen, HOST_ATS_CONTROLLER, id, atsControllerDisplays.getOrDefault(id, id)));
   }
 
-  /**
-   * Adds all index terms for one host to the host accumulator.
-   *
-   * <p>Mirrors {@link #indexDevice} for the host entity: it stamps the host's own attributes rather
-   * than the cross-entity join. The same empty-value skip in {@link Accumulator#add} gates these to
-   * the data that exists, so a host with no HostInfoService attributes (every ATS host) simply does
-   * not contribute those keys, and a host with no lab type contributes no lab type value. Host OS
-   * and connectivity are always present because {@code buildHostRecord} defaults them. The device
-   * count is stamped as its decimal string so it is filterable and groupable like any other value.
-   */
+  /** Adds all index terms for one host to the host accumulator. */
   private static void indexHost(
       Accumulator accumulator,
       HostRecord host,
       ImmutableMap<String, String> atsControllerDisplays) {
     Set<String> seen = new HashSet<>();
-
-    if (!host.hostName().isEmpty()) {
-      accumulator.add(seen, HOST_NAME, host.hostName());
+    for (Map.Entry<String, ImmutableList<String>> entry : host.values().entrySet()) {
+      String keyId = entry.getKey();
+      boolean isController = keyId.equals(HOST_FIELD_ATS_CONTROLLER);
+      for (String value : entry.getValue()) {
+        if (isController) {
+          accumulator.add(seen, keyId, value, atsControllerDisplays.getOrDefault(value, value));
+        } else {
+          accumulator.add(seen, keyId, value);
+        }
+      }
     }
-    if (!host.hostIp().isEmpty()) {
-      accumulator.add(seen, HOST_IP, host.hostIp());
-    }
-    accumulator.add(seen, HOST_OS, host.hostOs());
-    for (String labType : host.labTypes()) {
-      accumulator.add(seen, HOST_LAB_TYPE, labType);
-    }
-    accumulator.add(seen, HOST_CONNECTIVITY, host.hostConnectivity());
-    host.daemonStatus().ifPresent(value -> accumulator.add(seen, HOST_DAEMON_STATUS, value));
-    host.releaseStatus().ifPresent(value -> accumulator.add(seen, HOST_RELEASE_STATUS, value));
-    host.releaseType().ifPresent(value -> accumulator.add(seen, HOST_RELEASE_TYPE, value));
-    host.labServerVersion()
-        .ifPresent(value -> accumulator.add(seen, HOST_LAB_SERVER_VERSION, value));
-    for (Map.Entry<String, String> entry : host.hostProperties().entrySet()) {
-      accumulator.add(seen, PROP_PREFIX + entry.getKey(), entry.getValue());
-    }
-    // The controller id is the stored/filter term; the display is the friendly name from the
-    // ats-all registry, falling back to the id itself when the registry has no entry.
-    host.atsController()
-        .filter(id -> !id.isEmpty())
-        .ifPresent(
-            id ->
-                accumulator.add(
-                    seen, HOST_ATS_CONTROLLER, id, atsControllerDisplays.getOrDefault(id, id)));
-    // lab_server_activity is deferred: no lab activity source is wired into the fleet pull yet.
-    accumulator.add(seen, HOST_DEVICE_COUNT, String.valueOf(host.deviceCount()));
-  }
-
-  private static Instant toInstant(Timestamp timestamp) {
-    return Instant.ofEpochSecond(timestamp.getSeconds(), timestamp.getNanos());
   }
 
   private static String displayName(String keyId) {
@@ -568,14 +451,19 @@ public final class FleetIndexBuilder {
     if (builtin != null) {
       return builtin;
     }
-    int separator = keyId.indexOf("::");
-    String namespace = separator >= 0 ? keyId.substring(0, separator) : "";
-    String name = separator >= 0 ? keyId.substring(separator + 2) : keyId;
-    return switch (namespace) {
-      case "dim" -> "Dimension " + name;
-      case "prop" -> "Host Property " + name;
-      default -> name;
-    };
+    if (keyId.startsWith(DeviceKeys.PREFIX_DIMENSION)) {
+      return "Dimension " + keyId.substring(DeviceKeys.PREFIX_DIMENSION.length());
+    }
+    if (keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY)) {
+      return "Host Property " + keyId.substring(HostKeys.PREFIX_HOST_PROPERTY.length());
+    }
+    if (keyId.startsWith(DeviceKeys.PREFIX_DEVICE_FIELD)) {
+      return keyId.substring(DeviceKeys.PREFIX_DEVICE_FIELD.length());
+    }
+    if (keyId.startsWith(HostKeys.PREFIX_HOST_FIELD)) {
+      return keyId.substring(HostKeys.PREFIX_HOST_FIELD.length());
+    }
+    return keyId;
   }
 
   /**
@@ -613,16 +501,9 @@ public final class FleetIndexBuilder {
      */
     void add(Set<String> seen, String keyId, String term, String display) {
       String value = Ascii.toLowerCase(term);
-      // An empty value is not a distinct facet value. A device whose only value for
-      // a key is the empty string has no value for that key (it counts toward "(no
-      // value)"), matching the single-value fields and DeviceValueExtractor. proto3
-      // dimension lists can carry empty strings, which must not surface as a blank
-      // facet value in the value list.
       if (value.isEmpty()) {
         return;
       }
-      // TODO: Consider extracting a composite(keyId, value) helper for
-      // null-separated composite key lookups.
       if (!seen.add(keyId + '\u0000' + value)) {
         return;
       }
