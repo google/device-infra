@@ -35,10 +35,22 @@ java_library(
 )
 
 java_library(
+    name = "fleet_key_displays",
+    srcs = ["FleetKeyDisplays.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:ats_device_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "device_corpus",
     srcs = ["DeviceCorpus.java"],
     deps = [
         ":fleet_cell_mapper",
+        ":fleet_key_displays",
         ":scenario_curation",
         ":search_corpus",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
@@ -47,7 +59,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:composite_postings",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:device_record",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_search_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:overlay_view",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:postings",
@@ -61,15 +72,16 @@ java_library(
     name = "host_corpus",
     srcs = ["HostCorpus.java"],
     deps = [
+        ":fleet_key_displays",
         ":host_cell_mapper",
         ":scenario_curation",
         ":search_corpus",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_search_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:postings",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
@@ -92,10 +104,12 @@ java_library(
     name = "fleet_cell_mapper",
     srcs = ["FleetCellMapper.java"],
     deps = [
+        ":fleet_key_displays",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:device_record",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_search_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
@@ -105,10 +119,11 @@ java_library(
     name = "host_cell_mapper",
     srcs = ["HostCellMapper.java"],
     deps = [
+        ":fleet_key_displays",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_search_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:host_record",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
@@ -145,6 +160,7 @@ java_library(
     name = "fleet_chip_resolver",
     srcs = ["FleetChipResolver.java"],
     deps = [
+        ":fleet_key_displays",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
@@ -160,6 +176,7 @@ java_library(
     srcs = ["ScenarioCuration.java"],
     deps = [
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -169,19 +186,24 @@ java_library(
     srcs = ["FleetKeyPriority.java"],
     deps = [
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_search_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:ats_device_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
         "@maven//:com_google_guava_guava",
     ],
 )
 
 java_library(
-    name = "ats_one_curation",
-    srcs = ["AtsOneCuration.java"],
+    name = "ats_curation",
+    srcs = ["AtsCuration.java"],
     deps = [
         ":fleet_key_priority",
         ":scenario_curation",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_search_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:ats_device_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
@@ -191,7 +213,7 @@ java_library(
     name = "scenario_curation_module",
     srcs = ["ScenarioCurationModule.java"],
     deps = [
-        ":ats_one_curation",
+        ":ats_curation",
         ":scenario_curation",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "@maven//:com_google_inject_guice",
@@ -207,8 +229,8 @@ java_library(
         ":search_corpus",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
@@ -219,6 +241,7 @@ java_library(
     srcs = ["FleetSuggester.java"],
     deps = [
         ":fleet_filter_engine",
+        ":fleet_key_displays",
         ":scenario_curation",
         ":search_corpus",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
@@ -240,6 +263,7 @@ java_library(
     name = "fleet_column_cataloger",
     srcs = ["FleetColumnCataloger.java"],
     deps = [
+        ":fleet_key_displays",
         ":search_corpus",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
@@ -258,10 +282,10 @@ java_library(
         ":scenario_curation",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

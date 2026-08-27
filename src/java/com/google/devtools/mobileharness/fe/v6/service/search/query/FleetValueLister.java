@@ -80,7 +80,7 @@ public final class FleetValueLister {
     // every value's filtered count equals its total, which is exactly the prototype's behavior.
     BitSet filteredSet = toBitSet(filterEngine.match(corpus, otherFilters(filters, keyId)));
 
-    if (corpus.plainValueKey(keyId)) {
+    if (corpus.isIdentifierKey(keyId)) {
       return FleetValueListResponse.newBuilder().setPlain(buildPlain(index, keyId, values)).build();
     }
     return FleetValueListResponse.newBuilder()

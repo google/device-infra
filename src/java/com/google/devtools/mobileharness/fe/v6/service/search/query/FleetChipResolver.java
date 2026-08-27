@@ -42,7 +42,7 @@ import javax.inject.Inject;
  * {@code _pill_key}, {@code _pill_condition}, and {@code _bff_metadata} helpers.
  *
  * <p>Resolution is stateless beyond the snapshot: it needs only the chip structure to produce
- * display strings. It reads {@link FleetIndex#displayName} for the human key name and {@link
+ * display strings. It reads {@link FleetKeyDisplays} for the human key name and {@link
  * FleetIndex#valueDisplays(String)} for original value casing, mirroring the conventions in {@link
  * FleetCellMapper} and {@link FleetValueLister}. The response arrays are parallel to the request:
  * {@code filter_chips[i]} resolves {@code filters[i]} and {@code group_by_chips[j]} resolves {@code
@@ -53,9 +53,6 @@ import javax.inject.Inject;
  * "Host foo"). The {@code pill_condition} is the condition text describing what the filter selects.
  */
 public final class FleetChipResolver {
-
-  private static final String DIM_DISPLAY_PREFIX = "Dimension ";
-  private static final String PROP_DISPLAY_PREFIX = "Host Property ";
 
   private static final ImmutableSet<String> PLURAL_DISPLAY_KEYS =
       ImmutableSet.of(
@@ -85,7 +82,7 @@ public final class FleetChipResolver {
       response.addFilterChips(resolveFilter(index, filter));
     }
     for (String keyId : request.getGroupByKeysList()) {
-      response.addGroupByChips(resolveGroupBy(index, keyId));
+      response.addGroupByChips(resolveGroupBy(keyId));
     }
     return response.build();
   }
@@ -93,22 +90,22 @@ public final class FleetChipResolver {
   private static FleetResolvedFilterChip resolveFilter(FleetIndex index, Filter filter) {
     String keyId = filter.getKey();
     return FleetResolvedFilterChip.newBuilder()
-        .setPillKey(pillKey(index, keyId))
+        .setPillKey(pillKey(keyId))
         .setPillCondition(conditionText(index, filter))
-        .setMetadata(metadata(index, keyId))
+        .setMetadata(metadata(keyId))
         .build();
   }
 
-  private static FleetResolvedGroupByChip resolveGroupBy(FleetIndex index, String keyId) {
+  private static FleetResolvedGroupByChip resolveGroupBy(String keyId) {
     return FleetResolvedGroupByChip.newBuilder()
-        .setPillKey(pillKey(index, keyId))
-        .setDisplayName(displayName(index, keyId))
+        .setPillKey(pillKey(keyId))
+        .setDisplayName(displayName(keyId))
         .build();
   }
 
-  private static FleetFilterChipMetadata metadata(FleetIndex index, String keyId) {
+  private static FleetFilterChipMetadata metadata(String keyId) {
     return FleetFilterChipMetadata.newBuilder()
-        .setKeyDisplayName(displayName(index, keyId))
+        .setKeyDisplayName(displayName(keyId))
         .setCanUseAdvanced(!VALUE_DISPLAY_KEYS.contains(keyId))
         .setIsPlural(PLURAL_DISPLAY_KEYS.contains(keyId))
         .build();
@@ -120,22 +117,16 @@ public final class FleetChipResolver {
    * the prototype's {@code _pill_key}. Built-in fields and curated dimension names (for example
    * "Model") carry no prefix and pass through unchanged.
    */
-  private static String pillKey(FleetIndex index, String keyId) {
-    String label = displayName(index, keyId);
-    if (keyId.startsWith(DeviceKeys.PREFIX_DIMENSION) && label.startsWith(DIM_DISPLAY_PREFIX)) {
-      return label.substring(DIM_DISPLAY_PREFIX.length());
-    }
-    if (keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY) && label.startsWith(PROP_DISPLAY_PREFIX)) {
-      return "Host " + label.substring(PROP_DISPLAY_PREFIX.length());
-    }
-    return label;
+  private static String pillKey(String keyId) {
+    return FleetKeyDisplays.pillKey(keyId);
   }
 
   /**
-   * The full key display name, falling back to a namespace-derived name when absent from the fleet.
+   * The full key display name, including the "Dimension " and "Host Property " prefixes for
+   * long-tail keys (Special Case 1 for filter chip titles).
    */
-  private static String displayName(FleetIndex index, String keyId) {
-    return index.displayName(keyId);
+  private static String displayName(String keyId) {
+    return FleetKeyDisplays.titleDisplayName(keyId);
   }
 
   private static String conditionText(FleetIndex index, Filter filter) {

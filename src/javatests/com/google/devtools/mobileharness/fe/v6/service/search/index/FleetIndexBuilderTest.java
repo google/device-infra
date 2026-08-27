@@ -159,12 +159,6 @@ public final class FleetIndexBuilderTest {
             "host_property::host_version",
             "host_field::host_name",
             "host_field::host_ip");
-    assertThat(index.displayName("device_field::status")).isEqualTo("Status");
-    assertThat(index.displayName("dimension::os")).isEqualTo("OS");
-    assertThat(index.displayName("dimension::model")).isEqualTo("Model");
-    // Discovered non-built-in keys derive their display name from the raw name.
-    assertThat(index.displayName("host_property::location")).isEqualTo("Host Property location");
-
     // Device enrichment: wifi_ssid is single-valued, indexed under its normalized term with the
     // original casing preserved for display.
     assertThat(snapshot.devices().get(0).values("device_config::wifi_ssid"))
@@ -174,7 +168,6 @@ public final class FleetIndexBuilderTest {
     assertThat(posting(wifiPostings, "device_config::wifi_ssid", "googleguest")).containsExactly(0);
     assertThat(index.valueDisplays("device_config::wifi_ssid"))
         .containsEntry("googleguest", "GoogleGuest");
-    assertThat(index.displayName("device_config::wifi_ssid")).isEqualTo("Wi-Fi SSID");
 
     // Host enrichment: the lab type is computed from the release enum (SHARED_LAB maps to Core) and
     // stamped, as a display name, on every device of the enriched host (device-0 and device-1 on
@@ -182,7 +175,6 @@ public final class FleetIndexBuilderTest {
     assertThat(index.valueCount("host_field::lab_type", "core lab")).isEqualTo(2);
     assertThat(index.sortedValues("host_field::lab_type")).containsExactly("core lab");
     assertThat(index.valueDisplays("host_field::lab_type")).containsEntry("core lab", "Core Lab");
-    assertThat(index.displayName("host_field::lab_type")).isEqualTo("Host Lab Type");
 
     // The host keys are stamped onto every device of the host. Host OS defaults
     // to "Unknown" when the property is absent (lab2); connectivity buckets the lab status.
@@ -195,8 +187,6 @@ public final class FleetIndexBuilderTest {
     assertThat(index.valueCount("host_field::release_status", "running")).isEqualTo(2);
     assertThat(index.valueCount("host_field::release_type", "shared_lab")).isEqualTo(2);
     assertThat(index.valueCount("host_field::lab_server_version", "v42")).isEqualTo(2);
-    assertThat(index.displayName("host_field::daemon_status"))
-        .isEqualTo("Host Daemon Server Status");
 
     // Posting lists resolve the host keys through the device forward store, so filtering by a host
     // attribute selects the devices on matching hosts.
@@ -243,7 +233,6 @@ public final class FleetIndexBuilderTest {
     FleetIndex hostIndex = snapshot.hostIndex();
     assertThat(hostIndex.valueCount("host_field::device_count", "2")).isEqualTo(1);
     assertThat(hostIndex.valueCount("host_field::device_count", "1")).isEqualTo(1);
-    assertThat(hostIndex.displayName("host_field::device_count")).isEqualTo("Device Count");
     assertThat(hostIndex.valueCount("host_field::host_name", "lab1")).isEqualTo(1);
     assertThat(hostIndex.valueCount("host_field::host_name", "lab2")).isEqualTo(1);
     assertThat(hostIndex.valueCount("host_field::host_ip", "1.1.1.1")).isEqualTo(1);
@@ -396,7 +385,6 @@ public final class FleetIndexBuilderTest {
     FleetIndex index = atsSnapshot.index();
 
     assertThat(index.keyIds()).contains("host_field::ats_controller");
-    assertThat(index.displayName("host_field::ats_controller")).isEqualTo("ATS Lab");
 
     LazyPostings atsPostings = new LazyPostings(atsSnapshot.devices());
     assertThat(posting(atsPostings, "host_field::ats_controller", "xiaomi")).containsExactly(0);
@@ -446,7 +434,6 @@ public final class FleetIndexBuilderTest {
     assertThat(snapshot.hosts().get(1).values("host_field::ats_controller")).isEmpty();
 
     assertThat(hostIndex.keyIds()).contains("host_field::ats_controller");
-    assertThat(hostIndex.displayName("host_field::ats_controller")).isEqualTo("ATS Lab");
 
     assertThat(hostIndex.valueCount("host_field::ats_controller", "xiaomi")).isEqualTo(1);
     assertThat(hostIndex.sortedValues("host_field::ats_controller")).containsExactly("xiaomi");

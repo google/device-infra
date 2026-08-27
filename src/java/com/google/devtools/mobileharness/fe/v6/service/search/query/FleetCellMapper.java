@@ -31,13 +31,17 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.Row;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.StatusCell;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextCell;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceRecord;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import java.util.List;
 import javax.inject.Inject;
 
 /** Turns indexed device records into result-table {@link Column}s and typed {@link Cell}s. */
 public final class FleetCellMapper {
+
+  private static final String HOST_FIELD_ATS_CONTROLLER =
+      HostKeys.PREFIX_HOST_FIELD + "ats_controller";
 
   /** Device status name to semantic indicator. */
   private static final ImmutableMap<String, Indicator> STATUS_INDICATORS =
@@ -55,8 +59,10 @@ public final class FleetCellMapper {
 
   /** Builds the header for a column key. */
   public Column column(String keyId, FleetSnapshot snapshot) {
-    String display = snapshot.index().displayName(keyId);
-    return Column.newBuilder().setKey(keyId).setDisplayName(display).build();
+    return Column.newBuilder()
+        .setKey(keyId)
+        .setDisplayName(FleetKeyDisplays.standardDisplayName(keyId))
+        .build();
   }
 
   /** Builds one result row for a device: its UUID as id, plus one cell per requested column key. */
@@ -70,22 +76,22 @@ public final class FleetCellMapper {
 
   /** Builds a typed cell for a device and column key. */
   public Cell cell(String keyId, DeviceRecord device, FleetSnapshot snapshot) {
-    if (keyId.equals(FleetSearchKeys.FIELD_UUID)) {
+    if (keyId.equals(DeviceKeys.UUID.id())) {
       return Cell.newBuilder().setLink(deviceLink(device)).build();
     }
-    if (keyId.equals(FleetSearchKeys.HOST_NAME)) {
+    if (keyId.equals(HostKeys.HOST_NAME.id())) {
       return Cell.newBuilder().setLink(hostLink(device)).build();
     }
-    if (keyId.equals(FleetSearchKeys.FIELD_STATUS)) {
-      String status = firstValue(device.values(FleetSearchKeys.FIELD_STATUS));
+    if (keyId.equals(DeviceKeys.STATUS.id())) {
+      String status = firstValue(device.values(DeviceKeys.STATUS.id()));
       return Cell.newBuilder().setStatus(statusCell(status)).build();
     }
     return Cell.newBuilder().setText(textCell(displayValues(device, keyId, snapshot))).build();
   }
 
   private static LinkCell deviceLink(DeviceRecord device) {
-    String hostName = firstValue(device.values(FleetSearchKeys.HOST_NAME));
-    String hostIp = firstValue(device.values(FleetSearchKeys.HOST_IP));
+    String hostName = firstValue(device.values(HostKeys.HOST_NAME.id()));
+    String hostIp = firstValue(device.values(HostKeys.HOST_IP.id()));
     return LinkCell.newBuilder()
         .setText(device.deviceId())
         .setTarget(
@@ -99,8 +105,8 @@ public final class FleetCellMapper {
   }
 
   private static LinkCell hostLink(DeviceRecord device) {
-    String hostName = firstValue(device.values(FleetSearchKeys.HOST_NAME));
-    String hostIp = firstValue(device.values(FleetSearchKeys.HOST_IP));
+    String hostName = firstValue(device.values(HostKeys.HOST_NAME.id()));
+    String hostIp = firstValue(device.values(HostKeys.HOST_IP.id()));
     return LinkCell.newBuilder()
         .setText(hostName)
         .setTarget(
@@ -127,7 +133,7 @@ public final class FleetCellMapper {
    */
   static ImmutableList<String> displayValues(
       DeviceRecord device, String keyId, FleetSnapshot snapshot) {
-    if (keyId.equals(FleetSearchKeys.HOST_ATS_CONTROLLER)) {
+    if (keyId.equals(HOST_FIELD_ATS_CONTROLLER)) {
       return atsControllerValues(device, snapshot);
     }
     return device.values(keyId);
@@ -135,7 +141,7 @@ public final class FleetCellMapper {
 
   private static ImmutableList<String> atsControllerValues(
       DeviceRecord device, FleetSnapshot snapshot) {
-    ImmutableList<String> vals = device.values(FleetSearchKeys.HOST_ATS_CONTROLLER);
+    ImmutableList<String> vals = device.values(HOST_FIELD_ATS_CONTROLLER);
     if (vals.isEmpty()) {
       return ImmutableList.of();
     }
@@ -146,7 +152,7 @@ public final class FleetCellMapper {
     String display =
         snapshot
             .index()
-            .valueDisplays(FleetSearchKeys.HOST_ATS_CONTROLLER)
+            .valueDisplays(HOST_FIELD_ATS_CONTROLLER)
             .getOrDefault(Ascii.toLowerCase(id), id);
     return ImmutableList.of(display);
   }

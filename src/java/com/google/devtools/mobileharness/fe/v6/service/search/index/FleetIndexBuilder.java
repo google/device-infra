@@ -84,39 +84,15 @@ public final class FleetIndexBuilder {
   public static final String HOST_FIELD_ATS_CONTROLLER =
       HostKeys.PREFIX_HOST_FIELD + "ats_controller";
 
-  /** Display names for built-in keys across universal, ATS, partner, and 1P scopes. */
-  private static final ImmutableMap<String, String> BUILTIN_DISPLAY_NAMES =
-      ImmutableMap.<String, String>builder()
-          .put(DeviceKeys.UUID.id(), "UUID")
-          .put(DeviceKeys.STATUS.id(), "Status")
-          .put(DeviceKeys.TYPE.id(), "Type")
-          .put(DeviceKeys.DRIVER.id(), "Supported Drivers")
-          .put(DeviceKeys.DECORATOR.id(), "Supported Decorators")
-          .put(DEVICE_FIELD_OWNER, "Owners")
-          .put(DEVICE_FIELD_EXECUTOR, "Executors")
-          .put(DEVICE_FIELD_QUARANTINED, "Quarantine")
-          .put(DeviceKeys.MODEL.id(), "Model")
-          .put(DeviceKeys.OS.id(), "OS")
-          .put(DeviceKeys.SDK_VERSION.id(), "SDK Version")
-          .put(DeviceKeys.SOFTWARE_VERSION.id(), "Software Version")
-          .put(DeviceKeys.DEVICE_FORM.id(), "Form")
-          .put(DeviceKeys.DEVICE_CLASS_NAME.id(), "Device Class")
-          .put(DeviceKeys.MANUFACTURER.id(), "Manufacturer")
-          .put(AtsDeviceKeys.WIFI_SSID.id(), "Wi-Fi SSID")
-          .put(HostKeys.HOST_NAME.id(), "Host Name")
-          .put(HostKeys.HOST_IP.id(), "Host IP")
-          .put(HostKeys.CONNECTIVITY.id(), "Host Lab Server Connectivity")
-          .put(HostKeys.HOST_OS.id(), "Host OS")
-          .put(HostKeys.LAB_SERVER_VERSION.id(), "Host Lab Server Version")
-          .put(HostKeys.DEVICE_COUNT.id(), "Device Count")
-          .put(HOST_FIELD_LAB_TYPE, "Host Lab Type")
-          .put(HOST_FIELD_DAEMON_STATUS, "Host Daemon Server Status")
-          .put(HOST_FIELD_RELEASE_STATUS, "Host Release Status")
-          .put(HOST_FIELD_RELEASE_TYPE, "Host Release Type")
-          .put(HOST_FIELD_ATS_CONTROLLER, "ATS Lab")
-          .buildOrThrow();
+  /**
+   * Dimension names excluded from forward values and indexing. These dimensions carry non-textual
+   * data (e.g. serialized binary protos, base64 blobs) that have no search, filter, column, or
+   * group-by utility and would needlessly bloat the in-memory index.
+   */
+  private static final ImmutableSet<String> EXCLUDED_DIMENSIONS =
+      ImmutableSet.of("subdevice_dimensions");
 
-  private static final ImmutableSet<String> PLAIN_VALUE_KEYS =
+  private static final ImmutableSet<String> IDENTIFIER_KEYS =
       ImmutableSet.of(DeviceKeys.UUID.id(), HostKeys.HOST_NAME.id(), HostKeys.HOST_IP.id());
 
   @Inject
@@ -362,14 +338,14 @@ public final class FleetIndexBuilder {
     for (DeviceDimension dim : composite.getSupportedDimensionList()) {
       String name = dim.getName();
       String val = dim.getValue();
-      if (!name.isEmpty() && !val.isEmpty()) {
+      if (!name.isEmpty() && !val.isEmpty() && !EXCLUDED_DIMENSIONS.contains(name)) {
         dimMap.computeIfAbsent(DeviceKeys.PREFIX_DIMENSION + name, k -> new ArrayList<>()).add(val);
       }
     }
     for (DeviceDimension dim : composite.getRequiredDimensionList()) {
       String name = dim.getName();
       String val = dim.getValue();
-      if (!name.isEmpty() && !val.isEmpty()) {
+      if (!name.isEmpty() && !val.isEmpty() && !EXCLUDED_DIMENSIONS.contains(name)) {
         dimMap.computeIfAbsent(DeviceKeys.PREFIX_DIMENSION + name, k -> new ArrayList<>()).add(val);
       }
     }
@@ -444,26 +420,6 @@ public final class FleetIndexBuilder {
         }
       }
     }
-  }
-
-  private static String displayName(String keyId) {
-    String builtin = BUILTIN_DISPLAY_NAMES.get(keyId);
-    if (builtin != null) {
-      return builtin;
-    }
-    if (keyId.startsWith(DeviceKeys.PREFIX_DIMENSION)) {
-      return "Dimension " + keyId.substring(DeviceKeys.PREFIX_DIMENSION.length());
-    }
-    if (keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY)) {
-      return "Host Property " + keyId.substring(HostKeys.PREFIX_HOST_PROPERTY.length());
-    }
-    if (keyId.startsWith(DeviceKeys.PREFIX_DEVICE_FIELD)) {
-      return keyId.substring(DeviceKeys.PREFIX_DEVICE_FIELD.length());
-    }
-    if (keyId.startsWith(HostKeys.PREFIX_HOST_FIELD)) {
-      return keyId.substring(HostKeys.PREFIX_HOST_FIELD.length());
-    }
-    return keyId;
   }
 
   /**
@@ -572,7 +528,7 @@ public final class FleetIndexBuilder {
       // Build semanticGlobalSorted (parallel collect + sort).
       List<ValueKeyPair> semanticPairs =
           keyList.parallelStream()
-              .filter(keyId -> !PLAIN_VALUE_KEYS.contains(keyId))
+              .filter(keyId -> !IDENTIFIER_KEYS.contains(keyId))
               .flatMap(
                   keyId -> {
                     Set<String> values = distinctValues.get(keyId);
@@ -602,18 +558,11 @@ public final class FleetIndexBuilder {
         frozenGlobalExact.put(entry.getKey(), ImmutableList.copyOf(entry.getValue()));
       }
 
-      // Build display names.
-      ImmutableMap.Builder<String, String> names = ImmutableMap.builder();
-      for (String keyId : keyList) {
-        names.put(keyId, displayName(keyId));
-      }
-
       return CoreFleetIndex.builder()
           .setValueCountsMap(ImmutableMap.copyOf(countsMap))
           .setSortedValuesMap(ImmutableMap.copyOf(sortedMap))
           .setValueDisplaysMap(ImmutableMap.copyOf(displaysMap))
           .setKeyIds(ImmutableSet.copyOf(keyIds))
-          .setDisplayNamesMap(names.buildOrThrow())
           .setSemanticGlobalSorted(ImmutableList.copyOf(semanticPairs))
           .setGlobalExact(frozenGlobalExact.buildOrThrow())
           .build();

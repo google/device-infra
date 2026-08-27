@@ -38,6 +38,9 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.KeyDescripto
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
 import com.google.inject.Guice;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -66,27 +69,44 @@ public final class FleetSearchConfigProviderTest {
   private static final ScenarioCuration CURATION =
       new ScenarioCuration() {
         @Override
-        public ImmutableList<String> deviceFilterByRow() {
+        public ImmutableList<DeviceKeyDescriptor> deviceFilterByRow() {
           return ImmutableList.of();
         }
 
         @Override
-        public ImmutableList<String> deviceGroupByRow() {
+        public ImmutableList<DeviceKeyDescriptor> deviceGroupByRow() {
           return ImmutableList.of();
         }
 
         @Override
-        public ImmutableList<String> deviceDefaultColumns() {
+        public ImmutableList<DeviceKeyDescriptor> deviceDefaultColumns() {
           return ImmutableList.of(
-              "device_field::uuid",
-              "host_field::host_name",
-              "device_field::status",
-              "dimension::model");
+              DeviceKeys.UUID, DeviceKeys.HOST_NAME, DeviceKeys.STATUS, DeviceKeys.MODEL);
         }
 
         @Override
-        public ImmutableList<String> deviceRecommendedColumns() {
-          return ImmutableList.of("device_field::status", "device_field::type", "dimension::model");
+        public ImmutableList<DeviceKeyDescriptor> deviceRecommendedColumns() {
+          return ImmutableList.of(DeviceKeys.STATUS, DeviceKeys.TYPE, DeviceKeys.MODEL);
+        }
+
+        @Override
+        public ImmutableList<HostKeyDescriptor> hostFilterByRow() {
+          return ImmutableList.of();
+        }
+
+        @Override
+        public ImmutableList<HostKeyDescriptor> hostGroupByRow() {
+          return ImmutableList.of();
+        }
+
+        @Override
+        public ImmutableList<HostKeyDescriptor> hostDefaultColumns() {
+          return ImmutableList.of();
+        }
+
+        @Override
+        public ImmutableList<HostKeyDescriptor> hostRecommendedColumns() {
+          return ImmutableList.of();
         }
 
         @Override

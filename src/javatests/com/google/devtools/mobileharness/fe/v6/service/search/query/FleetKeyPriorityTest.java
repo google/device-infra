@@ -24,25 +24,25 @@ import com.google.testing.junit.testparameterinjector.TestParameterInjector;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+/** Unit tests for {@link FleetKeyPriority}. */
 @RunWith(TestParameterInjector.class)
 public final class FleetKeyPriorityTest {
 
   @Test
-  public void atsController_isTopInAtsAllOnly() {
-    assertThat(FleetKeyPriority.priority("host_field::ats_controller", Scenario.ATS_ALL))
+  public void atsController_isTopInPartnerAtsOnly() {
+    assertThat(FleetKeyPriority.priority("host_field::ats_controller", Scenario.PARTNER_ATS))
         .isEqualTo(3);
-    assertThat(FleetKeyPriority.priority("host_field::ats_controller", Scenario.ONE_P))
+    assertThat(FleetKeyPriority.priority("host_field::ats_controller", Scenario.INTERNAL))
         .isEqualTo(1);
-    assertThat(FleetKeyPriority.priority("host_field::ats_controller", Scenario.ATS_ONE))
-        .isEqualTo(1);
+    assertThat(FleetKeyPriority.priority("host_field::ats_controller", Scenario.ATS)).isEqualTo(1);
   }
 
   @Test
   public void wifiSsid_isTopInSelfScenarios() {
-    assertThat(FleetKeyPriority.priority("device_config::wifi_ssid", Scenario.ONE_P)).isEqualTo(3);
-    assertThat(FleetKeyPriority.priority("device_config::wifi_ssid", Scenario.ATS_ONE))
+    assertThat(FleetKeyPriority.priority("device_config::wifi_ssid", Scenario.INTERNAL))
         .isEqualTo(3);
-    assertThat(FleetKeyPriority.priority("device_config::wifi_ssid", Scenario.ATS_ALL))
+    assertThat(FleetKeyPriority.priority("device_config::wifi_ssid", Scenario.ATS)).isEqualTo(3);
+    assertThat(FleetKeyPriority.priority("device_config::wifi_ssid", Scenario.PARTNER_ATS))
         .isEqualTo(1);
   }
 
@@ -52,18 +52,19 @@ public final class FleetKeyPriorityTest {
   }
 
   @Test
-  public void tier2Key_isLowerInAtsOne() {
-    assertThat(FleetKeyPriority.priority("device_field::driver", Scenario.ATS_ONE)).isEqualTo(1);
-    assertThat(FleetKeyPriority.priority("device_field::driver", Scenario.ONE_P)).isEqualTo(2);
-    assertThat(FleetKeyPriority.priority("device_field::driver", Scenario.ATS_ALL)).isEqualTo(2);
+  public void tier2Key_isLowerInAts() {
+    assertThat(FleetKeyPriority.priority("device_field::driver", Scenario.ATS)).isEqualTo(1);
+    assertThat(FleetKeyPriority.priority("device_field::driver", Scenario.INTERNAL)).isEqualTo(2);
+    assertThat(FleetKeyPriority.priority("device_field::driver", Scenario.PARTNER_ATS))
+        .isEqualTo(2);
   }
 
   @Test
   public void rawDimension_isZeroInAtsScenarios() {
-    assertThat(FleetKeyPriority.priority("dimension::battery_level", Scenario.ATS_ALL))
+    assertThat(FleetKeyPriority.priority("dimension::battery_level", Scenario.PARTNER_ATS))
         .isEqualTo(0);
-    assertThat(FleetKeyPriority.priority("dimension::battery_level", Scenario.ATS_ONE))
-        .isEqualTo(0);
-    assertThat(FleetKeyPriority.priority("dimension::battery_level", Scenario.ONE_P)).isEqualTo(1);
+    assertThat(FleetKeyPriority.priority("dimension::battery_level", Scenario.ATS)).isEqualTo(0);
+    assertThat(FleetKeyPriority.priority("dimension::battery_level", Scenario.INTERNAL))
+        .isEqualTo(1);
   }
 }

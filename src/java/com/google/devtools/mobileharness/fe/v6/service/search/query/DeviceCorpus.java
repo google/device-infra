@@ -30,7 +30,6 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.CompositeFle
 import com.google.devtools.mobileharness.fe.v6.service.search.index.CompositePostings;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceRecord;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.OverlayView;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
@@ -63,6 +62,25 @@ public final class DeviceCorpus implements SearchCorpus {
           "UNAUTHORIZED",
           "FASTBOOT",
           "FASTBOOTDMODE");
+
+  private static final ImmutableSet<String> IDENTIFIER_KEYS =
+      ImmutableSet.of(
+          DeviceKeys.UUID.id(),
+          DeviceKeys.PREFIX_DIMENSION + "uuid",
+          DeviceKeys.PREFIX_DIMENSION + "id",
+          DeviceKeys.PREFIX_DIMENSION + "serial",
+          DeviceKeys.PREFIX_DIMENSION + "control_id",
+          DeviceKeys.PREFIX_DIMENSION + "mac_address",
+          DeviceKeys.PREFIX_DIMENSION + "bluetooth_mac_address",
+          DeviceKeys.PREFIX_DIMENSION + "soc_id",
+          DeviceKeys.PREFIX_DIMENSION + "network_address",
+          DeviceKeys.PREFIX_DIMENSION + "gservices_android_id",
+          DeviceKeys.PREFIX_DIMENSION + "iccid",
+          DeviceKeys.PREFIX_DIMENSION + "iccids",
+          DeviceKeys.PREFIX_DIMENSION + "imei",
+          DeviceKeys.PREFIX_DIMENSION + "ecid",
+          DeviceKeys.PREFIX_DIMENSION + "wifi_address",
+          DeviceKeys.PREFIX_DIMENSION + "testbed_name");
 
   private final FleetSnapshot snapshot;
   private final FleetIndex index;
@@ -115,12 +133,12 @@ public final class DeviceCorpus implements SearchCorpus {
 
   @Override
   public String identifierKey() {
-    return FleetSearchKeys.FIELD_UUID;
+    return DeviceKeys.UUID.id();
   }
 
   @Override
-  public boolean plainValueKey(String keyId) {
-    return FleetSearchKeys.PLAIN_VALUE_KEYS.contains(keyId);
+  public boolean isIdentifierKey(String keyId) {
+    return IDENTIFIER_KEYS.contains(keyId);
   }
 
   @Override
@@ -141,7 +159,10 @@ public final class DeviceCorpus implements SearchCorpus {
 
   @Override
   public Column column(String keyId) {
-    return Column.newBuilder().setKey(keyId).setDisplayName(index.displayName(keyId)).build();
+    return Column.newBuilder()
+        .setKey(keyId)
+        .setDisplayName(FleetKeyDisplays.standardDisplayName(keyId))
+        .build();
   }
 
   @Override
