@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
@@ -55,14 +56,34 @@ public final class LabInfoFleetPuller {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  /**
-   * The full fleet request: lab view, no filter, no page limit. Reused across pulls since it never
-   * varies.
-   */
+  private static final FieldMask FULL_FLEET_FIELD_MASK =
+      FieldMask.newBuilder()
+          .addPaths("device_locator.id")
+          .addPaths("device_status")
+          .addPaths("device_feature.type")
+          .addPaths("device_feature.owner")
+          .addPaths("device_feature.composite_dimension")
+          .build();
+
+  /** The full fleet request: lab view, masked core fields, 8 core dimensions, no page limit. */
   private static final GetLabInfoRequest FULL_FLEET_REQUEST =
       GetLabInfoRequest.newBuilder()
           .setLabQuery(
-              LabQuery.newBuilder().setLabViewRequest(LabQuery.LabViewRequest.getDefaultInstance()))
+              LabQuery.newBuilder()
+                  .setLabViewRequest(LabQuery.LabViewRequest.getDefaultInstance())
+                  .setMask(
+                      LabQuery.Mask.newBuilder()
+                          .setDeviceInfoMask(
+                              LabQuery.Mask.DeviceInfoMask.newBuilder()
+                                  .setFieldMask(FULL_FLEET_FIELD_MASK)
+                                  .setSupportedDimensionsMask(
+                                      LabQuery.Mask.DeviceInfoMask.DimensionsMask.newBuilder()
+                                          .addAllDimensionNames(
+                                              FleetSearchKeys.CORE_DIMENSION_NAMES))
+                                  .setRequiredDimensionsMask(
+                                      LabQuery.Mask.DeviceInfoMask.DimensionsMask.newBuilder()
+                                          .addAllDimensionNames(
+                                              FleetSearchKeys.CORE_DIMENSION_NAMES)))))
           .setPage(Page.newBuilder().setLimit(0))
           .build();
 
