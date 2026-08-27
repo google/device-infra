@@ -36,7 +36,10 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueLi
  * Core logic of the fleet (device and host) search service.
  *
  * <p>Covers the seven Fleet RPCs of {@code SearchService}. The four TJS (test, job, session) RPCs
- * have no backend and are handled by the gRPC layer, so they are absent here.
+ * are served by {@link com.google.devtools.mobileharness.fe.v6.service.search.tjs.TjsSearchLogic}.
+ *
+ * <p>// TODO: rename to FleetSearchLogic once the TJS backend lands. This interface covers only the
+ * fleet (device/host) RPCs; TJS RPCs are served by TjsSearchLogic.
  *
  * <p>Every method returns a {@link ListenableFuture}. The current implementation searches an
  * in-memory snapshot and completes immediately, but the async contract keeps the interface stable

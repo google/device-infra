@@ -41,28 +41,27 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSearchReq
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSearchResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSuggestionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSuggestionResponse;
-import io.grpc.Status;
-import io.grpc.StatusRuntimeException;
+import com.google.devtools.mobileharness.fe.v6.service.search.tjs.TjsSearchLogic;
 import io.grpc.stub.StreamObserver;
 import javax.inject.Inject;
 
 /**
  * gRPC binding for {@code SearchService}.
  *
- * <p>The seven Fleet RPCs delegate to {@link SearchServiceLogic} through {@link FeGrpcInvoker},
- * mirroring the DeviceService gRPC binding. The four TJS RPCs have no backend and fail with {@code
- * UNIMPLEMENTED}.
+ * <p>The seven Fleet RPCs delegate to {@link SearchServiceLogic} and the four TJS RPCs delegate to
+ * {@link TjsSearchLogic} through {@link FeGrpcInvoker}, mirroring the DeviceService gRPC binding.
  */
 public final class SearchServiceGrpcImpl extends SearchServiceGrpc.SearchServiceImplBase {
 
-  private static final String TJS_UNIMPLEMENTED_MESSAGE = "TJS search is not implemented";
-
-  private final SearchServiceLogic logic;
+  private final SearchServiceLogic fleetLogic;
+  private final TjsSearchLogic tjsLogic;
   private final ListeningExecutorService executor;
 
   @Inject
-  SearchServiceGrpcImpl(SearchServiceLogic logic, ListeningExecutorService executor) {
-    this.logic = logic;
+  SearchServiceGrpcImpl(
+      SearchServiceLogic fleetLogic, TjsSearchLogic tjsLogic, ListeningExecutorService executor) {
+    this.fleetLogic = fleetLogic;
+    this.tjsLogic = tjsLogic;
     this.executor = executor;
   }
 
@@ -76,7 +75,7 @@ public final class SearchServiceGrpcImpl extends SearchServiceGrpc.SearchService
     FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
-        logic::getFleetSearchConfig,
+        fleetLogic::getFleetSearchConfig,
         executor,
         SearchServiceGrpc.getServiceDescriptor(),
         SearchServiceGrpc.getGetFleetSearchConfigMethod());
@@ -88,7 +87,7 @@ public final class SearchServiceGrpcImpl extends SearchServiceGrpc.SearchService
     FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
-        logic::searchFleet,
+        fleetLogic::searchFleet,
         executor,
         SearchServiceGrpc.getServiceDescriptor(),
         SearchServiceGrpc.getSearchFleetMethod());
@@ -100,7 +99,7 @@ public final class SearchServiceGrpcImpl extends SearchServiceGrpc.SearchService
     FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
-        logic::getFleetSuggestions,
+        fleetLogic::getFleetSuggestions,
         executor,
         SearchServiceGrpc.getServiceDescriptor(),
         SearchServiceGrpc.getGetFleetSuggestionsMethod());
@@ -113,7 +112,7 @@ public final class SearchServiceGrpcImpl extends SearchServiceGrpc.SearchService
     FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
-        logic::resolveFleetChips,
+        fleetLogic::resolveFleetChips,
         executor,
         SearchServiceGrpc.getServiceDescriptor(),
         SearchServiceGrpc.getResolveFleetChipsMethod());
@@ -125,7 +124,7 @@ public final class SearchServiceGrpcImpl extends SearchServiceGrpc.SearchService
     FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
-        logic::getFleetValueList,
+        fleetLogic::getFleetValueList,
         executor,
         SearchServiceGrpc.getServiceDescriptor(),
         SearchServiceGrpc.getGetFleetValueListMethod());
@@ -138,7 +137,7 @@ public final class SearchServiceGrpcImpl extends SearchServiceGrpc.SearchService
     FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
-        logic::getFleetPromotedKeys,
+        fleetLogic::getFleetPromotedKeys,
         executor,
         SearchServiceGrpc.getServiceDescriptor(),
         SearchServiceGrpc.getGetFleetPromotedKeysMethod());
@@ -151,41 +150,61 @@ public final class SearchServiceGrpcImpl extends SearchServiceGrpc.SearchService
     FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
-        logic::getFleetColumnCatalog,
+        fleetLogic::getFleetColumnCatalog,
         executor,
         SearchServiceGrpc.getServiceDescriptor(),
         SearchServiceGrpc.getGetFleetColumnCatalogMethod());
   }
 
   // ===========================================================================
-  // TJS (test/job/session) search: no backend
+  // TJS (test/job/session) search
   // ===========================================================================
 
   @Override
   public void getTjsSearchConfig(
       TjsSearchConfigRequest request, StreamObserver<TjsSearchConfig> responseObserver) {
-    responseObserver.onError(tjsUnimplemented());
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        tjsLogic::getTjsSearchConfig,
+        executor,
+        SearchServiceGrpc.getServiceDescriptor(),
+        SearchServiceGrpc.getGetTjsSearchConfigMethod());
   }
 
   @Override
   public void searchTjs(
       TjsSearchRequest request, StreamObserver<TjsSearchResponse> responseObserver) {
-    responseObserver.onError(tjsUnimplemented());
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        tjsLogic::searchTjs,
+        executor,
+        SearchServiceGrpc.getServiceDescriptor(),
+        SearchServiceGrpc.getSearchTjsMethod());
   }
 
   @Override
   public void getTjsSuggestions(
       TjsSuggestionRequest request, StreamObserver<TjsSuggestionResponse> responseObserver) {
-    responseObserver.onError(tjsUnimplemented());
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        tjsLogic::getTjsSuggestions,
+        executor,
+        SearchServiceGrpc.getServiceDescriptor(),
+        SearchServiceGrpc.getGetTjsSuggestionsMethod());
   }
 
   @Override
   public void resolveTjsChips(
       TjsResolveChipsRequest request, StreamObserver<TjsResolveChipsResponse> responseObserver) {
-    responseObserver.onError(tjsUnimplemented());
-  }
-
-  private static StatusRuntimeException tjsUnimplemented() {
-    return Status.UNIMPLEMENTED.withDescription(TJS_UNIMPLEMENTED_MESSAGE).asRuntimeException();
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        tjsLogic::resolveTjsChips,
+        executor,
+        SearchServiceGrpc.getServiceDescriptor(),
+        SearchServiceGrpc.getResolveTjsChipsMethod());
   }
 }
