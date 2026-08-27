@@ -7,6 +7,7 @@
 export {MOCK_DEVICE_SCENARIOS} from './devices';
 export {MOCK_HOST_SCENARIOS} from './hosts';
 export {MOCK_JOB_SCENARIOS} from './jobs';
+export * from './search';
 export {MOCK_SESSION_SCENARIOS} from './sessions';
 export {MOCK_TEST_SCENARIOS} from './tests';
 

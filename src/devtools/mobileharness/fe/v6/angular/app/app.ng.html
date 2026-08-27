@@ -38,16 +38,16 @@
       }
     </mat-toolbar>
 
-    <mat-sidenav-container autosize [class.collapsed]="!sideNavExpanded" class="app-sidenav-container">
+    <mat-sidenav-container autosize class="app-sidenav-container">
       <!--Sidenav menu-->
-      <mat-sidenav mode="side" opened role="navigation">
+      <mat-sidenav mode="side" [opened]="sideNavExpanded" role="navigation">
         <div class="sidenav-container">
           <mat-nav-list>
             <a
               mat-list-item
               routerLink="/dev/device-harness"
               [class.active]="isNavActive('home')"
-              queryParamsHandling="preserve"
+              [queryParams]="getPreservedQueryParams()"
               [matTooltip]="'Home'"
             >
               <mat-icon matListItemIcon class="material-symbols-outlined">home</mat-icon>
@@ -58,10 +58,9 @@
 
             <a
               mat-list-item
-              [routerLink]="isFakeData ? '/dev/device-harness' : '/devices'"
-              [fragment]="isFakeData ? 'device-scenarios' : undefined"
+              routerLink="/devices"
               [class.active]="isNavActive('devices')"
-              queryParamsHandling="preserve"
+              [queryParams]="getPreservedQueryParams()"
               [matTooltip]="'Devices'"
             >
               <mat-icon matListItemIcon class="material-symbols-outlined">devices</mat-icon>
@@ -73,7 +72,7 @@
               [routerLink]="isFakeData ? '/dev/device-harness' : '/hosts'"
               [fragment]="isFakeData ? 'host-scenarios' : undefined"
               [class.active]="isNavActive('hosts')"
-              queryParamsHandling="preserve"
+              [queryParams]="getPreservedQueryParams()"
               [matTooltip]="'Hosts'"
             >
               <mat-icon matListItemIcon class="material-symbols-outlined">dns</mat-icon>
@@ -84,10 +83,9 @@
 
             <a
               mat-list-item
-              [routerLink]="isFakeData ? '/dev/device-harness' : '/tests'"
-              [fragment]="isFakeData ? 'test-scenarios' : undefined"
+              routerLink="/tests"
               [class.active]="isNavActive('tests')"
-              queryParamsHandling="preserve"
+              [queryParams]="getPreservedQueryParams()"
               [matTooltip]="'Tests'"
             >
               <mat-icon matListItemIcon class="material-symbols-outlined">fact_check</mat-icon>
@@ -96,17 +94,23 @@
 
             <a
               mat-list-item
-              [routerLink]="isFakeData ? '/dev/device-harness' : '/jobs'"
-              [fragment]="isFakeData ? 'job-scenarios' : undefined"
+              routerLink="/jobs"
               [class.active]="isNavActive('jobs')"
-              queryParamsHandling="preserve"
+              [queryParams]="getPreservedQueryParams()"
               [matTooltip]="'Jobs'"
             >
               <mat-icon matListItemIcon class="material-symbols-outlined">task</mat-icon>
               <span>Jobs</span>
             </a>
 
-            <a mat-list-item routerLink="/sessions" routerLinkActive="active" queryParamsHandling="preserve" [matTooltip]="'Sessions'">
+            <a
+              mat-list-item
+              [routerLink]="isFakeData ? '/dev/device-harness' : '/sessions'"
+              [fragment]="isFakeData ? 'session-scenarios' : undefined"
+              [class.active]="isNavActive('sessions')"
+              [queryParams]="getPreservedQueryParams()"
+              [matTooltip]="'Sessions'"
+            >
               <mat-icon matListItemIcon class="material-symbols-outlined">view_timeline</mat-icon>
               <span>Sessions</span>
             </a>

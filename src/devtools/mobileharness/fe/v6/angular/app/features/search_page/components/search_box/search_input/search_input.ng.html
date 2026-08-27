@@ -1,0 +1,86 @@
+<div class="query-top-row">
+  <!-- Fleet Switcher (only for devices and hosts) -->
+  @if (store.showScopeSwitcher()) {
+    <div class="scope-switcher" role="group" aria-label="Search fleet">
+      <button
+        class="scope-seg"
+        [class.active]="store.fleet() === 'internal'"
+        (click)="store.setFleet('internal')"
+      >
+        <span>Internal</span>
+      </button>
+      <button
+        class="scope-seg"
+        [class.active]="store.fleet() === 'ats'"
+        (click)="store.setFleet('ats')"
+      >
+        <span>ATS</span>
+      </button>
+    </div>
+  }
+
+  <!-- Smart Search Bar -->
+  <div class="search-wrap">
+    <div
+      #searchBox
+      class="search-box"
+      (click)="onSearchBoxClick($event)"
+    >
+      <mat-icon class="material-symbols-outlined search-icon">search</mat-icon>
+      <div class="search-input-area">
+        <div class="active-chips-container">
+          @for (chip of store.activeChips(); track (chip.key || chip.pillKey) + chip.pillCondition) {
+            <span
+              #chipEl
+              class="search-chip"
+              [attr.data-chip-key]="chip.key || chip.pillKey"
+              [class.group-by-chip]="chip.isGroupBy"
+              [class.exclude]="chip | appChipNegated"
+              [class.active]="store.isChipPickerActive(chip)"
+              (click)="openPickerForChip(chip, chipEl, $event)"
+            >
+              @if (chip.isGroupBy) {
+                <span class="chip-label">group by</span>
+                <span class="chip-value">{{ chip.pillKey }}</span>
+              } @else {
+                <span class="chip-label">{{ chip.pillKey }}</span>
+                <span class="chip-value">({{ chip.pillCondition }})</span>
+              }
+              <button class="chip-remove" (click)="store.removeFilterChip(chip); $event.stopPropagation()">
+                <mat-icon class="material-symbols-outlined">close</mat-icon>
+              </button>
+            </span>
+          }
+        </div>
+        <input
+          #searchInput
+          type="text"
+          class="search-input"
+          [placeholder]="store.searchPlaceholder()"
+          [value]="store.searchQuery()"
+          (input)="onSearchInput(searchInput.value)"
+          (focus)="onInputFocus()"
+          (click)="onInputClick($event)"
+          (blur)="onInputBlur()"
+          (keydown)="onKeyDown($event)"
+        />
+      </div>
+      @if (store.showSearchClear()) {
+        <button mat-icon-button class="search-clear-btn" (click)="store.resetSearchState()" title="Clear search">
+          <mat-icon class="material-symbols-outlined">close</mat-icon>
+        </button>
+      }
+    </div>
+
+    <!-- Suggestion Popover -->
+    <app-search-suggestions
+      [activeIndex]="activeSuggestionIndex()"
+      (selectSuggestion)="onSelectSuggestion($event)"
+    ></app-search-suggestions>
+  </div>
+
+  <!-- Refresh Button -->
+  <button mat-icon-button class="query-refresh-btn" (click)="store.executeSearch()" title="Refresh results">
+    <mat-icon class="material-symbols-outlined">refresh</mat-icon>
+  </button>
+</div>

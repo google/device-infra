@@ -63,4 +63,59 @@ describe('App Component', () => {
     expect(component).toBeTruthy();
   });
 
+  it('should have sideNavExpanded true by default', () => {
+    expect(component.sideNavExpanded).toBeTrue();
+  });
+
+  describe('Standalone mode', () => {
+    let standaloneComponent: App;
+    let standaloneFixture: ComponentFixture<App>;
+
+    beforeEach(async () => {
+      const standaloneMockActivatedRoute = {
+        snapshot: {
+          queryParams: {},
+          queryParamMap: convertToParamMap({'is_embedded_mode': 'false'}),
+        } as unknown as ActivatedRoute['snapshot'],
+        queryParamMap: of(convertToParamMap({'is_embedded_mode': 'false'})),
+      };
+
+      await TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [NoopAnimationsModule, App],
+        providers: [
+          provideRouter([]),
+          {provide: APP_DATA, useValue: appData},
+          {provide: UrlService, useValue: mockUrlService},
+          {provide: ActivatedRoute, useValue: standaloneMockActivatedRoute},
+        ],
+      }).compileComponents();
+
+      standaloneFixture = TestBed.createComponent(App);
+      standaloneComponent = standaloneFixture.componentInstance;
+      standaloneFixture.detectChanges();
+    });
+
+    it('should be in standalone mode with expanded sideNav by default', () => {
+      expect(standaloneComponent.isStandaloneMode).toBeTrue();
+      expect(standaloneComponent.sideNavExpanded).toBeTrue();
+      const sidenav =
+          standaloneFixture.nativeElement.querySelector('mat-sidenav');
+      expect(sidenav).toBeTruthy();
+    });
+
+    it('should toggle sideNavExpanded when menu button is clicked', () => {
+      const toggleButton: HTMLButtonElement =
+          standaloneFixture.nativeElement.querySelector('.toggleSidenavButton');
+      expect(toggleButton).toBeTruthy();
+
+      toggleButton.click();
+      standaloneFixture.detectChanges();
+      expect(standaloneComponent.sideNavExpanded).toBeFalse();
+
+      toggleButton.click();
+      standaloneFixture.detectChanges();
+      expect(standaloneComponent.sideNavExpanded).toBeTrue();
+    });
+  });
 });

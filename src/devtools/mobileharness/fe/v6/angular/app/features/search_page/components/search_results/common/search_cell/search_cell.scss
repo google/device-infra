@@ -1,0 +1,45 @@
+.status-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rt-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+
+  &.status-ok {
+    background-color: var(--mat-sys-positive, #34a853);
+  }
+
+  &.status-active {
+    background-color: var(--mat-sys-primary, #1a73e8);
+  }
+
+  &.status-error {
+    background-color: var(--mat-sys-error, #ea4335);
+  }
+
+  &.status-neutral {
+    background-color: var(--mat-sys-outline, #9aa0a6);
+  }
+}
+
+.device-link {
+  color: var(--mat-sys-primary, #1a73e8);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.rt-empty {
+  color: var(--mat-sys-outline, #9aa0a6);
+}
+
+.tjs-list-item {
+  white-space: nowrap;
+}

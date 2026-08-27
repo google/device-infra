@@ -1,0 +1,40 @@
+<button class="rt-btn-text" [matMenuTriggerFor]="densityMenu">
+  <mat-icon class="material-symbols-outlined">
+    {{ density() === 'compact' ? 'density_small' : (density() === 'comfortable' ? 'density_large' : 'density_medium') }}
+  </mat-icon>
+  Density
+  <mat-icon class="material-symbols-outlined rt-caret">arrow_drop_down</mat-icon>
+</button>
+
+<mat-menu #densityMenu="matMenu" class="density-dropdown-menu">
+  <button
+    mat-menu-item
+    (click)="setDensity('compact')"
+    [class.active-density]="density() === 'compact'"
+  >
+    <mat-icon class="material-symbols-outlined">
+      {{ density() === 'compact' ? 'check' : '' }}
+    </mat-icon>
+    <span>Compact</span>
+  </button>
+  <button
+    mat-menu-item
+    (click)="setDensity('default')"
+    [class.active-density]="density() === 'default'"
+  >
+    <mat-icon class="material-symbols-outlined">
+      {{ density() === 'default' ? 'check' : '' }}
+    </mat-icon>
+    <span>Default</span>
+  </button>
+  <button
+    mat-menu-item
+    (click)="setDensity('comfortable')"
+    [class.active-density]="density() === 'comfortable'"
+  >
+    <mat-icon class="material-symbols-outlined">
+      {{ density() === 'comfortable' ? 'check' : '' }}
+    </mat-icon>
+    <span>Comfortable</span>
+  </button>
+</mat-menu>

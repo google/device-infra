@@ -338,7 +338,6 @@ app-root {
   height: 100vh;
   background-color: $labconsole-bg;
 
-  $sidenav-collapsed-width: 62px;
   $sidenav-expanded-width: 256px;
   $nav-transition-duration: 250ms;
 
@@ -464,13 +463,26 @@ app-root {
       flex-direction: column;
       height: 100%;
       background-color: $labconsole-bg;
+      overflow-x: hidden;
       @include common.shared-scrollbar-style();
 
       main {
         flex: 1;
-        overflow: auto;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden auto;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
         background-color: $labconsole-bg;
         @include common.shared-scrollbar-style();
+
+        > * {
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+        }
       }
     }
 
@@ -481,25 +493,6 @@ app-root {
         container-width: $sidenav-expanded-width,
       )
     );
-
-    &.collapsed {
-      @include mat.sidenav-overrides(
-        (
-          container-divider-color: $border-menu,
-          container-width: $sidenav-collapsed-width,
-        )
-      );
-
-      mat-divider {
-        margin: 16px 0;
-        border-color: transparent;
-      }
-
-      mat-nav-list > a[mat-list-item] {
-        border-radius: 0;
-        margin: 0;
-      }
-    }
   }
 
   .embedded-content {

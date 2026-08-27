@@ -1,0 +1,77 @@
+@if (cell(); as cellObj) {
+  @switch (getCellType(cellObj)) {
+    @case ('text') {
+      @if (renderTextValue(cellObj, column()?.key); as txtVal) {
+        <span [title]="txtVal">{{ txtVal }}</span>
+      } @else {
+        <ng-container *ngTemplateOutlet="noValue"></ng-container>
+      }
+    }
+    @case ('link') {
+      @if (getRouterLink(cellObj.link); as linkArr) {
+        <a [routerLink]="linkArr" queryParamsHandling="preserve" class="device-link" [title]="getTextValue(cellObj)">
+          {{ getTextValue(cellObj) }}
+        </a>
+      } @else {
+        <ng-container *ngTemplateOutlet="noValue"></ng-container>
+      }
+    }
+    @case ('status') {
+      @if (getTextValue(cellObj); as statusTxt) {
+        <span class="status-cell">
+          <span class="rt-dot" [class]="getStatusClass(cellObj)"></span>
+          {{ statusTxt }}
+        </span>
+      } @else {
+        <ng-container *ngTemplateOutlet="noValue"></ng-container>
+      }
+    }
+    @case ('chips') {
+      @if (cellObj.chips?.values; as chipValues) {
+        @if (chipValues.length > 0) {
+          <app-overflow-chip-list
+            [items]="chipValues"
+            [title]="column()?.displayName || column()?.key || ''"
+          ></app-overflow-chip-list>
+        } @else {
+          <ng-container *ngTemplateOutlet="noValue"></ng-container>
+        }
+      } @else {
+        <ng-container *ngTemplateOutlet="noValue"></ng-container>
+      }
+    }
+    @case ('multilink') {
+      @if (cellObj.multiLink?.entries; as entries) {
+        @if (entries.length > 0) {
+          @for (entry of entries; track entry.text || $index) {
+            @if (getRouterLink(entry); as linkArr) {
+              <a [routerLink]="linkArr" queryParamsHandling="preserve" class="device-link">
+                {{ entry.text }}
+              </a>
+            } @else {
+              {{ entry.text }}
+            }
+            @if (!$last) {, }
+          }
+        } @else {
+          <ng-container *ngTemplateOutlet="noValue"></ng-container>
+        }
+      } @else {
+        <ng-container *ngTemplateOutlet="noValue"></ng-container>
+      }
+    }
+    @default {
+      @if (renderTextValue(cellObj, column()?.key); as defVal) {
+        <span [title]="defVal">{{ defVal }}</span>
+      } @else {
+        <ng-container *ngTemplateOutlet="noValue"></ng-container>
+      }
+    }
+  }
+} @else {
+  <ng-container *ngTemplateOutlet="noValue"></ng-container>
+}
+
+<ng-template #noValue>
+  <span class="rt-empty">-</span>
+</ng-template>

@@ -1,0 +1,43 @@
+@if (store.isPromotedKeysLoading() && store.promotedFilterKeys().length === 0 && store.promotedGroupByKeys().length === 0) {
+  <div class="preset-filters-container loading-placeholder" aria-hidden="true">
+    <div class="preset-shimmer-placeholder">
+      <div class="preset-shimmer-line"></div>
+    </div>
+  </div>
+} @else if (store.promotedFilterKeys().length > 0 || store.promotedGroupByKeys().length > 0) {
+  <div class="preset-filters-container">
+    @if (store.promotedFilterKeys().length > 0) {
+      <div class="preset-row">
+        <span class="preset-label">Filter by:</span>
+        @for (k of store.promotedFilterKeys(); track (k.key + (k.metadata?.keyDisplayName || ''))) {
+          <button
+            #presetBtn
+            class="preset-link"
+            [class.active]="store.isKeyPickerActive(k.key, k.metadata?.keyDisplayName || k.key)"
+            (click)="onSelectPromotedFilterKey(k, presetBtn, $event)"
+          >
+            <span>{{ k.metadata?.keyDisplayName || k.key }}</span>
+          </button>
+        }
+      </div>
+    }
+
+    @if (store.promotedGroupByKeys().length > 0) {
+      <div class="preset-row">
+        <span class="preset-label">Group by:</span>
+        @for (k of store.promotedGroupByKeys(); track k.key) {
+          <button
+            class="preset-link"
+            [class.active]="store.groupByKeys().includes(k.key)"
+            (click)="onSelectPromotedGroupBy(k)"
+          >
+            <span>{{ k.displayName }}</span>
+            @if (k.groupCount !== undefined && k.groupCount !== null) {
+              <span class="preset-count">{{ k.groupCount | number }} groups</span>
+            }
+          </button>
+        }
+      </div>
+    }
+  </div>
+}

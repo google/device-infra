@@ -1,0 +1,62 @@
+@use '../../../../../shared/styles/search_table_common' as st;
+
+:host {
+  @include st.search-table-base;
+}
+
+.results-area.tjs-mode {
+  .results-table {
+    th,
+    .mat-mdc-header-cell,
+    .mat-header-cell {
+      height: 56px;
+      padding: 0 16px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      text-transform: none;
+      color: #444746;
+      background-color: #f3f4f9;
+      border-bottom: 1px solid #c4c7c5;
+      cursor: default;
+      user-select: none;
+    }
+
+    td {
+      padding: 0 16px;
+      border-bottom: 1px solid #e1e3e1;
+    }
+  }
+}
+
+.tjs-empty {
+  padding: 48px;
+  text-align: center;
+  color: #5f6368;
+}
+
+// --- Column Widths ---
+[class*='col-'][class*='id'] {
+  width: 220px;
+  min-width: 160px;
+}
+
+[class*='col-'][class*='status'] {
+  width: 110px;
+  min-width: 100px;
+}
+
+[class*='col-'][class*='time'] {
+  width: 180px;
+  min-width: 140px;
+}
+
+[class*='col-'][class*='duration'] {
+  width: 120px;
+  min-width: 90px;
+}
+
+[class*='col-'][class*='user'],
+[class*='col-'][class*='owner'] {
+  width: 180px;
+  min-width: 120px;
+}

@@ -1,0 +1,59 @@
+<div class="vp-advanced">
+  <button class="vp-adv-back" (click)="backToSimple.emit()">
+    <mat-icon class="material-symbols-outlined">arrow_back</mat-icon>
+    <span>Simple matching</span>
+  </button>
+
+  <div class="vp-adv-modes">
+    @for (m of advModesList; track m.id) {
+      <label
+        class="vp-adv-mode"
+        [class.active]="mode() === m.id"
+        (click)="mode.set(m.id)"
+      >
+        <mat-icon class="material-symbols-outlined vp-adv-radio">
+          {{ mode() === m.id ? 'radio_button_checked' : 'radio_button_unchecked' }}
+        </mat-icon>
+        <span>{{ m.label }}</span>
+      </label>
+    }
+  </div>
+
+  <div class="vp-adv-input">
+    @if (!isMultiMode()) {
+      <input
+        type="text"
+        class="vp-adv-field"
+        [placeholder]="placeholder()"
+        [ngModel]="text()"
+        (ngModelChange)="text.set($event)"
+        (keydown.enter)="apply.emit()"
+      />
+    } @else {
+      <div class="vp-adv-input-row">
+        <input
+          type="text"
+          class="vp-adv-field"
+          placeholder="Add a value…"
+          [ngModel]="inputVal()"
+          (ngModelChange)="inputVal.set($event)"
+          (keydown.enter)="addChip()"
+        />
+        <button class="vp-adv-add" (click)="addChip()">Add</button>
+      </div>
+      <div class="vp-adv-chips">
+        @for (val of values(); track val; let i = $index) {
+          <span class="vp-adv-chip">
+            <span class="vp-adv-chip-label">{{ val }}</span>
+            <mat-icon
+              class="material-symbols-outlined vp-adv-chip-x"
+              (click)="removeChip(i)"
+            >
+              close
+            </mat-icon>
+          </span>
+        }
+      </div>
+    }
+  </div>
+</div>

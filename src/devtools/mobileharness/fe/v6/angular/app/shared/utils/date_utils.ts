@@ -227,6 +227,23 @@ export const dateUtils = {
   },
 
   /**
+   * Formats duration milliseconds into a readable scale representation (h/m/s).
+   */
+  formatDuration: (val: string | number | undefined | null): string | null => {
+    if (!val) return null;
+    const num = Number(val);
+    if (isNaN(num)) return String(val) || null;
+    const sec = Math.round(num / 1000);
+    if (sec < 60) return `${sec}s`;
+    const min = Math.floor(sec / 60);
+    const remSec = sec % 60;
+    if (min < 60) return remSec > 0 ? `${min}m ${remSec}s` : `${min}m`;
+    const hrs = Math.floor(min / 60);
+    const remMin = min % 60;
+    return remMin > 0 ? `${hrs}h ${remMin}m` : `${hrs}h`;
+  },
+
+  /**
    * Converts a date string or object to a Google Date object (year, month, day).
    *
    * @param date The date object or string to convert.

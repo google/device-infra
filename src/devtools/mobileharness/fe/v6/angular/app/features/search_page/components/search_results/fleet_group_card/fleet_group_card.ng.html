@@ -1,0 +1,151 @@
+<section class="rt-group">
+  <!-- Group Header Row -->
+  <div class="rt-group-row" [class.open]="isOpen()">
+    <button
+      class="rt-group-head"
+      [attr.aria-expanded]="isOpen()"
+      (click)="toggleGroup.emit(group().groupId)"
+    >
+      <mat-icon class="material-symbols-outlined rt-caret-icon">
+        {{ isOpen() ? 'expand_more' : 'chevron_right' }}
+      </mat-icon>
+
+      <span class="rt-group-name">
+        @for (val of group().values || []; track $index) {
+          @if (val !== null && val !== undefined && val !== '') {
+            <span>{{ val }}</span>
+          } @else {
+            <em class="rt-empty">(no value)</em>
+          }
+          @if (!$last) { <span class="rt-gv-sep">·</span> }
+        }
+      </span>
+
+      <span class="rt-group-count">
+        {{ (group().itemCount || 0) | number }} {{ entity() }}
+      </span>
+    </button>
+
+    <!-- Utilization Bar -->
+    @if (group().utilization && (group().utilization?.total || 0) > 0) {
+      <div class="rt-util">
+        <div class="rt-util-wrapper">
+          <div class="progress-container">
+            <div
+              class="progress-segment color-busy"
+              [style.width.%]="group().utilization!.busy | appUtilWidth:group().utilization!.total"
+              [title]="(group().utilization!.busy || 0) + ' (' + (group().utilization!.busy | appUtilPct:group().utilization!.total) + '%) in service (BUSY)'"
+            ></div>
+            <div
+              class="progress-segment color-idle"
+              [style.width.%]="group().utilization!.idle | appUtilWidth:group().utilization!.total"
+              [title]="(group().utilization!.idle || 0) + ' (' + (group().utilization!.idle | appUtilPct:group().utilization!.total) + '%) in service (IDLE)'"
+            ></div>
+            <div
+              class="progress-segment color-others"
+              [style.width.%]="group().utilization!.other | appUtilWidth:group().utilization!.total"
+              [title]="(group().utilization!.other || 0) + ' (' + (group().utilization!.other | appUtilPct:group().utilization!.total) + '%) out of service'"
+            ></div>
+          </div>
+          <div class="rt-util-legend-bar">
+            <span class="util-legend-item">
+              <span class="legend-dot color-busy"></span>
+              {{ (group().utilization!.busy || 0) | number }} ({{ group().utilization!.busy | appUtilPct:group().utilization!.total }}%)
+            </span>
+            <span class="util-legend-item">
+              <span class="legend-dot color-idle"></span>
+              {{ (group().utilization!.idle || 0) | number }} ({{ group().utilization!.idle | appUtilPct:group().utilization!.total }}%)
+            </span>
+            <span class="util-legend-item">
+              <span class="legend-dot color-others"></span>
+              {{ (group().utilization!.other || 0) | number }} ({{ group().utilization!.other | appUtilPct:group().utilization!.total }}%)
+            </span>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Group Body (Expanded) -->
+  @if (isOpen()) {
+    <div class="rt-group-body">
+      @if (groupState(); as state) {
+        @if (state.loading) {
+          <div class="rt-group-loading">Loading {{ entity() }}...</div>
+        } @else if (state.error) {
+          <div class="rt-group-empty rt-group-error-msg">
+            {{ state.error }}
+          </div>
+        } @else if (state.data?.rows && state.data!.rows!.length > 0) {
+          <div class="rt-group-scroll">
+            <table class="rt-inner-table">
+              <thead>
+                <tr>
+                  <th class="rt-check-cell">
+                    <mat-checkbox
+                      [checked]="isGroupPageAllSelected(state.data!.rows!)"
+                      (change)="toggleSelectGroupPage.emit(state.data!.rows!)"
+                    ></mat-checkbox>
+                  </th>
+                  @for (col of state.data!.columns || columns(); track col.key) {
+                    <th [class]="'col-' + col.key">{{ col.displayName }}</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of state.data!.rows!; track getRowId(row)) {
+                  <tr [class.selected-row]="selectedSet().has(getRowId(row))">
+                    <td class="rt-check-cell">
+                      <mat-checkbox
+                        [checked]="selectedSet().has(getRowId(row))"
+                        (change)="toggleSelectRow.emit(getRowId(row))"
+                      ></mat-checkbox>
+                    </td>
+                    @for (col of state.data!.columns || columns(); track col.key) {
+                      <td [class]="'col-' + col.key">
+                        <app-search-cell
+                          [cell]="row | appCell:col.key:(state.data!.columns || columns())"
+                          [column]="col"
+                          [entity]="entity()"
+                        ></app-search-cell>
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Inner Group Pagination -->
+          <div class="rt-inner-pagination">
+            <span class="rt-range">
+              {{ state.data!.rangeStart || 0 }}–{{ state.data!.rangeEnd || 0 }} of
+              {{ (state.data!.total || 0) | number }}
+            </span>
+            <span class="rt-grow"></span>
+            <button
+              class="rt-btn-text"
+              [disabled]="!state.data!.prevPageToken"
+              (click)="loadGroupPage.emit(state.data!.prevPageToken)"
+            >
+              <mat-icon class="material-symbols-outlined">chevron_left</mat-icon>
+              Previous
+            </button>
+            <button
+              class="rt-btn-text"
+              [disabled]="!state.data!.nextPageToken"
+              (click)="loadGroupPage.emit(state.data!.nextPageToken)"
+            >
+              Next
+              <mat-icon class="material-symbols-outlined">chevron_right</mat-icon>
+            </button>
+          </div>
+        } @else {
+          <div class="rt-group-empty">No {{ entity() }} in this group.</div>
+        }
+      } @else {
+        <div class="rt-group-loading">Loading {{ entity() }}...</div>
+      }
+    </div>
+  }
+</section>

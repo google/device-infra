@@ -1,0 +1,28 @@
+@if (store.showSuggestions() && store.suggestions().length > 0) {
+  <div class="search-suggestions-popover" (mousedown)="$event.preventDefault()">
+    <div class="suggestion-items">
+      @for (item of store.suggestions(); track $index) {
+        <div
+          #suggestionEl
+          class="suggestion-item"
+          [class.active-suggestion]="activeIndex() === $index"
+          (click)="onItemClick(item)"
+        >
+          @if (item.label) {
+            <span class="sg-label">{{ item.label }}</span>
+          }
+          <span class="sg-text">
+            @for (seg of item.mainText; track $index) {
+              <span [class.emphasized]="seg.emphasized">{{ seg.text }}</span>
+            }
+          </span>
+          @if (item.count !== undefined && item.count !== null) {
+            <span class="sg-count" [class.over-max]="item.overMax">
+              {{ item.countPrefix || '' }}{{ item.count | number }}{{ item.countUnit ? ' ' + item.countUnit : '' }}
+            </span>
+          }
+        </div>
+      }
+    </div>
+  </div>
+}

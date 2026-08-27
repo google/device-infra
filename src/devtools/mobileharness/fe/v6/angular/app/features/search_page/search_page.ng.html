@@ -1,0 +1,44 @@
+<div class="search-page-container">
+  <app-search-box></app-search-box>
+
+  @if (store.isLandingState()) {
+    @if (store.isConfigLoading() && !store.searchConfig()) {
+      <!-- Landing State Loading -->
+      <div class="rt-landing rt-landing-loading">
+        <mat-spinner diameter="32" class="landing-spinner"></mat-spinner>
+      </div>
+    } @else {
+      <!-- Landing State (Launcher) -->
+      <div class="rt-landing">
+        @if (store.searchConfig()?.landing?.tryCategories && store.searchConfig()!.landing!.tryCategories!.length > 0) {
+          <section class="rt-land-section">
+            <h2 class="rt-land-label">Try searching by</h2>
+            @for (cat of store.searchConfig()!.landing!.tryCategories!; track cat.label) {
+              <div class="rt-try-cat">
+                <span class="rt-try-cat-label">{{ cat.label }}</span>
+                <div class="rt-try-examples">
+                  @for (ex of cat.examples || []; track ex.text) {
+                    <button class="rt-try-ex" (click)="fillSearch(ex.text)">{{ ex.text }}</button>
+                  }
+                </div>
+              </div>
+            }
+          </section>
+        }
+
+        <section class="rt-land-section rt-land-browse">
+          <button mat-flat-button color="primary" class="browse-all-btn" (click)="onBrowseAll()">
+            Browse all {{ store.searchConfig()?.landing?.browseAllCount ?? 0 | number }} {{ store.entity() }}
+          </button>
+        </section>
+      </div>
+    }
+  } @else {
+    <!-- Search Results Component (Fleet vs TJS) -->
+    @if (!store.isTjs()) {
+      <app-fleet-search-results (refresh)="store.executeSearch()"></app-fleet-search-results>
+    } @else {
+      <app-tjs-search-results></app-tjs-search-results>
+    }
+  }
+</div>

@@ -1,0 +1,344 @@
+@if (store.pickerAnchor()) {
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="store.pickerAnchor()!"
+    [cdkConnectedOverlayOpen]="store.showValuePicker()"
+    [cdkConnectedOverlayPositions]="pickerOverlayPositions"
+    [cdkConnectedOverlayPush]="false"
+    (overlayOutsideClick)="store.closeValuePicker()"
+    (detach)="store.closeValuePicker()"
+  >
+    <div
+      class="value-picker"
+      [class.id-key]="isPlain()"
+    >
+      <!-- Header -->
+      <div class="vp-header">
+        <span class="vp-title">{{ store.pickerTitle() || store.pickerKey() }}</span>
+        @if (showNegateToggle()) {
+          <div class="vp-polarity-wrap">
+            <button
+              class="vp-polarity-btn"
+              [class.negate]="isNegated()"
+              (click)="showPolarityMenu.set(!showPolarityMenu())"
+            >
+              <span>{{ isNegated() ? negVerb() : posVerb() }}</span>
+              <mat-icon class="material-symbols-outlined">arrow_drop_down</mat-icon>
+            </button>
+            @if (showPolarityMenu()) {
+              <div class="vp-polarity-menu open">
+                <div
+                  class="vp-pm-item"
+                  (click)="isNegated.set(false); showPolarityMenu.set(false)"
+                >
+                  <mat-icon
+                    class="material-symbols-outlined vp-pm-check"
+                    [class.visible]="!isNegated()"
+                  >
+                    check
+                  </mat-icon>
+                  <span>{{ posVerb() }}</span>
+                </div>
+                <div
+                  class="vp-pm-item"
+                  (click)="isNegated.set(true); showPolarityMenu.set(false)"
+                >
+                  <mat-icon
+                    class="material-symbols-outlined vp-pm-check"
+                    [class.visible]="isNegated()"
+                  >
+                    check
+                  </mat-icon>
+                  <span>{{ negVerb() }}</span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (showAdvancedMenu()) {
+          <div class="vp-overflow-wrap">
+            <button
+              class="vp-overflow-btn"
+              title="More"
+              (click)="showOverflowMenu.set(!showOverflowMenu())"
+            >
+              <mat-icon class="material-symbols-outlined">more_vert</mat-icon>
+            </button>
+            @if (showOverflowMenu()) {
+              <div class="vp-overflow-menu open">
+                <div
+                  class="vp-om-item"
+                  (click)="isAdvanced.set(true); showOverflowMenu.set(false)"
+                >
+                  <mat-icon class="material-symbols-outlined">tune</mat-icon>
+                  <span>Advanced matching</span>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Body: Advanced vs Standard/Simple Modes -->
+      @if (isAdvanced()) {
+        <app-advanced-match-view
+          [(mode)]="advMode"
+          [(text)]="advText"
+          [(values)]="advValues"
+          (backToSimple)="isAdvanced.set(false)"
+          (apply)="onApply()"
+        ></app-advanced-match-view>
+      } @else {
+        @switch (config()?.type) {
+          @case ('range') {
+            <!-- Date Range Picker -->
+            <div class="vp-daterange">
+              <div class="vp-dt-row">
+                <span class="vp-dt-op">From:</span>
+                <input
+                  type="datetime-local"
+                  class="vp-from"
+                  [ngModel]="rangeFrom()"
+                  (ngModelChange)="rangeFrom.set($event)"
+                />
+              </div>
+              <div class="vp-dt-row">
+                <span class="vp-dt-op">To:</span>
+                <input
+                  type="datetime-local"
+                  class="vp-to"
+                  [ngModel]="rangeTo()"
+                  (ngModelChange)="rangeTo.set($event)"
+                />
+              </div>
+            </div>
+          }
+          @case ('namedPair') {
+            <!-- Property Key-Value Picker -->
+            @if (config()?.needsName) {
+              <div class="vp-search">
+                <input
+                  type="text"
+                  class="vp-name"
+                  [placeholder]="config()?.namePlaceholder || 'Name'"
+                  [ngModel]="propName()"
+                  (ngModelChange)="propName.set($event)"
+                />
+              </div>
+            }
+            <div class="vp-search">
+              <input
+                type="text"
+                class="vp-text"
+                [placeholder]="config()?.valPlaceholder || 'Value'"
+                [ngModel]="propVal()"
+                (ngModelChange)="propVal.set($event)"
+                (keydown.enter)="onApply()"
+                (keydown.escape)="onCancel()"
+              />
+            </div>
+          }
+          @case ('text') {
+            <!-- Plain Text Picker -->
+            <div class="vp-search">
+              <input
+                type="text"
+                class="vp-text"
+                [placeholder]="config()?.valPlaceholder || 'Value'"
+                [ngModel]="textVal()"
+                (ngModelChange)="textVal.set($event)"
+                (keydown.enter)="onApply()"
+                (keydown.escape)="onCancel()"
+              />
+            </div>
+          }
+          @default {
+            <!-- Standard Multi-column Filter List -->
+            @if (showSearchInput()) {
+              <div class="vp-search">
+                <input
+                  #searchInput
+                  type="text"
+                  placeholder="Filter or add value…"
+                  [ngModel]="searchQuery()"
+                  (ngModelChange)="searchQuery.set($event)"
+                  (keydown.enter)="onSearchEnter()"
+                />
+              </div>
+            }
+
+            <!-- Column Header -->
+            <div class="vp-col-header">
+              <span class="vp-col-spacer"></span>
+              <span
+                class="vp-col"
+                [class.active]="sortBy() === 'value'"
+                (click)="toggleSort('value')"
+              >
+                <span>Value</span>
+                @if (sortBy() === 'value') {
+                  <mat-icon class="material-symbols-outlined">
+                    {{ sortAsc() ? 'arrow_upward' : 'arrow_downward' }}
+                  </mat-icon>
+                }
+              </span>
+              <span class="vp-col-grow"></span>
+              @if (!isPlain()) {
+                <span
+                  class="vp-col vp-cnt-col"
+                  [class.active]="sortBy() === 'filtered'"
+                  (click)="toggleSort('filtered')"
+                >
+                  <span>Filtered</span>
+                  @if (sortBy() === 'filtered') {
+                    <mat-icon class="material-symbols-outlined">
+                      {{ sortAsc() ? 'arrow_upward' : 'arrow_downward' }}
+                    </mat-icon>
+                  }
+                </span>
+                <span
+                  class="vp-col vp-cnt-col"
+                  [class.active]="sortBy() === 'total'"
+                  (click)="toggleSort('total')"
+                >
+                  <span>Total</span>
+                  @if (sortBy() === 'total') {
+                    <mat-icon class="material-symbols-outlined">
+                      {{ sortAsc() ? 'arrow_upward' : 'arrow_downward' }}
+                    </mat-icon>
+                  }
+                </span>
+              }
+            </div>
+
+            <!-- Scrollable List -->
+            <div class="vp-list">
+              @if (state().loading && showAddRow()) {
+                <div
+                  class="vp-item vp-add-row"
+                  (click)="addCustomInput(searchQuery())"
+                >
+                  <mat-icon class="material-symbols-outlined vp-check">
+                    check_box_outline_blank
+                  </mat-icon>
+                  <span class="vp-val">
+                    Add "<strong>{{ searchQuery().trim() }}</strong>"
+                  </span>
+                </div>
+              }
+
+              @if (selectedSet().size > 0) {
+                <div class="vp-clear-all" (click)="clearAll()">Clear all</div>
+              }
+
+              @if (state().loading && selectedSet().size > 0) {
+                @for (val of selectedSet(); track val) {
+                  <div
+                    class="vp-item"
+                    (click)="toggleValue({value: val, displayLabel: val})"
+                  >
+                    <mat-icon class="material-symbols-outlined vp-check">
+                      check_box
+                    </mat-icon>
+                    <span class="vp-val" [title]="val">
+                      {{ val }}
+                    </span>
+                  </div>
+                }
+              }
+
+              @if (state().loading) {
+                <div class="vp-loading-hint">Loading values…</div>
+              }
+
+              <!-- Shared Row Item Template -->
+              <ng-template #pickerRow let-item let-isPinned="isPinned">
+                <div
+                  class="vp-item"
+                  [class.vp-pinned-item]="isPinned"
+                  [class.is-no-value-row]="item.isNoValue"
+                  [class.disabled]="item.disabled"
+                  (click)="toggleValue(item)"
+                >
+                  <mat-icon
+                    class="material-symbols-outlined vp-check"
+                    [class.disabled]="item.disabled"
+                  >
+                    {{ selectedSet().has(item.value) ? 'check_box' : 'check_box_outline_blank' }}
+                  </mat-icon>
+                  <span
+                    class="vp-val"
+                    [class.no-value-text]="item.isNoValue"
+                    [class.disabled-text]="item.disabled"
+                    [title]="item.disabled ? 'Value not found in options' : (item.isNoValue ? 'No value assigned for this key' : item.displayLabel)"
+                  >
+                    @if (item.isNoValue) {
+                      <em>(no value)</em>
+                    } @else {
+                      {{ item.displayLabel }}
+                    }
+                  </span>
+                  @if (showRowActions() && !item.disabled) {
+                    <span class="vp-actions">
+                      <button
+                        class="vp-act-btn vp-act-only"
+                        (click)="selectOnlyValue(item.value); $event.stopPropagation()"
+                      >
+                        only
+                      </button>
+                      <button
+                        class="vp-act-btn vp-act-copy"
+                        (click)="copyValue(item.isNoValue ? '' : item.value); $event.stopPropagation()"
+                        title="Copy value"
+                      >
+                        <mat-icon class="material-symbols-outlined">content_copy</mat-icon>
+                      </button>
+                    </span>
+                  }
+                  @if (!isPlain()) {
+                    <span class="vp-cnt filtered">
+                      {{ item.filtered !== undefined && item.filtered !== null ? (item.filtered | number) : '' }}
+                    </span>
+                    <span class="vp-cnt total">
+                      {{ item.total !== undefined && item.total !== null ? (item.total | number) : '' }}
+                    </span>
+                  }
+                </div>
+              </ng-template>
+
+              @if (pinnedValues().length > 0) {
+                @for (item of pinnedValues(); track item.value) {
+                  <ng-container
+                    *ngTemplateOutlet="pickerRow; context: {$implicit: item, isPinned: true}"
+                  ></ng-container>
+                }
+                <div class="vp-pinned-divider"></div>
+              }
+
+              @if (!state().loading && displayList().length === 0) {
+                <div class="vp-empty">No matching values</div>
+              } @else {
+                @for (item of displayList(); track item.value) {
+                  <ng-container
+                    *ngTemplateOutlet="pickerRow; context: {$implicit: item, isPinned: false}"
+                  ></ng-container>
+                }
+              }
+            </div>
+          }
+        }
+      }
+
+      <!-- Footer -->
+      <div class="vp-footer">
+        @if (footerStatusText()) {
+          <span class="vp-selected">{{ footerStatusText() }}</span>
+        }
+        <span class="vp-grow"></span>
+        <button class="vp-btn vp-cancel" (click)="onCancel()">Cancel</button>
+        <button class="vp-btn vp-apply" (click)="onApply()">Apply</button>
+      </div>
+    </div>
+  </ng-template>
+}

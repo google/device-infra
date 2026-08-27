@@ -1,0 +1,63 @@
+<mat-card class="results-area tjs-mode">
+  @if (store.activeChips().length === 0 && !store.browseAll() && !store.searchQuery().trim()) {
+    <div class="tjs-empty">Add a filter to search {{ entity() }}.</div>
+  } @else {
+    <!-- Toolbar -->
+    <div class="rt-toolbar">
+      <span class="rt-count">{{ tjsNounPlural() }}</span>
+      <span class="rt-grow"></span>
+      <app-density-dropdown
+        [density]="density()"
+        (densityChange)="density.set($event)"
+      ></app-density-dropdown>
+    </div>
+
+    @if (isLoading()) {
+      <mat-progress-bar mode="indeterminate" class="table-progress-bar"></mat-progress-bar>
+    }
+
+    @if (isLoading() && rows().length === 0) {
+      <div class="tjs-empty">Loading {{ tjsNounPlural() }}…</div>
+    } @else if (!isLoading() && rows().length === 0) {
+      <div class="tjs-empty">No matching {{ entity() }}.</div>
+    } @else {
+      <mat-card-content class="results-card-content">
+        <!-- Data Table -->
+        <div
+          class="table-container"
+          [class]="'density-' + density()"
+          [class.stale-loading]="isLoading()"
+        >
+          <table mat-table [dataSource]="rows()" class="results-table">
+            <!-- Dynamic Columns -->
+            @for (col of columns(); track col.key) {
+              <ng-container [matColumnDef]="col.key">
+                <th mat-header-cell *matHeaderCellDef [class]="'col-' + col.key">
+                  <span class="header-content">{{ col.displayName }}</span>
+                </th>
+                <td mat-cell *matCellDef="let row" [class]="'col-' + col.key">
+                  <app-search-cell [cell]="row | appCell:col.key:columns()" [column]="col" [entity]="entity()"></app-search-cell>
+                </td>
+              </ng-container>
+            }
+
+            @if (columnsToDisplay().length > 0) {
+              <tr mat-header-row *matHeaderRowDef="columnsToDisplay(); sticky: true"></tr>
+            }
+            <tr mat-row *matRowDef="let row; columns: columnsToDisplay()"></tr>
+          </table>
+        </div>
+      </mat-card-content>
+
+      <!-- Pagination Footer -->
+      <app-search-pagination
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize()"
+        [currentRowCount]="rows().length"
+        [hasNextPage]="store.hasNextPage()"
+        (prev)="prevPage()"
+        (next)="nextPage()"
+      ></app-search-pagination>
+    }
+  }
+</mat-card>

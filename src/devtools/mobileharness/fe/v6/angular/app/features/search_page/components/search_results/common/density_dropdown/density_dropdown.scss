@@ -1,0 +1,62 @@
+@use '@angular/material' as mat;
+
+:host {
+  display: inline-flex;
+  align-items: center;
+}
+
+.rt-btn-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #0b57d0;
+  white-space: nowrap;
+  line-height: 1;
+
+  &:hover:not(:disabled) {
+    background: rgba(11, 87, 208, 0.08);
+  }
+
+  &:disabled {
+    color: #444746;
+    opacity: 0.38;
+    cursor: default;
+  }
+
+  .mat-icon,
+  .material-symbols-outlined {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .rt-caret {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    margin-left: -2px;
+  }
+}
+
+.active-density {
+  background-color: #e8f0fe;
+  color: #0b57d0;
+  font-weight: 500;
+}

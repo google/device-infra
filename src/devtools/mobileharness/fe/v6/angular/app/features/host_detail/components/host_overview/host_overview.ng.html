@@ -284,30 +284,11 @@
               <ng-container matColumnDef="type">
                 <th mat-header-cell *matHeaderCellDef>TYPE</th>
                 <td mat-cell *matCellDef="let element">
-                  @if(element.types && element.types.length > 0) {
-                    <div class="type-chip-wrapper">
-                      <div
-                        class="type-chip"
-                        [class.type-chip-abnormal]="isTypeAbnormal(element.types)"
-                        [class.type-chip-normal]="!isTypeAbnormal(element.types)"
-                      >
-                        {{getFirstType(element.types)}}
-                      </div>
-                      @if(element.types.length > 1) {
-                        <button
-                          class="type-chip-more"
-                          cdkOverlayOrigin
-                          #trigger="cdkOverlayOrigin"
-                          (mouseenter)="onTypeHover(trigger, element.id, element.types)"
-                          (mouseleave)="handleMouseLeave($event)"
-                        >
-                          +{{ element.types.length - 1 }} more
-                        </button>
-                      }
-                    </div>
-                  } @else {
-                    —
-                  }
+                  <app-overflow-chip-list
+                    [items]="element.types"
+                    title="Device Types"
+                    [subtitle]="element.id"
+                  ></app-overflow-chip-list>
                 </td>
               </ng-container>
 
@@ -464,23 +445,11 @@
                              <ng-container matColumnDef="type">
                                <th mat-header-cell *matHeaderCellDef> TYPE </th>
                                <td mat-cell *matCellDef="let sub">
-                                 <app-overflow-list
+                                 <app-overflow-chip-list
                                    [items]="sub.types"
-                                   [limit]="1"
-                                   [itemTemplate]="typeTemplate"
-                                   moreButtonClass="type-chip-more"
-                                   (showOverlay)="onTypeHover($event, sub.id, sub.types)"
-                                   (hideOverlay)="handleMouseLeave($event)">
-                                 </app-overflow-list>
-                                 <ng-template #typeTemplate let-type>
-                                   <div
-                                     class="type-chip"
-                                     [class.type-chip-abnormal]="isTypeAbnormal([type])"
-                                     [class.type-chip-normal]="!isTypeAbnormal([type])"
-                                   >
-                                     {{type.type}}
-                                   </div>
-                                 </ng-template>
+                                   title="Device Types"
+                                   [subtitle]="sub.id"
+                                 ></app-overflow-chip-list>
                                </td>
                              </ng-container>
 

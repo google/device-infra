@@ -1,0 +1,242 @@
+@use '@angular/material' as mat;
+@use '../../../../../shared/styles/common';
+@use '../../../../../shared/styles/search_table_common' as st;
+
+:host {
+  @include st.search-table-base;
+}
+
+// --- Checkbox Column ---
+th.checkbox-col,
+td.checkbox-col,
+.mat-mdc-header-cell.checkbox-col,
+.mat-mdc-cell.checkbox-col,
+.mat-column-select,
+.mat-mdc-column-select {
+  width: 48px;
+  padding: 0;
+  text-align: center;
+  vertical-align: middle;
+  text-overflow: clip;
+  overflow: visible;
+
+  mat-checkbox {
+    @include mat.checkbox-density(-3);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+    height: 100%;
+    margin: 0 auto;
+  }
+}
+
+// --- Grouped Accordion Container Styles ---
+mat-card.results-area.grouped-mode,
+.results-area.grouped-mode {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+
+  .rt-toolbar {
+    background: transparent;
+    border-radius: 0;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+  }
+}
+
+.rt-groupby-label {
+  font-size: 0.8125rem;
+  color: #444746;
+}
+
+.rt-util-key {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.75rem;
+  color: #444746;
+}
+
+.rt-util-key-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rt-util-key .legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+
+  &.color-busy {
+    background-color: #0b57d0;
+  }
+  &.color-idle {
+    background-color: #146c2e;
+  }
+  &.color-others {
+    background-color: #747775;
+  }
+}
+
+.rt-accordion {
+  flex: 1;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden auto;
+  padding: 0 4px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  @include common.shared-scrollbar-style();
+  scrollbar-color: #bdc1c6 transparent;
+  transition: opacity 0.15s ease-in-out;
+
+  &.stale-loading {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: #bdc1c6;
+  }
+}
+
+.rt-group-empty {
+  padding: 16px;
+  font-size: 0.875rem;
+  color: #5f6368;
+}
+
+// --- Select-All-Matching Banner ---
+.rt-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 10px 16px;
+  font-size: 0.8125rem;
+  border-bottom: 1px solid #c4c7c5;
+  transition: all 0.2s ease-in-out;
+
+  .material-symbols-outlined,
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+  }
+
+  span b {
+    font-weight: 600;
+  }
+
+  .rt-btn-text {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #0b57d0;
+    margin-left: 8px;
+    text-decoration: none;
+    border-radius: 20px;
+    padding: 0 12px;
+
+    &:hover {
+      background: rgba(11, 87, 208, 0.08);
+    }
+  }
+}
+
+.rt-banner-info {
+  background: #e8f0fe;
+  color: #1a3d6d;
+}
+
+.rt-banner-error {
+  background: #fce8e6;
+  color: #9a2016;
+}
+
+.rt-excluded {
+  opacity: 0.75;
+  font-style: italic;
+}
+
+// --- Column Widths ---
+[class*='col-'][class*='id'] {
+  width: 220px;
+  min-width: 160px;
+}
+
+[class*='col-'][class*='status'] {
+  width: 110px;
+  min-width: 100px;
+}
+
+[class*='col-'][class*='type'],
+[class*='col-'][class*='driver'] {
+  width: 260px;
+  min-width: 220px;
+}
+
+[class*='col-'][class*='owner'],
+[class*='col-'][class*='user'] {
+  width: 180px;
+  min-width: 120px;
+}
+
+[class*='col-'][class*='time'] {
+  width: 180px;
+  min-width: 140px;
+}
+
+[class*='col-'][class*='duration'] {
+  width: 120px;
+  min-width: 90px;
+}
+
+[class*='col-'][class*='result'] {
+  width: 120px;
+  min-width: 90px;
+}
+
+[class*='col-'][class*='host'] {
+  width: 240px;
+  min-width: 180px;
+}
+
+[class*='col-'][class*='model'] {
+  width: 180px;
+  min-width: 140px;
+}
+
+[class*='col-'][class*='battery'] {
+  width: 110px;
+  min-width: 90px;
+}
+
+[class*='col-'][class*='sdk'] {
+  width: 110px;
+  min-width: 90px;
+}
+
+[class*='col-'][class*='name'] {
+  width: 400px;
+  min-width: 320px;
+}
+
+[class*='col-'][class*='device'] {
+  width: 240px;
+  min-width: 180px;
+}

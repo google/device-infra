@@ -1,0 +1,43 @@
+<div class="rt-pagination">
+  @if (showPageSize()) {
+    <span class="rt-page-label">Rows per page:</span>
+    <mat-select
+      [value]="pageSize()"
+      (valueChange)="pageSizeChange.emit($event)"
+      class="rt-page-size"
+      panelClass="rt-page-size-panel"
+      hideSingleSelectionIndicator
+    >
+      @for (opt of pageSizeOptions(); track opt) {
+        <mat-option [value]="opt">{{ opt }}</mat-option>
+      }
+    </mat-select>
+    <span class="rt-divider"></span>
+  }
+
+  <span class="rt-range">
+    {{ getRangeLabel() }}
+  </span>
+
+  <span class="rt-grow"></span>
+
+  <button
+    class="rt-btn-text"
+    [disabled]="!canGoPrev()"
+    (click)="prev.emit()"
+    title="Previous page"
+  >
+    <mat-icon class="material-symbols-outlined">chevron_left</mat-icon>
+    Previous
+  </button>
+
+  <button
+    class="rt-btn-text"
+    [disabled]="!canGoNext()"
+    (click)="next.emit()"
+    title="Next page"
+  >
+    Next
+    <mat-icon class="material-symbols-outlined">chevron_right</mat-icon>
+  </button>
+</div>
