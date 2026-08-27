@@ -48,6 +48,45 @@ func TestMonitoringWorkflows(t *testing.T) {
 	}
 	RecordDownloadStats(stats, "test-instance", true, false)
 
+	// Test CASProxy metrics APIs
+	Init("casproxy")
+
+	lastRecordedMethod = ""
+	RecordCacheRequest("ByteStream.Read", true)
+	if lastRecordedMethod != "ByteStream.Read" {
+		t.Errorf("RecordCacheRequest: lastRecordedMethod = %q, want %q", lastRecordedMethod, "ByteStream.Read")
+	}
+
+	lastRecordedServedBytes = 0
+	RecordServedBytes("local_cache", 2048)
+	if lastRecordedServedBytes != 2048 {
+		t.Errorf("RecordServedBytes: lastRecordedServedBytes = %d, want 2048", lastRecordedServedBytes)
+	}
+
+	lastRecordedWANBytes = 0
+	RecordWANBytes("ByteStream.Read", 4096)
+	if lastRecordedWANBytes != 4096 {
+		t.Errorf("RecordWANBytes: lastRecordedWANBytes = %d, want 4096", lastRecordedWANBytes)
+	}
+
+	lastRecordedTotal = 0
+	RecordStorageUsage(100*1024*1024*1024, 25*1024*1024*1024)
+	if lastRecordedTotal != 100*1024*1024*1024 {
+		t.Errorf("RecordStorageUsage: lastRecordedTotal = %d, want %d", lastRecordedTotal, int64(100*1024*1024*1024))
+	}
+
+	lastRecordedStatus = ""
+	RecordEvictionRun("evicted", 1024*1024, 5, 25*time.Millisecond)
+	if lastRecordedStatus != "evicted" {
+		t.Errorf("RecordEvictionRun: lastRecordedStatus = %q, want %q", lastRecordedStatus, "evicted")
+	}
+
+	lastRecordedUpstreamRPC = ""
+	RecordUpstreamRPC("CAS.BatchReadBlobs", "NOT_FOUND", 120*time.Millisecond)
+	if lastRecordedUpstreamRPC != "CAS.BatchReadBlobs" {
+		t.Errorf("RecordUpstreamRPC: lastRecordedUpstreamRPC = %q, want %q", lastRecordedUpstreamRPC, "CAS.BatchReadBlobs")
+	}
+
 	// Signal shutdown to verify flushing logic does not panic or deadlock
 	Shutdown()
 }

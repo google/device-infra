@@ -51,6 +51,36 @@ func RecordDownloadStats(stats *DownloadStats, casInstance string, localCacheEna
 	recordDownloadStats(stats, casInstance, localCacheEnabled, chunksOnly)
 }
 
+// RecordCacheRequest records a cache read request and whether it was a hit or miss.
+func RecordCacheRequest(method string, hit bool) {
+	recordCacheRequest(method, hit)
+}
+
+// RecordServedBytes records bytes delivered downstream to clients.
+func RecordServedBytes(source string, bytes int64) {
+	recordServedBytes(source, bytes)
+}
+
+// RecordWANBytes records bytes downloaded from upstream RBE.
+func RecordWANBytes(rpc string, bytes int64) {
+	recordWANBytes(rpc, bytes)
+}
+
+// RecordStorageUsage records the total and effective free bytes of the cache storage.
+func RecordStorageUsage(totalBytes, freeBytes int64) {
+	recordStorageUsage(totalBytes, freeBytes)
+}
+
+// RecordEvictionRun records an eviction cycle's status, reclaimed bytes, file count, and duration.
+func RecordEvictionRun(status string, reclaimedBytes, evictedFiles int64, duration time.Duration) {
+	recordEvictionRun(status, reclaimedBytes, evictedFiles, duration)
+}
+
+// RecordUpstreamRPC records an upstream RBE RPC call duration and status code.
+func RecordUpstreamRPC(rpc, grpcCode string, duration time.Duration) {
+	recordUpstreamRPC(rpc, grpcCode, duration)
+}
+
 // Shutdown flushes all pending metrics.
 func Shutdown() {
 	shutdown()
