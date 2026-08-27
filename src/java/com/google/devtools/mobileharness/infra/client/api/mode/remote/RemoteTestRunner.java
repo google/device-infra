@@ -26,7 +26,6 @@ import static java.util.stream.Collectors.toCollection;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Enums;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Streams;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -100,6 +99,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
@@ -112,6 +112,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
@@ -681,10 +682,14 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
   private ImmutableList<ResolveFileItem> getLabResolveFiles(JobInfo jobInfo)
       throws MobileHarnessException, InterruptedException {
-    return Streams.concat(
-            jobInfo.files().getAll().entries().stream(),
-            JobSpecHelper.getFiles(jobInfo.protoSpec().getProto()).entrySet().stream(),
-            jobInfo.scopedSpecs().getFiles(jobSpecHelper).entrySet().stream())
+    List<Entry<String, String>> allFiles = new ArrayList<>();
+    allFiles.addAll(jobInfo.files().getAll().entries());
+    allFiles.addAll(JobSpecHelper.getFiles(jobInfo.protoSpec().getProto()).entrySet());
+    allFiles.addAll(jobInfo.scopedSpecs().getFiles(jobSpecHelper).entrySet());
+    for (SubDeviceSpec subDeviceSpec : jobInfo.subDeviceSpecs().getAllSubDevices()) {
+      allFiles.addAll(subDeviceSpec.scopedSpecs().getFiles(jobSpecHelper).entrySet());
+    }
+    return allFiles.stream()
         .filter(entry -> !resolveInClient(entry.getValue(), jobInfo.params()))
         .map(entry -> createResolveFileItem(entry.getKey(), entry.getValue(), jobInfo))
         .collect(toImmutableList());

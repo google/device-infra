@@ -47,6 +47,7 @@ import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManag
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.ScopedSpecs;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecWalker;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
@@ -77,11 +78,12 @@ public class LabRpcProtoConverter {
     JobInfo jobInfo = testInfo.jobInfo();
     JobSpecWalker.Visitor escapePathVisitor = new EscapePathVisitor(labResolveFiles);
     JobSpec jobSpec = JobSpecWalker.resolve(jobInfo.protoSpec().getProto(), escapePathVisitor);
-    ScopedSpecs scopedSpecs = jobInfo.scopedSpecs();
-    JobSpec scopedJobSpec = scopedSpecs.toJobSpec(JobSpecHelper.getDefaultHelper());
-    JobSpec resolvedScopedJobSpec = JobSpecWalker.resolve(scopedJobSpec, escapePathVisitor);
-    ScopedSpecs resolvedScopedSpecs = new ScopedSpecs(null);
-    resolvedScopedSpecs.addAll(resolvedScopedJobSpec);
+    ScopedSpecs resolvedScopedSpecs = escapeScopedSpecs(jobInfo.scopedSpecs(), escapePathVisitor);
+    List<String> deviceScopedSpecsJson = new ArrayList<>();
+    for (SubDeviceSpec subDeviceSpec : jobInfo.subDeviceSpecs().getAllSubDevices()) {
+      deviceScopedSpecsJson.add(
+          escapeScopedSpecs(subDeviceSpec.scopedSpecs(), escapePathVisitor).toJsonString());
+    }
 
     return KickOffTestRequest.newBuilder()
         .addAllDeviceId(
@@ -98,10 +100,7 @@ public class LabRpcProtoConverter {
                 .setJobScopedSpecsJson(resolvedScopedSpecs.toJsonString())
                 .setJobCreateTimeMs(jobInfo.timing().getCreateTime().toEpochMilli())
                 .setJobStartTimeMs(jobInfo.timing().getStartTimeNonNull().toEpochMilli())
-                .addAllDeviceScopedSpecsJson(
-                    jobInfo.subDeviceSpecs().getAllSubDevices().stream()
-                        .map(s -> s.scopedSpecs().toJsonString())
-                        .collect(toImmutableList()))
+                .addAllDeviceScopedSpecsJson(deviceScopedSpecsJson)
                 .addAllJobProperty(StrPairUtil.convertMapToList(jobInfo.properties().getAll())))
         .setTest(
             Test.newBuilder()
@@ -112,6 +111,16 @@ public class LabRpcProtoConverter {
                 .addAllTestProperty(StrPairUtil.convertMapToList(testInfo.properties().getAll())))
         .setParentSpan(parentSpan)
         .build();
+  }
+
+  private static ScopedSpecs escapeScopedSpecs(
+      ScopedSpecs scopedSpecs, JobSpecWalker.Visitor escapePathVisitor)
+      throws MobileHarnessException, InterruptedException {
+    JobSpec scopedJobSpec = scopedSpecs.toJobSpec(JobSpecHelper.getDefaultHelper());
+    JobSpec resolvedScopedJobSpec = JobSpecWalker.resolve(scopedJobSpec, escapePathVisitor);
+    ScopedSpecs resolvedScopedSpecs = new ScopedSpecs(null);
+    resolvedScopedSpecs.addAll(resolvedScopedJobSpec);
+    return resolvedScopedSpecs;
   }
 
   /** A visitor that escapes all paths in the job spec. */
