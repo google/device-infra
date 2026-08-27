@@ -16,12 +16,8 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.DIM_PREFIX;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PLURAL_DISPLAY_KEYS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PROP_PREFIX;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.VALUE_DISPLAY_KEYS;
-
 import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.ComplexMatch;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.ContainsSubstring;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
@@ -35,6 +31,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.MatchesRegex
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import java.util.List;
 import javax.inject.Inject;
 
@@ -58,6 +56,16 @@ public final class FleetChipResolver {
 
   private static final String DIM_DISPLAY_PREFIX = "Dimension ";
   private static final String PROP_DISPLAY_PREFIX = "Host Property ";
+
+  private static final ImmutableSet<String> PLURAL_DISPLAY_KEYS =
+      ImmutableSet.of(
+          DeviceKeys.PREFIX_DEVICE_FIELD + "owner",
+          DeviceKeys.DRIVER.id(),
+          DeviceKeys.DECORATOR.id(),
+          DeviceKeys.PREFIX_DEVICE_FIELD + "executor");
+
+  private static final ImmutableSet<String> VALUE_DISPLAY_KEYS =
+      ImmutableSet.of(HostKeys.PREFIX_HOST_FIELD + "ats_controller");
 
   @Inject
   FleetChipResolver() {}
@@ -114,10 +122,10 @@ public final class FleetChipResolver {
    */
   private static String pillKey(FleetIndex index, String keyId) {
     String label = displayName(index, keyId);
-    if (keyId.startsWith(DIM_PREFIX) && label.startsWith(DIM_DISPLAY_PREFIX)) {
+    if (keyId.startsWith(DeviceKeys.PREFIX_DIMENSION) && label.startsWith(DIM_DISPLAY_PREFIX)) {
       return label.substring(DIM_DISPLAY_PREFIX.length());
     }
-    if (keyId.startsWith(PROP_PREFIX) && label.startsWith(PROP_DISPLAY_PREFIX)) {
+    if (keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY) && label.startsWith(PROP_DISPLAY_PREFIX)) {
       return "Host " + label.substring(PROP_DISPLAY_PREFIX.length());
     }
     return label;

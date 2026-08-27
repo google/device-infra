@@ -16,9 +16,6 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.DIM_PREFIX;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PROP_PREFIX;
-
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -29,6 +26,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnC
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogSection;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
@@ -130,11 +129,11 @@ public final class FleetColumnCataloger {
     List<String> dimensions = new ArrayList<>();
     List<String> properties = new ArrayList<>();
     for (String keyId : index.keyIds()) {
-      if (keyId.startsWith(DIM_PREFIX)) {
+      if (keyId.startsWith(DeviceKeys.PREFIX_DIMENSION)) {
         if (!redundant.contains(keyId)) {
           dimensions.add(keyId);
         }
-      } else if (keyId.startsWith(PROP_PREFIX)) {
+      } else if (keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY)) {
         properties.add(keyId);
       } else {
         builtin.add(keyId);
@@ -296,14 +295,14 @@ public final class FleetColumnCataloger {
     // First non-dim key seen for each bare name is the twin candidate.
     Map<String, String> bareToBuiltin = new LinkedHashMap<>();
     for (String keyId : index.keyIds()) {
-      if (!keyId.startsWith(DIM_PREFIX)) {
+      if (!keyId.startsWith(DeviceKeys.PREFIX_DIMENSION)) {
         bareToBuiltin.putIfAbsent(bareName(keyId), keyId);
       }
     }
     // Candidate dim -> its twin, pruned the moment the two disagree on a device that has the dim.
     Map<String, String> live = new LinkedHashMap<>();
     for (String keyId : index.keyIds()) {
-      if (keyId.startsWith(DIM_PREFIX)) {
+      if (keyId.startsWith(DeviceKeys.PREFIX_DIMENSION)) {
         String twin = bareToBuiltin.get(bareName(keyId));
         if (twin != null) {
           live.put(keyId, twin);
