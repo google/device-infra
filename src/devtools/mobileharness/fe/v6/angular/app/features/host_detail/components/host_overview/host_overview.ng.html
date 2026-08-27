@@ -537,10 +537,11 @@
   </app-info-card>
   <app-info-card #overviewSection id="host-properties" cardTitle="Host Properties">
     <div id="properties-content" class="info-card-content">
-      @if (host.properties && objectUtils.objectKeys(host.properties).length > 0) {
+      @let sortedKeys = host.properties ? objectUtils.sortedObjectKeys(host.properties) : [];
+      @if (sortedKeys.length > 0) {
         <div class="data-block">
           <dl class="data-block-grid">
-            @for (key of objectUtils.objectKeys(host.properties); track key) {
+            @for (key of sortedKeys; track key) {
               <div class="data-block-row contents">
                 <dt>{{ key }}</dt>
                 <dd>{{ host.properties[key] }}</dd>

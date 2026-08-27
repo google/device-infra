@@ -8,6 +8,9 @@ export const objectUtils = {
   objectKeys(obj: object): string[] {
     return Object.keys(obj);
   },
+  sortedObjectKeys(obj: object): string[] {
+    return Object.keys(obj).sort();
+  },
   deepCopy(obj: object): object {
     return JSON.parse(JSON.stringify(obj)) as object;
   },

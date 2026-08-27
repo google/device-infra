@@ -525,6 +525,43 @@ public final class GetHostOverviewHandlerTest {
   }
 
   @Test
+  public void getHostOverview_properties_sorted() throws Exception {
+    GetLabInfoResponse response =
+        GetLabInfoResponse.newBuilder()
+            .setLabQueryResult(
+                LabQueryResult.newBuilder()
+                    .setLabView(
+                        LabView.newBuilder()
+                            .addLabData(
+                                LabData.newBuilder()
+                                    .setLabInfo(
+                                        LabInfo.newBuilder()
+                                            .setLabServerFeature(
+                                                LabServerFeature.newBuilder()
+                                                    .setHostProperties(
+                                                        HostProperties.newBuilder()
+                                                            .addHostProperty(
+                                                                HostProperty.newBuilder()
+                                                                    .setKey("PropB")
+                                                                    .setValue("ValB"))
+                                                            .addHostProperty(
+                                                                HostProperty.newBuilder()
+                                                                    .setKey("PropA")
+                                                                    .setValue("ValA"))))))))
+            .build();
+    when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(response));
+
+    HostOverview overview =
+        Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
+            .getOverviewContent();
+
+    assertThat(overview.getPropertiesMap())
+        .containsExactly("PropA", "ValA", "PropB", "ValB")
+        .inOrder();
+  }
+
+  @Test
   public void getHostOverview_upgradeAvailable_canUpgradeIsTrue() throws Exception {
     mockLabInfoWithProperty("host_version", "4.357.0");
     mockLatestVersionResponse("4.358.0");

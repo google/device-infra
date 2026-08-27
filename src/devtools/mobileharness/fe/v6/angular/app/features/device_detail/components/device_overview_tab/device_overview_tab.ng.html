@@ -481,10 +481,11 @@
     <!-- Properties Card -->
     <app-info-card #overviewSection id="overview-properties" cardTitle="Properties">
       <div id="properties-content" class="info-card-content">
-        @if (device.properties && objectUtils.objectKeys(device.properties).length > 0) {
+        @let sortedKeys = device.properties ? objectUtils.sortedObjectKeys(device.properties) : [];
+        @if (sortedKeys.length > 0) {
           <div class="data-block">
             <dl class="data-block-grid">
-              @for (key of objectUtils.objectKeys(device.properties); track key) {
+              @for (key of sortedKeys; track key) {
                 <div class="data-block-row contents">
                   <dt>{{ key }}</dt>
                   <dd>{{ device.properties[key] }}</dd>
