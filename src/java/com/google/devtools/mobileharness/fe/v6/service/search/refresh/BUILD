@@ -32,13 +32,13 @@ java_library(
 )
 
 java_library(
-    name = "fleet_data_refresher",
-    srcs = ["FleetDataRefresher.java"],
+    name = "core_fleet_data_refresher",
+    srcs = ["CoreFleetDataRefresher.java"],
     deps = [
         ":fleet_snapshot_store",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:core_fleet_raw_data",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index_builder",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_raw_data",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:fleet_data_source",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
@@ -68,7 +68,7 @@ java_library(
     srcs = ["FleetSearchDataModule.java"],
     deps = [
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:ats_one_fleet_data_source",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:ats_fleet_data_source",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:fleet_data_source",
         "@maven//:com_google_inject_guice",
     ],

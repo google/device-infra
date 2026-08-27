@@ -27,8 +27,8 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.common.util.concurrent.Uninterruptibles;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.FleetDataSource;
 import java.time.Duration;
@@ -62,7 +62,7 @@ import javax.inject.Singleton;
  * the fixed-delay cadence measures the gap between completed cycles.
  */
 @Singleton
-public final class FleetDataRefresher {
+public final class CoreFleetDataRefresher {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -83,7 +83,7 @@ public final class FleetDataRefresher {
   @Nullable private ScheduledFuture<?> scheduledTask;
 
   @Inject
-  FleetDataRefresher(
+  CoreFleetDataRefresher(
       Map<Fleet, FleetDataSource> sources,
       FleetIndexBuilder indexBuilder,
       FleetSnapshotStore snapshotStore,
@@ -111,7 +111,7 @@ public final class FleetDataRefresher {
       Fleet fleet = entry.getKey();
       FleetDataSource source = entry.getValue();
       Instant start = instantSource.instant();
-      ListenableFuture<FleetRawData> rawFuture =
+      ListenableFuture<CoreFleetRawData> rawFuture =
           Futures.withTimeout(source.pull(), PULL_TIMEOUT, scheduledExecutor);
       ListenableFuture<Void> published =
           Futures.transform(

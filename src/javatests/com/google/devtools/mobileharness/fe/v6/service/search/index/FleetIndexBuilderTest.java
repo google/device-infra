@@ -87,8 +87,8 @@ public final class FleetIndexBuilderTest {
 
     // device-0 carries a WiFi SSID; device-1 and device-2 carry none. Host lab1 carries enrichment
     // (lab types plus release and daemon attributes); host lab2 carries none.
-    FleetRawData raw =
-        FleetRawData.builder()
+    CoreFleetRawData raw =
+        CoreFleetRawData.builder()
             .setLabData(labResult)
             .setDeviceEnrichments(ImmutableMap.of("device-0", deviceEnrichment("GoogleGuest")))
             .setHostEnrichments(ImmutableMap.of("lab1", lab1Enrichment()))
@@ -320,8 +320,8 @@ public final class FleetIndexBuilderTest {
                             device1())))
             .build();
 
-    FleetRawData raw =
-        FleetRawData.builder()
+    CoreFleetRawData raw =
+        CoreFleetRawData.builder()
             .setLabData(labResult)
             .setHostEnrichments(
                 ImmutableMap.of(
@@ -375,8 +375,8 @@ public final class FleetIndexBuilderTest {
 
     // device-0 belongs to controller "xiaomi", which the registry maps to a friendly display.
     // device-1 belongs to controller "acme", which the registry does not know.
-    FleetRawData raw =
-        FleetRawData.builder()
+    CoreFleetRawData raw =
+        CoreFleetRawData.builder()
             .setLabData(labResult)
             .setDeviceEnrichments(
                 ImmutableMap.of(
@@ -430,8 +430,8 @@ public final class FleetIndexBuilderTest {
                             device1())))
             .build();
 
-    FleetRawData raw =
-        FleetRawData.builder()
+    CoreFleetRawData raw =
+        CoreFleetRawData.builder()
             .setLabData(labResult)
             .setHostEnrichments(ImmutableMap.of("lab1", hostAtsControllerEnrichment("xiaomi")))
             .setAtsControllerDisplays(ImmutableMap.of("xiaomi", "Partner Lab: Xiaomi"))
@@ -463,7 +463,7 @@ public final class FleetIndexBuilderTest {
   @Test
   public void build_emptyResult_returnsEmptySnapshot() {
     FleetSnapshot snapshot =
-        builder.build(FleetRawData.ofLabData(LabQueryResult.getDefaultInstance()), BUILD_TIME);
+        builder.build(CoreFleetRawData.ofLabData(LabQueryResult.getDefaultInstance()), BUILD_TIME);
 
     assertThat(snapshot.deviceCount()).isEqualTo(0);
     assertThat(snapshot.hostCount()).isEqualTo(0);

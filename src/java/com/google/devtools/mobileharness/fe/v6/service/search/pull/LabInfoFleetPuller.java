@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.pull;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
 import com.google.common.base.Stopwatch;
@@ -24,68 +26,38 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.LabInfoMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.protobuf.FieldMask;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.Map;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 
 /**
- * Pulls the full fleet or on-demand single dimensions from {@code LabInfoService}.
+ * Pulls the core fleet or on-demand single dimensions from {@code LabInfoService}.
  *
  * <p>Unlike the per-entity detail-page reads, this asks for the whole fleet in one call: no filter
- * (every lab and device) and no page limit. It accepts the master's cached data, which is enough
- * for a periodically refreshed index that does not need the per-query realtime path (the {@code
- * use_realtime_data} opt-in stays at its default). The result comes back as a lab to device tree
- * ({@code lab_view_request}), which is the shape {@code FleetIndexBuilder} consumes.
+ * (every lab and device) and no page limit, using {@code DeviceInfoMask} and {@code LabInfoMask}
+ * derived from the schema registry. It accepts the master's cached data, which is enough for a
+ * periodically refreshed index that does not need the per-query realtime path.
  *
- * <p>{@link #pull()} is non-blocking: it returns the {@link ListenableFuture} from the async {@code
+ * <p>{@link #pull} is non-blocking: it returns the {@link ListenableFuture} from the async {@code
  * LabInfoService} call, transformed to its {@link LabQueryResult}. Timeouts and failure handling
  * are applied by the refresher around the returned future.
  */
 public final class LabInfoFleetPuller {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  private static final FieldMask FULL_FLEET_FIELD_MASK =
-      FieldMask.newBuilder()
-          .addPaths("device_locator.id")
-          .addPaths("device_status")
-          .addPaths("device_feature.type")
-          .addPaths("device_feature.owner")
-          .addPaths("device_feature.composite_dimension")
-          .build();
-
-  /** The full fleet request: lab view, masked core fields, 8 core dimensions, no page limit. */
-  private static final GetLabInfoRequest FULL_FLEET_REQUEST =
-      GetLabInfoRequest.newBuilder()
-          .setLabQuery(
-              LabQuery.newBuilder()
-                  .setLabViewRequest(LabQuery.LabViewRequest.getDefaultInstance())
-                  .setMask(
-                      LabQuery.Mask.newBuilder()
-                          .setDeviceInfoMask(
-                              LabQuery.Mask.DeviceInfoMask.newBuilder()
-                                  .setFieldMask(FULL_FLEET_FIELD_MASK)
-                                  .setSupportedDimensionsMask(
-                                      LabQuery.Mask.DeviceInfoMask.DimensionsMask.newBuilder()
-                                          .addAllDimensionNames(
-                                              FleetSearchKeys.CORE_DIMENSION_NAMES))
-                                  .setRequiredDimensionsMask(
-                                      LabQuery.Mask.DeviceInfoMask.DimensionsMask.newBuilder()
-                                          .addAllDimensionNames(
-                                              FleetSearchKeys.CORE_DIMENSION_NAMES)))))
-          .setPage(Page.newBuilder().setLimit(0))
-          .build();
 
   private static final FieldMask SINGLE_DIM_FIELD_MASK =
       FieldMask.newBuilder()
@@ -101,22 +73,36 @@ public final class LabInfoFleetPuller {
   }
 
   /**
-   * Starts a full-fleet pull from the local (self) universe; the future completes with its {@link
-   * LabQueryResult}.
+   * Starts a core fleet pull for the given masks from the local (self) universe; the future
+   * completes with its {@link LabQueryResult}.
    */
-  public ListenableFuture<LabQueryResult> pull() {
-    return pull(UniverseScope.SELF);
+  public ListenableFuture<LabQueryResult> pull(
+      DeviceInfoMask deviceInfoMask, LabInfoMask labInfoMask) {
+    return pull(deviceInfoMask, labInfoMask, UniverseScope.SELF);
   }
 
-  /** Starts a full-fleet pull for the specified universe. */
-  public ListenableFuture<LabQueryResult> pull(UniverseScope universeScope) {
+  /** Starts a core fleet pull for the given masks and universe. */
+  public ListenableFuture<LabQueryResult> pull(
+      DeviceInfoMask deviceInfoMask, LabInfoMask labInfoMask, UniverseScope universeScope) {
     logger.atInfo().log(
         "Issuing GetLabInfo to the master (%s universe): full fleet, no page limit, cached"
             + " data.",
         universeScope);
+    GetLabInfoRequest request =
+        GetLabInfoRequest.newBuilder()
+            .setLabQuery(
+                LabQuery.newBuilder()
+                    .setLabViewRequest(LabQuery.LabViewRequest.getDefaultInstance())
+                    .setMask(
+                        LabQuery.Mask.newBuilder()
+                            .setDeviceInfoMask(deviceInfoMask)
+                            .setLabInfoMask(labInfoMask)))
+            .setPage(Page.newBuilder().setLimit(0))
+            .setUseRealtimeData(false)
+            .build();
     Stopwatch stopwatch = Stopwatch.createStarted();
     return Futures.transform(
-        labInfoProvider.getLabInfoAsync(FULL_FLEET_REQUEST, universeScope),
+        labInfoProvider.getLabInfoAsync(request, universeScope),
         response -> {
           LabQueryResult result = response.getLabQueryResult();
           logger.atInfo().log(
@@ -130,7 +116,10 @@ public final class LabInfoFleetPuller {
   /** Starts an on-demand single dimension pull from the specified universe. */
   public ListenableFuture<DimensionOverlayRaw> pullDimension(
       String keyId, UniverseScope universeScope) {
-    String dimName = keyId.startsWith("dim::") ? keyId.substring("dim::".length()) : keyId;
+    String dimName =
+        keyId.startsWith(DeviceKeys.PREFIX_DIMENSION)
+            ? keyId.substring(DeviceKeys.PREFIX_DIMENSION.length())
+            : (keyId.startsWith("dim::") ? keyId.substring("dim::".length()) : keyId);
 
     GetLabInfoRequest request =
         GetLabInfoRequest.newBuilder()
@@ -155,46 +144,24 @@ public final class LabInfoFleetPuller {
     return Futures.transform(
         labInfoProvider.getLabInfoAsync(request, universeScope),
         response -> {
-          LabQueryResult result = response.getLabQueryResult();
-          ImmutableMap.Builder<String, ImmutableList<String>> uuidToValues = ImmutableMap.builder();
-
-          if (result.hasLabView()) {
-            for (LabData labData : result.getLabView().getLabDataList()) {
-              for (DeviceInfo deviceInfo : labData.getDeviceList().getDeviceInfoList()) {
-                String uuid = deviceInfo.getDeviceLocator().getId();
-                if (uuid.isEmpty()) {
-                  continue;
-                }
-                Set<String> values = new LinkedHashSet<>();
-                for (DeviceDimension dim :
-                    deviceInfo
-                        .getDeviceFeature()
-                        .getCompositeDimension()
-                        .getSupportedDimensionList()) {
-                  if (dim.getName().equals(dimName) && !dim.getValue().isEmpty()) {
-                    values.add(dim.getValue());
-                  }
-                }
-                for (DeviceDimension dim :
-                    deviceInfo
-                        .getDeviceFeature()
-                        .getCompositeDimension()
-                        .getRequiredDimensionList()) {
-                  if (dim.getName().equals(dimName) && !dim.getValue().isEmpty()) {
-                    values.add(dim.getValue());
-                  }
-                }
-                if (!values.isEmpty()) {
-                  uuidToValues.put(uuid, ImmutableList.copyOf(values));
-                }
-              }
-            }
-          }
+          ImmutableMap<String, ImmutableList<String>> uuidToValues =
+              response.getLabQueryResult().getLabView().getLabDataList().stream()
+                  .flatMap(labData -> labData.getDeviceList().getDeviceInfoList().stream())
+                  .filter(deviceInfo -> !deviceInfo.getDeviceLocator().getId().isEmpty())
+                  .map(
+                      deviceInfo ->
+                          Map.entry(
+                              deviceInfo.getDeviceLocator().getId(),
+                              dimensionValues(deviceInfo, dimName)))
+                  .filter(entry -> !entry.getValue().isEmpty())
+                  .collect(
+                      toImmutableMap(
+                          Map.Entry::getKey, Map.Entry::getValue, (first, second) -> second));
 
           logger.atInfo().log(
               "GetLabInfo on-demand dim '%s' returned %d devices in %d ms.",
-              keyId, uuidToValues.buildKeepingLast().size(), stopwatch.elapsed().toMillis());
-          return DimensionOverlayRaw.create(keyId, uuidToValues.buildKeepingLast());
+              keyId, uuidToValues.size(), stopwatch.elapsed().toMillis());
+          return DimensionOverlayRaw.create(keyId, uuidToValues);
         },
         directExecutor());
   }
@@ -202,5 +169,20 @@ public final class LabInfoFleetPuller {
   /** Starts an on-demand single dimension pull from the self universe. */
   public ListenableFuture<DimensionOverlayRaw> pullDimension(String keyId) {
     return pullDimension(keyId, UniverseScope.SELF);
+  }
+
+  /**
+   * Collects the distinct non-empty values of {@code dimName} carried by a device, across both its
+   * supported and required composite dimensions.
+   */
+  private static ImmutableList<String> dimensionValues(DeviceInfo deviceInfo, String dimName) {
+    DeviceCompositeDimension composite = deviceInfo.getDeviceFeature().getCompositeDimension();
+    return Stream.concat(
+            composite.getSupportedDimensionList().stream(),
+            composite.getRequiredDimensionList().stream())
+        .filter(dim -> dim.getName().equals(dimName) && !dim.getValue().isEmpty())
+        .map(DeviceDimension::getValue)
+        .distinct()
+        .collect(toImmutableList());
   }
 }

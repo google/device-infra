@@ -21,7 +21,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 
 /**
- * The complete set of raw inputs a data source produces for one build pass, consumed by {@link
+ * The complete set of raw inputs a data source produces for one core build pass, consumed by {@link
  * FleetIndexBuilder} to produce a {@link FleetSnapshot}.
  *
  * <p>{@link #labData()} is the LabInfo query result that every deployment provides. The enrichment
@@ -32,7 +32,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
  * no extra data.
  */
 @AutoValue
-public abstract class FleetRawData {
+public abstract class CoreFleetRawData {
 
   /**
    * Lab query result from LabInfoService. The base data every device and host record derives from.
@@ -47,7 +47,7 @@ public abstract class FleetRawData {
 
   /**
    * Friendly display names for ATS controllers, keyed by controller id. The ats-all source fills
-   * this so each {@code host::ats_controller} value can show a friendly display (for example
+   * this so each {@code host_field::ats_controller} value can show a friendly display (for example
    * "Partner Lab: Xiaomi") while its filter term stays the controller id. Empty in deployments that
    * do not carry ATS controllers.
    */
@@ -55,18 +55,18 @@ public abstract class FleetRawData {
 
   /** Creates a new builder with empty enrichment maps. */
   public static Builder builder() {
-    return new AutoValue_FleetRawData.Builder()
+    return new AutoValue_CoreFleetRawData.Builder()
         .setDeviceEnrichments(ImmutableMap.of())
         .setHostEnrichments(ImmutableMap.of())
         .setAtsControllerDisplays(ImmutableMap.of());
   }
 
   /** Creates raw data from lab query results alone, with no enrichment. */
-  public static FleetRawData ofLabData(LabQueryResult labData) {
+  public static CoreFleetRawData ofLabData(LabQueryResult labData) {
     return builder().setLabData(labData).build();
   }
 
-  /** Builder for {@link FleetRawData}. */
+  /** Builder for {@link CoreFleetRawData}. */
   @AutoValue.Builder
   public abstract static class Builder {
     public abstract Builder setLabData(LabQueryResult labData);
@@ -80,6 +80,6 @@ public abstract class FleetRawData {
     public abstract Builder setAtsControllerDisplays(
         ImmutableMap<String, String> atsControllerDisplays);
 
-    public abstract FleetRawData build();
+    public abstract CoreFleetRawData build();
   }
 }

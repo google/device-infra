@@ -30,8 +30,8 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.FleetDataSource;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
@@ -43,11 +43,11 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 /**
- * Unit tests for {@link FleetDataRefresher#refreshOnce()}. Scheduled timing is deliberately not
+ * Unit tests for {@link CoreFleetDataRefresher#refreshOnce()}. Scheduled timing is deliberately not
  * exercised here because sleep-based timing tests are flaky.
  */
 @RunWith(JUnit4.class)
-public final class FleetDataRefresherTest {
+public final class CoreFleetDataRefresherTest {
 
   private static final Instant BUILD_TIME = Instant.ofEpochSecond(1_700_000_000L);
 
@@ -78,7 +78,7 @@ public final class FleetDataRefresherTest {
   public void refreshOnce_oneFleetFails_keepsItsPreviousSnapshotAndRefreshesOthers() {
     FakeFleetDataSource selfSource = new FakeFleetDataSource(Fleet.FLEET_SELF);
     FakeFleetDataSource atsSource = new FakeFleetDataSource(Fleet.FLEET_ATS);
-    FleetDataRefresher refresher = refresher(selfSource, atsSource);
+    CoreFleetDataRefresher refresher = refresher(selfSource, atsSource);
 
     // A first refresh publishes a snapshot for both fleets.
     selfSource.setResult(deviceResult(2));
@@ -95,12 +95,12 @@ public final class FleetDataRefresherTest {
     assertThat(store.get(Fleet.FLEET_ATS).deviceCount()).isEqualTo(1);
   }
 
-  private FleetDataRefresher refresher(FleetDataSource... sources) {
+  private CoreFleetDataRefresher refresher(FleetDataSource... sources) {
     ImmutableMap.Builder<Fleet, FleetDataSource> map = ImmutableMap.builder();
     for (FleetDataSource source : sources) {
       map.put(source.fleet(), source);
     }
-    return new FleetDataRefresher(
+    return new CoreFleetDataRefresher(
         map.buildOrThrow(),
         indexBuilder,
         store,
@@ -127,15 +127,15 @@ public final class FleetDataRefresherTest {
   /** In-memory {@link FleetDataSource} that returns a configured result or a failed future. */
   private static final class FakeFleetDataSource implements FleetDataSource {
     private final Fleet fleet;
-    private ListenableFuture<FleetRawData> result =
-        immediateFuture(FleetRawData.ofLabData(LabQueryResult.getDefaultInstance()));
+    private ListenableFuture<CoreFleetRawData> result =
+        immediateFuture(CoreFleetRawData.ofLabData(LabQueryResult.getDefaultInstance()));
 
     FakeFleetDataSource(Fleet fleet) {
       this.fleet = fleet;
     }
 
     void setResult(LabQueryResult result) {
-      this.result = immediateFuture(FleetRawData.ofLabData(result));
+      this.result = immediateFuture(CoreFleetRawData.ofLabData(result));
     }
 
     void setFailure(RuntimeException failure) {
@@ -148,7 +148,7 @@ public final class FleetDataRefresherTest {
     }
 
     @Override
-    public ListenableFuture<FleetRawData> pull() {
+    public ListenableFuture<CoreFleetRawData> pull() {
       return result;
     }
 

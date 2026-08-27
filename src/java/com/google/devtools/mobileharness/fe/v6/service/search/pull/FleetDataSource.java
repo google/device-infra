@@ -18,15 +18,15 @@ package com.google.devtools.mobileharness.fe.v6.service.search.pull;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetRawData;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
 
 /**
  * A source of raw search data for a single fleet.
  *
  * <p>There is exactly one source per {@link Fleet}. Each build binds the sources its deployment can
- * reach: the OSS build binds the ats-one source under {@link Fleet#FLEET_SELF}; the internal build
- * binds the 1p source under {@link Fleet#FLEET_SELF} and the aggregated ATS source under {@link
- * Fleet#FLEET_ATS}. {@link #pull()} produces the {@link FleetRawData} that {@code
+ * reach: the OSS build binds the standalone ATS source under {@link Fleet#FLEET_SELF}; the internal
+ * build binds the 1p source under {@link Fleet#FLEET_SELF} and the aggregated ATS source under
+ * {@link Fleet#FLEET_ATS}. {@link #pull()} produces the {@link CoreFleetRawData} that {@code
  * FleetIndexBuilder} turns into a snapshot.
  *
  * <p>{@link #pull()} is asynchronous: it composes its backend RPCs with {@link ListenableFuture}
@@ -40,12 +40,12 @@ public interface FleetDataSource {
   Fleet fleet();
 
   /**
-   * Starts one full pull of this fleet's raw data and returns a future for the result.
+   * Starts one full pull of this fleet's core raw data and returns a future for the result.
    *
    * <p>The returned future fails if a backend this source consults fails; the refresher logs it and
    * keeps the previously published snapshot for this fleet.
    */
-  ListenableFuture<FleetRawData> pull();
+  ListenableFuture<CoreFleetRawData> pull();
 
   /**
    * Starts an on-demand pull of a single dimension's values for this fleet and returns a future for

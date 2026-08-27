@@ -28,8 +28,8 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetIndex;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DimensionOverlay;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.FleetDataSource;
@@ -139,7 +139,7 @@ public final class DimensionOverlayStoreTest {
     }
 
     @Override
-    public ListenableFuture<FleetRawData> pull() {
+    public ListenableFuture<CoreFleetRawData> pull() {
       throw new UnsupportedOperationException();
     }
 

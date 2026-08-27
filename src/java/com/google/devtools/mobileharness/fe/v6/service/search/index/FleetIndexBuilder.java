@@ -146,18 +146,18 @@ public final class FleetIndexBuilder {
    * carry only a lab query result, such as the aggregated ATS fan-out, and by tests.
    */
   public FleetSnapshot build(LabQueryResult labData, Instant buildTime) {
-    return build(FleetRawData.ofLabData(labData), buildTime);
+    return build(CoreFleetRawData.ofLabData(labData), buildTime);
   }
 
   /**
    * Builds a snapshot from the raw data, stamping the given build time.
    *
-   * <p>{@link FleetRawData#labData()} provides the base device and host records. Per-device and
+   * <p>{@link CoreFleetRawData#labData()} provides the base device and host records. Per-device and
    * per-host enrichment, when present, adds the WiFi SSID, the host lab types, and the host
    * release, daemon, and version attributes. A device or host with no enrichment entry behaves
    * exactly as if only lab data were supplied.
    */
-  public FleetSnapshot build(FleetRawData raw, Instant buildTime) {
+  public FleetSnapshot build(CoreFleetRawData raw, Instant buildTime) {
     LabQueryResult labResult = raw.labData();
     ImmutableMap<String, String> atsControllerDisplays = raw.atsControllerDisplays();
 

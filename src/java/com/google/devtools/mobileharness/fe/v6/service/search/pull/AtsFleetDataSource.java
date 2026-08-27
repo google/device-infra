@@ -26,8 +26,10 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInf
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceEnrichment;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetRawData;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.List;
@@ -35,30 +37,36 @@ import java.util.Optional;
 import javax.inject.Inject;
 
 /**
- * The ats-one fleet data source: the local ATS controller's own fleet, enriched with device WiFi
- * SSIDs from the config service.
+ * The standalone ATS fleet data source: the local ATS controller's own fleet, enriched with device
+ * WiFi SSIDs from the config service.
  *
- * <p>This is the {@link Fleet#FLEET_SELF} source in the OSS build. It pulls the full fleet from
- * {@code LabInfoService} for the base device and host records, then asks the config service for the
- * WiFi SSID of every device it saw. When the config service is unavailable (for example the OSS
- * server is not wired to a config server), the config lookup returns no configs and the fleet is
- * served from lab data alone.
+ * <p>This is the {@link Fleet#FLEET_SELF} source in the OSS build. It pulls the core fleet from
+ * {@code LabInfoService} using masks derived from {@link AtsDeviceKeyRegistry} and {@link
+ * AtsHostKeyRegistry}, then asks the config service for the WiFi SSID of every device it saw. When
+ * the config service is unavailable (for example the OSS server is not wired to a config server),
+ * the config lookup returns no configs and the fleet is served from lab data alone.
  *
  * <p>The config lookup depends on the device ids from the lab data, so the two reads chain rather
  * than run in parallel; the chain is composed asynchronously ({@link #pull()} never blocks).
  */
-public final class AtsOneFleetDataSource implements FleetDataSource {
+public final class AtsFleetDataSource implements FleetDataSource {
 
   private final LabInfoFleetPuller labInfoFleetPuller;
+  private final AtsDeviceKeyRegistry deviceKeyRegistry;
+  private final AtsHostKeyRegistry hostKeyRegistry;
   private final ConfigurationProvider configurationProvider;
   private final ListeningExecutorService executor;
 
   @Inject
-  AtsOneFleetDataSource(
+  AtsFleetDataSource(
       LabInfoFleetPuller labInfoFleetPuller,
+      AtsDeviceKeyRegistry deviceKeyRegistry,
+      AtsHostKeyRegistry hostKeyRegistry,
       ConfigurationProvider configurationProvider,
       ListeningExecutorService executor) {
     this.labInfoFleetPuller = labInfoFleetPuller;
+    this.deviceKeyRegistry = deviceKeyRegistry;
+    this.hostKeyRegistry = hostKeyRegistry;
     this.configurationProvider = configurationProvider;
     this.executor = executor;
   }
@@ -69,14 +77,15 @@ public final class AtsOneFleetDataSource implements FleetDataSource {
   }
 
   @Override
-  public ListenableFuture<FleetRawData> pull() {
+  public ListenableFuture<CoreFleetRawData> pull() {
     return Futures.transformAsync(
-        labInfoFleetPuller.pull(),
+        labInfoFleetPuller.pull(
+            deviceKeyRegistry.deriveDeviceInfoMask(), hostKeyRegistry.deriveLabInfoMask()),
         labData ->
             Futures.transform(
                 configurationProvider.getDeviceConfigs(deviceIds(labData), UniverseScope.SELF),
                 deviceConfigs ->
-                    FleetRawData.builder()
+                    CoreFleetRawData.builder()
                         .setLabData(labData)
                         .setDeviceEnrichments(deviceEnrichments(deviceConfigs))
                         .build(),

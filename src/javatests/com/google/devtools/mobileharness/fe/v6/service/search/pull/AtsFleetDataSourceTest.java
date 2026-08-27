@@ -32,7 +32,9 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetRawData;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
@@ -44,17 +46,19 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
-/** Unit tests for {@link AtsOneFleetDataSource}. */
+/** Unit tests for {@link AtsFleetDataSource}. */
 @RunWith(JUnit4.class)
-public final class AtsOneFleetDataSourceTest {
+public final class AtsFleetDataSourceTest {
 
   private static final LabQueryResult TWO_DEVICE_RESULT = labQueryResult("device-0", "device-1");
 
   private final FakeLabInfoProvider labInfoProvider = new FakeLabInfoProvider();
   private final FakeConfigurationProvider configurationProvider = new FakeConfigurationProvider();
-  private final AtsOneFleetDataSource source =
-      new AtsOneFleetDataSource(
+  private final AtsFleetDataSource source =
+      new AtsFleetDataSource(
           new LabInfoFleetPuller(labInfoProvider),
+          new AtsDeviceKeyRegistry(),
+          new AtsHostKeyRegistry(),
           configurationProvider,
           newDirectExecutorService());
 
@@ -71,7 +75,7 @@ public final class AtsOneFleetDataSourceTest {
             deviceConfigWithWifi("device-0", "guest-net"),
             deviceConfigWithWifi("device-1", "lab-net")));
 
-    FleetRawData rawData = source.pull().get();
+    CoreFleetRawData rawData = source.pull().get();
 
     assertThat(rawData.labData()).isEqualTo(TWO_DEVICE_RESULT);
     assertThat(rawData.deviceEnrichments().keySet()).containsExactly("device-0", "device-1");
@@ -88,7 +92,7 @@ public final class AtsOneFleetDataSourceTest {
             // device-1 has a config but no default WiFi, so it contributes no enrichment.
             DeviceConfig.newBuilder().setUuid("device-1").build()));
 
-    FleetRawData rawData = source.pull().get();
+    CoreFleetRawData rawData = source.pull().get();
 
     assertThat(rawData.deviceEnrichments().keySet()).containsExactly("device-0");
   }
@@ -99,7 +103,7 @@ public final class AtsOneFleetDataSourceTest {
     // The config service is gated off, so getDeviceConfigs returns an empty list.
     configurationProvider.setDeviceConfigs(ImmutableList.of());
 
-    FleetRawData rawData = source.pull().get();
+    CoreFleetRawData rawData = source.pull().get();
 
     assertThat(rawData.labData()).isEqualTo(TWO_DEVICE_RESULT);
     assertThat(rawData.deviceEnrichments()).isEmpty();

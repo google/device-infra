@@ -37,7 +37,7 @@ java_library(
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_search_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
@@ -53,14 +53,14 @@ java_library(
     deps = [
         ":dimension_overlay_raw",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_raw_data",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:core_fleet_raw_data",
         "@maven//:com_google_guava_guava",
     ],
 )
 
 java_library(
-    name = "ats_one_fleet_data_source",
-    srcs = ["AtsOneFleetDataSource.java"],
+    name = "ats_fleet_data_source",
+    srcs = ["AtsFleetDataSource.java"],
     deps = [
         ":dimension_overlay_raw",
         ":fleet_data_source",
@@ -68,8 +68,9 @@ java_library(
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:core_fleet_raw_data",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:device_enrichment",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_raw_data",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_registry",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "@maven//:com_google_guava_guava",

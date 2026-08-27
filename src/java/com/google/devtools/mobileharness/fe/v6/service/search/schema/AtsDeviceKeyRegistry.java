@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.schema;
 
+import com.google.common.annotations.VisibleForTesting;
 import javax.inject.Inject;
 
 /**
@@ -27,7 +28,8 @@ import javax.inject.Inject;
 public final class AtsDeviceKeyRegistry extends DeviceKeyRegistry {
 
   @Inject
-  AtsDeviceKeyRegistry() {
+  @VisibleForTesting
+  public AtsDeviceKeyRegistry() {
     super(AtsDeviceKeys.ATS_DEVICE_KEYS);
   }
 }

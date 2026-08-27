@@ -50,8 +50,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueLi
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Indicator;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Row;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.HostEnrichment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
@@ -211,8 +211,8 @@ public final class HostSearchTest {
     // Enrich each host with the ATS controller it came from and a controller-display registry that
     // only covers ctrl-1, so the cell shows the friendly display for ctrl-1 and falls back to the
     // raw id for the unregistered ctrl-2. lab-c has no controller, so its cell is blank.
-    FleetRawData raw =
-        FleetRawData.builder()
+    CoreFleetRawData raw =
+        CoreFleetRawData.builder()
             .setLabData(fleet())
             .setHostEnrichments(
                 ImmutableMap.of(

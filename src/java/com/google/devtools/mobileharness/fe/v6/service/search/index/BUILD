@@ -71,8 +71,8 @@ java_library(
 )
 
 java_library(
-    name = "fleet_raw_data",
-    srcs = ["FleetRawData.java"],
+    name = "core_fleet_raw_data",
+    srcs = ["CoreFleetRawData.java"],
     deps = [
         ":device_enrichment",
         ":host_enrichment",
@@ -161,10 +161,10 @@ java_library(
     name = "fleet_index_builder",
     srcs = ["FleetIndexBuilder.java"],
     deps = [
+        ":core_fleet_raw_data",
         ":device_enrichment",
         ":device_record",
         ":fleet_index",
-        ":fleet_raw_data",
         ":fleet_search_keys",
         ":fleet_snapshot",
         ":host_enrichment",

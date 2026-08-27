@@ -45,9 +45,9 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPageReq
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Indicator;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Row;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceEnrichment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.HostEnrichment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
@@ -255,8 +255,8 @@ public final class FleetFlatSearcherTest {
     // Enrich the same fleet with per-device ATS controllers and a controller-display registry that
     // only covers ctrl-1, so the cell shows the friendly display for ctrl-1 and falls back to the
     // raw id for the unregistered ctrl-2.
-    FleetRawData raw =
-        FleetRawData.builder()
+    CoreFleetRawData raw =
+        CoreFleetRawData.builder()
             .setLabData(fleet())
             .setDeviceEnrichments(
                 ImmutableMap.of(
@@ -293,8 +293,8 @@ public final class FleetFlatSearcherTest {
     // Layer host attributes onto the fleet: lab1 runs debian with a Core Lab release, lab2 runs
     // macos with no HostInfoService enrichment. The host keys added by CL A must render their
     // stamped values rather than a blank cell.
-    FleetRawData raw =
-        FleetRawData.builder()
+    CoreFleetRawData raw =
+        CoreFleetRawData.builder()
             .setLabData(hostAttributeFleet())
             .setHostEnrichments(
                 ImmutableMap.of(
@@ -343,7 +343,7 @@ public final class FleetFlatSearcherTest {
     FleetSnapshot enriched =
         Guice.createInjector()
             .getInstance(FleetIndexBuilder.class)
-            .build(FleetRawData.builder().setLabData(hostAttributeFleet()).build(), BUILD_TIME);
+            .build(CoreFleetRawData.builder().setLabData(hostAttributeFleet()).build(), BUILD_TIME);
     LazyPostings enrichedPostings = new LazyPostings(enriched.devices());
     ImmutableList<String> columns = ImmutableList.of("field::uuid", "host::host_os");
 
