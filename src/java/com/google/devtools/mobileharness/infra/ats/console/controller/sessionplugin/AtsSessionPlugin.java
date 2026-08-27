@@ -304,45 +304,6 @@ public class AtsSessionPlugin {
               runCommandState.getCommandId(), runCommand.getInitialState().getCommandLineArgs());
       runCommandHandler.initialize(runCommand);
 
-      // Create tradefed jobs.
-      try {
-        tradefedJobs = runCommandHandler.createTradefedJobs(runCommand);
-      } catch (MobileHarnessException e) {
-        if (!XtsJobCreator.isSkippableException(e)) {
-          throw e;
-        }
-        logger
-            .atInfo()
-            .with(IMPORTANCE, IMPORTANT)
-            .log(
-                "Failed to create tradefed jobs for session [%s] due to skippable exception: [%s].",
-                sessionInfo.getSessionId(), MoreThrowables.shortDebugString(e));
-        tradefedJobs = ImmutableList.of();
-      }
-
-      // Create non-tradefed jobs.
-      try {
-        nonTradefedJobs = runCommandHandler.createNonTradefedJobs(runCommand);
-      } catch (MobileHarnessException e) {
-        if (!XtsJobCreator.isSkippableException(e)) {
-          throw e;
-        }
-        logger
-            .atInfo()
-            .with(IMPORTANCE, IMPORTANT)
-            .log(
-                "Failed to create non-tradefed jobs for session [%s] due to skippable exception:"
-                    + " [%s].",
-                sessionInfo.getSessionId(), MoreThrowables.shortDebugString(e));
-        nonTradefedJobs = ImmutableList.of();
-      }
-      if (tradefedJobs.isEmpty() && nonTradefedJobs.isEmpty()) {
-        throw MobileHarnessExceptionFactory.createUserFacingException(
-            InfraErrorId.XTS_NO_JOB_CREATED_FOR_SESSION,
-            "No jobs created for session " + sessionInfo.getSessionId(),
-            /* cause= */ null);
-      }
-
       Optional<JobInfo> setupJobOpt = runCommandHandler.createSetupJob();
       Optional<JobInfo> teardownJobOpt = runCommandHandler.createTeardownJob();
 
@@ -352,6 +313,7 @@ public class AtsSessionPlugin {
       if (setupJobOpt.isPresent()) {
         addSetupJob(setupJobOpt.get());
       } else {
+        createMainJobs(runCommand);
         addMainJobs();
       }
 
@@ -430,6 +392,7 @@ public class AtsSessionPlugin {
     boolean isSetupJobEnd = runningSetupJobId.compareAndSet(jobId, null);
     if (isSetupJobEnd) {
       logger.atInfo().log("Setup job [%s] ended, starting main jobs.", jobId);
+      createMainJobs(config.getRunCommand());
       addMainJobs();
       return;
     }
@@ -832,6 +795,48 @@ public class AtsSessionPlugin {
     ImmutableList<String> setupJobIds = addJobsToSession(ImmutableList.of(setupJob));
     if (!setupJobIds.isEmpty()) {
       runningSetupJobId.set(setupJobIds.get(0));
+    }
+  }
+
+  private void createMainJobs(RunCommand runCommand)
+      throws MobileHarnessException, InterruptedException {
+    // Create tradefed jobs.
+    try {
+      tradefedJobs = runCommandHandler.createTradefedJobs(runCommand);
+    } catch (MobileHarnessException e) {
+      if (!XtsJobCreator.isSkippableException(e)) {
+        throw e;
+      }
+      logger
+          .atInfo()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "Failed to create tradefed jobs for session [%s] due to skippable exception: [%s].",
+              sessionInfo.getSessionId(), MoreThrowables.shortDebugString(e));
+      tradefedJobs = ImmutableList.of();
+    }
+
+    // Create non-tradefed jobs.
+    try {
+      nonTradefedJobs = runCommandHandler.createNonTradefedJobs(runCommand);
+    } catch (MobileHarnessException e) {
+      if (!XtsJobCreator.isSkippableException(e)) {
+        throw e;
+      }
+      logger
+          .atInfo()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "Failed to create non-tradefed jobs for session [%s] due to skippable exception:"
+                  + " [%s].",
+              sessionInfo.getSessionId(), MoreThrowables.shortDebugString(e));
+      nonTradefedJobs = ImmutableList.of();
+    }
+    if (tradefedJobs.isEmpty() && nonTradefedJobs.isEmpty()) {
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.XTS_NO_JOB_CREATED_FOR_SESSION,
+          "No jobs created for session " + sessionInfo.getSessionId(),
+          /* cause= */ null);
     }
   }
 
