@@ -122,7 +122,8 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
         .build();
   }
 
-  private static HttpRequestInitializer getCredential(GcsParams storageParams)
+  @VisibleForTesting
+  static HttpRequestInitializer getCredential(GcsParams storageParams)
       throws MobileHarnessException {
     switch (storageParams.credentialType.getType()) {
       case APP_DEFAULT:
@@ -130,7 +131,10 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
       case CREDENTIAL_FILE:
         return credentialFromJsonFile(
             storageParams.credentialType.credentialFile(), storageParams.scope);
+      case ANONYMOUS:
+        return request -> {};
       case NONE:
+        break;
     }
     throw new MobileHarnessException(
         BasicErrorId.GCS_INVALID_PARAMS,

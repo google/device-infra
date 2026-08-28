@@ -113,6 +113,7 @@ public abstract class GcsUtil {
     /** Type of credential. */
     public enum Type {
       NONE,
+      ANONYMOUS,
       CREDENTIAL_FILE,
       APP_DEFAULT,
     }
@@ -125,6 +126,8 @@ public abstract class GcsUtil {
 
     public abstract void appDefault();
 
+    public abstract void anonymous();
+
     public static CredentialType ofNone() {
       return AutoOneOf_GcsUtil_CredentialType.none();
     }
@@ -135,6 +138,10 @@ public abstract class GcsUtil {
 
     public static CredentialType ofAppDefault() {
       return AutoOneOf_GcsUtil_CredentialType.appDefault();
+    }
+
+    public static CredentialType ofAnonymous() {
+      return AutoOneOf_GcsUtil_CredentialType.anonymous();
     }
   }
 
@@ -393,6 +400,7 @@ public abstract class GcsUtil {
    * Copies {@code gcsFile} from Google Cloud Storage to local {@code localFile}. file {@code
    * gcsFile} will be split into shards with size {@code shardSize} and copied in parallel.
    */
+  @SuppressWarnings("Interruption")
   public void copyFileToLocalInParallel(GcsApiObject gcsFile, Path localFile, long shardSize)
       throws MobileHarnessException, InterruptedException {
     long fileSize = getGcsFileSize(gcsFile.path());
@@ -793,6 +801,7 @@ public abstract class GcsUtil {
    * @param gcsFile name of the object in the cloud
    * @throws MobileHarnessException if failed to copy file
    */
+  @SuppressWarnings("Interruption")
   public void copyFileToCloudInParallel(
       Path localFile, Path gcsFile, long shardSize, String contentType)
       throws MobileHarnessException, InterruptedException {
