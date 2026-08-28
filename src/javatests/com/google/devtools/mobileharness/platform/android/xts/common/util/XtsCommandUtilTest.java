@@ -24,6 +24,7 @@ import static org.mockito.Mockito.when;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.JavaVersion;
 import java.nio.file.Path;
@@ -42,6 +43,7 @@ public final class XtsCommandUtilTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
+  @Rule public final SetFlags flags = new SetFlags();
 
   @Mock private SystemUtil mockSystemUtil;
   @Mock private LocalFileUtil mockLocalFileUtil;
@@ -87,6 +89,36 @@ public final class XtsCommandUtilTest {
   }
 
   @Test
+  public void useXtsJavaBinary_fallbackJavaFlagSet_xtsJavaVersionHigher_returnsTrue()
+      throws Exception {
+    flags.set("tf_fallback_java_binary", "/custom/fallback/java");
+    Path xtsRoot = tmpFolder.getRoot().toPath();
+    Path xtsJava = XtsDirUtil.getXtsJavaBinary(xtsRoot, CTS_TYPE);
+    Path fallbackJava = Path.of("/custom/fallback/java");
+    when(mockSystemUtil.getJavaVersion(xtsJava)).thenReturn(new JavaVersion(17, "17.0.1"));
+    when(mockSystemUtil.getJavaVersion(fallbackJava)).thenReturn(new JavaVersion(11, "11.0.2"));
+
+    assertThat(xtsCommandUtil.useXtsJavaBinary(CTS_TYPE, tmpFolder.getRoot().toPath())).isTrue();
+    verify(mockSystemUtil).getJavaVersion(xtsJava);
+    verify(mockSystemUtil).getJavaVersion(fallbackJava);
+  }
+
+  @Test
+  public void useXtsJavaBinary_fallbackJavaFlagSet_xtsJavaVersionLower_returnsFalse()
+      throws Exception {
+    flags.set("tf_fallback_java_binary", "/custom/fallback/java");
+    Path xtsRoot = tmpFolder.getRoot().toPath();
+    Path xtsJava = XtsDirUtil.getXtsJavaBinary(xtsRoot, CTS_TYPE);
+    Path fallbackJava = Path.of("/custom/fallback/java");
+    when(mockSystemUtil.getJavaVersion(xtsJava)).thenReturn(new JavaVersion(11, "11.0.2"));
+    when(mockSystemUtil.getJavaVersion(fallbackJava)).thenReturn(new JavaVersion(17, "17.0.1"));
+
+    assertThat(xtsCommandUtil.useXtsJavaBinary(CTS_TYPE, tmpFolder.getRoot().toPath())).isFalse();
+    verify(mockSystemUtil).getJavaVersion(xtsJava);
+    verify(mockSystemUtil).getJavaVersion(fallbackJava);
+  }
+
+  @Test
   public void useXtsJavaBinary_versionsEqual_returnsTrue() throws Exception {
     Path xtsRoot = tmpFolder.getRoot().toPath();
     Path xtsJava = XtsDirUtil.getXtsJavaBinary(xtsRoot, CTS_TYPE);
@@ -117,11 +149,66 @@ public final class XtsCommandUtilTest {
   }
 
   @Test
+  public void useXtsJavaBinary_fallbackJavaVersionCheckFails_returnsTrue() throws Exception {
+    flags.set("tf_fallback_java_binary", "/custom/fallback/java");
+    Path xtsRoot = tmpFolder.getRoot().toPath();
+    Path xtsJava = XtsDirUtil.getXtsJavaBinary(xtsRoot, CTS_TYPE);
+    Path fallbackJava = Path.of("/custom/fallback/java");
+    when(mockSystemUtil.getJavaVersion(xtsJava)).thenReturn(new JavaVersion(17, "17.0.1"));
+    when(mockSystemUtil.getJavaVersion(fallbackJava))
+        .thenThrow(
+            new MobileHarnessException(
+                BasicErrorId.SYSTEM_GET_JAVA_VERSION_ERROR, "Failed to get java version"));
+
+    assertThat(xtsCommandUtil.useXtsJavaBinary(CTS_TYPE, tmpFolder.getRoot().toPath())).isTrue();
+    verify(mockSystemUtil).getJavaVersion(xtsJava);
+    verify(mockSystemUtil).getJavaVersion(fallbackJava);
+  }
+
+  @Test
   public void useXtsJavaBinary_xtsJavaFileNotExist_returnsFalse() throws Exception {
     when(mockLocalFileUtil.isFileExist(any(Path.class))).thenReturn(false);
     Path xtsRoot = tmpFolder.getRoot().toPath();
 
     assertThat(xtsCommandUtil.useXtsJavaBinary(CTS_TYPE, xtsRoot)).isFalse();
     verify(mockLocalFileUtil).isFileExist(XtsDirUtil.getXtsJavaBinary(xtsRoot, CTS_TYPE));
+  }
+
+  @Test
+  public void getJavaBinary_useXtsJavaBinaryTrue_returnsXtsJavaBinary() throws Exception {
+    Path xtsRoot = tmpFolder.getRoot().toPath();
+    Path xtsJava = XtsDirUtil.getXtsJavaBinary(xtsRoot, CTS_TYPE);
+    Path systemJava = Path.of("/system/java");
+    when(mockSystemUtil.getJavaBin()).thenReturn(systemJava.toString());
+    when(mockSystemUtil.getJavaVersion(xtsJava)).thenReturn(new JavaVersion(17, "17.0.1"));
+    when(mockSystemUtil.getJavaVersion(systemJava)).thenReturn(new JavaVersion(11, "11.0.2"));
+
+    assertThat(xtsCommandUtil.getJavaBinary(CTS_TYPE, xtsRoot)).isEqualTo(xtsJava);
+  }
+
+  @Test
+  public void getJavaBinary_useXtsJavaBinaryFalse_flagNotSet_returnsSystemJavaBinary()
+      throws Exception {
+    Path xtsRoot = tmpFolder.getRoot().toPath();
+    Path xtsJava = XtsDirUtil.getXtsJavaBinary(xtsRoot, CTS_TYPE);
+    Path systemJava = Path.of("/system/java");
+    when(mockSystemUtil.getJavaBin()).thenReturn(systemJava.toString());
+    when(mockSystemUtil.getJavaVersion(xtsJava)).thenReturn(new JavaVersion(8, "1.8.0_1"));
+    when(mockSystemUtil.getJavaVersion(systemJava)).thenReturn(new JavaVersion(11, "11.0.2"));
+
+    assertThat(xtsCommandUtil.getJavaBinary(CTS_TYPE, xtsRoot)).isEqualTo(systemJava);
+  }
+
+  @Test
+  public void getJavaBinary_useXtsJavaBinaryFalse_flagSet_returnsFallbackJavaBinary()
+      throws Exception {
+    flags.set("tf_fallback_java_binary", "/custom/fallback/java");
+    Path xtsRoot = tmpFolder.getRoot().toPath();
+    Path xtsJava = XtsDirUtil.getXtsJavaBinary(xtsRoot, CTS_TYPE);
+    Path fallbackJava = Path.of("/custom/fallback/java");
+    when(mockSystemUtil.getJavaVersion(xtsJava)).thenReturn(new JavaVersion(8, "1.8.0_1"));
+    when(mockSystemUtil.getJavaVersion(fallbackJava)).thenReturn(new JavaVersion(11, "11.0.2"));
+
+    assertThat(xtsCommandUtil.getJavaBinary(CTS_TYPE, xtsRoot)).isEqualTo(fallbackJava);
   }
 }
