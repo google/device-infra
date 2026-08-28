@@ -25,6 +25,7 @@ import {
 import {JOB_SERVICE} from '../../core/services/job/job_service';
 import {ActionButton} from '../../shared/components/action_button/action_button';
 import {ConfirmDialog} from '../../shared/components/confirm_dialog/confirm_dialog';
+import {KillJobConfirmContent} from '../../shared/components/kill_job_confirm_content/kill_job_confirm_content';
 import {LegacyConsoleBanner} from '../../shared/components/legacy_console_banner/legacy_console_banner';
 import {useCopyToClipboard} from '../../shared/composables/copy';
 import {usePageTitle} from '../../shared/composables/page_title';
@@ -204,7 +205,7 @@ export class JobDetail {
       panelClass: 'confirm-dialog-panel',
       data: {
         title: 'Kill Job?',
-        content: `Are you sure you want to terminate job ${job.id}? This action will abort all running child tests immediately and cannot be undone.`,
+        contentComponent: KillJobConfirmContent,
         type: 'error',
         primaryButtonLabel: 'Kill Job',
         secondaryButtonLabel: 'Cancel',
@@ -225,7 +226,7 @@ export class JobDetail {
   private executeKillJob(job: JobOverviewData) {
     this.jobService.killJob(job.id).subscribe({
       next: () => {
-        this.snackBar.showSuccess('Job aborted successfully.');
+        this.snackBar.showSuccess('Succeed to send kill job request to Master.');
         this.silentResourceResult.reloadSilent();
       },
       error: (err: unknown) => {
