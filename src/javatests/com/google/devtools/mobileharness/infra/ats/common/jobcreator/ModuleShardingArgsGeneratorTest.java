@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfoUtil;
@@ -58,17 +59,22 @@ public final class ModuleShardingArgsGeneratorTest {
   @Test
   public void generateShardingArgs_noModulesForSharding() throws Exception {
     ImmutableSet<String> shardingArgs =
-        moduleShardingArgsGenerator.generateShardingArgs(
-            SessionRequestInfoUtil.buildAndValidate(
-                SessionRequestInfo.newBuilder()
-                    .setTestPlan("cts")
-                    .setCommandLineArgs("cts")
-                    .setXtsType("cts")
-                    .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                    .setShardingMode(ShardingMode.MODULE)
-                    .addAllIncludeFilters(ImmutableList.of("mock_module1[instant]", "mock_module2"))
-                    .addAllExcludeFilters(ImmutableList.of("mock_module1[instant] class#test"))),
-            ImmutableList.of("mock_module1", "mock_module2"));
+        ImmutableSet.copyOf(
+            moduleShardingArgsGenerator
+                .generateShardingArgsMap(
+                    SessionRequestInfoUtil.buildAndValidate(
+                        SessionRequestInfo.newBuilder()
+                            .setTestPlan("cts")
+                            .setCommandLineArgs("cts")
+                            .setXtsType("cts")
+                            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                            .setShardingMode(ShardingMode.MODULE)
+                            .addAllIncludeFilters(
+                                ImmutableList.of("mock_module1[instant]", "mock_module2"))
+                            .addAllExcludeFilters(
+                                ImmutableList.of("mock_module1[instant] class#test"))),
+                    ImmutableList.of("mock_module1", "mock_module2"))
+                .values());
 
     assertThat(shardingArgs)
         .containsExactly(
@@ -81,17 +87,20 @@ public final class ModuleShardingArgsGeneratorTest {
   @Test
   public void generateShardingArgs_alreadyHasSkipPreconditions_notDuplicated() throws Exception {
     ImmutableSet<String> shardingArgs =
-        moduleShardingArgsGenerator.generateShardingArgs(
-            SessionRequestInfoUtil.buildAndValidate(
-                SessionRequestInfo.newBuilder()
-                    .setTestPlan("cts")
-                    .setCommandLineArgs("cts")
-                    .setXtsType("cts")
-                    .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                    .setShardingMode(ShardingMode.MODULE)
-                    .addAllIncludeFilters(ImmutableList.of("mock_module1"))
-                    .addExtraArgs("--skip-preconditions")),
-            ImmutableList.of("mock_module1"));
+        ImmutableSet.copyOf(
+            moduleShardingArgsGenerator
+                .generateShardingArgsMap(
+                    SessionRequestInfoUtil.buildAndValidate(
+                        SessionRequestInfo.newBuilder()
+                            .setTestPlan("cts")
+                            .setCommandLineArgs("cts")
+                            .setXtsType("cts")
+                            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                            .setShardingMode(ShardingMode.MODULE)
+                            .addAllIncludeFilters(ImmutableList.of("mock_module1"))
+                            .addExtraArgs("--skip-preconditions")),
+                    ImmutableList.of("mock_module1"))
+                .values());
 
     assertThat(shardingArgs)
         .containsExactly("--include-filter \"mock_module1\" --skip-preconditions");
@@ -100,15 +109,18 @@ public final class ModuleShardingArgsGeneratorTest {
   @Test
   public void generateShardingArgs_withLargeModules() throws Exception {
     ImmutableSet<String> shardingArgs =
-        moduleShardingArgsGenerator.generateShardingArgs(
-            SessionRequestInfoUtil.buildAndValidate(
-                SessionRequestInfo.newBuilder()
-                    .setTestPlan("cts")
-                    .setCommandLineArgs("cts")
-                    .setXtsType("cts")
-                    .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                    .setShardingMode(ShardingMode.MODULE)),
-            ShardConstants.LARGE_MODULES.asList());
+        ImmutableSet.copyOf(
+            moduleShardingArgsGenerator
+                .generateShardingArgsMap(
+                    SessionRequestInfoUtil.buildAndValidate(
+                        SessionRequestInfo.newBuilder()
+                            .setTestPlan("cts")
+                            .setCommandLineArgs("cts")
+                            .setXtsType("cts")
+                            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                            .setShardingMode(ShardingMode.MODULE)),
+                    ShardConstants.LARGE_MODULES.asList())
+                .values());
 
     assertThat(shardingArgs).hasSize(ShardConstants.LARGE_MODULES.size() * LARGE_MODULE_SHARDS);
   }
@@ -116,15 +128,18 @@ public final class ModuleShardingArgsGeneratorTest {
   @Test
   public void generateShardingArgs_withShardModules() throws Exception {
     ImmutableSet<String> shardingArgs =
-        moduleShardingArgsGenerator.generateShardingArgs(
-            SessionRequestInfoUtil.buildAndValidate(
-                SessionRequestInfo.newBuilder()
-                    .setTestPlan("cts")
-                    .setCommandLineArgs("cts")
-                    .setXtsType("cts")
-                    .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                    .setShardingMode(ShardingMode.MODULE)),
-            ShardConstants.SHARD_MODULES.asList());
+        ImmutableSet.copyOf(
+            moduleShardingArgsGenerator
+                .generateShardingArgsMap(
+                    SessionRequestInfoUtil.buildAndValidate(
+                        SessionRequestInfo.newBuilder()
+                            .setTestPlan("cts")
+                            .setCommandLineArgs("cts")
+                            .setXtsType("cts")
+                            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                            .setShardingMode(ShardingMode.MODULE)),
+                    ShardConstants.SHARD_MODULES.asList())
+                .values());
 
     assertThat(shardingArgs).hasSize(ShardConstants.SHARD_MODULES.size() * SHARD_MODULE_SHARDS);
   }
@@ -138,15 +153,19 @@ public final class ModuleShardingArgsGeneratorTest {
         .add("mock_module");
 
     ImmutableSet<String> shardingArgs =
-        moduleShardingArgsGenerator.generateShardingArgs(
-            SessionRequestInfoUtil.buildAndValidate(
-                SessionRequestInfo.newBuilder()
-                    .setTestPlan("cts")
-                    .setCommandLineArgs("cts")
-                    .setXtsType("cts")
-                    .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                    .setShardingMode(ShardingMode.MODULE)),
-            modules.build());
+        ImmutableSet.copyOf(
+            moduleShardingArgsGenerator
+                .generateShardingArgsMap(
+                    SessionRequestInfoUtil.buildAndValidate(
+                        SessionRequestInfo.newBuilder()
+                            .setTestPlan("cts")
+                            .setCommandLineArgs("cts")
+                            .setXtsType("cts")
+                            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                            .setShardingMode(ShardingMode.MODULE)),
+                    modules.build())
+                .values());
+
     String nonShardingArgs =
         shardingArgs.stream().filter(arg -> arg.contains("mock_module")).findFirst().get();
 
@@ -187,7 +206,10 @@ public final class ModuleShardingArgsGeneratorTest {
             .build();
 
     ImmutableSet<String> shardingArgs =
-        moduleShardingArgsGenerator.generateShardingArgs(sessionRequestInfo, targetModules);
+        ImmutableSet.copyOf(
+            moduleShardingArgsGenerator
+                .generateShardingArgsMap(sessionRequestInfo, targetModules)
+                .values());
 
     assertThat(shardingArgs).hasSize(SHARD_MODULE_SHARDS + LARGE_MODULE_SHARDS + 2);
     for (int index = 0; index < SHARD_MODULE_SHARDS; index++) {
@@ -269,5 +291,30 @@ public final class ModuleShardingArgsGeneratorTest {
                     SuiteTestFilter.create("abi1 module"),
                     SuiteTestFilter.create("abi2 module"))))
         .isTrue();
+  }
+
+  @Test
+  public void generateShardingArgsMap_mapsModulesToShardingArgs() throws Exception {
+    ImmutableListMultimap<String, String> shardingArgsMap =
+        moduleShardingArgsGenerator.generateShardingArgsMap(
+            SessionRequestInfoUtil.buildAndValidate(
+                SessionRequestInfo.newBuilder()
+                    .setTestPlan("cts")
+                    .setCommandLineArgs("cts")
+                    .setXtsType("cts")
+                    .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                    .setShardingMode(ShardingMode.MODULE)
+                    .addAllIncludeFilters(ImmutableList.of("mock_module1[instant]", "mock_module2"))
+                    .addAllExcludeFilters(ImmutableList.of("mock_module1[instant] class#test"))),
+            ImmutableList.of("mock_module1", "mock_module2"));
+
+    assertThat(shardingArgsMap.keySet()).containsExactly("mock_module1", "mock_module2");
+    assertThat(shardingArgsMap.get("mock_module1"))
+        .containsExactly(
+            "--include-filter \"mock_module1[instant]\""
+                + " --exclude-filter \"mock_module1[instant] class#test\""
+                + " --skip-preconditions");
+    assertThat(shardingArgsMap.get("mock_module2"))
+        .containsExactly("--include-filter \"mock_module2\" --skip-preconditions");
   }
 }

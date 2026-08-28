@@ -596,10 +596,14 @@ public class SessionRequestHandlerUtil {
    *
    * <p>The list of modules is filtered by include/exclude filters and the given module names.
    *
+   * @param sessionRequestInfo info about the session request
+   * @param dynamicMctsModules canonical set of dynamic MCTS module names downloaded during the
+   *     setup job, or empty to fallback to static MCTS modules
    * @return a list of filtered tradefed modules.
    * @throws MobileHarnessException if no tradefed modules could satisfy the given filters.
    */
-  public ImmutableList<String> getFilteredTradefedModules(SessionRequestInfo sessionRequestInfo)
+  public ImmutableList<String> getFilteredTradefedModules(
+      SessionRequestInfo sessionRequestInfo, ImmutableSet<String> dynamicMctsModules)
       throws MobileHarnessException {
     Path xtsRootDir = Path.of(sessionRequestInfo.getXtsRootDir());
     if (!localFileUtil.isDirExist(xtsRootDir)) {
@@ -625,9 +629,10 @@ public class SessionRequestHandlerUtil {
                         moduleMetadataExcludeFilters))
             .map(config -> config.getMetadata().getXtsModule())
             .collect(toImmutableSet());
-    ImmutableSet<String> staticTfModules = getStaticMctsModules();
+    ImmutableSet<String> mctsModules =
+        dynamicMctsModules.isEmpty() ? getStaticMctsModules() : dynamicMctsModules;
     ImmutableSet<String> allTfModules =
-        Stream.concat(localTfModules.stream(), staticTfModules.stream()).collect(toImmutableSet());
+        Stream.concat(localTfModules.stream(), mctsModules.stream()).collect(toImmutableSet());
 
     // For "run retry" command handled by TF, consider the module filter as include filter.
     boolean isTfRetryWithModules =

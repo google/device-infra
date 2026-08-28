@@ -119,17 +119,24 @@ class RunCommandHandler {
     return ThreadLocalRandom.current().nextInt(1000, 10000);
   }
 
+  ImmutableList<JobInfo> createTradefedJobs(RunCommand command)
+      throws MobileHarnessException, InterruptedException {
+    return createTradefedJobs(command, ImmutableSet.of());
+  }
+
   /**
-   * Creates tradefed jobs based on the {@code command} and adds the jobs to the {@code
-   * sessionInfo}.
+   * Creates tradefed jobs based on the {@code command} and {@code dynamicMctsModules}, and adds the
+   * jobs to the {@code sessionInfo}.
    *
    * <p>Jobs added to the session by the plugin will be started by the session job runner later.
    *
    * @return a list of {@code JobInfo} to be started
    */
-  ImmutableList<JobInfo> createTradefedJobs(RunCommand command)
+  ImmutableList<JobInfo> createTradefedJobs(
+      RunCommand command, ImmutableSet<String> dynamicMctsModules)
       throws MobileHarnessException, InterruptedException {
-    ImmutableList<JobInfo> jobInfoList = xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo);
+    ImmutableList<JobInfo> jobInfoList =
+        xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo, dynamicMctsModules);
     if (jobInfoList.isEmpty()) {
       logger.atInfo().log(
           "No tradefed jobs created, double check device availability. The run command -> %s",

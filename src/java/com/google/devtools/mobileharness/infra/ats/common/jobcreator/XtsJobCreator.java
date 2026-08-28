@@ -26,6 +26,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -126,19 +127,37 @@ public abstract class XtsJobCreator {
   }
 
   /**
-   * Creates a tradefed job based on the {@code SessionRequestInfo}.
+   * Creates Tradefed jobs based on the given {@link SessionRequestInfo}.
    *
-   * @return a tradefed jobInfo.
+   * @param sessionRequestInfo info about the session request
+   * @return a list of Tradefed jobs based on the sharding mode
    */
   public ImmutableList<JobInfo> createXtsTradefedTestJob(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException, InterruptedException {
+    return createXtsTradefedTestJob(sessionRequestInfo, ImmutableSet.of());
+  }
+
+  /**
+   * Creates Tradefed jobs based on the given {@link SessionRequestInfo} and dynamic MCTS modules.
+   *
+   * @param sessionRequestInfo info about the session request
+   * @param dynamicMctsModules canonical set of dynamic MCTS module names downloaded during the
+   *     setup job, or empty to fallback to static MCTS modules
+   * @return a list of Tradefed jobs based on the sharding mode
+   */
+  public ImmutableList<JobInfo> createXtsTradefedTestJob(
+      SessionRequestInfo sessionRequestInfo, ImmutableSet<String> dynamicMctsModules)
       throws MobileHarnessException, InterruptedException {
     if (sessionRequestInfo.getExcludeRunnersList().stream()
         .anyMatch(runner -> ConfigurationUtil.getSimpleClassName(runner).equals("TradefedTest"))) {
       return ImmutableList.of();
     }
 
+    // When dynamic MCTS modules are provided (e.g. after the setup job downloads the canonical
+    // test list), filter against those modules; otherwise, fallback to the static MCTS module list.
     ImmutableList<String> tfModules =
-        sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo);
+        sessionRequestHandlerUtil.getFilteredTradefedModules(
+            sessionRequestInfo, dynamicMctsModules);
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         createXtsTradefedTestJobInfo(sessionRequestInfo, tfModules);
 
@@ -157,8 +176,29 @@ public abstract class XtsJobCreator {
     boolean isDynamicMctsEnabled = isDynamicMctsEnabled(sessionRequestInfo);
     for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
       if (isDynamicMctsEnabled) {
-        for (String jobName : allDynamicDownloadJobNames) {
-          jobInfos.add(createDynamicJobInfo(sessionRequestInfo, tradefedJobInfo, jobName));
+        if (SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)) {
+          // In MODULE sharding mode, each module job runs independently. Create exactly ONE job
+          // per module: a DYNAMIC_MCTS job if the module is in dynamicMctsModules, or a STATIC_XTS
+          // job otherwise.
+          String moduleName =
+              tradefedJobInfo
+                  .extraJobProperties()
+                  .get(XtsPropertyName.Job.FILTERED_TRADEFED_MODULES);
+          if (moduleName != null && dynamicMctsModules.contains(moduleName)) {
+            jobInfos.add(
+                createDynamicJobInfo(
+                    sessionRequestInfo, tradefedJobInfo, XtsConstants.DYNAMIC_MCTS_JOB_NAME));
+          } else {
+            jobInfos.add(
+                createDynamicJobInfo(
+                    sessionRequestInfo, tradefedJobInfo, XtsConstants.STATIC_XTS_JOB_NAME));
+          }
+        } else {
+          // In RUNNER sharding mode, create both STATIC_XTS and DYNAMIC_MCTS jobs across all
+          // modules.
+          for (String jobName : allDynamicDownloadJobNames) {
+            jobInfos.add(createDynamicJobInfo(sessionRequestInfo, tradefedJobInfo, jobName));
+          }
         }
       } else {
         jobInfos.add(
@@ -301,10 +341,39 @@ public abstract class XtsJobCreator {
       skipDeviceInfoArg = Optional.empty();
     }
 
-    ImmutableSet<String> runCommandArgsSet;
+    ImmutableList.Builder<TradefedJobInfo> tradefedJobInfos = ImmutableList.builder();
     if (SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)) {
-      runCommandArgsSet =
-          moduleShardingArgsGenerator.generateShardingArgs(sessionRequestInfo, tfModules);
+      // In MODULE sharding mode, generate shard command args mapped by target module name so that
+      // each module-level job can be created with its corresponding module name attached in extra
+      // job properties.
+      ImmutableListMultimap<String, String> shardingArgsMap =
+          moduleShardingArgsGenerator.generateShardingArgsMap(sessionRequestInfo, tfModules);
+
+      if (shardingArgsMap.isEmpty()) {
+        throw MobileHarnessExceptionFactory.createUserFacingException(
+            InfraErrorId.XTS_EMPTY_RUN_COMMAND_ARGS,
+            "Failed to generate run command args to create jobs",
+            /* cause= */ null);
+      }
+      for (Map.Entry<String, String> entry : shardingArgsMap.entries()) {
+        String moduleName = entry.getKey();
+        String runCommandArgs = entry.getValue();
+        Map<String, String> driverParamsCopy = new HashMap<>(driverParams);
+        if (!runCommandArgs.isEmpty()) {
+          driverParamsCopy.put("run_command_args", runCommandArgs);
+        }
+        JobConfig jobConfig =
+            sessionRequestHandlerUtil.initializeJobConfig(
+                sessionRequestInfo,
+                driverParamsCopy,
+                subDeviceSpecList,
+                ImmutableMultimap.copyOf(jobFiles));
+        Map<XtsPropertyName, String> jobProps = new HashMap<>(extraJobProperties.buildOrThrow());
+        if (!moduleName.isEmpty()) {
+          jobProps.put(XtsPropertyName.Job.FILTERED_TRADEFED_MODULES, moduleName);
+        }
+        tradefedJobInfos.add(TradefedJobInfo.of(jobConfig, ImmutableMap.copyOf(jobProps)));
+      }
     } else {
       ImmutableList<String> moduleFilters;
       if (SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.getTestPlan())) {
@@ -410,21 +479,10 @@ public abstract class XtsJobCreator {
                               .map(arg -> arg.replace("\"", "\\\""))
                               .map(arg -> arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
                       .collect(toImmutableList()));
-      runCommandArgsSet = ImmutableSet.of(sessionRequestInfoArgs);
-    }
 
-    if (runCommandArgsSet.isEmpty()) {
-      throw MobileHarnessExceptionFactory.createUserFacingException(
-          InfraErrorId.XTS_EMPTY_RUN_COMMAND_ARGS,
-          "Failed to generate run command args to create jobs",
-          /* cause= */ null);
-    }
-
-    ImmutableList.Builder<TradefedJobInfo> tradefedJobInfos = ImmutableList.builder();
-    for (String runCommandArgs : runCommandArgsSet) {
       Map<String, String> driverParamsCopy = new HashMap<>(driverParams);
-      if (!runCommandArgs.isEmpty()) {
-        driverParamsCopy.put("run_command_args", runCommandArgs);
+      if (!sessionRequestInfoArgs.isEmpty()) {
+        driverParamsCopy.put("run_command_args", sessionRequestInfoArgs);
       }
       JobConfig jobConfig =
           sessionRequestHandlerUtil.initializeJobConfig(
@@ -638,7 +696,8 @@ public abstract class XtsJobCreator {
 
     try {
       ImmutableList<String> tfModules =
-          sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo);
+          sessionRequestHandlerUtil.getFilteredTradefedModules(
+              sessionRequestInfo, /* dynamicMctsModules= */ ImmutableSet.of());
       if (sessionRequestInfo.hasSubPlanName()) {
         Path subPlanPath =
             prepareSubPlanPath(
@@ -940,9 +999,7 @@ public abstract class XtsJobCreator {
       throws MobileHarnessException {
     return sessionRequestInfo.getIsXtsDynamicDownloadEnabled()
         // Only enable dynamic download for CTS test plan currently.
-        && isDynamicMctsSupportedCtsTestPlan(sessionRequestInfo)
-        // Disable dynamic download if the job is for module sharding.
-        && !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo);
+        && isDynamicMctsSupportedCtsTestPlan(sessionRequestInfo);
   }
 
   /**
@@ -967,9 +1024,13 @@ public abstract class XtsJobCreator {
       sessionRequestInfo = reviseRequestInfoForDynamicJob(sessionRequestInfo);
     }
     String updatedJobName = tradefedJobInfo.jobConfig().getName() + "_" + jobName;
+    Path newJobGenDir = sessionRequestHandlerUtil.createJobGenDir(updatedJobName);
     TradefedJobInfo updatedTradefedJobInfo =
         TradefedJobInfo.of(
-            tradefedJobInfo.jobConfig().toBuilder().setName(updatedJobName).build(),
+            tradefedJobInfo.jobConfig().toBuilder()
+                .setName(updatedJobName)
+                .setGenFileDir(newJobGenDir.toString())
+                .build(),
             tradefedJobInfo.extraJobProperties());
     JobInfo dynamicDownloadJobInfo =
         sessionRequestHandlerUtil.createXtsTradefedTestJob(

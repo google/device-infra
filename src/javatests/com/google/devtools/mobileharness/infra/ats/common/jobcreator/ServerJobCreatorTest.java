@@ -24,6 +24,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -183,8 +184,8 @@ public final class ServerJobCreatorTest {
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
-    when(moduleShardingArgsGenerator.generateShardingArgs(eq(sessionRequestInfo), any()))
-        .thenReturn(ImmutableSet.of("arg1", "arg2", "arg3"));
+    when(moduleShardingArgsGenerator.generateShardingArgsMap(eq(sessionRequestInfo), any()))
+        .thenReturn(ImmutableListMultimap.of("", "arg1", "", "arg2", "", "arg3"));
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         jobCreator.createXtsTradefedTestJobInfo(
@@ -847,10 +848,8 @@ public final class ServerJobCreatorTest {
         .thenReturn(ImmutableSet.of("mcts-module"));
     when(sessionRequestHandlerUtil.initializeJobConfig(any(), any(), any(), any()))
         .thenReturn(JobConfig.newBuilder().setName("job_name").build());
-    ArgumentCaptor<SessionRequestInfo> sessionRequestInfoCaptor =
-        ArgumentCaptor.forClass(SessionRequestInfo.class);
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(
-            sessionRequestInfoCaptor.capture(), any()))
+    when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any(), any()))
         .thenAnswer(
             invocation -> {
               JobInfo jobInfo = mock(JobInfo.class);
@@ -862,7 +861,7 @@ public final class ServerJobCreatorTest {
               when(jobInfo.tests()).thenReturn(testInfos);
               return jobInfo;
             });
-    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any()))
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any(), any()))
         .thenReturn(ImmutableList.of());
 
     ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);
@@ -872,6 +871,10 @@ public final class ServerJobCreatorTest {
         .isEqualTo(XtsConstants.STATIC_XTS_JOB_NAME);
     assertThat(jobInfos.get(1).properties().get(XtsConstants.XTS_JOB_NAME))
         .isEqualTo(XtsConstants.DYNAMIC_MCTS_JOB_NAME);
+    ArgumentCaptor<SessionRequestInfo> sessionRequestInfoCaptor =
+        ArgumentCaptor.forClass(SessionRequestInfo.class);
+    verify(sessionRequestHandlerUtil, times(2))
+        .createXtsTradefedTestJob(sessionRequestInfoCaptor.capture(), any());
     List<SessionRequestInfo> capturedSrIs = sessionRequestInfoCaptor.getAllValues();
     assertThat(capturedSrIs.get(0).getAtsServerTestEnvironment().getDeviceActionConfigObjectsList())
         .hasSize(2);
@@ -904,7 +907,7 @@ public final class ServerJobCreatorTest {
               when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
               return jobInfo;
             });
-    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any()))
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any(), any()))
         .thenReturn(ImmutableList.of());
 
     ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);

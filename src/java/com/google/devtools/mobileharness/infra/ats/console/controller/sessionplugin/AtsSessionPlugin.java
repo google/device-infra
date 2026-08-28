@@ -31,6 +31,7 @@ import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.partitioningBy;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.Subscribe;
@@ -107,6 +108,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
@@ -313,7 +315,7 @@ public class AtsSessionPlugin {
       if (setupJobOpt.isPresent()) {
         addSetupJob(setupJobOpt.get());
       } else {
-        createMainJobs(runCommand);
+        createMainJobs(runCommand, /* dynamicMctsModules= */ ImmutableSet.of());
         addMainJobs();
       }
 
@@ -392,7 +394,10 @@ public class AtsSessionPlugin {
     boolean isSetupJobEnd = runningSetupJobId.compareAndSet(jobId, null);
     if (isSetupJobEnd) {
       logger.atInfo().log("Setup job [%s] ended, starting main jobs.", jobId);
-      createMainJobs(config.getRunCommand());
+      // Extract dynamic MCTS module names downloaded during the setup job, and create Tradefed jobs
+      // now that the canonical list of dynamic modules is known.
+      ImmutableSet<String> dynamicMctsModules = extractDynamicMctsModules(currentJob);
+      createMainJobs(config.getRunCommand(), dynamicMctsModules);
       addMainJobs();
       return;
     }
@@ -798,11 +803,20 @@ public class AtsSessionPlugin {
     }
   }
 
-  private void createMainJobs(RunCommand runCommand)
+  /**
+   * Creates the main Tradefed and non-Tradefed jobs based on the given RunCommand.
+   *
+   * @param runCommand the run command representing the session config
+   * @param dynamicMctsModules the canonical set of dynamic MCTS module names downloaded during the
+   *     setup job, or an empty set if dynamic MCTS is disabled, no modules were requested, or the
+   *     setup job is unavailable. If provided, they replace static MCTS modules for Tradefed job
+   *     filtering and creation.
+   */
+  private void createMainJobs(RunCommand runCommand, ImmutableSet<String> dynamicMctsModules)
       throws MobileHarnessException, InterruptedException {
     // Create tradefed jobs.
     try {
-      tradefedJobs = runCommandHandler.createTradefedJobs(runCommand);
+      tradefedJobs = runCommandHandler.createTradefedJobs(runCommand, dynamicMctsModules);
     } catch (MobileHarnessException e) {
       if (!XtsJobCreator.isSkippableException(e)) {
         throw e;
@@ -838,6 +852,27 @@ public class AtsSessionPlugin {
           "No jobs created for session " + sessionInfo.getSessionId(),
           /* cause= */ null);
     }
+  }
+
+  /**
+   * Extracts the set of dynamic MCTS module names relayed via test properties from the completed
+   * setup job.
+   */
+  private static ImmutableSet<String> extractDynamicMctsModules(JobInfo setupJob) {
+    if (setupJob.tests() == null || setupJob.tests().getAll() == null) {
+      return ImmutableSet.of();
+    }
+    return setupJob.tests().getAll().values().stream()
+        .map(
+            testInfo ->
+                testInfo
+                    .properties()
+                    .get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_TEST_MODULES_PROPERTY_KEY))
+        .filter(Objects::nonNull)
+        .flatMap(
+            modulesStr ->
+                Splitter.on(',').omitEmptyStrings().trimResults().splitToStream(modulesStr))
+        .collect(toImmutableSet());
   }
 
   /**

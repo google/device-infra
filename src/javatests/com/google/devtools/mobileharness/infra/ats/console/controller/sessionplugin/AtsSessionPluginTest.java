@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.mock;
@@ -56,8 +57,6 @@ import com.google.protobuf.Any;
 import com.google.protobuf.TextFormat;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
-import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
-import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -65,7 +64,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
@@ -132,7 +130,8 @@ public final class AtsSessionPluginTest {
 
     JobInfo tfJob = mock(JobInfo.class);
     when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job_name"));
-    when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of(tfJob));
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any()))
+        .thenReturn(ImmutableList.of(tfJob));
     when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
 
     atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
@@ -156,7 +155,8 @@ public final class AtsSessionPluginTest {
     when(nonTfJob.locator()).thenReturn(new JobLocator("non_tf_job_id", "non_tf_job_name"));
     Properties properties = new Properties(new Timing());
     when(nonTfJob.properties()).thenReturn(properties);
-    when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any()))
+        .thenReturn(ImmutableList.of());
     when(runCommandHandler.createNonTradefedJobs(runCommand))
         .thenReturn(ImmutableList.of(nonTfJob));
 
@@ -449,7 +449,8 @@ public final class AtsSessionPluginTest {
     when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job"));
     when(tfJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of(tfJob));
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any()))
+        .thenReturn(ImmutableList.of(tfJob));
     when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
     when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
 
@@ -480,7 +481,8 @@ public final class AtsSessionPluginTest {
     when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job"));
     when(tfJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of(tfJob));
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any()))
+        .thenReturn(ImmutableList.of(tfJob));
     when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
     when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
 
@@ -516,7 +518,8 @@ public final class AtsSessionPluginTest {
     when(nonTfJob.locator()).thenReturn(new JobLocator("nontf_job_id", "nontf_job"));
     when(nonTfJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any()))
+        .thenReturn(ImmutableList.of());
     when(runCommandHandler.createNonTradefedJobs(runCommand))
         .thenReturn(ImmutableList.of(nonTfJob));
     when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
@@ -549,7 +552,8 @@ public final class AtsSessionPluginTest {
     when(nonTfJob.locator()).thenReturn(new JobLocator("nontf_job_id", "nontf_job"));
     when(nonTfJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of(tfJob));
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any()))
+        .thenReturn(ImmutableList.of(tfJob));
     when(runCommandHandler.createNonTradefedJobs(runCommand))
         .thenReturn(ImmutableList.of(nonTfJob));
     when(runCommandHandler.createSetupJob()).thenReturn(Optional.empty());
@@ -602,7 +606,8 @@ public final class AtsSessionPluginTest {
     when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
     when(teardownJob.tests()).thenReturn(teardownTests);
 
-    when(runCommandHandler.createTradefedJobs(runCommand)).thenReturn(ImmutableList.of(tfJob));
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any()))
+        .thenReturn(ImmutableList.of(tfJob));
     when(runCommandHandler.createNonTradefedJobs(runCommand))
         .thenReturn(ImmutableList.of(nonTfJob));
     when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
@@ -666,7 +671,7 @@ public final class AtsSessionPluginTest {
         .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
     when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(runCommand))
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any()))
         .thenReturn(ImmutableList.of(tfJob1, tfJob2));
     when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
     when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
@@ -690,55 +695,8 @@ public final class AtsSessionPluginTest {
   }
 
   @Test
-  public void onJobEnd_runnerSharding_addsDeviceIdsToSubDeviceSpecs() throws Exception {
-    RunCommand runCommand = RunCommand.getDefaultInstance();
-    when(sessionInfo.getSessionPluginExecutionConfig())
-        .thenReturn(
-            SessionPluginExecutionConfig.newBuilder()
-                .setConfig(
-                    Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
-                .build());
-    when(runCommandHandler.shouldEnableModuleSharding()).thenReturn(false);
-    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
-
-    JobInfo currentJob = mock(JobInfo.class);
-    when(currentJob.locator())
-        .thenReturn(new JobLocator("tf_job_1", "tf_job_1_" + XtsConstants.STATIC_XTS_JOB_NAME));
-    when(currentJob.properties()).thenReturn(new Properties(new Timing()));
-    TestInfos testInfos = mock(TestInfos.class);
-    TestInfo testInfo = mock(TestInfo.class);
-    Properties testProperties = new Properties(new Timing());
-    testProperties.add(PropertyName.Test.DEVICE_ID_LIST, "device_1");
-    when(testInfo.properties()).thenReturn(testProperties);
-    when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
-    when(currentJob.tests()).thenReturn(testInfos);
-
-    JobInfo nextJob = mock(JobInfo.class);
-    when(nextJob.locator())
-        .thenReturn(new JobLocator("tf_job_2", "tf_job_2_" + XtsConstants.DYNAMIC_MCTS_JOB_NAME));
-    when(nextJob.properties()).thenReturn(new Properties(new Timing()));
-    SubDeviceSpecs subDeviceSpecs = new SubDeviceSpecs(new Params(new Timing()), new Timing());
-    subDeviceSpecs.addSubDevice("AndroidDevice");
-    when(nextJob.subDeviceSpecs()).thenReturn(subDeviceSpecs);
-
-    when(runCommandHandler.createTradefedJobs(runCommand))
-        .thenReturn(ImmutableList.of(currentJob, nextJob));
-    when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
-    when(runCommandHandler.createSetupJob()).thenReturn(Optional.empty());
-    when(runCommandHandler.createTeardownJob()).thenReturn(Optional.empty());
-
-    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
-
-    // Current static job ends -> Next dynamic job scheduled WITH device IDs relayed to subdevice
-    // specs
-    atsSessionPlugin.onJobEnd(new JobEndEvent(currentJob, /* jobError= */ null));
-    verify(sessionInfo).addJob(nextJob);
-    assertThat(subDeviceSpecs.getAllSubDevices().get(0).dimensions().get(Name.ID.lowerCaseName()))
-        .isEqualTo("device_1");
-  }
-
-  @Test
-  public void addMainJobs_moduleSharding_addsAllTradefedJobsDirectly() throws Exception {
+  public void onJobEnd_moduleShardingWithDynamicMcts_schedulesAllJobsAndThenTeardown()
+      throws Exception {
     RunCommand runCommand = RunCommand.getDefaultInstance();
     when(sessionInfo.getSessionPluginExecutionConfig())
         .thenReturn(
@@ -749,23 +707,57 @@ public final class AtsSessionPluginTest {
     when(runCommandHandler.shouldEnableModuleSharding()).thenReturn(true);
     atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
 
-    JobInfo tfJob1 = mock(JobInfo.class);
-    when(tfJob1.locator()).thenReturn(new JobLocator("tf_job_1", "module_1_job_STATIC_XTS"));
-    when(tfJob1.properties()).thenReturn(new Properties(new Timing()));
+    JobInfo setupJob = mock(JobInfo.class);
+    when(setupJob.locator())
+        .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
+    when(setupJob.properties()).thenReturn(new Properties(new Timing()));
 
-    JobInfo tfJob2 = mock(JobInfo.class);
-    when(tfJob2.locator()).thenReturn(new JobLocator("tf_job_2", "module_1_job_MCTS"));
-    when(tfJob2.properties()).thenReturn(new Properties(new Timing()));
+    TestInfos testInfos = mock(TestInfos.class);
+    when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of());
 
-    when(runCommandHandler.createTradefedJobs(runCommand))
-        .thenReturn(ImmutableList.of(tfJob1, tfJob2));
+    JobInfo tfJob1Static = mock(JobInfo.class);
+    when(tfJob1Static.locator())
+        .thenReturn(
+            new JobLocator("tf_job_1_static", "module_1_" + XtsConstants.STATIC_XTS_JOB_NAME));
+    when(tfJob1Static.properties()).thenReturn(new Properties(new Timing()));
+    when(tfJob1Static.tests()).thenReturn(testInfos);
+
+    JobInfo tfJob2Mcts = mock(JobInfo.class);
+    when(tfJob2Mcts.locator())
+        .thenReturn(
+            new JobLocator("tf_job_2_mcts", "module_2_" + XtsConstants.DYNAMIC_MCTS_JOB_NAME));
+    when(tfJob2Mcts.properties()).thenReturn(new Properties(new Timing()));
+    when(tfJob2Mcts.tests()).thenReturn(testInfos);
+    SubDeviceSpecs subDeviceSpecs2 = mock(SubDeviceSpecs.class);
+    when(subDeviceSpecs2.getAllSubDevices()).thenReturn(ImmutableList.of());
+    when(tfJob2Mcts.subDeviceSpecs()).thenReturn(subDeviceSpecs2);
+
+    JobInfo teardownJob = mock(JobInfo.class);
+    when(teardownJob.locator())
+        .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
+    when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
+
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any()))
+        .thenReturn(ImmutableList.of(tfJob1Static, tfJob2Mcts));
     when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
-    when(runCommandHandler.createSetupJob()).thenReturn(Optional.empty());
-    when(runCommandHandler.createTeardownJob()).thenReturn(Optional.empty());
+    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
+    when(runCommandHandler.createTeardownJob()).thenReturn(Optional.of(teardownJob));
 
     atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
-    verify(sessionInfo).addJob(tfJob1);
-    verify(sessionInfo).addJob(tfJob2);
+    // Setup job ends -> 1 static job for module 1 and 1 MCTS job for module 2 scheduled
+    // concurrently
+    atsSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
+    verify(sessionInfo).addJob(tfJob1Static);
+    verify(sessionInfo).addJob(tfJob2Mcts);
+    verify(sessionInfo, never()).addJob(teardownJob);
+
+    // TF job 1 ends -> Teardown NOT yet scheduled
+    atsSessionPlugin.onJobEnd(new JobEndEvent(tfJob1Static, /* jobError= */ null));
+    verify(sessionInfo, never()).addJob(teardownJob);
+
+    // Last TF job ends -> Teardown scheduled
+    atsSessionPlugin.onJobEnd(new JobEndEvent(tfJob2Mcts, /* jobError= */ null));
+    verify(sessionInfo).addJob(teardownJob);
   }
 }

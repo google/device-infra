@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -39,8 +40,15 @@ class ModuleShardingArgsGenerator {
   // Shard number for a single large module
   @VisibleForTesting static final int LARGE_MODULE_SHARDS = 5;
 
+  /**
+   * Generates a multimap mapping each target module to its sharding run command arguments.
+   *
+   * @param sessionRequestInfo info about the session request
+   * @param tfModules list of target Tradefed modules
+   * @return a multimap from module name to its sharding run command args
+   */
   @VisibleForTesting
-  ImmutableSet<String> generateShardingArgs(
+  ImmutableListMultimap<String, String> generateShardingArgsMap(
       SessionRequestInfo sessionRequestInfo, ImmutableList<String> tfModules)
       throws MobileHarnessException {
     ImmutableSet<String> targetModules = ImmutableSet.copyOf(tfModules);
@@ -54,12 +62,13 @@ class ModuleShardingArgsGenerator {
             .map(SuiteTestFilter::create)
             .collect(toImmutableList());
 
-    ImmutableSet.Builder<String> shardingArgs = ImmutableSet.builder();
+    ImmutableListMultimap.Builder<String, String> shardingArgs = ImmutableListMultimap.builder();
 
     // Shard the shared modules to jobs by default.
     for (String module : ShardConstants.SHARD_MODULES) {
       if (targetModules.contains(module)) {
-        shardingArgs.addAll(
+        shardingArgs.putAll(
+            module,
             generateShardingArgsForModule(
                 module,
                 sessionRequestInfo,
@@ -72,7 +81,8 @@ class ModuleShardingArgsGenerator {
     // Make a module with a specific parameter per job for large modules.
     for (String module : ShardConstants.LARGE_MODULES) {
       if (targetModules.contains(module)) {
-        shardingArgs.addAll(
+        shardingArgs.putAll(
+            module,
             generateShardingArgsForModule(
                 module,
                 sessionRequestInfo,
@@ -86,7 +96,8 @@ class ModuleShardingArgsGenerator {
     for (String module : targetModules) {
       if (!ShardConstants.SHARD_MODULES.contains(module)
           && !ShardConstants.LARGE_MODULES.contains(module)) {
-        shardingArgs.addAll(
+        shardingArgs.putAll(
+            module,
             generateShardingArgsForModule(
                 module,
                 sessionRequestInfo,

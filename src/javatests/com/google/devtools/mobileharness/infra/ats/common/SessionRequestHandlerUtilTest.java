@@ -769,20 +769,23 @@ public final class SessionRequestHandlerUtilTest {
             sessionRequestHandlerUtil.getFilteredTradefedModules(
                 SessionRequestInfoUtil.buildAndValidate(
                     defaultSessionRequestInfoBuilder()
-                        .addAllIncludeFilters(ImmutableList.of("module3 TestClass#TestCase")))));
+                        .addAllIncludeFilters(ImmutableList.of("module3 TestClass#TestCase"))),
+                /* dynamicMctsModules= */ ImmutableSet.of()));
     assertThrows(
         MobileHarnessException.class,
         () ->
             sessionRequestHandlerUtil.getFilteredTradefedModules(
                 SessionRequestInfoUtil.buildAndValidate(
                     defaultSessionRequestInfoBuilder()
-                        .addAllExcludeFilters(ImmutableList.of("module1", "module2")))));
+                        .addAllExcludeFilters(ImmutableList.of("module1", "module2"))),
+                /* dynamicMctsModules= */ ImmutableSet.of()));
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
                 SessionRequestInfoUtil.buildAndValidate(
                     defaultSessionRequestInfoBuilder()
                         .addAllIncludeFilters(ImmutableList.of("module1"))
-                        .addAllExcludeFilters(ImmutableList.of("module2")))))
+                        .addAllExcludeFilters(ImmutableList.of("module2"))),
+                /* dynamicMctsModules= */ ImmutableSet.of()))
         .containsExactly("module1");
 
     assertThat(
@@ -790,14 +793,16 @@ public final class SessionRequestHandlerUtilTest {
                 SessionRequestInfoUtil.buildAndValidate(
                     defaultSessionRequestInfoBuilder()
                         .addAllIncludeFilters(
-                            ImmutableList.of("arm64-v8a module1 TestClass#TestCase")))))
+                            ImmutableList.of("arm64-v8a module1 TestClass#TestCase"))),
+                /* dynamicMctsModules= */ ImmutableSet.of()))
         .containsExactly("module1");
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
                 SessionRequestInfoUtil.buildAndValidate(
                     defaultSessionRequestInfoBuilder()
-                        .addAllExcludeFilters(ImmutableList.of("module1", "arm64-v8a module2")))))
+                        .addAllExcludeFilters(ImmutableList.of("module1", "arm64-v8a module2"))),
+                /* dynamicMctsModules= */ ImmutableSet.of()))
         .containsExactly("module2");
 
     assertThat(
@@ -805,21 +810,24 @@ public final class SessionRequestHandlerUtilTest {
                 SessionRequestInfoUtil.buildAndValidate(
                     defaultSessionRequestInfoBuilder()
                         .addAllIncludeFilters(
-                            ImmutableList.of("arm64-v8a module1[instant] TestClass#TestCase")))))
+                            ImmutableList.of("arm64-v8a module1[instant] TestClass#TestCase"))),
+                /* dynamicMctsModules= */ ImmutableSet.of()))
         .containsExactly("module1");
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
                 SessionRequestInfoUtil.buildAndValidate(
                     defaultSessionRequestInfoBuilder()
-                        .addAllModuleNames(ImmutableList.of("module1")))))
+                        .addAllModuleNames(ImmutableList.of("module1"))),
+                /* dynamicMctsModules= */ ImmutableSet.of()))
         .hasSize(1);
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
                 SessionRequestInfoUtil.buildAndValidate(
                     defaultSessionRequestInfoBuilder()
-                        .addAllModuleNames(ImmutableList.of("module1", "module2", "module3")))))
+                        .addAllModuleNames(ImmutableList.of("module1", "module2", "module3"))),
+                /* dynamicMctsModules= */ ImmutableSet.of()))
         .hasSize(2);
 
     assertThrows(
@@ -828,7 +836,8 @@ public final class SessionRequestHandlerUtilTest {
             sessionRequestHandlerUtil.getFilteredTradefedModules(
                 SessionRequestInfoUtil.buildAndValidate(
                     defaultSessionRequestInfoBuilder()
-                        .addAllModuleNames(ImmutableList.of("module3")))));
+                        .addAllModuleNames(ImmutableList.of("module3"))),
+                /* dynamicMctsModules= */ ImmutableSet.of()));
   }
 
   @Test
@@ -854,7 +863,8 @@ public final class SessionRequestHandlerUtilTest {
                     defaultSessionRequestInfoBuilder()
                         .setTestPlan("retry")
                         .setRetrySessionIndex(0)
-                        .addAllModuleNames(ImmutableList.of("module1")))))
+                        .addAllModuleNames(ImmutableList.of("module1"))),
+                /* dynamicMctsModules= */ ImmutableSet.of()))
         .hasSize(1);
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
@@ -862,7 +872,8 @@ public final class SessionRequestHandlerUtilTest {
                     defaultSessionRequestInfoBuilder()
                         .setTestPlan("retry")
                         .setRetrySessionIndex(0)
-                        .addAllModuleNames(ImmutableList.of("module2[instant]")))))
+                        .addAllModuleNames(ImmutableList.of("module2[instant]"))),
+                /* dynamicMctsModules= */ ImmutableSet.of()))
         .hasSize(1);
     assertThrows(
         MobileHarnessException.class,
@@ -872,7 +883,8 @@ public final class SessionRequestHandlerUtilTest {
                     defaultSessionRequestInfoBuilder()
                         .setTestPlan("retry")
                         .setRetrySessionIndex(0)
-                        .addAllModuleNames(ImmutableList.of("module")))));
+                        .addAllModuleNames(ImmutableList.of("module3"))),
+                /* dynamicMctsModules= */ ImmutableSet.of()));
   }
 
   @Test
@@ -919,13 +931,15 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
                 SessionRequestInfoUtil.buildAndValidate(
-                    defaultSessionRequestInfoBuilder().setTestPlan("plan_with_include"))))
+                    defaultSessionRequestInfoBuilder().setTestPlan("plan_with_include")),
+                /* dynamicMctsModules= */ ImmutableSet.of()))
         .containsExactly("module1");
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
                 SessionRequestInfoUtil.buildAndValidate(
-                    defaultSessionRequestInfoBuilder().setTestPlan("plan_with_exclude"))))
+                    defaultSessionRequestInfoBuilder().setTestPlan("plan_with_exclude")),
+                /* dynamicMctsModules= */ ImmutableSet.of()))
         .containsExactly("module2");
 
     assertThrows(
@@ -934,7 +948,8 @@ public final class SessionRequestHandlerUtilTest {
             sessionRequestHandlerUtil.getFilteredTradefedModules(
                 SessionRequestInfoUtil.buildAndValidate(
                     defaultSessionRequestInfoBuilder()
-                        .setTestPlan("plan_with_non_matched_include"))));
+                        .setTestPlan("plan_with_non_matched_include")),
+                /* dynamicMctsModules= */ ImmutableSet.of()));
   }
 
   @Test
@@ -981,13 +996,15 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
                 SessionRequestInfoUtil.buildAndValidate(
-                    defaultSessionRequestInfoBuilder().setTestPlan("plan_with_metadata_exclude"))))
+                    defaultSessionRequestInfoBuilder().setTestPlan("plan_with_metadata_exclude")),
+                /* dynamicMctsModules= */ ImmutableSet.of()))
         .containsExactly("module2");
 
     assertThat(
             sessionRequestHandlerUtil.getFilteredTradefedModules(
                 SessionRequestInfoUtil.buildAndValidate(
-                    defaultSessionRequestInfoBuilder().setTestPlan("plan_with_metadata_include"))))
+                    defaultSessionRequestInfoBuilder().setTestPlan("plan_with_metadata_include")),
+                /* dynamicMctsModules= */ ImmutableSet.of()))
         .containsExactly("module1");
   }
 
@@ -1020,7 +1037,8 @@ public final class SessionRequestHandlerUtilTest {
                 SessionRequestInfoUtil.buildAndValidate(
                     defaultSessionRequestInfoBuilder()
                         .putModuleMetadataExcludeFilters(
-                            "component", FilterValues.newBuilder().addValues("gts-root").build()))))
+                            "component", FilterValues.newBuilder().addValues("gts-root").build())),
+                /* dynamicMctsModules= */ ImmutableSet.of()))
         .containsExactly("module2");
 
     assertThat(
@@ -1028,7 +1046,8 @@ public final class SessionRequestHandlerUtilTest {
                 SessionRequestInfoUtil.buildAndValidate(
                     defaultSessionRequestInfoBuilder()
                         .putModuleMetadataIncludeFilters(
-                            "component", FilterValues.newBuilder().addValues("gts-root").build()))))
+                            "component", FilterValues.newBuilder().addValues("gts-root").build())),
+                /* dynamicMctsModules= */ ImmutableSet.of()))
         .containsExactly("module1");
   }
 

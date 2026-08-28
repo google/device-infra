@@ -25,10 +25,12 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -59,6 +61,8 @@ import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.PhaseS
 import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
@@ -71,7 +75,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import javax.inject.Inject;
@@ -253,14 +256,60 @@ public final class ConsoleJobCreatorTest {
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.getDefaultInstance());
-    when(moduleShardingArgsGenerator.generateShardingArgs(eq(sessionRequestInfo), any()))
-        .thenReturn(ImmutableSet.of("arg1", "arg2"));
+    when(moduleShardingArgsGenerator.generateShardingArgsMap(eq(sessionRequestInfo), any()))
+        .thenReturn(ImmutableListMultimap.of("", "arg1", "", "arg2"));
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         jobCreator.createXtsTradefedTestJobInfo(
             sessionRequestInfo, ImmutableList.of("mock_module"));
 
     assertThat(tradefedJobInfoList).hasSize(2);
+  }
+
+  @Test
+  public void createXtsTradefedTestJob_withModuleShardingAndDynamicMcts() throws Exception {
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setShardingMode(ShardingMode.MODULE)
+            .setIsXtsDynamicDownloadEnabled(true);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
+
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(eq(sessionRequestInfo), any()))
+        .thenReturn(ImmutableList.of("static_module", "mcts_module"));
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
+        .thenReturn(JobConfig.newBuilder().setName("mock_job").build());
+    when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
+    when(moduleShardingArgsGenerator.generateShardingArgsMap(eq(sessionRequestInfo), any()))
+        .thenReturn(
+            ImmutableListMultimap.of(
+                "static_module", "arg1",
+                "mcts_module", "arg2"));
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(eq(sessionRequestInfo), any()))
+        .thenAnswer(
+            invocation -> {
+              TradefedJobInfo tradefedJobInfo = invocation.getArgument(1);
+              JobInfo jobInfo = mock(JobInfo.class);
+              when(jobInfo.locator())
+                  .thenReturn(
+                      new JobLocator(
+                          tradefedJobInfo.jobConfig().getName(),
+                          tradefedJobInfo.jobConfig().getName()));
+              when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+              return jobInfo;
+            });
+
+    ImmutableList<JobInfo> jobInfos =
+        jobCreator.createXtsTradefedTestJob(sessionRequestInfo, ImmutableSet.of("mcts_module"));
+
+    assertThat(jobInfos).hasSize(2);
+    assertThat(jobInfos.get(0).properties().get(XtsConstants.XTS_JOB_NAME))
+        .isEqualTo(XtsConstants.STATIC_XTS_JOB_NAME);
+    assertThat(jobInfos.get(1).properties().get(XtsConstants.XTS_JOB_NAME))
+        .isEqualTo(XtsConstants.DYNAMIC_MCTS_JOB_NAME);
   }
 
   @Test
@@ -642,7 +691,7 @@ public final class ConsoleJobCreatorTest {
     SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
 
     Path testReportPropertiesFile = folder.newFile("test-report-prev-plan.properties").toPath();
-    Properties testReportProperties = new Properties();
+    java.util.Properties testReportProperties = new java.util.Properties();
     testReportProperties.setProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE, "true");
     testReportProperties.setProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE, "false");
     testReportProperties.setProperty(SuiteCommon.TEST_REPORT_PROPERTY_TEST_PLAN, "cts");
@@ -758,7 +807,7 @@ public final class ConsoleJobCreatorTest {
 
     when(localFileUtil.isDirExist(any(Path.class))).thenReturn(true);
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(true);
-    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any()))
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any(), any()))
         .thenReturn(ImmutableList.of());
     when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
     when(sessionRequestHandlerUtil.createJobTmpDir(any())).thenReturn(Path.of("/tmp/tmp"));
@@ -874,7 +923,7 @@ public final class ConsoleJobCreatorTest {
             .addAllModuleNames(ImmutableList.of("mock_mobly_module"));
     when(localFileUtil.isDirExist(any(Path.class))).thenReturn(true);
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(true);
-    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any()))
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any(), any()))
         .thenReturn(ImmutableList.of());
     when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any(), anyBoolean()))
         .thenReturn(MOCK_SUB_DEVICE_SPEC_LIST);
@@ -927,7 +976,7 @@ public final class ConsoleJobCreatorTest {
             .addAllModuleNames(ImmutableList.of("mock_mobly_module"));
     when(localFileUtil.isDirExist(any(Path.class))).thenReturn(true);
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(true);
-    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any()))
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any(), any()))
         .thenReturn(ImmutableList.of());
     when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any(), anyBoolean()))
         .thenReturn(MOCK_SUB_DEVICE_SPEC_LIST);
@@ -1010,7 +1059,7 @@ public final class ConsoleJobCreatorTest {
                 .setSubPlanName("npu"));
 
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(sessionRequestInfo)).thenReturn(true);
-    when(sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo))
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(eq(sessionRequestInfo), any()))
         .thenReturn(ImmutableList.of("CtsSampleDeviceTestCases"));
     when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any(), anyBoolean()))
         .thenReturn(MOCK_SUB_DEVICE_SPEC_LIST);
@@ -1036,7 +1085,7 @@ public final class ConsoleJobCreatorTest {
                 .setIsXtsDynamicDownloadEnabled(true));
 
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(sessionRequestInfo)).thenReturn(false);
-    when(sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo))
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(eq(sessionRequestInfo), any()))
         .thenReturn(ImmutableList.of("CtsSampleDeviceTestCases"));
     when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
     when(sessionRequestHandlerUtil.createJobTmpDir(any())).thenReturn(Path.of("/tmp/tmp"));
@@ -1096,7 +1145,7 @@ public final class ConsoleJobCreatorTest {
                 .setStartTimeout(toProtoDuration(Duration.ofHours(1))));
 
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(sessionRequestInfo)).thenReturn(false);
-    when(sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo))
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(eq(sessionRequestInfo), any()))
         .thenReturn(ImmutableList.of("CtsSampleDeviceTestCases"));
     when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
     when(sessionRequestHandlerUtil.createJobTmpDir(any())).thenReturn(Path.of("/tmp/tmp"));
@@ -1113,7 +1162,7 @@ public final class ConsoleJobCreatorTest {
   @Test
   public void createXtsSetupAndTearDownJob_retryCtsPlan_createsJobs() throws Exception {
     Path testReportPropertiesFile = folder.newFile("test-report-retry-cts.properties").toPath();
-    Properties testReportProperties = new Properties();
+    java.util.Properties testReportProperties = new java.util.Properties();
     testReportProperties.setProperty(SuiteCommon.TEST_REPORT_PROPERTY_TEST_PLAN, "cts");
     try (FileOutputStream outputStream = new FileOutputStream(testReportPropertiesFile.toFile())) {
       testReportProperties.store(outputStream, null);
@@ -1132,7 +1181,7 @@ public final class ConsoleJobCreatorTest {
                 .setIsXtsDynamicDownloadEnabled(true));
 
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(sessionRequestInfo)).thenReturn(false);
-    when(sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo))
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(eq(sessionRequestInfo), any()))
         .thenReturn(ImmutableList.of("ModuleA"));
     when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
     when(sessionRequestHandlerUtil.createJobTmpDir(any())).thenReturn(Path.of("/tmp/tmp"));
@@ -1149,9 +1198,62 @@ public final class ConsoleJobCreatorTest {
   }
 
   @Test
+  public void
+      createXtsSetupAndTearDownJob_moduleShardingWithDynamicMcts_createsJobsWithDynamicDownload()
+          throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setXtsType("cts")
+                .setShardingMode(ShardingMode.MODULE)
+                .setIsXtsDynamicDownloadEnabled(true));
+
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(sessionRequestInfo)).thenReturn(false);
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(eq(sessionRequestInfo), any()))
+        .thenReturn(ImmutableList.of("CtsSampleDeviceTestCases"));
+    when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(any())).thenReturn(Path.of("/tmp/tmp"));
+
+    Optional<JobInfo> setupJobOpt = jobCreator.createXtsSetupJob(sessionRequestInfo);
+    assertThat(setupJobOpt).isPresent();
+    JobInfo setupJob = setupJobOpt.get();
+    assertThat(setupJob.locator().getName()).isEqualTo(XtsConstants.SETUP_JOB_NAME);
+    assertThat(setupJob.properties().get(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED))
+        .isEqualTo("true");
+    Duration expectedJobTimeout =
+        min(SessionRequestHandlerUtil.DEFAULT_TRADEFED_JOB_TIMEOUT, Timeout.MAX_JOB_TIMEOUT);
+    Duration expectedTestTimeout =
+        min(
+            SessionRequestHandlerUtil.calculateTestTimeout(
+                SessionRequestHandlerUtil.DEFAULT_TRADEFED_JOB_TIMEOUT),
+            Timeout.MAX_TEST_TIMEOUT);
+    Duration expectedStartTimeout =
+        min(
+            SessionRequestHandlerUtil.DEFAULT_TRADEFED_START_TIMEOUT,
+            expectedJobTimeout.minusMinutes(1));
+    assertThat(setupJob.setting().getNewTimeout().jobTimeout()).isEqualTo(expectedJobTimeout);
+    assertThat(setupJob.setting().getNewTimeout().testTimeout()).isEqualTo(expectedTestTimeout);
+    assertThat(setupJob.setting().getNewTimeout().startTimeout()).isEqualTo(expectedStartTimeout);
+
+    Optional<JobInfo> teardownJobOpt = jobCreator.createXtsTearDownJob(sessionRequestInfo);
+    assertThat(teardownJobOpt).isPresent();
+    JobInfo teardownJob = teardownJobOpt.get();
+    assertThat(teardownJob.locator().getName()).isEqualTo(XtsConstants.TEARDOWN_JOB_NAME);
+    assertThat(teardownJob.properties().get(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED))
+        .isEqualTo("true");
+    assertThat(teardownJob.setting().getNewTimeout().jobTimeout()).isEqualTo(expectedJobTimeout);
+    assertThat(teardownJob.setting().getNewTimeout().testTimeout()).isEqualTo(expectedTestTimeout);
+    assertThat(teardownJob.setting().getNewTimeout().startTimeout())
+        .isEqualTo(expectedStartTimeout);
+  }
+
+  @Test
   public void createXtsSetupAndTearDownJob_retryNonCtsPlan_doesNotCreateJobs() throws Exception {
     Path testReportPropertiesFile = folder.newFile("test-report-retry-non-cts.properties").toPath();
-    Properties testReportProperties = new Properties();
+    java.util.Properties testReportProperties = new java.util.Properties();
     testReportProperties.setProperty(SuiteCommon.TEST_REPORT_PROPERTY_TEST_PLAN, "cts-camera");
     try (FileOutputStream outputStream = new FileOutputStream(testReportPropertiesFile.toFile())) {
       testReportProperties.store(outputStream, null);
@@ -1170,7 +1272,7 @@ public final class ConsoleJobCreatorTest {
                 .setIsXtsDynamicDownloadEnabled(true));
 
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(sessionRequestInfo)).thenReturn(false);
-    when(sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo))
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(eq(sessionRequestInfo), any()))
         .thenReturn(ImmutableList.of("ModuleA"));
 
     Optional<JobInfo> setupJobOpt = jobCreator.createXtsSetupJob(sessionRequestInfo);
