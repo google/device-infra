@@ -38,6 +38,7 @@ go_binary(
         "//src/devtools/rbe/common",
         "//src/devtools/rbe/common/monitoring",
         "//src/devtools/rbe/rbeclient",
+        "@org_golang_google_grpc//:grpc",
         "@org_golang_google_grpc//status",
         "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:remote_execution_go_proto",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/client",

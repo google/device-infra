@@ -9,8 +9,10 @@ import (
 type DownloadStats struct {
 	SizeCold           int64
 	SizeHot            int64
+	SizeWarm           int64
 	CountCold          int
 	CountHot           int
+	CountWarm          int
 	E2ETimeMS          int64
 	DirRetrieveTimeMS  int64
 	DirPrepareTimeMS   int64

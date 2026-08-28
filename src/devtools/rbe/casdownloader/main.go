@@ -27,6 +27,7 @@ import (
 	"github.com/google/device-infra/src/devtools/rbe/common"
 	"github.com/google/device-infra/src/devtools/rbe/common/monitoring"
 	"github.com/google/device-infra/src/devtools/rbe/rbeclient"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -316,8 +317,14 @@ func run(ctx context.Context) error {
 		RPCTimeouts:           rpcTimeouts,
 	}
 
+	tracker := download.NewTracker()
+	clientOpts.DialOpts = append(clientOpts.DialOpts,
+		grpc.WithChainStreamInterceptor(tracker.StreamInterceptor()),
+		grpc.WithChainUnaryInterceptor(tracker.UnaryInterceptor()),
+	)
+
 	useProxy := *casProxyAddr != ""
-	proxyStatus := "unspecified"
+	proxyStatus := ""
 	var rbeClient *client.Client
 	var err error
 
@@ -335,8 +342,6 @@ func run(ctx context.Context) error {
 			}
 			useProxy = false // Disable proxy usage for the rest of the run
 			proxyStatus = fmt.Sprintf("unavailable: %v", err)
-		} else {
-			proxyStatus = "success"
 		}
 	}
 
@@ -376,6 +381,7 @@ func run(ctx context.Context) error {
 		ChunksOnly:      *chunksOnly,
 		MinDownloadMbps: *minDownloadMbps,
 		DownloadTimeout: *downloadTimeout,
+		Tracker:         tracker,
 	}
 	reportMemoryStats()
 
@@ -413,6 +419,7 @@ func run(ctx context.Context) error {
 			return fmt.Errorf("failed to re-initialize cache for direct RBE fallback: %w", err)
 		}
 
+		tracker.Reset()
 		// Reassign client, cache, and updated proxy status to download job
 		d.Client = rbeClient
 		d.Cache = cache
@@ -542,8 +549,10 @@ func recordDownloadMetrics(success bool, rbeStatus string, duration time.Duratio
 	mStats := &monitoring.DownloadStats{
 		SizeCold:           stats.SizeCold,
 		SizeHot:            stats.SizeHot,
+		SizeWarm:           stats.SizeWarm,
 		CountCold:          stats.CountCold,
 		CountHot:           stats.CountHot,
+		CountWarm:          stats.CountWarm,
 		E2ETimeMS:          stats.E2ETimeMS,
 		DirRetrieveTimeMS:  stats.DirRetrieveTimeMS,
 		DirPrepareTimeMS:   stats.DirPrepareTimeMS,

@@ -4,14 +4,19 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/fakes"
 	repb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -310,5 +315,178 @@ func TestDoDownload_CASProxyStatusStats(t *testing.T) {
 	}
 	if !strings.Contains(string(dumpedContent), `"casproxy":"success"`) {
 		t.Errorf("Dumped JSON does not contain expected casproxy field: %s", string(dumpedContent))
+	}
+}
+
+func TestUpdateDownloadStats_ThreeTierBreakdown(t *testing.T) {
+	d1 := digest.Digest{Hash: "hash1", Size: 200}
+	d2 := digest.Digest{Hash: "hash2", Size: 300}
+	d3 := digest.Digest{Hash: "hash3", Size: 200}
+	d4 := digest.Digest{Hash: "hash4", Size: 300}
+
+	allOutputs := []*client.TreeOutput{
+		{Digest: d1, Path: "file1"},
+		{Digest: d2, Path: "file2"},
+		{Digest: d3, Path: "file3"},
+		{Digest: d4, Path: "file4"},
+	}
+
+	// File 1 is satisfied by local cache, so downloaded files are 2, 3, 4 (total 800 bytes)
+	downloadedOutputs := map[digest.Digest]*client.TreeOutput{
+		d2: {Digest: d2, Path: "file2"},
+		d3: {Digest: d3, Path: "file3"},
+		d4: {Digest: d4, Path: "file4"},
+	}
+
+	tracker := NewTracker()
+	// Files 2 and 3 served from proxy cache (300 + 200 = 500 bytes)
+	tracker.AddWarm(500, 2)
+
+	job := &DownloadJob{
+		DownloadStats: &Stats{},
+		Tracker:       tracker,
+	}
+
+	job.updateDownloadStats(allOutputs, downloadedOutputs)
+
+	stats := job.Stats()
+	if stats.SizeHot != 200 || stats.CountHot != 1 {
+		t.Errorf("Hot stats: got size=%d count=%d, want size=200 count=1", stats.SizeHot, stats.CountHot)
+	}
+	if stats.SizeWarm != 500 || stats.CountWarm != 2 {
+		t.Errorf("Warm stats: got size=%d count=%d, want size=500 count=2", stats.SizeWarm, stats.CountWarm)
+	}
+	if stats.SizeCold != 300 || stats.CountCold != 1 {
+		t.Errorf("Cold stats: got size=%d count=%d, want size=300 count=1", stats.SizeCold, stats.CountCold)
+	}
+
+	if got := job.TotalSize(); got != 1000 {
+		t.Errorf("TotalSize() = %d, want 1000", got)
+	}
+	if got := job.WarmSize(); got != 500 {
+		t.Errorf("WarmSize() = %d, want 500", got)
+	}
+	if got := job.HotSize(); got != 200 {
+		t.Errorf("HotSize() = %d, want 200", got)
+	}
+	if got := job.ColdSize(); got != 300 {
+		t.Errorf("ColdSize() = %d, want 300", got)
+	}
+}
+
+func TestTracker_AddWarmAndReset(t *testing.T) {
+	tracker := NewTracker()
+	if tracker.WarmBytes() != 0 || tracker.WarmCount() != 0 {
+		t.Errorf("Initial tracker = (bytes:%d, count:%d), want (0, 0)", tracker.WarmBytes(), tracker.WarmCount())
+	}
+
+	tracker.AddWarm(1024, 1)
+	tracker.AddWarm(2048, 2)
+	if tracker.WarmBytes() != 3072 || tracker.WarmCount() != 3 {
+		t.Errorf("After AddWarm tracker = (bytes:%d, count:%d), want (3072, 3)", tracker.WarmBytes(), tracker.WarmCount())
+	}
+
+	tracker.Reset()
+	if tracker.WarmBytes() != 0 || tracker.WarmCount() != 0 {
+		t.Errorf("After Reset tracker = (bytes:%d, count:%d), want (0, 0)", tracker.WarmBytes(), tracker.WarmCount())
+	}
+}
+
+func TestDoDownload_ThreeTierStats_DumpJSON(t *testing.T) {
+	ctx := context.Background()
+	fakeServer, err := fakes.NewServer(t)
+	if err != nil {
+		t.Fatalf("Failed to create fake RBE server: %v", err)
+	}
+	defer fakeServer.Stop()
+
+	fileData := []byte("three tier test file")
+	dFile := fakeServer.CAS.Put(fileData)
+
+	rootDir := &repb.Directory{
+		Files: []*repb.FileNode{
+			{Name: "file.txt", Digest: &repb.Digest{Hash: dFile.Hash, SizeBytes: dFile.Size}},
+		},
+	}
+	rootBytes, err := proto.Marshal(rootDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dRootDir := fakeServer.CAS.Put(rootBytes)
+
+	testClient, err := fakeServer.NewTestClient(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer testClient.Close()
+
+	destDir := t.TempDir()
+	dumpFile := filepath.Join(destDir, "stats.json")
+
+	tracker := NewTracker()
+	// Simulate that the file was served warm from proxy cache
+	tracker.AddWarm(dFile.Size, 1)
+
+	job := DownloadJob{
+		Client:         testClient,
+		Digest:         fmt.Sprintf("%s/%d", dRootDir.Hash, dRootDir.Size),
+		Dir:            destDir,
+		DumpJSON:       dumpFile,
+		CASProxyStatus: "",
+		Tracker:        tracker,
+	}
+
+	if err := job.DoDownload(ctx); err != nil {
+		t.Fatalf("DoDownload failed: %v", err)
+	}
+
+	if job.Stats().SizeWarm != dFile.Size || job.Stats().CountWarm != 1 {
+		t.Errorf("Stats.SizeWarm=%d, CountWarm=%d, want size=%d count=1",
+			job.Stats().SizeWarm, job.Stats().CountWarm, dFile.Size)
+	}
+
+	dumpedContent, err := os.ReadFile(dumpFile)
+	if err != nil {
+		t.Fatalf("Failed to read dumped stats: %v", err)
+	}
+	contentStr := string(dumpedContent)
+	for _, expectedKey := range []string{`"size_hot"`, `"size_warm"`, `"size_cold"`, `"count_hot"`, `"count_warm"`, `"count_cold"`} {
+		if !strings.Contains(contentStr, expectedKey) {
+			t.Errorf("Dumped JSON does not contain expected key %s: %s", expectedKey, contentStr)
+		}
+	}
+}
+
+type mockEOFClientStream struct {
+	grpc.ClientStream
+}
+
+func (m *mockEOFClientStream) RecvMsg(msg any) error {
+	return io.EOF
+}
+
+func TestTrackedClientStream_RecvMsgIdempotent(t *testing.T) {
+	tracker := NewTracker()
+	trailer := metadata.Pairs(TrailerWarmBytes, "1024", TrailerWarmCount, "2")
+	stream := &trackedClientStream{
+		ClientStream: &mockEOFClientStream{},
+		trailer:      &trailer,
+		tracker:      tracker,
+	}
+
+	// First RecvMsg returns io.EOF and records warm metrics
+	if err := stream.RecvMsg(nil); err != io.EOF {
+		t.Fatalf("RecvMsg err = %v, want io.EOF", err)
+	}
+	if tracker.WarmBytes() != 1024 || tracker.WarmCount() != 2 {
+		t.Errorf("After first RecvMsg tracker = (bytes:%d, count:%d), want (1024, 2)", tracker.WarmBytes(), tracker.WarmCount())
+	}
+
+	// Second RecvMsg returns io.EOF; should not double-count
+	if err := stream.RecvMsg(nil); err != io.EOF {
+		t.Fatalf("Second RecvMsg err = %v, want io.EOF", err)
+	}
+	if tracker.WarmBytes() != 1024 || tracker.WarmCount() != 2 {
+		t.Errorf("After second RecvMsg tracker = (bytes:%d, count:%d), want (1024, 2) without double-counting", tracker.WarmBytes(), tracker.WarmCount())
 	}
 }

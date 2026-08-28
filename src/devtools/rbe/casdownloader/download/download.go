@@ -43,22 +43,25 @@ type DownloadJob struct {
 	MinDownloadMbps int64
 	DownloadTimeout time.Duration
 	CASProxyStatus  string
+	Tracker         *Tracker
 }
 
 // Stats holds the telemetry data for a download job.
 type Stats struct {
 	SizeCold            int64  `json:"size_cold"`
 	SizeHot             int64  `json:"size_hot"`
+	SizeWarm            int64  `json:"size_warm"`
 	CountCold           int    `json:"count_cold"`
 	CountHot            int    `json:"count_hot"`
+	CountWarm           int    `json:"count_warm"`
 	E2ETimeMS           int64  `json:"e2e_time_ms"`
 	DirRetrieveTimeMS   int64  `json:"dir_retrieve_time_ms"`
 	DirPrepareTimeMS    int64  `json:"dir_prepare_time_ms"`
 	FileDownloadTimeMS  int64  `json:"file_download_time_ms"`
 	ChunkRestoreTimeMS  int64  `json:"chunk_restore_time_ms"`
 	CacheLockWaitTimeMS int64  `json:"cache_lock_wait_time_ms"`
-	DownloadError       string `json:"download_error"`
-	Notes               string `json:"notes"`
+	DownloadError       string `json:"download_error,omitempty"`
+	Notes               string `json:"notes,omitempty"`
 	CASProxy            string `json:"casproxy,omitempty"`
 }
 
@@ -177,24 +180,44 @@ func fileMode(output *client.TreeOutput) os.FileMode {
 }
 
 func (d *DownloadJob) updateDownloadStats(all []*client.TreeOutput, downloaded map[digest.Digest]*client.TreeOutput) {
-	var sizeTotal, sizeCold int64
-	countCold := len(downloaded)
-	countHot := len(all) - countCold
+	var sizeTotal int64
 	for _, output := range all {
 		sizeTotal += output.Digest.Size
 	}
+
+	var sizeDownloaded int64
 	for _, output := range downloaded {
-		sizeCold += output.Digest.Size
+		sizeDownloaded += output.Digest.Size
 	}
-	sizeHot := sizeTotal - sizeCold
 
-	log.Infof("Stats of cache: SizeCold: %v, SizeHot: %v, CountCold: %d, CountHot: %d",
-		units.Size(sizeCold), units.Size(sizeHot), countCold, countHot)
+	sizeHot := sizeTotal - sizeDownloaded
+	countHot := len(all) - len(downloaded)
 
-	d.DownloadStats.SizeCold = sizeCold
+	var sizeWarm int64
+	var countWarm int
+	if d.Tracker != nil {
+		sizeWarm = d.Tracker.WarmBytes()
+		countWarm = d.Tracker.WarmCount()
+		if sizeWarm > sizeDownloaded {
+			sizeWarm = sizeDownloaded
+		}
+		if countWarm > len(downloaded) {
+			countWarm = len(downloaded)
+		}
+	}
+
+	sizeCold := sizeDownloaded - sizeWarm
+	countCold := len(downloaded) - countWarm
+
+	log.Infof("Stats of cache: SizeHot: %v, SizeWarm: %v, SizeCold: %v, CountHot: %d, CountWarm: %d, CountCold: %d",
+		units.Size(sizeHot), units.Size(sizeWarm), units.Size(sizeCold), countHot, countWarm, countCold)
+
 	d.DownloadStats.SizeHot = sizeHot
-	d.DownloadStats.CountCold = countCold
+	d.DownloadStats.SizeWarm = sizeWarm
+	d.DownloadStats.SizeCold = sizeCold
 	d.DownloadStats.CountHot = countHot
+	d.DownloadStats.CountWarm = countWarm
+	d.DownloadStats.CountCold = countCold
 }
 
 func dumpStats(path string, stats *Stats) error {
@@ -357,10 +380,6 @@ func (d *DownloadJob) downloadWithoutLocalCache(ctx context.Context, outputs []*
 		sumSize += output.Digest.Size
 	}
 
-	if d.DumpJSON != "" {
-		d.updateDownloadStats(outputs, toDownload)
-	}
-
 	var cancel context.CancelFunc = func() {}
 	if d.MinDownloadMbps > 0 { // only set timeout if minDownloadMbps is positive.
 		timeout := calculateAndLogTimeout(ctx, d.DownloadTimeout, d.MinDownloadMbps, sumSize)
@@ -381,6 +400,8 @@ func (d *DownloadJob) downloadWithoutLocalCache(ctx context.Context, outputs []*
 	}
 	log.InfoContextf(ctx, "finished downloading %d files from CAS without local cache, took %s", len(toDownload), time.Since(start))
 
+	d.updateDownloadStats(outputs, toDownload)
+
 	return nil
 }
 
@@ -397,6 +418,7 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 
 	if len(missed) <= 0 {
 		log.InfoContextf(ctx, "All files in cache. Skip downloading files.")
+		d.updateDownloadStats(outputs, nil)
 		return nil
 	}
 
@@ -407,10 +429,6 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 		sumSize += output.Digest.Size
 	}
 	log.InfoContextf(ctx, "start downloading %d files, estimated size %v", len(toDownload), units.Size(sumSize))
-
-	if d.DumpJSON != "" {
-		d.updateDownloadStats(outputs, toDownload)
-	}
 
 	var cancel context.CancelFunc = func() {}
 	if d.MinDownloadMbps > 0 { // only set timeout if minDownloadMbps is positive.
@@ -431,6 +449,8 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 		return fmt.Errorf("failed to download files: %w", err)
 	}
 	log.InfoContextf(ctx, "finished downloading %d files from CAS, took %s", len(toDownload), time.Since(start))
+
+	d.updateDownloadStats(outputs, toDownload)
 
 	// Push downloaded files to local cache
 	start = time.Now()
@@ -646,5 +666,21 @@ func (d *DownloadJob) TotalSize() int64 {
 	if d.DownloadStats == nil {
 		return 0
 	}
-	return d.DownloadStats.SizeCold + d.DownloadStats.SizeHot
+	return d.DownloadStats.SizeCold + d.DownloadStats.SizeHot + d.DownloadStats.SizeWarm
+}
+
+// WarmSize returns the count of downloaded bytes served by CAS proxy cache.
+func (d *DownloadJob) WarmSize() int64 {
+	if d.DownloadStats == nil {
+		return 0
+	}
+	return d.DownloadStats.SizeWarm
+}
+
+// HotSize returns the count of downloaded bytes served by worker local directory cache.
+func (d *DownloadJob) HotSize() int64 {
+	if d.DownloadStats == nil {
+		return 0
+	}
+	return d.DownloadStats.SizeHot
 }

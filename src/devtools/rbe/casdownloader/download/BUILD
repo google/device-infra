@@ -22,11 +22,15 @@ package(
 
 go_library(
     name = "download",
-    srcs = ["download.go"],
+    srcs = [
+        "download.go",
+        "tracker.go",
+    ],
     importpath = "github.com/google/device-infra/src/devtools/rbe/casdownloader/download",
     deps = [
         "//src/devtools/rbe/casdownloader/cache",
         "//src/devtools/rbe/casuploader/chunkerutil",
+        "@org_golang_google_grpc//:grpc",
         "@org_golang_google_grpc//codes",
         "@org_golang_google_grpc//status",
         "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:remote_execution_go_proto",
@@ -34,6 +38,7 @@ go_library(
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/digest",
         "@com_github_golang_glog//:glog",
         "@org_chromium_go_luci//common/data/text/units",
+        "@org_golang_google_grpc//metadata",
         "@org_golang_x_sync//errgroup",
     ],
 )
@@ -44,8 +49,12 @@ go_test(
     embed = [":download"],
     tags = ["deviceinfra_disable_in_kokoro"],
     deps = [
+        "@org_golang_google_grpc//:grpc",
         "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:remote_execution_go_proto",
+        "@com_github_bazelbuild_remote_apis_sdks//go/pkg/client",
+        "@com_github_bazelbuild_remote_apis_sdks//go/pkg/digest",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/fakes",
+        "@org_golang_google_grpc//metadata",
         "@org_golang_google_protobuf//proto",
     ],
 )
