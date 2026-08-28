@@ -10,13 +10,9 @@ import {
 import {MatButtonModule} from '@angular/material/button';
 import {MatIconModule} from '@angular/material/icon';
 
+import {FilterChip, SearchBoxSuggestion} from '../../../models';
 import {SearchPageStore} from '../../../services/search_page_store';
-import {
-  ChipNegatedPipe,
-  FilterChip,
-  FilterKeyMetadata,
-  SearchBoxSuggestion,
-} from '../../../utils';
+import {getChipKey} from '../../../utils';
 import {SearchSuggestions} from '../search_suggestions/search_suggestions';
 
 /**
@@ -29,17 +25,14 @@ import {SearchSuggestions} from '../search_suggestions/search_suggestions';
   templateUrl: './search_input.ng.html',
   styleUrl: './search_input.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    CommonModule,
-    ChipNegatedPipe,
-    MatButtonModule,
-    MatIconModule,
-    SearchSuggestions,
-  ],
+  imports: [CommonModule, MatButtonModule, MatIconModule, SearchSuggestions],
 })
 export class SearchInput {
   /** Shared search page state store injected via Angular Dependency Injection. */
   readonly store = inject(SearchPageStore);
+
+  /** Helper to safely extract chip keys. */
+  readonly getChipKey = getChipKey;
 
   /** Signal reference targeting the native HTML `<input>` element inside the search bar. */
   readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
@@ -63,22 +56,10 @@ export class SearchInput {
     this.store.showSuggestions.set(false);
     this.activeSuggestionIndex.set(-1);
 
-    const raw = item.rawItem as
-      | {openPicker?: {key: string; keyDisplayName?: string; metadata?: FilterKeyMetadata}}
-      | undefined;
-    const op = raw?.openPicker;
-    if (op) {
-      const displayTitle = op.metadata?.keyDisplayName || op.keyDisplayName || op.key;
-      this.store.openValuePicker(
-        op.key,
-        this.searchBoxOrigin()?.nativeElement || null,
-        displayTitle,
-        op.metadata,
-      );
-      return;
-    }
-
-    this.store.selectSuggestion(item);
+    this.store.selectSuggestion(
+      item,
+      this.searchBoxOrigin()?.nativeElement || null,
+    );
   }
 
   /**
@@ -122,11 +103,14 @@ export class SearchInput {
    */
   onSearchBoxClick(event?: MouseEvent) {
     const target = event?.target as HTMLElement | null;
-    if (target?.closest('.search-chip') || target?.closest('.search-clear-btn')) {
+    if (
+      target === this.searchInput()?.nativeElement ||
+      target?.closest('.search-chip') ||
+      target?.closest('.search-clear-btn')
+    ) {
       return;
     }
     this.focusInput();
-    this.store.showSuggestions.set(true);
   }
 
   /** Handles blur event on the input element by hiding suggestions popover. */
@@ -173,7 +157,6 @@ export class SearchInput {
       default:
         break;
     }
-
   }
 
   /**
@@ -188,10 +171,11 @@ export class SearchInput {
     isShowing: boolean,
     suggestions: SearchBoxSuggestion[],
   ) {
-    if (isShowing && suggestions.length > 0) {
+    if (suggestions.length > 0) {
       event.preventDefault();
       const idx = this.activeSuggestionIndex();
-      const targetIdx = idx >= 0 && idx < suggestions.length ? idx : 0;
+      const targetIdx =
+        isShowing && idx >= 0 && idx < suggestions.length ? idx : 0;
       this.onSelectSuggestion({item: suggestions[targetIdx]});
       return;
     }
@@ -222,14 +206,10 @@ export class SearchInput {
    * @param anchor DOM element anchor where the ValuePicker overlay positions itself.
    * @param event Optional MouseEvent to prevent event bubbling.
    */
-  openPickerForChip(
-    chip: FilterChip,
-    anchor: HTMLElement,
-    event?: MouseEvent,
-  ) {
+  openPickerForChip(chip: FilterChip, anchor: HTMLElement, event?: MouseEvent) {
     event?.stopPropagation();
     if (chip.isGroupBy) return;
-    const key = chip.key || chip.pillKey;
+    const key = getChipKey(chip);
     const title = chip.metadata?.keyDisplayName || chip.pillKey;
     this.store.openValuePicker(key, anchor, title, chip.metadata);
   }

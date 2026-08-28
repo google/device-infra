@@ -41,19 +41,21 @@
         />
         <button class="vp-adv-add" (click)="addChip()">Add</button>
       </div>
-      <div class="vp-adv-chips">
-        @for (val of values(); track val; let i = $index) {
-          <span class="vp-adv-chip">
-            <span class="vp-adv-chip-label">{{ val }}</span>
-            <mat-icon
-              class="material-symbols-outlined vp-adv-chip-x"
-              (click)="removeChip(i)"
-            >
-              close
-            </mat-icon>
-          </span>
-        }
-      </div>
+      @if (values().length > 0) {
+        <div class="vp-adv-chips">
+          @for (val of values(); track val; let i = $index) {
+            <span class="vp-adv-chip" [title]="val">
+              <span class="vp-adv-chip-label">{{ val }}</span>
+              <mat-icon
+                class="material-symbols-outlined vp-adv-chip-x"
+                (click)="removeChip(i)"
+              >
+                close
+              </mat-icon>
+            </span>
+          }
+        </div>
+      }
     }
   </div>
 </div>

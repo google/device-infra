@@ -1,0 +1,157 @@
+<app-dialog
+  dialogTitle="Configure columns"
+  width="52rem"
+  maxHeight="90vh"
+  footerType="none"
+  (keydown.control.enter)="apply()"
+  (keydown.meta.enter)="apply()"
+>
+  <!-- Two Panes Layout -->
+  <div class="cs-panes">
+    <!-- Left Pane: Selected -->
+    <div class="cs-pane cs-pane-selected">
+      <div class="cs-pane-head">
+        <span class="cs-pane-title">Selected</span>
+        <span class="cs-hint">{{ draftColumns().length }} · drag to reorder</span>
+      </div>
+      <div
+        class="cs-pane-body"
+        role="list"
+        aria-label="Selected columns"
+        cdkDropList
+        [cdkDropListData]="draftColumns()"
+        (cdkDropListDropped)="drop($event)"
+      >
+        @for (key of draftColumns(); track key) {
+          <div
+            class="cs-sel-row"
+            role="listitem"
+            [class.cs-locked]="isLocked(key)"
+            cdkDrag
+            [cdkDragDisabled]="isLocked(key)"
+            cdkDragLockAxis="y"
+          >
+            @if (isLocked(key)) {
+              <mat-icon class="cs-grip cs-grip-locked" title="Locked to first" aria-hidden="true">lock</mat-icon>
+              <span class="cs-row-name" [title]="getColumnDisplayName(key)">{{ getColumnDisplayName(key) }}</span>
+              <span class="cs-row-meta">locked</span>
+            } @else {
+              <mat-icon
+                class="cs-grip"
+                cdkDragHandle
+                aria-roledescription="sortable column"
+                [attr.aria-label]="'Drag to reorder ' + getColumnDisplayName(key)"
+              >drag_indicator</mat-icon>
+              <span class="cs-row-name" [title]="getColumnDisplayName(key)">{{ getColumnDisplayName(key) }}</span>
+              <button
+                class="cs-x"
+                type="button"
+                [title]="'Remove ' + getColumnDisplayName(key)"
+                [attr.aria-label]="'Remove ' + getColumnDisplayName(key)"
+                (click)="removeColumn(key)"
+              >
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Right Pane: Browse -->
+    <div class="cs-pane cs-pane-browse">
+      <div class="cs-searchbar-container">
+        <div class="cs-searchbar">
+          <mat-icon aria-hidden="true">search</mat-icon>
+          <input
+            type="text"
+            placeholder="Search all columns…"
+            cdkFocusInitial
+            [value]="searchQuery()"
+            (input)="onSearchInput($event)"
+            autocomplete="off"
+            aria-label="Search all columns"
+          />
+          @if (searchQuery()) {
+            <button
+              class="cs-search-clear"
+              type="button"
+              (click)="clearSearch()"
+              title="Clear search"
+              aria-label="Clear search"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Live status region for screen readers -->
+      <div class="cdk-visually-hidden" aria-live="polite" aria-atomic="true">
+        @if (debouncedQuery()) {
+          Found {{ matchedColumnsCount() }} matching columns for “{{ debouncedQuery() }}”.
+        }
+      </div>
+
+      <div class="cs-pane-body">
+        @if (isCatalogLoading()) {
+          <div class="cs-empty">Loading columns…</div>
+        } @else if (viewCatalogSections().length === 0) {
+          <div class="cs-empty">
+            @if (debouncedQuery()) {
+              No column matches “{{ debouncedQuery() }}”
+            } @else {
+              No columns available
+            }
+          </div>
+        } @else {
+          @for (section of viewCatalogSections(); track section.heading) {
+            @if (section.entries; as entries) {
+              @if (entries.length > 0) {
+                <section class="cs-section">
+                  <h3 class="cs-head">
+                    <span>{{ section.heading }}</span>
+                    @if (section.totalAvailable; as total) {
+                      @if (total > entries.length) {
+                        <span class="cs-hint">showing top {{ entries.length }} of {{ total | number }}</span>
+                      }
+                    }
+                  </h3>
+                  @for (entry of entries; track entry.key) {
+                    <label class="cs-row" [class.cs-row-selected]="isSelected(entry.key)">
+                      <mat-checkbox
+                        [checked]="isSelected(entry.key)"
+                        [disabled]="isLocked(entry.key)"
+                        (change)="toggleColumn(entry.key, $event.checked)"
+                        [attr.aria-label]="'Select column ' + entry.displayName"
+                      ></mat-checkbox>
+                      <span class="cs-row-name" [title]="entry.displayName">{{ entry.displayName }}</span>
+                      @if (entry.reason; as reason) {
+                        <span class="cs-row-meta cs-row-reason">{{ reason }}</span>
+                      } @else if (entry.deviceCount; as count) {
+                        <span class="cs-row-meta">{{ count | number }} {{ entityUnit() }}</span>
+                      }
+                    </label>
+                  }
+                  @if (section.totalAvailable; as total) {
+                    @if (total > entries.length) {
+                      <div class="cs-more">Search above to find more</div>
+                    }
+                  }
+                </section>
+              }
+            }
+          }
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer Actions -->
+  <div class="cs-actions">
+    <button class="cs-btn-reset" type="button" (click)="reset()">Reset</button>
+    <span class="cs-grow"></span>
+    <button class="cs-btn-secondary" type="button" (click)="cancel()">Cancel</button>
+    <button class="cs-btn-primary" type="button" (click)="apply()">Apply</button>
+  </div>
+</app-dialog>

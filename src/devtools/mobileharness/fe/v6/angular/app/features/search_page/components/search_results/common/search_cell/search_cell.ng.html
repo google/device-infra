@@ -1,77 +1,60 @@
 @if (cell(); as cellObj) {
-  @switch (getCellType(cellObj)) {
-    @case ('text') {
-      @if (renderTextValue(cellObj, column()?.key); as txtVal) {
-        <span [title]="txtVal">{{ txtVal }}</span>
-      } @else {
-        <ng-container *ngTemplateOutlet="noValue"></ng-container>
-      }
+  @if (cellObj.link; as linkObj) {
+    @if (getRouterLink(linkObj.target); as linkArr) {
+      <a
+        [routerLink]="linkArr"
+        queryParamsHandling="preserve"
+        class="device-link"
+        [matTooltip]="linkObj.text"
+        tooltipIfTruncated
+      >
+        {{ linkObj.text }}
+      </a>
+    } @else {
+      <span class="cell-text" [matTooltip]="linkObj.text" tooltipIfTruncated>{{ linkObj.text }}</span>
     }
-    @case ('link') {
-      @if (getRouterLink(cellObj.link); as linkArr) {
-        <a [routerLink]="linkArr" queryParamsHandling="preserve" class="device-link" [title]="getTextValue(cellObj)">
-          {{ getTextValue(cellObj) }}
-        </a>
-      } @else {
-        <ng-container *ngTemplateOutlet="noValue"></ng-container>
-      }
+  } @else if (cellObj.status; as statusObj) {
+    <span class="status-cell" [matTooltip]="statusObj.text" tooltipIfTruncated>
+      <span class="rt-dot" [class]="getStatusClass(statusObj.indicator)"></span>
+      <span class="status-text">{{ statusObj.text }}</span>
+    </span>
+  } @else if (cellObj.chips; as chipsObj) {
+    @if (chipsObj.values && chipsObj.values.length > 0) {
+      <app-overflow-chip-list
+        [items]="chipsObj.values"
+        [title]="column()?.displayName || column()?.key || ''"
+      ></app-overflow-chip-list>
+    } @else {
+      <span class="rt-empty">-</span>
     }
-    @case ('status') {
-      @if (getTextValue(cellObj); as statusTxt) {
-        <span class="status-cell">
-          <span class="rt-dot" [class]="getStatusClass(cellObj)"></span>
-          {{ statusTxt }}
-        </span>
-      } @else {
-        <ng-container *ngTemplateOutlet="noValue"></ng-container>
-      }
-    }
-    @case ('chips') {
-      @if (cellObj.chips?.values; as chipValues) {
-        @if (chipValues.length > 0) {
-          <app-overflow-chip-list
-            [items]="chipValues"
-            [title]="column()?.displayName || column()?.key || ''"
-          ></app-overflow-chip-list>
-        } @else {
-          <ng-container *ngTemplateOutlet="noValue"></ng-container>
-        }
-      } @else {
-        <ng-container *ngTemplateOutlet="noValue"></ng-container>
-      }
-    }
-    @case ('multilink') {
-      @if (cellObj.multiLink?.entries; as entries) {
-        @if (entries.length > 0) {
-          @for (entry of entries; track entry.text || $index) {
-            @if (getRouterLink(entry); as linkArr) {
-              <a [routerLink]="linkArr" queryParamsHandling="preserve" class="device-link">
-                {{ entry.text }}
-              </a>
-            } @else {
+  } @else if (cellObj.multiLink; as multiLinkObj) {
+    @if (multiLinkObj.entries && multiLinkObj.entries.length > 0) {
+      <div class="multilink-list">
+        @for (entry of multiLinkObj.entries; track entry.text || $index) {
+          @if (getRouterLink(entry.target); as linkArr) {
+            <a
+              [routerLink]="linkArr"
+              queryParamsHandling="preserve"
+              class="device-link"
+              [matTooltip]="entry.text"
+              tooltipIfTruncated
+            >
               {{ entry.text }}
-            }
-            @if (!$last) {, }
+            </a>
+          } @else {
+            <span class="cell-text" [matTooltip]="entry.text" tooltipIfTruncated>{{ entry.text }}</span>
           }
-        } @else {
-          <ng-container *ngTemplateOutlet="noValue"></ng-container>
+          @if (!$last) {<span class="link-sep">,</span>}
         }
-      } @else {
-        <ng-container *ngTemplateOutlet="noValue"></ng-container>
-      }
+      </div>
+    } @else {
+      <span class="rt-empty">-</span>
     }
-    @default {
-      @if (renderTextValue(cellObj, column()?.key); as defVal) {
-        <span [title]="defVal">{{ defVal }}</span>
-      } @else {
-        <ng-container *ngTemplateOutlet="noValue"></ng-container>
-      }
-    }
+  } @else if (cellObj.text; as textObj) {
+    <span class="cell-text" [matTooltip]="textObj.value" tooltipIfTruncated>{{ textObj.value || '-' }}</span>
+  } @else {
+    <span class="rt-empty">-</span>
   }
 } @else {
-  <ng-container *ngTemplateOutlet="noValue"></ng-container>
-}
-
-<ng-template #noValue>
   <span class="rt-empty">-</span>
-</ng-template>
+}

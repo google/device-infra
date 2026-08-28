@@ -1,3 +1,5 @@
+@use '../../../../shared/styles/common';
+
 @keyframes vpOpen {
   from {
     opacity: 0;
@@ -10,7 +12,8 @@
 }
 
 @keyframes vp-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.4;
   }
   50% {
@@ -22,7 +25,7 @@
   position: fixed;
   z-index: 400;
   width: 420px;
-  max-height: 460px;
+  max-height: 520px;
   display: flex;
   flex-direction: column;
   background: #fff;
@@ -32,6 +35,14 @@
   border: 1px solid #c4c7c5;
   transform-origin: top left;
   animation: vpOpen 0.15s ease-out;
+
+  app-advanced-match-view {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
 
   .vp-header {
     padding: 12px 16px 8px;
@@ -101,7 +112,9 @@
     margin-top: 2px;
     background: #fff;
     border-radius: 4px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.1);
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.15),
+      0 1px 2px rgba(0, 0, 0, 0.1);
     padding: 4px 0;
     display: none;
     white-space: nowrap;
@@ -179,7 +192,9 @@
     margin-top: 2px;
     background: #fff;
     border-radius: 4px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.1);
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.15),
+      0 1px 2px rgba(0, 0, 0, 0.1);
     padding: 4px 0;
     display: none;
     white-space: nowrap;
@@ -247,11 +262,12 @@
     color: #444746;
     font-weight: 500;
     user-select: none;
+    gap: 8px;
 
     .vp-col {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       gap: 2px;
       cursor: pointer;
       padding: 2px 4px;
@@ -284,39 +300,56 @@
     }
 
     .vp-col-spacer {
-      width: 26px;
-      flex-shrink: 0;
+      width: 18px;
+      min-width: 18px;
+      max-width: 18px;
+      flex: 0 0 18px;
     }
 
-    .vp-col-grow {
-      flex: 1;
+    .vp-col-val {
+      flex: 1 1 0;
+      min-width: 0;
     }
 
     .vp-cnt-col {
       width: 60px;
-      text-align: right;
-      flex-shrink: 0;
+      min-width: 60px;
+      max-width: 60px;
+      flex: 0 0 60px;
+
+      &.vp-filtered-col {
+        text-align: center;
+        justify-content: center;
+      }
+
+      &.vp-total-col {
+        text-align: right;
+        justify-content: flex-end;
+      }
     }
   }
 
   .vp-list {
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
     flex: 1 1 auto;
     min-height: 40px;
-    max-height: 260px;
+    max-height: 360px;
+    overflow-x: hidden;
+  }
 
-    &::-webkit-scrollbar {
-      width: 6px;
-    }
+  .vp-virtual-viewport {
+    width: 100%;
+    overflow: hidden auto;
+    contain: strict;
+    @include common.shared-scrollbar-style();
+  }
 
-    &::-webkit-scrollbar-thumb {
-      background: #c4c7c5;
-      border-radius: 3px;
-
-      &:hover {
-        background: #a8aaa8;
-      }
-    }
+  .vp-pinned-section {
+    flex-shrink: 0;
+    max-height: 108px;
+    overflow: hidden auto;
+    @include common.shared-scrollbar-style();
   }
 
   .vp-clear-all {
@@ -325,6 +358,7 @@
     color: #0b57d0;
     cursor: pointer;
     font-weight: 500;
+    flex-shrink: 0;
 
     &:hover {
       text-decoration: underline;
@@ -335,17 +369,20 @@
     height: 1px;
     background: #c4c7c5;
     margin: 4px 16px;
+    flex-shrink: 0;
   }
 
   .vp-item {
     display: flex;
     align-items: center;
     height: 36px;
+    box-sizing: border-box;
     padding: 0 16px;
     cursor: pointer;
     gap: 8px;
     position: relative;
     white-space: nowrap;
+    overflow: hidden;
 
     &:hover {
       background: rgba(0, 0, 0, 0.04);
@@ -396,10 +433,12 @@
 
   .vp-check {
     width: 18px;
+    min-width: 18px;
+    max-width: 18px;
     height: 18px;
     font-size: 18px;
     line-height: 1;
-    flex-shrink: 0;
+    flex: 0 0 18px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -407,15 +446,16 @@
   }
 
   .vp-val {
-    flex: 1;
+    flex: 1 1 0;
+    min-width: 0;
+    width: 0;
     font-size: 0.8125rem;
     color: #1f1f1f;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    min-width: 0;
-    display: inline-flex;
-    align-items: center;
+    line-height: 36px;
+    display: block;
 
     &.no-value-text,
     em {
@@ -426,7 +466,10 @@
     }
   }
 
+  &.compact,
   &.id-key {
+    width: 340px;
+
     .vp-cnt,
     .vp-cnt-col {
       display: none;
@@ -485,17 +528,21 @@
 
   .vp-cnt {
     width: 60px;
-    text-align: right;
+    min-width: 60px;
+    max-width: 60px;
+    flex: 0 0 60px;
     font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
     flex-shrink: 0;
 
     &.filtered {
       color: #0b57d0;
+      text-align: center;
     }
 
     &.total {
       color: #444746;
+      text-align: right;
     }
   }
 
@@ -522,6 +569,7 @@
     padding: 8px 12px;
     border-top: 1px solid #c4c7c5;
     flex-shrink: 0;
+    background: #fff;
   }
 
   .vp-selected {
@@ -542,7 +590,9 @@
     font-size: 0.8125rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+    transition:
+      background-color 0.15s ease,
+      box-shadow 0.15s ease;
 
     &.vp-cancel {
       background: transparent;
@@ -584,7 +634,8 @@
   }
 
   .vp-dt-op {
-    width: 44px;
+    width: 82px;
+    min-width: 82px;
     flex-shrink: 0;
     text-align: left;
     line-height: 36px;
@@ -594,7 +645,7 @@
     color: #444746;
   }
 
-  .vp-daterange input[type="datetime-local"] {
+  .vp-daterange input[type='datetime-local'] {
     flex: 1;
     min-width: 0;
     height: 36px;

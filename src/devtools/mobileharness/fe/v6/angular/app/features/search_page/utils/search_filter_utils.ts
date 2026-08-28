@@ -1,367 +1,328 @@
+import {ActivatedRoute, Params, Router} from '@angular/router';
+
 import {
   ComplexMatch,
   Filter,
+  FilterValue,
+  Fleet,
   FleetGroupSort,
   FleetSuggestion,
+  SearchEntity,
+  TjsEntity,
   TjsFilter,
   TjsSuggestion,
 } from '../../../core/models/search';
 
 import {
-  ADV_MODES_LIST,
   AdvancedMatchMode,
   ComplexMatchInfo,
+  EntityType,
   FilterChip,
-  ParsedQueryFilter,
+  FilterPair,
+  ParsedUrlQueryChips,
   SearchBoxSuggestion,
-  ValuePickerApplyEvent,
 } from '../models';
-export * from '../models';
-
-/** Pre-compiled regex for parsing complex search filter conditions. */
-const COMPLEX_CONDITION_REGEX =
-  /^(starts with|starts|prefix|startswith|starts_with|does not contain|not contain|doesnt contain|not_substring|not substring|contains substring|contains_substring|contains|substring|does not match regex|doesnt match regex|not_regex|not regex|matches regex|matches_regex|regex|matches exactly|matches_exactly|is exactly|exactly|matches at least|matches_at_least|is at least|at least|at_least|atleast|matches|does not match|doesnt match|has all of)\b[\s:\/]*"?([^"\/]*)"?\/?$/i;
 
 // ============================================================================
-// ValuePicker Dialog ↔ ComplexMatch AST (Advanced Matching)
+// ComplexMatch AST (Advanced Matching Parsing & Display)
 // ============================================================================
 
-/** Helper to normalize any raw condition phrase into a canonical mode key matching ADV_MODES_LIST. */
-function normalizeRawMode(rawMode: string): string {
-  const norm = rawMode.toLowerCase().trim();
-  if (norm.includes('start') || norm.includes('prefix')) return 'prefix';
-  if (norm.includes('contain') || norm.includes('substring')) {
-    return norm.includes('not') || norm.includes('doesnt')
-      ? 'not_substring'
-      : 'substring';
+/**
+ * Factory to construct a Protobuf ComplexMatch AST strictly adhering to the search_fleet.proto contract:
+ * - StartsWith (starts/prefix): scalar string, NOT negatable (O(log n) prefix bisect index).
+ * - ContainsSubstring (contains/substring): scalar string, negatable (bool negated).
+ * - MatchesRegex (regex): scalar string, negatable (bool negated).
+ * - MatchesExactly (exactly/exact): repeated string, NOT negatable (device's value set == this set).
+ * - MatchesAtLeast (atleast/at_least): repeated string, NOT negatable (device's value set ⊇ this set).
+ */
+export function createComplexMatch(
+  mode: AdvancedMatchMode | string,
+  values: string | string[],
+  negated = false,
+): ComplexMatch | undefined {
+  const valArray = Array.isArray(values) ? values : [values];
+  const primaryVal = valArray[0]?.trim() || '';
+
+  switch (mode) {
+    case 'starts':
+    case 'prefix':
+      return primaryVal ? {startsWith: {value: primaryVal}} : undefined;
+
+    case 'contains':
+    case 'substring':
+      return primaryVal
+        ? {containsSubstring: {value: primaryVal, negated: !!negated}}
+        : undefined;
+
+    case 'not_contains':
+    case 'not_substring':
+      return primaryVal
+        ? {containsSubstring: {value: primaryVal, negated: true}}
+        : undefined;
+
+    case 'regex':
+      return primaryVal
+        ? {matchesRegex: {value: primaryVal, negated: !!negated}}
+        : undefined;
+
+    case 'not_regex':
+      return primaryVal
+        ? {matchesRegex: {value: primaryVal, negated: true}}
+        : undefined;
+
+    case 'exactly':
+    case 'exact': {
+      const cleanVals = valArray.map((s) => s.trim()).filter(Boolean);
+      return cleanVals.length > 0
+        ? {matchesExactly: {values: cleanVals}}
+        : undefined;
+    }
+
+    case 'atleast':
+    case 'at_least': {
+      const cleanVals = valArray.map((s) => s.trim()).filter(Boolean);
+      return cleanVals.length > 0
+        ? {matchesAtLeast: {values: cleanVals}}
+        : undefined;
+    }
+
+    default:
+      return undefined;
   }
-  if (
-    norm.includes('regex') ||
-    norm === 'matches' ||
-    norm === 'does not match' ||
-    norm === 'doesnt match'
-  ) {
-    return norm.includes('not') || norm.includes('doesnt')
-      ? 'not_regex'
-      : 'regex';
-  }
-  if (norm.includes('least') || norm === 'has all of') return 'at_least';
-  return 'exactly';
 }
 
-/** Parses raw pillCondition text string into structured ComplexMatchInfo. */
+/**
+ * Parses raw condition string into structured Protobuf ComplexMatch AST.
+ * Supports Scheme B DSL: "starts~Pixel", "contains~Pixel", "regex~^lab.*", "exactly~A,B", "atleast~X,Y".
+ */
 export function parseComplexCondition(
-  pillCondition?: string,
-  rawValues?: string[],
+  rawCondition?: string,
   negated?: boolean,
 ): ComplexMatch | undefined {
-  if (!pillCondition) return undefined;
-  const match = pillCondition.match(COMPLEX_CONDITION_REGEX);
-  if (!match) return undefined;
+  if (!rawCondition) return undefined;
 
-  const rawMode = match[1];
-  const targetVal = match[2]?.trim() || '';
-  const modeKey = normalizeRawMode(rawMode);
+  const trimmed = rawCondition.trim();
+  const sepIdx = trimmed.indexOf('~');
+  if (sepIdx === -1) return undefined;
 
-  const valuesArr =
-    modeKey === 'exactly' || modeKey === 'at_least'
-      ? targetVal
+  const operator = trimmed.substring(0, sepIdx).trim().toLowerCase();
+  const rawValue = trimmed.substring(sepIdx + 1).trim();
+  if (!rawValue) return undefined;
+
+  const values =
+    operator === 'exact' ||
+    operator === 'exactly' ||
+    operator === 'atleast' ||
+    operator === 'at_least'
+      ? rawValue
           .split(',')
-          .map((s) => s.trim())
+          .map((v) => decodeURIComponent(v.trim()))
           .filter(Boolean)
-      : rawValues?.length
-        ? rawValues
-        : targetVal
-          ? [targetVal]
-          : [];
+      : [
+          operator === 'regex' || operator === 'not_regex'
+            ? rawValue
+            : decodeURIComponent(rawValue),
+        ];
 
-  switch (modeKey) {
-    case 'prefix':
-      return {startsWith: {value: targetVal}};
-    case 'substring':
-      return {containsSubstring: {value: targetVal, negated: false}};
-    case 'not_substring':
-      return {containsSubstring: {value: targetVal, negated: true}};
-    case 'regex':
-      return {matchesRegex: {value: targetVal, negated: false}};
-    case 'not_regex':
-      return {matchesRegex: {value: targetVal, negated: true}};
-    case 'at_least':
-      return {matchesAtLeast: {values: valuesArr}};
-    case 'exactly':
-    default:
-      return {matchesExactly: {values: valuesArr}};
-  }
+  return createComplexMatch(operator, values, negated);
 }
 
-/** Converts a ComplexMatch Protobuf payload back to human-readable ComplexMatchInfo for UI display. */
+/**
+ * Converts a Protobuf ComplexMatch payload into a strongly-typed ComplexMatchInfo View-Model
+ * for UI display and ValuePicker state.
+ * Strictly adheres to search_fleet.proto negation capabilities.
+ */
 export function extractComplexMatchInfo(
   complex?: ComplexMatch,
-  fallbackCondition?: string,
-  negated?: boolean,
 ): ComplexMatchInfo | undefined {
-  if (!complex) {
-    const parsed = parseComplexCondition(fallbackCondition, undefined, negated);
-    if (!parsed) return undefined;
-    complex = parsed;
-  }
+  if (!complex) return undefined;
 
   if (complex.startsWith?.value) {
     return {
       mode: 'prefix',
       values: [complex.startsWith.value],
-      isNegated: !!negated,
+      isNegated: false,
     };
   }
+
   if (complex.containsSubstring?.value) {
+    const isNeg = Boolean(complex.containsSubstring.negated);
     return {
-      mode: complex.containsSubstring.negated ? 'not_substring' : 'substring',
+      mode: isNeg ? 'not_substring' : 'substring',
       values: [complex.containsSubstring.value],
-      isNegated: !!complex.containsSubstring.negated || !!negated,
+      isNegated: isNeg,
     };
   }
+
   if (complex.matchesRegex?.value) {
+    const isNeg = Boolean(complex.matchesRegex.negated);
     return {
-      mode: complex.matchesRegex.negated ? 'not_regex' : 'regex',
+      mode: isNeg ? 'not_regex' : 'regex',
       values: [complex.matchesRegex.value],
-      isNegated: !!complex.matchesRegex.negated || !!negated,
+      isNegated: isNeg,
     };
   }
+
   if (complex.matchesExactly?.values?.length) {
     return {
       mode: 'exactly',
       values: complex.matchesExactly.values,
-      isNegated: !!negated,
+      isNegated: false,
     };
   }
+
   if (complex.matchesAtLeast?.values?.length) {
     return {
       mode: 'at_least',
       values: complex.matchesAtLeast.values,
-      isNegated: !!negated,
+      isNegated: false,
     };
   }
 
   return undefined;
 }
 
-/** Helper to extract advanced matching state from a FilterChip for ValuePicker initialization. */
-export function extractAdvancedStateFromChip(chip: FilterChip): {
-  isAdv: boolean;
-  advMode: AdvancedMatchMode;
-  advText: string;
-  advValues: string[];
-} {
-  const info = extractComplexMatchInfo(
-    chip.complex,
-    chip.pillCondition,
-    chip.negated,
-  );
-  if (info) {
-    return {
-      isAdv: true,
-      advMode: info.mode,
-      advText: info.values.join(', '),
-      advValues: info.values,
-    };
-  }
-  return {
-    isAdv: false,
-    advMode: 'substring',
-    advText: '',
-    advValues: [],
-  };
-}
-
-/** Builds ComplexMatch Protobuf structure from Popover ValuePickerApplyEvent. */
-export function buildComplexMatchFromEvent(
-  event: ValuePickerApplyEvent,
-): ComplexMatch | undefined {
-  if (!event.isAdvanced || !event.advMode) return undefined;
-
-  const mode = event.advMode;
-  const txt = event.advText?.trim() || '';
-
-  switch (mode) {
-    case 'prefix':
-      return {startsWith: {value: txt}};
-    case 'substring':
-      return {containsSubstring: {value: txt, negated: !!event.negate}};
-    case 'not_substring':
-      return {containsSubstring: {value: txt, negated: true}};
-    case 'regex':
-      return {matchesRegex: {value: txt, negated: !!event.negate}};
-    case 'not_regex':
-      return {matchesRegex: {value: txt, negated: true}};
-    case 'exactly':
-      return {matchesExactly: {values: event.advValues || (txt ? [txt] : [])}};
-    case 'at_least':
-      return {matchesAtLeast: {values: event.advValues || (txt ? [txt] : [])}};
-    default:
-      return undefined;
-  }
-}
-
-/** Formats fallback human-readable pill condition string from Popover ValuePickerApplyEvent. */
-export function formatPillConditionFromEvent(
-  event: ValuePickerApplyEvent,
-): string {
-  if (event.isAdvanced) {
-    const modeObj = ADV_MODES_LIST.find((m) => m.id === event.advMode);
-    const modeLabel = modeObj?.label || event.advMode || '';
-    const valStr = event.advValues?.length
-      ? event.advValues.join(', ')
-      : event.advText || '';
-    return `${modeLabel} "${valStr}"`;
-  }
-
-  if (event.rangeFrom || event.rangeTo) {
-    return `${event.rangeFrom || ''} ~ ${event.rangeTo || ''}`.trim();
-  }
-
-  if (event.selected && event.selected.length > 0) {
-    return event.selected.join(', ');
-  }
-
-  if (event.propName || event.textVal) {
-    return `${event.propName || ''}:${event.textVal || ''}`;
-  }
-
-  if (event.textVal?.trim()) {
-    return event.textVal.trim();
-  }
-
-  return '';
-}
-
-/** Helper to check if a ValuePickerApplyEvent payload contains empty selection values. */
-export function isValuePickerSelectionEmpty(
-  event: ValuePickerApplyEvent,
-): boolean {
-  if (event.isAdvanced) {
-    if (event.advMode === 'exactly' || event.advMode === 'at_least') {
-      return !event.advValues?.length;
-    }
-    return !event.advText?.trim();
-  }
-  return (
-    !event.selected?.length &&
-    !event.rangeFrom?.trim() &&
-    !event.rangeTo?.trim() &&
-    !event.textVal?.trim() &&
-    !event.propName?.trim()
-  );
-}
-
 // ============================================================================
 // Simple Fleet Filter Builders
 // ============================================================================
 
-/** Constructs simple Fleet Filter Protobuf payload. */
+/** Special UI placeholder representing an unassigned/empty value in Protobuf. */
+export const EMPTY_FILTER_VALUE = '<empty>';
+
+/** Constructs simple Fleet Filter Protobuf payload with single-pass optimization. */
 export function buildSimpleFleetFilter(
   key: string,
   values: string[],
   negated?: boolean,
 ): Filter {
-  const isNoVal = values.includes('<empty>');
-  const cleanVals = values.filter((v) => v !== '<empty>');
+  const filterValues: FilterValue[] = [];
+  let hasNoValue = false;
+
+  for (const v of values) {
+    if (v === EMPTY_FILTER_VALUE || v === '') {
+      if (!hasNoValue) {
+        filterValues.push({noValue: true});
+        hasNoValue = true;
+      }
+    } else if (v) {
+      filterValues.push({value: v});
+    }
+  }
 
   return {
     key,
     simple: {
-      values: [
-        ...cleanVals.map((v) => ({value: v})),
-        ...(isNoVal ? [{noValue: true}] : []),
-      ],
+      values: filterValues,
       negated: !!negated,
     },
   };
 }
 
 // ============================================================================
-// URL Filter String Serializer & Parser
+// URL Filter String Serializer & Parser (Scheme B Specification)
 // ============================================================================
 
-/** Helper to extract unique values from a ComplexMatch object. */
-function getValuesFromComplexMatch(complex: ComplexMatch): string[] {
+/**
+ * Serializes a Protobuf ComplexMatch payload into official Scheme B DSL string:
+ * (e.g. "starts~Pixel", "contains~Pixel", "regex~^lab.*", "exactly~A,B", "atleast~X,Y")
+ */
+export function serializeComplexCondition(complex?: ComplexMatch): string {
+  if (!complex) return '';
+
   if (complex.startsWith?.value) {
-    return [complex.startsWith.value];
+    return `starts~${encodeURIComponent(complex.startsWith.value)}`;
   }
   if (complex.containsSubstring?.value) {
-    return [complex.containsSubstring.value];
+    return `contains~${encodeURIComponent(complex.containsSubstring.value)}`;
   }
   if (complex.matchesRegex?.value) {
-    return [complex.matchesRegex.value];
-  }
-  if (complex.matchesExactly?.values) {
-    return complex.matchesExactly.values;
-  }
-  if (complex.matchesAtLeast?.values) {
-    return complex.matchesAtLeast.values;
-  }
-  return [];
-}
-
-
-/** Formats a ComplexMatch object into a canonical, parser-friendly string representation. */
-function getCanonicalComplexCondition(complex: ComplexMatch): string {
-  if (complex.startsWith?.value) {
-    return `Starts with "${complex.startsWith.value}"`;
-  }
-  if (complex.containsSubstring?.value) {
-    const term = complex.containsSubstring.value;
-    return complex.containsSubstring.negated
-      ? `Does not contain "${term}"`
-      : `Contains "${term}"`;
-  }
-  if (complex.matchesRegex?.value) {
-    const term = complex.matchesRegex.value;
-    return complex.matchesRegex.negated
-      ? `Does not match regex "${term}"`
-      : `Matches regex "${term}"`;
+    return `regex~${complex.matchesRegex.value}`;
   }
   if (complex.matchesExactly?.values?.length) {
-    const vals = complex.matchesExactly.values.join(', ');
-    return `Is exactly "${vals}"`;
+    return `exactly~${complex.matchesExactly.values.map(encodeURIComponent).join(',')}`;
   }
   if (complex.matchesAtLeast?.values?.length) {
-    const vals = complex.matchesAtLeast.values.join(', ');
-    return `Is at least "${vals}"`;
+    return `atleast~${complex.matchesAtLeast.values.map(encodeURIComponent).join(',')}`;
   }
+
   return '';
 }
 
-/** Serializes a FilterChip object into a compressed URL query string format. */
+/** Safe URI component decoder that gracefully falls back to raw string on malformed URI. */
+function safeDecodeURIComponent(val: string): string {
+  try {
+    return decodeURIComponent(val);
+  } catch {
+    return val;
+  }
+}
+
+/**
+ * Serializes a FilterChip object into official Scheme B URL format:
+ *   - Simple with values: [!]<key>~<val1>,<val2>
+ *   - No-Value (Empty):   [!]<key>~
+ *   - Complex match:      [!]<key>~<mode>~<pattern>
+ */
 export function serializeFilterChip(c: FilterChip): string {
   if (c.isGroupBy) {
     return '';
   }
 
-  const prefix = c.negated ? '!' : '';
-  const key = c.key || c.pillKey;
+  const prefix = isChipNegated(c) ? '!' : '';
+  const key = getChipKey(c);
 
+  // 1. Complex Match -> 3-Part Scheme B DSL (e.g. !model~contains~Pixel)
   if (c.complex) {
-    const cond = getCanonicalComplexCondition(c.complex);
-    if (cond) {
-      return `${prefix}${key}~${cond}`;
+    const dsl = serializeComplexCondition(c.complex);
+    if (dsl) {
+      return `${prefix}${key}~${dsl}`;
     }
   }
 
+  // 2. Simple Match with Values or Empty
   if (c.rawValues && c.rawValues.length > 0) {
-    return `${prefix}${key}~${c.rawValues.join(',')}`;
+    const hasEmpty = c.rawValues.some(
+      (v) => v === EMPTY_FILTER_VALUE || v === '',
+    );
+    const validVals = c.rawValues
+      .map((v) => v.trim())
+      .filter((v) => v && v !== EMPTY_FILTER_VALUE);
+
+    if (hasEmpty && validVals.length === 0) {
+      return `${prefix}${key}~`; // (no value) -> key~
+    }
+    const serializedVals: string[] = [];
+    if (hasEmpty) {
+      serializedVals.push(EMPTY_FILTER_VALUE);
+    }
+    for (const val of validVals) {
+      serializedVals.push(encodeURIComponent(val));
+    }
+    return `${prefix}${key}~${serializedVals.join(',')}`;
   }
 
+  // 3. Fallback for pillCondition
   if (c.pillCondition) {
-    return `${prefix}${key}~${c.pillCondition}`;
+    const cond = c.pillCondition.trim();
+    const cleanCond = cond.startsWith('!') ? cond.substring(1).trim() : cond;
+    if (
+      cleanCond === '(no value)' ||
+      cleanCond === EMPTY_FILTER_VALUE ||
+      cleanCond === key
+    ) {
+      return `${prefix}${key}~`;
+    }
+    return cleanCond ? `${prefix}${key}~${cleanCond}` : `${prefix}${key}~`;
   }
 
-  return `${prefix}${key}`;
+  return `${prefix}${key}~`;
 }
 
-/** Parses a URL filter param string (e.g. "-status~RUNNING") into a ParsedQueryFilter object. */
-export function parseQueryFilterParam(
-  rawParam: string,
-): ParsedQueryFilter | null {
+/**
+ * Parses a Scheme B URL filter param string (e.g. "!model~contains~Pixel", "status~IDLE,BUSY", "driver~")
+ * directly into a standard FilterChip object.
+ */
+export function parseQueryFilterParam(rawParam: string): FilterChip | null {
   if (!rawParam || typeof rawParam !== 'string') return null;
 
   let str = rawParam.trim();
@@ -372,112 +333,222 @@ export function parseQueryFilterParam(
     str = str.substring(1).trim();
   }
 
-  // Support multiple filter separators: '~' (primary), '=' or ':' (compatibility)
-  let separatorIdx = str.indexOf('~');
-  if (separatorIdx === -1) {
-    separatorIdx = str.indexOf('=');
-  }
-  if (separatorIdx === -1) {
-    separatorIdx = str.indexOf(':');
-  }
+  const parts = str.split('~');
+  if (parts.length < 2) return null;
 
-  let key = str;
-  let rawCond = '';
-
-  if (separatorIdx !== -1) {
-    key = str.substring(0, separatorIdx).trim();
-    rawCond = str.substring(separatorIdx + 1).trim();
-  }
-
+  const key = parts[0].trim();
   if (!key) return null;
 
-  const rawValues = rawCond
-    ? rawCond
-        .split(',')
-        .map((v) => v.trim())
-        .filter(Boolean)
-    : [];
+  // Case A: 3-Part Complex Match (key~mode~pattern)
+  if (parts.length >= 3) {
+    const operator = parts[1].trim().toLowerCase();
+    const rawValue = parts.slice(2).join('~').trim();
+    if (rawValue) {
+      const values =
+        operator === 'exact' ||
+        operator === 'exactly' ||
+        operator === 'atleast' ||
+        operator === 'at_least'
+          ? rawValue
+              .split(',')
+              .map((v) => safeDecodeURIComponent(v.trim()))
+              .filter(Boolean)
+          : [
+              operator === 'regex' || operator === 'not_regex'
+                ? rawValue
+                : safeDecodeURIComponent(rawValue),
+            ];
 
-  const complexMatch = parseComplexCondition(rawCond, rawValues, negated);
+      const complex = createComplexMatch(operator, values, negated);
+      if (complex) {
+        const info = extractComplexMatchInfo(complex);
+        const extractedValues = info?.values || [];
+        const condition = `${operator}~${rawValue}`;
+        const filter = {key, complex};
+        return {
+          key,
+          pillKey: key,
+          pillCondition: condition,
+          rawValues: extractedValues.length > 0 ? extractedValues : undefined,
+          negated,
+          complex,
+          fleetFilter: filter,
+        };
+      }
+    }
+  }
 
-  const finalRawValues = complexMatch
-    ? getValuesFromComplexMatch(complexMatch)
-    : rawValues;
+  // Case B: Non-Complex Match (Simple, Multi-part, or No-Value)
+  const remainingParts = parts.slice(1);
+  const joinedVal = remainingParts.join('~').trim();
 
-  const fleetFilter: Filter = complexMatch
-    ? {key, complex: complexMatch}
-    : buildSimpleFleetFilter(key, finalRawValues, negated);
+  // (No Value): e.g. "driver~" -> remaining part is empty string
+  if (!joinedVal) {
+    const simpleFilter = buildSimpleFleetFilter(
+      key,
+      [EMPTY_FILTER_VALUE],
+      negated,
+    );
+    return {
+      key,
+      pillKey: key,
+      pillCondition: key,
+      rawValues: [EMPTY_FILTER_VALUE],
+      negated,
+      fleetFilter: simpleFilter,
+    };
+  }
 
-  const tjsFilter: TjsFilter = complexMatch
-    ? {key, stringValue: {value: rawCond}}
-    : finalRawValues.length > 0
-      ? {key, stringValue: {value: finalRawValues.join(',')}}
-      : {key, stringValue: {value: rawCond}};
+  // If there are multiple parts separated by ~ (e.g. named pair key~name~value or range key~from~to)
+  // or a single part with comma-separated values:
+  const rawValues =
+    remainingParts.length > 1
+      ? remainingParts
+          .map((v) => safeDecodeURIComponent(v.trim()))
+          .map((v) => (v === '(no value)' ? EMPTY_FILTER_VALUE : v))
+          .filter(Boolean)
+      : remainingParts[0]
+          .split(',')
+          .map((v) => safeDecodeURIComponent(v.trim()))
+          .map((v) => (v === '(no value)' ? EMPTY_FILTER_VALUE : v))
+          .filter(Boolean);
+
+  const simpleFilter = buildSimpleFleetFilter(key, rawValues, negated);
+  const condition = rawValues.join(', ') || key;
 
   return {
     key,
-    filter: fleetFilter,
-    tjsFilter,
-    fallbackPillCondition: rawCond || key,
-    rawValues: finalRawValues.length > 0 ? finalRawValues : undefined,
+    pillKey: key,
+    pillCondition: condition,
+    rawValues: rawValues.length > 0 ? rawValues : undefined,
     negated,
-    complex: complexMatch,
+    fleetFilter: simpleFilter,
   };
 }
 
 /** Converts a FilterChip to a Fleet Filter Protobuf payload. */
 export function buildFleetFilterFromChip(c: FilterChip): Filter {
-  const key = c.key || c.pillKey;
+  if (c.fleetFilter) {
+    return c.fleetFilter;
+  }
+  const key = getChipKey(c);
+  const negated = isChipNegated(c);
+
   if (c.complex) {
     return {key, complex: c.complex};
   }
 
-  const parsedComplex = parseComplexCondition(
-    c.pillCondition,
-    c.rawValues,
-    c.negated,
-  );
-  if (parsedComplex) {
-    return {key, complex: parsedComplex};
+  const rawVals = c.rawValues?.length ? c.rawValues : [EMPTY_FILTER_VALUE];
+  return buildSimpleFleetFilter(key, rawVals, negated);
+}
+
+/**
+ * Checks whether a FilterChip represents a negated/excluded condition.
+ */
+export function isChipNegated(
+  chip: Partial<FilterChip> | undefined | null,
+): boolean {
+  if (!chip) return false;
+
+  // 1. Explicit boolean flag on the chip is authoritative.
+  if (chip.negated !== undefined) {
+    return chip.negated;
   }
 
-  const rawVals = c.rawValues?.length
-    ? c.rawValues
-    : c.pillCondition.split(',');
+  // 2. If negated is not explicitly set on the chip, check complex match AST.
+  if (chip.complex?.containsSubstring?.negated !== undefined) {
+    return chip.complex.containsSubstring.negated;
+  }
+  if (chip.complex?.matchesRegex?.negated !== undefined) {
+    return chip.complex.matchesRegex.negated;
+  }
 
-  return buildSimpleFleetFilter(key, rawVals, c.negated);
+  const cond = (chip.pillCondition || '').trim();
+  return cond.startsWith('!');
 }
 
 // ============================================================================
 // Chip Dimension & Key Comparison (Deduplication)
 // ============================================================================
 
-/** Strips known filter key prefixes ('field::', 'dim::', 'config::') and lowercases the key. */
+/** Normalizes search key by trimming and lowercasing. */
 export function normalizeKey(key: string | null | undefined): string {
   if (!key) return '';
-  return key.toLowerCase().replace(/^(field::|dim::|config::)/, '');
+  return key.toLowerCase().trim();
 }
 
-/** Extracts a normalized lower-case search key for chip comparison. */
+/** Extracts the raw search key from a FilterChip. */
+export function getChipKey(c: FilterChip): string {
+  return c.key || c.pillKey || '';
+}
+
+/** Extracts a normalized lower-case search key for chip comparison and deduplication. */
 export function getNormalizedChipKey(c: FilterChip): string {
-  const rawKey = c.isGroupBy ? c.pillKey : c.key || c.pillKey;
-  return normalizeKey(rawKey);
+  return normalizeKey(getChipKey(c));
 }
 
-/** Helper to compare whether two filter chips refer to the same logical search key. */
-export function isSameFilterChip(a: FilterChip, b: FilterChip): boolean {
+/** Helper to compare whether two filter chips refer to the same logical search key and dimension. */
+export function isSameFilterChip(
+  a: Partial<FilterChip> | null | undefined,
+  b: Partial<FilterChip> | null | undefined,
+): boolean {
   if (a === b) return true;
-  if (!!a.isGroupBy !== !!b.isGroupBy) return false;
-  return getNormalizedChipKey(a) === getNormalizedChipKey(b);
+  if (!a || !b) return false;
+  if (Boolean(a.isGroupBy) !== Boolean(b.isGroupBy)) return false;
+
+  const keyA = getNormalizedChipKey(a as FilterChip);
+  const keyB = getNormalizedChipKey(b as FilterChip);
+  return !!(keyA && keyB && keyA === keyB);
+}
+
+/** Resolves the active EntityType from path or URL string based on supported domain entities. */
+export function resolveEntityFromPathOrUrl(
+  pathOrUrl: string,
+  supportedEntities: Set<EntityType>,
+  defaultEntity: EntityType = 'devices',
+): EntityType {
+  if (!pathOrUrl) return defaultEntity;
+  const clean = pathOrUrl
+    .replace(/^\//, '')
+    .split('?')[0]
+    .split('#')[0]
+    .replace(/\/$/, '');
+  const segment = clean.split('/')[0] as EntityType;
+  if (supportedEntities.has(segment)) {
+    return segment;
+  }
+  return defaultEntity;
+}
+
+/**
+ * Validates whether an active URL/path precisely matches a search store instance's bound entity.
+ * Returns true if the path's single segment equals the bound entity.
+ * Excludes sub-routes (e.g. detail pages like /devices/:id) and non-matching entity routes.
+ */
+export function isSearchRouteActive(
+  pathOrUrl: string,
+  boundEntity: EntityType,
+): boolean {
+  if (!pathOrUrl || pathOrUrl === '/' || pathOrUrl === '') return true;
+  const clean = pathOrUrl
+    .replace(/^\//, '')
+    .split('?')[0]
+    .split('#')[0]
+    .replace(/\/$/, '');
+  const segments = clean.split('/').filter(Boolean);
+  return segments.length === 1 && segments[0] === boundEntity;
 }
 
 /** Normalizes Angular Router query param value (string or string[]) into a clean array of strings. */
 export function getQueryParamAsArray(rawParam: unknown): string[] {
   if (Array.isArray(rawParam)) {
-    return rawParam.map(String).filter(Boolean);
+    return rawParam
+      .map((item) => (item != null ? String(item).trim() : ''))
+      .filter(Boolean);
   }
-  if (typeof rawParam === 'string' && rawParam) {
-    return [rawParam];
+  if (typeof rawParam === 'string') {
+    const trimmed = rawParam.trim();
+    return trimmed ? [trimmed] : [];
   }
   return [];
 }
@@ -488,19 +559,31 @@ export function buildUrlParamKey(
   groupBys: string[],
   fleet?: string | null,
 ): string {
-  const normFilters = Array.from(filters, (s) => s.toLowerCase().trim())
+  const normFilters = filters
+    .map(normalizeKey)
     .filter(Boolean)
     .sort()
     .join('&');
-  const normGb = Array.from(groupBys, (s) => s.toLowerCase().trim())
-    .filter(Boolean)
-    .sort()
-    .join(',');
-  const normFleet =
-    fleet && fleet.toLowerCase().trim() !== 'internal'
-      ? fleet.toLowerCase().trim()
-      : '';
-  return `f=${normFilters}|gb=${normGb}|fleet=${normFleet}`;
+  const normGb = groupBys.map(normalizeKey).filter(Boolean).sort().join(',');
+  const normFleet = normalizeKey(fleet);
+  const cleanFleet = normFleet && normFleet !== 'internal' ? normFleet : '';
+  return `f=${normFilters}|gb=${normGb}|fleet=${cleanFleet}`;
+}
+
+/** Generates a normalized canonical key string for a given array of filter chips. */
+export function getSerializedChipsKey(
+  chips: FilterChip[],
+  fleet?: string | null,
+): string {
+  const filters = chips
+    .filter((c) => !c.isGroupBy)
+    .map(serializeFilterChip)
+    .filter(Boolean);
+  const groupBys = chips
+    .filter((c) => c.isGroupBy)
+    .map(getChipKey)
+    .filter(Boolean);
+  return buildUrlParamKey(filters, groupBys, fleet);
 }
 
 /** Maps a raw suggestion object into a unified SearchBoxSuggestion structure. */
@@ -519,15 +602,39 @@ export function mapToSearchBoxSuggestion(
   };
 }
 
+/** Maps string entity type to SearchEntity protobuf enum value. */
+export function toSearchEntityProto(entity: EntityType): SearchEntity {
+  return entity === 'hosts'
+    ? SearchEntity.SEARCH_ENTITY_HOST
+    : SearchEntity.SEARCH_ENTITY_DEVICE;
+}
+
+/** Maps string fleet to Fleet protobuf enum value. */
+export function toFleetProto(fleet?: string): Fleet {
+  return fleet === 'ats' ? Fleet.FLEET_ATS : Fleet.FLEET_SELF;
+}
+
+/** Maps frontend EntityType string enum to backend Protobuf TjsEntity enum. */
+export function toTjsEntityProto(entity: EntityType): TjsEntity {
+  switch (entity) {
+    case 'tests':
+      return TjsEntity.TJS_ENTITY_TEST;
+    case 'jobs':
+      return TjsEntity.TJS_ENTITY_JOB;
+    case 'sessions':
+      return TjsEntity.TJS_ENTITY_SESSION;
+    default:
+      return TjsEntity.TJS_ENTITY_TEST;
+  }
+}
 
 /**
- * Builds a FleetGroupSort Protobuf payload from a frontend sort value string and active group-by keys.
- * Supports 'count:desc', 'count:asc', 'gb_asc:<key>', 'gb_desc:<key>', 'name:asc', and 'name:desc'.
+ * Builds a FleetGroupSort Protobuf payload from a frontend sort value string.
+ * Supports 'count:desc', 'count:asc', 'gb_asc:<key>', and 'gb_desc:<key>'.
  * Preserves exact group keys containing colons (e.g. 'host::lab_type').
  */
 export function buildFleetGroupSort(
   sortStr: string,
-  groupByKeys: string[],
 ): FleetGroupSort | undefined {
   if (!sortStr) return undefined;
 
@@ -548,24 +655,6 @@ export function buildFleetGroupSort(
     if (key) return {field: {groupKey: key}, ascending: false};
   }
 
-  if (sortStr === 'name:asc' && groupByKeys.length > 0) {
-    return {field: {groupKey: groupByKeys[0]}, ascending: true};
-  }
-
-  if (sortStr === 'name:desc' && groupByKeys.length > 0) {
-    return {field: {groupKey: groupByKeys[0]}, ascending: false};
-  }
-
-  // Fallback for direct field key (e.g. 'host::lab_type:asc')
-  const colonIdx = sortStr.lastIndexOf(':');
-  if (colonIdx > 0) {
-    const key = sortStr.substring(0, colonIdx);
-    const dir = sortStr.substring(colonIdx + 1);
-    if (groupByKeys.includes(key)) {
-      return {field: {groupKey: key}, ascending: dir === 'asc'};
-    }
-  }
-
   return undefined;
 }
 
@@ -577,9 +666,9 @@ export function extractFilterChipFromFleetSuggestion(
   const af = item.applyFilter;
   const rf = af.resultingFilter;
   const rawVals = rf?.simple?.values
-    ?.map((v) => v.value || (v.noValue ? '<empty>' : ''))
+    ?.map((v) => v.value || (v.noValue ? EMPTY_FILTER_VALUE : ''))
     .filter(Boolean);
-  const isNegated = rf?.simple?.negated || false;
+
   return {
     key: rf?.key,
     pillKey: af.pillKey || 'Filter',
@@ -587,9 +676,39 @@ export function extractFilterChipFromFleetSuggestion(
     isGroupBy: false,
     metadata: af.metadata,
     rawValues: rawVals && rawVals.length > 0 ? rawVals : undefined,
-    negated: isNegated,
+    negated: isChipNegated({
+      complex: rf?.complex,
+      negated: rf?.simple?.negated,
+      pillCondition: af.pillCondition,
+    }),
     complex: rf?.complex,
+    fleetFilter: rf,
   };
+}
+
+/** Helper to extract rawValues string array from a TjsFilter payload. */
+export function extractRawValuesFromTjsFilter(
+  filter?: TjsFilter | null,
+): string[] | undefined {
+  if (!filter) return undefined;
+  if (filter.stringValue?.value) {
+    return [filter.stringValue.value];
+  }
+  if (filter.enumValues?.values && filter.enumValues.values.length > 0) {
+    return filter.enumValues.values;
+  }
+  if (filter.namedValue) {
+    return [filter.namedValue.name || '', filter.namedValue.value || ''].filter(
+      Boolean,
+    );
+  }
+  if (filter.timeRange) {
+    const fromVal = filter.timeRange.from || '';
+    const toVal = filter.timeRange.to || '';
+    const vals = [fromVal, toVal].filter(Boolean);
+    return vals.length > 0 ? vals : undefined;
+  }
+  return undefined;
 }
 
 /** Extracts a FilterChip representation from a selected TjsSuggestion item. */
@@ -598,26 +717,154 @@ export function extractFilterChipFromTjsSuggestion(
 ): FilterChip | null {
   if (!item.applyFilter) return null;
   const af = item.applyFilter;
-  let rawVals: string[] | undefined;
-  if (af.filter?.stringValue?.value) {
-    rawVals = [af.filter.stringValue.value];
-  } else if (
-    af.filter?.enumValues?.values &&
-    af.filter.enumValues.values.length > 0
-  ) {
-    rawVals = af.filter.enumValues.values;
-  } else if (af.filter?.namedValue) {
-    rawVals = [
-      af.filter.namedValue.name || '',
-      af.filter.namedValue.value || '',
-    ].filter(Boolean);
-  }
+  const rawVals = extractRawValuesFromTjsFilter(af.filter);
   return {
     key: af.filter?.key,
     pillKey: af.pillKey || af.keyDisplayName || 'Filter',
     pillCondition: af.pillCondition || '',
     isGroupBy: false,
-    rawValues: rawVals && rawVals.length > 0 ? rawVals : undefined,
+    rawValues: rawVals,
+    negated: isChipNegated({pillCondition: af.pillCondition}),
+    tjsFilter: af.filter,
   };
 }
 
+// ============================================================================
+// Group-By FilterChip Construction
+// ============================================================================
+
+/**
+ * Constructs a specialized group-by FilterChip for search bar presentation.
+ *
+ * @param gbKey Key to group results by (e.g. 'host', 'model').
+ * @param displayName Optional user-friendly display name (e.g. 'Host', 'Model').
+ */
+export function createGroupByChip(
+  gbKey: string,
+  displayName?: string,
+): FilterChip {
+  const display = displayName || gbKey;
+  return {
+    key: gbKey,
+    pillKey: display,
+    pillCondition: display,
+    isGroupBy: true,
+  };
+}
+
+/**
+ * Deduplicates filter chips by key, ensuring that later conditions
+ * overwrite earlier conditions for the same key (Scenario 4).
+ */
+export function deduplicateFilterChipsByKey(chips: FilterChip[]): FilterChip[] {
+  const map = new Map<string, FilterChip>();
+  for (const chip of chips) {
+    const normKey = getNormalizedChipKey(chip);
+    if (normKey) {
+      const compositeKey = `${chip.isGroupBy ? 'gb:' : 'f:'}${normKey}`;
+      map.set(compositeKey, chip);
+    }
+  }
+  return Array.from(map.values());
+}
+
+/**
+ * Builds resolved filter chips from backend response.
+ * Filters not returned by backend or if response is empty are ignored/cleared (Scenarios 1, 2, 5).
+ * If enrichFn returns null/undefined (e.g. invalid chip), the chip is excluded.
+ */
+export function buildResolvedFilterChips<TFilter, TResolved>(
+  filterPairs: Array<FilterPair<TFilter>>,
+  resolvedList: TResolved[] | undefined | null,
+  enrichFn: (
+    chip: FilterChip,
+    resolved: TResolved,
+    filter: TFilter,
+  ) => FilterChip | null | undefined,
+): FilterChip[] {
+  if (!resolvedList || resolvedList.length === 0) {
+    return [];
+  }
+
+  const results: FilterChip[] = [];
+  resolvedList.forEach((resolved, idx) => {
+    const pair = filterPairs[idx];
+    if (pair && resolved) {
+      const enriched = enrichFn(pair.chip, resolved, pair.filter);
+      if (enriched) {
+        results.push(enriched);
+      }
+    }
+  });
+
+  return results;
+}
+
+// ============================================================================
+// URL Parameter & Route Initialization Utilities
+// ============================================================================
+
+/** Resolves initial URL from router state or browser location synchronously. */
+export function getInitialRouterUrl(router: Router): string {
+  const nav =
+    typeof router.currentNavigation === 'function'
+      ? router.currentNavigation()
+      : null;
+  if (nav?.finalUrl) {
+    return nav.finalUrl.toString();
+  }
+  if (nav?.extractedUrl) {
+    return nav.extractedUrl.toString();
+  }
+  if (router.url && router.url !== '/') {
+    return router.url;
+  }
+  if (typeof window !== 'undefined' && window.location?.pathname) {
+    return window.location.pathname;
+  }
+  return router.url || '';
+}
+
+/** Parses route query params ('f' and 'gb') into structured filter and group-by chips. */
+export function parseUrlChips(
+  params: Params | null | undefined,
+): ParsedUrlQueryChips {
+  if (!params) {
+    return {parsedFilters: [], groupByKeys: [], initialChips: []};
+  }
+
+  const fParams = getQueryParamAsArray(params['f']);
+  const gbParam: string = params['gb'] || '';
+  const groupByKeys = Array.from(
+    new Set(
+      gbParam
+        .split(',')
+        .map((k) => k.trim())
+        .filter(Boolean),
+    ),
+  );
+
+  const rawFilters = fParams
+    .map(parseQueryFilterParam)
+    .filter(Boolean) as FilterChip[];
+  // Scenario 4: Later conditions overwrite earlier conditions for the same key
+  const parsedFilters = deduplicateFilterChipsByKey(rawFilters);
+  const groupByChips = groupByKeys.map((gb: string) => createGroupByChip(gb));
+
+  return {
+    parsedFilters,
+    groupByKeys,
+    initialChips: [...parsedFilters, ...groupByChips],
+  };
+}
+
+/** Resolves initial filter and group-by chips from ActivatedRoute snapshot query params. */
+export function resolveInitialChips(route: ActivatedRoute): FilterChip[] {
+  return parseUrlChips(route.snapshot?.queryParams).initialChips;
+}
+
+/** Resolves initial fleet operational scope from ActivatedRoute snapshot query params. */
+export function resolveInitialFleet(route: ActivatedRoute): 'internal' | 'ats' {
+  const fleetParam = route.snapshot?.queryParams?.['fleet'];
+  return fleetParam === 'ats' ? 'ats' : 'internal';
+}

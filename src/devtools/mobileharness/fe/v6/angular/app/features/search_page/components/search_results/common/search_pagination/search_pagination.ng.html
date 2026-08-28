@@ -1,5 +1,5 @@
-<div class="rt-pagination">
-  @if (showPageSize()) {
+<div class="rt-pagination" [class.compact]="compact()">
+  @if (pageSize() !== undefined) {
     <span class="rt-page-label">Rows per page:</span>
     <mat-select
       [value]="pageSize()"
@@ -15,15 +15,15 @@
     <span class="rt-divider"></span>
   }
 
-  <span class="rt-range">
-    {{ getRangeLabel() }}
-  </span>
+  @if (rangeText()) {
+    <span class="rt-range">{{ rangeText() }}</span>
+  }
 
   <span class="rt-grow"></span>
 
   <button
     class="rt-btn-text"
-    [disabled]="!canGoPrev()"
+    [disabled]="!hasPrev()"
     (click)="prev.emit()"
     title="Previous page"
   >
@@ -33,7 +33,7 @@
 
   <button
     class="rt-btn-text"
-    [disabled]="!canGoNext()"
+    [disabled]="!hasNext()"
     (click)="next.emit()"
     title="Next page"
   >

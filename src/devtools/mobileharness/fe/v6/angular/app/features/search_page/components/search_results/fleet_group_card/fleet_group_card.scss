@@ -4,6 +4,17 @@
 :host {
   display: block;
   width: 100%;
+
+  @include mat.checkbox-overrides(
+    (
+      touch-target-size: 36px,
+      state-layer-size: 36px,
+      selected-icon-color: #0b57d0,
+      selected-checkmark-color: #fff,
+      selected-hover-icon-color: #0b57d0,
+      selected-focus-icon-color: #0b57d0,
+    )
+  );
 }
 
 .rt-group {
@@ -116,9 +127,15 @@
   background-color: #e0e0e0;
   box-sizing: border-box;
 
-  &:has(.progress-segment.color-busy:hover) + div .util-legend-item:nth-of-type(1),
-  &:has(.progress-segment.color-idle:hover) + div .util-legend-item:nth-of-type(2),
-  &:has(.progress-segment.color-others:hover) + div .util-legend-item:nth-of-type(3) {
+  &:has(.progress-segment.color-busy:hover)
+    + div
+    .util-legend-item:nth-of-type(1),
+  &:has(.progress-segment.color-idle:hover)
+    + div
+    .util-legend-item:nth-of-type(2),
+  &:has(.progress-segment.color-others:hover)
+    + div
+    .util-legend-item:nth-of-type(3) {
     color: #0b57d0;
     text-decoration-color: #0b57d0;
     font-weight: 500;
@@ -127,7 +144,10 @@
 
 .progress-segment {
   height: 100%;
-  transition: width 0.3s ease, transform 0.2s ease, filter 0.2s ease;
+  transition:
+    width 0.3s ease,
+    transform 0.2s ease,
+    filter 0.2s ease;
   transform-origin: center;
   cursor: pointer;
 
@@ -174,7 +194,9 @@
   cursor: pointer;
   text-decoration: underline;
   text-decoration-color: #c4c7c5;
-  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+  transition:
+    color 0.15s ease,
+    text-decoration-color 0.15s ease;
 
   &:hover {
     color: #0b57d0;
@@ -231,6 +253,11 @@
     text-transform: uppercase;
     text-align: left;
     direction: ltr;
+    min-width: 120px;
+    max-width: 320px;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   tbody tr {
@@ -244,6 +271,11 @@
     white-space: nowrap;
     text-align: left;
     direction: ltr;
+    min-width: 120px;
+    max-width: 320px;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   tr:hover {
@@ -254,89 +286,27 @@
     background-color: #0b57d008;
   }
 
+  thead th.rt-check-cell,
+  tbody td.rt-check-cell,
   th.rt-check-cell,
   td.rt-check-cell,
   .rt-check-cell {
-    width: 44px;
-    padding: 0;
+    padding: 0 12px;
+    width: 1%;
+    min-width: 0;
+    max-width: none;
     text-align: center;
     vertical-align: middle;
-    text-overflow: clip;
     overflow: visible;
+    text-overflow: clip;
 
     mat-checkbox {
-      @include mat.checkbox-density(-3);
       display: inline-flex;
       align-items: center;
       justify-content: center;
       vertical-align: middle;
-      height: 100%;
-      margin: 0 auto;
     }
   }
-}
-
-.rt-inner-pagination {
-  flex-shrink: 0;
-  height: 40px;
-  padding: 0 12px;
-  font-size: 0.75rem;
-  border-top: 1px solid #e1e3e1;
-  display: flex;
-  align-items: center;
-
-  .rt-btn-text {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    min-height: 28px;
-    height: 28px;
-    padding: 0 8px;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: #0b57d0;
-    white-space: nowrap;
-    line-height: 1;
-
-    &:hover:not(:disabled) {
-      background: rgba(11, 87, 208, 0.08);
-    }
-
-    &:disabled {
-      color: #444746;
-      opacity: 0.38;
-      cursor: default;
-    }
-
-    .mat-icon,
-    .material-symbols-outlined {
-      font-size: 16px;
-      width: 16px;
-      height: 16px;
-      line-height: 16px;
-      margin: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-  }
-}
-
-.rt-range {
-  font-variant-numeric: tabular-nums;
-  color: #444746;
-  font-size: 0.75rem;
-}
-
-.rt-grow {
-  flex: 1;
 }
 
 .rt-group-loading,
@@ -358,46 +328,79 @@
 [class*='col-'][class*='id'] {
   width: 220px;
   min-width: 160px;
+  max-width: 260px;
 }
 
 [class*='col-'][class*='status'] {
   width: 110px;
   min-width: 100px;
+  max-width: 140px;
 }
 
 [class*='col-'][class*='type'],
 [class*='col-'][class*='driver'] {
   width: 260px;
   min-width: 220px;
+  max-width: 320px;
 }
 
 [class*='col-'][class*='owner'],
 [class*='col-'][class*='user'] {
   width: 180px;
   min-width: 120px;
+  max-width: 220px;
 }
 
 [class*='col-'][class*='time'] {
   width: 180px;
   min-width: 140px;
+  max-width: 220px;
 }
 
 [class*='col-'][class*='duration'] {
   width: 120px;
   min-width: 90px;
+  max-width: 140px;
 }
 
 [class*='col-'][class*='result'] {
   width: 120px;
   min-width: 90px;
+  max-width: 140px;
 }
 
 [class*='col-'][class*='host'] {
   width: 240px;
   min-width: 180px;
+  max-width: 280px;
 }
 
 [class*='col-'][class*='model'] {
   width: 180px;
   min-width: 140px;
+  max-width: 220px;
+}
+
+[class*='col-'][class*='battery'] {
+  width: 110px;
+  min-width: 90px;
+  max-width: 130px;
+}
+
+[class*='col-'][class*='sdk'] {
+  width: 110px;
+  min-width: 90px;
+  max-width: 130px;
+}
+
+[class*='col-'][class*='name'] {
+  width: 360px;
+  min-width: 240px;
+  max-width: 480px;
+}
+
+[class*='col-'][class*='device'] {
+  width: 240px;
+  min-width: 180px;
+  max-width: 280px;
 }

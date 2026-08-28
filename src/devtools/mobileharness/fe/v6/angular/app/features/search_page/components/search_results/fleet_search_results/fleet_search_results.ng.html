@@ -1,79 +1,61 @@
-<mat-card class="results-area" [class.grouped-mode]="groupByKeys().length > 0">
-  @if (groupByKeys().length > 0) {
+@let isGrouped = store.groupByKeys().length > 0;
+@let fleetLabel = store.fleet() === 'internal' ? 'Google Internal' : 'ATS Labs';
+@let entity = store.entity();
+@let isLoading = store.isLoading();
+
+<mat-card class="results-area" [class.grouped-mode]="isGrouped">
+  @if (isGrouped) {
+    @let selectedGroupItems = store.selectedItems();
     <!-- Grouped Mode Toolbar -->
-    <div class="rt-toolbar" [class.rt-toolbar-active]="selected().size > 0">
-      @if (selected().size > 0) {
+    <div class="rt-toolbar" [class.rt-toolbar-active]="selectedGroupItems.size > 0">
+      @if (selectedGroupItems.size > 0) {
         <span class="rt-count">
-          {{ selected().size | number }} selected · {{ fleet() === 'internal' ? 'Google Internal' : 'ATS Labs' }}
+          {{ selectedGroupItems.size | number }} selected · {{ fleetLabel }}
         </span>
-        <span class="rt-divider"></span>
-        <button class="rt-btn-text" [disabled]="true" title="Feature is under development" (click)="quarantine.emit()">
-          <mat-icon class="material-symbols-outlined">gpp_bad</mat-icon>
-          Quarantine
-        </button>
-        @if (entity() === 'devices') {
-          <button class="rt-btn-text" [disabled]="true" title="Feature is under development" (click)="configureWifi.emit()">
-            <mat-icon class="material-symbols-outlined">wifi</mat-icon>
-            Configure Wi-Fi
-          </button>
-          <button class="rt-btn-text" [disabled]="true" title="Feature is under development" (click)="configure.emit()">
-            <mat-icon class="material-symbols-outlined">tune</mat-icon>
-            Configuration
-          </button>
-        }
-
-        <button class="rt-btn-text" [disabled]="true" title="Feature is under development" (click)="export.emit()">
-          <mat-icon class="material-symbols-outlined">download</mat-icon>
-          Export
-        </button>
-        <span class="rt-grow"></span>
-        <button class="rt-btn-text" (click)="clearSelection()">
-          <mat-icon class="material-symbols-outlined">close</mat-icon>
-          Clear
-        </button>
-
+        <ng-container *ngTemplateOutlet="selectionActions"></ng-container>
       } @else {
         <span class="rt-count">
-          {{ (groupedResults()?.totalItems || 0) | number }} {{ entity() }} in
-          {{ (groupedResults()?.totalGroups || 0) | number }} groups · {{ fleet() === 'internal' ? 'Google Internal' : 'ATS Labs' }}
+          {{ (store.groupedResults()?.totalItems || 0) | number }} {{ entity }} in
+          {{ (store.groupedResults()?.totalGroups || 0) | number }} groups · {{ fleetLabel }}
         </span>
         <span class="rt-divider"></span>
-        @if (groupKeysText()) {
-          <span class="rt-groupby-label">by {{ groupKeysText() }}</span>
+        @if (store.groupKeysText()) {
+          <span class="rt-groupby-label">by {{ store.groupKeysText() }}</span>
           <span class="rt-divider"></span>
         }
 
         <!-- Group Sort Menu -->
         <button class="rt-btn-text" [matMenuTriggerFor]="groupSortMenuGrouped">
           <mat-icon class="material-symbols-outlined">swap_vert</mat-icon>
-          {{ groupSortActiveLabel() }}
+          {{ store.groupSortActiveLabel() }}
           <mat-icon class="material-symbols-outlined rt-caret">arrow_drop_down</mat-icon>
         </button>
         <mat-menu #groupSortMenuGrouped="matMenu" class="sort-dropdown-menu">
-          @for (opt of groupSortOptions(); track opt.value) {
+          @for (opt of store.groupSortOptions(); track opt.value) {
             <button
               mat-menu-item
-              (click)="setGroupSort(opt.value)"
-              [class.active-density]="groupSort() === opt.value"
+              (click)="store.setGroupSort(opt.value)"
+              [class.active-density]="store.groupSort() === opt.value"
             >
               <mat-icon class="material-symbols-outlined">
-                {{ groupSort() === opt.value ? 'check' : '' }}
+                {{ store.groupSort() === opt.value ? 'check' : '' }}
               </mat-icon>
               <span>{{ opt.label }}</span>
             </button>
           }
         </mat-menu>
 
-        <!-- Columns Button (Under Development) -->
-        <button class="rt-btn-text" [disabled]="true" title="Columns selector feature is under development">
+        <!-- Columns Button -->
+        <button class="rt-btn-text" (click)="openColumnSelector()" title="Configure table columns">
           <mat-icon class="material-symbols-outlined">view_column</mat-icon>
           Columns
         </button>
 
+
         <span class="rt-grow"></span>
 
         <!-- Utilization Legend -->
-        @if (entity() === 'devices') {
+        @if (entity === 'devices') {
           <div class="rt-util-key">
             <span class="rt-util-key-item">
               <span class="legend-dot color-busy"></span>In Service (BUSY)
@@ -89,96 +71,84 @@
       }
     </div>
 
-    @if (store.isLoading()) {
+    @if (isLoading) {
       <mat-progress-bar mode="indeterminate" class="table-progress-bar"></mat-progress-bar>
     }
-    <div class="rt-accordion" [class.stale-loading]="store.isLoading()">
-      @if (groups().length > 0) {
-        @for (g of groups(); track g.groupId) {
+    <div class="rt-accordion" [class.stale-loading]="isLoading">
+      @let groups = store.groups();
+      @if (groups.length > 0) {
+        @for (g of groups; track g.groupId) {
           <app-fleet-group-card
             [group]="g"
-            [isOpen]="openGroupIds().has(g.groupId)"
-            [groupState]="expandedGroupPages().get(g.groupId)"
-            [entity]="entity()"
-            [columns]="columns()"
-            [selectedSet]="selected()"
-            (toggleGroup)="toggleGroup($event)"
-            (toggleSelectGroupPage)="toggleSelectGroupPage($event)"
-            (toggleSelectRow)="toggleSelectRow($event)"
+            [isOpen]="store.openGroupIds().has(g.groupId)"
+            [groupState]="store.expandedGroupPages().get(g.groupId)"
+            [entity]="entity"
+            [columns]="store.displayColumns()"
+            [selectedSet]="selectedGroupItems"
+            (toggleGroup)="store.toggleGroup($event)"
+            (toggleSelectGroupPage)="store.toggleSelectRows($event)"
+            (toggleSelectRow)="store.toggleSelectRow($event)"
             (loadGroupPage)="store.onLoadGroupRows(g.groupId, $event)"
           ></app-fleet-group-card>
         }
       } @else {
-        @if (!store.isLoading()) {
-          <div class="rt-group-empty">No groups found.</div>
+        @if (!isLoading) {
+          <div class="rt-empty-state">
+            @if (store.hasActiveFilters()) {
+              <mat-icon class="material-symbols-outlined rt-empty-icon">search_off</mat-icon>
+              <div class="rt-empty-title">No {{ entity }} match your filters</div>
+              <div class="rt-empty-sub">Try removing a filter or broadening your search.</div>
+              <button type="button" class="rt-btn-outlined" (click)="store.resetSearchState()">Clear all filters</button>
+            } @else {
+              <mat-icon class="material-symbols-outlined rt-empty-icon">inbox</mat-icon>
+              <div class="rt-empty-title">No groups found</div>
+            }
+          </div>
         }
       }
     </div>
 
     <!-- Group Pagination Footer -->
-    <app-search-pagination
-      [customRangeText]="groupedRangeText()"
-      [hasPrevPage]="!!groupedResults()?.prevPageToken"
-      [hasNextPage]="!!groupedResults()?.nextPageToken"
-      (prev)="prevPage()"
-      (next)="nextPage()"
-    ></app-search-pagination>
+    @if (store.groups().length > 0) {
+      <app-search-pagination
+        [rangeText]="store.rangeText()"
+        [hasPrev]="store.hasPrevPage()"
+        [hasNext]="store.hasNextPage()"
+        (prev)="store.prevPage()"
+        (next)="store.nextPage()"
+      ></app-search-pagination>
+    }
   } @else {
     <!-- Toolbar -->
-    <div class="rt-toolbar" [class.rt-toolbar-active]="selectedCount() > 0">
-      @if (selectedCount() > 0) {
+    @let selectedCount = store.selectedCount();
+    @let totalCount = store.effectiveTotalCount();
+    <div class="rt-toolbar" [class.rt-toolbar-active]="selectedCount > 0">
+      @if (selectedCount > 0) {
         <span class="rt-count">
-          @if (selectAllMatching()) {
-            All {{ selectedCount() | number }} matching {{ entity() }} selected · {{ fleet() === 'internal' ? 'Google Internal' : 'ATS Labs' }}
+          @if (store.selectAllMatching()) {
+            All {{ selectedCount | number }} matching {{ entity }} selected · {{ fleetLabel }}
           } @else {
-            {{ selectedCount() | number }} selected · {{ fleet() === 'internal' ? 'Google Internal' : 'ATS Labs' }}
+            {{ selectedCount | number }} selected · {{ fleetLabel }}
           }
         </span>
-        <span class="rt-divider"></span>
-        @if (!selectAllMatching()) {
-          <button class="rt-btn-text" [disabled]="true" title="Feature is under development" (click)="quarantine.emit()">
-            <mat-icon class="material-symbols-outlined">gpp_bad</mat-icon>
-            Quarantine
-          </button>
-          @if (entity() === 'devices') {
-            <button class="rt-btn-text" [disabled]="true" title="Feature is under development" (click)="configureWifi.emit()">
-              <mat-icon class="material-symbols-outlined">wifi</mat-icon>
-              Configure Wi-Fi
-            </button>
-            <button class="rt-btn-text" [disabled]="true" title="Feature is under development" (click)="configure.emit()">
-              <mat-icon class="material-symbols-outlined">tune</mat-icon>
-              Configuration
-            </button>
-          }
-        }
-
-        <button class="rt-btn-text" [disabled]="true" title="Feature is under development" (click)="export.emit()">
-          <mat-icon class="material-symbols-outlined">download</mat-icon>
-          Export
-        </button>
-        <span class="rt-grow"></span>
-        <button class="rt-btn-text" (click)="clearSelection()">
-          <mat-icon class="material-symbols-outlined">close</mat-icon>
-          Clear
-        </button>
-
-
+        <ng-container *ngTemplateOutlet="selectionActions"></ng-container>
       } @else {
         <span class="rt-count">
-          {{ totalCount() | number }} {{ entity() }} · {{ fleet() === 'internal' ? 'Google Internal' : 'ATS Labs' }}
+          {{ totalCount | number }} {{ entity }} · {{ fleetLabel }}
         </span>
         <span class="rt-divider"></span>
 
-        <!-- Columns Button (Under Development) -->
-        <button class="rt-btn-text" [disabled]="true" title="Columns selector feature is under development">
+        <!-- Columns Button -->
+        <button class="rt-btn-text" (click)="openColumnSelector()" title="Configure table columns">
           <mat-icon class="material-symbols-outlined">view_column</mat-icon>
           Columns
         </button>
 
+
         <!-- Density Selector Component -->
         <app-density-dropdown
-          [density]="density()"
-          (densityChange)="density.set($event)"
+          [density]="store.density()"
+          (densityChange)="store.density.set($event)"
         ></app-density-dropdown>
 
         <span class="rt-grow"></span>
@@ -188,11 +158,11 @@
           <mat-icon class="material-symbols-outlined">more_vert</mat-icon>
         </button>
         <mat-menu #moreMenu="matMenu" class="more-dropdown-menu">
-          <button mat-menu-item (click)="refresh.emit()">
+          <button mat-menu-item (click)="store.executeSearch()">
             <mat-icon class="material-symbols-outlined">refresh</mat-icon>
             <span>Refresh</span>
           </button>
-          <button mat-menu-item (click)="export.emit()">
+          <button mat-menu-item [disabled]="true" title="Feature is under development">
             <mat-icon class="material-symbols-outlined">download</mat-icon>
             <span>Export</span>
           </button>
@@ -200,101 +170,137 @@
       }
     </div>
 
-    @if (store.isLoading()) {
+    @if (isLoading) {
       <mat-progress-bar mode="indeterminate" class="table-progress-bar"></mat-progress-bar>
     }
 
-    <mat-card-content class="results-card-content">
-      <!-- Select-All-Matching Banner -->
-      @if (showSelectAllMatchingBanner()) {
-        <div class="rt-banner rt-banner-info" id="rt-selall-banner">
-          <mat-icon class="material-symbols-outlined">info</mat-icon>
-          @if (selectAllMatching()) {
-            <span>
-              All <b>{{ totalCount() | number }}</b> {{ entity() }} matching your filters are selected
-              @if (excludedCount() > 0) {
-                <span class="rt-excluded">({{ excludedCount() | number }} excluded)</span>
-              }
-              .
-            </span>
-            <button class="rt-btn-text" (click)="clearSelection()">Clear selection</button>
-          } @else {
-            <span>All {{ rows().length }} {{ entity() }} on this page are selected.</span>
-            <button class="rt-btn-text" (click)="selectActionAllMatching()">
-              Select all {{ totalCount() | number }} matching your filters
-            </button>
-          }
-        </div>
-      }
+    @let rows = store.rows();
+    @if (!isLoading && rows.length === 0) {
+      <div class="rt-empty-state">
+        @if (store.hasActiveFilters()) {
+          <mat-icon class="material-symbols-outlined rt-empty-icon">search_off</mat-icon>
+          <div class="rt-empty-title">No {{ entity }} match your filters</div>
+          <div class="rt-empty-sub">Try removing a filter or broadening your search.</div>
+          <button type="button" class="rt-btn-outlined" (click)="store.resetSearchState()">Clear all filters</button>
+        } @else {
+          <mat-icon class="material-symbols-outlined rt-empty-icon">inbox</mat-icon>
+          <div class="rt-empty-title">No {{ entity }} found</div>
+        }
+      </div>
+    } @else {
+      <mat-card-content class="results-card-content">
+        <!-- Select-All-Matching Banner -->
+        @if (store.showSelectAllMatchingBanner()) {
+          <div class="rt-banner rt-banner-info" id="rt-selall-banner">
+            <mat-icon class="material-symbols-outlined">info</mat-icon>
+            @if (store.selectAllMatching()) {
+              <span>
+                All <b>{{ totalCount | number }}</b> {{ entity }} matching your filters are selected
+                @if (store.excludedCount() > 0) {
+                  <span class="rt-excluded">({{ store.excludedCount() | number }} excluded)</span>
+                }
+                .
+              </span>
+              <button class="rt-btn-text" (click)="store.clearSelection()">Clear selection</button>
+            } @else {
+              <span>All {{ rows.length }} {{ entity }} on this page are selected.</span>
+              <button class="rt-btn-text" (click)="store.selectAllMatchingRecords()">
+                Select all {{ totalCount | number }} matching your filters
+              </button>
+            }
+          </div>
+        }
 
-      <!-- Data Table -->
-      <div
-        class="table-container"
-        [class]="'density-' + density()"
-        [class.stale-loading]="store.isLoading()"
-      >
-        <table mat-table [dataSource]="rows()" class="results-table">
-          <!-- Checkbox Column -->
-          <ng-container matColumnDef="checkbox">
-            <th mat-header-cell *matHeaderCellDef class="checkbox-col">
-              <mat-checkbox
-                [checked]="isAllSelected()"
-                [indeterminate]="isSomeSelected()"
-                (change)="toggleSelectAll()"
-              ></mat-checkbox>
-            </th>
-            <td mat-cell *matCellDef="let row; let i = index" class="checkbox-col">
-              <mat-checkbox
-                [checked]="isRowSelected(visibleRowIds()[i])"
-                (change)="toggleSelectRow(visibleRowIds()[i])"
-              ></mat-checkbox>
-            </td>
-          </ng-container>
-
-          <!-- Dynamic Columns -->
-          @for (col of columns(); track col.key) {
-            <ng-container [matColumnDef]="col.key">
-              <th mat-header-cell *matHeaderCellDef (click)="onHeaderClick(col.key)" class="sortable-header" [class]="'col-' + col.key">
-                <span class="header-content">
-                  {{ col.displayName }}
-                  @if (isSortColumn(col.key)) {
-                    <mat-icon class="material-symbols-outlined sort-icon">
-                      {{ sortAsc() ? 'arrow_upward' : 'arrow_downward' }}
-                    </mat-icon>
-                  }
-                </span>
+        <!-- Data Table -->
+        <div
+          class="table-container"
+          [class]="'density-' + store.density()"
+          [class.stale-loading]="isLoading"
+        >
+          <table mat-table [dataSource]="rows" class="results-table">
+            <!-- Checkbox Column -->
+            <ng-container matColumnDef="checkbox">
+              <th mat-header-cell *matHeaderCellDef class="checkbox-col">
+                <mat-checkbox
+                  [checked]="store.isAllSelected()"
+                  [indeterminate]="store.isSomeSelected()"
+                  (change)="store.toggleSelectAll()"
+                ></mat-checkbox>
               </th>
-              <td mat-cell *matCellDef="let row" [class]="'col-' + col.key">
-                <app-search-cell [cell]="row | appCell:col.key:columns()" [column]="col" [entity]="entity()"></app-search-cell>
+              <td mat-cell *matCellDef="let row" class="checkbox-col">
+                <mat-checkbox
+                  [checked]="store.isRowSelected(row.id)"
+                  (change)="store.toggleSelectRow(row.id)"
+                ></mat-checkbox>
               </td>
             </ng-container>
-          }
 
-          <tr mat-header-row *matHeaderRowDef="columnsToDisplay(); sticky: true"></tr>
-          <tr mat-row *matRowDef="let row; columns: columnsToDisplay()" [class.selected-row]="isRowSelected(getRowId(row))"></tr>
+            <!-- Dynamic Columns -->
+            @for (col of store.displayColumns(); track col.key; let colIdx = $index) {
+              <ng-container [matColumnDef]="col.key">
+                <th mat-header-cell *matHeaderCellDef (click)="store.toggleSort(col.key)" class="sortable-header" [class]="'col-' + col.key">
+                  <span class="header-content">
+                    {{ col.displayName }}
+                    @if (store.sortColumn() === col.key) {
+                      <mat-icon class="material-symbols-outlined sort-icon">
+                        {{ store.sortAsc() ? 'arrow_upward' : 'arrow_downward' }}
+                      </mat-icon>
+                    }
+                  </span>
+                </th>
+                <td mat-cell *matCellDef="let row" [class]="'col-' + col.key">
+                  <app-search-cell [cell]="row.cells?.[colIdx]" [column]="col"></app-search-cell>
+                </td>
+              </ng-container>
+            }
 
-          <!-- Row shown when there is no matching data. -->
-          <tr class="mat-row" *matNoDataRow>
-            <td class="mat-cell empty-table-cell" [attr.colspan]="columnsToDisplay().length">
-              No matching {{ entity() }} found.
-            </td>
-          </tr>
-        </table>
-      </div>
-    </mat-card-content>
+            <tr mat-header-row *matHeaderRowDef="columnsToDisplay(); sticky: true"></tr>
+            <tr mat-row *matRowDef="let row; columns: columnsToDisplay()" [class.selected-row]="store.isRowSelected(row.id)"></tr>
+          </table>
+        </div>
+      </mat-card-content>
 
-    <!-- Pagination Footer -->
-    <app-search-pagination
-      [showPageSize]="true"
-      [pageSize]="pageSize()"
-      [rangeStart]="rangeStart()"
-      [rangeEnd]="rangeEnd()"
-      [totalCount]="totalCount()"
-      [hasPrevPage]="pageIndex() > 0"
-      [hasNextPage]="store.hasNextPage()"
-      (pageSizeChange)="onPageSizeChange($event)"
-      (prev)="prevPage()"
-      (next)="nextPage()"
-    ></app-search-pagination>
+      <!-- Pagination Footer -->
+      <app-search-pagination
+        [pageSize]="store.pageSize()"
+        [rangeText]="store.rangeText()"
+        [hasPrev]="store.hasPrevPage()"
+        [hasNext]="store.hasNextPage()"
+        (pageSizeChange)="store.setPageSize($event)"
+        (prev)="store.prevPage()"
+        (next)="store.nextPage()"
+      ></app-search-pagination>
+    }
   }
+
+  <!-- Shared Selection Action Toolbar Fragment -->
+  <ng-template #selectionActions>
+    <span class="rt-divider"></span>
+    @if (!store.selectAllMatching()) {
+      <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
+        <mat-icon class="material-symbols-outlined">gpp_bad</mat-icon>
+        Quarantine
+      </button>
+      @if (store.entity() === 'devices') {
+        <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
+          <mat-icon class="material-symbols-outlined">wifi</mat-icon>
+          Configure Wi-Fi
+        </button>
+        <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
+          <mat-icon class="material-symbols-outlined">tune</mat-icon>
+          Configuration
+        </button>
+      }
+    }
+
+    <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
+      <mat-icon class="material-symbols-outlined">download</mat-icon>
+      Export
+    </button>
+    <span class="rt-grow"></span>
+    <button class="rt-btn-text" (click)="store.clearSelection()">
+      <mat-icon class="material-symbols-outlined">close</mat-icon>
+      Clear
+    </button>
+  </ng-template>
 </mat-card>

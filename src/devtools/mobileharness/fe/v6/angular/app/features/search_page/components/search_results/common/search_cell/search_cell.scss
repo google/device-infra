@@ -1,7 +1,44 @@
+:host {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-text,
+.status-text {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.multilink-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 4px;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+.link-sep {
+  color: var(--mat-sys-outline, #9aa0a6);
+  margin-right: 2px;
+}
+
 .status-cell {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 
 .rt-dot {
@@ -9,6 +46,7 @@
   height: 8px;
   border-radius: 50%;
   display: inline-block;
+  flex-shrink: 0;
 
   &.status-ok {
     background-color: var(--mat-sys-positive, #34a853);
@@ -30,6 +68,12 @@
 .device-link {
   color: var(--mat-sys-primary, #1a73e8);
   text-decoration: none;
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
 
   &:hover {
     text-decoration: underline;

@@ -1,7 +1,8 @@
+import {ConnectionPositionPair, OverlayModule} from '@angular/cdk/overlay';
 import {
-  ConnectionPositionPair,
-  OverlayModule,
-} from '@angular/cdk/overlay';
+  CdkVirtualScrollViewport,
+  ScrollingModule,
+} from '@angular/cdk/scrolling';
 import {CommonModule} from '@angular/common';
 import {
   afterNextRender,
@@ -17,19 +18,19 @@ import {
 import {FormsModule} from '@angular/forms';
 import {MatButtonModule} from '@angular/material/button';
 import {MatIconModule} from '@angular/material/icon';
+import {MatTooltipModule} from '@angular/material/tooltip';
 
-import {
-  AdvancedMatchMode,
-  PickerValueItem,
-} from '../../models/value_picker_models';
+import {TooltipIfTruncatedDirective} from '../../../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
+import {AdvancedMatchMode, PickerValueItem} from '../../models';
 import {SearchPageStore} from '../../services/search_page_store';
-import {AdvancedMatchView} from './advanced_match_view/advanced_match_view';
 import {
   buildValuePickerApplyEvent,
   computeFilteredAndSortedValues,
   computePinnedValues,
+  getPacificTimezoneName,
   parseDateRange,
 } from '../../utils';
+import {AdvancedMatchView} from './advanced_match_view/advanced_match_view';
 
 /**
  * Unified facade value picker component with embedded CDK Connected Overlay.
@@ -47,6 +48,9 @@ import {
     OverlayModule,
     MatButtonModule,
     MatIconModule,
+    MatTooltipModule,
+    ScrollingModule,
+    TooltipIfTruncatedDirective,
     AdvancedMatchView,
   ],
 })
@@ -82,7 +86,9 @@ export class FilterValuePicker {
 
   // ===================== Local Draft Reactive State =====================
   /** Set of selected value strings linked to store effective state. */
-  readonly selectedSet = linkedSignal(() => new Set(this.state().selectedValues));
+  readonly selectedSet = linkedSignal(
+    () => new Set(this.state().selectedValues),
+  );
   /** Set of manually staged custom free-text inputs added by user. */
   readonly stagedCustomInputs = linkedSignal({
     source: () => this.state().selectedValues,
@@ -111,29 +117,48 @@ export class FilterValuePicker {
   /** 'To' timestamp string for date-range picker type. */
   readonly rangeTo = linkedSignal(() => this.rangeState().to);
 
+  /** Selected values as an array for efficient multi-field consumption. */
+  readonly selectedValuesList = computed(() =>
+    Array.from(this.state().selectedValues),
+  );
+
   /** Property key name for namedPair picker type. */
   readonly propName = linkedSignal(() => {
-    const vals = Array.from(this.state().selectedValues);
+    const vals = this.selectedValuesList();
     if (this.config()?.needsName && vals.length >= 2) return vals[0] || '';
     return this.config()?.title || '';
   });
   /** Property value string for namedPair picker type. */
   readonly propVal = linkedSignal(() => {
-    const vals = Array.from(this.state().selectedValues);
+    const vals = this.selectedValuesList();
     if (this.config()?.needsName && vals.length >= 2) return vals[1] || '';
     return vals.join(', ');
   });
   /** Text value string for plain text picker type. */
-  readonly textVal = linkedSignal(() =>
-    Array.from(this.state().selectedValues).join(', '),
-  );
+  readonly textVal = linkedSignal(() => this.selectedValuesList().join(', '));
 
   /** Local search query entered in popover filter input. */
   readonly searchQuery = signal<string>('');
-  /** Active column to sort candidate items by ('value' | 'filtered' | 'total'). */
-  readonly sortBy = signal<'value' | 'filtered' | 'total'>('filtered');
-  /** Sort direction flag (true = ascending, false = descending). */
-  readonly sortAsc = signal<boolean>(false);
+  /** Whether the candidate items are plain values without count columns. */
+  readonly isPlain = computed(() => {
+    if (this.config()?.valuesType === 'plain') return true;
+    const list = this.state().values || [];
+    return (
+      list.length > 0 &&
+      list.every((v) => v.filtered === undefined && v.total === undefined)
+    );
+  });
+
+  /** Active column to sort candidate items by ('value' | 'filtered' | 'total'), adhering to search_fleet.proto contract. */
+  readonly sortBy = linkedSignal<boolean, 'value' | 'filtered' | 'total'>({
+    source: () => this.isPlain(),
+    computation: (plain) => (plain ? 'value' : 'filtered'),
+  });
+  /** Sort direction flag (true = ascending, false = descending), adhering to search_fleet.proto contract. */
+  readonly sortAsc = linkedSignal<boolean, boolean>({
+    source: () => this.isPlain(),
+    computation: (plain) => (plain ? true : false),
+  });
   /** Polarity menu open state flag. */
   readonly showPolarityMenu = signal<boolean>(false);
   /** More/Overflow options menu open state flag. */
@@ -147,14 +172,15 @@ export class FilterValuePicker {
   /** Negative verb text ('is not' or 'are not'). */
   readonly negVerb = computed(() => (this.isPlural() ? 'are not' : 'is not'));
 
-  /** Whether the candidate items are plain values without count columns. */
-  readonly isPlain = computed(() => {
-    if (this.config()?.valuesType === 'plain') return true;
-    const list = this.state().values || [];
-    return (
-      list.length > 0 &&
-      list.every((v) => v.filtered === undefined && v.total === undefined)
-    );
+  /** Active Pacific timezone abbreviation ('PDT' or 'PST'). */
+  readonly pdtTimezone = getPacificTimezoneName();
+
+  /** Whether the value picker should display in a compact width (non-list types or list with only values). */
+  readonly isCompact = computed(() => {
+    if (this.isAdvanced()) return false;
+    const type = this.config()?.type;
+    if (type && type !== 'list') return true;
+    return this.isPlain();
   });
 
   /** Whether polarity negate toggle button is visible. */
@@ -172,6 +198,14 @@ export class FilterValuePicker {
   /** Whether row actions ('only', 'copy') are enabled. */
   readonly showRowActions = computed(() => !!this.config()?.showRowActions);
 
+  /** Height of an individual candidate item row in pixels. */
+  readonly itemSize = 36;
+
+  /** Reference to the CDK virtual scroll viewport. */
+  readonly virtualViewport = viewChild<CdkVirtualScrollViewport>(
+    CdkVirtualScrollViewport,
+  );
+
   /** Filtered and sorted candidate value items for list view. */
   readonly displayList = computed(() =>
     computeFilteredAndSortedValues({
@@ -183,6 +217,13 @@ export class FilterValuePicker {
       isLoading: !!this.state().loading,
     }),
   );
+
+  /** Dynamic height for virtual scroll viewport based on item count and pinned state. */
+  readonly viewportHeight = computed(() => {
+    const count = this.displayList().length;
+    const maxViewportHeight = this.pinnedValues().length > 0 ? 220 : 260;
+    return Math.min(maxViewportHeight, Math.max(36, count * this.itemSize));
+  });
 
   /** Pinned selected items pinned to top when list exceeds threshold. */
   readonly pinnedValues = computed(() =>
@@ -214,12 +255,15 @@ export class FilterValuePicker {
   /** Footer status summary text indicating selected/excluded count or advanced values count. */
   readonly footerStatusText = computed(() => {
     if (this.isAdvanced()) {
-      const isMulti = this.advMode() === 'exactly' || this.advMode() === 'at_least';
+      const isMulti =
+        this.advMode() === 'exactly' || this.advMode() === 'at_least';
       if (!isMulti) {
         return this.advText().trim() ? '1 value added' : 'No values added';
       }
       const count = this.advValues().length;
-      return count === 0 ? 'No values added' : `${count} value${count > 1 ? 's' : ''} added`;
+      return count === 0
+        ? 'No values added'
+        : `${count} value${count > 1 ? 's' : ''} added`;
     }
 
     const type = this.config()?.type;
@@ -229,7 +273,9 @@ export class FilterValuePicker {
 
     const count = this.selectedSet().size;
     const verb = this.isNegated() ? 'excluded' : 'selected';
-    return count === 0 ? `No options ${verb}` : `${count} option${count > 1 ? 's' : ''} ${verb}`;
+    return count === 0
+      ? `No options ${verb}`
+      : `${count} option${count > 1 ? 's' : ''} ${verb}`;
   });
 
   constructor() {
@@ -304,10 +350,11 @@ export class FilterValuePicker {
 
   /** Dispatches ValuePickerApplyEvent to store and closes popover overlay. */
   onApply() {
+    const isAdv = this.isAdvanced();
     const event = buildValuePickerApplyEvent({
       type: this.config()?.type,
-      isAdvanced: this.isAdvanced(),
-      negated: this.isNegated(),
+      isAdvanced: isAdv,
+      negated: isAdv ? false : this.isNegated(),
       selectedSet: this.selectedSet(),
       searchQuery: this.searchQuery(),
       advMode: this.advMode(),
@@ -323,8 +370,19 @@ export class FilterValuePicker {
     this.store.closeValuePicker();
   }
 
+  /** Switches back from Advanced matching view to Simple list matching view. */
+  onBackToSimple() {
+    this.isAdvanced.set(false);
+    this.isNegated.set(false);
+  }
+
   /** Closes popover overlay without applying changes. */
   onCancel() {
     this.store.closeValuePicker();
+  }
+
+  /** TrackBy function for virtual scroll list items. */
+  trackByItemValue(index: number, item: PickerValueItem): string {
+    return item.value;
   }
 }

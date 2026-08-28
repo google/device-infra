@@ -16,6 +16,27 @@
   font-size: 0.8125rem;
   color: #444746;
   box-sizing: border-box;
+
+  &.compact {
+    height: 40px;
+    padding: 0 12px;
+    font-size: 0.75rem;
+
+    .rt-btn-text {
+      height: 28px;
+      min-height: 28px;
+      padding: 0 8px;
+      font-size: 0.75rem;
+
+      .mat-icon,
+      .material-symbols-outlined {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        line-height: 16px;
+      }
+    }
+  }
 }
 
 .rt-page-label {
@@ -36,10 +57,12 @@
   align-items: center;
   box-sizing: border-box;
 
-  @include mat.select-overrides((
-    trigger-text-size: 0.8125rem,
-    enabled-trigger-text-color: #1f1f1f,
-  ));
+  @include mat.select-overrides(
+    (
+      trigger-text-size: 0.8125rem,
+      enabled-trigger-text-color: #1f1f1f,
+    )
+  );
 
   ::ng-deep {
     .mat-select-trigger,
@@ -134,16 +157,20 @@
 }
 
 ::ng-deep .rt-page-size-panel {
-  @include mat.select-overrides((
-    panel-background-color: #fff,
-  ));
+  @include mat.select-overrides(
+    (
+      panel-background-color: #fff,
+    )
+  );
 
-  @include mat.option-overrides((
-    focus-state-layer-color: #e8f0fe,
-    label-text-size: 0.8125rem,
-    label-text-color: #1f1f1f,
-    hover-state-layer-color: rgba(29, 27, 32, 0.08),
-  ));
+  @include mat.option-overrides(
+    (
+      focus-state-layer-color: #e8f0fe,
+      label-text-size: 0.8125rem,
+      label-text-color: #1f1f1f,
+      hover-state-layer-color: rgba(29, 27, 32, 0.08),
+    )
+  );
 
   border: 1px solid #c4c7c5;
   border-radius: 8px;

@@ -55,13 +55,6 @@ describe('dateUtils', () => {
     });
   });
 
-  describe('parsePdtTimestamp (deprecated alias)', () => {
-    it('should delegate to parseUtcTimestamp', () => {
-      const parsed = dateUtils['parsePdtTimestamp']('2025-07-09 10:11:15');
-      expect(parsed.toISOString()).toBe('2025-07-09T10:11:15.000Z');
-    });
-  });
-
   describe('formatPdt', () => {
     it('should format Date to PDT string during summer time', () => {
       const date = new Date('2025-07-09T17:11:15Z');
@@ -127,6 +120,66 @@ describe('dateUtils', () => {
         durationText: '(+2h 15m)',
         elapsedHtml: '2h 15m after Start',
       });
+    });
+  });
+
+  describe('getPacificTimezoneName', () => {
+    it('should return PDT in summer and PST in winter', () => {
+      expect(dateUtils.getPacificTimezoneName(Date.UTC(2026, 6, 15))).toBe(
+        'PDT',
+      );
+      expect(dateUtils.getPacificTimezoneName(Date.UTC(2026, 0, 15))).toBe(
+        'PST',
+      );
+    });
+  });
+
+  describe('toDateTimeLocalString', () => {
+    it('should format ms to Pacific Time datetime-local string', () => {
+      // 2026-01-15 22:30 UTC is 2026-01-15 14:30 PST (UTC-8)
+      const pstMs = Date.UTC(2026, 0, 15, 22, 30);
+      expect(dateUtils.toDateTimeLocalString(pstMs)).toBe('2026-01-15T14:30');
+
+      // 2026-07-15 21:30 UTC is 2026-07-15 14:30 PDT (UTC-7)
+      const pdtMs = Date.UTC(2026, 6, 15, 21, 30);
+      expect(dateUtils.toDateTimeLocalString(pdtMs)).toBe('2026-07-15T14:30');
+    });
+  });
+
+  describe('pdtDateTimeToUtcIso', () => {
+    it('should convert Pacific Time datetime-local string to UTC ISO string during PDT and PST', () => {
+      // PDT test (July, UTC-7)
+      expect(dateUtils.pdtDateTimeToUtcIso('2026-07-15T14:30')).toBe(
+        '2026-07-15T21:30:00.000Z',
+      );
+
+      // PST test (January, UTC-8)
+      expect(dateUtils.pdtDateTimeToUtcIso('2026-01-15T14:30')).toBe(
+        '2026-01-15T22:30:00.000Z',
+      );
+    });
+
+    it('returns empty string for missing or invalid inputs without T separator', () => {
+      expect(dateUtils.pdtDateTimeToUtcIso('')).toBe('');
+      expect(dateUtils.pdtDateTimeToUtcIso('invalid')).toBe('');
+      expect(dateUtils.pdtDateTimeToUtcIso('2026-07-15')).toBe('');
+      expect(dateUtils.pdtDateTimeToUtcIso('T14:30')).toBe('');
+      expect(dateUtils.pdtDateTimeToUtcIso('2026-07-15T')).toBe('');
+    });
+
+    it('falls back to approx UTC ISO string if toLocaleString format does not match regex (line 321)', () => {
+      const origToLocaleString = Date.prototype.toLocaleString;
+      spyOn(Date.prototype, 'toLocaleString').and.returnValue(
+        'non-matching-format',
+      );
+      try {
+        const result = dateUtils.pdtDateTimeToUtcIso('2026-07-15T14:30');
+        expect(result).toBe(
+          new Date(Date.UTC(2026, 6, 15, 14, 30)).toISOString(),
+        );
+      } finally {
+        Date.prototype.toLocaleString = origToLocaleString;
+      }
     });
   });
 });

@@ -1,8 +1,16 @@
+import {ComplexMatch} from '../../../core/models/search';
+import {dateUtils} from '../../../shared/utils/date_utils';
 import {
   AdvancedMatchMode,
+  FilterChip,
   PickerValueItem,
   ValuePickerApplyEvent,
-} from '../models/value_picker_models';
+} from '../models';
+import {
+  createComplexMatch,
+  extractComplexMatchInfo,
+  normalizeKey,
+} from './search_filter_utils';
 
 /** Configuration options passed to computeFilteredAndSortedValues pure engine function. */
 export interface FilterSortOptions {
@@ -33,21 +41,19 @@ export function buildDisplayValues(
   staged: ReadonlySet<string> | undefined,
   isLoading = false,
 ): PickerValueItem[] {
-
   if (isLoading || !staged || staged.size === 0) {
     return [...baseValues];
   }
 
-  const baseLower = new Set(
-    baseValues.flatMap((v) => [
-      v.value.toLowerCase(),
-      v.displayLabel.toLowerCase(),
-    ]),
-  );
+  const baseLower = new Set<string>();
+  for (const v of baseValues) {
+    baseLower.add(normalizeKey(v.value));
+    baseLower.add(normalizeKey(v.displayLabel));
+  }
 
   const missingStaged: PickerValueItem[] = [];
   for (const customVal of staged) {
-    if (!baseLower.has(customVal.toLowerCase())) {
+    if (!baseLower.has(normalizeKey(customVal))) {
       missingStaged.push({
         value: customVal,
         displayLabel: customVal,
@@ -63,7 +69,7 @@ export function buildDisplayValues(
  * Pure function: Filters and multi-column sorts candidate items for display in the picker UI.
  *
  * @param opts Options specifying items, search query, sort column, and sort direction.
- * @return Filtered and sorted slice of candidate items capped at 1000 elements.
+ * @returns Filtered and sorted candidate items.
  */
 export function computeFilteredAndSortedValues(
   opts: FilterSortOptions,
@@ -73,14 +79,14 @@ export function computeFilteredAndSortedValues(
     opts.stagedCustomInputs,
     opts.isLoading,
   );
-  const q = opts.query.toLowerCase().trim();
+  const q = normalizeKey(opts.query);
 
   const list = !q
     ? displayItems
     : displayItems.filter(
         (v) =>
-          v.value.toLowerCase().includes(q) ||
-          v.displayLabel.toLowerCase().includes(q),
+          normalizeKey(v.value).includes(q) ||
+          normalizeKey(v.displayLabel).includes(q),
       );
 
   const normalItems = list.filter((v) => !v.disabled);
@@ -99,7 +105,7 @@ export function computeFilteredAndSortedValues(
     return opts.sortAsc ? valA - valB : valB - valA;
   });
 
-  return [...normalItems, ...disabledItems].slice(0, 1000);
+  return [...normalItems, ...disabledItems];
 }
 
 /**
@@ -119,9 +125,13 @@ export function computePinnedValues(
   isLoading: boolean,
   threshold = 20,
 ): PickerValueItem[] {
-
   const hasQuery = query.trim().length > 0;
-  if (hasQuery || isLoading || items.length <= threshold || selectedSet.size === 0) {
+  if (
+    hasQuery ||
+    isLoading ||
+    items.length <= threshold ||
+    selectedSet.size === 0
+  ) {
     return [];
   }
 
@@ -131,31 +141,52 @@ export function computePinnedValues(
 }
 
 /**
+ * Returns the active Pacific timezone abbreviation ('PDT' or 'PST') for a given timestamp.
+ * Delegates to shared dateUtils.
+ */
+export const getPacificTimezoneName = dateUtils.getPacificTimezoneName;
+
+/**
  * Pure function: Formats millisecond timestamp into datetime-local HTML input format YYYY-MM-DDTHH:MM.
  *
  * @param ms Epoch timestamp in milliseconds.
  * @return Formatted datetime-local string.
  */
-export function toDateTimeLocalString(ms: number): string {
-  const d = new Date(ms);
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+export const toDateTimeLocalString = dateUtils.toDateTimeLocalString;
 
 /**
- * Pure function: Extracts From and To date strings from selected values set or returns default 24h range.
+ * Converts a datetime-local string in Pacific Time (America/Los_Angeles) to UTC ISO-8601 string.
+ * Delegates to shared dateUtils.
+ */
+export const pdtDateTimeToUtcIso = dateUtils.pdtDateTimeToUtcIso;
+
+/**
+ * Pure function: Extracts From and To date strings from selected values set or returns default 24h range in Pacific Time.
  *
  * @param selectedValues Set of selected value strings.
  * @return Object containing 'from' and 'to' datetime-local strings.
  */
-export function parseDateRange(
-  selectedValues: ReadonlySet<string>,
-): {from: string; to: string} {
+export function parseDateRange(selectedValues: ReadonlySet<string>): {
+  from: string;
+  to: string;
+} {
   const selected = Array.from(selectedValues);
+  if (selected.length >= 2) {
+    return {
+      from: (selected[0] || '').trim(),
+      to: (selected[1] || '').trim(),
+    };
+  }
+
   const t = selected[0] || '';
-  const match = t.match(/From:\s*([^\s]+)\s*To:\s*([^\s]+)/);
+  const match = t.match(/From:\s*([^\s]+)\s*To:\s*([^\s]+)/i);
   if (match) {
     return {from: match[1], to: match[2]};
+  }
+
+  const matchTilde = t.match(/([^\s~]+)\s*~\s*([^\s~]+)/);
+  if (matchTilde) {
+    return {from: matchTilde[1], to: matchTilde[2]};
   }
 
   const now = Date.now();
@@ -242,7 +273,6 @@ export function buildValuePickerApplyEvent(
       break;
   }
 
-
   const selectedList = Array.from(selectedSet);
   const pendingQuery = searchQuery.trim();
   if (pendingQuery && !selectedList.includes(pendingQuery) && !isAdvanced) {
@@ -255,6 +285,67 @@ export function buildValuePickerApplyEvent(
     isAdvanced,
     advMode: isAdvanced ? payload.advMode : undefined,
     advText: isAdvanced ? (payload.advText || '').trim() : undefined,
-    advValues: isAdvanced && payload.advValues ? [...payload.advValues] : undefined,
+    advValues:
+      isAdvanced && payload.advValues ? [...payload.advValues] : undefined,
   };
+}
+
+/** Helper to extract advanced matching state from a FilterChip for ValuePicker initialization. */
+export function extractAdvancedStateFromChip(chip: FilterChip): {
+  isAdv: boolean;
+  advMode: AdvancedMatchMode;
+  advText: string;
+  advValues: string[];
+} {
+  const info = extractComplexMatchInfo(chip.complex);
+  if (info) {
+    return {
+      isAdv: true,
+      advMode: info.mode,
+      advText: info.values.join(', '),
+      advValues: info.values,
+    };
+  }
+  return {
+    isAdv: false,
+    advMode: 'substring',
+    advText: '',
+    advValues: [],
+  };
+}
+
+/** Builds ComplexMatch Protobuf structure from Popover ValuePickerApplyEvent. */
+export function buildComplexMatchFromEvent(
+  event: ValuePickerApplyEvent,
+): ComplexMatch | undefined {
+  if (!event.isAdvanced || !event.advMode) return undefined;
+
+  const vals = event.advValues?.length
+    ? event.advValues
+    : event.advText?.trim()
+      ? [event.advText.trim()]
+      : [];
+
+  const isNeg =
+    event.advMode === 'not_substring' || event.advMode === 'not_regex';
+  return createComplexMatch(event.advMode, vals, isNeg);
+}
+
+/** Helper to check if a ValuePickerApplyEvent payload contains empty selection values. */
+export function isValuePickerSelectionEmpty(
+  event: ValuePickerApplyEvent,
+): boolean {
+  if (event.isAdvanced) {
+    if (event.advMode === 'exactly' || event.advMode === 'at_least') {
+      return !event.advValues?.length;
+    }
+    return !event.advText?.trim();
+  }
+  return (
+    !event.selected?.length &&
+    !event.rangeFrom?.trim() &&
+    !event.rangeTo?.trim() &&
+    !event.textVal?.trim() &&
+    !event.propName?.trim()
+  );
 }

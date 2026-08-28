@@ -7,8 +7,8 @@ import {
   output,
 } from '@angular/core';
 
+import {SearchBoxSuggestion} from '../../../models';
 import {SearchPageStore} from '../../../services/search_page_store';
-import {SearchBoxSuggestion} from '../../../utils';
 
 /** Standalone popover component rendering typeahead search suggestions. */
 @Component({

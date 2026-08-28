@@ -7,11 +7,24 @@ import {
   linkedSignal,
   Signal,
   signal,
+  WritableSignal,
 } from '@angular/core';
-import {takeUntilDestroyed, toObservable, toSignal} from '@angular/core/rxjs-interop';
+import {
+  takeUntilDestroyed,
+  toObservable,
+  toSignal,
+} from '@angular/core/rxjs-interop';
 import {ActivatedRoute, NavigationEnd, Router} from '@angular/router';
-import {Observable, of} from 'rxjs';
-import {catchError, debounceTime, distinctUntilChanged, filter, map} from 'rxjs/operators';
+import {asapScheduler, Observable, of, Subject} from 'rxjs';
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  filter,
+  map,
+  observeOn,
+  switchMap,
+} from 'rxjs/operators';
 
 import {Column, Row} from '../../../core/models/search';
 import {SEARCH_SERVICE} from '../../../core/services/search/search_service';
@@ -20,8 +33,6 @@ import {
   FilterChip,
   FilterKeyMetadata,
   INITIAL_VALUE_PICKER_STATE,
-  ParsedQueryFilter,
-  PickerValueItem,
   PromotedFilterKeyItem,
   PromotedGroupByKeyItem,
   SearchBoxSuggestion,
@@ -32,78 +43,21 @@ import {
 } from '../models';
 import {
   buildUrlParamKey,
+  createGroupByChip,
+  getChipKey,
+  getInitialRouterUrl,
   getQueryParamAsArray,
+  getSerializedChipsKey,
+  isChipNegated,
   isSameFilterChip,
+  isSearchRouteActive,
   normalizeKey,
-  parseQueryFilterParam,
+  parseUrlChips,
+  resolveEntityFromPathOrUrl,
+  resolveInitialChips,
+  resolveInitialFleet,
   serializeFilterChip,
 } from '../utils';
-
-/** Resolves the active EntityType from current router URL or ActivatedRoute hierarchy. */
-function resolveInitialEntity(route: ActivatedRoute, router: Router): EntityType {
-  const locationUrl =
-    typeof window !== 'undefined' && window.location
-      ? window.location.pathname || window.location.href
-      : '';
-  const url = router.url || locationUrl || '';
-  if (url.includes('/hosts')) return 'hosts';
-  if (url.includes('/devices')) return 'devices';
-  if (url.includes('/tests')) return 'tests';
-  if (url.includes('/jobs')) return 'jobs';
-  if (url.includes('/sessions')) return 'sessions';
-
-  if (route.snapshot) {
-    for (const r of route.snapshot.pathFromRoot) {
-      if (r.data?.['entity']) {
-        return r.data['entity'] as EntityType;
-      }
-    }
-  }
-  if (route.snapshot?.data?.['entity']) {
-    return route.snapshot.data['entity'] as EntityType;
-  }
-
-  return 'devices';
-}
-function resolveInitialChips(route: ActivatedRoute): FilterChip[] {
-  const params = route.snapshot?.queryParams;
-  if (!params) return [];
-
-  const fParams = getQueryParamAsArray(params['f']);
-  const gbParam = params['gb'] || '';
-  const gbKeys = gbParam.split(',').filter(Boolean);
-
-  if (fParams.length === 0 && gbKeys.length === 0) {
-    return [];
-  }
-
-  const parsedFilters = fParams
-    .map(parseQueryFilterParam)
-    .filter(Boolean) as ParsedQueryFilter[];
-
-  return [
-    ...parsedFilters.map((pf) => ({
-      key: pf.key,
-      pillKey: pf.key,
-      pillCondition: pf.fallbackPillCondition,
-      rawValues: pf.rawValues,
-      negated: pf.negated,
-      complex: pf.complex,
-    })),
-    ...gbKeys.map((gb: string) => ({
-      key: 'group_by_' + gb,
-      pillKey: gb,
-      pillCondition: gb,
-      isGroupBy: true,
-    })),
-  ];
-}
-
-/** Resolves initial fleet operational scope from ActivatedRoute snapshot query params. */
-function resolveInitialFleet(route: ActivatedRoute): 'internal' | 'ats' {
-  const fleetParam = route.snapshot?.queryParams?.['fleet'];
-  return fleetParam === 'ats' ? 'ats' : 'internal';
-}
 
 /**
  * Abstract base store defining shared search state, reactive signals, and actions.
@@ -134,15 +88,54 @@ export abstract class SearchPageStore {
   // 2. Core Domain & Query Signals
   // ===========================================================================
 
-  /** Current active search entity type (e.g. 'devices', 'hosts', 'tests', 'jobs', 'sessions'). */
-  readonly entity = signal<EntityType>(
-    resolveInitialEntity(this.route, this.router),
+  /** Checks whether the given entity type is supported by this domain store. */
+  isEntitySupported(entity: string): boolean {
+    return this.getSupportedEntities().has(entity as EntityType);
+  }
+
+  /** Supported entity types for this store. */
+  protected abstract getSupportedEntities(): Set<EntityType>;
+
+  /** Subclass hook providing default entity type when route metadata is absent. */
+  protected abstract getDefaultEntity(): EntityType;
+
+  /** Reactive signal tracking the current active URL from NavigationEnd router events. */
+  protected readonly currentUrl = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map((e) => e.urlAfterRedirects || e.url),
+    ),
+    {initialValue: getInitialRouterUrl(this.router)},
   );
 
+  /**
+   * Specific entity type this store instance is permanently bound to.
+   * Derived from the RouteConfig path (e.g. 'devices', 'hosts', 'tests', 'jobs', 'sessions')
+   * with fallback to initial URL resolution or subclass default.
+   */
+  readonly entity: Signal<EntityType> = (() => {
+    const routePath = this.route.routeConfig?.path;
+    if (routePath && this.isEntitySupported(routePath)) {
+      return signal(routePath as EntityType).asReadonly();
+    }
+    const fromUrl = resolveEntityFromPathOrUrl(
+      getInitialRouterUrl(this.router),
+      this.getSupportedEntities(),
+      this.getDefaultEntity(),
+    );
+    return signal(fromUrl).asReadonly();
+  })();
+
+  /**
+   * Reactive computed signal validating whether the active browser URL belongs to THIS store instance.
+   * Adheres to Angular 20+ Signal graph and Google3 BFF exact-entity boundary.
+   */
+  readonly isCurrentRouteActive = computed<boolean>(() => {
+    return isSearchRouteActive(this.currentUrl(), this.entity());
+  });
+
   /** Fleet operational scope ('internal' vs 'ats'). */
-  readonly fleet = signal<'internal' | 'ats'>(
-    resolveInitialFleet(this.route),
-  );
+  readonly fleet = signal<'internal' | 'ats'>(resolveInitialFleet(this.route));
 
   /** Raw text input query string entered by the user in the search box. */
   readonly searchQuery = signal<string>('');
@@ -157,7 +150,7 @@ export abstract class SearchPageStore {
   );
 
   /** Active list of filter and group-by chips applied to the current search. */
-  readonly activeChips = signal<FilterChip[]>(
+  readonly activeChips: WritableSignal<FilterChip[]> = signal<FilterChip[]>(
     resolveInitialChips(this.route),
   );
 
@@ -189,23 +182,12 @@ export abstract class SearchPageStore {
   /** Display title for the currently open ValuePicker. */
   readonly pickerTitle = computed(() => this.pickerConfig()?.title || '');
 
-  /** Indicates whether enum options are being asynchronously loaded for the ValuePicker. */
-  readonly isPickerLoading: Signal<boolean> = signal(false);
-
-  /** Asynchronously fetched enum/value options for the ValuePicker. */
-  readonly asyncPickerValues: Signal<PickerValueItem[]> = signal([]);
-
-  /** Effective merged ValuePicker state combining user inputs and async fetched values/loading. */
-  readonly effectivePickerState = computed<ValuePickerState>(() => {
-    const raw = this.pickerState();
-    const asyncLoading = this.isPickerLoading();
-    const asyncVals = this.asyncPickerValues();
-    return {
-      ...raw,
-      loading: raw.loading || asyncLoading,
-      values: asyncVals.length > 0 ? asyncVals : raw.values,
-    };
-  });
+  /**
+   * Effective ValuePicker state presented to the popover overlay.
+   * Subclasses with asynchronous option fetching (e.g. FleetSearchStore) override this.
+   */
+  readonly effectivePickerState: Signal<ValuePickerState> =
+    this.pickerState.asReadonly();
 
   // ===========================================================================
   // 4. Pagination & Table Display State Signals
@@ -219,6 +201,13 @@ export abstract class SearchPageStore {
 
   /** Number of rows displayed per page. */
   readonly pageSize = signal<number>(25);
+
+  /** Updates the page size and resets page navigation cursor and index. */
+  setPageSize(newSize: number) {
+    this.pageSize.set(newSize);
+    this.pageIndex.set(0);
+    this.pageToken.set('');
+  }
 
   /** Opaque cursor token for backend pagination. Resets when chips or query change. */
   readonly pageToken = linkedSignal({
@@ -245,10 +234,13 @@ export abstract class SearchPageStore {
   /** Placeholder text for the main search input box. */
   readonly searchPlaceholder = computed(() => `Search ${this.entity()}...`);
 
-  /** Whether the clear button ('X') in the search bar should be displayed. */
-  readonly showSearchClear = computed(
-    () => this.searchQuery().trim().length > 0 || this.activeChips().length > 0,
+  /** Whether the user currently has active filter chips or a search query applied. */
+  readonly hasActiveFilters = computed<boolean>(
+    () => this.activeChips().length > 0 || this.searchQuery().trim().length > 0,
   );
+
+  /** Whether the clear button ('X') in the search bar should be displayed. */
+  readonly showSearchClear = computed(() => this.hasActiveFilters());
 
   /** Whether the search view is currently in its initial landing / empty guide state. */
   readonly isLandingState = computed<boolean>(() => {
@@ -257,10 +249,15 @@ export abstract class SearchPageStore {
   });
 
   /** List of active group-by field keys extracted from `activeChips`. */
-  readonly groupByKeys = computed<string[]>(() =>
-    this.activeChips()
-      .filter((c) => c.isGroupBy)
-      .map((c) => (c.key ? c.key.replace(/^group_by_/, '') : c.pillKey)),
+  readonly groupByKeys = computed<string[]>(
+    () =>
+      this.activeChips()
+        .filter((c) => c.isGroupBy)
+        .map(getChipKey)
+        .filter(Boolean),
+    {
+      equal: (a, b) => a.length === b.length && a.every((k, i) => k === b[i]),
+    },
   );
 
   /** Serialized active filter parameter strings formatted for URL query. */
@@ -271,19 +268,11 @@ export abstract class SearchPageStore {
       .filter(Boolean),
   );
 
-  /** Serialized active group-by key strings formatted for URL query. */
-  readonly serializedActiveGroupBys = computed<string[]>(() =>
-    this.activeChips()
-      .filter((c) => c.isGroupBy)
-      .map((c) => c.key?.replace(/^group_by_/, '') || c.pillKey)
-      .filter(Boolean),
-  );
-
   /** Canonical URL query parameter key computed from current active state. */
   readonly currentUrlParamKey = computed<string>(() =>
     buildUrlParamKey(
       this.serializedActiveFilters(),
-      this.serializedActiveGroupBys(),
+      this.groupByKeys(),
       this.fleet(),
     ),
   );
@@ -302,7 +291,7 @@ export abstract class SearchPageStore {
   abstract readonly searchConfig: Signal<SearchPageConfig | null>;
 
   /** Whether initial search configuration is loading. */
-  readonly isConfigLoading: Signal<boolean> = signal(false);
+  abstract readonly isConfigLoading: Signal<boolean>;
 
   /** Promoted / recommended filter keys shown as quick-action presets. */
   abstract readonly promotedFilterKeys: Signal<PromotedFilterKeyItem[]>;
@@ -311,13 +300,21 @@ export abstract class SearchPageStore {
   readonly promotedGroupByKeys: Signal<PromotedGroupByKeyItem[]> = signal([]);
 
   /** Options list for sorting group header cards in grouped mode. */
-  readonly groupSortOptions: Signal<Array<{value: string; label: string}>> = signal([]);
+  readonly groupSortOptions: Signal<Array<{value: string; label: string}>> =
+    signal([]);
 
   /** Whether auxiliary promoted keys are currently loading. */
-  readonly isPromotedKeysLoading: Signal<boolean> = signal(false);
+  abstract readonly isPromotedKeysLoading: Signal<boolean>;
 
   /** Map of filter key metadata for display names, types, and capability flags. */
   abstract readonly keyMetadataMap: Signal<Map<string, FilterKeyMetadata>>;
+
+  /** Safe lookup for key metadata across domain implementations. */
+  getKeyMetadata(key?: string): FilterKeyMetadata | undefined {
+    if (!key) return undefined;
+    const map = this.keyMetadataMap?.();
+    return map?.get(key) || map?.get(key.toLowerCase());
+  }
 
   /** Visible column definitions for the search results table. */
   abstract readonly displayColumns: Signal<Column[]>;
@@ -327,6 +324,12 @@ export abstract class SearchPageStore {
 
   /** Whether a subsequent page of search results is available. */
   abstract readonly hasNextPage: Signal<boolean>;
+
+  /** Whether a preceding page of search results is available based on current page index. */
+  readonly hasPrevPage = computed<boolean>(() => this.pageIndex() > 0);
+
+  /** Pre-formatted semantic range text for pagination footer display (e.g. "1 – 25 of 1,250", "showing 1–25"). */
+  abstract readonly rangeText: Signal<string>;
 
   /** Triggers execution of the primary domain search query. */
   abstract executeSearch(): void;
@@ -341,11 +344,22 @@ export abstract class SearchPageStore {
   abstract nextPage(): void;
 
   /** Handles user selection of an autocomplete suggestion from the search box popover. */
-  abstract selectSuggestion(item: SearchBoxSuggestion): void;
+  selectSuggestion(item: SearchBoxSuggestion, anchor?: HTMLElement | null) {
+    if (!item.rawItem) return;
+    this.showSuggestions.set(false);
+    this.searchQuery.set('');
+    this.applySuggestion(item.rawItem, anchor);
+  }
+
+  /** Subclass hook to unpack domain-specific suggestion payload and apply to store. */
+  protected abstract applySuggestion(
+    rawItem: unknown,
+    anchor?: HTMLElement | null,
+  ): void;
 
   /** Subclass hook to resolve chips from domain-specific backend RPC. */
   protected abstract resolveChipsFromBackend(
-    parsedFilters: ParsedQueryFilter[],
+    parsedFilters: FilterChip[],
     groupByKeys: string[],
   ): Observable<FilterChip[]>;
 
@@ -361,6 +375,7 @@ export abstract class SearchPageStore {
     key: string,
     activeChip?: FilterChip,
     metadata?: unknown,
+    stagedValues?: string[],
   ): ValuePickerState;
 
   /** Subclass hook to provide default filter chips on initial state / reset. Defaults to empty array. */
@@ -372,134 +387,45 @@ export abstract class SearchPageStore {
   // 7. URL Serialization & Deserialization Methods
   // ===========================================================================
 
-  /** Resolves parsed URL query filters and group-by keys into FilterChip list. */
-  resolveUrlFilters(
-    parsedFilters: ParsedQueryFilter[],
-    groupByKeys: string[] = [],
-  ): Observable<FilterChip[]> {
-    if (parsedFilters.length === 0 && groupByKeys.length === 0) {
-      return of([]);
-    }
-
-    return this.resolveChipsFromBackend(parsedFilters, groupByKeys).pipe(
-      map((resolvedChips) => {
-        if (resolvedChips.length > 0) {
-          return resolvedChips;
-        }
-        return this.buildFallbackChips(parsedFilters, groupByKeys);
-      }),
-      catchError(() => of(this.buildFallbackChips(parsedFilters, groupByKeys))),
-    );
-  }
-
-  /** Constructs a fallback FilterChip from a parsed URL query filter using local metadata. */
-  buildFallbackChip(pf: ParsedQueryFilter): FilterChip {
-    const meta = this.keyMetadataMap().get(pf.key);
-    return {
-      key: pf.key,
-      pillKey: meta?.keyDisplayName || pf.key,
-      pillCondition: pf.fallbackPillCondition,
-      rawValues: pf.rawValues,
-      metadata: meta,
-      negated: pf.negated,
-      complex: pf.complex,
-    };
-  }
-
-  /** Batch constructs fallback FilterChips for parsed query filters and group-by keys. */
-  buildFallbackChips(
-    parsedFilters: ParsedQueryFilter[],
-    groupByKeys: string[] = [],
-  ): FilterChip[] {
-    return [
-      ...parsedFilters.map((pf) => this.buildFallbackChip(pf)),
-      ...groupByKeys.map((gb) => this.buildGroupByChip(gb)),
-    ];
-  }
-
-  /** Constructs a specialized group-by FilterChip. */
-  buildGroupByChip(gbKey: string, displayName?: string): FilterChip {
-    const meta = this.keyMetadataMap().get(gbKey);
-    const display = displayName || meta?.keyDisplayName || gbKey;
-    return {
-      key: 'group_by_' + gbKey,
-      pillKey: display,
-      pillCondition: display,
-      isGroupBy: true,
-    };
-  }
-
   /** Tracks the last URL query parameter key that was successfully synced or processed. */
   private lastSyncedUrlKey: string | null = null;
 
+  /** Flag to prevent internal URL synchronizations from re-triggering navigation reset handlers. */
+  private isInternalUrlSync = false;
+
+  /** Subject driving asynchronous filter chip resolution with race condition protection via switchMap. */
+  private readonly resolveFiltersSubject = new Subject<{
+    parsedFilters: FilterChip[];
+    gbKeys: string[];
+  }>();
+
   constructor() {
-    // 0. Sync entity type immediately on NavigationEnd to prevent stale route entity loading
-    this.router.events
+    // Asynchronously enhance chips with rich backend metadata via race-free switchMap
+    this.resolveFiltersSubject
       .pipe(
-        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        switchMap(({parsedFilters, gbKeys}) => {
+          if (parsedFilters.length === 0 && gbKeys.length === 0) {
+            return of([]);
+          }
+          return this.resolveChipsFromBackend(parsedFilters, gbKeys).pipe(
+            map((resolvedChips) => resolvedChips || []),
+            catchError(() => of([])),
+          );
+        }),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe(() => {
-        const targetEntity = resolveInitialEntity(this.route, this.router);
-        if (targetEntity !== this.entity()) {
-          this.entity.set(targetEntity);
-          this.resetSearchState(false);
-        }
+      .subscribe({
+        next: (updatedChips) => {
+          // Scenario 1 & 5: Clear or update activeChips directly with backend resolved result
+          this.activeChips.set(updatedChips || []);
+        },
       });
 
-    // 1. Sync entity type when route data changes
-    this.route.data
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((data) => {
-        const newEntity = data?.['entity'] as EntityType | undefined;
-        if (newEntity && newEntity !== this.entity()) {
-          this.entity.set(newEntity);
-          this.resetSearchState(false);
-        }
-      });
-
-    // 2. Initial resolution of URL query filters on page load / refresh
-    const initialSnapshotParams = this.route.snapshot?.queryParams;
-    if (initialSnapshotParams) {
-      const fParams = getQueryParamAsArray(initialSnapshotParams['f']);
-      const gbParam = initialSnapshotParams['gb'] || '';
-      const gbKeys = gbParam.split(',').filter(Boolean);
-      const fleetParam = (initialSnapshotParams['fleet'] || 'internal') as
-        | 'internal'
-        | 'ats';
-
-      if (fParams.length > 0 || gbKeys.length > 0) {
-        const parsedFilters = fParams
-          .map(parseQueryFilterParam)
-          .filter(Boolean) as ParsedQueryFilter[];
-
-        const initialKey = buildUrlParamKey(fParams, gbKeys, fleetParam);
-        this.lastSyncedUrlKey = initialKey;
-
-        this.resolveUrlFilters(parsedFilters, gbKeys)
-          .pipe(takeUntilDestroyed(this.destroyRef))
-          .subscribe({
-            next: (updatedChips) => {
-              if (updatedChips && updatedChips.length > 0) {
-                this.activeChips.set(updatedChips);
-              }
-            },
-          });
-      }
-    }
-
-    // 3. Sync URL query parameters -> Active Chips & Fleet state
+    // Sync URL query parameters -> Active Chips & Fleet state
     this.route.queryParams
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(observeOn(asapScheduler), takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
-        if (!params) return;
-
-        const targetEntity =
-          (this.route.snapshot?.data?.['entity'] as EntityType | undefined) ||
-          resolveInitialEntity(this.route, this.router);
-        if (targetEntity && targetEntity !== this.entity()) {
-          this.entity.set(targetEntity);
-        }
+        if (!params || !this.isCurrentRouteActive()) return;
 
         const fleetParam = (params['fleet'] || 'internal') as
           | 'internal'
@@ -519,66 +445,32 @@ export abstract class SearchPageStore {
         this.lastSyncedUrlKey = incomingKey;
 
         if (fParams.length === 0 && gbKeys.length === 0) {
-          if (
-            this.browseAll() ||
-            this.activeChips().length > 0 ||
-            this.searchQuery().trim()
-          ) {
-            this.resetSearchState(false);
-          }
+          this.resetIfSearchActive(false);
           return;
         }
 
-        const parsedFilters = fParams
-          .map(parseQueryFilterParam)
-          .filter(Boolean) as ParsedQueryFilter[];
+        const {parsedFilters, initialChips} = parseUrlChips(params);
 
-        // Immediately set synchronous fallback chips so UI is in sync without any latency/flicker
-        const fallbackChips = this.buildFallbackChips(parsedFilters, gbKeys);
-        this.activeChips.set(fallbackChips);
+        // Immediately set synchronous initial chips from URL query parameters so UI renders without latency/flicker
+        this.activeChips.set(initialChips);
 
         // Asynchronously enhance chips with rich backend metadata
-        this.resolveUrlFilters(parsedFilters, gbKeys)
-          .pipe(takeUntilDestroyed(this.destroyRef))
-          .subscribe({
-            next: (updatedChips) => {
-              if (updatedChips && updatedChips.length > 0) {
-                this.activeChips.set(updatedChips);
-              }
-            },
-          });
+        this.resolveFiltersSubject.next({parsedFilters, gbKeys});
       });
 
-    // 3. Reset to clean initial state when Navigation Menu is clicked (same-URL or clean navigation without filter params)
+    // React to top-level router navigation events (e.g. clicking the active nav menu item to return to landing page)
     this.router.events
       .pipe(
         filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        observeOn(asapScheduler),
         takeUntilDestroyed(this.destroyRef),
       )
-      .subscribe((event) => {
-        const activeEntity = resolveInitialEntity(this.route, this.router);
-        if (activeEntity !== this.entity()) {
-          return;
-        }
-
-        const tree = this.router.parseUrl(event.urlAfterRedirects || event.url);
-        const f = tree.queryParams['f'];
-        const gb = tree.queryParams['gb'];
-        const fleetParam = (tree.queryParams['fleet'] || 'internal') as
-          | 'internal'
-          | 'ats';
-
-        if (!f && !gb) {
-          if (
-            this.browseAll() ||
-            this.activeChips().length > 0 ||
-            this.searchQuery().trim()
-          ) {
-            this.resetSearchState(false);
-          }
-          if (this.fleet() !== fleetParam) {
-            this.fleet.set(fleetParam);
-          }
+      .subscribe(() => {
+        if (!this.isCurrentRouteActive()) return;
+        if (this.isInternalUrlSync) return;
+        const qp = this.route.snapshot?.queryParams;
+        if (!qp?.['f'] && !qp?.['gb']) {
+          this.resetIfSearchActive(false);
         }
       });
   }
@@ -593,17 +485,16 @@ export abstract class SearchPageStore {
     fleet: 'internal' | 'ats' = this.fleet(),
     replaceUrl = false,
   ) {
-
     const filters = chips
       .filter((c) => !c.isGroupBy)
       .map(serializeFilterChip)
       .filter(Boolean);
     const groupBys = chips
       .filter((c) => c.isGroupBy)
-      .map((c) => c.key?.replace(/^group_by_/, '') || c.pillKey)
+      .map(getChipKey)
       .filter(Boolean);
 
-    this.lastSyncedUrlKey = buildUrlParamKey(filters, groupBys, fleet);
+    this.lastSyncedUrlKey = getSerializedChipsKey(chips, fleet);
 
     const queryParams: Record<string, string | string[] | null> = {
       'f': filters.length > 0 ? filters : null,
@@ -611,12 +502,19 @@ export abstract class SearchPageStore {
       'fleet': fleet !== 'internal' ? fleet : null,
     };
 
-    this.router.navigate([], {
-      relativeTo: this.route,
-      queryParams,
-      queryParamsHandling: 'merge',
-      replaceUrl,
-    });
+    this.isInternalUrlSync = true;
+    this.router
+      .navigate([], {
+        relativeTo: this.route,
+        queryParams,
+        queryParamsHandling: 'merge',
+        replaceUrl,
+      })
+      .then(() => {
+        setTimeout(() => {
+          this.isInternalUrlSync = false;
+        }, 0);
+      });
   }
 
   /** Sets the active fleet operational scope and updates URL. */
@@ -629,9 +527,11 @@ export abstract class SearchPageStore {
 
   /** Adds a new filter chip or updates an existing one with matching key and type. */
   addFilterChip(chip: FilterChip) {
+    const isNegated = isChipNegated(chip);
     const newChip: FilterChip = {
       ...chip,
       pillCondition: chip.pillCondition || '',
+      negated: isNegated,
     };
 
     const current = this.activeChips();
@@ -662,11 +562,7 @@ export abstract class SearchPageStore {
       if (
         nextChips.length === 0 ||
         !currentPickerKey ||
-        isSameFilterChip(chip, {
-          key: currentPickerKey,
-          pillKey: currentPickerKey,
-          pillCondition: '',
-        })
+        isSameFilterChip(chip, {key: currentPickerKey, isGroupBy: false})
       ) {
         this.closeValuePicker();
       }
@@ -678,27 +574,21 @@ export abstract class SearchPageStore {
   toggleGroupBy(gbKey: string, displayName?: string) {
     const currentGbKeys = this.groupByKeys();
     if (currentGbKeys.includes(gbKey)) {
-      const existing = this.activeChips().find(
-        (c) => c.isGroupBy && (c.key === 'group_by_' + gbKey || c.pillKey === gbKey),
+      const existing = this.activeChips().find((c) =>
+        isSameFilterChip(c, {key: gbKey, isGroupBy: true}),
       );
       if (existing) {
         this.removeFilterChip(existing);
       }
     } else {
-      this.addFilterChip(this.buildGroupByChip(gbKey, displayName));
+      this.addFilterChip(createGroupByChip(gbKey, displayName));
     }
   }
 
   /** Removes any filter chip matching the specified key. */
   removeChipForKey(key: string) {
-    const target: FilterChip = {
-      key,
-      pillKey: key,
-      pillCondition: '',
-      isGroupBy: false,
-    };
     const existing = this.activeChips().find((c) =>
-      isSameFilterChip(c, target),
+      isSameFilterChip(c, {key, isGroupBy: false}),
     );
     if (existing) {
       this.removeFilterChip(existing);
@@ -706,7 +596,7 @@ export abstract class SearchPageStore {
       const currentPickerKey = this.pickerConfig()?.key;
       if (
         currentPickerKey &&
-        key.toLowerCase() === currentPickerKey.toLowerCase()
+        normalizeKey(key) === normalizeKey(currentPickerKey)
       ) {
         this.closeValuePicker();
       }
@@ -720,10 +610,9 @@ export abstract class SearchPageStore {
   /** Determines whether the ValuePicker is currently active for the specified chip. */
   isChipPickerActive(chip: FilterChip): boolean {
     if (!this.showValuePicker() || chip.isGroupBy) return false;
-    const currentKey = normalizeKey(this.pickerKey());
+    const currentKey = this.pickerKey();
     if (!currentKey) return false;
-    const targetKey = normalizeKey(chip.key || chip.pillKey);
-    return currentKey === targetKey;
+    return isSameFilterChip(chip, {key: currentKey, isGroupBy: false});
   }
 
   /** Determines whether the ValuePicker is currently active for the specified key and optional title. */
@@ -749,39 +638,28 @@ export abstract class SearchPageStore {
     anchor?: CdkOverlayOrigin | HTMLElement | null,
     title?: string,
     metadata?: unknown,
+    stagedValues?: string[],
   ) {
-    if (anchor) {
-      this.pickerAnchor.set(anchor);
-    }
-    const cleanKey = normalizeKey(key);
-    const currentKey = normalizeKey(this.pickerConfig()?.key);
-    const currentTitle = this.pickerConfig()?.title;
-
-    if (
-      this.showValuePicker() &&
-      currentKey === cleanKey &&
-      (!title || !currentTitle || currentTitle.toLowerCase() === title.toLowerCase())
-    ) {
+    if (this.isKeyPickerActive(key, title)) {
       this.closeValuePicker();
       return;
     }
 
-    if (this.showValuePicker()) {
-      this.closeValuePicker();
-      if (anchor) {
-        this.pickerAnchor.set(anchor);
-      }
+    if (anchor) {
+      this.pickerAnchor.set(anchor);
     }
 
-    const activeChip = this.activeChips().find(
-      (c) =>
-        !c.isGroupBy &&
-        ((c.key && c.key.toLowerCase() === key.toLowerCase()) ||
-          c.pillKey.toLowerCase() === cleanKey),
+    const activeChip = this.activeChips().find((c) =>
+      isSameFilterChip(c, {key, isGroupBy: false}),
     );
 
     const config = this.buildPickerConfig(key, title, metadata);
-    const state = this.buildInitialPickerState(key, activeChip, metadata);
+    const state = this.buildInitialPickerState(
+      key,
+      activeChip,
+      metadata,
+      stagedValues,
+    );
 
     this.pickerConfig.set(config);
     this.pickerState.set(state);
@@ -807,6 +685,38 @@ export abstract class SearchPageStore {
     this.closeValuePicker();
     if (updateUrl) {
       this.syncUrl(defaultChips);
+    }
+  }
+
+  /** Returns true if the store is currently in its clean default state. */
+  private isDefaultState(): boolean {
+    if (this.browseAll() || this.searchQuery().trim().length > 0) {
+      return false;
+    }
+    if (this.showValuePicker() || this.showSuggestions()) {
+      return false;
+    }
+
+    const defaultChips = this.getDefaultChips();
+    const currentChips = this.activeChips();
+
+    if (currentChips.length !== defaultChips.length) {
+      return false;
+    }
+    if (defaultChips.length === 0) {
+      return true;
+    }
+
+    return (
+      getSerializedChipsKey(currentChips, this.fleet()) ===
+      getSerializedChipsKey(defaultChips, this.fleet())
+    );
+  }
+
+  /** Resets local search state back to default if currently in a non-default search state. */
+  private resetIfSearchActive(updateUrl = false) {
+    if (!this.isDefaultState()) {
+      this.resetSearchState(updateUrl);
     }
   }
 }

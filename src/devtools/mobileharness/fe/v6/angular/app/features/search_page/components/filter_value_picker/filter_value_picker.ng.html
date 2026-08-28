@@ -11,6 +11,7 @@
     <div
       class="value-picker"
       [class.id-key]="isPlain()"
+      [class.compact]="isCompact()"
     >
       <!-- Header -->
       <div class="vp-header">
@@ -86,7 +87,7 @@
           [(mode)]="advMode"
           [(text)]="advText"
           [(values)]="advValues"
-          (backToSimple)="isAdvanced.set(false)"
+          (backToSimple)="onBackToSimple()"
           (apply)="onApply()"
         ></app-advanced-match-view>
       } @else {
@@ -95,7 +96,7 @@
             <!-- Date Range Picker -->
             <div class="vp-daterange">
               <div class="vp-dt-row">
-                <span class="vp-dt-op">From:</span>
+                <span class="vp-dt-op">From ({{ pdtTimezone }}):</span>
                 <input
                   type="datetime-local"
                   class="vp-from"
@@ -104,7 +105,7 @@
                 />
               </div>
               <div class="vp-dt-row">
-                <span class="vp-dt-op">To:</span>
+                <span class="vp-dt-op">To ({{ pdtTimezone }}):</span>
                 <input
                   type="datetime-local"
                   class="vp-to"
@@ -172,7 +173,7 @@
             <div class="vp-col-header">
               <span class="vp-col-spacer"></span>
               <span
-                class="vp-col"
+                class="vp-col vp-col-val"
                 [class.active]="sortBy() === 'value'"
                 (click)="toggleSort('value')"
               >
@@ -183,10 +184,9 @@
                   </mat-icon>
                 }
               </span>
-              <span class="vp-col-grow"></span>
               @if (!isPlain()) {
                 <span
-                  class="vp-col vp-cnt-col"
+                  class="vp-col vp-cnt-col vp-filtered-col"
                   [class.active]="sortBy() === 'filtered'"
                   (click)="toggleSort('filtered')"
                 >
@@ -198,7 +198,7 @@
                   }
                 </span>
                 <span
-                  class="vp-col vp-cnt-col"
+                  class="vp-col vp-cnt-col vp-total-col"
                   [class.active]="sortBy() === 'total'"
                   (click)="toggleSort('total')"
                 >
@@ -241,7 +241,7 @@
                     <mat-icon class="material-symbols-outlined vp-check">
                       check_box
                     </mat-icon>
-                    <span class="vp-val" [title]="val">
+                    <span class="vp-val" [matTooltip]="val" tooltipIfTruncated>
                       {{ val }}
                     </span>
                   </div>
@@ -252,8 +252,38 @@
                 <div class="vp-loading-hint">Loading values…</div>
               }
 
-              <!-- Shared Row Item Template -->
-              <ng-template #pickerRow let-item let-isPinned="isPinned">
+              @if (pinnedValues().length > 0) {
+                <div class="vp-pinned-section">
+                  @for (item of pinnedValues(); track item.value) {
+                    <ng-container
+                      *ngTemplateOutlet="valueItem; context: {item: item, isPinned: true}"
+                    />
+                  }
+                </div>
+                <div class="vp-pinned-divider"></div>
+              }
+
+              @if (!state().loading && displayList().length === 0) {
+                <div class="vp-empty">No matching values</div>
+              } @else {
+                <cdk-virtual-scroll-viewport
+                  [itemSize]="itemSize"
+                  [minBufferPx]="180"
+                  [maxBufferPx]="360"
+                  class="vp-virtual-viewport"
+                  [style.height.px]="viewportHeight()"
+                >
+                  <ng-container
+                    *cdkVirtualFor="let item of displayList(); trackBy: trackByItemValue"
+                  >
+                    <ng-container
+                      *ngTemplateOutlet="valueItem; context: {item: item, isPinned: false}"
+                    />
+                  </ng-container>
+                </cdk-virtual-scroll-viewport>
+              }
+
+              <ng-template #valueItem let-item="item" let-isPinned="isPinned">
                 <div
                   class="vp-item"
                   [class.vp-pinned-item]="isPinned"
@@ -271,7 +301,8 @@
                     class="vp-val"
                     [class.no-value-text]="item.isNoValue"
                     [class.disabled-text]="item.disabled"
-                    [title]="item.disabled ? 'Value not found in options' : (item.isNoValue ? 'No value assigned for this key' : item.displayLabel)"
+                    [matTooltip]="item.disabled ? 'Value not found in options' : (item.isNoValue ? 'No value assigned for this key' : item.displayLabel)"
+                    tooltipIfTruncated
                   >
                     @if (item.isNoValue) {
                       <em>(no value)</em>
@@ -306,25 +337,6 @@
                   }
                 </div>
               </ng-template>
-
-              @if (pinnedValues().length > 0) {
-                @for (item of pinnedValues(); track item.value) {
-                  <ng-container
-                    *ngTemplateOutlet="pickerRow; context: {$implicit: item, isPinned: true}"
-                  ></ng-container>
-                }
-                <div class="vp-pinned-divider"></div>
-              }
-
-              @if (!state().loading && displayList().length === 0) {
-                <div class="vp-empty">No matching values</div>
-              } @else {
-                @for (item of displayList(); track item.value) {
-                  <ng-container
-                    *ngTemplateOutlet="pickerRow; context: {$implicit: item, isPinned: false}"
-                  ></ng-container>
-                }
-              }
             </div>
           }
         }
