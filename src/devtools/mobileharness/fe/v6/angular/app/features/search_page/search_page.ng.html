@@ -26,11 +26,13 @@
           </section>
         }
 
-        <section class="rt-land-section rt-land-browse">
-          <button mat-flat-button color="primary" class="browse-all-btn" (click)="onBrowseAll()">
-            Browse all {{ store.searchConfig()?.landing?.browseAllCount ?? 0 | number }} {{ store.entity() }}
-          </button>
-        </section>
+        @if ((store.searchConfig()?.landing?.browseAllCount ?? 0) > 0) {
+          <section class="rt-land-section rt-land-browse">
+            <button mat-flat-button color="primary" class="browse-all-btn" (click)="onBrowseAll()">
+              Browse all {{ store.searchConfig()!.landing!.browseAllCount | number }} {{ store.entity() }}
+            </button>
+          </section>
+        }
       </div>
     }
   } @else {
