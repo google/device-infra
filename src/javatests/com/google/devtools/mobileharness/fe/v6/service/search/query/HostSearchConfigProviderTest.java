@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.KeyDescripto
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.inject.Guice;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -128,7 +129,10 @@ public final class HostSearchConfigProviderTest {
       keys.add(descriptor.getKey());
     }
     // The device default columns are the device curation list, not the host list.
-    assertThat(keys).containsExactlyElementsIn(curation.deviceDefaultColumns()).inOrder();
+    assertThat(keys)
+        .containsExactlyElementsIn(
+            curation.deviceDefaultColumns().stream().map(DeviceKeyDescriptor::id).toList())
+        .inOrder();
     assertThat(config.getLanding().getBrowseAllCount()).isEqualTo(snapshot.deviceCount());
   }
 

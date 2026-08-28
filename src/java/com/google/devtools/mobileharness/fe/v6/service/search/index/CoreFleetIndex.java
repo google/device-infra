@@ -39,9 +39,6 @@ public abstract class CoreFleetIndex implements FleetIndex {
   /** Internal map: key id to (normalized value to first-seen original display value). */
   public abstract ImmutableMap<String, ImmutableMap<String, String>> valueDisplaysMap();
 
-  /** Internal map: key id to human-readable display name. */
-  public abstract ImmutableMap<String, String> displayNamesMap();
-
   @Override
   public ImmutableList<String> sortedValues(String keyId) {
     ImmutableList<String> values = sortedValuesMap().get(keyId);
@@ -58,12 +55,6 @@ public abstract class CoreFleetIndex implements FleetIndex {
   public ImmutableMap<String, String> valueDisplays(String keyId) {
     ImmutableMap<String, String> displays = valueDisplaysMap().get(keyId);
     return displays != null ? displays : ImmutableMap.of();
-  }
-
-  @Override
-  public String displayName(String keyId) {
-    String name = displayNamesMap().get(keyId);
-    return name != null ? name : FleetIndex.deriveDisplayName(keyId);
   }
 
   @Override
@@ -92,7 +83,6 @@ public abstract class CoreFleetIndex implements FleetIndex {
         .setValueCountsMap(ImmutableMap.of())
         .setSortedValuesMap(ImmutableMap.of())
         .setValueDisplaysMap(ImmutableMap.of())
-        .setDisplayNamesMap(ImmutableMap.of())
         .setKeyIds(ImmutableSet.of())
         .setSemanticGlobalSorted(ImmutableList.of())
         .setGlobalExact(ImmutableMap.of())
@@ -110,8 +100,6 @@ public abstract class CoreFleetIndex implements FleetIndex {
 
     public abstract Builder setValueDisplaysMap(
         ImmutableMap<String, ImmutableMap<String, String>> valueDisplays);
-
-    public abstract Builder setDisplayNamesMap(ImmutableMap<String, String> displayNames);
 
     public abstract Builder setKeyIds(ImmutableSet<String> keyIds);
 

@@ -21,17 +21,6 @@ package(
 )
 
 java_library(
-    name = "fleet_search_keys",
-    srcs = ["FleetSearchKeys.java"],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:ats_device_keys",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
     name = "fleet_search_index",
     srcs = ["FleetSearchIndex.java"],
     deps = [

@@ -21,7 +21,9 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetKeyPriority.Scenario;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import javax.inject.Inject;
 
@@ -40,43 +42,43 @@ public final class AtsCuration implements ScenarioCuration {
   AtsCuration() {}
 
   @Override
-  public ImmutableList<String> deviceFilterByRow() {
+  public ImmutableList<DeviceKeyDescriptor> deviceFilterByRow() {
     return ImmutableList.of(
-        DeviceKeys.UUID.id(),
-        HostKeys.HOST_NAME.id(),
-        DeviceKeys.STATUS.id(),
-        DeviceKeys.MODEL.id(),
-        DeviceKeys.SDK_VERSION.id(),
-        AtsDeviceKeys.WIFI_SSID.id());
+        DeviceKeys.UUID,
+        DeviceKeys.HOST_NAME,
+        DeviceKeys.STATUS,
+        DeviceKeys.MODEL,
+        DeviceKeys.SDK_VERSION,
+        AtsDeviceKeys.WIFI_SSID);
   }
 
   @Override
-  public ImmutableList<String> deviceGroupByRow() {
-    return ImmutableList.of(HostKeys.HOST_NAME.id(), AtsDeviceKeys.WIFI_SSID.id());
+  public ImmutableList<DeviceKeyDescriptor> deviceGroupByRow() {
+    return ImmutableList.of(DeviceKeys.HOST_NAME, AtsDeviceKeys.WIFI_SSID);
   }
 
   @Override
-  public ImmutableList<String> deviceDefaultColumns() {
+  public ImmutableList<DeviceKeyDescriptor> deviceDefaultColumns() {
     return ImmutableList.of(
-        DeviceKeys.UUID.id(),
-        HostKeys.HOST_NAME.id(),
-        DeviceKeys.STATUS.id(),
-        DeviceKeys.MODEL.id(),
-        DeviceKeys.OS.id(),
-        AtsDeviceKeys.WIFI_SSID.id());
+        DeviceKeys.UUID,
+        DeviceKeys.HOST_NAME,
+        DeviceKeys.STATUS,
+        DeviceKeys.MODEL,
+        DeviceKeys.OS,
+        AtsDeviceKeys.WIFI_SSID);
   }
 
   @Override
-  public ImmutableList<String> deviceRecommendedColumns() {
+  public ImmutableList<DeviceKeyDescriptor> deviceRecommendedColumns() {
     return ImmutableList.of(
-        HostKeys.HOST_NAME.id(),
-        DeviceKeys.STATUS.id(),
-        DeviceKeys.TYPE.id(),
-        DeviceKeys.MODEL.id(),
-        DeviceKeys.SDK_VERSION.id(),
-        DeviceKeys.DEVICE_CLASS_NAME.id(),
-        DeviceKeys.MANUFACTURER.id(),
-        AtsDeviceKeys.WIFI_SSID.id());
+        DeviceKeys.HOST_NAME,
+        DeviceKeys.STATUS,
+        DeviceKeys.TYPE,
+        DeviceKeys.MODEL,
+        DeviceKeys.SDK_VERSION,
+        DeviceKeys.DEVICE_CLASS_NAME,
+        DeviceKeys.MANUFACTURER,
+        AtsDeviceKeys.WIFI_SSID);
   }
 
   // ---- Host-entity curation ----
@@ -85,34 +87,30 @@ public final class AtsCuration implements ScenarioCuration {
   // nothing into the host "Group by:" row, so its group-by list is empty.
 
   @Override
-  public ImmutableList<String> hostFilterByRow() {
-    return ImmutableList.of(
-        HostKeys.HOST_NAME.id(), HostKeys.CONNECTIVITY.id(), HostKeys.DEVICE_COUNT.id());
+  public ImmutableList<HostKeyDescriptor> hostFilterByRow() {
+    return ImmutableList.of(HostKeys.HOST_NAME, HostKeys.CONNECTIVITY, HostKeys.DEVICE_COUNT);
   }
 
   @Override
-  public ImmutableList<String> hostGroupByRow() {
+  public ImmutableList<HostKeyDescriptor> hostGroupByRow() {
     return ImmutableList.of();
   }
 
   @Override
-  public ImmutableList<String> hostDefaultColumns() {
+  public ImmutableList<HostKeyDescriptor> hostDefaultColumns() {
     return ImmutableList.of(
-        HostKeys.HOST_NAME.id(),
-        HostKeys.CONNECTIVITY.id(),
-        HostKeys.DEVICE_COUNT.id(),
-        HostKeys.HOST_OS.id());
+        HostKeys.HOST_NAME, HostKeys.CONNECTIVITY, HostKeys.DEVICE_COUNT, HostKeys.HOST_OS);
   }
 
   @Override
-  public ImmutableList<String> hostRecommendedColumns() {
+  public ImmutableList<HostKeyDescriptor> hostRecommendedColumns() {
     return ImmutableList.of(
-        HostKeys.HOST_NAME.id(),
-        HostKeys.CONNECTIVITY.id(),
-        HostKeys.DEVICE_COUNT.id(),
-        HostKeys.HOST_OS.id(),
-        HostKeys.LAB_SERVER_VERSION.id(),
-        HostKeys.HOST_IP.id());
+        HostKeys.HOST_NAME,
+        HostKeys.CONNECTIVITY,
+        HostKeys.DEVICE_COUNT,
+        HostKeys.HOST_OS,
+        HostKeys.LAB_SERVER_VERSION,
+        HostKeys.HOST_IP);
   }
 
   @Override

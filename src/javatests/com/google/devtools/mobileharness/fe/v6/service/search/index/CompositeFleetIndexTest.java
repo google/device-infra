@@ -53,7 +53,6 @@ public final class CompositeFleetIndexTest {
                 ImmutableMap.of(
                     "field::status", ImmutableMap.of("idle", "IDLE", "busy", "BUSY"),
                     "dim::model", ImmutableMap.of("pixel 8", "Pixel 8", "pixel 7", "Pixel 7")))
-            .setDisplayNamesMap(ImmutableMap.of("field::status", "Status", "dim::model", "Model"))
             .setSemanticGlobalSorted(
                 ImmutableList.of(
                     new ValueKeyPair("pixel 7", "dim::model"),
@@ -77,7 +76,6 @@ public final class CompositeFleetIndexTest {
     assertThat(composite.sortedValues("field::status")).containsExactly("busy", "idle").inOrder();
     assertThat(composite.valueCounts("field::status")).containsEntry("idle", 10);
     assertThat(composite.valueDisplays("field::status")).containsEntry("idle", "IDLE");
-    assertThat(composite.displayName("field::status")).isEqualTo("Status");
     assertThat(composite.valueCount("field::status", "idle")).isEqualTo(10);
   }
 
@@ -88,17 +86,14 @@ public final class CompositeFleetIndexTest {
         .inOrder();
     assertThat(composite.valueCounts("dim::carrier")).containsEntry("verizon", 1200);
     assertThat(composite.valueDisplays("dim::carrier")).containsEntry("verizon", "Verizon");
-    assertThat(composite.displayName("dim::carrier")).isEqualTo("Dimension carrier");
     assertThat(composite.valueCount("dim::carrier", "verizon")).isEqualTo(1200);
   }
 
   @Test
-  public void absentKey_returnsEmptyAndDerivesDisplayName() {
+  public void absentKey_returnsEmpty() {
     assertThat(composite.sortedValues("dim::unknown")).isEmpty();
     assertThat(composite.valueCounts("dim::unknown")).isEmpty();
     assertThat(composite.valueDisplays("dim::unknown")).isEmpty();
-    assertThat(composite.displayName("dim::unknown")).isEqualTo("Dimension unknown");
-    assertThat(composite.displayName("prop::rack")).isEqualTo("Host Property rack");
     assertThat(composite.valueCount("dim::unknown", "val")).isEqualTo(0);
   }
 

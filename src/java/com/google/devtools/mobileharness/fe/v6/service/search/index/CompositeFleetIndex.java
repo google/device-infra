@@ -68,11 +68,6 @@ public final class CompositeFleetIndex implements FleetIndex {
   }
 
   @Override
-  public String displayName(String keyId) {
-    return core.displayName(keyId);
-  }
-
-  @Override
   public int valueCount(String keyId, String value) {
     if (overlay.containsKey(keyId)) {
       return overlay.valueCount(keyId, value);

@@ -120,7 +120,7 @@ public final class FleetColumnCataloger {
 
     Comparator<String> byCoverage =
         Comparator.<String>comparingInt(keyId -> -deviceCounts.getOrDefault(keyId, 0))
-            .thenComparing(keyId -> Ascii.toLowerCase(index.displayName(keyId)));
+            .thenComparing(keyId -> Ascii.toLowerCase(displayName(keyId)));
 
     // Partition the present keys into the browse buckets, matching the prototype's namespace split:
     // dim:: keys are dimensions (unless redundant), prop:: keys are host properties, and everything
@@ -139,15 +139,15 @@ public final class FleetColumnCataloger {
         builtin.add(keyId);
       }
     }
-    builtin.sort(Comparator.comparing(index::displayName));
+    builtin.sort(Comparator.comparing(FleetColumnCataloger::displayName));
     dimensions.sort(byCoverage);
     properties.sort(byCoverage);
 
     FleetColumnCatalogResponse.Builder response = FleetColumnCatalogResponse.newBuilder();
     addSuggestedSection(response, index, deviceCounts, request);
-    addFullSection(response, SECTION_BUILTIN, builtin, index, deviceCounts);
-    addTopNSection(response, SECTION_DIMENSIONS, dimensions, DIM_TOP, index, deviceCounts);
-    addTopNSection(response, SECTION_PROPERTIES, properties, PROP_TOP, index, deviceCounts);
+    addFullSection(response, SECTION_BUILTIN, builtin, deviceCounts);
+    addTopNSection(response, SECTION_DIMENSIONS, dimensions, DIM_TOP, deviceCounts);
+    addTopNSection(response, SECTION_PROPERTIES, properties, PROP_TOP, deviceCounts);
     addSearchSection(response, index, deviceCounts, redundant, byCoverage, request.getQuery());
     return response.build();
   }
@@ -169,12 +169,12 @@ public final class FleetColumnCataloger {
     for (Filter filter : request.getFiltersList()) {
       String keyId = filter.getKey();
       if (index.keyIds().contains(keyId) && seen.add(keyId)) {
-        entries.add(entry(keyId, index, deviceCounts, REASON_ACTIVE_FILTER));
+        entries.add(entry(keyId, deviceCounts, REASON_ACTIVE_FILTER));
       }
     }
     for (String keyId : request.getRecentKeysList()) {
       if (index.keyIds().contains(keyId) && seen.add(keyId)) {
-        entries.add(entry(keyId, index, deviceCounts, REASON_RECENTLY_USED));
+        entries.add(entry(keyId, deviceCounts, REASON_RECENTLY_USED));
       }
     }
     if (entries.isEmpty()) {
@@ -197,7 +197,6 @@ public final class FleetColumnCataloger {
       FleetColumnCatalogResponse.Builder response,
       String heading,
       List<String> keyIds,
-      FleetIndex index,
       ImmutableMap<String, Integer> deviceCounts) {
     if (keyIds.isEmpty()) {
       return;
@@ -205,7 +204,7 @@ public final class FleetColumnCataloger {
     FleetColumnCatalogSection.Builder section =
         FleetColumnCatalogSection.newBuilder().setHeading(heading);
     for (String keyId : keyIds) {
-      section.addEntries(entry(keyId, index, deviceCounts, ""));
+      section.addEntries(entry(keyId, deviceCounts, ""));
     }
     response.addSections(section);
   }
@@ -219,7 +218,6 @@ public final class FleetColumnCataloger {
       String heading,
       List<String> rankedKeyIds,
       int topN,
-      FleetIndex index,
       ImmutableMap<String, Integer> deviceCounts) {
     if (rankedKeyIds.isEmpty()) {
       return;
@@ -229,7 +227,7 @@ public final class FleetColumnCataloger {
             .setHeading(heading)
             .setTotalAvailable(rankedKeyIds.size());
     for (String keyId : rankedKeyIds.subList(0, Math.min(topN, rankedKeyIds.size()))) {
-      section.addEntries(entry(keyId, index, deviceCounts, ""));
+      section.addEntries(entry(keyId, deviceCounts, ""));
     }
     response.addSections(section);
   }
@@ -261,7 +259,7 @@ public final class FleetColumnCataloger {
       if (redundant.contains(keyId)) {
         continue;
       }
-      if (norm(index.displayName(keyId)).contains(normalizedQuery)
+      if (norm(displayName(keyId)).contains(normalizedQuery)
           || norm(bareName(keyId)).contains(normalizedQuery)) {
         hits.add(keyId);
       }
@@ -272,7 +270,7 @@ public final class FleetColumnCataloger {
             .setHeading(SECTION_SEARCH)
             .setTotalAvailable(hits.size());
     for (String keyId : hits.subList(0, Math.min(SEARCH_LIMIT, hits.size()))) {
-      section.addEntries(entry(keyId, index, deviceCounts, ""));
+      section.addEntries(entry(keyId, deviceCounts, ""));
     }
     response.addSections(section);
   }
@@ -346,19 +344,22 @@ public final class FleetColumnCataloger {
   }
 
   private static FleetColumnCatalogEntry entry(
-      String keyId, FleetIndex index, ImmutableMap<String, Integer> deviceCounts, String reason) {
+      String keyId, ImmutableMap<String, Integer> deviceCounts, String reason) {
     return FleetColumnCatalogEntry.newBuilder()
         .setKey(keyId)
-        .setDisplayName(index.displayName(keyId))
+        .setDisplayName(displayName(keyId))
         .setDeviceCount(deviceCounts.getOrDefault(keyId, 0))
         .setReason(reason)
         .build();
   }
 
+  private static String displayName(String keyId) {
+    return FleetKeyDisplays.titleDisplayName(keyId);
+  }
+
   /** The bare name of a namespaced key: the segment after the last {@code ::}. */
   private static String bareName(String keyId) {
-    int separator = keyId.lastIndexOf("::");
-    return separator >= 0 ? keyId.substring(separator + 2) : keyId;
+    return FleetKeyDisplays.bareName(keyId);
   }
 
   /**

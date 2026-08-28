@@ -42,6 +42,10 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.KeyDisplay;
 import com.google.inject.Guice;
 import java.time.Instant;
 import org.junit.Test;
@@ -183,37 +187,49 @@ public final class HostPromotedKeysProviderTest {
    */
   private static final class FakeCuration implements ScenarioCuration {
     @Override
-    public ImmutableList<String> deviceFilterByRow() {
+    public ImmutableList<DeviceKeyDescriptor> deviceFilterByRow() {
       return ImmutableList.of();
     }
 
     @Override
-    public ImmutableList<String> deviceGroupByRow() {
+    public ImmutableList<DeviceKeyDescriptor> deviceGroupByRow() {
       return ImmutableList.of();
     }
 
     @Override
-    public ImmutableList<String> deviceDefaultColumns() {
+    public ImmutableList<DeviceKeyDescriptor> deviceDefaultColumns() {
       return ImmutableList.of();
     }
 
     @Override
-    public ImmutableList<String> deviceRecommendedColumns() {
+    public ImmutableList<DeviceKeyDescriptor> deviceRecommendedColumns() {
       return ImmutableList.of();
     }
 
     @Override
-    public ImmutableList<String> hostFilterByRow() {
+    public ImmutableList<HostKeyDescriptor> hostFilterByRow() {
       return ImmutableList.of(
-          "host_field::host_name",
-          "host_field::connectivity",
-          "host_field::device_count",
-          "host_property::host_os");
+          HostKeys.HOST_NAME, HostKeys.CONNECTIVITY, HostKeys.DEVICE_COUNT, HostKeys.HOST_OS);
     }
 
     @Override
-    public ImmutableList<String> hostGroupByRow() {
-      return ImmutableList.of("host_property::host_os", "host_field::lab_type");
+    public ImmutableList<HostKeyDescriptor> hostGroupByRow() {
+      return ImmutableList.of(
+          HostKeys.HOST_OS,
+          HostKeyDescriptor.builder()
+              .setId(HostKeys.PREFIX_HOST_FIELD + "lab_type")
+              .setDisplay(KeyDisplay.of("Lab Type"))
+              .build());
+    }
+
+    @Override
+    public ImmutableList<HostKeyDescriptor> hostDefaultColumns() {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public ImmutableList<HostKeyDescriptor> hostRecommendedColumns() {
+      return ImmutableList.of();
     }
 
     @Override

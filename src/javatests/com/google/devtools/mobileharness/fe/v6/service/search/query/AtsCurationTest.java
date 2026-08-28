@@ -19,6 +19,9 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetKeyPriority.Scenario;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -33,19 +36,19 @@ public final class AtsCurationTest {
   public void deviceFilterByRow_isAtsList() {
     assertThat(curation.deviceFilterByRow())
         .containsExactly(
-            "device_field::uuid",
-            "host_field::host_name",
-            "device_field::status",
-            "dimension::model",
-            "dimension::sdk_version",
-            "device_config::wifi_ssid")
+            DeviceKeys.UUID,
+            DeviceKeys.HOST_NAME,
+            DeviceKeys.STATUS,
+            DeviceKeys.MODEL,
+            DeviceKeys.SDK_VERSION,
+            AtsDeviceKeys.WIFI_SSID)
         .inOrder();
   }
 
   @Test
   public void deviceGroupByRow_isAtsList() {
     assertThat(curation.deviceGroupByRow())
-        .containsExactly("host_field::host_name", "device_config::wifi_ssid")
+        .containsExactly(DeviceKeys.HOST_NAME, AtsDeviceKeys.WIFI_SSID)
         .inOrder();
   }
 
@@ -53,12 +56,12 @@ public final class AtsCurationTest {
   public void deviceDefaultColumns_isAtsList() {
     assertThat(curation.deviceDefaultColumns())
         .containsExactly(
-            "device_field::uuid",
-            "host_field::host_name",
-            "device_field::status",
-            "dimension::model",
-            "dimension::os",
-            "device_config::wifi_ssid")
+            DeviceKeys.UUID,
+            DeviceKeys.HOST_NAME,
+            DeviceKeys.STATUS,
+            DeviceKeys.MODEL,
+            DeviceKeys.OS,
+            AtsDeviceKeys.WIFI_SSID)
         .inOrder();
   }
 
@@ -66,22 +69,21 @@ public final class AtsCurationTest {
   public void deviceRecommendedColumns_isAtsList() {
     assertThat(curation.deviceRecommendedColumns())
         .containsExactly(
-            "host_field::host_name",
-            "device_field::status",
-            "device_field::type",
-            "dimension::model",
-            "dimension::sdk_version",
-            "dimension::device_class_name",
-            "dimension::manufacturer",
-            "device_config::wifi_ssid")
+            DeviceKeys.HOST_NAME,
+            DeviceKeys.STATUS,
+            DeviceKeys.TYPE,
+            DeviceKeys.MODEL,
+            DeviceKeys.SDK_VERSION,
+            DeviceKeys.DEVICE_CLASS_NAME,
+            DeviceKeys.MANUFACTURER,
+            AtsDeviceKeys.WIFI_SSID)
         .inOrder();
   }
 
   @Test
   public void hostFilterByRow_isAtsList() {
     assertThat(curation.hostFilterByRow())
-        .containsExactly(
-            "host_field::host_name", "host_field::connectivity", "host_field::device_count")
+        .containsExactly(HostKeys.HOST_NAME, HostKeys.CONNECTIVITY, HostKeys.DEVICE_COUNT)
         .inOrder();
   }
 
@@ -94,10 +96,7 @@ public final class AtsCurationTest {
   public void hostDefaultColumns_isAtsList() {
     assertThat(curation.hostDefaultColumns())
         .containsExactly(
-            "host_field::host_name",
-            "host_field::connectivity",
-            "host_field::device_count",
-            "host_property::host_os")
+            HostKeys.HOST_NAME, HostKeys.CONNECTIVITY, HostKeys.DEVICE_COUNT, HostKeys.HOST_OS)
         .inOrder();
   }
 
@@ -105,12 +104,12 @@ public final class AtsCurationTest {
   public void hostRecommendedColumns_isAtsList() {
     assertThat(curation.hostRecommendedColumns())
         .containsExactly(
-            "host_field::host_name",
-            "host_field::connectivity",
-            "host_field::device_count",
-            "host_property::host_os",
-            "host_field::lab_server_version",
-            "host_field::host_ip")
+            HostKeys.HOST_NAME,
+            HostKeys.CONNECTIVITY,
+            HostKeys.DEVICE_COUNT,
+            HostKeys.HOST_OS,
+            HostKeys.LAB_SERVER_VERSION,
+            HostKeys.HOST_IP)
         .inOrder();
   }
 

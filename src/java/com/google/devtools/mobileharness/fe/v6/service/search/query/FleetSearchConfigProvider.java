@@ -23,9 +23,10 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSearchC
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSearchConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.KeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import javax.inject.Inject;
 
@@ -34,10 +35,7 @@ import javax.inject.Inject;
  * landing content the frontend needs before its first query.
  *
  * <p>The config draws its keys from the request's {@link ScenarioCuration}: the recommended columns
- * offered in the column selector, and the default columns shown on a first visit. A key's display
- * name is the fleet index's name for it when the fleet carries the key, and a name derived from the
- * key namespace otherwise, matching {@code FleetCellMapper} and {@code FleetColumnCataloger} so a
- * curated key that no device currently carries still names its column.
+ * offered in the column selector, and the default columns shown on a first visit.
  *
  * <p>The landing count is the size of the searched entity: the device count for a device search and
  * the host count for a host search.
@@ -57,26 +55,38 @@ public final class FleetSearchConfigProvider {
   public FleetSearchConfig getConfig(
       FleetSnapshot snapshot, FleetSearchConfigRequest request, ScenarioCuration curation) {
     boolean host = request.getEntity() == SearchEntity.SEARCH_ENTITY_HOST;
-    // A host search reads its column names from the host index and its curated column lists from
-    // the
-    // host curation methods; a device search reads the device index and the device curation
-    // methods.
-    // The identifier and landing count are entity-aware below on their own.
-    FleetIndex index = host ? snapshot.hostIndex() : snapshot.index();
-    String identifierKey = identifierKey(request.getEntity());
-
     FleetColumnConfig.Builder columns = FleetColumnConfig.newBuilder();
-    for (String keyId :
-        host ? curation.hostRecommendedColumns() : curation.deviceRecommendedColumns()) {
-      columns.addRecommended(
-          KeyDescriptor.newBuilder().setKey(keyId).setDisplayName(displayName(index, keyId)));
-    }
-    for (String keyId : host ? curation.hostDefaultColumns() : curation.deviceDefaultColumns()) {
-      columns.addDefaults(
-          FleetColumnDescriptor.newBuilder()
-              .setKey(keyId)
-              .setDisplayName(displayName(index, keyId))
-              .setLocked(keyId.equals(identifierKey)));
+
+    if (host) {
+      String identifierKey = HostKeys.HOST_NAME.id();
+      for (HostKeyDescriptor descriptor : curation.hostRecommendedColumns()) {
+        columns.addRecommended(
+            KeyDescriptor.newBuilder()
+                .setKey(descriptor.id())
+                .setDisplayName(descriptor.display().name()));
+      }
+      for (HostKeyDescriptor descriptor : curation.hostDefaultColumns()) {
+        columns.addDefaults(
+            FleetColumnDescriptor.newBuilder()
+                .setKey(descriptor.id())
+                .setDisplayName(descriptor.display().name())
+                .setLocked(descriptor.id().equals(identifierKey)));
+      }
+    } else {
+      String identifierKey = DeviceKeys.UUID.id();
+      for (DeviceKeyDescriptor descriptor : curation.deviceRecommendedColumns()) {
+        columns.addRecommended(
+            KeyDescriptor.newBuilder()
+                .setKey(descriptor.id())
+                .setDisplayName(descriptor.display().name()));
+      }
+      for (DeviceKeyDescriptor descriptor : curation.deviceDefaultColumns()) {
+        columns.addDefaults(
+            FleetColumnDescriptor.newBuilder()
+                .setKey(descriptor.id())
+                .setDisplayName(descriptor.display().name())
+                .setLocked(descriptor.id().equals(identifierKey)));
+      }
     }
 
     FleetLandingConfig landing =
@@ -89,17 +99,6 @@ public final class FleetSearchConfigProvider {
   }
 
   /**
-   * The key locked as an always-shown, non-removable column: the searched entity's primary
-   * identifier. A device is identified by its UUID and a host by its name.
-   */
-  private static String identifierKey(SearchEntity entity) {
-    return switch (entity) {
-      case SEARCH_ENTITY_HOST -> HostKeys.HOST_NAME.id();
-      default -> DeviceKeys.UUID.id();
-    };
-  }
-
-  /**
    * The total count for the "Browse all N" button: devices for a device search, hosts for a host
    * search.
    */
@@ -108,13 +107,5 @@ public final class FleetSearchConfigProvider {
       case SEARCH_ENTITY_HOST -> snapshot.hosts().size();
       default -> snapshot.deviceCount();
     };
-  }
-
-  /**
-   * The key display name from the fleet index, falling back to a namespace-derived name when
-   * absent.
-   */
-  private static String displayName(FleetIndex index, String keyId) {
-    return index.displayName(keyId);
   }
 }

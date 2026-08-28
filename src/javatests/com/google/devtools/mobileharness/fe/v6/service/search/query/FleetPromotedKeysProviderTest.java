@@ -42,6 +42,11 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.KeyDisplay;
 import com.google.inject.Guice;
 import java.time.Instant;
 import org.junit.Test;
@@ -253,33 +258,65 @@ public final class FleetPromotedKeysProviderTest {
    */
   private static final class FakeCuration implements ScenarioCuration {
     @Override
-    public ImmutableList<String> deviceFilterByRow() {
+    public ImmutableList<DeviceKeyDescriptor> deviceFilterByRow() {
       return ImmutableList.of(
-          "device_field::status",
-          "dimension::model",
-          "device_field::type",
-          "device_field::owner",
-          "dimension::pool",
-          "host_field::host_name");
+          DeviceKeys.STATUS,
+          DeviceKeys.MODEL,
+          DeviceKeys.TYPE,
+          DeviceKeyDescriptor.builder()
+              .setId(DeviceKeys.PREFIX_DEVICE_FIELD + "owner")
+              .setDisplay(KeyDisplay.plural("Owners"))
+              .build(),
+          DeviceKeyDescriptor.builder()
+              .setId(DeviceKeys.PREFIX_DIMENSION + "pool")
+              .setDisplay(KeyDisplay.of("Pool"))
+              .build(),
+          DeviceKeys.HOST_NAME);
     }
 
     @Override
-    public ImmutableList<String> deviceGroupByRow() {
+    public ImmutableList<DeviceKeyDescriptor> deviceGroupByRow() {
       return ImmutableList.of(
-          "host_field::lab_type",
-          "dimension::lab_location",
-          "device_field::type",
-          "device_field::status",
-          "host_field::host_name");
+          DeviceKeyDescriptor.builder()
+              .setId(HostKeys.PREFIX_HOST_FIELD + "lab_type")
+              .setDisplay(KeyDisplay.of("Host Lab Type"))
+              .build(),
+          DeviceKeyDescriptor.builder()
+              .setId(DeviceKeys.PREFIX_DIMENSION + "lab_location")
+              .setDisplay(KeyDisplay.of("Dimension lab_location"))
+              .build(),
+          DeviceKeys.TYPE,
+          DeviceKeys.STATUS,
+          DeviceKeys.HOST_NAME);
     }
 
     @Override
-    public ImmutableList<String> deviceDefaultColumns() {
+    public ImmutableList<DeviceKeyDescriptor> deviceDefaultColumns() {
       return ImmutableList.of();
     }
 
     @Override
-    public ImmutableList<String> deviceRecommendedColumns() {
+    public ImmutableList<DeviceKeyDescriptor> deviceRecommendedColumns() {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public ImmutableList<HostKeyDescriptor> hostFilterByRow() {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public ImmutableList<HostKeyDescriptor> hostGroupByRow() {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public ImmutableList<HostKeyDescriptor> hostDefaultColumns() {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public ImmutableList<HostKeyDescriptor> hostRecommendedColumns() {
       return ImmutableList.of();
     }
 

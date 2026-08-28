@@ -28,9 +28,9 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.LinkCell;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.NavTarget;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.StatusCell;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextCell;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.HostRecord;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import javax.inject.Inject;
 
 /**
@@ -39,25 +39,17 @@ import javax.inject.Inject;
  * <p>Mirrors {@link FleetCellMapper} for host-entity search, rendering:
  *
  * <ul>
- *   <li>{@code host::host_name} as a {@link LinkCell} to the host page;
- *   <li>{@code host::connectivity} as a {@link StatusCell} with semantic color indicator;
+ *   <li>{@code host_field::host_name} as a {@link LinkCell} to the host page;
+ *   <li>{@code host_field::connectivity} as a {@link StatusCell} with semantic color indicator;
  *   <li>all remaining host fields and host properties as comma-joined {@link TextCell}s.
  * </ul>
- *
- * <p>Original value casing for per-value display maps (such as ATS controller display names) is
- * read from {@link FleetSnapshot#hostIndex()}'s {@link
- * com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex#valueDisplays(String)},
- * identical to the device path.
  */
 public final class HostCellMapper {
 
-  /**
-   * Host connectivity status name to semantic indicator. Matches {@link
-   * com.google.devtools.mobileharness.fe.v6.service.host.util.HostConnectivityStatuses#getTitle()}
-   * and {@link
-   * com.google.devtools.mobileharness.fe.v6.service.host.util.HostConnectivityStatuses#getIndicator()},
-   * following {@link FleetCellMapper}'s device status mapping style.
-   */
+  private static final String HOST_FIELD_ATS_CONTROLLER =
+      HostKeys.PREFIX_HOST_FIELD + "ats_controller";
+
+  /** Host connectivity status name to semantic indicator. */
   private static final ImmutableMap<String, Indicator> CONNECTIVITY_INDICATORS =
       ImmutableMap.<String, Indicator>builder()
           .put("RUNNING", Indicator.INDICATOR_OK)
@@ -70,35 +62,29 @@ public final class HostCellMapper {
   @Inject
   HostCellMapper() {}
 
-  /**
-   * Builds the header for a column key. The display name comes from the host index when the key is
-   * present in the fleet, and falls back to a name derived from the key namespace otherwise.
-   */
+  /** Builds the header for a column key. */
   public Column column(String keyId, FleetSnapshot snapshot) {
-    String display = snapshot.hostIndex().displayName(keyId);
-    return Column.newBuilder().setKey(keyId).setDisplayName(display).build();
+    return Column.newBuilder()
+        .setKey(keyId)
+        .setDisplayName(FleetKeyDisplays.standardDisplayName(keyId))
+        .build();
   }
 
   /** Builds a typed cell for a host and column key. */
   public Cell cell(String keyId, HostRecord host, FleetSnapshot snapshot) {
-    if (keyId.equals(FleetSearchKeys.HOST_NAME)) {
+    if (keyId.equals(HostKeys.HOST_NAME.id())) {
       return Cell.newBuilder().setLink(hostLink(host)).build();
     }
-    if (keyId.equals(FleetSearchKeys.HOST_CONNECTIVITY)) {
-      String connectivity = firstValue(host.values(FleetSearchKeys.HOST_CONNECTIVITY));
+    if (keyId.equals(HostKeys.CONNECTIVITY.id())) {
+      String connectivity = firstValue(host.values(HostKeys.CONNECTIVITY.id()));
       return Cell.newBuilder().setStatus(statusCell(connectivity)).build();
     }
-    // The device count is a numeric string, rendered as a plain TextCell. All remaining host keys
-    // (including the multi-valued lab type, comma-joined like device type/owner) and host
-    // properties also render as TextCell.
     return Cell.newBuilder().setText(textCell(displayValues(host, keyId, snapshot))).build();
   }
 
   private static LinkCell hostLink(HostRecord host) {
-    // TODO: For ats-all multi-controller routing, consider populating
-    // universe/ats_controller on HostRef once HostRecord.atsController is indexed.
     String hostName = host.hostName();
-    String hostIp = firstValue(host.values(FleetSearchKeys.HOST_IP));
+    String hostIp = firstValue(host.values(HostKeys.HOST_IP.id()));
     return LinkCell.newBuilder()
         .setText(hostName)
         .setTarget(
@@ -120,13 +106,11 @@ public final class HostCellMapper {
 
   /**
    * The host's display-cased values for a key, in the same key-namespace scheme the host index
-   * builder uses. A single-valued key yields a one-element list (or an empty list when the value is
-   * absent); a multi-valued key yields all its values. The searcher reuses it to derive sort
-   * values.
+   * builder uses.
    */
   static ImmutableList<String> displayValues(
       HostRecord host, String keyId, FleetSnapshot snapshot) {
-    if (keyId.equals(FleetSearchKeys.HOST_ATS_CONTROLLER)) {
+    if (keyId.equals(HOST_FIELD_ATS_CONTROLLER)) {
       return atsControllerValues(host, snapshot);
     }
     return host.values(keyId);
@@ -134,7 +118,7 @@ public final class HostCellMapper {
 
   private static ImmutableList<String> atsControllerValues(
       HostRecord host, FleetSnapshot snapshot) {
-    ImmutableList<String> vals = host.values(FleetSearchKeys.HOST_ATS_CONTROLLER);
+    ImmutableList<String> vals = host.values(HOST_FIELD_ATS_CONTROLLER);
     if (vals.isEmpty()) {
       return ImmutableList.of();
     }
@@ -145,7 +129,7 @@ public final class HostCellMapper {
     String display =
         snapshot
             .hostIndex()
-            .valueDisplays(FleetSearchKeys.HOST_ATS_CONTROLLER)
+            .valueDisplays(HOST_FIELD_ATS_CONTROLLER)
             .getOrDefault(Ascii.toLowerCase(id), id);
     return ImmutableList.of(display);
   }
