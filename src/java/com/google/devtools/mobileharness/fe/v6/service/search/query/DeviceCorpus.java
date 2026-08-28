@@ -63,7 +63,7 @@ public final class DeviceCorpus implements SearchCorpus {
           "FASTBOOT",
           "FASTBOOTDMODE");
 
-  private static final ImmutableSet<String> PLAIN_VALUE_KEYS =
+  private static final ImmutableSet<String> IDENTIFIER_KEYS =
       ImmutableSet.of(
           DeviceKeys.UUID.id(),
           DeviceKeys.PREFIX_DIMENSION + "uuid",
@@ -137,8 +137,8 @@ public final class DeviceCorpus implements SearchCorpus {
   }
 
   @Override
-  public boolean plainValueKey(String keyId) {
-    return PLAIN_VALUE_KEYS.contains(keyId);
+  public boolean isIdentifierKey(String keyId) {
+    return IDENTIFIER_KEYS.contains(keyId);
   }
 
   @Override
@@ -159,7 +159,10 @@ public final class DeviceCorpus implements SearchCorpus {
 
   @Override
   public Column column(String keyId) {
-    return Column.newBuilder().setKey(keyId).setDisplayName(index.displayName(keyId)).build();
+    return Column.newBuilder()
+        .setKey(keyId)
+        .setDisplayName(FleetKeyDisplays.standardDisplayName(keyId))
+        .build();
   }
 
   @Override

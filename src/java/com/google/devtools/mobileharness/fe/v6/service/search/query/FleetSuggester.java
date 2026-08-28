@@ -102,11 +102,6 @@ import javax.inject.Inject;
  */
 public final class FleetSuggester {
 
-  // --- Key namespaces and identity ---
-
-  private static final String DIM_DISPLAY_PREFIX = "Dimension ";
-  private static final String PROP_DISPLAY_PREFIX = "Host Property ";
-
   // --- Group-by ---
 
   /**
@@ -435,7 +430,7 @@ public final class FleetSuggester {
       // Cold long-tail fallback: if the key is valid but has no index entries in core/overlay,
       // and is not already in active filters, emit a ready-to-apply filter condition with no count.
       if (!hadMatches && !value.isEmpty() && !context.activeKeys().contains(keyId)) {
-        String display = context.index().displayName(keyId);
+        String display = displayName(keyId);
         String op = exclude ? "is not" : "is";
         ImmutableList<TextSegment> mainText = segments(display + " " + op + " ", rawValue.trim());
         Filter filter =
@@ -470,7 +465,7 @@ public final class FleetSuggester {
       if (!MULTI_VALUE_KEYS.contains(keyId) || !index.keyIds().contains(keyId)) {
         continue;
       }
-      String display = displayName(index, keyId);
+      String display = displayName(keyId);
       int present = presenceCount(context, keyId);
       String verb = PLURAL_DISPLAY_KEYS.contains(keyId) ? "are" : "is";
       Filter filter;
@@ -487,11 +482,9 @@ public final class FleetSuggester {
       }
       boolean inChip = context.activeKeys().contains(keyId);
       FleetSuggestion.Builder builder =
-          FleetSuggestion.newBuilder()
-              .setLabel(label(index, keyId, inChip))
-              .addAllMainText(mainText);
+          FleetSuggestion.newBuilder().setLabel(label(keyId, inChip)).addAllMainText(mainText);
       if (inChip) {
-        builder.setOpenPicker(openPickerViewExisting(index, keyId));
+        builder.setOpenPicker(openPickerViewExisting(keyId));
       } else {
         builder.setApplyFilter(applyFilter(index, keyId, filter));
       }
@@ -581,7 +574,7 @@ public final class FleetSuggester {
       int ihi = FleetFilterEngine.lowerBound(keyValues, value + '\uffff');
       int matchCount = ihi - ilo;
       if (matchCount > 0) {
-        String identDisplay = displayName(index, identKey);
+        String identDisplay = displayName(identKey);
         ImmutableList<TextSegment> mainText =
             ImmutableList.of(
                 text(identDisplay + " starts with ", false),
@@ -592,7 +585,7 @@ public final class FleetSuggester {
                 .setLabel("Add filter")
                 .addAllMainText(mainText)
                 .setCount(matchCount)
-                .setOpenPicker(openPickerNewChip(index, identKey));
+                .setOpenPicker(openPickerNewChip(identKey));
         Cand cand = new Cand(Kind.KEY, identKey, 1, builder, mainTextString(mainText));
         cand.needsCount = false;
         cand.noCount = true;
@@ -624,14 +617,13 @@ public final class FleetSuggester {
       }
       // The bare filter key: opens the value picker. Ranks just below a concrete condition.
       boolean inChip = context.activeKeys().contains(keyId);
-      String display = displayName(index, keyId);
+      String display = displayName(keyId);
       ImmutableList<TextSegment> mainText = segments(display, null);
       FleetSuggestion.Builder builder =
           FleetSuggestion.newBuilder()
-              .setLabel(label(index, keyId, inChip))
+              .setLabel(label(keyId, inChip))
               .addAllMainText(mainText)
-              .setOpenPicker(
-                  inChip ? openPickerViewExisting(index, keyId) : openPickerNewChip(index, keyId));
+              .setOpenPicker(inChip ? openPickerViewExisting(keyId) : openPickerNewChip(keyId));
       Cand cand = new Cand(Kind.KEY, keyId, tier - 0.4, builder, mainTextString(mainText));
       cand.needsCount = false;
       cand.noCount = true;
@@ -666,7 +658,7 @@ public final class FleetSuggester {
         if (matchRank.containsKey(keyId)) {
           continue;
         }
-        String display = normalize(displayName(index, keyId));
+        String display = normalize(displayName(keyId));
         String bare = normalize(bareName(keyId));
         if (display.startsWith(normTerm) || bare.startsWith(normTerm)) {
           matchRank.put(keyId, 1);
@@ -687,7 +679,7 @@ public final class FleetSuggester {
         continue;
       }
       boolean overMax = groups > GROUP_SUGGEST_MAX;
-      String display = displayName(index, keyId);
+      String display = displayName(keyId);
       ImmutableList<TextSegment> mainText = segments("group by ", display);
       FleetSuggestion.Builder builder =
           FleetSuggestion.newBuilder()
@@ -696,7 +688,7 @@ public final class FleetSuggester {
               .setCount(groups)
               .setCountUnit("groups")
               .setOverMax(overMax)
-              .setAddGroupBy(addGroupBy(index, keyId));
+              .setAddGroupBy(addGroupBy(keyId));
       Cand cand = new Cand(Kind.GROUP_BY, keyId, 0, builder, mainTextString(mainText));
       cand.groupRank = matchRank.getOrDefault(keyId, 0);
       cand.overMax = overMax;
@@ -734,10 +726,9 @@ public final class FleetSuggester {
       boolean inChip = context.activeKeys().contains(keyId);
       response.addItems(
           FleetSuggestion.newBuilder()
-              .setLabel(label(index, keyId, inChip))
-              .addAllMainText(segments(displayName(index, keyId), null))
-              .setOpenPicker(
-                  inChip ? openPickerViewExisting(index, keyId) : openPickerNewChip(index, keyId))
+              .setLabel(label(keyId, inChip))
+              .addAllMainText(segments(displayName(keyId), null))
+              .setOpenPicker(inChip ? openPickerViewExisting(keyId) : openPickerNewChip(keyId))
               .build());
       emitted++;
     }
@@ -778,7 +769,7 @@ public final class FleetSuggester {
       }
     }
 
-    String display = displayName(index, keyId);
+    String display = displayName(keyId);
     String shown = displayValue(index, keyId, valueLower);
     FleetSuggestion.Builder builder = FleetSuggestion.newBuilder();
     ImmutableList<TextSegment> mainText;
@@ -787,7 +778,7 @@ public final class FleetSuggester {
       // apply is reserved for brand-new chips.
       String verb = exclude ? "exclude " : "add ";
       mainText = segments(verb, shown);
-      builder.setOpenPicker(openPickerStaged(index, keyId, ImmutableList.of(shown)));
+      builder.setOpenPicker(openPickerStaged(keyId, ImmutableList.of(shown)));
     } else {
       String op =
           PLURAL_DISPLAY_KEYS.contains(keyId)
@@ -797,7 +788,7 @@ public final class FleetSuggester {
       Filter filter = valueFilter(keyId, ImmutableList.of(shown), exclude);
       builder.setApplyFilter(applyFilter(index, keyId, filter));
     }
-    builder.setLabel(label(index, keyId, inChip)).addAllMainText(mainText);
+    builder.setLabel(label(keyId, inChip)).addAllMainText(mainText);
 
     Cand cand = new Cand(Kind.CONDITION, keyId, tier, builder, mainTextString(mainText));
     cand.value = valueLower;
@@ -836,7 +827,7 @@ public final class FleetSuggester {
 
     int orCount = unionCount(context, keyId, present);
     boolean inChip = context.activeKeys().contains(keyId);
-    String display = displayName(index, keyId);
+    String display = displayName(keyId);
     String verb = PLURAL_DISPLAY_KEYS.contains(keyId) ? "are" : "is";
     if (exclude) {
       verb += " not";
@@ -855,9 +846,9 @@ public final class FleetSuggester {
     }
     ImmutableList<TextSegment> mainText = ImmutableList.copyOf(segmentList);
     FleetSuggestion.Builder builder =
-        FleetSuggestion.newBuilder().setLabel(label(index, keyId, inChip)).addAllMainText(mainText);
+        FleetSuggestion.newBuilder().setLabel(label(keyId, inChip)).addAllMainText(mainText);
     if (inChip) {
-      builder.setOpenPicker(openPickerStaged(index, keyId, shown));
+      builder.setOpenPicker(openPickerStaged(keyId, shown));
     } else {
       builder.setApplyFilter(applyFilter(index, keyId, valueFilter(keyId, shown, exclude)));
     }
@@ -1095,7 +1086,7 @@ public final class FleetSuggester {
       if (seen.contains(keyId)) {
         continue;
       }
-      String display = normalize(displayName(index, keyId));
+      String display = normalize(displayName(keyId));
       String bare = normalize(bareName(keyId));
       if (display.startsWith(normTerm) || bare.startsWith(normTerm)) {
         out.add(new KeyMatch(keyId, 2));
@@ -1106,7 +1097,7 @@ public final class FleetSuggester {
       if (seen.contains(keyId)) {
         continue;
       }
-      String display = normalize(displayName(index, keyId));
+      String display = normalize(displayName(keyId));
       String bare = normalize(bareName(keyId));
       if (display.contains(normTerm) || bare.contains(normTerm)) {
         out.add(new KeyMatch(keyId, 1));
@@ -1137,39 +1128,38 @@ public final class FleetSuggester {
   private static FleetApplyFilter applyFilter(FleetIndex index, String keyId, Filter filter) {
     return FleetApplyFilter.newBuilder()
         .setResultingFilter(filter)
-        .setPillKey(pillKey(index, keyId))
+        .setPillKey(pillKey(keyId))
         .setPillCondition(pillCondition(index, filter))
-        .setMetadata(metadata(index, keyId))
+        .setMetadata(metadata(keyId))
         .build();
   }
 
-  private static FleetOpenPicker openPickerNewChip(FleetIndex index, String keyId) {
+  private static FleetOpenPicker openPickerNewChip(String keyId) {
     return FleetOpenPicker.newBuilder()
         .setKey(keyId)
-        .setMetadata(metadata(index, keyId))
+        .setMetadata(metadata(keyId))
         .setNewChip(FleetNewChip.getDefaultInstance())
         .build();
   }
 
-  private static FleetOpenPicker openPickerViewExisting(FleetIndex index, String keyId) {
+  private static FleetOpenPicker openPickerViewExisting(String keyId) {
     return FleetOpenPicker.newBuilder()
         .setKey(keyId)
-        .setMetadata(metadata(index, keyId))
+        .setMetadata(metadata(keyId))
         .setViewExisting(FleetViewExisting.getDefaultInstance())
         .build();
   }
 
-  private static FleetOpenPicker openPickerStaged(
-      FleetIndex index, String keyId, ImmutableList<String> values) {
+  private static FleetOpenPicker openPickerStaged(String keyId, ImmutableList<String> values) {
     return FleetOpenPicker.newBuilder()
         .setKey(keyId)
-        .setMetadata(metadata(index, keyId))
+        .setMetadata(metadata(keyId))
         .setStagedModify(FleetStagedModification.newBuilder().addAllValues(values))
         .build();
   }
 
-  private static FleetAddGroupBy addGroupBy(FleetIndex index, String keyId) {
-    return FleetAddGroupBy.newBuilder().setKey(keyId).setPillKey(pillKey(index, keyId)).build();
+  private static FleetAddGroupBy addGroupBy(String keyId) {
+    return FleetAddGroupBy.newBuilder().setKey(keyId).setPillKey(pillKey(keyId)).build();
   }
 
   private static final ImmutableSet<String> MULTI_VALUE_KEYS =
@@ -1221,9 +1211,9 @@ public final class FleetSuggester {
   private static final ImmutableSet<String> VALUE_DISPLAY_KEYS =
       ImmutableSet.of(HostKeys.PREFIX_HOST_FIELD + "ats_controller");
 
-  private static FleetFilterChipMetadata metadata(FleetIndex index, String keyId) {
+  private static FleetFilterChipMetadata metadata(String keyId) {
     return FleetFilterChipMetadata.newBuilder()
-        .setKeyDisplayName(displayName(index, keyId))
+        .setKeyDisplayName(displayName(keyId))
         .setCanUseAdvanced(!VALUE_DISPLAY_KEYS.contains(keyId))
         .setIsPlural(PLURAL_DISPLAY_KEYS.contains(keyId))
         .build();
@@ -1251,28 +1241,20 @@ public final class FleetSuggester {
 
   // ---- Display helpers ----
 
-  private static String label(FleetIndex index, String keyId, boolean inChip) {
-    return inChip ? "Modify " + displayName(index, keyId) : "Add filter";
+  private static String label(String keyId, boolean inChip) {
+    return inChip ? "Modify " + displayName(keyId) : "Add filter";
   }
 
-  private static String displayName(FleetIndex index, String keyId) {
-    return index.displayName(keyId);
+  private static String displayName(String keyId) {
+    return FleetKeyDisplays.titleDisplayName(keyId);
   }
 
-  private static String pillKey(FleetIndex index, String keyId) {
-    String label = displayName(index, keyId);
-    if (keyId.startsWith(DeviceKeys.PREFIX_DIMENSION) && label.startsWith(DIM_DISPLAY_PREFIX)) {
-      return label.substring(DIM_DISPLAY_PREFIX.length());
-    }
-    if (keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY) && label.startsWith(PROP_DISPLAY_PREFIX)) {
-      return "Host " + label.substring(PROP_DISPLAY_PREFIX.length());
-    }
-    return label;
+  private static String pillKey(String keyId) {
+    return FleetKeyDisplays.pillKey(keyId);
   }
 
   private static String bareName(String keyId) {
-    int separator = keyId.indexOf("::");
-    return separator >= 0 ? keyId.substring(separator + 2) : keyId;
+    return FleetKeyDisplays.bareName(keyId);
   }
 
   private static String displayValue(FleetIndex index, String keyId, String valueLower) {

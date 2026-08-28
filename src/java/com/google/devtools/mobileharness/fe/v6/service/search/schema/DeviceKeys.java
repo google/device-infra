@@ -121,13 +121,20 @@ public final class DeviceKeys {
    * Group 1 host keys projected into device search (cross-entity host attributes stamped onto each
    * device). {@code device_count} is deliberately not projected: it is a host-only numeric key.
    */
+  public static final DeviceKeyDescriptor HOST_NAME =
+      projectHostKey(HostKeys.HOST_NAME, KeyDisplay.of("Host Name"));
+
+  public static final DeviceKeyDescriptor HOST_IP =
+      projectHostKey(HostKeys.HOST_IP, KeyDisplay.of("Host IP"));
+  public static final DeviceKeyDescriptor HOST_CONNECTIVITY =
+      projectHostKey(HostKeys.CONNECTIVITY, KeyDisplay.of("Host Lab Server Connectivity"));
+  public static final DeviceKeyDescriptor HOST_OS =
+      projectHostKey(HostKeys.HOST_OS, KeyDisplay.of("Host OS"));
+  public static final DeviceKeyDescriptor HOST_LAB_SERVER_VERSION =
+      projectHostKey(HostKeys.LAB_SERVER_VERSION, KeyDisplay.of("Host Lab Server Version"));
+
   public static final ImmutableList<DeviceKeyDescriptor> COMMON_HOST_PROJECTIONS =
-      ImmutableList.of(
-          projectHostKey(HostKeys.HOST_NAME, KeyDisplay.of("Host Name")),
-          projectHostKey(HostKeys.HOST_IP, KeyDisplay.of("Host IP")),
-          projectHostKey(HostKeys.CONNECTIVITY, KeyDisplay.of("Host Lab Server Connectivity")),
-          projectHostKey(HostKeys.HOST_OS, KeyDisplay.of("Host OS")),
-          projectHostKey(HostKeys.LAB_SERVER_VERSION, KeyDisplay.of("Host Lab Server Version")));
+      ImmutableList.of(HOST_NAME, HOST_IP, HOST_CONNECTIVITY, HOST_OS, HOST_LAB_SERVER_VERSION);
 
   // The helpers below are package-private by design. They are catalog-authoring helpers shared
   // across the schema catalogs (DeviceKeys, AtsDeviceKeys, InternalDeviceKeys,

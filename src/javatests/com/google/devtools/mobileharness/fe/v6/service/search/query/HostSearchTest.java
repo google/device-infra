@@ -323,14 +323,14 @@ public final class HostSearchTest {
   }
 
   @Test
-  public void valueList_deviceCountIsPlainWithoutCounts() {
+  public void valueList_deviceCountIsCounted() {
     FleetValueListResponse response =
         valueLister.listValues(corpus, "host_field::device_count", ImmutableList.of());
 
-    assertThat(response.hasPlain()).isTrue();
-    ImmutableList.Builder<String> values = ImmutableList.builder();
-    response.getPlain().getValuesList().forEach(value -> values.add(value.getValue()));
-    assertThat(values.build()).containsExactly("0", "1", "2").inOrder();
+    assertThat(response.hasCounted()).isTrue();
+    assertThat(totalFor(response, "0")).isEqualTo(1);
+    assertThat(totalFor(response, "1")).isEqualTo(1);
+    assertThat(totalFor(response, "2")).isEqualTo(1);
   }
 
   @Test

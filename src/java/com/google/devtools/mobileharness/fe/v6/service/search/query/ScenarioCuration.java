@@ -18,14 +18,14 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
 
 /**
  * The per-deployment curation of fleet search keys: which keys to promote in the query bar, which
  * columns to show by default, and how to rank keys in the suggester.
  *
- * <p>Every fact here is deployment dependent, so unlike {@link
- * com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys} (which holds only
- * facts true of a key in every deployment), a curation is bound per {@link
+ * <p>Every fact here is deployment dependent, bound per {@link
  * com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet}. Consumers inject {@code
  * Map<Fleet, ScenarioCuration>} and pick the entry for the request's fleet.
  *
@@ -33,46 +33,38 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity
  * binds a 1p curation under {@code FLEET_SELF} and an ats-all curation under {@code FLEET_ATS}. The
  * ats-one and 1p curations share the same fleet key but differ by build, so each build installs its
  * own module rather than switching on the fleet enum.
+ *
+ * <p>All key lists return typed {@link DeviceKeyDescriptor} and {@link HostKeyDescriptor} objects
+ * directly from the schema layer, preserving display names, grammatical number, and key attributes
+ * with compile-time type safety.
  */
 public interface ScenarioCuration {
 
   /** The keys promoted into the "Filter by:" row of the query bar, in display order. */
-  ImmutableList<String> deviceFilterByRow();
+  ImmutableList<DeviceKeyDescriptor> deviceFilterByRow();
 
   /** The keys promoted into the "Group by:" row of the query bar, in display order. */
-  ImmutableList<String> deviceGroupByRow();
+  ImmutableList<DeviceKeyDescriptor> deviceGroupByRow();
 
   /** The default column set for the flat search results table, in display order. */
-  ImmutableList<String> deviceDefaultColumns();
+  ImmutableList<DeviceKeyDescriptor> deviceDefaultColumns();
 
   /** The recommended columns offered in the column catalog, in display order. */
-  ImmutableList<String> deviceRecommendedColumns();
+  ImmutableList<DeviceKeyDescriptor> deviceRecommendedColumns();
 
   // ---- Host-entity curation ----
-  //
-  // The host entity has its own curated lists, analogous to the device ones above. They default to
-  // the device lists so a curation that has not been taught the host entity yet still compiles and
-  // serves a reasonable host page; a deployment overrides them with its host-specific lists.
 
   /** The keys promoted into the host "Filter by:" row of the query bar, in display order. */
-  default ImmutableList<String> hostFilterByRow() {
-    return deviceFilterByRow();
-  }
+  ImmutableList<HostKeyDescriptor> hostFilterByRow();
 
   /** The keys promoted into the host "Group by:" row of the query bar, in display order. */
-  default ImmutableList<String> hostGroupByRow() {
-    return deviceGroupByRow();
-  }
+  ImmutableList<HostKeyDescriptor> hostGroupByRow();
 
   /** The default column set for the host flat search results table, in display order. */
-  default ImmutableList<String> hostDefaultColumns() {
-    return deviceDefaultColumns();
-  }
+  ImmutableList<HostKeyDescriptor> hostDefaultColumns();
 
   /** The recommended host columns offered in the column catalog, in display order. */
-  default ImmutableList<String> hostRecommendedColumns() {
-    return deviceRecommendedColumns();
-  }
+  ImmutableList<HostKeyDescriptor> hostRecommendedColumns();
 
   /**
    * The suggester ranking for {@code keyId}: a higher value means the key is offered earlier. The
@@ -82,9 +74,7 @@ public interface ScenarioCuration {
 
   /**
    * The suggester ranking for {@code keyId} in the given {@code entity}: a higher value means the
-   * key is offered earlier. Defaults to the device ranking ({@link #keyPriority(String)}) so an
-   * impl that has not been taught the host entity still compiles and ranks host keys reasonably; a
-   * deployment overrides this to route through the host tier table.
+   * key is offered earlier. Defaults to the device ranking ({@link #keyPriority(String)}).
    */
   default int keyPriority(String keyId, SearchEntity entity) {
     return keyPriority(keyId);

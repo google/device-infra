@@ -41,8 +41,8 @@ import javax.annotation.Nullable;
  */
 public final class HostCorpus implements SearchCorpus {
 
-  private static final ImmutableSet<String> HOST_PLAIN_VALUE_KEYS =
-      ImmutableSet.of(HostKeys.HOST_NAME.id(), HostKeys.DEVICE_COUNT.id());
+  private static final ImmutableSet<String> HOST_IDENTIFIER_KEYS =
+      ImmutableSet.of(HostKeys.HOST_NAME.id());
 
   private final FleetSnapshot snapshot;
   private final Postings postings;
@@ -87,8 +87,8 @@ public final class HostCorpus implements SearchCorpus {
   }
 
   @Override
-  public boolean plainValueKey(String keyId) {
-    return HOST_PLAIN_VALUE_KEYS.contains(keyId);
+  public boolean isIdentifierKey(String keyId) {
+    return HOST_IDENTIFIER_KEYS.contains(keyId);
   }
 
   @Override
@@ -103,7 +103,10 @@ public final class HostCorpus implements SearchCorpus {
 
   @Override
   public Column column(String keyId) {
-    return cellMapper.column(keyId, snapshot);
+    return Column.newBuilder()
+        .setKey(keyId)
+        .setDisplayName(FleetKeyDisplays.standardDisplayName(keyId))
+        .build();
   }
 
   @Override

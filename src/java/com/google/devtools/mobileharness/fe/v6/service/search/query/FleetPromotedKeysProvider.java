@@ -26,7 +26,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromote
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
-import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import java.util.HashSet;
 import java.util.List;
@@ -43,14 +44,6 @@ import javax.inject.Inject;
  * scenario-ordered list of candidate keys, trimmed to the keys that still discriminate within the
  * current result set: a key that would open a picker with a single value, or a grouping that would
  * yield a single bucket, adds no signal and is dropped.
- *
- * <p>Ordering follows the prototype's curated priority list per scenario. The candidate rows are
- * not hardcoded here: the provider injects the per-fleet {@link Map} of {@link ScenarioCuration}
- * and reads the entry for the request's {@link
- * com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet}, using {@link
- * ScenarioCuration#deviceFilterByRow()} and {@link ScenarioCuration#deviceGroupByRow()} as the
- * candidate key lists. The dead-end, applied, and limit trimming below is scenario independent and
- * stays here.
  */
 public final class FleetPromotedKeysProvider {
 
@@ -73,16 +66,6 @@ public final class FleetPromotedKeysProvider {
    */
   private static final int PROMOTED_LIMIT = 6;
 
-  private static final ImmutableSet<String> PLURAL_DISPLAY_KEYS =
-      ImmutableSet.of(
-          DeviceKeys.PREFIX_DEVICE_FIELD + "owner",
-          DeviceKeys.DRIVER.id(),
-          DeviceKeys.DECORATOR.id(),
-          DeviceKeys.PREFIX_DEVICE_FIELD + "executor");
-
-  private static final ImmutableSet<String> VALUE_DISPLAY_KEYS =
-      ImmutableSet.of(HostKeys.PREFIX_HOST_FIELD + "ats_controller");
-
   private final FleetFilterEngine filterEngine;
 
   @Inject
@@ -98,9 +81,6 @@ public final class FleetPromotedKeysProvider {
    */
   public FleetPromotedKeysResponse getPromotedKeys(
       SearchCorpus corpus, FleetPromotedKeysRequest request) {
-    // The curation is bound to the corpus's fleet by the corpus factory. If none is installed (the
-    // MapBinder is wired at activation), promote no keys rather than failing, keeping behavior safe
-    // until the curation module is installed.
     ScenarioCuration curation = corpus.curation();
     if (curation == null) {
       return FleetPromotedKeysResponse.getDefaultInstance();
@@ -110,8 +90,6 @@ public final class FleetPromotedKeysProvider {
     List<Filter> filters = request.getFiltersList();
     boolean hasFilters = !filters.isEmpty();
 
-    // The current result set. With no filters this is the whole fleet, so distinct-value counts
-    // taken over it equal the fleet-wide counts, matching the prototype's global-count path.
     ImmutableList<Integer> current = filterEngine.match(corpus, filters);
 
     Set<String> appliedFilterKeys = new HashSet<>();
@@ -120,83 +98,139 @@ public final class FleetPromotedKeysProvider {
     }
     Set<String> appliedGroupByKeys = new HashSet<>(request.getGroupByList());
 
-    // The candidate rows are entity aware: host search reads the host curation rows, every other
-    // entity reads the device rows. For the device corpus this is the device filter and group-by
-    // rows exactly, so device promoted keys are unchanged.
     boolean host = corpus.entity() == SearchEntity.SEARCH_ENTITY_HOST;
-    ImmutableList<String> filterByRow =
-        host ? curation.hostFilterByRow() : curation.deviceFilterByRow();
-    ImmutableList<String> groupByRow =
-        host ? curation.hostGroupByRow() : curation.deviceGroupByRow();
-
     FleetPromotedKeysResponse.Builder response = FleetPromotedKeysResponse.newBuilder();
-    addFilterKeys(response, corpus, index, current, hasFilters, appliedFilterKeys, filterByRow);
-    addGroupByKeys(response, corpus, index, current, appliedGroupByKeys, groupByRow);
+
+    if (host) {
+      addHostFilterKeys(
+          response,
+          corpus,
+          index,
+          current,
+          hasFilters,
+          appliedFilterKeys,
+          curation.hostFilterByRow());
+      addHostGroupByKeys(
+          response, corpus, index, current, appliedGroupByKeys, curation.hostGroupByRow());
+    } else {
+      addDeviceFilterKeys(
+          response,
+          corpus,
+          index,
+          current,
+          hasFilters,
+          appliedFilterKeys,
+          curation.deviceFilterByRow());
+      addDeviceGroupByKeys(
+          response, corpus, index, current, appliedGroupByKeys, curation.deviceGroupByRow());
+    }
     return response.build();
   }
 
   /**
-   * Appends the "Filter by:" row in curated order. A key is skipped when it is unknown in this
-   * fleet (no data), when it already has a filter chip (the proto contract promotes only keys
-   * without a chip), or when it is a dead end. A dead end is a key with at most one distinct value
-   * in the current result set, so its picker would offer nothing to choose. Following the
+   * Appends the "Filter by:" row for devices in curated order. A key is skipped when it is unknown
+   * in this fleet (no data), when it already has a filter chip (the proto contract promotes only
+   * keys without a chip), or when it is a dead end. A dead end is a key with at most one distinct
+   * value in the current result set, so its picker would offer nothing to choose. Following the
    * prototype, the dead-end test applies only once filters are present: the unfiltered anchor row
    * is shown whole.
    */
-  private void addFilterKeys(
+  private void addDeviceFilterKeys(
       FleetPromotedKeysResponse.Builder response,
       SearchCorpus corpus,
       FleetIndex index,
       ImmutableList<Integer> current,
       boolean hasFilters,
       Set<String> appliedFilterKeys,
-      ImmutableList<String> filterByRow) {
+      ImmutableList<DeviceKeyDescriptor> filterByRow) {
     int emitted = 0;
-    for (String keyId : filterByRow) {
+    for (DeviceKeyDescriptor desc : filterByRow) {
       if (emitted >= PROMOTED_LIMIT) {
         break;
       }
-      if (!index.keyIds().contains(keyId)) {
-        continue;
-      }
-      if (appliedFilterKeys.contains(keyId)) {
+      String keyId = desc.id();
+      if (!index.keyIds().contains(keyId) || appliedFilterKeys.contains(keyId)) {
         continue;
       }
       if (hasFilters && comboCount(corpus, current, keyId).distinctCombos() <= 1) {
         continue;
       }
       response.addFilterKeys(
-          FleetPromotedFilterKey.newBuilder().setKey(keyId).setMetadata(metadata(index, keyId)));
+          FleetPromotedFilterKey.newBuilder()
+              .setKey(keyId)
+              .setMetadata(
+                  FleetFilterChipMetadata.newBuilder()
+                      .setKeyDisplayName(desc.display().name())
+                      .setIsPlural(desc.display().isPlural())
+                      .setCanUseAdvanced(true)
+                      .build()));
       emitted++;
     }
   }
 
   /**
-   * Appends the "Group by:" row in curated order. The row is empty once three group-by keys are
-   * applied. A key is skipped when it is unknown in this fleet, when it is already an applied
-   * group-by key, or when it would produce fewer than two groups (a no-op grouping). The reported
-   * count is the number of buckets, distinct value combinations plus one for the "(no value)"
-   * bucket when some device lacks the key, which is exactly what the user gets after clicking.
+   * Appends the "Filter by:" row for hosts in curated order, applying the same dead-end and
+   * presence filters.
    */
-  private void addGroupByKeys(
+  private void addHostFilterKeys(
+      FleetPromotedKeysResponse.Builder response,
+      SearchCorpus corpus,
+      FleetIndex index,
+      ImmutableList<Integer> current,
+      boolean hasFilters,
+      Set<String> appliedFilterKeys,
+      ImmutableList<HostKeyDescriptor> filterByRow) {
+    int emitted = 0;
+    for (HostKeyDescriptor desc : filterByRow) {
+      if (emitted >= PROMOTED_LIMIT) {
+        break;
+      }
+      String keyId = desc.id();
+      if (!index.keyIds().contains(keyId) || appliedFilterKeys.contains(keyId)) {
+        continue;
+      }
+      if (hasFilters && comboCount(corpus, current, keyId).distinctCombos() <= 1) {
+        continue;
+      }
+      boolean isAtsController = keyId.equals(HostKeys.PREFIX_HOST_FIELD + "ats_controller");
+      response.addFilterKeys(
+          FleetPromotedFilterKey.newBuilder()
+              .setKey(keyId)
+              .setMetadata(
+                  FleetFilterChipMetadata.newBuilder()
+                      .setKeyDisplayName(desc.display().name())
+                      .setIsPlural(desc.display().isPlural())
+                      .setCanUseAdvanced(!isAtsController)
+                      .build()));
+      emitted++;
+    }
+  }
+
+  /**
+   * Appends the "Group by:" row for devices in curated order. The row is empty once three group-by
+   * keys are applied. A key is skipped when it is unknown in this fleet, when it is already an
+   * applied group-by key, or when it would produce fewer than two groups (a no-op grouping). The
+   * reported count is the number of buckets, distinct value combinations plus one for the "(no
+   * value)" bucket when some device lacks the key, which is exactly what the user gets after
+   * clicking.
+   */
+  private void addDeviceGroupByKeys(
       FleetPromotedKeysResponse.Builder response,
       SearchCorpus corpus,
       FleetIndex index,
       ImmutableList<Integer> current,
       Set<String> appliedGroupByKeys,
-      ImmutableList<String> groupByRow) {
+      ImmutableList<DeviceKeyDescriptor> groupByRow) {
     if (appliedGroupByKeys.size() >= MAX_APPLIED_GROUP_BY) {
       return;
     }
     int emitted = 0;
-    for (String keyId : groupByRow) {
+    for (DeviceKeyDescriptor desc : groupByRow) {
       if (emitted >= PROMOTED_LIMIT) {
         break;
       }
-      if (!index.keyIds().contains(keyId)) {
-        continue;
-      }
-      if (appliedGroupByKeys.contains(keyId)) {
+      String keyId = desc.id();
+      if (!index.keyIds().contains(keyId) || appliedGroupByKeys.contains(keyId)) {
         continue;
       }
       KeyCount count = comboCount(corpus, current, keyId);
@@ -207,7 +241,44 @@ public final class FleetPromotedKeysProvider {
       response.addGroupByKeys(
           FleetPromotedGroupByKey.newBuilder()
               .setKey(keyId)
-              .setDisplayName(displayName(index, keyId))
+              .setDisplayName(desc.display().name())
+              .setGroupCount(groups));
+      emitted++;
+    }
+  }
+
+  /**
+   * Appends the "Group by:" row for hosts in curated order, calculating bucket counts over the
+   * filtered host set.
+   */
+  private void addHostGroupByKeys(
+      FleetPromotedKeysResponse.Builder response,
+      SearchCorpus corpus,
+      FleetIndex index,
+      ImmutableList<Integer> current,
+      Set<String> appliedGroupByKeys,
+      ImmutableList<HostKeyDescriptor> groupByRow) {
+    if (appliedGroupByKeys.size() >= MAX_APPLIED_GROUP_BY) {
+      return;
+    }
+    int emitted = 0;
+    for (HostKeyDescriptor desc : groupByRow) {
+      if (emitted >= PROMOTED_LIMIT) {
+        break;
+      }
+      String keyId = desc.id();
+      if (!index.keyIds().contains(keyId) || appliedGroupByKeys.contains(keyId)) {
+        continue;
+      }
+      KeyCount count = comboCount(corpus, current, keyId);
+      int groups = count.distinctCombos() + (count.hasMissing() ? 1 : 0);
+      if (groups < MIN_GROUP_COUNT) {
+        continue;
+      }
+      response.addGroupByKeys(
+          FleetPromotedGroupByKey.newBuilder()
+              .setKey(keyId)
+              .setDisplayName(desc.display().name())
               .setGroupCount(groups));
       emitted++;
     }
@@ -215,11 +286,7 @@ public final class FleetPromotedKeysProvider {
 
   /**
    * Counts distinct value combinations for a key over the current result set, and whether any
-   * device in the set lacks the key. A key's whole value list is one combination: a device owned by
-   * alice and bob forms the group "alice, bob" rather than joining alice's and bob's groups, so
-   * counting distinct values would under-report groups for a multi-valued key. This is the Java
-   * port of the prototype's {@code _distinct_counts} (suggest_engine.py lines 3023 to 3047),
-   * reading the forward store the same way the prototype reads {@code dev_values}.
+   * device in the set lacks the key.
    */
   private static KeyCount comboCount(
       SearchCorpus corpus, ImmutableList<Integer> current, String keyId) {
@@ -230,28 +297,10 @@ public final class FleetPromotedKeysProvider {
       if (values.isEmpty()) {
         hasMissing = true;
       } else {
-        // Values are already lowercased by valuesForKey. A NUL join over the sorted set gives a
-        // stable, collision-free key for the combination.
         combos.add(String.join("\u0000", new TreeSet<>(values)));
       }
     }
     return new KeyCount(combos.size(), hasMissing);
-  }
-
-  private static FleetFilterChipMetadata metadata(FleetIndex index, String keyId) {
-    return FleetFilterChipMetadata.newBuilder()
-        .setKeyDisplayName(displayName(index, keyId))
-        .setCanUseAdvanced(!VALUE_DISPLAY_KEYS.contains(keyId))
-        .setIsPlural(PLURAL_DISPLAY_KEYS.contains(keyId))
-        .build();
-  }
-
-  /**
-   * The full key display name, falling back to a namespace-derived name when absent from the fleet.
-   * Mirrors the derivation in {@link FleetChipResolver} and {@link FleetIndexBuilder}.
-   */
-  private static String displayName(FleetIndex index, String keyId) {
-    return index.displayName(keyId);
   }
 
   /** Distinct value-combination count for a key plus whether some device in the set lacks it. */

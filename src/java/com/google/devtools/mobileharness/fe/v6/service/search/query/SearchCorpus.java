@@ -42,10 +42,9 @@ import javax.annotation.Nullable;
  *
  * <p>Keeping the projection inside the corpus, rather than behind a shared record interface,
  * confines all entity specifics to the corpus implementations: the device corpus projects a {@code
- * DeviceRecord} onto {@code FleetSearchKeys.FIELD_UUID} identity, device status cells, and device
- * utilization, while a future host corpus projects a host record onto host name identity, host
- * connectivity cells, and no utilization. The records stay pure AutoValue types with no proto
- * dependency.
+ * DeviceRecord} onto {@code DeviceKeys.UUID} identity, device status cells, and device utilization,
+ * while a host corpus projects a host record onto host name identity, host connectivity cells, and
+ * no utilization. The records stay pure AutoValue types with no proto dependency.
  */
 public interface SearchCorpus {
 
@@ -68,10 +67,10 @@ public interface SearchCorpus {
   String identifierKey();
 
   /**
-   * Whether {@code keyId} is identifier-like, so its value list is shown without facet counts.
-   * Mirrors {@code PLAIN_VALUE_KEYS} for devices and {@code HOST_PLAIN_VALUE_KEYS} for hosts.
+   * Whether {@code keyId} is a high-cardinality identifier key (e.g. UUID, host name, serial, MAC
+   * address), whose value picker list suppresses facet counts.
    */
-  boolean plainValueKey(String keyId);
+  boolean isIdentifierKey(String keyId);
 
   /**
    * The lowercased value set the record at {@code index} carries for {@code keyId}. Used for

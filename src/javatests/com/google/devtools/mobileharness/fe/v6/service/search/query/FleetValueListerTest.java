@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
@@ -178,6 +179,23 @@ public final class FleetValueListerTest {
   }
 
   @Test
+  public void hostCorpus_hostNameIsPlain_deviceCountIsCounted() {
+    HostCorpus hostCorpus = new HostCorpus(snapshot, LazyPostings.forHosts(snapshot.hosts()), null);
+
+    // Host name is an identifier: plain list without counts.
+    FleetValueListResponse hostNameResp =
+        lister.listValues(hostCorpus, "host_field::host_name", ImmutableList.of());
+    assertThat(hostNameResp.getKindCase()).isEqualTo(FleetValueListResponse.KindCase.PLAIN);
+
+    // Device count is a discrete facet metric: counted list WITH counts!
+    FleetValueListResponse countResp =
+        lister.listValues(hostCorpus, "host_field::device_count", ImmutableList.of());
+    assertThat(countResp.getKindCase()).isEqualTo(FleetValueListResponse.KindCase.COUNTED);
+    assertThat(valuesOf(countResp.getCounted())).containsExactly("2");
+    assertThat(byValue(countResp.getCounted(), "2").getTotal()).isEqualTo(2);
+  }
+
+  @Test
   public void unknownKey_returnsEmptyCountedListWithoutNoValueEntry() {
     FleetValueListResponse response =
         lister.listValues(corpus, "dimension::does_not_exist", ImmutableList.of());
@@ -191,11 +209,9 @@ public final class FleetValueListerTest {
   // --- Helpers ---
 
   private static ImmutableList<String> valuesOf(FleetCountedValueList list) {
-    ImmutableList.Builder<String> values = ImmutableList.builder();
-    for (FleetCountedValue value : list.getValuesList()) {
-      values.add(value.getValue());
-    }
-    return values.build();
+    return list.getValuesList().stream()
+        .map(FleetCountedValue::getValue)
+        .collect(toImmutableList());
   }
 
   private static FleetCountedValue byValue(FleetCountedValueList list, String value) {
