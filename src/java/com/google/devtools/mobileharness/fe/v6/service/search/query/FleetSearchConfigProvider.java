@@ -16,9 +16,6 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_UUID;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_NAME;
-
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetLandingConfig;
@@ -28,6 +25,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.KeyDescripto
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import javax.inject.Inject;
 
 /**
@@ -95,8 +94,8 @@ public final class FleetSearchConfigProvider {
    */
   private static String identifierKey(SearchEntity entity) {
     return switch (entity) {
-      case SEARCH_ENTITY_HOST -> HOST_NAME;
-      default -> FIELD_UUID;
+      case SEARCH_ENTITY_HOST -> HostKeys.HOST_NAME.id();
+      default -> DeviceKeys.UUID.id();
     };
   }
 

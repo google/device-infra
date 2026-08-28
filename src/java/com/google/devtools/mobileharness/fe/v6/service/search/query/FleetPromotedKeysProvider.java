@@ -16,9 +16,6 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PLURAL_DISPLAY_KEYS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.VALUE_DISPLAY_KEYS;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
@@ -29,6 +26,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromote
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -73,6 +72,16 @@ public final class FleetPromotedKeysProvider {
    * (suggest_engine.py line 3079), which slices each row to its first six entries.
    */
   private static final int PROMOTED_LIMIT = 6;
+
+  private static final ImmutableSet<String> PLURAL_DISPLAY_KEYS =
+      ImmutableSet.of(
+          DeviceKeys.PREFIX_DEVICE_FIELD + "owner",
+          DeviceKeys.DRIVER.id(),
+          DeviceKeys.DECORATOR.id(),
+          DeviceKeys.PREFIX_DEVICE_FIELD + "executor");
+
+  private static final ImmutableSet<String> VALUE_DISPLAY_KEYS =
+      ImmutableSet.of(HostKeys.PREFIX_HOST_FIELD + "ats_controller");
 
   private final FleetFilterEngine filterEngine;
 

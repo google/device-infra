@@ -17,23 +17,6 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import static com.google.common.primitives.Booleans.falseFirst;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.DIM_PREFIX;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.DIM_QUARANTINED;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_OWNER;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_STATUS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_TYPE;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_UUID;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_CONNECTIVITY;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DEVICE_COUNT;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_TYPE;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_NAME;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_STATUS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.IDENTIFIER_KEYS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.MULTI_VALUE_KEYS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PLAIN_VALUE_KEYS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PLURAL_DISPLAY_KEYS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.PROP_PREFIX;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.VALUE_DISPLAY_KEYS;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
@@ -62,6 +45,9 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.KeyCount;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.ValueKeyPair;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collection;
@@ -129,14 +115,14 @@ public final class FleetSuggester {
    */
   private static final ImmutableList<String> GROUP_BY_CANDIDATES =
       ImmutableList.of(
-          "host::host_name",
-          "host::lab_type",
-          "host::ats_controller",
-          "dim::lab_location",
-          FIELD_STATUS,
-          "dim::model",
-          "dim::pool",
-          FIELD_TYPE);
+          HostKeys.HOST_NAME.id(),
+          HostKeys.PREFIX_HOST_FIELD + "lab_type",
+          HostKeys.PREFIX_HOST_FIELD + "ats_controller",
+          DeviceKeys.PREFIX_DIMENSION + "lab_location",
+          DeviceKeys.STATUS.id(),
+          DeviceKeys.PREFIX_DIMENSION + "model",
+          DeviceKeys.PREFIX_DIMENSION + "pool",
+          DeviceKeys.TYPE.id());
 
   /**
    * Group-by candidates for a bare {@code group by} prefix in the host entity. Ported from the
@@ -145,7 +131,8 @@ public final class FleetSuggester {
    * dropping any candidate absent from the fleet, exactly as the device pool does.
    */
   private static final ImmutableList<String> HOST_GROUP_BY_CANDIDATES =
-      ImmutableList.of(HOST_LAB_TYPE, HOST_RELEASE_STATUS);
+      ImmutableList.of(
+          HostKeys.PREFIX_HOST_FIELD + "lab_type", HostKeys.PREFIX_HOST_FIELD + "release_status");
 
   /** A grouping needs at least two buckets to be worth offering ({@code GROUP_SUGGEST_MIN}). */
   private static final int GROUP_SUGGEST_MIN = 2;
@@ -167,13 +154,13 @@ public final class FleetSuggester {
    */
   private static final ImmutableList<String> EMPTY_STATE_KEYS =
       ImmutableList.of(
-          FIELD_STATUS,
-          "dimension::model",
-          FIELD_TYPE,
-          FIELD_OWNER,
-          "dimension::pool",
-          "dimension::os",
-          DIM_QUARANTINED);
+          DeviceKeys.STATUS.id(),
+          DeviceKeys.PREFIX_DIMENSION + "model",
+          DeviceKeys.TYPE.id(),
+          DeviceKeys.PREFIX_DEVICE_FIELD + "owner",
+          DeviceKeys.PREFIX_DIMENSION + "pool",
+          DeviceKeys.PREFIX_DIMENSION + "os",
+          DeviceKeys.PREFIX_DEVICE_FIELD + "quarantined");
 
   /**
    * Curated starter keys offered for an empty query in the host entity. Ported from the prototype's
@@ -182,7 +169,11 @@ public final class FleetSuggester {
    */
   private static final ImmutableList<String> HOST_EMPTY_STATE_KEYS =
       ImmutableList.of(
-          HOST_NAME, HOST_LAB_TYPE, HOST_RELEASE_STATUS, HOST_CONNECTIVITY, HOST_DEVICE_COUNT);
+          HostKeys.HOST_NAME.id(),
+          HostKeys.PREFIX_HOST_FIELD + "lab_type",
+          HostKeys.PREFIX_HOST_FIELD + "release_status",
+          HostKeys.CONNECTIVITY.id(),
+          HostKeys.DEVICE_COUNT.id());
 
   private static final int DEFAULT_LIMIT = 12;
 
@@ -1059,12 +1050,12 @@ public final class FleetSuggester {
 
     Matcher dim = NAMESPACE_DIM.matcher(low);
     if (dim.matches()) {
-      String keyId = DIM_PREFIX + normalize(dim.group(1));
+      String keyId = DeviceKeys.PREFIX_DIMENSION + normalize(dim.group(1));
       return index.keyIds().contains(keyId) ? ImmutableList.of(keyId) : ImmutableList.of();
     }
     Matcher prop = NAMESPACE_PROP.matcher(low);
     if (prop.matches()) {
-      String keyId = PROP_PREFIX + normalize(prop.group(1));
+      String keyId = HostKeys.PREFIX_HOST_PROPERTY + normalize(prop.group(1));
       return index.keyIds().contains(keyId) ? ImmutableList.of(keyId) : ImmutableList.of();
     }
     ImmutableList<String> aliased = ALIAS_TO_KEYS.get(normalize(raw));
@@ -1072,11 +1063,11 @@ public final class FleetSuggester {
       return aliased;
     }
     // Case 3: a bare token equal to a dimension or host-property key present in the fleet.
-    String bareDim = DIM_PREFIX + normalize(raw);
+    String bareDim = DeviceKeys.PREFIX_DIMENSION + normalize(raw);
     if (index.keyIds().contains(bareDim)) {
       return ImmutableList.of(bareDim);
     }
-    String bareProp = PROP_PREFIX + normalize(raw);
+    String bareProp = HostKeys.PREFIX_HOST_PROPERTY + normalize(raw);
     if (index.keyIds().contains(bareProp)) {
       return ImmutableList.of(bareProp);
     }
@@ -1181,6 +1172,55 @@ public final class FleetSuggester {
     return FleetAddGroupBy.newBuilder().setKey(keyId).setPillKey(pillKey(index, keyId)).build();
   }
 
+  private static final ImmutableSet<String> MULTI_VALUE_KEYS =
+      ImmutableSet.of(
+          DeviceKeys.TYPE.id(),
+          DeviceKeys.PREFIX_DEVICE_FIELD + "owner",
+          DeviceKeys.DRIVER.id(),
+          DeviceKeys.DECORATOR.id(),
+          DeviceKeys.PREFIX_DEVICE_FIELD + "executor",
+          DeviceKeys.OS.id(),
+          DeviceKeys.MODEL.id(),
+          DeviceKeys.SDK_VERSION.id(),
+          DeviceKeys.SOFTWARE_VERSION.id(),
+          HostKeys.PREFIX_HOST_FIELD + "lab_type");
+
+  private static final ImmutableSet<String> PLAIN_VALUE_KEYS =
+      ImmutableSet.of(
+          DeviceKeys.UUID.id(),
+          DeviceKeys.PREFIX_DIMENSION + "uuid",
+          DeviceKeys.PREFIX_DIMENSION + "id",
+          DeviceKeys.PREFIX_DIMENSION + "serial",
+          DeviceKeys.PREFIX_DIMENSION + "control_id",
+          DeviceKeys.PREFIX_DIMENSION + "mac_address",
+          DeviceKeys.PREFIX_DIMENSION + "bluetooth_mac_address",
+          DeviceKeys.PREFIX_DIMENSION + "soc_id",
+          DeviceKeys.PREFIX_DIMENSION + "network_address",
+          DeviceKeys.PREFIX_DIMENSION + "gservices_android_id",
+          DeviceKeys.PREFIX_DIMENSION + "iccid",
+          DeviceKeys.PREFIX_DIMENSION + "iccids",
+          DeviceKeys.PREFIX_DIMENSION + "imei",
+          DeviceKeys.PREFIX_DIMENSION + "ecid",
+          DeviceKeys.PREFIX_DIMENSION + "wifi_address",
+          DeviceKeys.PREFIX_DIMENSION + "testbed_name");
+
+  private static final ImmutableSet<String> IDENTIFIER_KEYS =
+      ImmutableSet.<String>builder()
+          .addAll(PLAIN_VALUE_KEYS)
+          .add(HostKeys.HOST_NAME.id())
+          .add(HostKeys.HOST_IP.id())
+          .build();
+
+  private static final ImmutableSet<String> PLURAL_DISPLAY_KEYS =
+      ImmutableSet.of(
+          DeviceKeys.PREFIX_DEVICE_FIELD + "owner",
+          DeviceKeys.DRIVER.id(),
+          DeviceKeys.DECORATOR.id(),
+          DeviceKeys.PREFIX_DEVICE_FIELD + "executor");
+
+  private static final ImmutableSet<String> VALUE_DISPLAY_KEYS =
+      ImmutableSet.of(HostKeys.PREFIX_HOST_FIELD + "ats_controller");
+
   private static FleetFilterChipMetadata metadata(FleetIndex index, String keyId) {
     return FleetFilterChipMetadata.newBuilder()
         .setKeyDisplayName(displayName(index, keyId))
@@ -1221,10 +1261,10 @@ public final class FleetSuggester {
 
   private static String pillKey(FleetIndex index, String keyId) {
     String label = displayName(index, keyId);
-    if (keyId.startsWith(DIM_PREFIX) && label.startsWith(DIM_DISPLAY_PREFIX)) {
+    if (keyId.startsWith(DeviceKeys.PREFIX_DIMENSION) && label.startsWith(DIM_DISPLAY_PREFIX)) {
       return label.substring(DIM_DISPLAY_PREFIX.length());
     }
-    if (keyId.startsWith(PROP_PREFIX) && label.startsWith(PROP_DISPLAY_PREFIX)) {
+    if (keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY) && label.startsWith(PROP_DISPLAY_PREFIX)) {
       return "Host " + label.substring(PROP_DISPLAY_PREFIX.length());
     }
     return label;
@@ -1440,43 +1480,67 @@ public final class FleetSuggester {
   private static ImmutableMap<String, ImmutableList<String>> buildAliasMap() {
     SetMultimap<String, String> map =
         MultimapBuilder.linkedHashKeys().linkedHashSetValues().build();
-    addAliases(map, FIELD_UUID, "uuid", "id", "device id", "device uuid");
-    addAliases(map, FIELD_TYPE, "type(s)", "device type(s)");
-    addAliases(map, FIELD_STATUS, "status", "device status");
-    addAliases(map, FIELD_OWNER, "owner(s)", "device owner(s)");
-    addAliases(
-        map, "field::driver", "driver(s)", "supported driver(s)", "device supported driver(s)");
+    addAliases(map, DeviceKeys.UUID.id(), "uuid", "id", "device id", "device uuid");
+    addAliases(map, DeviceKeys.TYPE.id(), "type(s)", "device type(s)");
+    addAliases(map, DeviceKeys.STATUS.id(), "status", "device status");
+    addAliases(map, DeviceKeys.PREFIX_DEVICE_FIELD + "owner", "owner(s)", "device owner(s)");
     addAliases(
         map,
-        "field::decorator",
+        DeviceKeys.DRIVER.id(),
+        "driver(s)",
+        "supported driver(s)",
+        "device supported driver(s)");
+    addAliases(
+        map,
+        DeviceKeys.DECORATOR.id(),
         "decorator(s)",
         "supported decorator(s)",
         "device supported decorator(s)");
-    addAliases(map, "field::executor", "executor(s)", "device executor(s)");
-    addAliases(map, "dim::os", "os", "device os");
-    addAliases(map, "dim::model", "model", "device model");
-    addAliases(map, "dim::sdk_version", "sdk version", "version");
-    addAliases(map, "dim::software_version", "software version", "version");
-    addAliases(map, "dim::device_form", "form", "device form");
-    addAliases(map, "dim::quarantined", "quarantine", "quarantined");
-    addAliases(map, "dim::device_class_name", "device class", "class", "device class name");
-    addAliases(map, "dim::manufacturer", "manufacturer", "make", "brand");
     addAliases(
-        map, "config::wifi_ssid", "wifi", "wi-fi", "ssid", "wifi ssid", "wi-fi ssid", "network");
-    addAliases(map, "host::host_name", "host name", "hostname", "host");
-    addAliases(map, "host::host_ip", "host ip", "ip");
-    addAliases(map, "host::host_os", "host os");
-    addAliases(map, "host::lab_type", "lab type");
-    addAliases(map, "host::connectivity", "connectivity", "lab server connectivity");
-    addAliases(map, "host::lab_server_activity", "activity", "lab server activity");
-    addAliases(map, "host::daemon_status", "daemon", "daemon status", "daemon server status");
-    addAliases(map, "host::release_status", "release status", "release");
-    addAliases(map, "host::lab_server_version", "lab server version");
-    addAliases(map, "host::release_type", "release type", "host release type");
-    addAliases(map, "host::ats_controller", "controller", "ats controller", "ats lab");
+        map, DeviceKeys.PREFIX_DEVICE_FIELD + "executor", "executor(s)", "device executor(s)");
+    addAliases(map, DeviceKeys.OS.id(), "os", "device os");
+    addAliases(map, DeviceKeys.MODEL.id(), "model", "device model");
+    addAliases(map, DeviceKeys.SDK_VERSION.id(), "sdk version", "version");
+    addAliases(map, DeviceKeys.SOFTWARE_VERSION.id(), "software version", "version");
+    addAliases(map, DeviceKeys.DEVICE_FORM.id(), "form", "device form");
+    addAliases(map, DeviceKeys.PREFIX_DEVICE_FIELD + "quarantined", "quarantine", "quarantined");
+    addAliases(
+        map, DeviceKeys.DEVICE_CLASS_NAME.id(), "device class", "class", "device class name");
+    addAliases(map, DeviceKeys.MANUFACTURER.id(), "manufacturer", "make", "brand");
+    addAliases(
+        map,
+        AtsDeviceKeys.WIFI_SSID.id(),
+        "wifi",
+        "wi-fi",
+        "ssid",
+        "wifi ssid",
+        "wi-fi ssid",
+        "network");
+    addAliases(map, HostKeys.HOST_NAME.id(), "host name", "hostname", "host");
+    addAliases(map, HostKeys.HOST_IP.id(), "host ip", "ip");
+    addAliases(map, HostKeys.HOST_OS.id(), "host os");
+    addAliases(map, HostKeys.PREFIX_HOST_FIELD + "lab_type", "lab type");
+    addAliases(map, HostKeys.CONNECTIVITY.id(), "connectivity", "lab server connectivity");
+    addAliases(map, "host_field::lab_server_activity", "activity", "lab server activity");
+    addAliases(
+        map,
+        HostKeys.PREFIX_HOST_FIELD + "daemon_status",
+        "daemon",
+        "daemon status",
+        "daemon server status");
+    addAliases(map, HostKeys.PREFIX_HOST_FIELD + "release_status", "release status", "release");
+    addAliases(map, HostKeys.LAB_SERVER_VERSION.id(), "lab server version");
+    addAliases(
+        map, HostKeys.PREFIX_HOST_FIELD + "release_type", "release type", "host release type");
+    addAliases(
+        map,
+        HostKeys.PREFIX_HOST_FIELD + "ats_controller",
+        "controller",
+        "ats controller",
+        "ats lab");
     // Host device-count aliases. host::device_count is a host-only key, absent from the device
     // index, so these resolve to nothing under device search and only take effect for host search.
-    addAliases(map, HOST_DEVICE_COUNT, "device count", "device_count", "devices");
+    addAliases(map, HostKeys.DEVICE_COUNT.id(), "device count", "device_count", "devices");
 
     ImmutableMap.Builder<String, ImmutableList<String>> built = ImmutableMap.builder();
     for (Map.Entry<String, Collection<String>> entry : map.asMap().entrySet()) {
