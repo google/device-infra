@@ -79,7 +79,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
-import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -115,7 +114,7 @@ public final class SessionRequestHandlerUtilTest {
   @Bind @Mock private AtsMasterUtil atsMasterUtil;
   @Bind @Mock private DeviceDetailsRetriever deviceDetailsRetriever;
 
-  @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
+  private SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
   private final TestPlanFilter testPlanFilter =
       TestPlanFilter.create(
@@ -133,15 +132,16 @@ public final class SessionRequestHandlerUtilTest {
     sessionGenDir = folder.newFolder("session_gen_dir").toPath();
     sessionTempDir = folder.newFolder("session_temp_dir").toPath();
 
-    Guice.createInjector(
-            BoundFieldModule.of(this),
-            new AbstractModule() {
-              @Override
-              protected void configure() {
-                bind(LocalDeviceUtil.class).to(LocalDeviceUtilImpl.class);
-              }
-            })
-        .injectMembers(this);
+    sessionRequestHandlerUtil =
+        Guice.createInjector(
+                BoundFieldModule.of(this),
+                new AbstractModule() {
+                  @Override
+                  protected void configure() {
+                    bind(LocalDeviceUtil.class).to(LocalDeviceUtilImpl.class);
+                  }
+                })
+            .getInstance(SessionRequestHandlerUtil.class);
 
     when(testPlanParser.parseFilters(any(), anyString(), anyString())).thenReturn(testPlanFilter);
     when(atsMasterUtil.queryAndroidDevicesFromMaster())
@@ -279,20 +279,7 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void initializeJobConfig_atsServerSpecifyOneDevice_createJobWithThatDevice()
       throws Exception {
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfoUtil.buildAndValidate(
-            defaultSessionRequestInfoBuilder()
-                .setIsAtsServerRequest(true)
-                .addAllDeviceSerials(ImmutableList.of("device_id_1")));
-    ImmutableList<SubDeviceSpec> subDeviceSpecs =
-        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
-            sessionRequestInfo,
-            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
-    JobConfig jobConfig =
-        sessionRequestHandlerUtil.initializeJobConfig(
-            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
-    assertThat(jobConfig.getDevice().getSubDeviceSpecList())
-        .containsExactly(subDeviceSpecWithDimension("uuid", "device_id_1"));
+    checkInitializeJobConfigWithOneDevice();
   }
 
   @Test
@@ -323,7 +310,24 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
         .containsExactly(subDeviceSpecWithDimension("uuid", "device_id_1"));
 
-    initializeJobConfig_atsServerSpecifyOneDevice_createJobWithThatDevice();
+    checkInitializeJobConfigWithOneDevice();
+  }
+
+  private void checkInitializeJobConfigWithOneDevice() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .setIsAtsServerRequest(true)
+                .addAllDeviceSerials(ImmutableList.of("device_id_1")));
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo,
+            !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
+    JobConfig jobConfig =
+        sessionRequestHandlerUtil.initializeJobConfig(
+            sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
+    assertThat(jobConfig.getDevice().getSubDeviceSpecList())
+        .containsExactly(subDeviceSpecWithDimension("uuid", "device_id_1"));
   }
 
   @Test
