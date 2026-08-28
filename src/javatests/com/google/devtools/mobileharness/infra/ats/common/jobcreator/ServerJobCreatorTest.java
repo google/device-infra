@@ -396,7 +396,7 @@ public final class ServerJobCreatorTest {
             any());
 
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(6);
+    assertThat(driverParamsMap).hasSize(7);
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
@@ -408,7 +408,9 @@ public final class ServerJobCreatorTest {
             "prev_session_xts_test_plan",
             "cts",
             "xts_test_plan_file",
-            "ats-file-server::/public_dir/session_session_id/command.xml");
+            "ats-file-server::/public_dir/session_session_id/command.xml",
+            "run_command_args",
+            "--skip-device-info true");
     assertThat(driverParamsMap.get("subplan_xml")).startsWith("ats-file-server::");
   }
 
@@ -463,7 +465,7 @@ public final class ServerJobCreatorTest {
             eq(MOCK_SUB_DEVICE_SPEC_LIST),
             any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(6);
+    assertThat(driverParamsMap).hasSize(7);
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
@@ -475,7 +477,9 @@ public final class ServerJobCreatorTest {
             "prev_session_xts_test_plan",
             "cts",
             "xts_test_plan_file",
-            publicDir + "/session_session_id/command.xml");
+            publicDir + "/session_session_id/command.xml",
+            "run_command_args",
+            "--skip-device-info true");
     assertThat(driverParamsMap.get("subplan_xml"))
         .startsWith(Path.of(xtsRootDir).getParent().toString());
   }
@@ -526,7 +530,7 @@ public final class ServerJobCreatorTest {
             eq(MOCK_SUB_DEVICE_SPEC_LIST),
             any());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(6);
+    assertThat(driverParamsMap).hasSize(7);
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
@@ -538,7 +542,9 @@ public final class ServerJobCreatorTest {
             "prev_session_xts_test_plan",
             "cts",
             "xts_test_plan_file",
-            publicDir + "/session_session_id/command.xml");
+            publicDir + "/session_session_id/command.xml",
+            "run_command_args",
+            "--skip-device-info true");
     assertThat(driverParamsMap.get("subplan_xml"))
         .startsWith(Path.of(xtsRootDir).getParent().toString());
   }

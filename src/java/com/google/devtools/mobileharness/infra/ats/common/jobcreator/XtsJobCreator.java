@@ -215,7 +215,7 @@ public abstract class XtsJobCreator {
     driverParams.put("xts_type", xtsType);
     driverParams.put("xts_test_plan", testPlan);
     extraJobProperties.put(Job.XTS_TEST_PLAN, testPlan);
-    boolean prevSessionSkipDeviceInfo = false;
+    boolean shouldSkipDeviceInfoForRetry = false;
     boolean useTfRetry =
         SessionHandlerHelper.useTfRetry(
             sessionRequestInfo.getIsAtsServerRequest(),
@@ -238,8 +238,8 @@ public abstract class XtsJobCreator {
         Path runRetryTfSubPlanXmlFile =
             prepareRunRetryTfSubPlanXmlFile(sessionRequestInfo, runRetryTfSubPlan);
         driverParams.put("subplan_xml", runRetryTfSubPlanXmlFile.toAbsolutePath().toString());
-        prevSessionSkipDeviceInfo =
-            runRetryTfSubPlan.getPreviousSessionDeviceBuildFingerprint().orElse("").isEmpty();
+        shouldSkipDeviceInfoForRetry =
+            !runRetryTfSubPlan.getPreviousSessionDeviceBuildFingerprint().orElse("").isEmpty();
       }
     } else if (sessionRequestInfo.hasSubPlanName() && subPlanPath != null && subPlan != null) {
       Path tfSubPlan =
@@ -286,7 +286,7 @@ public abstract class XtsJobCreator {
                     sessionRequestInfo.getEnableDefaultLogs() ? "true" : "false"))
             : Optional.empty();
     Optional<String> skipDeviceInfoArg =
-        prevSessionSkipDeviceInfo ? Optional.of("--skip-device-info true") : Optional.empty();
+        shouldSkipDeviceInfoForRetry ? Optional.of("--skip-device-info true") : Optional.empty();
     if (sessionRequestInfo.hasSkipDeviceInfo()) {
       skipDeviceInfoArg =
           Optional.of(

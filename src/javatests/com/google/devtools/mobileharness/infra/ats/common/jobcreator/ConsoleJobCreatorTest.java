@@ -501,6 +501,57 @@ public final class ConsoleJobCreatorTest {
             "xts_type",
             "cts",
             "run_command_args",
+            "--skip-device-info true --enable-default-logs false",
+            "xts_root_dir",
+            xtsRootDir.getAbsolutePath(),
+            "xts_test_plan",
+            "retry",
+            "prev_session_xts_test_plan",
+            "cts");
+    assertThat(driverParamsMap.get("subplan_xml")).startsWith(xtsRootDir.getAbsolutePath());
+  }
+
+  @Test
+  public void
+      createXtsTradefedTestJob_retryWithoutPrevSessionDeviceBuildFingerprint_doesNotSkipDeviceInfo()
+          throws Exception {
+    SubPlan subPlan = new SubPlan();
+    subPlan.setPreviousSessionXtsTestPlan("cts");
+    // No previous session device build fingerprint set.
+    subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
+    File xtsRootDir = folder.newFolder("xts_root_dir_no_fp");
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
+            .setTestPlan("retry")
+            .setCommandLineArgs("retry --retry 0")
+            .setXtsType("cts")
+            .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .setRetrySessionIndex(0)
+            .setEnableDefaultLogs(false);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
+    @SuppressWarnings("unchecked") // safe by specification
+    ArgumentCaptor<Map<String, String>> driverParamsCaptor = ArgumentCaptor.forClass(Map.class);
+
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
+        .thenReturn(JobConfig.getDefaultInstance());
+    when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
+    doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
+
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
+
+    assertThat(tradefedJobInfoList).hasSize(1);
+    verify(sessionRequestHandlerUtil)
+        .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture(), any(), any());
+
+    Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
+    assertThat(driverParamsMap).hasSize(6);
+    assertThat(driverParamsMap)
+        .containsAtLeast(
+            "xts_type",
+            "cts",
+            "run_command_args",
             "--enable-default-logs false",
             "xts_root_dir",
             xtsRootDir.getAbsolutePath(),
@@ -562,7 +613,7 @@ public final class ConsoleJobCreatorTest {
             "xts_type",
             "cts",
             "run_command_args",
-            "--enable-default-logs false",
+            "--skip-device-info true --enable-default-logs false",
             "xts_root_dir",
             xtsRootDir.getAbsolutePath(),
             "xts_test_plan",
