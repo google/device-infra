@@ -16,29 +16,11 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.CONFIG_WIFI_SSID;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.DIM_QUARANTINED;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_DECORATOR;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_DRIVER;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_EXECUTOR;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_OWNER;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_STATUS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_TYPE;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.FIELD_UUID;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_ATS_CONTROLLER;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_CONNECTIVITY;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DAEMON_STATUS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_DEVICE_COUNT;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_IP;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_SERVER_VERSION;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_LAB_TYPE;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_NAME;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_OS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_STATUS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys.HOST_RELEASE_TYPE;
-
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 
 /**
  * The shared, deployment-independent core of the suggester key ranking: the global tier sets plus
@@ -47,26 +29,26 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity
  * <p>Every curation impl delegates its {@link ScenarioCuration#keyPriority} to {@link
  * #priority(String, Scenario)}, passing the {@link Scenario} it represents. The scenario, not the
  * {@link com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet}, drives the rules,
- * because ats-one and 1p share the {@code FLEET_SELF} fleet and differ only by build. This shared
- * helper cannot know the build, so the impl (which does) chooses the scenario and keeps the ats-one
- * versus 1p distinction out of any fleet switch.
+ * because ats and internal share the {@code FLEET_SELF} fleet and differ only by build. This shared
+ * helper cannot know the build, so the impl (which does) chooses the scenario and keeps the ats
+ * versus internal distinction out of any fleet switch.
  */
 public final class FleetKeyPriority {
 
   private FleetKeyPriority() {}
 
   /**
-   * The deployment a curation represents. {@link #ONE_P} and {@link #ATS_ONE} both map to {@code
+   * The deployment a curation represents. {@link #INTERNAL} and {@link #ATS} both map to {@code
    * FLEET_SELF} but differ by build, so the impl passes the right one rather than deriving it from
    * the fleet enum.
    */
   public enum Scenario {
     /** 1p (MH master), internal build. */
-    ONE_P,
-    /** ats-all: the aggregated view across all partner ATS controllers, internal build. */
-    ATS_ALL,
-    /** ats-one: a single local ATS controller, OSS build. */
-    ATS_ONE
+    INTERNAL,
+    /** partner-ats: the aggregated view across all partner ATS controllers, internal build. */
+    PARTNER_ATS,
+    /** ats: a single local ATS controller, OSS build. */
+    ATS
   }
 
   /**
@@ -75,19 +57,19 @@ public final class FleetKeyPriority {
    */
   public static final ImmutableSet<String> KEY_TIER1 =
       ImmutableSet.of(
-          FIELD_UUID,
-          FIELD_STATUS,
-          FIELD_TYPE,
-          "dimension::model",
-          "dimension::os",
-          "dimension::sdk_version",
-          HOST_NAME,
-          "dimension::device_class_name",
-          "dimension::manufacturer",
-          FIELD_OWNER,
-          DIM_QUARANTINED,
-          HOST_LAB_TYPE,
-          HOST_RELEASE_STATUS);
+          DeviceKeys.UUID.id(),
+          DeviceKeys.STATUS.id(),
+          DeviceKeys.TYPE.id(),
+          DeviceKeys.MODEL.id(),
+          DeviceKeys.OS.id(),
+          DeviceKeys.SDK_VERSION.id(),
+          HostKeys.HOST_NAME.id(),
+          DeviceKeys.DEVICE_CLASS_NAME.id(),
+          DeviceKeys.MANUFACTURER.id(),
+          DeviceKeys.PREFIX_DEVICE_FIELD + "owner",
+          DeviceKeys.PREFIX_DEVICE_FIELD + "quarantined",
+          HostKeys.PREFIX_HOST_FIELD + "lab_type",
+          HostKeys.PREFIX_HOST_FIELD + "release_status");
 
   /**
    * The secondary device keys: useful but ranked below tier 1. These are the finer-grained lab,
@@ -95,18 +77,18 @@ public final class FleetKeyPriority {
    */
   public static final ImmutableSet<String> KEY_TIER2 =
       ImmutableSet.of(
-          FIELD_DRIVER,
-          FIELD_DECORATOR,
-          HOST_IP,
-          HOST_OS,
-          HOST_CONNECTIVITY,
-          HOST_LAB_SERVER_VERSION,
-          FIELD_EXECUTOR,
-          "dimension::software_version",
-          "dimension::device_form",
+          DeviceKeys.DRIVER.id(),
+          DeviceKeys.DECORATOR.id(),
+          HostKeys.HOST_IP.id(),
+          HostKeys.HOST_OS.id(),
+          HostKeys.CONNECTIVITY.id(),
+          HostKeys.LAB_SERVER_VERSION.id(),
+          DeviceKeys.PREFIX_DEVICE_FIELD + "executor",
+          DeviceKeys.SOFTWARE_VERSION.id(),
+          DeviceKeys.DEVICE_FORM.id(),
           "host_field::lab_server_activity",
-          HOST_DAEMON_STATUS,
-          HOST_RELEASE_TYPE);
+          HostKeys.PREFIX_HOST_FIELD + "daemon_status",
+          HostKeys.PREFIX_HOST_FIELD + "release_type");
 
   /**
    * The most important host keys: always ranked highest for the host entity. Ported from the
@@ -114,13 +96,13 @@ public final class FleetKeyPriority {
    */
   public static final ImmutableSet<String> HOST_KEY_TIER1 =
       ImmutableSet.of(
-          HOST_NAME,
-          HOST_CONNECTIVITY,
-          HOST_DEVICE_COUNT,
-          HOST_OS,
-          HOST_LAB_SERVER_VERSION,
-          HOST_LAB_TYPE,
-          HOST_RELEASE_STATUS,
+          HostKeys.HOST_NAME.id(),
+          HostKeys.CONNECTIVITY.id(),
+          HostKeys.DEVICE_COUNT.id(),
+          HostKeys.HOST_OS.id(),
+          HostKeys.LAB_SERVER_VERSION.id(),
+          HostKeys.PREFIX_HOST_FIELD + "lab_type",
+          HostKeys.PREFIX_HOST_FIELD + "release_status",
           "host_field::lab_server_activity");
 
   /**
@@ -128,7 +110,10 @@ public final class FleetKeyPriority {
    * {@code HOST_KEY_TIER2}.
    */
   public static final ImmutableSet<String> HOST_KEY_TIER2 =
-      ImmutableSet.of(HOST_IP, HOST_RELEASE_TYPE, HOST_DAEMON_STATUS);
+      ImmutableSet.of(
+          HostKeys.HOST_IP.id(),
+          HostKeys.PREFIX_HOST_FIELD + "release_type",
+          HostKeys.PREFIX_HOST_FIELD + "daemon_status");
 
   /**
    * The suggester priority for {@code keyId} in {@code scenario}: higher means offered earlier.
@@ -136,28 +121,28 @@ public final class FleetKeyPriority {
    * <p>The rules mirror the prototype {@code _key_priority} for the device entity:
    *
    * <ul>
-   *   <li>{@code host::ats_controller}: 3 in ats-all (its defining axis) else 1.
-   *   <li>{@code config::wifi_ssid}: 3 in 1p and ats-one (where WiFi is curated) else 1.
+   *   <li>{@code host::ats_controller}: 3 in partner-ats (its defining axis) else 1.
+   *   <li>{@code config::wifi_ssid}: 3 in internal and ats (where WiFi is curated) else 1.
    *   <li>a tier 1 key: 3.
-   *   <li>a tier 2 key: 1 in ats-one (which keeps its list short) else 2.
-   *   <li>any other key (a raw discovered dimension or property): 0 in ats-all and ats-one (kept
+   *   <li>a tier 2 key: 1 in ats (which keeps its list short) else 2.
+   *   <li>any other key (a raw discovered dimension or property): 0 in partner-ats and ats (kept
    *       out of the way) else 1.
    * </ul>
    */
   public static int priority(String keyId, Scenario scenario) {
-    if (keyId.equals(HOST_ATS_CONTROLLER)) {
-      return scenario == Scenario.ATS_ALL ? 3 : 1;
+    if (keyId.equals(HostKeys.PREFIX_HOST_FIELD + "ats_controller")) {
+      return scenario == Scenario.PARTNER_ATS ? 3 : 1;
     }
-    if (keyId.equals(CONFIG_WIFI_SSID)) {
-      return scenario != Scenario.ATS_ALL ? 3 : 1;
+    if (keyId.equals(AtsDeviceKeys.WIFI_SSID.id())) {
+      return scenario != Scenario.PARTNER_ATS ? 3 : 1;
     }
     if (KEY_TIER1.contains(keyId)) {
       return 3;
     }
     if (KEY_TIER2.contains(keyId)) {
-      return scenario == Scenario.ATS_ONE ? 1 : 2;
+      return scenario == Scenario.ATS ? 1 : 2;
     }
-    return scenario == Scenario.ONE_P ? 1 : 0;
+    return scenario == Scenario.INTERNAL ? 1 : 0;
   }
 
   /**
@@ -169,25 +154,25 @@ public final class FleetKeyPriority {
    * {@code _key_priority} host branch:
    *
    * <ul>
-   *   <li>{@code host::ats_controller}: 3 in ats-all (its defining axis) else 1.
+   *   <li>{@code host::ats_controller}: 3 in partner-ats (its defining axis) else 1.
    *   <li>a host tier 1 key: 3.
-   *   <li>a host tier 2 key: 1 in ats-one (which keeps its list short) else 2.
-   *   <li>any other key: 1 in 1p else 0 (kept out of the way in both ATS scenarios).
+   *   <li>a host tier 2 key: 1 in ats (which keeps its list short) else 2.
+   *   <li>any other key: 1 in internal else 0 (kept out of the way in both ATS scenarios).
    * </ul>
    */
   public static int priority(String keyId, Scenario scenario, SearchEntity entity) {
     if (entity != SearchEntity.SEARCH_ENTITY_HOST) {
       return priority(keyId, scenario);
     }
-    if (keyId.equals(HOST_ATS_CONTROLLER)) {
-      return scenario == Scenario.ATS_ALL ? 3 : 1;
+    if (keyId.equals(HostKeys.PREFIX_HOST_FIELD + "ats_controller")) {
+      return scenario == Scenario.PARTNER_ATS ? 3 : 1;
     }
     if (HOST_KEY_TIER1.contains(keyId)) {
       return 3;
     }
     if (HOST_KEY_TIER2.contains(keyId)) {
-      return scenario == Scenario.ATS_ONE ? 1 : 2;
+      return scenario == Scenario.ATS ? 1 : 2;
     }
-    return scenario == Scenario.ONE_P ? 1 : 0;
+    return scenario == Scenario.INTERNAL ? 1 : 0;
   }
 }

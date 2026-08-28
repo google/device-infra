@@ -23,9 +23,9 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.Column;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetUtilization;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSearchKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -34,12 +34,15 @@ import javax.annotation.Nullable;
  * The host projection of a {@link FleetSnapshot} for the query classes.
  *
  * <p>Records are the snapshot's hosts, identified by host name. The value projection delegates to
- * {@link HostRecord#normalizedValues} (lowercased sets) and {@link HostCellMapper} (display values,
- * headers, typed cells), so it mirrors exactly what the host index builder recorded. Utilization is
- * a device concept, so a host group carries no utilization breakdown and {@link #utilization}
- * returns empty.
+ * {@link com.google.devtools.mobileharness.fe.v6.service.search.index.HostRecord#normalizedValues}
+ * (lowercased sets) and {@link HostCellMapper} (display values, headers, typed cells), so it
+ * mirrors exactly what the host index builder recorded. Utilization is a device concept, so a host
+ * group carries no utilization breakdown and {@link #utilization} returns empty.
  */
 public final class HostCorpus implements SearchCorpus {
+
+  private static final ImmutableSet<String> HOST_PLAIN_VALUE_KEYS =
+      ImmutableSet.of(HostKeys.HOST_NAME.id(), HostKeys.DEVICE_COUNT.id());
 
   private final FleetSnapshot snapshot;
   private final Postings postings;
@@ -80,12 +83,12 @@ public final class HostCorpus implements SearchCorpus {
 
   @Override
   public String identifierKey() {
-    return FleetSearchKeys.HOST_NAME;
+    return HostKeys.HOST_NAME.id();
   }
 
   @Override
   public boolean plainValueKey(String keyId) {
-    return FleetSearchKeys.HOST_PLAIN_VALUE_KEYS.contains(keyId);
+    return HOST_PLAIN_VALUE_KEYS.contains(keyId);
   }
 
   @Override

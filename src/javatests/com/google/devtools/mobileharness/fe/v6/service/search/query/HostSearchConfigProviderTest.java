@@ -58,7 +58,7 @@ public final class HostSearchConfigProviderTest {
   private final FleetSnapshot snapshot =
       Guice.createInjector().getInstance(FleetIndexBuilder.class).build(fleet(), BUILD_TIME);
   private final FleetSearchConfigProvider provider = new FleetSearchConfigProvider();
-  private final AtsOneCuration curation = new AtsOneCuration();
+  private final AtsCuration curation = new AtsCuration();
 
   @Test
   public void host_recommendedColumnsAreAtsOneHostList() {

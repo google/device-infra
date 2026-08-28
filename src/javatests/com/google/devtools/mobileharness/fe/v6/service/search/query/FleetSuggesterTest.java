@@ -68,13 +68,13 @@ public final class FleetSuggesterTest {
 
   // FleetSuggester needs the per-fleet ScenarioCuration map, which the production MapBinder wires
   // at activation. Construct it directly through the package-private @Inject constructor, binding
-  // the OSS ats-one curation under FLEET_SELF so its scenario key ranking drives the ordering
+  // the OSS ats curation under FLEET_SELF so its scenario key ranking drives the ordering
   // assertions below. FleetFilterEngine has a package-private @Inject constructor, so obtain it
   // through Guice.
   private final FleetSuggester suggester =
       new FleetSuggester(
           Guice.createInjector().getInstance(FleetFilterEngine.class),
-          ImmutableMap.of(Fleet.FLEET_SELF, new AtsOneCuration()));
+          ImmutableMap.of(Fleet.FLEET_SELF, new AtsCuration()));
 
   @Test
   public void valuePrefix_suggestsApplyFilterUnderMatchingKey() {

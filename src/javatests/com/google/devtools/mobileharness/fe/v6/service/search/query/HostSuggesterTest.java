@@ -66,14 +66,14 @@ public final class HostSuggesterTest {
   private final FleetSnapshot snapshot =
       Guice.createInjector().getInstance(FleetIndexBuilder.class).build(fleet(), BUILD_TIME);
   private final HostCorpus corpus =
-      new HostCorpus(snapshot, LazyPostings.forHosts(snapshot.hosts()), new AtsOneCuration());
+      new HostCorpus(snapshot, LazyPostings.forHosts(snapshot.hosts()), new AtsCuration());
 
-  // FleetSuggester needs the per-fleet ScenarioCuration map; bind the OSS ats-one curation under
+  // FleetSuggester needs the per-fleet ScenarioCuration map; bind the OSS ats curation under
   // FLEET_SELF so its host key ranking drives the ordering assertions below.
   private final FleetSuggester suggester =
       new FleetSuggester(
           Guice.createInjector().getInstance(FleetFilterEngine.class),
-          ImmutableMap.of(Fleet.FLEET_SELF, new AtsOneCuration()));
+          ImmutableMap.of(Fleet.FLEET_SELF, new AtsCuration()));
 
   @Test
   public void emptyQuery_returnsHostStarterKeysAsOpenPickers() {

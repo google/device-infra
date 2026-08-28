@@ -21,12 +21,12 @@ import com.google.inject.AbstractModule;
 import com.google.inject.multibindings.MapBinder;
 
 /**
- * Guice bindings for the OSS (ats-one) fleet scenario curation.
+ * Guice bindings for the OSS (ats) fleet scenario curation.
  *
  * <p>Binds the per-fleet {@link ScenarioCuration} map that promoted-key, suggester, and column
- * consumers read. The OSS build serves a single local ATS controller, so it binds only the ats-one
+ * consumers read. The OSS build serves a single local ATS controller, so it binds only the ats
  * curation under {@link Fleet#FLEET_SELF}. The internal build installs its own module that adds the
- * 1p ({@code FLEET_SELF}) and ats-all ({@code FLEET_ATS}) curations.
+ * internal ({@code FLEET_SELF}) and partner-ats ({@code FLEET_ATS}) curations.
  *
  * <p>This module is inert: it is not installed anywhere yet. The server installs it at activation,
  * alongside the promoted-key and suggester consumers that will read the map.
@@ -37,6 +37,6 @@ public final class ScenarioCurationModule extends AbstractModule {
   protected void configure() {
     MapBinder<Fleet, ScenarioCuration> curations =
         MapBinder.newMapBinder(binder(), Fleet.class, ScenarioCuration.class);
-    curations.addBinding(Fleet.FLEET_SELF).to(AtsOneCuration.class);
+    curations.addBinding(Fleet.FLEET_SELF).to(AtsCuration.class);
   }
 }
