@@ -23,6 +23,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.JavaVersion;
 import java.nio.file.Path;
@@ -79,7 +80,7 @@ public class XtsCommandUtil {
     if (useXtsJavaBinary(xtsType, xtsRootDir)) {
       return XtsDirUtil.getXtsJavaBinary(xtsRootDir, xtsType);
     } else {
-      return Path.of(systemUtil.getJavaBin());
+      return getFallbackJavaBinary();
     }
   }
 
@@ -98,9 +99,9 @@ public class XtsCommandUtil {
 
     try {
       JavaVersion xtsJavaVersion = systemUtil.getJavaVersion(xtsJavaBinary);
-      JavaVersion systemJavaVersion = systemUtil.getJavaVersion(Path.of(systemUtil.getJavaBin()));
+      JavaVersion fallbackJavaVersion = systemUtil.getJavaVersion(getFallbackJavaBinary());
 
-      return xtsJavaVersion.majorVersion() >= systemJavaVersion.majorVersion();
+      return xtsJavaVersion.majorVersion() >= fallbackJavaVersion.majorVersion();
     } catch (MobileHarnessException | InterruptedException e) {
       if (MoreThrowables.isInterruption(e)) {
         Thread.currentThread().interrupt();
@@ -110,5 +111,13 @@ public class XtsCommandUtil {
       logger.atWarning().withCause(e).log("Failed Java version check. Fallback to use XTS java.");
       return true;
     }
+  }
+
+  private Path getFallbackJavaBinary() {
+    String fallbackJavaBinary = Flags.tfFallbackJavaBinary.getNonNull();
+    if (!fallbackJavaBinary.isEmpty()) {
+      return Path.of(fallbackJavaBinary);
+    }
+    return Path.of(systemUtil.getJavaBin());
   }
 }

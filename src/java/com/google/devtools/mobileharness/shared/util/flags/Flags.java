@@ -1522,6 +1522,15 @@ public class Flags {
   public static final Flag<List<String>> testbedConfigPaths =
       Flag.stringList("/usr/local/google/mobileharness/testbeds");
 
+  @FlagSpec(
+      name = "tf_fallback_java_binary",
+      help =
+          "The fallback Java binary for Tradefed. When launching Tradefed, this binary is used"
+              + " when it is decided not to use the Java binary bundled in the xTS package. If"
+              + " empty (the default), the fallback Java binary will use SystemUtil.getJavaBin(),"
+              + " which is java in JAVA_HOME in most cases.")
+  public static final Flag<String> tfFallbackJavaBinary = Flag.value("");
+
   @FlagSpec(name = "tmp_dir_root", help = "The tmp Dir Root.")
   public static final Flag<String> tmpDirRoot = Flag.value(getTmpDirRootDefaultOss());
 
