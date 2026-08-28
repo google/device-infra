@@ -7,6 +7,7 @@ import (
 
 	log "github.com/golang/glog"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
+	"google.golang.org/grpc"
 )
 
 // Opts contains options for creating a new RBE client.
@@ -28,6 +29,8 @@ type Opts struct {
 	NoSecurity bool
 	// ProxyAddress is the address of the local caching proxy (optional).
 	ProxyAddress string
+	// DialOpts defines custom gRPC DialOptions to apply (e.g., client interceptors).
+	DialOpts []grpc.DialOption
 }
 
 // New creates a new RBE client with given options.
@@ -46,6 +49,7 @@ func New(ctx context.Context, clientOpts Opts) (*client.Client, error) {
 			Service:               clientOpts.ProxyAddress,
 			NoSecurity:            true, // Proxy is plaintext
 			MaxConcurrentRequests: client.DefaultMaxConcurrentRequests,
+			DialOpts:              clientOpts.DialOpts,
 		}, proxyOpts...)
 		if err == nil {
 			log.InfoContextf(ctx, "created CAS proxy client, took %s", time.Since(start))
@@ -66,6 +70,7 @@ func New(ctx context.Context, clientOpts Opts) (*client.Client, error) {
 		UseApplicationDefault: clientOpts.UseApplicationDefault,
 		NoSecurity:            clientOpts.NoSecurity,
 		MaxConcurrentRequests: client.DefaultMaxConcurrentRequests,
+		DialOpts:              clientOpts.DialOpts,
 	}, opts...)
 	log.InfoContextf(ctx, "created RBE client, took %s", time.Since(start))
 	return newClient, err

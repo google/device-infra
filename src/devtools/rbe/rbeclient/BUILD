@@ -27,6 +27,7 @@ go_library(
     ],
     importpath = "github.com/google/device-infra/src/devtools/rbe/rbeclient",
     deps = [
+        "@org_golang_google_grpc//:grpc",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/client",
         "@com_github_golang_glog//:glog",
     ],
