@@ -86,7 +86,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
   private static final ImmutableList<String> EXCLUDED_JAR_FILE_PATTERNS =
       ImmutableList.of("art-run-test.*", "art-gtest-jars.*");
   private static final ImmutableSet<String> DYNAMIC_JOB_TEST_DEPENDENCIES =
-      ImmutableSet.of("CtsPreconditions", "CtsDeviceInfo");
+      ImmutableSet.of("CtsPreconditions", "CtsDeviceInfo", "ReportIntegrityInfo");
 
   // Will remove these cases from MCTS.
   private static final ImmutableSet<String> STATIC_JOB_TEST_DEPENDENCIES =
