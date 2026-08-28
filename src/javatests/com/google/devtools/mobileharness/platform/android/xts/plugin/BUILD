@@ -36,6 +36,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:mobly_report_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemspec",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemstate:system_state_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:device_build_info",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:non_tradefed_report_generator_constants",

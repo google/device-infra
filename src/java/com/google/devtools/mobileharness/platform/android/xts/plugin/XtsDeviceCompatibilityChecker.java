@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.TestSuiteVersion;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
+import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.DeviceBuildInfo;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteVersionUtil;
@@ -51,12 +52,16 @@ public final class XtsDeviceCompatibilityChecker {
 
   private final AndroidAdbUtil androidAdbUtil;
   private final AndroidAdbInternalUtil androidAdbInternalUtil;
+  private final AndroidSystemSpecUtil androidSystemSpecUtil;
 
   @Inject
   XtsDeviceCompatibilityChecker(
-      AndroidAdbUtil androidAdbUtil, AndroidAdbInternalUtil androidAdbInternalUtil) {
+      AndroidAdbUtil androidAdbUtil,
+      AndroidAdbInternalUtil androidAdbInternalUtil,
+      AndroidSystemSpecUtil androidSystemSpecUtil) {
     this.androidAdbUtil = androidAdbUtil;
     this.androidAdbInternalUtil = androidAdbInternalUtil;
+    this.androidSystemSpecUtil = androidSystemSpecUtil;
   }
 
   @Subscribe
@@ -184,6 +189,20 @@ public final class XtsDeviceCompatibilityChecker {
     }
 
     try {
+      for (String serial : deviceSerials) {
+        if (shouldSkipDeviceBuildFingerprintSameCheck(serial)) {
+          testInfo
+              .log()
+              .atInfo()
+              .alsoTo(logger)
+              .log(
+                  "Device %s is exempt from build fingerprint sameness check, skipping for test"
+                      + " [%s]",
+                  serial, testInfo.locator().getName());
+          return;
+        }
+      }
+
       String deviceBuildFingerprint = getDeviceBuildFingerprint(deviceSerials.get(0));
       String deviceVendorBuildFingerprint = getDeviceVendorBuildFingerprint(deviceSerials.get(0));
       for (int i = 1; i < deviceSerials.size(); i++) {
@@ -230,6 +249,11 @@ public final class XtsDeviceCompatibilityChecker {
           AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_CHECK_DEVICE_BUILD_ERROR,
           e);
     }
+  }
+
+  private boolean shouldSkipDeviceBuildFingerprintSameCheck(String serial)
+      throws MobileHarnessException, InterruptedException {
+    return androidSystemSpecUtil.isWearableDevice(serial);
   }
 
   private void setSkipCollectingNonTfReports(JobInfo jobInfo) {

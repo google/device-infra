@@ -59,6 +59,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemspec",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:device_build_info",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_version_util",

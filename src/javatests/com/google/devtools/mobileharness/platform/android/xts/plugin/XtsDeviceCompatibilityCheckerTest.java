@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
+import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.DeviceBuildInfo;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
@@ -66,6 +67,7 @@ public final class XtsDeviceCompatibilityCheckerTest {
   @Mock private Api atInfo;
   @Mock private AndroidAdbUtil androidAdbUtil;
   @Mock private AndroidAdbInternalUtil androidAdbInternalUtil;
+  @Mock private AndroidSystemSpecUtil androidSystemSpecUtil;
   @Mock private LocalTestStartedEvent event;
   @Mock private Allocation allocation;
 
@@ -99,7 +101,8 @@ public final class XtsDeviceCompatibilityCheckerTest {
         .thenReturn("36");
 
     xtsDeviceCompatibilityChecker =
-        new XtsDeviceCompatibilityChecker(androidAdbUtil, androidAdbInternalUtil);
+        new XtsDeviceCompatibilityChecker(
+            androidAdbUtil, androidAdbInternalUtil, androidSystemSpecUtil);
     flags.set("enable_xts_device_compatibility_check", "true");
   }
 
@@ -269,6 +272,20 @@ public final class XtsDeviceCompatibilityCheckerTest {
                 .errorId())
         .isEqualTo(AndroidErrorId.XTS_DEVICE_COMPAT_CHECKER_DEVICE_BUILDS_NOT_THE_SAME);
     assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isTrue();
+  }
+
+  @Test
+  public void deviceBuildFingerprintsDifferent_watchDevice_skipChecking() throws Exception {
+    when(androidAdbUtil.getProperty(DEVICE_ID_1, DeviceBuildInfo.FINGERPRINT.getPropNames()))
+        .thenReturn("build_fingerprint1");
+    when(androidAdbUtil.getProperty(DEVICE_ID_2, DeviceBuildInfo.FINGERPRINT.getPropNames()))
+        .thenReturn("build_fingerprint2");
+    when(androidSystemSpecUtil.isWearableDevice(DEVICE_ID_2)).thenReturn(true);
+    properties.add(Job.IS_XTS_NON_TF_JOB, "true");
+
+    xtsDeviceCompatibilityChecker.onTestStarted(event);
+
+    assertThat(properties.getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)).isFalse();
   }
 
   @Test
