@@ -23,7 +23,6 @@ import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJav
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
@@ -31,7 +30,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -82,7 +80,6 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 /** A creator to create XTS tradefed jobs and non tradefed jobs. */
@@ -217,7 +214,6 @@ public abstract class XtsJobCreator {
     String testPlan = sessionRequestInfo.getTestPlan();
     Path xtsRootDir = Path.of(sessionRequestInfo.getXtsRootDir());
     String xtsType = sessionRequestInfo.getXtsType();
-    int shardCount = sessionRequestInfo.hasShardCount() ? sessionRequestInfo.getShardCount() : 0;
     ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties = ImmutableMap.builder();
 
     Path subPlanPath = null;
@@ -305,42 +301,6 @@ public abstract class XtsJobCreator {
 
     injectEnvSpecificProperties(sessionRequestInfo, driverParams, subDeviceSpecList.size());
 
-    ImmutableList<String> shardCountArg =
-        shardCount > 0
-            ? ImmutableList.of(String.format("--shard-count %s", shardCount))
-            : ImmutableList.of();
-
-    Optional<String> testNameArg =
-        sessionRequestInfo.hasTestName()
-            ? Optional.of(String.format("-t \"%s\"", sessionRequestInfo.getTestName()))
-            : Optional.empty();
-    Optional<String> reportSystemCheckersArg =
-        sessionRequestInfo.getReportSystemCheckers()
-            ? Optional.of("--report-system-checkers")
-            : Optional.empty();
-    Optional<String> enableDefaultLogsArg =
-        sessionRequestInfo.hasEnableDefaultLogs()
-            ? Optional.of(
-                String.format(
-                    "--enable-default-logs %s",
-                    sessionRequestInfo.getEnableDefaultLogs() ? "true" : "false"))
-            : Optional.empty();
-    Optional<String> skipDeviceInfoArg =
-        shouldSkipDeviceInfoForRetry ? Optional.of("--skip-device-info true") : Optional.empty();
-    if (sessionRequestInfo.hasSkipDeviceInfo()) {
-      skipDeviceInfoArg =
-          Optional.of(
-              String.format("--skip-device-info %s", sessionRequestInfo.getSkipDeviceInfo()));
-    }
-
-    // TODO Temporary solution to unblock app compat test post processing. This command
-    // does not recognize skipDeviceInfoArg flag, so remove from command args list.
-    // SessionRequestInfo still need this flag so that the result processing can ignore build
-    // fingerprint check.
-    if (testPlan.equals("csuite-app-crawl")) {
-      skipDeviceInfoArg = Optional.empty();
-    }
-
     ImmutableList.Builder<TradefedJobInfo> tradefedJobInfos = ImmutableList.builder();
     if (SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)) {
       // In MODULE sharding mode, generate shard command args mapped by target module name so that
@@ -375,110 +335,13 @@ public abstract class XtsJobCreator {
         tradefedJobInfos.add(TradefedJobInfo.of(jobConfig, ImmutableMap.copyOf(jobProps)));
       }
     } else {
-      ImmutableList<String> moduleFilters;
-      if (SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.getTestPlan())) {
-        if (useTfRetry) {
-          // For "run retry" command handled by TF, pass the original modules to TF
-          moduleFilters =
-              sessionRequestInfo.getModuleNamesList().stream()
-                  .map(module -> String.format("-m %s", module))
-                  .collect(toImmutableList());
-        } else {
-          // For "run retry" command handled by the console, the given modules have been processed
-          // when generating the subplan above, no need to pass these again to underneath TF
-          moduleFilters = ImmutableList.of();
-        }
-      } else {
-        moduleFilters =
-            sessionRequestInfo.getModuleNamesList().isEmpty()
-                ? ImmutableList.of()
-                : tfModules.stream()
-                    .map(module -> String.format("-m %s", module))
-                    .collect(toImmutableList());
-      }
       String sessionRequestInfoArgs =
-          Joiner.on(' ')
-              .join(
-                  Streams.concat(
-                          moduleFilters.stream(),
-                          testNameArg.stream(),
-                          shardCountArg.stream(),
-                          // For "run retry" command, the passed in include filters and exclude
-                          // filters are set in generated subplan, no need to set in TF command
-                          // again.
-                          // For "run with strict include filters" (--strict-include-filter set),
-                          // the include filters and exclude filters will be ignored.
-                          (!useTfRetry && SessionRequestHandlerUtil.isRunRetry(testPlan))
-                                  || !sessionRequestInfo.getStrictIncludeFiltersList().isEmpty()
-                              ? Stream.empty()
-                              : sessionRequestInfo.getIncludeFiltersList().stream()
-                                  .map(
-                                      includeFilter ->
-                                          String.format("--include-filter \"%s\"", includeFilter)),
-                          !useTfRetry && SessionRequestHandlerUtil.isRunRetry(testPlan)
-                              ? Stream.empty()
-                              : sessionRequestInfo.getStrictIncludeFiltersList().stream()
-                                  .map(
-                                      strictIncludeFilter ->
-                                          String.format(
-                                              "--strict-include-filter \"%s\"",
-                                              strictIncludeFilter)),
-                          (!useTfRetry && SessionRequestHandlerUtil.isRunRetry(testPlan))
-                                  || !sessionRequestInfo.getStrictIncludeFiltersList().isEmpty()
-                              ? Stream.empty()
-                              : sessionRequestInfo.getExcludeFiltersList().stream()
-                                  .map(
-                                      excludeFilter ->
-                                          String.format("--exclude-filter \"%s\"", excludeFilter)),
-                          sessionRequestInfo
-                              .getModuleMetadataIncludeFiltersMap()
-                              .entrySet()
-                              .stream()
-                              .flatMap(
-                                  entry ->
-                                      entry.getValue().getValuesList().stream()
-                                          .map(
-                                              value ->
-                                                  String.format(
-                                                      "--module-metadata-include-filter \"%s\""
-                                                          + " \"%s\"",
-                                                      entry.getKey(), value))),
-                          sessionRequestInfo
-                              .getModuleMetadataExcludeFiltersMap()
-                              .entrySet()
-                              .stream()
-                              .flatMap(
-                                  entry ->
-                                      entry.getValue().getValuesList().stream()
-                                          .map(
-                                              value ->
-                                                  String.format(
-                                                      "--module-metadata-exclude-filter \"%s\""
-                                                          + " \"%s\"",
-                                                      entry.getKey(), value))),
-                          reportSystemCheckersArg.stream(),
-                          skipDeviceInfoArg.stream(),
-                          enableDefaultLogsArg.stream(),
-                          sessionRequestInfo.getEnableTokenSharding()
-                              ? Stream.of("--enable-token-sharding")
-                              : Stream.empty(),
-                          sessionRequestInfo.hasBusinessLogicUrl()
-                              ? Stream.of(
-                                  String.format(
-                                      "--business-logic-url %s",
-                                      sessionRequestInfo.getBusinessLogicUrl()))
-                              : Stream.empty(),
-                          sessionRequestInfo.getIgnoreBusinessLogicFailure()
-                              ? Stream.of("--ignore-business-logic-failure")
-                              : Stream.empty(),
-                          sessionRequestInfo.getModuleArgsList().stream()
-                              .map(arg -> arg.replace("\"", "\\\""))
-                              .map(arg -> String.format("--module-arg \"%s\"", arg)),
-                          sessionRequestInfo.getExtraArgsList().stream()
-                              .map(arg -> arg.replace("\\", "\\\\"))
-                              .map(arg -> arg.replace("\"", "\\\""))
-                              .map(arg -> arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
-                      .collect(toImmutableList()));
+          TradefedCommandArgsBuilder.builder()
+              .setSessionRequestInfo(sessionRequestInfo)
+              .setTfModules(tfModules)
+              .setUseTfRetry(useTfRetry)
+              .setShouldSkipDeviceInfoForRetry(shouldSkipDeviceInfoForRetry)
+              .build();
 
       Map<String, String> driverParamsCopy = new HashMap<>(driverParams);
       if (!sessionRequestInfoArgs.isEmpty()) {

@@ -31,6 +31,7 @@ java_library(
     ],
     deps = [
         ":module_sharding_args_generator",
+        ":tradefed_command_args_builder",
         "//src/devtools/mobileharness/infra/ats/common/proto:session_request_info_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -143,6 +144,17 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:shard_constants",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "tradefed_command_args_builder",
+    srcs = ["TradefedCommandArgsBuilder.java"],
+    deps = [
+        "//src/devtools/mobileharness/infra/ats/common/proto:session_request_info_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
 )

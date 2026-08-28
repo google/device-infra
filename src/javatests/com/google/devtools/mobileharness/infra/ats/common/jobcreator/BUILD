@@ -38,6 +38,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:console_job_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:module_sharding_args_generator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:server_job_creator",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:tradefed_command_args_builder",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:test_plan_parser",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/util:ats_server_session_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_constants",
