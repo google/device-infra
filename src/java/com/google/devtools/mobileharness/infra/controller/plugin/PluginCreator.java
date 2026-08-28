@@ -324,6 +324,7 @@ public class PluginCreator implements AutoCloseable {
         scanResult =
             new ClassGraph()
                 .overrideClassLoaders(classLoader)
+                .ignoreParentClassLoaders()
                 .enableAnnotationInfo() // module scanning is enabled by default
                 .ignoreClassVisibility()
                 .scan();
