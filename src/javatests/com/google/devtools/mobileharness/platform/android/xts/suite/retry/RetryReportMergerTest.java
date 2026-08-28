@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.suite.retry;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -25,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.BuildInfo;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger.MergedResult;
@@ -522,5 +524,70 @@ public final class RetryReportMergerTest {
                 .findFirst()
                 .orElse(""))
         .isEqualTo("extra_value");
+  }
+
+  @Test
+  public void mergeReports_retryReportHasNewModulesNotInPreviousReport_addsNewModules()
+      throws Exception {
+    Result prevReport =
+        Result.newBuilder()
+            .setBuild(BuildInfo.newBuilder().setBuildFingerprint("fingerprint_1").build())
+            .addModuleInfo(
+                Module.newBuilder()
+                    .setAbi("arm64-v8a")
+                    .setName("CtsNpuManagerMoblyTestCases")
+                    .setDone(true)
+                    .setPassed(0)
+                    .setFailedTests(3)
+                    .setIsNonTfModule(true)
+                    .build())
+            .build();
+    Result retryReport =
+        Result.newBuilder()
+            .setBuild(BuildInfo.newBuilder().setBuildFingerprint("fingerprint_1").build())
+            .addModuleInfo(
+                Module.newBuilder()
+                    .setAbi("arm64-v8a")
+                    .setName("CtsNpuManagerMoblyTestCases")
+                    .setDone(true)
+                    .setPassed(0)
+                    .setFailedTests(3)
+                    .setIsNonTfModule(true)
+                    .build())
+            .addModuleInfo(
+                Module.newBuilder()
+                    .setAbi("arm64-v8a")
+                    .setName("CtsAccelerationTestCases")
+                    .setDone(true)
+                    .setPassed(2)
+                    .setFailedTests(0)
+                    .setIsNonTfModule(false)
+                    .build())
+            .build();
+    when(previousResultLoader.loadPreviousResult(
+            RESULTS_DIR_PATH, 0, /* previousSessionResultDirName= */ null))
+        .thenReturn(prevReport);
+
+    SubPlan subPlan = new SubPlan();
+    subPlan.addIncludeFilter("arm64-v8a CtsAccelerationTestCases");
+    subPlan.addNonTfIncludeFilter("arm64-v8a CtsNpuManagerMoblyTestCases");
+    when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
+
+    MergedResult mergedResult =
+        retryReportMerger.mergeReports(
+            RESULTS_DIR_PATH,
+            0,
+            /* previousSessionResultDirName= */ null,
+            /* retryType= */ null,
+            retryReport,
+            /* passedInModules= */ ImmutableList.of());
+
+    Result merged = mergedResult.mergedResult();
+    assertThat(merged.getModuleInfoList().stream().map(Module::getName).collect(toImmutableList()))
+        .containsExactly("CtsNpuManagerMoblyTestCases", "CtsAccelerationTestCases");
+    assertThat(merged.getSummary().getPassed()).isEqualTo(2);
+    assertThat(merged.getSummary().getFailed()).isEqualTo(3);
+    assertThat(merged.getSummary().getModulesTotal()).isEqualTo(2);
+    assertThat(merged.getSummary().getModulesDone()).isEqualTo(2);
   }
 }

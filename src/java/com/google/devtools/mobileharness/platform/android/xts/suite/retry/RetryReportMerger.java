@@ -271,6 +271,11 @@ public class RetryReportMerger {
     SetMultimap<String, String> retrySubPlanNonTfExcludeFiltersMultimap =
         retrySubPlan.getNonTfExcludeFiltersMultimap();
 
+    ImmutableSet<String> prevModuleIds =
+        previousResult.getModuleInfoList().stream()
+            .map(module -> AbiUtil.createId(module.getAbi(), module.getName()))
+            .collect(toImmutableSet());
+
     for (Module moduleFromPrevSession : previousResult.getModuleInfoList()) {
       mergedResult.addModuleInfo(
           createMergedModule(
@@ -283,6 +288,13 @@ public class RetryReportMerger {
                   ? retrySubPlanNonTfExcludeFiltersMultimap
                   : retrySubPlanExcludeFiltersMultimap));
     }
+
+    // Adds modules that were executed during retry but not present in previousResult (e.g., when
+    // previous attempt aborted before running TF modules).
+    modulesFromRetry.values().stream()
+        .filter(
+            module -> !prevModuleIds.contains(AbiUtil.createId(module.getAbi(), module.getName())))
+        .forEach(mergedResult::addModuleInfo);
 
     // Prepare the Summary
     long passedInSummary = 0;
