@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Tes
 import com.google.devtools.mobileharness.infra.ats.server.util.AtsServerSessionUtil;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
@@ -66,6 +67,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -701,6 +703,41 @@ public final class ServerJobCreatorTest {
     assertThat(retryArgs.previousSessionId()).hasValue("previous_session_id");
     assertThat(retryArgs.resultsDir().toString()).isEqualTo("/retry/result/dir");
     assertThat(retryArgs.previousSessionIndex()).isEmpty();
+  }
+
+  @Test
+  public void createXtsTradefedTestJob_tfRetryWithoutTfModule_throwsException() throws Exception {
+    flags.set("use_tf_retry", "true");
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setIsAtsServerRequest(true)
+                .setTestPlan("retry")
+                .setCommandLineArgs("retry")
+                .setXtsType("cts")
+                .setXtsRootDir(xtsRootDir)
+                .setRetrySessionId("previous_session_id")
+                .setRetryResultDir("/retry/result/dir"));
+
+    Path testReportPropertiesFile = folder.newFile("test-report-server-no-tf.properties").toPath();
+    java.util.Properties testReportProperties = new java.util.Properties();
+    testReportProperties.setProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE, "false");
+    testReportProperties.setProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE, "true");
+    testReportProperties.setProperty(SuiteCommon.TEST_REPORT_PROPERTY_TEST_PLAN, "cts");
+    try (FileOutputStream outputStream = new FileOutputStream(testReportPropertiesFile.toFile())) {
+      testReportProperties.store(outputStream, null);
+    }
+    when(previousResultLoader.getPrevSessionTestReportProperties(any(Path.class)))
+        .thenReturn(Optional.of(testReportPropertiesFile));
+
+    MobileHarnessException exception =
+        assertThrows(
+            MobileHarnessException.class,
+            () ->
+                jobCreator.createXtsTradefedTestJobInfo(
+                    sessionRequestInfo, ImmutableList.of("mock_module")));
+    assertThat(exception.getErrorId())
+        .isEqualTo(InfraErrorId.ATS_SERVER_TF_RETRY_WITHOUT_TF_MODULE);
   }
 
   @Test

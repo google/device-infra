@@ -55,6 +55,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.PhaseSkippableDecoratorConstants;
@@ -261,11 +262,12 @@ public abstract class XtsJobCreator {
                 : null);
     if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
-      addPrevSessionPropertiesForRetry(
-          sessionRequestInfo, extraJobProperties, /* throwIfNoNonTfModule= */ false);
+      Optional<Properties> testReportProperties =
+          addPrevSessionPropertiesForRetry(
+              sessionRequestInfo, extraJobProperties, /* throwIfNoNonTfModule= */ false);
       if (useTfRetry) {
         logger.atInfo().log("Preparing for TF retry...");
-        prepareTfRetry(sessionRequestInfo, driverParams, extraJobProperties, jobFiles);
+        prepareTfRetry(sessionRequestInfo, driverParams, jobFiles, testReportProperties);
       } else {
         SubPlan runRetryTfSubPlan = prepareRunRetrySubPlan(sessionRequestInfo, /* forTf= */ true);
         String prevSessionXtsTestPlan = runRetryTfSubPlan.getPreviousSessionXtsTestPlan();
@@ -811,7 +813,8 @@ public abstract class XtsJobCreator {
    * Adds properties from the previous session's test report to {@code extraJobProperties} for a
    * retry run.
    */
-  private void addPrevSessionPropertiesForRetry(
+  @CanIgnoreReturnValue
+  private Optional<Properties> addPrevSessionPropertiesForRetry(
       SessionRequestInfo sessionRequestInfo,
       ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties,
       boolean throwIfNoNonTfModule)
@@ -819,7 +822,7 @@ public abstract class XtsJobCreator {
     Optional<Path> testReportPropertiesFile =
         getPrevSessionTestReportProperties(sessionRequestInfo);
     if (testReportPropertiesFile.isEmpty()) {
-      return;
+      return Optional.empty();
     }
     Properties testReportProperties =
         TestReportPropertiesUtil.loadTestReportProperties(testReportPropertiesFile.get());
@@ -838,6 +841,7 @@ public abstract class XtsJobCreator {
     extraJobProperties
         .put(Job.PREV_SESSION_HAS_TF_MODULE, String.valueOf(hasTfModule))
         .put(Job.PREV_SESSION_HAS_NON_TF_MODULE, String.valueOf(hasNonTfModule));
+    return Optional.of(testReportProperties);
   }
 
   private void injectBuildFingerprint(
@@ -991,10 +995,36 @@ public abstract class XtsJobCreator {
   }
 
   /** Prepares retry parameters/properties for Tradefed. */
-  protected abstract void prepareTfRetry(
+  private void prepareTfRetry(
       SessionRequestInfo sessionRequestInfo,
       Map<String, String> driverParams,
-      ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties,
+      ListMultimap<String, String> jobFiles,
+      Optional<Properties> testReportProperties)
+      throws MobileHarnessException {
+    validateTfModuleForRetry(sessionRequestInfo, testReportProperties);
+    injectTfRunRetryFiles(sessionRequestInfo, driverParams, jobFiles);
+    if (sessionRequestInfo.hasRetryType()) {
+      driverParams.put("retry_type", sessionRequestInfo.getRetryType().toString());
+    }
+  }
+
+  private void validateTfModuleForRetry(
+      SessionRequestInfo sessionRequestInfo, Optional<Properties> testReportProperties)
+      throws MobileHarnessException {
+    if (testReportProperties.isPresent()
+        && !TestReportPropertiesUtil.hasTfModule(testReportProperties.get())) {
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          sessionRequestInfo.getIsAtsServerRequest()
+              ? InfraErrorId.ATS_SERVER_TF_RETRY_WITHOUT_TF_MODULE
+              : InfraErrorId.ATSC_TF_RETRY_WITHOUT_TF_MODULE,
+          "Previous session doesn't have tradefed module",
+          /* cause= */ null);
+    }
+  }
+
+  protected abstract void injectTfRunRetryFiles(
+      SessionRequestInfo sessionRequestInfo,
+      Map<String, String> driverParams,
       ListMultimap<String, String> jobFiles)
       throws MobileHarnessException;
 

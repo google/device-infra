@@ -36,9 +36,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Dev
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.TradefedConfigGenerator;
 import com.google.devtools.mobileharness.infra.ats.server.util.AtsServerSessionUtil;
-import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
-import com.google.devtools.mobileharness.platform.android.xts.suite.TestReportPropertiesUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader.TradefedResultFilesBundle;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
@@ -55,7 +53,6 @@ import java.io.OutputStream;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Properties;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.xmlpull.v1.XmlPullParserException;
@@ -226,25 +223,11 @@ public class ServerJobCreator extends XtsJobCreator {
   }
 
   @Override
-  protected void prepareTfRetry(
+  protected void injectTfRunRetryFiles(
       SessionRequestInfo sessionRequestInfo,
       Map<String, String> driverParams,
-      ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties,
       ListMultimap<String, String> jobFiles)
       throws MobileHarnessException {
-    Optional<Path> testReportPropertiesFile =
-        getPrevSessionTestReportProperties(sessionRequestInfo);
-    if (testReportPropertiesFile.isPresent()) {
-      Properties testReportProperties =
-          TestReportPropertiesUtil.loadTestReportProperties(testReportPropertiesFile.get());
-      // If previous session doesn't have TF module, skip running TF retry.
-      if (!TestReportPropertiesUtil.hasTfModule(testReportProperties)) {
-        throw MobileHarnessExceptionFactory.createUserFacingException(
-            InfraErrorId.ATS_SERVER_TF_RETRY_WITHOUT_TF_MODULE,
-            "Previous session doesn't have tradefed module",
-            /* cause= */ null);
-      }
-    }
     TradefedResultFilesBundle tfRunRetryFilesBundle =
         findTfRunRetryFilesBundle(
             Path.of(
@@ -270,9 +253,6 @@ public class ServerJobCreator extends XtsJobCreator {
             sessionRequestInfo.hasRemoteRunnerFilePathPrefix()
                 ? sessionRequestInfo.getRemoteRunnerFilePathPrefix()
                 : null));
-    if (sessionRequestInfo.hasRetryType()) {
-      driverParams.put("retry_type", sessionRequestInfo.getRetryType().toString());
-    }
   }
 
   private TradefedResultFilesBundle findTfRunRetryFilesBundle(Path retryResultDir)

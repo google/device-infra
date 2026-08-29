@@ -34,6 +34,7 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.in.Timeout;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
@@ -712,6 +713,40 @@ public final class ConsoleJobCreatorTest {
     assertThat(tradefedJobInfoList).hasSize(1);
     assertThat(tradefedJobInfoList.get(0).extraJobProperties())
         .containsEntry(Job.IS_RUN_RETRY, "true");
+  }
+
+  @Test
+  public void createXtsTradefedTestJob_tfRetryWithoutTfModule_throwsException() throws Exception {
+    flags.set("use_tf_retry", "true");
+    File xtsRootDir = folder.newFolder("xts_root_dir_tf_retry_no_tf");
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("retry")
+                .setCommandLineArgs("retry --retry 0")
+                .setXtsType("cts")
+                .setXtsRootDir(xtsRootDir.getAbsolutePath())
+                .setRetrySessionIndex(0));
+
+    Path testReportPropertiesFile =
+        folder.newFile("test-report-prev-plan-no-tf.properties").toPath();
+    java.util.Properties testReportProperties = new java.util.Properties();
+    testReportProperties.setProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE, "false");
+    testReportProperties.setProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE, "true");
+    testReportProperties.setProperty(SuiteCommon.TEST_REPORT_PROPERTY_TEST_PLAN, "cts");
+    try (FileOutputStream outputStream = new FileOutputStream(testReportPropertiesFile.toFile())) {
+      testReportProperties.store(outputStream, null);
+    }
+    when(previousResultLoader.getPrevSessionTestReportProperties(any(Path.class), anyInt(), any()))
+        .thenReturn(Optional.of(testReportPropertiesFile));
+
+    MobileHarnessException exception =
+        assertThrows(
+            MobileHarnessException.class,
+            () ->
+                jobCreator.createXtsTradefedTestJobInfo(
+                    sessionRequestInfo, ImmutableList.of("mock_module")));
+    assertThat(exception.getErrorId()).isEqualTo(InfraErrorId.ATSC_TF_RETRY_WITHOUT_TF_MODULE);
   }
 
   @Test
