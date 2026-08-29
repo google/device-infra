@@ -20,17 +20,20 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogEntry;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogSection;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
+import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionCatalogStore;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -103,8 +106,16 @@ public final class FleetColumnCataloger {
    */
   private static final int SEARCH_LIMIT = 50;
 
+  private final DimensionCatalogStore dimensionCatalogStore;
+
   @Inject
-  FleetColumnCataloger() {}
+  FleetColumnCataloger(DimensionCatalogStore dimensionCatalogStore) {
+    this.dimensionCatalogStore = dimensionCatalogStore;
+  }
+
+  FleetColumnCataloger() {
+    this(new DimensionCatalogStore());
+  }
 
   /**
    * Returns the ordered column catalog for the current dialog state.
@@ -117,6 +128,10 @@ public final class FleetColumnCataloger {
     FleetIndex index = corpus.index();
     ImmutableMap<String, Integer> deviceCounts = keyDeviceCounts(index, corpus.postings());
     ImmutableSet<String> redundant = redundantDims(corpus, index);
+
+    Fleet fleet =
+        request.getFleet() == Fleet.FLEET_UNSPECIFIED ? Fleet.FLEET_SELF : request.getFleet();
+    ImmutableSet<String> catalogDimensions = dimensionCatalogStore.getDimensionNames(fleet);
 
     Comparator<String> byCoverage =
         Comparator.<String>comparingInt(keyId -> -deviceCounts.getOrDefault(keyId, 0))
@@ -139,6 +154,12 @@ public final class FleetColumnCataloger {
         builtin.add(keyId);
       }
     }
+    for (String dimName : catalogDimensions) {
+      String keyId = DeviceKeys.PREFIX_DIMENSION + dimName;
+      if (!redundant.contains(keyId) && !index.keyIds().contains(keyId)) {
+        dimensions.add(keyId);
+      }
+    }
     builtin.sort(Comparator.comparing(FleetColumnCataloger::displayName));
     dimensions.sort(byCoverage);
     properties.sort(byCoverage);
@@ -148,7 +169,14 @@ public final class FleetColumnCataloger {
     addFullSection(response, SECTION_BUILTIN, builtin, deviceCounts);
     addTopNSection(response, SECTION_DIMENSIONS, dimensions, DIM_TOP, deviceCounts);
     addTopNSection(response, SECTION_PROPERTIES, properties, PROP_TOP, deviceCounts);
-    addSearchSection(response, index, deviceCounts, redundant, byCoverage, request.getQuery());
+    addSearchSection(
+        response,
+        index,
+        catalogDimensions,
+        deviceCounts,
+        redundant,
+        byCoverage,
+        request.getQuery());
     return response.build();
   }
 
@@ -246,6 +274,7 @@ public final class FleetColumnCataloger {
   private static void addSearchSection(
       FleetColumnCatalogResponse.Builder response,
       FleetIndex index,
+      ImmutableSet<String> catalogDimensions,
       ImmutableMap<String, Integer> deviceCounts,
       ImmutableSet<String> redundant,
       Comparator<String> byCoverage,
@@ -255,8 +284,19 @@ public final class FleetColumnCataloger {
     }
     String normalizedQuery = norm(query);
     List<String> hits = new ArrayList<>();
+    Set<String> seen = new HashSet<>();
     for (String keyId : index.keyIds()) {
-      if (redundant.contains(keyId)) {
+      if (redundant.contains(keyId) || !seen.add(keyId)) {
+        continue;
+      }
+      if (norm(displayName(keyId)).contains(normalizedQuery)
+          || norm(bareName(keyId)).contains(normalizedQuery)) {
+        hits.add(keyId);
+      }
+    }
+    for (String dimName : catalogDimensions) {
+      String keyId = DeviceKeys.PREFIX_DIMENSION + dimName;
+      if (redundant.contains(keyId) || !seen.add(keyId)) {
         continue;
       }
       if (norm(displayName(keyId)).contains(normalizedQuery)

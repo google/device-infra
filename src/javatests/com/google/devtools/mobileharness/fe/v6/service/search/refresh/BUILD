@@ -38,6 +38,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:dimension_overlay_raw",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:fleet_data_source",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:core_fleet_data_refresher",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:dimension_catalog_refresher",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:dimension_catalog_store",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:dimension_overlay_store",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:fleet_snapshot_store",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",

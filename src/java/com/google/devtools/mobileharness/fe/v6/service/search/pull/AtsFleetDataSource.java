@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.pull;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -96,6 +97,11 @@ public final class AtsFleetDataSource implements FleetDataSource {
   @Override
   public ListenableFuture<DimensionOverlayRaw> pullDimension(String keyId) {
     return labInfoFleetPuller.pullDimension(keyId);
+  }
+
+  @Override
+  public ListenableFuture<ImmutableSet<String>> pullDimensionNames() {
+    return labInfoFleetPuller.pullDimensionNames(UniverseScope.SELF);
   }
 
   /** Enumerates the device ids in the lab query result, in lab then device order. */

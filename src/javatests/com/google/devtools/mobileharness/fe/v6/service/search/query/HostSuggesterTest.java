@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestion;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextSegment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
@@ -137,6 +138,9 @@ public final class HostSuggesterTest {
     assertThat(labType.getLabel()).isEqualTo("Group by");
     assertThat(labType.getCountUnit()).isEqualTo("groups");
     assertThat(labType.getCount()).isEqualTo(2);
+    assertThat(labType.getMainTextList())
+        .containsExactly(
+            TextSegment.newBuilder().setText("Host Lab Type").setEmphasized(true).build());
   }
 
   @Test

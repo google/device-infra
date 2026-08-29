@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
@@ -39,9 +40,11 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggest
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextSegment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionCatalogStore;
 import com.google.inject.Guice;
 import java.time.Instant;
 import org.junit.Test;
@@ -174,6 +177,19 @@ public final class FleetSuggesterTest {
     assertThat(group.getCountUnit()).isEqualTo("groups");
     assertThat(group.getCount()).isEqualTo(60);
     assertThat(group.getOverMax()).isTrue();
+    assertThat(group.getMainTextList())
+        .containsExactly(
+            TextSegment.newBuilder().setText("Dimension pool").setEmphasized(true).build());
+  }
+
+  @Test
+  public void groupBy_rendersOnlyEmphasizedKeyInMainText() {
+    FleetSuggestionResponse response = suggester.suggest(corpus, request("group by"));
+
+    FleetSuggestion model = firstAddGroupBy(response, "dimension::model");
+    assertThat(model.getLabel()).isEqualTo("Group by");
+    assertThat(model.getMainTextList())
+        .containsExactly(TextSegment.newBuilder().setText("Model").setEmphasized(true).build());
   }
 
   @Test
@@ -261,6 +277,45 @@ public final class FleetSuggesterTest {
         .setKey(key)
         .setSimple(SimpleMatch.newBuilder().addValues(FilterValue.newBuilder().setValue(value)))
         .build();
+  }
+
+  @Test
+  public void keyMatch_discoveredDimensionInCatalog_suggestsAddFilterDimension() {
+    DimensionCatalogStore catalogStore = new DimensionCatalogStore();
+    catalogStore.setDimensionNames(Fleet.FLEET_SELF, ImmutableSet.of("build", "carrier"));
+    FleetSuggester suggesterWithCatalog =
+        new FleetSuggester(
+            Guice.createInjector().getInstance(FleetFilterEngine.class),
+            ImmutableMap.of(Fleet.FLEET_SELF, new AtsCuration()),
+            catalogStore);
+
+    FleetSuggestionResponse response =
+        suggesterWithCatalog.suggest(
+            corpus, FleetSuggestionRequest.newBuilder().setInput("build").setLimit(5).build());
+
+    FleetSuggestion suggestion = firstOpenPicker(response, "dimension::build");
+    assertThat(suggestion.getLabel()).isEqualTo("Add filter");
+    assertThat(suggestion.getMainText(0).getText()).isEqualTo("Dimension build");
+  }
+
+  @Test
+  public void keyMatch_explicitDimensionPrefix_suggestsAddFilterDimension() {
+    DimensionCatalogStore catalogStore = new DimensionCatalogStore();
+    catalogStore.setDimensionNames(Fleet.FLEET_SELF, ImmutableSet.of("build", "carrier"));
+    FleetSuggester suggesterWithCatalog =
+        new FleetSuggester(
+            Guice.createInjector().getInstance(FleetFilterEngine.class),
+            ImmutableMap.of(Fleet.FLEET_SELF, new AtsCuration()),
+            catalogStore);
+
+    FleetSuggestionResponse response =
+        suggesterWithCatalog.suggest(
+            corpus,
+            FleetSuggestionRequest.newBuilder().setInput("dimension build").setLimit(5).build());
+
+    FleetSuggestion suggestion = firstOpenPicker(response, "dimension::build");
+    assertThat(suggestion.getLabel()).isEqualTo("Add filter");
+    assertThat(suggestion.getMainText(0).getText()).isEqualTo("Dimension build");
   }
 
   // --- Synthetic fleets ---

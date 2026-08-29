@@ -26,7 +26,7 @@ export interface FilterSortOptions {
  * @param baseValues List of candidate items returned by backend or configuration.
  * @param staged Set of custom inputs entered by user.
  * @param isLoading Whether candidate values are currently loading.
- * @returns Array of combined PickerValueItem elements.
+ * @return Array of combined PickerValueItem elements.
  */
 export function buildDisplayValues(
   baseValues: readonly PickerValueItem[],
@@ -63,7 +63,7 @@ export function buildDisplayValues(
  * Pure function: Filters and multi-column sorts candidate items for display in the picker UI.
  *
  * @param opts Options specifying items, search query, sort column, and sort direction.
- * @returns Filtered and sorted slice of candidate items capped at 100 elements.
+ * @return Filtered and sorted slice of candidate items capped at 1000 elements.
  */
 export function computeFilteredAndSortedValues(
   opts: FilterSortOptions,
@@ -99,7 +99,7 @@ export function computeFilteredAndSortedValues(
     return opts.sortAsc ? valA - valB : valB - valA;
   });
 
-  return [...normalItems, ...disabledItems].slice(0, 100);
+  return [...normalItems, ...disabledItems].slice(0, 1000);
 }
 
 /**
@@ -110,7 +110,7 @@ export function computeFilteredAndSortedValues(
  * @param query Active search query.
  * @param isLoading Whether values are currently loading.
  * @param threshold Maximum total item threshold before pinning triggers (default 20).
- * @returns Array of pinned items matching current selections.
+ * @return Array of pinned items matching current selections.
  */
 export function computePinnedValues(
   items: readonly PickerValueItem[],
@@ -134,7 +134,7 @@ export function computePinnedValues(
  * Pure function: Formats millisecond timestamp into datetime-local HTML input format YYYY-MM-DDTHH:MM.
  *
  * @param ms Epoch timestamp in milliseconds.
- * @returns Formatted datetime-local string.
+ * @return Formatted datetime-local string.
  */
 export function toDateTimeLocalString(ms: number): string {
   const d = new Date(ms);
@@ -146,7 +146,7 @@ export function toDateTimeLocalString(ms: number): string {
  * Pure function: Extracts From and To date strings from selected values set or returns default 24h range.
  *
  * @param selectedValues Set of selected value strings.
- * @returns Object containing 'from' and 'to' datetime-local strings.
+ * @return Object containing 'from' and 'to' datetime-local strings.
  */
 export function parseDateRange(
   selectedValues: ReadonlySet<string>,
@@ -199,7 +199,7 @@ export interface ApplyEventPayload {
  * Pure function: Constructs canonical ValuePickerApplyEvent payload for store application.
  *
  * @param payload Event payload state parameters.
- * @returns ValuePickerApplyEvent object ready to dispatch.
+ * @return ValuePickerApplyEvent object ready to dispatch.
  */
 export function buildValuePickerApplyEvent(
   payload: ApplyEventPayload,

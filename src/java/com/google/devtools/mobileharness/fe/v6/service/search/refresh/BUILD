@@ -67,9 +67,35 @@ java_library(
     name = "fleet_search_data_module",
     srcs = ["FleetSearchDataModule.java"],
     deps = [
+        ":dimension_catalog_refresher",
+        ":dimension_catalog_store",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:ats_fleet_data_source",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:fleet_data_source",
         "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
+    name = "dimension_catalog_store",
+    srcs = ["DimensionCatalogStore.java"],
+    deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "dimension_catalog_refresher",
+    srcs = ["DimensionCatalogRefresher.java"],
+    deps = [
+        ":dimension_catalog_store",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:fleet_data_source",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )

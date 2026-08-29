@@ -34,5 +34,8 @@ public final class FleetSearchDataModule extends AbstractModule {
     MapBinder<Fleet, FleetDataSource> sources =
         MapBinder.newMapBinder(binder(), Fleet.class, FleetDataSource.class);
     sources.addBinding(Fleet.FLEET_SELF).to(AtsFleetDataSource.class);
+
+    bind(DimensionCatalogStore.class).asEagerSingleton();
+    bind(DimensionCatalogRefresher.class).asEagerSingleton();
   }
 }
