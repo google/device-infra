@@ -217,18 +217,11 @@ public abstract class XtsJobCreator {
     String xtsType = sessionRequestInfo.getXtsType();
     ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties = ImmutableMap.builder();
 
-    Path subPlanPath = null;
-    SubPlan subPlan = null;
-    String filteredTradefedModules;
-    if (sessionRequestInfo.hasSubPlanName()) {
-      subPlanPath =
-          prepareSubPlanPath(
-              xtsRootDir, xtsType, sessionRequestInfo.getSubPlanName(), sessionRequestInfo);
-      subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
-      filteredTradefedModules = filterTradefedModulesBySubPlan(tfModules, subPlan);
-    } else {
-      filteredTradefedModules = String.join(",", tfModules);
-    }
+    Optional<ResolvedSubPlan> subPlan = resolveSubPlan(sessionRequestInfo);
+    String filteredTradefedModules =
+        subPlan
+            .map(sp -> filterTradefedModulesBySubPlan(tfModules, sp.subPlan()))
+            .orElseGet(() -> String.join(",", tfModules));
 
     extraJobProperties
         .put(Job.FILTERED_TRADEFED_MODULES, filteredTradefedModules)
@@ -279,11 +272,10 @@ public abstract class XtsJobCreator {
         shouldSkipDeviceInfoForRetry =
             !runRetryTfSubPlan.getPreviousSessionDeviceBuildFingerprint().orElse("").isEmpty();
       }
-    } else if (sessionRequestInfo.hasSubPlanName() && subPlanPath != null && subPlan != null) {
+    } else if (subPlan.isPresent()) {
       Path tfSubPlan =
           prepareTfSubPlan(
-              subPlanPath,
-              subPlan,
+              subPlan.get(),
               xtsRootDir,
               sessionRequestInfo.getXtsType(),
               sessionRequestInfo.getSubPlanName());
@@ -374,10 +366,13 @@ public abstract class XtsJobCreator {
         .collect(joining(","));
   }
 
-  private Path prepareSubPlanPath(
-      Path xtsRootDir, String xtsType, String subPlanName, SessionRequestInfo sessionRequestInfo)
+  private Path prepareSubPlanPath(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
-    Path subPlanPath = SessionHandlerHelper.getSubPlanFilePath(xtsRootDir, xtsType, subPlanName);
+    Path xtsRootDir = Path.of(sessionRequestInfo.getXtsRootDir());
+    String xtsType = sessionRequestInfo.getXtsType();
+    Path subPlanPath =
+        SessionHandlerHelper.getSubPlanFilePath(
+            xtsRootDir, xtsType, sessionRequestInfo.getSubPlanName());
     SessionHandlerHelper.checkSubPlanFileExist(subPlanPath.toFile());
     Path subPlanBackupPath = null;
     // Prepares and uses the subplan backup file in case the original subplan file is modified
@@ -397,10 +392,21 @@ public abstract class XtsJobCreator {
     return subPlanBackupPath == null ? subPlanPath : subPlanBackupPath;
   }
 
+  private Optional<ResolvedSubPlan> resolveSubPlan(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException, InterruptedException {
+    if (!sessionRequestInfo.hasSubPlanName()) {
+      return Optional.empty();
+    }
+    Path subPlanPath = prepareSubPlanPath(sessionRequestInfo);
+    SubPlan subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
+    return Optional.of(ResolvedSubPlan.of(subPlanPath, subPlan));
+  }
+
   /** Prepares a sub plan file for a tradefed job. */
   private Path prepareTfSubPlan(
-      Path subPlanPath, SubPlan subPlan, Path xtsRootDir, String xtsType, String subPlanName)
+      ResolvedSubPlan resolvedSubPlan, Path xtsRootDir, String xtsType, String subPlanName)
       throws MobileHarnessException, InterruptedException {
+    SubPlan subPlan = resolvedSubPlan.subPlan();
     if (!subPlan.hasAnyTfIncludeFilters() && !subPlan.hasAnyTfExcludeFilters()) {
       throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.OLCS_NO_CORRESPONDING_FILTER_FOUND_IN_SUBPLAN,
@@ -410,7 +416,7 @@ public abstract class XtsJobCreator {
 
     // If the subplan only includes TF modules and tests, use the subplan file directly
     if (!subPlan.hasAnyNonTfIncludeFilters() && !subPlan.hasAnyNonTfExcludeFilters()) {
-      return subPlanPath;
+      return resolvedSubPlan.path();
     }
 
     Path tfOnlySubPlanPath =
@@ -467,13 +473,7 @@ public abstract class XtsJobCreator {
       subPlan = prepareRunRetrySubPlan(sessionRequestInfo, /* forTf= */ false);
       injectBuildFingerprint(extraJobProperties, subPlan);
     } else if (sessionRequestInfo.hasSubPlanName()) {
-      Path subPlanPath =
-          prepareSubPlanPath(
-              xtsRootDir,
-              sessionRequestInfo.getXtsType(),
-              sessionRequestInfo.getSubPlanName(),
-              sessionRequestInfo);
-      subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
+      subPlan = resolveSubPlan(sessionRequestInfo).map(ResolvedSubPlan::subPlan).orElse(null);
       validateNonTfSubPlan(subPlan);
     }
 
@@ -563,18 +563,14 @@ public abstract class XtsJobCreator {
       ImmutableList<String> tfModules =
           sessionRequestHandlerUtil.getFilteredTradefedModules(
               sessionRequestInfo, /* dynamicMctsModules= */ ImmutableSet.of());
-      if (sessionRequestInfo.hasSubPlanName()) {
-        Path subPlanPath =
-            prepareSubPlanPath(
-                Path.of(sessionRequestInfo.getXtsRootDir()),
-                sessionRequestInfo.getXtsType(),
-                sessionRequestInfo.getSubPlanName(),
-                sessionRequestInfo);
-        SubPlan subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
-        if (!subPlan.hasAnyTfIncludeFilters() && !subPlan.hasAnyTfExcludeFilters()) {
+      Optional<ResolvedSubPlan> subPlan = resolveSubPlan(sessionRequestInfo);
+      if (subPlan.isPresent()) {
+        if (!subPlan.get().subPlan().hasAnyTfIncludeFilters()
+            && !subPlan.get().subPlan().hasAnyTfExcludeFilters()) {
           return false;
         }
-        String filteredTradefedModules = filterTradefedModulesBySubPlan(tfModules, subPlan);
+        String filteredTradefedModules =
+            filterTradefedModulesBySubPlan(tfModules, subPlan.get().subPlan());
         return !filteredTradefedModules.isEmpty();
       }
       return tfModules != null && !tfModules.isEmpty();
@@ -1040,6 +1036,28 @@ public abstract class XtsJobCreator {
 
   protected abstract SubPlan prepareRunRetrySubPlan(
       SessionRequestInfo sessionRequestInfo, boolean forTf) throws MobileHarnessException;
+
+  private static class ResolvedSubPlan {
+    private final Path path;
+    private final SubPlan subPlan;
+
+    private ResolvedSubPlan(Path path, SubPlan subPlan) {
+      this.path = path;
+      this.subPlan = subPlan;
+    }
+
+    Path path() {
+      return path;
+    }
+
+    SubPlan subPlan() {
+      return subPlan;
+    }
+
+    static ResolvedSubPlan of(Path path, SubPlan subPlan) {
+      return new ResolvedSubPlan(path, subPlan);
+    }
+  }
 
   private static class PreconditionDecorator {
     private final String decoratorName;
