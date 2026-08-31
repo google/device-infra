@@ -597,3 +597,33 @@
     transform: rotate(360deg);
   }
 }
+
+.under-development-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px dashed #dadce0;
+  text-align: center;
+}
+
+.under-development-text {
+  color: #3c4043;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  margin: 0;
+  line-height: 1.5;
+
+  a {
+    color: #1a73e8;
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

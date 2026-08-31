@@ -216,11 +216,21 @@
           <!-- Timeline Tab -->
           @if (activeTab() === 'timeline') {
             <div class="tab-content">
+              <!-- TODO: Uncomment this and remove the under development section below when the feature is ready -->
+              <!--
               @defer {
-                <app-test-timeline-tab [timingBreakdown]="test.timingBreakdown"></app-test-timeline-tab>
+                <app-test-timeline-tab
+                  [timingBreakdown]="test.timingBreakdown"
+                ></app-test-timeline-tab>
               } @placeholder {
                 <div class="tab-loading-placeholder">Loading timeline...</div>
               }
+              -->
+              <div class="under-development-container">
+                <p class="under-development-text">
+                  This feature is currently under development in V6. Please view this timeline in the <a [href]="legacyFeUrl + '/testdetailview/' + jobId() + '/' + test.id + '?tab=2'" target="_blank">legacy page</a>.
+                </p>
+              </div>
             </div>
           }
 
