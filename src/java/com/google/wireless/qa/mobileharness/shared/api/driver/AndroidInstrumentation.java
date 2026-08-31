@@ -279,13 +279,6 @@ public class AndroidInstrumentation extends BaseDriver
 
     populateOptionMapsForUniformSharding(testInfo, optionMaps);
 
-    if (hasRetryTestTargets(testInfo)) {
-      // If there are explicit retry test targets, we should just run those test targets, and in
-      // case the option maps provided by the user via the job params contain other test targets, or
-      // test filters, we need to clean them up.
-      cleanUpOptionMapsExplicitTestTargets(testInfo, optionMaps);
-    }
-
     if (optionMaps.size() == 1
         && job.params().get(AndroidInstrumentationDriverSpec.PARAM_OPTIONS + "_0") == null) {
       testInfo
@@ -957,9 +950,6 @@ public class AndroidInstrumentation extends BaseDriver
 
   /** Get test target from either test name or user input. */
   private String getTestTarget(TestInfo testInfo, List<Map<String, String>> optionMaps) {
-    if (hasRetryTestTargets(testInfo)) {
-      return getTestTargetForRetryTest(testInfo);
-    }
 
     String testName = testInfo.locator().getName();
     String testTarget;
@@ -1005,12 +995,6 @@ public class AndroidInstrumentation extends BaseDriver
             "Running test %s with retry test targets:\n%s",
             testName, String.join("\n", Splitter.on(',').split(retryTestTargets)));
     return retryTestTargets;
-  }
-
-  private boolean hasRetryTestTargets(TestInfo testInfo) {
-    return testInfo
-        .properties()
-        .has(Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_RETRY_TEST_TARGETS);
   }
 
   private boolean isUniformSharding(TestInfo testInfo) {

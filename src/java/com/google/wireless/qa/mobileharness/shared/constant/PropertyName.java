@@ -394,6 +394,9 @@ public interface PropertyName {
     /** RoboViz link of test. */
     ROBOVIZ_LINK_OF_TEST,
 
+    /** Whether the test runs with retry test targets. */
+    RUN_WITH_RETRY_TEST_TARGETS,
+
     /** Whether the test runs in MH sandbox mode. Value type is boolean. */
     SANDBOX_MODE,
 
