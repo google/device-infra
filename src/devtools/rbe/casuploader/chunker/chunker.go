@@ -42,7 +42,7 @@ func ChunkFile(path string, chunksDir string, avgChunkSizeKb int) ([]ChunkInfo, 
 
 	// Add 5% to the estimated chunks to hopefully avoid in-loop reallocating of a large slice.
 	estimatedChunks := int(1.05*float64(fileInfo.Size())/float64(1024*avgChunkSizeKb)) + 1
-	seenChunks := make(map[string]struct{})	// Use the map as a set to deduplicate chunks.
+	seenChunks := make(map[string]struct{}) // Use the map as a set to deduplicate chunks.
 	chunkList := make([]ChunkInfo, 0, estimatedChunks)
 
 	for {
@@ -109,9 +109,13 @@ func RestoreFile(path string, chunksDir string, chunks []ChunkInfo) error {
 		if err != nil {
 			return fmt.Errorf("failed to open chunk file: %v", err)
 		}
-		_, err = io.Copy(file, chunkFile)
-		if err != nil {
-			return fmt.Errorf("failed to append chunk to artifact: %v", err)
+		_, copyErr := io.Copy(file, chunkFile)
+		closeErr := chunkFile.Close()
+		if copyErr != nil {
+			return fmt.Errorf("failed to append chunk to artifact: %w", copyErr)
+		}
+		if closeErr != nil {
+			return fmt.Errorf("failed to close chunk file: %w", closeErr)
 		}
 	}
 

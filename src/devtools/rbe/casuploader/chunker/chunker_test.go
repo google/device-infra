@@ -1,6 +1,7 @@
 package chunker
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
@@ -61,6 +62,49 @@ func TestChunkFile(t *testing.T) {
 		} else if !matched {
 			t.Fatalf("The hashes for the source and restored file do not match")
 		}
+	}
+}
+
+func TestRestoreFile_ManyChunks(t *testing.T) {
+	tempDir := t.TempDir()
+	chunksDir := filepath.Join(tempDir, "chunks")
+	if err := os.MkdirAll(chunksDir, 0755); err != nil {
+		t.Fatalf("Failed to create chunks dir: %v", err)
+	}
+
+	numChunks := 50
+	var chunks []ChunkInfo
+	var expectedContent []byte
+
+	for i := 0; i < numChunks; i++ {
+		chunkData := []byte(filepath.Join("chunk_data_content_block_", string(rune('A'+(i%26))), string(rune('0'+(i%10)))))
+		h := sha256.Sum256(chunkData)
+		sha := hex.EncodeToString(h[:])
+
+		chunkPath := filepath.Join(chunksDir, sha)
+		if err := os.WriteFile(chunkPath, chunkData, 0644); err != nil {
+			t.Fatalf("Failed to write chunk %d: %v", i, err)
+		}
+
+		chunks = append(chunks, ChunkInfo{
+			SHA256: sha,
+			Offset: int64(len(expectedContent)),
+		})
+		expectedContent = append(expectedContent, chunkData...)
+	}
+
+	restoredPath := filepath.Join(tempDir, "restored_large_file.bin")
+	if err := RestoreFile(restoredPath, chunksDir, chunks); err != nil {
+		t.Fatalf("RestoreFile failed: %v", err)
+	}
+
+	gotContent, err := os.ReadFile(restoredPath)
+	if err != nil {
+		t.Fatalf("Failed to read restored file: %v", err)
+	}
+
+	if !bytes.Equal(gotContent, expectedContent) {
+		t.Fatalf("Restored content mismatch: got %d bytes (want %d bytes), content differs", len(gotContent), len(expectedContent))
 	}
 }
 
