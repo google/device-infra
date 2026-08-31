@@ -359,7 +359,9 @@ public abstract class XtsJobCreator {
     return tfModules.stream()
         .filter(
             module ->
-                includeFilters.stream().anyMatch(includeFilter -> includeFilter.contains(module)))
+                includeFilters.isEmpty()
+                    || includeFilters.stream()
+                        .anyMatch(includeFilter -> includeFilter.contains(module)))
         .filter(
             module ->
                 excludeFilters.stream().noneMatch(excludeFilter -> excludeFilter.contains(module)))

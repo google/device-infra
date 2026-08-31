@@ -245,6 +245,47 @@ public final class ConsoleJobCreatorTest {
   }
 
   @Test
+  public void createXtsTradefedTestJob_withSubPlanOnlyExcludeFilters() throws Exception {
+    File xtsRootDir = folder.newFolder("xts_root_dir_exclude");
+    File subplansDir = folder.newFolder("xts_root_dir_exclude", "android-cts", "subplans");
+    Path subPlanPath = new File(subplansDir, "exclude_sub_plan.xml").toPath();
+    Files.writeString(
+        subPlanPath,
+        """
+        <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <subPlan>
+            <Entry exclude="armeabi-v7a MockModule2 TestName"/>
+        </subPlan>
+        """);
+
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.newBuilder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .setSubPlanName("exclude_sub_plan")
+            .setDeviceInfo(
+                DeviceInfo.newBuilder()
+                    .setDeviceId("mock_device_id")
+                    .setSupportedAbiList("arm64-v8a,armeabi-v7a")
+                    .build())
+            .setEnableDefaultLogs(false);
+    SessionRequestInfo sessionRequestInfo = SessionRequestInfoUtil.buildAndValidate(builder);
+
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
+        .thenReturn(JobConfig.getDefaultInstance());
+
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("MockModule1", "MockModule2"));
+
+    assertThat(tradefedJobInfoList).hasSize(1);
+    assertThat(tradefedJobInfoList.get(0).extraJobProperties())
+        .containsEntry(Job.FILTERED_TRADEFED_MODULES, "MockModule1");
+  }
+
+  @Test
   public void createXtsTradefedTestJob_withModuleSharding() throws Exception {
     SessionRequestInfo.Builder builder =
         SessionRequestInfo.newBuilder()
@@ -1105,6 +1146,55 @@ public final class ConsoleJobCreatorTest {
     assertThat(setupJobOpt).isPresent();
     assertThat(setupJobOpt.get().subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
         .containsExactly("AndroidCleanAppsDecorator");
+  }
+
+  @Test
+  public void createXtsSetupJob_subPlanWithTradefedExcludeFilters_doesNotCreateSetupJob()
+      throws Exception {
+    File xtsRootDir = folder.newFolder("xts_root_subplan_tf_exclude");
+    File subplansDir = folder.newFolder("xts_root_subplan_tf_exclude", "android-cts", "subplans");
+    Path subPlanPath = new File(subplansDir, "tf_exclude.xml").toPath();
+    Files.writeString(
+        subPlanPath,
+        """
+        <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+        <subPlan>
+            <Entry exclude="arm64-v8a ExcludedModule TestName"/>
+        </subPlan>
+        """);
+
+    File toolsDir = folder.newFolder("xts_root_subplan_tf_exclude", "android-cts", "tools");
+    File jarFile = new File(toolsDir, "cts-tradefed.jar");
+    try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(jarFile))) {
+      zos.putNextEntry(new ZipEntry("cts-preconditions.configv2"));
+      String xml =
+          """
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration description="CTS precondition v2 configs">
+              <target_preparer class="com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidCleanAppsDecorator"/>
+          </configuration>
+          """;
+      zos.write(xml.getBytes(UTF_8));
+      zos.closeEntry();
+    }
+    when(localFileUtil.isFileExist(eq(jarFile.toPath()))).thenReturn(true);
+    when(localFileUtil.isDirExist(any(Path.class))).thenReturn(true);
+
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts-system")
+                .setCommandLineArgs("cts-system --subplan tf_exclude")
+                .setXtsRootDir(xtsRootDir.getAbsolutePath())
+                .setXtsType("cts")
+                .setSubPlanName("tf_exclude"));
+
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(sessionRequestInfo)).thenReturn(true);
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(eq(sessionRequestInfo), any()))
+        .thenReturn(ImmutableList.of("ActiveModule", "ExcludedModule"));
+
+    Optional<JobInfo> setupJobOpt = jobCreator.createXtsSetupJob(sessionRequestInfo);
+    assertThat(setupJobOpt).isEmpty();
   }
 
   @Test
