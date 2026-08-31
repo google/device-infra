@@ -59,6 +59,7 @@ import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.devtools.mobileharness.shared.version.Version;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -240,6 +241,7 @@ public final class GetHostOverviewHandler {
             .map(
                 labInfo ->
                     labInfo.getLabServerFeature().getHostProperties().getHostPropertyList().stream()
+                        .sorted(Comparator.comparing(HostProperty::getKey))
                         .collect(
                             toImmutableMap(
                                 HostProperty::getKey, HostProperty::getValue, (v1, v2) -> v1)))

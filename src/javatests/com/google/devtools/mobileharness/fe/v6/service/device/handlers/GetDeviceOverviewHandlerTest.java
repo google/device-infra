@@ -42,6 +42,8 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceProperties;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceProperty;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.HealthCategory;
 import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
@@ -989,5 +991,41 @@ public final class GetDeviceOverviewHandlerTest {
 
     assertThat(response.getSubDevicesList()).containsExactly(subDevice);
     verify(subDeviceInfoListFactory).create(any());
+  }
+
+  @Test
+  public void getDeviceOverview_capabilitiesAndProperties_sorted() throws Exception {
+    DeviceInfo deviceInfo =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceFeature(
+                DEFAULT_DEVICE_INFO.getDeviceFeature().toBuilder()
+                    .addDriver("DriverB")
+                    .addDriver("DriverA")
+                    .addDecorator("DecoratorB")
+                    .addDecorator("DecoratorA")
+                    .setProperties(
+                        DeviceProperties.newBuilder()
+                            .addProperty(
+                                DeviceProperty.newBuilder().setName("PropB").setValue("ValB"))
+                            .addProperty(
+                                DeviceProperty.newBuilder().setName("PropA").setValue("ValA"))))
+            .build();
+    mockDeviceInfo(deviceInfo);
+
+    DeviceOverview response =
+        getDeviceOverviewHandler
+            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
+            .get()
+            .getOverview();
+
+    assertThat(response.getCapabilities().getSupportedDriversList())
+        .containsExactly("DriverA", "DriverB")
+        .inOrder();
+    assertThat(response.getCapabilities().getSupportedDecoratorsList())
+        .containsExactly("DecoratorA", "DecoratorB")
+        .inOrder();
+    assertThat(response.getPropertiesMap())
+        .containsExactly("PropA", "ValA", "PropB", "ValB")
+        .inOrder();
   }
 }

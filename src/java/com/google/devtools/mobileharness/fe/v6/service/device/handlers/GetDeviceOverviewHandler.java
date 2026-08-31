@@ -220,12 +220,15 @@ public final class GetDeviceOverviewHandler {
     // Capabilities
     builder.setCapabilities(
         CapabilitiesInfo.newBuilder()
-            .addAllSupportedDrivers(deviceInfo.getDeviceFeature().getDriverList())
-            .addAllSupportedDecorators(deviceInfo.getDeviceFeature().getDecoratorList()));
+            .addAllSupportedDrivers(
+                ImmutableList.sortedCopyOf(deviceInfo.getDeviceFeature().getDriverList()))
+            .addAllSupportedDecorators(
+                ImmutableList.sortedCopyOf(deviceInfo.getDeviceFeature().getDecoratorList())));
 
     // Properties
     builder.putAllProperties(
         deviceInfo.getDeviceFeature().getProperties().getPropertyList().stream()
+            .sorted(Comparator.comparing(p -> p.getName()))
             .collect(toImmutableMap(p -> p.getName(), p -> p.getValue())));
 
     // Dimensions
