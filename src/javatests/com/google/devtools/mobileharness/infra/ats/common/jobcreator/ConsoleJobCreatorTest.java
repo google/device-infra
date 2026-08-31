@@ -943,6 +943,9 @@ public final class ConsoleJobCreatorTest {
         .isEqualTo(PhaseSkippableDecoratorConstants.ExecutionMode.SETUP_ONLY.name());
     assertThat(setupJob.type().getDriver()).isEqualTo("NoOpDriver");
     assertThat(setupJob.setting().getNewTimeout().jobTimeout()).isEqualTo(Duration.ofMinutes(5));
+    assertThat(setupJob.setting().getGenFileDir()).isEqualTo("/tmp/gen");
+    verify(sessionRequestHandlerUtil).createJobGenDir(XtsConstants.SETUP_JOB_NAME);
+    verify(sessionRequestHandlerUtil).createJobTmpDir(XtsConstants.SETUP_JOB_NAME);
     assertThat(setupJob.subDeviceSpecs().getAllSubDevices().get(0).decorators().getAll())
         .containsExactly(
             "AndroidCleanAppsDecorator",

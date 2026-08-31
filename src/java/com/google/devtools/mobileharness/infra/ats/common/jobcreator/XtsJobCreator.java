@@ -669,6 +669,8 @@ public abstract class XtsJobCreator {
       startTimeout = Duration.ofMinutes(5);
     }
 
+    Path jobGenDir = sessionRequestHandlerUtil.createJobGenDir(name);
+    Path jobTmpDir = sessionRequestHandlerUtil.createJobTmpDir(name);
     JobConfig jobConfig =
         JobConfig.newBuilder()
             .setName(name)
@@ -681,15 +683,15 @@ public abstract class XtsJobCreator {
             .setTests(StringList.newBuilder().addContent(name))
             .setDevice(DeviceList.newBuilder().addAllSubDeviceSpec(subDeviceSpecList))
             .setDriver(Driver.newBuilder().setName("NoOpDriver"))
-            .setGenFileDir(sessionRequestHandlerUtil.createJobGenDir(name).toString())
+            .setGenFileDir(jobGenDir.toString())
             .build();
 
     JobInfo jobInfo =
         JobInfoCreator.createJobInfo(
             jobConfig,
             /* nonstandardFlags= */ ImmutableList.of(),
-            sessionRequestHandlerUtil.createJobGenDir(name).toString(),
-            sessionRequestHandlerUtil.createJobTmpDir(name).toString(),
+            jobGenDir.toString(),
+            jobTmpDir.toString(),
             systemUtil);
 
     if (decorators.stream()
