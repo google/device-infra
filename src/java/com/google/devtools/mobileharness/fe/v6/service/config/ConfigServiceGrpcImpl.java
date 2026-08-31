@@ -20,8 +20,12 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.fe.v6.service.grpc.FeGrpcInvoker;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.ConfigServiceGrpc;
@@ -80,6 +84,21 @@ public final class ConfigServiceGrpcImpl extends ConfigServiceGrpc.ConfigService
         executor,
         ConfigServiceGrpc.getServiceDescriptor(),
         ConfigServiceGrpc.getCheckDeviceWritePermissionMethod());
+  }
+
+  @Override
+  public void checkDeviceConfigPermission(
+      CheckDeviceConfigPermissionRequest request,
+      StreamObserver<CheckDeviceConfigPermissionResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        req ->
+            immediateFuture(
+                CheckDeviceConfigPermissionResponse.newBuilder().setHasPermission(true).build()),
+        executor,
+        ConfigServiceGrpc.getServiceDescriptor(),
+        ConfigServiceGrpc.getCheckDeviceConfigPermissionMethod());
   }
 
   @Override
@@ -146,6 +165,21 @@ public final class ConfigServiceGrpcImpl extends ConfigServiceGrpc.ConfigService
         executor,
         ConfigServiceGrpc.getServiceDescriptor(),
         ConfigServiceGrpc.getCheckHostWritePermissionMethod());
+  }
+
+  @Override
+  public void checkHostConfigPermission(
+      CheckHostConfigPermissionRequest request,
+      StreamObserver<CheckHostConfigPermissionResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        req ->
+            immediateFuture(
+                CheckHostConfigPermissionResponse.newBuilder().setHasPermission(true).build()),
+        executor,
+        ConfigServiceGrpc.getServiceDescriptor(),
+        ConfigServiceGrpc.getCheckHostConfigPermissionMethod());
   }
 
   @Override

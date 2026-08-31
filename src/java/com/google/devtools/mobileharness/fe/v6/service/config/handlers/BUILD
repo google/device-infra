@@ -52,6 +52,18 @@ java_library(
 )
 
 java_library(
+    name = "check_device_config_permission_handler",
+    srcs = ["CheckDeviceConfigPermissionHandler.java"],
+    deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "update_device_config_handler",
     srcs = ["UpdateDeviceConfigHandler.java"],
     deps = [
@@ -137,6 +149,18 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_util",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "check_host_config_permission_handler",
+    srcs = ["CheckHostConfigPermissionHandler.java"],
+    deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
