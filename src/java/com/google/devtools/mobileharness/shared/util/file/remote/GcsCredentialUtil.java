@@ -97,7 +97,7 @@ public final class GcsCredentialUtil {
       var unused = GoogleCredentials.getApplicationDefault();
       return true;
     } catch (IOException e) {
-      logger.atFine().withCause(e).log("Failed to get Application Default Credentials");
+      logger.atInfo().withCause(e).log("Failed to get Application Default Credentials");
       return false;
     }
   }
