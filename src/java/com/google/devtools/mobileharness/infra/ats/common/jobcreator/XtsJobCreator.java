@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.platform.android.xts.config.Configurati
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationXmlParser;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.TargetPreparer;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
@@ -87,6 +88,8 @@ import javax.annotation.Nullable;
 public abstract class XtsJobCreator {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final Gson GSON = new Gson();
 
   private static final ImmutableSet<ErrorId> SKIPPABLE_ERROR_IDS =
       ImmutableSet.of(
@@ -159,6 +162,16 @@ public abstract class XtsJobCreator {
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         createXtsTradefedTestJobInfo(sessionRequestInfo, tfModules);
 
+    if (!isDynamicMctsEnabled(sessionRequestInfo)) {
+      ImmutableList.Builder<JobInfo> jobInfos = ImmutableList.builder();
+      for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
+        jobInfos.add(
+            sessionRequestHandlerUtil.createXtsTradefedTestJob(
+                sessionRequestInfo, tradefedJobInfo));
+      }
+      return jobInfos.build();
+    }
+
     ImmutableList.Builder<JobInfo> jobInfos = ImmutableList.builder();
 
     // Make sure static job is created first and therefore executed first later in the queue. This
@@ -171,37 +184,25 @@ public abstract class XtsJobCreator {
             : ImmutableList.of(
                 XtsConstants.STATIC_XTS_JOB_NAME, XtsConstants.DYNAMIC_MCTS_JOB_NAME);
 
-    boolean isDynamicMctsEnabled = isDynamicMctsEnabled(sessionRequestInfo);
-    for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
-      if (isDynamicMctsEnabled) {
-        if (SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)) {
-          // In MODULE sharding mode, each module job runs independently. Create exactly ONE job
-          // per module: a DYNAMIC_MCTS job if the module is in dynamicMctsModules, or a STATIC_XTS
-          // job otherwise.
-          String moduleName =
-              tradefedJobInfo
-                  .extraJobProperties()
-                  .get(XtsPropertyName.Job.FILTERED_TRADEFED_MODULES);
-          if (moduleName != null && dynamicMctsModules.contains(moduleName)) {
-            jobInfos.add(
-                createDynamicJobInfo(
-                    sessionRequestInfo, tradefedJobInfo, XtsConstants.DYNAMIC_MCTS_JOB_NAME));
-          } else {
-            jobInfos.add(
-                createDynamicJobInfo(
-                    sessionRequestInfo, tradefedJobInfo, XtsConstants.STATIC_XTS_JOB_NAME));
-          }
-        } else {
-          // In RUNNER sharding mode, create both STATIC_XTS and DYNAMIC_MCTS jobs across all
-          // modules.
-          for (String jobName : allDynamicDownloadJobNames) {
-            jobInfos.add(createDynamicJobInfo(sessionRequestInfo, tradefedJobInfo, jobName));
-          }
+    if (SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)) {
+      // In MODULE sharding mode, each module job runs independently. Create exactly ONE job
+      // per module: a DYNAMIC_MCTS job if the module is in dynamicMctsModules, or a STATIC_XTS
+      // job otherwise.
+      for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
+        String moduleName =
+            tradefedJobInfo.extraJobProperties().get(XtsPropertyName.Job.FILTERED_TRADEFED_MODULES);
+        String jobName =
+            moduleName != null && dynamicMctsModules.contains(moduleName)
+                ? XtsConstants.DYNAMIC_MCTS_JOB_NAME
+                : XtsConstants.STATIC_XTS_JOB_NAME;
+        jobInfos.add(createDynamicJobInfo(sessionRequestInfo, tradefedJobInfo, jobName));
+      }
+    } else {
+      // In RUNNER sharding mode, create both STATIC_XTS and DYNAMIC_MCTS jobs across all modules.
+      for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
+        for (String jobName : allDynamicDownloadJobNames) {
+          jobInfos.add(createDynamicJobInfo(sessionRequestInfo, tradefedJobInfo, jobName));
         }
-      } else {
-        jobInfos.add(
-            sessionRequestHandlerUtil.createXtsTradefedTestJob(
-                sessionRequestInfo, tradefedJobInfo));
       }
     }
 
@@ -256,8 +257,7 @@ public abstract class XtsJobCreator {
     if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
       Optional<Properties> testReportProperties =
-          addPrevSessionPropertiesForRetry(
-              sessionRequestInfo, extraJobProperties, /* throwIfNoNonTfModule= */ false);
+          addPrevSessionPropertiesForRetry(sessionRequestInfo, extraJobProperties);
       if (useTfRetry) {
         logger.atInfo().log("Preparing for TF retry...");
         prepareTfRetry(sessionRequestInfo, driverParams, jobFiles, testReportProperties);
@@ -283,7 +283,7 @@ public abstract class XtsJobCreator {
     }
 
     if (!sessionRequestInfo.getEnvVarsMap().isEmpty()) {
-      driverParams.put("env_vars", new Gson().toJson(sessionRequestInfo.getEnvVarsMap()));
+      driverParams.put("env_vars", GSON.toJson(sessionRequestInfo.getEnvVarsMap()));
     }
 
     boolean enableModuleSharding =
@@ -470,8 +470,9 @@ public abstract class XtsJobCreator {
     SubPlan subPlan = null;
     if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
-      addPrevSessionPropertiesForRetry(
-          sessionRequestInfo, extraJobProperties, /* throwIfNoNonTfModule= */ true);
+      Optional<Properties> testReportProperties =
+          addPrevSessionPropertiesForRetry(sessionRequestInfo, extraJobProperties);
+      validateNonTfModuleForRetry(testReportProperties);
       subPlan = prepareRunRetrySubPlan(sessionRequestInfo, /* forTf= */ false);
       injectBuildFingerprint(extraJobProperties, subPlan);
     } else if (sessionRequestInfo.hasSubPlanName()) {
@@ -755,36 +756,8 @@ public abstract class XtsJobCreator {
       try (InputStream is = jarFile.getInputStream(entry)) {
         Configuration configuration = ConfigurationXmlParser.parse(is, configFileName);
         ImmutableList.Builder<PreconditionDecorator> decorators = ImmutableList.builder();
-        for (var preparer : configuration.getTargetPreparersList()) {
-          String decoratorName = ConfigurationUtil.getSimpleClassName(preparer.getClazz());
-          Optional<Map.Entry<String, JsonObject>> scopedSpec =
-              ModuleConfigurationHelper.convertOptionsToScopedSpec(
-                  decoratorName, preparer.getOptionsList());
-          String specKey = scopedSpec.map(Map.Entry::getKey).orElse(null);
-          JsonObject specJson = scopedSpec.map(Map.Entry::getValue).orElse(null);
-
-          // For certain decorators, we need to manually set up some additional properties that
-          // can't be statically configured in the config file.
-          if ((decoratorName.equals("DeviceInfoCollectorDecorator")
-                  || decoratorName.equals("AndroidAtsDynamicConfigPusherDecorator")
-                  || decoratorName.equals("ApkPreconditionCheckDecorator"))
-              && specJson != null) {
-            specJson.addProperty(
-                "xts_test_dir",
-                XtsDirUtil.getXtsTestCasesDir(
-                        Path.of(sessionRequestInfo.getXtsRootDir()),
-                        sessionRequestInfo.getXtsType())
-                    .toString());
-          }
-          if (decoratorName.equals("AndroidAtsDynamicConfigPusherDecorator")) {
-            specJson.addProperty(
-                "xts_suite_info",
-                String.format(
-                    "suite_name=%s,suite_version=%s",
-                    sessionRequestInfo.getTestSuiteInfo().getXtsType(),
-                    sessionRequestInfo.getTestSuiteInfo().getVersion()));
-          }
-          decorators.add(new PreconditionDecorator(decoratorName, specKey, specJson));
+        for (TargetPreparer preparer : configuration.getTargetPreparersList()) {
+          decorators.add(toPreconditionDecorator(sessionRequestInfo, preparer));
         }
         return decorators.build();
       }
@@ -795,6 +768,39 @@ public abstract class XtsJobCreator {
 
     logger.atWarning().log("Failed to parse precondition decorators from %s", tradefedJar);
     return ImmutableList.of();
+  }
+
+  private static PreconditionDecorator toPreconditionDecorator(
+      SessionRequestInfo sessionRequestInfo, TargetPreparer preparer)
+      throws MobileHarnessException {
+    String decoratorName = ConfigurationUtil.getSimpleClassName(preparer.getClazz());
+    Optional<Map.Entry<String, JsonObject>> scopedSpec =
+        ModuleConfigurationHelper.convertOptionsToScopedSpec(
+            decoratorName, preparer.getOptionsList());
+    String specKey = scopedSpec.map(Map.Entry::getKey).orElse(null);
+    JsonObject specJson = scopedSpec.map(Map.Entry::getValue).orElse(null);
+
+    // For certain decorators, we need to manually set up some additional properties that
+    // can't be statically configured in the config file.
+    if ((decoratorName.equals("DeviceInfoCollectorDecorator")
+            || decoratorName.equals("AndroidAtsDynamicConfigPusherDecorator")
+            || decoratorName.equals("ApkPreconditionCheckDecorator"))
+        && specJson != null) {
+      specJson.addProperty(
+          "xts_test_dir",
+          XtsDirUtil.getXtsTestCasesDir(
+                  Path.of(sessionRequestInfo.getXtsRootDir()), sessionRequestInfo.getXtsType())
+              .toString());
+    }
+    if (decoratorName.equals("AndroidAtsDynamicConfigPusherDecorator") && specJson != null) {
+      specJson.addProperty(
+          "xts_suite_info",
+          String.format(
+              "suite_name=%s,suite_version=%s",
+              sessionRequestInfo.getTestSuiteInfo().getXtsType(),
+              sessionRequestInfo.getTestSuiteInfo().getVersion()));
+    }
+    return new PreconditionDecorator(decoratorName, specKey, specJson);
   }
 
   /** Validates a sub plan for a non-tradefed job. */
@@ -814,8 +820,7 @@ public abstract class XtsJobCreator {
   @CanIgnoreReturnValue
   private Optional<Properties> addPrevSessionPropertiesForRetry(
       SessionRequestInfo sessionRequestInfo,
-      ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties,
-      boolean throwIfNoNonTfModule)
+      ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties)
       throws MobileHarnessException {
     Optional<Path> testReportPropertiesFile =
         getPrevSessionTestReportProperties(sessionRequestInfo);
@@ -828,18 +833,22 @@ public abstract class XtsJobCreator {
     boolean hasTfModule = TestReportPropertiesUtil.hasTfModule(testReportProperties);
     boolean hasNonTfModule = TestReportPropertiesUtil.hasNonTfModule(testReportProperties);
 
-    if (throwIfNoNonTfModule && !hasNonTfModule) {
+    extraJobProperties
+        .put(Job.PREV_SESSION_HAS_TF_MODULE, String.valueOf(hasTfModule))
+        .put(Job.PREV_SESSION_HAS_NON_TF_MODULE, String.valueOf(hasNonTfModule));
+    return Optional.of(testReportProperties);
+  }
+
+  private void validateNonTfModuleForRetry(Optional<Properties> testReportProperties)
+      throws MobileHarnessException {
+    if (testReportProperties.isPresent()
+        && !TestReportPropertiesUtil.hasNonTfModule(testReportProperties.get())) {
       // If previous session doesn't have Non-TF module, throw exception to skip the retry.
       throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.XTS_NO_MATCHED_NON_TF_MODULES_TO_RETRY,
           "Previous session doesn't have non-tradefed module",
           /* cause= */ null);
     }
-
-    extraJobProperties
-        .put(Job.PREV_SESSION_HAS_TF_MODULE, String.valueOf(hasTfModule))
-        .put(Job.PREV_SESSION_HAS_NON_TF_MODULE, String.valueOf(hasNonTfModule));
-    return Optional.of(testReportProperties);
   }
 
   private void injectBuildFingerprint(
@@ -985,8 +994,7 @@ public abstract class XtsJobCreator {
     return subPlan;
   }
 
-  protected static ImmutableSet<String> getNonTfModules(
-      ImmutableMap<String, Configuration> configsMap) {
+  protected static ImmutableSet<String> getNonTfModules(Map<String, Configuration> configsMap) {
     return configsMap.values().stream()
         .map(config -> config.getMetadata().getXtsModule())
         .collect(toImmutableSet());

@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -102,7 +101,7 @@ public class ConsoleJobCreator extends XtsJobCreator {
         sessionRequestInfo.hasRetryType() ? sessionRequestInfo.getRetryType() : null,
         ImmutableList.copyOf(sessionRequestInfo.getIncludeFiltersList()),
         ImmutableList.copyOf(sessionRequestInfo.getExcludeFiltersList()),
-        getNonTfModules(ImmutableMap.copyOf(sessionRequestInfo.getV2ConfigsMapMap())),
+        getNonTfModules(sessionRequestInfo.getV2ConfigsMapMap()),
         forTf,
         ImmutableList.copyOf(sessionRequestInfo.getModuleNamesList()));
   }

@@ -21,7 +21,6 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.urlForWorkerResolve;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
 import com.google.common.flogger.FluentLogger;
@@ -183,7 +182,7 @@ public class ServerJobCreator extends XtsJobCreator {
         sessionRequestInfo.hasRetryType() ? sessionRequestInfo.getRetryType() : null,
         ImmutableList.copyOf(sessionRequestInfo.getIncludeFiltersList()),
         ImmutableList.copyOf(sessionRequestInfo.getExcludeFiltersList()),
-        getNonTfModules(ImmutableMap.copyOf(sessionRequestInfo.getV2ConfigsMapMap())),
+        getNonTfModules(sessionRequestInfo.getV2ConfigsMapMap()),
         forTf,
         ImmutableList.copyOf(sessionRequestInfo.getModuleNamesList()));
   }
