@@ -25,10 +25,12 @@ export function createSearchFilter<V = string>(
     const data = dataInput();
     const term = searchTerm().toLowerCase().trim();
     if (!data) return [];
-    const entries = Object.entries(data).map(([key, value]) => ({
-      key,
-      value,
-    }));
+    const entries = Object.entries(data)
+      .map(([key, value]) => ({
+        key,
+        value,
+      }))
+      .sort((a, b) => a.key.localeCompare(b.key));
     if (!term) return entries;
     return entries.filter(
       (item) =>
