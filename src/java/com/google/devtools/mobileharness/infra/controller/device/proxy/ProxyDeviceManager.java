@@ -23,7 +23,6 @@ import static com.google.common.util.concurrent.Futures.immediateCancelledFuture
 import static com.google.common.util.concurrent.Futures.transform;
 import static com.google.common.util.concurrent.Futures.whenAllComplete;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
-import static com.google.common.util.concurrent.Runnables.doNothing;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.allAsMap;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.getUnchecked;
@@ -299,7 +298,7 @@ public class ProxyDeviceManager {
                           test.testLocator))
               .collect(toImmutableList());
       try {
-        getUnchecked(whenAllComplete(testDevicesReleasers).run(doNothing(), threadPool));
+        getUnchecked(whenAllComplete(testDevicesReleasers).run(() -> {}, threadPool));
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       } finally {
@@ -367,7 +366,7 @@ public class ProxyDeviceManager {
                           proxiedDevice.formattedDeviceLocator))
               .collect(toImmutableList());
       try {
-        getUnchecked(whenAllComplete(deviceReleasers).run(doNothing(), threadPool));
+        getUnchecked(whenAllComplete(deviceReleasers).run(() -> {}, threadPool));
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
       } finally {
