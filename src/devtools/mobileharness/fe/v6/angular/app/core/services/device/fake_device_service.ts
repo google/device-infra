@@ -1,7 +1,7 @@
 import {HttpErrorResponse} from '@angular/common/http';
 import {Injectable} from '@angular/core';
-import {Observable, of, throwError} from 'rxjs';
-import {delay} from 'rxjs/operators';
+import {Observable, of, throwError, timer} from 'rxjs';
+import {delay, switchMap} from 'rxjs/operators';
 
 import {GoogleDate} from '../../../shared/utils/date_utils';
 import {
@@ -35,12 +35,15 @@ import {
 /**
  * A fake implementation of the DeviceService for development and testing.
  * It uses the mock data defined in the central mock_data registry.
+ * This service simulates network latency and occasional failures for testing
+ * purposes. This is NOT prod code, so NO need to add test file for this.
  */
 @Injectable({
   providedIn: 'root',
 })
 export class FakeDeviceService extends DeviceService {
   private getDeviceOverviewCallCount = 0;
+  private failPage3Load = true;
 
   constructor() {
     super();
@@ -517,54 +520,76 @@ export class FakeDeviceService extends DeviceService {
       {key: 'host_name', displayName: 'Lab (host)'},
       {key: 'devices', displayName: 'Devices'},
     ];
+
+    const pageNum =
+      pageToken === '' ? 1 : Number(pageToken.replace('page', '')) || 1;
+
+    // Simulate failure on Page 3 load
+    if (pageNum === 3 && this.failPage3Load) {
+      this.failPage3Load = false; // Next time it will succeed
+      return timer(1000).pipe(
+        switchMap(() =>
+          throwError(
+            () => new Error('Simulated network failure while loading Page 3.'),
+          ),
+        ),
+      );
+    }
+
+    // Reset failure for next test run?
+    if (pageNum === 1) {
+      this.failPage3Load = true;
+    }
+
     const now = Date.now();
-    const rows = [
-      {
-        id: 'fake-test-0001',
+    const rows = [];
+    for (let i = 0; i < 5; i++) {
+      const testId = `fake-test-${pageNum}-${String(i).padStart(4, '0')}`;
+      const jobId = `fake-job-${pageNum}-${String(i).padStart(4, '0')}`;
+      rows.push({
+        id: testId,
         cells: [
           {
             link: {
-              text: 'fake-test-0001',
-              target: {
-                test: {testId: 'fake-test-0001', jobId: 'fake-job-0001'},
-              },
+              text: testId,
+              target: {test: {testId, jobId}},
             },
           },
-          {text: {value: 'com.google.example.SampleTest#testMethod0'}},
-          {text: {value: 'dafeng'}},
-          {text: {value: 'dafeng'}},
-          {status: {text: 'Done', indicator: 'INDICATOR_NEUTRAL' as const}},
-          {status: {text: 'Pass', indicator: 'INDICATOR_OK' as const}},
-          {text: {value: String(now - 3600_000)}},
-          {text: {value: '125000'}},
-          {text: {value: 'lab-host-01'}},
-          {multiLink: {entries: [{text: id, target: {device: {id}}}]}},
-        ],
-      },
-      {
-        id: 'fake-test-0002',
-        cells: [
+          {text: {value: `Page ${pageNum} Test ${i}`}},
+          {text: {value: i % 2 === 0 ? 'dafeng' : 'mhar-robot'}},
+          {text: {value: i % 2 === 0 ? 'dafeng' : 'system'}},
           {
-            link: {
-              text: 'fake-test-0002',
-              target: {
-                test: {testId: 'fake-test-0002', jobId: 'fake-job-0002'},
-              },
+            status: {
+              text: i % 2 === 0 ? 'Done' : 'Running',
+              indicator:
+                i % 2 === 0
+                  ? ('INDICATOR_NEUTRAL' as const)
+                  : ('INDICATOR_ACTIVE' as const),
             },
           },
-          {text: {value: 'com.google.example.SampleTest#testMethod1'}},
-          {text: {value: 'mhar-robot'}},
-          {text: {value: 'system'}},
-          {status: {text: 'Running', indicator: 'INDICATOR_ACTIVE' as const}},
-          {status: {text: 'Unknown', indicator: 'INDICATOR_NEUTRAL' as const}},
-          {text: {value: String(now - 7200_000)}},
-          {text: {value: ''}},
+          {
+            status: {
+              text: i % 2 === 0 ? 'Pass' : 'Unknown',
+              indicator:
+                i % 2 === 0
+                  ? ('INDICATOR_OK' as const)
+                  : ('INDICATOR_NEUTRAL' as const),
+            },
+          },
+          {text: {value: String(now - (i + 1) * 3600_000)}},
+          {text: {value: i % 2 === 0 ? '125000' : ''}},
           {text: {value: 'lab-host-01'}},
           {multiLink: {entries: [{text: id, target: {device: {id}}}]}},
         ],
-      },
-    ];
-    return of({columns, rows, nextPageToken: ''}).pipe(delay(300));
+      });
+    }
+
+    let nextPageToken = '';
+    if (pageNum < 5) {
+      nextPageToken = `page${pageNum + 1}`;
+    }
+
+    return of({columns, rows, nextPageToken}).pipe(delay(1000));
   }
 
   // Future methods like listDevices, updateDeviceConfig, etc., would be added here.

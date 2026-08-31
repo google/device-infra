@@ -1,6 +1,6 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {of, Subject} from 'rxjs';
+import {of, Subject, throwError} from 'rxjs';
 
 import {DebugService} from '@deviceinfra/app/core/services/debug_service';
 import {DeviceTestHistoryResponse} from '../../../../core/models/device_test_history';
@@ -151,5 +151,66 @@ describe('TestHistoryTab Component', () => {
       '',
     );
     expect(testComponent.canPrev()).toBeFalse();
+  });
+
+  it('navigates to next page', () => {
+    deviceServiceSpy.getDeviceTestHistory.and.returnValue(
+      of({
+        ...FIRST_PAGE,
+        nextPageToken: 'token-3',
+      }),
+    );
+
+    component.nextPage();
+    fixture.detectChanges();
+
+    expect(deviceServiceSpy.getDeviceTestHistory).toHaveBeenCalledWith(
+      'device-1',
+      'host-1',
+      'token-2',
+    );
+    expect(component.canPrev()).toBeTrue();
+  });
+
+  it('navigates to prev page', () => {
+    // First go to next page to populate tokens
+    deviceServiceSpy.getDeviceTestHistory.and.returnValue(
+      of({
+        ...FIRST_PAGE,
+        nextPageToken: 'token-3',
+      }),
+    );
+    component.nextPage();
+    fixture.detectChanges();
+
+    deviceServiceSpy.getDeviceTestHistory.calls.reset();
+
+    // Setup for prev page load
+    deviceServiceSpy.getDeviceTestHistory.and.returnValue(of(FIRST_PAGE));
+
+    component.prevPage();
+    fixture.detectChanges();
+
+    expect(deviceServiceSpy.getDeviceTestHistory).toHaveBeenCalledWith(
+      'device-1',
+      'host-1',
+      '', // should go back to first page token
+    );
+    expect(component.canPrev()).toBeFalse();
+  });
+
+  it('keeps current state on error during pagination', () => {
+    deviceServiceSpy.getDeviceTestHistory.and.returnValue(
+      throwError(() => new Error('error')),
+    );
+
+    const initialRows = component.rows();
+    component.nextPage();
+    fixture.detectChanges();
+
+    expect(component.rows()).toEqual(initialRows);
+    expect(component.error()).toBe('Failed to load test history.');
+    // Check next button is still enabled if it was
+    expect(component.hasNextPage()).toBeTrue();
   });
 });
