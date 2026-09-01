@@ -68,6 +68,7 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:io_github_classgraph_classgraph",
+        "@maven//:org_ow2_asm_asm",
     ],
 )
 
