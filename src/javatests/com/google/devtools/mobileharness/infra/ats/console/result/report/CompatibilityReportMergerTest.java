@@ -577,6 +577,14 @@ public final class CompatibilityReportMergerTest {
             Attribute.newBuilder().setKey("csr_default").setValue("default").build(),
             Attribute.newBuilder().setKey("csr_strongbox").setValue("strongbox").build(),
             Attribute.newBuilder()
+                .setKey("keymint_key_attestation.root_of_trust.verified_boot_hash")
+                .setValue("nGavg1HGnOPjtqhKowj5WMnUnPe/HnRugrGb6qFH03o=")
+                .build(),
+            Attribute.newBuilder()
+                .setKey("strong_box_key_attestation.root_of_trust.verified_boot_hash")
+                .setValue("nGavg1HGnOPjtqhKowj5WMnUnPe/HnRugrGb6qFH03o=")
+                .build(),
+            Attribute.newBuilder()
                 .setKey("device_kernel_info")
                 .setValue(
                     "Linux localhost 5.10.149-android13-4-693040-g6422af733678-ab9739629 #1"

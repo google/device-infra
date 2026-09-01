@@ -458,6 +458,7 @@ public class CompatibilityReportMerger {
                 attr ->
                     attr.getKey().startsWith("build_")
                         || attr.getKey().startsWith("csr_")
+                        || attr.getKey().endsWith(".root_of_trust.verified_boot_hash")
                         || EXTRA_BUILD_INFO_ATTR_TO_KEPT.contains(attr.getKey()))
             .collect(toImmutableList());
 

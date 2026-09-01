@@ -106,6 +106,14 @@ public final class CompatibilityReportParserTest {
             Attribute.newBuilder().setKey("invocation-id").setValue("1").build(),
             Attribute.newBuilder().setKey("java_version").setValue("19.0.2").build(),
             Attribute.newBuilder()
+                .setKey("keymint_key_attestation.root_of_trust.verified_boot_hash")
+                .setValue("nGavg1HGnOPjtqhKowj5WMnUnPe/HnRugrGb6qFH03o=")
+                .build(),
+            Attribute.newBuilder()
+                .setKey("strong_box_key_attestation.root_of_trust.verified_boot_hash")
+                .setValue("nGavg1HGnOPjtqhKowj5WMnUnPe/HnRugrGb6qFH03o=")
+                .build(),
+            Attribute.newBuilder()
                 .setKey("build_fingerprint")
                 .setValue(
                     "google/bramble/bramble:UpsideDownCake/UP1A.220722.002/8859461:userdebug/dev-keys")
@@ -181,6 +189,14 @@ public final class CompatibilityReportParserTest {
                 .build(),
             Attribute.newBuilder().setKey("invocation-id").setValue("1").build(),
             Attribute.newBuilder().setKey("java_version").setValue("19.0.2").build(),
+            Attribute.newBuilder()
+                .setKey("keymint_key_attestation.root_of_trust.verified_boot_hash")
+                .setValue("nGavg1HGnOPjtqhKowj5WMnUnPe/HnRugrGb6qFH03o=")
+                .build(),
+            Attribute.newBuilder()
+                .setKey("strong_box_key_attestation.root_of_trust.verified_boot_hash")
+                .setValue("nGavg1HGnOPjtqhKowj5WMnUnPe/HnRugrGb6qFH03o=")
+                .build(),
             Attribute.newBuilder()
                 .setKey("build_fingerprint")
                 .setValue(
