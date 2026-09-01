@@ -112,7 +112,7 @@ public final class RemoteControlEligibilityCheckerTest {
   }
 
   @Test
-  public void checkEligibility_macosHostSingleSelect_returnsIneligible() throws Exception {
+  public void checkEligibility_macosHostSingleSelect_returnsEligible() throws Exception {
     RemoteControlEligibilityContext context =
         RemoteControlEligibilityContext.builder()
             .setIsMultipleSelection(false)
@@ -124,8 +124,9 @@ public final class RemoteControlEligibilityCheckerTest {
 
     RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
 
-    assertThat(result.isEligible()).isFalse();
-    assertThat(result.reasonCode()).hasValue(IneligibilityReasonCode.HOST_OS_NOT_SUPPORTED);
+    assertThat(result.isEligible()).isTrue();
+    assertThat(result.supportedProxyTypes())
+        .containsExactly(DeviceProxyType.ADB_AND_VIDEO, DeviceProxyType.ADB_ONLY);
   }
 
   @Test
