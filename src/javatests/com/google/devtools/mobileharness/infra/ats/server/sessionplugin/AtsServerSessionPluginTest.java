@@ -604,6 +604,73 @@ public final class AtsServerSessionPluginTest {
   }
 
   @Test
+  public void onJobEnded_sessionResumedDuringTradefedJob_filtersCompletedJobsAndSchedulesNext()
+      throws Exception {
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000L));
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    timing.start();
+    var unused = timing.end();
+    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result result = new Result(timing.toNewTiming(), new Params(timing).toNewParams()).setPass();
+    when(jobInfo.resultWithCause()).thenReturn(result);
+
+    when(xtsJobCreator.createXtsTradefedTestJob(any()))
+        .thenReturn(ImmutableList.of(jobInfo, jobInfo2));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+
+    // Resumed session: jobInfo ends. ensureTradefedJobsInitialized must remove jobInfo
+    // without throwing UnsupportedOperationException, and schedule jobInfo2.
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+
+    verify(sessionInfo).addJob(jobInfo2);
+  }
+
+  @Test
+  public void
+      onJobEnded_sessionResumedDuringTradefedJob_schedulesNonTradefedJobsWhenAllTradefedJobsDone()
+          throws Exception {
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000L));
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    timing.start();
+    var unused = timing.end();
+    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result result = new Result(timing.toNewTiming(), new Params(timing).toNewParams()).setPass();
+    when(jobInfo.resultWithCause()).thenReturn(result);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
+
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of(moblyJobInfo));
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+
+    // Resumed session: single TF job ends -> scheduleNonTradefedJobsIfNeeded calls
+    // ensureNonTradefedJobsInitialized and schedules non-TF jobs.
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+
+    verify(sessionInfo).addJob(moblyJobInfo);
+  }
+
+  @Test
   public void onTestStarting_cancelSession_sendCancelMessageToTest() throws Exception {
     when(sessionInfo.getSessionPluginExecutionConfig())
         .thenReturn(

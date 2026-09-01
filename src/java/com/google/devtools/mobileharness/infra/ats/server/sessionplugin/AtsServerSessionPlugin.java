@@ -584,12 +584,24 @@ final class AtsServerSessionPlugin {
       CreateJobsResult createTradefedJobsResult =
           newMultiCommandRequestHandler.createTradefedJobs(
               requestDetail.getOriginalRequest(), sessionInfo);
-      tradefedJobs = createTradefedJobsResult.jobInfos();
+      tradefedJobs = new ArrayList<>(createTradefedJobsResult.jobInfos());
       ImmutableSet<String> triggeredJobNames =
           sessionInfo.getAllJobs().stream()
               .map(job -> job.locator().getName())
               .collect(toImmutableSet());
       tradefedJobs.removeIf(job -> triggeredJobNames.contains(job.locator().getName()));
+    }
+  }
+
+  /** Re-initializes non-Tradefed jobs if they are uninitialized (e.g., when resuming a session). */
+  @GuardedBy("sessionLock")
+  private void ensureNonTradefedJobsInitialized(RequestDetail.Builder requestDetail)
+      throws InterruptedException {
+    if (nonTradefedJobs == null) {
+      CreateJobsResult createNonTradefedJobsResult =
+          newMultiCommandRequestHandler.createNonTradefedJobs(
+              requestDetail.getOriginalRequest(), sessionInfo);
+      nonTradefedJobs = createNonTradefedJobsResult.jobInfos();
     }
   }
 
@@ -661,14 +673,7 @@ final class AtsServerSessionPlugin {
       return;
     }
 
-    // Non-tradefed jobs might be lost in the resumed sessions. Re-initialize them to ensure
-    // they are executed.
-    if (nonTradefedJobs == null) {
-      CreateJobsResult createNonTradefedJobsResult =
-          newMultiCommandRequestHandler.createNonTradefedJobs(
-              requestDetail.getOriginalRequest(), sessionInfo);
-      nonTradefedJobs = createNonTradefedJobsResult.jobInfos();
-    }
+    ensureNonTradefedJobsInitialized(requestDetail);
     if (!nonTradefedJobs.isEmpty()) {
       nonTradefedJobs.forEach(sessionInfo::addJob);
     }
@@ -792,14 +797,44 @@ final class AtsServerSessionPlugin {
     sessionInfo.setSessionPluginOutput(unused -> latestRequestDetail, RequestDetail.class);
   }
 
+  /**
+   * Resumes or initializes the {@link RequestDetail.Builder} from session plugin output.
+   *
+   * <p>Falls back to unpacking the original {@link NewMultiCommandRequest} from {@link
+   * SessionInfo#getSessionPluginExecutionConfig()} if missing from output (e.g. server restart
+   * before {@link #onSessionStarting} flushes output, or in tests), ensuring subsequent job
+   * re-initialization has access to the original request parameters.
+   */
   private RequestDetail.Builder resumeRequestDetailFromSessionPluginOutput() {
     // No need to use sessionLock here because the caller already holds the lock.
-    // It's added only to work around
+    // It's added only to satisfy ErrorProne GuardedBy analysis.
     synchronized (sessionLock) {
       RequestDetail.Builder requestDetailBuilder = RequestDetail.newBuilder();
       sessionInfo
           .getSessionPluginOutput(RequestDetail.class)
           .ifPresent(requestDetailBuilder::mergeFrom);
+      if (requestDetailBuilder
+          .getOriginalRequest()
+          .equals(NewMultiCommandRequest.getDefaultInstance())) {
+        try {
+          if (sessionInfo.getSessionPluginExecutionConfig() != null
+              && sessionInfo.getSessionPluginExecutionConfig().hasConfig()
+              && sessionInfo
+                  .getSessionPluginExecutionConfig()
+                  .getConfig()
+                  .is(SessionRequest.class)) {
+            SessionRequest sessionRequest =
+                sessionInfo
+                    .getSessionPluginExecutionConfig()
+                    .getConfig()
+                    .unpack(SessionRequest.class);
+            requestDetailBuilder.setOriginalRequest(sessionRequest.getNewMultiCommandRequest());
+          }
+        } catch (InvalidProtocolBufferException e) {
+          logger.atWarning().withCause(e).log(
+              "Failed to unpack SessionRequest from session plugin execution config");
+        }
+      }
       return requestDetailBuilder;
     }
   }
