@@ -1350,6 +1350,46 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
+  public void createSetupJobs_success() throws Exception {
+    when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    when(files.getAll()).thenReturn(ImmutableMultimap.of());
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createSetupJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.RUNNING);
+    assertThat(createJobsResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
+
+    assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
+    assertThat(commandDetail.getRequestId()).isEqualTo("session_id");
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.RUNNING);
+    assertThat(commandDetail.getOriginalCommandInfo()).isEqualTo(commandInfo);
+  }
+
+  @Test
+  public void createTeardownJobs_success() throws Exception {
+    when(xtsJobCreator.createXtsTearDownJob(any())).thenReturn(Optional.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    when(files.getAll()).thenReturn(ImmutableMultimap.of());
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTeardownJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.RUNNING);
+    assertThat(createJobsResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
+
+    assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
+    assertThat(commandDetail.getRequestId()).isEqualTo("session_id");
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.RUNNING);
+    assertThat(commandDetail.getOriginalCommandInfo()).isEqualTo(commandInfo);
+  }
+
+  @Test
   public void createNonTradefedJobs_invalidRequest_returnEmptyCommandList() throws Exception {
     when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");

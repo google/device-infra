@@ -233,6 +233,28 @@ final class NewMultiCommandRequestHandler {
     return createJobs(request, sessionInfo, this::createSlateJobInfos, "slate");
   }
 
+  /**
+   * Conditionally creates setup jobs from the request if required by the command line.
+   *
+   * @return a {@link CreateJobsResult} containing the created setup jobs (or an empty list if none
+   *     are required), command details, and creation state
+   */
+  CreateJobsResult createSetupJobs(NewMultiCommandRequest request, SessionInfo sessionInfo)
+      throws InterruptedException {
+    return createJobs(request, sessionInfo, this::createSetupJobInfos, "setup");
+  }
+
+  /**
+   * Conditionally creates teardown jobs from the request if required by the command line.
+   *
+   * @return a {@link CreateJobsResult} containing the created teardown jobs (or an empty list if
+   *     none are required), command details, and creation state
+   */
+  CreateJobsResult createTeardownJobs(NewMultiCommandRequest request, SessionInfo sessionInfo)
+      throws InterruptedException {
+    return createJobs(request, sessionInfo, this::createTeardownJobInfos, "teardown");
+  }
+
   private CreateJobsResult createJobs(
       NewMultiCommandRequest request,
       SessionInfo sessionInfo,
@@ -342,6 +364,114 @@ final class NewMultiCommandRequestHandler {
     }
     commandDetail.ifPresent(builder -> commandDetailsBuilder.put(commandId, builder.build()));
     return jobInfos;
+  }
+
+  @FunctionalInterface
+  private interface XtsJobCreatorFunction {
+    Optional<JobInfo> create(SessionRequestInfo sessionRequestInfo)
+        throws MobileHarnessException, InterruptedException;
+  }
+
+  private ImmutableList<JobInfo> createSetupJobInfos(
+      NewMultiCommandRequest request,
+      CommandInfo commandInfo,
+      SessionInfo sessionInfo,
+      ImmutableMap.Builder<String, CommandDetail> commandDetailsBuilder)
+      throws InterruptedException, MobileHarnessException {
+    return createSetupOrTeardownJobInfos(
+        request,
+        commandInfo,
+        sessionInfo,
+        commandDetailsBuilder,
+        xtsJobCreator::createXtsSetupJob,
+        "setup");
+  }
+
+  private ImmutableList<JobInfo> createTeardownJobInfos(
+      NewMultiCommandRequest request,
+      CommandInfo commandInfo,
+      SessionInfo sessionInfo,
+      ImmutableMap.Builder<String, CommandDetail> commandDetailsBuilder)
+      throws InterruptedException, MobileHarnessException {
+    return createSetupOrTeardownJobInfos(
+        request,
+        commandInfo,
+        sessionInfo,
+        commandDetailsBuilder,
+        xtsJobCreator::createXtsTearDownJob,
+        "teardown");
+  }
+
+  private ImmutableList<JobInfo> createSetupOrTeardownJobInfos(
+      NewMultiCommandRequest request,
+      CommandInfo commandInfo,
+      SessionInfo sessionInfo,
+      ImmutableMap.Builder<String, CommandDetail> commandDetailsBuilder,
+      XtsJobCreatorFunction jobCreatorFunction,
+      String jobType)
+      throws InterruptedException, MobileHarnessException {
+    SessionRequestInfo sessionRequestInfo =
+        getSessionRequestInfo(request, commandInfo, sessionInfo);
+
+    SetMultimap<String, String> commandToJobsMap = getCommandToJobsMap(sessionInfo);
+
+    Optional<JobInfo> jobInfoOpt;
+    try {
+      jobInfoOpt = jobCreatorFunction.create(sessionRequestInfo);
+    } catch (MobileHarnessException e) {
+      if (XtsJobCreator.isSkippableException(e)) {
+        logger.atInfo().log(
+            "Unable to create %s job for command [%s] due to skippable exception: [%s].",
+            jobType, commandInfo.getCommandLine(), shortDebugString(e));
+        return ImmutableList.of();
+      }
+      throw e;
+    }
+
+    if (jobInfoOpt.isEmpty()) {
+      return ImmutableList.of();
+    }
+
+    Optional<CommandDetail.Builder> commandDetail;
+    String commandId = getCommandId(commandInfo, request);
+    String hostIp = "";
+    if (!sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
+      hostIp = sessionRequestHandlerUtil.getHostIp(sessionRequestInfo.getDeviceSerials(0));
+    }
+    if (!commandToJobsMap.containsKey(commandId)) {
+      commandDetail =
+          Optional.of(
+              CommandDetail.newBuilder()
+                  .addAllDeviceSerials(sessionRequestInfo.getDeviceSerialsList())
+                  .setHostIp(hostIp)
+                  .setCommandLine(commandInfo.getCommandLine())
+                  .setOriginalCommandInfo(commandInfo)
+                  .setCreateTime(toProtoTimestamp(clock.instant()))
+                  .setStartTime(toProtoTimestamp(clock.instant()))
+                  .setUpdateTime(toProtoTimestamp(clock.instant()))
+                  .setRequestId(sessionInfo.getSessionId())
+                  .setCommandAttemptId(getCommandAttemptId(commandId, sessionInfo.getSessionId()))
+                  .setId(commandId)
+                  .setState(CommandState.RUNNING));
+    } else {
+      commandDetail = Optional.empty();
+    }
+
+    JobInfo jobInfo = jobInfoOpt.get();
+    try {
+      reformatResourcePathForNonTradefedJob(jobInfo);
+    } catch (MobileHarnessException e) {
+      commandDetail.ifPresent(
+          builder -> {
+            ErrorReason errorReason = getErrorReason(e);
+            setCommandError(builder, errorReason, e);
+            commandDetailsBuilder.put(commandId, builder.build());
+          });
+      throw e;
+    }
+    jobInfo.properties().add(XtsPropertyName.Job.XTS_COMMAND_ID, commandId);
+    commandDetail.ifPresent(builder -> commandDetailsBuilder.put(commandId, builder.build()));
+    return ImmutableList.of(jobInfo);
   }
 
   private static SetMultimap<String, String> getCommandToJobsMap(SessionInfo sessionInfo) {
@@ -749,7 +879,7 @@ final class NewMultiCommandRequestHandler {
     }
     sessionRequestInfoBuilder
         .addAllDeviceSerials(deviceSerials)
-        .putAllEnvVars(ImmutableMap.copyOf(request.getTestEnvironment().getEnvVarsMap()))
+        .putAllEnvVars(request.getTestEnvironment().getEnvVarsMap())
         .setRemoteRunnerFilePathPrefix(RemoteFileType.ATS_FILE_SERVER.prefix())
         .setIsXtsDynamicDownloadEnabled(commandInfo.getEnableXtsDynamicDownload());
 
