@@ -34,7 +34,12 @@ import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-/** Handler for the CheckDeviceWritePermission RPC. */
+/**
+ * Handler for the CheckDeviceWritePermission RPC.
+ *
+ * @deprecated Use {@link CheckDeviceConfigPermissionHandler} instead.
+ */
+@Deprecated
 @Singleton
 public final class CheckDeviceWritePermissionHandler {
 

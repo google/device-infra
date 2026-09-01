@@ -33,7 +33,12 @@ import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-/** Handler for the CheckHostWritePermission RPC. */
+/**
+ * Handler for the CheckHostWritePermission RPC.
+ *
+ * @deprecated Use {@link CheckHostConfigPermissionHandler} instead.
+ */
+@Deprecated
 @Singleton
 public final class CheckHostWritePermissionHandler {
 
