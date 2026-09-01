@@ -23,6 +23,7 @@ import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.util.concurrent.TimeUnit.HOURS;
 
+import com.google.common.base.Ascii;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -84,6 +85,7 @@ import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
 import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
+import com.google.wireless.qa.mobileharness.shared.api.decorator.util.PhaseSkippableDecoratorUtil;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
@@ -102,6 +104,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /** Session Plugin to serve test requests coming from ATS server. */
@@ -136,6 +139,25 @@ final class AtsServerSessionPlugin {
   @SuppressWarnings("PreferredInterfaceType")
   @GuardedBy("sessionLock")
   private List<JobInfo> tradefedJobs = null;
+
+  @GuardedBy("sessionLock")
+  @Nullable
+  private JobInfo setupJob = null;
+
+  @GuardedBy("sessionLock")
+  private boolean isTeardownJobInitialized = false;
+
+  @GuardedBy("sessionLock")
+  @Nullable
+  private JobInfo teardownJob = null;
+
+  @GuardedBy("sessionLock")
+  @Nullable
+  private String runningSetupJobId = null;
+
+  @GuardedBy("sessionLock")
+  @Nullable
+  private String runningTeardownJobId = null;
 
   private final SessionInfo sessionInfo;
 
@@ -425,16 +447,31 @@ final class AtsServerSessionPlugin {
       throws InterruptedException {
     if (!createTradefedJobs(requestDetail, newMultiCommandRequest)
         || !createNonTradefedJobs(requestDetail, newMultiCommandRequest)
-        || hasNoJobsCreated(requestDetail)) {
+        || hasNoJobsCreated(requestDetail)
+        || !createSetupJobs(requestDetail, newMultiCommandRequest)
+        || !createTeardownJobs(requestDetail, newMultiCommandRequest)) {
       return;
     }
 
-    addMainJobs();
+    if (setupJob != null) {
+      // If a setup job was created, schedule it first while deferring main jobs, and the teardown
+      // job.
+      addSetupJob(setupJob);
+    } else {
+      addMainJobs(requestDetail);
+    }
   }
 
   /**
-   * Creates Tradefed jobs from the request, updates request detail state and error messages, and
-   * saves the generated jobs in {@link #tradefedJobs}.
+   * Creates Tradefed jobs from the request.
+   *
+   * <p>This method performs the following steps:
+   *
+   * <ul>
+   *   <li>Generates Tradefed jobs via {@link NewMultiCommandRequestHandler#createTradefedJobs}.
+   *   <li>Updates {@link RequestDetail} with the resulting creation state and error messages.
+   *   <li>Saves the generated jobs in {@link #tradefedJobs}.
+   * </ul>
    *
    * @return true if the creation state is {@link RequestState#RUNNING}, false otherwise
    */
@@ -450,8 +487,16 @@ final class AtsServerSessionPlugin {
   }
 
   /**
-   * Creates non-Tradefed jobs from the request, updates request detail state and error messages,
-   * and saves the generated jobs in {@link #nonTradefedJobs}.
+   * Creates non-Tradefed jobs from the request.
+   *
+   * <p>This method performs the following steps:
+   *
+   * <ul>
+   *   <li>Generates non-Tradefed jobs via {@link
+   *       NewMultiCommandRequestHandler#createNonTradefedJobs}.
+   *   <li>Updates {@link RequestDetail} with the resulting creation state and error messages.
+   *   <li>Saves the generated jobs in {@link #nonTradefedJobs}.
+   * </ul>
    *
    * @return true if the creation state is {@link RequestState#RUNNING}, false otherwise
    */
@@ -464,6 +509,55 @@ final class AtsServerSessionPlugin {
     nonTradefedJobs = createNonTradefedJobsResult.jobInfos();
     updateRequestDetailWithCreateJobsResult(requestDetail, createNonTradefedJobsResult);
     return createNonTradefedJobsResult.state().equals(RequestState.RUNNING);
+  }
+
+  /**
+   * Creates setup jobs from the request.
+   *
+   * <p>This method performs the following steps:
+   *
+   * <ul>
+   *   <li>Generates setup jobs via {@link NewMultiCommandRequestHandler#createSetupJobs}.
+   *   <li>Updates {@link RequestDetail} with the resulting creation state and error messages.
+   *   <li>Saves the generated job in {@link #setupJob}.
+   * </ul>
+   *
+   * @return true if the creation state is {@link RequestState#RUNNING}, false otherwise
+   */
+  @GuardedBy("sessionLock")
+  private boolean createSetupJobs(
+      RequestDetail.Builder requestDetail, NewMultiCommandRequest newMultiCommandRequest)
+      throws InterruptedException {
+    CreateJobsResult createSetupJobsResult =
+        newMultiCommandRequestHandler.createSetupJobs(newMultiCommandRequest, sessionInfo);
+    updateRequestDetailWithCreateJobsResult(requestDetail, createSetupJobsResult);
+    setupJob = createSetupJobsResult.jobInfos().stream().findFirst().orElse(null);
+    return createSetupJobsResult.state().equals(RequestState.RUNNING);
+  }
+
+  /**
+   * Creates teardown jobs from the request.
+   *
+   * <p>This method performs the following steps:
+   *
+   * <ul>
+   *   <li>Generates teardown jobs via {@link NewMultiCommandRequestHandler#createTeardownJobs}.
+   *   <li>Updates {@link RequestDetail} with the resulting creation state and error messages.
+   *   <li>Saves the generated job in {@link #teardownJob}.
+   * </ul>
+   *
+   * @return true if the creation state is {@link RequestState#RUNNING}, false otherwise
+   */
+  @GuardedBy("sessionLock")
+  private boolean createTeardownJobs(
+      RequestDetail.Builder requestDetail, NewMultiCommandRequest newMultiCommandRequest)
+      throws InterruptedException {
+    CreateJobsResult createTeardownJobsResult =
+        newMultiCommandRequestHandler.createTeardownJobs(newMultiCommandRequest, sessionInfo);
+    updateRequestDetailWithCreateJobsResult(requestDetail, createTeardownJobsResult);
+    isTeardownJobInitialized = true;
+    teardownJob = createTeardownJobsResult.jobInfos().stream().findFirst().orElse(null);
+    return createTeardownJobsResult.state().equals(RequestState.RUNNING);
   }
 
   /**
@@ -489,22 +583,146 @@ final class AtsServerSessionPlugin {
   }
 
   /**
-   * Schedules main Tradefed and non-Tradefed jobs into the session.
-   *
-   * <p>If any Tradefed jobs exist, schedules the first Tradefed job (subsequent Tradefed jobs will
-   * execute sequentially when the previous one ends in {@link #handleXtsJobEnd}). If no Tradefed
-   * jobs exist, adds all non-Tradefed jobs directly.
+   * Adds the setup job to the session and records its execution ID in {@link #runningSetupJobId}.
    */
   @GuardedBy("sessionLock")
-  private void addMainJobs() {
-    if (tradefedJobs != null && !tradefedJobs.isEmpty()) {
+  private void addSetupJob(JobInfo setupJobInfo) {
+    logger.atInfo().log("Adding setup job [%s].", setupJobInfo.locator().getId());
+    runningSetupJobId = setupJobInfo.locator().getId();
+    sessionInfo.addJob(setupJobInfo);
+  }
+
+  /**
+   * Schedules main Tradefed and non-Tradefed jobs into the session.
+   *
+   * <p>The scheduling behavior follows these rules:
+   *
+   * <ul>
+   *   <li><b>Tradefed jobs present:</b> Schedules the first Tradefed job. Subsequent Tradefed jobs
+   *       execute sequentially when the previous one ends in {@link #handleXtsJobEnd}, after which
+   *       any non-Tradefed jobs will be scheduled.
+   *   <li><b>Only non-Tradefed jobs present:</b> Adds all non-Tradefed jobs directly.
+   *   <li><b>No main jobs present:</b> Falls back to adding the teardown job if present.
+   * </ul>
+   */
+  @GuardedBy("sessionLock")
+  private void addMainJobs(RequestDetail.Builder requestDetail) throws InterruptedException {
+    ensureTradefedJobsInitialized(requestDetail);
+    if (!tradefedJobs.isEmpty()) {
       // Add one tradefed job to session, if we have multiple TF jobs execute serially. The
       // following jobs will be added when the previous job hits onJobEnded.
       sessionInfo.addJob(tradefedJobs.remove(0));
-    } else if (nonTradefedJobs != null && !nonTradefedJobs.isEmpty()) {
-      // If no tradefed job was added, add non tradefed jobs directly.
-      nonTradefedJobs.forEach(sessionInfo::addJob);
+    } else {
+      ensureNonTradefedJobsInitialized(requestDetail);
+      if (!hasAnyNonTradefedJobs() && !nonTradefedJobs.isEmpty()) {
+        // If no tradefed job was added, add non tradefed jobs directly.
+        nonTradefedJobs.forEach(sessionInfo::addJob);
+      } else {
+        addTeardownJobIfAny(requestDetail);
+      }
     }
+  }
+
+  /**
+   * Adds the teardown job to the session if one has not already been added.
+   *
+   * <p>Before adding the teardown job, this method:
+   *
+   * <ul>
+   *   <li>Checks whether a teardown job is already present in the session to prevent duplicates.
+   *   <li>Ensures the teardown job is initialized (re-creating it from the original request if
+   *       resumed).
+   *   <li>Relays phase-skippable lifecycle decorator states from the setup job to the teardown job.
+   * </ul>
+   */
+  @GuardedBy("sessionLock")
+  private void addTeardownJobIfAny(RequestDetail.Builder requestDetail) {
+    // Early return if a teardown job has already been added to the session. This prevents duplicate
+    // teardown jobs when multiple main jobs complete around the same time or when
+    // addTeardownJobIfAny is called from both addMainJobs and handleXtsJobEnd.
+    boolean sessionHasTeardownJob = sessionInfo.getAllJobs().stream().anyMatch(this::isTeardownJob);
+    if (sessionHasTeardownJob) {
+      return;
+    }
+    ensureTeardownJobInitialized(requestDetail);
+    if (teardownJob != null) {
+      relayPhaseSkippableDecoratorStates(teardownJob);
+      logger.atInfo().log("Adding teardown job [%s].", teardownJob.locator().getId());
+      runningTeardownJobId = teardownJob.locator().getId();
+      sessionInfo.addJob(teardownJob);
+      teardownJob = null;
+    }
+  }
+
+  /**
+   * Re-initializes the teardown job if it is uninitialized (e.g., when resuming a session).
+   *
+   * <p>Teardown jobs might be lost in resumed sessions. This method re-creates the teardown job
+   * from the original request if it was not already created.
+   */
+  @GuardedBy("sessionLock")
+  private void ensureTeardownJobInitialized(RequestDetail.Builder requestDetail) {
+    if (!isTeardownJobInitialized) {
+      isTeardownJobInitialized = true;
+      try {
+        CreateJobsResult createTeardownJobsResult =
+            newMultiCommandRequestHandler.createTeardownJobs(
+                requestDetail.getOriginalRequest(), sessionInfo);
+        teardownJob = createTeardownJobsResult.jobInfos().stream().findFirst().orElse(null);
+      } catch (InterruptedException e) {
+        logger.atWarning().withCause(e).log(
+            "Interrupted when creating teardown job for session [%s]", sessionInfo.getSessionId());
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+
+  /**
+   * Relays phase-skippable lifecycle decorator properties from the setup job to the teardown job.
+   *
+   * <p>Finds the setup job from memory or from session jobs, and relays properties between their
+   * root tests using {@link PhaseSkippableDecoratorUtil#relayStates}.
+   */
+  @GuardedBy("sessionLock")
+  private void relayPhaseSkippableDecoratorStates(JobInfo teardownJobInfo) {
+    JobInfo setupJobToRelay = setupJob;
+    if (setupJobToRelay == null) {
+      setupJobToRelay =
+          sessionInfo.getAllJobs().stream().filter(this::isSetupJob).findFirst().orElse(null);
+    }
+    if (setupJobToRelay != null
+        && setupJobToRelay.tests() != null
+        && teardownJobInfo.tests() != null) {
+      setupJobToRelay.tests().getAll().values().stream()
+          .findFirst()
+          .ifPresent(
+              setupTest ->
+                  teardownJobInfo
+                      .tests()
+                      .getAll()
+                      .values()
+                      .forEach(
+                          teardownTest ->
+                              PhaseSkippableDecoratorUtil.relayStates(setupTest, teardownTest)));
+    }
+  }
+
+  /** Checks whether the given job is an ATS setup job based on its xTS job name property. */
+  private boolean isSetupJob(JobInfo jobInfo) {
+    return jobInfo
+        .properties()
+        .getOptional(XtsConstants.XTS_JOB_NAME)
+        .map(name -> Ascii.equalsIgnoreCase(name, XtsConstants.SETUP_JOB_NAME))
+        .orElse(false);
+  }
+
+  /** Checks whether the given job is an ATS teardown job based on its xTS job name property. */
+  private boolean isTeardownJob(JobInfo jobInfo) {
+    return jobInfo
+        .properties()
+        .getOptional(XtsConstants.XTS_JOB_NAME)
+        .map(name -> Ascii.equalsIgnoreCase(name, XtsConstants.TEARDOWN_JOB_NAME))
+        .orElse(false);
   }
 
   @GuardedBy("sessionLock")
@@ -532,12 +750,42 @@ final class AtsServerSessionPlugin {
     createJobsResult.commandDetails().forEach(requestDetail::putCommandDetails);
   }
 
+  /**
+   * Handles job completion in the session, orchestrating sequential scheduling of Tradefed,
+   * non-Tradefed, and teardown jobs.
+   *
+   * <p>This method performs the following workflow:
+   *
+   * <ul>
+   *   <li><b>Setup job end:</b> Starts main jobs via {@link #addMainJobs}.
+   *   <li><b>Teardown job end:</b> Returns early as the session lifecycle is complete.
+   *   <li><b>Main job end:</b> Handles post-processing for non-Tradefed jobs, schedules the next
+   *       Tradefed job (if any), and schedules non-Tradefed jobs once all Tradefed jobs finish.
+   *   <li><b>All main jobs finished:</b> Triggers {@link #addTeardownJobIfAny} once no unfinished
+   *       Tradefed or non-Tradefed main jobs remain.
+   * </ul>
+   */
   @GuardedBy("sessionLock")
   void handleXtsJobEnd(JobInfo jobInfo, RequestDetail.Builder requestDetail)
       throws MobileHarnessException, InterruptedException {
     if (requestDetail.getState().equals(RequestState.CANCELED) || isAborted()) {
       return;
     }
+    String jobId = jobInfo.locator().getId();
+    if ((runningSetupJobId != null && runningSetupJobId.equals(jobId)) || isSetupJob(jobInfo)) {
+      runningSetupJobId = null;
+      logger.atInfo().log("Setup job [%s] ended, starting main jobs.", jobId);
+      addMainJobs(requestDetail);
+      return;
+    }
+
+    if ((runningTeardownJobId != null && runningTeardownJobId.equals(jobId))
+        || isTeardownJob(jobInfo)) {
+      runningTeardownJobId = null;
+      logger.atInfo().log("Teardown job [%s] ended.", jobId);
+      return;
+    }
+
     handleNonTradefedJobEnd(jobInfo, requestDetail);
     ensureTradefedJobsInitialized(requestDetail);
     scheduleNextTradefedJob(jobInfo);
@@ -658,24 +906,45 @@ final class AtsServerSessionPlugin {
   }
 
   /**
-   * Schedules non-Tradefed jobs once all Tradefed jobs in the session have completed.
+   * Schedules non-Tradefed jobs or triggers the teardown job as main jobs complete.
    *
-   * <p>If there are non-tradefed jobs, that means all non-tradefed tests had already been added. So
-   * no need to add again. This can happen when two jobs end at the same time.
+   * <p>This method handles job transitions after any Tradefed or non-Tradefed main job ends:
+   *
+   * <ul>
+   *   <li><b>Canceled session:</b> No action is taken if the request state is {@link
+   *       RequestState#CANCELED}.
+   *   <li><b>Non-Tradefed job completed:</b> If all non-Tradefed main jobs have finished, triggers
+   *       {@link #addTeardownJobIfAny}.
+   *   <li><b>Tradefed job completed:</b> Once all Tradefed main jobs finish, checks {@link
+   *       #hasAnyNonTradefedJobs} to avoid duplicate scheduling on concurrent completions. If no
+   *       non-TF jobs were added yet, schedules them (re-initializing if needed) or triggers {@link
+   *       #addTeardownJobIfAny} if none exist.
+   * </ul>
    */
   @GuardedBy("sessionLock")
   private void scheduleNonTradefedJobsIfNeeded(
       JobInfo completedJob, RequestDetail.Builder requestDetail) throws InterruptedException {
-    if (requestDetail.getState() == RequestState.CANCELED
-        || !completedJob.type().getDriver().equals(TRADEFED_DRIVER_NAME)
-        || hasUnfinishedTradefedJobs()
-        || hasNonTradefedJobs()) {
+    if (requestDetail.getState() == RequestState.CANCELED) {
+      return;
+    }
+    if (!completedJob.type().getDriver().equals(TRADEFED_DRIVER_NAME)) {
+      if (!hasUnfinishedNonTradefedJobs()) {
+        logger.atInfo().log("All non-tradefed main jobs have completed.");
+        addTeardownJobIfAny(requestDetail);
+      }
+      return;
+    }
+    // Skip if TF jobs are still running or non-TF jobs were already added (avoids duplicate
+    // scheduling when TF jobs finish concurrently).
+    if (hasUnfinishedTradefedJobs() || hasAnyNonTradefedJobs()) {
       return;
     }
 
     ensureNonTradefedJobsInitialized(requestDetail);
     if (!nonTradefedJobs.isEmpty()) {
       nonTradefedJobs.forEach(sessionInfo::addJob);
+    } else {
+      addTeardownJobIfAny(requestDetail);
     }
   }
 
@@ -698,9 +967,19 @@ final class AtsServerSessionPlugin {
    * <p>If there are non-tradefed jobs, that means all non-tradefed tests had already been added. So
    * no need to add again. This can happen when two jobs end at the same time.
    */
-  private boolean hasNonTradefedJobs() {
+  private boolean hasAnyNonTradefedJobs() {
+    return sessionInfo.getAllJobs().stream().anyMatch(this::isMainNonTradefedJob);
+  }
+
+  private boolean hasUnfinishedNonTradefedJobs() {
     return sessionInfo.getAllJobs().stream()
-        .anyMatch(job -> !job.type().getDriver().equals(TRADEFED_DRIVER_NAME));
+        .anyMatch(job -> isMainNonTradefedJob(job) && !job.status().get().equals(TestStatus.DONE));
+  }
+
+  private boolean isMainNonTradefedJob(JobInfo job) {
+    return !job.type().getDriver().equals(TRADEFED_DRIVER_NAME)
+        && !isSetupJob(job)
+        && !isTeardownJob(job);
   }
 
   @GuardedBy("sessionLock")

@@ -33,6 +33,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Iterables;
@@ -368,6 +369,338 @@ public final class AtsServerSessionPluginTest {
   }
 
   @Test
+  public void onSessionStarting_withSetupAndTeardownJobs_schedulesSetupJobFirst() throws Exception {
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000L));
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+
+    JobInfo setupJob = mock(JobInfo.class);
+    when(setupJob.locator())
+        .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
+    Properties setupJobProperties = new Properties(timing);
+    setupJobProperties.add(XtsConstants.XTS_JOB_NAME, XtsConstants.SETUP_JOB_NAME);
+    when(setupJob.properties()).thenReturn(setupJobProperties);
+    when(setupJob.files()).thenReturn(files);
+
+    JobInfo teardownJob = mock(JobInfo.class);
+    when(teardownJob.locator())
+        .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
+    Properties teardownJobProperties = new Properties(timing);
+    teardownJobProperties.add(XtsConstants.XTS_JOB_NAME, XtsConstants.TEARDOWN_JOB_NAME);
+    when(teardownJob.properties()).thenReturn(teardownJobProperties);
+    when(teardownJob.files()).thenReturn(files);
+
+    when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsTearDownJob(any())).thenReturn(Optional.of(teardownJob));
+
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    verify(sessionInfo).addJob(setupJob);
+    verify(sessionInfo, never()).addJob(jobInfo);
+    verify(sessionInfo, never()).addJob(teardownJob);
+  }
+
+  @Test
+  public void onJobEnded_setupJobEnded_schedulesMainJobs_thenTeardownJob_relaysDecoratorStates()
+      throws Exception {
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000L));
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+
+    JobInfo setupJob = mock(JobInfo.class);
+    when(setupJob.locator())
+        .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
+    TestInfo setupTest = mock(TestInfo.class);
+    Properties setupTestProperties = new Properties(timing);
+    setupTestProperties.add("phase_skippable_decorator_state::device1::decorator1::key1", "val1");
+    when(setupTest.properties()).thenReturn(setupTestProperties);
+    when(setupTest.getRootTest()).thenReturn(setupTest);
+    TestInfos setupTests = mock(TestInfos.class);
+    when(setupTests.getAll()).thenReturn(ImmutableListMultimap.of("setup_test_id", setupTest));
+    when(setupJob.tests()).thenReturn(setupTests);
+    Properties setupJobProperties = new Properties(timing);
+    setupJobProperties.add(XtsConstants.XTS_JOB_NAME, XtsConstants.SETUP_JOB_NAME);
+    when(setupJob.properties()).thenReturn(setupJobProperties);
+    when(setupJob.files()).thenReturn(files);
+    when(setupJob.type()).thenReturn(JobType.newBuilder().setDriver("NoOpDriver").build());
+    when(setupJob.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+
+    JobInfo teardownJob = mock(JobInfo.class);
+    when(teardownJob.locator())
+        .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
+    TestInfo teardownTest = mock(TestInfo.class);
+    Properties teardownTestProperties = new Properties(timing);
+    when(teardownTest.properties()).thenReturn(teardownTestProperties);
+    when(teardownTest.getRootTest()).thenReturn(teardownTest);
+    TestInfos teardownTests = mock(TestInfos.class);
+    when(teardownTests.getAll())
+        .thenReturn(ImmutableListMultimap.of("teardown_test_id", teardownTest));
+    when(teardownJob.tests()).thenReturn(teardownTests);
+    Properties teardownJobProperties = new Properties(timing);
+    teardownJobProperties.add(XtsConstants.XTS_JOB_NAME, XtsConstants.TEARDOWN_JOB_NAME);
+    when(teardownJob.properties()).thenReturn(teardownJobProperties);
+    when(teardownJob.files()).thenReturn(files);
+    when(teardownJob.type()).thenReturn(JobType.newBuilder().setDriver("NoOpDriver").build());
+    when(teardownJob.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+
+    when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsTearDownJob(any())).thenReturn(Optional.of(teardownJob));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(setupJob);
+    verify(sessionInfo, never()).addJob(jobInfo);
+    verify(sessionInfo, never()).addJob(teardownJob);
+
+    // Setup job ends -> main TF job scheduled.
+    plugin.onJobEnded(new JobEndEvent(setupJob, null));
+    verify(sessionInfo).addJob(jobInfo);
+    verify(sessionInfo, never()).addJob(teardownJob);
+
+    // TF job ends -> teardown job scheduled and decorator state relayed.
+    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(setupJob, jobInfo));
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+    verify(sessionInfo).addJob(teardownJob);
+    assertThat(
+            teardownTestProperties.get(
+                "phase_skippable_decorator_state::device1::decorator1::key1"))
+        .isEqualTo("val1");
+  }
+
+  @Test
+  public void
+      onJobEnded_withTradefedAndNonTradefedJobs_schedulesSetup_thenTf_thenNonTf_thenTeardown()
+          throws Exception {
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000L));
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+
+    JobInfo setupJob = mock(JobInfo.class);
+    when(setupJob.locator())
+        .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
+    TestInfo setupTest = mock(TestInfo.class);
+    Properties setupTestProperties = new Properties(timing);
+    setupTestProperties.add("phase_skippable_decorator_state::device1::decorator1::key1", "val1");
+    when(setupTest.properties()).thenReturn(setupTestProperties);
+    when(setupTest.getRootTest()).thenReturn(setupTest);
+    TestInfos setupTests = mock(TestInfos.class);
+    when(setupTests.getAll()).thenReturn(ImmutableListMultimap.of("setup_test_id", setupTest));
+    when(setupJob.tests()).thenReturn(setupTests);
+    Properties setupJobProperties = new Properties(timing);
+    setupJobProperties.add(XtsConstants.XTS_JOB_NAME, XtsConstants.SETUP_JOB_NAME);
+    when(setupJob.properties()).thenReturn(setupJobProperties);
+    when(setupJob.files()).thenReturn(files);
+    when(setupJob.type()).thenReturn(JobType.newBuilder().setDriver("NoOpDriver").build());
+    when(setupJob.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+
+    JobInfo teardownJob = mock(JobInfo.class);
+    when(teardownJob.locator())
+        .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
+    TestInfo teardownTest = mock(TestInfo.class);
+    Properties teardownTestProperties = new Properties(timing);
+    when(teardownTest.properties()).thenReturn(teardownTestProperties);
+    when(teardownTest.getRootTest()).thenReturn(teardownTest);
+    TestInfos teardownTests = mock(TestInfos.class);
+    when(teardownTests.getAll())
+        .thenReturn(ImmutableListMultimap.of("teardown_test_id", teardownTest));
+    when(teardownJob.tests()).thenReturn(teardownTests);
+    Properties teardownJobProperties = new Properties(timing);
+    teardownJobProperties.add(XtsConstants.XTS_JOB_NAME, XtsConstants.TEARDOWN_JOB_NAME);
+    when(teardownJob.properties()).thenReturn(teardownJobProperties);
+    when(teardownJob.files()).thenReturn(files);
+    when(teardownJob.type()).thenReturn(JobType.newBuilder().setDriver("NoOpDriver").build());
+    when(teardownJob.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+
+    when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsTearDownJob(any())).thenReturn(Optional.of(teardownJob));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of(moblyJobInfo));
+
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(setupJob);
+    verify(sessionInfo, never()).addJob(jobInfo);
+    verify(sessionInfo, never()).addJob(moblyJobInfo);
+    verify(sessionInfo, never()).addJob(teardownJob);
+
+    // Setup job ends -> main TF job scheduled.
+    plugin.onJobEnded(new JobEndEvent(setupJob, null));
+    verify(sessionInfo).addJob(jobInfo);
+    verify(sessionInfo, never()).addJob(moblyJobInfo);
+    verify(sessionInfo, never()).addJob(teardownJob);
+
+    // TF job ends -> Non-TF mobly job scheduled.
+    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(setupJob, jobInfo));
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+    verify(sessionInfo).addJob(moblyJobInfo);
+    verify(sessionInfo, never()).addJob(teardownJob);
+
+    // Non-TF job ends -> teardown job scheduled and decorator state relayed.
+    when(moblyJobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(setupJob, jobInfo, moblyJobInfo));
+    plugin.onJobEnded(new JobEndEvent(moblyJobInfo, null));
+    verify(sessionInfo).addJob(teardownJob);
+    assertThat(
+            teardownTestProperties.get(
+                "phase_skippable_decorator_state::device1::decorator1::key1"))
+        .isEqualTo("val1");
+  }
+
+  @Test
+  public void onJobEnded_setupJobEnded_sessionResumed_schedulesTradefedJobs() throws Exception {
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000L));
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+
+    JobInfo setupJob = mock(JobInfo.class);
+    when(setupJob.locator())
+        .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
+    Properties setupJobProperties = new Properties(timing);
+    setupJobProperties.add(XtsConstants.XTS_JOB_NAME, XtsConstants.SETUP_JOB_NAME);
+    when(setupJob.properties()).thenReturn(setupJobProperties);
+    when(setupJob.files()).thenReturn(files);
+    when(setupJob.type()).thenReturn(JobType.newBuilder().setDriver("NoOpDriver").build());
+    when(setupJob.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+    when(xtsJobCreator.createXtsTearDownJob(any())).thenReturn(Optional.empty());
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(setupJob));
+
+    // In a resumed session, onSessionStarting was not called on this plugin instance.
+    // When setupJob ends, main Tradefed jobs should be initialized and scheduled.
+    plugin.onJobEnded(new JobEndEvent(setupJob, null));
+
+    verify(sessionInfo).addJob(jobInfo);
+  }
+
+  @Test
+  public void onJobEnded_setupJobEnded_sessionResumed_withOnlyNonTradefedJobs_schedulesNonTfJobs()
+      throws Exception {
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000L));
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+
+    JobInfo setupJob = mock(JobInfo.class);
+    when(setupJob.locator())
+        .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
+    Properties setupJobProperties = new Properties(timing);
+    setupJobProperties.add(XtsConstants.XTS_JOB_NAME, XtsConstants.SETUP_JOB_NAME);
+    when(setupJob.properties()).thenReturn(setupJobProperties);
+    when(setupJob.files()).thenReturn(files);
+    when(setupJob.type()).thenReturn(JobType.newBuilder().setDriver("NoOpDriver").build());
+    when(setupJob.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of());
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of(moblyJobInfo));
+    when(xtsJobCreator.createXtsTearDownJob(any())).thenReturn(Optional.empty());
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(setupJob));
+
+    // In a resumed session, setup job ends and since there are no Tradefed jobs, non-TF jobs should
+    // be scheduled.
+    plugin.onJobEnded(new JobEndEvent(setupJob, null));
+
+    verify(sessionInfo).addJob(moblyJobInfo);
+  }
+
+  @Test
+  public void onJobEnded_sessionResumedDuringTradefedJob_filtersCompletedJobsAndSchedulesNext()
+      throws Exception {
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000L));
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    timing.start();
+    var unused = timing.end();
+    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result result = new Result(timing.toNewTiming(), new Params(timing).toNewParams()).setPass();
+    when(jobInfo.resultWithCause()).thenReturn(result);
+
+    when(xtsJobCreator.createXtsTradefedTestJob(any()))
+        .thenReturn(ImmutableList.of(jobInfo, jobInfo2));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+    when(xtsJobCreator.createXtsTearDownJob(any())).thenReturn(Optional.empty());
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+
+    // Resumed session: jobInfo ends. ensureTradefedJobsInitialized must remove jobInfo
+    // without throwing UnsupportedOperationException, and schedule jobInfo2.
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+
+    verify(sessionInfo).addJob(jobInfo2);
+  }
+
+  @Test
+  public void addTeardownJobIfAny_noTeardownJobNeeded_doesNotRecreateTeardownJobs()
+      throws Exception {
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000L));
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+
+    when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.empty());
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of(moblyJobInfo));
+    when(xtsJobCreator.createXtsTearDownJob(any())).thenReturn(Optional.empty());
+
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+
+    // TF job ends -> schedules moblyJobInfo
+    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+    verify(sessionInfo).addJob(moblyJobInfo);
+
+    // Mobly job ends -> all main jobs finished, addTeardownJobIfAny called
+    when(moblyJobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo, moblyJobInfo));
+    plugin.onJobEnded(new JobEndEvent(moblyJobInfo, null));
+
+    // xtsJobCreator.createXtsTearDownJob should have been called only once during createXtsJobs
+    verify(xtsJobCreator).createXtsTearDownJob(any());
+  }
+
+  @Test
   public void onSessionStarting_addDummyCommandDetail() throws Exception {
     when(clock.instant())
         .thenReturn(Instant.ofEpochMilli(1000L))
@@ -601,73 +934,6 @@ public final class AtsServerSessionPluginTest {
     assertThat(requestDetail.containsCommandDetails(commandId)).isTrue();
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().get(commandId);
     assertThat(commandDetail.getOriginalCommandInfo()).isEqualTo(commandInfo);
-  }
-
-  @Test
-  public void onJobEnded_sessionResumedDuringTradefedJob_filtersCompletedJobsAndSchedulesNext()
-      throws Exception {
-    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000L));
-    when(sessionInfo.getSessionPluginExecutionConfig())
-        .thenReturn(
-            SessionPluginExecutionConfig.newBuilder()
-                .setConfig(
-                    Any.pack(
-                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
-                .build());
-
-    Timing timing = new Timing();
-    when(jobInfo.timing()).thenReturn(timing);
-    timing.start();
-    var unused = timing.end();
-    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
-    Result result = new Result(timing.toNewTiming(), new Params(timing).toNewParams()).setPass();
-    when(jobInfo.resultWithCause()).thenReturn(result);
-
-    when(xtsJobCreator.createXtsTradefedTestJob(any()))
-        .thenReturn(ImmutableList.of(jobInfo, jobInfo2));
-    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
-
-    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-
-    // Resumed session: jobInfo ends. ensureTradefedJobsInitialized must remove jobInfo
-    // without throwing UnsupportedOperationException, and schedule jobInfo2.
-    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
-
-    verify(sessionInfo).addJob(jobInfo2);
-  }
-
-  @Test
-  public void
-      onJobEnded_sessionResumedDuringTradefedJob_schedulesNonTradefedJobsWhenAllTradefedJobsDone()
-          throws Exception {
-    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000L));
-    when(sessionInfo.getSessionPluginExecutionConfig())
-        .thenReturn(
-            SessionPluginExecutionConfig.newBuilder()
-                .setConfig(
-                    Any.pack(
-                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
-                .build());
-
-    Timing timing = new Timing();
-    when(jobInfo.timing()).thenReturn(timing);
-    timing.start();
-    var unused = timing.end();
-    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
-    Result result = new Result(timing.toNewTiming(), new Params(timing).toNewParams()).setPass();
-    when(jobInfo.resultWithCause()).thenReturn(result);
-    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
-
-    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
-    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of(moblyJobInfo));
-
-    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-
-    // Resumed session: single TF job ends -> scheduleNonTradefedJobsIfNeeded calls
-    // ensureNonTradefedJobsInitialized and schedules non-TF jobs.
-    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
-
-    verify(sessionInfo).addJob(moblyJobInfo);
   }
 
   @Test
