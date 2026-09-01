@@ -92,6 +92,14 @@ public interface DeviceConfigStub {
   UpdateLabConfigResponse updateLabConfig(UpdateLabConfigRequest request)
       throws RpcExceptionWithErrorId;
 
+  /** Updates the configuration of a lab. */
+  @CanIgnoreReturnValue
+  default UpdateLabConfigResponse updateLabConfig(
+      UpdateLabConfigRequest request, @Nullable String impersonationUser)
+      throws RpcExceptionWithErrorId {
+    return updateLabConfig(request);
+  }
+
   /** Updates the configuration of a lab asynchronously. */
   ListenableFuture<UpdateLabConfigResponse> updateLabConfigAsync(
       UpdateLabConfigRequest request, boolean useClientRpcAuthority);
