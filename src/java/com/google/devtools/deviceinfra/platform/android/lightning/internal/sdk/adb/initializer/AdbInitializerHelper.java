@@ -21,6 +21,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
@@ -52,11 +53,12 @@ public final class AdbInitializerHelper {
       }
     } catch (MobileHarnessException e) {
       adbKillServerCommandFailed = true;
-      logger.atWarning().log("%s", e.getMessage());
+      logger.atWarning().log("%s", MoreThrowables.shortDebugString(e));
     } catch (InterruptedException e) {
       adbKillServerCommandFailed = true;
       Thread.currentThread().interrupt();
-      logger.atWarning().withCause(e).log("Interrupted when killing adb server");
+      logger.atWarning().log(
+          "Interrupted when killing adb server: %s", MoreThrowables.shortDebugString(e));
     }
 
     if (!adbKillServerCommandFailed) {
@@ -71,19 +73,21 @@ public final class AdbInitializerHelper {
             "Failed to kill adb process with killall command as the processes don't exist.");
       }
     } catch (MobileHarnessException e) {
-      logger.atWarning().log("%s", e.getMessage());
+      logger.atWarning().log("%s", MoreThrowables.shortDebugString(e));
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      logger.atWarning().withCause(e).log("Interrupted when killall adb process");
+      logger.atWarning().log(
+          "Interrupted when killall adb process: %s", MoreThrowables.shortDebugString(e));
     }
     try {
       String processes = systemUtil.getProcessesByKeywords("adb");
       logger.atInfo().log("All processes that has the keyword adb:\n%s", processes);
     } catch (MobileHarnessException e) {
-      logger.atWarning().log("%s", e.getMessage());
+      logger.atWarning().log("%s", MoreThrowables.shortDebugString(e));
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      logger.atWarning().withCause(e).log("Interrupted when get adb processes");
+      logger.atWarning().log(
+          "Interrupted when get adb processes: %s", MoreThrowables.shortDebugString(e));
     }
   }
 
@@ -115,10 +119,11 @@ public final class AdbInitializerHelper {
         managedAdbServer = true;
       }
     } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log("%s", e.getMessage());
+      logger.atWarning().log(
+          "Failed to check ADB server process: %s", MoreThrowables.shortDebugString(e));
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      logger.atWarning().withCause(e).log("Interrupted");
+      logger.atWarning().log("Interrupted: %s", MoreThrowables.shortDebugString(e));
     }
 
     if (ifKillAdbServer) {
@@ -132,7 +137,8 @@ public final class AdbInitializerHelper {
         localFileUtil.touchFileOrDir(adbPath, false);
         logger.atInfo().log("adb binary touched");
       } catch (MobileHarnessException e) {
-        logger.atWarning().withCause(e).log("%s", e.getMessage());
+        logger.atWarning().log(
+            "Failed to kill old adb server: %s", MoreThrowables.shortDebugString(e));
       }
     }
 
@@ -144,7 +150,8 @@ public final class AdbInitializerHelper {
                     try {
                       killAdbServer(adbPath, commandExecutor, systemUtil);
                     } catch (Throwable e) {
-                      logger.atInfo().withCause(e).log("Failed to stop ADB server");
+                      logger.atInfo().log(
+                          "Failed to stop ADB server: %s", MoreThrowables.shortDebugString(e));
                     }
                   }));
     }
