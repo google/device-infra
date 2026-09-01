@@ -791,6 +791,11 @@ public class Flags {
   public static final Flag<Boolean> enableMessagingService = Flag.value(true);
 
   @FlagSpec(
+      name = "enable_subprocess_plugins",
+      help = "Whether to run lab plugins in an isolated worker subprocess.")
+  public static final Flag<Boolean> enableSubprocessPlugins = Flag.value(false);
+
+  @FlagSpec(
       name = "enable_mobly_resultstore_upload",
       help = "Whether to enable Mobly result store upload. Default is false.")
   public static final Flag<Boolean> enableMoblyResultstoreUpload = Flag.value(false);
