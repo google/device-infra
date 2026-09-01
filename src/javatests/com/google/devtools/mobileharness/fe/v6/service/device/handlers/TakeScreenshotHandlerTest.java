@@ -18,25 +18,16 @@ package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static org.junit.Assert.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.GroupedDevices;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
 import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TakeScreenshotRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.TakeScreenshotResponse;
-import com.google.devtools.mobileharness.fe.v6.service.shared.auth.DeviceAccessResolver;
-import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
-import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -59,9 +50,6 @@ public final class TakeScreenshotHandlerTest {
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
   @Bind @Mock private ScreenshotActionHelper screenshotActionHelper;
-  @Bind @Mock private DeviceAccessResolver deviceAccessResolver;
-  @Bind @Mock private LabInfoProvider labInfoProvider;
-  @Bind private final ListeningExecutorService executor = MoreExecutors.newDirectExecutorService();
 
   @Inject private TakeScreenshotHandler takeScreenshotHandler;
 
@@ -76,23 +64,6 @@ public final class TakeScreenshotHandlerTest {
     TakeScreenshotResponse expectedResponse =
         TakeScreenshotResponse.newBuilder().setScreenshotUrl("http://gcs/path").build();
 
-    DeviceInfo deviceInfo = DeviceInfo.newBuilder().build();
-    GetLabInfoResponse labInfoResponse =
-        GetLabInfoResponse.newBuilder()
-            .setLabQueryResult(
-                LabQueryResult.newBuilder()
-                    .setDeviceView(
-                        DeviceView.newBuilder()
-                            .setGroupedDevices(
-                                GroupedDevices.newBuilder()
-                                    .setDeviceList(
-                                        DeviceList.newBuilder().addDeviceInfo(deviceInfo)))))
-            .build();
-
-    when(labInfoProvider.getLabInfoAsync(any(), any()))
-        .thenReturn(immediateFuture(labInfoResponse));
-    when(deviceAccessResolver.hasExecutePermission("user", deviceInfo))
-        .thenReturn(immediateFuture(true));
     when(screenshotActionHelper.takeScreenshot(request, UniverseScope.SELF))
         .thenReturn(immediateFuture(expectedResponse));
 
@@ -102,29 +73,16 @@ public final class TakeScreenshotHandlerTest {
             .get();
 
     assertThat(response).isEqualTo(expectedResponse);
+    verify(screenshotActionHelper).takeScreenshot(request, UniverseScope.SELF);
   }
 
   @Test
-  public void takeScreenshot_permissionDenied() {
+  public void takeScreenshot_helperError_propagates() {
     TakeScreenshotRequest request = TakeScreenshotRequest.newBuilder().setId("device_id").build();
 
-    DeviceInfo deviceInfo = DeviceInfo.newBuilder().build();
-    GetLabInfoResponse labInfoResponse =
-        GetLabInfoResponse.newBuilder()
-            .setLabQueryResult(
-                LabQueryResult.newBuilder()
-                    .setDeviceView(
-                        DeviceView.newBuilder()
-                            .setGroupedDevices(
-                                GroupedDevices.newBuilder()
-                                    .setDeviceList(
-                                        DeviceList.newBuilder().addDeviceInfo(deviceInfo)))))
-            .build();
-
-    when(labInfoProvider.getLabInfoAsync(any(), any()))
-        .thenReturn(immediateFuture(labInfoResponse));
-    when(deviceAccessResolver.hasExecutePermission("user", deviceInfo))
-        .thenReturn(immediateFuture(false));
+    when(screenshotActionHelper.takeScreenshot(request, UniverseScope.SELF))
+        .thenReturn(
+            immediateFailedFuture(FeServiceException.permissionDenied("Permission denied")));
 
     ExecutionException thrown =
         assertThrows(
@@ -137,24 +95,5 @@ public final class TakeScreenshotHandlerTest {
     assertThat(thrown).hasCauseThat().isInstanceOf(FeServiceException.class);
     FeServiceException cause = (FeServiceException) thrown.getCause();
     assertThat(cause.getCode()).isEqualTo(Status.Code.PERMISSION_DENIED);
-    assertThat(cause.getMessage()).contains("does not have permission");
-  }
-
-  @Test
-  public void takeScreenshot_noUser() {
-    TakeScreenshotRequest request = TakeScreenshotRequest.newBuilder().setId("device_id").build();
-
-    ExecutionException thrown =
-        assertThrows(
-            ExecutionException.class,
-            () ->
-                takeScreenshotHandler
-                    .takeScreenshot(request, UniverseScope.SELF, Optional.empty())
-                    .get());
-
-    assertThat(thrown).hasCauseThat().isInstanceOf(FeServiceException.class);
-    FeServiceException cause = (FeServiceException) thrown.getCause();
-    assertThat(cause.getCode()).isEqualTo(Status.Code.UNAUTHENTICATED);
-    assertThat(cause.getMessage()).contains("User identity not found");
   }
 }

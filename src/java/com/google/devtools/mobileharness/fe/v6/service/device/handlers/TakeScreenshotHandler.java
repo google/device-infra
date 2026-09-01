@@ -29,23 +29,14 @@ import javax.inject.Singleton;
 public final class TakeScreenshotHandler {
 
   private final ScreenshotActionHelper screenshotActionHelper;
-  private final DeviceActionAuthorizer authorizer;
 
   @Inject
-  TakeScreenshotHandler(
-      ScreenshotActionHelper screenshotActionHelper, DeviceActionAuthorizer authorizer) {
+  TakeScreenshotHandler(ScreenshotActionHelper screenshotActionHelper) {
     this.screenshotActionHelper = screenshotActionHelper;
-    this.authorizer = authorizer;
   }
 
   public ListenableFuture<TakeScreenshotResponse> takeScreenshot(
       TakeScreenshotRequest request, UniverseScope universe, Optional<String> username) {
-    return authorizer.authorizeAndRun(
-        request.getId(),
-        request.getHostName(),
-        username,
-        universe,
-        "take screenshot",
-        () -> screenshotActionHelper.takeScreenshot(request, universe));
+    return screenshotActionHelper.takeScreenshot(request, universe);
   }
 }

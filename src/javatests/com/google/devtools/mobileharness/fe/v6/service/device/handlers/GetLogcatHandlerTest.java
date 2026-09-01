@@ -18,26 +18,16 @@ package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static org.junit.Assert.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.GroupedDevices;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
 import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetLogcatResponse;
-import com.google.devtools.mobileharness.fe.v6.service.shared.auth.DeviceAccessResolver;
-import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
-import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -62,9 +52,6 @@ public final class GetLogcatHandlerTest {
   private static final UniverseScope SELF_UNIVERSE = new UniverseScope.SelfUniverse();
 
   @Bind @Mock private LogcatActionHelper logcatActionHelper;
-  @Bind @Mock private DeviceAccessResolver deviceAccessResolver;
-  @Bind @Mock private LabInfoProvider labInfoProvider;
-  @Bind private final ListeningExecutorService executor = MoreExecutors.newDirectExecutorService();
 
   @Inject private GetLogcatHandler getLogcatHandler;
 
@@ -79,23 +66,6 @@ public final class GetLogcatHandlerTest {
     GetLogcatResponse expectedResponse =
         GetLogcatResponse.newBuilder().setLogUrl("http://log_url").build();
 
-    DeviceInfo deviceInfo = DeviceInfo.newBuilder().build();
-    GetLabInfoResponse labInfoResponse =
-        GetLabInfoResponse.newBuilder()
-            .setLabQueryResult(
-                LabQueryResult.newBuilder()
-                    .setDeviceView(
-                        DeviceView.newBuilder()
-                            .setGroupedDevices(
-                                GroupedDevices.newBuilder()
-                                    .setDeviceList(
-                                        DeviceList.newBuilder().addDeviceInfo(deviceInfo)))))
-            .build();
-
-    when(labInfoProvider.getLabInfoAsync(any(), any()))
-        .thenReturn(immediateFuture(labInfoResponse));
-    when(deviceAccessResolver.hasExecutePermission("user", deviceInfo))
-        .thenReturn(immediateFuture(true));
     when(logcatActionHelper.getLogcat(request, SELF_UNIVERSE))
         .thenReturn(immediateFuture(expectedResponse));
 
@@ -105,26 +75,12 @@ public final class GetLogcatHandlerTest {
   }
 
   @Test
-  public void getLogcat_permissionDenied() {
+  public void getLogcat_helperError_propagates() {
     GetLogcatRequest request = GetLogcatRequest.newBuilder().setId("deviceId").build();
 
-    DeviceInfo deviceInfo = DeviceInfo.newBuilder().build();
-    GetLabInfoResponse labInfoResponse =
-        GetLabInfoResponse.newBuilder()
-            .setLabQueryResult(
-                LabQueryResult.newBuilder()
-                    .setDeviceView(
-                        DeviceView.newBuilder()
-                            .setGroupedDevices(
-                                GroupedDevices.newBuilder()
-                                    .setDeviceList(
-                                        DeviceList.newBuilder().addDeviceInfo(deviceInfo)))))
-            .build();
-
-    when(labInfoProvider.getLabInfoAsync(any(), any()))
-        .thenReturn(immediateFuture(labInfoResponse));
-    when(deviceAccessResolver.hasExecutePermission("user", deviceInfo))
-        .thenReturn(immediateFuture(false));
+    when(logcatActionHelper.getLogcat(request, SELF_UNIVERSE))
+        .thenReturn(
+            immediateFailedFuture(FeServiceException.permissionDenied("Permission denied")));
 
     ExecutionException thrown =
         assertThrows(
@@ -134,21 +90,5 @@ public final class GetLogcatHandlerTest {
     assertThat(thrown).hasCauseThat().isInstanceOf(FeServiceException.class);
     FeServiceException cause = (FeServiceException) thrown.getCause();
     assertThat(cause.getCode()).isEqualTo(Status.Code.PERMISSION_DENIED);
-    assertThat(cause.getMessage()).contains("does not have permission");
-  }
-
-  @Test
-  public void getLogcat_noUser() {
-    GetLogcatRequest request = GetLogcatRequest.newBuilder().setId("deviceId").build();
-
-    ExecutionException thrown =
-        assertThrows(
-            ExecutionException.class,
-            () -> getLogcatHandler.getLogcat(request, SELF_UNIVERSE, Optional.empty()).get());
-
-    assertThat(thrown).hasCauseThat().isInstanceOf(FeServiceException.class);
-    FeServiceException cause = (FeServiceException) thrown.getCause();
-    assertThat(cause.getCode()).isEqualTo(Status.Code.UNAUTHENTICATED);
-    assertThat(cause.getMessage()).contains("User identity not found");
   }
 }

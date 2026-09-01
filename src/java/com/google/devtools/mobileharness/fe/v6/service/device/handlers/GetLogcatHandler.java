@@ -29,22 +29,14 @@ import javax.inject.Singleton;
 public class GetLogcatHandler {
 
   private final LogcatActionHelper logcatActionHelper;
-  private final DeviceActionAuthorizer authorizer;
 
   @Inject
-  GetLogcatHandler(LogcatActionHelper logcatActionHelper, DeviceActionAuthorizer authorizer) {
+  GetLogcatHandler(LogcatActionHelper logcatActionHelper) {
     this.logcatActionHelper = logcatActionHelper;
-    this.authorizer = authorizer;
   }
 
   public ListenableFuture<GetLogcatResponse> getLogcat(
       GetLogcatRequest request, UniverseScope universe, Optional<String> username) {
-    return authorizer.authorizeAndRun(
-        request.getId(),
-        request.getHostName(),
-        username,
-        universe,
-        "get logcat",
-        () -> logcatActionHelper.getLogcat(request, universe));
+    return logcatActionHelper.getLogcat(request, universe);
   }
 }

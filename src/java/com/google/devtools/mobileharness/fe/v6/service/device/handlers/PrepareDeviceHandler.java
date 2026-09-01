@@ -29,23 +29,14 @@ import javax.inject.Singleton;
 public final class PrepareDeviceHandler {
 
   private final PrepareDeviceActionHelper prepareDeviceActionHelper;
-  private final DeviceActionAuthorizer authorizer;
 
   @Inject
-  PrepareDeviceHandler(
-      PrepareDeviceActionHelper prepareDeviceActionHelper, DeviceActionAuthorizer authorizer) {
+  PrepareDeviceHandler(PrepareDeviceActionHelper prepareDeviceActionHelper) {
     this.prepareDeviceActionHelper = prepareDeviceActionHelper;
-    this.authorizer = authorizer;
   }
 
   public ListenableFuture<PrepareDeviceResponse> prepareDevice(
       PrepareDeviceRequest request, UniverseScope universe, Optional<String> username) {
-    return authorizer.authorizeAndRun(
-        request.getId(),
-        request.getHostName(),
-        username,
-        universe,
-        "prepare device",
-        () -> prepareDeviceActionHelper.prepareDevice(request, universe, username.orElse("")));
+    return prepareDeviceActionHelper.prepareDevice(request, universe, username.orElse(""));
   }
 }
