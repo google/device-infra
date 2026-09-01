@@ -18,12 +18,15 @@ package com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceLocatorConfigPair;
-import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceGrpc;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceGrpc.DeviceConfigServiceBlockingStub;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceGrpc.DeviceConfigServiceFutureStub;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.CopyDeviceConfigsRequest;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.CopyDeviceConfigsResponse;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.CopyLabConfigsRequest;
@@ -42,27 +45,52 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServ
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.UpdateLabConfigResponse;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.DeviceConfigStub;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.Inject;
+import io.grpc.Metadata;
+import io.grpc.stub.MetadataUtils;
+import javax.annotation.Nullable;
 
 /** Blocking GRPC stub class for talking to device config service. */
 final class DeviceConfigGrpcStub implements DeviceConfigStub {
 
-  private final DeviceConfigServiceGrpc.DeviceConfigServiceBlockingStub deviceConfigStub;
-  private final DeviceConfigServiceGrpc.DeviceConfigServiceFutureStub deviceConfigServiceFutureStub;
+  @VisibleForTesting
+  static final Metadata.Key<String> END_USER_METADATA_KEY =
+      Metadata.Key.of("omnilab-end-user", Metadata.ASCII_STRING_MARSHALLER);
+
+  private final DeviceConfigServiceBlockingStub deviceConfigStub;
+  private final DeviceConfigServiceFutureStub deviceConfigServiceFutureStub;
 
   @Inject
   DeviceConfigGrpcStub(
-      DeviceConfigServiceGrpc.DeviceConfigServiceBlockingStub deviceConfigStub,
-      DeviceConfigServiceGrpc.DeviceConfigServiceFutureStub deviceConfigServiceFutureStub) {
+      DeviceConfigServiceBlockingStub deviceConfigStub,
+      DeviceConfigServiceFutureStub deviceConfigServiceFutureStub) {
     this.deviceConfigStub = deviceConfigStub;
     this.deviceConfigServiceFutureStub = deviceConfigServiceFutureStub;
+  }
+
+  private DeviceConfigServiceBlockingStub getBlockingStub(@Nullable String impersonationUser) {
+    if (!Strings.isNullOrEmpty(impersonationUser)) {
+      Metadata extraHeaders = new Metadata();
+      extraHeaders.put(END_USER_METADATA_KEY, impersonationUser);
+      return deviceConfigStub.withInterceptors(
+          MetadataUtils.newAttachHeadersInterceptor(extraHeaders));
+    }
+    return deviceConfigStub;
   }
 
   @Override
   public GetDeviceConfigsResponse getDeviceConfigs(GetDeviceConfigsRequest request)
       throws GrpcExceptionWithErrorId {
+    return getDeviceConfigs(request, /* impersonationUser= */ null);
+  }
+
+  @Override
+  public GetDeviceConfigsResponse getDeviceConfigs(
+      GetDeviceConfigsRequest request, @Nullable String impersonationUser)
+      throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
-        deviceConfigStub::getDeviceConfigs,
+        getBlockingStub(impersonationUser)::getDeviceConfigs,
         request,
         InfraErrorId.DEVICE_CONFIG_RPC_STUB_GET_DEVICE_CONFIGS_ERROR,
         String.format(
@@ -134,11 +162,20 @@ final class DeviceConfigGrpcStub implements DeviceConfigStub {
         String.format("Failed to delete config for lab %s", request.getLabHost()));
   }
 
+  @CanIgnoreReturnValue
   @Override
   public UpdateDeviceConfigsResponse updateDeviceConfigs(UpdateDeviceConfigsRequest request)
       throws GrpcExceptionWithErrorId {
+    return updateDeviceConfigs(request, /* impersonationUser= */ null);
+  }
+
+  @CanIgnoreReturnValue
+  @Override
+  public UpdateDeviceConfigsResponse updateDeviceConfigs(
+      UpdateDeviceConfigsRequest request, @Nullable String impersonationUser)
+      throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
-        deviceConfigStub::updateDeviceConfigs,
+        getBlockingStub(impersonationUser)::updateDeviceConfigs,
         request,
         InfraErrorId.DEVICE_CONFIG_RPC_STUB_UPDATE_DEVICE_CONFIGS_ERROR,
         String.format(
@@ -168,11 +205,20 @@ final class DeviceConfigGrpcStub implements DeviceConfigStub {
                 .collect(toImmutableList())));
   }
 
+  @CanIgnoreReturnValue
   @Override
   public UpdateLabConfigResponse updateLabConfig(UpdateLabConfigRequest request)
       throws GrpcExceptionWithErrorId {
+    return updateLabConfig(request, /* impersonationUser= */ null);
+  }
+
+  @CanIgnoreReturnValue
+  @Override
+  public UpdateLabConfigResponse updateLabConfig(
+      UpdateLabConfigRequest request, @Nullable String impersonationUser)
+      throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
-        deviceConfigStub::updateLabConfig,
+        getBlockingStub(impersonationUser)::updateLabConfig,
         request,
         InfraErrorId.DEVICE_CONFIG_RPC_STUB_UPDATE_LAB_CONFIG_ERROR,
         String.format("Failed to update config for lab %s", request.getLabConfig().getHostName()));

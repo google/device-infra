@@ -68,6 +68,17 @@ java_library(
 )
 
 java_library(
+    name = "end_user_server_interceptor",
+    srcs = ["EndUserServerInterceptor.java"],
+    deps = [
+        ":grpc_contexts",
+        "@grpc-java//context",
+        "@grpc-java//core",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+    ],
+)
+
+java_library(
     name = "grpc_contexts",
     srcs = ["GrpcContexts.java"],
     deps = [

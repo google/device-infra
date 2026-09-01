@@ -24,9 +24,14 @@ import java.util.Optional;
 public class GrpcContexts {
 
   static final Context.Key<SocketAddress> CLIENT_ADDRESS = Context.key("client-address");
+  public static final Context.Key<String> END_USER = Context.key("omnilab-end-user");
 
   public static Optional<SocketAddress> clientAddress() {
     return Optional.ofNullable(CLIENT_ADDRESS.get());
+  }
+
+  public static Optional<String> endUser() {
+    return Optional.ofNullable(END_USER.get());
   }
 
   private GrpcContexts() {}
