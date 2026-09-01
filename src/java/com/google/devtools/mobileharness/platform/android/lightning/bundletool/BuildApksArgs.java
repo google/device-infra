@@ -19,7 +19,9 @@ package com.google.devtools.mobileharness.platform.android.lightning.bundletool;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.auto.value.AutoBuilder;
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
@@ -41,6 +43,7 @@ public record BuildApksArgs(
     String keystoreKeyAlias,
     String keystoreKeyPassword,
     Optional<Path> lineage,
+    ImmutableList<String> deviceGroups,
     Duration commandTimeout) {
 
   enum OutputFormat {
@@ -87,6 +90,9 @@ public record BuildApksArgs(
       args.add("--key-pass=" + keystoreKeyPassword);
     }
     lineage.ifPresent(ln -> args.add("--lineage=" + ln));
+    if (!deviceGroups.isEmpty()) {
+      args.add("--device-groups=" + Joiner.on(",").join(deviceGroups));
+    }
     return args.build();
   }
 
@@ -163,6 +169,15 @@ public record BuildApksArgs(
 
     /** Binary file of SigningCertificateLineage (default absent). */
     public abstract Builder setLineage(Path lineage);
+
+    /** Device groups the device belongs to for matching modules (default empty). */
+    public abstract ImmutableList.Builder<String> deviceGroupsBuilder();
+
+    @CanIgnoreReturnValue
+    public Builder addDeviceGroups(String deviceGroup) {
+      deviceGroupsBuilder().add(deviceGroup);
+      return this;
+    }
 
     /** Timeout for the command (default 10 minutes). */
     public abstract Builder setCommandTimeout(Duration commandTimeout);
