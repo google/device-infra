@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol;
 
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
@@ -73,7 +72,6 @@ public class RemoteControlEligibilityChecker {
   // Drivers and Dimensions
   private static final String DRIVER_ACID_REMOTE_DRIVER = "AcidRemoteDriver";
   private static final String DIMENSION_COMMUNICATION_TYPE = "communication_type";
-  private static final String DIMENSION_HOST_OS = "host_os";
   private static final String DIMENSION_SDK_VERSION = "sdk_version";
   private static final String DIMENSION_DEVICE_SUPPORTS_MORETO = "device_supports_moreto";
 
@@ -157,7 +155,6 @@ public class RemoteControlEligibilityChecker {
     }
 
     ImmutableSet<String> types = context.types();
-    ImmutableMap<String, String> dimensions = context.dimensions();
 
     // 3. Multiple selection constraints.
     if (context.isMultipleSelection()
@@ -169,19 +166,7 @@ public class RemoteControlEligibilityChecker {
           .build();
     }
 
-    // 4. Host OS check.
-    String hostOs = dimensions.get(DIMENSION_HOST_OS);
-    if (!context.isMultipleSelection()
-        && hostOs != null
-        && Ascii.toLowerCase(hostOs).contains("mac os")) {
-      return resultBuilder
-          .setIsEligible(false)
-          .setReasonCode(IneligibilityReasonCode.HOST_OS_NOT_SUPPORTED)
-          .setReasonMessage("Mac OS not supported")
-          .build();
-    }
-
-    // 5. Ineligible types check.
+    // 4. Ineligible types check.
     if (!context.isMultipleSelection()
         && (types.contains(TYPE_ABNORMAL_TESTBED_DEVICE) || types.contains(TYPE_FAILED_DEVICE))) {
       return resultBuilder
@@ -191,7 +176,7 @@ public class RemoteControlEligibilityChecker {
           .build();
     }
 
-    // 6. Generic Acid support check.
+    // 5. Generic Acid support check.
     if (!hasEligibleAcidDimension(context)) {
       return resultBuilder
           .setIsEligible(false)
