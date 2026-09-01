@@ -627,15 +627,13 @@ public final class JobInfoCreator {
                 subDeviceSpec.toBuilder()
                     .setType(deviceSpecFromFile.getType())
                     .setDimensions(
-                        // If dimensions are explicitly set to empty (e.g., --dimensions=''), keep
-                        // them empty.
-                        // Otherwise, merge overrides/inline dimensions with the device spec file.
+                        // subDeviceSpec.hasDimensions() only catches cases when flag
+                        // --dimensions='' is passed to test. Besides this,
+                        // subDeviceSpec.hasDimensions() behaves equally as
+                        // subDeviceSpec.getDimensions().getContentCount() > 0
                         subDeviceSpec.hasDimensions()
-                                && subDeviceSpec.getDimensions().getContentMap().isEmpty()
                             ? subDeviceSpec.getDimensions()
-                            : mergeDimensions(
-                                subDeviceSpec.getDimensions(),
-                                getDeviceDimensions(deviceSpecFromFile))));
+                            : getDeviceDimensions(deviceSpecFromFile)));
           }
           logger.atInfo().log(
               "Device list update from target_device as: %s", deviceListBuilder.build());
@@ -925,13 +923,6 @@ public final class JobInfoCreator {
       }
     }
     return dimensions.build();
-  }
-
-  private static StringMap mergeDimensions(StringMap overrides, StringMap base) {
-    return StringMap.newBuilder()
-        .putAllContent(base.getContentMap())
-        .putAllContent(overrides.getContentMap())
-        .build();
   }
 
   private static String getSysLogDecoratorName(String device) {
