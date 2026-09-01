@@ -33,12 +33,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/platform/android/instrumentation/result/proto:test_suite_result_java_proto",
         "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation/result:test_suite_result_converter",
-        "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation/result:test_suite_result_loader",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/junit/xmlwriter/model",
-        "//src/java/com/google/devtools/mobileharness/shared/util/path",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
         "@maven//:com_google_protobuf_protobuf_java",
