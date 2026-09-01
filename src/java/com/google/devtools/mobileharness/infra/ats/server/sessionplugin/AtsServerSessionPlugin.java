@@ -42,6 +42,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Ats
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.ErrorReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.NewMultiCommandRequest;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
@@ -221,7 +222,24 @@ final class AtsServerSessionPlugin {
           updateSessionPluginOutput(requestDetail);
 
           if (newMultiCommandRequest.getCommands(0).getCommandLine().startsWith("slate")) {
-            createSlateJobs(requestDetail, newMultiCommandRequest);
+            // Check if any Tradefed target preparers are configured in the test environment.
+            // When target preparers are present, a Tradefed helper job is scheduled first to
+            // prepare the device before running the Slate test.
+            boolean hasTfTargetPrep =
+                newMultiCommandRequest
+                    .getTestEnvironment()
+                    .getDeviceActionConfigObjectsList()
+                    .stream()
+                    .anyMatch(
+                        obj ->
+                            obj.getType()
+                                == DeviceActionConfigObject.DeviceActionConfigObjectType
+                                    .TARGET_PREPARER);
+            if (hasTfTargetPrep) {
+              createSlateJobsWithTfTargetPrep(requestDetail, newMultiCommandRequest);
+            } else {
+              createSlateJobs(requestDetail, newMultiCommandRequest);
+            }
           } else {
             createXtsJobs(requestDetail, newMultiCommandRequest);
           }
@@ -507,6 +525,10 @@ final class AtsServerSessionPlugin {
     }
   }
 
+  /**
+   * Creates and schedules a standard Slate job into the session without Tradefed target
+   * preparation.
+   */
   @GuardedBy("sessionLock")
   void createSlateJobs(
       RequestDetail.Builder requestDetail, NewMultiCommandRequest newMultiCommandRequest)
@@ -520,6 +542,47 @@ final class AtsServerSessionPlugin {
 
     // One slate job per session.
     createSlateJobsResult.jobInfos().forEach(sessionInfo::addJob);
+  }
+
+  /**
+   * Creates a Tradefed target-preparer helper job and a Slate job, executing them serially.
+   *
+   * <p>The helper Tradefed job runs first to execute any configured Tradefed target preparers
+   * (e.g., device provisioning, APK installation, environment configuration). Once the helper job
+   * completes, {@link #handleXtsJobEnd} will trigger the subsequent Slate job on the prepared
+   * device.
+   */
+  @GuardedBy("sessionLock")
+  private void createSlateJobsWithTfTargetPrep(
+      RequestDetail.Builder requestDetail, NewMultiCommandRequest newMultiCommandRequest)
+      throws InterruptedException {
+    // 1. Create the Tradefed helper job that executes target preparers using a no-op test plan.
+    CreateJobsResult createTradefedJobsResult =
+        newMultiCommandRequestHandler.createXtsJobForSlate(newMultiCommandRequest, sessionInfo);
+    if (!createTradefedJobsResult.state().equals(RequestState.RUNNING)) {
+      updateRequestDetailWithCreateJobsResult(requestDetail, createTradefedJobsResult);
+      return;
+    }
+
+    // 2. Create the actual Slate test job.
+    CreateJobsResult createSlateJobsResult =
+        newMultiCommandRequestHandler.createSlateJobs(newMultiCommandRequest, sessionInfo);
+    if (!createSlateJobsResult.state().equals(RequestState.RUNNING)) {
+      updateRequestDetailWithCreateJobsResult(requestDetail, createSlateJobsResult);
+      return;
+    }
+
+    // 3. Queue both jobs serially: [TF Helper Job, Slate Job].
+    tradefedJobs = new ArrayList<>();
+    tradefedJobs.addAll(createTradefedJobsResult.jobInfos());
+    tradefedJobs.addAll(createSlateJobsResult.jobInfos());
+
+    updateRequestDetailWithCreateJobsResult(requestDetail, createTradefedJobsResult);
+    updateRequestDetailWithCreateJobsResult(requestDetail, createSlateJobsResult);
+
+    // 4. Schedule the first job (TF helper job). The Slate job will be triggered when the helper
+    // ends.
+    addMainJobs();
   }
 
   private void updateRequestDetailWithCreateJobsResult(
@@ -572,19 +635,49 @@ final class AtsServerSessionPlugin {
   }
 
   /**
-   * Re-initializes Tradefed jobs if they are uninitialized (e.g., when resuming a session).
+   * Re-initializes Tradefed and Slate jobs if they are uninitialized (e.g., when resuming a
+   * session).
    *
-   * <p>Tradefed jobs might be lost in resumed sessions. This method re-creates them to ensure they
-   * are executed, while removing jobs that have already been triggered in the session.
+   * <p>Jobs might be lost in resumed sessions. This method re-creates them to ensure they are
+   * executed, while removing jobs that have already been triggered in the session.
    */
   @GuardedBy("sessionLock")
   private void ensureTradefedJobsInitialized(RequestDetail.Builder requestDetail)
       throws InterruptedException {
     if (tradefedJobs == null) {
-      CreateJobsResult createTradefedJobsResult =
-          newMultiCommandRequestHandler.createTradefedJobs(
-              requestDetail.getOriginalRequest(), sessionInfo);
-      tradefedJobs = new ArrayList<>(createTradefedJobsResult.jobInfos());
+      NewMultiCommandRequest newMultiCommandRequest = requestDetail.getOriginalRequest();
+      if (newMultiCommandRequest.getCommandsCount() > 0
+          && newMultiCommandRequest.getCommands(0).getCommandLine().startsWith("slate")) {
+        boolean hasTfTargetPrep =
+            newMultiCommandRequest.getTestEnvironment().getDeviceActionConfigObjectsList().stream()
+                .anyMatch(
+                    obj ->
+                        obj.getType()
+                            == DeviceActionConfigObject.DeviceActionConfigObjectType
+                                .TARGET_PREPARER);
+        if (hasTfTargetPrep) {
+          tradefedJobs = new ArrayList<>();
+          CreateJobsResult createTradefedJobsResult =
+              newMultiCommandRequestHandler.createXtsJobForSlate(
+                  newMultiCommandRequest, sessionInfo);
+          if (createTradefedJobsResult.state().equals(RequestState.RUNNING)) {
+            tradefedJobs.addAll(createTradefedJobsResult.jobInfos());
+          }
+          CreateJobsResult createSlateJobsResult =
+              newMultiCommandRequestHandler.createSlateJobs(newMultiCommandRequest, sessionInfo);
+          if (createSlateJobsResult.state().equals(RequestState.RUNNING)) {
+            tradefedJobs.addAll(createSlateJobsResult.jobInfos());
+          }
+        } else {
+          CreateJobsResult createSlateJobsResult =
+              newMultiCommandRequestHandler.createSlateJobs(newMultiCommandRequest, sessionInfo);
+          tradefedJobs = new ArrayList<>(createSlateJobsResult.jobInfos());
+        }
+      } else {
+        CreateJobsResult createTradefedJobsResult =
+            newMultiCommandRequestHandler.createTradefedJobs(newMultiCommandRequest, sessionInfo);
+        tradefedJobs = new ArrayList<>(createTradefedJobsResult.jobInfos());
+      }
       ImmutableSet<String> triggeredJobNames =
           sessionInfo.getAllJobs().stream()
               .map(job -> job.locator().getName())
