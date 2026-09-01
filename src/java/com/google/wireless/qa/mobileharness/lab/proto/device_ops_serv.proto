@@ -93,6 +93,15 @@ message RunTroubleshootScriptResponse {
   optional string stderr = 3;
 }
 
+message ConnectToDefaultWifiRequest {
+  optional string device_id = 1;
+}
+
+message ConnectToDefaultWifiResponse {
+  optional bool success = 1;
+  optional string error_message = 2;
+}
+
 // Lab service for FE to take the screenshot.
 service DeviceOpsService {
   // Sends the screenshot file info to the lab.
@@ -109,4 +118,8 @@ service DeviceOpsService {
   // Runs a troubleshooting script on the lab host.
   rpc RunTroubleshootScript(RunTroubleshootScriptRequest)
       returns (RunTroubleshootScriptResponse) {}
+
+  // Connects the device to the default lab wifi network.
+  rpc ConnectToDefaultWifi(ConnectToDefaultWifiRequest)
+      returns (ConnectToDefaultWifiResponse) {}
 }

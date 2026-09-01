@@ -64,6 +64,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/lab/proto:device_ops_serv_grpc",
         "//src/java/com/google/wireless/qa/mobileharness/lab/proto:device_ops_serv_java_proto",
         "@grpc-java//core",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
 )

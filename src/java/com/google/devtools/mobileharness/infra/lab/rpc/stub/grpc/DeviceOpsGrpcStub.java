@@ -22,6 +22,8 @@ import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.DeviceOpsStub;
 import com.google.devtools.mobileharness.shared.util.comm.stub.GrpcDirectTargetConfigures;
+import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.ConnectToDefaultWifiRequest;
+import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.ConnectToDefaultWifiResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.GetDeviceDebugInfoRequest;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.GetDeviceDebugInfoResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.GetDeviceLogRequest;
@@ -32,6 +34,7 @@ import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.TakeScreensh
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.TakeScreenshotResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServiceGrpc;
 import io.grpc.Channel;
+import javax.annotation.Nullable;
 
 /** gRPC stub of {@code DeviceOpsService}. */
 public class DeviceOpsGrpcStub implements DeviceOpsStub {
@@ -142,6 +145,39 @@ public class DeviceOpsGrpcStub implements DeviceOpsStub {
   }
 
   @Override
+  public ConnectToDefaultWifiResponse connectToDefaultWifi(ConnectToDefaultWifiRequest request)
+      throws RpcExceptionWithErrorId {
+    return GrpcStubUtil.invoke(
+        stub::connectToDefaultWifi,
+        request,
+        InfraErrorId.LAB_RPC_DEVICE_OPS_CONNECT_TO_DEFAULT_WIFI_GRPC_ERROR,
+        "Failed to connect to default wifi");
+  }
+
+  @Override
+  public ConnectToDefaultWifiResponse connectToDefaultWifi(
+      ConnectToDefaultWifiRequest request, @Nullable String impersonationUser)
+      throws RpcExceptionWithErrorId {
+    return connectToDefaultWifi(request);
+  }
+
+  @Override
+  public ListenableFuture<ConnectToDefaultWifiResponse> connectToDefaultWifiAsync(
+      ConnectToDefaultWifiRequest request) {
+    return futureStub.connectToDefaultWifi(request);
+  }
+
+  @Override
+  public ListenableFuture<ConnectToDefaultWifiResponse> connectToDefaultWifiAsync(
+      ConnectToDefaultWifiRequest request, boolean useClientRpcAuthority) {
+    if (useClientRpcAuthority) {
+      throw new UnsupportedOperationException(
+          "useClientRpcAuthority is not supported in gRPC stub");
+    }
+    return connectToDefaultWifiAsync(request);
+  }
+
+  @Override
   public void close() {
     // This stub is not responsible for managing lifecycle of the channel.
   }
@@ -155,6 +191,8 @@ public class DeviceOpsGrpcStub implements DeviceOpsStub {
     GetDeviceDebugInfoResponse getDeviceDebugInfo(GetDeviceDebugInfoRequest request);
 
     RunTroubleshootScriptResponse runTroubleshootScript(RunTroubleshootScriptRequest request);
+
+    ConnectToDefaultWifiResponse connectToDefaultWifi(ConnectToDefaultWifiRequest request);
   }
 
   /** Interface for {@link DeviceOpsServiceFutureStub} */
@@ -168,6 +206,9 @@ public class DeviceOpsGrpcStub implements DeviceOpsStub {
 
     ListenableFuture<RunTroubleshootScriptResponse> runTroubleshootScript(
         RunTroubleshootScriptRequest request);
+
+    ListenableFuture<ConnectToDefaultWifiResponse> connectToDefaultWifi(
+        ConnectToDefaultWifiRequest request);
   }
 
   public static BlockingInterface newBlockingInterface(Channel channel) {

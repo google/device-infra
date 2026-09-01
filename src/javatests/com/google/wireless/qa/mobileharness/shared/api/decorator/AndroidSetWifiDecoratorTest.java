@@ -19,22 +19,27 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.google.common.base.Ascii;
+import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Warnings;
+import com.google.devtools.mobileharness.infra.lab.rpc.stub.DeviceOpsStub;
 import com.google.devtools.mobileharness.platform.android.lightning.networkconnector.NetworkConnector;
 import com.google.devtools.mobileharness.platform.android.lightning.networkconnector.WifiConnectArgs;
+import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ.ConnectToDefaultWifiResponse;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidRealDevice;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
-import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
@@ -69,8 +74,10 @@ public class AndroidSetWifiDecoratorTest {
 
   private AndroidSetWifiDecorator decorator;
 
+  @Mock private DeviceOpsStub mockDeviceOpsStub;
+
   @Before
-  public void setUp() throws MobileHarnessException, InterruptedException {
+  public void setUp() throws MobileHarnessException, InterruptedException, RpcExceptionWithErrorId {
     when(decoratedDriver.getDevice()).thenReturn(device);
     when(device.getDeviceId()).thenReturn(DEVICE_ID);
     when(testInfo.jobInfo()).thenReturn(jobInfo);
@@ -78,7 +85,12 @@ public class AndroidSetWifiDecoratorTest {
     when(testInfo.resultWithCause()).thenReturn(result);
     when(testInfo.warnings()).thenReturn(warnings);
 
-    decorator = new AndroidSetWifiDecorator(decoratedDriver, testInfo, networkConnector);
+    decorator = spy(new AndroidSetWifiDecorator(decoratedDriver, testInfo, networkConnector));
+
+    ConnectToDefaultWifiResponse successResponse =
+        ConnectToDefaultWifiResponse.newBuilder().setSuccess(true).build();
+    when(mockDeviceOpsStub.connectToDefaultWifi(any())).thenReturn(successResponse);
+    doReturn(mockDeviceOpsStub).when(decorator).getDeviceOpsStub(anyString(), anyInt());
   }
 
   @Test
@@ -148,47 +160,33 @@ public class AndroidSetWifiDecoratorTest {
 
   @Test
   public void testSetWifi_defaultConfig_success()
-      throws MobileHarnessException, InterruptedException {
-    String ssid = "ssid1";
-    String psk = "psk1";
+      throws MobileHarnessException, InterruptedException, RpcExceptionWithErrorId {
     AndroidSetWifiDecoratorSpec spec =
         AndroidSetWifiDecoratorSpec.newBuilder().setUseDefaultSsid(true).build();
     when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenReturn(spec);
-    when(device.getProperty(
-            Ascii.toLowerCase(PropertyName.Test.AndroidSetWifiDecorator.DEFAULT_WIFI_SSID.name())))
-        .thenReturn(ssid);
-    when(device.getProperty(
-            Ascii.toLowerCase(PropertyName.Test.AndroidSetWifiDecorator.DEFAULT_WIFI_PSK.name())))
-        .thenReturn(psk);
 
     decorator.run(testInfo);
 
-    verify(networkConnector)
-        .connectToWifi(
-            device,
-            WifiConnectArgs.builder()
-                .setWifiSsid("ssid1")
-                .setWifiPsk("psk1")
-                .setScanSsid(false)
-                .setWaitTimeout(Duration.ofMinutes(5))
-                .setRetryNum(3)
-                .build(),
-            log);
+    verify(mockDeviceOpsStub).connectToDefaultWifi(any());
     verify(decoratedDriver).run(testInfo);
   }
 
   @Test
   public void testSetWifi_defaultConfigWithEmptySsid_throwException()
-      throws MobileHarnessException, InterruptedException {
+      throws MobileHarnessException, InterruptedException, RpcExceptionWithErrorId {
     AndroidSetWifiDecoratorSpec spec =
         AndroidSetWifiDecoratorSpec.newBuilder().setUseDefaultSsid(true).build();
     when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenReturn(spec);
+
+    ConnectToDefaultWifiResponse failResponse =
+        ConnectToDefaultWifiResponse.newBuilder().setSuccess(false).build();
+    when(mockDeviceOpsStub.connectToDefaultWifi(any())).thenReturn(failResponse);
 
     MobileHarnessException e =
         assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
 
     assertThat(e.getErrorId())
-        .isEqualTo(AndroidErrorId.ANDROID_SET_WIFI_DECORATOR_GET_DEFAULT_SSID_ERROR);
+        .isEqualTo(AndroidErrorId.ANDROID_SET_WIFI_DECORATOR_WIFI_CONNECT_ERROR);
   }
 
   @Test
@@ -237,14 +235,11 @@ public class AndroidSetWifiDecoratorTest {
             .setWifiSsidOptional(true)
             .build();
     when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenReturn(spec);
-    when(device.getProperty(
-            Ascii.toLowerCase(PropertyName.Test.AndroidSetWifiDecorator.DEFAULT_WIFI_SSID.name())))
-        .thenReturn(null);
 
     decorator.run(testInfo);
 
     verify(decoratedDriver).run(testInfo);
-    verifyNoInteractions(networkConnector);
+    verify(mockDeviceOpsStub).connectToDefaultWifi(any());
   }
 
   @Test

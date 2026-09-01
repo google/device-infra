@@ -29,10 +29,13 @@ java_library(
     srcs = ["GrpcStubManager.java"],
     visibility = [
         "//src/java/com/google/wireless/qa/mobileharness/client/api/util/stub:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
     ],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:device_ops",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:exec_test",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:prepare_test",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub/grpc:device_ops_grpc_stub",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub/grpc:exec_test_grpc_stub",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub/grpc:prepare_test_grpc_stub",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
