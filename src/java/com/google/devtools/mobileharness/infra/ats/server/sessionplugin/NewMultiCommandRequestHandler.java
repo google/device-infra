@@ -160,6 +160,8 @@ final class NewMultiCommandRequestHandler {
 
   private static final String ATS_GOOGLE_CLOUD_STORAGE_PREFIX = "mtt:///google_cloud_storage/";
 
+  // A no-op Tradefed test plan used to run Tradefed target preparers for Slate commands without
+  // running test modules.
   private static final String NOOP_TEST_COMMAND_LINE = "util/timewaster";
 
   private static final String SLATE_JOB_PROP = "slate-job";
@@ -253,6 +255,19 @@ final class NewMultiCommandRequestHandler {
   CreateJobsResult createTeardownJobs(NewMultiCommandRequest request, SessionInfo sessionInfo)
       throws InterruptedException {
     return createJobs(request, sessionInfo, this::createTeardownJobInfos, "teardown");
+  }
+
+  /**
+   * Creates a helper Tradefed job for a Slate command to execute configured Tradefed target
+   * preparers.
+   *
+   * @param request the multi-command request containing command and environment configs
+   * @param sessionInfo the active session information
+   * @return the result containing the created helper Tradefed {@link JobInfo}s or error state
+   */
+  CreateJobsResult createXtsJobForSlate(NewMultiCommandRequest request, SessionInfo sessionInfo)
+      throws InterruptedException {
+    return createJobs(request, sessionInfo, this::createXtsJobForSlateInfos, "tradefed");
   }
 
   private CreateJobsResult createJobs(
@@ -524,6 +539,90 @@ final class NewMultiCommandRequestHandler {
     // Validates request and generate a sessionRequestInfo that is needed to create a jobInfo.
     try {
       sessionRequestInfo = getSessionRequestInfo(request, commandInfo, sessionInfo);
+    } catch (MobileHarnessException e) {
+      ErrorReason errorReason = getErrorReason(e);
+      setCommandError(commandDetailBuilder, errorReason, e);
+      commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
+      throw e;
+    }
+    commandDetailBuilder.addAllDeviceSerials(sessionRequestInfo.getDeviceSerialsList());
+    if (!sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
+      commandDetailBuilder.setHostIp(
+          sessionRequestHandlerUtil.getHostIp(sessionRequestInfo.getDeviceSerials(0)));
+    }
+    ImmutableList<JobInfo> jobInfoList;
+    try {
+      jobInfoList = xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo);
+    } catch (MobileHarnessException e) {
+      if (XtsJobCreator.isSkippableException(e)) {
+        logger.atInfo().log(
+            "Unable to create tradefed jobs for command [%s] due to skippable exception: [%s].",
+            commandInfo.getCommandLine(), shortDebugString(e));
+        commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
+        return ImmutableList.of();
+      }
+      ErrorReason errorReason = getErrorReason(e);
+      setCommandError(commandDetailBuilder, errorReason, e);
+      commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
+      throw e;
+    }
+    for (JobInfo jobInfo : jobInfoList) {
+      try {
+        insertAdditionalTestResource(jobInfo, request);
+      } catch (MobileHarnessException e) {
+        ErrorReason errorReason = getErrorReason(e);
+        setCommandError(commandDetailBuilder, errorReason, e);
+        commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
+        throw e;
+      }
+      commandDetailBuilder.setState(CommandState.RUNNING);
+      jobInfo.properties().add(XtsPropertyName.Job.XTS_COMMAND_ID, commandId);
+      jobInfo.properties().add(XTS_TF_JOB_PROP, "true");
+      logger.atInfo().log(
+          "Added job [%s] to the session %s",
+          jobInfo.locator().getId(), sessionInfo.getSessionId());
+    }
+
+    CommandDetail commandDetail = commandDetailBuilder.build();
+    commandDetailsBuilder.put(commandDetail.getId(), commandDetail);
+    return jobInfoList;
+  }
+
+  /**
+   * Generates Tradefed {@link JobInfo}s for executing target preparers on behalf of a Slate
+   * command.
+   *
+   * <p>Overwrites the command line with {@link #NOOP_TEST_COMMAND_LINE} so that Tradefed executes
+   * all specified target preparers while skipping standard test module execution.
+   */
+  private ImmutableList<JobInfo> createXtsJobForSlateInfos(
+      NewMultiCommandRequest request,
+      CommandInfo commandInfo,
+      SessionInfo sessionInfo,
+      ImmutableMap.Builder<String, CommandDetail> commandDetailsBuilder)
+      throws InterruptedException, MobileHarnessException {
+    // Replace the Slate command line with the no-op Tradefed test plan so Tradefed initializes
+    // target preparers but does not run test modules.
+    CommandInfo xtsCommandInfo =
+        commandInfo.toBuilder().setCommandLine(NOOP_TEST_COMMAND_LINE).build();
+    String commandId = getCommandId(commandInfo, request);
+
+    SessionRequestInfo sessionRequestInfo;
+    CommandDetail.Builder commandDetailBuilder =
+        CommandDetail.newBuilder()
+            .setCommandLine(commandInfo.getCommandLine())
+            .setOriginalCommandInfo(commandInfo)
+            .setCreateTime(Timestamps.fromMillis(clock.instant().toEpochMilli()))
+            .setStartTime(Timestamps.fromMillis(clock.instant().toEpochMilli()))
+            .setUpdateTime(Timestamps.fromMillis(clock.instant().toEpochMilli()))
+            .setRequestId(sessionInfo.getSessionId())
+            .setId(commandId)
+            .setCommandAttemptId(getCommandAttemptId(commandId, sessionInfo.getSessionId()))
+            .setState(CommandState.UNKNOWN_STATE);
+
+    // Validate request and generate SessionRequestInfo needed to create the Tradefed job.
+    try {
+      sessionRequestInfo = getSessionRequestInfo(request, xtsCommandInfo, sessionInfo);
     } catch (MobileHarnessException e) {
       ErrorReason errorReason = getErrorReason(e);
       setCommandError(commandDetailBuilder, errorReason, e);
@@ -1077,7 +1176,9 @@ final class NewMultiCommandRequestHandler {
               .map(jobIdToJobMap::get)
               .collect(toImmutableList());
       try {
-        if (!jobs.isEmpty() && jobs.get(0).properties().has(SLATE_JOB_PROP)) {
+        // Route to Slate result processing if any job is a Slate job (including sessions with TF
+        // target preparer helper jobs).
+        if (jobs.stream().anyMatch(job -> job.properties().has(SLATE_JOB_PROP))) {
           handleSlateResultProcessing(sessionInfo, jobs, logDir, commandDetailBuilder);
         } else {
           handleXtsResultProcessing(
@@ -1314,10 +1415,13 @@ final class NewMultiCommandRequestHandler {
               genFile, testLogDir, ImmutableList.of("-rf"));
         }
 
-        if (testInfo.resultWithCause().get().type() == TestResult.PASS) {
-          passedTestCount++;
-        } else if (testInfo.resultWithCause().get().type() != TestResult.SKIP) {
-          failedTestCount++;
+        // Only aggregate test statistics from actual Slate jobs, ignoring helper TF jobs.
+        if (jobInfo.properties().has(SLATE_JOB_PROP)) {
+          if (testInfo.resultWithCause().get().type() == TestResult.PASS) {
+            passedTestCount++;
+          } else if (testInfo.resultWithCause().get().type() != TestResult.SKIP) {
+            failedTestCount++;
+          }
         }
       }
     }
@@ -1331,17 +1435,24 @@ final class NewMultiCommandRequestHandler {
       logger.atWarning().withCause(e).log(
           "Failed to create server session logs dir for session: %s", sessionInfo.getSessionId());
     }
+
+    // Only count Slate jobs towards total and failed module counts, ignoring TF target-preparer
+    // helper jobs.
+    long slateJobsCount = jobs.stream().filter(job -> job.properties().has(SLATE_JOB_PROP)).count();
+    long failedSlateJobsCount =
+        jobs.stream()
+            .filter(job -> job.properties().has(SLATE_JOB_PROP))
+            .filter(
+                jobInfo ->
+                    jobInfo.resultWithCause().get().type() != TestResult.PASS
+                        && jobInfo.resultWithCause().get().type() != TestResult.SKIP)
+            .count();
+
     commandDetailBuilder
         .setPassedTestCount(passedTestCount)
         .setFailedTestCount(failedTestCount)
-        .setTotalModuleCount(jobs.size())
-        .setFailedModuleCount(
-            jobs.stream()
-                .filter(
-                    jobInfo ->
-                        jobInfo.resultWithCause().get().type() != TestResult.PASS
-                            && jobInfo.resultWithCause().get().type() != TestResult.SKIP)
-                .count())
+        .setTotalModuleCount(slateJobsCount)
+        .setFailedModuleCount(failedSlateJobsCount)
         .setTotalTestCount(passedTestCount + failedTestCount);
   }
 

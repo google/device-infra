@@ -21,6 +21,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.endsWith;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.startsWith;
@@ -57,6 +58,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Can
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.ErrorReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.NewMultiCommandRequest;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
@@ -365,6 +367,362 @@ public final class AtsServerSessionPluginTest {
     assertThat(
             requestDetail.getCommandDetailsMap().values().iterator().next().getDeviceSerialsList())
         .containsExactly("device_id_1", "device_id_2");
+  }
+
+  @Test
+  public void onSessionStarting_slateWithTfTargetPrep_success() throws Exception {
+    when(clock.instant())
+        .thenReturn(Instant.ofEpochMilli(1000L))
+        .thenReturn(Instant.ofEpochMilli(2000L))
+        .thenReturn(Instant.ofEpochMilli(3000L));
+    when(sessionRequestHandlerUtil.createJobGenDir(anyString())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(anyString())).thenReturn(Path.of("/tmp/tmp"));
+
+    CommandInfo slateCommandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine("slate --target team.module.task_id1")
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("device_id_1")
+                    .build())
+            .build();
+    NewMultiCommandRequest slateRequest =
+        NewMultiCommandRequest.newBuilder()
+            .setUserId("user_id")
+            .addCommands(slateCommandInfo)
+            .setTestEnvironment(
+                TestEnvironment.newBuilder()
+                    .addDeviceActionConfigObjects(
+                        DeviceActionConfigObject.newBuilder()
+                            .setType(
+                                DeviceActionConfigObject.DeviceActionConfigObjectType
+                                    .TARGET_PREPARER)
+                            .build())
+                    .build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl(ANDROID_XTS_ZIP)
+                    .setName("android-cts.zip")
+                    .build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///path/to/slate_binary")
+                    .setName("slate_binary")
+                    .build())
+            .build();
+
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder()
+                            .setNewMultiCommandRequest(slateRequest)
+                            .build()))
+                .build());
+
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    // First job added to session is the TF target-preparer helper job.
+    verify(sessionInfo).addJob(jobInfo);
+
+    // When TF target-preparer helper job finishes, the Slate job is scheduled.
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+    verify(sessionInfo, times(2)).addJob(any(JobInfo.class));
+  }
+
+  @Test
+  public void onSessionStarting_slateWithoutTfTargetPrep_success() throws Exception {
+    when(clock.instant())
+        .thenReturn(Instant.ofEpochMilli(1000L))
+        .thenReturn(Instant.ofEpochMilli(2000L))
+        .thenReturn(Instant.ofEpochMilli(3000L));
+    when(sessionRequestHandlerUtil.createJobGenDir(anyString())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(anyString())).thenReturn(Path.of("/tmp/tmp"));
+
+    CommandInfo slateCommandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine("slate --target team.module.task_id1")
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("device_id_1")
+                    .build())
+            .build();
+    NewMultiCommandRequest slateRequest =
+        NewMultiCommandRequest.newBuilder()
+            .setUserId("user_id")
+            .addCommands(slateCommandInfo)
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///path/to/slate_binary")
+                    .setName("slate_binary")
+                    .build())
+            .build();
+
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder()
+                            .setNewMultiCommandRequest(slateRequest)
+                            .build()))
+                .build());
+
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    // Directly adds the Slate job.
+    verify(sessionInfo).addJob(any(JobInfo.class));
+    verify(sessionInfo, times(2))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.RUNNING);
+  }
+
+  @Test
+  public void onSessionStarting_slateWithTfTargetPrep_createTradefedJobError() throws Exception {
+    when(clock.instant())
+        .thenReturn(Instant.ofEpochMilli(1000L))
+        .thenReturn(Instant.ofEpochMilli(2000L))
+        .thenReturn(Instant.ofEpochMilli(3000L));
+    when(sessionRequestHandlerUtil.createJobGenDir(anyString())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(anyString())).thenReturn(Path.of("/tmp/tmp"));
+    when(xtsJobCreator.createXtsTradefedTestJob(any()))
+        .thenThrow(
+            new MobileHarnessException(
+                InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR, "TF job creation failed"));
+
+    CommandInfo slateCommandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine("slate --target team.module.task_id1")
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("device_id_1")
+                    .build())
+            .build();
+    NewMultiCommandRequest slateRequest =
+        NewMultiCommandRequest.newBuilder()
+            .setUserId("user_id")
+            .addCommands(slateCommandInfo)
+            .setTestEnvironment(
+                TestEnvironment.newBuilder()
+                    .addDeviceActionConfigObjects(
+                        DeviceActionConfigObject.newBuilder()
+                            .setType(
+                                DeviceActionConfigObject.DeviceActionConfigObjectType
+                                    .TARGET_PREPARER)
+                            .build())
+                    .build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl(ANDROID_XTS_ZIP)
+                    .setName("android-cts.zip")
+                    .build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///path/to/slate_binary")
+                    .setName("slate_binary")
+                    .build())
+            .build();
+
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder()
+                            .setNewMultiCommandRequest(slateRequest)
+                            .build()))
+                .build());
+
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    // No job added because Tradefed job creation failed.
+    verify(sessionInfo, never()).addJob(any(JobInfo.class));
+    verify(sessionInfo, times(2))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
+    assertThat(requestDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_REQUEST);
+  }
+
+  @Test
+  public void onSessionStarting_slateWithTfTargetPrep_createSlateJobError() throws Exception {
+    when(clock.instant())
+        .thenReturn(Instant.ofEpochMilli(1000L))
+        .thenReturn(Instant.ofEpochMilli(2000L))
+        .thenReturn(Instant.ofEpochMilli(3000L));
+    when(sessionRequestHandlerUtil.createJobGenDir(anyString())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(anyString())).thenReturn(Path.of("/tmp/tmp"));
+
+    CommandInfo slateCommandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine("slate --target team.module.task_id1")
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("device_id_1")
+                    .build())
+            .build();
+    // Missing slate_binary resource
+    NewMultiCommandRequest slateRequest =
+        NewMultiCommandRequest.newBuilder()
+            .setUserId("user_id")
+            .addCommands(slateCommandInfo)
+            .setTestEnvironment(
+                TestEnvironment.newBuilder()
+                    .addDeviceActionConfigObjects(
+                        DeviceActionConfigObject.newBuilder()
+                            .setType(
+                                DeviceActionConfigObject.DeviceActionConfigObjectType
+                                    .TARGET_PREPARER)
+                            .build())
+                    .build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl(ANDROID_XTS_ZIP)
+                    .setName("android-cts.zip")
+                    .build())
+            .build();
+
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder()
+                            .setNewMultiCommandRequest(slateRequest)
+                            .build()))
+                .build());
+
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    // No job added because Slate job creation failed.
+    verify(sessionInfo, never()).addJob(any(JobInfo.class));
+    verify(sessionInfo, times(2))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
+    assertThat(requestDetail.getErrorReason()).isEqualTo(ErrorReason.INVALID_RESOURCE);
+  }
+
+  @Test
+  public void onJobEnded_sessionResumed_slateWithTfTargetPrep_scheduleSlateJob() throws Exception {
+    when(sessionRequestHandlerUtil.createJobGenDir(anyString())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(anyString())).thenReturn(Path.of("/tmp/tmp"));
+
+    CommandInfo slateCommandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine("slate --target team.module.task_id1")
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("device_id_1")
+                    .build())
+            .build();
+    NewMultiCommandRequest slateRequest =
+        NewMultiCommandRequest.newBuilder()
+            .setUserId("user_id")
+            .addCommands(slateCommandInfo)
+            .setTestEnvironment(
+                TestEnvironment.newBuilder()
+                    .addDeviceActionConfigObjects(
+                        DeviceActionConfigObject.newBuilder()
+                            .setType(
+                                DeviceActionConfigObject.DeviceActionConfigObjectType
+                                    .TARGET_PREPARER)
+                            .build())
+                    .build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl(ANDROID_XTS_ZIP)
+                    .setName("android-cts.zip")
+                    .build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///path/to/slate_binary")
+                    .setName("slate_binary")
+                    .build())
+            .build();
+
+    RequestDetail requestDetail =
+        RequestDetail.newBuilder()
+            .setId("session_id")
+            .setState(RequestState.RUNNING)
+            .setOriginalRequest(slateRequest)
+            .build();
+
+    when(sessionInfo.getSessionPluginOutput(RequestDetail.class))
+        .thenReturn(Optional.of(requestDetail));
+
+    // TF helper job already ran and is recorded in sessionInfo.
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+
+    // Slate job is scheduled
+    verify(sessionInfo).addJob(any(JobInfo.class));
+  }
+
+  @Test
+  public void onJobEnded_sessionResumed_slateWithoutTfTargetPrep_noJobToSchedule()
+      throws Exception {
+    when(sessionRequestHandlerUtil.createJobGenDir(anyString())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(anyString())).thenReturn(Path.of("/tmp/tmp"));
+
+    CommandInfo slateCommandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine("slate --target team.module.task_id1")
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("device_id_1")
+                    .build())
+            .build();
+    NewMultiCommandRequest slateRequest =
+        NewMultiCommandRequest.newBuilder()
+            .setUserId("user_id")
+            .addCommands(slateCommandInfo)
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///path/to/slate_binary")
+                    .setName("slate_binary")
+                    .build())
+            .build();
+
+    RequestDetail requestDetail =
+        RequestDetail.newBuilder()
+            .setId("session_id")
+            .setState(RequestState.RUNNING)
+            .setOriginalRequest(slateRequest)
+            .build();
+
+    when(sessionInfo.getSessionPluginOutput(RequestDetail.class))
+        .thenReturn(Optional.of(requestDetail));
+
+    // Slate job has name "slate-job", simulate it having already run.
+    JobInfo existingSlateJob = mock(JobInfo.class);
+    when(existingSlateJob.locator()).thenReturn(new JobLocator("slate_id", "slate-job"));
+    when(existingSlateJob.properties()).thenReturn(new Properties(new Timing()));
+    when(existingSlateJob.type()).thenReturn(TRADEFED_JOB_TYPE);
+    when(existingSlateJob.status()).thenReturn(new Status(new Timing()).set(TestStatus.DONE));
+    when(existingSlateJob.resultWithCause())
+        .thenReturn(new Result(new Timing().toNewTiming(), new Params(new Timing()).toNewParams()));
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(existingSlateJob));
+
+    plugin.onJobEnded(new JobEndEvent(existingSlateJob, null));
+
+    // No new jobs added because the Slate job was already run.
+    verify(sessionInfo, never()).addJob(any(JobInfo.class));
   }
 
   @Test

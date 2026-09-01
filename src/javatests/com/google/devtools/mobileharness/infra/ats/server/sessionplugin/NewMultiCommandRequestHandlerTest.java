@@ -86,6 +86,7 @@ import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
@@ -376,6 +377,88 @@ public final class NewMultiCommandRequestHandlerTest {
     verify(commandExecutor).run(mountCommand);
     verify(files).add(eq("test-name-1"), eq("ats-file-server::/path/to/file1"));
     verify(files).add(eq("test-name-2"), eq("ats-file-server::/path/to/file2"));
+  }
+
+  @Test
+  public void createXtsJobForSlate_success() throws Exception {
+    when(clock.instant())
+        .thenReturn(
+            Instant.ofEpochMilli(1000L), Instant.ofEpochMilli(2000L), Instant.ofEpochMilli(3000L));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createXtsJobForSlate(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+    assertThat(createJobsResult.commandDetails()).hasSize(1);
+    String commandId = createJobsResult.commandDetails().keySet().iterator().next();
+    assertThat(commandId)
+        .isEqualTo(UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString());
+    CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
+    assertThat(commandDetail.getId()).isEqualTo(commandId);
+    assertThat(properties.get("xts-tradefed-job")).isEqualTo("true");
+    assertThat(properties.get("xts_command_id")).isEqualTo(commandId);
+    verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+
+    SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("util/timewaster");
+  }
+
+  @Test
+  public void createXtsJobForSlate_emptyCommands_returnsError() throws Exception {
+    NewMultiCommandRequest emptyRequest =
+        NewMultiCommandRequest.newBuilder().setUserId("user_id").build();
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createXtsJobForSlate(emptyRequest, sessionInfo);
+
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
+    assertThat(createJobsResult.errorReason()).hasValue(ErrorReason.INVALID_REQUEST);
+    assertThat(createJobsResult.errorMessage()).hasValue("COMMAND_NOT_AVAILABLE");
+    assertThat(createJobsResult.jobInfos()).isEmpty();
+  }
+
+  @Test
+  public void createXtsJobForSlate_createJobException_returnsError() throws Exception {
+    when(clock.instant())
+        .thenReturn(
+            Instant.ofEpochMilli(1000L), Instant.ofEpochMilli(2000L), Instant.ofEpochMilli(3000L));
+    when(xtsJobCreator.createXtsTradefedTestJob(any()))
+        .thenThrow(
+            new MobileHarnessException(
+                InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR, "Failed to create TF job"));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createXtsJobForSlate(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).isEmpty();
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
+    assertThat(createJobsResult.errorReason().get()).isEqualTo(ErrorReason.INVALID_REQUEST);
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    assertThat(createJobsResult.commandDetails().get(commandId).getState())
+        .isEqualTo(CommandState.ERROR);
+  }
+
+  @Test
+  public void createXtsJobForSlate_skippableException_returnsEmptyList() throws Exception {
+    when(clock.instant())
+        .thenReturn(
+            Instant.ofEpochMilli(1000L), Instant.ofEpochMilli(2000L), Instant.ofEpochMilli(3000L));
+    when(xtsJobCreator.createXtsTradefedTestJob(any()))
+        .thenThrow(
+            new MobileHarnessException(
+                InfraErrorId.XTS_NO_MATCHED_TRADEFED_MODULES, "No matched TF modules"));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createXtsJobForSlate(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).isEmpty();
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.RUNNING);
   }
 
   @Test
@@ -1480,6 +1563,232 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(commandDetail.getId()).isEqualTo(commandId);
     assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
     assertThat(handleResultProcessingResult.testContexts()).hasSize(1);
+  }
+
+  @Test
+  public void handleResultProcessing_slateWithTfTargetPrep_success() throws Exception {
+    when(clock.instant())
+        .thenReturn(
+            Instant.ofEpochMilli(1000L), Instant.ofEpochMilli(2000L), Instant.ofEpochMilli(3000L));
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    CommandDetail commandDetail =
+        CommandDetail.newBuilder()
+            .setId(commandId)
+            .setCommandLine("slate --target team.module.task_id1")
+            .build();
+    RequestDetail requestDetail =
+        RequestDetail.newBuilder()
+            .setOriginalRequest(request)
+            .putCommandDetails(commandId, commandDetail)
+            .build();
+
+    // 1. TF target preparer helper job (no SLATE_JOB_PROP)
+    JobInfo tfJobInfo = Mockito.mock(JobInfo.class);
+    TestInfo tfTestInfo = Mockito.mock(TestInfo.class);
+    Properties tfProperties = new Properties(new Timing());
+    tfProperties.add(Job.XTS_COMMAND_ID, commandId);
+    when(tfJobInfo.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job_name"));
+    when(tfJobInfo.properties()).thenReturn(tfProperties);
+    when(tfJobInfo.setting())
+        .thenReturn(JobSetting.newBuilder().setGenFileDir("/tmp/tf_gen").build());
+    TestInfos tfTestInfos = Mockito.mock(TestInfos.class);
+    when(tfJobInfo.tests()).thenReturn(tfTestInfos);
+    when(tfTestInfos.getAll()).thenReturn(ImmutableListMultimap.of("tf_test_id", tfTestInfo));
+    when(tfTestInfo.locator())
+        .thenReturn(
+            new TestLocator(
+                "tf_test_id", "tf_test_name", new JobLocator("tf_job_id", "tf_job_name")));
+    Result tfResult = Mockito.mock(Result.class);
+    when(tfResult.get()).thenReturn(PASS_RESULT);
+    when(tfTestInfo.resultWithCause()).thenReturn(tfResult);
+    when(sessionResultHandlerUtil.getGenFilesFromTest(tfTestInfo)).thenReturn(ImmutableList.of());
+
+    // 2. Slate job (has SLATE_JOB_PROP)
+    JobInfo slateJobInfo = Mockito.mock(JobInfo.class);
+    TestInfo slateTestInfo1 = Mockito.mock(TestInfo.class);
+    TestInfo slateTestInfo2 = Mockito.mock(TestInfo.class);
+    Properties slateProperties = new Properties(new Timing());
+    slateProperties.add(Job.XTS_COMMAND_ID, commandId);
+    slateProperties.add("slate-job", "true");
+    when(slateJobInfo.locator()).thenReturn(new JobLocator("slate_job_id", "slate_job_name"));
+    when(slateJobInfo.properties()).thenReturn(slateProperties);
+    when(slateJobInfo.setting())
+        .thenReturn(JobSetting.newBuilder().setGenFileDir("/tmp/slate_gen").build());
+    Result slateJobResult = Mockito.mock(Result.class);
+    when(slateJobResult.get()).thenReturn(PASS_RESULT);
+    when(slateJobInfo.resultWithCause()).thenReturn(slateJobResult);
+    TestInfos slateTestInfos = Mockito.mock(TestInfos.class);
+    when(slateJobInfo.tests()).thenReturn(slateTestInfos);
+    when(slateTestInfos.getAll())
+        .thenReturn(ImmutableListMultimap.of("test_1", slateTestInfo1, "test_2", slateTestInfo2));
+    when(slateTestInfo1.locator())
+        .thenReturn(
+            new TestLocator("test_1", "test_1", new JobLocator("slate_job_id", "slate_job_name")));
+    Result passResultWithCause = Mockito.mock(Result.class);
+    when(passResultWithCause.get()).thenReturn(PASS_RESULT);
+    when(slateTestInfo1.resultWithCause()).thenReturn(passResultWithCause);
+
+    Result errorResultWithCause = Mockito.mock(Result.class);
+    when(errorResultWithCause.get()).thenReturn(ERROR_RESULT);
+    when(slateTestInfo2.locator())
+        .thenReturn(
+            new TestLocator("test_2", "test_2", new JobLocator("slate_job_id", "slate_job_name")));
+    when(slateTestInfo2.resultWithCause()).thenReturn(errorResultWithCause);
+    when(sessionResultHandlerUtil.getGenFilesFromTest(slateTestInfo1))
+        .thenReturn(ImmutableList.of());
+    when(sessionResultHandlerUtil.getGenFilesFromTest(slateTestInfo2))
+        .thenReturn(ImmutableList.of());
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(tfJobInfo, slateJobInfo));
+
+    HandleResultProcessingResult result =
+        newMultiCommandRequestHandler.handleResultProcessing(
+            sessionInfo, requestDetail.toBuilder());
+
+    assertThat(result.commandDetails()).hasSize(1);
+    CommandDetail resultDetail = result.commandDetails().get(commandId);
+    assertThat(resultDetail.getPassedTestCount()).isEqualTo(1); // 1 PASS from Slate job
+    assertThat(resultDetail.getFailedTestCount()).isEqualTo(1); // 1 ERROR from Slate job
+    assertThat(resultDetail.getTotalTestCount()).isEqualTo(2); // Total 2 tests from Slate job
+    assertThat(resultDetail.getTotalModuleCount()).isEqualTo(1); // Exactly 1 module (Slate job)
+    assertThat(resultDetail.getFailedModuleCount()).isEqualTo(0);
+  }
+
+  @Test
+  public void handleResultProcessing_slateOnly_success() throws Exception {
+    when(clock.instant())
+        .thenReturn(
+            Instant.ofEpochMilli(1000L), Instant.ofEpochMilli(2000L), Instant.ofEpochMilli(3000L));
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    CommandDetail commandDetail =
+        CommandDetail.newBuilder()
+            .setId(commandId)
+            .setCommandLine("slate --target team.module.task_id1")
+            .build();
+    RequestDetail requestDetail =
+        RequestDetail.newBuilder()
+            .setOriginalRequest(request)
+            .putCommandDetails(commandId, commandDetail)
+            .build();
+
+    JobInfo slateJobInfo = Mockito.mock(JobInfo.class);
+    TestInfo slateTestInfo = Mockito.mock(TestInfo.class);
+    Properties slateProperties = new Properties(new Timing());
+    slateProperties.add(Job.XTS_COMMAND_ID, commandId);
+    slateProperties.add("slate-job", "true");
+    when(slateJobInfo.locator()).thenReturn(new JobLocator("slate_job_id", "slate_job_name"));
+    when(slateJobInfo.properties()).thenReturn(slateProperties);
+    when(slateJobInfo.setting())
+        .thenReturn(JobSetting.newBuilder().setGenFileDir("/tmp/slate_gen").build());
+    Result slateJobResult = Mockito.mock(Result.class);
+    when(slateJobResult.get()).thenReturn(PASS_RESULT);
+    when(slateJobInfo.resultWithCause()).thenReturn(slateJobResult);
+    TestInfos slateTestInfos = Mockito.mock(TestInfos.class);
+    when(slateJobInfo.tests()).thenReturn(slateTestInfos);
+    when(slateTestInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_1", slateTestInfo));
+    when(slateTestInfo.locator())
+        .thenReturn(
+            new TestLocator("test_1", "test_1", new JobLocator("slate_job_id", "slate_job_name")));
+    Result passResultWithCause = Mockito.mock(Result.class);
+    when(passResultWithCause.get()).thenReturn(PASS_RESULT);
+    when(slateTestInfo.resultWithCause()).thenReturn(passResultWithCause);
+    when(sessionResultHandlerUtil.getGenFilesFromTest(slateTestInfo))
+        .thenReturn(ImmutableList.of());
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(slateJobInfo));
+
+    HandleResultProcessingResult result =
+        newMultiCommandRequestHandler.handleResultProcessing(
+            sessionInfo, requestDetail.toBuilder());
+
+    assertThat(result.commandDetails()).hasSize(1);
+    CommandDetail resultDetail = result.commandDetails().get(commandId);
+    assertThat(resultDetail.getPassedTestCount()).isEqualTo(1);
+    assertThat(resultDetail.getFailedTestCount()).isEqualTo(0);
+    assertThat(resultDetail.getTotalTestCount()).isEqualTo(1);
+    assertThat(resultDetail.getTotalModuleCount()).isEqualTo(1);
+    assertThat(resultDetail.getFailedModuleCount()).isEqualTo(0);
+  }
+
+  @Test
+  public void handleResultProcessing_slateWithTfTargetPrep_failedSlateJob() throws Exception {
+    when(clock.instant())
+        .thenReturn(
+            Instant.ofEpochMilli(1000L), Instant.ofEpochMilli(2000L), Instant.ofEpochMilli(3000L));
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    CommandDetail commandDetail =
+        CommandDetail.newBuilder()
+            .setId(commandId)
+            .setCommandLine("slate --target team.module.task_id1")
+            .build();
+    RequestDetail requestDetail =
+        RequestDetail.newBuilder()
+            .setOriginalRequest(request)
+            .putCommandDetails(commandId, commandDetail)
+            .build();
+
+    // 1. TF target preparer helper job
+    JobInfo tfJobInfo = Mockito.mock(JobInfo.class);
+    TestInfo tfTestInfo = Mockito.mock(TestInfo.class);
+    Properties tfProperties = new Properties(new Timing());
+    tfProperties.add(Job.XTS_COMMAND_ID, commandId);
+    when(tfJobInfo.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job_name"));
+    when(tfJobInfo.properties()).thenReturn(tfProperties);
+    when(tfJobInfo.setting())
+        .thenReturn(JobSetting.newBuilder().setGenFileDir("/tmp/tf_gen").build());
+    TestInfos tfTestInfos = Mockito.mock(TestInfos.class);
+    when(tfJobInfo.tests()).thenReturn(tfTestInfos);
+    when(tfTestInfos.getAll()).thenReturn(ImmutableListMultimap.of("tf_test_id", tfTestInfo));
+    when(tfTestInfo.locator())
+        .thenReturn(
+            new TestLocator(
+                "tf_test_id", "tf_test_name", new JobLocator("tf_job_id", "tf_job_name")));
+    Result tfResult = Mockito.mock(Result.class);
+    when(tfResult.get()).thenReturn(PASS_RESULT);
+    when(tfTestInfo.resultWithCause()).thenReturn(tfResult);
+    when(sessionResultHandlerUtil.getGenFilesFromTest(tfTestInfo)).thenReturn(ImmutableList.of());
+
+    // 2. Slate job with ERROR job result
+    JobInfo slateJobInfo = Mockito.mock(JobInfo.class);
+    TestInfo slateTestInfo = Mockito.mock(TestInfo.class);
+    Properties slateProperties = new Properties(new Timing());
+    slateProperties.add(Job.XTS_COMMAND_ID, commandId);
+    slateProperties.add("slate-job", "true");
+    when(slateJobInfo.locator()).thenReturn(new JobLocator("slate_job_id", "slate_job_name"));
+    when(slateJobInfo.properties()).thenReturn(slateProperties);
+    when(slateJobInfo.setting())
+        .thenReturn(JobSetting.newBuilder().setGenFileDir("/tmp/slate_gen").build());
+    Result slateJobResult = Mockito.mock(Result.class);
+    when(slateJobResult.get()).thenReturn(ERROR_RESULT);
+    when(slateJobInfo.resultWithCause()).thenReturn(slateJobResult);
+    TestInfos slateTestInfos = Mockito.mock(TestInfos.class);
+    when(slateJobInfo.tests()).thenReturn(slateTestInfos);
+    when(slateTestInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_1", slateTestInfo));
+    when(slateTestInfo.locator())
+        .thenReturn(
+            new TestLocator("test_1", "test_1", new JobLocator("slate_job_id", "slate_job_name")));
+    Result errorResultWithCause = Mockito.mock(Result.class);
+    when(errorResultWithCause.get()).thenReturn(ERROR_RESULT);
+    when(slateTestInfo.resultWithCause()).thenReturn(errorResultWithCause);
+    when(sessionResultHandlerUtil.getGenFilesFromTest(slateTestInfo))
+        .thenReturn(ImmutableList.of());
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(tfJobInfo, slateJobInfo));
+
+    HandleResultProcessingResult result =
+        newMultiCommandRequestHandler.handleResultProcessing(
+            sessionInfo, requestDetail.toBuilder());
+
+    assertThat(result.commandDetails()).hasSize(1);
+    CommandDetail resultDetail = result.commandDetails().get(commandId);
+    assertThat(resultDetail.getPassedTestCount()).isEqualTo(0);
+    assertThat(resultDetail.getFailedTestCount()).isEqualTo(1);
+    assertThat(resultDetail.getTotalTestCount()).isEqualTo(1);
+    assertThat(resultDetail.getTotalModuleCount()).isEqualTo(1);
+    assertThat(resultDetail.getFailedModuleCount()).isEqualTo(1); // Failed module count is 1
   }
 
   @Test
