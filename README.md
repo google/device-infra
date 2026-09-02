@@ -65,6 +65,6 @@ bazel-bin/src/java/com/google/devtools/mobileharness/infra/lab/lab_server_oss_de
 
 ## Run an example
 
-To run an example helloworld test using these jars built, you may reference the
+To run an example hello world test using these jars built, you may reference the
 [OlcServerIntegrationTest](https://github.com/google/device-infra/blob/f96966f3ba4d8bf614d64c08d06bb200d50cd8d5/src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/OlcServerIntegrationTest.java)
 file and follow how these binaries are started.
