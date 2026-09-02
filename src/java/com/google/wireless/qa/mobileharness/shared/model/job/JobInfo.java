@@ -460,16 +460,6 @@ public class JobInfo extends JobScheduleUnit {
     return status;
   }
 
-  /**
-   * Please use {@link #resultWithCause()} instead.
-   *
-   * <p>Execution result.
-   */
-  @Deprecated
-  public Result result() {
-    return result;
-  }
-
   /** Execution result. */
   public com.google.devtools.mobileharness.api.model.job.out.Result resultWithCause() {
     return result.toNewResult();
