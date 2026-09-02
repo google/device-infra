@@ -19,7 +19,9 @@ package com.google.devtools.mobileharness.fe.v6.service.config;
 import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.config.handlers.CheckDeviceConfigPermissionHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.CheckDeviceWritePermissionHandler;
+import com.google.devtools.mobileharness.fe.v6.service.config.handlers.CheckHostConfigPermissionHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.CheckHostWritePermissionHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetDeviceConfigHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetHostConfigHandler;
@@ -28,8 +30,12 @@ import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetRecomm
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.UnlockHostPropertiesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.UpdateDeviceConfigHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.UpdateHostConfigHandler;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigRequest;
@@ -58,11 +64,13 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
 
   private final GetDeviceConfigHandler getDeviceConfigHandler;
   private final CheckDeviceWritePermissionHandler checkDeviceWritePermissionHandler;
+  private final CheckDeviceConfigPermissionHandler checkDeviceConfigPermissionHandler;
   private final UpdateDeviceConfigHandler updateDeviceConfigHandler;
   private final GetRecommendedWifiHandler getRecommendedWifiHandler;
   private final GetHostDefaultDeviceConfigHandler getHostDefaultDeviceConfigHandler;
   private final GetHostConfigHandler getHostConfigHandler;
   private final CheckHostWritePermissionHandler checkHostWritePermissionHandler;
+  private final CheckHostConfigPermissionHandler checkHostConfigPermissionHandler;
   private final UpdateHostConfigHandler updateHostConfigHandler;
   private final UnlockHostPropertiesHandler unlockHostPropertiesHandler;
   private final UniverseFactory universeFactory;
@@ -71,21 +79,25 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
   ConfigServiceLogicImpl(
       GetDeviceConfigHandler getDeviceConfigHandler,
       CheckDeviceWritePermissionHandler checkDeviceWritePermissionHandler,
+      CheckDeviceConfigPermissionHandler checkDeviceConfigPermissionHandler,
       UpdateDeviceConfigHandler updateDeviceConfigHandler,
       GetRecommendedWifiHandler getRecommendedWifiHandler,
       GetHostDefaultDeviceConfigHandler getHostDefaultDeviceConfigHandler,
       GetHostConfigHandler getHostConfigHandler,
       CheckHostWritePermissionHandler checkHostWritePermissionHandler,
+      CheckHostConfigPermissionHandler checkHostConfigPermissionHandler,
       UpdateHostConfigHandler updateHostConfigHandler,
       UnlockHostPropertiesHandler unlockHostPropertiesHandler,
       UniverseFactory universeFactory) {
     this.getDeviceConfigHandler = getDeviceConfigHandler;
     this.checkDeviceWritePermissionHandler = checkDeviceWritePermissionHandler;
+    this.checkDeviceConfigPermissionHandler = checkDeviceConfigPermissionHandler;
     this.updateDeviceConfigHandler = updateDeviceConfigHandler;
     this.getRecommendedWifiHandler = getRecommendedWifiHandler;
     this.getHostDefaultDeviceConfigHandler = getHostDefaultDeviceConfigHandler;
     this.getHostConfigHandler = getHostConfigHandler;
     this.checkHostWritePermissionHandler = checkHostWritePermissionHandler;
+    this.checkHostConfigPermissionHandler = checkHostConfigPermissionHandler;
     this.updateHostConfigHandler = updateHostConfigHandler;
     this.unlockHostPropertiesHandler = unlockHostPropertiesHandler;
     this.universeFactory = universeFactory;
@@ -112,6 +124,19 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
       return immediateFailedFuture(e);
     }
     return checkDeviceWritePermissionHandler.checkDeviceWritePermission(
+        request.getId(), universe, username);
+  }
+
+  @Override
+  public ListenableFuture<CheckDeviceConfigPermissionResponse> checkDeviceConfigPermission(
+      CheckDeviceConfigPermissionRequest request, Optional<String> username) {
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return checkDeviceConfigPermissionHandler.checkDeviceConfigPermission(
         request.getId(), universe, username);
   }
 
@@ -172,6 +197,19 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
       return immediateFailedFuture(e);
     }
     return checkHostWritePermissionHandler.checkHostWritePermission(
+        request.getHostName(), universe, username);
+  }
+
+  @Override
+  public ListenableFuture<CheckHostConfigPermissionResponse> checkHostConfigPermission(
+      CheckHostConfigPermissionRequest request, Optional<String> username) {
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return checkHostConfigPermissionHandler.checkHostConfigPermission(
         request.getHostName(), universe, username);
   }
 

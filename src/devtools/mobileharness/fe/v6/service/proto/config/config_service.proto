@@ -36,10 +36,22 @@ service ConfigService {
   }
 
   // Checks if the current user has permission to modify device configuration.
+  //
+  // Deprecated: use CheckDeviceConfigPermission instead.
   rpc CheckDeviceWritePermission(CheckDeviceWritePermissionRequest)
       returns (CheckDeviceWritePermissionResponse) {
     option (google.api.http) = {
       post: "/v6/devices/{id}/config:checkWritePermission",
+      body: "*"
+    };
+    option deprecated = true;
+  }
+
+  // Checks if the current user has permission to modify device configuration.
+  rpc CheckDeviceConfigPermission(CheckDeviceConfigPermissionRequest)
+      returns (CheckDeviceConfigPermissionResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices/{id}/config:checkConfigPermission",
       body: "*"
     };
   }
@@ -78,10 +90,22 @@ service ConfigService {
   }
 
   // Checks if the current user has permission to modify host configuration.
+  //
+  // Deprecated: use CheckHostConfigPermission instead.
   rpc CheckHostWritePermission(CheckHostWritePermissionRequest)
       returns (CheckHostWritePermissionResponse) {
     option (google.api.http) = {
       post: "/v6/hosts/{host_name}/config:checkWritePermission",
+      body: "*"
+    };
+    option deprecated = true;
+  }
+
+  // Checks if the current user has permission to modify host configuration.
+  rpc CheckHostConfigPermission(CheckHostConfigPermissionRequest)
+      returns (CheckHostConfigPermissionResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts/{host_name}/config:checkConfigPermission",
       body: "*"
     };
   }
@@ -134,6 +158,20 @@ message CheckDeviceWritePermissionRequest {
 
 // Response for CheckDeviceWritePermission.
 message CheckDeviceWritePermissionResponse {
+  bool has_permission = 1;
+  string user_name = 2;
+}
+
+// Request for CheckDeviceConfigPermission.
+message CheckDeviceConfigPermissionRequest {
+  string id = 1;
+
+  // The universe the device belongs to.
+  string universe = 2;
+}
+
+// Response for CheckDeviceConfigPermission.
+message CheckDeviceConfigPermissionResponse {
   bool has_permission = 1;
   string user_name = 2;
 }
@@ -210,12 +248,26 @@ message GetHostConfigResponse {
 message CheckHostWritePermissionRequest {
   string host_name = 1;
 
-  // The universe the device belongs to.
+  // The universe the host belongs to.
   string universe = 2;
 }
 
 // Response for CheckHostWritePermission.
 message CheckHostWritePermissionResponse {
+  bool has_permission = 1;
+  string user_name = 2;
+}
+
+// Request for CheckHostConfigPermission.
+message CheckHostConfigPermissionRequest {
+  string host_name = 1;
+
+  // The universe the host belongs to.
+  string universe = 2;
+}
+
+// Response for CheckHostConfigPermission.
+message CheckHostConfigPermissionResponse {
   bool has_permission = 1;
   string user_name = 2;
 }
