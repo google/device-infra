@@ -170,7 +170,7 @@ message FleetSearchConfig {
 message FleetColumnConfig {
   // "Recommended" section in the column selector. These keys are always
   // visible at the top of the selector, regardless of search state.
-  repeated KeyDescriptor recommended = 1;
+  repeated KeyDescriptor recommended = 1 [deprecated = true];
 
   // Initial table columns (before the user customizes). Each column may be
   // marked as locked (always shown, not removable by the user).
