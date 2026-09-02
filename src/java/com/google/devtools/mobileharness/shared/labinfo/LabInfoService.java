@@ -20,6 +20,8 @@ import static com.google.devtools.mobileharness.shared.labinfo.LabQueryUtils.cre
 import static com.google.devtools.mobileharness.shared.labinfo.LabQueryUtils.getPagedResult;
 import static com.google.devtools.mobileharness.shared.labinfo.LabQueryUtils.normalizePage;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
+import static java.util.stream.Collectors.counting;
+import static java.util.stream.Collectors.groupingBy;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
@@ -28,15 +30,26 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceGrpc;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DeviceDimensionSummary;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import io.grpc.stub.StreamObserver;
 import java.time.Duration;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -77,6 +90,54 @@ public class LabInfoService extends LabInfoServiceGrpc.LabInfoServiceImplBase {
         this::doGetLabInfo,
         LabInfoServiceGrpc.getServiceDescriptor(),
         LabInfoServiceGrpc.getGetLabInfoMethod());
+  }
+
+  @Override
+  public void getAllDeviceDimensions(
+      GetAllDeviceDimensionsRequest request,
+      StreamObserver<GetAllDeviceDimensionsResponse> responseObserver) {
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        this::doGetAllDeviceDimensions,
+        LabInfoServiceGrpc.getServiceDescriptor(),
+        LabInfoServiceGrpc.getGetAllDeviceDimensionsMethod());
+  }
+
+  @VisibleForTesting
+  GetAllDeviceDimensionsResponse doGetAllDeviceDimensions(GetAllDeviceDimensionsRequest request)
+      throws MobileHarnessException {
+    logger.atInfo().log("Get all device dimensions, req=[%s]", shortDebugString(request));
+    LabView labView = labInfoProvider.getLabInfos(Filter.getDefaultInstance());
+
+    Map<String, Long> dimensionDeviceCounts =
+        labView.getLabDataList().stream()
+            .flatMap(labData -> labData.getDeviceList().getDeviceInfoList().stream())
+            .flatMap(LabInfoService::extractDeviceDimensionNames)
+            .collect(groupingBy(Function.identity(), counting()));
+
+    return GetAllDeviceDimensionsResponse.newBuilder()
+        .addAllDimensions(
+            dimensionDeviceCounts.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .map(
+                    entry ->
+                        DeviceDimensionSummary.newBuilder()
+                            .setName(entry.getKey())
+                            .setDeviceCount(entry.getValue())
+                            .build())
+                .toList())
+        .build();
+  }
+
+  private static Stream<String> extractDeviceDimensionNames(DeviceInfo deviceInfo) {
+    DeviceCompositeDimension composite = deviceInfo.getDeviceFeature().getCompositeDimension();
+    return Stream.concat(
+            composite.getSupportedDimensionList().stream(),
+            composite.getRequiredDimensionList().stream())
+        .map(DeviceDimension::getName)
+        .filter(name -> !name.isEmpty())
+        .distinct();
   }
 
   @VisibleForTesting

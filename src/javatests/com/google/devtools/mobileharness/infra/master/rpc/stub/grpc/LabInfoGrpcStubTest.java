@@ -18,13 +18,16 @@ package com.google.devtools.mobileharness.infra.master.rpc.stub.grpc;
 
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DeviceDimensionSummary;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
-import java.util.concurrent.TimeUnit;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -69,7 +72,39 @@ public final class LabInfoGrpcStubTest {
         labInfoGrpcStub.getLabInfoAsync(GetLabInfoRequest.getDefaultInstance());
 
     // Assert that the future completes within a timeout and returns the expected value
-    GetLabInfoResponse actualResponse = actualFuture.get(5, TimeUnit.SECONDS); // Added timeout
+    GetLabInfoResponse actualResponse = actualFuture.get(5, SECONDS); // Added timeout
+    assertThat(actualResponse).isEqualTo(expectedResponse);
+  }
+
+  @Test
+  public void getAllDeviceDimensions_success() throws Exception {
+    GetAllDeviceDimensionsResponse response =
+        GetAllDeviceDimensionsResponse.newBuilder()
+            .addDimensions(DeviceDimensionSummary.newBuilder().setName("model").setDeviceCount(10L))
+            .build();
+    when(blockingInterface.getAllDeviceDimensions(any(GetAllDeviceDimensionsRequest.class)))
+        .thenReturn(response);
+
+    assertThat(
+            labInfoGrpcStub.getAllDeviceDimensions(
+                GetAllDeviceDimensionsRequest.getDefaultInstance()))
+        .isEqualTo(response);
+  }
+
+  @Test
+  public void getAllDeviceDimensionsAsync_success() throws Exception {
+    GetAllDeviceDimensionsResponse expectedResponse =
+        GetAllDeviceDimensionsResponse.newBuilder()
+            .addDimensions(DeviceDimensionSummary.newBuilder().setName("model").setDeviceCount(10L))
+            .build();
+    when(futureInterface.getAllDeviceDimensions(any(GetAllDeviceDimensionsRequest.class)))
+        .thenReturn(immediateFuture(expectedResponse));
+
+    ListenableFuture<GetAllDeviceDimensionsResponse> actualFuture =
+        labInfoGrpcStub.getAllDeviceDimensionsAsync(
+            GetAllDeviceDimensionsRequest.getDefaultInstance());
+
+    GetAllDeviceDimensionsResponse actualResponse = actualFuture.get(5, SECONDS);
     assertThat(actualResponse).isEqualTo(expectedResponse);
   }
 }

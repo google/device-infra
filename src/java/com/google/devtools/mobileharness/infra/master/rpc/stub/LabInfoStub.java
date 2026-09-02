@@ -20,6 +20,8 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DiagnoseJobResponse;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 
@@ -34,4 +36,12 @@ public interface LabInfoStub {
 
   /** Diagnoses job allocation failure. */
   DiagnoseJobResponse diagnoseJob(DiagnoseJobRequest request) throws RpcExceptionWithErrorId;
+
+  /** Gets all device dimensions with device counts synchronously. */
+  GetAllDeviceDimensionsResponse getAllDeviceDimensions(GetAllDeviceDimensionsRequest request)
+      throws RpcExceptionWithErrorId;
+
+  /** Gets all device dimensions with device counts asynchronously. */
+  ListenableFuture<GetAllDeviceDimensionsResponse> getAllDeviceDimensionsAsync(
+      GetAllDeviceDimensionsRequest request);
 }

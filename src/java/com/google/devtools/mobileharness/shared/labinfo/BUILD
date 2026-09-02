@@ -52,6 +52,7 @@ java_library(
     deps = [
         ":lab_info_provider",
         ":lab_query_utils",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_grpc_proto",
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",

@@ -66,6 +66,9 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DeviceDimensionSummary;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.Guice;
@@ -813,6 +816,19 @@ public class LabInfoServiceTest {
                                 .setGroupedDevices(
                                     GroupedDevices.newBuilder()
                                         .setDeviceGroupResult(deviceGroupResult))))
+                .build());
+  }
+
+  @Test
+  public void getAllDeviceDimensions_success() throws Exception {
+    GetAllDeviceDimensionsResponse response =
+        labInfoService.doGetAllDeviceDimensions(GetAllDeviceDimensionsRequest.getDefaultInstance());
+
+    assertThat(response.getDimensionsList())
+        .containsExactly(
+            DeviceDimensionSummary.newBuilder()
+                .setName("fake_dimension_name")
+                .setDeviceCount(1)
                 .build());
   }
 }

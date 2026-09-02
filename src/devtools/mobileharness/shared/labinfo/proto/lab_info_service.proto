@@ -31,6 +31,24 @@ service LabInfoService {
 
   // Diagnoses job allocation failure.
   rpc DiagnoseJob(DiagnoseJobRequest) returns (DiagnoseJobResponse) {}
+
+  // Gets all device dimensions across all labs and devices with device counts.
+  rpc GetAllDeviceDimensions(GetAllDeviceDimensionsRequest)
+      returns (GetAllDeviceDimensionsResponse) {}
+}
+
+message GetAllDeviceDimensionsRequest {}
+
+message GetAllDeviceDimensionsResponse {
+  repeated DeviceDimensionSummary dimensions = 1;
+}
+
+message DeviceDimensionSummary {
+  // The dimension name.
+  string name = 1;
+
+  // Number of devices having this dimension.
+  int64 device_count = 2;
 }
 
 message GetLabInfoRequest {

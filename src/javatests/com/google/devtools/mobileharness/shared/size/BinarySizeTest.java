@@ -16,14 +16,13 @@
 
 package com.google.devtools.mobileharness.shared.size;
 
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertWithMessage;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.shared.util.file.local.BinarySizeChecker;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
-import java.util.Map.Entry;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -55,11 +54,11 @@ public class BinarySizeTest {
   private static final ImmutableMap<String, Long> BINARIES_MAX_SIZE_BYTE =
       ImmutableMap.of(
           "base_olc_server",
-          32_250_000L,
+          32_350_000L,
           "ats_olc_server",
-          40_050_000L,
+          40_150_000L,
           "ats_olc_server_local_mode",
-          45_250_000L,
+          45_350_000L,
           "lab_server",
           46_550_000L,
           "ats_console",
@@ -284,7 +283,7 @@ Illegal binary max size\
         .that(
             BINARIES_MAX_SIZE_BYTE.entrySet().stream()
                 .filter(e -> e.getValue() % 100_000L != 50_000L)
-                .collect(toImmutableMap(Entry::getKey, Entry::getValue)))
+                .collect(toImmutableList()))
         .isEmpty();
   }
 }
