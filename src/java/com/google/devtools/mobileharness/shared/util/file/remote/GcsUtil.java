@@ -770,7 +770,11 @@ public abstract class GcsUtil {
             return null;
           } catch (IOException e) {
             throw new MobileHarnessException(
-                BasicErrorId.GCS_UPLOAD_FILE_ERROR, "Failed to upload " + fileInfo, e);
+                BasicErrorId.GCS_UPLOAD_FILE_ERROR,
+                String.format(
+                    "Failed to upload %s after %s",
+                    fileInfo, Duration.between(startTime, currentTime())),
+                e);
           }
         },
         "upload " + fileInfo);
@@ -874,8 +878,12 @@ public abstract class GcsUtil {
       throw new MobileHarnessException(
           BasicErrorId.GCS_UPLOAD_FILE_ERROR,
           String.format(
-              "Failed to upload local %s to GCS file gs://%s/%s in parallel",
-              localFile, storageParams.bucketName, gcsFile),
+              "Failed to upload local %s to GCS file gs://%s/%s in %s shards after %s",
+              localFile,
+              storageParams.bucketName,
+              gcsFile,
+              shardCount,
+              Duration.between(startTime, currentTime())),
           e);
     }
   }
