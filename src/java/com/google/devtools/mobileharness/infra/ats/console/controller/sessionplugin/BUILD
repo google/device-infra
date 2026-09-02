@@ -53,6 +53,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:local_device_util_impl",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:console_job_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:xts_job_creator",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/sessionplugin:session_job_provider",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:session_properties",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_event",

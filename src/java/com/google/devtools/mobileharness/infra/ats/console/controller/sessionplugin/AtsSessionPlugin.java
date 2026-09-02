@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWith
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
+import com.google.devtools.mobileharness.infra.ats.common.sessionplugin.SessionJobProvider;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig.CommandCase;
@@ -128,7 +129,7 @@ import javax.inject.Inject;
   AtsSessionPluginOutput.class,
   AtsSessionPluginNotification.class
 })
-public class AtsSessionPlugin {
+public class AtsSessionPlugin implements SessionJobProvider {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -306,8 +307,8 @@ public class AtsSessionPlugin {
               runCommandState.getCommandId(), runCommand.getInitialState().getCommandLineArgs());
       runCommandHandler.initialize(runCommand);
 
-      Optional<JobInfo> setupJobOpt = runCommandHandler.createSetupJob();
-      Optional<JobInfo> teardownJobOpt = runCommandHandler.createTeardownJob();
+      Optional<JobInfo> setupJobOpt = this.createSetupJob();
+      Optional<JobInfo> teardownJobOpt = this.createTeardownJob();
 
       setupJobOpt.ifPresent(setupJobRef::set);
       teardownJobOpt.ifPresent(teardownJobRef::set);
@@ -815,37 +816,10 @@ public class AtsSessionPlugin {
   private void createMainJobs(RunCommand runCommand, ImmutableSet<String> dynamicMctsModules)
       throws MobileHarnessException, InterruptedException {
     // Create tradefed jobs.
-    try {
-      tradefedJobs = runCommandHandler.createTradefedJobs(runCommand, dynamicMctsModules);
-    } catch (MobileHarnessException e) {
-      if (!XtsJobCreator.isSkippableException(e)) {
-        throw e;
-      }
-      logger
-          .atInfo()
-          .with(IMPORTANCE, IMPORTANT)
-          .log(
-              "Failed to create tradefed jobs for session [%s] due to skippable exception: [%s].",
-              sessionInfo.getSessionId(), MoreThrowables.shortDebugString(e));
-      tradefedJobs = ImmutableList.of();
-    }
+    tradefedJobs = this.createTradefedJobs(dynamicMctsModules.asList());
 
     // Create non-tradefed jobs.
-    try {
-      nonTradefedJobs = runCommandHandler.createNonTradefedJobs(runCommand);
-    } catch (MobileHarnessException e) {
-      if (!XtsJobCreator.isSkippableException(e)) {
-        throw e;
-      }
-      logger
-          .atInfo()
-          .with(IMPORTANCE, IMPORTANT)
-          .log(
-              "Failed to create non-tradefed jobs for session [%s] due to skippable exception:"
-                  + " [%s].",
-              sessionInfo.getSessionId(), MoreThrowables.shortDebugString(e));
-      nonTradefedJobs = ImmutableList.of();
-    }
+    nonTradefedJobs = this.createNonTradefedJobs();
     if (tradefedJobs.isEmpty() && nonTradefedJobs.isEmpty()) {
       throw MobileHarnessExceptionFactory.createUserFacingException(
           InfraErrorId.XTS_NO_JOB_CREATED_FOR_SESSION,
@@ -1063,5 +1037,67 @@ public class AtsSessionPlugin {
                   .collect(toImmutableList()))
           .build();
     }
+  }
+
+  @Override
+  public Optional<JobInfo> createSetupJob() throws MobileHarnessException, InterruptedException {
+    if (config.getCommandCase() == CommandCase.RUN_COMMAND) {
+      return runCommandHandler.createSetupJob();
+    }
+    return Optional.empty();
+  }
+
+  @Override
+  public ImmutableList<JobInfo> createTradefedJobs(List<String> mctsModules)
+      throws MobileHarnessException, InterruptedException {
+    if (config.getCommandCase() != CommandCase.RUN_COMMAND) {
+      return ImmutableList.of();
+    }
+    try {
+      return runCommandHandler.createTradefedJobs(
+          config.getRunCommand(), ImmutableSet.copyOf(mctsModules));
+    } catch (MobileHarnessException e) {
+      if (!XtsJobCreator.isSkippableException(e)) {
+        throw e;
+      }
+      logger
+          .atInfo()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "Failed to create tradefed jobs for session [%s] due to skippable exception: [%s].",
+              sessionInfo.getSessionId(), MoreThrowables.shortDebugString(e));
+      return ImmutableList.of();
+    }
+  }
+
+  @Override
+  public ImmutableList<JobInfo> createNonTradefedJobs()
+      throws MobileHarnessException, InterruptedException {
+    if (config.getCommandCase() != CommandCase.RUN_COMMAND) {
+      return ImmutableList.of();
+    }
+    try {
+      return runCommandHandler.createNonTradefedJobs(config.getRunCommand());
+    } catch (MobileHarnessException e) {
+      if (!XtsJobCreator.isSkippableException(e)) {
+        throw e;
+      }
+      logger
+          .atInfo()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "Failed to create non-tradefed jobs for session [%s] due to skippable exception:"
+                  + " [%s].",
+              sessionInfo.getSessionId(), MoreThrowables.shortDebugString(e));
+      return ImmutableList.of();
+    }
+  }
+
+  @Override
+  public Optional<JobInfo> createTeardownJob() throws MobileHarnessException, InterruptedException {
+    if (config.getCommandCase() != CommandCase.RUN_COMMAND) {
+      return Optional.empty();
+    }
+    return runCommandHandler.createTeardownJob();
   }
 }
