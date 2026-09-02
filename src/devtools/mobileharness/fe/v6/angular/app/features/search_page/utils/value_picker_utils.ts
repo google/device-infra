@@ -63,7 +63,7 @@ export function buildDisplayValues(
  * Pure function: Filters and multi-column sorts candidate items for display in the picker UI.
  *
  * @param opts Options specifying items, search query, sort column, and sort direction.
- * @return Filtered and sorted slice of candidate items capped at 1000 elements.
+ * @return Filtered and sorted candidate items.
  */
 export function computeFilteredAndSortedValues(
   opts: FilterSortOptions,
@@ -99,7 +99,7 @@ export function computeFilteredAndSortedValues(
     return opts.sortAsc ? valA - valB : valB - valA;
   });
 
-  return [...normalItems, ...disabledItems].slice(0, 1000);
+  return [...normalItems, ...disabledItems];
 }
 
 /**
