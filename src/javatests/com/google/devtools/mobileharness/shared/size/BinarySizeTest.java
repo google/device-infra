@@ -69,7 +69,7 @@ public class BinarySizeTest {
           "xts_tradefed_agent",
           4_950_000L,
           "device_config_server",
-          22_450_000L);
+          23_550_000L);
 
   private static final long MAX_RESOURCE_FILE_SIZE_BYTE = 800_000L;
 

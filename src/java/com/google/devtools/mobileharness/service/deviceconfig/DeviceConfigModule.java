@@ -42,8 +42,7 @@ public class DeviceConfigModule extends AbstractModule {
   @Singleton
   DatabaseConnections provideDatabaseConnections() throws MobileHarnessException {
     Properties properties = new Properties();
-    properties.put("user", "root");
-    properties.put("password", "");
+    Flags.configServiceJdbcProperty.getNonNull().forEach(properties::setProperty);
 
     DatabaseConnections databaseConnections = new DatabaseConnections();
     String jdbcUrl = Flags.configServiceJdbcUrl.getNonNull();

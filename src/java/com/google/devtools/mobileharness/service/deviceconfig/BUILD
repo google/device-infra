@@ -29,6 +29,9 @@ java_library(
     name = "device_config_module",
     srcs = ["DeviceConfigModule.java"],
     runtime_deps = [
+        "@maven//:com_kohlschutter_junixsocket_junixsocket_common",
+        "@maven//:com_kohlschutter_junixsocket_junixsocket_mysql",
+        "@maven//:com_kohlschutter_junixsocket_junixsocket_native_common",
         "@maven//:com_mysql_mysql_connector_j",
     ],
     deps = [

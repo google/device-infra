@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.shared.util.flags;
 import static com.google.common.base.Preconditions.checkArgument;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.shared.util.flags.core.Flag;
 import com.google.devtools.mobileharness.shared.util.flags.core.FlagConstraint;
 import com.google.devtools.mobileharness.shared.util.flags.core.FlagSpec;
@@ -436,6 +437,10 @@ public class Flags {
 
   @FlagSpec(name = "config_service_grpc_target", help = "gRPC target of the config service.")
   public static final Flag<String> configServiceGrpcTarget = Flag.value("localhost:8081");
+
+  @FlagSpec(name = "config_service_jdbc_property", help = "Config service JDBC property.")
+  public static final Flag<Map<String, String>> configServiceJdbcProperty =
+      Flag.stringMap(ImmutableMap.of("user", "root", "password", ""));
 
   @FlagSpec(
       name = "config_service_jdbc_url",
