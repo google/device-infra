@@ -30,6 +30,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:enums",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemspec",
         "//src/java/com/google/devtools/mobileharness/shared/usmf:testing",
         "//src/java/com/google/devtools/mobileharness/shared/usmf/builtin/adb",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",

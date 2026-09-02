@@ -250,6 +250,33 @@ def handle_pm(ctx):
             installed = [p for p in installed if filter_str in p]
         lines = ["package:%s" % p for p in installed]
         return Result(stdout="\n".join(lines) + ("\n" if lines else ""))
+    elif subcmd == "list" and len(actual_pm_args) > 1 and actual_pm_args[1] == "features":
+        features = [
+            "reqGlEsVersion=0x30002",
+            "android.hardware.camera",
+            "android.hardware.camera.autofocus",
+            "android.hardware.faketouch",
+            "android.hardware.location",
+            "android.hardware.location.gps",
+            "android.hardware.location.network",
+            "android.hardware.microphone",
+            "android.hardware.screen.landscape",
+            "android.hardware.screen.portrait",
+            "android.hardware.sensor.accelerometer",
+            "android.hardware.sensor.compass",
+            "android.hardware.touchscreen",
+            "android.hardware.touchscreen.multitouch",
+            "android.hardware.touchscreen.multitouch.distinct",
+            "android.hardware.touchscreen.multitouch.jazzhand",
+            "android.hardware.usb.accessory",
+            "android.hardware.wifi",
+            "android.software.backup",
+            "android.software.print",
+            "android.software.voice_recognizers",
+            "android.software.webview",
+        ]
+        lines = ["feature:%s" % f for f in features]
+        return Result(stdout="\n".join(lines) + "\n")
     elif subcmd == "path" and len(actual_pm_args) > 1:
         pkg = actual_pm_args[1]
         installed = dev.get("installed_packages", [])
@@ -357,6 +384,8 @@ def handle_logcat_bugreport(ctx):
         return online_err
 
     if subcmd == "logcat":
+        if "-c" in cmd_args or "--clear" in cmd_args:
+            return Result(stdout="")
         return Result(stdout="--------- beginning of main\n08-19 12:00:00.000  1000  1000 I MockLog: Mock logcat entry\n")
     elif subcmd == "bugreport":
         return Result(stdout="== dumpstate: 2026-08-19 12:00:00\n========================================================\n== Build: Mock Build\n========================================================\n")
@@ -475,10 +504,59 @@ def handle_generic_shell(ctx):
         elif cmd_args[2] == "density":
             return Result(stdout="Physical density: 420\n")
 
+    # cat files
+    if subcmd == "cat" and len(cmd_args) > 2:
+        file_path = cmd_args[2]
+        if file_path == "/proc/meminfo":
+            total_mem = dev.get("props", {}).get("mock.meminfo.mem_total_kb", "8000000")
+            return Result(stdout="""MemTotal:        %s kB
+MemFree:         4000000 kB
+MemAvailable:    6000000 kB
+Buffers:          200000 kB
+Cached:          2000000 kB
+SwapCached:            0 kB
+Active:          2500000 kB
+Inactive:        1000000 kB
+""" % total_mem)
+        elif file_path == "/proc/cpuinfo":
+            return Result(stdout="""processor\t: 0
+BogoMIPS\t: 38.40
+Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp
+CPU implementer\t: 0x41
+CPU architecture: 8
+CPU variant\t: 0x1
+CPU part\t: 0xd03
+CPU revision\t: 4
+
+processor\t: 1
+BogoMIPS\t: 38.40
+Features\t: fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp
+CPU implementer\t: 0x41
+CPU architecture: 8
+CPU variant\t: 0x1
+CPU part\t: 0xd03
+CPU revision\t: 4
+
+Hardware\t: Google Panther
+""")
+        elif file_path == "/sys/class/net/wlan0/address":
+            return Result(stdout="02:00:00:00:00:00\n")
+        elif file_path == "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq":
+            return Result(stdout="2850000\n")
+        return Result(stdout="")
+
+    # settings get
+    if subcmd == "settings" and len(cmd_args) >= 4 and cmd_args[2] == "get":
+        if "bluetooth_address" in cmd_args:
+            return Result(stdout="02:00:00:00:00:00\n")
+        return Result(stdout="null\n")
+
     # Uptime / uname
     if subcmd == "uptime":
         return Result(stdout=" 12:00:00 up 1 day,  2:30,  0 users,  load average: 0.10, 0.08, 0.05\n")
     if subcmd == "uname":
+        if len(cmd_args) > 2 and cmd_args[2] == "-m":
+            return Result(stdout="aarch64\n")
         return Result(stdout="Linux localhost 6.1.0 #1 SMP PREEMPT aarch64 Android\n")
 
     return Result(stdout="")

@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.Android
 import com.google.devtools.mobileharness.platform.android.packagemanager.PackageType;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
+import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.shared.usmf.UsmfBinary.CommandInvocation;
 import com.google.devtools.mobileharness.shared.usmf.UsmfEnvironment;
 import com.google.devtools.mobileharness.shared.usmf.builtin.adb.MockAndroidDevice.DeviceStatus;
@@ -37,6 +38,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -54,6 +56,7 @@ public final class MockAdbControllerTest {
   private CommandExecutor executor;
   private AndroidAdbInternalUtil adbInternalUtil;
   private AndroidPackageManagerUtil packageManagerUtil;
+  private AndroidSystemSpecUtil systemSpecUtil;
 
   @Before
   public void setUp() throws Exception {
@@ -61,6 +64,7 @@ public final class MockAdbControllerTest {
     executor = new CommandExecutor();
     adbInternalUtil = new AndroidAdbInternalUtil();
     packageManagerUtil = new AndroidPackageManagerUtil();
+    systemSpecUtil = new AndroidSystemSpecUtil();
   }
 
   @Test
@@ -617,6 +621,45 @@ public final class MockAdbControllerTest {
                 "mock",
                 "adb"));
     assertThat(echoOut.trim()).isEqualTo("hello mock adb");
+  }
+
+  @Test
+  public void adbSystemSpecCommands_meminfoCpuinfoFeaturesAndHardware() throws Exception {
+    MockAndroidDevice customDevice =
+        MockAndroidDevice.pixel7("emulator-5554").toBuilder()
+            .setProperty("mock.meminfo.mem_total_kb", "12000000")
+            .build();
+    MockAdbController controller =
+        MockAdbController.builder(usmfEnvironment).addDevice(customDevice).buildAndDeploy();
+
+    flags.set("adb", controller.getAdbPath());
+
+    // 1. Total memory info (/proc/meminfo) with custom property
+    assertThat(systemSpecUtil.getTotalMem("emulator-5554")).isEqualTo(12000000);
+
+    // 2. CPU count (/proc/cpuinfo)
+    assertThat(systemSpecUtil.getNumberOfCpus("emulator-5554")).isEqualTo(2);
+
+    // 3. Machine hardware name (uname -m)
+    assertThat(systemSpecUtil.getMachineHardwareName("emulator-5554")).isEqualTo("aarch64");
+
+    // 4. System features (pm list features)
+    Set<String> features = systemSpecUtil.getSystemFeatures("emulator-5554");
+    assertThat(features).contains("feature:android.hardware.camera");
+    assertThat(features).contains("feature:android.hardware.wifi");
+
+    // 5. WiFi MAC address (/sys/class/net/wlan0/address)
+    assertThat(systemSpecUtil.getMacAddress("emulator-5554")).isEqualTo("02:00:00:00:00:00");
+
+    // 6. Bluetooth MAC address (settings get secure bluetooth_address)
+    assertThat(systemSpecUtil.getBluetoothMacAddress("emulator-5554"))
+        .isEqualTo("02:00:00:00:00:00");
+
+    // 7. Logcat clear command (logcat -c)
+    CommandResult clearLogcat =
+        executor.exec(Command.of(controller.getAdbPath(), "-s", "emulator-5554", "logcat", "-c"));
+    assertThat(clearLogcat.exitCode()).isEqualTo(0);
+    assertThat(clearLogcat.stdout()).isEmpty();
   }
 
   @Test
