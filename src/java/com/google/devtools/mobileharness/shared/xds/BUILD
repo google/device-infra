@@ -17,10 +17,7 @@ load("@rules_java//java:defs.bzl", "java_binary")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//:deviceinfra_all_pkg",
-        "//third_party/py/multitest_transport:__subpackages__",
-    ],
+    default_visibility = ["//third_party/py/multitest_transport:__subpackages__"],
 )
 
 # This target is for dynamic loading grpc xds.
