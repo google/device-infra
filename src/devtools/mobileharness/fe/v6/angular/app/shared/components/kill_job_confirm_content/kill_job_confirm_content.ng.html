@@ -1,0 +1,38 @@
+<div class="kill-job-box">
+  <div class="warning-banner">
+    <mat-icon class="warning-icon">warning</mat-icon>
+    <div class="warning-text">
+      <span class="warning-lead">Warning: This action will kill the whole job.</span>
+      <span class="warning-desc">All tests not in DONE status in the job will be stopped!</span>
+    </div>
+  </div>
+
+  <div class="notes-section">
+    <div class="notes-header">
+      <mat-icon class="info-icon">info</mat-icon>
+      <span class="notes-title">Note:</span>
+    </div>
+    <ul class="notes-list">
+      <li class="note-item">
+        <span class="item-bullet">•</span>
+        <span class="note-item-text">
+          The RPC may fail with a <code class="code-badge">MASTER_CENTRAL_SPANNER_JOB_NOT_FOUND</code> error, which means either the job has been finished or the job is newly started whose status hasn't been updated in MH Master.
+        </span>
+      </li>
+      <li class="note-item">
+        <span class="item-bullet">•</span>
+        <div class="note-item-text">
+          <span>It may take about 1 minute to release the devices when using satellite lab, and may take 4~25 minutes (most cases take 4~7 minutes) when using shared lab.</span>
+          <div class="timing-chips">
+            <span class="timing-chip satellite">
+              <span class="chip-label">Satellite lab:</span> ~1 min
+            </span>
+            <span class="timing-chip shared">
+              <span class="chip-label">Shared lab:</span> 4~25 mins (most 4~7 mins)
+            </span>
+          </div>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>
