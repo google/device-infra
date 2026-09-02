@@ -693,7 +693,7 @@ public final class FleetSuggester {
       }
       boolean overMax = groups > GROUP_SUGGEST_MAX;
       String display = displayName(keyId);
-      ImmutableList<TextSegment> mainText = segments("group by ", display);
+      ImmutableList<TextSegment> mainText = segments("", display);
       FleetSuggestion.Builder builder =
           FleetSuggestion.newBuilder()
               .setLabel("Group by")

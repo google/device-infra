@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggest
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextSegment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
@@ -176,6 +177,19 @@ public final class FleetSuggesterTest {
     assertThat(group.getCountUnit()).isEqualTo("groups");
     assertThat(group.getCount()).isEqualTo(60);
     assertThat(group.getOverMax()).isTrue();
+    assertThat(group.getMainTextList())
+        .containsExactly(
+            TextSegment.newBuilder().setText("Dimension pool").setEmphasized(true).build());
+  }
+
+  @Test
+  public void groupBy_rendersOnlyEmphasizedKeyInMainText() {
+    FleetSuggestionResponse response = suggester.suggest(corpus, request("group by"));
+
+    FleetSuggestion model = firstAddGroupBy(response, "dimension::model");
+    assertThat(model.getLabel()).isEqualTo("Group by");
+    assertThat(model.getMainTextList())
+        .containsExactly(TextSegment.newBuilder().setText("Model").setEmphasized(true).build());
   }
 
   @Test
