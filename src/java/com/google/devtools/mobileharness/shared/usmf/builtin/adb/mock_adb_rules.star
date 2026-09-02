@@ -551,6 +551,18 @@ Hardware\t: Google Panther
             return Result(stdout="02:00:00:00:00:00\n")
         return Result(stdout="null\n")
 
+    # am
+    if subcmd == "am":
+        if "get-current-user" in cmd_args:
+            return Result(stdout="0\n")
+        return Result(stdout="")
+
+    # cmd
+    if subcmd == "cmd":
+        if len(cmd_args) >= 4 and cmd_args[2] == "user" and cmd_args[3] == "get-current-user":
+            return Result(stdout="0\n")
+        return Result(stdout="")
+
     # Uptime / uname
     if subcmd == "uptime":
         return Result(stdout=" 12:00:00 up 1 day,  2:30,  0 users,  load average: 0.10, 0.08, 0.05\n")

@@ -663,6 +663,34 @@ public final class MockAdbControllerTest {
   }
 
   @Test
+  public void adbUserCommands_getCurrentUser() throws Exception {
+    MockAdbController controller =
+        MockAdbController.builder(usmfEnvironment)
+            .addDevice(MockAndroidDevice.pixel7("emulator-5554"))
+            .buildAndDeploy();
+
+    // 1. am get-current-user
+    String amCurrentUser =
+        executor.run(
+            Command.of(
+                controller.getAdbPath(), "-s", "emulator-5554", "shell", "am", "get-current-user"));
+    assertThat(amCurrentUser.trim()).isEqualTo("0");
+
+    // 2. cmd user get-current-user
+    String cmdCurrentUser =
+        executor.run(
+            Command.of(
+                controller.getAdbPath(),
+                "-s",
+                "emulator-5554",
+                "shell",
+                "cmd",
+                "user",
+                "get-current-user"));
+    assertThat(cmdCurrentUser.trim()).isEqualTo("0");
+  }
+
+  @Test
   public void adbTcpipConnectDisconnect_managesTcpDevices() throws Exception {
     MockAdbController controller =
         MockAdbController.builder(usmfEnvironment)
