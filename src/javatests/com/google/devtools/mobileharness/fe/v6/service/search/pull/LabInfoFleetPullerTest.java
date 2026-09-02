@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
@@ -126,6 +127,48 @@ public final class LabInfoFleetPullerTest {
                 .getSupportedDimensionsMask()
                 .getDimensionNamesList())
         .containsExactly("carrier");
+  }
+
+  @Test
+  public void pullDimensionNames_extractsAllDimensionNames() throws Exception {
+    DeviceInfo device =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("dev-1"))
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder().setName("model").setValue("Pixel 8"))
+                            .addRequiredDimension(
+                                DeviceDimension.newBuilder().setName("carrier").setValue("Verizon"))
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder().setName("").setValue("invalid"))))
+            .build();
+    LabQueryResult labResult =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .addLabData(
+                        LabData.newBuilder()
+                            .setDeviceList(DeviceList.newBuilder().addDeviceInfo(device))))
+            .build();
+    labInfoProvider.setResult(labResult);
+
+    ImmutableSet<String> names = puller.pullDimensionNames(UniverseScope.SELF).get();
+
+    assertThat(names).containsExactly("model", "carrier");
+    assertThat(
+            labInfoProvider
+                .lastRequest
+                .getLabQuery()
+                .getMask()
+                .getDeviceInfoMask()
+                .getFieldMask()
+                .getPathsList())
+        .containsExactly("device_locator.id", "device_feature.composite_dimension");
+    assertThat(labInfoProvider.lastRequest.getPage().getLimit()).isEqualTo(0);
+    assertThat(labInfoProvider.lastRequest.getUseRealtimeData()).isFalse();
   }
 
   private static final class FakeLabInfoProvider implements LabInfoProvider {

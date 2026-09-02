@@ -58,10 +58,7 @@ java_library(
 java_library(
     name = "host_enrichment",
     srcs = ["HostEnrichment.java"],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
-        "@maven//:com_google_guava_guava",
-    ],
+    deps = ["//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value"],
 )
 
 java_library(

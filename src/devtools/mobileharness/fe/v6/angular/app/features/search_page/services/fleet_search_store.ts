@@ -496,16 +496,16 @@ export class FleetSearchStore extends SearchPageStore {
               (v) => ({
                 value: v.value,
                 displayLabel: v.displayLabel || v.value,
-                filtered: v.filtered,
-                total: v.total,
+                filtered: v.filtered ?? 0,
+                total: v.total ?? 0,
               }),
             );
             if (res.counted.noValueEntry) {
               list.push({
                 value: '<empty>',
                 displayLabel: '(no value)',
-                filtered: res.counted.noValueEntry.filtered,
-                total: res.counted.noValueEntry.total,
+                filtered: res.counted.noValueEntry.filtered ?? 0,
+                total: res.counted.noValueEntry.total ?? 0,
                 isNoValue: true,
               });
             }

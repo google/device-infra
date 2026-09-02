@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.KeyCount;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.ValueKeyPair;
+import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionCatalogStore;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
@@ -239,10 +240,20 @@ public final class FleetSuggester {
    */
   private final Map<Fleet, ScenarioCuration> curations;
 
+  private final DimensionCatalogStore dimensionCatalogStore;
+
   @Inject
-  FleetSuggester(FleetFilterEngine filterEngine, Map<Fleet, ScenarioCuration> curations) {
+  FleetSuggester(
+      FleetFilterEngine filterEngine,
+      Map<Fleet, ScenarioCuration> curations,
+      DimensionCatalogStore dimensionCatalogStore) {
     this.filterEngine = filterEngine;
     this.curations = curations;
+    this.dimensionCatalogStore = dimensionCatalogStore;
+  }
+
+  FleetSuggester(FleetFilterEngine filterEngine, Map<Fleet, ScenarioCuration> curations) {
+    this(filterEngine, curations, new DimensionCatalogStore());
   }
 
   /** Returns ranked suggestions for the request against the given snapshot. */
@@ -275,8 +286,10 @@ public final class FleetSuggester {
     ToIntFunction<String> keyPriority =
         keyId -> (curation == null || keyId == null) ? 0 : curation.keyPriority(keyId, entity);
 
+    ImmutableSet<String> catalogDimensions = dimensionCatalogStore.getDimensionNames(fleet);
     Context context =
         new Context(
+            fleet,
             corpus,
             index,
             filters,
@@ -285,7 +298,8 @@ public final class FleetSuggester {
             current,
             currentBits,
             keyPriority,
-            corpus.postings());
+            corpus.postings(),
+            catalogDimensions);
 
     if (query.isEmpty()) {
       return emptyState(context, limit);
@@ -406,7 +420,7 @@ public final class FleetSuggester {
 
   private List<Cand> suggestKv(Context context, String keyToken, String rawValue, boolean exclude) {
     List<Cand> out = new ArrayList<>();
-    ImmutableList<String> keyIds = resolveKey(context.index(), keyToken);
+    ImmutableList<String> keyIds = resolveKey(context, keyToken);
 
     // Comma outside quotes: a multi-value OR under the resolved key.
     if (rawValue.contains(",") && !rawValue.contains("\"") && !rawValue.contains("'")) {
@@ -500,7 +514,7 @@ public final class FleetSuggester {
 
   private List<Cand> suggestKeyValues(Context context, String keyToken, boolean exclude) {
     List<Cand> out = new ArrayList<>();
-    for (String keyId : resolveKey(context.index(), keyToken)) {
+    for (String keyId : resolveKey(context, keyToken)) {
       for (Match match : topValues(context, keyId, KEY_VALUES_PER_KEY)) {
         Cand cand = condition(context, keyId, match.value(), 3, exclude);
         if (cand != null) {
@@ -600,8 +614,7 @@ public final class FleetSuggester {
 
   private List<Cand> suggestKey(Context context, String token) {
     List<Cand> out = new ArrayList<>();
-    FleetIndex index = context.index();
-    List<KeyMatch> matched = matchKeyIds(index, token);
+    List<KeyMatch> matched = matchKeyIds(context, token);
     int rank = 0;
     for (KeyMatch keyMatch : matched) {
       String keyId = keyMatch.keyId();
@@ -1035,14 +1048,26 @@ public final class FleetSuggester {
 
   // ---- Key resolution (spec section 2.2) ----
 
+  private static ImmutableList<String> resolveKey(Context context, String token) {
+    return resolveKey(context.index(), context.catalogDimensions(), token);
+  }
+
   private static ImmutableList<String> resolveKey(FleetIndex index, String token) {
+    return resolveKey(index, ImmutableSet.of(), token);
+  }
+
+  private static ImmutableList<String> resolveKey(
+      FleetIndex index, ImmutableSet<String> catalogDimensions, String token) {
     String raw = token.trim();
     String low = Ascii.toLowerCase(raw);
 
     Matcher dim = NAMESPACE_DIM.matcher(low);
     if (dim.matches()) {
-      String keyId = DeviceKeys.PREFIX_DIMENSION + normalize(dim.group(1));
-      return index.keyIds().contains(keyId) ? ImmutableList.of(keyId) : ImmutableList.of();
+      String dimName = normalize(dim.group(1));
+      String keyId = DeviceKeys.PREFIX_DIMENSION + dimName;
+      return (index.keyIds().contains(keyId) || catalogDimensions.contains(dimName))
+          ? ImmutableList.of(keyId)
+          : ImmutableList.of();
     }
     Matcher prop = NAMESPACE_PROP.matcher(low);
     if (prop.matches()) {
@@ -1054,8 +1079,9 @@ public final class FleetSuggester {
       return aliased;
     }
     // Case 3: a bare token equal to a dimension or host-property key present in the fleet.
-    String bareDim = DeviceKeys.PREFIX_DIMENSION + normalize(raw);
-    if (index.keyIds().contains(bareDim)) {
+    String bareDimName = normalize(raw);
+    String bareDim = DeviceKeys.PREFIX_DIMENSION + bareDimName;
+    if (index.keyIds().contains(bareDim) || catalogDimensions.contains(bareDimName)) {
       return ImmutableList.of(bareDim);
     }
     String bareProp = HostKeys.PREFIX_HOST_PROPERTY + normalize(raw);
@@ -1068,13 +1094,15 @@ public final class FleetSuggester {
   /**
    * Resolves a key token to matched keys with a match-quality tier, looser than {@link
    * #resolveKey}: beyond exact alias hits it also offers prefix and contains matches over key
-   * display names.
+   * display names, including discovered long-tail dimensions from {@code DimensionCatalogStore}.
    */
-  private static List<KeyMatch> matchKeyIds(FleetIndex index, String token) {
+  private static List<KeyMatch> matchKeyIds(Context context, String token) {
+    FleetIndex index = context.index();
     List<KeyMatch> out = new ArrayList<>();
     Set<String> seen = new HashSet<>();
-    for (String keyId : resolveKey(index, token)) {
-      if (index.keyIds().contains(keyId) && seen.add(keyId)) {
+    for (String keyId : resolveKey(context, token)) {
+      if ((index.keyIds().contains(keyId) || isDiscoveredDimension(context, keyId))
+          && seen.add(keyId)) {
         out.add(new KeyMatch(keyId, 3));
       }
     }
@@ -1083,6 +1111,18 @@ public final class FleetSuggester {
       return out;
     }
     for (String keyId : index.keyIds()) {
+      if (seen.contains(keyId)) {
+        continue;
+      }
+      String display = normalize(displayName(keyId));
+      String bare = normalize(bareName(keyId));
+      if (display.startsWith(normTerm) || bare.startsWith(normTerm)) {
+        out.add(new KeyMatch(keyId, 2));
+        seen.add(keyId);
+      }
+    }
+    for (String dimName : context.catalogDimensions()) {
+      String keyId = DeviceKeys.PREFIX_DIMENSION + dimName;
       if (seen.contains(keyId)) {
         continue;
       }
@@ -1104,7 +1144,27 @@ public final class FleetSuggester {
         seen.add(keyId);
       }
     }
+    for (String dimName : context.catalogDimensions()) {
+      String keyId = DeviceKeys.PREFIX_DIMENSION + dimName;
+      if (seen.contains(keyId)) {
+        continue;
+      }
+      String display = normalize(displayName(keyId));
+      String bare = normalize(bareName(keyId));
+      if (display.contains(normTerm) || bare.contains(normTerm)) {
+        out.add(new KeyMatch(keyId, 1));
+        seen.add(keyId);
+      }
+    }
     return out;
+  }
+
+  private static boolean isDiscoveredDimension(Context context, String keyId) {
+    if (keyId.startsWith(DeviceKeys.PREFIX_DIMENSION)) {
+      String dimName = keyId.substring(DeviceKeys.PREFIX_DIMENSION.length());
+      return context.catalogDimensions().contains(dimName);
+    }
+    return false;
   }
 
   // ---- Group-by counting (mirrors FleetPromotedKeysProvider) ----
@@ -1609,6 +1669,7 @@ public final class FleetSuggester {
 
   /** Per-request query context, so helpers avoid threading many parameters. */
   private record Context(
+      Fleet fleet,
       SearchCorpus corpus,
       FleetIndex index,
       List<Filter> filters,
@@ -1617,7 +1678,8 @@ public final class FleetSuggester {
       ImmutableList<Integer> current,
       BitSet currentBits,
       ToIntFunction<String> keyPriority,
-      Postings postings) {}
+      Postings postings,
+      ImmutableSet<String> catalogDimensions) {}
 
   /**
    * A candidate suggestion before ranking. Holds the partially built proto (label, main text, and

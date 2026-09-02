@@ -16,6 +16,9 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.pull;
 
+import static com.google.common.util.concurrent.Futures.immediateFuture;
+
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
@@ -52,4 +55,12 @@ public interface FleetDataSource {
    * the raw overlay data.
    */
   ListenableFuture<DimensionOverlayRaw> pullDimension(String keyId);
+
+  /**
+   * Starts a pull of all available device dimension names for this fleet and returns a future for
+   * the discovered dimension names set.
+   */
+  default ListenableFuture<ImmutableSet<String>> pullDimensionNames() {
+    return immediateFuture(ImmutableSet.of());
+  }
 }

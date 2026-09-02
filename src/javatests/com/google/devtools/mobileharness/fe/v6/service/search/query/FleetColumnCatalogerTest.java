@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
@@ -35,6 +36,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogEntry;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogResponse;
@@ -42,6 +44,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnC
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionCatalogStore;
 import com.google.inject.Guice;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -73,6 +76,66 @@ public final class FleetColumnCatalogerTest {
   private final DeviceCorpus corpus = new DeviceCorpus(snapshot, postings, null);
   private final FleetColumnCataloger cataloger =
       Guice.createInjector().getInstance(FleetColumnCataloger.class);
+
+  @Test
+  public void defaultConstructor_works() {
+    FleetColumnCataloger defaultCataloger = new FleetColumnCataloger();
+    FleetColumnCatalogResponse response =
+        defaultCataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
+    assertThat(headings(response)).contains("Built-in fields");
+  }
+
+  @Test
+  public void dimensionsSection_includesCatalogOnlyDimensions() {
+    DimensionCatalogStore store = new DimensionCatalogStore();
+    store.setDimensionNames(Fleet.FLEET_SELF, ImmutableSet.of("custom_catalog_dim"));
+    FleetColumnCataloger customCataloger = new FleetColumnCataloger(store);
+
+    FleetColumnCatalogResponse response =
+        customCataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
+
+    FleetColumnCatalogSection dimensions = section(response, "Dimensions");
+    assertThat(dimensions.getTotalAvailable()).isEqualTo(13);
+
+    FleetColumnCatalogResponse queryResponse =
+        customCataloger.getColumnCatalog(
+            corpus, FleetColumnCatalogRequest.newBuilder().setQuery("custom_catalog_dim").build());
+    FleetColumnCatalogSection search = section(queryResponse, "Search results");
+    assertThat(keys(search)).contains("dimension::custom_catalog_dim");
+    assertThat(entryFor(search, "dimension::custom_catalog_dim").getDeviceCount()).isEqualTo(0);
+  }
+
+  @Test
+  public void getColumnCatalog_respectsRequestedFleet() {
+    DimensionCatalogStore store = new DimensionCatalogStore();
+    store.setDimensionNames(Fleet.FLEET_SELF, ImmutableSet.of("self_catalog_dim"));
+    store.setDimensionNames(Fleet.FLEET_ATS, ImmutableSet.of("ats_catalog_dim"));
+    FleetColumnCataloger customCataloger = new FleetColumnCataloger(store);
+
+    FleetColumnCatalogResponse atsResponse =
+        customCataloger.getColumnCatalog(
+            corpus,
+            FleetColumnCatalogRequest.newBuilder()
+                .setFleet(Fleet.FLEET_ATS)
+                .setQuery("catalog_dim")
+                .build());
+    FleetColumnCatalogResponse defaultResponse =
+        customCataloger.getColumnCatalog(
+            corpus,
+            FleetColumnCatalogRequest.newBuilder()
+                .setFleet(Fleet.FLEET_UNSPECIFIED)
+                .setQuery("catalog_dim")
+                .build());
+
+    assertThat(keys(section(atsResponse, "Search results"))).contains("dimension::ats_catalog_dim");
+    assertThat(keys(section(atsResponse, "Search results")))
+        .doesNotContain("dimension::self_catalog_dim");
+
+    assertThat(keys(section(defaultResponse, "Search results")))
+        .contains("dimension::self_catalog_dim");
+    assertThat(keys(section(defaultResponse, "Search results")))
+        .doesNotContain("dimension::ats_catalog_dim");
+  }
 
   @Test
   public void browse_sectionsInOrder() {
