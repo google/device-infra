@@ -95,6 +95,20 @@ describe('value_picker_utils', () => {
       });
       expect(desc.map((i) => i.value)).toEqual(['cherry', 'apple', 'banana', 'date']);
     });
+
+    it('should not cap candidate items at any arbitrary limit', () => {
+      const largeList: PickerValueItem[] = Array.from({length: 1200}, (_, idx) => ({
+        value: `val_${idx}`,
+        displayLabel: `Val ${idx}`,
+      }));
+      const result = computeFilteredAndSortedValues({
+        items: largeList,
+        query: '',
+        sortBy: 'value',
+        sortAsc: true,
+      });
+      expect(result.length).toBe(1200);
+    });
   });
 
   describe('computePinnedValues', () => {

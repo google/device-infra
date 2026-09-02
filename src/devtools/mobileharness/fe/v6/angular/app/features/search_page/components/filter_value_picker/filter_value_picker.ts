@@ -131,9 +131,13 @@ export class FilterValuePicker {
   /** Local search query entered in popover filter input. */
   readonly searchQuery = signal<string>('');
   /** Active column to sort candidate items by ('value' | 'filtered' | 'total'). */
-  readonly sortBy = signal<'value' | 'filtered' | 'total'>('filtered');
+  readonly sortBy = linkedSignal<'value' | 'filtered' | 'total'>(() =>
+    this.isPlain() ? 'value' : 'filtered',
+  );
   /** Sort direction flag (true = ascending, false = descending). */
-  readonly sortAsc = signal<boolean>(false);
+  readonly sortAsc = linkedSignal<boolean>(() =>
+    this.isPlain() ? true : false,
+  );
   /** Polarity menu open state flag. */
   readonly showPolarityMenu = signal<boolean>(false);
   /** More/Overflow options menu open state flag. */
@@ -150,6 +154,8 @@ export class FilterValuePicker {
   /** Whether the candidate items are plain values without count columns. */
   readonly isPlain = computed(() => {
     if (this.config()?.valuesType === 'plain') return true;
+    if (this.state()?.valuesType === 'plain') return true;
+    if (this.state()?.valuesType === 'counted') return false;
     const list = this.state().values || [];
     return (
       list.length > 0 &&

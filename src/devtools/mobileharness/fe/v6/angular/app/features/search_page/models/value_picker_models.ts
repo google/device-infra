@@ -53,6 +53,7 @@ export interface ValuePickerConfig {
 export interface ValuePickerState {
   loading: boolean;
   values: PickerValueItem[];
+  valuesType?: 'counted' | 'plain';
   selectedValues: Set<string>;
   negated: boolean;
   advanced: {

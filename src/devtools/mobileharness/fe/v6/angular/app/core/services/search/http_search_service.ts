@@ -1,6 +1,7 @@
 import {HttpClient} from '@angular/common/http';
 import {inject, Injectable} from '@angular/core';
 import {Observable} from 'rxjs';
+import {map} from 'rxjs/operators';
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
   FleetChipResolverRequest,
@@ -75,10 +76,45 @@ export class HttpSearchService extends SearchService {
   override getFleetValueList(
     request: FleetValueListRequest,
   ): Observable<FleetValueListResponse> {
-    return this.http.post<FleetValueListResponse>(
-      `${this.fleetApiUrl}/value-list`,
-      request,
-    );
+    return this.http
+      .post<FleetValueListResponse>(`${this.fleetApiUrl}/value-list`, request)
+      .pipe(map((res) => this.normalizeFleetValueListResponse(res)));
+  }
+
+  private normalizeFleetValueListResponse(
+    res: FleetValueListResponse,
+  ): FleetValueListResponse {
+    if (!res) return res;
+    if (res.counted) {
+      return {
+        counted: {
+          values: (res.counted.values || []).map((v) => ({
+            value: v.value,
+            displayLabel: v.displayLabel || v.value,
+            filtered: v.filtered ?? 0,
+            total: v.total ?? 0,
+          })),
+          noValueEntry: res.counted.noValueEntry
+            ? {
+                filtered: res.counted.noValueEntry.filtered ?? 0,
+                total: res.counted.noValueEntry.total ?? 0,
+              }
+            : undefined,
+        },
+      };
+    }
+    if (res.plain) {
+      return {
+        plain: {
+          values: (res.plain.values || []).map((v) => ({
+            value: v.value,
+            displayLabel: v.displayLabel || v.value,
+          })),
+          noValueEntry: res.plain.noValueEntry ? {} : undefined,
+        },
+      };
+    }
+    return res;
   }
 
   override getFleetPromotedKeys(

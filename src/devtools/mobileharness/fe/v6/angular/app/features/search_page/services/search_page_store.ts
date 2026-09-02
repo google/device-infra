@@ -195,15 +195,20 @@ export abstract class SearchPageStore {
   /** Asynchronously fetched enum/value options for the ValuePicker. */
   readonly asyncPickerValues: Signal<PickerValueItem[]> = signal([]);
 
+  /** Asynchronously fetched value list format ('counted' | 'plain') for the ValuePicker. */
+  readonly asyncPickerValuesType: Signal<'counted' | 'plain' | undefined> = signal(undefined);
+
   /** Effective merged ValuePicker state combining user inputs and async fetched values/loading. */
   readonly effectivePickerState = computed<ValuePickerState>(() => {
     const raw = this.pickerState();
     const asyncLoading = this.isPickerLoading();
     const asyncVals = this.asyncPickerValues();
+    const asyncValuesType = this.asyncPickerValuesType();
     return {
       ...raw,
       loading: raw.loading || asyncLoading,
       values: asyncVals.length > 0 ? asyncVals : raw.values,
+      valuesType: asyncValuesType || raw.valuesType,
     };
   });
 

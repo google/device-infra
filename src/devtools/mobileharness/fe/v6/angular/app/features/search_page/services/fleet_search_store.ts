@@ -458,7 +458,7 @@ export class FleetSearchStore extends SearchPageStore {
 
   /** Reactive resource fetching value list items for the active Popover ValuePicker. */
   private readonly valueListResource = rxResource<
-    PickerValueItem[],
+    {values: PickerValueItem[]; valuesType: 'counted' | 'plain'} | null,
     | {
         entity: EntityType;
         key: string;
@@ -482,7 +482,7 @@ export class FleetSearchStore extends SearchPageStore {
       };
     },
     stream: ({params: req}) => {
-      if (!req) return of([]);
+      if (!req) return of(null);
       const fleetReq: FleetValueListRequest = {
         entity: this.getSearchEntityProto(req.entity),
         key: req.key,
@@ -496,20 +496,20 @@ export class FleetSearchStore extends SearchPageStore {
               (v) => ({
                 value: v.value,
                 displayLabel: v.displayLabel || v.value,
-                filtered: v.filtered ?? 0,
-                total: v.total ?? 0,
+                filtered: v.filtered,
+                total: v.total,
               }),
             );
             if (res.counted.noValueEntry) {
               list.push({
                 value: '<empty>',
                 displayLabel: '(no value)',
-                filtered: res.counted.noValueEntry.filtered ?? 0,
-                total: res.counted.noValueEntry.total ?? 0,
+                filtered: res.counted.noValueEntry.filtered,
+                total: res.counted.noValueEntry.total,
                 isNoValue: true,
               });
             }
-            return list;
+            return {values: list, valuesType: 'counted' as const};
           }
 
           if (res.plain) {
@@ -526,12 +526,12 @@ export class FleetSearchStore extends SearchPageStore {
                 isNoValue: true,
               });
             }
-            return list;
+            return {values: list, valuesType: 'plain' as const};
           }
 
-          return [];
+          return {values: [], valuesType: 'plain' as const};
         }),
-        catchError(() => of([])),
+        catchError(() => of(null)),
       );
     },
   });
@@ -543,8 +543,13 @@ export class FleetSearchStore extends SearchPageStore {
 
   /** Async options list delivered to the Popover ValuePicker. */
   override readonly asyncPickerValues = computed<PickerValueItem[]>(
-    () => this.valueListResource.value() || [],
+    () => this.valueListResource.value()?.values || [],
   );
+
+  /** Async options format ('counted' | 'plain') delivered to the Popover ValuePicker. */
+  override readonly asyncPickerValuesType = computed<
+    'counted' | 'plain' | undefined
+  >(() => this.valueListResource.value()?.valuesType);
 
   // ===========================================================================
   // 6. Primary Search Resource & Execution
