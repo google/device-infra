@@ -207,6 +207,8 @@ public final class FleetIndexBuilderTest {
         .containsExactly("SHARED_LAB");
     assertThat(snapshot.hosts().get(0).values("host_field::daemon_status"))
         .containsExactly("RUNNING");
+    assertThat(snapshot.hosts().get(0).values("host_field::daemon_server_version"))
+        .containsExactly("1.0.0");
 
     // Data-driven gating: device-2 is on the unenriched host lab2, so the HostInfoService-sourced
     // keys carry no value for it and lab2 has no lab type. Host OS and connectivity, available in
@@ -214,9 +216,11 @@ public final class FleetIndexBuilderTest {
     assertThat(snapshot.devices().get(1).values("device_config::wifi_ssid")).isEmpty();
     assertThat(posting(hostPostings, "host_field::lab_type", "core lab")).doesNotContain(2);
     assertThat(index.valueCount("host_field::daemon_status", "running")).isEqualTo(2);
+    assertThat(index.valueCount("host_field::daemon_server_version", "1.0.0")).isEqualTo(2);
     assertThat(snapshot.hosts().get(1).values("host_field::lab_type")).isEmpty();
     assertThat(snapshot.hosts().get(1).values("host_field::release_status")).isEmpty();
     assertThat(snapshot.hosts().get(1).values("host_field::daemon_status")).isEmpty();
+    assertThat(snapshot.hosts().get(1).values("host_field::daemon_server_version")).isEmpty();
 
     // Host record OS and connectivity: sourced from the host_os property (defaulting to "Unknown")
     // and the lab status bucket.
@@ -543,6 +547,7 @@ public final class FleetIndexBuilderTest {
         .setReleaseStatus(Optional.of("RUNNING"))
         .setReleaseType(Optional.of("SHARED_LAB"))
         .setDaemonStatus(Optional.of("RUNNING"))
+        .setDaemonServerVersion(Optional.of("1.0.0"))
         .build();
   }
 

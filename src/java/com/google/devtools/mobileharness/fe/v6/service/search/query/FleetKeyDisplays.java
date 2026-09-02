@@ -53,6 +53,7 @@ final class FleetKeyDisplays {
           .put(HostKeys.DEVICE_COUNT.id(), "Device Count")
           .put(HostKeys.PREFIX_HOST_FIELD + "lab_type", "Host Lab Type")
           .put(HostKeys.PREFIX_HOST_FIELD + "daemon_status", "Host Daemon Server Status")
+          .put(HostKeys.PREFIX_HOST_FIELD + "daemon_server_version", "Host Daemon Server Version")
           .put(HostKeys.PREFIX_HOST_FIELD + "release_status", "Host Release Status")
           .put(HostKeys.PREFIX_HOST_FIELD + "release_type", "Host Release Type")
           .put(HostKeys.PREFIX_HOST_FIELD + "ats_controller", "ATS Lab")

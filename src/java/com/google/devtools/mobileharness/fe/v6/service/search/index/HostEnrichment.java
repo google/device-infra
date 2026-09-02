@@ -40,6 +40,9 @@ public abstract class HostEnrichment {
   /** Daemon server status (for example "RUNNING", "MISSING"). */
   public abstract Optional<String> daemonStatus();
 
+  /** Daemon server version string. */
+  public abstract Optional<String> daemonServerVersion();
+
   /** Lab server version string. */
   public abstract Optional<String> labServerVersion();
 
@@ -56,6 +59,7 @@ public abstract class HostEnrichment {
         .setReleaseStatus(Optional.empty())
         .setReleaseType(Optional.empty())
         .setDaemonStatus(Optional.empty())
+        .setDaemonServerVersion(Optional.empty())
         .setLabServerVersion(Optional.empty())
         .setAtsController(Optional.empty());
   }
@@ -68,6 +72,8 @@ public abstract class HostEnrichment {
     public abstract Builder setReleaseType(Optional<String> releaseType);
 
     public abstract Builder setDaemonStatus(Optional<String> daemonStatus);
+
+    public abstract Builder setDaemonServerVersion(Optional<String> daemonServerVersion);
 
     public abstract Builder setLabServerVersion(Optional<String> labServerVersion);
 

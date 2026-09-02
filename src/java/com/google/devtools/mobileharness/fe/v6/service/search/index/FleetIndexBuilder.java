@@ -78,6 +78,8 @@ public final class FleetIndexBuilder {
   public static final String HOST_FIELD_LAB_TYPE = HostKeys.PREFIX_HOST_FIELD + "lab_type";
   public static final String HOST_FIELD_DAEMON_STATUS =
       HostKeys.PREFIX_HOST_FIELD + "daemon_status";
+  public static final String HOST_FIELD_DAEMON_SERVER_VERSION =
+      HostKeys.PREFIX_HOST_FIELD + "daemon_server_version";
   public static final String HOST_FIELD_RELEASE_STATUS =
       HostKeys.PREFIX_HOST_FIELD + "release_status";
   public static final String HOST_FIELD_RELEASE_TYPE = HostKeys.PREFIX_HOST_FIELD + "release_type";
@@ -239,6 +241,10 @@ public final class FleetIndexBuilder {
         .flatMap(HostEnrichment::daemonStatus)
         .filter(s -> !s.isEmpty())
         .ifPresent(s -> values.put(HOST_FIELD_DAEMON_STATUS, ImmutableList.of(s)));
+    enrichment
+        .flatMap(HostEnrichment::daemonServerVersion)
+        .filter(v -> !v.isEmpty())
+        .ifPresent(v -> values.put(HOST_FIELD_DAEMON_SERVER_VERSION, ImmutableList.of(v)));
     enrichment
         .flatMap(HostEnrichment::releaseStatus)
         .filter(s -> !s.isEmpty())

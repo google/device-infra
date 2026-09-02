@@ -1570,6 +1570,12 @@ public final class FleetSuggester {
         "daemon",
         "daemon status",
         "daemon server status");
+    addAliases(
+        map,
+        HostKeys.PREFIX_HOST_FIELD + "daemon_server_version",
+        "daemon version",
+        "daemon server version",
+        "host daemon server version");
     addAliases(map, HostKeys.PREFIX_HOST_FIELD + "release_status", "release status", "release");
     addAliases(map, HostKeys.LAB_SERVER_VERSION.id(), "lab server version");
     addAliases(

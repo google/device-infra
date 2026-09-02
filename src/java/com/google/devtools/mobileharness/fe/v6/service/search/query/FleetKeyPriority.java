@@ -88,6 +88,7 @@ public final class FleetKeyPriority {
           DeviceKeys.DEVICE_FORM.id(),
           "host_field::lab_server_activity",
           HostKeys.PREFIX_HOST_FIELD + "daemon_status",
+          HostKeys.PREFIX_HOST_FIELD + "daemon_server_version",
           HostKeys.PREFIX_HOST_FIELD + "release_type");
 
   /**
@@ -113,7 +114,8 @@ public final class FleetKeyPriority {
       ImmutableSet.of(
           HostKeys.HOST_IP.id(),
           HostKeys.PREFIX_HOST_FIELD + "release_type",
-          HostKeys.PREFIX_HOST_FIELD + "daemon_status");
+          HostKeys.PREFIX_HOST_FIELD + "daemon_status",
+          HostKeys.PREFIX_HOST_FIELD + "daemon_server_version");
 
   /**
    * The suggester priority for {@code keyId} in {@code scenario}: higher means offered earlier.
