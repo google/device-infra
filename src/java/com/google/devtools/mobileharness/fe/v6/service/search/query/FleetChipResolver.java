@@ -16,56 +16,60 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.base.Ascii;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.ComplexMatch;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.ContainsSubstring;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FilterValue;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetChipResolverRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetChipResolverResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterChipMetadata;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetInvalidFilterChip;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetInvalidGroupByChip;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetResolvedFilterChip;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetResolvedGroupByChip;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValidFilterChip;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValidGroupByChip;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.MatchesRegex;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
-import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
-import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyRegistry;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 /**
  * Resolves filter and group-by chips into the pill text and metadata the frontend renders, without
  * running any query. This is the Java port of the search prototype's {@code resolve_chips} plus its
  * {@code _pill_key}, {@code _pill_condition}, and {@code _bff_metadata} helpers.
  *
- * <p>Resolution is stateless beyond the snapshot: it needs only the chip structure to produce
- * display strings. It reads {@link FleetKeyDisplays} for the human key name and {@link
- * FleetIndex#valueDisplays(String)} for original value casing, mirroring the conventions in {@link
- * FleetCellMapper} and {@link FleetValueLister}. The response arrays are parallel to the request:
- * {@code filter_chips[i]} resolves {@code filters[i]} and {@code group_by_chips[j]} resolves {@code
- * group_by_keys[j]}.
- *
- * <p>A chip has two display halves. The {@code pill_key} is the short chip label, the key display
- * name with its namespace prefix stripped ({@code dim::model} to "Model", {@code prop::foo} to
- * "Host foo"). The {@code pill_condition} is the condition text describing what the filter selects.
+ * <p>Resolution reads descriptors from the per-fleet {@link ScenarioCuration}'s {@link
+ * DeviceKeyRegistry} and {@link HostKeyRegistry}.
  */
+@Singleton
 public final class FleetChipResolver {
 
-  private static final ImmutableSet<String> PLURAL_DISPLAY_KEYS =
-      ImmutableSet.of(
-          DeviceKeys.PREFIX_DEVICE_FIELD + "owner",
-          DeviceKeys.DRIVER.id(),
-          DeviceKeys.DECORATOR.id(),
-          DeviceKeys.PREFIX_DEVICE_FIELD + "executor");
-
-  private static final ImmutableSet<String> VALUE_DISPLAY_KEYS =
-      ImmutableSet.of(HostKeys.PREFIX_HOST_FIELD + "ats_controller");
+  private final Map<Fleet, ScenarioCuration> curations;
 
   @Inject
-  FleetChipResolver() {}
+  FleetChipResolver(Map<Fleet, ScenarioCuration> curations) {
+    this.curations = checkNotNull(curations);
+  }
+
+  public FleetChipResolver() {
+    this(ImmutableMap.of(Fleet.FLEET_SELF, new AtsCuration()));
+  }
 
   /**
    * Resolves every filter and group-by key in the request into its display text and metadata.
@@ -76,38 +80,186 @@ public final class FleetChipResolver {
    */
   public FleetChipResolverResponse resolve(
       FleetSnapshot snapshot, FleetChipResolverRequest request) {
-    FleetIndex index = snapshot.index();
+    if (request.getEntity() == SearchEntity.SEARCH_ENTITY_UNSPECIFIED) {
+      throw FeServiceException.invalidArgument(
+          "entity must be specified in FleetChipResolverRequest");
+    }
+    Fleet fleet =
+        request.getFleet() == Fleet.FLEET_UNSPECIFIED ? Fleet.FLEET_SELF : request.getFleet();
+    ScenarioCuration curation = curations.get(fleet);
+    if (curation == null) {
+      throw FeServiceException.invalidArgument("Unsupported fleet: " + fleet);
+    }
+    DeviceKeyRegistry deviceKeyRegistry = curation.deviceKeyRegistry();
+    HostKeyRegistry hostKeyRegistry = curation.hostKeyRegistry();
+
+    SearchEntity entity = request.getEntity();
+    FleetIndex index =
+        entity == SearchEntity.SEARCH_ENTITY_HOST ? snapshot.hostIndex() : snapshot.index();
     FleetChipResolverResponse.Builder response = FleetChipResolverResponse.newBuilder();
     for (Filter filter : request.getFiltersList()) {
-      response.addFilterChips(resolveFilter(index, filter));
+      response.addFilterChips(
+          resolveFilter(index, entity, deviceKeyRegistry, hostKeyRegistry, filter));
     }
     for (String keyId : request.getGroupByKeysList()) {
-      response.addGroupByChips(resolveGroupBy(keyId));
+      response.addGroupByChips(resolveGroupBy(entity, deviceKeyRegistry, hostKeyRegistry, keyId));
     }
     return response.build();
   }
 
-  private static FleetResolvedFilterChip resolveFilter(FleetIndex index, Filter filter) {
+  private static FleetResolvedFilterChip resolveFilter(
+      FleetIndex index,
+      SearchEntity entity,
+      DeviceKeyRegistry deviceKeyRegistry,
+      HostKeyRegistry hostKeyRegistry,
+      Filter filter) {
     String keyId = filter.getKey();
+    if (keyId.trim().isEmpty()) {
+      return FleetResolvedFilterChip.newBuilder()
+          .setInvalid(FleetInvalidFilterChip.newBuilder().setReason("Filter key must not be empty"))
+          .build();
+    }
+    String normalizedKey = keyId.trim();
+    boolean keyValid =
+        entity == SearchEntity.SEARCH_ENTITY_HOST
+            ? hostKeyRegistry.getKey(normalizedKey).isPresent()
+            : deviceKeyRegistry.getKey(normalizedKey).isPresent();
+    if (!keyValid) {
+      return FleetResolvedFilterChip.newBuilder()
+          .setInvalid(
+              FleetInvalidFilterChip.newBuilder()
+                  .setReason("Unknown " + entityName(entity) + " filter key: " + keyId))
+          .build();
+    }
+
+    ValidationResult conditionValidation = validateCondition(filter);
+    if (!conditionValidation.isValid()) {
+      return FleetResolvedFilterChip.newBuilder()
+          .setInvalid(
+              FleetInvalidFilterChip.newBuilder().setReason(conditionValidation.errorMessage()))
+          .build();
+    }
+
     return FleetResolvedFilterChip.newBuilder()
-        .setPillKey(pillKey(keyId))
-        .setPillCondition(conditionText(index, filter))
-        .setMetadata(metadata(keyId))
+        .setValid(
+            FleetValidFilterChip.newBuilder()
+                .setPillKey(pillKey(normalizedKey))
+                .setPillCondition(conditionText(index, filter))
+                .setMetadata(metadata(normalizedKey, entity, deviceKeyRegistry, hostKeyRegistry)))
         .build();
   }
 
-  private static FleetResolvedGroupByChip resolveGroupBy(String keyId) {
+  private static FleetResolvedGroupByChip resolveGroupBy(
+      SearchEntity entity,
+      DeviceKeyRegistry deviceKeyRegistry,
+      HostKeyRegistry hostKeyRegistry,
+      String keyId) {
+    if (keyId.trim().isEmpty()) {
+      return FleetResolvedGroupByChip.newBuilder()
+          .setInvalid(
+              FleetInvalidGroupByChip.newBuilder().setReason("Group-by key must not be empty"))
+          .build();
+    }
+    String normalizedKey = keyId.trim();
+    boolean keyValid =
+        entity == SearchEntity.SEARCH_ENTITY_HOST
+            ? hostKeyRegistry.getKey(normalizedKey).isPresent()
+            : deviceKeyRegistry.getKey(normalizedKey).isPresent();
+    if (!keyValid) {
+      return FleetResolvedGroupByChip.newBuilder()
+          .setInvalid(
+              FleetInvalidGroupByChip.newBuilder()
+                  .setReason("Unknown " + entityName(entity) + " group-by key: " + keyId))
+          .build();
+    }
+
     return FleetResolvedGroupByChip.newBuilder()
-        .setPillKey(pillKey(keyId))
-        .setDisplayName(displayName(keyId))
+        .setValid(
+            FleetValidGroupByChip.newBuilder()
+                .setPillKey(pillKey(normalizedKey))
+                .setDisplayName(displayName(normalizedKey)))
         .build();
   }
 
-  private static FleetFilterChipMetadata metadata(String keyId) {
+  private record ValidationResult(boolean isValid, String errorMessage) {
+    static ValidationResult valid() {
+      return new ValidationResult(true, "");
+    }
+
+    static ValidationResult invalid(String message) {
+      return new ValidationResult(false, message);
+    }
+  }
+
+  private static ValidationResult validateCondition(Filter filter) {
+    return switch (filter.getModeCase()) {
+      case SIMPLE -> validateSimple(filter.getSimple());
+      case COMPLEX -> validateComplex(filter.getComplex());
+      case MODE_NOT_SET -> ValidationResult.invalid("Filter condition is not set");
+    };
+  }
+
+  private static ValidationResult validateSimple(SimpleMatch simple) {
+    if (simple.getValuesList().isEmpty()) {
+      return ValidationResult.invalid("Simple filter condition must have at least one value");
+    }
+    return ValidationResult.valid();
+  }
+
+  private static ValidationResult validateComplex(ComplexMatch complex) {
+    return switch (complex.getKindCase()) {
+      case STARTS_WITH ->
+          complex.getStartsWith().getValue().isEmpty()
+              ? ValidationResult.invalid("Starts-with condition value must not be empty")
+              : ValidationResult.valid();
+      case CONTAINS_SUBSTRING ->
+          complex.getContainsSubstring().getValue().isEmpty()
+              ? ValidationResult.invalid("Contains-substring condition value must not be empty")
+              : ValidationResult.valid();
+      case MATCHES_REGEX -> {
+        String pattern = complex.getMatchesRegex().getValue();
+        if (pattern.isEmpty()) {
+          yield ValidationResult.invalid("Regular expression must not be empty");
+        }
+        try {
+          Pattern.compile(pattern);
+          yield ValidationResult.valid();
+        } catch (PatternSyntaxException e) {
+          yield ValidationResult.invalid(
+              "Invalid regular expression '" + pattern + "': " + e.getDescription());
+        }
+      }
+      case MATCHES_EXACTLY ->
+          complex.getMatchesExactly().getValuesList().isEmpty()
+              ? ValidationResult.invalid("Matches-exactly condition must have at least one value")
+              : ValidationResult.valid();
+      case MATCHES_AT_LEAST ->
+          complex.getMatchesAtLeast().getValuesList().isEmpty()
+              ? ValidationResult.invalid("Matches-at-least condition must have at least one value")
+              : ValidationResult.valid();
+      case KIND_NOT_SET -> ValidationResult.invalid("Complex match kind is not set");
+    };
+  }
+
+  private static String entityName(SearchEntity entity) {
+    return entity == SearchEntity.SEARCH_ENTITY_HOST ? "host" : "device";
+  }
+
+  private static FleetFilterChipMetadata metadata(
+      String keyId,
+      SearchEntity entity,
+      DeviceKeyRegistry deviceKeyRegistry,
+      HostKeyRegistry hostKeyRegistry) {
+    boolean isPlural;
+    if (entity == SearchEntity.SEARCH_ENTITY_HOST) {
+      isPlural = hostKeyRegistry.getKey(keyId).map(k -> k.display().isPlural()).orElse(false);
+    } else {
+      isPlural = deviceKeyRegistry.getKey(keyId).map(k -> k.display().isPlural()).orElse(false);
+    }
     return FleetFilterChipMetadata.newBuilder()
         .setKeyDisplayName(displayName(keyId))
-        .setCanUseAdvanced(!VALUE_DISPLAY_KEYS.contains(keyId))
-        .setIsPlural(PLURAL_DISPLAY_KEYS.contains(keyId))
+        .setCanUseAdvanced(true)
+        .setIsPlural(isPlural)
         .build();
   }
 

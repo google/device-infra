@@ -20,10 +20,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetKeyPriority.Scenario;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import javax.inject.Inject;
 
@@ -38,8 +42,21 @@ import javax.inject.Inject;
  */
 public final class AtsCuration implements ScenarioCuration {
 
+  private final AtsDeviceKeyRegistry deviceKeyRegistry = new AtsDeviceKeyRegistry();
+  private final AtsHostKeyRegistry hostKeyRegistry = new AtsHostKeyRegistry();
+
   @Inject
   AtsCuration() {}
+
+  @Override
+  public DeviceKeyRegistry deviceKeyRegistry() {
+    return deviceKeyRegistry;
+  }
+
+  @Override
+  public HostKeyRegistry hostKeyRegistry() {
+    return hostKeyRegistry;
+  }
 
   @Override
   public ImmutableList<DeviceKeyDescriptor> deviceFilterByRow() {

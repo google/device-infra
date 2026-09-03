@@ -90,6 +90,9 @@ public final class HostKeys {
    * these on demand; they carry no curated display (raw name) and are flagged long-tail.
    */
   static HostKeyDescriptor hostPropertyKey(String key) {
+    if (key == null || key.trim().isEmpty()) {
+      throw new IllegalArgumentException("Host property key cannot be empty");
+    }
     return HostKeyDescriptor.builder()
         .setId(PREFIX_HOST_PROPERTY + key)
         .setLabInfoSource(LabInfoSource.hostProperty(key))

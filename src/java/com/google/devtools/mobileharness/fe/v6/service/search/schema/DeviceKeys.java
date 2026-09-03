@@ -163,6 +163,9 @@ public final class DeviceKeys {
    * display (raw name) and is flagged long-tail.
    */
   static DeviceKeyDescriptor longTailDimensionKey(String dimensionName) {
+    if (dimensionName == null || dimensionName.trim().isEmpty()) {
+      throw new IllegalArgumentException("Dimension name cannot be empty");
+    }
     return DeviceKeyDescriptor.builder()
         .setId(PREFIX_DIMENSION + dimensionName)
         .setDeviceInfoSource(DeviceInfoSource.dimension(dimensionName))

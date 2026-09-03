@@ -67,7 +67,17 @@ public final class HostKeyRegistryTest {
     assertThat(prop).isPresent();
     assertThat(prop.get().isLongTail()).isTrue();
     assertThat(prop.get().display().name()).isEqualTo("rack");
-    assertThat(registry.createLongTailHostPropertyKey("rack").isLongTail()).isTrue();
+
+    assertThat(registry.createLongTailHostPropertyKey("rack")).isPresent();
+    assertThat(registry.createLongTailHostPropertyKey("rack").get().isLongTail()).isTrue();
+
+    // Rejects bare prefixes and empty/blank/null values gracefully.
+    assertThat(registry.getKey("host_property::")).isEmpty();
+    assertThat(registry.getKey("host_property::   ")).isEmpty();
+    assertThat(registry.createLongTailHostPropertyKey("")).isEmpty();
+    assertThat(registry.createLongTailHostPropertyKey("  ")).isEmpty();
+    assertThat(registry.createLongTailHostPropertyKey(null)).isEmpty();
+
     // A host_field:: id that is not built in cannot be minted.
     assertThat(registry.getKey("host_field::bogus")).isEmpty();
   }

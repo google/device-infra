@@ -42,8 +42,12 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.KeyDisplay;
 import com.google.inject.Guice;
@@ -235,6 +239,16 @@ public final class HostPromotedKeysProviderTest {
     @Override
     public int keyPriority(String keyId) {
       return 0;
+    }
+
+    @Override
+    public DeviceKeyRegistry deviceKeyRegistry() {
+      return new AtsDeviceKeyRegistry();
+    }
+
+    @Override
+    public HostKeyRegistry hostKeyRegistry() {
+      return new AtsHostKeyRegistry();
     }
 
     @Override

@@ -69,20 +69,28 @@ public abstract class HostKeyRegistry {
    * minted long-tail descriptor for a {@code host_property::} id, otherwise empty.
    */
   public Optional<HostKeyDescriptor> getKey(String keyId) {
+    if (keyId == null) {
+      return Optional.empty();
+    }
     HostKeyDescriptor builtIn = builtInKeys.get(keyId);
     if (builtIn != null) {
       return Optional.of(builtIn);
     }
     if (keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY)) {
-      return Optional.of(
-          createLongTailHostPropertyKey(keyId.substring(HostKeys.PREFIX_HOST_PROPERTY.length())));
+      return createLongTailHostPropertyKey(keyId.substring(HostKeys.PREFIX_HOST_PROPERTY.length()));
     }
     return Optional.empty();
   }
 
-  /** Mints a long-tail host-property key for a property discovered from data. */
-  public HostKeyDescriptor createLongTailHostPropertyKey(String propertyKey) {
-    return HostKeys.hostPropertyKey(propertyKey);
+  /**
+   * Mints a long-tail host-property key for a property discovered from data, or returns empty if
+   * the property key is null or empty.
+   */
+  public Optional<HostKeyDescriptor> createLongTailHostPropertyKey(String propertyKey) {
+    if (propertyKey == null || propertyKey.trim().isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(HostKeys.hostPropertyKey(propertyKey));
   }
 
   /** All built-in host key descriptors. */

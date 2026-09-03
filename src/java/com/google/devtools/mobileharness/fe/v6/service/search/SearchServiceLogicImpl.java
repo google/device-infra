@@ -210,7 +210,8 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
       FleetChipResolverRequest request) {
     return Futures.submit(
         () -> {
-          FleetSnapshot snapshot = store.get(Fleet.FLEET_SELF);
+          Fleet fleet = normalize(request.getFleet());
+          FleetSnapshot snapshot = store.get(fleet);
           return chipResolver.resolve(snapshot, request);
         },
         executor);

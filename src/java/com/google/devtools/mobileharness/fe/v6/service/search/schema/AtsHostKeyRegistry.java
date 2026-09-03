@@ -16,9 +16,7 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.schema;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import javax.inject.Inject;
 
 /**
  * Host-search key registry for the standalone ATS (OSS) deployment.
@@ -27,8 +25,6 @@ import javax.inject.Inject;
  */
 public final class AtsHostKeyRegistry extends HostKeyRegistry {
 
-  @Inject
-  @VisibleForTesting
   public AtsHostKeyRegistry() {
     super(ImmutableList.of());
   }

@@ -160,12 +160,14 @@ java_library(
     name = "fleet_chip_resolver",
     srcs = ["FleetChipResolver.java"],
     deps = [
+        ":ats_curation",
         ":fleet_key_displays",
+        ":scenario_curation",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/errors",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_registry",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
@@ -177,6 +179,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_registry",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -204,6 +207,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_registry",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],

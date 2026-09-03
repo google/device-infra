@@ -19,7 +19,9 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyRegistry;
 
 /**
  * The per-deployment curation of fleet search keys: which keys to promote in the query bar, which
@@ -79,6 +81,12 @@ public interface ScenarioCuration {
   default int keyPriority(String keyId, SearchEntity entity) {
     return keyPriority(keyId);
   }
+
+  /** Returns the registry of valid keys and parser for device search in this deployment. */
+  DeviceKeyRegistry deviceKeyRegistry();
+
+  /** Returns the registry of valid keys and parser for host search in this deployment. */
+  HostKeyRegistry hostKeyRegistry();
 
   /**
    * Whether the search page shows a landing page before the first query. A deployment whose fleet

@@ -38,9 +38,13 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.KeyDescripto
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyRegistry;
 import com.google.inject.Guice;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -112,6 +116,16 @@ public final class FleetSearchConfigProviderTest {
         @Override
         public int keyPriority(String keyId) {
           return 0;
+        }
+
+        @Override
+        public DeviceKeyRegistry deviceKeyRegistry() {
+          return new AtsDeviceKeyRegistry();
+        }
+
+        @Override
+        public HostKeyRegistry hostKeyRegistry() {
+          return new AtsHostKeyRegistry();
         }
 
         @Override

@@ -85,34 +85,45 @@ public abstract class DeviceKeyRegistry {
    * id, otherwise empty.
    */
   public Optional<DeviceKeyDescriptor> getKey(String keyId) {
+    if (keyId == null) {
+      return Optional.empty();
+    }
     DeviceKeyDescriptor builtIn = builtInKeys.get(keyId);
     if (builtIn != null) {
       return Optional.of(builtIn);
     }
     if (keyId.startsWith(DeviceKeys.PREFIX_DIMENSION)) {
-      return Optional.of(
-          createLongTailDimensionKey(keyId.substring(DeviceKeys.PREFIX_DIMENSION.length())));
+      return createLongTailDimensionKey(keyId.substring(DeviceKeys.PREFIX_DIMENSION.length()));
     }
     if (keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY)) {
-      return Optional.of(
-          createProjectLongTailHostPropertyKey(
-              keyId.substring(HostKeys.PREFIX_HOST_PROPERTY.length())));
+      return createProjectLongTailHostPropertyKey(
+          keyId.substring(HostKeys.PREFIX_HOST_PROPERTY.length()));
     }
     return Optional.empty();
   }
 
-  /** Mints a long-tail device dimension key for a dimension discovered from data. */
-  public DeviceKeyDescriptor createLongTailDimensionKey(String dimensionName) {
-    return DeviceKeys.longTailDimensionKey(dimensionName);
+  /**
+   * Mints a long-tail device dimension key for a dimension discovered from data, or returns empty
+   * if the dimension name is null or empty.
+   */
+  public Optional<DeviceKeyDescriptor> createLongTailDimensionKey(String dimensionName) {
+    if (dimensionName == null || dimensionName.trim().isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(DeviceKeys.longTailDimensionKey(dimensionName));
   }
 
   /**
    * Mints a long-tail host-property key projected into device search (a cross-entity host attribute
-   * discovered from data).
+   * discovered from data), or returns empty if the property key is null or empty.
    */
-  public DeviceKeyDescriptor createProjectLongTailHostPropertyKey(String propertyKey) {
-    return DeviceKeys.projectHostKey(
-        HostKeys.hostPropertyKey(propertyKey), KeyDisplay.of(propertyKey));
+  public Optional<DeviceKeyDescriptor> createProjectLongTailHostPropertyKey(String propertyKey) {
+    if (propertyKey == null || propertyKey.trim().isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        DeviceKeys.projectHostKey(
+            HostKeys.hostPropertyKey(propertyKey), KeyDisplay.of(propertyKey)));
   }
 
   /** All built-in device key descriptors. */

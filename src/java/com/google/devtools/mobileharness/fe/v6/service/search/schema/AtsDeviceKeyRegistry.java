@@ -16,9 +16,6 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.schema;
 
-import com.google.common.annotations.VisibleForTesting;
-import javax.inject.Inject;
-
 /**
  * Device-search key registry for the standalone ATS (OSS) deployment.
  *
@@ -27,8 +24,6 @@ import javax.inject.Inject;
  */
 public final class AtsDeviceKeyRegistry extends DeviceKeyRegistry {
 
-  @Inject
-  @VisibleForTesting
   public AtsDeviceKeyRegistry() {
     super(AtsDeviceKeys.ATS_DEVICE_KEYS);
   }

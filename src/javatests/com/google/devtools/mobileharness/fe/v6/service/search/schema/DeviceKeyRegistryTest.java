@@ -89,8 +89,23 @@ public final class DeviceKeyRegistryTest {
     assertThat(prop.get().isLongTail()).isTrue();
     assertThat(prop.get().display().name()).isEqualTo("rack");
 
-    assertThat(registry.createLongTailDimensionKey("carrier").isLongTail()).isTrue();
-    assertThat(registry.createProjectLongTailHostPropertyKey("rack").isLongTail()).isTrue();
+    assertThat(registry.createLongTailDimensionKey("carrier")).isPresent();
+    assertThat(registry.createLongTailDimensionKey("carrier").get().isLongTail()).isTrue();
+    assertThat(registry.createProjectLongTailHostPropertyKey("rack")).isPresent();
+    assertThat(registry.createProjectLongTailHostPropertyKey("rack").get().isLongTail()).isTrue();
+
+    // Rejects bare prefixes and empty/blank/null values gracefully.
+    assertThat(registry.getKey("dimension::")).isEmpty();
+    assertThat(registry.getKey("dimension::   ")).isEmpty();
+    assertThat(registry.getKey("host_property::")).isEmpty();
+    assertThat(registry.getKey("host_property::   ")).isEmpty();
+    assertThat(registry.createLongTailDimensionKey("")).isEmpty();
+    assertThat(registry.createLongTailDimensionKey("  ")).isEmpty();
+    assertThat(registry.createLongTailDimensionKey(null)).isEmpty();
+    assertThat(registry.createProjectLongTailHostPropertyKey("")).isEmpty();
+    assertThat(registry.createProjectLongTailHostPropertyKey("  ")).isEmpty();
+    assertThat(registry.createProjectLongTailHostPropertyKey(null)).isEmpty();
+
     // An unknown non-mintable namespace is not a key.
     assertThat(registry.getKey("device_field::bogus")).isEmpty();
   }

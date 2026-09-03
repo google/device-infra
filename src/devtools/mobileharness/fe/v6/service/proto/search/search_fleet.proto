@@ -509,26 +509,39 @@ message FleetAddGroupBy {
 // Chip resolver
 // =============================================================================
 
-// Request to resolve filter and group-by chips to their display text.
-// Stateless: the resolver needs only the chip structure, no query context.
-// Used by URL cold-load (batch) and post-Apply (single chip).
+// Request to resolve filter and group-by chips to their display text and
+// validate them. Used by URL cold-load (batch) and post-Apply (single chip).
 message FleetChipResolverRequest {
   // Filter chips to resolve.
   repeated Filter filters = 1;
 
   // Group-by key IDs to resolve.
   repeated string group_by_keys = 2;
+
+  // Which search entity these chips belong to (DEVICE vs HOST).
+  // Used to validate whether keys belong to the entity schema.
+  SearchEntity entity = 3;
+
+  // Which fleet scope (Internal 1P vs ATS / Partner ATS).
+  Fleet fleet = 4;
 }
 
-// Response with resolved pill text for each chip.
+// Response with resolved pill text and validation status for each chip.
 // Arrays are parallel to the request: filter_chips[i] resolves filters[i].
 message FleetChipResolverResponse {
   repeated FleetResolvedFilterChip filter_chips = 1;
   repeated FleetResolvedGroupByChip group_by_chips = 2;
 }
 
-// Resolved display text for a filter chip.
+// Resolved display text and validation status for a filter chip.
 message FleetResolvedFilterChip {
+  oneof result {
+    FleetValidFilterChip valid = 1;
+    FleetInvalidFilterChip invalid = 2;
+  }
+}
+
+message FleetValidFilterChip {
   // Text displayed on the chip pill (prefix-stripped key, e.g. "Model").
   string pill_key = 1;
 
@@ -538,8 +551,21 @@ message FleetResolvedFilterChip {
   FleetFilterChipMetadata metadata = 3;
 }
 
-// Resolved display text for a group-by chip.
+// Carries the explanation displayed to the user via snackbar when the filter is
+// dropped.
+message FleetInvalidFilterChip {
+  string reason = 1;
+}
+
+// Resolved display text and validation status for a group-by chip.
 message FleetResolvedGroupByChip {
+  oneof result {
+    FleetValidGroupByChip valid = 1;
+    FleetInvalidGroupByChip invalid = 2;
+  }
+}
+
+message FleetValidGroupByChip {
   // Text displayed on the chip pill. The frontend renders "group by
   // {pill_key}". Prefix-stripped (e.g. "Host Name" not "host::host_name").
   string pill_key = 1;
@@ -549,6 +575,12 @@ message FleetResolvedGroupByChip {
   // grouped results header "by Host Name"). Currently equals pill_key, but
   // kept separate so the two can diverge if needed.
   string display_name = 2;
+}
+
+// Carries the explanation displayed to the user via snackbar when the group-by
+// key is dropped.
+message FleetInvalidGroupByChip {
+  string reason = 1;
 }
 
 // =============================================================================
