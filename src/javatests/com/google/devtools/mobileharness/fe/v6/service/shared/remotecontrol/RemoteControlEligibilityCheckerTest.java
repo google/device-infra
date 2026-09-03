@@ -190,6 +190,30 @@ public final class RemoteControlEligibilityCheckerTest {
   }
 
   @Test
+  public void checkEligibility_authorizedByXcidTeam_returnsEligible() throws Exception {
+    RemoteControlEligibilityContext context =
+        RemoteControlEligibilityContext.builder()
+            .setUsername("user")
+            .setOwnersAndExecutors(ImmutableList.of("group1", "group2"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
+            .setDimensions(ImmutableMap.of("communication_type", "ADB"))
+            .build();
+
+    when(groupMembershipProvider.isMemberOfAny(eq("user"), eq(ImmutableList.of("group1"))))
+        .thenReturn(Futures.immediateFuture(false));
+    when(groupMembershipProvider.isMemberOfAny(eq("user"), eq(ImmutableList.of("group2"))))
+        .thenReturn(Futures.immediateFuture(false));
+    when(groupMembershipProvider.isMemberOfAny(eq("user"), eq(ImmutableList.of("xcid-team"))))
+        .thenReturn(Futures.immediateFuture(true));
+
+    RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
+
+    assertThat(result.isEligible()).isTrue();
+    assertThat(result.runAsCandidates()).containsExactly("group1", "group2");
+  }
+
+  @Test
   public void checkEligibility_technicalFailureButAuthorized_populatesCandidates()
       throws Exception {
     RemoteControlEligibilityContext context =

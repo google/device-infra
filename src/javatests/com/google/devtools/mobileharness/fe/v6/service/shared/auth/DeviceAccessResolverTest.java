@@ -34,6 +34,7 @@ package com.google.devtools.mobileharness.fe.v6.service.shared.auth;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
@@ -63,6 +64,7 @@ public final class DeviceAccessResolverTest {
 
   @Before
   public void setUp() {
+    when(groupMembershipProvider.isMemberOfAny(any(), any())).thenReturn(immediateFuture(false));
     resolver = new DeviceAccessResolver(groupMembershipProvider, executor);
   }
 
@@ -152,6 +154,49 @@ public final class DeviceAccessResolverTest {
   public void hasOwnership_userInOwnerGroup_returnsTrue() throws Exception {
     DeviceInfo deviceInfo = createDeviceInfo(ImmutableList.of("owner_group"), ImmutableList.of());
     when(groupMembershipProvider.isMemberOfAny("user", ImmutableList.of("owner_group")))
+        .thenReturn(immediateFuture(true));
+
+    assertThat(resolver.hasOwnership("user", deviceInfo).get()).isTrue();
+  }
+
+  @Test
+  public void calculateRunAsCandidates_userInXcidTeam_returnsAllCandidates() throws Exception {
+    when(groupMembershipProvider.isMemberOfAny(
+            "user", ImmutableList.of(DeviceAccessResolver.XCID_TEAM_MDB_GROUP)))
+        .thenReturn(immediateFuture(true));
+
+    assertThat(
+            resolver
+                .calculateRunAsCandidates("user", ImmutableList.of("owner_group", "executor_group"))
+                .get())
+        .containsExactly("owner_group", "executor_group");
+  }
+
+  @Test
+  public void calculateRunAsCandidates_userNotInXcidTeam_returnsEmpty() throws Exception {
+    assertThat(
+            resolver
+                .calculateRunAsCandidates("user", ImmutableList.of("owner_group", "executor_group"))
+                .get())
+        .isEmpty();
+  }
+
+  @Test
+  public void hasExecutePermission_userInXcidTeam_returnsTrue() throws Exception {
+    DeviceInfo deviceInfo =
+        createDeviceInfo(ImmutableList.of("owner_group"), ImmutableList.of("executor_group"));
+    when(groupMembershipProvider.isMemberOfAny(
+            "user", ImmutableList.of(DeviceAccessResolver.XCID_TEAM_MDB_GROUP)))
+        .thenReturn(immediateFuture(true));
+
+    assertThat(resolver.hasExecutePermission("user", deviceInfo).get()).isTrue();
+  }
+
+  @Test
+  public void hasOwnership_userInXcidTeam_returnsTrue() throws Exception {
+    DeviceInfo deviceInfo = createDeviceInfo(ImmutableList.of("owner_group"), ImmutableList.of());
+    when(groupMembershipProvider.isMemberOfAny(
+            "user", ImmutableList.of(DeviceAccessResolver.XCID_TEAM_MDB_GROUP)))
         .thenReturn(immediateFuture(true));
 
     assertThat(resolver.hasOwnership("user", deviceInfo).get()).isTrue();

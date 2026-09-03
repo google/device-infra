@@ -53,6 +53,8 @@ import javax.inject.Singleton;
 @Singleton
 public class DeviceAccessResolver {
 
+  @VisibleForTesting static final String XCID_TEAM_MDB_GROUP = "xcid-team";
+
   private final GroupMembershipProvider groupMembershipProvider;
   private final ListeningExecutorService executor;
 
@@ -162,20 +164,38 @@ public class DeviceAccessResolver {
     // Deduplicate candidates to minimize RPC calls.
     ImmutableSet<String> uniqueCandidates = ImmutableSet.copyOf(ownersAndExecutors);
 
-    return Futures.transform(
-        Futures.allAsList(
-            uniqueCandidates.stream()
-                .map(
-                    candidate ->
-                        candidate.equals(username)
-                            ? immediateFuture(username)
-                            : Futures.transform(
-                                groupMembershipProvider.isMemberOfAny(
-                                    username, ImmutableList.of(candidate)),
-                                isMember -> isMember ? candidate : null,
-                                directExecutor()))
-                .collect(toImmutableList())),
-        results -> results.stream().filter(Objects::nonNull).collect(toImmutableList()),
+    ListenableFuture<ImmutableList<String>> normalCandidatesFuture =
+        Futures.transform(
+            Futures.allAsList(
+                uniqueCandidates.stream()
+                    .map(
+                        candidate ->
+                            candidate.equals(username)
+                                ? immediateFuture(username)
+                                : Futures.transform(
+                                    groupMembershipProvider.isMemberOfAny(
+                                        username, ImmutableList.of(candidate)),
+                                    isMember -> isMember ? candidate : null,
+                                    directExecutor()))
+                    .collect(toImmutableList())),
+            results -> results.stream().filter(Objects::nonNull).collect(toImmutableList()),
+            executor);
+
+    return Futures.transformAsync(
+        normalCandidatesFuture,
+        candidates -> {
+          if (!candidates.isEmpty()) {
+            return immediateFuture(candidates);
+          }
+          // Members of xcid-team have administrative bypass permission to remote control any
+          // device, matching the authorization policy in XCID backend (LeaseAcidDeviceAction).
+          return Futures.transform(
+              groupMembershipProvider.isMemberOfAny(
+                  username, ImmutableList.of(XCID_TEAM_MDB_GROUP)),
+              isXcidTeamMember ->
+                  isXcidTeamMember ? ImmutableList.copyOf(uniqueCandidates) : ImmutableList.of(),
+              directExecutor());
+        },
         executor);
   }
 }
