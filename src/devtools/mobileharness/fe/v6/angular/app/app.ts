@@ -94,24 +94,20 @@ export class App implements OnDestroy {
     section: 'home' | 'devices' | 'hosts' | 'tests' | 'jobs' | 'sessions',
   ): boolean {
     const path = this.getCurrentRoutePath();
-    const fragment = this.router.parseUrl(this.router.url).fragment;
 
     switch (section) {
       case 'home':
-        return path === 'dev/device-harness' && !fragment;
+        return path === 'home' || !path;
       case 'devices':
-        return path.startsWith('devices') || fragment === 'device-scenarios';
+        return path.startsWith('devices');
       case 'hosts':
-        return path.startsWith('hosts') || fragment === 'host-scenarios';
+        return path.startsWith('hosts');
       case 'tests':
-        return path.includes('tests') || fragment === 'test-scenarios';
+        return path.includes('tests');
       case 'jobs':
-        return (
-          (path.startsWith('jobs') && !path.includes('tests')) ||
-          fragment === 'job-scenarios'
-        );
+        return path.startsWith('jobs') && !path.includes('tests');
       case 'sessions':
-        return path.startsWith('sessions') || fragment === 'session-scenarios';
+        return path.startsWith('sessions');
       default:
         return false;
     }
@@ -125,14 +121,14 @@ export class App implements OnDestroy {
     if (this.isEmbeddedMode) {
       qParams['is_embedded_mode'] = 'true';
     }
-    const universe = this.route.snapshot.queryParams['universe'];
+    const universe = this.route.snapshot?.queryParams?.['universe'];
     if (universe) {
       qParams['universe'] = universe;
     }
     return qParams;
   }
 
-  private getCurrentRoutePath(): string {
+  getCurrentRoutePath(): string {
     let route = this.router.routerState.snapshot.root;
     while (route.firstChild) {
       route = route.firstChild;
@@ -181,7 +177,7 @@ export class App implements OnDestroy {
 
     if (
       !path ||
-      path === 'dev/device-harness' ||
+      path === 'home' ||
       path === 'devices' ||
       path === 'hosts' ||
       path === 'tests' ||

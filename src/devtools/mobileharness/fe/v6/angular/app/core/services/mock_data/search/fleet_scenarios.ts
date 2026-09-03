@@ -3,11 +3,114 @@ import {
   FleetPromotedKeysResponse,
   FleetSearchConfig,
   FleetSearchResults,
-  FleetSuggestion,
-  FleetSuggestionResponse,
   FleetValueListResponse,
   Indicator,
+  Row,
 } from '@deviceinfra/app/core/models/search';
+import {MOCK_DEVICE_SCENARIOS} from '../devices';
+import {MOCK_HOST_SCENARIOS} from '../hosts';
+
+function getStatusIndicator(statusText: string): Indicator {
+  const sUpper = statusText.toUpperCase();
+  if (
+    sUpper === 'IDLE' ||
+    sUpper === 'READY' ||
+    sUpper === 'HEALTHY' ||
+    sUpper === 'RUNNING'
+  ) {
+    return Indicator.INDICATOR_OK;
+  }
+  if (
+    sUpper === 'BUSY' ||
+    sUpper === 'ACTIVE' ||
+    sUpper === 'DRAINING' ||
+    sUpper === 'STARTING'
+  ) {
+    return Indicator.INDICATOR_ACTIVE;
+  }
+  return Indicator.INDICATOR_ERROR;
+}
+
+/** Generates mock device rows dynamically from all registered mock device scenarios. */
+export function generateMockDeviceRows(): Row[] {
+  return MOCK_DEVICE_SCENARIOS.map((wrapper) => {
+    const scenario = wrapper.factory(0);
+    const id = scenario.id || wrapper.id;
+    const overview = scenario.overview;
+    const hostName = overview?.host?.name || 'mh-lab-01.google.com';
+    const statusText =
+      overview?.healthAndActivity?.deviceStatus?.status ||
+      (scenario.isQuarantined ? 'QUARANTINED' : 'IDLE');
+
+    const type =
+      overview?.healthAndActivity?.deviceTypes?.[0]?.type ||
+      overview?.basicInfo?.os ||
+      'ANDROID';
+    const owner = overview?.permissions?.owners?.[0] || 'qiupingf@google.com';
+    const model = overview?.basicInfo?.model || 'Pixel';
+
+    return {
+      id,
+      cells: [
+        {
+          link: {
+            text: id,
+            target: {device: {id}},
+          },
+        },
+        {text: {value: hostName}},
+        {status: {text: statusText, indicator: getStatusIndicator(statusText)}},
+        {text: {value: type}},
+        {text: {value: owner}},
+        {text: {value: model}},
+      ],
+    };
+  });
+}
+
+/** Generates mock host rows dynamically from all registered mock host scenarios. */
+export function generateMockHostRows(): Row[] {
+  const seen = new Set<string>();
+  const rows: Row[] = [];
+
+  for (const wrapper of MOCK_HOST_SCENARIOS) {
+    const scenario = wrapper.factory(0);
+    const hostName = scenario.hostName || wrapper.hostName;
+    if (!hostName || seen.has(hostName)) continue;
+    seen.add(hostName);
+
+    const overview = scenario.overview;
+    const statusText = overview?.labServer?.connectivity?.state || 'RUNNING';
+
+    const os = overview?.os || 'gLinux';
+    const owner =
+      scenario.hostConfigResult?.hostConfig?.permissions?.hostAdmins?.[0] ||
+      'qiupingf@google.com';
+    const model = overview?.uiLabTypes?.[0] || 'Standard';
+
+    rows.push({
+      id: hostName,
+      cells: [
+        {
+          link: {
+            text: hostName,
+            target: {host: {hostName}},
+          },
+        },
+        {text: {value: hostName}},
+        {status: {text: statusText, indicator: getStatusIndicator(statusText)}},
+        {text: {value: os}},
+        {text: {value: owner}},
+        {text: {value: model}},
+      ],
+    });
+  }
+
+  return rows;
+}
+
+const ALL_MOCK_DEVICE_ROWS = generateMockDeviceRows();
+const ALL_MOCK_HOST_ROWS = generateMockHostRows();
 
 /** Mock search configuration for lab fleet search. */
 export const MOCK_FLEET_SEARCH_CONFIG: FleetSearchConfig = {
@@ -27,7 +130,7 @@ export const MOCK_FLEET_SEARCH_CONFIG: FleetSearchConfig = {
   },
   landing: {
     enabled: true,
-    browseAllCount: 14,
+    browseAllCount: ALL_MOCK_DEVICE_ROWS.length,
     tryCategories: [
       {
         label: 'a value',
@@ -44,221 +147,21 @@ export const MOCK_FLEET_SEARCH_CONFIG: FleetSearchConfig = {
 /** Mock search results for device entity type. */
 export const MOCK_FLEET_SEARCH_RESULTS_DEVICE: FleetSearchResults = {
   flat: {
-    total: 3,
-    rangeStart: 1,
-    rangeEnd: 3,
-    rows: [
-      {
-        id: 'device_12345',
-        cells: [
-          {
-            link: {
-              text: 'device_12345',
-              target: {device: {id: 'device_12345'}},
-            },
-          },
-          {text: {value: 'mh-lab-01.google.com'}},
-          {status: {text: 'IDLE', indicator: Indicator.INDICATOR_OK}},
-          {text: {value: 'ANDROID'}},
-          {text: {value: 'qiupingf@google.com'}},
-          {text: {value: 'Pixel 7'}},
-        ],
-      },
-      {
-        id: 'device_67890',
-        cells: [
-          {
-            link: {
-              text: 'device_67890',
-              target: {device: {id: 'device_67890'}},
-            },
-          },
-          {text: {value: 'mh-lab-02.google.com'}},
-          {status: {text: 'BUSY', indicator: Indicator.INDICATOR_ACTIVE}},
-          {text: {value: 'ANDROID'}},
-          {text: {value: 'dev@google.com'}},
-          {text: {value: 'Pixel 8'}},
-        ],
-      },
-      {
-        id: 'device_abcde',
-        cells: [
-          {
-            link: {
-              text: 'device_abcde',
-              target: {device: {id: 'device_abcde'}},
-            },
-          },
-          {text: {value: 'mh-lab-01.google.com'}},
-          {status: {text: 'OFFLINE', indicator: Indicator.INDICATOR_ERROR}},
-          {text: {value: 'IOS'}},
-          {text: {value: 'qiupingf@google.com'}},
-          {text: {value: 'iPhone 14'}},
-        ],
-      },
-    ],
+    total: ALL_MOCK_DEVICE_ROWS.length,
+    rangeStart: ALL_MOCK_DEVICE_ROWS.length > 0 ? 1 : 0,
+    rangeEnd: ALL_MOCK_DEVICE_ROWS.length,
+    rows: ALL_MOCK_DEVICE_ROWS,
   },
 };
 
 /** Mock search results for host entity type. */
 export const MOCK_FLEET_SEARCH_RESULTS_HOST: FleetSearchResults = {
   flat: {
-    total: 2,
-    rangeStart: 1,
-    rangeEnd: 2,
-    rows: [
-      {
-        id: 'mh-lab-01.google.com',
-        cells: [
-          {
-            link: {
-              text: 'mh-lab-01.google.com',
-              target: {host: {hostName: 'mh-lab-01.google.com'}},
-            },
-          },
-          {text: {value: 'mh-lab-01.google.com'}},
-          {status: {text: 'HEALTHY', indicator: Indicator.INDICATOR_OK}},
-          {text: {value: 'LINUX'}},
-          {text: {value: 'qiupingf@google.com'}},
-          {text: {value: 'Standard'}},
-        ],
-      },
-      {
-        id: 'mh-lab-02.google.com',
-        cells: [
-          {
-            link: {
-              text: 'mh-lab-02.google.com',
-              target: {host: {hostName: 'mh-lab-02.google.com'}},
-            },
-          },
-          {text: {value: 'mh-lab-02.google.com'}},
-          {status: {text: 'BUSY', indicator: Indicator.INDICATOR_ACTIVE}},
-          {text: {value: 'LINUX'}},
-          {text: {value: 'dev@google.com'}},
-          {text: {value: 'High Memory'}},
-        ],
-      },
-    ],
+    total: ALL_MOCK_HOST_ROWS.length,
+    rangeStart: ALL_MOCK_HOST_ROWS.length > 0 ? 1 : 0,
+    rangeEnd: ALL_MOCK_HOST_ROWS.length,
+    rows: ALL_MOCK_HOST_ROWS,
   },
-};
-
-/** Mock default suggestions for device search. */
-export const MOCK_FLEET_SUGGESTIONS_DEVICE_DEFAULT: FleetSuggestion[] = [
-  {
-    label: 'Add filter',
-    mainText: [
-      {text: 'Status is ', emphasized: false},
-      {text: 'IDLE', emphasized: true},
-    ],
-    count: 95584,
-    applyFilter: {
-      pillKey: 'Status',
-      pillCondition: 'IDLE',
-      resultingFilter: {
-        key: 'field::status',
-        simple: {values: [{value: 'IDLE'}]},
-      },
-    },
-  },
-  {
-    label: 'Add filter',
-    mainText: [
-      {text: 'Model is ', emphasized: false},
-      {text: 'Pixel 7', emphasized: true},
-    ],
-    count: 5,
-    applyFilter: {
-      pillKey: 'Model',
-      pillCondition: 'Pixel 7',
-      resultingFilter: {
-        key: 'dim::model',
-        simple: {values: [{value: 'Pixel 7'}]},
-      },
-    },
-  },
-  {
-    openPicker: {
-      key: 'field::type',
-      metadata: {keyDisplayName: 'Type', canUseAdvanced: true, isPlural: true},
-    },
-  },
-  {
-    openPicker: {
-      key: 'field::owners',
-      metadata: {keyDisplayName: 'Owner', canUseAdvanced: true, isPlural: true},
-    },
-  },
-  {
-    openPicker: {
-      key: 'dim::pool',
-      metadata: {keyDisplayName: 'Pool', canUseAdvanced: true, isPlural: false},
-    },
-  },
-  {
-    openPicker: {
-      key: 'host::host_name',
-      metadata: {
-        keyDisplayName: 'Host Name',
-        canUseAdvanced: true,
-        isPlural: false,
-      },
-    },
-  },
-  {
-    openPicker: {
-      key: 'field::quarantined',
-      metadata: {
-        keyDisplayName: 'Quarantine',
-        canUseAdvanced: false,
-        isPlural: false,
-      },
-    },
-  },
-  {
-    openPicker: {
-      key: 'dim::os',
-      metadata: {keyDisplayName: 'OS', canUseAdvanced: true, isPlural: false},
-    },
-  },
-];
-
-/** Mock suggestion response for device search. */
-export const MOCK_FLEET_SUGGESTION_RESPONSE_DEVICE: FleetSuggestionResponse = {
-  items: MOCK_FLEET_SUGGESTIONS_DEVICE_DEFAULT,
-};
-
-/** Mock suggestion items for host search. */
-export const MOCK_FLEET_SUGGESTIONS_HOST_DEFAULT: FleetSuggestion[] = [
-  {
-    label: 'Add filter',
-    mainText: [
-      {text: 'Status is ', emphasized: false},
-      {text: 'RUNNING', emphasized: true},
-    ],
-    count: 15,
-    applyFilter: {
-      pillKey: 'Status',
-      pillCondition: 'RUNNING',
-    },
-  },
-  {
-    label: 'Add filter',
-    mainText: [
-      {text: 'Host contains ', emphasized: false},
-      {text: 'host', emphasized: true},
-    ],
-    count: 3,
-    applyFilter: {
-      pillKey: 'Host Name',
-      pillCondition: 'host',
-    },
-  },
-];
-
-/** Mock suggestion response for host search. */
-export const MOCK_FLEET_SUGGESTION_RESPONSE_HOST: FleetSuggestionResponse = {
-  items: MOCK_FLEET_SUGGESTIONS_HOST_DEFAULT,
 };
 
 /** Mock promoted filter and group keys for fleet. */

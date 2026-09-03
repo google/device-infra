@@ -1,0 +1,161 @@
+<mat-card class="m3-card">
+  <div class="card-header">
+    <div class="header-title-container">
+      <h2 class="card-title">OmniLab Summary</h2>
+      @if (lastUpdated(); as updated) {
+        <span
+          class="last-updated-text"
+          [matTooltip]="'Last updated: ' + (updated | date:'medium')"
+        >
+          Updated {{ updated | date:'shortTime' }}
+        </span>
+      }
+    </div>
+    <button
+      mat-icon-button
+      type="button"
+      [disabled]="isLoading()"
+      (click)="refresh()"
+      aria-label="Refresh data"
+      matTooltip="Refresh data"
+    >
+      <mat-icon [class.spin-animation]="isRefreshing()">refresh</mat-icon>
+    </button>
+  </div>
+
+  <!-- Full-width divider + loading progress bar -->
+  <div class="divider-container">
+    @if (isLoading()) {
+      <mat-progress-bar mode="indeterminate" class="card-progress-bar" />
+    }
+  </div>
+
+  @if (errorMessage()) {
+    <div class="error-banner">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ errorMessage() }}</span>
+      <button mat-button color="primary" (click)="refresh()">Retry</button>
+    </div>
+  }
+
+  @if (isLoading() && !summary()) {
+    <div class="loading-state" aria-busy="true" aria-label="Loading fleet summary">
+      <span class="loading-text">Loading OmniLab summary…</span>
+    </div>
+  } @else if (summary(); as s) {
+    <!-- Section 1: First-Party OmniLab -->
+    @if (s.firstParty; as fp) {
+      @let hostRoute = fp.hosts?.search | drilldownRoute;
+      @let devRoute = fp.devices?.search | drilldownRoute;
+      <div class="util-section">
+        <h3 class="section-heading">First-Party OmniLab</h3>
+
+        <div class="stats-row">
+          <a
+            class="stat-group clickable"
+            [routerLink]="hostRoute?.path"
+            [queryParams]="hostRoute?.queryParams"
+            queryParamsHandling="merge"
+            matTooltip="Click to browse First-Party hosts"
+          >
+            <span class="stat-label">Total Hosts</span>
+            <span class="num-with-arrow">
+              <span class="stat-value">
+                {{ (fp.hosts?.count ?? 0) | number }}
+              </span>
+              <mat-icon class="drill-arrow">arrow_outward</mat-icon>
+            </span>
+          </a>
+
+          <a
+            class="stat-group clickable"
+            [routerLink]="devRoute?.path"
+            [queryParams]="devRoute?.queryParams"
+            queryParamsHandling="merge"
+            matTooltip="Click to browse First-Party devices"
+          >
+            <span class="stat-label">Total Devices</span>
+            <span class="num-with-arrow">
+              <span class="stat-value">
+                {{ (fp.devices?.count ?? 0) | number }}
+              </span>
+              <mat-icon class="drill-arrow">arrow_outward</mat-icon>
+            </span>
+          </a>
+        </div>
+
+        <!-- Device Utilization -->
+        <div class="util-subheading">Device Utilization</div>
+        <app-utilization-bar
+          [utilization]="fp.utilization"
+          [totalDevices]="fp.devices?.count"
+        />
+      </div>
+    }
+
+    <!-- Section divider -->
+    @if (s.firstParty && s.partnerAtsLabs) {
+      <mat-divider class="section-divider" />
+    }
+
+    <!-- Section 2: ATS Labs (including Partners') -->
+    @if (s.partnerAtsLabs; as pal) {
+      @let hostRoute = pal.hosts?.search | drilldownRoute;
+      @let devRoute = pal.devices?.search | drilldownRoute;
+      <div class="util-section">
+        <h3 class="section-heading">ATS Labs (including Partners')</h3>
+
+        <div class="stats-row ats-stats-row">
+          <div class="stat-group stat-group-fixed">
+            <span class="stat-label">Labs (Controllers)</span>
+            <span class="stat-value">{{ pal.labCount | number }}</span>
+          </div>
+
+          <a
+            class="stat-group stat-group-fixed clickable"
+            [routerLink]="hostRoute?.path"
+            [queryParams]="hostRoute?.queryParams"
+            queryParamsHandling="merge"
+            matTooltip="Click to browse ATS hosts"
+          >
+            <span class="stat-label">Total Hosts</span>
+            <span class="num-with-arrow">
+              <span class="stat-value">
+                {{ (pal.hosts?.count ?? 0) | number }}
+              </span>
+              <mat-icon class="drill-arrow">arrow_outward</mat-icon>
+            </span>
+          </a>
+
+          <a
+            class="stat-group clickable"
+            [routerLink]="devRoute?.path"
+            [queryParams]="devRoute?.queryParams"
+            queryParamsHandling="merge"
+            matTooltip="Click to browse ATS devices"
+          >
+            <span class="stat-label">Total Devices</span>
+            <span class="num-with-arrow">
+              <span class="stat-value">
+                {{ (pal.devices?.count ?? 0) | number }}
+              </span>
+              <mat-icon class="drill-arrow">arrow_outward</mat-icon>
+            </span>
+          </a>
+        </div>
+
+        <!-- Aggregate Device Utilization for All ATS Labs -->
+        <div class="util-subheading">Device Utilization</div>
+        <app-utilization-bar
+          [utilization]="pal.utilization"
+          [totalDevices]="pal.devices?.count"
+        />
+
+        <!-- Breakdown Table -->
+        <app-ats-breakdown-table
+          [labs]="pal.labs"
+        />
+      </div>
+    }
+  }
+</mat-card>

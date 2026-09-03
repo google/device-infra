@@ -45,7 +45,7 @@
           <mat-nav-list>
             <a
               mat-list-item
-              routerLink="/dev/device-harness"
+              routerLink="/home"
               [class.active]="isNavActive('home')"
               [queryParams]="getPreservedQueryParams()"
               [matTooltip]="'Home'"
@@ -69,8 +69,7 @@
 
             <a
               mat-list-item
-              [routerLink]="isFakeData ? '/dev/device-harness' : '/hosts'"
-              [fragment]="isFakeData ? 'host-scenarios' : undefined"
+              routerLink="/hosts"
               [class.active]="isNavActive('hosts')"
               [queryParams]="getPreservedQueryParams()"
               [matTooltip]="'Hosts'"
@@ -105,8 +104,7 @@
 
             <a
               mat-list-item
-              [routerLink]="isFakeData ? '/dev/device-harness' : '/sessions'"
-              [fragment]="isFakeData ? 'session-scenarios' : undefined"
+              routerLink="/sessions"
               [class.active]="isNavActive('sessions')"
               [queryParams]="getPreservedQueryParams()"
               [matTooltip]="'Sessions'"

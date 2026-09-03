@@ -5,6 +5,7 @@
  */
 
 export {MOCK_DEVICE_SCENARIOS} from './devices';
+export * from './home';
 export {MOCK_HOST_SCENARIOS} from './hosts';
 export {MOCK_JOB_SCENARIOS} from './jobs';
 export * from './search';

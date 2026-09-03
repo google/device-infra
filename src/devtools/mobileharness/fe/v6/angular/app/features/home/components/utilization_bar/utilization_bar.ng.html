@@ -1,0 +1,153 @@
+@let busyRoute = utilization()?.busy?.search | drilldownRoute;
+@let idleRoute = utilization()?.idle?.search | drilldownRoute;
+@let othersRoute = utilization()?.others?.search | drilldownRoute;
+@let busyCount = utilization()?.busy?.count ?? 0;
+@let idleCount = utilization()?.idle?.count ?? 0;
+@let othersCount = utilization()?.others?.count ?? 0;
+
+<div [class.mini-util-container]="mode() === 'mini'">
+  <!-- Progress Bar (Shared between full and mini mode) -->
+  <div class="progress-container" [class.mini-bar]="mode() === 'mini'">
+    <a
+      class="progress-segment color-busy"
+      [style.width.%]="metrics().busyPct"
+      [class.hl]="hoveredSegment() === 'busy'"
+      (mouseenter)="setHover('busy')"
+      (mouseleave)="setHover(null)"
+      [matTooltip]="metrics().busyTooltip"
+      [routerLink]="busyRoute?.path"
+      [queryParams]="busyRoute?.queryParams"
+      queryParamsHandling="merge"
+    ></a>
+    <a
+      class="progress-segment color-idle"
+      [style.width.%]="metrics().idlePct"
+      [class.hl]="hoveredSegment() === 'idle'"
+      (mouseenter)="setHover('idle')"
+      (mouseleave)="setHover(null)"
+      [matTooltip]="metrics().idleTooltip"
+      [routerLink]="idleRoute?.path"
+      [queryParams]="idleRoute?.queryParams"
+      queryParamsHandling="merge"
+    ></a>
+    <a
+      class="progress-segment color-others"
+      [style.width.%]="metrics().othersPct"
+      [class.hl]="hoveredSegment() === 'others'"
+      (mouseenter)="setHover('others')"
+      (mouseleave)="setHover(null)"
+      [matTooltip]="metrics().othersTooltip"
+      [routerLink]="othersRoute?.path"
+      [queryParams]="othersRoute?.queryParams"
+      queryParamsHandling="merge"
+    ></a>
+  </div>
+
+  @if (mode() === 'mini') {
+    <!-- Legend Row (Mini Mode) -->
+    <div class="mini-legend-row">
+      <a
+        class="util-legend-item"
+        [class.hl]="hoveredSegment() === 'busy'"
+        (mouseenter)="setHover('busy')"
+        (mouseleave)="setHover(null)"
+        [matTooltip]="metrics().busyTooltip"
+        [routerLink]="busyRoute?.path"
+        [queryParams]="busyRoute?.queryParams"
+        queryParamsHandling="merge"
+      >
+        <span class="legend-dot-tiny color-busy"></span>
+        {{ busyCount | number }} ({{ metrics().busyPct }}%)
+      </a>
+
+      <a
+        class="util-legend-item"
+        [class.hl]="hoveredSegment() === 'idle'"
+        (mouseenter)="setHover('idle')"
+        (mouseleave)="setHover(null)"
+        [matTooltip]="metrics().idleTooltip"
+        [routerLink]="idleRoute?.path"
+        [queryParams]="idleRoute?.queryParams"
+        queryParamsHandling="merge"
+      >
+        <span class="legend-dot-tiny color-idle"></span>
+        {{ idleCount | number }} ({{ metrics().idlePct }}%)
+      </a>
+
+      <a
+        class="util-legend-item"
+        [class.hl]="hoveredSegment() === 'others'"
+        (mouseenter)="setHover('others')"
+        (mouseleave)="setHover(null)"
+        [matTooltip]="metrics().othersTooltip"
+        [routerLink]="othersRoute?.path"
+        [queryParams]="othersRoute?.queryParams"
+        queryParamsHandling="merge"
+      >
+        <span class="legend-dot-tiny color-others"></span>
+        {{ othersCount | number }} ({{ metrics().othersPct }}%)
+      </a>
+    </div>
+  } @else {
+    <!-- Legend Row (Full Mode) -->
+    <div class="legend-relative-container">
+      <a
+        class="legend-clickable legend-left"
+        [class.hl]="hoveredSegment() === 'busy'"
+        (mouseenter)="setHover('busy')"
+        (mouseleave)="setHover(null)"
+        [matTooltip]="metrics().busyTooltip"
+        [routerLink]="busyRoute?.path"
+        [queryParams]="busyRoute?.queryParams"
+        queryParamsHandling="merge"
+      >
+        <div class="legend-header">
+          <span class="legend-dot color-busy"></span>
+          In Service (BUSY)
+        </div>
+        <span class="legend-value">
+          {{ busyCount | number }} ({{ metrics().busyPct }}%)
+        </span>
+      </a>
+
+      <a
+        class="legend-clickable legend-floating"
+        [style.--idle-left]="metrics().idleLeftStyle"
+        [class.hl]="hoveredSegment() === 'idle'"
+        (mouseenter)="setHover('idle')"
+        (mouseleave)="setHover(null)"
+        [matTooltip]="metrics().idleTooltip"
+        [routerLink]="idleRoute?.path"
+        [queryParams]="idleRoute?.queryParams"
+        queryParamsHandling="merge"
+      >
+        <div class="legend-header">
+          <span class="legend-dot color-idle"></span>
+          In Service (IDLE)
+        </div>
+        <span class="legend-value">
+          {{ idleCount | number }} ({{ metrics().idlePct }}%)
+        </span>
+      </a>
+
+      <a
+        class="legend-clickable legend-right"
+        [class.hl]="hoveredSegment() === 'others'"
+        (mouseenter)="setHover('others')"
+        (mouseleave)="setHover(null)"
+        [matTooltip]="metrics().othersTooltip"
+        [routerLink]="othersRoute?.path"
+        [queryParams]="othersRoute?.queryParams"
+        queryParamsHandling="merge"
+      >
+        <div class="legend-header justify-end">
+          <span class="legend-dot color-others"></span>
+          Others
+        </div>
+        <span class="legend-value align-right">
+          {{ othersCount | number }} ({{ metrics().othersPct }}%)
+        </span>
+      </a>
+    </div>
+  }
+</div>

@@ -12,12 +12,12 @@ export const MOCK_TJS_SEARCH_CONFIG_TEST: TjsSearchConfig = {
   entityLabel: 'Tests',
   defaultChips: [
     {
-      pillKey: 'Result',
-      pillCondition: 'PASS',
-      keyDisplayName: 'Result',
+      pillKey: 'User',
+      pillCondition: 'qiupingf',
+      keyDisplayName: 'User',
       filter: {
-        key: 'result',
-        enumValues: {values: ['PASS']},
+        key: 'user',
+        stringValue: {value: 'qiupingf'},
       },
     },
   ],
@@ -108,12 +108,12 @@ export const MOCK_TJS_SEARCH_CONFIG_JOB: TjsSearchConfig = {
   entityLabel: 'Jobs',
   defaultChips: [
     {
-      pillKey: 'Status',
-      pillCondition: 'RUNNING',
-      keyDisplayName: 'Status',
+      pillKey: 'User',
+      pillCondition: 'qiupingf',
+      keyDisplayName: 'User',
       filter: {
-        key: 'status',
-        enumValues: {values: ['RUNNING']},
+        key: 'user',
+        stringValue: {value: 'qiupingf'},
       },
     },
   ],
@@ -333,6 +333,66 @@ export const MOCK_TJS_SEARCH_RESPONSE_TEST: TjsSearchResponse = {
         {chips: {values: ['18271FDF600EZ0']}},
       ],
     },
+    {
+      id: 'a1b2c3d4-e5f6-47a8-9b0c-1d2e3f4a5b6c',
+      cells: [
+        {
+          link: {
+            text: 'a1b2c3d4-e5f6-47a8-9b0c-1d2e3f4a5b6c',
+            target: {
+              test: {
+                testId: 'a1b2c3d4-e5f6-47a8-9b0c-1d2e3f4a5b6c',
+                jobId: 'j_987654',
+              },
+            },
+          },
+        },
+        {
+          text: {
+            value:
+              'com.google.codelab.mobileharness.android.hellomobileharness.HelloMobileHarnessTest#loginFlow',
+          },
+        },
+        {text: {value: 'qiupingf'}},
+        {text: {value: 'qiupingf'}},
+        {status: {text: 'RUNNING', indicator: Indicator.INDICATOR_ACTIVE}},
+        {status: {text: 'UNKNOWN', indicator: Indicator.INDICATOR_NEUTRAL}},
+        {text: {value: '1785826200100'}},
+        {text: {value: '12000'}},
+        {text: {value: 'mt08-dm02.atl14.mtaas.google.com'}},
+        {chips: {values: ['18261FDF6003KC']}},
+      ],
+    },
+    {
+      id: 'c9d8e7f6-a5b4-4321-fedc-ba9876543210',
+      cells: [
+        {
+          link: {
+            text: 'c9d8e7f6-a5b4-4321-fedc-ba9876543210',
+            target: {
+              test: {
+                testId: 'c9d8e7f6-a5b4-4321-fedc-ba9876543210',
+                jobId: 'j_876543',
+              },
+            },
+          },
+        },
+        {
+          text: {
+            value:
+              'com.google.devtools.mobileharness.infra.client.ClientTest#testDeviceAllocation',
+          },
+        },
+        {text: {value: 'dev_user'}},
+        {text: {value: 'dev_user'}},
+        {status: {text: 'DONE', indicator: Indicator.INDICATOR_ERROR}},
+        {status: {text: 'FAIL', indicator: Indicator.INDICATOR_ERROR}},
+        {text: {value: '1785826150000'}},
+        {text: {value: '65432'}},
+        {text: {value: 'mt101-dm01.atl14.mtaas.google.com'}},
+        {chips: {values: ['18271FDF600EZ1']}},
+      ],
+    },
   ],
 };
 
@@ -356,6 +416,17 @@ export const MOCK_TJS_SEARCH_RESPONSE_JOB: TjsSearchResponse = {
         {status: {text: 'RUNNING', indicator: Indicator.INDICATOR_ACTIVE}},
         {text: {value: '1723550400000'}},
         {text: {value: '124500'}},
+      ],
+    },
+    {
+      id: 'job_3',
+      cells: [
+        {link: {text: 'j_765432', target: {job: {jobId: 'j_765432'}}}},
+        {text: {value: 'OmniLab Smoke Tests'}},
+        {text: {value: 'qiupingf'}},
+        {status: {text: 'DONE', indicator: Indicator.INDICATOR_OK}},
+        {text: {value: '1723548000000'}},
+        {text: {value: '342000'}},
       ],
     },
     {
@@ -393,6 +464,16 @@ export const MOCK_TJS_SEARCH_RESPONSE_SESSION: TjsSearchResponse = {
       ],
     },
     {
+      id: 'session_3',
+      cells: [
+        {link: {text: 's_fedcba', target: {session: {sessionId: 's_fedcba'}}}},
+        {text: {value: 'qiupingf'}},
+        {status: {text: 'RUNNING', indicator: Indicator.INDICATOR_ACTIVE}},
+        {text: {value: '1723555000000'}},
+        {text: {value: '60000'}},
+      ],
+    },
+    {
       id: 'session_2',
       cells: [
         {link: {text: 's_123456', target: {session: {sessionId: 's_123456'}}}},
@@ -407,6 +488,22 @@ export const MOCK_TJS_SEARCH_RESPONSE_SESSION: TjsSearchResponse = {
 
 /** Mock default suggestions for test search. */
 export const MOCK_TJS_SUGGESTIONS_TEST_DEFAULT: TjsSuggestion[] = [
+  {
+    label: 'Add filter',
+    mainText: [
+      {text: 'User is ', emphasized: false},
+      {text: 'qiupingf', emphasized: true},
+    ],
+    applyFilter: {
+      pillKey: 'User',
+      pillCondition: 'qiupingf',
+      keyDisplayName: 'User',
+      filter: {
+        key: 'user',
+        stringValue: {value: 'qiupingf'},
+      },
+    },
+  },
   {
     label: 'Add filter',
     mainText: [
@@ -427,6 +524,22 @@ export const MOCK_TJS_SUGGESTIONS_TEST_DEFAULT: TjsSuggestion[] = [
 
 /** Mock suggestions list for job search. */
 export const MOCK_TJS_SUGGESTIONS_JOB: TjsSuggestion[] = [
+  {
+    label: 'Add filter',
+    mainText: [
+      {text: 'User is ', emphasized: false},
+      {text: 'qiupingf', emphasized: true},
+    ],
+    applyFilter: {
+      pillKey: 'User',
+      pillCondition: 'qiupingf',
+      keyDisplayName: 'User',
+      filter: {
+        key: 'user',
+        stringValue: {value: 'qiupingf'},
+      },
+    },
+  },
   {
     label: 'Add filter',
     mainText: [

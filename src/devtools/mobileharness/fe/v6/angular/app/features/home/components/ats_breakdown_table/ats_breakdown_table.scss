@@ -1,0 +1,136 @@
+@use '@angular/material' as mat;
+
+:host {
+  display: block;
+  width: 100%;
+
+  @include mat.table-overrides(
+    (
+      background-color: transparent,
+      header-container-height: auto,
+      row-item-container-height: auto,
+      header-headline-color: #444746,
+      header-headline-weight: 500,
+      header-headline-size: 0.875rem,
+      row-item-label-text-color: #1f1f1f,
+      row-item-label-text-size: 0.875rem,
+      row-item-outline-color: #f0f4f9,
+      row-item-outline-width: 1px,
+    )
+  );
+
+  @include mat.button-overrides(
+    (
+      text-label-text-color: #444746,
+      text-label-text-font: inherit,
+      text-label-text-size: 0.875rem,
+      text-label-text-weight: 500,
+    )
+  );
+}
+
+// Accordion Toggle Button
+.m3-button-toggle {
+  margin-top: 24px;
+  padding: 0 12px;
+  letter-spacing: normal;
+
+  .chevron-icon {
+    margin-left: 8px;
+    transition: transform 0.2s ease;
+
+    &.expanded {
+      transform: rotate(180deg);
+    }
+  }
+}
+
+// ATS Breakdown Table
+.ats-table-container {
+  margin-top: 16px;
+  overflow-x: auto;
+}
+
+.ats-breakdown-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+
+  tr[mat-header-row] {
+    border-bottom: 1px solid #c4c7c5;
+  }
+
+  th[mat-header-cell] {
+    padding: 12px 8px;
+    background: transparent;
+    text-align: left;
+
+    &.th-name {
+      width: 25%;
+    }
+    &.th-hosts {
+      width: 15%;
+    }
+    &.th-devices {
+      width: 15%;
+    }
+    &.th-util {
+      width: 45%;
+    }
+  }
+
+  tr[mat-row].drill-row {
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background-color: #f0f4f9;
+    }
+  }
+
+  td[mat-cell] {
+    padding: 12px 8px;
+    vertical-align: middle;
+
+    &.td-name {
+      font-weight: 500;
+
+      .td-name-wrapper {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+    }
+
+    &.drill-cell {
+      .clickable-number {
+        cursor: pointer;
+        text-decoration: underline;
+        text-decoration-color: #c4c7c5;
+        text-underline-offset: 4px;
+        color: #1f1f1f;
+        font-variant-numeric: tabular-nums;
+        transition:
+          color 0.15s,
+          text-decoration-color 0.15s;
+
+        &:hover {
+          color: #0b57d0;
+          text-decoration-color: #0b57d0;
+        }
+      }
+    }
+  }
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+
+  &.dot-orange {
+    background-color: #e8710a;
+  }
+}

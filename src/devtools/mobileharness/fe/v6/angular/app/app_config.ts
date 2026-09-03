@@ -20,6 +20,9 @@ import {HttpConfigService} from './core/services/config/http_config_service';
 import {DEVICE_SERVICE} from './core/services/device/device_service';
 import {HttpDeviceService} from './core/services/device/http_device_service';
 import {InterceptedFakeDeviceService} from './core/services/device/intercepted_fake_device_service';
+import {FakeHomeService} from './core/services/home/fake_home_service';
+import {HOME_SERVICE} from './core/services/home/home_service';
+import {HttpHomeService} from './core/services/home/http_home_service';
 import {HOST_SERVICE} from './core/services/host/host_service';
 import {HttpHostService} from './core/services/host/http_host_service';
 import {InterceptedFakeHostService} from './core/services/host/intercepted_fake_host_service';
@@ -111,6 +114,14 @@ export const appConfig: ApplicationConfig = {
       useFactory: (route: ActivatedRoute) => {
         const useFakeData = route.snapshot.queryParams['fake_data'] === 'true';
         return useFakeData ? new FakeSearchService() : new HttpSearchService();
+      },
+      deps: [ActivatedRoute],
+    },
+    {
+      provide: HOME_SERVICE,
+      useFactory: (route: ActivatedRoute) => {
+        const useFakeData = route.snapshot.queryParams['fake_data'] === 'true';
+        return useFakeData ? new FakeHomeService() : new HttpHomeService();
       },
       deps: [ActivatedRoute],
     },

@@ -1,6 +1,9 @@
-import {Injectable} from '@angular/core';
+import {inject, Injectable} from '@angular/core';
 import {Observable, of} from 'rxjs';
+import {APP_DATA, AppData, getAppData} from '../../models/app_data';
 import {
+  Cell,
+  Column,
   FleetChipResolverRequest,
   FleetChipResolverResponse,
   FleetColumnCatalogRequest,
@@ -16,14 +19,17 @@ import {
   FleetSuggestionResponse,
   FleetValueListRequest,
   FleetValueListResponse,
+  Row,
   SearchEntity,
   TjsEntity,
+  TjsFilter,
   TjsResolveChipsRequest,
   TjsResolveChipsResponse,
   TjsSearchConfig,
   TjsSearchConfigRequest,
   TjsSearchRequest,
   TjsSearchResponse,
+  TjsSuggestion,
   TjsSuggestionRequest,
   TjsSuggestionResponse,
 } from '../../models/search';
@@ -45,40 +51,119 @@ import {
   MOCK_TJS_SEARCH_RESPONSE_JOB,
   MOCK_TJS_SEARCH_RESPONSE_SESSION,
   MOCK_TJS_SEARCH_RESPONSE_TEST,
-  MOCK_TJS_SUGGESTION_RESPONSE_JOB,
-  MOCK_TJS_SUGGESTION_RESPONSE_SESSION,
-  MOCK_TJS_SUGGESTION_RESPONSE_TEST,
 } from '../mock_data';
 import {SearchService} from './search_service';
+
+/** Default user for fake data. */
+export const DEFAULT_FAKE_USER = 'qiupingf';
 
 /** Mock implementation of SearchService for frontend testing & offline fallback. */
 @Injectable()
 export class FakeSearchService extends SearchService {
+  private readonly appData: AppData | null = inject(APP_DATA, {optional: true});
+
   constructor() {
     super();
+  }
+
+  private getCurrentUser(): string {
+    const email = this.appData?.email || getAppData()?.email;
+    if (email && !email.startsWith('tianch@')) {
+      return email.split('@')[0];
+    }
+    return DEFAULT_FAKE_USER;
   }
 
   override getFleetSearchConfig(
     request: FleetSearchConfigRequest,
   ): Observable<FleetSearchConfig> {
-    return of(MOCK_FLEET_SEARCH_CONFIG);
+    const isHost = request.entity === SearchEntity.SEARCH_ENTITY_HOST;
+    const defaults = isHost
+      ? [
+          {key: 'id', displayName: 'Host Name', locked: true},
+          {key: 'hostName', displayName: 'Host Name'},
+          {key: 'status', displayName: 'Status'},
+          {key: 'type', displayName: 'OS / Type'},
+          {key: 'owner', displayName: 'Owner'},
+          {key: 'model', displayName: 'Lab Type'},
+        ]
+      : MOCK_FLEET_SEARCH_CONFIG.columns?.defaults;
+
+    const count = isHost
+      ? MOCK_FLEET_SEARCH_RESULTS_HOST.flat?.total || 0
+      : MOCK_FLEET_SEARCH_RESULTS_DEVICE.flat?.total || 0;
+
+    return of({
+      ...MOCK_FLEET_SEARCH_CONFIG,
+      columns: {
+        ...MOCK_FLEET_SEARCH_CONFIG.columns,
+        defaults,
+      },
+      landing: {
+        ...MOCK_FLEET_SEARCH_CONFIG.landing,
+        browseAllCount: count,
+      },
+    });
   }
 
   override searchFleet(
     request: FleetSearchRequest,
   ): Observable<FleetSearchResults> {
+    let allRows: Row[] = [];
     if (request.entity === SearchEntity.SEARCH_ENTITY_DEVICE) {
-      return of(MOCK_FLEET_SEARCH_RESULTS_DEVICE);
+      allRows = MOCK_FLEET_SEARCH_RESULTS_DEVICE.flat?.rows || [];
+    } else if (request.entity === SearchEntity.SEARCH_ENTITY_HOST) {
+      allRows = MOCK_FLEET_SEARCH_RESULTS_HOST.flat?.rows || [];
     }
-    if (request.entity === SearchEntity.SEARCH_ENTITY_HOST) {
-      return of(MOCK_FLEET_SEARCH_RESULTS_HOST);
+
+    let filteredRows = allRows;
+    if (request.filters && request.filters.length > 0) {
+      filteredRows = allRows.filter((row) => {
+        return request.filters!.every((f) => {
+          if (f.key === 'field::status' && f.simple) {
+            const statusCell = (
+              row.cells?.[2]?.status?.text || ''
+            ).toUpperCase();
+            const vals = (f.simple.values || []).map((v) =>
+              (v.value || '').toUpperCase(),
+            );
+            if (f.simple.negated) {
+              return !vals.includes(statusCell);
+            }
+            return vals.includes(statusCell);
+          }
+          if (f.key === 'host::ats_controller' && f.simple) {
+            const hostCell = (row.cells?.[1]?.text?.value || '').toLowerCase();
+            const vals = (f.simple.values || []).map((v) =>
+              (v.value || '').toLowerCase(),
+            );
+            return vals.some((v) => hostCell.includes(v));
+          }
+          return true;
+        });
+      });
     }
+
+    const total = filteredRows.length;
+    const pageSize = request.flat?.page?.pageSize || 25;
+    const pageToken = request.flat?.page?.pageToken;
+    const offset = pageToken ? Number(pageToken) || 0 : 0;
+    const pageRows = filteredRows.slice(offset, offset + pageSize);
+    const rangeStart = total > 0 ? offset + 1 : 0;
+    const rangeEnd = Math.min(offset + pageRows.length, total);
+    const nextPageToken =
+      offset + pageSize < total ? String(offset + pageSize) : undefined;
+    const prevPageToken =
+      offset > 0 ? String(Math.max(0, offset - pageSize)) : undefined;
+
     return of({
       flat: {
-        total: 0,
-        rangeStart: 0,
-        rangeEnd: 0,
-        rows: [],
+        total,
+        rangeStart,
+        rangeEnd,
+        rows: pageRows,
+        nextPageToken,
+        prevPageToken,
       },
     });
   }
@@ -243,37 +328,340 @@ export class FakeSearchService extends SearchService {
     request: TjsSearchConfigRequest,
   ): Observable<TjsSearchConfig> {
     const entity = request.entity;
+    let baseConfig: TjsSearchConfig;
     if (entity === TjsEntity.TJS_ENTITY_TEST) {
-      return of(MOCK_TJS_SEARCH_CONFIG_TEST);
+      baseConfig = MOCK_TJS_SEARCH_CONFIG_TEST;
+    } else if (entity === TjsEntity.TJS_ENTITY_JOB) {
+      baseConfig = MOCK_TJS_SEARCH_CONFIG_JOB;
+    } else {
+      baseConfig = MOCK_TJS_SEARCH_CONFIG_SESSION;
     }
-    if (entity === TjsEntity.TJS_ENTITY_JOB) {
-      return of(MOCK_TJS_SEARCH_CONFIG_JOB);
-    }
-    return of(MOCK_TJS_SEARCH_CONFIG_SESSION);
+
+    const currentUser = this.getCurrentUser();
+    const defaultChips = baseConfig.defaultChips?.map((chip) => {
+      if (chip.filter?.key === 'user') {
+        return {
+          ...chip,
+          pillCondition: currentUser,
+          filter: {
+            ...chip.filter,
+            stringValue: {value: currentUser},
+          },
+        };
+      }
+      return chip;
+    });
+
+    return of({
+      ...baseConfig,
+      defaultChips,
+    });
   }
 
   override searchTjs(request: TjsSearchRequest): Observable<TjsSearchResponse> {
     const entity = request.entity;
+    let baseResponse: TjsSearchResponse;
     if (entity === TjsEntity.TJS_ENTITY_TEST) {
-      return of(MOCK_TJS_SEARCH_RESPONSE_TEST);
+      baseResponse = MOCK_TJS_SEARCH_RESPONSE_TEST;
+    } else if (entity === TjsEntity.TJS_ENTITY_JOB) {
+      baseResponse = MOCK_TJS_SEARCH_RESPONSE_JOB;
+    } else {
+      baseResponse = MOCK_TJS_SEARCH_RESPONSE_SESSION;
     }
-    if (entity === TjsEntity.TJS_ENTITY_JOB) {
-      return of(MOCK_TJS_SEARCH_RESPONSE_JOB);
+
+    const columns: Column[] = baseResponse.columns || [];
+    let rows: Row[] = baseResponse.rows || [];
+
+    const currentUser = this.getCurrentUser();
+    const userColIdx = columns.findIndex((c) => c.key === 'user');
+    const actualUserColIdx = columns.findIndex((c) => c.key === 'actual_user');
+
+    if (currentUser !== 'qiupingf') {
+      rows = rows.map((row) => {
+        const cells = row.cells ? [...row.cells] : [];
+        if (
+          userColIdx !== -1 &&
+          cells[userColIdx]?.text?.value === 'qiupingf'
+        ) {
+          cells[userColIdx] = {
+            ...cells[userColIdx],
+            text: {value: currentUser},
+          };
+        }
+        if (
+          actualUserColIdx !== -1 &&
+          cells[actualUserColIdx]?.text?.value === 'qiupingf'
+        ) {
+          cells[actualUserColIdx] = {
+            ...cells[actualUserColIdx],
+            text: {value: currentUser},
+          };
+        }
+        return {...row, cells};
+      });
     }
-    return of(MOCK_TJS_SEARCH_RESPONSE_SESSION);
+
+    let filteredRows = rows;
+    if (request.filters && request.filters.length > 0) {
+      filteredRows = rows.filter((row) =>
+        request.filters!.every((filter) =>
+          this.matchesTjsFilter(row, filter, columns),
+        ),
+      );
+    }
+
+    return of({
+      columns,
+      rows: filteredRows,
+    });
+  }
+
+  private matchesTjsFilter(
+    row: Row,
+    filter: TjsFilter,
+    columns: Column[],
+  ): boolean {
+    const filterKey = (filter.key || '').toLowerCase().trim();
+    if (!filterKey) return true;
+
+    let colIndex = columns.findIndex((c) => c.key.toLowerCase() === filterKey);
+    if (colIndex === -1 && filterKey === 'id') {
+      colIndex = columns.findIndex(
+        (c) =>
+          c.key.toLowerCase() === 'job_id' ||
+          c.key.toLowerCase() === 'session_id' ||
+          c.key.toLowerCase() === 'test_id',
+      );
+    }
+    if (
+      colIndex === -1 &&
+      (filterKey === 'devices' ||
+        filterKey === 'device_id' ||
+        filterKey === 'device')
+    ) {
+      colIndex = columns.findIndex((c) => c.key.toLowerCase() === 'devices');
+    }
+
+    if (filterKey === 'name') {
+      const targetVal = (filter.stringValue?.value || '').toLowerCase().trim();
+      if (!targetVal) return true;
+
+      // Check against 'name' column if present
+      if (colIndex !== -1) {
+        const nameValues = this.extractCellValues(row.cells?.[colIndex]);
+        if (nameValues.some((v) => v.toLowerCase().includes(targetVal))) {
+          return true;
+        }
+      }
+      // Also allow matching against user column (in case 'name' refers to username)
+      const userColIdx = columns.findIndex(
+        (c) => c.key.toLowerCase() === 'user',
+      );
+      if (userColIdx !== -1) {
+        const userValues = this.extractCellValues(row.cells?.[userColIdx]);
+        if (
+          userValues.some(
+            (v) =>
+              v.toLowerCase() === targetVal ||
+              v.toLowerCase().includes(targetVal),
+          )
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    if (colIndex === -1) {
+      if (
+        filterKey === 'id' ||
+        filterKey === 'job_id' ||
+        filterKey === 'session_id' ||
+        filterKey === 'test_id'
+      ) {
+        const targetVal = (filter.stringValue?.value || '')
+          .toLowerCase()
+          .trim();
+        return targetVal
+          ? (row.id || '').toLowerCase().includes(targetVal)
+          : true;
+      }
+      return true;
+    }
+
+    const cellValues = this.extractCellValues(row.cells?.[colIndex]);
+    if (cellValues.length === 0) return false;
+
+    if (filter.stringValue?.value !== undefined) {
+      const targetVal = filter.stringValue.value.toLowerCase().trim();
+      if (!targetVal) return true;
+
+      if (filterKey === 'user' || filterKey === 'actual_user') {
+        return cellValues.some((v) => v.toLowerCase().trim() === targetVal);
+      }
+
+      return cellValues.some((v) => v.toLowerCase().includes(targetVal));
+    }
+
+    if (filter.enumValues?.values && filter.enumValues.values.length > 0) {
+      const targetEnumVals = filter.enumValues.values.map((v: string) =>
+        v.toUpperCase().trim(),
+      );
+      return cellValues.some((v) =>
+        targetEnumVals.includes(v.toUpperCase().trim()),
+      );
+    }
+
+    if (filter.namedValue) {
+      const targetPair =
+        `${filter.namedValue.name}:${filter.namedValue.value}`.toLowerCase();
+      const targetVal = filter.namedValue.value.toLowerCase();
+      return cellValues.some(
+        (v) =>
+          v.toLowerCase().includes(targetPair) ||
+          v.toLowerCase().includes(targetVal),
+      );
+    }
+
+    return true;
+  }
+
+  private extractCellValues(cell?: Cell): string[] {
+    if (!cell) return [];
+    if (cell.text?.value !== undefined) return [cell.text.value];
+    if (cell.link?.text !== undefined) return [cell.link.text];
+    if (cell.status?.text !== undefined) return [cell.status.text];
+    if (cell.chips?.values) return cell.chips.values;
+    if (cell.multiLink?.entries) {
+      return cell.multiLink.entries.map((e) => e.text);
+    }
+    return [];
   }
 
   override getTjsSuggestions(
     request: TjsSuggestionRequest,
   ): Observable<TjsSuggestionResponse> {
-    const entity = request.entity;
-    if (entity === TjsEntity.TJS_ENTITY_TEST) {
-      return of(MOCK_TJS_SUGGESTION_RESPONSE_TEST);
+    const currentUser = this.getCurrentUser();
+    const input = (request.input || '').trim().toLowerCase();
+
+    const items: TjsSuggestion[] = [];
+
+    if (!input) {
+      items.push({
+        label: 'Add filter',
+        mainText: [
+          {text: 'User is ', emphasized: false},
+          {text: currentUser, emphasized: true},
+        ],
+        applyFilter: {
+          pillKey: 'User',
+          pillCondition: currentUser,
+          keyDisplayName: 'User',
+          filter: {
+            key: 'user',
+            stringValue: {value: currentUser},
+          },
+        },
+      });
+      if (request.entity === TjsEntity.TJS_ENTITY_TEST) {
+        items.push({
+          label: 'Add filter',
+          mainText: [
+            {text: 'Result is ', emphasized: false},
+            {text: 'PASS', emphasized: true},
+          ],
+          applyFilter: {
+            pillKey: 'Result',
+            pillCondition: 'PASS',
+            keyDisplayName: 'Result',
+            filter: {
+              key: 'result',
+              enumValues: {values: ['PASS']},
+            },
+          },
+        });
+      } else if (request.entity === TjsEntity.TJS_ENTITY_JOB) {
+        items.push({
+          label: 'Add filter',
+          mainText: [
+            {text: 'Status is ', emphasized: false},
+            {text: 'RUNNING', emphasized: true},
+          ],
+          applyFilter: {
+            pillKey: 'Status',
+            pillCondition: 'RUNNING',
+            keyDisplayName: 'Status',
+            filter: {
+              key: 'status',
+              enumValues: {values: ['RUNNING']},
+            },
+          },
+        });
+      }
+    } else {
+      if (currentUser.toLowerCase().includes(input) || 'user'.includes(input)) {
+        items.push({
+          label: 'Add filter',
+          mainText: [
+            {text: 'User is ', emphasized: false},
+            {text: currentUser, emphasized: true},
+          ],
+          applyFilter: {
+            pillKey: 'User',
+            pillCondition: currentUser,
+            keyDisplayName: 'User',
+            filter: {
+              key: 'user',
+              stringValue: {value: currentUser},
+            },
+          },
+        });
+      }
+      const knownEnums = ['RUNNING', 'DONE', 'PASS', 'FAIL', 'ERROR'];
+      for (const val of knownEnums) {
+        if (val.toLowerCase().includes(input)) {
+          const isResult = val === 'PASS' || val === 'FAIL' || val === 'ERROR';
+          const key = isResult ? 'result' : 'status';
+          const label = isResult ? 'Result' : 'Status';
+          items.push({
+            label: 'Add filter',
+            mainText: [
+              {text: `${label} is `, emphasized: false},
+              {text: val, emphasized: true},
+            ],
+            applyFilter: {
+              pillKey: label,
+              pillCondition: val,
+              keyDisplayName: label,
+              filter: {
+                key,
+                enumValues: {values: [val]},
+              },
+            },
+          });
+        }
+      }
+      if (items.length === 0) {
+        items.push({
+          label: 'Add filter',
+          mainText: [
+            {text: 'Search ', emphasized: false},
+            {text: request.input, emphasized: true},
+          ],
+          applyFilter: {
+            pillKey: 'Name',
+            pillCondition: request.input,
+            keyDisplayName: 'Name',
+            filter: {
+              key: 'name',
+              stringValue: {value: request.input},
+            },
+          },
+        });
+      }
     }
-    if (entity === TjsEntity.TJS_ENTITY_JOB) {
-      return of(MOCK_TJS_SUGGESTION_RESPONSE_JOB);
-    }
-    return of(MOCK_TJS_SUGGESTION_RESPONSE_SESSION);
+
+    return of({items});
   }
 
   override resolveTjsChips(
@@ -295,7 +683,8 @@ export class FakeSearchService extends SearchService {
       } else if (f.namedValue) {
         condition = `${f.namedValue.name}:${f.namedValue.value}`;
       } else if (f.timeRange) {
-        condition = `${f.timeRange.from || ''} ~ ${f.timeRange.to || ''}`.trim();
+        condition =
+          `${f.timeRange.from || ''} ~ ${f.timeRange.to || ''}`.trim();
       }
 
       return {

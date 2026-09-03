@@ -1,0 +1,93 @@
+<button
+  mat-button
+  type="button"
+  class="m3-button-toggle"
+  (click)="toggleExpanded()"
+>
+  <span>
+    {{ expanded() ? 'Hide Breakdown by Lab (Controller)' : 'View Breakdown by Lab (Controller)' }}
+  </span>
+  <mat-icon
+    class="chevron-icon"
+    [class.expanded]="expanded()"
+  >
+    expand_more
+  </mat-icon>
+</button>
+
+@if (expanded()) {
+  <div class="ats-table-container">
+    <table mat-table [dataSource]="labs()" class="ats-breakdown-table">
+      <!-- ATS Lab (Controller) Name Column -->
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef class="th-name">ATS Lab (Controller) Name</th>
+        <td mat-cell *matCellDef="let lab" class="td-name">
+          @let labName = lab.displayName || lab.controllerId;
+          <div class="td-name-wrapper">
+            <span class="legend-dot dot-orange"></span>
+            <span>{{ labName }}</span>
+          </div>
+        </td>
+      </ng-container>
+
+      <!-- Hosts Column -->
+      <ng-container matColumnDef="hosts">
+        <th mat-header-cell *matHeaderCellDef class="th-hosts">Hosts</th>
+        <td
+          mat-cell
+          *matCellDef="let lab"
+          class="drill-cell"
+        >
+          @let hostRoute = lab.hosts?.search | drilldownRoute;
+          @let labName = lab.displayName || lab.controllerId;
+          <a
+            class="clickable-number"
+            [routerLink]="hostRoute?.path"
+            [queryParams]="hostRoute?.queryParams"
+            queryParamsHandling="merge"
+            [matTooltip]="'Click to view hosts in ' + labName"
+          >
+            {{ (lab.hosts?.count ?? 0) | number }}
+          </a>
+        </td>
+      </ng-container>
+
+      <!-- Devices Column -->
+      <ng-container matColumnDef="devices">
+        <th mat-header-cell *matHeaderCellDef class="th-devices">Devices</th>
+        <td
+          mat-cell
+          *matCellDef="let lab"
+          class="drill-cell"
+        >
+          @let devRoute = lab.devices?.search | drilldownRoute;
+          @let labName = lab.displayName || lab.controllerId;
+          <a
+            class="clickable-number"
+            [routerLink]="devRoute?.path"
+            [queryParams]="devRoute?.queryParams"
+            queryParamsHandling="merge"
+            [matTooltip]="'Click to view devices in ' + labName"
+          >
+            {{ (lab.devices?.count ?? 0) | number }}
+          </a>
+        </td>
+      </ng-container>
+
+      <!-- Device Utilization Column -->
+      <ng-container matColumnDef="utilization">
+        <th mat-header-cell *matHeaderCellDef class="th-util">Device Utilization</th>
+        <td mat-cell *matCellDef="let lab">
+          <app-utilization-bar
+            mode="mini"
+            [utilization]="lab.utilization"
+            [totalDevices]="lab.devices?.count"
+          />
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns" class="drill-row"></tr>
+    </table>
+  </div>
+}

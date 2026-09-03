@@ -2,6 +2,7 @@ import {inject} from '@angular/core';
 import {CanActivateFn, Router, Routes} from '@angular/router';
 import {DevHarnessPage} from './features/dev_harness/dev_harness_page';
 import {DeviceDetailPage} from './features/device_detail/device_detail_page';
+import {HomePage} from './features/home/home_page';
 import {HostDetail} from './features/host_detail/host_detail';
 import {JobDetail} from './features/job_detail/job_detail';
 import {SearchPage} from './features/search_page/search_page';
@@ -33,6 +34,11 @@ const stripUniverseGuard: CanActivateFn = (route, state) => {
  * The application routes.
  */
 export const routes: Routes = [
+  {
+    path: 'home',
+    component: HomePage,
+    title: 'Home',
+  },
   {
     path: 'dev/device-harness',
     component: DevHarnessPage,
@@ -107,7 +113,7 @@ export const routes: Routes = [
   },
   {
     path: '',
-    redirectTo: 'dev/device-harness',
+    redirectTo: 'home',
     pathMatch: 'full',
   },
 ];

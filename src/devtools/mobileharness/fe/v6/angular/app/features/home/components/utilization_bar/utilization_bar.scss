@@ -1,0 +1,214 @@
+:host {
+  display: block;
+  width: 100%;
+  container-type: inline-size;
+  container-name: util-bar;
+}
+
+.progress-container {
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  background-color: #e1e3e1;
+  overflow: visible;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+
+  &.mini-bar {
+    height: 6px;
+    margin: 0;
+  }
+}
+
+.progress-segment {
+  display: block;
+  height: 100%;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    width 0.8s cubic-bezier(0.2, 0, 0, 1),
+    transform 0.2s ease,
+    filter 0.2s ease;
+  transform-origin: center;
+
+  &:hover,
+  &.hl {
+    filter: brightness(1.15);
+    transform: scaleY(1.6);
+    z-index: 10;
+  }
+}
+
+// Semantic Colors
+.color-busy {
+  background-color: #0b57d0;
+}
+
+.color-idle {
+  background-color: #146c2e;
+}
+
+.color-others {
+  background-color: #747775;
+}
+
+// Legend Relative Container
+.legend-relative-container {
+  position: relative;
+  height: 48px;
+  width: 100%;
+}
+
+.legend-clickable {
+  cursor: pointer;
+  display: inline-flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+
+  &.legend-left {
+    position: absolute;
+    left: 0;
+  }
+
+  &.legend-floating {
+    position: absolute;
+    left: var(--idle-left, 0);
+    transition: left 0.5s ease;
+  }
+
+  &.legend-right {
+    position: absolute;
+    right: 0;
+    text-align: right;
+  }
+
+  .legend-value {
+    text-decoration: underline;
+    text-decoration-color: #c4c7c5;
+    text-underline-offset: 3px;
+  }
+
+  &:hover,
+  &.hl {
+    .legend-header {
+      color: #0b57d0;
+    }
+    .legend-value {
+      color: #0b57d0;
+      text-decoration-color: #0b57d0;
+    }
+  }
+}
+
+.legend-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: #1f1f1f;
+  margin-bottom: 4px;
+  transition: color 0.15s ease;
+
+  &.justify-end {
+    justify-content: flex-end;
+  }
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.legend-dot-tiny {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+.legend-value {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #444746;
+  margin-left: 20px;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.15s ease;
+
+  &.align-right {
+    margin-left: 0;
+  }
+}
+
+// Mini Bar Container & Legends
+.mini-util-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mini-legend-row {
+  font-size: 0.75rem;
+  color: #444746;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.util-legend-item {
+  transition: color 0.15s ease;
+  cursor: pointer;
+  text-underline-offset: 3px;
+  text-decoration: underline;
+  text-decoration-color: #c4c7c5;
+  font-variant-numeric: tabular-nums;
+
+  &:hover,
+  &.hl {
+    color: #0b57d0;
+    text-decoration-color: #0b57d0;
+    font-weight: 500;
+  }
+}
+
+// Responsive legends on narrow containers
+@container util-bar (max-width: 540px) {
+  .legend-relative-container {
+    height: auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px 16px;
+    padding-top: 4px;
+  }
+
+  .legend-clickable {
+    &.legend-left,
+    &.legend-floating,
+    &.legend-right {
+      position: static;
+      left: auto;
+      right: auto;
+      text-align: left;
+    }
+
+    &.legend-right {
+      .legend-header {
+        justify-content: flex-start;
+      }
+      .legend-value {
+        text-align: left;
+        margin-left: 20px;
+      }
+    }
+  }
+}
