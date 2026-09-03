@@ -938,8 +938,9 @@ public class TradefedTest extends BaseDriver
       return;
     }
 
-    Map<String, String> dimensions =
-        androidDesktopDeviceHelper.getDeviceDimensions(getDevice().getDeviceId());
+    String dutName = getTest().properties().get("dut_name");
+    String targetHost = Strings.isNullOrEmpty(dutName) ? getDevice().getDeviceId() : dutName;
+    Map<String, String> dimensions = androidDesktopDeviceHelper.getDeviceDimensions(targetHost);
     dimensions.forEach((key, value) -> addInvocationData(tradefedRunCommand, key, value));
   }
 
