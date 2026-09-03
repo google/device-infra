@@ -374,6 +374,9 @@ class RunCommandHandler {
           .setSubPlanNameBackup(
               String.format(
                   "%s_backup_%s", runCommand.getSubPlanName(), Instant.now().toEpochMilli()));
+    } else if (SessionHandlerHelper.isSvrTestPlan(runCommand.getTestPlan())) {
+      builder.setSubPlanName(
+          SessionHandlerHelper.getSvrSubPlanFileName(sessionInfo.getSessionId()));
     }
     if (runCommand.getDeviceType() != DeviceType.DEVICE_TYPE_UNSPECIFIED) {
       builder.setDeviceType(

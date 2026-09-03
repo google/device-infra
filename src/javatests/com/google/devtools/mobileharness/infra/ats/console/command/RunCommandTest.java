@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.S
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.GuiceFactory;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
@@ -251,7 +252,7 @@ public final class RunCommandTest {
     assertThat(runCommand.getProductTypes()).containsExactly("product1");
     assertThat(runCommand.getDevicePropertiesMap())
         .containsExactly("name1", "value1", "name2", "value2");
-    assertThat(runCommand.getExtraRunCmdArgs())
+    assertThat(runCommand.options.getExtraRunCmdArgs())
         .containsExactly("tf-arg0", "tf-arg1", "-opt0", "-opt1", "opt1-value", "-opt2");
 
     commandLine.parseArgs("cts", "--property", "name1", "value1");
@@ -339,7 +340,7 @@ public final class RunCommandTest {
         .containsExactly("key1", "value1", "key2", "value2");
     assertThat(runCommand.getModuleMetadataExcludeFilters())
         .containsExactly("key3", "value3", "key4", "value4");
-    assertThat(runCommand.getExtraRunCmdArgs())
+    assertThat(runCommand.options.getExtraRunCmdArgs())
         .containsExactly("tf-arg0", "tf-arg1", "-opt0", "-opt1", "opt1-value", "-opt2");
   }
 
@@ -371,19 +372,23 @@ public final class RunCommandTest {
     commandLine.parseArgs("cts", "--help");
     when(commandExecutor.run(any(Command.class)))
         .thenReturn(
-            "'cts' configuration: Setup that allows to point to a remote config and run it.\n"
-                + "\n"
-                + "aaa\n"
-                + "05-13 20:17:37 I/DeviceManager: Detected new device b\n"
-                + "ccc\n"
-                + "05-13 20:17:37 I/CommandScheduler: Received shutdown request.");
+            """
+            'cts' configuration: Setup that allows to point to a remote config and run it.
+
+            aaa
+            05-13 20:17:37 I/DeviceManager: Detected new device b
+            ccc
+            05-13 20:17:37 I/CommandScheduler: Received shutdown request.\
+            """);
     assertThat(runCommand.showHelpMessage("cts", Path.of("/ats"))).isEqualTo(ExitCode.OK);
     verify(consoleUtil)
         .printlnStdout(
-            "'cts' configuration: Setup that allows to point to a remote config and run it.\n"
-                + "\n"
-                + "aaa\n"
-                + "ccc");
+            """
+            'cts' configuration: Setup that allows to point to a remote config and run it.
+
+            aaa
+            ccc\
+            """);
   }
 
   @Test
@@ -434,9 +439,35 @@ public final class RunCommandTest {
     verify(atsSessionStub)
         .runSession(
             eq(RunCommand.RUN_COMMAND_SESSION_NAME), atsSessionPluginConfigCaptor.capture());
-    com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto
-            .RunCommand
-        runCmd = atsSessionPluginConfigCaptor.getValue().getRunCommand();
+    SessionPluginProto.RunCommand runCmd = atsSessionPluginConfigCaptor.getValue().getRunCommand();
     assertThat(runCmd.getShardingMode()).isEqualTo(ShardingMode.MODULE);
+  }
+
+  @Test
+  public void parseArgs_ctsSvrTestPlan() throws Exception {
+    when(commandHelper.getXtsType()).thenReturn("cts");
+    when(atsSessionStub.runSession(any(), any()))
+        .thenReturn(immediateFuture(AtsSessionPluginOutput.getDefaultInstance()));
+
+    commandLine.parseArgs("cts-svr");
+    var unused = runCommand.runWithCommand(ImmutableList.of("run", "cts-svr"));
+
+    verify(atsSessionStub)
+        .runSession(
+            eq(RunCommand.RUN_COMMAND_SESSION_NAME), atsSessionPluginConfigCaptor.capture());
+    SessionPluginProto.RunCommand runCmd = atsSessionPluginConfigCaptor.getValue().getRunCommand();
+    assertThat(runCmd.getTestPlan()).isEqualTo("cts-svr");
+    assertThat(runCmd.getXtsType()).isEqualTo("cts");
+  }
+
+  @Test
+  public void validateCommandParameters_svrTestPlan_notSupportSubplanOption() {
+    commandLine.parseArgs("cts-svr", "--subplan", "foo");
+
+    assertThat(
+            assertThrows(
+                ParameterException.class, () -> runCommand.options.validateCommandParameters()))
+        .hasMessageThat()
+        .contains("Option '--subplan <subplan_name>' is not supported for SVR test plan");
   }
 }

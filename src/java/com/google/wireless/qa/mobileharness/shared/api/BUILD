@@ -96,6 +96,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:ats_device_recovery_plugin",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:mobly_resultstore_upload_plugin",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:non_tradefed_report_generator",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:system_vendor_reuse_plugin",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:xts_device_compatibility_checker",
     ],
 )

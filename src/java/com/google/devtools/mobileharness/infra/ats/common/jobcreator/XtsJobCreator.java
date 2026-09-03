@@ -77,6 +77,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
@@ -268,7 +269,8 @@ public abstract class XtsJobCreator {
     Map<String, String> driverParams = new HashMap<>();
     ListMultimap<String, String> jobFiles = ArrayListMultimap.create();
     driverParams.put("xts_type", xtsType);
-    driverParams.put("xts_test_plan", testPlan);
+    driverParams.put(
+        "xts_test_plan", SessionHandlerHelper.isSvrTestPlan(testPlan) ? xtsType : testPlan);
     extraJobProperties.put(Job.XTS_TEST_PLAN, testPlan);
     boolean shouldSkipDeviceInfoForRetry = false;
     boolean useTfRetry =
@@ -304,6 +306,11 @@ public abstract class XtsJobCreator {
               sessionRequestInfo.getXtsType(),
               sessionRequestInfo.getSubPlanName());
       driverParams.put("subplan_xml", tfSubPlan.toAbsolutePath().toString());
+    } else if (sessionRequestInfo.hasSubPlanName()) {
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.ATSC_RUN_SUBPLAN_COMMAND_SUBPLAN_XML_NOT_FOUND,
+          String.format("Subplan [%s] not found", sessionRequestInfo.getSubPlanName()),
+          /* cause= */ null);
     }
 
     if (!sessionRequestInfo.getEnvVarsMap().isEmpty()) {
@@ -423,7 +430,18 @@ public abstract class XtsJobCreator {
     if (!sessionRequestInfo.hasSubPlanName()) {
       return Optional.empty();
     }
-    Path subPlanPath = prepareSubPlanPath(sessionRequestInfo);
+    Path subPlanPath =
+        SessionHandlerHelper.getSubPlanFilePath(
+            Path.of(sessionRequestInfo.getXtsRootDir()),
+            sessionRequestInfo.getXtsType(),
+            sessionRequestInfo.getSubPlanName());
+    // For SVR test plans, the subplan file is generated dynamically by the synthetic setup job
+    // (SystemVendorReusePlugin) and does not exist on disk prior to setup job completion.
+    if (SessionHandlerHelper.isSvrTestPlan(sessionRequestInfo.getTestPlan())
+        && !subPlanPath.toFile().exists()) {
+      return Optional.empty();
+    }
+    subPlanPath = prepareSubPlanPath(sessionRequestInfo);
     SubPlan subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
     return Optional.of(ResolvedSubPlan.of(subPlanPath, subPlan));
   }
@@ -501,7 +519,9 @@ public abstract class XtsJobCreator {
       injectBuildFingerprint(extraJobProperties, subPlan);
     } else if (sessionRequestInfo.hasSubPlanName()) {
       subPlan = resolveSubPlan(sessionRequestInfo).map(ResolvedSubPlan::subPlan).orElse(null);
-      validateNonTfSubPlan(subPlan);
+      if (subPlan != null) {
+        validateNonTfSubPlan(subPlan);
+      }
     }
 
     return sessionRequestHandlerUtil.createXtsNonTradefedJobs(
@@ -524,7 +544,8 @@ public abstract class XtsJobCreator {
                 .collect(toImmutableList())
             : ImmutableList.of();
     boolean isDynamicMctsEnabled = isDynamicMctsEnabled(sessionRequestInfo);
-    if (preconditionDecorators.isEmpty() && !isDynamicMctsEnabled) {
+    boolean isSvrEnabled = SessionHandlerHelper.isSvrTestPlan(sessionRequestInfo.getTestPlan());
+    if (preconditionDecorators.isEmpty() && !isDynamicMctsEnabled && !isSvrEnabled) {
       return Optional.empty();
     }
     return Optional.of(
@@ -564,8 +585,9 @@ public abstract class XtsJobCreator {
    */
   private boolean shouldCreatePreconditionJobs(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
-    return shouldAttachPreconditionDecorators(sessionRequestInfo)
-        || isDynamicMctsEnabled(sessionRequestInfo);
+    return SessionHandlerHelper.isSvrTestPlan(sessionRequestInfo.getTestPlan())
+        || isDynamicMctsEnabled(sessionRequestInfo)
+        || shouldAttachPreconditionDecorators(sessionRequestInfo);
   }
 
   private boolean shouldAttachPreconditionDecorators(SessionRequestInfo sessionRequestInfo)
@@ -585,7 +607,6 @@ public abstract class XtsJobCreator {
         .anyMatch(runner -> ConfigurationUtil.getSimpleClassName(runner).equals("TradefedTest"))) {
       return false;
     }
-
     try {
       ImmutableList<String> tfModules =
           sessionRequestHandlerUtil.getFilteredTradefedModules(
@@ -600,6 +621,9 @@ public abstract class XtsJobCreator {
             filterTradefedModulesBySubPlan(tfModules, subPlan.get().subPlan());
         return !filteredTradefedModules.isEmpty();
       }
+      // If no subplan is present (or an SVR subplan has not yet been generated prior to setup job
+      // execution), determine Tradefed job availability based on whether the suite contains TF
+      // modules.
       return tfModules != null && !tfModules.isEmpty();
     } catch (MobileHarnessException e) {
       if (e.getErrorId() == InfraErrorId.XTS_NO_MATCHED_TRADEFED_MODULES
@@ -742,6 +766,16 @@ public abstract class XtsJobCreator {
     jobInfo.properties().add(XtsConstants.XTS_JOB_NAME, name);
     if (isDynamicMctsEnabled) {
       jobInfo.properties().add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
+    }
+    if (SessionHandlerHelper.isSvrTestPlan(sessionRequestInfo.getTestPlan())
+        && Objects.equals(name, XtsConstants.SETUP_JOB_NAME)) {
+      jobInfo.params().add(XtsConstants.IS_SYSTEM_VENDOR_REUSE_ENABLED, "true");
+      Path svrSubPlanPath =
+          SessionHandlerHelper.getSvrSubPlanFilePath(
+              Path.of(sessionRequestInfo.getXtsRootDir()),
+              sessionRequestInfo.getXtsType(),
+              sessionRequestInfo.getSessionId());
+      jobInfo.properties().add(Job.SVR_SUBPLAN_FILE_PATH, svrSubPlanPath.toString());
     }
     if (sessionRequestInfo.hasSessionId()) {
       jobInfo.properties().add(Job.SESSION_ID, sessionRequestInfo.getSessionId());

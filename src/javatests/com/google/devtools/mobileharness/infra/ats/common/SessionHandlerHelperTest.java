@@ -145,6 +145,16 @@ public final class SessionHandlerHelperTest {
     assertThat(SessionHandlerHelper.isRunRetry("Retry")).isTrue();
     assertThat(SessionHandlerHelper.isRunRetry("cts")).isFalse();
     assertThat(SessionHandlerHelper.isRunRetry("")).isFalse();
+    assertThat(SessionHandlerHelper.isRunRetry(null)).isFalse();
+  }
+
+  @Test
+  public void isSvrTestPlan_matchesCaseInsensitive() {
+    assertThat(SessionHandlerHelper.isSvrTestPlan("cts-svr")).isTrue();
+    assertThat(SessionHandlerHelper.isSvrTestPlan("CTS-SVR")).isTrue();
+    assertThat(SessionHandlerHelper.isSvrTestPlan("cts")).isFalse();
+    assertThat(SessionHandlerHelper.isSvrTestPlan("")).isFalse();
+    assertThat(SessionHandlerHelper.isSvrTestPlan(null)).isFalse();
   }
 
   private static TestSuiteVersion create(int major, int minor, int patch, int revision) {

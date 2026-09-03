@@ -70,6 +70,12 @@ public class XtsConstants {
   /** A MH job property key to indicate whether xTS dynamic download is enabled. */
   public static final String IS_XTS_DYNAMIC_DOWNLOAD_ENABLED = "is_xts_dynamic_download_enabled";
 
+  /** A MH job param key to indicate whether system-vendor reuse (SVR) is enabled. */
+  public static final String IS_SYSTEM_VENDOR_REUSE_ENABLED = "is_system_vendor_reuse_enabled";
+
+  /** The CTS-SVR test plan name. */
+  public static final String CTS_SVR_TEST_PLAN = "cts-svr";
+
   /** The job type of xTS jobs. */
   public static final String XTS_JOB_NAME = "xts_job_name";
 

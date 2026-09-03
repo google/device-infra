@@ -131,4 +131,19 @@ public final class TestPlanParserTest {
                 ImmutableMultimap.of(),
                 ImmutableSet.of()));
   }
+
+  @Test
+  public void parseFilters_svr() throws Exception {
+    TestPlanFilter emptyFilter =
+        TestPlanFilter.create(
+            ImmutableSet.of(),
+            ImmutableSet.of(),
+            ImmutableMultimap.of(),
+            ImmutableMultimap.of(),
+            ImmutableSet.of());
+    assertThat(testPlanParser.parseFilters(Path.of("mock"), "cts", "cts-svr"))
+        .isEqualTo(emptyFilter);
+    assertThat(testPlanParser.parseFilters(Path.of("mock"), "cts", "CTS-SVR"))
+        .isEqualTo(emptyFilter);
+  }
 }

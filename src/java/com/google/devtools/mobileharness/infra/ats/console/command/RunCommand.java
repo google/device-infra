@@ -181,7 +181,7 @@ public final class RunCommand implements Callable<Integer> {
                         ImmutableList.of(
                             "run",
                             "commandAndExit",
-                            options.config,
+                            options.getTestPlan(),
                             options.showHelp ? "--help" : "--help-all")))
                 .timeout(Timeout.fixed(Duration.ofSeconds(60))));
     Iterable<String> lines = Splitters.LINE_SPLITTER.split(result);
@@ -204,7 +204,7 @@ public final class RunCommand implements Callable<Integer> {
           break;
         }
         output.append(line).append("\n");
-      } else if (line.startsWith("'" + options.config + "' configuration:")) {
+      } else if (line.startsWith("'" + options.getTestPlan() + "' configuration:")) {
         output.append(line).append("\n");
         printing = true;
       } else if (line.startsWith("Failed to run command:")) {
@@ -272,10 +272,7 @@ public final class RunCommand implements Callable<Integer> {
         options.moduleCmdArgs != null
             ? ImmutableList.copyOf(options.moduleCmdArgs)
             : ImmutableList.of();
-    ImmutableList<String> extraArgs =
-        options.extraRunCmdArgs != null
-            ? ImmutableList.copyOf(options.extraRunCmdArgs)
-            : ImmutableList.of();
+    ImmutableList<String> extraArgs = options.getExtraRunCmdArgs();
     ImmutableSet<String> excludeRunners =
         options.excludeRunnerOpt != null
             ? ImmutableSet.copyOf(options.excludeRunnerOpt)
@@ -299,7 +296,8 @@ public final class RunCommand implements Callable<Integer> {
             .setReportSystemCheckers(options.reportSystemCheckers)
             .putAllXtsSuiteInfo(
                 new CertificationSuiteInfoFactory()
-                    .generateSuiteInfoMap(xtsRootDirectory.toString(), xtsType, options.config));
+                    .generateSuiteInfoMap(
+                        xtsRootDirectory.toString(), xtsType, options.getTestPlan()));
     if (!isNullOrEmpty(options.businessLogicUrl)) {
       runCommand.setBusinessLogicUrl(options.businessLogicUrl);
     }
@@ -326,7 +324,7 @@ public final class RunCommand implements Callable<Integer> {
     }
 
     runCommand
-        .setTestPlan(options.config)
+        .setTestPlan(options.getTestPlan())
         .addAllModuleName(modules)
         .addAllModuleArg(moduleArgs)
         .addAllExtraArg(extraArgs)
@@ -441,7 +439,7 @@ public final class RunCommand implements Callable<Integer> {
     private final ConsoleUtil consoleUtil;
     private final ServerLogPrinter serverLogPrinter;
 
-    public RunCommandFutureCallback(ConsoleUtil consoleUtil, ServerLogPrinter serverLogPrinter) {
+    RunCommandFutureCallback(ConsoleUtil consoleUtil, ServerLogPrinter serverLogPrinter) {
       this.consoleUtil = consoleUtil;
       this.serverLogPrinter = serverLogPrinter;
     }
@@ -500,11 +498,6 @@ public final class RunCommand implements Callable<Integer> {
   @VisibleForTesting
   List<String> getSerials() {
     return this.options.serialOpt;
-  }
-
-  @VisibleForTesting
-  List<String> getExtraRunCmdArgs() {
-    return this.options.extraRunCmdArgs;
   }
 
   @VisibleForTesting
