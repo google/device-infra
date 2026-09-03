@@ -69,6 +69,7 @@ import com.google.devtools.mobileharness.infra.ats.server.util.AtsServerSessionU
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
@@ -108,9 +109,6 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -121,7 +119,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -150,8 +147,6 @@ final class NewMultiCommandRequestHandler {
 
   private static final Duration UNZIP_TIMEOUT = Duration.ofHours(1);
 
-  private static final DateTimeFormatter TIMESTAMP_DIR_NAME_FORMATTER =
-      DateTimeFormatter.ofPattern("uuuu.MM.dd_HH.mm.ss.SSS").withZone(ZoneId.systemDefault());
   private static final String OUTPUT_MANIFEST_FILE_NAME = "FILES";
   private static final Pattern ANDROID_XTS_ZIP_FILENAME_REGEX =
       Pattern.compile("android-[a-z]+\\.zip_?");
@@ -1223,8 +1218,7 @@ final class NewMultiCommandRequestHandler {
       CommandDetail.Builder commandDetailBuilder,
       ImmutableMap.Builder<String, TestContext> testContextMapBuilder)
       throws MobileHarnessException, InterruptedException {
-    String resultDirectoryName =
-        TIMESTAMP_DIR_NAME_FORMATTER.format(Instant.now()) + "_" + getRandom4Digits();
+    String resultDirectoryName = XtsDirUtil.generateTimestampDirName();
     Path resultDir = outputDirPath.resolve(resultDirectoryName);
     SessionRequestInfo sessionRequestInfo =
         getSessionRequestInfo(request, commandDetail.getOriginalCommandInfo(), sessionInfo);
@@ -1675,10 +1669,6 @@ final class NewMultiCommandRequestHandler {
       logger.atWarning().withCause(e).log("Failed to check testcases dir for %s.", xtsRootDir);
       return false;
     }
-  }
-
-  private static int getRandom4Digits() {
-    return ThreadLocalRandom.current().nextInt(1000, 10000);
   }
 
   private Path getSessionWorkDir(SessionInfo sessionInfo) {

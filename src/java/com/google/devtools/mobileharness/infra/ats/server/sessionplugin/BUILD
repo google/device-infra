@@ -99,6 +99,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:session_properties",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
         "//src/java/com/google/devtools/mobileharness/infra/lab/common/dir",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_constants",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/runtime:xts_tradefed_runtime_info",

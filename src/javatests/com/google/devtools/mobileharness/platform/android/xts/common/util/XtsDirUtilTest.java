@@ -33,6 +33,12 @@ public final class XtsDirUtilTest {
   private static final String SESSION_ID = "test_session_123";
 
   @Test
+  public void generateTimestampDirName_matchesPattern() {
+    assertThat(XtsDirUtil.generateTimestampDirName())
+        .matches("^\\d{4}\\.\\d{2}\\.\\d{2}_\\d{2}\\.\\d{2}\\.\\d{2}\\.\\d{3}_\\d{4}$");
+  }
+
+  @Test
   public void getXtsDynamicDownloadRootDir() {
     setFlags.set("xts_res_dir_root", "/flag/xts/root");
     assertThat(XtsDirUtil.getXtsDynamicDownloadRootDir())

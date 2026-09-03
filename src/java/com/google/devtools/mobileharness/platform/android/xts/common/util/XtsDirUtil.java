@@ -23,10 +23,28 @@ import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.util.concurrent.ThreadLocalRandom;
 
 /** xTs directory relevant util. */
 public class XtsDirUtil {
+
+  private static final DateTimeFormatter TIMESTAMP_DIR_NAME_FORMATTER =
+      DateTimeFormatter.ofPattern("uuuu.MM.dd_HH.mm.ss.SSS").withZone(ZoneId.systemDefault());
+
+  /**
+   * Generates a directory name based on the current timestamp with a random 4-digit suffix in the
+   * format of {@code uuuu.MM.dd_HH.mm.ss.SSS_1234}.
+   */
+  public static String generateTimestampDirName() {
+    return TIMESTAMP_DIR_NAME_FORMATTER.format(Instant.now()) + "_" + getRandom4Digits();
+  }
+
+  private static int getRandom4Digits() {
+    return ThreadLocalRandom.current().nextInt(1000, 10000);
+  }
 
   /** Gets a {@link String} to use for directory suffixes created from the given time. */
   public static String getDirSuffix(Instant time) {
