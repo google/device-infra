@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -22,6 +22,19 @@ package(
 
 go_library(
     name = "common",
-    srcs = ["multistringflag.go"],
+    srcs = [
+        "envelope.go",
+        "multistringflag.go",
+    ],
     importpath = "github.com/google/device-infra/src/devtools/rbe/common",
+    deps = [
+    ],
+)
+
+go_test(
+    name = "common_test",
+    srcs = ["envelope_test.go"],
+    embed = [":common"],
+    deps = [
+    ],
 )
