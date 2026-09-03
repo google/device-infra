@@ -43,6 +43,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggest
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.GetGlobalSummaryRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.GlobalSummary;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DimensionOverlay;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
@@ -61,6 +63,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.query.ScenarioCura
 import com.google.devtools.mobileharness.fe.v6.service.search.query.SearchCorpus;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionOverlayStore;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.FleetSnapshotStore;
+import com.google.devtools.mobileharness.fe.v6.service.search.summary.GlobalSummaryProvider;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -99,6 +102,7 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
   private final FleetValueLister valueLister;
   private final FleetPromotedKeysProvider promotedKeysProvider;
   private final FleetColumnCataloger columnCataloger;
+  private final GlobalSummaryProvider globalSummaryProvider;
 
   @Inject
   SearchServiceLogicImpl(
@@ -113,7 +117,8 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
       FleetChipResolver chipResolver,
       FleetValueLister valueLister,
       FleetPromotedKeysProvider promotedKeysProvider,
-      FleetColumnCataloger columnCataloger) {
+      FleetColumnCataloger columnCataloger,
+      GlobalSummaryProvider globalSummaryProvider) {
     this.executor = executor;
     this.store = store;
     this.overlayStore = overlayStore;
@@ -126,6 +131,7 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
     this.valueLister = valueLister;
     this.promotedKeysProvider = promotedKeysProvider;
     this.columnCataloger = columnCataloger;
+    this.globalSummaryProvider = globalSummaryProvider;
   }
 
   @Override
@@ -248,6 +254,11 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
           return columnCataloger.getColumnCatalog(corpus(fleet, request.getEntity()), request);
         },
         executor);
+  }
+
+  @Override
+  public ListenableFuture<GlobalSummary> getGlobalSummary(GetGlobalSummaryRequest request) {
+    return globalSummaryProvider.getGlobalSummary(request);
   }
 
   private SearchCorpus corpus(

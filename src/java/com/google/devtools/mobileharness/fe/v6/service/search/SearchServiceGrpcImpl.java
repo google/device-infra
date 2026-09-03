@@ -32,6 +32,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggest
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.GetGlobalSummaryRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.GlobalSummary;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchServiceGrpc;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsResolveChipsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsResolveChipsResponse;
@@ -154,6 +156,22 @@ public final class SearchServiceGrpcImpl extends SearchServiceGrpc.SearchService
         executor,
         SearchServiceGrpc.getServiceDescriptor(),
         SearchServiceGrpc.getGetFleetColumnCatalogMethod());
+  }
+
+  // ===========================================================================
+  // Home page global summary
+  // ===========================================================================
+
+  @Override
+  public void getGlobalSummary(
+      GetGlobalSummaryRequest request, StreamObserver<GlobalSummary> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        fleetLogic::getGlobalSummary,
+        executor,
+        SearchServiceGrpc.getServiceDescriptor(),
+        SearchServiceGrpc.getGetGlobalSummaryMethod());
   }
 
   // ===========================================================================
