@@ -19,8 +19,6 @@ package com.google.wireless.qa.mobileharness.shared.model.job.out;
 import com.google.devtools.mobileharness.api.model.job.out.TouchableTiming;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.PropertiesProto;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.RemoteFilesProto;
-import com.google.devtools.mobileharness.service.moss.proto.Slg.ResultProto;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 
 /**
@@ -44,14 +42,6 @@ public final class JobOutInternalFactory {
    */
   public static RemoteFiles createRemoteFiles(Timing timing, RemoteFilesProto remoteFilesProto) {
     return new RemoteFiles(timing, remoteFilesProto);
-  }
-
-  /**
-   * Creates a {@link Result} instance by the given {@link Timing}, {@link Params} and {@link
-   * ResultProto}.
-   */
-  public static Result createResult(Timing timing, Params params, ResultProto resultProto) {
-    return new Result(timing, params, resultProto);
   }
 
   /** Creates a {@link Status} instance by the given {@link Timing} and {@link TestStatus}. */

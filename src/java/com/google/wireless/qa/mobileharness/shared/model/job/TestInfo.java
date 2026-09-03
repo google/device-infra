@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Warnings;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionUnit;
 import com.google.devtools.mobileharness.shared.util.dir.TestDirUtil;
@@ -32,7 +33,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.RemoteFiles;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Status;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import java.time.Duration;
@@ -151,7 +151,7 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
                             "test_" + locator().getId())));
     warnings = new Warnings(log, timing().toNewTiming());
     properties = new Properties(timing());
-    result = new Result(timing(), jobInfo.params());
+    result = new Result(timing().toNewTiming(), jobInfo.params().toNewParams());
     status = new Status(timing());
     testExecutionUnitSupplier =
         Suppliers.memoize(
@@ -263,8 +263,8 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
   }
 
   /** Execution result with cause. */
-  public com.google.devtools.mobileharness.api.model.job.out.Result resultWithCause() {
-    return result.toNewResult();
+  public Result resultWithCause() {
+    return result;
   }
 
   /** Log generated during execution. */
