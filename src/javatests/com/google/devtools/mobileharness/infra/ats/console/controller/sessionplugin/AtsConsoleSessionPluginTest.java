@@ -79,7 +79,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
-public final class AtsSessionPluginTest {
+public final class AtsConsoleSessionPluginTest {
 
   @Rule public MockitoRule mockito = MockitoJUnit.rule();
 
@@ -95,11 +95,11 @@ public final class AtsSessionPluginTest {
   @Bind @Mock private LocalFileUtil localFileUtil;
   @Bind @Mock private SessionDeviceCache sessionDeviceCache;
 
-  @Inject private AtsSessionPlugin atsSessionPlugin;
+  @Inject private AtsConsoleSessionPlugin atsConsoleSessionPlugin;
 
   @Before
   public void setUp() {
-    AtsSessionPlugin.NEXT_RUN_COMMAND_ID.set(1);
+    AtsConsoleSessionPlugin.NEXT_RUN_COMMAND_ID.set(1);
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
   }
 
@@ -112,7 +112,7 @@ public final class AtsSessionPluginTest {
                 .setConfig(
                     Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
                 .build());
-    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
 
     verify(sessionInfo).putSessionProperty(SessionProperties.PROPERTY_KEY_COMMAND_ID, "1");
   }
@@ -126,7 +126,7 @@ public final class AtsSessionPluginTest {
                 .setConfig(
                     Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
                 .build());
-    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
 
     JobInfo tfJob = mock(JobInfo.class);
     when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job_name"));
@@ -134,7 +134,7 @@ public final class AtsSessionPluginTest {
         .thenReturn(ImmutableList.of(tfJob));
     when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
 
-    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
     verify(sessionInfo).addJob(tfJob);
   }
@@ -149,7 +149,7 @@ public final class AtsSessionPluginTest {
                 .setConfig(
                     Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
                 .build());
-    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
 
     JobInfo nonTfJob = mock(JobInfo.class);
     when(nonTfJob.locator()).thenReturn(new JobLocator("non_tf_job_id", "non_tf_job_name"));
@@ -160,7 +160,7 @@ public final class AtsSessionPluginTest {
     when(runCommandHandler.createNonTradefedJobs(runCommand))
         .thenReturn(ImmutableList.of(nonTfJob));
 
-    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
     verify(sessionInfo).addJob(nonTfJob);
   }
@@ -184,7 +184,7 @@ public final class AtsSessionPluginTest {
 
     JobEndEvent event = new JobEndEvent(jobInfo, /* jobError= */ null);
 
-    atsSessionPlugin.onJobEnd(event);
+    atsConsoleSessionPlugin.onJobEnd(event);
 
     verify(localFileUtil)
         .writeToFile("/tmp/test_gen_file_dir/ats_module_run_result.textproto", "result: PASS\n");
@@ -215,7 +215,7 @@ public final class AtsSessionPluginTest {
 
     JobEndEvent event = new JobEndEvent(jobInfo, /* jobError= */ null);
 
-    atsSessionPlugin.onJobEnd(event);
+    atsConsoleSessionPlugin.onJobEnd(event);
 
     verify(localFileUtil)
         .writeToFile(
@@ -245,7 +245,7 @@ public final class AtsSessionPluginTest {
     when(allocation.getAllDeviceLocators()).thenReturn(ImmutableList.of());
     when(startingEvent.getLocalDevices()).thenReturn(ImmutableMap.of());
 
-    atsSessionPlugin.onTestStarting(startingEvent);
+    atsConsoleSessionPlugin.onTestStarting(startingEvent);
 
     AtsSessionPluginNotification notification =
         AtsSessionPluginNotification.newBuilder()
@@ -262,7 +262,7 @@ public final class AtsSessionPluginTest {
             SessionNotification.newBuilder().setNotification(Any.pack(notification)).build(),
             TextFormat.printer());
 
-    atsSessionPlugin.onSessionNotification(notificationEvent);
+    atsConsoleSessionPlugin.onSessionNotification(notificationEvent);
 
     verify(testMessageUtil)
         .sendProtoMessageToTest(
@@ -291,7 +291,7 @@ public final class AtsSessionPluginTest {
     when(allocation.getAllDeviceLocators()).thenReturn(ImmutableList.of());
     when(startingEvent.getLocalDevices()).thenReturn(ImmutableMap.of());
 
-    atsSessionPlugin.onTestStarting(startingEvent);
+    atsConsoleSessionPlugin.onTestStarting(startingEvent);
 
     AtsSessionPluginNotification notification =
         AtsSessionPluginNotification.newBuilder()
@@ -308,7 +308,7 @@ public final class AtsSessionPluginTest {
             SessionNotification.newBuilder().setNotification(Any.pack(notification)).build(),
             TextFormat.printer());
 
-    atsSessionPlugin.onSessionNotification(notificationEvent);
+    atsConsoleSessionPlugin.onSessionNotification(notificationEvent);
 
     verify(testMessageUtil)
         .sendProtoMessageToTest(
@@ -338,7 +338,7 @@ public final class AtsSessionPluginTest {
     when(allocation.getAllDeviceLocators()).thenReturn(ImmutableList.of());
     when(startingEvent.getLocalDevices()).thenReturn(ImmutableMap.of());
 
-    atsSessionPlugin.onTestStarting(startingEvent);
+    atsConsoleSessionPlugin.onTestStarting(startingEvent);
 
     AtsSessionPluginNotification notification =
         AtsSessionPluginNotification.newBuilder()
@@ -355,7 +355,7 @@ public final class AtsSessionPluginTest {
             SessionNotification.newBuilder().setNotification(Any.pack(notification)).build(),
             TextFormat.printer());
 
-    atsSessionPlugin.onSessionNotification(notificationEvent);
+    atsConsoleSessionPlugin.onSessionNotification(notificationEvent);
 
     verify(testMessageUtil)
         .sendProtoMessageToTest(
@@ -384,7 +384,7 @@ public final class AtsSessionPluginTest {
     when(allocation.getAllDeviceLocators()).thenReturn(ImmutableList.of());
     when(startingEvent.getLocalDevices()).thenReturn(ImmutableMap.of());
 
-    atsSessionPlugin.onTestStarting(startingEvent);
+    atsConsoleSessionPlugin.onTestStarting(startingEvent);
 
     // First cancellation
     AtsSessionPluginNotification notification1 =
@@ -397,7 +397,7 @@ public final class AtsSessionPluginTest {
             sessionInfo,
             SessionNotification.newBuilder().setNotification(Any.pack(notification1)).build(),
             TextFormat.printer());
-    atsSessionPlugin.onSessionNotification(event1);
+    atsConsoleSessionPlugin.onSessionNotification(event1);
 
     // Second cancellation
     AtsSessionPluginNotification notification2 =
@@ -410,7 +410,7 @@ public final class AtsSessionPluginTest {
             sessionInfo,
             SessionNotification.newBuilder().setNotification(Any.pack(notification2)).build(),
             TextFormat.printer());
-    atsSessionPlugin.onSessionNotification(event2);
+    atsConsoleSessionPlugin.onSessionNotification(event2);
 
     verify(testMessageUtil)
         .sendProtoMessageToTest(
@@ -438,7 +438,7 @@ public final class AtsSessionPluginTest {
                 .setConfig(
                     Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
                 .build());
-    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
 
     JobInfo setupJob = mock(JobInfo.class);
     when(setupJob.locator())
@@ -454,7 +454,7 @@ public final class AtsSessionPluginTest {
     when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
     when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
 
-    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
     verify(sessionInfo).addJob(setupJob);
     verify(sessionInfo, never()).addJob(tfJob);
@@ -469,7 +469,7 @@ public final class AtsSessionPluginTest {
                 .setConfig(
                     Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
                 .build());
-    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
 
     JobInfo setupJob = mock(JobInfo.class);
     when(setupJob.locator())
@@ -486,12 +486,12 @@ public final class AtsSessionPluginTest {
     when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
     when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
 
-    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
     verify(sessionInfo).addJob(setupJob);
     verify(sessionInfo, never()).addJob(tfJob);
 
-    atsSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
+    atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
 
     verify(sessionInfo).addJob(tfJob);
   }
@@ -506,7 +506,7 @@ public final class AtsSessionPluginTest {
                 .setConfig(
                     Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
                 .build());
-    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
 
     JobInfo setupJob = mock(JobInfo.class);
     when(setupJob.locator())
@@ -524,12 +524,12 @@ public final class AtsSessionPluginTest {
         .thenReturn(ImmutableList.of(nonTfJob));
     when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
 
-    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
     verify(sessionInfo).addJob(setupJob);
     verify(sessionInfo, never()).addJob(nonTfJob);
 
-    atsSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
+    atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
 
     verify(sessionInfo).addJob(nonTfJob);
   }
@@ -543,7 +543,7 @@ public final class AtsSessionPluginTest {
                 .setConfig(
                     Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
                 .build());
-    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
 
     JobInfo tfJob = mock(JobInfo.class);
     when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job"));
@@ -558,7 +558,7 @@ public final class AtsSessionPluginTest {
         .thenReturn(ImmutableList.of(nonTfJob));
     when(runCommandHandler.createSetupJob()).thenReturn(Optional.empty());
 
-    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
     verify(sessionInfo).addJob(tfJob);
     verify(sessionInfo, never()).addJob(nonTfJob);
@@ -573,7 +573,7 @@ public final class AtsSessionPluginTest {
                 .setConfig(
                     Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
                 .build());
-    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
 
     Properties setupTestProperties = new Properties(new Timing());
     setupTestProperties.add("phase_skippable_decorator_state::device1::decorator1::key1", "val1");
@@ -613,7 +613,7 @@ public final class AtsSessionPluginTest {
     when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
     when(runCommandHandler.createTeardownJob()).thenReturn(Optional.of(teardownJob));
 
-    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
     verify(sessionInfo).addJob(setupJob);
     verify(sessionInfo, never()).addJob(tfJob);
@@ -621,18 +621,18 @@ public final class AtsSessionPluginTest {
     verify(sessionInfo, never()).addJob(teardownJob);
 
     // Setup job ends -> TF job scheduled
-    atsSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
+    atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
     verify(sessionInfo).addJob(tfJob);
     verify(sessionInfo, never()).addJob(nonTfJob);
     verify(sessionInfo, never()).addJob(teardownJob);
 
     // TF job ends -> Non-TF main job scheduled
-    atsSessionPlugin.onJobEnd(new JobEndEvent(tfJob, /* jobError= */ null));
+    atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(tfJob, /* jobError= */ null));
     verify(sessionInfo).addJob(nonTfJob);
     verify(sessionInfo, never()).addJob(teardownJob);
 
     // Non-TF job ends -> Teardown job scheduled
-    atsSessionPlugin.onJobEnd(new JobEndEvent(nonTfJob, /* jobError= */ null));
+    atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(nonTfJob, /* jobError= */ null));
     verify(sessionInfo).addJob(teardownJob);
     assertThat(
             teardownTestProperties.get(
@@ -649,7 +649,7 @@ public final class AtsSessionPluginTest {
                 .setConfig(
                     Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
                 .build());
-    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
 
     JobInfo setupJob = mock(JobInfo.class);
     when(setupJob.locator())
@@ -677,20 +677,20 @@ public final class AtsSessionPluginTest {
     when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
     when(runCommandHandler.createTeardownJob()).thenReturn(Optional.of(teardownJob));
 
-    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
     // Setup job ends -> TF jobs scheduled
-    atsSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
+    atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
     verify(sessionInfo).addJob(tfJob1);
     verify(sessionInfo).addJob(tfJob2);
     verify(sessionInfo, never()).addJob(teardownJob);
 
     // TF job 1 ends -> Teardown NOT yet scheduled (TF job 2 still running)
-    atsSessionPlugin.onJobEnd(new JobEndEvent(tfJob1, /* jobError= */ null));
+    atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(tfJob1, /* jobError= */ null));
     verify(sessionInfo, never()).addJob(teardownJob);
 
     // TF job 2 ends -> Teardown scheduled
-    atsSessionPlugin.onJobEnd(new JobEndEvent(tfJob2, /* jobError= */ null));
+    atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(tfJob2, /* jobError= */ null));
     verify(sessionInfo).addJob(teardownJob);
   }
 
@@ -705,7 +705,7 @@ public final class AtsSessionPluginTest {
                     Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
                 .build());
     when(runCommandHandler.shouldEnableModuleSharding()).thenReturn(true);
-    atsSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
 
     JobInfo setupJob = mock(JobInfo.class);
     when(setupJob.locator())
@@ -743,21 +743,21 @@ public final class AtsSessionPluginTest {
     when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
     when(runCommandHandler.createTeardownJob()).thenReturn(Optional.of(teardownJob));
 
-    atsSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+    atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
     // Setup job ends -> 1 static job for module 1 and 1 MCTS job for module 2 scheduled
     // concurrently
-    atsSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
+    atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
     verify(sessionInfo).addJob(tfJob1Static);
     verify(sessionInfo).addJob(tfJob2Mcts);
     verify(sessionInfo, never()).addJob(teardownJob);
 
     // TF job 1 ends -> Teardown NOT yet scheduled
-    atsSessionPlugin.onJobEnd(new JobEndEvent(tfJob1Static, /* jobError= */ null));
+    atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(tfJob1Static, /* jobError= */ null));
     verify(sessionInfo, never()).addJob(teardownJob);
 
     // Last TF job ends -> Teardown scheduled
-    atsSessionPlugin.onJobEnd(new JobEndEvent(tfJob2Mcts, /* jobError= */ null));
+    atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(tfJob2Mcts, /* jobError= */ null));
     verify(sessionInfo).addJob(teardownJob);
   }
 }

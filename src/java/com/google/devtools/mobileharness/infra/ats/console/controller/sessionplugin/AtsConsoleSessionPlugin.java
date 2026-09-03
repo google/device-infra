@@ -128,7 +128,7 @@ import javax.inject.Inject;
   AtsSessionPluginOutput.class,
   AtsSessionPluginNotification.class
 })
-public class AtsSessionPlugin {
+public class AtsConsoleSessionPlugin {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -190,7 +190,7 @@ public class AtsSessionPlugin {
   private final AtomicReference<String> runningTeardownJobId = new AtomicReference<>();
 
   @Inject
-  AtsSessionPlugin(
+  AtsConsoleSessionPlugin(
       SessionInfo sessionInfo,
       DumpEnvVarCommandHandler dumpEnvVarCommandHandler,
       DumpStackTraceCommandHandler dumpStackCommandHandler,
@@ -215,7 +215,7 @@ public class AtsSessionPlugin {
     this.sessionDeviceCache = sessionDeviceCache;
     this.scheduledThreadPool =
         ThreadPools.createStandardScheduledThreadPool(
-            "ats-session-plugin-scheduled-thread-pool-" + sessionInfo.getSessionId(),
+            "ats-console-session-plugin-scheduled-thread-pool-" + sessionInfo.getSessionId(),
             /* corePoolSize= */ 2);
   }
 

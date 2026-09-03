@@ -50,7 +50,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_result_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:xts_job_creator",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:ats_session_plugin",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:ats_console_session_plugin",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:dump_env_var_command_handler",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:dump_stack_trace_command_handler",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:dump_uptime_command_handler",

@@ -25,10 +25,10 @@ package(
 )
 
 java_library(
-    name = "ats_session_plugin",
+    name = "ats_console_session_plugin",
     srcs = [
-        "AtsSessionPlugin.java",
-        "AtsSessionPluginModule.java",
+        "AtsConsoleSessionPlugin.java",
+        "AtsConsoleSessionPluginModule.java",
     ],
     visibility = DEFAULT_VISIBILITY + [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__subpackages__",

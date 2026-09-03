@@ -24,8 +24,8 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.Compati
 import com.google.devtools.mobileharness.infra.controller.device.DeviceManagementFilter;
 import com.google.inject.AbstractModule;
 
-/** Guice module for {@code AtsSessionPlugin}. */
-public final class AtsSessionPluginModule extends AbstractModule {
+/** Guice module for {@code AtsConsoleSessionPlugin}. */
+public final class AtsConsoleSessionPluginModule extends AbstractModule {
 
   @Override
   protected void configure() {

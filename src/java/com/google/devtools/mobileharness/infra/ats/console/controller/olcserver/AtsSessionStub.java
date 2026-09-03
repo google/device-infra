@@ -95,10 +95,10 @@ public class AtsSessionStub {
   private static final String SESSION_PLUGIN_LABEL = "AtsSessionPlugin";
   private static final String SESSION_PLUGIN_CLASS_NAME =
       "com.google.devtools.mobileharness.infra.ats.console."
-          + "controller.sessionplugin.AtsSessionPlugin";
+          + "controller.sessionplugin.AtsConsoleSessionPlugin";
   private static final String SESSION_PLUGIN_MODULE_CLASS_NAME =
       "com.google.devtools.mobileharness.infra.ats.console."
-          + "controller.sessionplugin.AtsSessionPluginModule";
+          + "controller.sessionplugin.AtsConsoleSessionPluginModule";
   private static final Duration GET_SESSION_STATUS_SHORT_INTERVAL = Duration.ofMillis(400L);
   private static final Duration GET_SESSION_STATUS_MEDIUM_INTERVAL = Duration.ofSeconds(5L);
   private static final Duration GET_SESSION_STATUS_LONG_INTERVAL = Duration.ofSeconds(30L);
@@ -522,8 +522,8 @@ public class AtsSessionStub {
    * Returns the highest priority exception as the session error, and other exceptions as its
    * suppressed exceptions.
    *
-   * <p>Priority: exceptions from AtsSessionPlugin -> exception from session runner -> exception
-   * from other session plugins.
+   * <p>Priority: exceptions from AtsConsoleSessionPlugin -> exception from session runner ->
+   * exception from other session plugins.
    */
   private static Optional<MobileHarnessException> getSessionError(SessionDetail sessionDetail) {
     Optional<MobileHarnessException> sessionRunnerError =
@@ -536,7 +536,7 @@ public class AtsSessionStub {
                         sessionDetail.getSessionRunnerError())))
             : Optional.empty();
 
-    // Selects exceptions from AtsSessionPlugin.
+    // Selects exceptions from AtsConsoleSessionPlugin.
     List<SessionPluginError> sessionPluginErrors =
         sessionDetail.getSessionOutput().getSessionPluginErrorList();
     Map<Boolean, List<SessionPluginError>> sessionPluginErrorsPartitionedByLabel =
