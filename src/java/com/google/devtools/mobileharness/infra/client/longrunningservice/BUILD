@@ -117,7 +117,10 @@ java_library(
 java_library(
     name = "olc_server_module_factory",
     srcs = ["OlcServerModuleFactory.java"],
-    visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/integration:__pkg__",
+    ],
     deps = [
         "@maven//:com_google_inject_guice",
     ],
@@ -126,6 +129,10 @@ java_library(
 java_library(
     name = "olc_server_module_factory_impl",
     srcs = ["OlcServerModuleFactoryImpl.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/integration:__pkg__",
+    ],
     deps = [
         ":olc_server_module",
         ":olc_server_module_factory",
@@ -136,7 +143,9 @@ java_library(
 java_library(
     name = "olc_server_runner",
     srcs = ["OlcServerRunner.java"],
-    visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__",
+    ],
     deps = [
         "//src/devtools/mobileharness/infra/controller/device/proto:device_management_filter_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",

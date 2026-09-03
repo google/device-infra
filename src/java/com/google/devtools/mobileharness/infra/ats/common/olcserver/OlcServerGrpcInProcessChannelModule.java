@@ -28,6 +28,7 @@ import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
 import java.io.IOException;
 import java.util.Set;
+import java.util.UUID;
 import javax.inject.Singleton;
 
 /** Module for providing gRPC in-process channels connecting to an in-process OLC server. */
@@ -41,7 +42,7 @@ public class OlcServerGrpcInProcessChannelModule extends AbstractModule {
       ListeningScheduledExecutorService scheduledThreadPool,
       @OlcServicesForNonWorker Set<BindableService> services)
       throws IOException {
-    String serverName = "in-process-olc-grpc-server";
+    String serverName = "in-process-olc-grpc-server-" + UUID.randomUUID();
     InProcessServerBuilder serverBuilder =
         InProcessServerBuilder.forName(serverName)
             .executor(threadPool)

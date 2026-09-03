@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.controller.messaging;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -47,6 +48,11 @@ public class MessagingManagerHolder {
     MessagingManager messagingManager = MessagingManagerHolder.messagingManager.get();
     checkState(messagingManager != null, "MessagingManager has not been initialized");
     return messagingManager;
+  }
+
+  @VisibleForTesting
+  public static void resetForTest() {
+    messagingManager.set(null);
   }
 
   private MessagingManagerHolder() {}

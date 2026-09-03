@@ -59,6 +59,13 @@ public class TestMessageManager {
     }
   }
 
+  @VisibleForTesting
+  public static void resetForTest() {
+    synchronized (CONSTRUCTING_LOCK) {
+      instance = null;
+    }
+  }
+
   /**
    * Gets the singleton instance.
    *
