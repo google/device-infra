@@ -16,11 +16,11 @@
 
 package com.google.devtools.mobileharness.service.moss.util.slg;
 
+import com.google.devtools.mobileharness.api.model.job.out.JobOutInternalFactory;
+import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.ResultProto;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.JobOutInternalFactory;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 
 /**
@@ -36,14 +36,15 @@ final class ResultConverter {
    * Note: the params should be restored first in able to invoke this method.
    */
   static Result fromProto(Timing timing, Params params, ResultProto resultProto) {
-    return JobOutInternalFactory.createResult(timing, params, resultProto);
+    return JobOutInternalFactory.createResult(
+        timing.toNewTiming(), params.toNewParams(), resultProto);
   }
 
   /**
    * Gets a {@link ResultProto} by the given {@link Result}. The cause to the failure result is also
    * persistent if presented.
    */
-  static ResultProto toProto(com.google.devtools.mobileharness.api.model.job.out.Result result) {
+  static ResultProto toProto(Result result) {
     ResultTypeWithCause resultTypeWithCause = result.get();
     ResultProto.Builder resultProto =
         ResultProto.newBuilder().setResult(resultTypeWithCause.type());

@@ -41,7 +41,6 @@ java_library(
         "Log.java",
         "Properties.java",
         "RemoteFiles.java",
-        "Result.java",
         "Status.java",
     ],
     exports = [
@@ -49,11 +48,8 @@ java_library(
     ],
     deps = [
         ":timing",
-        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/api/model/job/in",
-        "//src/java/com/google/devtools/mobileharness/api/model/job/out",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
@@ -61,7 +57,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/log:log_collector_backend",
         "//src/java/com/google/wireless/qa/mobileharness/shared/log:log_context",
         "//src/java/com/google/wireless/qa/mobileharness/shared/log:log_data",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
@@ -80,7 +75,6 @@ java_library(
         ":out",
         "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
     ],
 )

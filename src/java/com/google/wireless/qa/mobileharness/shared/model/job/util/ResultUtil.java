@@ -20,6 +20,7 @@ import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException.DesiredTestResult;
+import com.google.wireless.qa.mobileharness.shared.proto.Job;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.ResultCounter;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.util.ArrayList;
@@ -46,6 +47,41 @@ public final class ResultUtil {
 
     // Get test result of a test.
     TestResult getResult(T t);
+  }
+
+  /**
+   * Converts a legacy result type to the current one.
+   *
+   * <p>ABORT and ERROR aside, the values correspond by name. INFRA_ERROR has no counterpart and
+   * folds into ERROR, which the current enum documents as covering MH infra and the tools MH
+   * depends on.
+   */
+  public static TestResult upgradeTestResult(Job.TestResult oldType) {
+    switch (oldType) {
+      case UNKNOWN:
+        return TestResult.UNKNOWN;
+      case PASS:
+        return TestResult.PASS;
+      case FAIL:
+        return TestResult.FAIL;
+      case TIMEOUT:
+        return TestResult.TIMEOUT;
+      case SKIP:
+        return TestResult.SKIP;
+      case ABORT:
+        return TestResult.ABORT;
+      case ERROR:
+      default:
+        return TestResult.ERROR;
+    }
+  }
+
+  /**
+   * Converts a current result type back to the legacy one, for RPC and storage protos that still
+   * carry the legacy enum.
+   */
+  public static Job.TestResult downgradeTestResult(TestResult newType) {
+    return Job.TestResult.valueOf(newType.name());
   }
 
   /** Gets test result with the given exception. */
