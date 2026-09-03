@@ -382,7 +382,7 @@ public class AndroidInstrumentationTest {
         .writeToFile(
             eq(PathUtil.join(genFileDirPath, "instrument_test_result.pb")), any(byte[].class));
 
-    File xmlResultFile = new File(PathUtil.join(genFileDirPath, "test_result.xml"));
+    File xmlResultFile = new File(PathUtil.join(genFileDirPath, "junit.xml"));
     assertThat(xmlResultFile.exists()).isTrue();
     String xmlContent = new String(Files.readAllBytes(xmlResultFile.toPath()), UTF_8);
     assertThat(xmlContent).contains("<testsuites>");

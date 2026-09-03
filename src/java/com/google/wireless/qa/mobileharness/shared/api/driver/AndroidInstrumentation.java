@@ -1094,7 +1094,7 @@ public class AndroidInstrumentation extends BaseDriver
   private static void generateJunitXml(
       TestSuiteResult testSuiteResult, TestInfo testInfo, Instant instrumentationStartTime)
       throws MobileHarnessException {
-    String testResultFilePath = PathUtil.join(testInfo.getGenFileDir(), "test_result.xml");
+    String testResultFilePath = PathUtil.join(testInfo.getGenFileDir(), "junit.xml");
     try {
       com.google.devtools.mobileharness.shared.util.junit.xmlwriter.model.TestResult testResult =
           TestSuiteResultConverter.toJunitTestResult(
