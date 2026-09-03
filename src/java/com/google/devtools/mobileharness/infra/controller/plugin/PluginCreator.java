@@ -211,6 +211,10 @@ public class PluginCreator implements AutoCloseable {
               jarUrls, getClass().getClassLoader(), forceLoadFromJarClassRegex);
       Set<Class<? extends Module>> moduleClasses = getPluginModuleClasses(jarUrls);
       Set<Class<?>> classes = getPluginClasses(jarUrls);
+      if (scanResult != null) { // Close the ScanResult immediately to save memory.
+        scanResult.close();
+        scanResult = null;
+      }
       if (classes.isEmpty()) {
         logInfo("No plugin is loaded");
         return false;
