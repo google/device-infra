@@ -262,17 +262,6 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
     return status;
   }
 
-  /**
-   * Please use {@link #resultWithCause()} instead because it requires result cause for a
-   * non-passing result, which helps debugging.
-   *
-   * <p>Execution result.
-   */
-  @Deprecated
-  public Result result() {
-    return result;
-  }
-
   /** Execution result with cause. */
   public com.google.devtools.mobileharness.api.model.job.out.Result resultWithCause() {
     return result.toNewResult();
