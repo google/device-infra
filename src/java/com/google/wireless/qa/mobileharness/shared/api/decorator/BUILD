@@ -240,6 +240,32 @@ java_library(
 )
 
 java_library(
+    name = "android_cdp_decorator",
+    srcs = [
+        "AndroidCdpDecorator.java",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/process:android_process_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/shared/autovalue:util_args",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent/retry",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "android_clean_apps_decorator",
     srcs = ["AndroidCleanAppsDecorator.java"],
     deps = [
