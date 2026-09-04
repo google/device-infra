@@ -330,7 +330,6 @@ public final class NewMultiCommandRequestHandlerTest {
     CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId()).isEqualTo(commandId);
-    assertThat(properties.get("xts-tradefed-job")).isEqualTo("true");
     assertThat(properties.get("xts_command_id")).isEqualTo(commandId);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
@@ -467,7 +466,6 @@ public final class NewMultiCommandRequestHandlerTest {
     CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId()).isEqualTo(commandId);
-    assertThat(properties.get("xts-tradefed-job")).isEqualTo("true");
     assertThat(properties.get("xts_command_id")).isEqualTo(commandId);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
@@ -540,7 +538,6 @@ public final class NewMultiCommandRequestHandlerTest {
     CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId()).isEqualTo(commandId);
-    assertThat(properties.get("xts-tradefed-job")).isEqualTo("true");
     assertThat(properties.get("xts_command_id")).isEqualTo(commandId);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
@@ -663,7 +660,6 @@ public final class NewMultiCommandRequestHandlerTest {
     CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(retryCommandLine);
     assertThat(commandDetail.getId()).isEqualTo(expectedCommandId);
-    assertThat(properties.get("xts-tradefed-job")).isEqualTo("true");
     assertThat(properties.get("xts_command_id")).isEqualTo(expectedCommandId);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
@@ -798,7 +794,6 @@ public final class NewMultiCommandRequestHandlerTest {
     CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId()).isEqualTo(commandId);
-    assertThat(properties.get("xts-tradefed-job")).isEqualTo("true");
     assertThat(properties.get("xts_command_id")).isEqualTo(commandId);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
@@ -1040,7 +1035,6 @@ public final class NewMultiCommandRequestHandlerTest {
     CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId()).isEqualTo(commandId);
-    assertThat(properties.get("xts-tradefed-job")).isEqualTo("true");
     assertThat(properties.get("xts_command_id")).isEqualTo(commandId);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 

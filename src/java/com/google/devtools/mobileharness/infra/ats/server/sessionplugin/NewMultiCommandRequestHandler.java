@@ -150,7 +150,6 @@ final class NewMultiCommandRequestHandler {
   private static final String OUTPUT_MANIFEST_FILE_NAME = "FILES";
   private static final Pattern ANDROID_XTS_ZIP_FILENAME_REGEX =
       Pattern.compile("android-[a-z]+\\.zip_?");
-  @VisibleForTesting static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
   private static final String ACLOUD_FILENAME = "acloud_prebuilt";
 
   private static final String ATS_GOOGLE_CLOUD_STORAGE_PREFIX = "mtt:///google_cloud_storage/";
@@ -557,7 +556,6 @@ final class NewMultiCommandRequestHandler {
       }
       commandDetailBuilder.setState(CommandState.RUNNING);
       jobInfo.properties().add(XtsPropertyName.Job.XTS_COMMAND_ID, commandId);
-      jobInfo.properties().add(XTS_TF_JOB_PROP, "true");
       logger.atInfo().log(
           "Added job [%s] to the session %s",
           jobInfo.locator().getId(), sessionInfo.getSessionId());
