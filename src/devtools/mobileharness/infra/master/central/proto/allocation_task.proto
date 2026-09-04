@@ -146,6 +146,7 @@ message AllocationWorkflowContext {
 
   OmnilabContext omnilab_context = 1;
   SchedukeContext scheduke_context = 2;
+  // TODO: b/ - Rename to test_exec_env_context?
   OtterContext otter_context = 3;
 }
 
