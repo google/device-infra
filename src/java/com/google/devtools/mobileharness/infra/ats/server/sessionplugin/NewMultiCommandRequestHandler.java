@@ -147,7 +147,7 @@ final class NewMultiCommandRequestHandler {
 
   private static final Duration UNZIP_TIMEOUT = Duration.ofHours(1);
 
-  private static final String OUTPUT_MANIFEST_FILE_NAME = "FILES";
+  @VisibleForTesting static final String OUTPUT_MANIFEST_FILE_NAME = "FILES";
   private static final Pattern ANDROID_XTS_ZIP_FILENAME_REGEX =
       Pattern.compile("android-[a-z]+\\.zip_?");
   @VisibleForTesting static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
@@ -1404,31 +1404,34 @@ final class NewMultiCommandRequestHandler {
    * paths) in the output directory. Also removes any existing manifest file with the same name if
    * it exists.
    */
-  private void createOutputManifestFile(Path outputDirPath) {
+  @VisibleForTesting
+  void createOutputManifestFile(Path outputDirPath) {
     try {
-      ImmutableList.Builder<String> outputManifestListBuilder = ImmutableList.builder();
-      localFileUtil.listFiles(outputDirPath.toString(), /* recursively= */ true).stream()
-          .map(File::getAbsolutePath)
-          .filter(
-              path -> {
-                if (path.endsWith(OUTPUT_MANIFEST_FILE_NAME)) {
-                  try {
-                    localFileUtil.removeFileOrDir(path);
-                  } catch (MobileHarnessException | InterruptedException e) {
-                    logger.atWarning().withCause(e).log(
-                        "Failed to remove existing output manifest file: %s", path);
-                    if (MoreThrowables.isInterruption(e)) {
-                      Thread.currentThread().interrupt();
-                    }
+      List<File> allFiles =
+          localFileUtil.listFiles(outputDirPath.toString(), /* recursively= */ true);
+
+      allFiles.stream()
+          .filter(file -> file.getName().equals(OUTPUT_MANIFEST_FILE_NAME))
+          .forEach(
+              file -> {
+                try {
+                  localFileUtil.removeFileOrDir(file.getAbsolutePath());
+                } catch (MobileHarnessException | InterruptedException e) {
+                  logger.atWarning().withCause(e).log(
+                      "Failed to remove existing output manifest file: %s", file.getAbsolutePath());
+                  if (MoreThrowables.isInterruption(e)) {
+                    Thread.currentThread().interrupt();
                   }
-                  return false;
                 }
-                return true;
-              })
-          // Get the relative path of the file ("+ 1" to skip past the "/").
-          .map(path -> path.substring(outputDirPath.toString().length() + 1))
-          .forEach(outputManifestListBuilder::add);
-      String outputManifest = String.join("\n", outputManifestListBuilder.build());
+              });
+
+      ImmutableList<String> relativePaths =
+          allFiles.stream()
+              .filter(file -> !file.getName().equals(OUTPUT_MANIFEST_FILE_NAME))
+              .map(file -> outputDirPath.relativize(file.toPath()).toString())
+              .collect(toImmutableList());
+
+      String outputManifest = String.join("\n", relativePaths);
       localFileUtil.writeToFile(
           outputDirPath.resolve(OUTPUT_MANIFEST_FILE_NAME).toString(), outputManifest);
     } catch (MobileHarnessException e) {
