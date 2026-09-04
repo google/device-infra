@@ -296,6 +296,26 @@ public final class MctsDynamicDownloadPluginTest {
   }
 
   @Test
+  public void onTestStarting_setupJob_setsHasPreloadedMainlineModulesProperty() throws Exception {
+    when(jobProperties.getOptional(XtsConstants.XTS_JOB_NAME))
+        .thenReturn(Optional.of(XtsConstants.SETUP_JOB_NAME));
+    generateTestZipFilesForDynamicJob();
+
+    try {
+      spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
+
+      // The mocked device (listModuleInfos) reports preloaded Mainline modules.
+      verify(testProperties)
+          .add(
+              XtsConstants.XTS_DYNAMIC_DOWNLOAD_HAS_PRELOADED_MAINLINE_MODULES_PROPERTY_KEY,
+              "true");
+    } finally {
+      localFileUtil.removeFileOrDir(
+          XtsDirUtil.getXtsDynamicDownloadDir("test_session_id").toString());
+    }
+  }
+
+  @Test
   public void onTestStarting_teardownJob_cleansUpWorkDirAndStaleSessionDirs() throws Exception {
     Path sessionDir = XtsDirUtil.getXtsDynamicDownloadDir("test_session_id");
     localFileUtil.prepareDir(sessionDir.resolve("testcases").toString());

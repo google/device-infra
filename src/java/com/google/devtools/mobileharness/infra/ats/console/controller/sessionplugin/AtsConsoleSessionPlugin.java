@@ -381,6 +381,12 @@ public class AtsConsoleSessionPlugin {
       // now that the canonical list of dynamic modules is known.
       ImmutableSet<String> dynamicMctsModules = extractDynamicMctsModules(currentJob);
       createMainJobs(config.getRunCommand(), dynamicMctsModules);
+      // If the setup job reported the device has no preloaded Mainline modules (e.g. Auto / AOSP
+      // builds), it does not need dynamic MCTS, so drop the redundant dynamic MCTS jobs to avoid
+      // booting Tradefed for 0 tests.
+      if (!extractHasPreloadedMainlineModules(currentJob)) {
+        dropDynamicMctsTradefedJobs();
+      }
       addMainJobs();
       return;
     }
@@ -856,6 +862,51 @@ public class AtsConsoleSessionPlugin {
             modulesStr ->
                 Splitter.on(',').omitEmptyStrings().trimResults().splitToStream(modulesStr))
         .collect(toImmutableSet());
+  }
+
+  /**
+   * Extracts whether the device under test has preloaded Mainline modules, as relayed via a test
+   * property from the completed setup job. Returns {@code true} when the property is absent (e.g.
+   * an older setup plugin or a failed setup) so that dynamic MCTS is never skipped due to
+   * ambiguity.
+   */
+  private static boolean extractHasPreloadedMainlineModules(JobInfo setupJob) {
+    if (setupJob.tests() == null
+        || setupJob.tests().getAll() == null
+        || setupJob.tests().getAll().isEmpty()) {
+      return true;
+    }
+    // A session may span multiple devices (one setup test each). Keep dynamic MCTS unless EVERY
+    // device explicitly reports no preloaded Mainline modules. A device is treated as needing MCTS
+    // if it reports "true" or if its signal is missing (safe default), so we only skip when all
+    // devices are unambiguously "false".
+    return setupJob.tests().getAll().values().stream()
+        .anyMatch(
+            testInfo -> {
+              String value =
+                  testInfo
+                      .properties()
+                      .get(
+                          XtsConstants
+                              .XTS_DYNAMIC_DOWNLOAD_HAS_PRELOADED_MAINLINE_MODULES_PROPERTY_KEY);
+              return value == null || Boolean.parseBoolean(value);
+            });
+  }
+
+  /**
+   * Removes dynamic MCTS Tradefed jobs from {@link #tradefedJobs}. Invoked when the setup job
+   * reports that the device has no preloaded Mainline modules (e.g. Auto / AOSP builds), so the
+   * dynamic MCTS jobs would only boot Tradefed for 0 tests.
+   */
+  private void dropDynamicMctsTradefedJobs() {
+    tradefedJobs =
+        tradefedJobs.stream()
+            .filter(
+                job ->
+                    !Objects.equals(
+                        job.properties().get(XtsConstants.XTS_JOB_NAME),
+                        XtsConstants.DYNAMIC_MCTS_JOB_NAME))
+            .collect(toImmutableList());
   }
 
   /**
