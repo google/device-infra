@@ -270,7 +270,7 @@ public final class FleetSuggester {
             catalogDimensions);
 
     if (query.isEmpty()) {
-      return emptyState(context, limit);
+      return FleetSuggestionResponse.getDefaultInstance();
     }
 
     // Pattern 0: the group-by prefix owns its input. A group-by term that matches no key returns
@@ -389,12 +389,52 @@ public final class FleetSuggester {
   private List<Cand> suggestKv(Context context, String keyToken, String rawValue, boolean exclude) {
     List<Cand> out = new ArrayList<>();
     ImmutableList<String> keyIds = resolveKey(context, keyToken);
+    if (keyIds.isEmpty()) {
+      // When built-in keys (and known catalog/index keys) did not match, fallback to treating the
+      // bare token as an arbitrary dimension name (or host property for HostCorpus) so long-tail
+      // dimensions can be filtered even before the dimension catalog is populated.
+      String bareName = normalize(keyToken);
+      if (!bareName.isEmpty()) {
+        keyIds =
+            ImmutableList.of(
+                context.corpus() instanceof HostCorpus
+                    ? HostKeys.PREFIX_HOST_PROPERTY + bareName
+                    : DeviceKeys.PREFIX_DIMENSION + bareName);
+      }
+    }
 
     // Comma outside quotes: a multi-value OR under the resolved key.
     if (rawValue.contains(",") && !rawValue.contains("\"") && !rawValue.contains("'")) {
       ImmutableList<String> parts = splitCommaLower(rawValue);
       for (String keyId : keyIds) {
         addMultiValueOr(context, out, keyId, parts, exclude);
+      }
+      if (out.isEmpty() && !keyIds.isEmpty()) {
+        for (String keyId : keyIds) {
+          if (!context.activeKeys().contains(keyId)) {
+            String display = displayName(context.corpus(), keyId);
+            String verb = isPlural(context.corpus(), keyId) ? "are" : "is";
+            if (exclude) {
+              verb += " not";
+            }
+            String joined = String.join(", ", parts);
+            ImmutableList<TextSegment> mainText = segments(display + " " + verb + " ", joined);
+            SimpleMatch.Builder simpleBuilder = SimpleMatch.newBuilder().setNegated(exclude);
+            for (String part : parts) {
+              simpleBuilder.addValues(FilterValue.newBuilder().setValue(part));
+            }
+            Filter filter = Filter.newBuilder().setKey(keyId).setSimple(simpleBuilder).build();
+            FleetSuggestion.Builder builder =
+                FleetSuggestion.newBuilder()
+                    .setLabel("Add filter")
+                    .addAllMainText(mainText)
+                    .setApplyFilter(applyFilter(context.corpus(), context.index(), keyId, filter));
+            Cand cand = new Cand(Kind.CONDITION, keyId, 1.0, builder, mainTextString(mainText));
+            cand.needsCount = false;
+            cand.noCount = true;
+            out.add(cand);
+          }
+        }
       }
       return out;
     }
@@ -739,35 +779,6 @@ public final class FleetSuggester {
     return response.build();
   }
 
-  // ---- Empty query (spec section 11 empty state) ----
-
-  private FleetSuggestionResponse emptyState(Context context, int limit) {
-    FleetIndex index = context.index();
-    FleetSuggestionResponse.Builder response = FleetSuggestionResponse.newBuilder();
-    int emitted = 0;
-    // Personalization is deferred, so no recent conditions are offered; only curated starter keys.
-    for (String keyId : emptyStateKeys(context)) {
-      if (emitted >= limit) {
-        break;
-      }
-      if (!index.keyIds().contains(keyId)) {
-        continue;
-      }
-      boolean inChip = context.activeKeys().contains(keyId);
-      response.addItems(
-          FleetSuggestion.newBuilder()
-              .setLabel(label(context.corpus(), keyId, inChip))
-              .addAllMainText(segments(displayName(context.corpus(), keyId), null))
-              .setOpenPicker(
-                  inChip
-                      ? openPickerViewExisting(context.corpus(), keyId)
-                      : openPickerNewChip(context.corpus(), keyId))
-              .build());
-      emitted++;
-    }
-    return response.build();
-  }
-
   // ---- Condition builder (spec section 10.2, section 11.1 eligibility) ----
 
   @Nullable
@@ -1088,14 +1099,12 @@ public final class FleetSuggester {
     if (dim.matches()) {
       String dimName = normalize(dim.group(1));
       String keyId = DeviceKeys.PREFIX_DIMENSION + dimName;
-      return (index.keyIds().contains(keyId) || catalogDimensions.contains(dimName))
-          ? ImmutableList.of(keyId)
-          : ImmutableList.of();
+      return ImmutableList.of(keyId);
     }
     Matcher prop = NAMESPACE_PROP.matcher(low);
     if (prop.matches()) {
       String keyId = HostKeys.PREFIX_HOST_PROPERTY + normalize(prop.group(1));
-      return index.keyIds().contains(keyId) ? ImmutableList.of(keyId) : ImmutableList.of();
+      return ImmutableList.of(keyId);
     }
     ImmutableList<String> aliased = ALIAS_TO_KEYS.get(normalize(raw));
     if (aliased != null) {
@@ -1124,7 +1133,10 @@ public final class FleetSuggester {
     List<KeyMatch> out = new ArrayList<>();
     Set<String> seen = new HashSet<>();
     for (String keyId : resolveKey(context, token)) {
-      if ((index.keyIds().contains(keyId) || isDiscoveredDimension(context, keyId))
+      if ((index.keyIds().contains(keyId)
+              || isDiscoveredDimension(context, keyId)
+              || keyId.startsWith(DeviceKeys.PREFIX_DIMENSION)
+              || keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY))
           && seen.add(keyId)) {
         out.add(new KeyMatch(keyId, 3));
       }
@@ -1460,28 +1472,6 @@ public final class FleetSuggester {
     if (context.corpus() instanceof HostCorpus) {
       if (curation != null) {
         return curation.hostGroupByCandidates().stream()
-            .map(HostKeyDescriptor::id)
-            .collect(toImmutableList());
-      }
-      return ImmutableList.of(
-          HostKeys.HOST_NAME.id(), HostKeys.CONNECTIVITY.id(), HostKeys.DEVICE_COUNT.id());
-    }
-    return ImmutableList.of();
-  }
-
-  private static ImmutableList<String> emptyStateKeys(Context context) {
-    ScenarioCuration curation = context.corpus().curation();
-    if (context.corpus() instanceof DeviceCorpus) {
-      if (curation != null) {
-        return curation.deviceEmptyStateKeys().stream()
-            .map(DeviceKeyDescriptor::id)
-            .collect(toImmutableList());
-      }
-      return ImmutableList.of(DeviceKeys.STATUS.id(), DeviceKeys.MODEL.id(), DeviceKeys.TYPE.id());
-    }
-    if (context.corpus() instanceof HostCorpus) {
-      if (curation != null) {
-        return curation.hostEmptyStateKeys().stream()
             .map(HostKeyDescriptor::id)
             .collect(toImmutableList());
       }
