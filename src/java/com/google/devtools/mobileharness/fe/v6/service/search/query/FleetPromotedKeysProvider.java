@@ -28,7 +28,6 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
-import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -192,7 +191,6 @@ public final class FleetPromotedKeysProvider {
       if (hasFilters && comboCount(corpus, current, keyId).distinctCombos() <= 1) {
         continue;
       }
-      boolean isAtsController = keyId.equals(HostKeys.PREFIX_HOST_FIELD + "ats_controller");
       response.addFilterKeys(
           FleetPromotedFilterKey.newBuilder()
               .setKey(keyId)
@@ -200,7 +198,7 @@ public final class FleetPromotedKeysProvider {
                   FleetFilterChipMetadata.newBuilder()
                       .setKeyDisplayName(desc.display().name())
                       .setIsPlural(desc.display().isPlural())
-                      .setCanUseAdvanced(!isAtsController)
+                      .setCanUseAdvanced(true)
                       .build()));
       emitted++;
     }

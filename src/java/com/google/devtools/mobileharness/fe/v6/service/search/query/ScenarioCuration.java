@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import com.google.common.collect.ImmutableList;
-import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
@@ -29,32 +28,21 @@ import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyRegi
  *
  * <p>Every fact here is deployment dependent, bound per {@link
  * com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet}. Consumers inject {@code
- * Map<Fleet, ScenarioCuration>} and pick the entry for the request's fleet.
- *
- * <p>The OSS build binds a single ats-one curation under {@code FLEET_SELF}. The internal build
- * binds a 1p curation under {@code FLEET_SELF} and an ats-all curation under {@code FLEET_ATS}. The
- * ats-one and 1p curations share the same fleet key but differ by build, so each build installs its
- * own module rather than switching on the fleet enum.
- *
- * <p>All key lists return typed {@link DeviceKeyDescriptor} and {@link HostKeyDescriptor} objects
- * directly from the schema layer, preserving display names, grammatical number, and key attributes
- * with compile-time type safety.
+ * Map<Fleet, ScenarioCuration>} and look up the curation for the request's fleet.
  */
 public interface ScenarioCuration {
 
-  /** The keys promoted into the "Filter by:" row of the query bar, in display order. */
+  /** The keys promoted into the device "Filter by:" row of the query bar, in display order. */
   ImmutableList<DeviceKeyDescriptor> deviceFilterByRow();
 
-  /** The keys promoted into the "Group by:" row of the query bar, in display order. */
+  /** The keys promoted into the device "Group by:" row of the query bar, in display order. */
   ImmutableList<DeviceKeyDescriptor> deviceGroupByRow();
 
-  /** The default column set for the flat search results table, in display order. */
+  /** The default column set for the device flat search results table, in display order. */
   ImmutableList<DeviceKeyDescriptor> deviceDefaultColumns();
 
-  /** The recommended columns offered in the column catalog, in display order. */
+  /** The recommended device columns offered in the column catalog, in display order. */
   ImmutableList<DeviceKeyDescriptor> deviceRecommendedColumns();
-
-  // ---- Host-entity curation ----
 
   /** The keys promoted into the host "Filter by:" row of the query bar, in display order. */
   ImmutableList<HostKeyDescriptor> hostFilterByRow();
@@ -68,18 +56,38 @@ public interface ScenarioCuration {
   /** The recommended host columns offered in the column catalog, in display order. */
   ImmutableList<HostKeyDescriptor> hostRecommendedColumns();
 
-  /**
-   * The suggester ranking for {@code keyId}: a higher value means the key is offered earlier. The
-   * mapping is scenario aware, so the same key can rank differently in different deployments.
-   */
-  int keyPriority(String keyId);
+  /** Candidate group-by keys offered when typing "group by" in device search. */
+  default ImmutableList<DeviceKeyDescriptor> deviceGroupByCandidates() {
+    return deviceGroupByRow();
+  }
+
+  /** Starter keys offered when the device search bar input is empty. */
+  default ImmutableList<DeviceKeyDescriptor> deviceEmptyStateKeys() {
+    return deviceFilterByRow();
+  }
+
+  /** Candidate group-by keys offered when typing "group by" in host search. */
+  default ImmutableList<HostKeyDescriptor> hostGroupByCandidates() {
+    return hostGroupByRow();
+  }
+
+  /** Starter keys offered when the host search bar input is empty. */
+  default ImmutableList<HostKeyDescriptor> hostEmptyStateKeys() {
+    return hostFilterByRow();
+  }
+
+  /** Suggester ranking and pattern eligibility policy for this scenario. */
+  KeyPriority keyPriority();
 
   /**
-   * The suggester ranking for {@code keyId} in the given {@code entity}: a higher value means the
-   * key is offered earlier. Defaults to the device ranking ({@link #keyPriority(String)}).
+   * Symmetrical, strongly-typed ranking and suggestion eligibility policy for device and host keys.
    */
-  default int keyPriority(String keyId, SearchEntity entity) {
-    return keyPriority(keyId);
+  interface KeyPriority {
+    /** Ranking for a device key: higher value means offered earlier. */
+    int devicePriority(DeviceKeyDescriptor key);
+
+    /** Ranking for a host key: higher value means offered earlier. */
+    int hostPriority(HostKeyDescriptor key);
   }
 
   /** Returns the registry of valid keys and parser for device search in this deployment. */

@@ -46,12 +46,11 @@ public abstract class HostEnrichment {
   /** Lab server version string. */
   public abstract Optional<String> labServerVersion();
 
-  /**
-   * The ATS controller this host belongs to. Present only in the ats-all deployment, where the
-   * fan-out records which controller each host came from. Absent in ats-one and 1p, where the fleet
-   * is a single controller or the 1P master.
-   */
-  public abstract Optional<String> atsController();
+  /** The human-readable ATS lab display name (e.g. "Pixel Lab MTV"). */
+  public abstract Optional<String> atsLabDisplayName();
+
+  /** The raw controller endpoint identifier (e.g. "ats-ctrl-us-central1-b-04"). */
+  public abstract Optional<String> atsControllerId();
 
   /** Creates a new builder. */
   public static Builder builder() {
@@ -61,7 +60,8 @@ public abstract class HostEnrichment {
         .setDaemonStatus(Optional.empty())
         .setDaemonServerVersion(Optional.empty())
         .setLabServerVersion(Optional.empty())
-        .setAtsController(Optional.empty());
+        .setAtsLabDisplayName(Optional.empty())
+        .setAtsControllerId(Optional.empty());
   }
 
   /** Builder for {@link HostEnrichment}. */
@@ -77,7 +77,9 @@ public abstract class HostEnrichment {
 
     public abstract Builder setLabServerVersion(Optional<String> labServerVersion);
 
-    public abstract Builder setAtsController(Optional<String> atsController);
+    public abstract Builder setAtsLabDisplayName(Optional<String> atsLabDisplayName);
+
+    public abstract Builder setAtsControllerId(Optional<String> atsControllerId);
 
     public abstract HostEnrichment build();
   }

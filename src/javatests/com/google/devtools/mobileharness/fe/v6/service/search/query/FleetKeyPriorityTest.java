@@ -18,53 +18,67 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetKeyPriority.Scenario;
-import com.google.testing.junit.testparameterinjector.TestParameter;
-import com.google.testing.junit.testparameterinjector.TestParameterInjector;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.KeyDisplay;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 /** Unit tests for {@link FleetKeyPriority}. */
-@RunWith(TestParameterInjector.class)
+@RunWith(JUnit4.class)
 public final class FleetKeyPriorityTest {
 
+  private final FleetKeyPriority priority = FleetKeyPriority.INSTANCE;
+
   @Test
-  public void atsController_isTopInPartnerAtsOnly() {
-    assertThat(FleetKeyPriority.priority("host_field::ats_controller", Scenario.PARTNER_ATS))
-        .isEqualTo(3);
-    assertThat(FleetKeyPriority.priority("host_field::ats_controller", Scenario.INTERNAL))
-        .isEqualTo(1);
-    assertThat(FleetKeyPriority.priority("host_field::ats_controller", Scenario.ATS)).isEqualTo(1);
+  public void devicePriority_tier1AndWifiSsid_isTop() {
+    assertThat(priority.devicePriority(DeviceKeys.STATUS)).isEqualTo(3);
+    assertThat(priority.devicePriority(DeviceKeys.UUID)).isEqualTo(3);
+    assertThat(priority.devicePriority(AtsDeviceKeys.WIFI_SSID)).isEqualTo(3);
   }
 
   @Test
-  public void wifiSsid_isTopInSelfScenarios() {
-    assertThat(FleetKeyPriority.priority("device_config::wifi_ssid", Scenario.INTERNAL))
-        .isEqualTo(3);
-    assertThat(FleetKeyPriority.priority("device_config::wifi_ssid", Scenario.ATS)).isEqualTo(3);
-    assertThat(FleetKeyPriority.priority("device_config::wifi_ssid", Scenario.PARTNER_ATS))
-        .isEqualTo(1);
+  public void devicePriority_tier2_isOneInAts() {
+    assertThat(priority.devicePriority(DeviceKeys.DRIVER)).isEqualTo(1);
+    assertThat(priority.devicePriority(DeviceKeys.DECORATOR)).isEqualTo(1);
+    assertThat(priority.devicePriority(DeviceKeys.HOST_IP)).isEqualTo(1);
   }
 
   @Test
-  public void tier1Key_isTopEverywhere(@TestParameter Scenario scenario) {
-    assertThat(FleetKeyPriority.priority("device_field::status", scenario)).isEqualTo(3);
-  }
-
-  @Test
-  public void tier2Key_isLowerInAts() {
-    assertThat(FleetKeyPriority.priority("device_field::driver", Scenario.ATS)).isEqualTo(1);
-    assertThat(FleetKeyPriority.priority("device_field::driver", Scenario.INTERNAL)).isEqualTo(2);
-    assertThat(FleetKeyPriority.priority("device_field::driver", Scenario.PARTNER_ATS))
-        .isEqualTo(2);
-  }
-
-  @Test
-  public void rawDimension_isZeroInAtsScenarios() {
-    assertThat(FleetKeyPriority.priority("dimension::battery_level", Scenario.PARTNER_ATS))
+  public void devicePriority_otherKeys_isZero() {
+    assertThat(
+            priority.devicePriority(
+                DeviceKeyDescriptor.builder()
+                    .setId("dimension::battery_level")
+                    .setDisplay(KeyDisplay.of("Battery Level"))
+                    .build()))
         .isEqualTo(0);
-    assertThat(FleetKeyPriority.priority("dimension::battery_level", Scenario.ATS)).isEqualTo(0);
-    assertThat(FleetKeyPriority.priority("dimension::battery_level", Scenario.INTERNAL))
-        .isEqualTo(1);
+  }
+
+  @Test
+  public void hostPriority_tier1_isTop() {
+    assertThat(priority.hostPriority(HostKeys.HOST_NAME)).isEqualTo(3);
+    assertThat(priority.hostPriority(HostKeys.CONNECTIVITY)).isEqualTo(3);
+    assertThat(priority.hostPriority(HostKeys.DEVICE_COUNT)).isEqualTo(3);
+  }
+
+  @Test
+  public void hostPriority_tier2_isOne() {
+    assertThat(priority.hostPriority(HostKeys.HOST_IP)).isEqualTo(1);
+  }
+
+  @Test
+  public void hostPriority_otherKeys_isZero() {
+    assertThat(
+            priority.hostPriority(
+                HostKeyDescriptor.builder()
+                    .setId("host_property::rack")
+                    .setDisplay(KeyDisplay.of("Rack"))
+                    .build()))
+        .isEqualTo(0);
   }
 }

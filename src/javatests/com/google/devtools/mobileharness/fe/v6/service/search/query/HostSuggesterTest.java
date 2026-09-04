@@ -90,10 +90,7 @@ public final class HostSuggesterTest {
     }
     assertThat(keys.build())
         .containsExactly(
-            "host_field::host_name",
-            "host_field::lab_type",
-            "host_field::connectivity",
-            "host_field::device_count")
+            "host_field::host_name", "host_field::connectivity", "host_field::device_count")
         .inOrder();
   }
 
@@ -134,13 +131,16 @@ public final class HostSuggesterTest {
   public void groupBy_offersHostGroupByCandidates() {
     FleetSuggestionResponse response = suggester.suggest(corpus, request("group by"));
 
-    FleetSuggestion labType = firstAddGroupBy(response, "host_field::lab_type");
-    assertThat(labType.getLabel()).isEqualTo("Group by");
-    assertThat(labType.getCountUnit()).isEqualTo("groups");
-    assertThat(labType.getCount()).isEqualTo(2);
-    assertThat(labType.getMainTextList())
+    FleetSuggestion connectivity = firstAddGroupBy(response, "host_field::connectivity");
+    assertThat(connectivity.getLabel()).isEqualTo("Group by");
+    assertThat(connectivity.getCountUnit()).isEqualTo("groups");
+    assertThat(connectivity.getCount()).isEqualTo(2);
+    assertThat(connectivity.getMainTextList())
         .containsExactly(
-            TextSegment.newBuilder().setText("Host Lab Type").setEmphasized(true).build());
+            TextSegment.newBuilder()
+                .setText("Lab Server Connectivity")
+                .setEmphasized(true)
+                .build());
   }
 
   @Test
@@ -208,7 +208,7 @@ public final class HostSuggesterTest {
                         "lab-a",
                         "1.1.1.1",
                         LabStatus.LAB_RUNNING,
-                        hostProperties("host_os", "debian", "lab_type", "slaas"),
+                        hostProperties("host_os", "debian"),
                         2))
                 .addLabData(
                     hostLab(

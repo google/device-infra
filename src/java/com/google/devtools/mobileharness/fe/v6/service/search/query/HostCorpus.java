@@ -25,6 +25,9 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import java.util.List;
 import java.util.Optional;
@@ -47,6 +50,7 @@ public final class HostCorpus implements SearchCorpus {
   private final FleetSnapshot snapshot;
   private final Postings postings;
   @Nullable private final ScenarioCuration curation;
+  private final HostKeyRegistry registry;
   private final HostCellMapper cellMapper = new HostCellMapper();
 
   public HostCorpus(
@@ -54,6 +58,7 @@ public final class HostCorpus implements SearchCorpus {
     this.snapshot = snapshot;
     this.postings = postings;
     this.curation = curation;
+    this.registry = curation != null ? curation.hostKeyRegistry() : new AtsHostKeyRegistry();
   }
 
   @Override
@@ -101,12 +106,22 @@ public final class HostCorpus implements SearchCorpus {
     return HostCellMapper.displayValues(snapshot.hosts().get(index), keyId, snapshot);
   }
 
+  public HostKeyRegistry hostKeyRegistry() {
+    return registry;
+  }
+
+  public Optional<HostKeyDescriptor> getKey(String keyId) {
+    return registry.getKey(keyId);
+  }
+
   @Override
   public Column column(String keyId) {
-    return Column.newBuilder()
-        .setKey(keyId)
-        .setDisplayName(FleetKeyDisplays.standardDisplayName(keyId))
-        .build();
+    String displayName =
+        registry
+            .getKey(keyId)
+            .map(HostKeyDisplays::standardDisplayName)
+            .orElseThrow(() -> new IllegalArgumentException("Unknown host key: " + keyId));
+    return Column.newBuilder().setKey(keyId).setDisplayName(displayName).build();
   }
 
   @Override

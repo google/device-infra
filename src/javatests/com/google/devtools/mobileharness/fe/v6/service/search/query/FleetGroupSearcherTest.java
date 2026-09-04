@@ -169,20 +169,21 @@ public final class FleetGroupSearcherTest {
         searcher.searchGrouped(
             corpus,
             ImmutableList.of(),
-            ImmutableList.of("device_field::owner"),
+            ImmutableList.of("device_field::driver"),
             FleetGroupSort.getDefaultInstance(),
             FleetPageRequest.getDefaultInstance());
 
-    // alice+carol is a single group, distinct from the alice-only group. alice holds device-0 and
-    // device-4; bob holds device-1; alice+carol holds device-2; device-3 has no owner.
-    assertThat(groupValues(results)).containsExactly("alice", "bob", "alice, carol", "(no value)");
-    FleetGroup aliceCarol = groupByFirstValue(results, "alice, carol");
-    assertThat(aliceCarol.getItemCount()).isEqualTo(1);
+    // driverA+driverC is a single group, distinct from the driverA-only group. driverA holds
+    // device-0 and
+    // device-4; driverB holds device-1; driverA+driverC holds device-2; device-3 has no driver.
+    assertThat(groupValues(results))
+        .containsExactly("driverA", "driverB", "driverA, driverC", "(no value)");
+    FleetGroup driverAc = groupByFirstValue(results, "driverA, driverC");
+    assertThat(driverAc.getItemCount()).isEqualTo(1);
 
     FleetFlatResults expanded =
-        searcher.expandGroup(
-            corpus, ImmutableList.of(), aliceCarol.getGroupId(), EXPAND_COLUMNS, "");
-    // Exact-set membership: device-2 (alice+carol) only, not the alice-only devices.
+        searcher.expandGroup(corpus, ImmutableList.of(), driverAc.getGroupId(), EXPAND_COLUMNS, "");
+    // Exact-set membership: device-2 (driverA+driverC) only, not the driverA-only devices.
     assertThat(rowIds(expanded)).containsExactly("device-2");
   }
 
@@ -215,7 +216,7 @@ public final class FleetGroupSearcherTest {
                 "dimension::os",
                 "device_field::status",
                 "device_field::type",
-                "device_field::owner"),
+                "device_field::driver"),
             FleetGroupSort.getDefaultInstance(),
             FleetPageRequest.getDefaultInstance());
 
@@ -232,7 +233,7 @@ public final class FleetGroupSearcherTest {
         searcher.searchGrouped(
             corpus,
             ImmutableList.of(),
-            ImmutableList.of("device_field::owner"),
+            ImmutableList.of("device_field::driver"),
             FleetGroupSort.getDefaultInstance(),
             firstPage);
 
@@ -249,7 +250,7 @@ public final class FleetGroupSearcherTest {
         searcher.searchGrouped(
             corpus,
             ImmutableList.of(),
-            ImmutableList.of("device_field::owner"),
+            ImmutableList.of("device_field::driver"),
             FleetGroupSort.getDefaultInstance(),
             secondPage);
 
@@ -404,6 +405,7 @@ public final class FleetGroupSearcherTest {
         .setDeviceFeature(
             DeviceFeature.newBuilder()
                 .addType("AndroidRealDevice")
+                .addDriver("driverA")
                 .addOwner("alice")
                 .setCompositeDimension(
                     DeviceCompositeDimension.newBuilder()
@@ -418,6 +420,7 @@ public final class FleetGroupSearcherTest {
         .setDeviceFeature(
             DeviceFeature.newBuilder()
                 .addType("AndroidRealDevice")
+                .addDriver("driverB")
                 .addOwner("bob")
                 .setCompositeDimension(
                     DeviceCompositeDimension.newBuilder()
@@ -432,6 +435,8 @@ public final class FleetGroupSearcherTest {
         .setDeviceFeature(
             DeviceFeature.newBuilder()
                 .addType("IosRealDevice")
+                .addDriver("driverA")
+                .addDriver("driverC")
                 .addOwner("alice")
                 .addOwner("carol")
                 .setCompositeDimension(
@@ -455,6 +460,7 @@ public final class FleetGroupSearcherTest {
         .setDeviceFeature(
             DeviceFeature.newBuilder()
                 .addType("FailedDevice")
+                .addDriver("driverA")
                 .addOwner("alice")
                 .setCompositeDimension(
                     DeviceCompositeDimension.newBuilder()

@@ -19,18 +19,6 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
-import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
-import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
-import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
-import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
-import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
-import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
-import com.google.devtools.mobileharness.api.model.proto.Lab.LabStatus;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.ComplexMatch;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.ContainsSubstring;
@@ -46,12 +34,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.MatchesRegex
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.NoValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
-import com.google.inject.Guice;
 import io.grpc.Status;
-import java.time.Instant;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -60,25 +44,12 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public final class FleetChipResolverTest {
 
-  private static final Instant BUILD_TIME = Instant.ofEpochSecond(1_700_000_000L);
-
-  // Synthetic fleet built through the real index builder:
-  //   device-0: IDLE, owner alice, dim os=android, dim model="Pixel 8".
-  //   device-1: IDLE, owner alice, dim os=android, dim model="Pixel 8".
-  //   device-2: BUSY, owner bob,   dim os=ios,     dim model="Galaxy".
-  //   device-3: IDLE, owner alice, no os, no model.
-  // Both FleetIndexBuilder and FleetChipResolver have package-private @Inject constructors, so
-  // obtain
-  // them through Guice rather than constructing directly.
-  private final FleetSnapshot snapshot =
-      Guice.createInjector().getInstance(FleetIndexBuilder.class).build(fleet(), BUILD_TIME);
   private final FleetChipResolver resolver = new FleetChipResolver();
 
   @Test
   public void simpleSingleValue_pillAndMetadata() {
-    // A lowercase input value proves the resolver looks up original casing via valueDisplays.
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(simple("device_field::status", "idle")));
+        resolver.resolve(request(simple("device_field::status", "IDLE")));
 
     assertThat(response.getFilterChipsCount()).isEqualTo(1);
     FleetResolvedFilterChip chip = response.getFilterChips(0);
@@ -93,7 +64,7 @@ public final class FleetChipResolverTest {
   @Test
   public void simpleMultiValue_showsCount() {
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(simple("device_field::status", "idle", "busy")));
+        resolver.resolve(request(simple("device_field::status", "IDLE", "BUSY")));
 
     assertThat(response.getFilterChips(0).getValid().getPillCondition()).isEqualTo("2");
   }
@@ -101,7 +72,7 @@ public final class FleetChipResolverTest {
   @Test
   public void negatedSingleValue_notEqualValue() {
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(simpleNegated("device_field::status", "idle")));
+        resolver.resolve(request(simpleNegated("device_field::status", "IDLE")));
 
     assertThat(response.getFilterChips(0).getValid().getPillCondition()).isEqualTo("\u2260 IDLE");
   }
@@ -109,7 +80,7 @@ public final class FleetChipResolverTest {
   @Test
   public void negatedMultiValue_notEqualCount() {
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(simpleNegated("device_field::status", "idle", "busy")));
+        resolver.resolve(request(simpleNegated("device_field::status", "IDLE", "BUSY")));
 
     assertThat(response.getFilterChips(0).getValid().getPillCondition()).isEqualTo("\u2260 2");
   }
@@ -118,14 +89,14 @@ public final class FleetChipResolverTest {
   public void noValueEntry_emptyText() {
     assertThat(
             resolver
-                .resolve(snapshot, request(noValue("dimension::os", false)))
+                .resolve(request(noValue("dimension::os", false)))
                 .getFilterChips(0)
                 .getValid()
                 .getPillCondition())
         .isEqualTo("empty");
     assertThat(
             resolver
-                .resolve(snapshot, request(noValue("dimension::os", true)))
+                .resolve(request(noValue("dimension::os", true)))
                 .getFilterChips(0)
                 .getValid()
                 .getPillCondition())
@@ -136,8 +107,7 @@ public final class FleetChipResolverTest {
   public void pluralKey_driver_isPluralMetadata() {
     // The compact condition text does not carry a verb; is_plural is metadata for the frontend.
     FleetChipResolverResponse response =
-        resolver.resolve(
-            snapshot, request(simpleNegated(DeviceKeys.DRIVER.id(), "AndroidRealDeviceDriver")));
+        resolver.resolve(request(simpleNegated(DeviceKeys.DRIVER.id(), "AndroidRealDeviceDriver")));
 
     FleetResolvedFilterChip chip = response.getFilterChips(0);
     assertThat(chip.hasValid()).isTrue();
@@ -149,7 +119,7 @@ public final class FleetChipResolverTest {
   @Test
   public void complexContains_conditionText() {
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(contains("dimension::model", "pix")));
+        resolver.resolve(request(contains("dimension::model", "pix")));
 
     FleetResolvedFilterChip chip = response.getFilterChips(0);
     assertThat(chip.hasValid()).isTrue();
@@ -159,9 +129,8 @@ public final class FleetChipResolverTest {
 
   @Test
   public void complexMatchesExactly_singleValueOriginalCasing() {
-    // A lowercase input resolves back to its original casing "Pixel 8".
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(exactly("dimension::model", "pixel 8")));
+        resolver.resolve(request(exactly("dimension::model", "Pixel 8")));
 
     assertThat(response.getFilterChips(0).getValid().getPillCondition())
         .isEqualTo("is exactly Pixel 8");
@@ -170,15 +139,15 @@ public final class FleetChipResolverTest {
   @Test
   public void complexMatchesExactly_multipleValuesShowCount() {
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(exactly("dimension::model", "pixel 8", "galaxy")));
+        resolver.resolve(request(exactly("dimension::model", "Pixel 8", "Galaxy")));
 
     assertThat(response.getFilterChips(0).getValid().getPillCondition()).isEqualTo("is exactly 2");
   }
 
   @Test
-  public void hostNameKey_canUseAdvanced() {
+  public void filterChip_canUseAdvanced() {
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(simple("host_field::host_name", "host-a")));
+        resolver.resolve(request(simple("device_field::status", "IDLE")));
 
     assertThat(response.getFilterChips(0).getValid().getMetadata().getCanUseAdvanced()).isTrue();
   }
@@ -187,7 +156,6 @@ public final class FleetChipResolverTest {
   public void groupByChips_pillKeyAndDisplayName() {
     FleetChipResolverResponse response =
         resolver.resolve(
-            snapshot,
             FleetChipResolverRequest.newBuilder()
                 .setEntity(SearchEntity.SEARCH_ENTITY_DEVICE)
                 .addGroupByKeys("dimension::model")
@@ -209,11 +177,10 @@ public final class FleetChipResolverTest {
   public void resolve_arraysParallelToRequestInOrder() {
     FleetChipResolverResponse response =
         resolver.resolve(
-            snapshot,
             FleetChipResolverRequest.newBuilder()
                 .setEntity(SearchEntity.SEARCH_ENTITY_DEVICE)
-                .addFilters(simple("device_field::status", "idle"))
-                .addFilters(simple("device_field::type", "android"))
+                .addFilters(simple("device_field::status", "IDLE"))
+                .addFilters(simple("device_field::type", "AndroidRealDevice"))
                 .addFilters(contains("dimension::model", "pix"))
                 .addGroupByKeys("dimension::os")
                 .build());
@@ -229,7 +196,7 @@ public final class FleetChipResolverTest {
   @Test
   public void validFilterChip_hasValidTrue() {
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(simple("device_field::status", "idle")));
+        resolver.resolve(request(simple("device_field::status", "IDLE")));
 
     assertThat(response.getFilterChips(0).hasValid()).isTrue();
   }
@@ -237,7 +204,7 @@ public final class FleetChipResolverTest {
   @Test
   public void invalidFilterKey_hasInvalidTrueWithDescriptiveReason() {
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(simple("bogus_unknown_key", "foo")));
+        resolver.resolve(request(simple("bogus_unknown_key", "foo")));
 
     FleetResolvedFilterChip chip = response.getFilterChips(0);
     assertThat(chip.hasInvalid()).isTrue();
@@ -253,7 +220,7 @@ public final class FleetChipResolverTest {
             .addFilters(simple("dimension::model", "pixel"))
             .build();
 
-    FleetChipResolverResponse response = resolver.resolve(snapshot, req);
+    FleetChipResolverResponse response = resolver.resolve(req);
 
     FleetResolvedFilterChip chip = response.getFilterChips(0);
     assertThat(chip.hasInvalid()).isTrue();
@@ -268,7 +235,7 @@ public final class FleetChipResolverTest {
             .addFilters(simple("host_field::device_count", "1"))
             .build();
 
-    FleetChipResolverResponse response = resolver.resolve(snapshot, req);
+    FleetChipResolverResponse response = resolver.resolve(req);
 
     FleetResolvedFilterChip chip = response.getFilterChips(0);
     assertThat(chip.hasInvalid()).isTrue();
@@ -284,7 +251,7 @@ public final class FleetChipResolverTest {
             .addFilters(simple("host_property::", "rack1"))
             .build();
 
-    FleetChipResolverResponse response = resolver.resolve(snapshot, req);
+    FleetChipResolverResponse response = resolver.resolve(req);
 
     FleetResolvedFilterChip chip = response.getFilterChips(0);
     assertThat(chip.hasInvalid()).isTrue();
@@ -299,7 +266,7 @@ public final class FleetChipResolverTest {
             .addFilters(simple("dimension::", "pixel"))
             .build();
 
-    FleetChipResolverResponse response = resolver.resolve(snapshot, req);
+    FleetChipResolverResponse response = resolver.resolve(req);
 
     FleetResolvedFilterChip chip = response.getFilterChips(0);
     assertThat(chip.hasInvalid()).isTrue();
@@ -314,7 +281,7 @@ public final class FleetChipResolverTest {
             .addFilters(simple("host_field::bogus_field", "val"))
             .build();
 
-    FleetChipResolverResponse response = resolver.resolve(snapshot, req);
+    FleetChipResolverResponse response = resolver.resolve(req);
 
     FleetResolvedFilterChip chip = response.getFilterChips(0);
     assertThat(chip.hasInvalid()).isTrue();
@@ -330,11 +297,11 @@ public final class FleetChipResolverTest {
             .addFilters(simple("host_property::rack", "rack1"))
             .build();
 
-    FleetChipResolverResponse response = resolver.resolve(snapshot, req);
+    FleetChipResolverResponse response = resolver.resolve(req);
 
     FleetResolvedFilterChip chip = response.getFilterChips(0);
     assertThat(chip.hasValid()).isTrue();
-    assertThat(chip.getValid().getPillKey()).isEqualTo("Host rack");
+    assertThat(chip.getValid().getPillKey()).isEqualTo("rack");
   }
 
   @Test
@@ -345,7 +312,7 @@ public final class FleetChipResolverTest {
             .addFilters(simple("host_field::host_name", "lab1"))
             .build();
 
-    FleetChipResolverResponse response = resolver.resolve(snapshot, req);
+    FleetChipResolverResponse response = resolver.resolve(req);
 
     FleetResolvedFilterChip chip = response.getFilterChips(0);
     assertThat(chip.hasValid()).isTrue();
@@ -355,7 +322,7 @@ public final class FleetChipResolverTest {
   @Test
   public void invalidRegex_hasInvalidTrueWithSyntaxDetail() {
     FleetChipResolverResponse response =
-        resolver.resolve(snapshot, request(regex("device_field::status", "[unclosed_regex")));
+        resolver.resolve(request(regex("device_field::status", "[unclosed_regex")));
 
     FleetResolvedFilterChip chip = response.getFilterChips(0);
     assertThat(chip.hasInvalid()).isTrue();
@@ -370,7 +337,7 @@ public final class FleetChipResolverTest {
             .setSimple(SimpleMatch.getDefaultInstance())
             .build();
 
-    FleetChipResolverResponse response = resolver.resolve(snapshot, request(emptySimple));
+    FleetChipResolverResponse response = resolver.resolve(request(emptySimple));
 
     FleetResolvedFilterChip chip = response.getFilterChips(0);
     assertThat(chip.hasInvalid()).isTrue();
@@ -388,7 +355,7 @@ public final class FleetChipResolverTest {
             .addGroupByKeys("host_field::device_count")
             .build();
 
-    FleetChipResolverResponse response = resolver.resolve(snapshot, req);
+    FleetChipResolverResponse response = resolver.resolve(req);
 
     assertThat(response.getGroupByChips(0).hasValid()).isTrue();
     assertThat(response.getGroupByChips(1).hasInvalid()).isTrue();
@@ -407,8 +374,7 @@ public final class FleetChipResolverTest {
             .addFilters(simple("device_field::status", "idle"))
             .build();
 
-    FeServiceException e =
-        assertThrows(FeServiceException.class, () -> resolver.resolve(snapshot, req));
+    FeServiceException e = assertThrows(FeServiceException.class, () -> resolver.resolve(req));
     assertThat(e.getCode()).isEqualTo(Status.Code.INVALID_ARGUMENT);
   }
 
@@ -421,8 +387,7 @@ public final class FleetChipResolverTest {
             .addFilters(simple("device_field::status", "idle"))
             .build();
 
-    FeServiceException e =
-        assertThrows(FeServiceException.class, () -> resolver.resolve(snapshot, req));
+    FeServiceException e = assertThrows(FeServiceException.class, () -> resolver.resolve(req));
     assertThat(e.getCode()).isEqualTo(Status.Code.INVALID_ARGUMENT);
   }
 
@@ -487,70 +452,5 @@ public final class FleetChipResolverTest {
         .setComplex(
             ComplexMatch.newBuilder().setMatchesRegex(MatchesRegex.newBuilder().setValue(pattern)))
         .build();
-  }
-
-  // --- Synthetic fleet ---
-
-  private static LabQueryResult fleet() {
-    return LabQueryResult.newBuilder()
-        .setLabView(
-            LabQueryResult.LabView.newBuilder()
-                .setLabTotalCount(2)
-                .addLabData(labData("lab1", "1.1.1.1", device0(), device1()))
-                .addLabData(labData("lab2", "2.2.2.2", device2(), device3())))
-        .build();
-  }
-
-  private static LabData labData(String hostName, String ip, DeviceInfo... devices) {
-    DeviceList.Builder deviceList = DeviceList.newBuilder().setDeviceTotalCount(devices.length);
-    for (DeviceInfo device : devices) {
-      deviceList.addDeviceInfo(device);
-    }
-    return LabData.newBuilder()
-        .setLabInfo(
-            LabInfo.newBuilder()
-                .setLabLocator(LabLocator.newBuilder().setHostName(hostName).setIp(ip))
-                .setLabStatus(LabStatus.LAB_RUNNING))
-        .setDeviceList(deviceList)
-        .build();
-  }
-
-  private static DeviceInfo device0() {
-    return device("device-0", DeviceStatus.IDLE, "alice", "android", "Pixel 8");
-  }
-
-  private static DeviceInfo device1() {
-    return device("device-1", DeviceStatus.IDLE, "alice", "android", "Pixel 8");
-  }
-
-  private static DeviceInfo device2() {
-    return device("device-2", DeviceStatus.BUSY, "bob", "ios", "Galaxy");
-  }
-
-  private static DeviceInfo device3() {
-    return DeviceInfo.newBuilder()
-        .setDeviceLocator(DeviceLocator.newBuilder().setId("device-3"))
-        .setDeviceStatus(DeviceStatus.IDLE)
-        .setDeviceFeature(DeviceFeature.newBuilder().addOwner("alice"))
-        .build();
-  }
-
-  private static DeviceInfo device(
-      String id, DeviceStatus status, String owner, String os, String model) {
-    return DeviceInfo.newBuilder()
-        .setDeviceLocator(DeviceLocator.newBuilder().setId(id))
-        .setDeviceStatus(status)
-        .setDeviceFeature(
-            DeviceFeature.newBuilder()
-                .addOwner(owner)
-                .setCompositeDimension(
-                    DeviceCompositeDimension.newBuilder()
-                        .addSupportedDimension(dimension("os", os))
-                        .addSupportedDimension(dimension("model", model))))
-        .build();
-  }
-
-  private static DeviceDimension dimension(String name, String value) {
-    return DeviceDimension.newBuilder().setName(name).setValue(value).build();
   }
 }

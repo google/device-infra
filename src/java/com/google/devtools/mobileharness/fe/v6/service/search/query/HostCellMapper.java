@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -46,9 +48,6 @@ import javax.inject.Inject;
  */
 public final class HostCellMapper {
 
-  private static final String HOST_FIELD_ATS_CONTROLLER =
-      HostKeys.PREFIX_HOST_FIELD + "ats_controller";
-
   /** Host connectivity status name to semantic indicator. */
   private static final ImmutableMap<String, Indicator> CONNECTIVITY_INDICATORS =
       ImmutableMap.<String, Indicator>builder()
@@ -61,14 +60,6 @@ public final class HostCellMapper {
 
   @Inject
   HostCellMapper() {}
-
-  /** Builds the header for a column key. */
-  public Column column(String keyId, FleetSnapshot snapshot) {
-    return Column.newBuilder()
-        .setKey(keyId)
-        .setDisplayName(FleetKeyDisplays.standardDisplayName(keyId))
-        .build();
-  }
 
   /** Builds a typed cell for a host and column key. */
   public Cell cell(String keyId, HostRecord host, FleetSnapshot snapshot) {
@@ -110,28 +101,17 @@ public final class HostCellMapper {
    */
   static ImmutableList<String> displayValues(
       HostRecord host, String keyId, FleetSnapshot snapshot) {
-    if (keyId.equals(HOST_FIELD_ATS_CONTROLLER)) {
-      return atsControllerValues(host, snapshot);
-    }
-    return host.values(keyId);
-  }
-
-  private static ImmutableList<String> atsControllerValues(
-      HostRecord host, FleetSnapshot snapshot) {
-    ImmutableList<String> vals = host.values(HOST_FIELD_ATS_CONTROLLER);
-    if (vals.isEmpty()) {
+    ImmutableList<String> values = host.values(keyId);
+    if (values.isEmpty()) {
       return ImmutableList.of();
     }
-    String id = vals.get(0);
-    if (id.isEmpty()) {
-      return ImmutableList.of();
+    ImmutableMap<String, String> displays = snapshot.hostIndex().valueDisplays(keyId);
+    if (displays.isEmpty()) {
+      return values;
     }
-    String display =
-        snapshot
-            .hostIndex()
-            .valueDisplays(HOST_FIELD_ATS_CONTROLLER)
-            .getOrDefault(Ascii.toLowerCase(id), id);
-    return ImmutableList.of(display);
+    return values.stream()
+        .map(val -> displays.getOrDefault(Ascii.toLowerCase(val), val))
+        .collect(toImmutableList());
   }
 
   private static String firstValue(ImmutableList<String> list) {

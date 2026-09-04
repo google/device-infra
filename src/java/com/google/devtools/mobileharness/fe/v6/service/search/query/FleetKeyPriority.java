@@ -17,164 +17,82 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 
 /**
- * The shared, deployment-independent core of the suggester key ranking: the global tier sets plus
- * the base tier-to-priority mapping that every {@link ScenarioCuration} reuses.
+ * Universal common key priority tiers and default standalone ATS KeyPriority implementation.
  *
- * <p>Every curation impl delegates its {@link ScenarioCuration#keyPriority} to {@link
- * #priority(String, Scenario)}, passing the {@link Scenario} it represents. The scenario, not the
- * {@link com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet}, drives the rules,
- * because ats and internal share the {@code FLEET_SELF} fleet and differ only by build. This shared
- * helper cannot know the build, so the impl (which does) chooses the scenario and keeps the ats
- * versus internal distinction out of any fleet switch.
+ * <p>Contains only deployment-independent Group 1 (common) and Group 2 (ATS) keys.
+ * Deployment-specific curations (such as 1P internal master or Partner ATS) define their own
+ * rankings using typed descriptors.
  */
-public final class FleetKeyPriority {
+public final class FleetKeyPriority implements ScenarioCuration.KeyPriority {
 
-  private FleetKeyPriority() {}
+  public static final FleetKeyPriority INSTANCE = new FleetKeyPriority();
 
-  /**
-   * The deployment a curation represents. {@link #INTERNAL} and {@link #ATS} both map to {@code
-   * FLEET_SELF} but differ by build, so the impl passes the right one rather than deriving it from
-   * the fleet enum.
-   */
-  public enum Scenario {
-    /** 1p (MH master), internal build. */
-    INTERNAL,
-    /** partner-ats: the aggregated view across all partner ATS controllers, internal build. */
-    PARTNER_ATS,
-    /** ats: a single local ATS controller, OSS build. */
-    ATS
-  }
+  public FleetKeyPriority() {}
 
-  /**
-   * The most important device keys: always ranked highest. These are the identity, status, and
-   * headline hardware keys an operator reaches for first, true across every deployment.
-   */
-  public static final ImmutableSet<String> KEY_TIER1 =
+  /** Universal common device keys ranked highest across all deployments. */
+  public static final ImmutableSet<DeviceKeyDescriptor> COMMON_KEY_TIER1 =
       ImmutableSet.of(
-          DeviceKeys.UUID.id(),
-          DeviceKeys.STATUS.id(),
-          DeviceKeys.TYPE.id(),
-          DeviceKeys.MODEL.id(),
-          DeviceKeys.OS.id(),
-          DeviceKeys.SDK_VERSION.id(),
-          HostKeys.HOST_NAME.id(),
-          DeviceKeys.DEVICE_CLASS_NAME.id(),
-          DeviceKeys.MANUFACTURER.id(),
-          DeviceKeys.PREFIX_DEVICE_FIELD + "owner",
-          DeviceKeys.PREFIX_DEVICE_FIELD + "quarantined",
-          HostKeys.PREFIX_HOST_FIELD + "lab_type",
-          HostKeys.PREFIX_HOST_FIELD + "release_status");
+          DeviceKeys.UUID,
+          DeviceKeys.STATUS,
+          DeviceKeys.TYPE,
+          DeviceKeys.MODEL,
+          DeviceKeys.OS,
+          DeviceKeys.SDK_VERSION,
+          DeviceKeys.HOST_NAME,
+          DeviceKeys.DEVICE_CLASS_NAME,
+          DeviceKeys.MANUFACTURER);
 
-  /**
-   * The secondary device keys: useful but ranked below tier 1. These are the finer-grained lab,
-   * host, and capability keys, again deployment independent.
-   */
-  public static final ImmutableSet<String> KEY_TIER2 =
+  /** Universal secondary device keys ranked below tier 1. */
+  public static final ImmutableSet<DeviceKeyDescriptor> COMMON_KEY_TIER2 =
       ImmutableSet.of(
-          DeviceKeys.DRIVER.id(),
-          DeviceKeys.DECORATOR.id(),
-          HostKeys.HOST_IP.id(),
-          HostKeys.HOST_OS.id(),
-          HostKeys.CONNECTIVITY.id(),
-          HostKeys.LAB_SERVER_VERSION.id(),
-          DeviceKeys.PREFIX_DEVICE_FIELD + "executor",
-          DeviceKeys.SOFTWARE_VERSION.id(),
-          DeviceKeys.DEVICE_FORM.id(),
-          "host_field::lab_server_activity",
-          HostKeys.PREFIX_HOST_FIELD + "daemon_status",
-          HostKeys.PREFIX_HOST_FIELD + "daemon_server_version",
-          HostKeys.PREFIX_HOST_FIELD + "release_type");
+          DeviceKeys.DRIVER,
+          DeviceKeys.DECORATOR,
+          DeviceKeys.HOST_IP,
+          DeviceKeys.HOST_OS,
+          DeviceKeys.HOST_CONNECTIVITY,
+          DeviceKeys.HOST_LAB_SERVER_VERSION,
+          DeviceKeys.SOFTWARE_VERSION,
+          DeviceKeys.DEVICE_FORM);
 
-  /**
-   * The most important host keys: always ranked highest for the host entity. Ported from the
-   * prototype's {@code HOST_KEY_TIER1}.
-   */
-  public static final ImmutableSet<String> HOST_KEY_TIER1 =
+  /** Universal common host keys ranked highest for the host entity. */
+  public static final ImmutableSet<HostKeyDescriptor> COMMON_HOST_KEY_TIER1 =
       ImmutableSet.of(
-          HostKeys.HOST_NAME.id(),
-          HostKeys.CONNECTIVITY.id(),
-          HostKeys.DEVICE_COUNT.id(),
-          HostKeys.HOST_OS.id(),
-          HostKeys.LAB_SERVER_VERSION.id(),
-          HostKeys.PREFIX_HOST_FIELD + "lab_type",
-          HostKeys.PREFIX_HOST_FIELD + "release_status",
-          "host_field::lab_server_activity");
+          HostKeys.HOST_NAME,
+          HostKeys.CONNECTIVITY,
+          HostKeys.DEVICE_COUNT,
+          HostKeys.HOST_OS,
+          HostKeys.LAB_SERVER_VERSION);
 
-  /**
-   * The secondary host keys: useful but ranked below host tier 1. Ported from the prototype's
-   * {@code HOST_KEY_TIER2}.
-   */
-  public static final ImmutableSet<String> HOST_KEY_TIER2 =
-      ImmutableSet.of(
-          HostKeys.HOST_IP.id(),
-          HostKeys.PREFIX_HOST_FIELD + "release_type",
-          HostKeys.PREFIX_HOST_FIELD + "daemon_status",
-          HostKeys.PREFIX_HOST_FIELD + "daemon_server_version");
+  /** Universal secondary host keys ranked below host tier 1. */
+  public static final ImmutableSet<HostKeyDescriptor> COMMON_HOST_KEY_TIER2 =
+      ImmutableSet.of(HostKeys.HOST_IP);
 
-  /**
-   * The suggester priority for {@code keyId} in {@code scenario}: higher means offered earlier.
-   *
-   * <p>The rules mirror the prototype {@code _key_priority} for the device entity:
-   *
-   * <ul>
-   *   <li>{@code host::ats_controller}: 3 in partner-ats (its defining axis) else 1.
-   *   <li>{@code config::wifi_ssid}: 3 in internal and ats (where WiFi is curated) else 1.
-   *   <li>a tier 1 key: 3.
-   *   <li>a tier 2 key: 1 in ats (which keeps its list short) else 2.
-   *   <li>any other key (a raw discovered dimension or property): 0 in partner-ats and ats (kept
-   *       out of the way) else 1.
-   * </ul>
-   */
-  public static int priority(String keyId, Scenario scenario) {
-    if (keyId.equals(HostKeys.PREFIX_HOST_FIELD + "ats_controller")) {
-      return scenario == Scenario.PARTNER_ATS ? 3 : 1;
-    }
-    if (keyId.equals(AtsDeviceKeys.WIFI_SSID.id())) {
-      return scenario != Scenario.PARTNER_ATS ? 3 : 1;
-    }
-    if (KEY_TIER1.contains(keyId)) {
+  @Override
+  public int devicePriority(DeviceKeyDescriptor key) {
+    if (key.equals(AtsDeviceKeys.WIFI_SSID) || COMMON_KEY_TIER1.contains(key)) {
       return 3;
     }
-    if (KEY_TIER2.contains(keyId)) {
-      return scenario == Scenario.ATS ? 1 : 2;
+    if (COMMON_KEY_TIER2.contains(key)) {
+      return 1;
     }
-    return scenario == Scenario.INTERNAL ? 1 : 0;
+    return 0;
   }
 
-  /**
-   * The suggester priority for {@code keyId} in {@code scenario} for the given {@code entity}:
-   * higher means offered earlier.
-   *
-   * <p>For the device entity this is exactly {@link #priority(String, Scenario)}, so device ranking
-   * is unchanged. For the host entity a separate host tier table applies, mirroring the prototype
-   * {@code _key_priority} host branch:
-   *
-   * <ul>
-   *   <li>{@code host::ats_controller}: 3 in partner-ats (its defining axis) else 1.
-   *   <li>a host tier 1 key: 3.
-   *   <li>a host tier 2 key: 1 in ats (which keeps its list short) else 2.
-   *   <li>any other key: 1 in internal else 0 (kept out of the way in both ATS scenarios).
-   * </ul>
-   */
-  public static int priority(String keyId, Scenario scenario, SearchEntity entity) {
-    if (entity != SearchEntity.SEARCH_ENTITY_HOST) {
-      return priority(keyId, scenario);
-    }
-    if (keyId.equals(HostKeys.PREFIX_HOST_FIELD + "ats_controller")) {
-      return scenario == Scenario.PARTNER_ATS ? 3 : 1;
-    }
-    if (HOST_KEY_TIER1.contains(keyId)) {
+  @Override
+  public int hostPriority(HostKeyDescriptor key) {
+    if (COMMON_HOST_KEY_TIER1.contains(key)) {
       return 3;
     }
-    if (HOST_KEY_TIER2.contains(keyId)) {
-      return scenario == Scenario.ATS ? 1 : 2;
+    if (COMMON_HOST_KEY_TIER2.contains(key)) {
+      return 1;
     }
-    return scenario == Scenario.INTERNAL ? 1 : 0;
+    return 0;
   }
 }

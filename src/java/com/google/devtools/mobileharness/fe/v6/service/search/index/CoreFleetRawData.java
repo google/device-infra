@@ -45,20 +45,11 @@ public abstract class CoreFleetRawData {
   /** Per-host enrichment keyed by host name. */
   public abstract ImmutableMap<String, HostEnrichment> hostEnrichments();
 
-  /**
-   * Friendly display names for ATS controllers, keyed by controller id. The ats-all source fills
-   * this so each {@code host_field::ats_controller} value can show a friendly display (for example
-   * "Partner Lab: Xiaomi") while its filter term stays the controller id. Empty in deployments that
-   * do not carry ATS controllers.
-   */
-  public abstract ImmutableMap<String, String> atsControllerDisplays();
-
   /** Creates a new builder with empty enrichment maps. */
   public static Builder builder() {
     return new AutoValue_CoreFleetRawData.Builder()
         .setDeviceEnrichments(ImmutableMap.of())
-        .setHostEnrichments(ImmutableMap.of())
-        .setAtsControllerDisplays(ImmutableMap.of());
+        .setHostEnrichments(ImmutableMap.of());
   }
 
   /** Creates raw data from lab query results alone, with no enrichment. */
@@ -76,9 +67,6 @@ public abstract class CoreFleetRawData {
 
     public abstract Builder setHostEnrichments(
         ImmutableMap<String, HostEnrichment> hostEnrichments);
-
-    public abstract Builder setAtsControllerDisplays(
-        ImmutableMap<String, String> atsControllerDisplays);
 
     public abstract CoreFleetRawData build();
   }

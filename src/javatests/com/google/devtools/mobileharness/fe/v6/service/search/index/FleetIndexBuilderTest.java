@@ -380,28 +380,26 @@ public final class FleetIndexBuilderTest {
             .setLabData(labResult)
             .setHostEnrichments(
                 ImmutableMap.of(
-                    "lab1", hostAtsControllerEnrichment("xiaomi"),
-                    "lab2", hostAtsControllerEnrichment("acme")))
-            .setAtsControllerDisplays(ImmutableMap.of("xiaomi", "Partner Lab: Xiaomi"))
+                    "lab1", hostAtsControllerEnrichment("xiaomi", "Partner Lab: Xiaomi"),
+                    "lab2", hostAtsControllerEnrichment("acme", "acme")))
             .build();
 
     FleetSnapshot atsSnapshot = builder.build(raw, BUILD_TIME);
     FleetIndex index = atsSnapshot.index();
 
-    assertThat(index.keyIds()).contains("host_field::ats_controller");
+    assertThat(index.keyIds())
+        .containsAtLeast("host_field::ats_controller_id", "host_field::ats_lab_display_name");
 
     LazyPostings atsPostings = new LazyPostings(atsSnapshot.devices());
-    assertThat(posting(atsPostings, "host_field::ats_controller", "xiaomi")).containsExactly(0);
-    assertThat(posting(atsPostings, "host_field::ats_controller", "acme")).containsExactly(1);
-    assertThat(index.valueCount("host_field::ats_controller", "xiaomi")).isEqualTo(1);
-
-    assertThat(index.valueDisplays("host_field::ats_controller"))
-        .containsEntry("xiaomi", "Partner Lab: Xiaomi");
-    assertThat(index.valueDisplays("host_field::ats_controller")).containsEntry("acme", "acme");
+    assertThat(posting(atsPostings, "host_field::ats_controller_id", "xiaomi")).containsExactly(0);
+    assertThat(posting(atsPostings, "host_field::ats_controller_id", "acme")).containsExactly(1);
+    assertThat(posting(atsPostings, "host_field::ats_lab_display_name", "partner lab: xiaomi"))
+        .containsExactly(0);
+    assertThat(posting(atsPostings, "host_field::ats_lab_display_name", "acme")).containsExactly(1);
   }
 
   @Test
-  public void build_hostAtsController_termIsIdDisplayIsFriendly() {
+  public void build_hostAtsController_indexedOnHosts() {
     LabQueryResult labResult =
         LabQueryResult.newBuilder()
             .setLabView(
@@ -426,26 +424,28 @@ public final class FleetIndexBuilderTest {
     CoreFleetRawData raw =
         CoreFleetRawData.builder()
             .setLabData(labResult)
-            .setHostEnrichments(ImmutableMap.of("lab1", hostAtsControllerEnrichment("xiaomi")))
-            .setAtsControllerDisplays(ImmutableMap.of("xiaomi", "Partner Lab: Xiaomi"))
+            .setHostEnrichments(
+                ImmutableMap.of(
+                    "lab1", hostAtsControllerEnrichment("xiaomi", "Partner Lab: Xiaomi")))
             .build();
 
     FleetSnapshot snapshot = builder.build(raw, BUILD_TIME);
     FleetIndex hostIndex = snapshot.hostIndex();
 
-    assertThat(snapshot.hosts().get(0).values("host_field::ats_controller"))
+    assertThat(snapshot.hosts().get(0).values("host_field::ats_controller_id"))
         .containsExactly("xiaomi");
-    assertThat(snapshot.hosts().get(1).values("host_field::ats_controller")).isEmpty();
+    assertThat(snapshot.hosts().get(0).values("host_field::ats_lab_display_name"))
+        .containsExactly("Partner Lab: Xiaomi");
+    assertThat(snapshot.hosts().get(1).values("host_field::ats_controller_id")).isEmpty();
+    assertThat(snapshot.hosts().get(1).values("host_field::ats_lab_display_name")).isEmpty();
 
-    assertThat(hostIndex.keyIds()).contains("host_field::ats_controller");
+    assertThat(hostIndex.keyIds())
+        .containsAtLeast("host_field::ats_controller_id", "host_field::ats_lab_display_name");
 
-    assertThat(hostIndex.valueCount("host_field::ats_controller", "xiaomi")).isEqualTo(1);
-    assertThat(hostIndex.sortedValues("host_field::ats_controller")).containsExactly("xiaomi");
     LazyPostings hostPostings = LazyPostings.forHosts(snapshot.hosts());
-    assertThat(posting(hostPostings, "host_field::ats_controller", "xiaomi")).containsExactly(0);
-
-    assertThat(hostIndex.valueDisplays("host_field::ats_controller"))
-        .containsEntry("xiaomi", "Partner Lab: Xiaomi");
+    assertThat(posting(hostPostings, "host_field::ats_controller_id", "xiaomi")).containsExactly(0);
+    assertThat(posting(hostPostings, "host_field::ats_lab_display_name", "partner lab: xiaomi"))
+        .containsExactly(0);
   }
 
   @Test
@@ -538,8 +538,11 @@ public final class FleetIndexBuilderTest {
     return DeviceEnrichment.builder().setWifiSsid(Optional.of(wifiSsid)).build();
   }
 
-  private static HostEnrichment hostAtsControllerEnrichment(String controllerId) {
-    return HostEnrichment.builder().setAtsController(Optional.of(controllerId)).build();
+  private static HostEnrichment hostAtsControllerEnrichment(String controllerId, String labName) {
+    return HostEnrichment.builder()
+        .setAtsControllerId(Optional.of(controllerId))
+        .setAtsLabDisplayName(Optional.of(labName))
+        .build();
   }
 
   private static HostEnrichment lab1Enrichment() {

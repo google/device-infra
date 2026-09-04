@@ -33,6 +33,9 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.OverlayView;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import java.util.List;
 import java.util.Optional;
@@ -87,6 +90,7 @@ public final class DeviceCorpus implements SearchCorpus {
   private final Postings postings;
   private final OverlayView overlayView;
   @Nullable private final ScenarioCuration curation;
+  private final DeviceKeyRegistry registry;
   private final FleetCellMapper cellMapper = new FleetCellMapper();
 
   public DeviceCorpus(
@@ -99,6 +103,7 @@ public final class DeviceCorpus implements SearchCorpus {
     this.index = new CompositeFleetIndex(snapshot.index(), overlayView);
     this.postings = new CompositePostings(postings, overlayView);
     this.curation = curation;
+    this.registry = curation != null ? curation.deviceKeyRegistry() : new AtsDeviceKeyRegistry();
   }
 
   public DeviceCorpus(
@@ -157,12 +162,22 @@ public final class DeviceCorpus implements SearchCorpus {
     return FleetCellMapper.displayValues(snapshot.devices().get(index), keyId, snapshot);
   }
 
+  public DeviceKeyRegistry deviceKeyRegistry() {
+    return registry;
+  }
+
+  public Optional<DeviceKeyDescriptor> getKey(String keyId) {
+    return registry.getKey(keyId);
+  }
+
   @Override
   public Column column(String keyId) {
-    return Column.newBuilder()
-        .setKey(keyId)
-        .setDisplayName(FleetKeyDisplays.standardDisplayName(keyId))
-        .build();
+    String displayName =
+        registry
+            .getKey(keyId)
+            .map(DeviceKeyDisplays::standardDisplayName)
+            .orElseThrow(() -> new IllegalArgumentException("Unknown device key: " + keyId));
+    return Column.newBuilder().setKey(keyId).setDisplayName(displayName).build();
   }
 
   @Override

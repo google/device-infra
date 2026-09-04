@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
@@ -50,14 +49,11 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueLi
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Indicator;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Row;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.HostEnrichment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import com.google.inject.Guice;
 import java.time.Instant;
-import java.util.Optional;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -85,7 +81,7 @@ public final class HostSearchTest {
           "host_field::host_name",
           "host_field::connectivity",
           "host_field::device_count",
-          "host_field::lab_type",
+          "host_field::lab_server_version",
           "host_property::host_os");
 
   private final FleetSnapshot snapshot =
@@ -148,9 +144,9 @@ public final class HostSearchTest {
     assertThat(row.getCells(2).hasText()).isTrue();
     assertThat(row.getCells(2).getText().getValue()).isEqualTo("2");
 
-    // lab_type is a multi-valued TextCell with comma-joined display names.
+    // lab_server_version is a TextCell from the host version property.
     assertThat(row.getCells(3).hasText()).isTrue();
-    assertThat(row.getCells(3).getText().getValue()).isEqualTo("Satellite Lab, SLaaS");
+    assertThat(row.getCells(3).getText().getValue()).isEqualTo("1.0.0");
 
     // host_os is a TextCell from the host property.
     assertThat(row.getCells(4).hasText()).isTrue();
@@ -205,11 +201,11 @@ public final class HostSearchTest {
   }
 
   @Test
-  public void flat_filtersByMultiValuedLabType() {
+  public void flat_filtersByLabServerVersion() {
     FleetFlatResults results =
         flatSearcher.searchFlat(
             corpus,
-            ImmutableList.of(simple("host_field::lab_type", "slaas")),
+            ImmutableList.of(simple("host_field::lab_server_version", "1.0.0")),
             COLUMNS,
             FleetColumnSort.getDefaultInstance(),
             FleetPageRequest.getDefaultInstance());
@@ -231,55 +227,6 @@ public final class HostSearchTest {
             FleetPageRequest.getDefaultInstance());
 
     assertThat(rowIds(results)).containsExactly("lab-c", "lab-b", "lab-a").inOrder();
-  }
-
-  @Test
-  public void flat_atsControllerColumn_showsFriendlyDisplayWithIdFallbackAndFilters() {
-    // Enrich each host with the ATS controller it came from and a controller-display registry that
-    // only covers ctrl-1, so the cell shows the friendly display for ctrl-1 and falls back to the
-    // raw id for the unregistered ctrl-2. lab-c has no controller, so its cell is blank.
-    CoreFleetRawData raw =
-        CoreFleetRawData.builder()
-            .setLabData(fleet())
-            .setHostEnrichments(
-                ImmutableMap.of(
-                    "lab-a", atsControllerEnrichment("ctrl-1"),
-                    "lab-b", atsControllerEnrichment("ctrl-2")))
-            .setAtsControllerDisplays(ImmutableMap.of("ctrl-1", "Controller One"))
-            .build();
-    FleetSnapshot enriched =
-        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(raw, BUILD_TIME);
-    LazyPostings enrichedPostings = LazyPostings.forHosts(enriched.hosts());
-
-    ImmutableList<String> columns =
-        ImmutableList.of("host_field::host_name", "host_field::ats_controller");
-    FleetFlatResults results =
-        flatSearcher.searchFlat(
-            new HostCorpus(enriched, enrichedPostings, null),
-            ImmutableList.of(),
-            columns,
-            FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance());
-
-    assertThat(rowIds(results)).containsExactly("lab-a", "lab-b", "lab-c").inOrder();
-    // lab-a: ctrl-1 mapped to its friendly display.
-    Cell registered = results.getRows(0).getCells(1);
-    assertThat(registered.getKindCase()).isEqualTo(Cell.KindCase.TEXT);
-    assertThat(registered.getText().getValue()).isEqualTo("Controller One");
-    // lab-b: ctrl-2 has no registry entry, so it falls back to the raw controller id.
-    assertThat(results.getRows(1).getCells(1).getText().getValue()).isEqualTo("ctrl-2");
-    // lab-c: no controller at all, so the cell is empty.
-    assertThat(results.getRows(2).getCells(1).getText().getValue()).isEmpty();
-
-    // Filtering by controller id matches the right host.
-    FleetFlatResults filtered =
-        flatSearcher.searchFlat(
-            new HostCorpus(enriched, enrichedPostings, null),
-            ImmutableList.of(simple("host_field::ats_controller", "ctrl-1")),
-            columns,
-            FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance());
-    assertThat(rowIds(filtered)).containsExactly("lab-a");
   }
 
   // --- Group by ---
@@ -363,7 +310,7 @@ public final class HostSearchTest {
             "host_field::host_ip",
             "host_field::connectivity",
             "host_field::device_count",
-            "host_field::lab_type");
+            "host_field::lab_server_version");
     // The device count column is offered, named, and carries the per-key host count.
     FleetColumnCatalogEntry deviceCount = entryByKey(builtin, "host_field::device_count");
     assertThat(deviceCount.getDisplayName()).isEqualTo("Device Count");
@@ -416,10 +363,6 @@ public final class HostSearchTest {
     throw new AssertionError("No entry with key: " + key);
   }
 
-  private static HostEnrichment atsControllerEnrichment(String controllerId) {
-    return HostEnrichment.builder().setAtsController(Optional.of(controllerId)).build();
-  }
-
   private static Filter simple(String key, String value) {
     return Filter.newBuilder()
         .setKey(key)
@@ -439,7 +382,7 @@ public final class HostSearchTest {
                         "lab-a",
                         "1.1.1.1",
                         LabStatus.LAB_RUNNING,
-                        hostProperties("host_os", "debian", "lab_type", "slaas"),
+                        hostProperties("host_os", "debian", "host_version", "1.0.0"),
                         2))
                 .addLabData(
                     hostLab(

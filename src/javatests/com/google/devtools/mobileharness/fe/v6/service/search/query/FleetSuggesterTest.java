@@ -67,7 +67,7 @@ public final class FleetSuggesterTest {
   private final FleetSnapshot snapshot =
       Guice.createInjector().getInstance(FleetIndexBuilder.class).build(fleet(), BUILD_TIME);
   private final LazyPostings postings = new LazyPostings(snapshot.devices());
-  private final DeviceCorpus corpus = new DeviceCorpus(snapshot, postings, null);
+  private final DeviceCorpus corpus = new DeviceCorpus(snapshot, postings, new AtsCuration());
 
   // FleetSuggester needs the per-fleet ScenarioCuration map, which the production MapBinder wires
   // at activation. Construct it directly through the package-private @Inject constructor, binding
@@ -111,20 +111,18 @@ public final class FleetSuggesterTest {
   }
 
   @Test
-  public void ownerValue_suggestsOwnerFilterWithPluralVerb() {
-    // Typing a user name resolves onto the Owners key, again through value search.
-    FleetSuggestionResponse response = suggester.suggest(corpus, request("alice"));
+  public void driverValue_suggestsDriverFilterWithPluralVerb() {
+    FleetSuggestionResponse response =
+        suggester.suggest(corpus, request("AndroidRealDeviceDriver"));
 
-    FleetSuggestion owner = firstApplyFilter(response, "device_field::owner");
-    assertThat(owner.getApplyFilter().getResultingFilter().getSimple().getValues(0).getValue())
-        .isEqualTo("alice");
-    // Owner is multi-valued, so the verb reads "are".
-    assertThat(owner.getMainText(0).getText()).isEqualTo("Owners are ");
-    assertThat(owner.getMainText(1).getText()).isEqualTo("alice");
-    assertThat(owner.getMainText(1).getEmphasized()).isTrue();
-    // Devices 0, 1, 3 are owned by alice.
-    assertThat(owner.getCount()).isEqualTo(3);
-    assertThat(owner.getApplyFilter().getMetadata().getIsPlural()).isTrue();
+    FleetSuggestion driver = firstApplyFilter(response, "device_field::driver");
+    assertThat(driver.getApplyFilter().getResultingFilter().getSimple().getValues(0).getValue())
+        .isEqualTo("AndroidRealDeviceDriver");
+    // Driver is multi-valued/plural, so the verb reads "are".
+    assertThat(driver.getMainText(0).getText()).isEqualTo("Supported Drivers are ");
+    assertThat(driver.getMainText(1).getText()).isEqualTo("AndroidRealDeviceDriver");
+    assertThat(driver.getMainText(1).getEmphasized()).isTrue();
+    assertThat(driver.getApplyFilter().getMetadata().getIsPlural()).isTrue();
   }
 
   @Test
@@ -223,14 +221,77 @@ public final class FleetSuggesterTest {
       keys.add(item.getOpenPicker().getKey());
     }
     assertThat(keys.build())
-        .containsExactly(
-            "device_field::status",
-            "dimension::model",
-            "device_field::type",
-            "device_field::owner",
-            "dimension::pool",
-            "device_field::quarantined")
+        .containsExactly("device_field::status", "dimension::model", "device_field::type")
         .inOrder();
+  }
+
+  @Test
+  public void emptyFilter_zeroCountCondition_isNotSuggested() {
+    // Every device in the fleet has a status, so "status is empty" matches 0 devices and must not
+    // be suggested.
+    FleetSuggestionResponse response = suggester.suggest(corpus, request("status is empty"));
+    for (FleetSuggestion item : response.getItemsList()) {
+      if (item.hasApplyFilter()) {
+        assertThat(item.getApplyFilter().getResultingFilter().getKey())
+            .isNotEqualTo("device_field::status");
+      }
+    }
+  }
+
+  @Test
+  public void emptyFilter_partiallyEmptyKey_suggestsEmptyAndNotEmpty() {
+    // device-3 lacks lab_location (3 of 4 devices have it), so "lab_location is empty" matches 1
+    // device.
+    FleetSuggestionResponse emptyResp = suggester.suggest(corpus, request("lab_location is empty"));
+    FleetSuggestion emptyItem = firstApplyFilter(emptyResp, "dimension::lab_location");
+    assertThat(emptyItem.getCount()).isEqualTo(1);
+    assertThat(emptyItem.getApplyFilter().getResultingFilter().getSimple().getNegated()).isFalse();
+    assertThat(
+            emptyItem.getApplyFilter().getResultingFilter().getSimple().getValues(0).hasNoValue())
+        .isTrue();
+
+    // "lab_location is not empty" matches 3 devices.
+    FleetSuggestionResponse notEmptyResp =
+        suggester.suggest(corpus, request("lab_location is not empty"));
+    FleetSuggestion notEmptyItem = firstApplyFilter(notEmptyResp, "dimension::lab_location");
+    assertThat(notEmptyItem.getCount()).isEqualTo(3);
+    assertThat(notEmptyItem.getApplyFilter().getResultingFilter().getSimple().getNegated())
+        .isTrue();
+    assertThat(
+            notEmptyItem
+                .getApplyFilter()
+                .getResultingFilter()
+                .getSimple()
+                .getValues(0)
+                .hasNoValue())
+        .isTrue();
+  }
+
+  @Test
+  public void emptyFilter_globallyFullKey_notEmptyIsNotSuggested() {
+    // Every device in the fleet has a status globally, so "status is not empty" has zero
+    // discrimination globally and must not be suggested (dropped completely).
+    FleetSuggestionResponse response = suggester.suggest(corpus, request("status is not empty"));
+    for (FleetSuggestion item : response.getItemsList()) {
+      if (item.hasApplyFilter()) {
+        assertThat(item.getApplyFilter().getResultingFilter().getKey())
+            .isNotEqualTo("device_field::status");
+      }
+    }
+  }
+
+  @Test
+  public void emptyFilter_filteredContextLocallyFullKey_isSuggestedWithLocalDemotion() {
+    // Under active filter pool=dedicated (matches device-2 only), device-2 has lab_location,
+    // so in this filtered subset, count == base == 1. Because lab_location is globally
+    // discriminative (device-3 lacks it), it is NOT dropped globally; it is suggested with local
+    // demotion.
+    FleetSuggestionResponse response =
+        suggester.suggest(
+            corpus, request("lab_location is not empty", simple("dimension::pool", "dedicated")));
+    FleetSuggestion item = firstApplyFilter(response, "dimension::lab_location");
+    assertThat(item.getCount()).isEqualTo(1);
+    assertThat(item.getApplyFilter().getResultingFilter().getSimple().getNegated()).isTrue();
   }
 
   // --- Helpers ---
@@ -509,6 +570,7 @@ public final class FleetSuggesterTest {
         .setDeviceFeature(
             DeviceFeature.newBuilder()
                 .addType("android_real_device")
+                .addDriver("AndroidRealDeviceDriver")
                 .addOwner("alice")
                 .addOwner("bob")
                 .setCompositeDimension(
@@ -526,6 +588,7 @@ public final class FleetSuggesterTest {
         .setDeviceFeature(
             DeviceFeature.newBuilder()
                 .addType("android_real_device")
+                .addDriver("AndroidRealDeviceDriver")
                 .addOwner("alice")
                 .setCompositeDimension(
                     DeviceCompositeDimension.newBuilder()

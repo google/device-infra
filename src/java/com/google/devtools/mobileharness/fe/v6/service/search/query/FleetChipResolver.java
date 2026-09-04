@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.ComplexMatch;
@@ -38,12 +37,13 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValidGr
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.MatchesRegex;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyRegistry;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import javax.inject.Inject;
@@ -55,7 +55,8 @@ import javax.inject.Singleton;
  * {@code _pill_key}, {@code _pill_condition}, and {@code _bff_metadata} helpers.
  *
  * <p>Resolution reads descriptors from the per-fleet {@link ScenarioCuration}'s {@link
- * DeviceKeyRegistry} and {@link HostKeyRegistry}.
+ * DeviceKeyRegistry} and {@link HostKeyRegistry}, formatting presentation through {@link
+ * DeviceKeyDisplays} and {@link HostKeyDisplays}.
  */
 @Singleton
 public final class FleetChipResolver {
@@ -74,12 +75,10 @@ public final class FleetChipResolver {
   /**
    * Resolves every filter and group-by key in the request into its display text and metadata.
    *
-   * @param snapshot the fleet snapshot supplying key display names and value casing
    * @param request the chips to resolve
    * @return resolved chips in arrays parallel to the request
    */
-  public FleetChipResolverResponse resolve(
-      FleetSnapshot snapshot, FleetChipResolverRequest request) {
+  public FleetChipResolverResponse resolve(FleetChipResolverRequest request) {
     if (request.getEntity() == SearchEntity.SEARCH_ENTITY_UNSPECIFIED) {
       throw FeServiceException.invalidArgument(
           "entity must be specified in FleetChipResolverRequest");
@@ -94,12 +93,9 @@ public final class FleetChipResolver {
     HostKeyRegistry hostKeyRegistry = curation.hostKeyRegistry();
 
     SearchEntity entity = request.getEntity();
-    FleetIndex index =
-        entity == SearchEntity.SEARCH_ENTITY_HOST ? snapshot.hostIndex() : snapshot.index();
     FleetChipResolverResponse.Builder response = FleetChipResolverResponse.newBuilder();
     for (Filter filter : request.getFiltersList()) {
-      response.addFilterChips(
-          resolveFilter(index, entity, deviceKeyRegistry, hostKeyRegistry, filter));
+      response.addFilterChips(resolveFilter(entity, deviceKeyRegistry, hostKeyRegistry, filter));
     }
     for (String keyId : request.getGroupByKeysList()) {
       response.addGroupByChips(resolveGroupBy(entity, deviceKeyRegistry, hostKeyRegistry, keyId));
@@ -108,7 +104,6 @@ public final class FleetChipResolver {
   }
 
   private static FleetResolvedFilterChip resolveFilter(
-      FleetIndex index,
       SearchEntity entity,
       DeviceKeyRegistry deviceKeyRegistry,
       HostKeyRegistry hostKeyRegistry,
@@ -120,65 +115,102 @@ public final class FleetChipResolver {
           .build();
     }
     String normalizedKey = keyId.trim();
-    boolean keyValid =
-        entity == SearchEntity.SEARCH_ENTITY_HOST
-            ? hostKeyRegistry.getKey(normalizedKey).isPresent()
-            : deviceKeyRegistry.getKey(normalizedKey).isPresent();
-    if (!keyValid) {
+
+    if (entity == SearchEntity.SEARCH_ENTITY_HOST) {
+      Optional<HostKeyDescriptor> hostKey = hostKeyRegistry.getKey(normalizedKey);
+      if (hostKey.isEmpty()) {
+        return FleetResolvedFilterChip.newBuilder()
+            .setInvalid(
+                FleetInvalidFilterChip.newBuilder().setReason("Unknown host filter key: " + keyId))
+            .build();
+      }
+      ValidationResult conditionValidation = validateCondition(filter);
+      if (!conditionValidation.isValid()) {
+        return FleetResolvedFilterChip.newBuilder()
+            .setInvalid(
+                FleetInvalidFilterChip.newBuilder().setReason(conditionValidation.errorMessage()))
+            .build();
+      }
+      HostKeyDescriptor key = hostKey.get();
       return FleetResolvedFilterChip.newBuilder()
-          .setInvalid(
-              FleetInvalidFilterChip.newBuilder()
-                  .setReason("Unknown " + entityName(entity) + " filter key: " + keyId))
+          .setValid(
+              FleetValidFilterChip.newBuilder()
+                  .setPillKey(pillKey(key))
+                  .setPillCondition(conditionText(filter))
+                  .setMetadata(metadata(key)))
+          .build();
+    } else {
+      Optional<DeviceKeyDescriptor> deviceKey = deviceKeyRegistry.getKey(normalizedKey);
+      if (deviceKey.isEmpty()) {
+        return FleetResolvedFilterChip.newBuilder()
+            .setInvalid(
+                FleetInvalidFilterChip.newBuilder()
+                    .setReason("Unknown device filter key: " + keyId))
+            .build();
+      }
+      ValidationResult conditionValidation = validateCondition(filter);
+      if (!conditionValidation.isValid()) {
+        return FleetResolvedFilterChip.newBuilder()
+            .setInvalid(
+                FleetInvalidFilterChip.newBuilder().setReason(conditionValidation.errorMessage()))
+            .build();
+      }
+      DeviceKeyDescriptor key = deviceKey.get();
+      return FleetResolvedFilterChip.newBuilder()
+          .setValid(
+              FleetValidFilterChip.newBuilder()
+                  .setPillKey(pillKey(key))
+                  .setPillCondition(conditionText(filter))
+                  .setMetadata(metadata(key)))
           .build();
     }
-
-    ValidationResult conditionValidation = validateCondition(filter);
-    if (!conditionValidation.isValid()) {
-      return FleetResolvedFilterChip.newBuilder()
-          .setInvalid(
-              FleetInvalidFilterChip.newBuilder().setReason(conditionValidation.errorMessage()))
-          .build();
-    }
-
-    return FleetResolvedFilterChip.newBuilder()
-        .setValid(
-            FleetValidFilterChip.newBuilder()
-                .setPillKey(pillKey(normalizedKey))
-                .setPillCondition(conditionText(index, filter))
-                .setMetadata(metadata(normalizedKey, entity, deviceKeyRegistry, hostKeyRegistry)))
-        .build();
   }
 
   private static FleetResolvedGroupByChip resolveGroupBy(
       SearchEntity entity,
       DeviceKeyRegistry deviceKeyRegistry,
       HostKeyRegistry hostKeyRegistry,
-      String keyId) {
-    if (keyId.trim().isEmpty()) {
+      String rawKeyId) {
+    String keyId = rawKeyId.trim();
+    if (keyId.isEmpty()) {
       return FleetResolvedGroupByChip.newBuilder()
           .setInvalid(
               FleetInvalidGroupByChip.newBuilder().setReason("Group-by key must not be empty"))
           .build();
     }
-    String normalizedKey = keyId.trim();
-    boolean keyValid =
-        entity == SearchEntity.SEARCH_ENTITY_HOST
-            ? hostKeyRegistry.getKey(normalizedKey).isPresent()
-            : deviceKeyRegistry.getKey(normalizedKey).isPresent();
-    if (!keyValid) {
+    if (entity == SearchEntity.SEARCH_ENTITY_HOST) {
+      Optional<HostKeyDescriptor> hostKey = hostKeyRegistry.getKey(keyId);
+      if (hostKey.isEmpty()) {
+        return FleetResolvedGroupByChip.newBuilder()
+            .setInvalid(
+                FleetInvalidGroupByChip.newBuilder()
+                    .setReason("Unknown host group-by key: " + rawKeyId))
+            .build();
+      }
+      HostKeyDescriptor key = hostKey.get();
       return FleetResolvedGroupByChip.newBuilder()
-          .setInvalid(
-              FleetInvalidGroupByChip.newBuilder()
-                  .setReason("Unknown " + entityName(entity) + " group-by key: " + keyId))
+          .setValid(
+              FleetValidGroupByChip.newBuilder()
+                  .setPillKey(pillKey(key))
+                  .setDisplayName(displayName(key)))
+          .build();
+    } else {
+      Optional<DeviceKeyDescriptor> deviceKey = deviceKeyRegistry.getKey(keyId);
+      if (deviceKey.isEmpty()) {
+        return FleetResolvedGroupByChip.newBuilder()
+            .setInvalid(
+                FleetInvalidGroupByChip.newBuilder()
+                    .setReason("Unknown device group-by key: " + rawKeyId))
+            .build();
+      }
+      DeviceKeyDescriptor key = deviceKey.get();
+      return FleetResolvedGroupByChip.newBuilder()
+          .setValid(
+              FleetValidGroupByChip.newBuilder()
+                  .setPillKey(pillKey(key))
+                  .setDisplayName(displayName(key)))
           .build();
     }
-
-    return FleetResolvedGroupByChip.newBuilder()
-        .setValid(
-            FleetValidGroupByChip.newBuilder()
-                .setPillKey(pillKey(normalizedKey))
-                .setDisplayName(displayName(normalizedKey)))
-        .build();
   }
 
   private record ValidationResult(boolean isValid, String errorMessage) {
@@ -241,25 +273,19 @@ public final class FleetChipResolver {
     };
   }
 
-  private static String entityName(SearchEntity entity) {
-    return entity == SearchEntity.SEARCH_ENTITY_HOST ? "host" : "device";
+  private static FleetFilterChipMetadata metadata(DeviceKeyDescriptor key) {
+    return FleetFilterChipMetadata.newBuilder()
+        .setKeyDisplayName(displayName(key))
+        .setCanUseAdvanced(true)
+        .setIsPlural(key.display().isPlural())
+        .build();
   }
 
-  private static FleetFilterChipMetadata metadata(
-      String keyId,
-      SearchEntity entity,
-      DeviceKeyRegistry deviceKeyRegistry,
-      HostKeyRegistry hostKeyRegistry) {
-    boolean isPlural;
-    if (entity == SearchEntity.SEARCH_ENTITY_HOST) {
-      isPlural = hostKeyRegistry.getKey(keyId).map(k -> k.display().isPlural()).orElse(false);
-    } else {
-      isPlural = deviceKeyRegistry.getKey(keyId).map(k -> k.display().isPlural()).orElse(false);
-    }
+  private static FleetFilterChipMetadata metadata(HostKeyDescriptor key) {
     return FleetFilterChipMetadata.newBuilder()
-        .setKeyDisplayName(displayName(keyId))
+        .setKeyDisplayName(displayName(key))
         .setCanUseAdvanced(true)
-        .setIsPlural(isPlural)
+        .setIsPlural(key.display().isPlural())
         .build();
   }
 
@@ -269,23 +295,37 @@ public final class FleetChipResolver {
    * the prototype's {@code _pill_key}. Built-in fields and curated dimension names (for example
    * "Model") carry no prefix and pass through unchanged.
    */
-  private static String pillKey(String keyId) {
-    return FleetKeyDisplays.pillKey(keyId);
+  private static String pillKey(DeviceKeyDescriptor key) {
+    return DeviceKeyDisplays.pillKey(key);
+  }
+
+  /**
+   * Short chip label for host pills: built-in display name for built-ins, bare name for properties.
+   */
+  private static String pillKey(HostKeyDescriptor key) {
+    return HostKeyDisplays.pillKey(key);
   }
 
   /**
    * The full key display name, including the "Dimension " and "Host Property " prefixes for
    * long-tail keys (Special Case 1 for filter chip titles).
    */
-  private static String displayName(String keyId) {
-    return FleetKeyDisplays.titleDisplayName(keyId);
+  private static String displayName(DeviceKeyDescriptor key) {
+    return DeviceKeyDisplays.titleDisplayName(key);
   }
 
-  private static String conditionText(FleetIndex index, Filter filter) {
-    String keyId = filter.getKey();
+  /**
+   * Title display name for host dialogs and suggestions: clean names for built-in host fields and
+   * "Host Property <name>" for discovered host properties.
+   */
+  private static String displayName(HostKeyDescriptor key) {
+    return HostKeyDisplays.titleDisplayName(key);
+  }
+
+  private static String conditionText(Filter filter) {
     return switch (filter.getModeCase()) {
-      case SIMPLE -> simpleCondition(index, keyId, filter.getSimple());
-      case COMPLEX -> complexCondition(index, keyId, filter.getComplex());
+      case SIMPLE -> simpleCondition(filter.getSimple());
+      case COMPLEX -> complexCondition(filter.getComplex());
       case MODE_NOT_SET -> "";
     };
   }
@@ -304,7 +344,7 @@ public final class FleetChipResolver {
    * values -> "&ne; 2"; a lone no-value entry -> "empty" or "not empty". Real values and a no-value
    * entry count together toward N.
    */
-  private static String simpleCondition(FleetIndex index, String keyId, SimpleMatch simple) {
+  private static String simpleCondition(SimpleMatch simple) {
     int count = 0;
     String lastDisplay = "";
     boolean lastIsNoValue = false;
@@ -312,7 +352,7 @@ public final class FleetChipResolver {
       switch (value.getKindCase()) {
         case VALUE -> {
           count++;
-          lastDisplay = displayValue(index, keyId, value.getValue());
+          lastDisplay = value.getValue();
           lastIsNoValue = false;
         }
         case NO_VALUE -> {
@@ -345,7 +385,7 @@ public final class FleetChipResolver {
    * so their compact phrasing here ("is exactly ..." / "has all of ...", the value when singular
    * and the count otherwise) is provisional pending confirmation.
    */
-  private static String complexCondition(FleetIndex index, String keyId, ComplexMatch complex) {
+  private static String complexCondition(ComplexMatch complex) {
     return switch (complex.getKindCase()) {
       case STARTS_WITH -> "starts with " + complex.getStartsWith().getValue();
       case CONTAINS_SUBSTRING -> {
@@ -356,28 +396,17 @@ public final class FleetChipResolver {
         MatchesRegex regex = complex.getMatchesRegex();
         yield (regex.getNegated() ? "does not match /" : "matches /") + regex.getValue() + "/";
       }
-      case MATCHES_EXACTLY ->
-          "is exactly " + setText(index, keyId, complex.getMatchesExactly().getValuesList());
-      case MATCHES_AT_LEAST ->
-          "has all of " + setText(index, keyId, complex.getMatchesAtLeast().getValuesList());
+      case MATCHES_EXACTLY -> "is exactly " + setText(complex.getMatchesExactly().getValuesList());
+      case MATCHES_AT_LEAST -> "has all of " + setText(complex.getMatchesAtLeast().getValuesList());
       case KIND_NOT_SET -> "";
     };
   }
 
   /** A value set rendered compactly: the sole value when there is one, the count otherwise. */
-  private static String setText(FleetIndex index, String keyId, List<String> values) {
+  private static String setText(List<String> values) {
     if (values.size() == 1) {
-      return displayValue(index, keyId, values.get(0));
+      return values.get(0);
     }
     return Integer.toString(values.size());
-  }
-
-  /**
-   * The value's original-casing display, looked up by its normalized (lowercased) form, falling
-   * back to the supplied value when the fleet has no record of it. Mirrors {@link
-   * FleetValueLister}'s display resolution.
-   */
-  private static String displayValue(FleetIndex index, String keyId, String value) {
-    return index.valueDisplays(keyId).getOrDefault(Ascii.toLowerCase(value), value);
   }
 }

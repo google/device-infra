@@ -48,6 +48,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_search_config_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_suggester",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_value_lister",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:host_column_cataloger",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:host_corpus",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:scenario_curation",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:dimension_catalog_store",
@@ -60,7 +61,6 @@ java_library(
         "@grpc-java//core",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
-        "@maven//:com_google_testparameterinjector_test_parameter_injector",
         "@maven//:junit_junit",
     ],
 )

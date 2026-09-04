@@ -83,8 +83,10 @@ public final class FleetIndexBuilder {
   public static final String HOST_FIELD_RELEASE_STATUS =
       HostKeys.PREFIX_HOST_FIELD + "release_status";
   public static final String HOST_FIELD_RELEASE_TYPE = HostKeys.PREFIX_HOST_FIELD + "release_type";
-  public static final String HOST_FIELD_ATS_CONTROLLER =
-      HostKeys.PREFIX_HOST_FIELD + "ats_controller";
+  public static final String HOST_FIELD_ATS_LAB_DISPLAY_NAME =
+      HostKeys.PREFIX_HOST_FIELD + "ats_lab_display_name";
+  public static final String HOST_FIELD_ATS_CONTROLLER_ID =
+      HostKeys.PREFIX_HOST_FIELD + "ats_controller_id";
 
   /**
    * Dimension names excluded from forward values and indexing. These dimensions carry non-textual
@@ -108,7 +110,6 @@ public final class FleetIndexBuilder {
   /** Builds a snapshot from the raw data, stamping the given build time. */
   public FleetSnapshot build(CoreFleetRawData raw, Instant buildTime) {
     LabQueryResult labResult = raw.labData();
-    ImmutableMap<String, String> atsControllerDisplays = raw.atsControllerDisplays();
 
     ImmutableList<LabData> labDataList =
         labResult.hasLabView()
@@ -160,7 +161,7 @@ public final class FleetIndexBuilder {
                   Accumulator hostAccum =
                       hostAccumulatorsByThread.computeIfAbsent(
                           Thread.currentThread(), t -> new Accumulator());
-                  indexHost(hostAccum, hostRecord, atsControllerDisplays);
+                  indexHost(hostAccum, hostRecord);
 
                   Accumulator accum =
                       accumulatorsByThread.computeIfAbsent(
@@ -173,7 +174,7 @@ public final class FleetIndexBuilder {
                     DeviceRecord record =
                         buildDeviceRecord(deviceInfo, hostRecord, deviceEnrichment);
                     devices.add(record);
-                    indexDevice(accum, record, atsControllerDisplays);
+                    indexDevice(accum, record);
                   }
                   return new HostDevices(hostRecord, devices);
                 })
@@ -259,9 +260,13 @@ public final class FleetIndexBuilder {
         .filter(v -> !v.isEmpty())
         .ifPresent(v -> values.put(HostKeys.LAB_SERVER_VERSION.id(), ImmutableList.of(v)));
     enrichment
-        .flatMap(HostEnrichment::atsController)
+        .flatMap(HostEnrichment::atsLabDisplayName)
         .filter(c -> !c.isEmpty())
-        .ifPresent(c -> values.put(HOST_FIELD_ATS_CONTROLLER, ImmutableList.of(c)));
+        .ifPresent(c -> values.put(HOST_FIELD_ATS_LAB_DISPLAY_NAME, ImmutableList.of(c)));
+    enrichment
+        .flatMap(HostEnrichment::atsControllerId)
+        .filter(c -> !c.isEmpty())
+        .ifPresent(c -> values.put(HOST_FIELD_ATS_CONTROLLER_ID, ImmutableList.of(c)));
     values.put(
         HostKeys.DEVICE_COUNT.id(),
         ImmutableList.of(String.valueOf(deviceList.getDeviceInfoCount())));
@@ -391,39 +396,23 @@ public final class FleetIndexBuilder {
   }
 
   /** Adds all index terms for one device to the accumulator. */
-  private static void indexDevice(
-      Accumulator accumulator,
-      DeviceRecord record,
-      ImmutableMap<String, String> atsControllerDisplays) {
+  private static void indexDevice(Accumulator accumulator, DeviceRecord record) {
     Set<String> seen = new HashSet<>();
     for (Map.Entry<String, ImmutableList<String>> entry : record.values().entrySet()) {
       String keyId = entry.getKey();
-      boolean isController = keyId.equals(HOST_FIELD_ATS_CONTROLLER);
       for (String value : entry.getValue()) {
-        if (isController) {
-          accumulator.add(seen, keyId, value, atsControllerDisplays.getOrDefault(value, value));
-        } else {
-          accumulator.add(seen, keyId, value);
-        }
+        accumulator.add(seen, keyId, value);
       }
     }
   }
 
   /** Adds all index terms for one host to the host accumulator. */
-  private static void indexHost(
-      Accumulator accumulator,
-      HostRecord host,
-      ImmutableMap<String, String> atsControllerDisplays) {
+  private static void indexHost(Accumulator accumulator, HostRecord host) {
     Set<String> seen = new HashSet<>();
     for (Map.Entry<String, ImmutableList<String>> entry : host.values().entrySet()) {
       String keyId = entry.getKey();
-      boolean isController = keyId.equals(HOST_FIELD_ATS_CONTROLLER);
       for (String value : entry.getValue()) {
-        if (isController) {
-          accumulator.add(seen, keyId, value, atsControllerDisplays.getOrDefault(value, value));
-        } else {
-          accumulator.add(seen, keyId, value);
-        }
+        accumulator.add(seen, keyId, value);
       }
     }
   }

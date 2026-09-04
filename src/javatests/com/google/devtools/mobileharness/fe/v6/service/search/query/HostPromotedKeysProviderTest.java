@@ -237,8 +237,8 @@ public final class HostPromotedKeysProviderTest {
     }
 
     @Override
-    public int keyPriority(String keyId) {
-      return 0;
+    public KeyPriority keyPriority() {
+      return FleetKeyPriority.INSTANCE;
     }
 
     @Override

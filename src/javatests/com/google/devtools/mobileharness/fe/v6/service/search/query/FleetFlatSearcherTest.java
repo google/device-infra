@@ -187,13 +187,13 @@ public final class FleetFlatSearcherTest {
         searcher.searchFlat(
             corpus,
             ImmutableList.of(simple("device_field::uuid", "device-2")),
-            ImmutableList.of("device_field::owner"),
+            ImmutableList.of("device_field::driver"),
             FleetColumnSort.getDefaultInstance(),
             FleetPageRequest.getDefaultInstance());
 
-    Cell ownerCell = results.getRows(0).getCells(0);
-    assertThat(ownerCell.getKindCase()).isEqualTo(Cell.KindCase.TEXT);
-    assertThat(ownerCell.getText().getValue()).isEqualTo("alice, carol");
+    Cell driverCell = results.getRows(0).getCells(0);
+    assertThat(driverCell.getKindCase()).isEqualTo(Cell.KindCase.TEXT);
+    assertThat(driverCell.getText().getValue()).isEqualTo("driverA, driverC");
   }
 
   @Test
@@ -252,44 +252,6 @@ public final class FleetFlatSearcherTest {
   }
 
   @Test
-  public void atsControllerColumn_showsFriendlyDisplayWithIdFallback() {
-    // Enrich the fleet with per-host ATS controllers and a controller-display registry that
-    // only covers ctrl-1, so the cell shows the friendly display for ctrl-1 and falls back to the
-    // raw id for the unregistered ctrl-2.
-    CoreFleetRawData raw =
-        CoreFleetRawData.builder()
-            .setLabData(atsControllerFleet())
-            .setHostEnrichments(
-                ImmutableMap.of(
-                    "lab1",
-                    HostEnrichment.builder().setAtsController(Optional.of("ctrl-1")).build(),
-                    "lab2",
-                    HostEnrichment.builder().setAtsController(Optional.of("ctrl-2")).build()))
-            .setAtsControllerDisplays(ImmutableMap.of("ctrl-1", "ATS Lab One"))
-            .build();
-    FleetSnapshot enriched =
-        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(raw, BUILD_TIME);
-
-    FleetFlatResults results =
-        searcher.searchFlat(
-            new DeviceCorpus(enriched, postings, null),
-            ImmutableList.of(),
-            ImmutableList.of("device_field::uuid", "host_field::ats_controller"),
-            FleetColumnSort.getDefaultInstance(),
-            FleetPageRequest.getDefaultInstance());
-
-    assertThat(rowIds(results)).containsExactly("device-0", "device-1", "device-2").inOrder();
-    // device-0: ctrl-1 mapped to its friendly display.
-    Cell registered = results.getRows(0).getCells(1);
-    assertThat(registered.getKindCase()).isEqualTo(Cell.KindCase.TEXT);
-    assertThat(registered.getText().getValue()).isEqualTo("ATS Lab One");
-    // device-1: ctrl-2 has no registry entry, so it falls back to the raw controller id.
-    assertThat(results.getRows(1).getCells(1).getText().getValue()).isEqualTo("ctrl-2");
-    // device-2: no controller at all, so the cell is empty.
-    assertThat(results.getRows(2).getCells(1).getText().getValue()).isEmpty();
-  }
-
-  @Test
   public void hostAttributeColumns_projectValuesWithEmptyFallback() {
     // Layer host attributes onto the fleet: lab1 runs debian with a Core Lab release, lab2 runs
     // macos with no HostInfoService enrichment. The host keys added by CL A must render their
@@ -313,10 +275,7 @@ public final class FleetFlatSearcherTest {
 
     ImmutableList<String> columns =
         ImmutableList.of(
-            "device_field::uuid",
-            "host_field::lab_type",
-            "host_property::host_os",
-            "host_field::release_status");
+            "device_field::uuid", "host_field::lab_server_version", "host_property::host_os");
     FleetFlatResults results =
         searcher.searchFlat(
             new DeviceCorpus(enriched, enrichedPostings, null),
@@ -327,20 +286,18 @@ public final class FleetFlatSearcherTest {
 
     assertThat(rowIds(results)).containsExactly("device-0", "device-1", "device-2").inOrder();
 
-    // device-0 on lab1: every host key projects a value, lab type as a comma-joinable TextCell.
+    // device-0 on lab1: lab_server_version is 1.2.3, host_os is debian.
     Row lab1Row = results.getRows(0);
-    Cell labTypeCell = lab1Row.getCells(1);
-    assertThat(labTypeCell.getKindCase()).isEqualTo(Cell.KindCase.TEXT);
-    assertThat(labTypeCell.getText().getValue()).isEqualTo("Core Lab");
+    Cell versionCell = lab1Row.getCells(1);
+    assertThat(versionCell.getKindCase()).isEqualTo(Cell.KindCase.TEXT);
+    assertThat(versionCell.getText().getValue()).isEqualTo("1.2.3");
     assertThat(lab1Row.getCells(2).getText().getValue()).isEqualTo("debian");
-    assertThat(lab1Row.getCells(3).getText().getValue()).isEqualTo("RUNNING");
 
-    // device-2 on lab2: no lab type and no release status, so those cells are blank; host os still
+    // device-2 on lab2: no lab_server_version, so that cell is blank; host os still
     // renders from the LabInfo host property.
     Row lab2Row = results.getRows(2);
     assertThat(lab2Row.getCells(1).getText().getValue()).isEmpty();
     assertThat(lab2Row.getCells(2).getText().getValue()).isEqualTo("macos");
-    assertThat(lab2Row.getCells(3).getText().getValue()).isEmpty();
   }
 
   @Test
@@ -431,17 +388,6 @@ public final class FleetFlatSearcherTest {
         .build();
   }
 
-  private static LabQueryResult atsControllerFleet() {
-    return LabQueryResult.newBuilder()
-        .setLabView(
-            LabQueryResult.LabView.newBuilder()
-                .setLabTotalCount(3)
-                .addLabData(labData("lab1", "1.1.1.1", device0()))
-                .addLabData(labData("lab2", "2.2.2.2", device1()))
-                .addLabData(labData("lab3", "3.3.3.3", device2())))
-        .build();
-  }
-
   private static LabData labData(String hostName, String ip, DeviceInfo... devices) {
     DeviceList.Builder deviceList = DeviceList.newBuilder().setDeviceTotalCount(devices.length);
     for (DeviceInfo device : devices) {
@@ -495,6 +441,7 @@ public final class FleetFlatSearcherTest {
         .setDeviceFeature(
             DeviceFeature.newBuilder()
                 .addType("AndroidRealDevice")
+                .addDriver("driverA")
                 .addOwner("alice")
                 .setCompositeDimension(
                     DeviceCompositeDimension.newBuilder()
@@ -510,6 +457,7 @@ public final class FleetFlatSearcherTest {
         .setDeviceFeature(
             DeviceFeature.newBuilder()
                 .addType("AndroidRealDevice")
+                .addDriver("driverB")
                 .addOwner("bob")
                 .setCompositeDimension(
                     DeviceCompositeDimension.newBuilder()
@@ -525,6 +473,8 @@ public final class FleetFlatSearcherTest {
         .setDeviceFeature(
             DeviceFeature.newBuilder()
                 .addType("IosRealDevice")
+                .addDriver("driverA")
+                .addDriver("driverC")
                 .addOwner("alice")
                 .addOwner("carol")
                 .setCompositeDimension(

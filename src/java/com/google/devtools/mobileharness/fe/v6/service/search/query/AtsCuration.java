@@ -18,8 +18,6 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
-import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
-import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetKeyPriority.Scenario;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeyRegistry;
@@ -42,11 +40,18 @@ import javax.inject.Inject;
  */
 public final class AtsCuration implements ScenarioCuration {
 
-  private final AtsDeviceKeyRegistry deviceKeyRegistry = new AtsDeviceKeyRegistry();
-  private final AtsHostKeyRegistry hostKeyRegistry = new AtsHostKeyRegistry();
+  private final AtsDeviceKeyRegistry deviceKeyRegistry;
+  private final AtsHostKeyRegistry hostKeyRegistry;
 
   @Inject
-  AtsCuration() {}
+  AtsCuration(AtsDeviceKeyRegistry deviceKeyRegistry, AtsHostKeyRegistry hostKeyRegistry) {
+    this.deviceKeyRegistry = deviceKeyRegistry;
+    this.hostKeyRegistry = hostKeyRegistry;
+  }
+
+  public AtsCuration() {
+    this(new AtsDeviceKeyRegistry(), new AtsHostKeyRegistry());
+  }
 
   @Override
   public DeviceKeyRegistry deviceKeyRegistry() {
@@ -72,6 +77,17 @@ public final class AtsCuration implements ScenarioCuration {
   @Override
   public ImmutableList<DeviceKeyDescriptor> deviceGroupByRow() {
     return ImmutableList.of(DeviceKeys.HOST_NAME, AtsDeviceKeys.WIFI_SSID);
+  }
+
+  @Override
+  public ImmutableList<DeviceKeyDescriptor> deviceGroupByCandidates() {
+    return ImmutableList.of(
+        DeviceKeys.STATUS, DeviceKeys.MODEL, DeviceKeys.TYPE, DeviceKeys.HOST_NAME);
+  }
+
+  @Override
+  public ImmutableList<DeviceKeyDescriptor> deviceEmptyStateKeys() {
+    return ImmutableList.of(DeviceKeys.STATUS, DeviceKeys.MODEL, DeviceKeys.TYPE);
   }
 
   @Override
@@ -114,6 +130,11 @@ public final class AtsCuration implements ScenarioCuration {
   }
 
   @Override
+  public ImmutableList<HostKeyDescriptor> hostGroupByCandidates() {
+    return ImmutableList.of(HostKeys.HOST_NAME, HostKeys.CONNECTIVITY, HostKeys.DEVICE_COUNT);
+  }
+
+  @Override
   public ImmutableList<HostKeyDescriptor> hostDefaultColumns() {
     return ImmutableList.of(
         HostKeys.HOST_NAME, HostKeys.CONNECTIVITY, HostKeys.DEVICE_COUNT, HostKeys.HOST_OS);
@@ -131,13 +152,8 @@ public final class AtsCuration implements ScenarioCuration {
   }
 
   @Override
-  public int keyPriority(String keyId) {
-    return FleetKeyPriority.priority(keyId, Scenario.ATS);
-  }
-
-  @Override
-  public int keyPriority(String keyId, SearchEntity entity) {
-    return FleetKeyPriority.priority(keyId, Scenario.ATS, entity);
+  public KeyPriority keyPriority() {
+    return FleetKeyPriority.INSTANCE;
   }
 
   @Override

@@ -100,9 +100,11 @@ public final class FleetColumnCatalogerTest {
     FleetColumnCatalogResponse queryResponse =
         customCataloger.getColumnCatalog(
             corpus, FleetColumnCatalogRequest.newBuilder().setQuery("custom_catalog_dim").build());
-    FleetColumnCatalogSection search = section(queryResponse, "Search results");
-    assertThat(keys(search)).contains("dimension::custom_catalog_dim");
-    assertThat(entryFor(search, "dimension::custom_catalog_dim").getDeviceCount()).isEqualTo(0);
+    FleetColumnCatalogSection dimensionsSection = section(queryResponse, "Dimensions");
+    assertThat(keys(dimensionsSection)).contains("dimension::custom_catalog_dim");
+    assertThat(entryFor(dimensionsSection, "dimension::custom_catalog_dim").getDeviceCount())
+        .isEqualTo(0);
+    assertThat(headings(queryResponse)).doesNotContain("Search results");
   }
 
   @Test
@@ -127,13 +129,13 @@ public final class FleetColumnCatalogerTest {
                 .setQuery("catalog_dim")
                 .build());
 
-    assertThat(keys(section(atsResponse, "Search results"))).contains("dimension::ats_catalog_dim");
-    assertThat(keys(section(atsResponse, "Search results")))
+    assertThat(keys(section(atsResponse, "Dimensions"))).contains("dimension::ats_catalog_dim");
+    assertThat(keys(section(atsResponse, "Dimensions")))
         .doesNotContain("dimension::self_catalog_dim");
 
-    assertThat(keys(section(defaultResponse, "Search results")))
+    assertThat(keys(section(defaultResponse, "Dimensions")))
         .contains("dimension::self_catalog_dim");
-    assertThat(keys(section(defaultResponse, "Search results")))
+    assertThat(keys(section(defaultResponse, "Dimensions")))
         .doesNotContain("dimension::ats_catalog_dim");
   }
 
@@ -163,8 +165,6 @@ public final class FleetColumnCatalogerTest {
             "host_field::host_ip",
             "host_field::connectivity",
             "host_field::host_name",
-            "device_field::owner",
-            "device_field::quarantined",
             "device_field::status",
             "device_field::type",
             "device_field::uuid")
@@ -243,16 +243,21 @@ public final class FleetColumnCatalogerTest {
   }
 
   @Test
-  public void search_presentOnlyWithQueryAndMatchesAcrossNamespaces() {
+  public void search_filtersCategoriesInPlaceAndOmitsEmptySections() {
     FleetColumnCatalogResponse withQuery =
         cataloger.getColumnCatalog(
             corpus, FleetColumnCatalogRequest.newBuilder().setQuery("model").build());
 
-    FleetColumnCatalogSection search = section(withQuery, "Search results");
-    assertThat(keys(search)).contains("dimension::model");
-    assertThat(search.getTotalAvailable()).isEqualTo(1);
+    // Under Scheme B (Category Filter Tree Mode), categories are filtered in place.
+    // 'model' matches dimension::model, so Dimensions section is present, Search results is
+    // omitted.
+    FleetColumnCatalogSection dimensions = section(withQuery, "Dimensions");
+    assertThat(keys(dimensions)).contains("dimension::model");
+    assertThat(dimensions.getTotalAvailable()).isEqualTo(1);
+    assertThat(headings(withQuery)).doesNotContain("Search results");
+    assertThat(headings(withQuery)).doesNotContain("Suggested for you");
 
-    // With no query there is no search section.
+    // With no query, browse sections are returned and Search results is omitted.
     FleetColumnCatalogResponse noQuery =
         cataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
     assertThat(headings(noQuery)).doesNotContain("Search results");

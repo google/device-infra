@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetKeyPriority.Scenario;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
@@ -114,23 +113,8 @@ public final class AtsCurationTest {
   }
 
   @Test
-  public void keyPriority_delegatesToAtsScenario() {
-    // The WiFi SSID key is promoted in ats (rank 3).
-    assertThat(curation.keyPriority("device_config::wifi_ssid"))
-        .isEqualTo(FleetKeyPriority.priority("device_config::wifi_ssid", Scenario.ATS));
-    assertThat(curation.keyPriority("device_config::wifi_ssid")).isEqualTo(3);
-    // The ATS controller key is not curated in ats (rank 1).
-    assertThat(curation.keyPriority("host_field::ats_controller"))
-        .isEqualTo(FleetKeyPriority.priority("host_field::ats_controller", Scenario.ATS));
-    assertThat(curation.keyPriority("host_field::ats_controller")).isEqualTo(1);
-    // A tier 2 key ranks 1 in ats, distinguishing it from 1p and ats-all (2).
-    assertThat(curation.keyPriority("device_field::driver"))
-        .isEqualTo(FleetKeyPriority.priority("device_field::driver", Scenario.ATS));
-    assertThat(curation.keyPriority("device_field::driver")).isEqualTo(1);
-    // A raw discovered dimension is kept out of the way in ats (rank 0).
-    assertThat(curation.keyPriority("dimension::pool"))
-        .isEqualTo(FleetKeyPriority.priority("dimension::pool", Scenario.ATS));
-    assertThat(curation.keyPriority("dimension::pool")).isEqualTo(0);
+  public void keyPriority_isFleetKeyPriority() {
+    assertThat(curation.keyPriority()).isSameInstanceAs(FleetKeyPriority.INSTANCE);
   }
 
   @Test

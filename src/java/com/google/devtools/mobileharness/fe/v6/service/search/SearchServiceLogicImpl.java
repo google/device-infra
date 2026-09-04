@@ -208,13 +208,7 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
   @Override
   public ListenableFuture<FleetChipResolverResponse> resolveFleetChips(
       FleetChipResolverRequest request) {
-    return Futures.submit(
-        () -> {
-          Fleet fleet = normalize(request.getFleet());
-          FleetSnapshot snapshot = store.get(fleet);
-          return chipResolver.resolve(snapshot, request);
-        },
-        executor);
+    return Futures.submit(() -> chipResolver.resolve(request), executor);
   }
 
   @Override
