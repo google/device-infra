@@ -2614,4 +2614,29 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
     assertThat(createJobsResult.errorReason()).hasValue(ErrorReason.INVALID_REQUEST);
   }
+
+  @Test
+  public void handleNonTradefedJobEnd_nonTradefedJob_preparesLogDirNameAndCallsResultHandler()
+      throws Exception {
+    properties.add(Job.IS_XTS_NON_TF_JOB, "true");
+    when(testInfo.locator())
+        .thenReturn(new TestLocator("test_id", "test_name", new JobLocator("job_id", "job_name")));
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
+
+    newMultiCommandRequestHandler.handleNonTradefedJobEnd(jobInfo, requestDetail);
+
+    assertThat(requestDetail.getNonTradefedLogDirNamesList()).isNotEmpty();
+    verify(sessionResultHandlerUtil).handleNonTradefedJobEnd(jobInfo);
+  }
+
+  @Test
+  public void handleNonTradefedJobEnd_notNonTradefedJob_doesNothing() throws Exception {
+    properties.add(Job.IS_XTS_NON_TF_JOB, "false");
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
+
+    newMultiCommandRequestHandler.handleNonTradefedJobEnd(jobInfo, requestDetail);
+
+    assertThat(requestDetail.getNonTradefedLogDirNamesList()).isEmpty();
+    verify(sessionResultHandlerUtil, never()).handleNonTradefedJobEnd(jobInfo);
+  }
 }

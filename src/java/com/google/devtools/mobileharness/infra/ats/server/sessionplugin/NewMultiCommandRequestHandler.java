@@ -1377,7 +1377,20 @@ final class NewMultiCommandRequestHandler {
     }
   }
 
-  void prepareMoblyJobLogDirName(JobInfo jobInfo, RequestDetail.Builder requestDetail) {
+  /**
+   * Handles post-processing when a non-Tradefed xTS job completes, preparing Mobly log directory
+   * names and writing module run result files.
+   */
+  void handleNonTradefedJobEnd(JobInfo jobInfo, RequestDetail.Builder requestDetail)
+      throws MobileHarnessException {
+    if (!jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
+      return;
+    }
+    prepareMoblyJobLogDirName(jobInfo, requestDetail);
+    sessionResultHandlerUtil.handleNonTradefedJobEnd(jobInfo);
+  }
+
+  private void prepareMoblyJobLogDirName(JobInfo jobInfo, RequestDetail.Builder requestDetail) {
     String moduleId = SessionResultHandlerUtil.getExpandedNonTfModuleId(jobInfo);
     for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
       requestDetail.addNonTradefedLogDirNames(

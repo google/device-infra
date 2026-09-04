@@ -23,7 +23,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.endsWith;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -1007,8 +1006,7 @@ public final class AtsServerSessionPluginTest {
 
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
 
-    verify(localFileUtil)
-        .writeToFile("/tmp/test_gen_file_dir/ats_module_run_result.textproto", "result: PASS\n");
+    verify(sessionResultHandlerUtil).handleNonTradefedJobEnd(jobInfo);
   }
 
   @Test
@@ -1043,13 +1041,7 @@ public final class AtsServerSessionPluginTest {
 
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
 
-    verify(localFileUtil)
-        .writeToFile(
-            eq("/tmp/test_gen_file_dir/ats_module_run_result.textproto"),
-            startsWith(
-                "result: ERROR\n"
-                    + "cause: \"ERROR[cause=MobileHarnessException: Device is not available."
-                    + " [MH|INFRA_ISSUE|DM_RESERVE_BUSY_DEVICE|40308] [MobileHarnessException]"));
+    verify(sessionResultHandlerUtil).handleNonTradefedJobEnd(jobInfo);
   }
 
   @Test

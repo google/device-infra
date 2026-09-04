@@ -232,7 +232,9 @@ java_library(
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/infra/ats/common/proto:session_request_info_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:result_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/out",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_format",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_merger",
@@ -263,6 +265,7 @@ java_library(
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
+        "@protobuf//:protobuf_java",
     ],
 )
 

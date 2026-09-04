@@ -32,11 +32,9 @@ import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
-import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification.NotificationCase;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
@@ -69,18 +67,15 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.util.Se
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache.CacheRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache.InvalidateCacheRequest;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
-import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedTestModuleResultsMessage;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedTestModuleResults;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
-import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.Any;
 import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
 import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
@@ -90,7 +85,6 @@ import com.google.wireless.qa.mobileharness.shared.controller.event.TestStarting
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
-import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -143,7 +137,6 @@ final class AtsServerSessionPlugin {
   private final LocalSessionStub localSessionStub;
   private final Clock clock;
   private final TestMessageUtil testMessageUtil;
-  private final LocalFileUtil localFileUtil;
   private final SessionDeviceCache sessionDeviceCache;
   private final ListeningScheduledExecutorService scheduledThreadPool;
 
@@ -157,14 +150,12 @@ final class AtsServerSessionPlugin {
       LocalSessionStub localSessionStub,
       Clock clock,
       TestMessageUtil testMessageUtil,
-      LocalFileUtil localFileUtil,
       SessionDeviceCache sessionDeviceCache) {
     this.sessionInfo = sessionInfo;
     this.newMultiCommandRequestHandler = newMultiCommandRequestHandler;
     this.localSessionStub = localSessionStub;
     this.clock = clock;
     this.testMessageUtil = testMessageUtil;
-    this.localFileUtil = localFileUtil;
     this.sessionDeviceCache = sessionDeviceCache;
     this.scheduledThreadPool =
         ThreadPools.createStandardScheduledThreadPool(
@@ -538,37 +529,10 @@ final class AtsServerSessionPlugin {
     if (requestDetail.getState().equals(RequestState.CANCELED) || isAborted()) {
       return;
     }
-    handleNonTradefedJobEnd(jobInfo, requestDetail);
+    newMultiCommandRequestHandler.handleNonTradefedJobEnd(jobInfo, requestDetail);
     ensureTradefedJobsInitialized(requestDetail);
     scheduleNextTradefedJob(jobInfo);
     scheduleNonTradefedJobsIfNeeded(jobInfo, requestDetail);
-  }
-
-  /**
-   * Handles post-processing when a non-Tradefed xTS job completes, such as preparing Mobly log
-   * directory names and writing module run result files.
-   */
-  @GuardedBy("sessionLock")
-  private void handleNonTradefedJobEnd(JobInfo jobInfo, RequestDetail.Builder requestDetail)
-      throws MobileHarnessException {
-    if (!jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
-      return;
-    }
-    newMultiCommandRequestHandler.prepareMoblyJobLogDirName(jobInfo, requestDetail);
-    for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
-      ResultTypeWithCause resultWithCause = testInfo.resultWithCause().get();
-      ModuleRunResult.Builder resultBuilder =
-          ModuleRunResult.newBuilder().setResult(resultWithCause.type());
-      if (resultWithCause.causeProto().isPresent()) {
-        resultBuilder.setCause(resultWithCause.toStringWithDetail());
-      }
-      localFileUtil.writeToFile(
-          Path.of(testInfo.getGenFileDir())
-              .resolve("ats_module_run_result.textproto")
-              .toAbsolutePath()
-              .toString(),
-          TextFormat.printer().printToString(resultBuilder.build()));
-    }
   }
 
   /**

@@ -19,10 +19,18 @@ package com.google.devtools.mobileharness.infra.ats.common;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Metric;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
@@ -38,6 +46,7 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationDescriptorMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
+import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -47,6 +56,7 @@ import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
@@ -483,5 +493,62 @@ public final class SessionResultHandlerUtilTest {
                 .exists())
         .isTrue();
     assertThat(invocationDir.resolve("tradefed.log").toFile().exists()).isTrue();
+  }
+
+  @Test
+  public void handleNonTradefedJobEnd_nonTradefedJobPass_atsModuleRunResultFileWritten()
+      throws Exception {
+    TestInfos testInfos = mock(TestInfos.class);
+    com.google.devtools.mobileharness.api.model.job.out.Result result =
+        mock(com.google.devtools.mobileharness.api.model.job.out.Result.class);
+    when(jobProperties.getBoolean(Job.IS_XTS_NON_TF_JOB)).thenReturn(Optional.of(true));
+    when(jobInfo.tests()).thenReturn(testInfos);
+    when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
+    when(testInfo.resultWithCause()).thenReturn(result);
+    when(result.get()).thenReturn(ResultTypeWithCause.create(TestResult.PASS, /* cause= */ null));
+    when(testInfo.getGenFileDir()).thenReturn("/tmp/test_gen_file_dir");
+
+    sessionResultHandlerUtil.handleNonTradefedJobEnd(jobInfo);
+
+    verify(localFileUtil)
+        .writeToFile("/tmp/test_gen_file_dir/ats_module_run_result.textproto", "result: PASS\n");
+  }
+
+  @Test
+  public void handleNonTradefedJobEnd_nonTradefedJobErrorWithCause_atsModuleRunResultFileWritten()
+      throws Exception {
+    TestInfos testInfos = mock(TestInfos.class);
+    com.google.devtools.mobileharness.api.model.job.out.Result result =
+        mock(com.google.devtools.mobileharness.api.model.job.out.Result.class);
+    when(jobProperties.getBoolean(Job.IS_XTS_NON_TF_JOB)).thenReturn(Optional.of(true));
+    when(jobInfo.tests()).thenReturn(testInfos);
+    when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
+    when(testInfo.resultWithCause()).thenReturn(result);
+    when(result.get())
+        .thenReturn(
+            ResultTypeWithCause.create(
+                TestResult.ERROR,
+                new MobileHarnessException(
+                    InfraErrorId.DM_RESERVE_BUSY_DEVICE, "Device is not available.")));
+    when(testInfo.getGenFileDir()).thenReturn("/tmp/test_gen_file_dir");
+
+    sessionResultHandlerUtil.handleNonTradefedJobEnd(jobInfo);
+
+    verify(localFileUtil)
+        .writeToFile(
+            eq("/tmp/test_gen_file_dir/ats_module_run_result.textproto"),
+            startsWith(
+                "result: ERROR\n"
+                    + "cause: \"ERROR[cause=MobileHarnessException: Device is not available."));
+  }
+
+  @Test
+  public void handleNonTradefedJobEnd_notNonTradefedJob_doesNothing() throws Exception {
+    when(jobProperties.getBoolean(Job.IS_XTS_NON_TF_JOB)).thenReturn(Optional.of(false));
+
+    sessionResultHandlerUtil.handleNonTradefedJobEnd(jobInfo);
+
+    verify(localFileUtil, never())
+        .writeToFile(eq("/tmp/test_gen_file_dir/ats_module_run_result.textproto"), anyString());
   }
 }

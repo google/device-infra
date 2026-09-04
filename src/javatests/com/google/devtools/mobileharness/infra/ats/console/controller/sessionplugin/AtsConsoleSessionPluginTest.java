@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.sessionpl
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -28,11 +27,6 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.job.out.Result;
-import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
-import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginNotification;
@@ -46,7 +40,6 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
-import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -166,65 +159,15 @@ public final class AtsConsoleSessionPluginTest {
   }
 
   @Test
-  public void onJobEnd_nonTradefedJob_atsModuleRunResultFileWritten() throws Exception {
+  public void onJobEnd_callsRunCommandHandler() throws Exception {
     JobInfo jobInfo = mock(JobInfo.class);
-    TestInfos testInfos = mock(TestInfos.class);
-    TestInfo testInfo = mock(TestInfo.class);
-    Result result = mock(Result.class);
-
     when(jobInfo.locator()).thenReturn(new JobLocator("job_id", "job_name"));
-    Properties jobProperties = new Properties(new Timing());
-    jobProperties.add(Job.IS_XTS_NON_TF_JOB, "true");
-    when(jobInfo.properties()).thenReturn(jobProperties);
-    when(jobInfo.tests()).thenReturn(testInfos);
-    when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
-    when(testInfo.resultWithCause()).thenReturn(result);
-    when(result.get()).thenReturn(ResultTypeWithCause.create(TestResult.PASS, /* cause= */ null));
-    when(testInfo.getGenFileDir()).thenReturn("/tmp/test_gen_file_dir");
 
     JobEndEvent event = new JobEndEvent(jobInfo, /* jobError= */ null);
 
     atsConsoleSessionPlugin.onJobEnd(event);
 
-    verify(localFileUtil)
-        .writeToFile("/tmp/test_gen_file_dir/ats_module_run_result.textproto", "result: PASS\n");
-  }
-
-  @Test
-  public void onJobEnd_nonTradefedJobFailure_atsModuleRunResultFileWritten() throws Exception {
-    JobInfo jobInfo = mock(JobInfo.class);
-    TestInfos testInfos = mock(TestInfos.class);
-    TestInfo testInfo = mock(TestInfo.class);
-    Result result = mock(Result.class);
-
-    when(jobInfo.locator()).thenReturn(new JobLocator("job_id", "job_name"));
-    Properties jobProperties = new Properties(new Timing());
-    jobProperties.add(Job.IS_XTS_NON_TF_JOB, "true");
-    when(jobInfo.properties()).thenReturn(jobProperties);
-    when(jobInfo.tests()).thenReturn(testInfos);
-    when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
-    when(testInfo.resultWithCause()).thenReturn(result);
-    when(result.get())
-        .thenReturn(
-            ResultTypeWithCause.create(
-                TestResult.FAIL,
-                new MobileHarnessException(
-                    ExtErrorId.MOBLY_TEST_FAILURE,
-                    "The Mobly test run had some failures. Please see Mobly test results.")));
-    when(testInfo.getGenFileDir()).thenReturn("/tmp/test_gen_file_dir");
-
-    JobEndEvent event = new JobEndEvent(jobInfo, /* jobError= */ null);
-
-    atsConsoleSessionPlugin.onJobEnd(event);
-
-    verify(localFileUtil)
-        .writeToFile(
-            eq("/tmp/test_gen_file_dir/ats_module_run_result.textproto"),
-            startsWith(
-                "result: FAIL\n"
-                    + "cause: \"FAIL[cause=MobileHarnessException: The Mobly test run had some"
-                    + " failures. Please see Mobly test results."
-                    + " [MH|CUSTOMER_ISSUE|MOBLY_TEST_FAILURE|81022] [MobileHarnessException]"));
+    verify(runCommandHandler).handleNonTradefedJobEnd(jobInfo);
   }
 
   @Test

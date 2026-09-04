@@ -23,7 +23,9 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
@@ -449,5 +451,15 @@ public final class RunCommandHandlerTest {
         xtsRootDir.toPath().resolve(String.format("android-cts/results/%s", TIMESTAMP_DIR_NAME));
 
     assertThat(resultDir.toFile().isDirectory()).isTrue();
+  }
+
+  @Test
+  public void handleNonTradefedJobEnd_callsSessionResultHandlerUtil() throws Exception {
+    JobInfo jobInfo = mock(JobInfo.class);
+    doNothing().when(sessionResultHandlerUtil).handleNonTradefedJobEnd(jobInfo);
+
+    runCommandHandler.handleNonTradefedJobEnd(jobInfo);
+
+    verify(sessionResultHandlerUtil).handleNonTradefedJobEnd(jobInfo);
   }
 }

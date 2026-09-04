@@ -32,11 +32,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportFormat;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
@@ -63,6 +65,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.protobuf.TextFormat;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.io.File;
@@ -80,13 +83,15 @@ public class SessionResultHandlerUtil {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final String ATS_MODULE_RUN_RESULT_FILE_NAME = "ats_module_run_result.textproto";
+
   private static final ImmutableSet<String> MOBLY_TEST_RESULT_FILE_NAMES =
       ImmutableSet.of(
           "test_summary.yaml",
           "device_build_fingerprint.txt",
           "mobly_run_build_attributes.textproto",
           "mobly_run_result_attributes.textproto",
-          "ats_module_run_result.textproto");
+          ATS_MODULE_RUN_RESULT_FILE_NAME);
 
   // Mobly result directories that are copied to the root result dir.
   private static final ImmutableSet<String> MOBLY_ROOT_TEST_RESULT_DIR_NAMES =
@@ -1087,7 +1092,7 @@ public class SessionResultHandlerUtil {
       case "mobly_run_result_attributes.textproto" ->
           resultBuilder.setResultAttributesFile(filePath);
       case "mobly_run_build_attributes.textproto" -> resultBuilder.setBuildAttributesFile(filePath);
-      case "ats_module_run_result.textproto" -> resultBuilder.setModuleResultFile(filePath);
+      case ATS_MODULE_RUN_RESULT_FILE_NAME -> resultBuilder.setModuleResultFile(filePath);
       default -> {}
     }
   }
@@ -1195,6 +1200,30 @@ public class SessionResultHandlerUtil {
     Optional<String> labGenFileDir = getLabGenFileDir(testInfo);
     if (labGenFileDir.isPresent()) {
       localFileUtil.removeFileOrDir(labGenFileDir.get());
+    }
+  }
+
+  /**
+   * Handles post-processing when a non-Tradefed (e.g. Mobly) xTS job completes, writing module run
+   * result files for each test.
+   */
+  public void handleNonTradefedJobEnd(JobInfo jobInfo) throws MobileHarnessException {
+    if (!jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
+      return;
+    }
+    for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
+      ResultTypeWithCause resultWithCause = testInfo.resultWithCause().get();
+      ModuleRunResult.Builder resultBuilder =
+          ModuleRunResult.newBuilder().setResult(resultWithCause.type());
+      resultWithCause
+          .causeProto()
+          .ifPresent(unused -> resultBuilder.setCause(resultWithCause.toStringWithDetail()));
+      localFileUtil.writeToFile(
+          Path.of(testInfo.getGenFileDir())
+              .resolve(ATS_MODULE_RUN_RESULT_FILE_NAME)
+              .toAbsolutePath()
+              .toString(),
+          TextFormat.printer().printToString(resultBuilder.build()));
     }
   }
 

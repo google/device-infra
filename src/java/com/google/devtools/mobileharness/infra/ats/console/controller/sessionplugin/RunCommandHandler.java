@@ -298,6 +298,11 @@ class RunCommandHandler {
     }
   }
 
+  /** Handles post-processing when a non-Tradefed xTS job completes. */
+  void handleNonTradefedJobEnd(JobInfo jobInfo) throws MobileHarnessException {
+    sessionResultHandlerUtil.handleNonTradefedJobEnd(jobInfo);
+  }
+
   @VisibleForTesting
   SessionRequestInfo generateSessionRequestInfo(RunCommand runCommand)
       throws MobileHarnessException, InterruptedException {
