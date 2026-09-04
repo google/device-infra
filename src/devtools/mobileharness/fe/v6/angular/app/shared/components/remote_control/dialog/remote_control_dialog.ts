@@ -56,6 +56,9 @@ import {
   RemoteControlDialogData,
 } from '../remote_control.types';
 
+/** Sentinel value indicating mixed run_as identities across selected devices. */
+export const MIXED_RUN_AS = '__MIXED__';
+
 declare interface RemoteControlFormValue {
   deviceConfigs: DeviceRemoteControlConfig[];
   globalRunAs: string;
@@ -152,10 +155,26 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
   globalRunAsOptions = computed(() => {
     return this.commonIdentities();
   });
+  readonly isAllDefaultIdentities = computed(() => {
+    const list = this.deviceList();
+    return list.length > 0 && list.every((d) => d.validIdentities.length === 0);
+  });
 
   startingSession = signal(false);
   readonly PROXY_TYPE_LABELS = PROXY_TYPE_LABELS;
   readonly DeviceProxyType = DeviceProxyType;
+  readonly MIXED_RUN_AS = MIXED_RUN_AS;
+
+  getGlobalRunAsDisplay(): string {
+    const val = this.form.get('globalRunAs')?.value;
+    if (val === MIXED_RUN_AS) {
+      return 'Mixed';
+    }
+    if (!val) {
+      return 'Default';
+    }
+    return val;
+  }
 
   get deviceConfigs(): FormArray {
     return this.form.get('deviceConfigs') as FormArray;
@@ -289,8 +308,7 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
         const deviceGroup = this.fb.group({
           deviceId: [device.id],
           runAs: [
-            hasAccess ? validIdentities[0] : '',
-            hasAccess ? Validators.required : null,
+            hasAccess && validIdentities.length > 0 ? validIdentities[0] : '',
           ],
         });
         this.deviceConfigs.push(deviceGroup);
@@ -327,20 +345,27 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
     ).sort();
     this.commonIdentities.set(commonIds);
 
-    // Default select the first common identity if available
-    if (commonIds.length > 0) {
-      const defaultId = commonIds[0];
-      this.form.get('globalRunAs')?.setValue(defaultId, {emitEvent: false});
+    // Multi-device initialization:
+    if (this.deviceList().length > 1) {
+      if (commonIds.length > 0) {
+        const defaultId = commonIds[0];
+        this.form.get('globalRunAs')?.setValue(defaultId, {emitEvent: false});
 
-      // Propagate to all devices
-      this.deviceConfigs.controls.forEach(
-        (control: AbstractControl, index: number) => {
-          const deviceData = this.deviceList()[index];
-          if (deviceData.validIdentities.includes(defaultId)) {
-            control.get('runAs')?.setValue(defaultId);
-          }
-        },
-      );
+        this.deviceConfigs.controls.forEach(
+          (control: AbstractControl, index: number) => {
+            const deviceData = this.deviceList()[index];
+            if (deviceData.validIdentities.includes(defaultId)) {
+              control.get('runAs')?.setValue(defaultId);
+            }
+          },
+        );
+      } else {
+        // When devices have no common groups, cleanly default all devices to Default ('')
+        this.form.get('globalRunAs')?.setValue('', {emitEvent: false});
+        this.deviceConfigs.controls.forEach((control: AbstractControl) => {
+          control.get('runAs')?.setValue('');
+        });
+      }
     }
 
     // Initialize Common Proxies from Data
@@ -473,7 +498,14 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
   private setupGlobalRunAsSync() {
     // Global -> Devices
     this.form.get('globalRunAs')?.valueChanges.subscribe((val) => {
-      if (!val || val === 'Mixed') {
+      if (val === MIXED_RUN_AS) {
+        return;
+      }
+
+      if (!val) {
+        this.deviceConfigs.controls.forEach((control: AbstractControl) => {
+          control.get('runAs')?.setValue('');
+        });
         return;
       }
 
@@ -493,19 +525,24 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
         const runAsValues = vals.map((v) => v.runAs);
         const unique = new Set(runAsValues);
 
-        // If all devices share the same valid runAs value and it is one of the common identities
-        const val = runAsValues[0];
-        if (unique.size === 1 && val && this.commonIdentities().includes(val)) {
-          // If current global is different, update it
-          if (this.form.get('globalRunAs')?.value !== val) {
-            this.form.get('globalRunAs')?.setValue(val, {emitEvent: false});
+        if (unique.size === 1) {
+          const val = runAsValues[0];
+          if (val === '') {
+            if (this.form.get('globalRunAs')?.value !== '') {
+              this.form.get('globalRunAs')?.setValue('', {emitEvent: false});
+            }
+            return;
           }
-          return;
+          if (this.commonIdentities().includes(val)) {
+            if (this.form.get('globalRunAs')?.value !== val) {
+              this.form.get('globalRunAs')?.setValue(val, {emitEvent: false});
+            }
+            return;
+          }
         }
 
-        // Otherwise, set to Mixed if not already
-        if (this.form.get('globalRunAs')?.value !== '') {
-          this.form.get('globalRunAs')?.setValue('', {emitEvent: false});
+        if (this.form.get('globalRunAs')?.value !== MIXED_RUN_AS) {
+          this.form.get('globalRunAs')?.setValue(MIXED_RUN_AS, {emitEvent: false});
         }
       },
     );
@@ -634,11 +671,10 @@ export class RemoteControlDialog implements OnInit, OnDestroy {
 
         return {
           deviceId: c.deviceId,
-          runAs: c.runAs,
+          runAs: c.runAs || '',
           subDeviceId,
         };
-      })
-      .filter((c) => c.runAs);
+      });
 
     const req: RemoteControlDevicesRequest = {
       deviceConfigs,

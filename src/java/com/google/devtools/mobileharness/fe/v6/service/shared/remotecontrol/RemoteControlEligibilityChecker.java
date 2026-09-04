@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol;
 
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
@@ -106,28 +107,13 @@ public class RemoteControlEligibilityChecker {
                 calculateSupportedProxies(context.types(), context.dimensions()))
             .build();
 
-    // Permission and Candidate Calculation (Async).
-    // We calculate this even if technical check failed to ensure PERMISSION_DENIED
-    // takes precedence or candidates are populated for debugging.
+    // Candidate Calculation (Async).
+    // Candidates are populated as hints/suggestions for the caller. If no candidates
+    // match, the device remains eligible and downstream (e.g. XCID / MH Lab Server)
+    // performs final lease authorization.
     return Futures.transform(
         calculateRunAsCandidates(context),
-        candidates -> {
-          RemoteControlEligibilityResult.Builder resultBuilder =
-              resultWithProxies.toBuilder().setRunAsCandidates(candidates);
-
-          // If no candidates are found, return ineligible with PERMISSION_DENIED.
-          // This takes precedence over technical ineligibility.
-          if (candidates.isEmpty()) {
-            return resultBuilder
-                .setIsEligible(false)
-                .setReasonCode(IneligibilityReasonCode.PERMISSION_DENIED)
-                .setReasonMessage("Permission denied")
-                .setSupportedProxyTypes(ImmutableList.of())
-                .build();
-          }
-
-          return resultBuilder.build();
-        },
+        candidates -> resultWithProxies.toBuilder().setRunAsCandidates(candidates).build(),
         executor);
   }
 
@@ -195,9 +181,8 @@ public class RemoteControlEligibilityChecker {
     // For sub-device, check communication_type dimension or device_supports_moreto dimension.
     if (context.isSubDevice()) {
       return dimensions.containsKey(DIMENSION_COMMUNICATION_TYPE)
-          || dimensions
-              .getOrDefault(DIMENSION_DEVICE_SUPPORTS_MORETO, "false")
-              .equalsIgnoreCase("true");
+          || Ascii.equalsIgnoreCase(
+              dimensions.getOrDefault(DIMENSION_DEVICE_SUPPORTS_MORETO, "false"), "true");
     }
 
     // For testbed device, check communication_type and sub-device communication_type dimension.

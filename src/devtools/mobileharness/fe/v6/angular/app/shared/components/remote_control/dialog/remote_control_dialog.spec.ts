@@ -13,7 +13,7 @@ import {DeviceProxyType} from '../../../../core/models/host_overview';
 import {SnackBarService} from '../../../services/snackbar_service';
 import {ConfirmDialog} from '../../confirm_dialog/confirm_dialog';
 import {RemoteControlDialogData} from '../remote_control.types';
-import {RemoteControlDialog} from './remote_control_dialog';
+import {MIXED_RUN_AS, RemoteControlDialog} from './remote_control_dialog';
 
 describe('RemoteControlDialog', () => {
   let fixture: ComponentFixture<MatTestDialogOpener<RemoteControlDialog>>;
@@ -253,7 +253,57 @@ describe('RemoteControlDialog', () => {
     component.deviceConfigs.at(1).get('runAs')?.setValue('user3');
     tickAndDetectChanges();
 
+    expect(component.form.get('globalRunAs')?.value).toBe(MIXED_RUN_AS);
+
+    // When both devices are set to Default ('')
+    component.deviceConfigs.at(0).get('runAs')?.setValue('');
+    component.deviceConfigs.at(1).get('runAs')?.setValue('');
+    tickAndDetectChanges();
     expect(component.form.get('globalRunAs')?.value).toBe('');
+
+    // When globalRunAs is set to Default ('')
+    component.form.get('globalRunAs')?.setValue('user1');
+    tickAndDetectChanges();
+    expect(component.deviceConfigs.at(0).get('runAs')?.value).toBe('user1');
+    expect(component.deviceConfigs.at(1).get('runAs')?.value).toBe('user1');
+
+    component.form.get('globalRunAs')?.setValue('');
+    tickAndDetectChanges();
+    expect(component.deviceConfigs.at(0).get('runAs')?.value).toBe('');
+    expect(component.deviceConfigs.at(1).get('runAs')?.value).toBe('');
+  });
+
+  it('should cleanly default multi-device runAs to Default when no common groups exist', () => {
+    initComponent({
+      devices: [
+        {id: 'device-1', model: 'Pixel 9', isTestbed: false, subDevices: []},
+        {id: 'device-2', model: 'Pixel 8', isTestbed: false, subDevices: []},
+      ],
+      eligibilityResults: [
+        {
+          deviceId: 'device-1',
+          isEligible: true,
+          runAsCandidates: ['user1'],
+          supportedProxyTypes: [],
+        },
+        {
+          deviceId: 'device-2',
+          isEligible: true,
+          runAsCandidates: ['user2'],
+          supportedProxyTypes: [],
+        },
+      ],
+      sessionOptions: {
+        maxDurationHours: 3,
+        commonRunAsCandidates: [],
+        commonProxyTypes: [DeviceProxyType.ADB_ONLY],
+      },
+    });
+    tickAndDetectChanges();
+
+    expect(component.form.get('globalRunAs')?.value).toBe('');
+    expect(component.deviceConfigs.at(0).get('runAs')?.value).toBe('');
+    expect(component.deviceConfigs.at(1).get('runAs')?.value).toBe('');
   });
 
   it('should toggle expanded device lists and remove devices correctly', () => {

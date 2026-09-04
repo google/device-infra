@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.fe.v6.service.shared.remotecontrol;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.Futures.immediateFuture;
+import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -26,9 +28,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DeviceProxyType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.IneligibilityReasonCode;
@@ -49,7 +49,7 @@ public final class RemoteControlEligibilityCheckerTest {
 
   @Mock private GroupMembershipProvider groupMembershipProvider;
 
-  private final ListeningExecutorService executor = MoreExecutors.newDirectExecutorService();
+  private final ListeningExecutorService executor = newDirectExecutorService();
   private DeviceAccessResolver deviceAccessResolver;
   private RemoteControlEligibilityChecker checker;
 
@@ -149,7 +149,8 @@ public final class RemoteControlEligibilityCheckerTest {
   }
 
   @Test
-  public void checkEligibility_permissionDenied_returnsIneligible() throws Exception {
+  public void checkEligibility_noMatchingCandidates_returnsEligibleWithEmptyCandidates()
+      throws Exception {
     RemoteControlEligibilityContext context =
         RemoteControlEligibilityContext.builder()
             .setUsername("user")
@@ -160,12 +161,12 @@ public final class RemoteControlEligibilityCheckerTest {
             .build();
 
     when(groupMembershipProvider.isMemberOfAny(anyString(), any()))
-        .thenReturn(Futures.immediateFuture(false));
+        .thenReturn(immediateFuture(false));
 
     RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
 
-    assertThat(result.isEligible()).isFalse();
-    assertThat(result.reasonCode()).hasValue(IneligibilityReasonCode.PERMISSION_DENIED);
+    assertThat(result.isEligible()).isTrue();
+    assertThat(result.reasonCode()).isEmpty();
     assertThat(result.runAsCandidates()).isEmpty();
   }
 
@@ -181,7 +182,7 @@ public final class RemoteControlEligibilityCheckerTest {
             .build();
 
     when(groupMembershipProvider.isMemberOfAny(eq("user"), eq(ImmutableList.of("group1"))))
-        .thenReturn(Futures.immediateFuture(true));
+        .thenReturn(immediateFuture(true));
 
     RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
 
@@ -358,8 +359,7 @@ public final class RemoteControlEligibilityCheckerTest {
 
     RemoteControlEligibilityResult result = checker.checkEligibility(mockContext).get();
 
-    assertThat(result.isEligible()).isFalse();
-    assertThat(result.reasonCode()).hasValue(IneligibilityReasonCode.PERMISSION_DENIED);
+    assertThat(result.isEligible()).isTrue();
     assertThat(result.runAsCandidates()).isEmpty();
   }
 
@@ -394,7 +394,7 @@ public final class RemoteControlEligibilityCheckerTest {
             .build();
 
     when(groupMembershipProvider.isMemberOfAny("user", ImmutableList.of("owner1")))
-        .thenReturn(Futures.immediateFuture(true));
+        .thenReturn(immediateFuture(true));
 
     RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
 
@@ -416,6 +416,22 @@ public final class RemoteControlEligibilityCheckerTest {
             .build();
 
     RemoteControlEligibilityResult result = checker.checkEligibility(context).get();
+
+    assertThat(result.isEligible()).isTrue();
+  }
+
+  @Test
+  public void checkTechnicalEligibility_subDeviceSupportsMoreto_returnsEligible() {
+    RemoteControlEligibilityContext context =
+        RemoteControlEligibilityContext.builder()
+            .setIsMultipleSelection(false)
+            .setIsSubDevice(true)
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDrivers(ImmutableSet.of("AcidRemoteDriver"))
+            .setDimensions(ImmutableMap.of("device_supports_moreto", "true"))
+            .build();
+
+    RemoteControlEligibilityResult result = checker.checkTechnicalEligibility(context);
 
     assertThat(result.isEligible()).isTrue();
   }

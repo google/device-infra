@@ -23,25 +23,34 @@
 
         <!-- Global Selector -->
         @if (deviceList().length > 1) {
-          @if (globalRunAsOptions().length > 0) {
-            <div class="global-selector" [class.mixed]="form.get('globalRunAs')?.value === ''">
+          @if (isAllDefaultIdentities()) {
+            <div class="global-selector static">
+              <div class="static-wrapper">
+                <mat-icon>group_work</mat-icon>
+                <span>All devices run as: <strong>Default</strong></span>
+              </div>
+            </div>
+          } @else {
+            <div
+              class="global-selector"
+              [class.mixed]="form.get('globalRunAs')?.value === MIXED_RUN_AS"
+            >
               <mat-form-field appearance="outline" subscriptSizing="dynamic">
                 <div matPrefix class="prefix-wrapper">
                   <mat-icon>group_work</mat-icon>
-                  <label>All Devices RUN AS:</label>
+                  <label>All devices run as:</label>
                 </div>
-                <mat-select formControlName="globalRunAs" [matTooltip]="form.get('globalRunAs')?.value">
-                  <mat-option value="" disabled class="hidden-option">Mixed</mat-option>
+                <mat-select
+                  formControlName="globalRunAs"
+                  [matTooltip]="getGlobalRunAsDisplay()"
+                >
+                  <mat-option [value]="MIXED_RUN_AS" disabled class="hidden-option">Mixed</mat-option>
+                  <mat-option value="">Default</mat-option>
                   @for (opt of globalRunAsOptions(); track opt) {
                     <mat-option [value]="opt">{{ opt }}</mat-option>
                   }
                 </mat-select>
               </mat-form-field>
-            </div>
-          } @else {
-            <div class="no-common-identity" title="No common identity available across all selected devices">
-              <mat-icon>group_off</mat-icon>
-              <span>No Common Identity</span>
             </div>
           }
         }
@@ -70,12 +79,7 @@
 
             <div class="card-action" [formGroup]="getDeviceControl(i)">
               @if (item.hasAccess) {
-                @if (item.validIdentities.length === 1) {
-                  <div class="static-identity">
-                    <mat-icon>person</mat-icon>
-                    <span>Run as: <strong [matTooltip]="item.validIdentities[0]">{{ item.validIdentities[0] }}</strong></span>
-                  </div>
-                } @else {
+                @if (item.validIdentities.length > 0) {
                   <div class="identity-select-wrapper">
                     <mat-form-field appearance="outline" subscriptSizing="dynamic">
                       <div matPrefix class="label">
@@ -83,11 +87,17 @@
                         <span>Run as:</span>
                       </div>
                       <mat-select formControlName="runAs" [matTooltip]="getDeviceControl(i).get('runAs')?.value">
+                        <mat-option value="">Default</mat-option>
                         @for (uid of item.validIdentities; track uid) {
                           <mat-option [value]="uid">{{ uid }}</mat-option>
                         }
                       </mat-select>
                     </mat-form-field>
+                  </div>
+                } @else {
+                  <div class="static-identity">
+                    <mat-icon>person</mat-icon>
+                    <span>Run as: <strong>Default</strong></span>
                   </div>
                 }
               } @else {
