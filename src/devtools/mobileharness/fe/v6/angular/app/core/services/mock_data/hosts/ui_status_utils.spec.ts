@@ -3,9 +3,12 @@ import {createLabServerActions} from './ui_status_utils';
 describe('ui_status_utils', () => {
   describe('createLabServerActions', () => {
     it('should disable mutation actions for CORE lab types', () => {
-      const actions = createLabServerActions('RUNNING', 'LAB_SERVER_RELEASE_STATE_RUNNING', 'RUNNING', [
-        'CORE',
-      ]);
+      const actions = createLabServerActions(
+        'RUNNING',
+        'LAB_SERVER_RELEASE_STATE_RUNNING',
+        'RUNNING',
+        ['CORE'],
+      );
       expect(actions.release.enabled).toBeFalse();
       expect(actions.start.enabled).toBeFalse();
       expect(actions.restart.enabled).toBeFalse();
@@ -14,9 +17,12 @@ describe('ui_status_utils', () => {
     });
 
     it('should disable mutation actions for FUSION lab types', () => {
-      const actions = createLabServerActions('RUNNING', 'LAB_SERVER_RELEASE_STATE_RUNNING', 'RUNNING', [
-        'FUSION',
-      ]);
+      const actions = createLabServerActions(
+        'RUNNING',
+        'LAB_SERVER_RELEASE_STATE_RUNNING',
+        'RUNNING',
+        ['FUSION'],
+      );
       expect(actions.release.enabled).toBeFalse();
       expect(actions.start.enabled).toBeFalse();
       expect(actions.restart.enabled).toBeFalse();
@@ -25,9 +31,12 @@ describe('ui_status_utils', () => {
     });
 
     it('should enable mutation actions for SATELLITE lab types', () => {
-      const actions = createLabServerActions('RUNNING', 'LAB_SERVER_RELEASE_STATE_RUNNING', 'RUNNING', [
-        'SATELLITE',
-      ]);
+      const actions = createLabServerActions(
+        'RUNNING',
+        'LAB_SERVER_RELEASE_STATE_RUNNING',
+        'RUNNING',
+        ['SATELLITE'],
+      );
       expect(actions.release.enabled).toBeTrue();
       expect(actions.restart.enabled).toBeTrue();
       expect(actions.stop.enabled).toBeTrue();
@@ -35,47 +44,68 @@ describe('ui_status_utils', () => {
     });
 
     it('should set start visible for start targets (DRAINED, STOPPED, UNKNOWN)', () => {
-      let actions = createLabServerActions('RUNNING', 'LAB_SERVER_RELEASE_STATE_DRAINED', 'RUNNING', [
-        'SATELLITE',
-      ]);
+      let actions = createLabServerActions(
+        'RUNNING',
+        'LAB_SERVER_RELEASE_STATE_DRAINED',
+        'RUNNING',
+        ['SATELLITE'],
+      );
       expect(actions.start.visible).toBeTrue();
 
-      actions = createLabServerActions('RUNNING', 'LAB_SERVER_RELEASE_STATE_STOPPED', 'RUNNING', [
-        'SATELLITE',
-      ]);
+      actions = createLabServerActions(
+        'RUNNING',
+        'LAB_SERVER_RELEASE_STATE_STOPPED',
+        'RUNNING',
+        ['SATELLITE'],
+      );
       expect(actions.start.visible).toBeTrue();
 
-      actions = createLabServerActions('RUNNING', 'LAB_SERVER_RELEASE_STATE_UNKNOWN', 'RUNNING', [
-        'SATELLITE',
-      ]);
+      actions = createLabServerActions(
+        'RUNNING',
+        'LAB_SERVER_RELEASE_STATE_UNKNOWN',
+        'RUNNING',
+        ['SATELLITE'],
+      );
       expect(actions.start.visible).toBeTrue();
     });
 
     it('should not set start visible for non-start targets', () => {
-      const actions = createLabServerActions('RUNNING', 'LAB_SERVER_RELEASE_STATE_RUNNING', 'RUNNING', [
-        'SATELLITE',
-      ]);
+      const actions = createLabServerActions(
+        'RUNNING',
+        'LAB_SERVER_RELEASE_STATE_RUNNING',
+        'RUNNING',
+        ['SATELLITE'],
+      );
       expect(actions.start.visible).toBeFalse();
     });
 
     it('should set restart/stop visible for restart/stop targets (RUNNING, ERROR)', () => {
-      let actions = createLabServerActions('RUNNING', 'LAB_SERVER_RELEASE_STATE_RUNNING', 'RUNNING', [
-        'SATELLITE',
-      ]);
+      let actions = createLabServerActions(
+        'RUNNING',
+        'LAB_SERVER_RELEASE_STATE_RUNNING',
+        'RUNNING',
+        ['SATELLITE'],
+      );
       expect(actions.restart.visible).toBeTrue();
       expect(actions.stop.visible).toBeTrue();
 
-      actions = createLabServerActions('RUNNING', 'LAB_SERVER_RELEASE_STATE_ERROR', 'RUNNING', [
-        'SATELLITE',
-      ]);
+      actions = createLabServerActions(
+        'RUNNING',
+        'LAB_SERVER_RELEASE_STATE_ERROR',
+        'RUNNING',
+        ['SATELLITE'],
+      );
       expect(actions.restart.visible).toBeTrue();
       expect(actions.stop.visible).toBeTrue();
     });
 
     it('should not set restart/stop visible for non-targets', () => {
-      const actions = createLabServerActions('RUNNING', 'LAB_SERVER_RELEASE_STATE_DRAINED', 'RUNNING', [
-        'SATELLITE',
-      ]);
+      const actions = createLabServerActions(
+        'RUNNING',
+        'LAB_SERVER_RELEASE_STATE_DRAINED',
+        'RUNNING',
+        ['SATELLITE'],
+      );
       expect(actions.restart.visible).toBeFalse();
       expect(actions.stop.visible).toBeFalse();
     });

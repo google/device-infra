@@ -51,11 +51,10 @@ app-tjs-search-results {
   overflow: hidden;
 }
 
-
-
 .rt-landing {
   flex: 1;
   overflow: auto;
+  @include common.shared-scrollbar-style();
   width: 100%;
   max-width: 960px;
   padding: 8px 0 24px;
@@ -207,5 +206,3 @@ button.browse-all-btn {
   background-color: #c2e7ff;
   color: #001d35;
 }
-
-

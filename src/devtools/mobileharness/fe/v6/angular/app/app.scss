@@ -420,7 +420,6 @@ app-root {
     background-color: $labconsole-bg;
     height: calc(100% - 64px);
 
-
     mat-sidenav {
       margin-top: 1.5rem;
       @include common.shared-scrollbar-style();
@@ -445,11 +444,17 @@ app-root {
         color: #444746;
         text-decoration: none;
         font-weight: 500;
-        transition: background-color 0.2s, color 0.2s;
+        transition:
+          background-color 0.2s,
+          color 0.2s;
         white-space: nowrap;
         margin: 0 5px;
         padding: 0;
         width: auto;
+
+        span {
+          letter-spacing: normal;
+        }
       }
 
       mat-nav-list > a[mat-list-item].active {

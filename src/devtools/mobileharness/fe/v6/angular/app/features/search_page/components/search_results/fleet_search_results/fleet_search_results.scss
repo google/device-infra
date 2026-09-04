@@ -4,30 +4,20 @@
 
 :host {
   @include st.search-table-base;
-}
 
-// --- Checkbox Column ---
-th.checkbox-col,
-td.checkbox-col,
-.mat-mdc-header-cell.checkbox-col,
-.mat-mdc-cell.checkbox-col,
-.mat-column-select,
-.mat-mdc-column-select {
-  width: 48px;
-  padding: 0;
-  text-align: center;
-  vertical-align: middle;
-  text-overflow: clip;
-  overflow: visible;
-
-  mat-checkbox {
-    @include mat.checkbox-density(-3);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+  // --- Checkbox Column (aligns with host overview devices table) ---
+  .mat-column-select,
+  .mat-column-checkbox,
+  .mat-mdc-column-checkbox,
+  .mat-mdc-column-select,
+  th.checkbox-col,
+  td.checkbox-col {
+    padding: 0 12px;
+    width: 1%;
+    min-width: 0;
+    max-width: none;
+    text-align: center;
     vertical-align: middle;
-    height: 100%;
-    margin: 0 auto;
   }
 }
 
@@ -95,16 +85,11 @@ mat-card.results-area.grouped-mode,
   flex-direction: column;
   gap: 8px;
   @include common.shared-scrollbar-style();
-  scrollbar-color: #bdc1c6 transparent;
   transition: opacity 0.15s ease-in-out;
 
   &.stale-loading {
     opacity: 0.6;
     pointer-events: none;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: #bdc1c6;
   }
 }
 
@@ -177,66 +162,79 @@ mat-card.results-area.grouped-mode,
 [class*='col-'][class*='id'] {
   width: 220px;
   min-width: 160px;
+  max-width: 260px;
 }
 
 [class*='col-'][class*='status'] {
   width: 110px;
   min-width: 100px;
+  max-width: 140px;
 }
 
 [class*='col-'][class*='type'],
 [class*='col-'][class*='driver'] {
   width: 260px;
   min-width: 220px;
+  max-width: 320px;
 }
 
 [class*='col-'][class*='owner'],
 [class*='col-'][class*='user'] {
   width: 180px;
   min-width: 120px;
+  max-width: 220px;
 }
 
 [class*='col-'][class*='time'] {
   width: 180px;
   min-width: 140px;
+  max-width: 220px;
 }
 
 [class*='col-'][class*='duration'] {
   width: 120px;
   min-width: 90px;
+  max-width: 140px;
 }
 
 [class*='col-'][class*='result'] {
   width: 120px;
   min-width: 90px;
+  max-width: 140px;
 }
 
 [class*='col-'][class*='host'] {
   width: 240px;
   min-width: 180px;
+  max-width: 280px;
 }
 
 [class*='col-'][class*='model'] {
   width: 180px;
   min-width: 140px;
+  max-width: 220px;
 }
 
 [class*='col-'][class*='battery'] {
   width: 110px;
   min-width: 90px;
+  max-width: 130px;
 }
 
 [class*='col-'][class*='sdk'] {
   width: 110px;
   min-width: 90px;
+  max-width: 130px;
 }
 
 [class*='col-'][class*='name'] {
-  width: 400px;
-  min-width: 320px;
+  width: 360px;
+  min-width: 240px;
+  max-width: 480px;
 }
 
 [class*='col-'][class*='device'] {
   width: 240px;
   min-width: 180px;
+  max-width: 280px;
 }

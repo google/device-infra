@@ -1,11 +1,14 @@
-import {computed, Injectable, signal} from '@angular/core';
-import {rxResource, takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
+import {computed, inject, Injectable, linkedSignal} from '@angular/core';
+import {
+  rxResource,
+  takeUntilDestroyed,
+  toObservable,
+} from '@angular/core/rxjs-interop';
 import {Observable, of} from 'rxjs';
-import {catchError, map} from 'rxjs/operators';
+import {catchError, filter, map, switchMap, take} from 'rxjs/operators';
 import {
   Column,
   Row,
-  TjsEntity,
   TjsFilter,
   TjsPromotedKey,
   TjsResolveChipsRequest,
@@ -15,11 +18,12 @@ import {
   TjsSuggestion,
   TjsSuggestionRequest,
 } from '../../../core/models/search';
+import {SnackBarService} from '../../../shared/services/snackbar_service';
 import {
   EntityType,
   FilterChip,
   FilterKeyMetadata,
-  ParsedQueryFilter,
+  FilterPair,
   PickerValueItem,
   PromotedFilterKeyItem,
   SearchBoxSuggestion,
@@ -28,8 +32,14 @@ import {
   ValuePickerState,
 } from '../models';
 import {
+  buildResolvedFilterChips,
   extractFilterChipFromTjsSuggestion,
+  extractRawValuesFromTjsFilter,
+  getChipKey,
   mapToSearchBoxSuggestion,
+  pdtDateTimeToUtcIso,
+  resolveInitialChips,
+  toTjsEntityProto,
 } from '../utils';
 import {SearchPageStore} from './search_page_store';
 
@@ -41,9 +51,25 @@ import {SearchPageStore} from './search_page_store';
  */
 @Injectable()
 export class TjsSearchStore extends SearchPageStore {
+  private readonly snackBarService = inject(SnackBarService);
   // ===========================================================================
   // 1. Dynamic UI Prompts & Suggestion Signals
   // ===========================================================================
+
+  private static readonly SUPPORTED_ENTITIES = new Set<EntityType>([
+    'tests',
+    'jobs',
+    'sessions',
+  ]);
+
+  /** Subclass hook providing default entity type when route metadata is absent. */
+  override getDefaultEntity(): EntityType {
+    return 'tests';
+  }
+
+  override getSupportedEntities(): Set<EntityType> {
+    return TjsSearchStore.SUPPORTED_ENTITIES;
+  }
 
   /** Returns dynamic search placeholder text based on the active search entity. */
   override readonly searchPlaceholder = computed(() => {
@@ -70,21 +96,20 @@ export class TjsSearchStore extends SearchPageStore {
     | undefined
   >({
     params: () => {
-      const e = this.entity();
-      if (e !== 'tests' && e !== 'jobs' && e !== 'sessions') return undefined;
+      if (!this.isCurrentRouteActive()) return undefined;
       const show = this.showSuggestions();
       if (!show) return undefined;
 
       return {
-        entity: e,
+        entity: this.entity(),
         input: this.debouncedSearchQuery(),
-        filters: this.getAllEffectiveFilters(),
+        filters: this.effectiveFilters(),
       };
     },
     stream: ({params: req}) => {
       if (!req) return of([]);
       const tjsReq: TjsSuggestionRequest = {
-        entity: this.getTjsEntityProto(req.entity),
+        entity: toTjsEntityProto(req.entity),
         input: req.input,
         filters: req.filters.length > 0 ? req.filters : undefined,
         limit: 10,
@@ -96,14 +121,11 @@ export class TjsSearchStore extends SearchPageStore {
     },
   });
 
-  /** Exposes current array of raw TJS suggestions. */
-  readonly tjsSuggestions = computed<TjsSuggestion[]>(
-    () => this.suggestionsResource.value() || [],
-  );
-
   /** Mapped search suggestions for SearchBox popover consumption. */
   override readonly suggestions = computed<SearchBoxSuggestion[]>(() => {
-    return this.tjsSuggestions().map(mapToSearchBoxSuggestion);
+    return (this.suggestionsResource.value() || []).map(
+      mapToSearchBoxSuggestion,
+    );
   });
 
   // ===========================================================================
@@ -116,14 +138,13 @@ export class TjsSearchStore extends SearchPageStore {
     EntityType | undefined
   >({
     params: () => {
-      const e = this.entity();
-      if (e !== 'tests' && e !== 'jobs' && e !== 'sessions') return undefined;
-      return e;
+      if (!this.isCurrentRouteActive()) return undefined;
+      return this.entity();
     },
     stream: ({params: entity}) => {
       if (!entity) return of(null);
       return this.searchService
-        .getTjsSearchConfig({entity: this.getTjsEntityProto(entity)})
+        .getTjsSearchConfig({entity: toTjsEntityProto(entity)})
         .pipe(catchError(() => of(null)));
     },
   });
@@ -133,33 +154,54 @@ export class TjsSearchStore extends SearchPageStore {
     () => this.searchConfigResource.value() || null,
   );
 
+  /** Observable stream of searchConfig for reactive waiting during cold-load chip resolution. */
+  private readonly searchConfig$ = toObservable(this.searchConfig);
+
+  /** Formatted entity display label provided by BFF search config (e.g. "Tests", "Jobs", "Sessions"). */
+  readonly entityLabel = computed<string>(() => {
+    return this.searchConfig()?.entityLabel || this.entity();
+  });
+
   /** Whether initial search configuration is loading. */
-  override readonly isConfigLoading = computed<boolean>(
-    () => this.searchConfigResource.isLoading(),
+  override readonly isConfigLoading = computed<boolean>(() =>
+    this.searchConfigResource.isLoading(),
   );
 
   /** Whether auxiliary promoted keys are currently loading. */
-  override readonly isPromotedKeysLoading = computed<boolean>(
-    () => this.searchConfigResource.isLoading(),
+  override readonly isPromotedKeysLoading = computed<boolean>(() =>
+    this.searchConfigResource.isLoading(),
   );
 
-  constructor() {
-    super();
+  /** Tracks whether the initial route entry contained filter query parameters. */
+  private readonly hasInitialUrlFilters = !!(
+    this.route.snapshot?.queryParams?.['f'] ||
+    this.route.snapshot?.queryParams?.['gb']
+  );
 
-    // When initial search config loads on a clean URL, populate default chips
-    toObservable(this.searchConfig)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((cfg) => {
-        const queryParams = this.route.snapshot?.queryParams;
-        const hasUrlFilters = queryParams?.['f'] || queryParams?.['gb'];
-        if (cfg && !hasUrlFilters && this.activeChips().length === 0) {
-          const defaults = this.mapDefaultChips(cfg);
-          if (defaults.length > 0) {
-            this.activeChips.set(defaults);
-          }
-        }
-      });
-  }
+  /**
+   * Synchronizes active filter chips with search configuration default chips
+   * using Angular 20+ linkedSignal.
+   *
+   * On initial route entry with filters, retains URL filters.
+   * On clean route entry, populates default chips once searchConfig resolves.
+   * Subsequent user modifications are preserved.
+   */
+  override readonly activeChips = linkedSignal<
+    TjsSearchConfig | null,
+    FilterChip[]
+  >({
+    source: () => this.searchConfig(),
+    computation: (cfg, previous) => {
+      if (!previous) {
+        return resolveInitialChips(this.route);
+      }
+      if (!this.hasInitialUrlFilters && cfg && previous.value.length === 0) {
+        const defaults = this.mapDefaultChips(cfg);
+        if (defaults.length > 0) return defaults;
+      }
+      return previous.value;
+    },
+  });
 
   /** Returns default chips from active search configuration if available. */
   override getDefaultChips(): FilterChip[] {
@@ -170,24 +212,16 @@ export class TjsSearchStore extends SearchPageStore {
   private mapDefaultChips(cfg: TjsSearchConfig | null): FilterChip[] {
     if (cfg?.defaultChips && cfg.defaultChips.length > 0) {
       return cfg.defaultChips.map((c) => {
-        let rawVals: string[] | undefined;
-        if (c.filter?.enumValues?.values) {
-          rawVals = c.filter.enumValues.values;
-        } else if (c.filter?.stringValue?.value) {
-          rawVals = [c.filter.stringValue.value];
-        } else if (c.filter?.namedValue) {
-          rawVals = [c.filter.namedValue.name, c.filter.namedValue.value];
-        }
+        const rawVals = extractRawValuesFromTjsFilter(c.filter);
         const key = c.filter?.key || c.pillKey;
-        const meta =
-          this.keyMetadataMap().get(c.pillKey?.toLowerCase()) ||
-          this.keyMetadataMap().get(key);
+        const meta = this.getKeyMetadata(key);
         return {
           key,
           pillKey: c.pillKey || c.keyDisplayName || meta?.keyDisplayName || key,
           pillCondition: c.pillCondition || c.filter?.stringValue?.value || '',
           rawValues: rawVals,
           metadata: meta,
+          tjsFilter: c.filter,
         };
       });
     }
@@ -217,15 +251,11 @@ export class TjsSearchStore extends SearchPageStore {
       const cfg = this.searchConfig();
       if (cfg?.promotedKeys) {
         for (const pk of cfg.promotedKeys) {
-          const meta: FilterKeyMetadata = {
+          nextMap.set(pk.key, {
             ...pk,
             key: pk.key,
             keyDisplayName: pk.displayName || pk.key,
-          };
-          nextMap.set(pk.key, meta);
-          if (pk.displayName) {
-            nextMap.set(pk.displayName.toLowerCase(), meta);
-          }
+          });
         }
       }
       return nextMap;
@@ -247,33 +277,24 @@ export class TjsSearchStore extends SearchPageStore {
     | undefined
   >({
     params: () => {
-      const e = this.entity();
-      if (e !== 'tests' && e !== 'jobs' && e !== 'sessions') return undefined;
+      if (!this.isCurrentRouteActive()) return undefined;
 
       // On clean page entry, wait for searchConfig to load and populate default chips
-      const queryParams = this.route.snapshot?.queryParams;
-      const hasUrlFilters = queryParams?.['f'] || queryParams?.['gb'];
-      if (!hasUrlFilters) {
-        const cfg = this.searchConfig();
-        if (!cfg) {
-          return undefined;
-        }
-        if (this.activeChips().length === 0 && cfg.defaultChips && cfg.defaultChips.length > 0) {
-          return undefined;
-        }
+      if (!this.hasInitialUrlFilters && !this.searchConfig?.()) {
+        return undefined;
       }
 
       return {
-        entity: e,
+        entity: this.entity(),
         pageToken: this.pageToken(),
-        filters: this.getAllEffectiveFilters(),
+        filters: this.effectiveFilters(),
       };
     },
     stream: ({params: req}) => {
       if (!req) return of({columns: [], rows: []} as TjsSearchResponse);
 
       const tjsReq: TjsSearchRequest = {
-        entity: this.getTjsEntityProto(req.entity),
+        entity: toTjsEntityProto(req.entity),
         filters: req.filters.length > 0 ? req.filters : undefined,
         pageToken: req.pageToken || undefined,
       };
@@ -307,6 +328,15 @@ export class TjsSearchStore extends SearchPageStore {
     return !!this.tjsResource.value()?.nextPageToken;
   });
 
+  /** Pre-formatted semantic range text for TJS cursor pagination display (e.g. "showing 1–25"). */
+  override readonly rangeText = computed<string>(() => {
+    const count = this.rows().length;
+    if (count === 0) return '';
+    const start = this.pageIndex() * this.pageSize() + 1;
+    const end = this.pageIndex() * this.pageSize() + count;
+    return `showing ${start.toLocaleString()}–${end.toLocaleString()}`;
+  });
+
   /** Triggers execution of primary TJS search and forces resource reload. */
   override executeSearch() {
     this.pageIndex.set(0);
@@ -315,65 +345,63 @@ export class TjsSearchStore extends SearchPageStore {
     this.tjsResource.reload();
   }
 
-  /** Maps frontend EntityType string enum to backend Protobuf TjsEntity enum. */
-  private getTjsEntityProto(e: EntityType): TjsEntity {
-    switch (e) {
-      case 'tests':
-        return TjsEntity.TJS_ENTITY_TEST;
-      case 'jobs':
-        return TjsEntity.TJS_ENTITY_JOB;
-      case 'sessions':
-        return TjsEntity.TJS_ENTITY_SESSION;
-      default:
-        return TjsEntity.TJS_ENTITY_TEST;
-    }
-  }
-
-  /** Combines active filter chips into backend TjsFilter array. */
-  private getAllEffectiveFilters(): TjsFilter[] {
-    return this.activeChips()
-      .map((chip) => this.buildTjsFilterFromChip(chip))
-      .filter(Boolean) as TjsFilter[];
-  }
+  /** Memoized effective filter list guarding downstream search resources from display-only chip updates. */
+  readonly effectiveFilters = computed<TjsFilter[]>(
+    () =>
+      this.activeChips()
+        .map((chip) => this.buildTjsFilterFromChip(chip))
+        .filter(Boolean) as TjsFilter[],
+    {
+      equal: (a, b) => {
+        if (a === b) return true;
+        if (a.length !== b.length) return false;
+        return JSON.stringify(a) === JSON.stringify(b);
+      },
+    },
+  );
 
   /** Maps FilterChip to TjsFilter Protobuf payload. */
-  private buildTjsFilterFromChip(chip: FilterChip): TjsFilter | null {
-    if (!chip.key && !chip.pillKey) return null;
-    const key = chip.key || chip.pillKey;
+  private buildTjsFilterFromChip(chip: Partial<FilterChip>): TjsFilter | null {
+    if (chip.tjsFilter) {
+      return chip.tjsFilter;
+    }
+    const rawKey = chip.key || chip.pillKey;
+    if (!rawKey) return null;
+
+    if (this.searchConfig() && !this.getKeyMetadata(rawKey)) {
+      return null;
+    }
 
     const meta =
       chip.metadata ||
-      this.keyMetadataMap().get(chip.pillKey.toLowerCase()) ||
-      this.keyMetadataMap().get(key);
-    const tjsMeta = meta as unknown as TjsPromotedKey | undefined;
+      this.getKeyMetadata(chip.key) ||
+      this.getKeyMetadata(chip.pillKey);
 
-    if (tjsMeta?.timeRange || key === 'create_time') {
-      const cond = chip.pillCondition || '';
-      const parts = cond.split('~').map((s) => s.trim());
+    if (meta?.timeRange) {
+      const fromStr = chip.rawValues?.[0] || '';
+      const toStr = chip.rawValues?.[1] || '';
+      const isoFrom = this.toIsoString(fromStr);
+      const isoTo = this.toIsoString(toStr);
+
+      if (!isoFrom && !isoTo) {
+        return null;
+      }
+
       return {
-        key,
+        key: rawKey,
         timeRange: {
-          from: this.toIsoString(parts[0] || ''),
-          to: this.toIsoString(parts[1] || ''),
+          from: isoFrom,
+          to: isoTo,
         },
       };
     }
 
-    if (
-      tjsMeta?.namedPair ||
-      key === 'dimension' ||
-      (key === 'property' && chip.pillKey.toLowerCase() === 'property')
-    ) {
-      const cond = chip.pillCondition || '';
-      const idx = cond.indexOf(':');
-      const name =
-        idx !== -1 ? cond.substring(0, idx) : chip.rawValues?.[0] || '';
-      const value =
-        idx !== -1
-          ? cond.substring(idx + 1)
-          : chip.rawValues?.[1] || chip.rawValues?.[0] || cond;
+    if (meta?.namedPair) {
+      const name = chip.rawValues?.[0] || '';
+      const value = chip.rawValues?.[1] || '';
+      if (!name && !value) return null;
       return {
-        key,
+        key: rawKey,
         namedValue: {
           name,
           value,
@@ -381,16 +409,12 @@ export class TjsSearchStore extends SearchPageStore {
       };
     }
 
-    if (tjsMeta?.enumPicker) {
+    if (meta?.enumPicker) {
       const vals =
-        chip.rawValues && chip.rawValues.length > 0
-          ? chip.rawValues
-          : chip.pillCondition
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean);
+        chip.rawValues && chip.rawValues.length > 0 ? chip.rawValues : [];
+      if (vals.length === 0) return null;
       return {
-        key,
+        key: rawKey,
         enumValues: {
           values: vals,
         },
@@ -398,17 +422,19 @@ export class TjsSearchStore extends SearchPageStore {
     }
 
     if (chip.rawValues && chip.rawValues.length > 0) {
+      const validVals = chip.rawValues.filter(Boolean);
+      if (validVals.length === 0) return null;
       return {
-        key,
+        key: rawKey,
         stringValue: {
-          value: chip.rawValues[0] || chip.rawValues.join(','),
+          value: validVals.join(','),
         },
       };
     }
 
     if (chip.pillCondition) {
       return {
-        key,
+        key: rawKey,
         stringValue: {
           value: chip.pillCondition,
         },
@@ -418,19 +444,24 @@ export class TjsSearchStore extends SearchPageStore {
     return null;
   }
 
-  /** Converts ISO or timestamp string to ISO format string. */
+  /** Converts ISO or PDT timestamp string to UTC ISO format string. */
   private toIsoString(val: string): string | undefined {
     if (!val) return undefined;
-    const d = new Date(val);
-    return isNaN(d.getTime()) ? val : d.toISOString();
+    return pdtDateTimeToUtcIso(val) || undefined;
   }
 
   // ===========================================================================
   // 4. Pagination Stack & History Controls
   // ===========================================================================
 
-  /** History stack of page tokens used for backward pagination. */
-  readonly prevPageTokens = signal<string[]>([]);
+  /** History stack of page tokens used for backward pagination, automatically reset when chips or query change. */
+  readonly prevPageTokens = linkedSignal<
+    {chips: FilterChip[]; query: string},
+    string[]
+  >({
+    source: () => ({chips: this.activeChips(), query: this.searchQuery()}),
+    computation: () => [],
+  });
 
   /** Navigates to previous page token by popping from token history stack. */
   override prevPage() {
@@ -452,57 +483,81 @@ export class TjsSearchStore extends SearchPageStore {
   }
 
   // ===========================================================================
-  // 5. URL Resolution & Fallback Chip Construction
+  // 5. URL Resolution & Backend Metadata Enrichment
   // ===========================================================================
-
-  /** Overrides base fallback chip builder to exclude polarity, advanced match, and group-by. */
-  override buildFallbackChip(pf: ParsedQueryFilter): FilterChip {
-    const meta =
-      this.keyMetadataMap().get(pf.fallbackPillCondition.toLowerCase()) ||
-      this.keyMetadataMap().get(pf.key);
-    return {
-      key: pf.key,
-      pillKey: meta?.keyDisplayName || pf.key,
-      pillCondition: pf.fallbackPillCondition,
-      rawValues: pf.rawValues,
-      metadata: meta,
-    };
-  }
 
   /** Resolves parsed URL query filters into FilterChip list using TJS resolve API. */
   protected override resolveChipsFromBackend(
-    parsedFilters: ParsedQueryFilter[],
+    parsedFilters: FilterChip[],
     _groupByKeys: string[],
   ): Observable<FilterChip[]> {
     if (parsedFilters.length === 0) {
       return of([]);
     }
 
+    if (!this.searchConfig()) {
+      return this.searchConfig$.pipe(
+        filter((cfg): cfg is TjsSearchConfig => cfg !== null),
+        take(1),
+        switchMap(() => this.executeTjsResolve(parsedFilters)),
+      );
+    }
+
+    return this.executeTjsResolve(parsedFilters);
+  }
+
+  /** Executes TJS chip resolution after search configuration and promotedKeys are available. */
+  private executeTjsResolve(
+    parsedFilters: FilterChip[],
+  ): Observable<FilterChip[]> {
+    // Scenario 1 (TJS): Since promotedKeys are known in config, ignore unknown keys directly and notify user
+    const filterPairs: Array<FilterPair<TjsFilter>> = [];
+    for (const chip of parsedFilters) {
+      const key = getChipKey(chip);
+      if (!key || !this.getKeyMetadata(key)) {
+        const label = chip.pillKey || chip.key || key || 'Unknown';
+        this.snackBarService.showWarning(
+          `Filter "${label}" is not supported for ${this.entity()} and has been ignored.`,
+        );
+        continue;
+      }
+      const filter = chip.tjsFilter || this.buildTjsFilterFromChip(chip);
+      if (filter) {
+        filterPairs.push({chip, filter});
+      }
+    }
+
+    // If no matching filters, return empty array to clear invalid chips (Scenario 1 & 5)
+    if (filterPairs.length === 0) {
+      return of([]);
+    }
+
     const req: TjsResolveChipsRequest = {
-      filters: parsedFilters.map((pf) => pf.tjsFilter),
+      filters: filterPairs.map((p) => p.filter),
     };
 
     return this.searchService.resolveTjsChips(req).pipe(
-      map((res) => {
-        const updatedChips: FilterChip[] = [];
-        if (res.chips && res.chips.length > 0) {
-          res.chips.forEach((c, idx) => {
-            const pf = parsedFilters[idx];
-            const meta = pf?.key
-              ? this.keyMetadataMap().get(c.pillKey?.toLowerCase()) ||
-                this.keyMetadataMap().get(pf.key)
+      map((res) =>
+        buildResolvedFilterChips(
+          filterPairs,
+          res.chips,
+          (chip, resolved, filter) => {
+            const meta = chip.key
+              ? this.getKeyMetadata(chip.key) ||
+                this.getKeyMetadata(resolved.pillKey)
               : undefined;
-            updatedChips.push({
-              key: pf?.key,
-              pillKey: c.pillKey,
-              pillCondition: c.pillCondition,
-              rawValues: pf?.rawValues,
-              metadata: meta,
-            });
-          });
-        }
-        return updatedChips;
-      }),
+            return {
+              ...chip,
+              pillKey: resolved.pillKey || chip.pillKey,
+              pillCondition: resolved.pillCondition || chip.pillCondition,
+              metadata: meta || chip.metadata,
+              tjsFilter: filter,
+            };
+          },
+        ),
+      ),
+      // TODO: Uniformly handle backend RPC error / 500 / offline display in search UI.
+      catchError(() => of([])),
     );
   }
 
@@ -516,35 +571,31 @@ export class TjsSearchStore extends SearchPageStore {
     title?: string,
     metadata?: unknown,
   ): ValuePickerConfig {
-    const meta =
-      (metadata as FilterKeyMetadata) ||
-      (title ? this.keyMetadataMap().get(title.toLowerCase()) : undefined) ||
-      this.keyMetadataMap().get(key);
+    const meta = (metadata as FilterKeyMetadata) || this.getKeyMetadata(key);
     const displayTitle = meta?.keyDisplayName || title || key;
-    const tjsMeta = meta as unknown as TjsPromotedKey | undefined;
+
+    const namedPair =
+      typeof meta?.namedPair === 'object' ? meta.namedPair : undefined;
+    const textInput =
+      typeof meta?.textInput === 'object' ? meta.textInput : undefined;
 
     let layoutType: 'list' | 'range' | 'namedPair' | 'text' = 'list';
     let needsName = false;
     let namePlaceholder = 'Name';
     let valPlaceholder = 'Value';
 
-    if (tjsMeta?.timeRange || key === 'create_time') {
+    if (meta?.timeRange) {
       layoutType = 'range';
-    } else if (tjsMeta?.enumPicker) {
+    } else if (meta?.enumPicker) {
       layoutType = 'list';
-    } else if (
-      tjsMeta?.namedPair ||
-      (key === 'property' && displayTitle.toLowerCase() === 'property') ||
-      key === 'dimension'
-    ) {
+    } else if (namedPair) {
       layoutType = 'namedPair';
       needsName = true;
-      namePlaceholder = tjsMeta?.namedPair?.namePlaceholder || 'Property name';
-      valPlaceholder =
-        tjsMeta?.namedPair?.valuePlaceholder || 'Property value';
-    } else if (tjsMeta?.textInput) {
+      namePlaceholder = namedPair.namePlaceholder || 'Name';
+      valPlaceholder = namedPair.valuePlaceholder || 'Value';
+    } else if (textInput) {
       layoutType = 'text';
-      valPlaceholder = tjsMeta.textInput.placeholder || 'Value';
+      valPlaceholder = textInput.placeholder || 'Value';
     } else {
       layoutType = 'text';
     }
@@ -570,18 +621,15 @@ export class TjsSearchStore extends SearchPageStore {
     key: string,
     activeChip?: FilterChip,
     metadata?: unknown,
+    stagedValues?: string[],
   ): ValuePickerState {
-    const meta =
-      (metadata as FilterKeyMetadata) ||
-      (activeChip?.pillKey
-        ? this.keyMetadataMap().get(activeChip.pillKey.toLowerCase())
-        : undefined) ||
-      this.keyMetadataMap().get(key);
-    const tjsMeta = meta as unknown as TjsPromotedKey | undefined;
+    const meta = (metadata as FilterKeyMetadata) || this.getKeyMetadata(key);
 
     let enumOptions: PickerValueItem[] = [];
-    if (tjsMeta?.enumPicker?.options && tjsMeta.enumPicker.options.length > 0) {
-      enumOptions = tjsMeta.enumPicker.options.map((o) => ({
+    const enumPicker =
+      typeof meta?.enumPicker === 'object' ? meta.enumPicker : undefined;
+    if (enumPicker?.options && enumPicker.options.length > 0) {
+      enumOptions = enumPicker.options.map((o) => ({
         value: o.value,
         displayLabel: o.label || o.value,
       }));
@@ -589,7 +637,12 @@ export class TjsSearchStore extends SearchPageStore {
 
     let selectedVals = new Set<string>();
     if (activeChip) {
-      if (activeChip.rawValues && activeChip.rawValues.length > 0) {
+      if (activeChip.tjsFilter) {
+        const rawVals = extractRawValuesFromTjsFilter(activeChip.tjsFilter);
+        if (rawVals && rawVals.length > 0) {
+          selectedVals = new Set(rawVals);
+        }
+      } else if (activeChip.rawValues && activeChip.rawValues.length > 0) {
         selectedVals = new Set(activeChip.rawValues);
       } else if (activeChip.pillCondition) {
         const existingVals = activeChip.pillCondition
@@ -598,6 +651,10 @@ export class TjsSearchStore extends SearchPageStore {
           .filter(Boolean);
         selectedVals = new Set(existingVals);
       }
+    }
+
+    if (stagedValues && stagedValues.length > 0) {
+      selectedVals = new Set([...selectedVals, ...stagedValues]);
     }
 
     return {
@@ -614,18 +671,23 @@ export class TjsSearchStore extends SearchPageStore {
     };
   }
 
-  /** Handles ValuePicker apply events by resolving chips from API or falling back locally. */
+  /** Handles ValuePicker apply events by resolving chips from API. */
   override applyValuePicker(event: ValuePickerApplyEvent) {
     const key = this.pickerKey();
     const title = this.pickerTitle();
-    const meta = key
-      ? this.keyMetadataMap().get(title.toLowerCase()) ||
-        this.keyMetadataMap().get(key)
-      : undefined;
+    const meta = key ? this.getKeyMetadata(key) : undefined;
     const displayTitle = meta?.keyDisplayName || title;
     this.closeValuePicker();
 
-    const tjsFilter = this.buildTjsFilter(key, event, meta);
+    const rawValues = this.extractRawValues(event, meta);
+    const draftChip: Partial<FilterChip> = {
+      key,
+      pillKey: displayTitle,
+      rawValues,
+      metadata: meta,
+    };
+
+    const tjsFilter = this.buildTjsFilterFromChip(draftChip);
     if (!tjsFilter) {
       this.removeChipForKey(key);
       return;
@@ -637,142 +699,41 @@ export class TjsSearchStore extends SearchPageStore {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
-          if (res.chips && res.chips.length > 0) {
-            const c = res.chips[0];
+          if (!res.chips || res.chips.length === 0) {
+            return;
+          }
+          for (const c of res.chips) {
             this.addFilterChip({
               key,
               pillKey: c.pillKey || displayTitle,
               pillCondition: c.pillCondition,
-              rawValues: this.extractRawValues(event),
+              rawValues,
               metadata: meta,
+              tjsFilter,
             });
-          } else {
-            this.applyTjsChipLocally(event, key, displayTitle, meta);
           }
         },
-        error: () => {
-          this.applyTjsChipLocally(event, key, displayTitle, meta);
-        },
+        // TODO: Uniformly handle backend RPC error / 500 / offline display in search UI.
+        error: () => {},
       });
   }
 
-  /** Builds a TjsFilter Protobuf request object from a ValuePickerApplyEvent. */
-  private buildTjsFilter(
-    key: string,
-    event: ValuePickerApplyEvent,
-    meta?: FilterKeyMetadata,
-  ): TjsFilter | null {
-    if (event.rangeFrom || event.rangeTo) {
-      const fromVal = event.rangeFrom?.trim() || '';
-      const toVal = event.rangeTo?.trim() || '';
-      return {
-        key,
-        timeRange: {
-          from: this.toIsoString(fromVal),
-          to: this.toIsoString(toVal),
-        },
-      };
-    }
-
-    const tjsMeta = meta as unknown as TjsPromotedKey | undefined;
-
-    if (
-      tjsMeta?.namedPair ||
-      event.propName ||
-      (key === 'property' && meta?.keyDisplayName?.toLowerCase() === 'property') ||
-      key === 'dimension'
-    ) {
-      const propName = event.propName?.trim() || '';
-      const propVal =
-        event.textVal?.trim() ||
-        (event.selected && event.selected[0]) ||
-        '';
-      if (!propName && !propVal) return null;
-      return {
-        key,
-        namedValue: {
-          name: propName,
-          value: propVal,
-        },
-      };
-    }
-
-    if (tjsMeta?.enumPicker) {
-      if (event.selected && event.selected.length > 0) {
-        return {
-          key,
-          enumValues: {
-            values: event.selected,
-          },
-        };
-      }
-      return null;
-    }
-
-    if (event.textVal?.trim()) {
-      return {
-        key,
-        stringValue: {
-          value: event.textVal.trim(),
-        },
-      };
-    }
-
-    if (event.selected && event.selected.length > 0) {
-      return {
-        key,
-        stringValue: {
-          value: event.selected[0],
-        },
-      };
-    }
-
-    return null;
-  }
-
-  /** Formats fallback pill condition string from ValuePickerApplyEvent. */
-  private formatTjsFallbackCondition(event: ValuePickerApplyEvent): string {
-    if (event.rangeFrom || event.rangeTo) {
-      return `${event.rangeFrom || ''} ~ ${event.rangeTo || ''}`.trim();
-    }
-    if (event.selected && event.selected.length > 0) {
-      return event.selected.join(', ');
-    }
-    if (event.propName || event.textVal) {
-      return `${event.propName || ''}:${event.textVal || ''}`;
-    }
-    if (event.textVal?.trim()) {
-      return event.textVal.trim();
-    }
-    return '';
-  }
-
-  /** Helper method to locally insert a fallback TJS filter chip into state. */
-  private applyTjsChipLocally(
-    event: ValuePickerApplyEvent,
-    key: string,
-    displayTitle: string,
-    meta?: FilterKeyMetadata,
-  ) {
-    const condition = this.formatTjsFallbackCondition(event);
-    if (!condition) return;
-
-    this.addFilterChip({
-      key,
-      pillKey: displayTitle,
-      pillCondition: condition,
-      rawValues: this.extractRawValues(event),
-      metadata: meta,
-    });
-  }
-
   /** Extracts raw values string array from ValuePickerApplyEvent. */
-  private extractRawValues(event: ValuePickerApplyEvent): string[] | undefined {
-    if (event.selected && event.selected.length > 0) {
-      return event.selected;
+  private extractRawValues(
+    event: ValuePickerApplyEvent,
+    meta?: FilterKeyMetadata,
+  ): string[] | undefined {
+    if (event.rangeFrom || event.rangeTo) {
+      return [event.rangeFrom || '', event.rangeTo || ''];
+    }
+    if (meta?.namedPair || event.propName) {
+      return [event.propName || '', event.textVal || ''];
     }
     if (event.textVal?.trim()) {
       return [event.textVal.trim()];
+    }
+    if (event.selected && event.selected.length > 0) {
+      return event.selected;
     }
     return undefined;
   }
@@ -781,41 +742,25 @@ export class TjsSearchStore extends SearchPageStore {
   // 7. Suggestion Selection, Chip Mutators, & State Reset
   // ===========================================================================
 
-  /** Directly resolves and applies test/job/session suggestion filters to store. */
-  override selectSuggestion(item: SearchBoxSuggestion) {
-    const raw = item.rawItem as TjsSuggestion;
+  /** Unpacks TjsSuggestion payload to open value picker or apply filter chips. */
+  protected override applySuggestion(
+    rawItem: unknown,
+    anchor?: HTMLElement | null,
+  ) {
+    const raw = rawItem as TjsSuggestion;
     if (!raw) return;
 
-    this.showSuggestions.set(false);
-    this.searchQuery.set('');
+    if (raw.openPicker) {
+      const op = raw.openPicker;
+      const meta = this.getKeyMetadata(op.key);
+      const displayTitle = op.keyDisplayName || meta?.keyDisplayName || op.key;
+      this.openValuePicker(op.key, anchor || null, displayTitle, meta);
+      return;
+    }
 
-    this.applyTjsSuggestionDirectly(raw);
-  }
-
-  /** Directly applies a TjsSuggestion locally without redundant backend resolution. */
-  private applyTjsSuggestionDirectly(item: TjsSuggestion) {
-    const chip = extractFilterChipFromTjsSuggestion(item);
+    const chip = extractFilterChipFromTjsSuggestion(raw);
     if (chip) {
       this.addFilterChip(chip);
     }
   }
-
-  /** Appends or updates a filter chip and clears pagination token history. */
-  override addFilterChip(chip: FilterChip) {
-    this.prevPageTokens.set([]);
-    super.addFilterChip(chip);
-  }
-
-  /** Removes a filter chip and clears pagination token history. */
-  override removeFilterChip(chip: FilterChip) {
-    this.prevPageTokens.set([]);
-    super.removeFilterChip(chip);
-  }
-
-  /** Fully resets search query, active chips, and pagination history. */
-  override resetSearchState(updateUrl = true) {
-    super.resetSearchState(updateUrl);
-    this.prevPageTokens.set([]);
-  }
-
 }

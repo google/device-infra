@@ -88,6 +88,8 @@ export declare interface FleetSuggestionResponse {
 export declare interface FleetChipResolverRequest {
   filters?: Filter[];
   groupByKeys?: string[];
+  entity?: SearchEntity;
+  fleet?: Fleet;
 }
 
 /** Fleet chip resolver response. */

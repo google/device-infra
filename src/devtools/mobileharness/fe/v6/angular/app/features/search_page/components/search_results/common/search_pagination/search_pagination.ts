@@ -1,11 +1,5 @@
 import {CommonModule} from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  input,
-  output,
-} from '@angular/core';
+import {ChangeDetectionStrategy, Component, input, output} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {MatSelectModule} from '@angular/material/select';
 
@@ -19,38 +13,27 @@ import {MatSelectModule} from '@angular/material/select';
   imports: [CommonModule, MatIconModule, MatSelectModule],
 })
 export class SearchPaginationComponent {
-  /** Current zero-indexed page number. */
-  readonly pageIndex = input<number>(0);
+  /** Pre-formatted semantic range text provided directly by BFF/Store (e.g. "1 – 25 of 1,250", "showing 1–25", "1–25 of 142 groups"). */
+  readonly rangeText = input<string>('');
 
-  /** Active page size count. */
-  readonly pageSize = input<number>(25);
-
-  /** Number of rows returned on the current page. */
-  readonly currentRowCount = input<number>(0);
-
-  /** Optional explicit total record count. */
-  readonly totalCount = input<number | null | undefined>(undefined);
-
-  /** Explicit start record index for current page range display. */
-  readonly rangeStart = input<number | null | undefined>(undefined);
-
-  /** Explicit end record index for current page range display. */
-  readonly rangeEnd = input<number | null | undefined>(undefined);
-
-  /** Optional custom text override for the page range label. */
-  readonly customRangeText = input<string | null | undefined>(undefined);
-
-  /** Optional explicit indicator of whether a previous page exists. */
-  readonly hasPrevPage = input<boolean | null | undefined>(undefined);
+  /** Whether a preceding page of results is available. */
+  readonly hasPrev = input<boolean, boolean | null | undefined>(false, {
+    transform: (v) => !!v,
+  });
 
   /** Whether a subsequent page of results is available. */
-  readonly hasNextPage = input<boolean>(false);
+  readonly hasNext = input<boolean, boolean | null | undefined>(false, {
+    transform: (v) => !!v,
+  });
 
-  /** Controls display of the 'Rows per page' dropdown selector. */
-  readonly showPageSize = input<boolean>(false);
+  /** Active page size count. When provided, the 'Rows per page' selector is shown. */
+  readonly pageSize = input<number | undefined>(undefined);
 
   /** Available options for page size selection dropdown. */
   readonly pageSizeOptions = input<number[]>([10, 25, 50, 100]);
+
+  /** Whether to render in compact height mode (e.g. for nested card pagination). */
+  readonly compact = input<boolean>(false);
 
   /** Event emitted when user clicks the previous page button. */
   readonly prev = output<void>();
@@ -60,31 +43,4 @@ export class SearchPaginationComponent {
 
   /** Event emitted when user changes the page size selection. */
   readonly pageSizeChange = output<number>();
-
-  /** Computes formatted page range display label string. */
-  readonly getRangeLabel = computed(() => {
-    if (this.customRangeText()) {
-      return this.customRangeText()!;
-    }
-    const start =
-      this.rangeStart() ?? this.pageIndex() * this.pageSize() + 1;
-    const end =
-      this.rangeEnd() ??
-      this.pageIndex() * this.pageSize() + this.currentRowCount();
-    if (this.totalCount() != null) {
-      return `${start.toLocaleString()}–${end.toLocaleString()} of ${this.totalCount()!.toLocaleString()}`;
-    }
-    return `showing ${start.toLocaleString()}–${end.toLocaleString()}`;
-  });
-
-  /** Computes whether previous page button is enabled. */
-  readonly canGoPrev = computed(() => {
-    if (this.hasPrevPage() != null) {
-      return this.hasPrevPage()!;
-    }
-    return this.pageIndex() > 0;
-  });
-
-  /** Computes whether next page button is enabled. */
-  readonly canGoNext = computed(() => this.hasNextPage());
 }

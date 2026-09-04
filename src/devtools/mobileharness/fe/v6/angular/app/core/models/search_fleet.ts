@@ -252,17 +252,39 @@ export declare interface FleetStagedModification {
 }
 
 // ===========================ResolveFleetChips response===========================
-/** Resolved display text for a filter chip. */
+/** Resolved display text and validation status for a filter chip. */
 export declare interface FleetResolvedFilterChip {
+  valid?: FleetValidFilterChip;
+  invalid?: FleetInvalidFilterChip;
+}
+
+/** Resolved valid filter chip details. */
+export declare interface FleetValidFilterChip {
   pillKey: string;
   pillCondition: string;
   metadata?: FleetFilterChipMetadata;
 }
 
-/** Resolved display text for a group-by chip. */
+/** Invalid filter chip explanation for dropped filters. */
+export declare interface FleetInvalidFilterChip {
+  reason: string;
+}
+
+/** Resolved display text and validation status for a group-by chip. */
 export declare interface FleetResolvedGroupByChip {
+  valid?: FleetValidGroupByChip;
+  invalid?: FleetInvalidGroupByChip;
+}
+
+/** Resolved valid group-by chip details. */
+export declare interface FleetValidGroupByChip {
   pillKey: string;
   displayName: string;
+}
+
+/** Invalid group-by chip explanation for dropped group-by keys. */
+export declare interface FleetInvalidGroupByChip {
+  reason: string;
 }
 
 // ===============GetFleetValueList - FleetValueListResponse=================

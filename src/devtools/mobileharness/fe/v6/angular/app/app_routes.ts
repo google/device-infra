@@ -46,7 +46,6 @@ export const routes: Routes = [
   {
     path: 'devices',
     component: SearchPage,
-    data: {'entity': 'devices'},
     providers: [
       FleetSearchStore,
       {provide: SearchPageStore, useExisting: FleetSearchStore},
@@ -55,7 +54,6 @@ export const routes: Routes = [
   {
     path: 'hosts',
     component: SearchPage,
-    data: {'entity': 'hosts'},
     providers: [
       FleetSearchStore,
       {provide: SearchPageStore, useExisting: FleetSearchStore},
@@ -64,7 +62,6 @@ export const routes: Routes = [
   {
     path: 'tests',
     component: SearchPage,
-    data: {'entity': 'tests'},
     providers: [
       TjsSearchStore,
       {provide: SearchPageStore, useExisting: TjsSearchStore},
@@ -73,7 +70,6 @@ export const routes: Routes = [
   {
     path: 'jobs',
     component: SearchPage,
-    data: {'entity': 'jobs'},
     providers: [
       TjsSearchStore,
       {provide: SearchPageStore, useExisting: TjsSearchStore},
@@ -82,7 +78,6 @@ export const routes: Routes = [
   {
     path: 'sessions',
     component: SearchPage,
-    data: {'entity': 'sessions'},
     providers: [
       TjsSearchStore,
       {provide: SearchPageStore, useExisting: TjsSearchStore},

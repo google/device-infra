@@ -2,23 +2,16 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   input,
   output,
 } from '@angular/core';
 import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatIconModule} from '@angular/material/icon';
 
-import {
-  Column,
-  FleetGroup,
-  Row,
-} from '../../../../../core/models/search';
-import {
-  SearchCellPipe,
-  UtilPctPipe,
-  UtilWidthPipe,
-} from '../../../utils';
+import {Column, FleetGroup, Row} from '../../../../../core/models/search';
 import {SearchCellComponent} from '../common/search_cell/search_cell';
+import {SearchPaginationComponent} from '../common/search_pagination/search_pagination';
 
 /** Data state structure for an expanded group card page. */
 export interface GroupPageState {
@@ -47,14 +40,38 @@ export interface GroupPageState {
     MatCheckboxModule,
     MatIconModule,
     SearchCellComponent,
-    SearchCellPipe,
-    UtilPctPipe,
-    UtilWidthPipe,
+    SearchPaginationComponent,
   ],
 })
 export class FleetGroupCardComponent {
   /** Fleet group header card data object. */
   readonly group = input.required<FleetGroup>();
+
+  /** Computed structured utilization view model for progress and legend bars. */
+  readonly utilization = computed(() => {
+    const util = this.group().utilization;
+    const total = util?.total || 0;
+    if (!util || total <= 0) return null;
+
+    const calcPct = (v?: number) =>
+      Math.min(100, Math.max(0, Math.round((100 * (v || 0)) / total)));
+    const calcWidth = (v?: number) =>
+      Math.min(100, Math.max(0, (100 * (v || 0)) / total));
+
+    return {
+      busyCount: util.busy || 0,
+      busyPct: calcPct(util.busy),
+      busyWidth: calcWidth(util.busy),
+
+      idleCount: util.idle || 0,
+      idlePct: calcPct(util.idle),
+      idleWidth: calcWidth(util.idle),
+
+      otherCount: util.other || 0,
+      otherPct: calcPct(util.other),
+      otherWidth: calcWidth(util.other),
+    };
+  });
 
   /** Whether this group card accordion is currently open/expanded. */
   readonly isOpen = input<boolean>(false);
@@ -83,33 +100,35 @@ export class FleetGroupCardComponent {
   /** Event emitted when user requests inner page change (token passed). */
   readonly loadGroupPage = output<string | undefined>();
 
-  getRowId(row: Row | undefined): string {
-    if (!row) return '';
-    const rawId = row.id || '';
-    if (
-      rawId &&
-      rawId !== '000000000000' &&
-      rawId !== '00000000-0000-0000-0000-000000000000'
-    ) {
-      return rawId;
-    }
-    const c0 = row.cells?.[0];
-    if (c0) {
-      const link = c0.link;
-      const target = link?.target;
-      const cellText =
-        target?.device?.id ||
-        target?.host?.hostName ||
-        link?.text ||
-        c0.text?.value;
-      if (cellText) return String(cellText);
-    }
-    return rawId;
-  }
+  /** Group rows for the current expanded group page. */
+  readonly groupRows = computed<Row[]>(
+    () => this.groupState()?.data?.rows || [],
+  );
 
-  isGroupPageAllSelected(rows: Row[] | undefined): boolean {
-    if (!rows || rows.length === 0) return false;
+  /** Whether all rows on the current group page are selected. */
+  readonly isGroupPageAllSelected = computed<boolean>(() => {
+    const rows = this.groupRows();
+    if (rows.length === 0) return false;
     const selected = this.selectedSet();
-    return rows.every((r) => selected.has(this.getRowId(r)));
-  }
+    return rows.every((r) => selected.has(r.id));
+  });
+
+  /** Whether some (but not all) rows on the current group page are selected. */
+  readonly isGroupPageSomeSelected = computed<boolean>(() => {
+    const rows = this.groupRows();
+    if (rows.length === 0) return false;
+    const selected = this.selectedSet();
+    const count = rows.filter((r) => selected.has(r.id)).length;
+    return count > 0 && count < rows.length;
+  });
+
+  /** Formatted range text for the inner group pagination footer (e.g. "1–25 of 100"). */
+  readonly innerRangeText = computed<string>(() => {
+    const data = this.groupState()?.data;
+    if (!data) return '';
+    const start = (data.rangeStart || 0).toLocaleString();
+    const end = (data.rangeEnd || 0).toLocaleString();
+    const total = (data.total || 0).toLocaleString();
+    return `${start}–${end} of ${total}`;
+  });
 }

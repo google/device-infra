@@ -4,10 +4,13 @@ import {APP_DATA, AppData, getAppData} from '../../models/app_data';
 import {
   Cell,
   Column,
+  Filter,
   FleetChipResolverRequest,
   FleetChipResolverResponse,
+  FleetColumnCatalogEntry,
   FleetColumnCatalogRequest,
   FleetColumnCatalogResponse,
+  FleetColumnCatalogSection,
   FleetPromotedKeysRequest,
   FleetPromotedKeysResponse,
   FleetSearchConfig,
@@ -275,15 +278,81 @@ export class FakeSearchService extends SearchService {
     request: FleetChipResolverRequest,
   ): Observable<FleetChipResolverResponse> {
     return of({
-      filterChips: (request.filters || []).map((f) => ({
-        pillKey: f.key,
-        pillCondition: f.simple?.values?.[0]?.value || '',
-      })),
-      groupByChips: (request.groupByKeys || []).map((k) => ({
-        pillKey: k,
-        displayName: k,
-      })),
+      filterChips: (request.filters || []).map((f) => {
+        if (
+          f.key === 'invalid_key' ||
+          f.key === 'unknown_key' ||
+          f.key === 'bad_dim'
+        ) {
+          return {
+            invalid: {
+              reason: `Unknown ${request.entity === SearchEntity.SEARCH_ENTITY_HOST ? 'host' : 'device'} filter key: ${f.key}`,
+            },
+          };
+        }
+
+        const pillKey = f.key;
+        const cleanKey = f.key.includes('::') ? f.key.split('::')[1] : f.key;
+        const displayTitle =
+          cleanKey.charAt(0).toUpperCase() +
+          cleanKey.slice(1).replace(/_/g, ' ');
+
+        return {
+          valid: {
+            pillKey,
+            pillCondition: this.formatFleetFilterCondition(f),
+            metadata: {
+              key: f.key,
+              keyDisplayName: displayTitle,
+              canUseAdvanced: true,
+              isPlural: false,
+            },
+          },
+        };
+      }),
+      groupByChips: (request.groupByKeys || []).map((k) => {
+        if (k === 'invalid_key' || k === 'unknown_key' || k === 'bad_group') {
+          return {
+            invalid: {
+              reason: `Unknown ${request.entity === SearchEntity.SEARCH_ENTITY_HOST ? 'host' : 'device'} group-by key: ${k}`,
+            },
+          };
+        }
+        return {
+          valid: {
+            pillKey: k,
+            displayName: k,
+          },
+        };
+      }),
     });
+  }
+
+  private formatFleetFilterCondition(f: Filter): string {
+    if (f.simple?.values && f.simple.values.length > 0) {
+      return f.simple.values.map((v) => v.value).join(', ');
+    }
+    const complex = f.complex;
+    if (complex?.startsWith) {
+      return `^${complex.startsWith.value}`;
+    }
+    if (complex?.containsSubstring) {
+      return complex.containsSubstring.negated
+        ? `!contains:${complex.containsSubstring.value}`
+        : `contains:${complex.containsSubstring.value}`;
+    }
+    if (complex?.matchesRegex) {
+      return complex.matchesRegex.negated
+        ? `!/${complex.matchesRegex.value}/`
+        : `/${complex.matchesRegex.value}/`;
+    }
+    if (complex?.matchesExactly) {
+      return (complex.matchesExactly.values || []).join(', ');
+    }
+    if (complex?.matchesAtLeast) {
+      return (complex.matchesAtLeast.values || []).join(', ');
+    }
+    return f.key || '';
   }
 
   override getFleetValueList(
@@ -321,7 +390,93 @@ export class FakeSearchService extends SearchService {
   override getFleetColumnCatalog(
     request: FleetColumnCatalogRequest,
   ): Observable<FleetColumnCatalogResponse> {
-    return of(MOCK_FLEET_COLUMN_CATALOG);
+    const rawSections = (MOCK_FLEET_COLUMN_CATALOG.sections || []).map((s) => ({
+      ...s,
+      entries: [...(s.entries || [])],
+    }));
+
+    // Dynamically build "Suggested for you" section from request.filters and request.recentKeys if provided
+    const suggestedEntries: FleetColumnCatalogEntry[] = [];
+    const addedKeys = new Set<string>();
+
+    if (request.filters && request.filters.length > 0) {
+      for (const f of request.filters) {
+        if (!addedKeys.has(f.key)) {
+          addedKeys.add(f.key);
+          suggestedEntries.push({
+            key: f.key,
+            displayName: f.key.startsWith('dim::')
+              ? f.key
+                  .slice(5)
+                  .replace(/[_-]+/g, ' ')
+                  .replace(/\b\w/g, (c) => c.toUpperCase())
+              : f.key
+                  .replace(/[_-]+/g, ' ')
+                  .replace(/\b\w/g, (c) => c.toUpperCase()),
+            reason: 'Active filter',
+          });
+        }
+      }
+    }
+
+    if (request.recentKeys && request.recentKeys.length > 0) {
+      for (const k of request.recentKeys) {
+        if (!addedKeys.has(k)) {
+          addedKeys.add(k);
+          suggestedEntries.push({
+            key: k,
+            displayName: k.startsWith('dim::')
+              ? k
+                  .slice(5)
+                  .replace(/[_-]+/g, ' ')
+                  .replace(/\b\w/g, (c) => c.toUpperCase())
+              : k
+                  .replace(/[_-]+/g, ' ')
+                  .replace(/\b\w/g, (c) => c.toUpperCase()),
+            reason: 'Recently used',
+          });
+        }
+      }
+    }
+
+    const sections: FleetColumnCatalogSection[] = [];
+    if (suggestedEntries.length > 0) {
+      sections.push({
+        heading: 'Suggested for you',
+        entries: suggestedEntries,
+        totalAvailable: 0,
+      });
+    } else {
+      const defaultSuggested = rawSections.find(
+        (s) => s.heading === 'Suggested for you',
+      );
+      if (defaultSuggested) {
+        sections.push(defaultSuggested);
+      }
+    }
+
+    for (const s of rawSections) {
+      if (s.heading !== 'Suggested for you') {
+        sections.push(s);
+      }
+    }
+
+    if (!request.query) {
+      return of({sections});
+    }
+
+    const q = request.query.toLowerCase().trim();
+    const filteredSections = sections
+      .map((s) => ({
+        ...s,
+        entries: (s.entries || []).filter(
+          (e: FleetColumnCatalogEntry) =>
+            e.displayName.toLowerCase().includes(q) ||
+            e.key.toLowerCase().includes(q),
+        ),
+      }))
+      .filter((s) => s.entries && s.entries.length > 0);
+    return of({sections: filteredSections});
   }
 
   override getTjsSearchConfig(

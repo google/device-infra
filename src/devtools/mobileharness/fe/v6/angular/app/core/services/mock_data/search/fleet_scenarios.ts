@@ -242,8 +242,54 @@ export const MOCK_FLEET_COLUMN_CATALOG: FleetColumnCatalogResponse = {
     {
       heading: 'Suggested for you',
       entries: [
+        {key: 'status', displayName: 'Status', reason: 'Active filter'},
+        {key: 'model', displayName: 'Model', reason: 'Active filter'},
+        {
+          key: 'battery_level',
+          displayName: 'Battery Level',
+          reason: 'Recently used',
+        },
+      ],
+    },
+    {
+      heading: 'Built-in fields',
+      totalAvailable: 6,
+      entries: [
+        {key: 'id', displayName: 'Device ID', deviceCount: 14},
         {key: 'status', displayName: 'Status', deviceCount: 14},
-        {key: 'model', displayName: 'Model', deviceCount: 14},
+        {key: 'type', displayName: 'Device Type', deviceCount: 14},
+        {key: 'owner', displayName: 'Owner', deviceCount: 14},
+        {key: 'hostName', displayName: 'Host Name', deviceCount: 14},
+        {key: 'ip', displayName: 'IP Address', deviceCount: 12},
+      ],
+    },
+    {
+      heading: 'Dimensions',
+      totalAvailable: 24,
+      entries: [
+        {key: 'dim::model', displayName: 'Model', deviceCount: 14},
+        {key: 'dim::sdk_version', displayName: 'SDK Version', deviceCount: 13},
+        {key: 'dim::hardware', displayName: 'Hardware', deviceCount: 14},
+        {key: 'dim::pool', displayName: 'Pool', deviceCount: 10},
+        {
+          key: 'dim::product_board',
+          displayName: 'Product Board',
+          deviceCount: 14,
+        },
+        {key: 'dim::sim_state', displayName: 'SIM State', deviceCount: 9},
+      ],
+    },
+    {
+      heading: 'Host properties',
+      totalAvailable: 8,
+      entries: [
+        {key: 'host::location', displayName: 'Lab Location', deviceCount: 14},
+        {key: 'host::ip', displayName: 'Host IP', deviceCount: 14},
+        {
+          key: 'host::version',
+          displayName: 'Lab Server Version',
+          deviceCount: 14,
+        },
       ],
     },
   ],
