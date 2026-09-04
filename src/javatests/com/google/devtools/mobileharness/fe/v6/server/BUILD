@@ -25,6 +25,7 @@ java_library(
     testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/server:annotations",
         "//src/java/com/google/devtools/mobileharness/fe/v6/server:oss_fe_server_lib",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/admin:admin_service_module",
@@ -32,12 +33,16 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device:device_service_module",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host:host_service_module",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/job",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search:search_service_module",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/session",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared:oss_stubs",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/test",
         "//src/java/com/google/devtools/mobileharness/fe/v6/shared/util/concurrent:oss_executor_module",
+        "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:lab_info",
+        "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
 )
 

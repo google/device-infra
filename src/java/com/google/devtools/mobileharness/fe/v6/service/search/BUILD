@@ -25,6 +25,7 @@ java_library(
     srcs = ["SearchServiceLogic.java"],
     deps = [
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_summary_java_proto",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -35,6 +36,7 @@ java_library(
     deps = [
         ":search_service_logic",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_summary_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:dimension_overlay",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:overlay_view",
@@ -52,6 +54,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:search_corpus",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:dimension_overlay_store",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:fleet_snapshot_store",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/summary:global_summary_provider",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
@@ -64,6 +67,7 @@ java_library(
         ":search_service_logic",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_service_java_grpc",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_summary_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_tjs_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/grpc:fe_grpc_invoker",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/tjs:tjs_search_logic",
@@ -82,6 +86,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:lab_info_fleet_puller",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:scenario_curation_module",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:fleet_search_data_module",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/summary:global_summary_provider",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/summary:noop_global_summary_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/tjs:noop_tjs_search_logic",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/tjs:tjs_search_logic",
         "@maven//:com_google_inject_guice",

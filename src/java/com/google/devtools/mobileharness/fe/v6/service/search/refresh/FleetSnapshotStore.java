@@ -49,6 +49,11 @@ public final class FleetSnapshotStore {
     return snapshots.getOrDefault(fleet, FleetSnapshot.empty());
   }
 
+  /** Returns true if a snapshot has been published for the fleet. */
+  public boolean hasSnapshot(Fleet fleet) {
+    return snapshots.containsKey(fleet);
+  }
+
   /** Returns the lazy device posting lists for the fleet, building a new one if none exists yet. */
   public LazyPostings postings(Fleet fleet) {
     return postingsCache.computeIfAbsent(fleet, f -> new LazyPostings(get(f).devices()));
