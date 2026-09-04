@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoP
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
+import java.util.Optional;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -56,22 +57,28 @@ public final class RemoteControlDevicesHandler {
     this.executor = executor;
   }
 
-  /** Starts remote control sessions for the requested devices. */
+  /** Starts remote control sessions for the requested devices with authenticated username. */
   public ListenableFuture<RemoteControlDevicesResponse> remoteControlDevices(
-      RemoteControlDevicesRequest request, UniverseScope universe) {
+      RemoteControlDevicesRequest request, UniverseScope universe, Optional<String> username) {
     // Create a request to fetch device details from the lab for the given host.
     GetLabInfoRequest getLabInfoRequest = createGetLabInfoRequest(request.getHostName());
 
     // Asynchronously fetch lab info and then process it to generate session URLs.
     return Futures.transform(
         labInfoProvider.getLabInfoAsync(getLabInfoRequest, universe),
-        response -> processLabInfoResponse(response, request),
+        response -> processLabInfoResponse(response, request, username),
         executor);
+  }
+
+  /** Starts remote control sessions for the requested devices. */
+  public ListenableFuture<RemoteControlDevicesResponse> remoteControlDevices(
+      RemoteControlDevicesRequest request, UniverseScope universe) {
+    return remoteControlDevices(request, universe, Optional.empty());
   }
 
   /** Processes the lab info response and generates remote control URLs for each device. */
   private RemoteControlDevicesResponse processLabInfoResponse(
-      GetLabInfoResponse response, RemoteControlDevicesRequest request) {
+      GetLabInfoResponse response, RemoteControlDevicesRequest request, Optional<String> username) {
     // Build a map of device ID to DeviceInfo for quick lookup.
     ImmutableMap<String, DeviceInfo> deviceInfoMap =
         response.getLabQueryResult().getLabView().getLabDataList().stream()
@@ -85,7 +92,7 @@ public final class RemoteControlDevicesHandler {
     return RemoteControlDevicesResponse.newBuilder()
         .addAllSessions(
             request.getDeviceConfigsList().stream()
-                .map(config -> generateSessionResult(config, deviceInfoMap, request))
+                .map(config -> generateSessionResult(config, deviceInfoMap, request, username))
                 .collect(toImmutableList()))
         .build();
   }
@@ -94,7 +101,8 @@ public final class RemoteControlDevicesHandler {
   private SessionResult generateSessionResult(
       RemoteControlDeviceConfig config,
       ImmutableMap<String, DeviceInfo> deviceInfoMap,
-      RemoteControlDevicesRequest request) {
+      RemoteControlDevicesRequest request,
+      Optional<String> username) {
     String deviceId = config.getDeviceId();
     DeviceInfo deviceInfo = deviceInfoMap.get(deviceId);
 
@@ -108,7 +116,7 @@ public final class RemoteControlDevicesHandler {
 
     // 2. Delegate URL generation and map the resulting Optional to a SessionResult.
     return remoteControlUrlBuilder
-        .generateRemoteControlUrl(deviceInfo, config, request)
+        .generateRemoteControlUrl(deviceInfo, config, request, username)
         .map(url -> SessionResult.newBuilder().setDeviceId(deviceId).setSessionUrl(url).build())
         .orElseGet(
             () ->

@@ -29,4 +29,21 @@ public interface RemoteControlUrlBuilder {
       DeviceInfo deviceInfo,
       RemoteControlDeviceConfig deviceConfig,
       RemoteControlDevicesRequest request);
+
+  /**
+   * Generates the remote control URL for the device with optional caller username.
+   *
+   * @param deviceInfo the target device information from the lab
+   * @param deviceConfig the remote control configuration for this device
+   * @param request the overall remote control request
+   * @param username the authenticated caller LDAP username, if present
+   * @return the generated remote control session URL, or empty if unsupported
+   */
+  default Optional<String> generateRemoteControlUrl(
+      DeviceInfo deviceInfo,
+      RemoteControlDeviceConfig deviceConfig,
+      RemoteControlDevicesRequest request,
+      Optional<String> username) {
+    return generateRemoteControlUrl(deviceInfo, deviceConfig, request);
+  }
 }
