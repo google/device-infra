@@ -86,11 +86,6 @@ public final class AtsCuration implements ScenarioCuration {
   }
 
   @Override
-  public ImmutableList<DeviceKeyDescriptor> deviceEmptyStateKeys() {
-    return ImmutableList.of(DeviceKeys.STATUS, DeviceKeys.MODEL, DeviceKeys.TYPE);
-  }
-
-  @Override
   public ImmutableList<DeviceKeyDescriptor> deviceDefaultColumns() {
     return ImmutableList.of(
         DeviceKeys.UUID,

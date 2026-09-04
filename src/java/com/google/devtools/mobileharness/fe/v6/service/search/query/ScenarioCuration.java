@@ -61,19 +61,9 @@ public interface ScenarioCuration {
     return deviceGroupByRow();
   }
 
-  /** Starter keys offered when the device search bar input is empty. */
-  default ImmutableList<DeviceKeyDescriptor> deviceEmptyStateKeys() {
-    return deviceFilterByRow();
-  }
-
   /** Candidate group-by keys offered when typing "group by" in host search. */
   default ImmutableList<HostKeyDescriptor> hostGroupByCandidates() {
     return hostGroupByRow();
-  }
-
-  /** Starter keys offered when the host search bar input is empty. */
-  default ImmutableList<HostKeyDescriptor> hostEmptyStateKeys() {
-    return hostFilterByRow();
   }
 
   /** Suggester ranking and pattern eligibility policy for this scenario. */
