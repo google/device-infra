@@ -520,6 +520,14 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
         moduleInfoMap.getModulePackageToModuleInfoMap();
     String deviceId = getDeviceId(event);
     ImmutableList<String> preloadedMainlineModules = getPreloadedMainlineModules(deviceId);
+    // Relay to the session plugin whether this device has any preloaded Mainline modules. Devices
+    // with none (e.g. Auto / AOSP builds) do not need a dynamic MCTS test job.
+    event
+        .getTest()
+        .properties()
+        .add(
+            XtsConstants.XTS_DYNAMIC_DOWNLOAD_HAS_PRELOADED_MAINLINE_MODULES_PROPERTY_KEY,
+            String.valueOf(!preloadedMainlineModules.isEmpty()));
     for (String moduleName : preloadedMainlineModules) {
       if (modulePackageToModuleInfoMap.containsKey(moduleName)) {
         String mctsName = modulePackageToModuleInfoMap.get(moduleName);

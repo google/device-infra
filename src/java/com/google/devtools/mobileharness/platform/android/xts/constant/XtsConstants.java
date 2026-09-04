@@ -96,6 +96,15 @@ public class XtsConstants {
   public static final String XTS_DYNAMIC_DOWNLOAD_TEST_MODULES_PROPERTY_KEY =
       "xts_dynamic_download_test_modules";
 
+  /**
+   * MH test property key set by the dynamic MCTS setup job to indicate whether the device under
+   * test has any preloaded Mainline modules ({@code "true"}/{@code "false"}). Consumers use this to
+   * decide whether a dynamic MCTS test job is needed; when absent, consumers must assume {@code
+   * true} (i.e. do not skip) to avoid silently dropping MCTS coverage.
+   */
+  public static final String XTS_DYNAMIC_DOWNLOAD_HAS_PRELOADED_MAINLINE_MODULES_PROPERTY_KEY =
+      "xts_dynamic_download_has_preloaded_mainline_modules";
+
   public static final Pattern RESULT_ZIP_FILENAME_PATTERN =
       Pattern.compile("^\\d{4}\\.\\d{2}\\.\\d{2}_\\d{2}\\.\\d{2}\\.\\d{2}\\.\\d{3}_\\d{4}\\.zip$");
 
