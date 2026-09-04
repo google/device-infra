@@ -59,6 +59,7 @@ public class AndroidSystemSpecUtil {
         ImmutableSet.of(
             "boe-nt37290",
             "boe-ts110f5mlg0",
+            "boe-ts110f5mlg0-rt4539",
             "google-bigsurf",
             "google-tk4b",
             "google-tk4d",
@@ -69,7 +70,8 @@ public class AndroidSystemSpecUtil {
             "google-tkicb",
             "google-fleb",
             "google-staea",
-            "google-dcsdb")),
+            "google-dcsdb",
+            "google-wgoeb")),
     CSOT("csot", ImmutableSet.of("csot-ppa957db2d", "google-tkicc")),
     SDC("sdc", ImmutableSet.of());
 
@@ -87,10 +89,11 @@ public class AndroidSystemSpecUtil {
     }
 
     static PanelVendor fromPanelName(String panelName) {
-      if (BOE.panelNames.contains(panelName)) {
+      String lowerPanelName = Ascii.toLowerCase(panelName);
+      if (BOE.panelNames.contains(lowerPanelName) || lowerPanelName.startsWith("boe-")) {
         return BOE;
       }
-      if (CSOT.panelNames.contains(panelName)) {
+      if (CSOT.panelNames.contains(lowerPanelName) || lowerPanelName.startsWith("csot-")) {
         return CSOT;
       }
       return SDC;
