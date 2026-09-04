@@ -75,3 +75,14 @@ java_test(
         "@maven//:org_mockito_mockito_core",
     ],
 )
+
+java_test(
+    name = "VirtualDeviceConfigTest",
+    size = "small",
+    srcs = ["VirtualDeviceConfigTest.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:cloud_orchestrator_client",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:junit_junit",
+    ],
+)

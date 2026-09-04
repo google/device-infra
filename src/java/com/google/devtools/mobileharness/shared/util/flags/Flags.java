@@ -187,6 +187,20 @@ public class Flags {
   public static final Flag<Duration> androidFactoryResetWaitTime = DurationFlag.seconds(30L);
 
   @FlagSpec(
+      name = "android_jit_emulator_cpus",
+      help =
+          "The number of CPUs for each android Just-in-time emulator instance. If not set or <= 0,"
+              + " defaults to 4.")
+  public static final Flag<Integer> androidJitEmulatorCpus = Flag.value(0);
+
+  @FlagSpec(
+      name = "android_jit_emulator_memory_mb",
+      help =
+          "The memory in MB for each android Just-in-time emulator instance. If not set or <= 0,"
+              + " defaults to 8192.")
+  public static final Flag<Integer> androidJitEmulatorMemoryMb = Flag.value(0);
+
+  @FlagSpec(
       name = "android_jit_emulator_num",
       help =
           "The maximum number of android Just-in-time emulators that could be run on the local"

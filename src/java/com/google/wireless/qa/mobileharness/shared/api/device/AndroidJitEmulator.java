@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudO
 import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorMessages.DockerInstance;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorMessages.HostInstance;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.CloudOrchestratorMessages.Operation;
+import com.google.devtools.mobileharness.platform.android.shared.emulator.VirtualDeviceConfig;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -240,6 +241,26 @@ public class AndroidJitEmulator extends AndroidDevice {
     }
     String buildId = testInfo.jobInfo().params().get(PARAM_BUILD_ID, "");
 
+    VirtualDeviceConfig.Builder configBuilder = VirtualDeviceConfig.builder();
+    int flagCpus = Flags.androidJitEmulatorCpus.getNonNull();
+    if (flagCpus > 0) {
+      configBuilder.setCpus(flagCpus);
+    } else if (flagCpus < 0) {
+      logger.atWarning().log(
+          "Invalid android_jit_emulator_cpus=%d; defaulting to %d",
+          flagCpus, VirtualDeviceConfig.DEFAULT_CPUS);
+    }
+    int flagMemoryMb = Flags.androidJitEmulatorMemoryMb.getNonNull();
+    if (flagMemoryMb > 0) {
+      configBuilder.setMemoryMb(flagMemoryMb);
+    } else if (flagMemoryMb < 0) {
+      logger.atWarning().log(
+          "Invalid android_jit_emulator_memory_mb=%d; defaulting to %d",
+          flagMemoryMb, VirtualDeviceConfig.DEFAULT_MEMORY_MB);
+    }
+    VirtualDeviceConfig virtualDeviceConfig = configBuilder.build();
+    logger.atInfo().log("Creating CVD with virtual device config: %s", virtualDeviceConfig);
+
     Cvd cvd;
     if (!hostImagePath.isEmpty() && !deviceImagePath.isEmpty()) {
       logger.atInfo().log("Using local images to launch AVD.");
@@ -256,7 +277,12 @@ public class AndroidJitEmulator extends AndroidDevice {
         }
         cvd =
             client.createCvdWithLocalImageAndWait(
-                hostId, cvdId, result.hostImageDirId(), result.deviceImageDirId(), target);
+                hostId,
+                cvdId,
+                result.hostImageDirId(),
+                result.deviceImageDirId(),
+                target,
+                virtualDeviceConfig);
       } catch (IOException e) {
         throw new MobileHarnessException(
             BasicErrorId.LOCAL_FILE_OR_DIR_NOT_FOUND, "Failed to prepare local images", e);
@@ -268,7 +294,9 @@ public class AndroidJitEmulator extends AndroidDevice {
       } finally {
         imagePreparationLock.unlock();
       }
-      cvd = client.createCvdWithEnvConfigAndWait(hostId, cvdId, branch, buildId, target);
+      cvd =
+          client.createCvdWithEnvConfigAndWait(
+              hostId, cvdId, branch, buildId, target, virtualDeviceConfig);
     }
 
     logger.atInfo().log("Created CVD: %s, ADB Serial: %s", cvd.name, cvd.adbSerial);

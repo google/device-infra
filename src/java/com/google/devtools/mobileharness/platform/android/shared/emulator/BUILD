@@ -72,6 +72,7 @@ java_library(
         "CloudOrchestratorClient.java",
         "CloudOrchestratorLocalImagePreparer.java",
         "CloudOrchestratorMessages.java",
+        "VirtualDeviceConfig.java",
     ],
     visibility = [
         "//javatests/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",

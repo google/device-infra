@@ -391,17 +391,31 @@ public class CloudOrchestratorClient {
     }
   }
 
-  /** Creates a CVD and waits for completion. Max timeout is 10 minutes. */
   @CanIgnoreReturnValue
   public Cvd createCvdWithEnvConfigAndWait(
       String hostId, String cvdId, String branch, String target)
       throws MobileHarnessException, InterruptedException {
-    return createCvdWithEnvConfigAndWait(hostId, cvdId, branch, "", target);
+    return createCvdWithEnvConfigAndWait(
+        hostId, cvdId, branch, "", target, VirtualDeviceConfig.getDefaultInstance());
+  }
+
+  /** Creates a CVD and waits for completion. Max timeout is 10 minutes. */
+  @CanIgnoreReturnValue
+  public Cvd createCvdWithEnvConfigAndWait(
+      String hostId, String cvdId, String branch, String buildId, String target)
+      throws MobileHarnessException, InterruptedException {
+    return createCvdWithEnvConfigAndWait(
+        hostId, cvdId, branch, buildId, target, VirtualDeviceConfig.getDefaultInstance());
   }
 
   @CanIgnoreReturnValue
   public Cvd createCvdWithEnvConfigAndWait(
-      String hostId, String cvdId, String branch, String buildId, String target)
+      String hostId,
+      String cvdId,
+      String branch,
+      String buildId,
+      String target,
+      VirtualDeviceConfig virtualDeviceConfig)
       throws MobileHarnessException, InterruptedException {
     Map<String, Object> envConfig = new HashMap<>();
     Map<String, Object> common = new HashMap<>();
@@ -412,26 +426,10 @@ public class CloudOrchestratorClient {
     common.put("host_package", buildStr);
     envConfig.put("common", common);
 
-    Map<String, Object> instance = new HashMap<>();
-    instance.put("@import", "phone");
-    Map<String, Object> vm = new HashMap<>();
-
-    // TODO: Consider making these VM parameters configurable.
-    vm.put("memory_mb", 8192);
-    vm.put("setupwizard_mode", "OPTIONAL");
-    vm.put("cpus", 4);
-    if (isX86Target(target)) {
-      Map<String, Object> crosvm = new HashMap<>();
-      crosvm.put("vhost_user_vsock", "true");
-      vm.put("crosvm", crosvm);
-    }
-    instance.put("vm", vm);
+    Map<String, Object> instance = createInstanceConfigMap(cvdId, target, virtualDeviceConfig);
     Map<String, Object> disk = new HashMap<>();
     disk.put("default_build", buildStr);
     instance.put("disk", disk);
-    Map<String, Object> streaming = new HashMap<>();
-    streaming.put("device_id", cvdId);
-    instance.put("streaming", streaming);
 
     envConfig.put("instances", ImmutableList.of(instance));
     return createCvdWithEnvConfigAndWait(hostId, envConfig, null);
@@ -459,7 +457,13 @@ public class CloudOrchestratorClient {
   public Cvd createCvdWithLocalImageAndWait(
       String hostId, String cvdId, String hostImageDirId, String deviceImageDirId)
       throws MobileHarnessException, InterruptedException {
-    return createCvdWithLocalImageAndWait(hostId, cvdId, hostImageDirId, deviceImageDirId, null);
+    return createCvdWithLocalImageAndWait(
+        hostId,
+        cvdId,
+        hostImageDirId,
+        deviceImageDirId,
+        null,
+        VirtualDeviceConfig.getDefaultInstance());
   }
 
   /** Creates a CVD using local images. */
@@ -470,34 +474,74 @@ public class CloudOrchestratorClient {
       String deviceImageDirId,
       @Nullable String target)
       throws MobileHarnessException, InterruptedException {
+    return createCvdWithLocalImageAndWait(
+        hostId,
+        cvdId,
+        hostImageDirId,
+        deviceImageDirId,
+        target,
+        VirtualDeviceConfig.getDefaultInstance());
+  }
+
+  /** Creates a CVD using local images with hardware specs. */
+  public Cvd createCvdWithLocalImageAndWait(
+      String hostId,
+      String cvdId,
+      String hostImageDirId,
+      String deviceImageDirId,
+      @Nullable String target,
+      VirtualDeviceConfig virtualDeviceConfig)
+      throws MobileHarnessException, InterruptedException {
     Map<String, Object> envConfig = new HashMap<>();
     Map<String, Object> common = new HashMap<>();
     common.put("host_package", "@image_dirs/" + hostImageDirId);
     envConfig.put("common", common);
 
-    Map<String, Object> instance = new HashMap<>();
-    instance.put("@import", "phone");
-    Map<String, Object> vm = new HashMap<>();
+    Map<String, Object> instance = createInstanceConfigMap(cvdId, target, virtualDeviceConfig);
+    Map<String, Object> disk = new HashMap<>();
+    disk.put("default_build", "@image_dirs/" + deviceImageDirId);
+    instance.put("disk", disk);
 
-    // TODO: Consider making these VM parameters configurable.
-    vm.put("memory_mb", 8192);
+    envConfig.put("instances", ImmutableList.of(instance));
+    return createCvdWithEnvConfigAndWait(hostId, envConfig, null);
+  }
+
+  /**
+   * Creates the Cuttlefish instance configuration map for a CVD.
+   *
+   * <p>Note: We explicitly specify the instance configuration parameters manually rather than using
+   * {@code "@import": "phone"} because Cuttlefish's template expansion will override our custom
+   * configuration instead of merging with it (for example, {@code kPhoneInstanceTemplate} sets
+   * {@code "vm": {"memory_mb": 4096}}, which overrides custom VM configurations).
+   */
+  private Map<String, Object> createInstanceConfigMap(
+      String cvdId, @Nullable String target, VirtualDeviceConfig virtualDeviceConfig) {
+    Map<String, Object> instance = new HashMap<>();
+
+    Map<String, Object> display = new HashMap<>();
+    display.put("width", 720);
+    display.put("height", 1280);
+    display.put("dpi", 320);
+    Map<String, Object> graphics = new HashMap<>();
+    graphics.put("displays", ImmutableList.of(display));
+    instance.put("graphics", graphics);
+
+    Map<String, Object> vm = new HashMap<>();
+    vm.put("memory_mb", virtualDeviceConfig.memoryMb());
     vm.put("setupwizard_mode", "OPTIONAL");
-    vm.put("cpus", 4);
+    vm.put("cpus", virtualDeviceConfig.cpus());
     if (isX86Target(target)) {
       Map<String, Object> crosvm = new HashMap<>();
       crosvm.put("vhost_user_vsock", "true");
       vm.put("crosvm", crosvm);
     }
     instance.put("vm", vm);
-    Map<String, Object> disk = new HashMap<>();
-    disk.put("default_build", "@image_dirs/" + deviceImageDirId);
-    instance.put("disk", disk);
+
     Map<String, Object> streaming = new HashMap<>();
     streaming.put("device_id", cvdId);
     instance.put("streaming", streaming);
 
-    envConfig.put("instances", ImmutableList.of(instance));
-    return createCvdWithEnvConfigAndWait(hostId, envConfig, null);
+    return instance;
   }
 
   /** Creates a CVD and waits for completion. Max timeout is 10 minutes. */

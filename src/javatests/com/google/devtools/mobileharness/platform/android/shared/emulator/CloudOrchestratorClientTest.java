@@ -400,6 +400,21 @@ public class CloudOrchestratorClientTest {
   }
 
   @Test
+  public void createCvdWithEnvConfigAndWait_withBuildId_success() throws Exception {
+    server.enqueue(new MockResponse().setBody("{\"name\": \"op-123\", \"done\": true}"));
+    server.enqueue(
+        new MockResponse()
+            .setBody("{\"cvds\": [{\"webrtc_device_id\": \"cvd-1\"}]}")
+            .addHeader("Content-Type", "application/json"));
+
+    var cvd =
+        client.createCvdWithEnvConfigAndWait(
+            "host-1", "cvd-1", "branch-1", "build-123", "target-1");
+
+    assertThat(cvd.webrtcDeviceId).isEqualTo("cvd-1");
+  }
+
+  @Test
   public void createCvdWithEnvConfigAndWait_x86Target_setsVhostUserVsock() throws Exception {
     server.enqueue(new MockResponse().setBody("{\"name\": \"op-123\", \"done\": true}"));
     server.enqueue(
@@ -416,6 +431,32 @@ public class CloudOrchestratorClientTest {
     assertThat(req.getMethod()).isEqualTo("POST");
     String body = req.getBody().readUtf8();
     assertThat(body).contains("\"crosvm\":{\"vhost_user_vsock\":\"true\"}");
+  }
+
+  @Test
+  public void createCvdWithEnvConfigAndWait_customHardwareSpecs_setsCpusAndMemory()
+      throws Exception {
+    server.enqueue(new MockResponse().setBody("{\"name\": \"op-123\", \"done\": true}"));
+    server.enqueue(
+        new MockResponse()
+            .setBody("{\"cvds\": [{\"webrtc_device_id\": \"cvd-1\"}]}")
+            .addHeader("Content-Type", "application/json"));
+
+    var cvd =
+        client.createCvdWithEnvConfigAndWait(
+            "host-1",
+            "cvd-1",
+            "branch-1",
+            "build-1",
+            "target-1",
+            VirtualDeviceConfig.builder().setCpus(8).setMemoryMb(16384).build());
+
+    assertThat(cvd.webrtcDeviceId).isEqualTo("cvd-1");
+    var req = server.takeRequest();
+    assertThat(req.getMethod()).isEqualTo("POST");
+    String body = req.getBody().readUtf8();
+    assertThat(body).contains("\"cpus\":8");
+    assertThat(body).contains("\"memory_mb\":16384");
   }
 
   @Test
@@ -687,6 +728,10 @@ public class CloudOrchestratorClientTest {
     String body = req.getBody().readUtf8();
     assertThat(body).contains("\"host_package\":\"@image_dirs/dir-host\"");
     assertThat(body).contains("\"default_build\":\"@image_dirs/dir-device\"");
+    assertThat(body).contains("\"width\":720");
+    assertThat(body).contains("\"height\":1280");
+    assertThat(body).contains("\"dpi\":320");
+    assertThat(body).doesNotContain("\"@import\"");
   }
 
   @Test
@@ -706,6 +751,32 @@ public class CloudOrchestratorClientTest {
     assertThat(req.getMethod()).isEqualTo("POST");
     String body = req.getBody().readUtf8();
     assertThat(body).contains("\"crosvm\":{\"vhost_user_vsock\":\"true\"}");
+  }
+
+  @Test
+  public void createCvdWithLocalImageAndWait_customHardwareSpecs_setsCpusAndMemory()
+      throws Exception {
+    server.enqueue(new MockResponse().setBody("{\"name\": \"op-123\", \"done\": true}"));
+    server.enqueue(
+        new MockResponse()
+            .setBody("{\"cvds\": [{\"webrtc_device_id\": \"cvd-1\"}]}")
+            .addHeader("Content-Type", "application/json"));
+
+    var cvd =
+        client.createCvdWithLocalImageAndWait(
+            "host-1",
+            "cvd-1",
+            "dir-host",
+            "dir-device",
+            "target-1",
+            VirtualDeviceConfig.builder().setCpus(16).setMemoryMb(32768).build());
+
+    assertThat(cvd.webrtcDeviceId).isEqualTo("cvd-1");
+    var req = server.takeRequest();
+    assertThat(req.getMethod()).isEqualTo("POST");
+    String body = req.getBody().readUtf8();
+    assertThat(body).contains("\"cpus\":16");
+    assertThat(body).contains("\"memory_mb\":32768");
   }
 
   @Test
