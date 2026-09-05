@@ -29,6 +29,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.LocalDeviceUtil;
 import com.google.devtools.mobileharness.infra.ats.common.LocalDeviceUtilImpl;
@@ -88,12 +89,6 @@ import org.mockito.junit.MockitoRule;
 public final class RunCommandHandlerTest {
 
   private static final String XTS_ROOT_DIR_NAME = "xts_root_dir";
-
-  private static final String SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME = "timestamp_dir_name";
-
-  // Refer to:
-  // com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants.RESULT_ZIP_FILENAME_PATTERN
-  private static final String TIMESTAMP_DIR_NAME = "2023.06.13_06.27.28.789_1234";
 
   // For tradefed job
   private static final Path JOB_1_GEN_DIR =
@@ -155,8 +150,6 @@ public final class RunCommandHandlerTest {
     doNothing().when(sessionResultHandlerUtil).cleanUpJobGenDirs(any());
 
     when(sessionInfo.getSessionId()).thenReturn("session_id");
-    when(sessionInfo.getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME))
-        .thenReturn(Optional.of(TIMESTAMP_DIR_NAME));
 
     when(compatibilityReportMerger.mergeResultBundles(anyList(), anyBoolean()))
         .thenReturn(ParseResult.of(Optional.empty(), Optional.empty()));
@@ -383,10 +376,18 @@ public final class RunCommandHandlerTest {
     runCommandHandler.initialize(command);
     runCommandHandler.handleResultProcessing(command, RunCommandState.getDefaultInstance());
 
+    Path resultsDir = xtsRootDir.toPath().resolve("android-cts/results");
+    Path logsDir = xtsRootDir.toPath().resolve("android-cts/logs");
     Path resultDir =
-        xtsRootDir.toPath().resolve(String.format("android-cts/results/%s", TIMESTAMP_DIR_NAME));
+        localFileUtil.listDirs(resultsDir).stream()
+            .filter(path -> !path.endsWith("latest"))
+            .findFirst()
+            .orElseThrow();
     Path logDir =
-        xtsRootDir.toPath().resolve(String.format("android-cts/logs/%s", TIMESTAMP_DIR_NAME));
+        localFileUtil.listDirs(logsDir).stream()
+            .filter(path -> !path.endsWith("latest"))
+            .findFirst()
+            .orElseThrow();
 
     assertThat(resultDir.toFile().isDirectory()).isTrue();
 
@@ -447,10 +448,38 @@ public final class RunCommandHandlerTest {
     runCommandHandler.initialize(command);
     runCommandHandler.handleResultProcessing(command, RunCommandState.getDefaultInstance());
 
+    Path resultsDir = xtsRootDir.toPath().resolve("android-cts/results");
     Path resultDir =
-        xtsRootDir.toPath().resolve(String.format("android-cts/results/%s", TIMESTAMP_DIR_NAME));
+        localFileUtil.listDirs(resultsDir).stream()
+            .filter(path -> !path.endsWith("latest"))
+            .findFirst()
+            .orElseThrow();
 
     assertThat(resultDir.toFile().isDirectory()).isTrue();
+  }
+
+  @Test
+  public void createTradefedJobs_success() throws Exception {
+    File xtsRootDir = folder.newFolder("create_jobs_" + XTS_ROOT_DIR_NAME);
+    RunCommand command =
+        RunCommand.newBuilder()
+            .setTestPlan("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .build();
+    JobInfo jobInfo = createJobInfos().get(0);
+    when(xtsJobCreator.createXtsTradefedTestJob(any(), any()))
+        .thenReturn(ImmutableList.of(jobInfo));
+
+    runCommandHandler.initialize(command);
+    ImmutableList<JobInfo> jobs = runCommandHandler.createTradefedJobs(command, ImmutableSet.of());
+
+    assertThat(jobs).containsExactly(jobInfo);
+    Path xtsLogsDir = xtsRootDir.toPath().resolve("android-cts/logs");
+    assertThat(Path.of(jobInfo.params().get("xts_log_root_path")).getParent())
+        .isEqualTo(xtsLogsDir);
+    assertThat(Path.of(jobInfo.params().get("xts_log_root_path")).getFileName().toString())
+        .isNotEmpty();
   }
 
   @Test

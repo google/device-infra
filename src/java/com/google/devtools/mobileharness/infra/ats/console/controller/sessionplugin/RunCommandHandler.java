@@ -71,8 +71,6 @@ class RunCommandHandler {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final String SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME = "timestamp_dir_name";
-
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   private final SessionResultHandlerUtil sessionResultHandlerUtil;
   private final LocalFileUtil localFileUtil;
@@ -85,6 +83,9 @@ class RunCommandHandler {
 
   /** Set in {@link #initialize}. Present if {@link #initialized} is true. */
   private volatile SessionRequestInfo sessionRequestInfo;
+
+  /** Set in {@link #initialize}. Present if {@link #initialized} is true. */
+  private volatile String timestampDirName;
 
   @Inject
   RunCommandHandler(
@@ -103,8 +104,7 @@ class RunCommandHandler {
   }
 
   void initialize(RunCommand command) throws MobileHarnessException, InterruptedException {
-    sessionInfo.putSessionProperty(
-        SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME, XtsDirUtil.generateTimestampDirName());
+    timestampDirName = XtsDirUtil.generateTimestampDirName();
     sessionRequestInfo = generateSessionRequestInfo(command);
     initialized = true;
   }
@@ -136,10 +136,7 @@ class RunCommandHandler {
 
     Path xtsLogsDir =
         XtsDirUtil.getXtsLogsDir(Path.of(command.getXtsRootDir()), command.getXtsType())
-            .resolve(
-                sessionInfo
-                    .getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME)
-                    .orElseThrow());
+            .resolve(timestampDirName);
     boolean disableTfResultLog = Flags.xtsDisableTfResultLog.getNonNull();
     jobInfoList.forEach(
         jobInfo -> {
@@ -212,8 +209,6 @@ class RunCommandHandler {
             "xTS root dir [%s] doesn't exist, skip processing result.", command.getXtsRootDir());
         return;
       }
-      String timestampDirName =
-          sessionInfo.getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME).orElseThrow();
       resultDir = resultsDir.resolve(timestampDirName);
       Path logsDir = XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType);
       logDir = logsDir.resolve(timestampDirName);
