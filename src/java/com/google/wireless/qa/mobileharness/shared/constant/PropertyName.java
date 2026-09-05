@@ -707,6 +707,21 @@ public interface PropertyName {
       USE_SHARED_LAB_GOOGLE_DEVICE,
     }
 
+    /** iOS app information property names. */
+    public enum IosAppInfo implements PropertyName {
+      /**
+       * Property name prefix of version code. Will append bundle id (replaced '.' with '_') after
+       * it.
+       */
+      VERSION_CODE_,
+
+      /**
+       * Property name prefix of version name. Will append bundle id (replaced '.' with '_') after
+       * it.
+       */
+      VERSION_NAME_,
+    }
+
     /** Lab property name constants. */
     public enum Lab implements PropertyName {}
 
