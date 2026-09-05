@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.devtools.mobileharness.infra.ats.server.sessionplugin.NewMultiCommandRequestHandler.OUTPUT_MANIFEST_FILE_NAME;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -2638,5 +2639,58 @@ public final class NewMultiCommandRequestHandlerTest {
 
     assertThat(requestDetail.getNonTradefedLogDirNamesList()).isEmpty();
     verify(sessionResultHandlerUtil, never()).handleNonTradefedJobEnd(jobInfo);
+  }
+
+  @Test
+  public void createOutputManifestFile_preservesFilesEndingWithFilesAndRemovesOldManifest()
+      throws Exception {
+    File outputDir = tmpFolder.newFolder("output_dir");
+    Path outputDirPath = outputDir.toPath();
+
+    File regularFile = new File(outputDir, "test.log");
+    localFileUtil.writeToFile(regularFile.getAbsolutePath(), "log content");
+
+    File fileEndingWithFiles = new File(outputDir, "TEST_FILES");
+    localFileUtil.writeToFile(fileEndingWithFiles.getAbsolutePath(), "test files content");
+
+    File subDir = new File(outputDir, "sub_dir");
+    localFileUtil.prepareDir(subDir.getAbsolutePath());
+
+    File subFileEndingWithFiles = new File(subDir, "DATA_FILES");
+    localFileUtil.writeToFile(subFileEndingWithFiles.getAbsolutePath(), "data files content");
+
+    File subFileNamedFiles = new File(subDir, OUTPUT_MANIFEST_FILE_NAME);
+    localFileUtil.writeToFile(subFileNamedFiles.getAbsolutePath(), "sub files content");
+
+    File oldManifestFile = new File(outputDir, OUTPUT_MANIFEST_FILE_NAME);
+    localFileUtil.writeToFile(oldManifestFile.getAbsolutePath(), "stale_entry.txt");
+
+    newMultiCommandRequestHandler.createOutputManifestFile(outputDirPath);
+
+    assertThat(localFileUtil.isFileExist(regularFile.getAbsolutePath())).isTrue();
+    assertThat(localFileUtil.isFileExist(fileEndingWithFiles.getAbsolutePath())).isTrue();
+    assertThat(localFileUtil.isFileExist(subFileEndingWithFiles.getAbsolutePath())).isTrue();
+    assertThat(localFileUtil.isFileExist(subFileNamedFiles.getAbsolutePath())).isFalse();
+
+    assertThat(localFileUtil.isFileExist(oldManifestFile.getAbsolutePath())).isTrue();
+    String manifestContent = localFileUtil.readFile(oldManifestFile.getAbsolutePath());
+    assertThat(manifestContent.split("\n"))
+        .asList()
+        .containsExactly("test.log", "TEST_FILES", "sub_dir/DATA_FILES");
+    assertThat(manifestContent.split("\n")).asList().doesNotContain(OUTPUT_MANIFEST_FILE_NAME);
+    assertThat(manifestContent.split("\n")).asList().doesNotContain("sub_dir/FILES");
+    assertThat(manifestContent.split("\n")).asList().doesNotContain("stale_entry.txt");
+  }
+
+  @Test
+  public void createOutputManifestFile_emptyDirectory_createsEmptyManifest() throws Exception {
+    File outputDir = tmpFolder.newFolder("empty_output_dir");
+    Path outputDirPath = outputDir.toPath();
+
+    newMultiCommandRequestHandler.createOutputManifestFile(outputDirPath);
+
+    File manifestFile = new File(outputDir, OUTPUT_MANIFEST_FILE_NAME);
+    assertThat(localFileUtil.isFileExist(manifestFile.getAbsolutePath())).isTrue();
+    assertThat(localFileUtil.readFile(manifestFile.getAbsolutePath())).isEmpty();
   }
 }
