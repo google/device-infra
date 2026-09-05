@@ -94,7 +94,7 @@ public final class RemoteControlDevicesHandlerTest {
     when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(labInfoResponse));
     String expectedUrl = "https://example.com/expected";
-    when(remoteControlUrlBuilder.generateRemoteControlUrl(any(), any(), any()))
+    when(remoteControlUrlBuilder.generateRemoteControlUrl(any(), any(), any(), any()))
         .thenReturn(Optional.of(expectedUrl));
 
     RemoteControlDevicesRequest request =
@@ -113,7 +113,8 @@ public final class RemoteControlDevicesHandlerTest {
     assertThat(response.getSessions(0).getDeviceId()).isEqualTo(deviceId);
     assertThat(response.getSessions(0).getSessionUrl()).isEqualTo(expectedUrl);
     verify(remoteControlUrlBuilder)
-        .generateRemoteControlUrl(deviceInfo, request.getDeviceConfigs(0), request);
+        .generateRemoteControlUrl(
+            deviceInfo, request.getDeviceConfigs(0), request, Optional.empty());
   }
 
   @Test
@@ -140,7 +141,7 @@ public final class RemoteControlDevicesHandlerTest {
             .build();
     when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(labInfoResponse));
-    when(remoteControlUrlBuilder.generateRemoteControlUrl(any(), any(), any()))
+    when(remoteControlUrlBuilder.generateRemoteControlUrl(any(), any(), any(), any()))
         .thenReturn(Optional.empty());
 
     RemoteControlDevicesRequest request =
@@ -183,7 +184,7 @@ public final class RemoteControlDevicesHandlerTest {
             .build();
     when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
         .thenReturn(immediateFuture(labInfoResponse));
-    when(remoteControlUrlBuilder.generateRemoteControlUrl(any(), any(), any()))
+    when(remoteControlUrlBuilder.generateRemoteControlUrl(any(), any(), any(), any()))
         .thenReturn(Optional.of("https://example.com"));
 
     RemoteControlDevicesRequest request =
@@ -197,6 +198,51 @@ public final class RemoteControlDevicesHandlerTest {
 
     assertThat(response.getSessionsCount()).isEqualTo(1);
     assertThat(response.getSessions(0).getDeviceId()).isEqualTo(deviceId);
+  }
+
+  @Test
+  public void remoteControlDevices_withUsername_passesUsernameToUrlBuilder() throws Exception {
+    String hostName = "test_host";
+    String deviceId = "device_1";
+    DeviceInfo deviceInfo =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(
+                DeviceLocator.newBuilder()
+                    .setId(deviceId)
+                    .setLabLocator(LabLocator.newBuilder().setHostName(hostName).setIp("1.2.3.4")))
+            .build();
+    GetLabInfoResponse labInfoResponse =
+        GetLabInfoResponse.newBuilder()
+            .setLabQueryResult(
+                LabQueryResult.newBuilder()
+                    .setLabView(
+                        LabView.newBuilder()
+                            .addLabData(
+                                LabData.newBuilder()
+                                    .setDeviceList(
+                                        DeviceList.newBuilder().addDeviceInfo(deviceInfo)))))
+            .build();
+    when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(labInfoResponse));
+    String expectedUrl = "https://example.com/expected";
+    when(remoteControlUrlBuilder.generateRemoteControlUrl(any(), any(), any(), any()))
+        .thenReturn(Optional.of(expectedUrl));
+
+    RemoteControlDevicesRequest request =
+        RemoteControlDevicesRequest.newBuilder()
+            .setHostName(hostName)
+            .addDeviceConfigs(
+                RemoteControlDeviceConfig.newBuilder().setDeviceId(deviceId).setRunAs(""))
+            .build();
+
+    RemoteControlDevicesResponse response =
+        handler.remoteControlDevices(request, UniverseScope.SELF, Optional.of("test_user")).get();
+
+    assertThat(response.getSessionsCount()).isEqualTo(1);
+    assertThat(response.getSessions(0).getSessionUrl()).isEqualTo(expectedUrl);
+    verify(remoteControlUrlBuilder)
+        .generateRemoteControlUrl(
+            deviceInfo, request.getDeviceConfigs(0), request, Optional.of("test_user"));
   }
 
   @Test
