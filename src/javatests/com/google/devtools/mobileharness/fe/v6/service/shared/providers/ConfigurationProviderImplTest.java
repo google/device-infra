@@ -45,6 +45,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -131,8 +132,10 @@ public final class ConfigurationProviderImplTest {
 
     configurationProvider.updateDeviceConfig("device_id", deviceConfig, UNIVERSE).get();
 
-    verify(deviceConfigStub)
-        .updateDeviceConfigsAsync(any(UpdateDeviceConfigsRequest.class), eq(false));
+    ArgumentCaptor<UpdateDeviceConfigsRequest> captor =
+        ArgumentCaptor.forClass(UpdateDeviceConfigsRequest.class);
+    verify(deviceConfigStub).updateDeviceConfigsAsync(captor.capture(), eq(false));
+    assertThat(captor.getValue().getClient()).isEqualTo("mobileharness-fe");
   }
 
   @Test
@@ -144,7 +147,10 @@ public final class ConfigurationProviderImplTest {
 
     configurationProvider.updateLabConfig("host_name", labConfig, UNIVERSE).get();
 
-    verify(deviceConfigStub).updateLabConfigAsync(any(UpdateLabConfigRequest.class), eq(false));
+    ArgumentCaptor<UpdateLabConfigRequest> captor =
+        ArgumentCaptor.forClass(UpdateLabConfigRequest.class);
+    verify(deviceConfigStub).updateLabConfigAsync(captor.capture(), eq(false));
+    assertThat(captor.getValue().getClient()).isEqualTo("mobileharness-fe");
   }
 
   @Test
