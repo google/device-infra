@@ -316,7 +316,9 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
     if (health.uiState && health.uiState !== 'UI_STATE_UNSPECIFIED') {
       return health.uiState === 'HEALTHY' || health.uiState === 'BUSY';
     }
-    return health.state === 'IN_SERVICE_IDLE' || health.state === 'IN_SERVICE_BUSY';
+    return (
+      health.state === 'IN_SERVICE_IDLE' || health.state === 'IN_SERVICE_BUSY'
+    );
   }
 
   // Map UiState (presentation intent) to UI properties.
