@@ -138,6 +138,7 @@ public final class DriverDecoratorMetadata {
     builder.put("AndroidShowInstructionDecorator", "AndroidShowInstructionDecoratorSpec");
     builder.put("AndroidSwitchLanguageDecorator", "AndroidSwitchLanguageDecoratorSpec");
     builder.put("AndroidSwitchUserDecorator", "AndroidSwitchUserDecoratorSpec");
+    builder.put("AndroidVideoDecorator", "AndroidVideoDecoratorSpec");
     builder.put("ApkPreconditionCheckDecorator", "ApkPreconditionCheckDecoratorSpec");
     builder.put("DeviceInfoCollectorDecorator", "DeviceInfoCollectorDecoratorSpec");
     builder.put("DeviceInfoCollectorSetupOnlyDecorator", "DeviceInfoCollectorDecoratorSpec");
