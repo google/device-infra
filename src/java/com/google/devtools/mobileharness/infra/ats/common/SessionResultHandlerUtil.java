@@ -93,9 +93,12 @@ public class SessionResultHandlerUtil {
           "mobly_run_result_attributes.textproto",
           ATS_MODULE_RUN_RESULT_FILE_NAME);
 
+  private static final String DEVICE_INFO_DIR_NAME = "device-info-files";
+  private static final String DEVICE_INFO_FILE_SUFFIX = ".deviceinfo.json";
+
   // Mobly result directories that are copied to the root result dir.
   private static final ImmutableSet<String> MOBLY_ROOT_TEST_RESULT_DIR_NAMES =
-      ImmutableSet.of("report-log-files", "device-info-files", "vintf-files");
+      ImmutableSet.of("report-log-files", DEVICE_INFO_DIR_NAME, "vintf-files");
 
   private static final ImmutableSet<String> EXCLUDED_TF_GEN_RESULT_FILES =
       ImmutableSet.of(
@@ -782,8 +785,9 @@ public class SessionResultHandlerUtil {
    *        ...
    * </pre>
    */
+  @VisibleForTesting
   @CanIgnoreReturnValue
-  private Optional<TradefedResultBundle> copyTradefedTestResultFiles(
+  Optional<TradefedResultBundle> copyTradefedTestResultFiles(
       TestInfo tradefedTestInfo, Path tmpResultDir, Path resultDirInZip)
       throws MobileHarnessException, InterruptedException {
     Path tmpTestResultDir = prepareLogOrResultDirForTest(tradefedTestInfo, tmpResultDir);
@@ -871,11 +875,10 @@ public class SessionResultHandlerUtil {
                 id ->
                     TradefedResultBundle.ModuleInfo.of(/* abi= */ id.get(0), /* name= */ id.get(1)))
             .collect(toImmutableList());
-    Path deviceInfoDir = Path.of(tradefedTestInfo.getGenFileDir(), "device-info-files");
+    Path deviceInfoDir = Path.of(tradefedTestInfo.getGenFileDir(), DEVICE_INFO_DIR_NAME);
     if (localFileUtil.isDirExist(deviceInfoDir)) {
-      Path destDir = resultDirInZip.resolve("device-info-files");
-      logger.atInfo().log("Copying device-info-files [%s] into dir [%s]", deviceInfoDir, destDir);
-      localFileUtil.copyFileOrDir(deviceInfoDir, destDir);
+      Path destDir = resultDirInZip.resolve(DEVICE_INFO_DIR_NAME);
+      copyDeviceInfoFiles(deviceInfoDir, destDir);
     }
 
     return Optional.ofNullable(testResultXmlFile)
@@ -948,8 +951,9 @@ public class SessionResultHandlerUtil {
    * @param moduleName the xts module name
    * @return {@code NonTradefedTestResult} if any
    */
+  @VisibleForTesting
   @CanIgnoreReturnValue
-  private Optional<NonTradefedTestResult> copyNonTradefedTestResultFiles(
+  Optional<NonTradefedTestResult> copyNonTradefedTestResultFiles(
       TestInfo nonTradefedTestInfo,
       Path nonTradefedResultDir,
       Path rootResultDir,
@@ -1013,12 +1017,39 @@ public class SessionResultHandlerUtil {
 
     // Copy mobly result dirs to the root result dir.
     for (String path : moblyRootResultDirs) {
-      logger.atInfo().log(
-          "Copying non-tradefed test result relevant dir [%s] into dir [%s]", path, rootResultDir);
-      localFileUtil.copyFileOrDir(Path.of(path), rootResultDir);
+      Path dirPath = Path.of(path);
+      if (dirPath.getFileName().toString().equals(DEVICE_INFO_DIR_NAME)) {
+        copyDeviceInfoFiles(dirPath, rootResultDir.resolve(DEVICE_INFO_DIR_NAME));
+      } else {
+        logger.atInfo().log(
+            "Copying non-tradefed test result relevant dir [%s] into dir [%s]",
+            path, rootResultDir);
+        localFileUtil.copyFileOrDir(dirPath, rootResultDir);
+      }
     }
 
     return Optional.of(nonTradefedTestResultBuilder.build());
+  }
+
+  /**
+   * Copies device info files (matching {@code *.deviceinfo.json}) from {@code srcDir} to {@code
+   * destDir}.
+   */
+  private void copyDeviceInfoFiles(Path srcDir, Path destDir)
+      throws MobileHarnessException, InterruptedException {
+    List<Path> deviceInfoFiles =
+        localFileUtil.listFilePaths(
+            srcDir,
+            /* recursively= */ false,
+            path -> path.getFileName().toString().endsWith(DEVICE_INFO_FILE_SUFFIX));
+    if (deviceInfoFiles.isEmpty()) {
+      return;
+    }
+    localFileUtil.prepareDir(destDir);
+    for (Path deviceInfoFile : deviceInfoFiles) {
+      logger.atInfo().log("Copying device info file [%s] into dir [%s]", deviceInfoFile, destDir);
+      localFileUtil.copyFileOrDir(deviceInfoFile, destDir);
+    }
   }
 
   public ImmutableList<Path> getGenFilesFromTest(TestInfo test) throws MobileHarnessException {

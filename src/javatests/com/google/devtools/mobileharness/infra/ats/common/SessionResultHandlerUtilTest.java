@@ -551,4 +551,79 @@ public final class SessionResultHandlerUtilTest {
     verify(localFileUtil, never())
         .writeToFile(eq("/tmp/test_gen_file_dir/ats_module_run_result.textproto"), anyString());
   }
+
+  @Test
+  public void copyNonTradefedTestResultFiles_filtersDeviceInfoFiles() throws Exception {
+    Path testGenFileDir = folder.newFolder("non_tf_test_gen_files").toPath();
+    when(testInfo.getGenFileDir()).thenReturn(testGenFileDir.toString());
+
+    // Create device-info-files containing .deviceinfo.json and .xml files.
+    Path deviceInfoDir = testGenFileDir.resolve("device-info-files");
+    deviceInfoDir.toFile().mkdirs();
+    deviceInfoDir.resolve("PackageDeviceInfo.deviceinfo.json").toFile().createNewFile();
+    deviceInfoDir.resolve("VintfDeviceInfo.deviceinfo.json").toFile().createNewFile();
+    deviceInfoDir.resolve("device_compatibility_matrix.xml").toFile().createNewFile();
+    deviceInfoDir.resolve("device_manifest.xml").toFile().createNewFile();
+    deviceInfoDir.resolve("framework_compatibility_matrix.xml").toFile().createNewFile();
+    deviceInfoDir.resolve("framework_manifest.xml").toFile().createNewFile();
+
+    // Create report-log-files directory.
+    Path reportLogDir = testGenFileDir.resolve("report-log-files");
+    reportLogDir.toFile().mkdirs();
+    reportLogDir.resolve("report.txt").toFile().createNewFile();
+
+    Path nonTradefedResultDir = folder.newFolder("non_tf_result_dir").toPath();
+    Path rootResultDir = folder.newFolder("root_result_dir").toPath();
+
+    sessionResultHandlerUtil.copyNonTradefedTestResultFiles(
+        testInfo,
+        nonTradefedResultDir,
+        rootResultDir,
+        "CtsNpuManagerMoblyTestCases",
+        /* moduleAbi= */ null,
+        /* moduleParameter= */ null);
+
+    // Verify rootResultDir/device-info-files only has *.deviceinfo.json
+    Path resultDeviceInfoDir = rootResultDir.resolve("device-info-files");
+    assertThat(resultDeviceInfoDir.toFile().exists()).isTrue();
+    assertThat(resultDeviceInfoDir.resolve("PackageDeviceInfo.deviceinfo.json").toFile().exists())
+        .isTrue();
+    assertThat(resultDeviceInfoDir.resolve("VintfDeviceInfo.deviceinfo.json").toFile().exists())
+        .isTrue();
+    assertThat(resultDeviceInfoDir.resolve("device_compatibility_matrix.xml").toFile().exists())
+        .isFalse();
+    assertThat(resultDeviceInfoDir.resolve("device_manifest.xml").toFile().exists()).isFalse();
+    assertThat(resultDeviceInfoDir.resolve("framework_compatibility_matrix.xml").toFile().exists())
+        .isFalse();
+    assertThat(resultDeviceInfoDir.resolve("framework_manifest.xml").toFile().exists()).isFalse();
+
+    // Verify other root result dirs (e.g. report-log-files) are copied as-is
+    Path resultReportLogDir = rootResultDir.resolve("report-log-files");
+    assertThat(resultReportLogDir.toFile().exists()).isTrue();
+    assertThat(resultReportLogDir.resolve("report.txt").toFile().exists()).isTrue();
+  }
+
+  @Test
+  public void copyTradefedTestResultFiles_filtersDeviceInfoFiles() throws Exception {
+    Path testGenFileDir = folder.newFolder("tf_test_gen_files").toPath();
+    when(testInfo.getGenFileDir()).thenReturn(testGenFileDir.toString());
+
+    // Create device-info-files containing .deviceinfo.json and .xml files in testGenFileDir.
+    Path deviceInfoDir = testGenFileDir.resolve("device-info-files");
+    deviceInfoDir.toFile().mkdirs();
+    deviceInfoDir.resolve("PackageDeviceInfo.deviceinfo.json").toFile().createNewFile();
+    deviceInfoDir.resolve("device_compatibility_matrix.xml").toFile().createNewFile();
+
+    Path tmpResultDir = folder.newFolder("tmp_result_dir").toPath();
+    Path resultDirInZip = folder.newFolder("result_dir_in_zip").toPath();
+
+    sessionResultHandlerUtil.copyTradefedTestResultFiles(testInfo, tmpResultDir, resultDirInZip);
+
+    Path resultDeviceInfoDir = resultDirInZip.resolve("device-info-files");
+    assertThat(resultDeviceInfoDir.toFile().exists()).isTrue();
+    assertThat(resultDeviceInfoDir.resolve("PackageDeviceInfo.deviceinfo.json").toFile().exists())
+        .isTrue();
+    assertThat(resultDeviceInfoDir.resolve("device_compatibility_matrix.xml").toFile().exists())
+        .isFalse();
+  }
 }
