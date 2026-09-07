@@ -21,6 +21,7 @@ package devtools.mobileharness.fe.v6.service.proto.device;
 import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
 import "google/type/date.proto";
+import "src/devtools/mobileharness/api/model/proto/device.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/device/device_resources.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/device/device_stats.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/search/search_common.proto";
@@ -135,6 +136,14 @@ service DeviceService {
       returns (GetDeviceTestHistoryResponse) {
     option (google.api.http) = {
       get: "/v6/devices/{id}/test-history"
+    };
+  }
+
+  // Retrieves the structured device errors reported by the lab server.
+  rpc GetDeviceErrors(GetDeviceErrorsRequest)
+      returns (GetDeviceErrorsResponse) {
+    option (google.api.http) = {
+      get: "/v6/devices/{id}/errors"
     };
   }
 }
@@ -377,4 +386,24 @@ message GetDeviceTestHistoryResponse {
   // Cursor for the next page. Empty when this is the last page. There is no
   // total count (MOSS does not provide one).
   string next_page_token = 3;
+}
+
+// Request message for GetDeviceErrors.
+message GetDeviceErrorsRequest {
+  // The unique identifier of the device.
+  string id = 1;
+
+  // The universe the device belongs to.
+  string universe = 2;
+
+  // Optional host name. When set, restricts the lookup to the device on this
+  // host, disambiguating a device id that appears on more than one host. Empty
+  // applies no host filter.
+  string host_name = 3;
+}
+
+// Response message for GetDeviceErrors.
+message GetDeviceErrorsResponse {
+  // Structured errors reported by the lab server for this device.
+  repeated .mobileharness.api.model.DeviceError device_errors = 1;
 }

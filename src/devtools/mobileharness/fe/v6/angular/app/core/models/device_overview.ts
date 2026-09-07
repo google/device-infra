@@ -10,6 +10,7 @@
  *   by the backend.
  */
 
+import {DeviceError} from './common_models';
 import {DeviceHeaderInfo, HostInfo} from './device_action';
 
 /**
@@ -209,6 +210,11 @@ export declare interface HealthAndActivityInfo {
     suggestedAction?: string;
   };
 
+  /**
+   * Indicates if the device has any errors reported by the lab server.
+   */
+  hasDeviceError?: boolean;
+
   // Deprecated: These fields are now in DeviceHeaderInfo.
   // isQuarantined?: boolean;
   // quarantineExpiry?: string;
@@ -341,5 +347,12 @@ export interface GetDeviceOverviewRequest {
 export declare interface DeviceOverviewPageData {
   headerInfo: DeviceHeaderInfo;
   overview: DeviceOverview;
+}
+
+/**
+ * Response for getDeviceErrors.
+ */
+export declare interface GetDeviceErrorsResponse {
+  deviceErrors?: DeviceError[];
 }
 

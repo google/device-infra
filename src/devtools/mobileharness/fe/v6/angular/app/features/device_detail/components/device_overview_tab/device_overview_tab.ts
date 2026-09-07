@@ -36,6 +36,7 @@ import {
 } from '../../../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 import {Environment} from '../../../../core/services/environment';
+import {DeviceErrorDialog} from '../../../../shared/components/device_error_dialog/device_error_dialog';
 import {
   deviceDiagnosePrompt,
   DiagnoseInAssistant,
@@ -204,6 +205,14 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
     } else {
       this.isSubDeviceCollapsible.set(true);
     }
+  }
+
+  /** Opens the dialog listing the errors reported for this device. */
+  openDeviceErrorDialog() {
+    DeviceErrorDialog.open(this.dialog, {
+      deviceId: this.device.id,
+      hostName: this.device.host.name,
+    });
   }
 
   getNavList(): NavItem[] {

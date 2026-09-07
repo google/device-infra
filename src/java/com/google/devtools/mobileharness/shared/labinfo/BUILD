@@ -31,9 +31,11 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/shared/labinfo:__pkg__",
     ],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/filter:mask_utils",
+        "@maven//:com_google_guava_guava",
     ],
 )
 

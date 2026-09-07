@@ -138,6 +138,9 @@ public class LocalLabInfoProvider implements LabInfoProvider {
                       .setDimension(DeviceDimension.newBuilder().setName(name).setValue(value))
                       .setExpireTimestampMs(dimensions.expireTime().toEpochMilli())
                       .setRequired(true)));
+      // TODO: b/585438621 - Populate DeviceCondition.has_device_error from
+      // DeviceStatusInfo.getExceptionDetail(), and override getDeviceErrors(deviceId,
+      // hostName).
       return conditionBuilder.build();
     });
   }

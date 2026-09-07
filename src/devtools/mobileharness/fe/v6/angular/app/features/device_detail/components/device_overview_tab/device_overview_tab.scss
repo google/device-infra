@@ -230,6 +230,18 @@
   gap: 0.5rem;
 }
 
+// The status chip and the device error button are taller than the label, so
+// center the label and them vertically in the row.
+.status-label {
+  align-self: center;
+}
+
+.status-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .no-types {
   color: #d93025;
   font-style: italic;
@@ -608,9 +620,10 @@
   }
 }
 
-// Lifecycle config link in Basic Information card
+// External links in Basic Information card
 .lifecycle-config-link,
-.metrics-link {
+.metrics-link,
+.device-events-link {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -628,4 +641,8 @@
   font-size: 16px;
   width: 16px;
   height: 16px;
+}
+
+.device-error-button {
+  @include overview.device-error-button;
 }

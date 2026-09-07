@@ -1,0 +1,669 @@
+// Shared styles of the two-pane dialogs that have a resizable sidebar and
+// expandable sections, i.e. HostDebugDialog and DeviceErrorDialog. Their
+// shared behavior lives in shared/composables/dialog_sidebar.ts.
+//
+// Except for `host` and `highlight-flash`, the mixins emit the BEM elements of
+// the dialog (`&__header`, `&__sidebar`, ...), so they must be included inside
+// the block rule of the dialog:
+//
+//   .host-debug-dialog {
+//     @include dialog_sidebar.shell;
+//   }
+//
+// Each dialog only adds its own elements and declarations on top of these
+// mixins, e.g. the colors of its sidebar items.
+
+/// Makes the dialog component fill the dialog container. Include inside
+/// `:host`.
+@mixin host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+/// Dialog card with its header, body, loading overlay and the layout that
+/// holds the sidebar and the main pane.
+@mixin shell {
+  $block: &;
+
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: #fff;
+  border-radius: 16px; // rounded-2xl
+  overflow: hidden;
+  box-shadow:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04); // shadow-xl
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px; // px-6 py-4
+    border-bottom: 1px solid #f3f4f6; // border-gray-100
+    background-color: #f9fafb; // bg-gray-50
+    flex-shrink: 0;
+  }
+
+  &__title-section {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__title {
+    margin: 0;
+    font-size: 1.25rem; // text-xl
+    font-weight: 700; // font-bold
+    color: #1f2937; // text-gray-800
+  }
+
+  &__subtitle {
+    font-size: 0.875rem; // text-sm
+    color: #6b7280; // text-gray-500
+    margin-top: 4px; // mt-1
+  }
+
+  &__close-btn {
+    color: #9ca3af; // text-gray-400
+    &:hover {
+      color: #4b5563; // text-gray-600
+      background-color: #e5e7eb; // hover:bg-gray-200
+    }
+  }
+
+  &__body {
+    flex-grow: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+    min-height: 0;
+    max-height: none;
+    padding: 0;
+  }
+
+  &__loading-overlay {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 60;
+
+    #{$block}__loading-text {
+      margin-top: 16px;
+      color: #4b5563;
+      font-weight: 500;
+      font-size: 1.125rem;
+    }
+  }
+
+  &__layout {
+    display: flex;
+    width: 100%;
+    height: 100%;
+
+    &--resizing {
+      user-select: none;
+      cursor: col-resize;
+
+      #{$block}__sidebar:not(#{$block}__sidebar--compact) {
+        transition: none;
+      }
+    }
+  }
+}
+
+/// Resizable sidebar with its compact icon rail and resize handle.
+///
+/// The colors of the rail and sidebar items (`&__rail-item-btn` and
+/// `&__sidebar-item`) are defined by each dialog.
+///
+/// @param $rail-badge-color Background color of the count badge on the rail
+///     items.
+@mixin sidebar($rail-badge-color) {
+  $block: &;
+
+  &__sidebar {
+    width: 300px;
+    min-width: 56px;
+    max-width: 50%;
+    min-height: 0;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    background-color: #f9fafb; // bg-gray-50
+    border-right: 1px solid #e5e7eb; // border-gray-200
+    padding: 16px 0 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: width 0.14s cubic-bezier(0.2, 0, 0, 1);
+
+    &--compact {
+      padding: 12px 0 0;
+      align-items: center;
+    }
+  }
+
+  &__rail-header {
+    width: 100%;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    padding: 0 6px 10px;
+    margin-bottom: 0;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__rail-icon-btn {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: none;
+    background-color: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #2563eb;
+    padding: 0;
+    transition:
+      background-color 0.18s,
+      color 0.18s;
+
+    &:hover {
+      background-color: rgba(37, 99, 235, 0.1);
+      color: #1d4ed8;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #3b82f6;
+      outline-offset: 1px;
+    }
+
+    &--secondary {
+      color: #6b7280;
+      width: 32px;
+      height: 32px;
+
+      &:hover {
+        background-color: #e5e7eb;
+        color: #1f2937;
+      }
+    }
+
+    .mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      line-height: 20px;
+    }
+  }
+
+  &__rail-nav {
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden auto;
+    scrollbar-width: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 6px 12px;
+    box-sizing: border-box;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  &__rail-item-icon.mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+  }
+
+  &__rail-item-badge {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    min-width: 13px;
+    height: 13px;
+    padding: 0 3px;
+    border-radius: 999px;
+    background-color: $rail-badge-color;
+    color: #fff;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 13px;
+    text-align: center;
+    box-sizing: border-box;
+    box-shadow: 0 0 0 1.5px #f9fafb;
+  }
+
+  &__resizer {
+    width: 8px;
+    margin-left: -4px;
+    margin-right: -4px;
+    flex-shrink: 0;
+    cursor: col-resize;
+    position: relative;
+    z-index: 10;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 3px;
+      transform: translateX(-50%);
+      background-color: transparent;
+      transition: background-color 0.15s ease;
+    }
+
+    &:hover::after,
+    &--active::after {
+      background-color: #3b82f6;
+    }
+  }
+
+  &__sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    margin: 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  &__sidebar-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  &__sidebar-actions {
+    display: flex;
+    gap: 8px;
+
+    #{$block}__action-btn {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: #2563eb;
+      min-width: 0;
+      padding: 0 4px;
+      &:hover {
+        color: #1d4ed8;
+      }
+    }
+  }
+
+  &__sidebar-nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 16px 16px;
+  }
+
+  &__sidebar-error-icon {
+    margin-right: 8px;
+    font-size: 1rem;
+    height: 1rem;
+    width: 1rem;
+  }
+}
+
+/// Main pane with the expandable sections (Material accordion overrides).
+///
+/// @param $copy-btn BEM element name of the copy button in the section
+///     headers, which is shown on hover.
+/// @param $copy-btn-margin-left Gap between that copy button and the section
+///     title.
+/// @param $copy-btn-flex-shrink Optional `flex-shrink` of that copy button.
+@mixin sections($copy-btn, $copy-btn-margin-left, $copy-btn-flex-shrink: null) {
+  $block: &;
+
+  &__main {
+    position: relative;
+    flex-grow: 1;
+    min-width: 0;
+    padding: 16px;
+    overflow-y: auto;
+    background-color: #f1f5f9; // bg-slate-100
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 0;
+  }
+
+  &__accordion-group {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  // Use higher specificity to override Angular Material defaults without !important
+  mat-accordion#{$block}__accordion-group {
+    mat-expansion-panel#{$block}__panel {
+      background-color: #fff;
+      border-radius: 12px;
+      border: 1px solid #e5e7eb;
+      box-shadow: none;
+      // Use clip instead of hidden so sticky copy buttons bind to __main scrollport.
+      overflow: clip;
+
+      &:hover {
+        box-shadow:
+          0 1px 3px 0 rgba(0, 0, 0, 0.1),
+          0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      }
+
+      &.mat-expansion-panel-spacing {
+        margin: 0;
+      }
+
+      ::ng-deep .mat-expansion-panel-body {
+        padding: 0;
+      }
+
+      ::ng-deep .mat-expansion-panel-content {
+        border-top: 1px solid #e5e7eb;
+      }
+
+      mat-expansion-panel-header#{$block}__panel-header {
+        padding: 12px 16px;
+        background-color: #fff;
+        height: auto;
+
+        &:focus,
+        &.cdk-keyboard-focused,
+        &.cdk-program-focused {
+          background-color: #fff;
+        }
+
+        ::ng-deep .mat-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-grow: 1;
+          overflow: hidden;
+          margin-right: 0;
+        }
+
+        // Styled to match prototype's smaller copy button
+        button#{$block}__#{$copy-btn} {
+          width: 24px;
+          height: 24px;
+          line-height: 24px;
+          padding: 0;
+          opacity: 0;
+          transition:
+            opacity 0.2s,
+            background-color 0.2s;
+          margin-left: $copy-btn-margin-left;
+          flex-shrink: $copy-btn-flex-shrink;
+
+          &:hover {
+            background-color: #f3f4f6;
+          }
+
+          &--copied {
+            opacity: 1;
+            color: #16a34a;
+          }
+
+          ::ng-deep .mat-icon {
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+            line-height: 16px;
+          }
+        }
+
+        &:hover {
+          button#{$block}__#{$copy-btn} {
+            opacity: 1;
+          }
+        }
+      }
+    }
+  }
+
+  &__accordion-title {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    flex-grow: 1;
+    margin-right: 16px;
+  }
+
+  &__accordion-error-icon {
+    color: #ef4444;
+    flex-shrink: 0;
+  }
+
+  &__expand-icon {
+    color: #6b7280;
+    transition: transform 0.2s;
+  }
+
+  &__accordion-content {
+    border-top: 1px solid #e5e7eb;
+    padding: 0; // Remove padding to let terminal theme fill the width
+    background-color: #111827; // gray-900, dark background for terminal feel
+  }
+}
+
+/// Dark, terminal-like output in the section bodies, with a copy button that
+/// sticks to the bottom of the visible part of the output.
+///
+/// @param $content-white-space `white-space` of the output text.
+@mixin terminal-output($content-white-space) {
+  $block: &;
+
+  &__output {
+    position: relative;
+    border-radius: 0;
+    // Use clip instead of hidden so the sticky copy button stays visible when scrolling tall outputs.
+    overflow: clip;
+    border: none;
+    padding: 0;
+    min-height: 66px; // 8px top + 40px copy button + 16px bottom scrollbar clearance
+
+    &:hover {
+      #{$block}__copy-btn {
+        opacity: 1;
+      }
+    }
+  }
+
+  &__copy-track {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    bottom: 16px; // Keep floating button cleanly above the 10px horizontal scrollbar
+    pointer-events: none;
+    display: flex;
+    align-items: flex-end;
+    z-index: 5;
+  }
+
+  &__copy-btn {
+    position: sticky;
+    bottom: 16px;
+    pointer-events: auto;
+    background-color: #374151;
+    color: #d1d5db;
+    opacity: 0;
+    transition: all 0.2s;
+
+    &:focus-visible {
+      opacity: 1;
+    }
+
+    &:hover {
+      background-color: #1f2937;
+      color: #fff;
+    }
+
+    &--copied {
+      opacity: 1;
+      color: #4ade80;
+
+      &:hover {
+        color: #4ade80;
+      }
+    }
+  }
+
+  &__output-content {
+    margin: 0;
+    padding: 12px 60px 14px 16px;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: $content-white-space;
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: #475569 #0f172a;
+
+    &::-webkit-scrollbar {
+      height: 10px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 5px;
+      border: 2px solid #0f172a;
+    }
+  }
+
+  &__terminal-theme {
+    background-color: #1e293b; // slate-800
+    border-color: #334155;
+    color: #e2e8f0; // slate-200
+
+    #{$block}__output-content {
+      color: #e2e8f0;
+    }
+  }
+}
+
+/// Footer with the dialog actions.
+@mixin footer {
+  &__footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-top: 1px solid #f3f4f6;
+    background-color: #f9fafb;
+    flex-shrink: 0;
+  }
+
+  &__footer-left {
+    display: flex;
+    gap: 12px;
+  }
+
+  &__footer-btn {
+    border-radius: 4px;
+    padding: 0 16px;
+    height: 36px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+
+    .material-icons {
+      font-size: 18px;
+      margin-right: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 18px;
+      width: 18px;
+    }
+
+    &--outlined {
+      color: #2563eb; // Primary blue for text buttons
+      background-color: transparent;
+      border: none;
+      &:hover:not(:disabled) {
+        background-color: rgba(37, 99, 235, 0.08);
+      }
+      &:disabled {
+        opacity: 0.5;
+        color: #9ca3af;
+        cursor: not-allowed;
+      }
+    }
+
+    &--filled {
+      background-color: #2563eb; // primary blue
+      color: #fff;
+      &:hover:not(:disabled) {
+        filter: brightness(1.1);
+        transform: translateY(-1px);
+        box-shadow:
+          0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      }
+      &:active:not(:disabled) {
+        transform: translateY(0);
+      }
+      &:disabled {
+        opacity: 0.5;
+        background-color: #9ca3af;
+        cursor: not-allowed;
+      }
+    }
+  }
+}
+
+/// Blue flash on the section that the sidebar navigated to. Include at the top
+/// level of the stylesheet.
+@mixin highlight-flash {
+  @keyframes highlight-fade-blue {
+    0% {
+      box-shadow:
+        0 0 8px 4px rgba(59, 130, 246, 0.6),
+        0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+    100% {
+      box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    }
+  }
+
+  .highlight-flash {
+    animation: highlight-fade-blue 2s ease-out;
+  }
+}

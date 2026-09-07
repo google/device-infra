@@ -25,10 +25,12 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Device.HealthCategory;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
@@ -172,6 +174,39 @@ public final class GetHostDeviceSummariesHandlerTest {
             .setActions(expectedActions)
             .build();
     assertThat(response.getDeviceSummaries(0)).isEqualTo(expectedDeviceSummary);
+  }
+
+  @Test
+  public void getHostDeviceSummaries_withDeviceError_populatesHasDeviceError() throws Exception {
+    DeviceInfo failedDeviceInfo =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("failed_device"))
+            .setDeviceStatus(DeviceStatus.FAILED)
+            .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
+            .setHealthCategory(HealthCategory.HEALTH_CATEGORY_NEED_MANUAL_REPAIR)
+            .setDeviceCondition(DeviceCondition.newBuilder().setHasDeviceError(true))
+            .build();
+
+    when(labInfoProvider.getLabInfoAsync(any(), any(UniverseScope.class)))
+        .thenReturn(
+            immediateFuture(
+                GetLabInfoResponse.newBuilder()
+                    .setLabQueryResult(
+                        LabQueryResult.newBuilder()
+                            .setLabView(
+                                LabView.newBuilder()
+                                    .addLabData(
+                                        LabData.newBuilder()
+                                            .setDeviceList(
+                                                DeviceList.newBuilder()
+                                                    .addDeviceInfo(failedDeviceInfo)))))
+                    .build()));
+
+    GetHostDeviceSummariesResponse response =
+        getHostDeviceSummariesHandler.getHostDeviceSummaries(REQUEST, UNIVERSE).get();
+
+    assertThat(response.getDeviceSummariesList()).hasSize(1);
+    assertThat(response.getDeviceSummaries(0).getHasDeviceError()).isTrue();
   }
 
   @Test

@@ -99,6 +99,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:prod',
     model: 'Pixel 8 Pro',
     version: '14',
+    hasDeviceError: true,
   },
   {
     id: 'LNX-STABLE-A4B1C2',
@@ -127,6 +128,7 @@ const deviceSummaries: DeviceSummary[] = [
     requiredDims: 'pool:staging',
     model: 'Pixel 6',
     version: '13',
+    hasDeviceError: true,
   },
   {
     id: 'RECOVERING-DEVICE',

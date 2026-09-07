@@ -2,6 +2,7 @@
  * @fileoverview Defines the interfaces for mock scenarios.
  */
 
+import {DeviceError} from '../../models/common_models';
 import {
   DeviceConfig,
   DeviceConfigUiStatus,
@@ -62,6 +63,7 @@ export interface MockDeviceScenario extends BaseMockScenario {
   };
   readonly allActionsNotReady?: boolean;
   readonly testbedConfig?: TestbedConfig;
+  readonly deviceErrors?: DeviceError[];
 }
 
 /**

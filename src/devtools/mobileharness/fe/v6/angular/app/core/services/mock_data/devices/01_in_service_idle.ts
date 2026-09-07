@@ -7,6 +7,7 @@
 import {DeviceConfig} from '../../../models/device_config_models';
 import {DeviceOverview} from '../../../models/device_overview';
 import {MockDeviceScenario} from '../models';
+import {MOCK_DEVICE_ERRORS} from './07_out_of_service_failed';
 
 const DEVICE_ID = '43021FDAQ000UM';
 
@@ -225,6 +226,7 @@ const SCENARIO_IN_SERVICE_IDLE_DATA: MockDeviceScenario = {
     remoteControl: true,
     quarantine: true,
   },
+  deviceErrors: MOCK_DEVICE_ERRORS,
 };
 
 /**

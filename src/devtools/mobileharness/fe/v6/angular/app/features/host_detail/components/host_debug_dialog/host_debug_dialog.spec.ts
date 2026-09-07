@@ -15,6 +15,7 @@ import {SnackBarService} from '@deviceinfra/app/shared/services/snackbar_service
 import {of, Subject, throwError} from 'rxjs';
 
 import {
+  HOST_DEBUG_SIDEBAR_ICON_ONLY_STORAGE_KEY,
   HostDebugDialog,
   normalizeHostDebugInfoResponse,
 } from './host_debug_dialog';
@@ -50,6 +51,7 @@ describe('HostDebugDialog', () => {
   };
 
   beforeEach(async () => {
+    window.localStorage.removeItem(HOST_DEBUG_SIDEBAR_ICON_ONLY_STORAGE_KEY);
     hostServiceSpy = jasmine.createSpyObj('HostService', ['getHostDebugInfo']);
     snackBarServiceSpy = jasmine.createSpyObj('SnackBarService', [
       'showInfo',
@@ -86,6 +88,10 @@ describe('HostDebugDialog', () => {
     spyOn(dialogRef, 'close');
 
     fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    window.localStorage.removeItem(HOST_DEBUG_SIDEBAR_ICON_ONLY_STORAGE_KEY);
   });
 
   it('should create', () => {
@@ -339,6 +345,184 @@ describe('HostDebugDialog', () => {
 
     // scrollTop should be set to offsetTop - 16
     expect(mainContent.scrollTop).toBe(targetPanel.offsetTop - 16);
+  });
+
+  it('should snap sidebar to 56px icon rail below 185px and restore via expand button', () => {
+    const layoutEl = document.querySelector(
+      '.host-debug-dialog__layout',
+    ) as HTMLElement;
+    spyOnProperty(layoutEl, 'clientWidth', 'get').and.returnValue(1000);
+
+    const resizer = document.querySelector(
+      '.host-debug-dialog__resizer',
+    ) as HTMLElement;
+    expect(resizer).toBeTruthy();
+    expect(component.sidebar.width()).toBe(300);
+    expect(component.sidebar.isCompact()).toBeFalse();
+
+    resizer.dispatchEvent(
+      new MouseEvent('mousedown', {clientX: 300, bubbles: true}),
+    );
+    expect(component.sidebar.isResizing()).toBeTrue();
+
+    // Drag past half dialog width -> clamped to 500px
+    window.dispatchEvent(new MouseEvent('mousemove', {clientX: 850}));
+    expect(component.sidebar.width()).toBe(500);
+
+    // Drag to mid width -> 350px
+    window.dispatchEvent(new MouseEvent('mousemove', {clientX: 350}));
+    expect(component.sidebar.width()).toBe(350);
+
+    // Drag below 185px -> snaps cleanly to 56px icon rail
+    window.dispatchEvent(new MouseEvent('mousemove', {clientX: 100}));
+    expect(component.sidebar.width()).toBe(56);
+    expect(component.sidebar.isCompact()).toBeTrue();
+
+    window.dispatchEvent(new MouseEvent('mouseup'));
+    expect(component.sidebar.isResizing()).toBeFalse();
+    fixture.detectChanges();
+
+    // Verify icon-only rail buttons distinguish normal ('code') vs stderr ('error_outline')
+    expect(
+      document.querySelectorAll('.host-debug-dialog__sidebar-item').length,
+    ).toBe(0);
+    const railBtns = document.querySelectorAll(
+      '.host-debug-dialog__rail-item-btn',
+    );
+    expect(railBtns.length).toBe(3);
+    expect(
+      railBtns[0]
+        .querySelector('.host-debug-dialog__rail-item-icon')
+        ?.textContent?.trim(),
+    ).toBe('code');
+    expect(
+      railBtns[1]
+        .querySelector('.host-debug-dialog__rail-item-icon')
+        ?.textContent?.trim(),
+    ).toBe('error_outline');
+    expect(
+      railBtns[1].classList.contains('host-debug-dialog__rail-item-btn--error'),
+    ).toBeTrue();
+
+    // Restore initial default sidebar width (300) via expand button
+    const expandRailBtn = document.querySelector(
+      '.host-debug-dialog__rail-icon-btn--secondary',
+    ) as HTMLButtonElement;
+    expandRailBtn.click();
+    fixture.detectChanges();
+    expect(component.sidebar.width()).toBe(300);
+    expect(component.sidebar.isCompact()).toBeFalse();
+  });
+
+  it('should update activeCommand to the last command when scrolled to bottom', () => {
+    const mainEl = document.querySelector(
+      '.host-debug-dialog__main',
+    ) as HTMLElement;
+    spyOnProperty(mainEl, 'scrollHeight', 'get').and.returnValue(1000);
+    spyOnProperty(mainEl, 'clientHeight', 'get').and.returnValue(300);
+
+    let mockScrollTop = 0;
+    spyOnProperty(mainEl, 'scrollTop', 'get').and.callFake(() => mockScrollTop);
+
+    expect(component.activeCommand()).toBe('lsusb');
+
+    // Scroll to bottom (maxScroll = 700)
+    mockScrollTop = 700;
+    mainEl.dispatchEvent(new Event('scroll'));
+    fixture.detectChanges();
+    expect(component.activeCommand()).toBe('dmesg');
+  });
+
+  it('should keep sidebar header fixed while only the nav list scrolls', () => {
+    const sidebarEl = document.querySelector(
+      '.host-debug-dialog__sidebar',
+    ) as HTMLElement;
+    const navEl = document.querySelector(
+      '.host-debug-dialog__sidebar-nav',
+    ) as HTMLElement;
+
+    expect(getComputedStyle(sidebarEl).overflowY).toBe('hidden');
+    expect(getComputedStyle(navEl).overflowY).toBe('auto');
+  });
+
+  it('should persist and restore icon-only sidebar preference in localStorage', () => {
+    const resizer = document.querySelector(
+      '.host-debug-dialog__resizer',
+    ) as HTMLElement;
+
+    resizer.dispatchEvent(
+      new MouseEvent('mousedown', {clientX: 300, bubbles: true}),
+    );
+    window.dispatchEvent(new MouseEvent('mousemove', {clientX: 100}));
+    window.dispatchEvent(new MouseEvent('mouseup'));
+
+    expect(
+      window.localStorage.getItem(HOST_DEBUG_SIDEBAR_ICON_ONLY_STORAGE_KEY),
+    ).toBe('true');
+
+    (dialogRef.close as jasmine.Spy).and.callThrough();
+    dialogRef.close();
+    fixture.detectChanges();
+
+    const reopenedFixture = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostDebugDialog, {
+        data: {hostName: 'test-host'},
+      }),
+    );
+    reopenedFixture.detectChanges();
+    const reopenedComponent =
+      reopenedFixture.componentInstance.dialogRef.componentInstance;
+    spyOnProperty(
+      reopenedComponent.dialogLayout!.nativeElement,
+      'clientWidth',
+      'get',
+    ).and.returnValue(1000);
+
+    expect(reopenedComponent.sidebar.width()).toBe(56);
+    expect(reopenedComponent.sidebar.isCompact()).toBeTrue();
+
+    reopenedComponent.sidebar.expand();
+    reopenedFixture.detectChanges();
+    expect(reopenedComponent.sidebar.width()).toBe(300);
+    expect(
+      window.localStorage.getItem(HOST_DEBUG_SIDEBAR_ICON_ONLY_STORAGE_KEY),
+    ).toBe('false');
+    reopenedFixture.componentInstance.dialogRef.close();
+    reopenedFixture.detectChanges();
+  });
+
+  it('should render content copy button inside sticky copy track and show check icon for 3s', () => {
+    jasmine.clock().install();
+    try {
+      clipboardServiceSpy.copyToClipboard.and.returnValue(true);
+
+      const copyBtn = document.querySelector(
+        '.host-debug-dialog__copy-track .host-debug-dialog__copy-btn',
+      ) as HTMLButtonElement;
+      expect(copyBtn).toBeTruthy();
+      const icon = copyBtn.querySelector('mat-icon');
+      expect(icon?.textContent?.trim()).toBe('content_copy');
+
+      copyBtn.click();
+      fixture.detectChanges();
+      expect(clipboardServiceSpy.copyToClipboard).toHaveBeenCalledWith(
+        'Bus 001 Device 001: ID 1d6b:0002 Linux Foundation 2.0 root hub',
+      );
+      expect(snackBarServiceSpy.showInfo).toHaveBeenCalledWith('STDOUT copied');
+      expect(icon?.textContent?.trim()).toBe('check');
+      expect(
+        copyBtn.classList.contains('host-debug-dialog__copy-btn--copied'),
+      ).toBeTrue();
+
+      jasmine.clock().tick(3000);
+      fixture.detectChanges();
+      expect(icon?.textContent?.trim()).toBe('content_copy');
+      expect(
+        copyBtn.classList.contains('host-debug-dialog__copy-btn--copied'),
+      ).toBeFalse();
+    } finally {
+      jasmine.clock().uninstall();
+    }
   });
 });
 

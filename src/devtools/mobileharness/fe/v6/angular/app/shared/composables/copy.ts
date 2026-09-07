@@ -1,4 +1,4 @@
-import {inject, signal} from '@angular/core';
+import {DestroyRef, inject, signal} from '@angular/core';
 import {ClipboardService} from '../services/clipboard_service';
 import {SnackBarService} from '../services/snackbar_service';
 
@@ -53,4 +53,67 @@ export function useCopiedIds(
     );
   };
   return {copiedIds, copyId};
+}
+
+/** How long a copy button shows its "copied" state, in milliseconds. */
+const COPY_FEEDBACK_DURATION_MS = 3000;
+
+/** Copy action and per-button state returned by {@link useCopyFeedback}. */
+export interface CopyFeedback {
+  /**
+   * Copies `text` to the clipboard and reports the result in a snackbar. On
+   * success, the button identified by `feedbackKey`, if given, reports as
+   * copied for a few seconds.
+   */
+  readonly copy: (
+    text: string,
+    successMessage: string,
+    feedbackKey?: string,
+  ) => void;
+  /** Whether the button identified by `feedbackKey` was just copied from. */
+  readonly isCopied: (feedbackKey: string) => boolean;
+}
+
+/**
+ * Composable for copy buttons that briefly switch to a "copied" state (e.g. a
+ * check mark icon) after a successful copy, in addition to an info snackbar.
+ */
+export function useCopyFeedback(): CopyFeedback {
+  const clipboard = inject(ClipboardService);
+  const snackBar = inject(SnackBarService);
+  const copiedKeys = signal<Record<string, boolean>>({});
+  const resetTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+  const setCopied = (feedbackKey: string, copied: boolean) => {
+    copiedKeys.update((keys) => ({...keys, [feedbackKey]: copied}));
+  };
+
+  inject(DestroyRef).onDestroy(() => {
+    for (const timer of resetTimers.values()) {
+      clearTimeout(timer);
+    }
+  });
+
+  return {
+    copy: (text, successMessage, feedbackKey) => {
+      if (!clipboard.copyToClipboard(text)) {
+        snackBar.showError('Failed to copy to clipboard.');
+        return;
+      }
+      snackBar.showInfo(successMessage);
+      if (feedbackKey === undefined) {
+        return;
+      }
+      clearTimeout(resetTimers.get(feedbackKey));
+      setCopied(feedbackKey, true);
+      resetTimers.set(
+        feedbackKey,
+        setTimeout(() => {
+          resetTimers.delete(feedbackKey);
+          setCopied(feedbackKey, false);
+        }, COPY_FEEDBACK_DURATION_MS),
+      );
+    },
+    isCopied: (feedbackKey) => copiedKeys()[feedbackKey] === true,
+  };
 }

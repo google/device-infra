@@ -1,50 +1,11 @@
+@use '../../../../shared/styles/dialog_sidebar';
+
 :host {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
+  @include dialog_sidebar.host;
 }
 
 .host-debug-dialog {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  width: 100%;
-  background-color: #fff;
-  border-radius: 16px; // rounded-2xl
-  overflow: hidden;
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04); // shadow-xl
-
-  &__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 24px; // px-6 py-4
-    border-bottom: 1px solid #f3f4f6; // border-gray-100
-    background-color: #f9fafb; // bg-gray-50
-    flex-shrink: 0;
-  }
-
-  &__title-section {
-    display: flex;
-    flex-direction: column;
-  }
-
-  &__title {
-    margin: 0;
-    font-size: 1.25rem; // text-xl
-    font-weight: 700; // font-bold
-    color: #1f2937; // text-gray-800
-  }
-
-  &__subtitle {
-    font-size: 0.875rem; // text-sm
-    color: #6b7280; // text-gray-500
-    margin-top: 4px; // mt-1
-  }
+  @include dialog_sidebar.shell;
 
   &__host-name {
     font-weight: 700;
@@ -55,112 +16,85 @@
     margin-left: 8px;
   }
 
-  &__close-btn {
-    color: #9ca3af; // text-gray-400
-    &:hover {
-      color: #4b5563; // text-gray-600
-      background-color: #e5e7eb; // hover:bg-gray-200
-    }
-  }
+  @include dialog_sidebar.sidebar($rail-badge-color: #64748b);
 
-  &__body {
-    flex-grow: 1;
-    display: flex;
-    overflow: hidden;
-    position: relative;
-    min-height: 0;
-    max-height: none;
-    padding: 0;
-  }
-
-  &__loading-overlay {
-    position: absolute;
-    inset: 0;
-    background-color: rgba(255, 255, 255, 0.8);
-    display: flex;
-    flex-direction: column;
+  // Rail and sidebar items are neutral, and red for the commands that failed.
+  &__rail-item-btn {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background-color: transparent;
+    color: #4b5563;
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
-    align-items: center;
-    z-index: 60;
+    cursor: pointer;
+    position: relative;
+    transition:
+      background-color 0.16s,
+      border-color 0.16s,
+      color 0.16s;
+    padding: 0;
 
-    .host-debug-dialog__loading-text {
-      margin-top: 16px;
-      color: #4b5563;
-      font-weight: 500;
-      font-size: 1.125rem;
+    &:hover {
+      background-color: #f3f4f6;
+      border-color: #e5e7eb;
     }
-  }
 
-  &__layout {
-    display: flex;
-    width: 100%;
-    height: 100%;
-  }
+    &:focus-visible {
+      outline: 2px solid #3b82f6;
+      outline-offset: 1px;
+    }
 
-  &__sidebar {
-    width: 300px;
-    min-width: 300px;
-    max-width: 300px;
-    background-color: #f9fafb; // bg-gray-50
-    border-right: 1px solid #e5e7eb; // border-gray-200
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-  }
-
-  &__sidebar-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #e5e7eb;
-  }
-
-  &__sidebar-title {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  &__sidebar-actions {
-    display: flex;
-    gap: 8px;
-
-    .host-debug-dialog__action-btn {
-      font-size: 0.75rem;
-      font-weight: 500;
+    &--active {
+      background-color: #eff6ff;
+      border-color: #bfdbfe;
       color: #2563eb;
-      min-width: 0;
-      padding: 0 4px;
+    }
+
+    &--error {
+      color: #ef4444;
+
       &:hover {
-        color: #1d4ed8;
+        background-color: #fee2e2;
+        border-color: #fecaca;
+      }
+
+      &.host-debug-dialog__rail-item-btn--active {
+        background-color: #fef2f2;
+        border-color: #fca5a5;
+        color: #ef4444;
+      }
+
+      .host-debug-dialog__rail-item-badge {
+        background-color: #b91c1c;
       }
     }
   }
 
-  &__sidebar-nav {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
   &__sidebar-item {
+    flex-shrink: 0;
     padding: 8px 12px;
     border-radius: 8px;
+    border: 1px solid transparent;
     cursor: pointer;
     display: flex;
     align-items: center;
     font-size: 0.875rem;
     color: #374151;
-    transition: background-color 0.2s;
+    transition:
+      background-color 0.2s,
+      border-color 0.2s;
 
     &:hover {
       background-color: #f3f4f6;
+    }
+
+    &--active {
+      background-color: #eff6ff;
+      border-color: #bfdbfe;
     }
 
     &--error {
@@ -168,14 +102,11 @@
       &:hover {
         background-color: #fee2e2;
       }
+      &.host-debug-dialog__sidebar-item--active {
+        background-color: #fef2f2;
+        border-color: #fca5a5;
+      }
     }
-  }
-
-  &__sidebar-error-icon {
-    margin-right: 8px;
-    font-size: 1rem;
-    height: 1rem;
-    width: 1rem;
   }
 
   &__sidebar-command-name {
@@ -184,114 +115,13 @@
     white-space: nowrap;
   }
 
-  &__main {
-    flex-grow: 1;
-    padding: 16px;
-    overflow-y: auto;
-    background-color: #f1f5f9; // bg-slate-100
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    min-height: 0;
-  }
-
-  &__accordion-group {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  // Use higher specificity to override Angular Material defaults without !important
-  mat-accordion.host-debug-dialog__accordion-group {
-    mat-expansion-panel.host-debug-dialog__panel {
-      background-color: #fff;
-      border-radius: 12px;
-      border: 1px solid #e5e7eb;
-      box-shadow: none;
-
-      &:hover {
-        box-shadow:
-          0 1px 3px 0 rgba(0, 0, 0, 0.1),
-          0 1px 2px 0 rgba(0, 0, 0, 0.06);
-      }
-
-      &.mat-expansion-panel-spacing {
-        margin: 0;
-      }
-
-      ::ng-deep .mat-expansion-panel-body {
-        padding: 0;
-      }
-
-      ::ng-deep .mat-expansion-panel-content {
-        border-top: 1px solid #e5e7eb;
-      }
-
-      mat-expansion-panel-header.host-debug-dialog__panel-header {
-        padding: 12px 16px;
-        background-color: #fff;
-        height: auto;
-
-        &:focus,
-        &.cdk-keyboard-focused,
-        &.cdk-program-focused {
-          background-color: #fff;
-        }
-
-        ::ng-deep .mat-content {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          flex-grow: 1;
-          overflow: hidden;
-          margin-right: 0;
-        }
-
-        // Styled to match prototype's smaller copy button
-        button.host-debug-dialog__copy-cmd-btn {
-          width: 24px;
-          height: 24px;
-          line-height: 24px;
-          padding: 0;
-          opacity: 0;
-          transition:
-            opacity 0.2s,
-            background-color 0.2s;
-          margin-left: 8px;
-
-          &:hover {
-            background-color: #f3f4f6;
-          }
-
-          ::ng-deep .mat-icon {
-            font-size: 16px;
-            width: 16px;
-            height: 16px;
-            line-height: 16px;
-          }
-        }
-
-        &:hover {
-          button.host-debug-dialog__copy-cmd-btn {
-            opacity: 1;
-          }
-        }
-      }
-    }
-  }
-
-  &__accordion-title {
-    display: flex;
-    align-items: center;
-    overflow: hidden;
-    flex-grow: 1;
-    margin-right: 16px;
-  }
+  @include dialog_sidebar.sections(
+    $copy-btn: 'copy-cmd-btn',
+    $copy-btn-margin-left: 8px
+  );
 
   &__accordion-error-icon {
-    color: #ef4444;
     margin-right: 8px;
-    flex-shrink: 0;
   }
 
   &__accordion-code-icon {
@@ -312,17 +142,6 @@
     &--error {
       color: #b91c1c; // text-red-700
     }
-  }
-
-  &__expand-icon {
-    color: #6b7280;
-    transition: transform 0.2s;
-  }
-
-  &__accordion-content {
-    border-top: 1px solid #e5e7eb;
-    padding: 0; // Remove padding to let terminal theme fill the width
-    background-color: #111827; // gray-900, dark background for terminal feel
   }
 
   &__tabs {
@@ -359,56 +178,11 @@
     }
   }
 
-  &__output {
-    position: relative;
-    border-radius: 0;
-    overflow: hidden;
-    border: none;
-    padding: 12px;
-    min-height: 64px; // Ensure enough height for copy button on short output
+  @include dialog_sidebar.terminal-output($content-white-space: pre-wrap);
 
-    &--hidden {
-      display: none;
-    }
-
-    &:hover {
-      .host-debug-dialog__copy-btn {
-        opacity: 1;
-      }
-    }
-  }
-
-  &__copy-btn {
-    position: absolute;
-    bottom: 8px;
-    right: 8px;
-    background-color: #374151;
-    color: #d1d5db;
-    opacity: 0;
-    transition: all 0.2s;
-    &:hover {
-      background-color: #1f2937;
-      color: #fff;
-    }
-  }
-
-  &__output-content {
-    margin: 0;
-    font-family: 'Roboto Mono', monospace;
-    font-size: 0.875rem;
-    line-height: 1.5;
-    overflow-x: auto;
-    white-space: pre-wrap;
-  }
-
-  &__terminal-theme {
-    background-color: #1e293b; // slate-800
-    border-color: #334155;
-    color: #e2e8f0; // slate-200
-
-    .host-debug-dialog__output-content {
-      color: #e2e8f0;
-    }
+  // Hides the output of the inactive STDOUT/STDERR tab.
+  &__output--hidden {
+    display: none;
   }
 
   &__error-theme {
@@ -418,6 +192,16 @@
 
     .host-debug-dialog__output-content {
       color: #ffb0b0;
+      scrollbar-color: #553c3c #1a1010;
+
+      &::-webkit-scrollbar-track {
+        background: #1a1010;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: #553c3c;
+        border-color: #1a1010;
+      }
     }
 
     .host-debug-dialog__copy-btn {
@@ -426,6 +210,13 @@
       &:hover {
         background-color: #553c3c;
         color: #fff;
+      }
+      &--copied {
+        opacity: 1;
+        color: #4ade80;
+        &:hover {
+          color: #4ade80;
+        }
       }
     }
   }
@@ -439,91 +230,7 @@
     font-style: italic;
   }
 
-  &__footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 24px;
-    border-top: 1px solid #f3f4f6;
-    background-color: #f9fafb;
-    flex-shrink: 0;
-  }
-
-  &__footer-left {
-    display: flex;
-    gap: 12px;
-  }
-
-  &__footer-btn {
-    border-radius: 4px;
-    padding: 0 16px;
-    height: 36px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    cursor: pointer;
-
-    .material-icons {
-      font-size: 18px;
-      margin-right: 6px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      height: 18px;
-      width: 18px;
-    }
-
-    &--outlined {
-      color: #2563eb; // Primary blue for text buttons
-      background-color: transparent;
-      border: none;
-      &:hover:not(:disabled) {
-        background-color: rgba(37, 99, 235, 0.08);
-      }
-      &:disabled {
-        opacity: 0.5;
-        color: #9ca3af;
-        cursor: not-allowed;
-      }
-    }
-
-    &--filled {
-      background-color: #2563eb; // primary blue
-      color: #fff;
-      &:hover:not(:disabled) {
-        filter: brightness(1.1);
-        transform: translateY(-1px);
-        box-shadow:
-          0 4px 6px -1px rgba(0, 0, 0, 0.1),
-          0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      }
-      &:active:not(:disabled) {
-        transform: translateY(0);
-      }
-      &:disabled {
-        opacity: 0.5;
-        background-color: #9ca3af;
-        cursor: not-allowed;
-      }
-    }
-  }
+  @include dialog_sidebar.footer;
 }
 
-@keyframes highlight-fade-blue {
-  0% {
-    box-shadow:
-      0 0 8px 4px rgba(59, 130, 246, 0.6),
-      0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  }
-  100% {
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  }
-}
-
-.highlight-flash {
-  animation: highlight-fade-blue 2s ease-out;
-}
+@include dialog_sidebar.highlight-flash;

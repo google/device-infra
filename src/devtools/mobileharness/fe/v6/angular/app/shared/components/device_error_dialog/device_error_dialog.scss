@@ -1,0 +1,199 @@
+@use '../../styles/dialog_sidebar';
+
+:host {
+  @include dialog_sidebar.host;
+}
+
+.device-error-dialog {
+  @include dialog_sidebar.shell;
+
+  &__device-id,
+  &__host-name {
+    font-weight: 700;
+    color: #374151;
+  }
+
+  @include dialog_sidebar.sidebar($rail-badge-color: #b91c1c);
+
+  // Every rail and sidebar item is an error, so they are always red.
+  &__rail-item-btn {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background-color: transparent;
+    color: #ef4444;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition:
+      background-color 0.16s,
+      border-color 0.16s;
+    padding: 0;
+
+    &:hover {
+      background-color: #fee2e2;
+      border-color: #fecaca;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #3b82f6;
+      outline-offset: 1px;
+    }
+
+    &--active {
+      background-color: #fef2f2;
+      border-color: #fca5a5;
+    }
+  }
+
+  &__sidebar-header {
+    gap: 8px;
+  }
+
+  &__sidebar-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__sidebar-actions {
+    flex-shrink: 0;
+  }
+
+  &__sidebar-item {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: flex-start;
+    color: #ef4444;
+    transition:
+      background-color 0.2s,
+      border-color 0.2s;
+
+    &:hover {
+      background-color: #fee2e2;
+    }
+
+    &--active {
+      background-color: #fef2f2;
+      border-color: #fca5a5;
+    }
+  }
+
+  &__sidebar-error-icon {
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  &__sidebar-meta {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__sidebar-timestamp {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #b91c1c;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__sidebar-sub {
+    font-size: 0.7rem;
+    color: #6b7280;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @include dialog_sidebar.sections(
+    $copy-btn: 'copy-header-btn',
+    $copy-btn-margin-left: 4px,
+    $copy-btn-flex-shrink: 0
+  );
+
+  &__empty-state {
+    background-color: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    color: #6b7280;
+    text-align: center;
+    padding: 32px;
+    font-style: italic;
+
+    &--error {
+      border-color: #fecaca;
+      background-color: #fef2f2;
+      color: #b91c1c;
+      font-style: normal;
+    }
+  }
+
+  &__accordion-title {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  &__accordion-ts-text {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #b91c1c;
+    white-space: nowrap;
+  }
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 5px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+
+    &--name {
+      background-color: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+      font-family: 'Roboto Mono', monospace;
+    }
+
+    &--code {
+      background-color: #f3f4f6;
+      color: #374151;
+      border: 1px solid #e5e7eb;
+      font-family: 'Roboto Mono', monospace;
+    }
+
+    &--type {
+      background-color: #fffbeb;
+      color: #b45309;
+      border: 1px solid #fde68a;
+    }
+
+    &--namespace {
+      background-color: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+  }
+
+  // Long trace lines scroll horizontally instead of wrapping.
+  @include dialog_sidebar.terminal-output($content-white-space: pre);
+
+  @include dialog_sidebar.footer;
+}
+
+@include dialog_sidebar.highlight-flash;

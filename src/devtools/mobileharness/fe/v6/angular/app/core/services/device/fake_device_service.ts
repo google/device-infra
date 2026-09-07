@@ -14,6 +14,7 @@ import {
 } from '../../models/device_action';
 import {
   DeviceOverviewPageData,
+  GetDeviceErrorsResponse,
   GetDeviceOverviewRequest,
   TestbedConfig,
 } from '../../models/device_overview';
@@ -656,6 +657,25 @@ export class FakeDeviceService extends DeviceService {
     }
 
     return of({columns, rows, nextPageToken}).pipe(delay(1000));
+  }
+
+  /**
+   * Retrieves fake device errors for testing.
+   *
+   * @param id The device ID.
+   * @param hostName The name of the host.
+   * @return An Observable emitting the fake device errors response.
+   */
+  override getDeviceErrors(
+    id: string,
+    hostName: string,
+  ): Observable<GetDeviceErrorsResponse> {
+    console.log(`FakeService: Getting device errors for ${id}`);
+    const wrapper = this.findScenarioWrapper(id);
+    const scenario = wrapper?.factory(this.getDeviceOverviewCallCount);
+    return of({
+      deviceErrors: scenario?.deviceErrors ?? [],
+    }).pipe(delay(500));
   }
 
   // Future methods like listDevices, updateDeviceConfig, etc., would be added here.
