@@ -44,6 +44,8 @@ import com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsModeModule
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.OlcServicesForWorker;
 import com.google.devtools.mobileharness.shared.usmf.UsmfBinary;
 import com.google.devtools.mobileharness.shared.usmf.UsmfEnvironment;
+import com.google.devtools.mobileharness.shared.usmf.builtin.adb.MockAdbController;
+import com.google.devtools.mobileharness.shared.usmf.builtin.adb.MockAndroidDevice;
 import com.google.devtools.mobileharness.shared.util.base.StackTraceExtractor;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.command.Command;
@@ -66,6 +68,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import io.grpc.BindableService;
 import io.grpc.ManagedChannel;
+import io.grpc.Server;
 import io.grpc.netty.NettyServerBuilder;
 import java.io.IOException;
 import java.time.Duration;
@@ -111,7 +114,8 @@ public class LabServerIntegrationTest {
 
   private CommandProcess labServerProcess;
   private ManagedChannel labServerChannel;
-  private UsmfBinary mockAdb;
+  private MockAdbController mockAdb;
+  private Server masterServer;
 
   @Inject private ListeningExecutorService threadPool;
   @Inject private AtsMode atsMode;
@@ -119,6 +123,8 @@ public class LabServerIntegrationTest {
 
   @Before
   public void setUp() throws Exception {
+    System.setProperty("mobileharness.force_to_use_grpc", "true");
+
     Guice.createInjector(
             new AtsModeModule(),
             new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()))
@@ -138,73 +144,8 @@ public class LabServerIntegrationTest {
     labServerFoundDevice = new CountDownLatch(1);
 
     mockAdb =
-        usmfEnvironment
-            .createBinary("adb")
-            .setRules(
-                """
-                def handle_devices(ctx):
-                    if "devices" in ctx.args:
-                        return Result(stdout="List of devices attached\\nHT8420M00155\\tdevice\\tproduct:real_device_model\\n")
-                    return None
-
-                def handle_version(ctx):
-                    if "version" in ctx.args:
-                        return Result(stdout="Android Debug Bridge version 1.0.41\\n")
-                    return None
-
-                def handle_get_state(ctx):
-                    if re_search(r"get-state", ctx.command):
-                        return Result(stdout="device\\n")
-                    return None
-
-                def handle_wait_for_device(ctx):
-                    if re_search(r"wait-for-device", ctx.command):
-                        return Result(exit_code=0)
-                    return None
-
-                def handle_get_current_user(ctx):
-                    if re_search(r"am\\s+get-current-user", ctx.command):
-                        return Result(stdout="0\\n")
-                    return None
-
-                def handle_install(ctx):
-                    if re_search(r"install", ctx.command):
-                        return Result(stdout="Success\\n")
-                    return None
-
-                def handle_uninstall(ctx):
-                    if re_search(r"uninstall", ctx.command):
-                        return Result(stdout="Success\\n")
-                    return None
-
-                def handle_getprop_model(ctx):
-                    if re_search(r"getprop.*ro\\.product\\.model", ctx.command):
-                        return Result(stdout="real_device_model\\n")
-                    return None
-
-                def handle_getprop_sdk(ctx):
-                    if re_search(r"getprop.*ro\\.build\\.version\\.sdk", ctx.command):
-                        return Result(stdout="29\\n")
-                    return None
-
-                def handle_cpu_freq(ctx):
-                    if re_search(r"cat\\s+/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq", ctx.command):
-                        return Result(stdout="2400000\\n")
-                    return None
-
-                usmf_rules = [
-                    handle_devices,
-                    handle_version,
-                    handle_get_state,
-                    handle_wait_for_device,
-                    handle_get_current_user,
-                    handle_install,
-                    handle_uninstall,
-                    handle_getprop_model,
-                    handle_getprop_sdk,
-                    handle_cpu_freq,
-                ]
-                """)
+        MockAdbController.builder(usmfEnvironment)
+            .addDevice(MockAndroidDevice.pixel7("HT8420M00155"))
             .buildAndDeploy();
 
     UsmfBinary mockAapt = usmfEnvironment.createBinary("aapt").buildAndDeploy();
@@ -217,13 +158,18 @@ public class LabServerIntegrationTest {
                         LAB_SERVER_FILE_PATH,
                         ImmutableList.of(
                             "--aapt=" + mockAapt.getPath(),
-                            "--adb=" + mockAdb.getPath(),
+                            "--adb=" + mockAdb.getAdbPath(),
                             "--api_config=" + API_CONFIG_FILE_PATH,
+                            "--check_device_interval=0",
                             "--detect_adb_device=true",
+                            "--detect_device_interval_sec=0",
+                            "--dispatch_device_interval_sec=0",
                             "--enable_control_service=false",
                             "--enable_file_cleaner=false",
+                            "--enable_rdh=false",
                             "--enable_stubby_rpc_server=false",
-                            "--enable_wrangler_device_syncer=true",
+                            "--enable_trace_span_processor=false",
+                            "--enable_wrangler_device_syncer=false",
                             "--external_adb_initializer_template=true",
                             "--grpc_port=" + labServerGrpcPort,
                             "--master_grpc_target=localhost:" + masterPort,
@@ -261,18 +207,31 @@ public class LabServerIntegrationTest {
 
   @After
   public void tearDown() {
+    System.clearProperty("mobileharness.force_to_use_grpc");
+
     if (labServerProcess != null) {
       labServerProcess.kill();
     }
     if (labServerChannel != null) {
       labServerChannel.shutdown();
     }
+    if (masterServer != null) {
+      masterServer.shutdown();
+    }
   }
 
   @Test
-  public void getVersion() throws Exception {
+  public void runLabServerLifecycle() throws Exception {
     startServersAndWaitUntilReady();
 
+    checkGetVersion();
+
+    checkAllocateDevice();
+
+    checkLabServerLog();
+  }
+
+  private void checkGetVersion() throws Exception {
     GetVersionResponse getVersionResponse =
         new VersionGrpcStub(labServerChannel).getVersion(GetVersionRequest.getDefaultInstance());
 
@@ -282,26 +241,7 @@ public class LabServerIntegrationTest {
             GetVersionResponse.newBuilder().setVersion(Version.LAB_VERSION.toString()).build());
   }
 
-  @Test
-  public void checkLabServerLog() throws Exception {
-    startServersAndWaitUntilReady();
-
-    logger.atInfo().log("Running lab server for a while...");
-    Sleeper.defaultSleeper().sleep(Duration.ofSeconds(10L));
-
-    assertWithMessage(
-            "A normal lab server run should not print exception stack traces, which will confuse"
-                + " users and affect debuggability when debugging lab server logs.\n"
-                + "lab server stderr")
-        .that(
-            StackTraceExtractor.extract(stringBuilders.getOrCreate("lab_server_stderr").toString()))
-        .isEmpty();
-  }
-
-  @Test
-  public void allocateDevice() throws Exception {
-    startServersAndWaitUntilReady();
-
+  private void checkAllocateDevice() throws Exception {
     // Creates JobInfo and TestInfo.
     JobInfo jobInfo =
         JobInfo.newBuilder()
@@ -331,10 +271,10 @@ public class LabServerIntegrationTest {
     while (true) {
       allocations = deviceAllocator.pollAllocations();
       count++;
-      if (!allocations.isEmpty() || count > 20) {
+      if (!allocations.isEmpty() || count > 200) {
         break;
       }
-      Sleeper.defaultSleeper().sleep(Duration.ofSeconds(1L));
+      Sleeper.defaultSleeper().sleep(Duration.ofMillis(50L));
     }
 
     // Checks the allocation.
@@ -358,6 +298,19 @@ public class LabServerIntegrationTest {
             labServerGrpcPort);
   }
 
+  private void checkLabServerLog() throws Exception {
+    logger.atInfo().log("Running lab server for a while...");
+    Sleeper.defaultSleeper().sleep(Duration.ofSeconds(2L));
+
+    assertWithMessage(
+            "A normal lab server run should not print exception stack traces, which will confuse"
+                + " users and affect debuggability when debugging lab server logs.\n"
+                + "lab server stderr")
+        .that(
+            StackTraceExtractor.extract(stringBuilders.getOrCreate("lab_server_stderr").toString()))
+        .isEmpty();
+  }
+
   private void startServersAndWaitUntilReady()
       throws MobileHarnessException, InterruptedException, IOException, ExecutionException {
     logger.atInfo().log("Starting AtsMode, port=%s", masterPort);
@@ -365,7 +318,7 @@ public class LabServerIntegrationTest {
     NettyServerBuilder nettyServerBuilder =
         NettyServerBuilder.forPort(masterPort).executor(threadPool);
     workerServices.forEach(nettyServerBuilder::addService);
-    nettyServerBuilder.build().start();
+    masterServer = nettyServerBuilder.build().start();
 
     logger.atInfo().log("Starting lab server, command=%s", labServerCommand);
     labServerProcess = new CommandExecutor().start(labServerCommand);
