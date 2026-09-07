@@ -109,11 +109,6 @@ class RunCommandHandler {
     initialized = true;
   }
 
-  ImmutableList<JobInfo> createTradefedJobs(RunCommand command)
-      throws MobileHarnessException, InterruptedException {
-    return createTradefedJobs(command, ImmutableSet.of());
-  }
-
   /**
    * Creates tradefed jobs based on the {@code command} and {@code dynamicMctsModules}, and adds the
    * jobs to the {@code sessionInfo}.
