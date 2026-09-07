@@ -19,23 +19,24 @@ package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 import static com.google.common.primitives.Ints.saturatedCast;
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.function.Function.identity;
 import static java.util.function.Predicate.not;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.SetMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.io.Files;
 import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
@@ -303,7 +304,7 @@ final class NewMultiCommandRequestHandler {
     SessionRequestInfo sessionRequestInfo =
         getSessionRequestInfo(request, commandInfo, sessionInfo);
 
-    SetMultimap<String, String> commandToJobsMap = getCommandToJobsMap(sessionInfo);
+    ImmutableListMultimap<String, JobInfo> commandToJobsMap = getCommandToJobsMap(sessionInfo);
 
     ImmutableList<JobInfo> jobInfos;
     try {
@@ -408,7 +409,7 @@ final class NewMultiCommandRequestHandler {
     SessionRequestInfo sessionRequestInfo =
         getSessionRequestInfo(request, commandInfo, sessionInfo);
 
-    SetMultimap<String, String> commandToJobsMap = getCommandToJobsMap(sessionInfo);
+    ImmutableListMultimap<String, JobInfo> commandToJobsMap = getCommandToJobsMap(sessionInfo);
 
     Optional<JobInfo> jobInfoOpt;
     try {
@@ -469,16 +470,14 @@ final class NewMultiCommandRequestHandler {
     return ImmutableList.of(jobInfo);
   }
 
-  private static SetMultimap<String, String> getCommandToJobsMap(SessionInfo sessionInfo) {
-    SetMultimap<String, String> commandToJobsMap = HashMultimap.create();
-
-    for (JobInfo jobInfo : sessionInfo.getAllJobs()) {
-      jobInfo
-          .properties()
-          .getOptional(XtsPropertyName.Job.XTS_COMMAND_ID)
-          .ifPresent(commandId -> commandToJobsMap.put(commandId, jobInfo.locator().getId()));
-    }
-    return commandToJobsMap;
+  private static ImmutableListMultimap<String, JobInfo> getCommandToJobsMap(
+      SessionInfo sessionInfo) {
+    return sessionInfo.getAllJobs().stream()
+        .filter(jobInfo -> jobInfo.properties().has(XtsPropertyName.Job.XTS_COMMAND_ID))
+        .collect(
+            toImmutableListMultimap(
+                jobInfo -> jobInfo.properties().get(XtsPropertyName.Job.XTS_COMMAND_ID),
+                identity()));
   }
 
   private void reformatResourcePathForNonTradefedJob(JobInfo jobInfo)
@@ -1029,11 +1028,7 @@ final class NewMultiCommandRequestHandler {
     Collection<CommandDetail> commandDetails = requestDetail.getCommandDetailsMap().values();
     URL outputUrl = null;
     String outputFileUploadUrl = request.getTestEnvironment().getOutputFileUploadUrl();
-    Map<String, JobInfo> jobIdToJobMap = new HashMap<>();
-    for (JobInfo jobInfo : sessionInfo.getAllJobs()) {
-      jobIdToJobMap.put(jobInfo.locator().getId(), jobInfo);
-    }
-    SetMultimap<String, String> commandToJobsMap = getCommandToJobsMap(sessionInfo);
+    ImmutableListMultimap<String, JobInfo> commandToJobsMap = getCommandToJobsMap(sessionInfo);
     try {
       outputUrl = URI.create(outputFileUploadUrl).toURL();
     } catch (IllegalArgumentException | MalformedURLException e) {
@@ -1067,10 +1062,7 @@ final class NewMultiCommandRequestHandler {
       Path logDir = outputDirPath.resolve("logs");
 
       MobileHarnessException resultProcessingException = null; // Store result processing error
-      ImmutableList<JobInfo> jobs =
-          commandToJobsMap.get(commandId).stream()
-              .map(jobIdToJobMap::get)
-              .collect(toImmutableList());
+      ImmutableList<JobInfo> jobs = commandToJobsMap.get(commandId);
       try {
         if (!jobs.isEmpty() && jobs.get(0).properties().has(SLATE_JOB_PROP)) {
           handleSlateResultProcessing(sessionInfo, jobs, logDir, commandDetailBuilder);
