@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
@@ -77,21 +76,9 @@ public final class HostSuggesterTest {
           ImmutableMap.of(Fleet.FLEET_SELF, new AtsCuration()));
 
   @Test
-  public void emptyQuery_returnsHostStarterKeysAsOpenPickers() {
+  public void emptyQuery_returnsNoSuggestions() {
     FleetSuggestionResponse response = suggester.suggest(corpus, request(""));
-
-    // The host empty-state keys present in this fleet, in their fixed order. host::release_status
-    // is
-    // absent from the fleet, so it is skipped; every entry opens the value picker.
-    ImmutableList.Builder<String> keys = ImmutableList.builder();
-    for (FleetSuggestion item : response.getItemsList()) {
-      assertThat(item.hasOpenPicker()).isTrue();
-      keys.add(item.getOpenPicker().getKey());
-    }
-    assertThat(keys.build())
-        .containsExactly(
-            "host_field::host_name", "host_field::connectivity", "host_field::device_count")
-        .inOrder();
+    assertThat(response.getItemsList()).isEmpty();
   }
 
   @Test

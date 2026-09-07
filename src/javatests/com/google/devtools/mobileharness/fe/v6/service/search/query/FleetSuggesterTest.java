@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
@@ -209,20 +208,9 @@ public final class FleetSuggesterTest {
   }
 
   @Test
-  public void emptyQuery_returnsCuratedStarterKeysAsOpenPickers() {
+  public void emptyQuery_returnsNoSuggestions() {
     FleetSuggestionResponse response = suggester.suggest(corpus, request(""));
-
-    // The curated starter keys present in this fleet, in their fixed order. dimension::os is absent
-    // from
-    // the fleet, so it is skipped; every entry opens the value picker.
-    ImmutableList.Builder<String> keys = ImmutableList.builder();
-    for (FleetSuggestion item : response.getItemsList()) {
-      assertThat(item.hasOpenPicker()).isTrue();
-      keys.add(item.getOpenPicker().getKey());
-    }
-    assertThat(keys.build())
-        .containsExactly("device_field::status", "dimension::model", "device_field::type")
-        .inOrder();
+    assertThat(response.getItemsList()).isEmpty();
   }
 
   @Test

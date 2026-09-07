@@ -270,7 +270,7 @@ public final class FleetSuggester {
             catalogDimensions);
 
     if (query.isEmpty()) {
-      return emptyState(context, limit);
+      return FleetSuggestionResponse.getDefaultInstance();
     }
 
     // Pattern 0: the group-by prefix owns its input. A group-by term that matches no key returns
@@ -735,35 +735,6 @@ public final class FleetSuggester {
     FleetSuggestionResponse.Builder response = FleetSuggestionResponse.newBuilder();
     for (Cand cand : out.subList(0, Math.min(out.size(), limit))) {
       response.addItems(cand.builder.build());
-    }
-    return response.build();
-  }
-
-  // ---- Empty query (spec section 11 empty state) ----
-
-  private FleetSuggestionResponse emptyState(Context context, int limit) {
-    FleetIndex index = context.index();
-    FleetSuggestionResponse.Builder response = FleetSuggestionResponse.newBuilder();
-    int emitted = 0;
-    // Personalization is deferred, so no recent conditions are offered; only curated starter keys.
-    for (String keyId : emptyStateKeys(context)) {
-      if (emitted >= limit) {
-        break;
-      }
-      if (!index.keyIds().contains(keyId)) {
-        continue;
-      }
-      boolean inChip = context.activeKeys().contains(keyId);
-      response.addItems(
-          FleetSuggestion.newBuilder()
-              .setLabel(label(context.corpus(), keyId, inChip))
-              .addAllMainText(segments(displayName(context.corpus(), keyId), null))
-              .setOpenPicker(
-                  inChip
-                      ? openPickerViewExisting(context.corpus(), keyId)
-                      : openPickerNewChip(context.corpus(), keyId))
-              .build());
-      emitted++;
     }
     return response.build();
   }
@@ -1460,28 +1431,6 @@ public final class FleetSuggester {
     if (context.corpus() instanceof HostCorpus) {
       if (curation != null) {
         return curation.hostGroupByCandidates().stream()
-            .map(HostKeyDescriptor::id)
-            .collect(toImmutableList());
-      }
-      return ImmutableList.of(
-          HostKeys.HOST_NAME.id(), HostKeys.CONNECTIVITY.id(), HostKeys.DEVICE_COUNT.id());
-    }
-    return ImmutableList.of();
-  }
-
-  private static ImmutableList<String> emptyStateKeys(Context context) {
-    ScenarioCuration curation = context.corpus().curation();
-    if (context.corpus() instanceof DeviceCorpus) {
-      if (curation != null) {
-        return curation.deviceEmptyStateKeys().stream()
-            .map(DeviceKeyDescriptor::id)
-            .collect(toImmutableList());
-      }
-      return ImmutableList.of(DeviceKeys.STATUS.id(), DeviceKeys.MODEL.id(), DeviceKeys.TYPE.id());
-    }
-    if (context.corpus() instanceof HostCorpus) {
-      if (curation != null) {
-        return curation.hostEmptyStateKeys().stream()
             .map(HostKeyDescriptor::id)
             .collect(toImmutableList());
       }
