@@ -139,6 +139,20 @@ public final class HostSuggesterTest {
     assertThat(deviceCount.getOpenPicker().getKey()).isEqualTo("host_field::device_count");
   }
 
+  @Test
+  public void kv_unknownHostPropertyBareToken_suggestsAddFilterWithoutCount() {
+    FleetSuggestionResponse response =
+        suggester.suggest(corpus, request("custom_host_prop is special_val"));
+
+    FleetSuggestion suggestion = firstApplyFilter(response, "host_property::custom_host_prop");
+    assertThat(suggestion.getLabel()).isEqualTo("Add filter");
+    assertThat(suggestion.getMainText(0).getText()).isEqualTo("Host Property custom_host_prop is ");
+    assertThat(suggestion.getMainText(1).getText()).isEqualTo("special_val");
+    assertThat(suggestion.getApplyFilter().getResultingFilter().getSimple().getValues(0).getValue())
+        .isEqualTo("special_val");
+    assertThat(suggestion.hasCount()).isFalse();
+  }
+
   // --- Helpers ---
 
   private static FleetSuggestion firstApplyFilter(FleetSuggestionResponse response, String key) {

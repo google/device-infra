@@ -475,6 +475,77 @@ public final class FleetSuggesterTest {
     assertThat(suggestion.getMainText(0).getText()).isEqualTo("Dimension screen_density");
   }
 
+  @Test
+  public void kv_unknownDimensionBareToken_suggestsAddFilterWithoutCount() {
+    // "custom_tag is special" where custom_tag is not in the index and not in the catalog.
+    // Falls back to synthesizing a dimension filter without count.
+    FleetSuggestionResponse response = suggester.suggest(corpus, request("custom_tag is special"));
+
+    FleetSuggestion suggestion = firstApplyFilter(response, "dimension::custom_tag");
+    assertThat(suggestion.getLabel()).isEqualTo("Add filter");
+    assertThat(suggestion.getMainText(0).getText()).isEqualTo("Dimension custom_tag is ");
+    assertThat(suggestion.getMainText(1).getText()).isEqualTo("special");
+    assertThat(suggestion.getApplyFilter().getResultingFilter().getSimple().getValues(0).getValue())
+        .isEqualTo("special");
+    assertThat(suggestion.getApplyFilter().getResultingFilter().getSimple().getNegated()).isFalse();
+    assertThat(suggestion.hasCount()).isFalse();
+  }
+
+  @Test
+  public void kv_unknownDimensionNegatedBareToken_suggestsAddFilterWithoutCount() {
+    FleetSuggestionResponse response = suggester.suggest(corpus, request("custom_tag != special"));
+
+    FleetSuggestion suggestion = firstApplyFilter(response, "dimension::custom_tag");
+    assertThat(suggestion.getLabel()).isEqualTo("Add filter");
+    assertThat(suggestion.getMainText(0).getText()).isEqualTo("Dimension custom_tag is not ");
+    assertThat(suggestion.getMainText(1).getText()).isEqualTo("special");
+    assertThat(suggestion.getApplyFilter().getResultingFilter().getSimple().getValues(0).getValue())
+        .isEqualTo("special");
+    assertThat(suggestion.getApplyFilter().getResultingFilter().getSimple().getNegated()).isTrue();
+    assertThat(suggestion.hasCount()).isFalse();
+  }
+
+  @Test
+  public void kv_unknownDimensionExplicitPrefix_suggestsAddFilterWithoutCount() {
+    FleetSuggestionResponse response =
+        suggester.suggest(corpus, request("dimension:my_dim is my_val"));
+
+    FleetSuggestion suggestion = firstApplyFilter(response, "dimension::my_dim");
+    assertThat(suggestion.getLabel()).isEqualTo("Add filter");
+    assertThat(suggestion.getMainText(0).getText()).isEqualTo("Dimension my_dim is ");
+    assertThat(suggestion.getMainText(1).getText()).isEqualTo("my_val");
+    assertThat(suggestion.getApplyFilter().getResultingFilter().getSimple().getValues(0).getValue())
+        .isEqualTo("my_val");
+    assertThat(suggestion.hasCount()).isFalse();
+  }
+
+  @Test
+  public void kv_unknownDimensionCommaSeparated_suggestsAddFilterWithoutCount() {
+    FleetSuggestionResponse response = suggester.suggest(corpus, request("custom_tag is foo, bar"));
+
+    FleetSuggestion suggestion = firstApplyFilter(response, "dimension::custom_tag");
+    assertThat(suggestion.getLabel()).isEqualTo("Add filter");
+    assertThat(suggestion.getMainText(0).getText()).isEqualTo("Dimension custom_tag is ");
+    assertThat(suggestion.getMainText(1).getText()).isEqualTo("foo, bar");
+    assertThat(suggestion.getApplyFilter().getResultingFilter().getSimple().getValuesList())
+        .containsExactly(
+            FilterValue.newBuilder().setValue("foo").build(),
+            FilterValue.newBuilder().setValue("bar").build())
+        .inOrder();
+    assertThat(suggestion.hasCount()).isFalse();
+  }
+
+  @Test
+  public void kv_unknownDimensionOnlyCommas_doesNotSuggestEmptyFilter() {
+    FleetSuggestionResponse response = suggester.suggest(corpus, request("custom_tag is ,"));
+    for (FleetSuggestion item : response.getItemsList()) {
+      if (item.hasApplyFilter()) {
+        assertThat(item.getApplyFilter().getResultingFilter().getKey())
+            .isNotEqualTo("dimension::custom_tag");
+      }
+    }
+  }
+
   // --- Synthetic fleets ---
 
   private static LabQueryResult fleet() {

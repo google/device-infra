@@ -389,12 +389,55 @@ public final class FleetSuggester {
   private List<Cand> suggestKv(Context context, String keyToken, String rawValue, boolean exclude) {
     List<Cand> out = new ArrayList<>();
     ImmutableList<String> keyIds = resolveKey(context, keyToken);
+    if (keyIds.isEmpty()) {
+      // When built-in keys (and known catalog/index keys) did not match, fallback to treating the
+      // bare token as an arbitrary dimension name (or host property for HostCorpus) so long-tail
+      // dimensions can be filtered even before the dimension catalog is populated.
+      String bareName = normalize(keyToken);
+      if (!bareName.isEmpty()) {
+        keyIds =
+            ImmutableList.of(
+                context.corpus() instanceof HostCorpus
+                    ? HostKeys.PREFIX_HOST_PROPERTY + bareName
+                    : DeviceKeys.PREFIX_DIMENSION + bareName);
+      }
+    }
 
     // Comma outside quotes: a multi-value OR under the resolved key.
     if (rawValue.contains(",") && !rawValue.contains("\"") && !rawValue.contains("'")) {
       ImmutableList<String> parts = splitCommaLower(rawValue);
+      if (parts.isEmpty()) {
+        return out;
+      }
       for (String keyId : keyIds) {
         addMultiValueOr(context, out, keyId, parts, exclude);
+      }
+      if (out.isEmpty() && !keyIds.isEmpty() && !parts.isEmpty()) {
+        for (String keyId : keyIds) {
+          if (!context.activeKeys().contains(keyId)) {
+            String display = displayName(context.corpus(), keyId);
+            String verb = isPlural(context.corpus(), keyId) ? "are" : "is";
+            if (exclude) {
+              verb += " not";
+            }
+            String joined = String.join(", ", parts);
+            ImmutableList<TextSegment> mainText = segments(display + " " + verb + " ", joined);
+            SimpleMatch.Builder simpleBuilder = SimpleMatch.newBuilder().setNegated(exclude);
+            for (String part : parts) {
+              simpleBuilder.addValues(FilterValue.newBuilder().setValue(part));
+            }
+            Filter filter = Filter.newBuilder().setKey(keyId).setSimple(simpleBuilder).build();
+            FleetSuggestion.Builder builder =
+                FleetSuggestion.newBuilder()
+                    .setLabel("Add filter")
+                    .addAllMainText(mainText)
+                    .setApplyFilter(applyFilter(context.corpus(), context.index(), keyId, filter));
+            Cand cand = new Cand(Kind.CONDITION, keyId, 1.0, builder, mainTextString(mainText));
+            cand.needsCount = false;
+            cand.noCount = true;
+            out.add(cand);
+          }
+        }
       }
       return out;
     }
@@ -1059,14 +1102,12 @@ public final class FleetSuggester {
     if (dim.matches()) {
       String dimName = normalize(dim.group(1));
       String keyId = DeviceKeys.PREFIX_DIMENSION + dimName;
-      return (index.keyIds().contains(keyId) || catalogDimensions.contains(dimName))
-          ? ImmutableList.of(keyId)
-          : ImmutableList.of();
+      return ImmutableList.of(keyId);
     }
     Matcher prop = NAMESPACE_PROP.matcher(low);
     if (prop.matches()) {
       String keyId = HostKeys.PREFIX_HOST_PROPERTY + normalize(prop.group(1));
-      return index.keyIds().contains(keyId) ? ImmutableList.of(keyId) : ImmutableList.of();
+      return ImmutableList.of(keyId);
     }
     ImmutableList<String> aliased = ALIAS_TO_KEYS.get(normalize(raw));
     if (aliased != null) {
@@ -1095,7 +1136,10 @@ public final class FleetSuggester {
     List<KeyMatch> out = new ArrayList<>();
     Set<String> seen = new HashSet<>();
     for (String keyId : resolveKey(context, token)) {
-      if ((index.keyIds().contains(keyId) || isDiscoveredDimension(context, keyId))
+      if ((index.keyIds().contains(keyId)
+              || isDiscoveredDimension(context, keyId)
+              || keyId.startsWith(DeviceKeys.PREFIX_DIMENSION)
+              || keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY))
           && seen.add(keyId)) {
         out.add(new KeyMatch(keyId, 3));
       }
