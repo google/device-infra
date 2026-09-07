@@ -44,6 +44,7 @@ java_library(
     visibility = [
         "//javatests/com/google/devtools/mobileharness/infra/controller/test/local/utp/driver:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
     deps = [
         ":base_generator",

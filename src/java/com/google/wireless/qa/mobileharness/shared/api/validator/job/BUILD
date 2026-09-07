@@ -69,6 +69,17 @@ java_library(
 )
 
 java_library(
+    name = "android_cdp_decorator_job_validator",
+    srcs = ["AndroidCdpDecoratorJobValidator.java"],
+    deps = [
+        ":job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "android_clean_apps_decorator_job_validator",
     srcs = ["AndroidCleanAppsDecoratorJobValidator.java"],
     deps = [
