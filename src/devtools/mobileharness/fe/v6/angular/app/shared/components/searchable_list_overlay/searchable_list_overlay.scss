@@ -5,7 +5,8 @@
   display: flex;
   flex-direction: column;
   width: 32rem;
-  max-height: 60vh;
+  max-width: min(32rem, calc(100vw - 24px));
+  max-height: min(60vh, calc(100vh - 48px), calc(100dvh - 48px));
   box-sizing: border-box;
   background: white;
   border-radius: 8px;
@@ -146,4 +147,10 @@
   color: #5f6368;
   font-style: italic;
   grid-column: 1 / -1;
+}
+
+@media (max-width: 600px) {
+  .overlay-content .list-container {
+    grid-template-columns: 1fr;
+  }
 }

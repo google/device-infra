@@ -10,10 +10,7 @@ import {
 import {FormsModule} from '@angular/forms';
 import {MatIconModule} from '@angular/material/icon';
 
-import {
-  ADV_MODES_LIST,
-  AdvancedMatchMode,
-} from '../../../models/value_picker_models';
+import {ADV_MODES_LIST, AdvancedMatchMode} from '../../../models';
 
 /** Standalone sub-view handling prefix, regex, substring, and multi-chip matching modes. */
 @Component({
@@ -52,16 +49,15 @@ export class AdvancedMatchView {
   addChip() {
     const val = this.inputVal().trim();
     if (!val) return;
-    const current = this.values();
-    if (!current.some((v) => v.toLowerCase() === val.toLowerCase())) {
-      this.values.set([...current, val]);
-    }
+    this.values.update((vals) =>
+      vals.some((v) => v.toLowerCase() === val.toLowerCase())
+        ? vals
+        : [...vals, val],
+    );
     this.inputVal.set('');
   }
 
   removeChip(index: number) {
-    const next = [...this.values()];
-    next.splice(index, 1);
-    this.values.set(next);
+    this.values.update((vals) => vals.filter((_, i) => i !== index));
   }
 }

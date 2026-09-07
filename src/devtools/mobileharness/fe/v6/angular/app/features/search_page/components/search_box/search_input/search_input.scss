@@ -16,6 +16,32 @@
     margin-top: 8px;
     flex-shrink: 0;
   }
+
+  @media (max-width: 768px) {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+
+    > *:not(.search-wrap) {
+      margin-top: 0;
+    }
+
+    .scope-switcher {
+      order: 1;
+    }
+
+    .query-refresh-btn {
+      order: 2;
+      margin-left: auto;
+    }
+
+    .search-wrap {
+      order: 3;
+      flex: 1 1 100%;
+      width: 100%;
+    }
+  }
 }
 
 .scope-switcher {
@@ -59,6 +85,13 @@
   &:hover:not(.active) {
     background-color: rgba(29, 27, 32, 0.08);
   }
+
+  @media (max-width: 600px) {
+    height: 36px;
+    padding: 0 12px;
+    min-width: 72px;
+    font-size: 0.8125rem;
+  }
 }
 
 .search-wrap {
@@ -92,6 +125,12 @@
     border-color: #0b57d0;
     box-shadow: 0 0 0 2px rgba(11, 87, 208, 0.2);
   }
+
+  @media (max-width: 600px) {
+    min-height: 48px;
+    padding: 6px 10px 6px 12px;
+    border-radius: 20px;
+  }
 }
 
 .search-icon {
@@ -115,6 +154,7 @@
   flex-wrap: wrap;
   gap: 4px;
   align-items: center;
+  max-width: 100%;
 }
 
 .search-chip {
@@ -132,6 +172,8 @@
   transition: all 0.15s ease;
   flex-shrink: 0;
   white-space: nowrap;
+  max-width: 100%;
+  min-width: 0;
 
   &.active {
     outline: 2px solid #0b57d0;
@@ -154,10 +196,18 @@
 
   .chip-label {
     font-weight: 500;
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 
   .chip-value {
     font-weight: 600;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: min(640px, 70vw);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .chip-remove {
@@ -169,6 +219,7 @@
     padding: 0;
     color: #041e49;
     font-size: 16px;
+    flex-shrink: 0;
 
     .mat-icon {
       font-size: 16px;
@@ -187,6 +238,11 @@
   font-size: 1rem;
   color: #1f1f1f;
   background: transparent;
+
+  @media (max-width: 600px) {
+    font-size: 0.9375rem;
+    min-width: 48px;
+  }
 }
 
 .search-clear-btn,

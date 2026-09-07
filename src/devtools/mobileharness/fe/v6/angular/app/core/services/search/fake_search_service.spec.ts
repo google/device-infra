@@ -352,13 +352,13 @@ describe('FakeSearchService', () => {
         .subscribe((res: FleetChipResolverResponse) => {
           expect(res.filterChips).toBeDefined();
           expect(res.filterChips!.length).toBe(1);
-          expect(res.filterChips![0].pillKey).toBe('field::status');
-          expect(res.filterChips![0].pillCondition).toBe('IDLE');
+          expect(res.filterChips![0].valid?.pillKey).toBe('field::status');
+          expect(res.filterChips![0].valid?.pillCondition).toBe('IDLE');
 
           expect(res.groupByChips).toBeDefined();
           expect(res.groupByChips!.length).toBe(1);
-          expect(res.groupByChips![0].pillKey).toBe('dim::model');
-          expect(res.groupByChips![0].displayName).toBe('dim::model');
+          expect(res.groupByChips![0].valid?.pillKey).toBe('dim::model');
+          expect(res.groupByChips![0].valid?.displayName).toBe('dim::model');
           done();
         });
     });
@@ -369,6 +369,24 @@ describe('FakeSearchService', () => {
         .subscribe((res: FleetChipResolverResponse) => {
           expect(res.filterChips).toEqual([]);
           expect(res.groupByChips).toEqual([]);
+          done();
+        });
+    });
+
+    it('should return invalid result for unknown keys', (done) => {
+      service
+        .resolveFleetChips({
+          filters: [{key: 'invalid_key'}],
+          groupByKeys: ['unknown_key'],
+          entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+        })
+        .subscribe((res: FleetChipResolverResponse) => {
+          expect(res.filterChips?.[0].invalid?.reason).toContain(
+            'Unknown device filter key: invalid_key',
+          );
+          expect(res.groupByChips?.[0].invalid?.reason).toContain(
+            'Unknown device group-by key: unknown_key',
+          );
           done();
         });
     });

@@ -28,35 +28,60 @@
   }
 }
 
-.tjs-empty {
-  padding: 48px;
-  text-align: center;
-  color: #5f6368;
-}
-
 // --- Column Widths ---
 [class*='col-'][class*='id'] {
   width: 220px;
   min-width: 160px;
+  max-width: 260px;
 }
 
 [class*='col-'][class*='status'] {
   width: 110px;
   min-width: 100px;
+  max-width: 140px;
 }
 
 [class*='col-'][class*='time'] {
   width: 180px;
   min-width: 140px;
+  max-width: 220px;
 }
 
 [class*='col-'][class*='duration'] {
   width: 120px;
   min-width: 90px;
+  max-width: 140px;
 }
 
 [class*='col-'][class*='user'],
 [class*='col-'][class*='owner'] {
   width: 180px;
   min-width: 120px;
+  max-width: 220px;
+}
+
+[class*='col-'][class*='name'] {
+  width: 360px;
+  min-width: 240px;
+  max-width: 480px;
+}
+
+[class*='col-'][class*='type'],
+[class*='col-'][class*='driver'] {
+  width: 240px;
+  min-width: 180px;
+  max-width: 300px;
+}
+
+[class*='col-'][class*='result'] {
+  width: 120px;
+  min-width: 90px;
+  max-width: 140px;
+}
+
+[class*='col-'][class*='host'],
+[class*='col-'][class*='device'] {
+  width: 240px;
+  min-width: 180px;
+  max-width: 280px;
 }

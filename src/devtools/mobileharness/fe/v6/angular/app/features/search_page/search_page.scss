@@ -25,6 +25,16 @@
   flex: 1;
   box-sizing: border-box;
   overflow: hidden;
+
+  @media (max-width: 960px) {
+    padding: 1.25rem 1rem;
+    gap: 16px;
+  }
+
+  @media (max-width: 600px) {
+    padding: 0.75rem 0.5rem;
+    gap: 12px;
+  }
 }
 
 app-search-box {
@@ -51,11 +61,10 @@ app-tjs-search-results {
   overflow: hidden;
 }
 
-
-
 .rt-landing {
   flex: 1;
   overflow: auto;
+  @include common.shared-scrollbar-style();
   width: 100%;
   max-width: 960px;
   padding: 8px 0 24px;
@@ -167,6 +176,13 @@ app-tjs-search-results {
   gap: 12px;
   margin-bottom: 12px;
   padding-left: 16px;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding-left: 8px;
+  }
 }
 
 .rt-try-cat-label {
@@ -174,12 +190,20 @@ app-tjs-search-results {
   width: 88px;
   font-size: 0.8125rem;
   color: #444746;
+
+  @media (max-width: 600px) {
+    width: auto;
+  }
 }
 
 .rt-try-examples {
   display: flex;
   flex-wrap: wrap;
   gap: 20px;
+
+  @media (max-width: 600px) {
+    gap: 12px 16px;
+  }
 }
 
 .rt-try-ex {
@@ -206,6 +230,9 @@ button.browse-all-btn {
   letter-spacing: normal;
   background-color: #c2e7ff;
   color: #001d35;
+
+  @media (max-width: 600px) {
+    margin-left: 8px;
+    max-width: calc(100% - 16px);
+  }
 }
-
-

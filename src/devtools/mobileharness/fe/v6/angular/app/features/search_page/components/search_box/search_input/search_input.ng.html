@@ -29,22 +29,30 @@
       <mat-icon class="material-symbols-outlined search-icon">search</mat-icon>
       <div class="search-input-area">
         <div class="active-chips-container">
-          @for (chip of store.activeChips(); track (chip.key || chip.pillKey) + chip.pillCondition) {
+          @for (chip of store.activeChips(); track getChipKey(chip) + chip.pillCondition) {
             <span
               #chipEl
               class="search-chip"
-              [attr.data-chip-key]="chip.key || chip.pillKey"
+              [attr.data-chip-key]="getChipKey(chip)"
               [class.group-by-chip]="chip.isGroupBy"
-              [class.exclude]="chip | appChipNegated"
+              [class.exclude]="chip.negated"
               [class.active]="store.isChipPickerActive(chip)"
               (click)="openPickerForChip(chip, chipEl, $event)"
             >
               @if (chip.isGroupBy) {
                 <span class="chip-label">group by</span>
-                <span class="chip-value">{{ chip.pillKey }}</span>
+                <span
+                  class="chip-value"
+                  [matTooltip]="chip.pillKey"
+                  tooltipIfTruncated
+                >{{ chip.pillKey }}</span>
               } @else {
                 <span class="chip-label">{{ chip.pillKey }}</span>
-                <span class="chip-value">({{ chip.pillCondition }})</span>
+                <span
+                  class="chip-value"
+                  [matTooltip]="chip.pillCondition"
+                  tooltipIfTruncated
+                >({{ chip.pillCondition }})</span>
               }
               <button class="chip-remove" (click)="store.removeFilterChip(chip); $event.stopPropagation()">
                 <mat-icon class="material-symbols-outlined">close</mat-icon>

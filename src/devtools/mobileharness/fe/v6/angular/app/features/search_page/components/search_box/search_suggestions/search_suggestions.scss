@@ -1,3 +1,5 @@
+@use '../../../../../shared/styles/common';
+
 :host {
   display: block;
   position: absolute;
@@ -12,8 +14,16 @@
   border-radius: 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   border: 1px solid #c4c7c5;
-  overflow: hidden;
+  overflow: hidden auto;
+  max-height: min(380px, calc(100vh - 160px), calc(100dvh - 160px));
   padding: 8px 0;
+  box-sizing: border-box;
+  @include common.shared-scrollbar-style();
+
+  @media (max-width: 600px) {
+    border-radius: 12px;
+    padding: 4px 0;
+  }
 }
 
 .suggestion-items {
@@ -32,6 +42,10 @@
   color: #1f1f1f;
   transition: background-color 0.15s ease;
   min-height: 24px;
+
+  @media (max-width: 600px) {
+    padding: 8px 12px;
+  }
 
   &:hover,
   &.active-suggestion {

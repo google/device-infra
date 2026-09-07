@@ -1,8 +1,8 @@
 import {CommonModule} from '@angular/common';
 import {ChangeDetectionStrategy, Component, inject} from '@angular/core';
 
+import {PromotedFilterKeyItem, PromotedGroupByKeyItem} from '../../../models';
 import {SearchPageStore} from '../../../services/search_page_store';
-import {PromotedFilterKeyItem, PromotedGroupByKeyItem} from '../../../utils';
 
 /**
  * Standalone component displaying promoted quick filter keys and group-by preset links below the primary search box.

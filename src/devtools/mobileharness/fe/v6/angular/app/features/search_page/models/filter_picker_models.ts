@@ -1,13 +1,3 @@
-/** Represents a selectable item in the value picker. */
-export interface PickerValueItem {
-  value: string;
-  displayLabel: string;
-  filtered?: number;
-  total?: number;
-  isNoValue?: boolean;
-  disabled?: boolean;
-}
-
 /** Supported advanced matching mode keys. */
 export type AdvancedMatchMode =
   | 'prefix'
@@ -17,6 +7,16 @@ export type AdvancedMatchMode =
   | 'not_regex'
   | 'exactly'
   | 'at_least';
+
+/** Represents a selectable item in the value picker. */
+export interface PickerValueItem {
+  value: string;
+  displayLabel: string;
+  filtered?: number;
+  total?: number;
+  isNoValue?: boolean;
+  disabled?: boolean;
+}
 
 /** Payload emitted when applying value picker changes. */
 export interface ValuePickerApplyEvent {
@@ -32,7 +32,7 @@ export interface ValuePickerApplyEvent {
   textVal?: string;
 }
 
-/** Configuration layout and feature toggle properties for ValuePicker. */
+/** Configuration layout and domain properties for ValuePicker. */
 export interface ValuePickerConfig {
   key: string;
   type: 'list' | 'range' | 'namedPair' | 'text';
@@ -43,10 +43,6 @@ export interface ValuePickerConfig {
   needsName?: boolean;
   namePlaceholder?: string;
   valPlaceholder?: string;
-  showNegateToggle?: boolean;
-  showAdvancedMenu?: boolean;
-  showSearchInput?: boolean;
-  showRowActions?: boolean;
 }
 
 /** Active reactive state values for ValuePicker. */

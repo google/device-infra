@@ -1,17 +1,21 @@
 <section class="rt-group">
+  @let isGroupOpen = isOpen();
+  @let currentEntity = entity();
+  @let groupData = group();
+
   <!-- Group Header Row -->
-  <div class="rt-group-row" [class.open]="isOpen()">
+  <div class="rt-group-row" [class.open]="isGroupOpen">
     <button
       class="rt-group-head"
-      [attr.aria-expanded]="isOpen()"
-      (click)="toggleGroup.emit(group().groupId)"
+      [attr.aria-expanded]="isGroupOpen"
+      (click)="toggleGroup.emit(groupData.groupId)"
     >
       <mat-icon class="material-symbols-outlined rt-caret-icon">
-        {{ isOpen() ? 'expand_more' : 'chevron_right' }}
+        {{ isGroupOpen ? 'expand_more' : 'chevron_right' }}
       </mat-icon>
 
       <span class="rt-group-name">
-        @for (val of group().values || []; track $index) {
+        @for (val of groupData.values || []; track $index) {
           @if (val !== null && val !== undefined && val !== '') {
             <span>{{ val }}</span>
           } @else {
@@ -22,43 +26,43 @@
       </span>
 
       <span class="rt-group-count">
-        {{ (group().itemCount || 0) | number }} {{ entity() }}
+        {{ (groupData.itemCount || 0) | number }} {{ currentEntity }}
       </span>
     </button>
 
     <!-- Utilization Bar -->
-    @if (group().utilization && (group().utilization?.total || 0) > 0) {
+    @if (utilization(); as u) {
       <div class="rt-util">
         <div class="rt-util-wrapper">
           <div class="progress-container">
             <div
               class="progress-segment color-busy"
-              [style.width.%]="group().utilization!.busy | appUtilWidth:group().utilization!.total"
-              [title]="(group().utilization!.busy || 0) + ' (' + (group().utilization!.busy | appUtilPct:group().utilization!.total) + '%) in service (BUSY)'"
+              [style.width.%]="u.busyWidth"
+              [title]="u.busyCount + ' (' + u.busyPct + '%) in service (BUSY)'"
             ></div>
             <div
               class="progress-segment color-idle"
-              [style.width.%]="group().utilization!.idle | appUtilWidth:group().utilization!.total"
-              [title]="(group().utilization!.idle || 0) + ' (' + (group().utilization!.idle | appUtilPct:group().utilization!.total) + '%) in service (IDLE)'"
+              [style.width.%]="u.idleWidth"
+              [title]="u.idleCount + ' (' + u.idlePct + '%) in service (IDLE)'"
             ></div>
             <div
               class="progress-segment color-others"
-              [style.width.%]="group().utilization!.other | appUtilWidth:group().utilization!.total"
-              [title]="(group().utilization!.other || 0) + ' (' + (group().utilization!.other | appUtilPct:group().utilization!.total) + '%) out of service'"
+              [style.width.%]="u.otherWidth"
+              [title]="u.otherCount + ' (' + u.otherPct + '%) out of service'"
             ></div>
           </div>
           <div class="rt-util-legend-bar">
             <span class="util-legend-item">
               <span class="legend-dot color-busy"></span>
-              {{ (group().utilization!.busy || 0) | number }} ({{ group().utilization!.busy | appUtilPct:group().utilization!.total }}%)
+              {{ u.busyCount | number }} ({{ u.busyPct }}%)
             </span>
             <span class="util-legend-item">
               <span class="legend-dot color-idle"></span>
-              {{ (group().utilization!.idle || 0) | number }} ({{ group().utilization!.idle | appUtilPct:group().utilization!.total }}%)
+              {{ u.idleCount | number }} ({{ u.idlePct }}%)
             </span>
             <span class="util-legend-item">
               <span class="legend-dot color-others"></span>
-              {{ (group().utilization!.other || 0) | number }} ({{ group().utilization!.other | appUtilPct:group().utilization!.total }}%)
+              {{ u.otherCount | number }} ({{ u.otherPct }}%)
             </span>
           </div>
         </div>
@@ -67,46 +71,49 @@
   </div>
 
   <!-- Group Body (Expanded) -->
-  @if (isOpen()) {
+  @if (isGroupOpen) {
     <div class="rt-group-body">
       @if (groupState(); as state) {
         @if (state.loading) {
-          <div class="rt-group-loading">Loading {{ entity() }}...</div>
+          <div class="rt-group-loading">Loading {{ currentEntity }}...</div>
         } @else if (state.error) {
           <div class="rt-group-empty rt-group-error-msg">
             {{ state.error }}
           </div>
         } @else if (state.data?.rows && state.data!.rows!.length > 0) {
+          @let groupColumns = state.data?.columns || columns();
+          @let selected = selectedSet();
           <div class="rt-group-scroll">
             <table class="rt-inner-table">
               <thead>
                 <tr>
                   <th class="rt-check-cell">
                     <mat-checkbox
-                      [checked]="isGroupPageAllSelected(state.data!.rows!)"
+                      [checked]="isGroupPageAllSelected()"
+                      [indeterminate]="isGroupPageSomeSelected()"
                       (change)="toggleSelectGroupPage.emit(state.data!.rows!)"
                     ></mat-checkbox>
                   </th>
-                  @for (col of state.data!.columns || columns(); track col.key) {
+                  @for (col of groupColumns; track col.key) {
                     <th [class]="'col-' + col.key">{{ col.displayName }}</th>
                   }
                 </tr>
               </thead>
               <tbody>
-                @for (row of state.data!.rows!; track getRowId(row)) {
-                  <tr [class.selected-row]="selectedSet().has(getRowId(row))">
+                @for (row of state.data!.rows!; track row.id) {
+                  @let isRowSelected = selected.has(row.id);
+                  <tr [class.selected-row]="isRowSelected">
                     <td class="rt-check-cell">
                       <mat-checkbox
-                        [checked]="selectedSet().has(getRowId(row))"
-                        (change)="toggleSelectRow.emit(getRowId(row))"
+                        [checked]="isRowSelected"
+                        (change)="toggleSelectRow.emit(row.id)"
                       ></mat-checkbox>
                     </td>
-                    @for (col of state.data!.columns || columns(); track col.key) {
+                    @for (col of groupColumns; track col.key; let colIdx = $index) {
                       <td [class]="'col-' + col.key">
                         <app-search-cell
-                          [cell]="row | appCell:col.key:(state.data!.columns || columns())"
+                          [cell]="row.cells?.[colIdx]"
                           [column]="col"
-                          [entity]="entity()"
                         ></app-search-cell>
                       </td>
                     }
@@ -117,34 +124,19 @@
           </div>
 
           <!-- Inner Group Pagination -->
-          <div class="rt-inner-pagination">
-            <span class="rt-range">
-              {{ state.data!.rangeStart || 0 }}–{{ state.data!.rangeEnd || 0 }} of
-              {{ (state.data!.total || 0) | number }}
-            </span>
-            <span class="rt-grow"></span>
-            <button
-              class="rt-btn-text"
-              [disabled]="!state.data!.prevPageToken"
-              (click)="loadGroupPage.emit(state.data!.prevPageToken)"
-            >
-              <mat-icon class="material-symbols-outlined">chevron_left</mat-icon>
-              Previous
-            </button>
-            <button
-              class="rt-btn-text"
-              [disabled]="!state.data!.nextPageToken"
-              (click)="loadGroupPage.emit(state.data!.nextPageToken)"
-            >
-              Next
-              <mat-icon class="material-symbols-outlined">chevron_right</mat-icon>
-            </button>
-          </div>
+          <app-search-pagination
+            [compact]="true"
+            [rangeText]="innerRangeText()"
+            [hasPrev]="!!state.data!.prevPageToken"
+            [hasNext]="!!state.data!.nextPageToken"
+            (prev)="loadGroupPage.emit(state.data!.prevPageToken)"
+            (next)="loadGroupPage.emit(state.data!.nextPageToken)"
+          ></app-search-pagination>
         } @else {
-          <div class="rt-group-empty">No {{ entity() }} in this group.</div>
+          <div class="rt-group-empty">No {{ currentEntity }} in this group.</div>
         }
       } @else {
-        <div class="rt-group-loading">Loading {{ entity() }}...</div>
+        <div class="rt-group-loading">Loading {{ currentEntity }}...</div>
       }
     </div>
   }

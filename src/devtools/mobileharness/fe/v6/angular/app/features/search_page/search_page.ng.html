@@ -10,10 +10,11 @@
     } @else {
       <!-- Landing State (Launcher) -->
       <div class="rt-landing">
-        @if (store.searchConfig()?.landing?.tryCategories && store.searchConfig()!.landing!.tryCategories!.length > 0) {
+        @let landing = store.searchConfig()?.landing;
+        @if (landing?.tryCategories?.length) {
           <section class="rt-land-section">
             <h2 class="rt-land-label">Try searching by</h2>
-            @for (cat of store.searchConfig()!.landing!.tryCategories!; track cat.label) {
+            @for (cat of landing?.tryCategories || []; track cat.label) {
               <div class="rt-try-cat">
                 <span class="rt-try-cat-label">{{ cat.label }}</span>
                 <div class="rt-try-examples">
@@ -26,10 +27,10 @@
           </section>
         }
 
-        @if ((store.searchConfig()?.landing?.browseAllCount ?? 0) > 0) {
+        @if ((landing?.browseAllCount ?? 0) > 0) {
           <section class="rt-land-section rt-land-browse">
             <button mat-flat-button color="primary" class="browse-all-btn" (click)="onBrowseAll()">
-              Browse all {{ store.searchConfig()!.landing!.browseAllCount | number }} {{ store.entity() }}
+              Browse all {{ landing!.browseAllCount | number }} {{ store.entity() }}
             </button>
           </section>
         }
@@ -38,7 +39,7 @@
   } @else {
     <!-- Search Results Component (Fleet vs TJS) -->
     @if (!store.isTjs()) {
-      <app-fleet-search-results (refresh)="store.executeSearch()"></app-fleet-search-results>
+      <app-fleet-search-results></app-fleet-search-results>
     } @else {
       <app-tjs-search-results></app-tjs-search-results>
     }

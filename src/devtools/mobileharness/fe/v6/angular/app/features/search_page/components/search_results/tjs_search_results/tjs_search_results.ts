@@ -12,10 +12,9 @@ import {MatTableModule} from '@angular/material/table';
 
 import {Column} from '../../../../../core/models/search';
 import {TjsSearchStore} from '../../../services/tjs_search_store';
-import {SearchCellPipe} from '../../../utils';
 import {DensityDropdownComponent} from '../common/density_dropdown/density_dropdown';
-import {SearchPaginationComponent} from '../common/search_pagination/search_pagination';
 import {SearchCellComponent} from '../common/search_cell/search_cell';
+import {SearchPaginationComponent} from '../common/search_pagination/search_pagination';
 
 /** Component representing search results for TJS search entity types. */
 @Component({
@@ -33,39 +32,13 @@ import {SearchCellComponent} from '../common/search_cell/search_cell';
     DensityDropdownComponent,
     SearchPaginationComponent,
     SearchCellComponent,
-    SearchCellPipe,
   ],
 })
 export class TjsSearchResultsComponent {
   readonly store = inject(TjsSearchStore);
 
-  // Context Delegates
-  readonly columns = this.store.displayColumns;
-  readonly rows = this.store.rows;
-  readonly entity = this.store.entity;
-  readonly pageIndex = this.store.pageIndex;
-  readonly pageSize = this.store.pageSize;
-  readonly density = this.store.density;
-  readonly isLoading = this.store.isLoading;
-
-  // Derived Signals
+  /** Derived table columns array for mat-table header and row definitions. */
   readonly columnsToDisplay = computed<string[]>(() => {
-    return this.columns().map((col: Column) => col.key);
-  });
-
-  prevPage() {
-    this.store.prevPage();
-  }
-
-  nextPage() {
-    this.store.nextPage();
-  }
-
-  readonly tjsNounPlural = computed<string>(() => {
-    const e = this.entity();
-    if (e === 'tests') return 'Tests';
-    if (e === 'jobs') return 'Jobs';
-    if (e === 'sessions') return 'Sessions';
-    return e;
+    return this.store.displayColumns().map((col: Column) => col.key);
   });
 }
