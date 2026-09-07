@@ -32,7 +32,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.LocalDeviceUtil;
-import com.google.devtools.mobileharness.infra.ats.common.LocalDeviceUtilImpl;
 import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
@@ -118,6 +117,7 @@ public final class RunCommandHandlerTest {
   @Bind @Mock private PreviousResultLoader previousResultLoader;
   @Bind @Mock private VerifierResultHelper verifierResultHelper;
   @Bind @Mock private Sleeper sleeper;
+  @Bind @Mock private LocalDeviceUtil localDeviceUtil;
 
   private RunCommandHandler runCommandHandler;
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
@@ -139,7 +139,6 @@ public final class RunCommandHandlerTest {
               @Override
               protected void configure() {
                 bind(Clock.class).toInstance(Clock.systemUTC());
-                bind(LocalDeviceUtil.class).to(LocalDeviceUtilImpl.class);
               }
             });
     injector.injectMembers(this);
