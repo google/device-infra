@@ -80,8 +80,13 @@ public class LabQueryUtils {
     LabQueryResult.Builder result =
         LabQueryResult.newBuilder().setTimestamp(TimeUtils.toProtoTimestamp(Instant.now()));
 
-    // Gets filtered lab/device info from device manager.
-    LabView rawLabView = labInfoProvider.getLabInfos(query.getFilter());
+    Mask effectivePushDownMask = computeEffectivePushDownMask(query);
+
+    // Gets filtered lab/device info from device manager with projection push-down.
+    LabView rawLabView =
+        query.hasMask()
+            ? labInfoProvider.getLabInfos(query.getFilter(), effectivePushDownMask)
+            : labInfoProvider.getLabInfos(query.getFilter());
 
     // Sets lab view / device view, sorts all LabInfo/DeviceInfo in it.
     setViewAndSort(result, rawLabView, query);
@@ -89,10 +94,82 @@ public class LabQueryUtils {
     // Groups devices if necessary, handles device limit in group and group limit.
     groupDevice(result, query.getDeviceViewRequest());
 
-    // Removes fields and dimensions from all LabInfo/DeviceInfo if necessary.
-    applyMask(result, query.getMask());
+    // Removes temporary sort/group fields only when effectivePushDownMask differs from query mask.
+    if (query.hasMask() && !effectivePushDownMask.equals(query.getMask())) {
+      applyMask(result, query.getMask());
+    }
 
     return result.build();
+  }
+
+  /**
+   * Computes the push-down mask that must be retained during provider retrieval so that subsequent
+   * sorting and grouping operations have access to their required fields.
+   */
+  private static Mask computeEffectivePushDownMask(LabQuery query) {
+    if (!query.hasMask()) {
+      return Mask.getDefaultInstance();
+    }
+    Mask mask = query.getMask();
+    Mask.Builder builder = mask.toBuilder();
+
+    if (!query.hasDeviceViewRequest()
+        && mask.hasLabInfoMask()
+        && mask.getLabInfoMask().hasFieldMask()
+        && !mask.getLabInfoMask().getFieldMask().getPathsList().isEmpty()) {
+      List<String> paths = mask.getLabInfoMask().getFieldMask().getPathsList();
+      if (!paths.contains("lab_locator") && !paths.contains("lab_locator.host_name")) {
+        builder.getLabInfoMaskBuilder().getFieldMaskBuilder().addPaths("lab_locator.host_name");
+      }
+    }
+
+    if (mask.hasDeviceInfoMask()
+        && mask.getDeviceInfoMask().hasFieldMask()
+        && !mask.getDeviceInfoMask().getFieldMask().getPathsList().isEmpty()) {
+      List<String> paths = mask.getDeviceInfoMask().getFieldMask().getPathsList();
+      if (!paths.contains("device_locator") && !paths.contains("device_locator.id")) {
+        builder.getDeviceInfoMaskBuilder().getFieldMaskBuilder().addPaths("device_locator.id");
+      }
+      if (query.hasDeviceViewRequest()) {
+        for (DeviceGroupOperation op : query.getDeviceViewRequest().getDeviceGroupOperationList()) {
+          DeviceGroupCondition cond = op.getDeviceGroupCondition();
+          if (cond.hasSingleDimensionValue() || cond.hasDimensionValueList()) {
+            String dimName =
+                cond.hasSingleDimensionValue()
+                    ? cond.getSingleDimensionValue().getDimensionName()
+                    : cond.getDimensionValueList().getDimensionName();
+            if (!paths.contains("device_feature")
+                && !paths.contains("device_feature.composite_dimension")) {
+              builder
+                  .getDeviceInfoMaskBuilder()
+                  .getFieldMaskBuilder()
+                  .addPaths("device_feature.composite_dimension");
+            }
+            if (mask.getDeviceInfoMask().hasSupportedDimensionsMask()) {
+              builder
+                  .getDeviceInfoMaskBuilder()
+                  .getSupportedDimensionsMaskBuilder()
+                  .addDimensionNames(dimName);
+            }
+            if (mask.getDeviceInfoMask().hasRequiredDimensionsMask()) {
+              builder
+                  .getDeviceInfoMaskBuilder()
+                  .getRequiredDimensionsMaskBuilder()
+                  .addDimensionNames(dimName);
+            }
+          } else {
+            if (!paths.contains("device_status")) {
+              builder.getDeviceInfoMaskBuilder().getFieldMaskBuilder().addPaths("device_status");
+            }
+            if (!paths.contains("device_feature")) {
+              builder.getDeviceInfoMaskBuilder().getFieldMaskBuilder().addPaths("device_feature");
+            }
+          }
+        }
+      }
+    }
+
+    return builder.build();
   }
 
   /** Sets lab view or device view, and orders labs / devices. */
@@ -142,7 +219,7 @@ public class LabQueryUtils {
    * Sorts the {@link DeviceInfo} list in a {@link LabData} by the given {@link
    * DeviceInfoComparator}.
    */
-  public static LabData sortDeviceListInLabData(
+  private static LabData sortDeviceListInLabData(
       LabData labData, DeviceInfoComparator deviceInfoComparator) {
     LabData.Builder result = labData.toBuilder();
     DeviceList.Builder deviceListBuilder = result.getDeviceListBuilder();
@@ -466,8 +543,8 @@ public class LabQueryUtils {
                 // Adds device group for each distinct dimension value, sorted by dimension name.
                 deviceInfoList.stream()
                     .flatMap(deviceInfo -> getDimensionValues(deviceInfo, dimensionName))
-                    .distinct()
                     .sorted()
+                    .distinct()
                     .map(
                         dimensionValue ->
                             immutableEntry(
