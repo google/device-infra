@@ -23,6 +23,7 @@ import "src/devtools/mobileharness/api/query/proto/lab_record.proto";
 
 option java_package = "com.google.devtools.mobileharness.infra.master.rpc.proto";
 option java_outer_classname = "LabRecordServiceProto";
+option py_legacy_stubby_symbols = true;
 
 service LabRecordService {
   // Gets lab record information.

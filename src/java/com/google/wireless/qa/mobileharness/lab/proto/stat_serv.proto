@@ -21,6 +21,7 @@ package mobileharness.lab;
 import "src/java/com/google/wireless/qa/mobileharness/lab/proto/stat.proto";
 
 option java_package = "com.google.wireless.qa.mobileharness.lab.proto";
+option py_legacy_stubby_symbols = true;
 
 message GetLabStatRequest {
   // Empty but may be extended.
