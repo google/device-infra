@@ -204,7 +204,7 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
     FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
-        logic::remoteControlDevices,
+        req -> logic.remoteControlDevices(req, Optional.empty()),
         executor,
         HostServiceGrpc.getServiceDescriptor(),
         HostServiceGrpc.getRemoteControlDevicesMethod());

@@ -84,7 +84,7 @@ public interface HostServiceLogic {
       CheckRemoteControlEligibilityRequest request, Optional<String> username);
 
   ListenableFuture<RemoteControlDevicesResponse> remoteControlDevices(
-      RemoteControlDevicesRequest request);
+      RemoteControlDevicesRequest request, Optional<String> username);
 
   ListenableFuture<DecommissionHostResponse> decommissionHost(DecommissionHostRequest request);
 
