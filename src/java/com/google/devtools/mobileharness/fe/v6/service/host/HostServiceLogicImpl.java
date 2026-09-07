@@ -258,14 +258,14 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
 
   @Override
   public ListenableFuture<RemoteControlDevicesResponse> remoteControlDevices(
-      RemoteControlDevicesRequest request) {
+      RemoteControlDevicesRequest request, Optional<String> username) {
     UniverseScope universe;
     try {
       universe = universeFactory.create(request.getUniverse());
     } catch (IllegalArgumentException e) {
       return immediateFailedFuture(e);
     }
-    return remoteControlDevicesHandler.remoteControlDevices(request, universe);
+    return remoteControlDevicesHandler.remoteControlDevices(request, universe, username);
   }
 
   @Override
