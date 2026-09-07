@@ -83,8 +83,8 @@ public class AndroidVideoDecorator extends LifecycleDecorator
   protected SetupResult setUp(SetupContext context)
       throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
-    spec = testInfo.jobInfo().combinedSpec(this, getDevice().getDeviceId());
     Device device = getDevice();
+    spec = testInfo.jobInfo().combinedSpec(this, device.getDeviceId());
     String deviceType = device.getClass().getSimpleName();
 
     if (deviceType.contains("NoOp")) {
