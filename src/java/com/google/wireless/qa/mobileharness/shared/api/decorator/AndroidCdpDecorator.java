@@ -29,11 +29,6 @@ import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
-import com.google.devtools.mobileharness.shared.util.command.Command;
-import com.google.devtools.mobileharness.shared.util.command.CommandException;
-import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
-import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
-import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
 import com.google.devtools.mobileharness.shared.util.concurrent.MobileHarnessRunnable;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryException;
@@ -41,7 +36,6 @@ import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrat
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCallable;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.annotation.FileAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
@@ -51,8 +45,6 @@ import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -101,19 +93,11 @@ public class AndroidCdpDecorator extends LifecycleDecorator {
 
   @ParamAnnotation(
       required = false,
-      help = "The local workstation path to the compatible chromedriver binary.")
-  public static final String PARAM_CHROMEDRIVER_PATH = "chromedriver_path";
-
-  @ParamAnnotation(
-      required = false,
       help = "The host debugging port to forward the Chrome DevTools Protocol (CDP) socket to.")
   public static final String PARAM_DEBUG_PORT = "debug_port";
 
   @ParamAnnotation(required = false, help = "Custom Chrome command line flags.")
   public static final String PARAM_CHROME_FLAGS = "chrome_flags";
-
-  @FileAnnotation(help = "The compatible chromedriver binary path.")
-  public static final String TAG_CHROMEDRIVER = "chromedriver";
 
   private static final Pattern WEBVIEW_DEVTOOLS_SOCKET_PATTERN =
       Pattern.compile("webview_devtools_remote_(\\d+)");
@@ -123,8 +107,6 @@ public class AndroidCdpDecorator extends LifecycleDecorator {
 
   private static final String PROPERTY_REVERSE_DEVICE_PORTS = "MH_REVERSE_DEVICE_PORTS";
   private static final String PROPERTY_DEBUGGER_ADDRESS = "DEBUGGER_ADDRESS";
-  private static final String PROPERTY_SELENIUM_ADDRESS = "SELENIUM_ADDRESS";
-  private static final String PROPERTY_SELENIUM_ADDRESS_LEGACY = "seleniumAddress";
   private static final String PROPERTY_BASE_URL = "BASE_URL";
   private static final String PROPERTY_WEB_TEST_HTTP_SERVER = "WEB_TEST_HTTP_SERVER";
   private static final String PROPERTY_WEB_TEST_BROWSER_DESCRIPTOR = "WEB_TEST_BROWSER_DESCRIPTOR";
@@ -145,21 +127,16 @@ public class AndroidCdpDecorator extends LifecycleDecorator {
       "localabstract:webview_devtools_remote_";
   private static final String LOCALHOST_IP = "127.0.0.1";
 
-  private final CommandExecutor commandExecutor;
   private final AndroidAdbUtil adbUtil;
   private final AndroidProcessUtil processUtil;
   private final Adb adb;
   private final AndroidFileUtil fileUtil;
-
-  // Sole instance variable retained across lifecycle (live OS process cannot be serialized)
-  private CommandProcess chromedriverProcess;
 
   @Inject
   AndroidCdpDecorator(Driver decoratedDriver, TestInfo testInfo) {
     this(
         decoratedDriver,
         testInfo,
-        new CommandExecutor(),
         new AndroidAdbUtil(),
         new AndroidProcessUtil(),
         new Adb(),
@@ -170,13 +147,11 @@ public class AndroidCdpDecorator extends LifecycleDecorator {
   AndroidCdpDecorator(
       Driver decoratedDriver,
       TestInfo testInfo,
-      CommandExecutor commandExecutor,
       AndroidAdbUtil adbUtil,
       AndroidProcessUtil processUtil,
       Adb adb,
       AndroidFileUtil fileUtil) {
     super(decoratedDriver, testInfo);
-    this.commandExecutor = commandExecutor;
     this.adbUtil = adbUtil;
     this.processUtil = processUtil;
     this.adb = adb;
@@ -195,9 +170,8 @@ public class AndroidCdpDecorator extends LifecycleDecorator {
     Optional<String> detectedSocket = waitForDevToolsSocket(testInfo, deviceId, appPid);
     String resolvedBaseUrl =
         setupPortForwarding(testInfo, deviceId, detectedSocket, reversePortMappings, appPid, port);
-    int chromedriverPort = startChromeDriverIfConfigured(testInfo);
 
-    injectContextVariables(testInfo, resolvedBaseUrl, chromedriverPort, port);
+    injectContextVariables(testInfo, resolvedBaseUrl, port);
     return SetupResult.continueDecorated();
   }
 
@@ -623,68 +597,7 @@ public class AndroidCdpDecorator extends LifecycleDecorator {
     return resolvedBaseUrl;
   }
 
-  private int startChromeDriverIfConfigured(TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
-    String chromedriverPath = null;
-    if (testInfo.jobInfo().files().isTagNotEmpty(TAG_CHROMEDRIVER)) {
-      chromedriverPath = testInfo.jobInfo().files().getSingle(TAG_CHROMEDRIVER);
-    }
-    if (Strings.isNullOrEmpty(chromedriverPath)) {
-      chromedriverPath = testInfo.jobInfo().params().get(PARAM_CHROMEDRIVER_PATH, null);
-    }
-    if (Strings.isNullOrEmpty(chromedriverPath)) {
-      return 0;
-    }
-
-    int chromedriverPort = 0;
-    try {
-      chromedriverPort = PortProber.pickUnusedPort();
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_CDP_PORT_ALLOCATION_ERROR,
-          "Failed to pick an unused dynamic port for ChromeDriver.",
-          e);
-    }
-    testInfo
-        .log()
-        .atInfo()
-        .alsoTo(logger)
-        .log("Starting ChromeDriver on port %d...", chromedriverPort);
-    try {
-      this.chromedriverProcess =
-          commandExecutor.start(
-              Command.of(chromedriverPath, "--port=" + chromedriverPort)
-                  .redirectStderr(true)
-                  .onStdout(
-                      LineCallback.does(
-                          line ->
-                              testInfo
-                                  .log()
-                                  .atInfo()
-                                  .alsoTo(logger)
-                                  .log("[ChromeDriver] %s", line))));
-    } catch (CommandException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_CDP_CHROMEDRIVER_ERROR, "Failed to start ChromeDriver.", e);
-    }
-    try {
-      waitForPort(chromedriverPort, Duration.ofSeconds(10));
-    } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_CDP_CHROMEDRIVER_ERROR,
-          "ChromeDriver failed to bind to port " + chromedriverPort,
-          e);
-    }
-    return chromedriverPort;
-  }
-
-  private void injectContextVariables(
-      TestInfo testInfo, String resolvedBaseUrl, int chromedriverPort, int port) {
-    if (chromedriverPort > 0) {
-      String seleniumUrl = "http://" + LOCALHOST_IP + ":" + chromedriverPort;
-      injectContextVariable(testInfo, PROPERTY_SELENIUM_ADDRESS, seleniumUrl);
-      testInfo.properties().add(PROPERTY_SELENIUM_ADDRESS_LEGACY, seleniumUrl);
-    }
+  private void injectContextVariables(TestInfo testInfo, String resolvedBaseUrl, int port) {
     if (resolvedBaseUrl != null) {
       injectContextVariable(testInfo, PROPERTY_BASE_URL, resolvedBaseUrl);
     }
@@ -711,45 +624,6 @@ public class AndroidCdpDecorator extends LifecycleDecorator {
     testInfo.properties().add(ENV_VAR_PREFIX + name, value);
   }
 
-  @VisibleForTesting
-  void waitForPort(int port, Duration timeout) throws MobileHarnessException, InterruptedException {
-    try {
-      RetryingCallable.newBuilder(
-              () -> {
-                try {
-                  InetAddress[] addresses = InetAddress.getAllByName(LOCALHOST_IP);
-                  if (addresses.length == 0) {
-                    throw new MobileHarnessException(
-                        AndroidErrorId.ANDROID_CDP_CHROMEDRIVER_ERROR,
-                        "No address found for " + LOCALHOST_IP);
-                  }
-                  try (Socket socket = new Socket(addresses[0], port)) {
-                    return true;
-                  }
-                } catch (IOException e) {
-                  throw new MobileHarnessException(
-                      AndroidErrorId.ANDROID_CDP_CHROMEDRIVER_ERROR, "Port is not open yet.", e);
-                }
-              },
-              RetryStrategy.uniformDelay(
-                  Duration.ofMillis(100), Math.max(1, (int) (timeout.toMillis() / 100))))
-          .build()
-          .call();
-    } catch (RetryException e) {
-      if (e.getCause() instanceof InterruptedException interruptedException) {
-        throw interruptedException;
-      }
-      if (Thread.interrupted()) {
-        throw new InterruptedException(
-            String.format("Interrupted while waiting for port %d to open.", port));
-      }
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_CDP_CHROMEDRIVER_ERROR,
-          String.format("Timed out waiting for port %d to open.", port),
-          e.getCause());
-    }
-  }
-
   @Override
   protected void tearDown(TeardownContext context)
       throws MobileHarnessException, InterruptedException {
@@ -757,18 +631,10 @@ public class AndroidCdpDecorator extends LifecycleDecorator {
     String deviceId = getDevice().getDeviceId();
 
     Callables.runAll(
-        (MobileHarnessRunnable) () -> cleanupChromeDriver(testInfo),
-        () -> cleanupPortForwarding(testInfo, deviceId),
+        (MobileHarnessRunnable) () -> cleanupPortForwarding(testInfo, deviceId),
         () -> cleanupReversePortForwarding(testInfo, deviceId),
         () -> cleanupTargetApplication(testInfo, deviceId),
         () -> cleanupCommandFlagFiles(testInfo, deviceId));
-  }
-
-  private void cleanupChromeDriver(TestInfo testInfo) {
-    if (this.chromedriverProcess != null) {
-      testInfo.log().atInfo().alsoTo(logger).log("Tearing down ChromeDriver...");
-      this.chromedriverProcess.kill();
-    }
   }
 
   private void cleanupPortForwarding(TestInfo testInfo, String deviceId)
