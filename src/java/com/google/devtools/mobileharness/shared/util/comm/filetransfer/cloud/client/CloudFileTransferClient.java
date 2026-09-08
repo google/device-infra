@@ -239,7 +239,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
   public boolean isSendable(String path, @Nullable String checksum)
       throws MobileHarnessException, InterruptedException {
     return (checksum != null && gcsFileManager.fileExistAndFresh(Path.of(checksum)))
-        || isFileExists(Path.of(path))
+        || (isFileExists(Path.of(path)))
         || localFileUtil.isDirExist(path);
   }
 
@@ -788,36 +788,30 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
     return localFileUtil.isDirExist(local);
   }
 
-  private long getFileSize(Path file)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+  private long getFileSize(Path file) throws MobileHarnessException {
     return localFileUtil.getFileSize(file);
   }
 
-  private List<Path> listFilesForPath(Path local)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+  private List<Path> listFilesForPath(Path local) throws MobileHarnessException {
     return listFilesForLocalPath(local);
   }
 
-  private ImmutableList<Path> listFilesForLocalPath(Path local)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+  private ImmutableList<Path> listFilesForLocalPath(Path local) throws MobileHarnessException {
     return localFileUtil.listFiles(local.toString(), true).stream()
         .map(File::toPath)
         .collect(toImmutableList());
   }
 
-  private byte[] readBytes(Path local)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+  private byte[] readBytes(Path local) throws MobileHarnessException {
     return readLocalBytes(local);
   }
 
-  private byte[] readLocalBytes(Path local)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+  private byte[] readLocalBytes(Path local) throws MobileHarnessException {
     return localFileUtil.readBinaryFile(local.toString());
   }
 
   private void removeLocalFileOrDir(Path local)
-      throws InterruptedException,
-          com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+      throws InterruptedException, MobileHarnessException {
     localFileUtil.removeFileOrDir(local);
   }
 
@@ -825,8 +819,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
     return localFileUtil.isFileExist(local);
   }
 
-  private void prepareParentDir(Path local)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+  private void prepareParentDir(Path local) throws MobileHarnessException {
     localFileUtil.prepareParentDir(local);
   }
 }
