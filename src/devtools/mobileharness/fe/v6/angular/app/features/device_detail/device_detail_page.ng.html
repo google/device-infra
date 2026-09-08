@@ -11,6 +11,13 @@
       </div>
     } @else if (data.pageData; as pageData) {
       @let device = pageData.overview;
+      <!-- TODO: remove it when we don't need this banner anymore -->
+      <!-- Legacy Console Banner -->
+      <app-legacy-console-banner
+        [legacyUrl]="legacyFeUrl + '/devicedetailview/' + device.host.name + '/' + device.host.ip + '/' + device.id"
+        bannerType="device">
+      </app-legacy-console-banner>
+
       <div class="main-card">
         <header class="card-header">
           <div class="header-device-id">
@@ -29,13 +36,6 @@
         </header>
 
         <div class="card-body">
-          <!-- TODO: remove it when we don't need this banner anymore -->
-          <!-- Legacy Console Banner -->
-          <app-legacy-console-banner
-            [legacyUrl]="legacyFeUrl + '/devicedetailview/' + device.host.name + '/' + device.host.ip + '/' + device.id"
-            bannerType="device">
-          </app-legacy-console-banner>
-
           <!-- Device Title Bar -->
           <div class="device-title-bar">
             <div class="title-bar-content-wrapper">

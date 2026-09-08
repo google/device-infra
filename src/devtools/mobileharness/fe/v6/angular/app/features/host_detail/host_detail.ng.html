@@ -11,6 +11,10 @@
       </div>
     } @else if (data.hostOverviewPageData; as pageData) {
       @let host = pageData.overviewContent;
+      <app-legacy-console-banner
+        [legacyUrl]="legacyFeUrl + '/labdetailview/' + host.hostName + '/' + host.ip"
+        bannerType="host">
+      </app-legacy-console-banner>
       <div class="main-card">
         <header class="card-header">
           <div class="header-host-id">
@@ -24,10 +28,6 @@
         </header>
 
         <div class="card-body">
-          <app-legacy-console-banner
-            [legacyUrl]="legacyFeUrl + '/labdetailview/' + host.hostName + '/' + host.ip"
-            bannerType="host">
-          </app-legacy-console-banner>
           <div class="host-title-bar">
             <div class="title-icon-wrapper">
               <mat-icon class="title-icon">dns</mat-icon>
