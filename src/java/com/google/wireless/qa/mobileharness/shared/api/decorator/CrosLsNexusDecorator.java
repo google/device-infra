@@ -17,9 +17,11 @@
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.platform.androiddesktop.device.CrosCipdUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
@@ -56,9 +58,13 @@ public class CrosLsNexusDecorator extends CrosBaseDecorator {
   private static final Duration LSNEXUS_PORT_FILE_POLL_INTERVAL = Duration.ofSeconds(2);
 
   private final CommandExecutor commandExecutor;
+  private final LocalFileUtil fileUtil;
 
   /** Map of LSNexus ports to their running processes. */
   private final Map<Integer, CommandProcess> lsnexusServices = new HashMap<>();
+
+  private String resolvedLsNexusPath = LSNEXUS_CIPD_PATH;
+  private Path cipdDownloadedDir = null;
 
   /**
    * @param driver the decorated driver that this decorator wraps
@@ -67,8 +73,15 @@ public class CrosLsNexusDecorator extends CrosBaseDecorator {
    */
   @Inject
   CrosLsNexusDecorator(Driver driver, TestInfo testInfo, CommandExecutor commandExecutor) {
+    this(driver, testInfo, commandExecutor, new LocalFileUtil());
+  }
+
+  @VisibleForTesting
+  CrosLsNexusDecorator(
+      Driver driver, TestInfo testInfo, CommandExecutor commandExecutor, LocalFileUtil fileUtil) {
     super(driver, testInfo);
     this.commandExecutor = commandExecutor;
+    this.fileUtil = fileUtil;
   }
 
   /**
@@ -102,6 +115,9 @@ public class CrosLsNexusDecorator extends CrosBaseDecorator {
     final String deviceName = deviceName(deviceId());
     testInfo.log().atInfo().alsoTo(logger).log("Creating LSNexus service for DUT: %s", deviceName);
 
+    resolveLsNexusPath(testInfo);
+    CrosCipdUtil.printVersion(commandExecutor, resolvedLsNexusPath, testInfo);
+
     final String serviceLogDir = createLsNexusServiceLogDir(testInfo, deviceName);
     final CommandProcess service = startLsNexusService(testInfo, deviceName, serviceLogDir);
     final int servicePort =
@@ -116,27 +132,98 @@ public class CrosLsNexusDecorator extends CrosBaseDecorator {
   }
 
   /**
-   * Stops all LSNexus service instances started by this decorator.
+   * Resolves the LSNexus binary path.
    *
-   * <p>This method stops each LSNexus service instance, terminating the underlying process to
-   * ensure all resources are properly released.
-   *
-   * @param testInfo the context of the current test, used for logging service shutdown messages
+   * <p>By default, dynamically pulls the production package using {@link #DEFAULT_CIPD_TAG}
+   * ("prod"). If a custom {@link #LSNEXUS_CIPD_TAG} is specified (tag or instance ID), that version
+   * is downloaded. If the tag is explicitly set to empty ({@code ""}), skips downloading and falls
+   * back to pre-installed {@link #LSNEXUS_CIPD_PATH}.
    */
-  @Override
-  protected void cleanUp(TeardownContext context) {
-    TestInfo testInfo = context.testInfo();
-    for (Map.Entry<Integer, CommandProcess> entry : lsnexusServices.entrySet()) {
-      final int port = entry.getKey();
-      final CommandProcess process = entry.getValue();
-      process.stop();
+  private void resolveLsNexusPath(TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
+    String cipdTag = getParam(testInfo, LSNEXUS_CIPD_TAG, DEFAULT_CIPD_TAG);
+    if (!Strings.isNullOrEmpty(cipdTag)) {
       testInfo
           .log()
           .atInfo()
           .alsoTo(logger)
-          .log("Shutting down LSNexus service : %s", lsnexusAddress(port));
+          .log("Pulling lsnexus CIPD package with tag/version: %s", cipdTag);
+      Path downloaded =
+          CrosCipdUtil.downloadPackage(
+              commandExecutor,
+              fileUtil,
+              LSNEXUS_PACKAGE,
+              cipdTag,
+              /* destDir= */ null,
+              "lsnexus",
+              testInfo,
+              CrosCipdUtil.DEFAULT_CIPD_TIMEOUT);
+      resolvedLsNexusPath = downloaded.toAbsolutePath().toString();
+      cipdDownloadedDir = CrosCipdUtil.getPackageRootDir(downloaded, "lsnexus");
+      return;
     }
-    lsnexusServices.clear();
+
+    testInfo
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log(
+            "No CIPD tag/version specified for lsnexus; using pre-installed binary at %s",
+            LSNEXUS_CIPD_PATH);
+    resolvedLsNexusPath = LSNEXUS_CIPD_PATH;
+  }
+
+  @VisibleForTesting
+  String getResolvedLsNexusPath() {
+    return resolvedLsNexusPath;
+  }
+
+  @VisibleForTesting
+  Path getCipdDownloadedDir() {
+    return cipdDownloadedDir;
+  }
+
+  /**
+   * Stops all LSNexus service instances started by this decorator.
+   *
+   * <p>This method stops each LSNexus service instance, terminating the underlying process to
+   * ensure all resources are properly released. Also cleans up temporary downloaded CIPD
+   * directories if any.
+   *
+   * @param context the teardown context of the current test, used for logging and cleanup
+   */
+  @Override
+  protected void cleanUp(TeardownContext context) {
+    TestInfo testInfo = context == null ? getTest() : context.testInfo();
+    try {
+      for (Map.Entry<Integer, CommandProcess> entry : lsnexusServices.entrySet()) {
+        final int port = entry.getKey();
+        final CommandProcess process = entry.getValue();
+        try {
+          testInfo
+              .log()
+              .atInfo()
+              .alsoTo(logger)
+              .log("Shutting down LSNexus service : %s", lsnexusAddress(port));
+          process.stop();
+        } catch (RuntimeException e) {
+          testInfo
+              .log()
+              .atWarning()
+              .alsoTo(logger)
+              .withCause(e)
+              .log("Error shutting down LSNexus service on port %d", port);
+        }
+      }
+    } finally {
+      lsnexusServices.clear();
+
+      if (cipdDownloadedDir != null) {
+        CrosCipdUtil.cleanupTempDir(fileUtil, cipdDownloadedDir, testInfo);
+        cipdDownloadedDir = null;
+      }
+      resolvedLsNexusPath = LSNEXUS_CIPD_PATH;
+    }
   }
 
   /**
@@ -171,7 +258,7 @@ public class CrosLsNexusDecorator extends CrosBaseDecorator {
   CommandProcess startLsNexusService(TestInfo testInfo, String dutName, String logDir)
       throws MobileHarnessException {
     final List<String> args = new ArrayList<>();
-    args.add(LSNEXUS_CIPD_PATH);
+    args.add(resolvedLsNexusPath);
     args.add("server");
     args.add("-port");
     args.add("0");
@@ -213,28 +300,33 @@ public class CrosLsNexusDecorator extends CrosBaseDecorator {
     final Instant deadline = Instant.now().plus(timeout);
     final LocalFileUtil fileUtil = new LocalFileUtil();
 
-    while (Instant.now().isBefore(deadline)) {
-      if (Files.exists(Path.of(portFile))) {
-        try {
-          final String portStr = fileUtil.readFile(portFile).trim();
-          if (!portStr.isEmpty()) {
+    try {
+      while (Instant.now().isBefore(deadline)) {
+        if (Files.exists(Path.of(portFile))) {
+          try {
+            final String portStr = fileUtil.readFile(portFile).trim();
+            if (!portStr.isEmpty()) {
+              testInfo
+                  .log()
+                  .atInfo()
+                  .alsoTo(logger)
+                  .log("LSNexus port file found. Port: %s", portStr);
+              return Integer.parseInt(portStr);
+            }
+          } catch (MobileHarnessException | NumberFormatException e) {
             testInfo
                 .log()
-                .atInfo()
+                .atWarning()
                 .alsoTo(logger)
-                .log("LSNexus port file found. Port: %s", portStr);
-            return Integer.parseInt(portStr);
+                .withCause(e)
+                .log("Failed to read or parse LSNexus port from file: %s. Retrying...", portFile);
           }
-        } catch (MobileHarnessException | NumberFormatException e) {
-          testInfo
-              .log()
-              .atWarning()
-              .alsoTo(logger)
-              .withCause(e)
-              .log("Failed to read or parse LSNexus port from file: %s. Retrying...", portFile);
         }
+        Thread.sleep(LSNEXUS_PORT_FILE_POLL_INTERVAL.toMillis());
       }
-      Thread.sleep(LSNEXUS_PORT_FILE_POLL_INTERVAL.toMillis());
+    } catch (InterruptedException e) {
+      service.kill();
+      throw e;
     }
 
     // Timeout reached
