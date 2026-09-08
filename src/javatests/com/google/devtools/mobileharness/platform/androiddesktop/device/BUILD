@@ -38,10 +38,30 @@ java_library(
     ],
 )
 
+java_library(
+    name = "cros_cipd_util_test",
+    testonly = True,
+    srcs = ["CrosCipdUtilTest.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/androiddesktop/device:cros_cipd_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
+    ],
+)
+
 junit_test_suites(
     name = "gen_tests",
     sizes = [
         "small",
     ],
-    deps = [":android_desktop_device_helper_test"],
+    deps = [
+        ":android_desktop_device_helper_test",
+        ":cros_cipd_util_test",
+    ],
 )

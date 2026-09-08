@@ -18,10 +18,12 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.wireless.qa.mobileharness.shared.api.spec.CrosDecoratorSpec.DT_CONVERTER_CIPD_PATH;
+import static com.google.wireless.qa.mobileharness.shared.api.spec.CrosDecoratorSpec.DT_CONVERTER_CIPD_TAG;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -35,6 +37,7 @@ import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleD
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
+import com.google.wireless.qa.mobileharness.shared.api.spec.CrosDecoratorSpec;
 import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -43,9 +46,11 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
+import java.nio.file.Path;
 import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -84,13 +89,24 @@ public class CrosDutTopologyDecoratorTest {
     when(testInfo.properties()).thenReturn(properties);
     when(testInfo.getGenFileDir()).thenReturn("/tmp/test_logs");
     when(jobInfo.params()).thenReturn(params);
+    when(params.has(DT_CONVERTER_CIPD_TAG)).thenReturn(true);
+    when(params.get(DT_CONVERTER_CIPD_TAG)).thenReturn("");
     when(jobInfo.files()).thenReturn(files);
     when(driver.getDevice()).thenReturn(device);
     when(device.getDeviceId()).thenReturn("test_device:1234");
     when(log.atInfo()).thenReturn(atInfo);
+    when(log.atWarning()).thenReturn(atInfo);
     when(atInfo.alsoTo(any(FluentLogger.class))).thenReturn(alsoTo);
+    when(alsoTo.withCause(any(Throwable.class))).thenReturn(alsoTo);
 
     decorator = new CrosDutTopologyDecorator(driver, testInfo, commandExecutor);
+  }
+
+  @After
+  public void tearDownDecorator() {
+    if (decorator != null) {
+      decorator.cleanUp(TeardownContext.create(testInfo, null, null));
+    }
   }
 
   @Test
@@ -111,10 +127,16 @@ public class CrosDutTopologyDecoratorTest {
 
     // Assert
     ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
-    verify(commandExecutor).exec(commandCaptor.capture());
-    Command actualCommand = commandCaptor.getValue();
+    verify(commandExecutor, times(2)).exec(commandCaptor.capture());
+    List<Command> capturedCommands = commandCaptor.getAllValues();
 
-    assertThat(actualCommand.getCommand())
+    Command versionCommand = capturedCommands.get(0);
+    assertThat(versionCommand.getCommand())
+        .containsExactly(DT_CONVERTER_CIPD_PATH, "version")
+        .inOrder();
+
+    Command convertCommand = capturedCommands.get(1);
+    assertThat(convertCommand.getCommand())
         .containsExactly(
             DT_CONVERTER_CIPD_PATH,
             "convert",
@@ -329,5 +351,155 @@ public class CrosDutTopologyDecoratorTest {
     // Act & Assert
     // The method is empty, so no exception is expected.
     decorator.tearDown(TeardownContext.create(testInfo, null, null));
+  }
+
+  private void mockCipdDownload() throws Exception {
+    when(commandResult.stdout()).thenReturn("-c /tmp/mobly_config.yaml\n--param1 val1");
+    when(commandExecutor.exec(any(Command.class)))
+        .thenAnswer(
+            invocation -> {
+              Command cmd = invocation.getArgument(0);
+              ImmutableList<String> cmdArgs = cmd.getCommand();
+              int rootIdx = cmdArgs.indexOf("-root");
+              if (rootIdx != -1 && rootIdx + 1 < cmdArgs.size()) {
+                Path rootPath = Path.of(cmdArgs.get(rootIdx + 1));
+                Path bin = rootPath.resolve("dt-converter");
+                if (!java.nio.file.Files.exists(bin)) {
+                  java.nio.file.Files.createFile(bin);
+                }
+              }
+              return commandResult;
+            });
+  }
+
+  @Test
+  public void setUp_defaultTag_downloadsProdPackage() throws Exception {
+    when(params.has(DT_CONVERTER_CIPD_TAG)).thenReturn(false);
+    when(params.get(DT_CONVERTER_CIPD_TAG)).thenReturn(null);
+    when(params.get("inventory_service_host", "localhost")).thenReturn("inv_host");
+    when(params.getInt("inventory_service_port", 1485)).thenReturn(9999);
+
+    mockCipdDownload();
+
+    decorator.setUp(SetupContext.create(testInfo));
+
+    assertThat(decorator.getResolvedDtConverterPath()).isNotEqualTo(DT_CONVERTER_CIPD_PATH);
+    assertThat(decorator.getResolvedDtConverterPath()).contains("dt-converter");
+    assertThat(decorator.getCipdDownloadedDir()).isNotNull();
+    assertThat(java.nio.file.Files.exists(decorator.getCipdDownloadedDir())).isTrue();
+
+    ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
+    verify(commandExecutor, times(3)).exec(commandCaptor.capture());
+    List<Command> capturedCommands = commandCaptor.getAllValues();
+    assertThat(capturedCommands.get(0).getCommand())
+        .containsAtLeast(
+            "install",
+            CrosDecoratorSpec.DT_CONVERTER_PACKAGE,
+            CrosDecoratorSpec.DEFAULT_CIPD_TAG,
+            "-root")
+        .inOrder();
+    assertThat(capturedCommands.get(1).getCommand())
+        .containsExactly(decorator.getResolvedDtConverterPath(), "version")
+        .inOrder();
+    assertThat(capturedCommands.get(2).getCommand().get(0))
+        .isEqualTo(decorator.getResolvedDtConverterPath());
+
+    Path downloadedDir = decorator.getCipdDownloadedDir();
+    assertThat(downloadedDir).isNotNull();
+    assertThat(java.nio.file.Files.exists(downloadedDir)).isTrue();
+
+    // Clean up
+    decorator.cleanUp(TeardownContext.create(testInfo, null, null));
+    assertThat(decorator.getCipdDownloadedDir()).isNull();
+    assertThat(java.nio.file.Files.exists(downloadedDir)).isFalse();
+  }
+
+  @Test
+  public void setUp_withCipdTag_downloadsPackageAndUsesDownloadedBinary() throws Exception {
+    when(params.has(DT_CONVERTER_CIPD_TAG)).thenReturn(true);
+    when(params.get(DT_CONVERTER_CIPD_TAG)).thenReturn("custom_tag");
+    when(params.get("inventory_service_host", "localhost")).thenReturn("inv_host");
+    when(params.getInt("inventory_service_port", 1485)).thenReturn(9999);
+
+    mockCipdDownload();
+
+    decorator.setUp(SetupContext.create(testInfo));
+
+    assertThat(decorator.getResolvedDtConverterPath()).isNotEqualTo(DT_CONVERTER_CIPD_PATH);
+    assertThat(decorator.getResolvedDtConverterPath()).contains("dt-converter");
+    assertThat(decorator.getCipdDownloadedDir()).isNotNull();
+    Path downloadedDir = decorator.getCipdDownloadedDir();
+    assertThat(downloadedDir).isNotNull();
+    assertThat(java.nio.file.Files.exists(downloadedDir)).isTrue();
+
+    ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
+    verify(commandExecutor, times(3)).exec(commandCaptor.capture());
+    List<Command> capturedCommands = commandCaptor.getAllValues();
+    assertThat(capturedCommands.get(0).getCommand())
+        .containsAtLeast("install", CrosDecoratorSpec.DT_CONVERTER_PACKAGE, "custom_tag", "-root")
+        .inOrder();
+    assertThat(capturedCommands.get(1).getCommand())
+        .containsExactly(decorator.getResolvedDtConverterPath(), "version")
+        .inOrder();
+    assertThat(capturedCommands.get(2).getCommand().get(0))
+        .isEqualTo(decorator.getResolvedDtConverterPath());
+
+    // Clean up
+    decorator.cleanUp(TeardownContext.create(testInfo, null, null));
+    assertThat(decorator.getCipdDownloadedDir()).isNull();
+    assertThat(java.nio.file.Files.exists(downloadedDir)).isFalse();
+  }
+
+  @Test
+  public void setUp_withKebabCaseCipdTag_downloadsPackageAndUsesDownloadedBinary()
+      throws Exception {
+    when(params.has(DT_CONVERTER_CIPD_TAG)).thenReturn(false);
+    when(params.has("dt-converter-cipd-tag")).thenReturn(true);
+    when(params.get("dt-converter-cipd-tag")).thenReturn("custom_tag");
+    when(params.get("inventory_service_host", "localhost")).thenReturn("inv_host");
+    when(params.getInt("inventory_service_port", 1485)).thenReturn(9999);
+
+    mockCipdDownload();
+
+    decorator.setUp(SetupContext.create(testInfo));
+
+    assertThat(decorator.getResolvedDtConverterPath()).isNotEqualTo(DT_CONVERTER_CIPD_PATH);
+    assertThat(decorator.getResolvedDtConverterPath()).contains("dt-converter");
+    Path downloadedDir = decorator.getCipdDownloadedDir();
+    assertThat(downloadedDir).isNotNull();
+    assertThat(java.nio.file.Files.exists(downloadedDir)).isTrue();
+
+    ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
+    verify(commandExecutor, times(3)).exec(commandCaptor.capture());
+    List<Command> capturedCommands = commandCaptor.getAllValues();
+    assertThat(capturedCommands.get(0).getCommand())
+        .containsAtLeast("install", CrosDecoratorSpec.DT_CONVERTER_PACKAGE, "custom_tag", "-root")
+        .inOrder();
+    assertThat(capturedCommands.get(1).getCommand())
+        .containsExactly(decorator.getResolvedDtConverterPath(), "version")
+        .inOrder();
+    assertThat(capturedCommands.get(2).getCommand().get(0))
+        .isEqualTo(decorator.getResolvedDtConverterPath());
+
+    // Clean up
+    decorator.cleanUp(TeardownContext.create(testInfo, null, null));
+    assertThat(decorator.getCipdDownloadedDir()).isNull();
+    assertThat(java.nio.file.Files.exists(downloadedDir)).isFalse();
+  }
+
+  @Test
+  public void setUp_withEmptyCipdTag_fallsBackToPreinstalledBinary() throws Exception {
+    when(params.has(DT_CONVERTER_CIPD_TAG)).thenReturn(true);
+    when(params.get(DT_CONVERTER_CIPD_TAG)).thenReturn("");
+    when(params.get("inventory_service_host", "localhost")).thenReturn("inv_host");
+    when(params.getInt("inventory_service_port", 1485)).thenReturn(9999);
+
+    when(commandResult.stdout()).thenReturn("-c /tmp/mobly_config.yaml\n--param1 val1");
+    when(commandExecutor.exec(any(Command.class))).thenReturn(commandResult);
+
+    decorator.setUp(SetupContext.create(testInfo));
+
+    assertThat(decorator.getResolvedDtConverterPath()).isEqualTo(DT_CONVERTER_CIPD_PATH);
+    assertThat(decorator.getCipdDownloadedDir()).isNull();
   }
 }
