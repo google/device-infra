@@ -47,6 +47,8 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapsho
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.FleetDataSource;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.ScenarioCurationModule;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.FleetSnapshotStore;
+import com.google.devtools.mobileharness.fe.v6.service.search.summary.GlobalSummaryProvider;
+import com.google.devtools.mobileharness.fe.v6.service.search.summary.NoOpGlobalSummaryProvider;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -86,6 +88,7 @@ public final class SearchServiceLogicImplTest {
               @Override
               protected void configure() {
                 bind(ListeningExecutorService.class).toInstance(newDirectExecutorService());
+                bind(GlobalSummaryProvider.class).to(NoOpGlobalSummaryProvider.class);
                 MapBinder.newMapBinder(binder(), Fleet.class, FleetDataSource.class);
               }
             });

@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.fe.v6.service.search;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.LabInfoFleetPuller;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.ScenarioCurationModule;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.FleetSearchDataModule;
+import com.google.devtools.mobileharness.fe.v6.service.search.summary.GlobalSummaryProvider;
+import com.google.devtools.mobileharness.fe.v6.service.search.summary.NoOpGlobalSummaryProvider;
 import com.google.devtools.mobileharness.fe.v6.service.search.tjs.NoOpTjsSearchLogic;
 import com.google.devtools.mobileharness.fe.v6.service.search.tjs.TjsSearchLogic;
 import com.google.inject.AbstractModule;
@@ -47,6 +49,7 @@ public final class SearchServiceModule extends AbstractModule {
   protected void configure() {
     bind(SearchServiceLogic.class).to(SearchServiceLogicImpl.class);
     bind(TjsSearchLogic.class).to(NoOpTjsSearchLogic.class);
+    bind(GlobalSummaryProvider.class).to(NoOpGlobalSummaryProvider.class);
     bind(LabInfoFleetPuller.class).in(Singleton.class);
     install(new FleetSearchDataModule());
     install(new ScenarioCurationModule());
