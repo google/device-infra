@@ -78,8 +78,6 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   private static final Object lock = new Object();
 
-  private static final String MCTS_JDK_PATH = "/android/xts/mcts/tool/jdk.zip";
-
   private static final String TMP_MCTS_TOOL_PATH = "/android/xts/mcts/tool";
 
   private static final String MAINLINE_TVP_PKG = "com.google.android.modulemetadata";
@@ -320,7 +318,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     String jdkFileTargetPath = TMP_MCTS_TOOL_PATH + "/" + jdkVersion + "/jdk.zip";
     logger.atInfo().log("Start to download JDK files: %s", jdkFileTargetPath);
     String jdkFilePath =
-        downloadPublicUrlFiles("https://dl.google.com/dl" + jdkFileTargetPath, MCTS_JDK_PATH);
+        downloadPublicUrlFiles("https://dl.google.com/dl" + jdkFileTargetPath, jdkFileTargetPath);
     if (jdkFilePath != null) {
       String sessionId = getSessionId(testInfo);
       Path mctsJdkDir = XtsDirUtil.getXtsDynamicDownloadJdkDir(sessionId);

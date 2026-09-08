@@ -238,11 +238,6 @@ public final class MctsDynamicDownloadPluginTest {
     Mockito.doReturn(null)
         .when(spyMctsDynamicDownloadPlugin)
         .downloadPublicUrlFiles(
-            "https://dl.google.com/dl/android/xts/mcts/tool/jdk.zip",
-            "/android/xts/mcts/tool/jdk.zip");
-    Mockito.doReturn(null)
-        .when(spyMctsDynamicDownloadPlugin)
-        .downloadPublicUrlFiles(
             "https://dl.google.com/dl/android/xts/mcts/tool/mcts_exclude/30/2024-10/mcts-exclude.txt",
             "/android/xts/mcts/tool/mcts_exclude/30/2024-10/mcts-exclude.txt");
     Mockito.doReturn(null)
@@ -254,7 +249,7 @@ public final class MctsDynamicDownloadPluginTest {
         .when(spyMctsDynamicDownloadPlugin)
         .downloadPublicUrlFiles(
             "https://dl.google.com/dl/android/xts/mcts/tool/35/jdk.zip",
-            "/android/xts/mcts/tool/jdk.zip");
+            "/android/xts/mcts/tool/35/jdk.zip");
   }
 
   @Test
@@ -265,9 +260,41 @@ public final class MctsDynamicDownloadPluginTest {
 
     spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
 
+    verify(spyMctsDynamicDownloadPlugin)
+        .downloadPublicUrlFiles(
+            "https://dl.google.com/dl/android/xts/mcts/tool/35/jdk.zip",
+            "/android/xts/mcts/tool/35/jdk.zip");
     verifyDownloadAndUnzipFile();
     localFileUtil.removeFileOrDir(
         XtsDirUtil.getXtsDynamicDownloadDir("test_session_id").toString());
+  }
+
+  @Test
+  public void onTestStarting_setupJob_downloadsJdkUsingVersionSpecificPath_differentVersion()
+      throws Exception {
+    when(jobProperties.getOptional(XtsConstants.XTS_JOB_NAME))
+        .thenReturn(Optional.of(XtsConstants.SETUP_JOB_NAME));
+    when(mockAndroidPackageManagerUtil.getAppVersionCode(
+            any(), eq("com.google.android.modulemetadata")))
+        .thenReturn(361040000);
+    Mockito.doReturn(null)
+        .when(spyMctsDynamicDownloadPlugin)
+        .downloadPublicUrlFiles(
+            "https://dl.google.com/dl/android/xts/mcts/tool/36/jdk.zip",
+            "/android/xts/mcts/tool/36/jdk.zip");
+    generateTestZipFilesForDynamicJob();
+
+    try {
+      spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
+
+      verify(spyMctsDynamicDownloadPlugin)
+          .downloadPublicUrlFiles(
+              "https://dl.google.com/dl/android/xts/mcts/tool/36/jdk.zip",
+              "/android/xts/mcts/tool/36/jdk.zip");
+    } finally {
+      localFileUtil.removeFileOrDir(
+          XtsDirUtil.getXtsDynamicDownloadDir("test_session_id").toString());
+    }
   }
 
   @Test
@@ -629,7 +656,7 @@ public final class MctsDynamicDownloadPluginTest {
         .when(spyMctsDynamicDownloadPlugin)
         .downloadPublicUrlFiles(
             "https://dl.google.com/dl/android/xts/mcts/tool/35/jdk.zip",
-            "/android/xts/mcts/tool/jdk.zip");
+            "/android/xts/mcts/tool/35/jdk.zip");
     generateTestZipFilesForDynamicJob();
 
     SkipTestException thrown =
