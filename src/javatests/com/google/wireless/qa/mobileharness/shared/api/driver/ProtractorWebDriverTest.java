@@ -64,13 +64,14 @@ import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-/** Unit tests for {@link PlaywrightWebDriver}. */
+/** Unit tests for {@link ProtractorWebDriver}. */
 @RunWith(JUnit4.class)
-public class PlaywrightWebDriverTest {
+public class ProtractorWebDriverTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Rule public final TemporaryFolder tempFolder = new TemporaryFolder();
 
+  private static final String SELENIUM_ADDRESS = "http://localhost:4444/wd/hub";
   private static final String DEBUGGER_ADDRESS = "127.0.0.1:9876";
   private static final String BASE_URL = "https://example.com";
 
@@ -95,21 +96,21 @@ public class PlaywrightWebDriverTest {
   @Mock private LocalFileUtil localFileUtil;
   @Mock private TestXmlParser testXmlParser;
 
-  private PlaywrightWebDriver driver;
+  private ProtractorWebDriver driver;
   private File testFile;
   private File genFileDir;
 
   @Before
   public void setUp() throws Exception {
-    testFile = tempFolder.newFile("playwright_test.sh");
+    testFile = tempFolder.newFile("protractor_test.sh");
     genFileDir = tempFolder.newFolder("genfiles");
 
-    driver = new PlaywrightWebDriver(device, testInfo, cmdExecutor, localFileUtil, testXmlParser);
+    driver = new ProtractorWebDriver(device, testInfo, cmdExecutor, localFileUtil, testXmlParser);
 
     // Common mock setup
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(jobInfo.files()).thenReturn(files);
-    when(files.get(PlaywrightWebDriver.TAG_PLAYWRIGHT_TEST_FILE))
+    when(files.get(ProtractorWebDriver.TAG_PROTRACTOR_TEST_FILE))
         .thenReturn(ImmutableSet.of(testFile.getAbsolutePath()));
     when(testInfo.getGenFileDir()).thenReturn(genFileDir.getAbsolutePath());
     when(jobInfo.params()).thenReturn(params);
@@ -147,6 +148,7 @@ public class PlaywrightWebDriverTest {
   @Test
   public void run_success_generatesCorrectCommandAndEnv() throws Exception {
     // Setup params and properties
+    when(params.get(ProtractorWebDriver.PARAM_SELENIUM_ADDRESS, null)).thenReturn(SELENIUM_ADDRESS);
     when(params.get("DEBUGGER_ADDRESS", null)).thenReturn(DEBUGGER_ADDRESS);
     when(params.get("BASE_URL", null)).thenReturn(BASE_URL);
 
@@ -164,7 +166,7 @@ public class PlaywrightWebDriverTest {
         .thenAnswer(
             invocation -> {
               writeDummyJUnitXml(genFileDir, "company.spec.ts", "basic test", /* failed= */ false);
-              return "Playwright logs";
+              return "Protractor logs";
             });
 
     driver.run(testInfo);
@@ -177,32 +179,17 @@ public class PlaywrightWebDriverTest {
     assertThat(executedCommand.getCommand())
         .containsExactly(
             testFile.getAbsolutePath(),
-            "--debuggerAddress=" + DEBUGGER_ADDRESS,
-            "--baseUrl=" + BASE_URL);
+            "--seleniumAddress=" + SELENIUM_ADDRESS,
+            "--params.debuggerAddress=" + DEBUGGER_ADDRESS,
+            "--capabilities.chromeOptions.debuggerAddress=" + DEBUGGER_ADDRESS,
+            "--params.baseUrl=" + BASE_URL);
 
     assertThat(executedCommand.getExtraEnvironment())
         .containsEntry("MH_GEN_FILE_DIR", genFileDir.getAbsolutePath());
     assertThat(executedCommand.getExtraEnvironment())
-        .containsEntry("PLAYWRIGHT_WS_ENDPOINT", "ws://" + DEBUGGER_ADDRESS);
-    assertThat(executedCommand.getExtraEnvironment()).containsEntry("BASE_URL", BASE_URL);
-    assertThat(executedCommand.getExtraEnvironment())
         .containsEntry(
             "XML_OUTPUT_FILE",
             Path.of(genFileDir.getAbsolutePath(), "test-results", "results.xml").toString());
-
-    // Trigger stdout LineCallback
-    assertThat(executedCommand.getStdoutLineCallback()).isPresent();
-    executedCommand.getStdoutLineCallback().get().onLine("Mock stdout line");
-
-    // Trigger stderr LineCallback
-    assertThat(executedCommand.getStderrLineCallback()).isPresent();
-    executedCommand.getStderrLineCallback().get().onLine("Mock stderr line");
-
-    // Verify logs were called with the mock line contents
-    verify(loggingApi, Mockito.atLeastOnce())
-        .log(eq("%s %s"), eq("[Playwright]"), eq("Mock stdout line"));
-    verify(loggingApi, Mockito.atLeastOnce())
-        .log(eq("%s %s"), eq("[Playwright]"), eq("Mock stderr line"));
 
     // Verify dependencies were called
     verify(localFileUtil).grantFileOrDirFullAccess(testFile.getAbsolutePath());
@@ -214,7 +201,47 @@ public class PlaywrightWebDriverTest {
   }
 
   @Test
+  public void run_withDriverSpecificParams_appendsParamsToCommand() throws Exception {
+    when(params.get(ProtractorWebDriver.PARAM_SELENIUM_ADDRESS, null)).thenReturn(SELENIUM_ADDRESS);
+    when(params.get(ProtractorWebDriver.PARAM_SPECS, null)).thenReturn("spec1.ts,spec2.ts");
+    when(params.get(ProtractorWebDriver.PARAM_TARGET_TYPE, null)).thenReturn("webview");
+    when(params.get(ProtractorWebDriver.PARAM_PACKAGE_NAME, null)).thenReturn("com.example.app");
+    when(device.getDeviceId()).thenReturn("emulator-5554");
+
+    ListMultimap<String, TestInfo> finalizedList = LinkedListMultimap.create();
+    finalizedList.put("company#basic test", subTestInfo);
+    when(subTests.getFinalized()).thenReturn(finalizedList);
+
+    ResultTypeWithCause passResult = ResultTypeWithCause.create(TestResult.PASS, null);
+    when(testResult.get()).thenReturn(passResult);
+    when(subTestResult.get()).thenReturn(passResult);
+
+    when(cmdExecutor.run(any(Command.class)))
+        .thenAnswer(
+            invocation -> {
+              writeDummyJUnitXml(genFileDir, "company.spec.ts", "basic test", /* failed= */ false);
+              return "Protractor logs";
+            });
+
+    driver.run(testInfo);
+
+    ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
+    verify(cmdExecutor).run(commandCaptor.capture());
+    Command executedCommand = commandCaptor.getValue();
+
+    assertThat(executedCommand.getCommand())
+        .containsExactly(
+            testFile.getAbsolutePath(),
+            "--seleniumAddress=" + SELENIUM_ADDRESS,
+            "--specs=spec1.ts,spec2.ts",
+            "--params.target_type=webview",
+            "--params.package_name=com.example.app",
+            "--params.device_id=emulator-5554");
+  }
+
+  @Test
   public void run_commandFailure_marksFailAndParsesPartialResults() throws Exception {
+    when(params.get(ProtractorWebDriver.PARAM_SELENIUM_ADDRESS, null)).thenReturn(null);
     when(params.get("DEBUGGER_ADDRESS", null)).thenReturn(null);
     when(params.get("BASE_URL", null)).thenReturn(null);
 
@@ -240,7 +267,6 @@ public class PlaywrightWebDriverTest {
 
     driver.run(testInfo);
 
-    verify(localFileUtil).grantFileOrDirFullAccess(testFile.getAbsolutePath());
     // Verify it marks non-passing
     verify(testResult).setNonPassing(eq(TestResult.FAIL), eq(commandException));
 
@@ -254,6 +280,7 @@ public class PlaywrightWebDriverTest {
 
   @Test
   public void run_interrupted_propagatesInterruptedButParsesResults() throws Exception {
+    when(params.get(ProtractorWebDriver.PARAM_SELENIUM_ADDRESS, null)).thenReturn(null);
     when(params.get("DEBUGGER_ADDRESS", null)).thenReturn(null);
     when(params.get("BASE_URL", null)).thenReturn(null);
 
@@ -277,7 +304,6 @@ public class PlaywrightWebDriverTest {
 
     assertThrows(InterruptedException.class, () -> driver.run(testInfo));
 
-    verify(localFileUtil).grantFileOrDirFullAccess(testFile.getAbsolutePath());
     // Verify it still parsed the partial results in the finally block
     verify(testXmlParser)
         .parseTestXmlFileToTestInfo(
@@ -285,128 +311,6 @@ public class PlaywrightWebDriverTest {
             eq(Path.of(genFileDir.getAbsolutePath(), "test-results", "results.xml").toString()),
             eq(false));
     verify(testResult, Mockito.never()).setPass();
-  }
-
-  @Test
-  public void getSeleniumAddress_returnsAddressFromParams() {
-    when(params.get(PlaywrightWebDriver.PARAM_SELENIUM_ADDRESS, null))
-        .thenReturn("http://params-address:4444/wd/hub");
-    assertThat(driver.getSeleniumAddress(testInfo)).hasValue("http://params-address:4444/wd/hub");
-  }
-
-  @Test
-  public void getSeleniumAddress_returnsAddressFromProperties() {
-    when(params.get(PlaywrightWebDriver.PARAM_SELENIUM_ADDRESS, null)).thenReturn(null);
-    when(properties.get(PlaywrightWebDriver.PARAM_SELENIUM_ADDRESS))
-        .thenReturn("http://properties-address:4444/wd/hub");
-    assertThat(driver.getSeleniumAddress(testInfo))
-        .hasValue("http://properties-address:4444/wd/hub");
-  }
-
-  @Test
-  public void getSeleniumAddress_returnsEmptyWhenNotConfigured() {
-    when(params.get(PlaywrightWebDriver.PARAM_SELENIUM_ADDRESS, null)).thenReturn(null);
-    when(properties.get(PlaywrightWebDriver.PARAM_SELENIUM_ADDRESS)).thenReturn(null);
-    assertThat(driver.getSeleniumAddress(testInfo)).isEmpty();
-  }
-
-  @Test
-  public void getDebuggerAddress_returnsAddressFromParams() {
-    when(params.get(PlaywrightWebDriver.PARAM_DEBUGGER_ADDRESS, null)).thenReturn("127.0.0.1:1234");
-    assertThat(driver.getDebuggerAddress(testInfo)).hasValue("127.0.0.1:1234");
-  }
-
-  @Test
-  public void getDebuggerAddress_returnsAddressFromProperties() {
-    when(params.get(PlaywrightWebDriver.PARAM_DEBUGGER_ADDRESS, null)).thenReturn(null);
-    when(properties.get(PlaywrightWebDriver.PARAM_DEBUGGER_ADDRESS)).thenReturn("127.0.0.1:1234");
-    assertThat(driver.getDebuggerAddress(testInfo)).hasValue("127.0.0.1:1234");
-  }
-
-  @Test
-  public void getDebuggerAddress_returnsEmptyWhenNotConfigured() {
-    when(params.get(PlaywrightWebDriver.PARAM_DEBUGGER_ADDRESS, null)).thenReturn(null);
-    when(properties.get(PlaywrightWebDriver.PARAM_DEBUGGER_ADDRESS)).thenReturn(null);
-    assertThat(driver.getDebuggerAddress(testInfo)).isEmpty();
-  }
-
-  @Test
-  public void getBaseUrl_returnsUrlFromParams() {
-    when(params.get(PlaywrightWebDriver.PARAM_BASE_URL, null)).thenReturn("http://example.com");
-    assertThat(driver.getBaseUrl(testInfo)).hasValue("http://example.com");
-  }
-
-  @Test
-  public void getBaseUrl_returnsUrlFromProperties() {
-    when(params.get(PlaywrightWebDriver.PARAM_BASE_URL, null)).thenReturn(null);
-    when(properties.get(PlaywrightWebDriver.PARAM_BASE_URL)).thenReturn("http://example.com");
-    assertThat(driver.getBaseUrl(testInfo)).hasValue("http://example.com");
-  }
-
-  @Test
-  public void getBaseUrl_returnsEmptyWhenNotConfigured() {
-    when(params.get(PlaywrightWebDriver.PARAM_BASE_URL, null)).thenReturn(null);
-    when(properties.get(PlaywrightWebDriver.PARAM_BASE_URL)).thenReturn(null);
-    assertThat(driver.getBaseUrl(testInfo)).isEmpty();
-  }
-
-  @Test
-  public void constructor_default_injectsSuccessfully() {
-    PlaywrightWebDriver defaultDriver = new PlaywrightWebDriver(device, testInfo);
-    assertThat(defaultDriver).isNotNull();
-  }
-
-  @Test
-  public void run_missingXmlResults_logsWarning() throws Exception {
-    when(params.get("DEBUGGER_ADDRESS", null)).thenReturn(DEBUGGER_ADDRESS);
-    when(params.get("BASE_URL", null)).thenReturn(BASE_URL);
-
-    // Setup command execution to NOT write output XML file (do nothing)
-    when(cmdExecutor.run(any(Command.class))).thenReturn("Playwright logs");
-
-    driver.run(testInfo);
-
-    verify(localFileUtil).grantFileOrDirFullAccess(testFile.getAbsolutePath());
-    // Verify it logged the info message
-    verify(log, Mockito.atLeastOnce()).atInfo();
-    // Verify parser was never called
-    verify(testXmlParser, Mockito.never())
-        .parseTestXmlFileToTestInfo(any(), any(), Mockito.anyBoolean());
-  }
-
-  @Test
-  public void run_corruptXmlResults_logsWarning() throws Exception {
-    when(params.get("DEBUGGER_ADDRESS", null)).thenReturn(DEBUGGER_ADDRESS);
-    when(params.get("BASE_URL", null)).thenReturn(BASE_URL);
-
-    // Setup command execution to write corrupted XML output
-    when(cmdExecutor.run(any(Command.class)))
-        .thenAnswer(
-            invocation -> {
-              Path resultsPath =
-                  Path.of(genFileDir.getAbsolutePath(), "test-results", "results.xml");
-              java.nio.file.Files.createDirectories(resultsPath.getParent());
-              java.nio.file.Files.writeString(
-                  resultsPath, "<corrupt-invalid-xml-without-closing-tags");
-              return "Playwright logs";
-            });
-
-    Mockito.doThrow(
-            new MobileHarnessException(BasicErrorId.SPONGE_PARSE_XML_ERROR, "Failed to parse XML"))
-        .when(testXmlParser)
-        .parseTestXmlFileToTestInfo(any(), any(), Mockito.anyBoolean());
-
-    driver.run(testInfo);
-
-    verify(localFileUtil).grantFileOrDirFullAccess(testFile.getAbsolutePath());
-    // Verify it caught the exception and logged a warning
-    verify(log, Mockito.times(2)).atWarning();
-    // Verify parser was called
-    verify(testXmlParser)
-        .parseTestXmlFileToTestInfo(
-            eq(testInfo),
-            eq(Path.of(genFileDir.getAbsolutePath(), "test-results", "results.xml").toString()),
-            eq(false));
   }
 
   private void writeDummyJUnitXml(
