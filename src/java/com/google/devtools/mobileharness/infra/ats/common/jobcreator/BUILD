@@ -149,7 +149,7 @@ java_library(
     srcs = ["TradefedCommandArgsBuilder.java"],
     deps = [
         "//src/devtools/mobileharness/infra/ats/common/proto:session_request_info_java_proto",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_handler_helper",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],

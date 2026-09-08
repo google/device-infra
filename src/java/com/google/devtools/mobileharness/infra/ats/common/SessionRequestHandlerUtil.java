@@ -636,7 +636,7 @@ public class SessionRequestHandlerUtil {
 
     // For "run retry" command handled by TF, consider the module filter as include filter.
     boolean isTfRetryWithModules =
-        SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.getTestPlan())
+        SessionHandlerHelper.isRunRetry(sessionRequestInfo.getTestPlan())
             && SessionHandlerHelper.useTfRetry(
                 sessionRequestInfo.getIsAtsServerRequest(),
                 sessionRequestInfo.getXtsType(),
@@ -820,7 +820,7 @@ public class SessionRequestHandlerUtil {
   public static boolean shouldEnableModuleSharding(SessionRequestInfo sessionRequestInfo) {
     return sessionRequestInfo.getShardingMode().equals(ShardingMode.MODULE)
         && sessionRequestInfo.getTestName().isEmpty()
-        && !SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.getTestPlan());
+        && !SessionHandlerHelper.isRunRetry(sessionRequestInfo.getTestPlan());
   }
 
   public Optional<DeviceInfo> getDeviceInfo(SessionRequestInfo sessionRequestInfo)
@@ -909,7 +909,7 @@ public class SessionRequestHandlerUtil {
    * @return true if non-tradefed jobs can be created.
    */
   public boolean canCreateNonTradefedJobs(SessionRequestInfo sessionRequestInfo) {
-    if (isRunRetry(sessionRequestInfo.getTestPlan())) {
+    if (SessionHandlerHelper.isRunRetry(sessionRequestInfo.getTestPlan())) {
       return true;
     }
     return sessionRequestInfo.getModuleNamesList().isEmpty()
@@ -951,7 +951,7 @@ public class SessionRequestHandlerUtil {
             .collect(toImmutableMap(e -> e.getValue().getMetadata().getXtsModule(), Entry::getKey));
 
     String testPlan =
-        (SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.getTestPlan()) && subPlan != null)
+        (SessionHandlerHelper.isRunRetry(sessionRequestInfo.getTestPlan()) && subPlan != null)
             ? subPlan.getPreviousSessionXtsTestPlan()
             : sessionRequestInfo.getTestPlan();
     TestPlanFilter testPlanFilter =
@@ -1496,7 +1496,7 @@ public class SessionRequestHandlerUtil {
                 xtsRootDir.toAbsolutePath().toString(),
                 xtsType,
                 previousSessionTestPlan != null ? previousSessionTestPlan : testPlan,
-                isRunRetry(testPlan),
+                SessionHandlerHelper.isRunRetry(testPlan),
                 xtsSuiteInfo));
 
     // TODO: Add multi hosts mode support.
@@ -1669,10 +1669,6 @@ public class SessionRequestHandlerUtil {
     return matcher.find() ? Optional.of(matcher.group("moduleParam")) : Optional.empty();
   }
 
-  public static boolean isRunRetry(String testPlan) {
-    return Ascii.equalsIgnoreCase(testPlan, "retry");
-  }
-
   private static ImmutableSet<String> matchModules(List<String> filters, Set<String> allModules)
       throws MobileHarnessException {
     ImmutableSet.Builder<String> modules = ImmutableSet.builder();
@@ -1741,7 +1737,7 @@ public class SessionRequestHandlerUtil {
   private static boolean shouldSkipDeviceInfo(
       SessionRequestInfo sessionRequestInfo, @Nullable SubPlan subPlan) {
     return (sessionRequestInfo.hasSkipDeviceInfo() ? sessionRequestInfo.getSkipDeviceInfo() : false)
-        || (isRunRetry(sessionRequestInfo.getTestPlan())
+        || (SessionHandlerHelper.isRunRetry(sessionRequestInfo.getTestPlan())
             && subPlan != null
             && !subPlan.getPreviousSessionDeviceBuildFingerprint().orElse("").isEmpty());
   }

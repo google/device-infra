@@ -138,6 +138,15 @@ public final class SessionHandlerHelperTest {
         .isFalse();
   }
 
+  @Test
+  public void isRunRetry_matchesCaseInsensitive() {
+    assertThat(SessionHandlerHelper.isRunRetry("retry")).isTrue();
+    assertThat(SessionHandlerHelper.isRunRetry("RETRY")).isTrue();
+    assertThat(SessionHandlerHelper.isRunRetry("Retry")).isTrue();
+    assertThat(SessionHandlerHelper.isRunRetry("cts")).isFalse();
+    assertThat(SessionHandlerHelper.isRunRetry("")).isFalse();
+  }
+
   private static TestSuiteVersion create(int major, int minor, int patch, int revision) {
     return TestSuiteVersion.newBuilder()
         .setMajor(major)

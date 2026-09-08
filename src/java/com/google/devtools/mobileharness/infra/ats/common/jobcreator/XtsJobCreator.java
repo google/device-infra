@@ -254,7 +254,7 @@ public abstract class XtsJobCreator {
             sessionRequestInfo.getTestSuiteInfo().hasTestSuiteVersion()
                 ? sessionRequestInfo.getTestSuiteInfo().getTestSuiteVersion()
                 : null);
-    if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
+    if (SessionHandlerHelper.isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
       Optional<Properties> testReportProperties =
           addPrevSessionPropertiesForRetry(sessionRequestInfo, extraJobProperties);
@@ -468,7 +468,7 @@ public abstract class XtsJobCreator {
     }
     injectSuiteVersion(sessionRequestInfo, extraJobProperties);
     SubPlan subPlan = null;
-    if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
+    if (SessionHandlerHelper.isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
       Optional<Properties> testReportProperties =
           addPrevSessionPropertiesForRetry(sessionRequestInfo, extraJobProperties);
@@ -920,7 +920,7 @@ public abstract class XtsJobCreator {
   private boolean isDynamicMctsSupportedCtsTestPlan(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException {
     String testPlan = sessionRequestInfo.getTestPlan();
-    if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
+    if (SessionHandlerHelper.isRunRetry(testPlan)) {
       return getPrevSessionTestPlan(sessionRequestInfo)
           .map(DYNAMIC_MCTS_SUPPORTED_CTS_TEST_PLANS::contains)
           .orElse(false);

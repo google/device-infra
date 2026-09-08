@@ -22,7 +22,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.List;
@@ -82,7 +82,7 @@ class TradefedCommandArgsBuilder {
   }
 
   private ImmutableList<String> getModuleFilters() {
-    if (SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.getTestPlan())) {
+    if (SessionHandlerHelper.isRunRetry(sessionRequestInfo.getTestPlan())) {
       if (useTfRetry) {
         // For "run retry" command handled by TF, pass the original modules to TF
         return sessionRequestInfo.getModuleNamesList().stream()
@@ -116,7 +116,7 @@ class TradefedCommandArgsBuilder {
 
   private Stream<String> getFilterArgs() {
     String testPlan = sessionRequestInfo.getTestPlan();
-    boolean isRunRetry = SessionRequestHandlerUtil.isRunRetry(testPlan);
+    boolean isRunRetry = SessionHandlerHelper.isRunRetry(testPlan);
     boolean skipIncludeExcludeFilters =
         (!useTfRetry && isRunRetry) || !sessionRequestInfo.getStrictIncludeFiltersList().isEmpty();
     boolean skipStrictIncludeFilters = !useTfRetry && isRunRetry;
