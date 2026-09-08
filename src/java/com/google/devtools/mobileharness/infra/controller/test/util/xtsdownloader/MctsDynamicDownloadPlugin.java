@@ -627,8 +627,9 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           return null;
         } else if (fileUtil.isFileExist(filePath)) {
           long fileLastModified = fileUtil.getFileLastModifiedTime(filePath).toEpochMilli();
-          // check if the zip file is valid and up to date.
-          if (urlLastModified < fileLastModified && fileUtil.isZipFileValid(filePath)) {
+          // check if the file is valid and up to date.
+          boolean isZip = filePath.endsWith(".zip");
+          if (urlLastModified < fileLastModified && (!isZip || fileUtil.isZipFileValid(filePath))) {
             logger.atInfo().log("File %s is up to date, skip downloading.", filePath);
             return filePath;
           } else {

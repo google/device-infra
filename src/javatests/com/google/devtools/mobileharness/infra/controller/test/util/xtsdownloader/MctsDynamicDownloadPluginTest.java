@@ -641,4 +641,95 @@ public final class MctsDynamicDownloadPluginTest {
         .isEqualTo(AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_PROPERTY_NOT_FOUND);
     assertThat(cause).hasMessageThat().contains(PropertyName.Job.SESSION_ID.name());
   }
+
+  @Test
+  public void downloadPublicUrlFiles_textCachedFileUpToDate_skipsDownload() throws Exception {
+    MctsDynamicDownloadPlugin plugin =
+        new MctsDynamicDownloadPlugin(
+            mockAdbUtil, mockAndroidPackageManagerUtil, mockAdbInternalUtil);
+
+    File remoteDir = new File("/tmp/test_remote_txt");
+    localFileUtil.prepareDir(remoteDir.getAbsolutePath());
+    File remoteFile = new File(remoteDir, "mcts-exclude.txt");
+    localFileUtil.writeToFile(remoteFile.getAbsolutePath(), "remote_module\n");
+    remoteFile.setLastModified(Instant.now().minus(Duration.ofHours(2)).toEpochMilli());
+
+    String subDirName = "tool/mcts_exclude/test_txt/mcts-exclude.txt";
+    Path cachedFile = XtsDirUtil.getXtsDynamicDownloadRootDir().resolve(subDirName);
+    localFileUtil.prepareDir(cachedFile.getParent().toString());
+    localFileUtil.writeToFile(cachedFile.toString(), "cached_module\n");
+    cachedFile.toFile().setLastModified(Instant.now().minus(Duration.ofHours(1)).toEpochMilli());
+
+    try {
+      String downloadedFilePath =
+          plugin.downloadPublicUrlFiles(remoteFile.toURI().toURL().toString(), subDirName);
+
+      assertThat(downloadedFilePath).isEqualTo(cachedFile.toString());
+      assertThat(localFileUtil.readFile(cachedFile.toString())).isEqualTo("cached_module\n");
+    } finally {
+      localFileUtil.removeFileOrDir(remoteDir.getAbsolutePath());
+      localFileUtil.removeFileOrDir(cachedFile.toString());
+    }
+  }
+
+  @Test
+  public void downloadPublicUrlFiles_zipCachedFileValidAndUpToDate_skipsDownload()
+      throws Exception {
+    MctsDynamicDownloadPlugin plugin =
+        new MctsDynamicDownloadPlugin(
+            mockAdbUtil, mockAndroidPackageManagerUtil, mockAdbInternalUtil);
+
+    File remoteDir = new File("/tmp/test_remote_zip");
+    localFileUtil.prepareDir(remoteDir.getAbsolutePath());
+    File remoteZip = new File(remoteDir, "test.zip");
+    generateTestZipFile("test", "testcase_remote", remoteDir.getAbsolutePath());
+    remoteZip.setLastModified(Instant.now().minus(Duration.ofHours(2)).toEpochMilli());
+
+    String subDirName = "testcases/test.zip";
+    Path cachedZip = XtsDirUtil.getXtsDynamicDownloadRootDir().resolve(subDirName);
+    localFileUtil.prepareDir(cachedZip.getParent().toString());
+    generateTestZipFile("test", "testcase_cached", cachedZip.getParent().toString());
+    cachedZip.toFile().setLastModified(Instant.now().minus(Duration.ofHours(1)).toEpochMilli());
+
+    try {
+      String downloadedFilePath =
+          plugin.downloadPublicUrlFiles(remoteZip.toURI().toURL().toString(), subDirName);
+
+      assertThat(downloadedFilePath).isEqualTo(cachedZip.toString());
+      assertThat(localFileUtil.isZipFileValid(cachedZip.toString())).isTrue();
+    } finally {
+      localFileUtil.removeFileOrDir(remoteDir.getAbsolutePath());
+      localFileUtil.removeFileOrDir(cachedZip.toString());
+    }
+  }
+
+  @Test
+  public void downloadPublicUrlFiles_zipCachedFileCorrupted_reDownloads() throws Exception {
+    MctsDynamicDownloadPlugin plugin =
+        new MctsDynamicDownloadPlugin(
+            mockAdbUtil, mockAndroidPackageManagerUtil, mockAdbInternalUtil);
+
+    File remoteDir = new File("/tmp/test_remote_corrupt_zip");
+    localFileUtil.prepareDir(remoteDir.getAbsolutePath());
+    File remoteZip = new File(remoteDir, "test.zip");
+    generateTestZipFile("test", "testcase_remote", remoteDir.getAbsolutePath());
+    remoteZip.setLastModified(Instant.now().minus(Duration.ofHours(2)).toEpochMilli());
+
+    String subDirName = "testcases/test_corrupt.zip";
+    Path cachedZip = XtsDirUtil.getXtsDynamicDownloadRootDir().resolve(subDirName);
+    localFileUtil.prepareDir(cachedZip.getParent().toString());
+    localFileUtil.writeToFile(cachedZip.toString(), "corrupted content");
+    cachedZip.toFile().setLastModified(Instant.now().minus(Duration.ofHours(1)).toEpochMilli());
+
+    try {
+      String downloadedFilePath =
+          plugin.downloadPublicUrlFiles(remoteZip.toURI().toURL().toString(), subDirName);
+
+      assertThat(downloadedFilePath).isEqualTo(cachedZip.toString());
+      assertThat(localFileUtil.isZipFileValid(cachedZip.toString())).isTrue();
+    } finally {
+      localFileUtil.removeFileOrDir(remoteDir.getAbsolutePath());
+      localFileUtil.removeFileOrDir(cachedZip.toString());
+    }
+  }
 }
