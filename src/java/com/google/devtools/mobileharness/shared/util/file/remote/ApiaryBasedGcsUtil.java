@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.shared.util.file.checksum.ChecksumUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -84,6 +85,7 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
   private static final Duration HTTP_READ_TIMEOUT = Duration.ofMinutes(1);
 
   private final Storage client;
+  private final SystemUtil systemUtil;
 
   /**
    * Constructs a ApiaryBasedGcsUtil given the related parameters about the storage.
@@ -93,6 +95,7 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
   public ApiaryBasedGcsUtil(GcsParams storageParams) throws MobileHarnessException {
     super(storageParams);
     this.client = getClient(storageParams);
+    this.systemUtil = new SystemUtil();
   }
 
   @VisibleForTesting
@@ -101,9 +104,11 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
       Storage client,
       ChecksumUtil checksumUtil,
       ChecksumUtil crc32cChecksumUtil,
-      LocalFileUtil localFileUtil) {
+      LocalFileUtil localFileUtil,
+      SystemUtil systemUtil) {
     super(storageParams, checksumUtil, crc32cChecksumUtil, localFileUtil);
     this.client = client;
+    this.systemUtil = systemUtil;
   }
 
   private static Storage getClient(GcsParams storageParams) throws MobileHarnessException {
@@ -359,6 +364,14 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
             if (isObjectNoFound(e)) {
               return Optional.empty();
             }
+            if (isPermissionDenied(e)) {
+              String guidance = "Please ensure you have permission to access the GCS bucket.";
+              throw new MobileHarnessException(
+                  BasicErrorId.GCS_PERMISSION_DENIED,
+                  String.format(
+                      "Permission denied when accessing GCS file: %s. %s", gcsFile, guidance),
+                  e);
+            }
             throw new MobileHarnessException(
                 BasicErrorId.GCS_GET_METADATA_ERROR, "Failed to " + actionInfo, e);
           }
@@ -417,19 +430,26 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
     return errorCode.isPresent() && errorCode.get().equals(HttpStatusCodes.STATUS_CODE_NOT_FOUND);
   }
 
+  private static boolean isPermissionDenied(IOException e) {
+    Optional<Integer> errorCode = getGcsServerErrorCode(e);
+    return errorCode.isPresent()
+        && (errorCode.get().equals(HttpStatusCodes.STATUS_CODE_FORBIDDEN)
+            || errorCode.get().equals(HttpStatusCodes.STATUS_CODE_UNAUTHORIZED));
+  }
+
   private static Optional<Integer> getGcsServerErrorCode(IOException e) {
-    if (!(e instanceof GoogleJsonResponseException)) {
-      if (e instanceof HttpResponseException) {
-        return Optional.of(((HttpResponseException) e).getStatusCode());
+    if (e instanceof GoogleJsonResponseException googleJsonResponseException) {
+      @Nullable GoogleJsonError details = googleJsonResponseException.getDetails();
+      if (details == null) {
+        // For the http error code like 5XX, the details maybe null, use status code instead.
+        return Optional.of(googleJsonResponseException.getStatusCode());
       }
-      return Optional.empty();
+      return Optional.of(details.getCode());
     }
-    @Nullable GoogleJsonError details = ((GoogleJsonResponseException) e).getDetails();
-    if (details == null) {
-      // For the http error code like 5XX, the details maybe null, use status code instead.
-      return Optional.of(((GoogleJsonResponseException) e).getStatusCode());
+    if (e instanceof HttpResponseException httpResponseException) {
+      return Optional.of(httpResponseException.getStatusCode());
     }
-    return Optional.of(details.getCode());
+    return Optional.empty();
   }
 
   /** For mocking in unit test, because the wrapped method is `final`. */
