@@ -277,7 +277,9 @@ public class AndroidInstrumentation extends BaseDriver
     testInfo.properties().add(AndroidInstrumentationDriverSpec.PROPERTY_PACKAGE, testPackageName);
     testInfo.properties().add(AndroidInstrumentationDriverSpec.PROPERTY_RUNNER, runnerName);
 
-    populateOptionMapsForUniformSharding(testInfo, optionMaps);
+    if (isUniformSharding(testInfo)) {
+      populateOptionMapsForUniformSharding(testInfo, optionMaps);
+    }
 
     if (optionMaps.size() == 1
         && job.params().get(AndroidInstrumentationDriverSpec.PARAM_OPTIONS + "_0") == null) {
