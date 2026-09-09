@@ -1,0 +1,251 @@
+@use 'third_party/deviceinfra/src/devtools/mobileharness/fe/v6/angular/app/shared/styles/common';
+
+.turn-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px 0;
+  font-family: 'Google Sans', Roboto, sans-serif;
+
+  // User Prompt Row
+  .user-prompt-row {
+    display: flex;
+    justify-content: flex-end;
+    padding-left: 48px;
+
+    .user-prompt-bubble {
+      background-color: #f0f4f9;
+      color: #1f1f1f;
+      padding: 12px 18px;
+      border-radius: 18px 18px 4px;
+      font-size: 14px;
+      line-height: 1.5;
+      max-width: 720px;
+      word-break: break-word;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+  }
+
+  // Assistant Response Row
+  .assistant-response-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding-right: 32px;
+
+    .assistant-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background-color: #e8f0fe;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+
+      .avatar-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: #1a73e8;
+      }
+    }
+
+    .assistant-content-column {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+
+      // Collapsible Thought Tray
+      .thought-expansion-panel.mat-expansion-panel {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        box-shadow: none;
+        background-color: #f8f9fa;
+
+        .thought-panel-header.mat-expansion-panel-header {
+          height: 38px;
+          padding: 0 14px;
+
+          .thought-panel-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: #5f6368;
+
+            .thought-icon {
+              font-size: 16px;
+              width: 16px;
+              height: 16px;
+              color: #1a73e8;
+            }
+          }
+        }
+
+        .thought-panel-body {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          padding: 8px 14px 12px;
+          border-top: 1px solid #e8eaed;
+
+          .thoughts-text {
+            font-size: 12.5px;
+            line-height: 1.5;
+            color: #5f6368;
+            white-space: pre-wrap;
+          }
+
+          .tools-tray {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+        }
+      }
+
+      // Tool Execution Chips
+      .tools-summary-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .tool-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 16px;
+        border: 1px solid #dadce0;
+        background-color: #fff;
+        cursor: pointer;
+        font-family: 'Google Sans', Roboto, sans-serif;
+        font-size: 12px;
+        font-weight: 500;
+        color: #3c4043;
+        transition:
+          background-color 0.15s,
+          border-color 0.15s,
+          box-shadow 0.15s;
+
+        &:hover {
+          background-color: #f1f3f4;
+          border-color: #bdc1c6;
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        }
+
+        .tool-chip-icon {
+          font-size: 15px;
+          width: 15px;
+          height: 15px;
+        }
+
+        &.tool-success {
+          .tool-chip-icon {
+            color: #137333;
+          }
+        }
+
+        &.tool-error {
+          border-color: #f28b82;
+          background-color: #fce8e6;
+          color: #c5221f;
+
+          .tool-chip-icon {
+            color: #c5221f;
+          }
+        }
+      }
+
+      // Assistant Response Markdown
+      .markdown-response-box {
+        background-color: #fff;
+        padding: 4px 0;
+      }
+
+      // Status Banners
+      .status-banner {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+
+        .banner-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
+
+        &.error-banner {
+          background-color: #fce8e6;
+          color: #c5221f;
+          border: 1px solid #f28b82;
+        }
+
+        &.cancelled-banner {
+          background-color: #f1f3f4;
+          color: #5f6368;
+          border: 1px solid #dadce0;
+        }
+      }
+
+      // Outbound Deep-Link Tray
+      .outbound-links-tray {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-top: 4px;
+        padding-top: 8px;
+        border-top: 1px solid #f1f3f4;
+
+        .links-tray-label {
+          font-size: 12px;
+          font-weight: 500;
+          color: #5f6368;
+        }
+
+        .links-chip-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+
+          .outbound-link-chip {
+            height: 30px;
+            font-size: 12px;
+            font-weight: 500;
+            border-radius: 15px;
+            padding: 0 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #1a73e8;
+            border-color: #d2e3fc;
+            background-color: #f8faff;
+            text-decoration: none;
+
+            &:hover {
+              background-color: #e8f0fe;
+              border-color: #aecbfa;
+            }
+
+            .link-icon {
+              font-size: 15px;
+              width: 15px;
+              height: 15px;
+            }
+          }
+        }
+      }
+    }
+  }
+}
