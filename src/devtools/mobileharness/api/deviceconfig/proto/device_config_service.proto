@@ -25,6 +25,7 @@ import "src/devtools/mobileharness/api/deviceconfig/proto/lab.proto";
 option features.field_presence = IMPLICIT;
 option java_package = "com.google.devtools.mobileharness.api.deviceconfig.proto";
 option java_outer_classname = "DeviceConfigServiceProto";
+option py_legacy_stubby_symbols = true;
 
 message GetDeviceConfigsRequest {
   // The locators to help locating devices. Config of devices will be returned
