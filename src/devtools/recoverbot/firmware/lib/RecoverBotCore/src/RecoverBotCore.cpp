@@ -9,7 +9,7 @@ bool isTickSafe(uint16_t tick, uint16_t minTick, uint16_t maxTick) {
 }
 
 ServoTicks defaultTicksForChannel(uint8_t channel) {
-  return {300, 360};
+  return {360, 300};
 }
 
 void buildCalKey(char* out, size_t cap, uint8_t boardAddr, uint8_t channel) {
