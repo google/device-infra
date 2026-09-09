@@ -622,6 +622,17 @@ public class LabServer {
               }
             });
 
+    // Network speed
+    netUtil
+        .getNetworkSpeed()
+        .ifPresent(
+            speed ->
+                hostProperties.addHostProperty(
+                    HostProperty.newBuilder()
+                        .setKey(Ascii.toLowerCase(HostPropertyKey.NETWORK_SPEED.name()))
+                        .setValue(speed)
+                        .build()));
+
     return hostProperties.build();
   }
 
