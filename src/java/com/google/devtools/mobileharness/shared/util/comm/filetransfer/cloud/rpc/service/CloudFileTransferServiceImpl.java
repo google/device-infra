@@ -720,7 +720,22 @@ public class CloudFileTransferServiceImpl {
                     InfraErrorId.FT_CLOUD_PROCESS_INTERRUPTED,
                     String.format("Process %s is interrupted", processId)));
       } catch (MobileHarnessException e) {
-        processResponse = ProcessResponseOrException.of(e);
+        if (Thread.currentThread().isInterrupted()) {
+          // The request handlers wrap InterruptedException into a MobileHarnessException carrying
+          // their own error id (e.g. FT_RPC_UPLOAD_FILE_INTERRUPTED) while re-setting the
+          // interrupt flag. Normalize it back to FT_CLOUD_PROCESS_INTERRUPTED: cancelProcess()
+          // publishes that same error id from the caller thread, and both threads write to
+          // processStatusCache concurrently. Without this, whichever thread happens to write last
+          // decides the error id the caller observes.
+          processResponse =
+              ProcessResponseOrException.of(
+                  new MobileHarnessException(
+                      InfraErrorId.FT_CLOUD_PROCESS_INTERRUPTED,
+                      String.format("Process %s is interrupted", processId),
+                      e));
+        } else {
+          processResponse = ProcessResponseOrException.of(e);
+        }
       }
       processStatusCache.put(processId, processResponse);
       return processResponse;
