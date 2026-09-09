@@ -1,3 +1,4 @@
+import {JobStatus} from '@deviceinfra/app/core/models/test_overview';
 import {MockTestScenario} from '../models';
 import {SCENARIO_TEST_ERROR} from './overview_error';
 import {SCENARIO_TEST_FAILED} from './overview_failed';
@@ -11,8 +12,7 @@ import {SCENARIO_TEST_SUSPENDED} from './overview_suspended';
 import {SCENARIO_TEST_TIMEOUT} from './overview_timeout';
 import {SCENARIO_TEST_WARNING} from './overview_warning';
 
-/** Central registry of all mock test scenarios. */
-export const MOCK_TEST_SCENARIOS: MockTestScenario[] = [
+const RAW_MOCK_TEST_SCENARIOS: MockTestScenario[] = [
   SCENARIO_TEST_FILES,
   SCENARIO_TEST_FAILED,
   SCENARIO_TEST_PASSED,
@@ -25,3 +25,29 @@ export const MOCK_TEST_SCENARIOS: MockTestScenario[] = [
   SCENARIO_TEST_SKIPPED,
   SCENARIO_TEST_SUSPENDED,
 ];
+
+/** Central registry of all mock test scenarios. */
+export const MOCK_TEST_SCENARIOS: MockTestScenario[] =
+  RAW_MOCK_TEST_SCENARIOS.map((scenario) => {
+    const isKillableStatus =
+      scenario.overview.job?.status === JobStatus.JOB_STATUS_RUNNING ||
+      scenario.overview.job?.status === JobStatus.JOB_STATUS_NEW ||
+      scenario.overview.job?.status === JobStatus.JOB_STATUS_ASSIGNED;
+    const defaultKillJobAction = {
+      enabled: isKillableStatus,
+      visible: isKillableStatus,
+      tooltip: isKillableStatus
+        ? 'Click to terminate this running job immediately.'
+        : `Permission denied. Only the owner (${scenario.overview.executionDetails?.user || 'unknown'}) or admins can kill this job.`,
+      isReady: true,
+    };
+    return {
+      ...scenario,
+      actions: scenario.actions || {
+        killJob: defaultKillJobAction,
+      },
+      overview: {
+        ...scenario.overview,
+      },
+    };
+  });

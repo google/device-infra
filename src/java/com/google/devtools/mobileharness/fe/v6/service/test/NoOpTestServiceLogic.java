@@ -25,12 +25,14 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestLogRequ
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestLogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestResponse;
+import java.util.Optional;
 
 /** No-op implementation of {@link TestServiceLogic} used when no MOSS backend is available. */
 public final class NoOpTestServiceLogic implements TestServiceLogic {
 
   @Override
-  public ListenableFuture<GetTestResponse> getTest(GetTestRequest request) {
+  public ListenableFuture<GetTestResponse> getTest(
+      GetTestRequest request, Optional<String> caller) {
     return immediateFailedFuture(
         new UnsupportedOperationException("TestService.GetTest is not available."));
   }
