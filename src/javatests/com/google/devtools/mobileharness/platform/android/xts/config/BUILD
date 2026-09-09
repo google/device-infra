@@ -29,10 +29,6 @@ java_library(
     data = [
         ":testdata",
     ],
-    runtime_deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:no_op_test",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_file_puller_decorator",
-    ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",

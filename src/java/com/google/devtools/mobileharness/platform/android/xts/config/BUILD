@@ -89,6 +89,9 @@ java_library(
 java_library(
     name = "module_configuration_helper",
     srcs = ["ModuleConfigurationHelper.java"],
+    runtime_deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:spec_java_proto",
+    ],
     deps = [
         ":configuration_util",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
