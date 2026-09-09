@@ -1,4 +1,5 @@
 import {MockDeviceScenario, MockDeviceScenarioWrapper} from '../models';
+import {SCENARIOS_LOCAL_MTT_DEVICES} from './local_mtt_devices';
 import {SCENARIO_IN_SERVICE_IDLE} from './01_in_service_idle';
 import {SCENARIO_IN_SERVICE_BUSY} from './02_in_service_busy';
 import {SCENARIO_OUT_OF_SERVICE_INIT} from './03_out_of_service_init';
@@ -46,6 +47,7 @@ function wrapDevice(
 
 /** List of mock device scenarios. */
 export const MOCK_DEVICE_SCENARIOS: MockDeviceScenarioWrapper[] = [
+  ...SCENARIOS_LOCAL_MTT_DEVICES.map(wrapDevice),
   wrapDevice(deviceRefreshFactory),
   wrapDevice(SCENARIO_IN_SERVICE_IDLE),
   wrapDevice(SCENARIO_IN_SERVICE_BUSY),
@@ -78,3 +80,5 @@ export const MOCK_DEVICE_SCENARIOS: MockDeviceScenarioWrapper[] = [
   wrapDevice(scenarioErrorLogical),
   wrapDevice(scenarioErrorRpc),
 ];
+
+export {SCENARIOS_LOCAL_MTT_DEVICES} from './local_mtt_devices';
