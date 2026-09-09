@@ -22,7 +22,7 @@ package(default_applicable_licenses = ["//:license"])
 # visibility of the internal libgson.jar.
 java_binary(
     name = "gson_for_shading",
-    main_class = "none",
+    create_executable = False,
     runtime_deps = ["@maven//:com_google_code_gson_gson"],
 )
 
