@@ -149,4 +149,7 @@ message DeviceCondition {
 
   // Optional. The timestamp of the last time when the device was healthy.
   google.protobuf.Timestamp last_healthy_time = 3;
+
+  // Optional. Errors on the device.
+  repeated DeviceError device_error = 4;
 }
