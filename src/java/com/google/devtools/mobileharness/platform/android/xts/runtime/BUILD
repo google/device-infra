@@ -49,6 +49,7 @@ genrule(
 java_import(
     name = "gson_shaded",
     jars = ["shaded_gson.jar"],
+    tags = ["incomplete-deps"],
 )
 
 java_library(
