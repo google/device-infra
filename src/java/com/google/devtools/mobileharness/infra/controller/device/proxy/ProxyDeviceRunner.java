@@ -23,6 +23,7 @@ import com.google.devtools.mobileharness.api.devicemanager.proxy.DeviceProxyModu
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
+import com.google.devtools.mobileharness.platform.android.device.AndroidDeviceHelper;
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.CreationException;
@@ -30,6 +31,7 @@ import com.google.inject.Guice;
 import com.google.inject.Module;
 import com.google.inject.ProvisionException;
 import com.google.inject.assistedinject.Assisted;
+import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
@@ -40,6 +42,8 @@ import javax.inject.Inject;
 class ProxyDeviceRunner {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final AndroidDeviceHelper ANDROID_DEVICE_HELPER = new AndroidDeviceHelper();
 
   /** Factory for {@link ProxyDeviceRunner}. */
   interface Factory {
@@ -98,6 +102,9 @@ class ProxyDeviceRunner {
     logger.atInfo().log("Leasing %s", formattedDeviceLocator);
     Device device = deviceProxy.leaseDevice();
     logger.atInfo().log("Leased %s", formattedDeviceLocator);
+    if (device instanceof AndroidDevice) {
+      ANDROID_DEVICE_HELPER.updateAndroidPropertyDimensions((AndroidDevice) device);
+    }
     return device;
   }
 
