@@ -149,6 +149,27 @@ public abstract class XtsJobCreator {
   public ImmutableList<JobInfo> createXtsTradefedTestJob(
       SessionRequestInfo sessionRequestInfo, ImmutableSet<String> dynamicMctsModules)
       throws MobileHarnessException, InterruptedException {
+    return createXtsTradefedTestJob(
+        sessionRequestInfo, dynamicMctsModules, /* skipDynamicMctsJob= */ false);
+  }
+
+  /**
+   * Creates Tradefed jobs based on the given {@link SessionRequestInfo}, dynamic MCTS modules, and
+   * whether the dynamic MCTS job should be skipped.
+   *
+   * @param sessionRequestInfo info about the session request
+   * @param dynamicMctsModules canonical set of dynamic MCTS module names downloaded during the
+   *     setup job, or empty to fallback to static MCTS modules
+   * @param skipDynamicMctsJob when {@code true}, the dynamic MCTS job is not created in RUNNER
+   *     sharding mode (e.g. the device has no preloaded Mainline modules, so there is nothing to
+   *     dynamically test)
+   * @return a list of Tradefed jobs based on the sharding mode
+   */
+  public ImmutableList<JobInfo> createXtsTradefedTestJob(
+      SessionRequestInfo sessionRequestInfo,
+      ImmutableSet<String> dynamicMctsModules,
+      boolean skipDynamicMctsJob)
+      throws MobileHarnessException, InterruptedException {
     if (sessionRequestInfo.getExcludeRunnersList().stream()
         .anyMatch(runner -> ConfigurationUtil.getSimpleClassName(runner).equals("TradefedTest"))) {
       return ImmutableList.of();
@@ -174,16 +195,6 @@ public abstract class XtsJobCreator {
 
     ImmutableList.Builder<JobInfo> jobInfos = ImmutableList.builder();
 
-    // Make sure static job is created first and therefore executed first later in the queue. This
-    // list of job will be triggered in AtsServerSessionPlugin one by one. AtsServerSessionPlugin
-    // will make sure the static job is complete before starting the dynamic jobs, and skip
-    // dynamic jobs if static job failed.
-    ImmutableList<String> allDynamicDownloadJobNames =
-        Flags.runDynamicDownloadMctsOnly.getNonNull()
-            ? ImmutableList.of(XtsConstants.DYNAMIC_MCTS_JOB_NAME)
-            : ImmutableList.of(
-                XtsConstants.STATIC_XTS_JOB_NAME, XtsConstants.DYNAMIC_MCTS_JOB_NAME);
-
     if (SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)) {
       // In MODULE sharding mode, each module job runs independently. Create exactly ONE job
       // per module: a DYNAMIC_MCTS job if the module is in dynamicMctsModules, or a STATIC_XTS
@@ -198,9 +209,22 @@ public abstract class XtsJobCreator {
         jobInfos.add(createDynamicJobInfo(sessionRequestInfo, tradefedJobInfo, jobName));
       }
     } else {
-      // In RUNNER sharding mode, create both STATIC_XTS and DYNAMIC_MCTS jobs across all modules.
+      // In RUNNER sharding mode, create the static xTS job first (so it runs first) and the dynamic
+      // MCTS job across all modules. AtsServerSessionPlugin triggers these jobs one by one,
+      // ensuring the static job completes before the dynamic jobs and skipping the dynamic jobs if
+      // the static job failed. When requested, skip the dynamic MCTS job entirely to avoid
+      // booting Tradefed for 0 tests.
+      ImmutableList<String> dynamicDownloadJobNames;
+      if (skipDynamicMctsJob) {
+        dynamicDownloadJobNames = ImmutableList.of(XtsConstants.STATIC_XTS_JOB_NAME);
+      } else if (Flags.runDynamicDownloadMctsOnly.getNonNull()) {
+        dynamicDownloadJobNames = ImmutableList.of(XtsConstants.DYNAMIC_MCTS_JOB_NAME);
+      } else {
+        dynamicDownloadJobNames =
+            ImmutableList.of(XtsConstants.STATIC_XTS_JOB_NAME, XtsConstants.DYNAMIC_MCTS_JOB_NAME);
+      }
       for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
-        for (String jobName : allDynamicDownloadJobNames) {
+        for (String jobName : dynamicDownloadJobNames) {
           jobInfos.add(createDynamicJobInfo(sessionRequestInfo, tradefedJobInfo, jobName));
         }
       }

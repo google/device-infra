@@ -115,13 +115,15 @@ class RunCommandHandler {
    *
    * <p>Jobs added to the session by the plugin will be started by the session job runner later.
    *
+   * @param skipDynamicMctsJob when {@code true}, the dynamic MCTS job is not created in RUNNER mode
    * @return a list of {@code JobInfo} to be started
    */
   ImmutableList<JobInfo> createTradefedJobs(
-      RunCommand command, ImmutableSet<String> dynamicMctsModules)
+      RunCommand command, ImmutableSet<String> dynamicMctsModules, boolean skipDynamicMctsJob)
       throws MobileHarnessException, InterruptedException {
     ImmutableList<JobInfo> jobInfoList =
-        xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo, dynamicMctsModules);
+        xtsJobCreator.createXtsTradefedTestJob(
+            sessionRequestInfo, dynamicMctsModules, skipDynamicMctsJob);
     if (jobInfoList.isEmpty()) {
       logger.atInfo().log(
           "No tradefed jobs created, double check device availability. The run command -> %s",

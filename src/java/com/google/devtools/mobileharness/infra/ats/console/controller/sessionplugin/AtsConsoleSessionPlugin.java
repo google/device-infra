@@ -313,7 +313,10 @@ public class AtsConsoleSessionPlugin {
       if (setupJobOpt.isPresent()) {
         addSetupJob(setupJobOpt.get());
       } else {
-        createMainJobs(runCommand, /* dynamicMctsModules= */ ImmutableSet.of());
+        createMainJobs(
+            runCommand,
+            /* dynamicMctsModules= */ ImmutableSet.of(),
+            /* skipDynamicMctsJob= */ false);
         addMainJobs();
       }
 
@@ -380,7 +383,11 @@ public class AtsConsoleSessionPlugin {
       // Extract dynamic MCTS module names downloaded during the setup job, and create Tradefed jobs
       // now that the canonical list of dynamic modules is known.
       ImmutableSet<String> dynamicMctsModules = extractDynamicMctsModules(currentJob);
-      createMainJobs(config.getRunCommand(), dynamicMctsModules);
+      // If the setup job reported the device has no preloaded Mainline modules (e.g. Auto / AOSP
+      // builds), it does not need dynamic MCTS, so skip creating the dynamic MCTS job to avoid
+      // booting Tradefed for 0 tests.
+      boolean skipDynamicMctsJob = !extractHasPreloadedMainlineModules(currentJob);
+      createMainJobs(config.getRunCommand(), dynamicMctsModules, skipDynamicMctsJob);
       addMainJobs();
       return;
     }
@@ -794,12 +801,15 @@ public class AtsConsoleSessionPlugin {
    *     setup job, or an empty set if dynamic MCTS is disabled, no modules were requested, or the
    *     setup job is unavailable. If provided, they replace static MCTS modules for Tradefed job
    *     filtering and creation.
+   * @param skipDynamicMctsJob when {@code true}, the dynamic MCTS job is not created in RUNNER mode
    */
-  private void createMainJobs(RunCommand runCommand, ImmutableSet<String> dynamicMctsModules)
+  private void createMainJobs(
+      RunCommand runCommand, ImmutableSet<String> dynamicMctsModules, boolean skipDynamicMctsJob)
       throws MobileHarnessException, InterruptedException {
     // Create tradefed jobs.
     try {
-      tradefedJobs = runCommandHandler.createTradefedJobs(runCommand, dynamicMctsModules);
+      tradefedJobs =
+          runCommandHandler.createTradefedJobs(runCommand, dynamicMctsModules, skipDynamicMctsJob);
     } catch (MobileHarnessException e) {
       if (!XtsJobCreator.isSkippableException(e)) {
         throw e;
@@ -856,6 +866,29 @@ public class AtsConsoleSessionPlugin {
             modulesStr ->
                 Splitter.on(',').omitEmptyStrings().trimResults().splitToStream(modulesStr))
         .collect(toImmutableSet());
+  }
+
+  /**
+   * Returns whether the dynamic MCTS Tradefed job should be kept, based on the "has preloaded
+   * Mainline modules" signal that the setup job relays via a test property.
+   *
+   * <p>Defaults to keeping the job (returns {@code true}) unless the setup test explicitly reported
+   * that the device has no preloaded Mainline modules. If the signal is missing (e.g. the setup
+   * plugin failed to execute), dynamic MCTS is still run so test coverage is not accidentally
+   * skipped.
+   */
+  private static boolean extractHasPreloadedMainlineModules(JobInfo setupJob) {
+    return setupJob.tests().getAll().values().stream()
+        .anyMatch(
+            testInfo -> {
+              String value =
+                  testInfo
+                      .properties()
+                      .get(
+                          XtsConstants
+                              .XTS_DYNAMIC_DOWNLOAD_HAS_PRELOADED_MAINLINE_MODULES_PROPERTY_KEY);
+              return value == null || Boolean.parseBoolean(value);
+            });
   }
 
   /**

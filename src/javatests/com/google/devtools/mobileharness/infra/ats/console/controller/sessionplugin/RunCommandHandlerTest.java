@@ -467,11 +467,13 @@ public final class RunCommandHandlerTest {
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
             .build();
     JobInfo jobInfo = createJobInfos().get(0);
-    when(xtsJobCreator.createXtsTradefedTestJob(any(), any()))
+    when(xtsJobCreator.createXtsTradefedTestJob(any(), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(jobInfo));
 
     runCommandHandler.initialize(command);
-    ImmutableList<JobInfo> jobs = runCommandHandler.createTradefedJobs(command, ImmutableSet.of());
+    ImmutableList<JobInfo> jobs =
+        runCommandHandler.createTradefedJobs(
+            command, ImmutableSet.of(), /* skipDynamicMctsJob= */ false);
 
     assertThat(jobs).containsExactly(jobInfo);
     Path xtsLogsDir = xtsRootDir.toPath().resolve("android-cts/logs");

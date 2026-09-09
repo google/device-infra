@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.sessionpl
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -96,6 +97,21 @@ public final class AtsConsoleSessionPluginTest {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
   }
 
+  /**
+   * Builds a realistic setup-job {@link TestInfos} with a single test that reports the device has
+   * preloaded Mainline modules, so dynamic MCTS jobs are kept (not dropped).
+   */
+  private static TestInfos setupTestsWithPreloadedModules() {
+    Properties properties = new Properties(new Timing());
+    properties.add(
+        XtsConstants.XTS_DYNAMIC_DOWNLOAD_HAS_PRELOADED_MAINLINE_MODULES_PROPERTY_KEY, "true");
+    TestInfo testInfo = mock(TestInfo.class);
+    when(testInfo.properties()).thenReturn(properties);
+    TestInfos testInfos = mock(TestInfos.class);
+    when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("setup_test_id", testInfo));
+    return testInfos;
+  }
+
   @Test
   public void onSessionStarting() throws Exception {
     RunCommand runCommand = RunCommand.getDefaultInstance();
@@ -123,7 +139,7 @@ public final class AtsConsoleSessionPluginTest {
 
     JobInfo tfJob = mock(JobInfo.class);
     when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job_name"));
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any()))
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJob));
     when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
 
@@ -148,7 +164,7 @@ public final class AtsConsoleSessionPluginTest {
     when(nonTfJob.locator()).thenReturn(new JobLocator("non_tf_job_id", "non_tf_job_name"));
     Properties properties = new Properties(new Timing());
     when(nonTfJob.properties()).thenReturn(properties);
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any()))
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
         .thenReturn(ImmutableList.of());
     when(runCommandHandler.createNonTradefedJobs(runCommand))
         .thenReturn(ImmutableList.of(nonTfJob));
@@ -392,7 +408,7 @@ public final class AtsConsoleSessionPluginTest {
     when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job"));
     when(tfJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any()))
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJob));
     when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
     when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
@@ -419,12 +435,14 @@ public final class AtsConsoleSessionPluginTest {
         .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
     Properties setupProperties = new Properties(new Timing());
     when(setupJob.properties()).thenReturn(setupProperties);
+    TestInfos setupTests = setupTestsWithPreloadedModules();
+    when(setupJob.tests()).thenReturn(setupTests);
 
     JobInfo tfJob = mock(JobInfo.class);
     when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job"));
     when(tfJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any()))
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJob));
     when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
     when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
@@ -456,12 +474,14 @@ public final class AtsConsoleSessionPluginTest {
         .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
     Properties setupProperties = new Properties(new Timing());
     when(setupJob.properties()).thenReturn(setupProperties);
+    TestInfos setupTests = setupTestsWithPreloadedModules();
+    when(setupJob.tests()).thenReturn(setupTests);
 
     JobInfo nonTfJob = mock(JobInfo.class);
     when(nonTfJob.locator()).thenReturn(new JobLocator("nontf_job_id", "nontf_job"));
     when(nonTfJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any()))
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
         .thenReturn(ImmutableList.of());
     when(runCommandHandler.createNonTradefedJobs(runCommand))
         .thenReturn(ImmutableList.of(nonTfJob));
@@ -495,7 +515,7 @@ public final class AtsConsoleSessionPluginTest {
     when(nonTfJob.locator()).thenReturn(new JobLocator("nontf_job_id", "nontf_job"));
     when(nonTfJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any()))
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJob));
     when(runCommandHandler.createNonTradefedJobs(runCommand))
         .thenReturn(ImmutableList.of(nonTfJob));
@@ -549,7 +569,7 @@ public final class AtsConsoleSessionPluginTest {
     when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
     when(teardownJob.tests()).thenReturn(teardownTests);
 
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any()))
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJob));
     when(runCommandHandler.createNonTradefedJobs(runCommand))
         .thenReturn(ImmutableList.of(nonTfJob));
@@ -598,6 +618,8 @@ public final class AtsConsoleSessionPluginTest {
     when(setupJob.locator())
         .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
     when(setupJob.properties()).thenReturn(new Properties(new Timing()));
+    TestInfos setupTests = setupTestsWithPreloadedModules();
+    when(setupJob.tests()).thenReturn(setupTests);
 
     JobInfo tfJob1 = mock(JobInfo.class);
     when(tfJob1.locator())
@@ -614,7 +636,7 @@ public final class AtsConsoleSessionPluginTest {
         .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
     when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any()))
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJob1, tfJob2));
     when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
     when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
@@ -654,6 +676,8 @@ public final class AtsConsoleSessionPluginTest {
     when(setupJob.locator())
         .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
     when(setupJob.properties()).thenReturn(new Properties(new Timing()));
+    TestInfos setupTests = setupTestsWithPreloadedModules();
+    when(setupJob.tests()).thenReturn(setupTests);
 
     TestInfos testInfos = mock(TestInfos.class);
     when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of());
@@ -680,7 +704,7 @@ public final class AtsConsoleSessionPluginTest {
         .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
     when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any()))
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJob1Static, tfJob2Mcts));
     when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
     when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
@@ -702,5 +726,176 @@ public final class AtsConsoleSessionPluginTest {
     // Last TF job ends -> Teardown scheduled
     atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(tfJob2Mcts, /* jobError= */ null));
     verify(sessionInfo).addJob(teardownJob);
+  }
+
+  @Test
+  public void onJobEnd_noPreloadedMainlineModules_skipsDynamicMcts() throws Exception {
+    RunCommand runCommand = RunCommand.getDefaultInstance();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
+                .build());
+    atsConsoleSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    // Setup job reports the device has NO preloaded Mainline modules (e.g. Auto / AOSP build).
+    Properties setupTestProperties = new Properties(new Timing());
+    setupTestProperties.add(
+        XtsConstants.XTS_DYNAMIC_DOWNLOAD_HAS_PRELOADED_MAINLINE_MODULES_PROPERTY_KEY, "false");
+    TestInfo setupTest = mock(TestInfo.class);
+    when(setupTest.properties()).thenReturn(setupTestProperties);
+    TestInfos setupTests = mock(TestInfos.class);
+    when(setupTests.getAll()).thenReturn(ImmutableListMultimap.of("test_id", setupTest));
+    JobInfo setupJob = mock(JobInfo.class);
+    when(setupJob.locator())
+        .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
+    when(setupJob.properties()).thenReturn(new Properties(new Timing()));
+    when(setupJob.tests()).thenReturn(setupTests);
+
+    Properties staticJobProperties = new Properties(new Timing());
+    staticJobProperties.add(XtsConstants.XTS_JOB_NAME, XtsConstants.STATIC_XTS_JOB_NAME);
+    JobInfo tfJobStatic = mock(JobInfo.class);
+    when(tfJobStatic.locator())
+        .thenReturn(new JobLocator("tf_job_static", "tf_job_" + XtsConstants.STATIC_XTS_JOB_NAME));
+    when(tfJobStatic.properties()).thenReturn(staticJobProperties);
+
+    Properties mctsJobProperties = new Properties(new Timing());
+    mctsJobProperties.add(XtsConstants.XTS_JOB_NAME, XtsConstants.DYNAMIC_MCTS_JOB_NAME);
+    JobInfo tfJobMcts = mock(JobInfo.class);
+    when(tfJobMcts.locator())
+        .thenReturn(new JobLocator("tf_job_mcts", "tf_job_" + XtsConstants.DYNAMIC_MCTS_JOB_NAME));
+    when(tfJobMcts.properties()).thenReturn(mctsJobProperties);
+
+    JobInfo teardownJob = mock(JobInfo.class);
+    when(teardownJob.locator())
+        .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
+    when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
+
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
+        .thenReturn(ImmutableList.of(tfJobStatic, tfJobMcts));
+    when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
+    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
+    when(runCommandHandler.createTeardownJob()).thenReturn(Optional.of(teardownJob));
+
+    atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+
+    // Setup job ends -> XtsJobCreator is told the device has no preloaded modules, so it skips the
+    // dynamic MCTS job.
+    atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
+    verify(runCommandHandler)
+        .createTradefedJobs(eq(runCommand), any(), /* skipDynamicMctsJob= */ eq(true));
+  }
+
+  @Test
+  public void onJobEnd_hasPreloadedMainlineModules_createsDynamicMcts() throws Exception {
+    RunCommand runCommand = RunCommand.getDefaultInstance();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
+                .build());
+    atsConsoleSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    // The setup job has a single test that reports the device HAS preloaded Mainline modules.
+    TestInfos setupTests = setupTestsWithPreloadedModules();
+    JobInfo setupJob = mock(JobInfo.class);
+    when(setupJob.locator())
+        .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
+    when(setupJob.properties()).thenReturn(new Properties(new Timing()));
+    when(setupJob.tests()).thenReturn(setupTests);
+
+    TestInfos emptyTests = mock(TestInfos.class);
+    when(emptyTests.getAll()).thenReturn(ImmutableListMultimap.of());
+
+    Properties staticJobProperties = new Properties(new Timing());
+    staticJobProperties.add(XtsConstants.XTS_JOB_NAME, XtsConstants.STATIC_XTS_JOB_NAME);
+    JobInfo tfJobStatic = mock(JobInfo.class);
+    when(tfJobStatic.locator())
+        .thenReturn(new JobLocator("tf_job_static", "tf_job_" + XtsConstants.STATIC_XTS_JOB_NAME));
+    when(tfJobStatic.properties()).thenReturn(staticJobProperties);
+    when(tfJobStatic.tests()).thenReturn(emptyTests);
+
+    Properties mctsJobProperties = new Properties(new Timing());
+    mctsJobProperties.add(XtsConstants.XTS_JOB_NAME, XtsConstants.DYNAMIC_MCTS_JOB_NAME);
+    JobInfo tfJobMcts = mock(JobInfo.class);
+    when(tfJobMcts.locator())
+        .thenReturn(new JobLocator("tf_job_mcts", "tf_job_" + XtsConstants.DYNAMIC_MCTS_JOB_NAME));
+    when(tfJobMcts.properties()).thenReturn(mctsJobProperties);
+    when(tfJobMcts.tests()).thenReturn(emptyTests);
+
+    JobInfo teardownJob = mock(JobInfo.class);
+    when(teardownJob.locator())
+        .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
+    when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
+
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
+        .thenReturn(ImmutableList.of(tfJobStatic, tfJobMcts));
+    when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
+    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
+    when(runCommandHandler.createTeardownJob()).thenReturn(Optional.of(teardownJob));
+
+    atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+
+    // Setup job ends -> XtsJobCreator is told the device has preloaded modules, so it creates the
+    // dynamic MCTS job.
+    atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
+    verify(runCommandHandler)
+        .createTradefedJobs(eq(runCommand), any(), /* skipDynamicMctsJob= */ eq(false));
+  }
+
+  @Test
+  public void onJobEnd_setupJobHasNoTest_skipsDynamicMcts() throws Exception {
+    RunCommand runCommand = RunCommand.getDefaultInstance();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
+                .build());
+    atsConsoleSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    // Setup job produced no test at all -> nothing was downloaded, so dynamic MCTS is dropped.
+    TestInfos emptySetupTests = mock(TestInfos.class);
+    when(emptySetupTests.getAll()).thenReturn(ImmutableListMultimap.of());
+    JobInfo setupJob = mock(JobInfo.class);
+    when(setupJob.locator())
+        .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
+    when(setupJob.properties()).thenReturn(new Properties(new Timing()));
+    when(setupJob.tests()).thenReturn(emptySetupTests);
+
+    Properties staticJobProperties = new Properties(new Timing());
+    staticJobProperties.add(XtsConstants.XTS_JOB_NAME, XtsConstants.STATIC_XTS_JOB_NAME);
+    JobInfo tfJobStatic = mock(JobInfo.class);
+    when(tfJobStatic.locator())
+        .thenReturn(new JobLocator("tf_job_static", "tf_job_" + XtsConstants.STATIC_XTS_JOB_NAME));
+    when(tfJobStatic.properties()).thenReturn(staticJobProperties);
+
+    Properties mctsJobProperties = new Properties(new Timing());
+    mctsJobProperties.add(XtsConstants.XTS_JOB_NAME, XtsConstants.DYNAMIC_MCTS_JOB_NAME);
+    JobInfo tfJobMcts = mock(JobInfo.class);
+    when(tfJobMcts.locator())
+        .thenReturn(new JobLocator("tf_job_mcts", "tf_job_" + XtsConstants.DYNAMIC_MCTS_JOB_NAME));
+    when(tfJobMcts.properties()).thenReturn(mctsJobProperties);
+
+    JobInfo teardownJob = mock(JobInfo.class);
+    when(teardownJob.locator())
+        .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
+    when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
+
+    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
+        .thenReturn(ImmutableList.of(tfJobStatic, tfJobMcts));
+    when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
+    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
+    when(runCommandHandler.createTeardownJob()).thenReturn(Optional.of(teardownJob));
+
+    atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+
+    // Setup job ends -> no setup test means no signal, so XtsJobCreator is told to skip dynamic
+    // MCTS.
+    atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
+    verify(runCommandHandler)
+        .createTradefedJobs(eq(runCommand), any(), /* skipDynamicMctsJob= */ eq(true));
   }
 }
