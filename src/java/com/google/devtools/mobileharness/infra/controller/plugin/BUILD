@@ -75,6 +75,7 @@ java_library(
     name = "plugin_loader",
     srcs = ["PluginLoader.java"],
     visibility = [
+        "//:deviceinfra_all_pkg",
         "//java/com/google/devtools/mobileharness/infra/controller/test/local/utp/controller:__pkg__",
     ],
     deps = [

@@ -1,0 +1,160 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * Copyright 2026 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.controller.plugin.proto;
+
+option java_package = "com.google.devtools.mobileharness.infra.controller.plugin.proto";
+option java_multiple_files = true;
+option java_outer_classname = "PluginWorkerProto";
+
+// Service implemented by the isolated worker subprocess to execute test events.
+service PluginWorkerService {
+  // Dispatches a test-level lifecycle event to registered plugins.
+  rpc RunTestEvent(RunTestEventRequest) returns (RunTestEventResponse);
+
+  // Cleanly shuts down the worker process.
+  rpc Shutdown(ShutdownRequest) returns (ShutdownResponse);
+}
+
+// Key-value pair for file tag and path.
+message FileEntry {
+  string tag = 1;
+  string path = 2;
+}
+
+// Key-value pair for device dimension.
+message DimensionEntry {
+  string name = 1;
+  string value = 2;
+}
+
+// Request to run a test event on loaded plugins in the worker subprocess.
+message RunTestEventRequest {
+  string event_class_name = 1;
+  TestInfoSnapshot test_info = 2;
+  JobInfoSnapshot job_info = 3;
+  DeviceInfoSnapshot device_info = 4;
+  optional string driver_name = 5;
+  optional TestMessageDetail test_message = 6;
+}
+
+// Snapshot of TestInfo state sent from Host to Worker.
+message TestInfoSnapshot {
+  string test_id = 1;
+  string test_name = 2;
+  map<string, string> properties = 3;
+  string status = 4;
+  string result = 5;
+  repeated FileEntry input_files = 6;
+  string gen_file_dir = 7;
+  string tmp_file_dir = 8;
+}
+
+// Snapshot of JobInfo state sent from Host to Worker.
+message JobInfoSnapshot {
+  string job_id = 1;
+  string job_name = 2;
+  map<string, string> params = 3;
+  map<string, string> properties = 4;
+  repeated FileEntry files = 5;
+  string device_type = 6;
+  string driver_type = 7;
+  repeated string decorator_types = 8;
+}
+
+// Snapshot of Device state sent from Host to Worker.
+message DeviceInfoSnapshot {
+  string device_id = 1;
+  string device_control_id = 2;
+  repeated DimensionEntry dimensions = 3;
+  map<string, string> properties = 4;
+  repeated string supported_drivers = 5;
+  repeated string supported_decorators = 6;
+  repeated string supported_device_types = 7;
+}
+
+// Delta mutations captured from plugin execution inside the worker subprocess.
+message RunTestEventResponse {
+  map<string, string> added_properties = 1;
+  repeated string removed_property_keys = 2;
+  optional string override_status = 3;
+  optional string override_result = 4;
+  repeated FileEntry added_files = 5;
+  repeated FileEntry added_remote_gen_files = 6;
+  repeated string log_records = 7;
+  repeated ExceptionDetail warnings = 8;
+  optional SkipTestExceptionDetail skip_test_exception = 9;
+  repeated DimensionEntry added_dimensions = 10;
+  repeated TestMessageDetail outgoing_test_messages = 11;
+  repeated SubTestDetail added_sub_tests = 12;
+}
+
+// Test message transferred between Host and Worker.
+message TestMessageDetail {
+  string root_test_id = 1;
+  repeated string sub_test_id_chain = 2;
+  map<string, string> message = 3;
+}
+
+// Sub test metadata transferred between Host and Worker.
+message SubTestDetail {
+  string sub_test_id = 1;
+  string sub_test_name = 2;
+}
+
+// Serialized SkipTestException details when a plugin requests to skip a test.
+message SkipTestExceptionDetail {
+  string message = 1;
+  string desired_test_result = 2;
+  int32 error_id_code = 3;
+  string error_id_name = 4;
+  string error_type = 5;
+}
+
+// Serialized exception detail from testInfo.warnings().
+message ExceptionDetail {
+  string exception_class = 1;
+  string message = 2;
+  string stack_trace = 3;
+}
+
+// Request to shut down the worker process.
+message ShutdownRequest {
+  string reason = 1;
+}
+
+// Response from worker shutdown.
+message ShutdownResponse {
+  bool success = 1;
+}

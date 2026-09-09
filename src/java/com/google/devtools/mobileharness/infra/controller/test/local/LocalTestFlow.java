@@ -29,6 +29,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
@@ -43,6 +44,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
 import com.google.devtools.mobileharness.infra.controller.plugin.LabCommonSetupModule;
 import com.google.devtools.mobileharness.infra.controller.plugin.PluginCreator;
+import com.google.devtools.mobileharness.infra.controller.plugin.subprocess.SubprocessPluginLoader;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner.EventScope;
 import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResult.PluginItem;
@@ -54,6 +56,7 @@ import com.google.devtools.mobileharness.infra.controller.test.local.utp.control
 import com.google.devtools.mobileharness.platform.testbed.adhoc.controller.AdhocTestbedDriverFactory;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil.SubTask;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
@@ -138,6 +141,47 @@ public class LocalTestFlow {
         jobInfo.params().getList(JobInfo.PARAM_CLIENT_PLUGIN_MODULES, null);
     String labPluginForceLoadFromJarClassRegex =
         jobInfo.params().get(JobInfo.PARAM_LAB_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX);
+
+    boolean enableSubprocessPlugins =
+        Flags.enableSubprocessPlugins.getNonNull()
+            || jobInfo.params().getBool("enable_subprocess_plugins", false);
+    if (enableSubprocessPlugins && !labPluginPaths.isEmpty()) {
+      String hermeticWorkerBin =
+          Iterables.getFirst(jobInfo.files().get("mh_plugin_worker_bin"), null);
+      if (hermeticWorkerBin == null) {
+        hermeticWorkerBin = Iterables.getFirst(testInfo.files().get("mh_plugin_worker_bin"), null);
+      }
+      SubprocessPluginLoader subprocessLoader =
+          new SubprocessPluginLoader(
+              labPluginPaths,
+              labPluginClasses,
+              /* customWorkerRunnerJar= */ null,
+              hermeticWorkerBin);
+      subprocessLoader.load();
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Created new subprocess lab plugin loader of test %s", testInfo.locator());
+      testRunner.registerTestEventSubscriber(
+          new Object() {
+            @Subscribe
+            private void onTestEnded(TestEndedEvent event) {
+              subprocessLoader.close();
+              TestInfo testInfo = event.getTest();
+              testInfo
+                  .log()
+                  .atInfo()
+                  .alsoTo(logger)
+                  .log("Closed subprocess lab plugin loader of test %s", testInfo.locator());
+            }
+          },
+          EventScope.CLASS_INTERNAL);
+      Object subscriber = subprocessLoader.getSubscriber();
+      testRunner.registerTestEventSubscriber(subscriber, EventScope.JAR_PLUGIN);
+      testRunner.registerTestEventSubscriber(subscriber, EventScope.TEST_MESSAGE);
+      return ImmutableList.of(PluginItem.create(subscriber, EventScope.JAR_PLUGIN));
+    }
 
     // Always create a new ClassLoader for the lab plugin of a new test, and close it when test
     // ends.
