@@ -127,6 +127,43 @@ service ConfigService {
       body: "*"
     };
   }
+
+  // Retrieves dimensions available for batch configuration.
+  rpc GetConfigurableDimensions(GetConfigurableDimensionsRequest)
+      returns (GetConfigurableDimensionsResponse) {
+    option (google.api.http) = {
+      get: "/v6/configs/dimensions:configurable"
+    };
+  }
+
+  // Retrieves current dimension values for target devices and candidate values
+  // to pick from.
+  rpc GetBatchDimensionContext(GetBatchDimensionContextRequest)
+      returns (GetBatchDimensionContextResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices:batchGetDimensionContext"
+      body: "*"
+    };
+  }
+
+  // Retrieves current Wi-Fi configuration for target devices and candidate
+  // networks.
+  rpc GetBatchWifiContext(GetBatchWifiContextRequest)
+      returns (GetBatchWifiContextResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices:batchGetWifiContext"
+      body: "*"
+    };
+  }
+
+  // Applies a batch configuration change across target devices.
+  rpc BatchUpdateDeviceConfig(BatchUpdateDeviceConfigRequest)
+      returns (BatchUpdateDeviceConfigResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices:batchUpdateConfig"
+      body: "*"
+    };
+  }
 }
 
 // Request for GetDeviceConfig.
@@ -300,4 +337,155 @@ message UnlockHostPropertiesRequest {
 message UnlockHostPropertiesResponse {
   bool success = 1;
   UpdateError error = 2;
+}
+
+// Scope of the dimension in device config.
+enum DimensionScope {
+  DIMENSION_SCOPE_UNSPECIFIED = 0;
+  // Stored in composite_dimension.supported_dimension
+  SUPPORTED = 1;
+  // Stored in composite_dimension.required_dimension
+  REQUIRED = 2;
+}
+
+// Metadata for a configurable dimension.
+message ConfigurableDimension {
+  // Dimension key (e.g. "recovery", "pool", "skip_suw_app").
+  string key = 1;
+
+  // Human-readable display label.
+  string display_name = 2;
+
+  // Target storage section in composite_dimension.
+  DimensionScope scope = 3;
+
+  // Number of devices currently configured with this dimension in Config
+  // Server. Populated in 1P internal builds; omitted in ATS builds.
+  optional int32 configured_device_count = 4;
+}
+
+// Request for GetConfigurableDimensions.
+message GetConfigurableDimensionsRequest {
+  // Optional search query to filter dimensions by name (used in the "More..."
+  // dialog). When empty, returns the top configured dimensions for the
+  // selection toolbar dropdown.
+  string query = 1;
+}
+
+// Response for GetConfigurableDimensions.
+message GetConfigurableDimensionsResponse {
+  // Configurable dimensions matching the request.
+  repeated ConfigurableDimension dimensions = 1;
+
+  // Whether operators are permitted to specify custom dimension keys.
+  // Strictly false in ATS and OSS builds; true in 1P internal builds.
+  bool allow_custom_dimensions = 2;
+}
+
+// Request for GetBatchDimensionContext.
+message GetBatchDimensionContextRequest {
+  // Explicit device IDs to retrieve context for.
+  repeated string device_ids = 1;
+
+  // The dimension key being inspected (e.g. "recovery", "pool").
+  string key = 2;
+}
+
+// Response for GetBatchDimensionContext.
+message GetBatchDimensionContextResponse {
+  // Current values and authorization for a target device.
+  message DeviceCurrent {
+    string device_id = 1;
+    // Current value set assigned to this dimension (empty if unset).
+    repeated string values = 2;
+    // Whether the caller is authorized to modify this device.
+    bool writable = 3;
+    // Human-readable reason when writable is false (e.g. host-managed, Config
+    // Pusher, no permission).
+    string unwritable_reason = 4;
+  }
+
+  // A candidate value set available to pick from in Step 1.
+  message CandidateValue {
+    // Value set (empty list represents clearing the dimension).
+    repeated string values = 1;
+    // Approximate number of devices in the fleet using this value set.
+    int32 device_count = 2;
+  }
+
+  // Current values for the selected devices (Step 2 review table).
+  repeated DeviceCurrent current = 1;
+
+  // Candidate values ranked by popularity (Step 1 picker).
+  repeated CandidateValue candidate_values = 2;
+}
+
+// Request for GetBatchWifiContext.
+message GetBatchWifiContextRequest {
+  // Explicit device IDs to retrieve context for.
+  repeated string device_ids = 1;
+}
+
+// Response for GetBatchWifiContext.
+message GetBatchWifiContextResponse {
+  // Current Wi-Fi configuration and authorization for a target device.
+  message DeviceCurrentWifi {
+    string device_id = 1;
+    // Current Wi-Fi configuration (empty SSID if unconfigured).
+    WifiConfig wifi = 2;
+    // Whether the caller is authorized to modify this device.
+    bool writable = 3;
+    // Human-readable reason when writable is false (e.g. host-managed, Config
+    // Pusher, no permission).
+    string unwritable_reason = 4;
+  }
+
+  // A candidate Wi-Fi network available to pick from in Step 1.
+  message CandidateWifi {
+    // Network name (SSID).
+    string ssid = 1;
+    // True if the network is hidden (does not broadcast SSID).
+    bool scan_ssid = 2;
+    // Approximate number of devices in the fleet configured with this network.
+    int32 device_count = 3;
+  }
+
+  // Current Wi-Fi configurations for the selected devices (Step 2 review
+  // table).
+  repeated DeviceCurrentWifi current = 1;
+
+  // Candidate Wi-Fi networks ranked by popularity (Step 1 picker).
+  repeated CandidateWifi candidate_wifis = 2;
+}
+
+// Target dimension configuration to update across devices.
+message DimensionUpdate {
+  // Dimension key (e.g. "recovery", "pool", "skip_suw_app").
+  string key = 1;
+
+  // Target value set to assign to this dimension on all target devices.
+  // Supplying an empty list removes this dimension key from target devices.
+  repeated string values = 2;
+
+  // Whether this is written to supported or required dimensions.
+  DimensionScope scope = 3;
+}
+
+// Request for BatchUpdateDeviceConfig.
+message BatchUpdateDeviceConfigRequest {
+  // Target device IDs to update.
+  repeated string device_ids = 1;
+
+  // The specific configuration change to apply.
+  oneof update {
+    WifiConfig wifi = 2;
+    DimensionUpdate dimension = 3;
+  }
+}
+
+// Response for BatchUpdateDeviceConfig.
+message BatchUpdateDeviceConfigResponse {
+  // Per-device error details for devices that failed.
+  // Key is device_id. An empty map indicates complete success.
+  map<string, UpdateError> errors = 1;
 }
