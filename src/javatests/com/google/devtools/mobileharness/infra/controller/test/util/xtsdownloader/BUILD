@@ -25,6 +25,7 @@ java_library(
     name = "xts_downloader_test",
     srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/proto:xts_dynamic_download_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:mcts_dynamic_download_plugin",

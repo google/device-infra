@@ -779,4 +779,41 @@ public final class MctsDynamicDownloadPluginTest {
       localFileUtil.removeFileOrDir(cachedZip.toString());
     }
   }
+
+  @Test
+  public void parse_setsJdkSdkVersionInDownloadInfo() throws Exception {
+    when(mockAndroidPackageManagerUtil.getAppVersionCode(
+            any(), eq("com.google.android.modulemetadata")))
+        .thenReturn(351030004);
+
+    XtsDynamicDownloadInfo downloadInfo = spyMctsDynamicDownloadPlugin.parse(mockEvent);
+
+    assertThat(downloadInfo.getJdkSdkVersion()).isEqualTo("35");
+  }
+
+  @Test
+  public void downloadXtsFiles_usesJdkSdkVersionFromInfoWithoutQueryingDevice() throws Exception {
+    XtsDynamicDownloadInfo downloadInfo =
+        XtsDynamicDownloadInfo.newBuilder()
+            .setXtsType("cts")
+            .setProject(XtsDynamicDownloadInfo.Project.MAINLINE)
+            .addDownloadUrl(
+                "https://dl.google.com/dl/android/xts/mcts/tool/mcts_exclude/30/2024-10/mcts-exclude.txt")
+            .addDownloadUrl(
+                "https://dl.google.com/dl/android/xts/mcts/2024-10/arm64/mcts_test_list.txt")
+            .setJdkSdkVersion("36")
+            .build();
+    Mockito.doReturn(null)
+        .when(spyMctsDynamicDownloadPlugin)
+        .downloadPublicUrlFiles(
+            "https://dl.google.com/dl/android/xts/mcts/tool/36/jdk.zip",
+            "/android/xts/mcts/tool/36/jdk.zip");
+
+    spyMctsDynamicDownloadPlugin.downloadXtsFiles(downloadInfo, mockEvent);
+
+    verify(spyMctsDynamicDownloadPlugin)
+        .downloadPublicUrlFiles(
+            "https://dl.google.com/dl/android/xts/mcts/tool/36/jdk.zip",
+            "/android/xts/mcts/tool/36/jdk.zip");
+  }
 }

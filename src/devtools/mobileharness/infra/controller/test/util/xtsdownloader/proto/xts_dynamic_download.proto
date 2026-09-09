@@ -37,6 +37,12 @@ message XtsDynamicDownloadInfo {
   repeated string download_url = 3;
   // The preloaded mainline version.
   string preloaded_mainline_version = 4;
+  // The Android SDK API level corresponding to the JDK tool for dynamic
+  // download (e.g. "35" for Android 15/V, "36" for Android 16). Extracted from
+  // the Train Version Package (com.google.android.modulemetadata) version code
+  // prefix, matching the remote download path:
+  // https://dl.google.com/dl/android/xts/mcts/tool/{jdk_sdk_version}/jdk.zip
+  string jdk_sdk_version = 5;
 }
 
 message ModuleInfoMap {

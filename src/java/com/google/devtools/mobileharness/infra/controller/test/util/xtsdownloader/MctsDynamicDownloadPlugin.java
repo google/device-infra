@@ -198,12 +198,15 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
             .setXtsType("cts")
             .setProject(XtsDynamicDownloadInfo.Project.MAINLINE);
     List<String> downloadLinkUrls = new ArrayList<>();
+    String tvpVersionCode = getTvpVersion(event);
+    if (tvpVersionCode.length() >= 2) {
+      downloadInfoBuilder.setJdkSdkVersion(tvpVersionCode.substring(0, 2));
+    }
     // Add the Lorry download link url of MCTS file for preloaded mainline modules. For example:
     // https://dl.google.com/dl/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
     if (mctsNamesOfAllModules.containsKey(PRELOADED_KEY)) {
-      String versioncode = getTvpVersion(event);
       String preloadedMainlineVersion =
-          processModuleVersion(versioncode, MAINLINE_TVP_PKG, aospVersion, aospVersion);
+          processModuleVersion(tvpVersionCode, MAINLINE_TVP_PKG, aospVersion, aospVersion);
       downloadInfoBuilder.setPreloadedMainlineVersion(preloadedMainlineVersion);
       // Add the MCTS exclude file link url to the front of the list.
       downloadLinkUrls.add(
@@ -314,16 +317,18 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     }
     // Download the JDK file.
     // Use train version to match JDK version.
-    String jdkVersion = getTvpVersion(event).substring(0, 2);
-    String jdkFileTargetPath = TMP_MCTS_TOOL_PATH + "/" + jdkVersion + "/jdk.zip";
-    logger.atInfo().log("Start to download JDK files: %s", jdkFileTargetPath);
-    String jdkFilePath =
-        downloadPublicUrlFiles("https://dl.google.com/dl" + jdkFileTargetPath, jdkFileTargetPath);
-    if (jdkFilePath != null) {
-      String sessionId = getSessionId(testInfo);
-      Path mctsJdkDir = XtsDirUtil.getXtsDynamicDownloadJdkDir(sessionId);
-      fileUtil.unzipFile(jdkFilePath, mctsJdkDir.getParent().toString());
-      logger.atInfo().log("Downloaded MCTS JDK files");
+    String jdkSdkVersion = xtsDynamicDownloadInfo.getJdkSdkVersion();
+    if (!jdkSdkVersion.isEmpty()) {
+      String jdkFileTargetPath = TMP_MCTS_TOOL_PATH + "/" + jdkSdkVersion + "/jdk.zip";
+      logger.atInfo().log("Start to download JDK files: %s", jdkFileTargetPath);
+      String jdkFilePath =
+          downloadPublicUrlFiles("https://dl.google.com/dl" + jdkFileTargetPath, jdkFileTargetPath);
+      if (jdkFilePath != null) {
+        String sessionId = getSessionId(testInfo);
+        Path mctsJdkDir = XtsDirUtil.getXtsDynamicDownloadJdkDir(sessionId);
+        fileUtil.unzipFile(jdkFilePath, mctsJdkDir.getParent().toString());
+        logger.atInfo().log("Downloaded MCTS JDK files");
+      }
     }
   }
 
