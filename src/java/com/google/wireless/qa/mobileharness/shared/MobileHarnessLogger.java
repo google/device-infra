@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
@@ -38,6 +39,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.ConsoleHandler;
+import java.util.logging.ErrorManager;
 import java.util.logging.FileHandler;
 import java.util.logging.Filter;
 import java.util.logging.Handler;
@@ -73,6 +75,15 @@ public class MobileHarnessLogger {
   private static final Filter FILTER = combineFilter(COMMON_FILTER, logRecord -> true);
 
   private static final AtomicBoolean isInitialized = new AtomicBoolean();
+  private static final AtomicBoolean isShuttingDown = new AtomicBoolean();
+
+  static {
+    try {
+      Runtime.getRuntime().addShutdownHook(new Thread(() -> isShuttingDown.set(true)));
+    } catch (IllegalStateException e) {
+      isShuttingDown.set(true);
+    }
+  }
 
   @SuppressWarnings("NonFinalStaticField")
   @Nullable
@@ -235,11 +246,12 @@ public class MobileHarnessLogger {
     }
   }
 
-  /** Sets formatter/filter/level of a {@link Handler}. */
+  /** Sets formatter/filter/level/errorManager of a {@link Handler}. */
   private static void configureHandler(Handler handler) {
     handler.setFormatter(MobileHarnessLogFormatter.getDefaultFormatter());
     addFilter(handler, FILTER);
     handler.setLevel(Level.INFO);
+    handler.setErrorManager(new SafeErrorManager());
   }
 
   private static void prepareDir(String dir) throws MobileHarnessException {
@@ -256,6 +268,59 @@ public class MobileHarnessLogger {
     Logger logger = Logger.getLogger(loggerName);
     configuredLoggers.put(loggerName, logger);
     return logger;
+  }
+
+  /**
+   * An {@link ErrorManager} that suppresses the race-condition {@link NullPointerException} thrown
+   * by {@code StreamHandler.publish} during JVM shutdown (JDK-8349206 / b/556473785).
+   */
+  @VisibleForTesting
+  static class SafeErrorManager extends ErrorManager {
+
+    private static final String STREAM_HANDLER_CLASS_NAME = "java.util.logging.StreamHandler";
+    private static final String PUBLISH_METHOD_NAME = "publish";
+
+    @Override
+    public void error(String msg, Exception ex, int code) {
+      if (isStreamHandlerRaceNpe(ex, code, isJvmShuttingDown())) {
+        return;
+      }
+      super.error(msg, ex, code);
+    }
+
+    @VisibleForTesting
+    static boolean isStreamHandlerRaceNpe(
+        @Nullable Exception ex, int code, boolean isJvmShuttingDown) {
+      if (code != WRITE_FAILURE || !(ex instanceof NullPointerException)) {
+        return false;
+      }
+      StackTraceElement[] stackTrace = ex.getStackTrace();
+      if (stackTrace != null && stackTrace.length > 0) {
+        StackTraceElement topFrame = stackTrace[0];
+        return STREAM_HANDLER_CLASS_NAME.equals(topFrame.getClassName())
+            && PUBLISH_METHOD_NAME.equals(topFrame.getMethodName());
+      }
+      // Handles -XX:+OmitStackTraceInFastThrow where stack trace is omitted.
+      String message = ex.getMessage();
+      if (message != null) {
+        return message.contains("Writer.write") || message.contains("writer");
+      }
+      return isJvmShuttingDown;
+    }
+
+    private static boolean isJvmShuttingDown() {
+      if (isShuttingDown.get()) {
+        return true;
+      }
+      try {
+        Thread hook = new Thread(() -> {});
+        Runtime.getRuntime().addShutdownHook(hook);
+        Runtime.getRuntime().removeShutdownHook(hook);
+        return false;
+      } catch (IllegalStateException e) {
+        return true;
+      }
+    }
   }
 
   private static class HandlerRemover implements NonThrowingAutoCloseable {
