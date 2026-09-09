@@ -28,10 +28,12 @@ import com.google.devtools.mobileharness.platform.android.instrumentation.result
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestSuiteResult;
 import com.google.devtools.mobileharness.shared.util.testresult.rollup.Outcome.OutcomeSummary;
 import com.google.protobuf.util.Timestamps;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.time.Duration;
@@ -713,5 +715,71 @@ public final class JobResultUtilTest {
         .setEndTime(Instant.ofEpochSecond(endTimeSeconds))
         .setElapsedTime(Duration.ofSeconds(endTimeSeconds - startTimeSeconds))
         .build();
+  }
+
+  @Test
+  public void computeJobLevelTestResult_ios_success() throws Exception {
+    TestInfo runShard0 =
+        mockIosTestRun(
+            "test_shard_0",
+            "0",
+            com.google.devtools.mobileharness.api.model.proto.Test.TestResult.PASS,
+            /* flakyAttemptIndex= */ 0,
+            /* errorAttemptIndex= */ 0,
+            "com.example.Suite",
+            TestStatus.PASSED,
+            ImmutableList.of(
+                buildTestCaseInfo("MyClass", "testFoo", TestStatus.PASSED, Duration.ofSeconds(5))));
+
+    JobInfo jobInfo = mock(JobInfo.class, Mockito.RETURNS_DEEP_STUBS);
+    when(jobInfo.locator().getId()).thenReturn("job-1");
+    when(jobInfo.tests().getAll().values()).thenReturn(ImmutableList.of(runShard0));
+
+    com.google.devtools.mobileharness.shared.util.testresult.rollup.TestResult result =
+        JobResultUtil.computeJobRunResult(jobInfo);
+
+    assertThat(result.outcome().summary()).isEqualTo(OutcomeSummary.SUCCESS);
+    assertThat(result.testCases()).hasSize(1);
+    // In iOS, the testSuiteName of the test case should be mapped to the package name of the test
+    // case ("com.example")
+    // rather than the overall metadata suite name ("com.example.Suite")
+    assertThat(result.testCases().get(0).testCaseReference().testSuiteName())
+        .isEqualTo("com.example");
+  }
+
+  private TestInfo mockIosTestRun(
+      String shardName,
+      String shardIndex,
+      com.google.devtools.mobileharness.api.model.proto.Test.TestResult mockResult,
+      int flakyAttemptIndex,
+      int errorAttemptIndex,
+      String testSuiteName,
+      TestStatus suiteStatus,
+      ImmutableList<TestCaseInfo> cases)
+      throws Exception {
+    TestInfo testInfo = mock(TestInfo.class, Mockito.RETURNS_DEEP_STUBS);
+    File genDir = tempFolder.newFolder();
+    when(testInfo.getGenFileDir()).thenReturn(genDir.getAbsolutePath());
+
+    Properties properties = new Properties(new Timing());
+    properties.add("flaky_attempt_index", String.valueOf(flakyAttemptIndex));
+    properties.add("error_attempt_index", String.valueOf(errorAttemptIndex));
+    if (shardIndex != null) {
+      properties.add(PropertyName.Test.SHARD_INDEX, shardIndex);
+    }
+    when(testInfo.properties()).thenReturn(properties);
+
+    when(testInfo.locator().getName()).thenReturn(shardName);
+    when(testInfo.resultWithCause().get().type()).thenReturn(mockResult);
+
+    JobType jobType = JobType.newBuilder().setDriver("IosNativeXcTest").build();
+    when(testInfo.jobInfo().type()).thenReturn(jobType);
+
+    if (testSuiteName != null) {
+      TestSuiteResult testSuiteResult = buildTestSuiteResult(testSuiteName, suiteStatus, cases);
+      writeProto(genDir, "xctest_test_result.pb", testSuiteResult);
+    }
+
+    return testInfo;
   }
 }

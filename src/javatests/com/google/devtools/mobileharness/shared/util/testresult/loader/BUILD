@@ -16,30 +16,21 @@
 load("@rules_java//java:defs.bzl", "java_library")
 load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
-package(
-    default_applicable_licenses = ["//:license"],
-    default_testonly = 1,
-)
+package(default_applicable_licenses = ["//:license"])
 
 java_library(
-    name = "processor",
+    name = "loader",
+    testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
-        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/platform/android/instrumentation/result/proto:test_suite_result_java_proto",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/processor:android_instrumentation_test_retry_processor",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/processor:retry_tests_grouper",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/processor:test_retry_processor",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/strategy:flaky_test_retry_constants",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/devtools/mobileharness/shared/util/testresult/loader",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
-        "@maven//:org_mockito_mockito_core",
     ],
 )
 
@@ -48,5 +39,7 @@ junit_test_suites(
     sizes = [
         "small",
     ],
-    deps = [":processor"],
+    deps = [
+        ":loader",
+    ],
 )
