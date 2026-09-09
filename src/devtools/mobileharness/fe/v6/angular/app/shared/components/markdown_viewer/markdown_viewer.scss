@@ -1,0 +1,207 @@
+@use 'third_party/deviceinfra/src/devtools/mobileharness/fe/v6/angular/app/shared/styles/common';
+
+.markdown-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #202124;
+  word-break: break-word;
+
+  .markdown-h1,
+  .markdown-h2,
+  .markdown-h3,
+  .markdown-h4 {
+    margin: 8px 0 4px 0;
+    font-weight: 600;
+    color: #1f1f1f;
+  }
+
+  .markdown-h1 {
+    font-size: 20px;
+    line-height: 26px;
+  }
+
+  .markdown-h2 {
+    font-size: 17px;
+    line-height: 22px;
+  }
+
+  .markdown-h3 {
+    font-size: 15px;
+    line-height: 20px;
+  }
+
+  .markdown-h4 {
+    font-size: 14px;
+    line-height: 18px;
+  }
+
+  .markdown-p {
+    margin: 0;
+    white-space: pre-wrap;
+  }
+
+  .inline-code {
+    font-family:
+      'Google Sans Mono', 'Roboto Mono', 'SFMono-Regular', Consolas, monospace;
+    font-size: 12.5px;
+    background-color: #f1f3f4;
+    color: #b31412;
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid #dadce0;
+  }
+
+  .markdown-link {
+    color: #1a73e8;
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .markdown-ul,
+  .markdown-ol {
+    margin: 4px 0;
+    padding-left: 24px;
+
+    li {
+      margin-bottom: 4px;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  .markdown-blockquote {
+    margin: 4px 0;
+    padding: 6px 14px;
+    border-left: 3px solid #1a73e8;
+    background-color: #f8f9fa;
+    color: #5f6368;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .markdown-hr {
+    border: none;
+    border-top: 1px solid #e0e0e0;
+    margin: 8px 0;
+  }
+
+  // Code Block
+  .code-block-wrapper {
+    margin: 6px 0;
+    background-color: #1e1e1e;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+
+    .code-block-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 12px;
+      background-color: #2d2d2d;
+      border-bottom: 1px solid #3c3c3c;
+
+      .code-lang-tag {
+        font-family: 'Google Sans Mono', monospace;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #9aa0a6;
+      }
+
+      .copy-code-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: transparent;
+        border: none;
+        color: #bdc1c6;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        line-height: 1;
+        transition:
+          background-color 0.15s,
+          color 0.15s;
+
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.1);
+          color: #fff;
+        }
+
+        .copy-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+        }
+
+        .copy-label {
+          font-size: 11px;
+          font-weight: 500;
+        }
+      }
+    }
+
+    .code-block-content {
+      margin: 0;
+      padding: 12px 16px;
+      overflow-x: auto;
+      @include common.shared-scrollbar-style();
+
+      .code-body {
+        font-family: 'Google Sans Mono', 'Roboto Mono', Consolas, monospace;
+        font-size: 12.5px;
+        line-height: 1.5;
+        color: #e8eaed;
+      }
+    }
+  }
+
+  // Table
+  .table-container {
+    overflow-x: auto;
+    margin: 6px 0;
+    @include common.shared-scrollbar-style();
+
+    .markdown-table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 280px;
+      font-size: 13px;
+      text-align: left;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+
+      th,
+      td {
+        padding: 8px 12px;
+        border: 1px solid #e0e0e0;
+      }
+
+      th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        color: #3c4043;
+      }
+
+      tr:nth-child(even) td {
+        background-color: #fafafa;
+      }
+
+      tr:hover td {
+        background-color: #f1f3f4;
+      }
+    }
+  }
+}
