@@ -64,9 +64,12 @@ public final class FleetColumnCatalogerTest {
   //             plus ten filler dimensions carried only by this device.
   //   device-1: IDLE, android, owner alice, model pixel, pool shared, dim host_name lab-a.
   //   device-2: BUSY, ios,     owner carol, model iphone, pool dedicated, dim host_name lab-b.
-  // Every device carries a "host_name" dimension equal to its real host name, so dim::host_name
-  // never disagrees with the built-in host::host_name and is detected as redundant. Both hosts
-  // carry a "location" host property so a prop:: key exists. The ten filler dimensions push the
+  // Every device carries a "host_name" dimension equal to its real host name, so
+  // dimension::host_name
+  // never disagrees with the built-in host_field::host_name and is detected as redundant. Both
+  // hosts
+  // carry a "location" host property so a host_property:: key exists. The ten filler dimensions
+  // push the
   // non-redundant dimension count past the browse top-N so truncation is exercised.
   // FleetIndexBuilder and FleetColumnCataloger have package-private @Inject constructors, so obtain
   // them through Guice rather than constructing directly.

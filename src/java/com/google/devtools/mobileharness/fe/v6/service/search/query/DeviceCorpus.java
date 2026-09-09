@@ -66,24 +66,23 @@ public final class DeviceCorpus implements SearchCorpus {
           "FASTBOOT",
           "FASTBOOTDMODE");
 
-  private static final ImmutableSet<String> IDENTIFIER_KEYS =
+  private static final ImmutableSet<String> IDENTIFIER_DIMENSIONS =
       ImmutableSet.of(
-          DeviceKeys.UUID.id(),
-          DeviceKeys.PREFIX_DIMENSION + "uuid",
-          DeviceKeys.PREFIX_DIMENSION + "id",
-          DeviceKeys.PREFIX_DIMENSION + "serial",
-          DeviceKeys.PREFIX_DIMENSION + "control_id",
-          DeviceKeys.PREFIX_DIMENSION + "mac_address",
-          DeviceKeys.PREFIX_DIMENSION + "bluetooth_mac_address",
-          DeviceKeys.PREFIX_DIMENSION + "soc_id",
-          DeviceKeys.PREFIX_DIMENSION + "network_address",
-          DeviceKeys.PREFIX_DIMENSION + "gservices_android_id",
-          DeviceKeys.PREFIX_DIMENSION + "iccid",
-          DeviceKeys.PREFIX_DIMENSION + "iccids",
-          DeviceKeys.PREFIX_DIMENSION + "imei",
-          DeviceKeys.PREFIX_DIMENSION + "ecid",
-          DeviceKeys.PREFIX_DIMENSION + "wifi_address",
-          DeviceKeys.PREFIX_DIMENSION + "testbed_name");
+          "uuid",
+          "id",
+          "serial",
+          "control_id",
+          "mac_address",
+          "bluetooth_mac_address",
+          "soc_id",
+          "network_address",
+          "gservices_android_id",
+          "iccid",
+          "iccids",
+          "imei",
+          "ecid",
+          "wifi_address",
+          "testbed_name");
 
   private final FleetSnapshot snapshot;
   private final FleetIndex index;
@@ -143,7 +142,13 @@ public final class DeviceCorpus implements SearchCorpus {
 
   @Override
   public boolean isIdentifierKey(String keyId) {
-    return IDENTIFIER_KEYS.contains(keyId);
+    if (DeviceKeys.UUID.id().equals(keyId)) {
+      return true;
+    }
+    return getKey(keyId)
+        .filter(DeviceKeyDescriptor::isDimension)
+        .map(descriptor -> IDENTIFIER_DIMENSIONS.contains(descriptor.bareName()))
+        .orElse(false);
   }
 
   @Override

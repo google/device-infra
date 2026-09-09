@@ -16,20 +16,30 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetCountedNoValueEntry;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetCountedValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetCountedValueList;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPlainValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPlainValueList;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /**
@@ -194,5 +204,22 @@ public final class FleetValueLister {
       set.set(deviceIndex);
     }
     return set;
+  }
+
+  /**
+   * Extracts all dimension keys that require on-demand overlay loading for the given value-list
+   * request.
+   */
+  public static ImmutableSet<DeviceKeyDescriptor> extractOverlayKeys(
+      @Nullable DeviceKeyRegistry registry, FleetValueListRequest request) {
+    if (request.getEntity() == SearchEntity.SEARCH_ENTITY_HOST || registry == null) {
+      return ImmutableSet.of();
+    }
+    return Stream.concat(
+            Stream.of(request.getKey()), request.getFiltersList().stream().map(Filter::getKey))
+        .map(registry::getKey)
+        .flatMap(Optional::stream)
+        .filter(DeviceKeyDescriptor::isOverlay)
+        .collect(toImmutableSet());
   }
 }

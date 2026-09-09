@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.devtools.mobileharness.fe.v6.service.search.query.FleetKeyIds.bareName;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
@@ -32,6 +31,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnC
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionCatalogStore;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import java.util.ArrayList;
@@ -41,6 +41,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -109,16 +110,16 @@ public final class DeviceColumnCataloger {
     List<String> dimensions = new ArrayList<>();
     List<String> properties = new ArrayList<>();
     for (String keyId : index.keyIds()) {
-      if (corpus.getKey(keyId).isEmpty()
-          && !keyId.startsWith(DeviceKeys.PREFIX_DIMENSION)
-          && !keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY)) {
+      Optional<DeviceKeyDescriptor> key = corpus.getKey(keyId);
+      if (key.isEmpty()) {
         continue;
       }
-      if (keyId.startsWith(DeviceKeys.PREFIX_DIMENSION)) {
+      DeviceKeyDescriptor descriptor = key.get();
+      if (descriptor.isDimension()) {
         if (!redundant.contains(keyId)) {
           dimensions.add(keyId);
         }
-      } else if (keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY)) {
+      } else if (descriptor.isHostProperty()) {
         properties.add(keyId);
       } else {
         builtin.add(keyId);
@@ -128,7 +129,7 @@ public final class DeviceColumnCataloger {
     // Merge discovered dimension names from catalog store.
     Set<String> seenDimensions = new HashSet<>(dimensions);
     for (String dimName : catalogDimensions) {
-      String keyId = DeviceKeys.PREFIX_DIMENSION + dimName;
+      String keyId = DeviceKeys.dimensionKeyId(dimName);
       if (!redundant.contains(keyId) && seenDimensions.add(keyId)) {
         dimensions.add(keyId);
       }
@@ -147,7 +148,7 @@ public final class DeviceColumnCataloger {
               .filter(
                   keyId -> {
                     String disp = norm(displayName(corpus, keyId));
-                    String bare = norm(bareName(keyId));
+                    String bare = norm(bareName(corpus, keyId));
                     return disp.contains(q) || bare.contains(q);
                   })
               .collect(toImmutableList());
@@ -160,7 +161,7 @@ public final class DeviceColumnCataloger {
               .filter(
                   keyId -> {
                     String disp = norm(displayName(corpus, keyId));
-                    String bare = norm(bareName(keyId));
+                    String bare = norm(bareName(corpus, keyId));
                     return disp.contains(q) || bare.contains(q);
                   })
               .collect(toImmutableList());
@@ -174,7 +175,7 @@ public final class DeviceColumnCataloger {
               .filter(
                   keyId -> {
                     String disp = norm(displayName(corpus, keyId));
-                    String bare = norm(bareName(keyId));
+                    String bare = norm(bareName(corpus, keyId));
                     return disp.contains(q) || bare.contains(q);
                   })
               .collect(toImmutableList());
@@ -279,13 +280,14 @@ public final class DeviceColumnCataloger {
     return b.build();
   }
 
-  private static ImmutableSet<String> redundantDims(SearchCorpus corpus, FleetIndex index) {
+  private static ImmutableSet<String> redundantDims(DeviceCorpus corpus, FleetIndex index) {
     ImmutableSet.Builder<String> out = ImmutableSet.builder();
     for (String dimKey : index.keyIds()) {
-      if (!dimKey.startsWith(DeviceKeys.PREFIX_DIMENSION)) {
+      Optional<DeviceKeyDescriptor> key = corpus.getKey(dimKey);
+      if (key.isEmpty() || !key.get().isDimension()) {
         continue;
       }
-      String bare = bareName(dimKey);
+      String bare = key.get().bareName();
       String hostKey = HostKeys.PREFIX_HOST_FIELD + bare;
       String deviceKey = DeviceKeys.PREFIX_DEVICE_FIELD + bare;
 
@@ -333,19 +335,11 @@ public final class DeviceColumnCataloger {
   }
 
   private static String displayName(DeviceCorpus corpus, String keyId) {
-    return corpus
-        .getKey(keyId)
-        .map(DeviceKeyDisplays::titleDisplayName)
-        .orElseGet(
-            () -> {
-              if (keyId.startsWith(DeviceKeys.PREFIX_DIMENSION)) {
-                return "Dimension " + bareName(keyId);
-              }
-              if (keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY)) {
-                return "Host Property " + bareName(keyId);
-              }
-              return bareName(keyId);
-            });
+    return corpus.getKey(keyId).map(DeviceKeyDisplays::titleDisplayName).orElse(keyId);
+  }
+
+  private static String bareName(DeviceCorpus corpus, String keyId) {
+    return corpus.getKey(keyId).map(DeviceKeyDescriptor::bareName).orElse(keyId);
   }
 
   private static String norm(String s) {

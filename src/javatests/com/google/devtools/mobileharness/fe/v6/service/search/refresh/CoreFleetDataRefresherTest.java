@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRaw
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.FleetDataSource;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.inject.Guice;
 import java.time.Instant;
@@ -153,8 +154,8 @@ public final class CoreFleetDataRefresherTest {
     }
 
     @Override
-    public ListenableFuture<DimensionOverlayRaw> pullDimension(String keyId) {
-      return immediateFuture(DimensionOverlayRaw.create(keyId, ImmutableMap.of()));
+    public ListenableFuture<DimensionOverlayRaw> pullDimension(DeviceKeyDescriptor dimensionKey) {
+      return immediateFuture(DimensionOverlayRaw.create(dimensionKey.id(), ImmutableMap.of()));
     }
   }
 }

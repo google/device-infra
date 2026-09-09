@@ -40,33 +40,35 @@ public final class CompositeFleetIndexTest {
   public void setUp() {
     core =
         CoreFleetIndex.builder()
-            .setKeyIds(ImmutableSet.of("field::status", "dim::model"))
+            .setKeyIds(ImmutableSet.of("field::status", "dimension::model"))
             .setSortedValuesMap(
                 ImmutableMap.of(
                     "field::status", ImmutableList.of("busy", "idle"),
-                    "dim::model", ImmutableList.of("pixel 7", "pixel 8")))
+                    "dimension::model", ImmutableList.of("pixel 7", "pixel 8")))
             .setValueCountsMap(
                 ImmutableMap.of(
                     "field::status", ImmutableMap.of("idle", 10, "busy", 5),
-                    "dim::model", ImmutableMap.of("pixel 8", 8, "pixel 7", 7)))
+                    "dimension::model", ImmutableMap.of("pixel 8", 8, "pixel 7", 7)))
             .setValueDisplaysMap(
                 ImmutableMap.of(
                     "field::status", ImmutableMap.of("idle", "IDLE", "busy", "BUSY"),
-                    "dim::model", ImmutableMap.of("pixel 8", "Pixel 8", "pixel 7", "Pixel 7")))
+                    "dimension::model",
+                        ImmutableMap.of("pixel 8", "Pixel 8", "pixel 7", "Pixel 7")))
             .setSemanticGlobalSorted(
                 ImmutableList.of(
-                    new ValueKeyPair("pixel 7", "dim::model"),
-                    new ValueKeyPair("pixel 8", "dim::model")))
+                    new ValueKeyPair("pixel 7", "dimension::model"),
+                    new ValueKeyPair("pixel 8", "dimension::model")))
             .setGlobalExact(
-                ImmutableMap.of("pixel 8", ImmutableList.of(new KeyCount("dim::model", 8))))
+                ImmutableMap.of("pixel 8", ImmutableList.of(new KeyCount("dimension::model", 8))))
             .build();
 
     overlay = new FakeOverlayView();
-    overlay.loadedKeys = ImmutableSet.of("dim::carrier", "dim::battery_level");
-    overlay.sortedValuesMap.put("dim::carrier", ImmutableList.of("att", "t-mobile", "verizon"));
-    overlay.valueCountsMap.put("dim::carrier", ImmutableMap.of("verizon", 1200, "att", 500));
+    overlay.loadedKeys = ImmutableSet.of("dimension::carrier", "dimension::battery_level");
+    overlay.sortedValuesMap.put(
+        "dimension::carrier", ImmutableList.of("att", "t-mobile", "verizon"));
+    overlay.valueCountsMap.put("dimension::carrier", ImmutableMap.of("verizon", 1200, "att", 500));
     overlay.valueDisplaysMap.put(
-        "dim::carrier", ImmutableMap.of("verizon", "Verizon", "att", "AT&T"));
+        "dimension::carrier", ImmutableMap.of("verizon", "Verizon", "att", "AT&T"));
 
     composite = new CompositeFleetIndex(core, overlay);
   }
@@ -81,26 +83,27 @@ public final class CompositeFleetIndexTest {
 
   @Test
   public void overlayKey_delegatesToOverlay() {
-    assertThat(composite.sortedValues("dim::carrier"))
+    assertThat(composite.sortedValues("dimension::carrier"))
         .containsExactly("att", "t-mobile", "verizon")
         .inOrder();
-    assertThat(composite.valueCounts("dim::carrier")).containsEntry("verizon", 1200);
-    assertThat(composite.valueDisplays("dim::carrier")).containsEntry("verizon", "Verizon");
-    assertThat(composite.valueCount("dim::carrier", "verizon")).isEqualTo(1200);
+    assertThat(composite.valueCounts("dimension::carrier")).containsEntry("verizon", 1200);
+    assertThat(composite.valueDisplays("dimension::carrier")).containsEntry("verizon", "Verizon");
+    assertThat(composite.valueCount("dimension::carrier", "verizon")).isEqualTo(1200);
   }
 
   @Test
   public void absentKey_returnsEmpty() {
-    assertThat(composite.sortedValues("dim::unknown")).isEmpty();
-    assertThat(composite.valueCounts("dim::unknown")).isEmpty();
-    assertThat(composite.valueDisplays("dim::unknown")).isEmpty();
-    assertThat(composite.valueCount("dim::unknown", "val")).isEqualTo(0);
+    assertThat(composite.sortedValues("dimension::unknown")).isEmpty();
+    assertThat(composite.valueCounts("dimension::unknown")).isEmpty();
+    assertThat(composite.valueDisplays("dimension::unknown")).isEmpty();
+    assertThat(composite.valueCount("dimension::unknown", "val")).isEqualTo(0);
   }
 
   @Test
   public void keyIds_returnsUnion() {
     assertThat(composite.keyIds())
-        .containsExactly("field::status", "dim::model", "dim::carrier", "dim::battery_level");
+        .containsExactly(
+            "field::status", "dimension::model", "dimension::carrier", "dimension::battery_level");
   }
 
   @Test
@@ -108,10 +111,11 @@ public final class CompositeFleetIndexTest {
     // Invariant D6: global bare-value search is strictly isolated from overlay data.
     assertThat(composite.semanticGlobalSorted())
         .containsExactly(
-            new ValueKeyPair("pixel 7", "dim::model"), new ValueKeyPair("pixel 8", "dim::model"))
+            new ValueKeyPair("pixel 7", "dimension::model"),
+            new ValueKeyPair("pixel 8", "dimension::model"))
         .inOrder();
     assertThat(composite.globalExact())
-        .containsExactly("pixel 8", ImmutableList.of(new KeyCount("dim::model", 8)));
+        .containsExactly("pixel 8", ImmutableList.of(new KeyCount("dimension::model", 8)));
   }
 
   private static final class FakeOverlayView implements OverlayView {

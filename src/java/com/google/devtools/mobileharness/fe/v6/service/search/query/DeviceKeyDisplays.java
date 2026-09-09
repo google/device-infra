@@ -17,8 +17,6 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
-import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
-import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 
 /**
  * Presentation helper for formatting key display names in device search context.
@@ -39,10 +37,10 @@ public final class DeviceKeyDisplays {
    */
   public static String titleDisplayName(DeviceKeyDescriptor key) {
     if (key.isLongTail()) {
-      if (key.id().startsWith(DeviceKeys.PREFIX_DIMENSION)) {
+      if (key.isDimension()) {
         return "Dimension " + key.display().name();
       }
-      if (key.id().startsWith(HostKeys.PREFIX_HOST_PROPERTY)) {
+      if (key.isHostProperty()) {
         return "Host Property " + key.display().name();
       }
     }
@@ -55,10 +53,10 @@ public final class DeviceKeyDisplays {
    */
   public static String pillKey(DeviceKeyDescriptor key) {
     if (key.isLongTail()) {
-      if (key.id().startsWith(DeviceKeys.PREFIX_DIMENSION)) {
+      if (key.isDimension()) {
         return key.display().name();
       }
-      if (key.id().startsWith(HostKeys.PREFIX_HOST_PROPERTY)) {
+      if (key.isHostProperty()) {
         return "Host " + key.display().name();
       }
     }

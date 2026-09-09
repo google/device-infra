@@ -102,6 +102,11 @@ public abstract class DeviceKeyRegistry {
     return Optional.empty();
   }
 
+  /** Returns whether {@code keyId} represents an on-demand overlay dimension key. */
+  public boolean isOverlayKey(String keyId) {
+    return getKey(keyId).map(DeviceKeyDescriptor::isOverlay).orElse(false);
+  }
+
   /**
    * Mints a long-tail device dimension key for a dimension discovered from data, or returns empty
    * if the dimension name is null or empty.

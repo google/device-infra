@@ -43,9 +43,9 @@ public final class CompositePostingsTest {
         "field::status", ImmutableMap.of("idle", new int[] {0, 2}, "busy", new int[] {1}));
 
     overlayView = new FakeOverlayView();
-    overlayView.loadedKeys = ImmutableSet.of("dim::carrier");
+    overlayView.loadedKeys = ImmutableSet.of("dimension::carrier");
     overlayView.postingsMap.put(
-        "dim::carrier", ImmutableMap.of("verizon", new int[] {0, 1}, "att", new int[] {2}));
+        "dimension::carrier", ImmutableMap.of("verizon", new int[] {0, 1}, "att", new int[] {2}));
 
     composite = new CompositePostings(corePostings, overlayView);
   }
@@ -58,14 +58,17 @@ public final class CompositePostingsTest {
 
   @Test
   public void overlayKey_delegatesToOverlay() {
-    assertThat(composite.get("dim::carrier", "verizon")).asList().containsExactly(0, 1).inOrder();
-    assertThat(composite.forKey("dim::carrier")).containsKey("verizon");
+    assertThat(composite.get("dimension::carrier", "verizon"))
+        .asList()
+        .containsExactly(0, 1)
+        .inOrder();
+    assertThat(composite.forKey("dimension::carrier")).containsKey("verizon");
   }
 
   @Test
   public void absentKey_returnsEmpty() {
-    assertThat(composite.get("dim::unknown", "val")).isEmpty();
-    assertThat(composite.forKey("dim::unknown")).isEmpty();
+    assertThat(composite.get("dimension::unknown", "val")).isEmpty();
+    assertThat(composite.forKey("dimension::unknown")).isEmpty();
   }
 
   private static final class FakePostings implements Postings {

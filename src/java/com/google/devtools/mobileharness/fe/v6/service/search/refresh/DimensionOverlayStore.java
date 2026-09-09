@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.DimensionOve
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.FleetDataSource;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,9 +46,10 @@ import javax.inject.Singleton;
 /**
  * Thread-safe store for on-demand {@link DimensionOverlay} instances across fleets.
  *
- * <p>Asynchronously loads cold dimensions via {@link FleetDataSource#pullDimension(String)} with
- * in-flight deduplication and returns strong-reference maps for query execution. Overlays are
- * cached in a bounded per-fleet LRU cache (capacity 50, TTL 30m).
+ * <p>Asynchronously loads cold dimensions via {@link
+ * FleetDataSource#pullDimension(DeviceKeyDescriptor)} with in-flight deduplication and returns
+ * strong-reference maps for query execution. Overlays are cached in a bounded per-fleet LRU cache
+ * (capacity 50, TTL 30m).
  */
 @Singleton
 public final class DimensionOverlayStore {
@@ -73,8 +75,8 @@ public final class DimensionOverlayStore {
    * reference map of loaded overlays. Keys that are already cached return immediately.
    */
   public ListenableFuture<ImmutableMap<String, DimensionOverlay>> loadOverlaysAsync(
-      Fleet fleet, Set<String> keyIds, Executor executor) {
-    if (keyIds.isEmpty()) {
+      Fleet fleet, Set<DeviceKeyDescriptor> keys, Executor executor) {
+    if (keys.isEmpty()) {
       return immediateFuture(ImmutableMap.of());
     }
 
@@ -96,7 +98,8 @@ public final class DimensionOverlayStore {
 
     List<ListenableFuture<Map.Entry<String, DimensionOverlay>>> futures = new ArrayList<>();
 
-    for (String keyId : keyIds) {
+    for (DeviceKeyDescriptor key : keys) {
+      String keyId = key.id();
       DimensionOverlay cached = cache.getIfPresent(keyId);
       if (cached != null) {
         futures.add(immediateFuture(Map.entry(keyId, cached)));
@@ -111,7 +114,7 @@ public final class DimensionOverlayStore {
           pullFuture = existing;
         } else {
           pullFuture = settable;
-          ListenableFuture<DimensionOverlayRaw> rawFuture = dataSource.pullDimension(keyId);
+          ListenableFuture<DimensionOverlayRaw> rawFuture = dataSource.pullDimension(key);
           Futures.addCallback(
               rawFuture,
               new FutureCallback<>() {

@@ -34,7 +34,7 @@ public final class DimensionOverlayTest {
   public void create_and_bind_reindexesAccurately() {
     DimensionOverlayRaw raw =
         DimensionOverlayRaw.create(
-            "dim::carrier",
+            "dimension::carrier",
             ImmutableMap.of(
                 "uuid-1", ImmutableList.of("Verizon"),
                 "uuid-2", ImmutableList.of("T-Mobile", "AT&T"),
@@ -52,7 +52,7 @@ public final class DimensionOverlayTest {
 
     DimensionOverlay overlay = DimensionOverlay.create(raw, snapshotA);
 
-    assertThat(overlay.keyId()).isEqualTo("dim::carrier");
+    assertThat(overlay.keyId()).isEqualTo("dimension::carrier");
     assertThat(overlay.sortedValues()).containsExactly("at&t", "t-mobile", "verizon").inOrder();
     assertThat(overlay.valueCounts()).containsEntry("verizon", 2);
     assertThat(overlay.valueDisplays()).containsEntry("verizon", "Verizon");

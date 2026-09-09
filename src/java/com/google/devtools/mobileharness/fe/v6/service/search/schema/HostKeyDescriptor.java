@@ -49,11 +49,26 @@ public abstract class HostKeyDescriptor {
   /** Whether this descriptor was minted for a discovered (non-built-in) host property. */
   public abstract boolean isLongTail();
 
+  /** Whether this descriptor represents a host property. */
+  public abstract boolean isHostProperty();
+
+  /** Whether this descriptor represents a native host field. */
+  public boolean isHostField() {
+    return !isHostProperty();
+  }
+
+  /** Returns the bare name of this key without its namespace prefix. */
+  public String bareName() {
+    int separator = id().lastIndexOf("::");
+    return separator >= 0 ? id().substring(separator + 2) : id();
+  }
+
   /** Creates a builder for {@link HostKeyDescriptor}. */
   public static Builder builder() {
     return new AutoValue_HostKeyDescriptor.Builder()
         .setLabInfoSources(ImmutableList.of())
-        .setIsLongTail(false);
+        .setIsLongTail(false)
+        .setIsHostProperty(false);
   }
 
   /** Builder for {@link HostKeyDescriptor}. */
@@ -71,6 +86,8 @@ public abstract class HostKeyDescriptor {
     public abstract Builder setDisplay(KeyDisplay display);
 
     public abstract Builder setIsLongTail(boolean isLongTail);
+
+    public abstract Builder setIsHostProperty(boolean isHostProperty);
 
     public abstract HostKeyDescriptor build();
   }

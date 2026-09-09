@@ -104,6 +104,5 @@ java_library(
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_protobuf_protobuf_java",
-        "@maven//:javax_inject_jsr330_api",
     ],
 )

@@ -65,6 +65,7 @@ public final class HostKeys {
           .setId(PREFIX_HOST_PROPERTY + "host_os")
           .setLabInfoSource(LabInfoSource.hostProperty("host_os"))
           .setDisplay(KeyDisplay.of("Host OS"))
+          .setIsHostProperty(true)
           .build();
 
   public static final HostKeyDescriptor LAB_SERVER_VERSION =
@@ -97,12 +98,18 @@ public final class HostKeys {
         .setId(PREFIX_HOST_PROPERTY + key)
         .setLabInfoSource(LabInfoSource.hostProperty(key))
         .setDisplay(KeyDisplay.of(key))
+        .setIsHostProperty(true)
         .setIsLongTail(true)
         .build();
   }
 
   private static ImmutableList<String> nonEmpty(String value) {
     return value.isEmpty() ? ImmutableList.of() : ImmutableList.of(value);
+  }
+
+  /** Returns the canonical key ID for a host property key. */
+  public static String hostPropertyKeyId(String propertyKey) {
+    return PREFIX_HOST_PROPERTY + propertyKey;
   }
 
   private HostKeys() {}

@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.pull;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
@@ -36,7 +37,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.LabInfoMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
-import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
@@ -117,11 +118,9 @@ public final class LabInfoFleetPuller {
 
   /** Starts an on-demand single dimension pull from the specified universe. */
   public ListenableFuture<DimensionOverlayRaw> pullDimension(
-      String keyId, UniverseScope universeScope) {
-    String dimName =
-        keyId.startsWith(DeviceKeys.PREFIX_DIMENSION)
-            ? keyId.substring(DeviceKeys.PREFIX_DIMENSION.length())
-            : (keyId.startsWith("dim::") ? keyId.substring("dim::".length()) : keyId);
+      DeviceKeyDescriptor dimensionKey, UniverseScope universeScope) {
+    checkArgument(dimensionKey.isDimension(), "Key must be a dimension: %s", dimensionKey.id());
+    String dimName = dimensionKey.bareName();
 
     GetLabInfoRequest request =
         GetLabInfoRequest.newBuilder()
@@ -162,15 +161,15 @@ public final class LabInfoFleetPuller {
 
           logger.atInfo().log(
               "GetLabInfo on-demand dim '%s' returned %d devices in %d ms.",
-              keyId, uuidToValues.size(), stopwatch.elapsed().toMillis());
-          return DimensionOverlayRaw.create(keyId, uuidToValues);
+              dimensionKey.id(), uuidToValues.size(), stopwatch.elapsed().toMillis());
+          return DimensionOverlayRaw.create(dimensionKey.id(), uuidToValues);
         },
         directExecutor());
   }
 
   /** Starts an on-demand single dimension pull from the self universe. */
-  public ListenableFuture<DimensionOverlayRaw> pullDimension(String keyId) {
-    return pullDimension(keyId, UniverseScope.SELF);
+  public ListenableFuture<DimensionOverlayRaw> pullDimension(DeviceKeyDescriptor dimensionKey) {
+    return pullDimension(dimensionKey, UniverseScope.SELF);
   }
 
   /**

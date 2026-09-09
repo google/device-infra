@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.devtools.mobileharness.fe.v6.service.search.query.FleetKeyIds.bareName;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
@@ -30,13 +29,14 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnC
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogSection;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
-import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import javax.inject.Inject;
 
 /**
@@ -78,12 +78,14 @@ public final class HostColumnCataloger {
     List<String> builtin = new ArrayList<>();
     List<String> properties = new ArrayList<>();
     for (String keyId : index.keyIds()) {
-      if (corpus.getKey(keyId).isEmpty() && !keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY)) {
+      Optional<HostKeyDescriptor> key = corpus.getKey(keyId);
+      if (key.isEmpty()) {
         continue;
       }
-      if (keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY)) {
+      HostKeyDescriptor descriptor = key.get();
+      if (descriptor.isHostProperty()) {
         properties.add(keyId);
-      } else if (keyId.startsWith(HostKeys.PREFIX_HOST_FIELD)) {
+      } else if (descriptor.isHostField()) {
         builtin.add(keyId);
       }
     }
@@ -100,7 +102,7 @@ public final class HostColumnCataloger {
               .filter(
                   keyId -> {
                     String disp = norm(displayName(corpus, keyId));
-                    String bare = norm(bareName(keyId));
+                    String bare = norm(bareName(corpus, keyId));
                     return disp.contains(q) || bare.contains(q);
                   })
               .collect(toImmutableList());
@@ -113,7 +115,7 @@ public final class HostColumnCataloger {
               .filter(
                   keyId -> {
                     String disp = norm(displayName(corpus, keyId));
-                    String bare = norm(bareName(keyId));
+                    String bare = norm(bareName(corpus, keyId));
                     return disp.contains(q) || bare.contains(q);
                   })
               .collect(toImmutableList());
@@ -232,16 +234,11 @@ public final class HostColumnCataloger {
   }
 
   private static String displayName(HostCorpus corpus, String keyId) {
-    return corpus
-        .getKey(keyId)
-        .map(HostKeyDisplays::titleDisplayName)
-        .orElseGet(
-            () -> {
-              if (keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY)) {
-                return "Host Property " + bareName(keyId);
-              }
-              return bareName(keyId);
-            });
+    return corpus.getKey(keyId).map(HostKeyDisplays::titleDisplayName).orElse(keyId);
+  }
+
+  private static String bareName(HostCorpus corpus, String keyId) {
+    return corpus.getKey(keyId).map(HostKeyDescriptor::bareName).orElse(keyId);
   }
 
   private static String norm(String s) {

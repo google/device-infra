@@ -33,6 +33,8 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.DimensionOve
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.FleetDataSource;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Before;
@@ -43,6 +45,9 @@ import org.junit.runners.JUnit4;
 /** Unit tests for {@link DimensionOverlayStore}. */
 @RunWith(JUnit4.class)
 public final class DimensionOverlayStoreTest {
+
+  private static final DeviceKeyDescriptor CARRIER_KEY =
+      new AtsDeviceKeyRegistry().createLongTailDimensionKey("carrier").get();
 
   private final ListeningExecutorService executor = newDirectExecutorService();
   private final FleetSnapshotStore snapshotStore = new FleetSnapshotStore();
@@ -80,24 +85,24 @@ public final class DimensionOverlayStoreTest {
   public void loadOverlaysAsync_coldKey_pullsFromDataSourceAndCaches() throws Exception {
     dataSource.rawResult =
         DimensionOverlayRaw.create(
-            "dim::carrier", ImmutableMap.of("dev-1", ImmutableList.of("Verizon")));
+            "dimension::carrier", ImmutableMap.of("dev-1", ImmutableList.of("Verizon")));
 
     ImmutableMap<String, DimensionOverlay> result =
         overlayStore
-            .loadOverlaysAsync(Fleet.FLEET_SELF, ImmutableSet.of("dim::carrier"), executor)
+            .loadOverlaysAsync(Fleet.FLEET_SELF, ImmutableSet.of(CARRIER_KEY), executor)
             .get();
 
-    assertThat(result.keySet()).containsExactly("dim::carrier");
-    assertThat(result.get("dim::carrier").valueCounts()).containsEntry("verizon", 1);
+    assertThat(result.keySet()).containsExactly("dimension::carrier");
+    assertThat(result.get("dimension::carrier").valueCounts()).containsEntry("verizon", 1);
     assertThat(dataSource.pullCount.get()).isEqualTo(1);
 
     // Second call hits cache; does not pull again
     ImmutableMap<String, DimensionOverlay> secondResult =
         overlayStore
-            .loadOverlaysAsync(Fleet.FLEET_SELF, ImmutableSet.of("dim::carrier"), executor)
+            .loadOverlaysAsync(Fleet.FLEET_SELF, ImmutableSet.of(CARRIER_KEY), executor)
             .get();
 
-    assertThat(secondResult.keySet()).containsExactly("dim::carrier");
+    assertThat(secondResult.keySet()).containsExactly("dimension::carrier");
     assertThat(dataSource.pullCount.get()).isEqualTo(1);
   }
 
@@ -107,26 +112,26 @@ public final class DimensionOverlayStoreTest {
     dataSource.setPendingFuture(inFlight);
 
     ListenableFuture<ImmutableMap<String, DimensionOverlay>> future1 =
-        overlayStore.loadOverlaysAsync(Fleet.FLEET_SELF, ImmutableSet.of("dim::carrier"), executor);
+        overlayStore.loadOverlaysAsync(Fleet.FLEET_SELF, ImmutableSet.of(CARRIER_KEY), executor);
     ListenableFuture<ImmutableMap<String, DimensionOverlay>> future2 =
-        overlayStore.loadOverlaysAsync(Fleet.FLEET_SELF, ImmutableSet.of("dim::carrier"), executor);
+        overlayStore.loadOverlaysAsync(Fleet.FLEET_SELF, ImmutableSet.of(CARRIER_KEY), executor);
 
     assertThat(dataSource.pullCount.get()).isEqualTo(1);
 
     // Complete the in-flight pull
     inFlight.set(
         DimensionOverlayRaw.create(
-            "dim::carrier", ImmutableMap.of("dev-1", ImmutableList.of("Verizon"))));
+            "dimension::carrier", ImmutableMap.of("dev-1", ImmutableList.of("Verizon"))));
 
-    assertThat(future1.get()).containsKey("dim::carrier");
-    assertThat(future2.get()).containsKey("dim::carrier");
+    assertThat(future1.get()).containsKey("dimension::carrier");
+    assertThat(future2.get()).containsKey("dimension::carrier");
     assertThat(dataSource.pullCount.get()).isEqualTo(1);
   }
 
   private static final class FakeDataSource implements FleetDataSource {
     final AtomicInteger pullCount = new AtomicInteger(0);
     volatile DimensionOverlayRaw rawResult =
-        DimensionOverlayRaw.create("dim::empty", ImmutableMap.of());
+        DimensionOverlayRaw.create("dimension::empty", ImmutableMap.of());
     volatile SettableFuture<DimensionOverlayRaw> pendingFuture = null;
 
     void setPendingFuture(SettableFuture<DimensionOverlayRaw> pending) {
@@ -144,7 +149,7 @@ public final class DimensionOverlayStoreTest {
     }
 
     @Override
-    public ListenableFuture<DimensionOverlayRaw> pullDimension(String keyId) {
+    public ListenableFuture<DimensionOverlayRaw> pullDimension(DeviceKeyDescriptor dimensionKey) {
       pullCount.incrementAndGet();
       if (pendingFuture != null) {
         return pendingFuture;

@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.primitives.Booleans.falseFirst;
-import static com.google.devtools.mobileharness.fe.v6.service.search.query.FleetKeyIds.bareName;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
@@ -445,7 +444,8 @@ public final class FleetSuggester {
     String value = Ascii.toLowerCase(stripQuotes(rawValue.trim()));
     for (String keyId : keyIds) {
       boolean hadMatches = false;
-      for (Match match : matchValues(context.index(), keyId, value, /* allowContains= */ true)) {
+      for (Match match :
+          matchValues(context.corpus(), context.index(), keyId, value, /* allowContains= */ true)) {
         Cand cand = condition(context, keyId, match.value(), match.tier(), exclude);
         if (cand != null) {
           out.add(cand);
@@ -633,8 +633,11 @@ public final class FleetSuggester {
       }
     }
 
-    // 3. Identifier collapse (PLAIN_VALUE_KEYS, one collapsed suggestion per key).
-    for (String identKey : PLAIN_VALUE_KEYS) {
+    // 3. Identifier collapse (one collapsed suggestion per identifier key in the index).
+    for (String identKey : index.keyIds()) {
+      if (!context.corpus().isIdentifierKey(identKey)) {
+        continue;
+      }
       ImmutableList<String> keyValues = index.sortedValues(identKey);
       if (keyValues.isEmpty()) {
         continue;
@@ -730,7 +733,7 @@ public final class FleetSuggester {
           continue;
         }
         String display = normalize(displayName(context.corpus(), keyId));
-        String bare = normalize(bareName(keyId));
+        String bare = normalize(bareName(context.corpus(), keyId));
         if (display.startsWith(normTerm) || bare.startsWith(normTerm)) {
           matchRank.put(keyId, 1);
         } else if (display.contains(normTerm) || bare.contains(normTerm)) {
@@ -926,7 +929,8 @@ public final class FleetSuggester {
     }
 
     // Ranking order (matches prototype suggest_engine.py _rank sort_key): key priority is the
-    // PRIMARY sort so core keys (e.g. dim::model) outrank raw dims (e.g. dim::supported_model)
+    // PRIMARY sort so core keys (e.g. dimension::model) outrank raw dims (e.g.
+    // dimension::supported_model)
     // regardless of match count, then match quality (tier), personalization, count, text.
     uniq.sort(
         Comparator.<Cand>comparingInt(c -> -context.keyPriority().applyAsInt(c.keyId))
@@ -1035,7 +1039,7 @@ public final class FleetSuggester {
   // ---- Value matching (spec section 2.3) ----
 
   private static ImmutableList<Match> matchValues(
-      FleetIndex index, String keyId, String query, boolean allowContains) {
+      SearchCorpus corpus, FleetIndex index, String keyId, String query, boolean allowContains) {
     ImmutableList<String> sorted = index.sortedValues(keyId);
     if (sorted.isEmpty() || query.isEmpty()) {
       return ImmutableList.of();
@@ -1057,7 +1061,7 @@ public final class FleetSuggester {
         out.add(new Match(value, 2));
       }
     }
-    if (allowContains && !IDENTIFIER_KEYS.contains(keyId) && out.size() < KEY_VALUES_PER_KEY) {
+    if (allowContains && !corpus.isIdentifierKey(keyId) && out.size() < KEY_VALUES_PER_KEY) {
       for (String value : sorted) {
         if (value.contains(query) && !value.startsWith(query) && !value.equals(query)) {
           out.add(new Match(value, 1));
@@ -1101,12 +1105,12 @@ public final class FleetSuggester {
     Matcher dim = NAMESPACE_DIM.matcher(low);
     if (dim.matches()) {
       String dimName = normalize(dim.group(1));
-      String keyId = DeviceKeys.PREFIX_DIMENSION + dimName;
+      String keyId = DeviceKeys.dimensionKeyId(dimName);
       return ImmutableList.of(keyId);
     }
     Matcher prop = NAMESPACE_PROP.matcher(low);
     if (prop.matches()) {
-      String keyId = HostKeys.PREFIX_HOST_PROPERTY + normalize(prop.group(1));
+      String keyId = HostKeys.hostPropertyKeyId(normalize(prop.group(1)));
       return ImmutableList.of(keyId);
     }
     ImmutableList<String> aliased = ALIAS_TO_KEYS.get(normalize(raw));
@@ -1115,11 +1119,11 @@ public final class FleetSuggester {
     }
     // Case 3: a bare token equal to a dimension or host-property key present in the fleet.
     String bareDimName = normalize(raw);
-    String bareDim = DeviceKeys.PREFIX_DIMENSION + bareDimName;
+    String bareDim = DeviceKeys.dimensionKeyId(bareDimName);
     if (index.keyIds().contains(bareDim) || catalogDimensions.contains(bareDimName)) {
       return ImmutableList.of(bareDim);
     }
-    String bareProp = HostKeys.PREFIX_HOST_PROPERTY + normalize(raw);
+    String bareProp = HostKeys.hostPropertyKeyId(normalize(raw));
     if (index.keyIds().contains(bareProp)) {
       return ImmutableList.of(bareProp);
     }
@@ -1138,8 +1142,7 @@ public final class FleetSuggester {
     for (String keyId : resolveKey(context, token)) {
       if ((index.keyIds().contains(keyId)
               || isDiscoveredDimension(context, keyId)
-              || keyId.startsWith(DeviceKeys.PREFIX_DIMENSION)
-              || keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY))
+              || isDimensionOrProperty(context.corpus(), keyId))
           && seen.add(keyId)) {
         out.add(new KeyMatch(keyId, 3));
       }
@@ -1153,19 +1156,19 @@ public final class FleetSuggester {
         continue;
       }
       String display = normalize(displayName(context.corpus(), keyId));
-      String bare = normalize(bareName(keyId));
+      String bare = normalize(bareName(context.corpus(), keyId));
       if (display.startsWith(normTerm) || bare.startsWith(normTerm)) {
         out.add(new KeyMatch(keyId, 2));
         seen.add(keyId);
       }
     }
     for (String dimName : context.catalogDimensions()) {
-      String keyId = DeviceKeys.PREFIX_DIMENSION + dimName;
+      String keyId = DeviceKeys.dimensionKeyId(dimName);
       if (seen.contains(keyId)) {
         continue;
       }
       String display = normalize(displayName(context.corpus(), keyId));
-      String bare = normalize(bareName(keyId));
+      String bare = normalize(dimName);
       if (display.startsWith(normTerm) || bare.startsWith(normTerm)) {
         out.add(new KeyMatch(keyId, 2));
         seen.add(keyId);
@@ -1176,19 +1179,19 @@ public final class FleetSuggester {
         continue;
       }
       String display = normalize(displayName(context.corpus(), keyId));
-      String bare = normalize(bareName(keyId));
+      String bare = normalize(bareName(context.corpus(), keyId));
       if (display.contains(normTerm) || bare.contains(normTerm)) {
         out.add(new KeyMatch(keyId, 1));
         seen.add(keyId);
       }
     }
     for (String dimName : context.catalogDimensions()) {
-      String keyId = DeviceKeys.PREFIX_DIMENSION + dimName;
+      String keyId = DeviceKeys.dimensionKeyId(dimName);
       if (seen.contains(keyId)) {
         continue;
       }
       String display = normalize(displayName(context.corpus(), keyId));
-      String bare = normalize(bareName(keyId));
+      String bare = normalize(dimName);
       if (display.contains(normTerm) || bare.contains(normTerm)) {
         out.add(new KeyMatch(keyId, 1));
         seen.add(keyId);
@@ -1198,9 +1201,12 @@ public final class FleetSuggester {
   }
 
   private static boolean isDiscoveredDimension(Context context, String keyId) {
-    if (keyId.startsWith(DeviceKeys.PREFIX_DIMENSION)) {
-      String dimName = keyId.substring(DeviceKeys.PREFIX_DIMENSION.length());
-      return context.catalogDimensions().contains(dimName);
+    if (context.corpus() instanceof DeviceCorpus deviceCorpus) {
+      return deviceCorpus
+          .getKey(keyId)
+          .filter(DeviceKeyDescriptor::isDimension)
+          .map(d -> context.catalogDimensions().contains(d.bareName()))
+          .orElse(false);
     }
     return false;
   }
@@ -1262,31 +1268,17 @@ public final class FleetSuggester {
     return FleetAddGroupBy.newBuilder().setKey(keyId).setPillKey(pillKey(corpus, keyId)).build();
   }
 
-  private static final ImmutableSet<String> PLAIN_VALUE_KEYS =
-      ImmutableSet.of(
-          DeviceKeys.UUID.id(),
-          DeviceKeys.PREFIX_DIMENSION + "uuid",
-          DeviceKeys.PREFIX_DIMENSION + "id",
-          DeviceKeys.PREFIX_DIMENSION + "serial",
-          DeviceKeys.PREFIX_DIMENSION + "control_id",
-          DeviceKeys.PREFIX_DIMENSION + "mac_address",
-          DeviceKeys.PREFIX_DIMENSION + "bluetooth_mac_address",
-          DeviceKeys.PREFIX_DIMENSION + "soc_id",
-          DeviceKeys.PREFIX_DIMENSION + "network_address",
-          DeviceKeys.PREFIX_DIMENSION + "gservices_android_id",
-          DeviceKeys.PREFIX_DIMENSION + "iccid",
-          DeviceKeys.PREFIX_DIMENSION + "iccids",
-          DeviceKeys.PREFIX_DIMENSION + "imei",
-          DeviceKeys.PREFIX_DIMENSION + "ecid",
-          DeviceKeys.PREFIX_DIMENSION + "wifi_address",
-          DeviceKeys.PREFIX_DIMENSION + "testbed_name");
-
-  private static final ImmutableSet<String> IDENTIFIER_KEYS =
-      ImmutableSet.<String>builder()
-          .addAll(PLAIN_VALUE_KEYS)
-          .add(HostKeys.HOST_NAME.id())
-          .add(HostKeys.HOST_IP.id())
-          .build();
+  private static boolean isDimensionOrProperty(SearchCorpus corpus, String keyId) {
+    if (corpus instanceof DeviceCorpus deviceCorpus) {
+      return deviceCorpus
+          .getKey(keyId)
+          .map(k -> k.isDimension() || k.isHostProperty())
+          .orElse(false);
+    } else if (corpus instanceof HostCorpus hostCorpus) {
+      return hostCorpus.getKey(keyId).map(HostKeyDescriptor::isHostProperty).orElse(false);
+    }
+    return false;
+  }
 
   private static FleetFilterChipMetadata metadata(SearchCorpus corpus, String keyId) {
     return FleetFilterChipMetadata.newBuilder()
@@ -1324,49 +1316,32 @@ public final class FleetSuggester {
 
   private static String displayName(SearchCorpus corpus, String keyId) {
     if (corpus instanceof DeviceCorpus deviceCorpus) {
-      return deviceCorpus
-          .getKey(keyId)
-          .map(DeviceKeyDisplays::titleDisplayName)
-          .orElseGet(
-              () -> {
-                if (keyId.startsWith(DeviceKeys.PREFIX_DIMENSION)) {
-                  return "Dimension " + FleetKeyIds.bareName(keyId);
-                }
-                if (keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY)) {
-                  return "Host Property " + FleetKeyIds.bareName(keyId);
-                }
-                return FleetKeyIds.bareName(keyId);
-              });
+      return deviceCorpus.getKey(keyId).map(DeviceKeyDisplays::titleDisplayName).orElse(keyId);
     }
     if (corpus instanceof HostCorpus hostCorpus) {
-      return hostCorpus
-          .getKey(keyId)
-          .map(HostKeyDisplays::titleDisplayName)
-          .orElseGet(
-              () -> {
-                if (keyId.startsWith(HostKeys.PREFIX_HOST_PROPERTY)) {
-                  return "Host Property " + FleetKeyIds.bareName(keyId);
-                }
-                return FleetKeyIds.bareName(keyId);
-              });
+      return hostCorpus.getKey(keyId).map(HostKeyDisplays::titleDisplayName).orElse(keyId);
     }
-    return FleetKeyIds.bareName(keyId);
+    return keyId;
+  }
+
+  private static String bareName(SearchCorpus corpus, String keyId) {
+    if (corpus instanceof DeviceCorpus deviceCorpus) {
+      return deviceCorpus.getKey(keyId).map(DeviceKeyDescriptor::bareName).orElse(keyId);
+    }
+    if (corpus instanceof HostCorpus hostCorpus) {
+      return hostCorpus.getKey(keyId).map(HostKeyDescriptor::bareName).orElse(keyId);
+    }
+    return keyId;
   }
 
   private static String pillKey(SearchCorpus corpus, String keyId) {
     if (corpus instanceof DeviceCorpus deviceCorpus) {
-      return deviceCorpus
-          .getKey(keyId)
-          .map(DeviceKeyDisplays::pillKey)
-          .orElseGet(() -> FleetKeyIds.bareName(keyId));
+      return deviceCorpus.getKey(keyId).map(DeviceKeyDisplays::pillKey).orElse(keyId);
     }
     if (corpus instanceof HostCorpus hostCorpus) {
-      return hostCorpus
-          .getKey(keyId)
-          .map(HostKeyDisplays::pillKey)
-          .orElseGet(() -> FleetKeyIds.bareName(keyId));
+      return hostCorpus.getKey(keyId).map(HostKeyDisplays::pillKey).orElse(keyId);
     }
-    return FleetKeyIds.bareName(keyId);
+    return keyId;
   }
 
   private static boolean isPlural(SearchCorpus corpus, String keyId) {

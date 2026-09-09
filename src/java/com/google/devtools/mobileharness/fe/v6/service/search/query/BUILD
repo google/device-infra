@@ -37,20 +37,13 @@ java_library(
 java_library(
     name = "device_key_displays",
     srcs = ["DeviceKeyDisplays.java"],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
-    ],
+    deps = ["//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor"],
 )
 
 java_library(
     name = "host_key_displays",
     srcs = ["HostKeyDisplays.java"],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
-    ],
+    deps = ["//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor"],
 )
 
 java_library(
@@ -161,6 +154,9 @@ java_library(
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:postings",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_registry",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
@@ -256,7 +252,6 @@ java_library(
         ":device_corpus",
         ":device_key_displays",
         ":fleet_filter_engine",
-        ":fleet_key_ids",
         ":host_corpus",
         ":host_key_displays",
         ":scenario_curation",
@@ -279,24 +274,18 @@ java_library(
 )
 
 java_library(
-    name = "fleet_key_ids",
-    srcs = ["FleetKeyIds.java"],
-)
-
-java_library(
     name = "device_column_cataloger",
     srcs = ["DeviceColumnCataloger.java"],
     deps = [
         ":device_corpus",
         ":device_key_displays",
-        ":fleet_key_ids",
-        ":search_corpus",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:postings",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:dimension_catalog_store",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
@@ -306,13 +295,48 @@ java_library(
     name = "host_column_cataloger",
     srcs = ["HostColumnCataloger.java"],
     deps = [
-        ":fleet_key_ids",
         ":host_corpus",
         ":host_key_displays",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:postings",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "fleet_searcher",
+    srcs = ["FleetSearcher.java"],
+    deps = [
+        ":fleet_flat_searcher",
+        ":fleet_group_searcher",
+        ":search_corpus",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_registry",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "search_corpus_factory",
+    srcs = ["SearchCorpusFactory.java"],
+    deps = [
+        ":device_corpus",
+        ":host_corpus",
+        ":scenario_curation",
+        ":search_corpus",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:dimension_overlay",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:overlay_view",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:fleet_snapshot_store",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_registry",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],

@@ -58,6 +58,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:dimension_overlay_raw",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:fleet_data_source",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],

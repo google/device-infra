@@ -151,6 +151,7 @@ public final class DeviceKeys {
         .setId(PREFIX_DIMENSION + dimensionName)
         .setDeviceInfoSource(DeviceInfoSource.dimension(dimensionName))
         .setDisplay(display)
+        .setIsDimension(true)
         .build();
   }
 
@@ -170,6 +171,7 @@ public final class DeviceKeys {
         .setId(PREFIX_DIMENSION + dimensionName)
         .setDeviceInfoSource(DeviceInfoSource.dimension(dimensionName))
         .setDisplay(KeyDisplay.of(dimensionName))
+        .setIsDimension(true)
         .setIsLongTail(true)
         .build();
   }
@@ -185,7 +187,13 @@ public final class DeviceKeys {
         .setLabInfoSources(host.labInfoSources())
         .setDisplay(deviceDisplay)
         .setIsLongTail(host.isLongTail())
+        .setIsHostProperty(host.isHostProperty())
         .build();
+  }
+
+  /** Returns the canonical key ID for a dimension name. */
+  public static String dimensionKeyId(String dimensionName) {
+    return PREFIX_DIMENSION + dimensionName;
   }
 
   private static ImmutableList<String> nonEmpty(String value) {

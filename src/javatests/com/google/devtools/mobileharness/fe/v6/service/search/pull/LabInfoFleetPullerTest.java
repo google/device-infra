@@ -32,6 +32,8 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.LabInfoMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
@@ -113,7 +115,9 @@ public final class LabInfoFleetPullerTest {
             .build();
     labInfoProvider.setResult(labResult);
 
-    DimensionOverlayRaw raw = puller.pullDimension("dimension::carrier").get();
+    DeviceKeyDescriptor carrierKey =
+        new AtsDeviceKeyRegistry().createLongTailDimensionKey("carrier").get();
+    DimensionOverlayRaw raw = puller.pullDimension(carrierKey).get();
 
     assertThat(raw.keyId()).isEqualTo("dimension::carrier");
     assertThat(raw.uuidToValues())

@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.FleetDataSource;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import java.util.concurrent.Executors;
 import org.junit.After;
 import org.junit.Before;
@@ -142,7 +143,7 @@ public final class DimensionCatalogRefresherTest {
     }
 
     @Override
-    public ListenableFuture<DimensionOverlayRaw> pullDimension(String dimensionName) {
+    public ListenableFuture<DimensionOverlayRaw> pullDimension(DeviceKeyDescriptor dimensionKey) {
       throw new UnsupportedOperationException();
     }
 
@@ -171,7 +172,7 @@ public final class DimensionCatalogRefresherTest {
     }
 
     @Override
-    public ListenableFuture<DimensionOverlayRaw> pullDimension(String dimensionName) {
+    public ListenableFuture<DimensionOverlayRaw> pullDimension(DeviceKeyDescriptor dimensionKey) {
       throw new UnsupportedOperationException();
     }
 

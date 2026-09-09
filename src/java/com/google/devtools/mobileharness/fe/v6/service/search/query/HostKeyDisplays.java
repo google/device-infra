@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
-import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 
 /**
  * Presentation helper for formatting key display names in host search context.
@@ -38,7 +37,7 @@ public final class HostKeyDisplays {
    * "Host Property <name>" for discovered host properties.
    */
   public static String titleDisplayName(HostKeyDescriptor key) {
-    if (key.isLongTail() && key.id().startsWith(HostKeys.PREFIX_HOST_PROPERTY)) {
+    if (key.isLongTail() && key.isHostProperty()) {
       return "Host Property " + key.display().name();
     }
     return key.display().name();

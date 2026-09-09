@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableMap;
 @AutoValue
 public abstract class DimensionOverlayRaw {
 
-  /** The namespaced key id (e.g. "dim::carrier"). */
+  /** The namespaced key id (e.g. "dimension::carrier"). */
   public abstract String keyId();
 
   /** Map from device UUID to the list of display-cased values for this dimension. */

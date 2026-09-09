@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRaw
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceEnrichment;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.List;
@@ -95,8 +96,8 @@ public final class AtsFleetDataSource implements FleetDataSource {
   }
 
   @Override
-  public ListenableFuture<DimensionOverlayRaw> pullDimension(String keyId) {
-    return labInfoFleetPuller.pullDimension(keyId);
+  public ListenableFuture<DimensionOverlayRaw> pullDimension(DeviceKeyDescriptor dimensionKey) {
+    return labInfoFleetPuller.pullDimension(dimensionKey);
   }
 
   @Override

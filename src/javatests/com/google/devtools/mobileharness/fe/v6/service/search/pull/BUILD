@@ -36,6 +36,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:ats_fleet_data_source",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:dimension_overlay_raw",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:lab_info_fleet_puller",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_registry",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:config_result",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",

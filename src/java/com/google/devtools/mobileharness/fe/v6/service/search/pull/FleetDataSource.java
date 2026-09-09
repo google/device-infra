@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 
 /**
  * A source of raw search data for a single fleet.
@@ -54,7 +55,7 @@ public interface FleetDataSource {
    * Starts an on-demand pull of a single dimension's values for this fleet and returns a future for
    * the raw overlay data.
    */
-  ListenableFuture<DimensionOverlayRaw> pullDimension(String keyId);
+  ListenableFuture<DimensionOverlayRaw> pullDimension(DeviceKeyDescriptor dimensionKey);
 
   /**
    * Starts a pull of all available device dimension names for this fleet and returns a future for

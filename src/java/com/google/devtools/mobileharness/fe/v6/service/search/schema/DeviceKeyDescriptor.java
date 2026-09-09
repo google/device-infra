@@ -60,12 +60,31 @@ public abstract class DeviceKeyDescriptor {
   /** Whether this descriptor was minted for a discovered (non-built-in) key. */
   public abstract boolean isLongTail();
 
+  /** Whether this descriptor represents a composite device dimension. */
+  public abstract boolean isDimension();
+
+  /** Whether this descriptor represents a projected host property. */
+  public abstract boolean isHostProperty();
+
+  /** Whether this descriptor represents an on-demand long-tail dimension overlay. */
+  public boolean isOverlay() {
+    return isDimension() && isLongTail();
+  }
+
+  /** Returns the bare name of this key without its namespace prefix. */
+  public String bareName() {
+    int separator = id().lastIndexOf("::");
+    return separator >= 0 ? id().substring(separator + 2) : id();
+  }
+
   /** Creates a builder for {@link DeviceKeyDescriptor}. */
   public static Builder builder() {
     return new AutoValue_DeviceKeyDescriptor.Builder()
         .setDeviceInfoSources(ImmutableList.of())
         .setLabInfoSources(ImmutableList.of())
-        .setIsLongTail(false);
+        .setIsLongTail(false)
+        .setIsDimension(false)
+        .setIsHostProperty(false);
   }
 
   /** Builder for {@link DeviceKeyDescriptor}. */
@@ -90,6 +109,10 @@ public abstract class DeviceKeyDescriptor {
     public abstract Builder setDisplay(KeyDisplay display);
 
     public abstract Builder setIsLongTail(boolean isLongTail);
+
+    public abstract Builder setIsDimension(boolean isDimension);
+
+    public abstract Builder setIsHostProperty(boolean isHostProperty);
 
     public abstract DeviceKeyDescriptor build();
   }
