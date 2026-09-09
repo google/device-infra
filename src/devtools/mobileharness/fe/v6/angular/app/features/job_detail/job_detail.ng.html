@@ -9,6 +9,10 @@
       -->
     </div>
   } @else if (job(); as job) {
+    <app-legacy-console-banner
+      [legacyUrl]="legacyFeUrl + '/jobdetailview/' + job.id"
+      bannerType="job">
+    </app-legacy-console-banner>
     <div class="main-card">
       <!-- Breadcrumb Navigation & Top Action Bar -->
       <header class="card-header">
@@ -48,10 +52,6 @@
         </header>
 
         <div class="card-body">
-          <app-legacy-console-banner
-            [legacyUrl]="legacyFeUrl + '/jobdetailview/' + job.id"
-            bannerType="job">
-          </app-legacy-console-banner>
           <!-- Job Title Bar / Identity Area -->
           <div class="job-title-bar">
             <div class="title-bar-content-wrapper">
