@@ -13,6 +13,7 @@
 # limitations under the License.
 #
 
+load("@grpc//bazel:python_rules.bzl", "py_grpc_library")
 load("@grpc-java//:java_grpc_library.bzl", "java_grpc_library")
 load("@protobuf//bazel:java_proto_library.bzl", "java_proto_library")
 load("@protobuf//bazel:proto_library.bzl", "proto_library")
