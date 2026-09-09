@@ -209,6 +209,8 @@ public enum ExtErrorId implements ErrorId {
   PYTHON_VERSION_CHECK_DECORATOR_PARSE_VERSION_ERROR(92_002, ErrorType.DEPENDENCY_ISSUE),
   PYTHON_VERSION_CHECK_DECORATOR_RUN_COMMAND_ERROR(92_003, ErrorType.DEPENDENCY_ISSUE),
 
+  // AiEdgeLocalFilePullerDecorator: 92_101 ~ 92_150
+
   // AiEdgeMacModelEval: 92_151 ~ 92_200
 
   // AiEdgeWindowsModelEval: 92_251 ~ 92_300
