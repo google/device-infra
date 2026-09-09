@@ -26,11 +26,16 @@ import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
 import com.google.devtools.mobileharness.shared.util.network.localhost.LocalHost;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -222,5 +227,81 @@ public class NetUtil {
     return !(address.isLoopbackAddress()
         || address.isLinkLocalAddress()
         || address instanceof Inet6Address);
+  }
+
+  /**
+   * Returns the negotiated link speed of the primary network interface of the host.
+   *
+   * <p>On Linux, reads {@code /sys/class/net/<interface>/speed}.
+   *
+   * @return link speed string with unit (e.g. "1000 Mbps"), or empty if unavailable
+   */
+  public Optional<String> getNetworkSpeed() {
+    return getNetworkSpeed(Paths.get("/sys/class/net"));
+  }
+
+  @VisibleForTesting
+  Optional<String> getNetworkSpeed(Path sysClassNetDir) {
+    try {
+      SystemUtil systemUtil = new SystemUtil();
+      if (!systemUtil.isOnLinux()) {
+        return Optional.empty();
+      }
+      Optional<List<NetworkInterfaceInfo>> interfaces = getNetworkInterfaceAndAddress();
+      return getLinuxNetworkSpeed(sysClassNetDir, interfaces);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log("Failed to detect network speed.");
+      return Optional.empty();
+    }
+  }
+
+  @VisibleForTesting
+  Optional<String> getLinuxNetworkSpeed(
+      Path sysClassNetDir, Optional<List<NetworkInterfaceInfo>> interfaces) {
+    if (!interfaces.isPresent() || interfaces.get().isEmpty()) {
+      return Optional.empty();
+    }
+    Optional<String> hostIp = getUniqueHostIpOrEmpty(interfaces);
+    // 1. Try to find the interface matching hostIp
+    if (hostIp.isPresent()) {
+      for (NetworkInterfaceInfo iface : interfaces.get()) {
+        if (iface.ips().stream().anyMatch(ip -> ip.getHostAddress().equals(hostIp.get()))) {
+          Optional<String> speed = readInterfaceSpeed(sysClassNetDir, iface.name());
+          if (speed.isPresent()) {
+            return speed;
+          }
+        }
+      }
+    }
+    // 2. Fallback: try any valid non-virtual interface
+    for (NetworkInterfaceInfo iface : interfaces.get()) {
+      if (iface.name().startsWith("docker")
+          || iface.name().startsWith("veth")
+          || iface.name().startsWith("br-")) {
+        continue;
+      }
+      Optional<String> speed = readInterfaceSpeed(sysClassNetDir, iface.name());
+      if (speed.isPresent()) {
+        return speed;
+      }
+    }
+    return Optional.empty();
+  }
+
+  private Optional<String> readInterfaceSpeed(Path sysClassNetDir, String ifaceName) {
+    Path speedFile = sysClassNetDir.resolve(ifaceName).resolve("speed");
+    if (!Files.isRegularFile(speedFile)) {
+      return Optional.empty();
+    }
+    try {
+      String content = Files.readString(speedFile).trim();
+      long speedMbps = Long.parseLong(content);
+      if (speedMbps > 0) {
+        return Optional.of(speedMbps + " Mbps");
+      }
+    } catch (IOException | NumberFormatException e) {
+      logger.atFine().withCause(e).log("Could not read link speed for interface %s", ifaceName);
+    }
+    return Optional.empty();
   }
 }
