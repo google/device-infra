@@ -56,6 +56,7 @@ public abstract class DetectionResult {
     FASTBOOT,
     FUCHSIA,
     GEM5,
+    GOLDFISH,
     IDEVICE_ID,
     LIBUSB,
     LINUX,

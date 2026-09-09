@@ -163,7 +163,11 @@ public enum MoblySubdeviceType {
   TINY_HUMAN_DEVICE(
       /* jsonTypeName= */ "TinyHumanDevice",
       /* jsonIdKey= */ "id",
-      /* mhClassName= */ "TinyHumanDevice");
+      /* mhClassName= */ "TinyHumanDevice"),
+  XR_GOLDFISH_DEVICE(
+      /* jsonTypeName= */ "XrGoldfishDevice",
+      /* jsonIdKey= */ "id",
+      /* mhClassName= */ "XrGoldfishDevice");
 
   private final String jsonTypeName;
   private final String jsonIdKey;
