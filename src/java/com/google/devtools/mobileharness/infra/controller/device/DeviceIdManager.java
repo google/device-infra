@@ -68,6 +68,22 @@ public class DeviceIdManager {
     uuidToDeviceId.put(deviceId.uuid(), deviceId);
   }
 
+  /**
+   * Securely evicts mapped identifiers only if the active runner UUID matches. Do <b>not</b> make
+   * it public.
+   */
+  void remove(String controlId, String uuid) {
+    controlIdToDeviceId.computeIfPresent(
+        controlId,
+        (key, currentVal) -> {
+          if (currentVal.uuid().equals(uuid)) {
+            return null; // Atomic matching eviction!
+          }
+          return currentVal; // Retains concurrent re-registration mapping
+        });
+    uuidToDeviceId.remove(uuid);
+  }
+
   /** Do <b>not</b> make it public. */
   @VisibleForTesting
   void clearAll() {
