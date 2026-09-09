@@ -314,6 +314,9 @@ public class ApiConfigV5 implements ApiConfig {
       logger.atInfo().atMostEvery(2, MINUTES).log(
           "Set TenantDeviceConfig for device %s to %s ", deviceControlId, tenantConfig);
       tenantDeviceConfigs.put(deviceControlId, tenantConfig);
+      for (ApiConfigListener listener : listeners) {
+        listener.onDeviceConfigChange(ImmutableSet.of(deviceControlId));
+      }
     }
   }
 
