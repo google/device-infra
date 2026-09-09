@@ -30,24 +30,24 @@ import java.util.List;
 import java.util.Map;
 import javax.inject.Inject;
 
-/** Driver for running Playwright tests on Android devices via CDP. */
-@DriverAnnotation(help = "For running Playwright tests on Android devices.")
+/** Driver for running standard Selenium WebDriver tests on Android devices. */
+@DriverAnnotation(help = "For running Selenium tests on Android devices.")
 @TestAnnotation(
     required = false,
     help = "Leave it empty and Mobile Harness will simply use your job name as test name.")
-public class PlaywrightWebDriver extends BaseWebTestDriver {
+public class SeleniumWebDriver extends BaseWebTestDriver {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  @FileAnnotation(required = true, help = "The Playwright test binary or wrapper script.")
-  public static final String TAG_PLAYWRIGHT_TEST_FILE = "playwright_test_file";
+  @FileAnnotation(required = true, help = "The Selenium test binary or wrapper script.")
+  public static final String TAG_SELENIUM_TEST_FILE = "selenium_test_file";
 
   @Inject
-  PlaywrightWebDriver(Device device, TestInfo testInfo) {
+  SeleniumWebDriver(Device device, TestInfo testInfo) {
     super(device, testInfo);
   }
 
-  PlaywrightWebDriver(
+  SeleniumWebDriver(
       Device device,
       TestInfo testInfo,
       CommandExecutor cmdExecutor,
@@ -58,28 +58,22 @@ public class PlaywrightWebDriver extends BaseWebTestDriver {
 
   @Override
   protected String getTestFileTag() {
-    return TAG_PLAYWRIGHT_TEST_FILE;
+    return TAG_SELENIUM_TEST_FILE;
   }
 
   @Override
   protected String getLogPrefix() {
-    return "[Playwright]";
+    return "[Selenium]";
   }
 
   @Override
   protected void populateEnvironment(TestInfo testInfo, Map<String, String> extraEnv)
       throws MobileHarnessException {
-    getDebuggerAddress(testInfo)
+    getSeleniumAddress(testInfo)
         .ifPresent(
             address -> {
-              // Playwright expects ws:// scheme for CDP WebSocket connection
-              String wsEndpoint = "ws://" + address;
-              extraEnv.put("PLAYWRIGHT_WS_ENDPOINT", wsEndpoint);
-              testInfo
-                  .log()
-                  .atInfo()
-                  .alsoTo(logger)
-                  .log("Set PLAYWRIGHT_WS_ENDPOINT to %s", wsEndpoint);
+              extraEnv.put("SELENIUM_ADDRESS", address);
+              testInfo.log().atInfo().alsoTo(logger).log("Set SELENIUM_ADDRESS to %s", address);
             });
 
     getBaseUrl(testInfo)
@@ -93,8 +87,8 @@ public class PlaywrightWebDriver extends BaseWebTestDriver {
   @Override
   protected void populateCommandArgs(TestInfo testInfo, List<String> commandList)
       throws MobileHarnessException {
-    getDebuggerAddress(testInfo)
-        .ifPresent(address -> commandList.add("--debuggerAddress=" + address));
+    getSeleniumAddress(testInfo)
+        .ifPresent(address -> commandList.add("--seleniumAddress=" + address));
     getBaseUrl(testInfo).ifPresent(url -> commandList.add("--baseUrl=" + url));
   }
 }
