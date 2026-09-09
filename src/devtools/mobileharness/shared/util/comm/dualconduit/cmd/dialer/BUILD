@@ -36,8 +36,8 @@ go_binary(
         "//src/devtools/mobileharness/shared/util/comm/dualconduit/version",
         "@com_github_rsocket_rsocket_go//core/transport",
         "@org_golang_google_grpc//:grpc",
-        "@org_golang_google_grpc//health",
-        "@org_golang_google_grpc//reflection",
+        "@org_golang_google_grpc//:grpc/health",
+        "@org_golang_google_grpc//:grpc/reflection",
         "@org_golang_google_grpc//health/grpc_health_v1",
     ],
 )
