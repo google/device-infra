@@ -1481,6 +1481,14 @@ public class Flags {
   public static final Flag<Boolean> skipNetwork = Flag.value(false);
 
   @FlagSpec(
+      name = "skip_plugin_scan_jar_size_mb",
+      help =
+          "The jar size threshold in megabytes at or above which ClassGraph scanning in"
+              + " PluginCreator is skipped to avoid OutOfMemoryError. If 0, all jars are skipped."
+              + " If < 0, no jars are skipped.")
+  public static final Flag<Long> skipPluginScanJarSizeMb = Flag.value(256L);
+
+  @FlagSpec(
       name = "skip_recover_device_network",
       help =
           "Whether to skip recovering device network by connecting device to saved ssid. Default "

@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.stream.Collectors.groupingBy;
 
+import com.google.common.base.Ascii;
 import com.google.common.cache.Cache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
@@ -34,6 +35,7 @@ import com.google.devtools.mobileharness.infra.controller.plugin.provider.Plugin
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.PluginModuleClassProvider;
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.RetryPluginClassProvider;
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.RetryPluginModuleClassProvider;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.inject.Module;
@@ -163,7 +165,7 @@ public class PluginCreator implements AutoCloseable {
       @Nullable LogCollector<?> log,
       Module... systemModules) {
     checkArgument(
-        !PluginType.UNSPECIFIED.equals(pluginType),
+        pluginType != PluginType.UNSPECIFIED,
         "Plugin type should not be %s",
         PluginType.UNSPECIFIED);
     this.jarUris = jarPaths.stream().map(File::new).map(File::toURI).collect(toImmutableList());
@@ -324,16 +326,46 @@ public class PluginCreator implements AutoCloseable {
         logInfo("Plugin creator has already scanned all jars: [%s]", jarUrls);
         return;
       }
+      long skipJarSizeMb = Flags.skipPluginScanJarSizeMb.getNonNull();
+      Set<String> skippedJarUrls = new HashSet<>();
+      List<URL> scannableJarUrls = new ArrayList<>();
+      if (skipJarSizeMb >= 0) {
+        long skipJarSizeBytes = skipJarSizeMb * 1024 * 1024;
+        for (URL jarUrl : jarUrls) {
+          long jarSize = getJarSize(jarUrl);
+          if (jarSize >= skipJarSizeBytes) {
+            logWarning(
+                "Skipping ClassGraph scan for jar [%s] because its size (%d MB) meets or exceeds"
+                    + " the threshold (%d MB)",
+                jarUrl, jarSize / (1024 * 1024), skipJarSizeMb);
+            skippedJarUrls.add(jarUrl.toString());
+          } else {
+            scannableJarUrls.add(jarUrl);
+          }
+        }
+      } else {
+        scannableJarUrls.addAll(jarUrls);
+      }
+      if (scannableJarUrls.isEmpty()) {
+        logWarning(
+            "All jars meet or exceed the size threshold of %d MB, skip ClassGraph scanning"
+                + " entirely: [%s]",
+            skipJarSizeMb, jarUrls);
+        return;
+      }
       try {
-        scanResult =
+        ClassGraph classGraph =
             new ClassGraph()
                 .overrideClassLoaders(classLoader)
                 .ignoreParentClassLoaders()
                 .rejectPackages("com.google.protos")
                 .enableAnnotationInfo() // module scanning is enabled by default
-                .ignoreClassVisibility()
-                .scan();
-      } catch (Exception e) {
+                .ignoreClassVisibility();
+        if (!skippedJarUrls.isEmpty()) {
+          classGraph.filterClasspathElementsByURL(url -> !skippedJarUrls.contains(url.toString()));
+        }
+        scanResult = classGraph.scan();
+      } catch (RuntimeException e) {
         close();
         throw new MobileHarnessException(
             BasicErrorId.PLUGIN_LOADER_FAILED_TO_SCAN_CLASS_GRAPH_IN_JAR,
@@ -341,6 +373,20 @@ public class PluginCreator implements AutoCloseable {
             e);
       }
     }
+  }
+
+  private static long getJarSize(URL jarUrl) {
+    try {
+      if (Ascii.equalsIgnoreCase("file", jarUrl.getProtocol())) {
+        File file = new File(jarUrl.toURI());
+        if (file.exists() && file.isFile()) {
+          return file.length();
+        }
+      }
+    } catch (Exception e) {
+      logger.atWarning().withCause(e).log("Failed to get file size for jar [%s]", jarUrl);
+    }
+    return 0L;
   }
 
   /**
@@ -358,7 +404,7 @@ public class PluginCreator implements AutoCloseable {
                 + " by plugin module annotation");
         scanJars(jarUrls);
         if (scanResult == null) {
-          logInfo("Failed to scan the jars: [%s]", jarUrls);
+          logInfo("No scan result available for jars (skipped or scan failed): [%s]", jarUrls);
           return moduleClasses;
         }
         // Group class metadata from ScanResult by their originating JAR URL
@@ -414,7 +460,7 @@ public class PluginCreator implements AutoCloseable {
         logInfo("No plugin class name given, searching plugin class by plugin annotation");
         scanJars(jarUrls);
         if (scanResult == null) {
-          logInfo("Failed to scan the jars: [%s]", jarUrls);
+          logInfo("No scan result available for jars (skipped or scan failed): [%s]", jarUrls);
           return classes;
         }
         // Group class metadata from ScanResult by their originating JAR URL
