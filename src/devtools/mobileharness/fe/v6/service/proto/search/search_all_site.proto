@@ -1,0 +1,76 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.search;
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.search";
+option java_multiple_files = true;
+option java_outer_classname = "SearchAllSiteProto";
+
+// =============================================================================
+// All-Site ID Resolution types.
+//
+// All-Site search functions as an ID lookup tool: given a raw string query
+// (device serial, host name, test UUID, job ID, or session ID), the system
+// resolves it to canonical entity identifiers for direct detail navigation,
+// candidate disambiguation, or not-found fallback guidance.
+// =============================================================================
+
+// Which entity type an All-Site match belongs to.
+enum AllSiteEntityType {
+  ALL_SITE_ENTITY_UNSPECIFIED = 0;
+  ALL_SITE_ENTITY_DEVICE = 1;
+  ALL_SITE_ENTITY_HOST = 2;
+  ALL_SITE_ENTITY_TEST = 3;
+  ALL_SITE_ENTITY_JOB = 4;
+  ALL_SITE_ENTITY_SESSION = 5;
+}
+
+// Request to resolve a raw string query across all OmniLab entities.
+message ResolveAllSiteQueryRequest {
+  // Raw string identifier entered by the user or extracted from URL parameters.
+  string query = 1;
+}
+
+// Response containing matching entities for the resolved query.
+message ResolveAllSiteQueryResponse {
+  // Matching entities found across OmniLab backends:
+  // - 0 items: Not Found. Frontend presents fallback entity search links.
+  // - 1 item:  Unique match. Frontend immediately navigates to detail page.
+  // - >1 item: Ambiguous. Frontend presents candidate cards for user selection.
+  repeated AllSiteMatch matches = 1;
+}
+
+// A single entity matched by All-Site ID resolution.
+message AllSiteMatch {
+  // The type of entity matched.
+  AllSiteEntityType entity_type = 1;
+
+  // Primary identifier of the entity (device ID/serial, host name, test UUID,
+  // job ID, session ID).
+  string id = 2;
+
+  // Human-readable display title (e.g. "Pixel 9 (HT74A0201234)" or host FQDN).
+  string display_name = 3;
+
+  // Optional: Parent job ID for test detail routing (/jobs/:jobId/tests/:id).
+  string job_id = 4;
+
+  // Optional: Host name for device cross-host disambiguation (?host_name=xxx).
+  string host_name = 5;
+}
