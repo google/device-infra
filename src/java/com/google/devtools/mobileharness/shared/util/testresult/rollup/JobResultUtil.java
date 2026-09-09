@@ -22,17 +22,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.processor.RetryTestsGrouper;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.processor.RetryTestsGrouper.GroupedTests;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.retry.processor.RetryTestsGrouper.ShardTestRuns;
-import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestSuiteResult;
-import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.platform.android.instrumentation.result.TestSuiteResultLoader;
+import com.google.devtools.mobileharness.shared.util.testresult.loader.JunitXmlResultLoader;
 import com.google.devtools.mobileharness.shared.util.testresult.rollup.Outcome.OutcomeSummary;
-import com.google.protobuf.ExtensionRegistryLite;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.ArrayList;
@@ -42,6 +38,11 @@ import java.util.List;
 public final class JobResultUtil {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final String IOS_NATIVE_XC_TEST_DRIVER_NAME = "IosNativeXcTest";
+
+  private static final TestSuiteResultLoader TEST_SUITE_RESULT_LOADER = new TestSuiteResultLoader();
+  private static final JunitXmlResultLoader JUNIT_XML_RESULT_LOADER = new JunitXmlResultLoader();
 
   private JobResultUtil() {}
 
@@ -93,26 +94,18 @@ public final class JobResultUtil {
           State.COMPLETE);
     }
 
-    LocalFileUtil localFileUtil = new LocalFileUtil();
-    try {
-      String genFileDir = testInfo.getGenFileDir();
-      String pbPath = PathUtil.join(genFileDir, "instrument_test_result.pb");
-      if (localFileUtil.isFileExist(pbPath)) {
-        byte[] bytes = localFileUtil.readBinaryFile(pbPath);
-        TestSuiteResult testSuiteResult =
-            TestSuiteResult.parseFrom(bytes, ExtensionRegistryLite.getEmptyRegistry());
-        return AndroidInstrumentationTestSuiteResultConverter.toTestResult(testSuiteResult);
-      } else {
-        logger.atInfo().log(
-            "No instrument_test_result.pb found for test %s.", testInfo.locator().getId());
-      }
-    } catch (InvalidProtocolBufferException | MobileHarnessException e) {
-      // Fall back to simple TestResult
-      logger.atWarning().withCause(e).log(
-          "Failed to load test result for test %s, fallback to simple TestResult.",
-          testInfo.locator().getId());
+    // The iOS IosNativeXcTest driver only writes JUnit XML, while the Android
+    // AndroidInstrumentation driver additionally writes a richer instrument_test_result.pb.
+    if (testInfo.jobInfo().type().getDriver().equals(IOS_NATIVE_XC_TEST_DRIVER_NAME)) {
+      return JUNIT_XML_RESULT_LOADER
+          .loadTestSuites(testInfo)
+          .map(JunitTestSuiteResultConverter::toTestResult)
+          .orElseGet(() -> buildFallbackTestResult(testInfo));
     }
-    return buildFallbackTestResult(testInfo);
+    return TEST_SUITE_RESULT_LOADER
+        .loadTestResult(testInfo)
+        .map(AndroidInstrumentationTestSuiteResultConverter::toTestResult)
+        .orElseGet(() -> buildFallbackTestResult(testInfo));
   }
 
   private static TestResult buildFallbackTestResult(TestInfo testInfo) {
