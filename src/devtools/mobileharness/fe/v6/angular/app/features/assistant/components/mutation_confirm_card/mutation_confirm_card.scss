@@ -1,0 +1,149 @@
+.mutation-card {
+  border: 1px solid #f28b82;
+  border-radius: 12px;
+  background-color: #fffbfa;
+  padding: 16px;
+  margin-top: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+
+  &--resolved {
+    border-color: #dadce0;
+    background-color: #f8f9fa;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  &__title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__shield-icon {
+    color: #d93025;
+  }
+
+  &__tool-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #202124;
+  }
+
+  &__body {
+    margin-bottom: 16px;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+
+  &__label {
+    color: #5f6368;
+    font-weight: 500;
+  }
+
+  &__entity-id {
+    background-color: #f1f3f4;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 13px;
+    color: #174ea6;
+  }
+
+  &__summary {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    line-height: 1.45;
+    color: #3c4043;
+  }
+
+  &__params {
+    margin-top: 8px;
+    font-size: 12px;
+
+    summary {
+      cursor: pointer;
+      color: #1a73e8;
+      font-weight: 500;
+    }
+  }
+
+  &__params-code {
+    margin: 6px 0 0 0;
+    padding: 8px 12px;
+    background-color: #f1f3f4;
+    border-radius: 6px;
+    font-family: monospace;
+    font-size: 12px;
+    overflow-x: auto;
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__status-banner {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 20px;
+
+    &.status-banner--approved {
+      background-color: #e6f4ea;
+      color: #137333;
+    }
+
+    &.status-banner--rejected {
+      background-color: #fce8e6;
+      color: #c5221f;
+    }
+
+    .resolved-by {
+      font-weight: 400;
+      opacity: 0.85;
+    }
+  }
+}
+
+.risk-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 12px;
+  letter-spacing: 0.4px;
+
+  &--low {
+    background-color: #e8f0fe;
+    color: #1967d2;
+  }
+
+  &--medium {
+    background-color: #fef7e0;
+    color: #b06000;
+  }
+
+  &--high {
+    background-color: #fce8e6;
+    color: #c5221f;
+  }
+}
