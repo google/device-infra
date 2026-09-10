@@ -307,6 +307,22 @@ public final class RunCommandHandlerTest {
         .containsExactly("strict_1", "strict_2");
   }
 
+  @Test
+  public void generateSessionRequestInfo_svrTestPlan_setsSessionScopedSubPlanName()
+      throws Exception {
+    when(sessionInfo.getSessionId()).thenReturn("session_abc_123");
+    RunCommand command =
+        RunCommand.newBuilder()
+            .setTestPlan("cts-svr")
+            .setXtsType("cts")
+            .setXtsRootDir("xts_root_dir")
+            .build();
+
+    SessionRequestInfo sessionRequestInfo = runCommandHandler.generateSessionRequestInfo(command);
+
+    assertThat(sessionRequestInfo.getSubPlanName()).isEqualTo("svr_session_abc_123");
+  }
+
   private static ImmutableList<JobInfo> createJobInfos() throws MobileHarnessException {
     JobInfo tradefedJobInfo =
         JobInfo.newBuilder()

@@ -102,6 +102,13 @@ class LocalTestBuiltinPlugins {
                   "com.google.devtools.mobileharness.platform.android.xts.plugin.MoblyResultstoreUploadPlugin"),
               EventScope.INTERNAL_PLUGIN));
     }
+    if (isSystemVendorReuseEnabled(testInfo.jobInfo())) {
+      builtinPluginsBuilder.add(
+          PluginItem.create(
+              createBuiltinPlugin(
+                  "com.google.devtools.mobileharness.platform.android.xts.plugin.SystemVendorReusePlugin"),
+              EventScope.INTERNAL_PLUGIN));
+    }
     // Dynamically loads the SLATE to AOA script conversion lab plugin when enabled by job
     // configuration.
     if (isSlate2AoaScriptGenerationEnabled(testInfo.jobInfo())) {
@@ -203,5 +210,12 @@ class LocalTestBuiltinPlugins {
     return jobInfo
         .params()
         .getBool(NonTradefedReportGeneratorConstants.PARAM_RUN_CERTIFICATION_TEST_SUITE, false);
+  }
+
+  /** Returns {@code true} if System-Vendor Reuse (SVR) is enabled for the setup job. */
+  private static boolean isSystemVendorReuseEnabled(JobInfo jobInfo) {
+    return jobInfo.params().getBool(XtsConstants.IS_SYSTEM_VENDOR_REUSE_ENABLED, false)
+        && Objects.equals(
+            jobInfo.properties().get(XtsConstants.XTS_JOB_NAME), XtsConstants.SETUP_JOB_NAME);
   }
 }

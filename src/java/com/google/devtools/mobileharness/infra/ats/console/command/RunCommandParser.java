@@ -72,7 +72,7 @@ public class RunCommandParser implements Callable<Integer> {
     SessionRequestInfo.Builder sessionRequestBuilder = SessionRequestInfo.newBuilder();
     options.validateCommandParameters();
     sessionRequestBuilder
-        .setTestPlan(options.config)
+        .setTestPlan(options.getTestPlan())
         .addAllModuleNames(options.getModules())
         .addAllIncludeFilters(
             this.options.includeFilters == null
@@ -120,10 +120,7 @@ public class RunCommandParser implements Callable<Integer> {
         options.moduleCmdArgs != null
             ? ImmutableList.copyOf(options.moduleCmdArgs)
             : ImmutableList.of();
-    ImmutableList<String> extraArgs =
-        options.extraRunCmdArgs != null
-            ? ImmutableList.copyOf(options.extraRunCmdArgs)
-            : ImmutableList.of();
+    ImmutableList<String> extraArgs = options.getExtraRunCmdArgs();
     ImmutableSet<String> excludeRunners =
         options.excludeRunnerOpt != null
             ? ImmutableSet.copyOf(options.excludeRunnerOpt)

@@ -22,6 +22,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
@@ -377,7 +378,7 @@ class RunCommandOptions {
   }
 
   void validateCommandParameters() throws MobileHarnessException {
-    if (isNullOrEmpty(config)) {
+    if (isNullOrEmpty(getTestPlan())) {
       throw new ParameterException(
           spec.commandLine(),
           Ansi.AUTO.string(
@@ -409,8 +410,14 @@ class RunCommandOptions {
           Ansi.AUTO.string(
               "Don't use '--include-filter' and '--module/-m' options at the same time.\n"));
     }
-    if (config.equals("retry")) {
+    if (Objects.equals(getTestPlan(), "retry")) {
       validateRunRetryCommandParameters();
+    }
+    if (SessionHandlerHelper.isSvrTestPlan(getTestPlan()) && !isNullOrEmpty(subPlanName)) {
+      throw new ParameterException(
+          spec.commandLine(),
+          Ansi.AUTO.string(
+              "Option '--subplan <subplan_name>' is not supported for SVR test plan.\n"));
     }
     if (!isNullOrEmpty(subPlanName) && !isSubPlanExist(subPlanName)) {
       throw new ParameterException(
@@ -464,11 +471,12 @@ class RunCommandOptions {
   }
 
   private void validateRunCommandExtraArgs() {
-    if (extraRunCmdArgs != null && !extraRunCmdArgs.isEmpty()) {
+    ImmutableList<String> extraArgs = getExtraRunCmdArgs();
+    if (!extraArgs.isEmpty()) {
       // The extra args are passed to TF behind if need to run tests via TF. Ideally we should add
       // corresponding parameter or option in this Command class explicitly, but at the moment we
       // may not cover all TF supported options, so we do some basic validations here.
-      if (!extraRunCmdArgs.get(0).startsWith("-")) {
+      if (!extraArgs.get(0).startsWith("-")) {
         throw new ParameterException(
             spec.commandLine(),
             Ansi.AUTO.string(
@@ -476,9 +484,19 @@ class RunCommandOptions {
                     "Invalid arguments provided. Unprocessed arguments: %s\n"
                         + "Double check if the input is valid, for example, quoting the arg value"
                         + " if it contains space.\n",
-                    extraRunCmdArgs)));
+                    extraArgs)));
       }
     }
+  }
+
+  /** Returns the test plan specified in the command. */
+  String getTestPlan() {
+    return config;
+  }
+
+  /** Returns extra arguments for the run command. */
+  ImmutableList<String> getExtraRunCmdArgs() {
+    return extraRunCmdArgs != null ? ImmutableList.copyOf(extraRunCmdArgs) : ImmutableList.of();
   }
 
   private boolean isSubPlanExist(String subPlanName) throws MobileHarnessException {
@@ -504,11 +522,11 @@ class RunCommandOptions {
     // Currently skip collecting device info for plan cts-dev or set explicitly, and ideally it
     // should parse given plan and its child plans to see if the option "skip-device-info" is set to
     // true explicitly.
-    if (skipDeviceInfo == null && Objects.equals(config, "cts-dev")) {
+    if (skipDeviceInfo == null && Objects.equals(getTestPlan(), "cts-dev")) {
       return Optional.of(true);
     }
     // TODO Temporary solution to unblock app compat test post processing.
-    if (skipDeviceInfo == null && Objects.equals(config, "csuite-app-crawl")) {
+    if (skipDeviceInfo == null && Objects.equals(getTestPlan(), "csuite-app-crawl")) {
       return Optional.of(true);
     }
     return Optional.ofNullable(skipDeviceInfo);

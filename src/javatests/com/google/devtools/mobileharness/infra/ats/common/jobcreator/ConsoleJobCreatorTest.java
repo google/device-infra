@@ -37,6 +37,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.in.Timeout;
+import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.TradefedJobInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfoUtil;
@@ -1474,6 +1475,53 @@ public final class ConsoleJobCreatorTest {
 
     Optional<JobInfo> teardownJobOpt = jobCreator.createXtsTearDownJob(sessionRequestInfo);
     assertThat(teardownJobOpt).isEmpty();
+  }
+
+  @Test
+  public void createXtsSetupJob_svrEnabled_setsSvrParamsAndProperties() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts-svr")
+                .setSessionId("session_123")
+                .setCommandLineArgs("cts-svr")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setXtsType("cts"));
+
+    when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createJobTmpDir(any())).thenReturn(Path.of("/tmp/tmp"));
+
+    Optional<JobInfo> setupJobOpt = jobCreator.createXtsSetupJob(sessionRequestInfo);
+    assertThat(setupJobOpt).isPresent();
+    JobInfo setupJob = setupJobOpt.get();
+    assertThat(setupJob.params().get(XtsConstants.IS_SYSTEM_VENDOR_REUSE_ENABLED))
+        .isEqualTo("true");
+    Path expectedSubPlanPath =
+        SessionHandlerHelper.getSvrSubPlanFilePath(
+            Path.of(XTS_ROOT_DIR_PATH), "cts", sessionRequestInfo.getSessionId());
+    assertThat(setupJob.properties().get(Job.SVR_SUBPLAN_FILE_PATH))
+        .isEqualTo(expectedSubPlanPath.toString());
+    assertThat(setupJob.properties().get(Job.SESSION_ID))
+        .isEqualTo(sessionRequestInfo.getSessionId());
+  }
+
+  @Test
+  public void createXtsTradefedTestJobInfo_svrEnabledWithoutSubplan_throwsException() {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts-svr")
+                .setSessionId("session_123")
+                .setSubPlanName(SessionHandlerHelper.getSvrSubPlanFileName("session_123"))
+                .setCommandLineArgs("cts-svr")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setXtsType("cts"));
+
+    assertThrows(
+        MobileHarnessException.class,
+        () ->
+            jobCreator.createXtsTradefedTestJobInfo(
+                sessionRequestInfo, ImmutableList.of("mock_module")));
   }
 
   private static Duration min(Duration d1, Duration d2) {

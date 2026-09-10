@@ -125,6 +125,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_handler_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/picocli/parameterpreprocessor:map_preprocessor",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/picocli/parameterpreprocessor:multimap_preprocessor",
