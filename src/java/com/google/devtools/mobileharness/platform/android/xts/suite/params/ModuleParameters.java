@@ -48,6 +48,7 @@ public enum ModuleParameters {
   MULTIUSER("multiuser", ModuleParameters.MULTIUSER_FAMILY),
   RUN_ON_WORK_PROFILE("run_on_work_profile", ModuleParameters.RUN_ON_WORK_PROFILE_FAMILY),
   RUN_ON_SECONDARY_USER("run_on_secondary_user", ModuleParameters.RUN_ON_SECONDARY_USER_FAMILY),
+  HSU_AS_LOGIN_SCREEN("hsu_as_login_screen", ModuleParameters.HSU_AS_LOGIN_SCREEN_FAMILY),
   RUN_ON_CLONE_PROFILE("run_on_clone_profile", ModuleParameters.RUN_ON_CLONE_PROFILE_FAMILY),
   RUN_ON_PRIVATE_PROFILE("run_on_private_profile", ModuleParameters.RUN_ON_PRIVATE_PROFILE_FAMILY),
 
@@ -75,6 +76,7 @@ public enum ModuleParameters {
   public static final String RUN_ON_SDK_SANDBOX_FAMILY = "run_on_sdk_sandbox_family";
   public static final String RUN_ON_WORK_PROFILE_FAMILY = "run_on_work_profile_family";
   public static final String RUN_ON_SECONDARY_USER_FAMILY = "run_on_secondary_user_family";
+  public static final String HSU_AS_LOGIN_SCREEN_FAMILY = "hsu_as_login_screen_family";
   public static final String RUN_ON_CLONE_PROFILE_FAMILY = "run_on_clone_profile_family";
   public static final String RUN_ON_PRIVATE_PROFILE_FAMILY = "run_on_private_profile_family";
   public static final String RUN_ON_PCC_SANDBOX_FAMILY = "run_on_pcc_sandbox_family";

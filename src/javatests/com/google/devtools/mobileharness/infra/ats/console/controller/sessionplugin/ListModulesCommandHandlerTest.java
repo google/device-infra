@@ -65,7 +65,8 @@ public final class ListModulesCommandHandlerTest {
             "CtsMultiUserTestCases[run-on-clone-profile]",
             "CtsMultiUserTestCases[run-on-secondary-user]",
             "CtsMultiUserTestCases[run-on-work-profile]",
-            "CtsMultiUserTestCases[run-on-private-profile]");
+            "CtsMultiUserTestCases[run-on-private-profile]",
+            "CtsMultiUserTestCases[hsu-as-login-screen]");
   }
 
   @Test
@@ -86,5 +87,25 @@ public final class ListModulesCommandHandlerTest {
                 .splitToStream(atsSessionPluginOutput.getSuccess().getOutputMessage())
                 .map(entry -> Splitter.on(" ").splitToList(entry).get(1)))
         .containsExactly("CtsPccSandboxTestCases[run-on-pcc-sandbox]");
+  }
+
+  @Test
+  public void handle_moduleParamHasHsuAsLoginScreen_success() throws Exception {
+    AtsSessionPluginOutput atsSessionPluginOutput =
+        listModulesCommandHandler.handle(
+            ListModulesCommand.newBuilder()
+                .setXtsRootDir(TEST_CTS_ROOT_DIR)
+                .setXtsType("cts")
+                .setModuleParameter("hsu_as_login_screen")
+                .build());
+
+    assertThat(atsSessionPluginOutput.hasSuccess()).isTrue();
+    assertThat(
+            Splitter.on("\n")
+                .trimResults()
+                .omitEmptyStrings()
+                .splitToStream(atsSessionPluginOutput.getSuccess().getOutputMessage())
+                .map(entry -> Splitter.on(" ").splitToList(entry).get(1)))
+        .containsExactly("CtsMultiUserTestCases[hsu-as-login-screen]");
   }
 }
