@@ -25,6 +25,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Warnings;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirements;
@@ -53,7 +54,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.UnionJobSpe
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.RemoteFiles;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Status;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
@@ -359,7 +359,7 @@ public class JobInfo extends JobScheduleUnit {
                     remoteFileDir ->
                         PathUtil.join(remoteFileDir, "j_" + locator().getId(), "runfiles")));
     status = new Status(timing());
-    result = new Result(timing(), params());
+    result = new Result(timing().toNewTiming(), params().toNewParams());
     log = new Log(timing());
     properties = new Properties(timing());
     warnings = new Warnings(log, timing().toNewTiming());
@@ -461,8 +461,8 @@ public class JobInfo extends JobScheduleUnit {
   }
 
   /** Execution result. */
-  public com.google.devtools.mobileharness.api.model.job.out.Result resultWithCause() {
-    return result.toNewResult();
+  public Result resultWithCause() {
+    return result;
   }
 
   /** Log generated during execution. */

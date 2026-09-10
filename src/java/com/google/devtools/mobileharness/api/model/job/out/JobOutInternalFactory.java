@@ -17,7 +17,9 @@
 package com.google.devtools.mobileharness.api.model.job.out;
 
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
+import com.google.devtools.mobileharness.api.model.job.in.Params;
 import com.google.devtools.mobileharness.service.moss.proto.Result.TimeDetail;
+import com.google.devtools.mobileharness.service.moss.proto.Slg.ResultProto;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
 import java.util.Collection;
 
@@ -28,6 +30,15 @@ import java.util.Collection;
 public final class JobOutInternalFactory {
 
   private JobOutInternalFactory() {}
+
+  /**
+   * Creates a {@link Result} instance by the given {@link TouchableTiming}, {@link Params} and
+   * {@link ResultProto}.
+   */
+  public static Result createResult(
+      TouchableTiming timing, Params params, ResultProto resultProto) {
+    return new Result(timing, params, resultProto);
+  }
 
   /** Creates a {@link TouchableTiming} instance by the given {@link TimeDetail}. */
   public static TouchableTiming createTouchableTiming(TimeDetail timeDetail) {
