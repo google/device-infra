@@ -113,6 +113,8 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
         executor);
   }
 
+  private static final String CLIENT = "mobileharness-fe";
+
   @Override
   public ListenableFuture<Void> updateDeviceConfig(
       String deviceId, DeviceConfig deviceConfig, UniverseScope universe) {
@@ -125,6 +127,7 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
                 DeviceLocatorConfigPair.newBuilder()
                     .setDeviceLocator(DeviceLocator.newBuilder().setDeviceUuid(deviceId))
                     .setDeviceConfig(deviceConfig))
+            .setClient(CLIENT)
             .build();
     return Futures.transform(
         deviceConfigStub.updateDeviceConfigsAsync(request, useClientRpcAuthority),
@@ -156,7 +159,7 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
       return immediateVoidFuture();
     }
     UpdateLabConfigRequest request =
-        UpdateLabConfigRequest.newBuilder().setLabConfig(labConfig).build();
+        UpdateLabConfigRequest.newBuilder().setLabConfig(labConfig).setClient(CLIENT).build();
     return Futures.transform(
         deviceConfigStub.updateLabConfigAsync(request, useClientRpcAuthority),
         response -> null,
