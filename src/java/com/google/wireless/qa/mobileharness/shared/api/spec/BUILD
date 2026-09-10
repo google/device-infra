@@ -46,6 +46,14 @@ java_library(
 )
 
 java_library(
+    name = "android_chrome_driver_provider_decorator_spec",
+    srcs = ["AndroidChromeDriverProviderDecoratorSpec.java"],
+    deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:basic_annotation",
+    ],
+)
+
+java_library(
     name = "android_file_puller_spec",
     srcs = ["AndroidFilePullerSpec.java"],
     deps = [
