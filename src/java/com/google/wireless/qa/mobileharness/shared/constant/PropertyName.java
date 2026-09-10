@@ -603,6 +603,9 @@ public interface PropertyName {
 
       /** The client email retrieved from the key file. */
       FLASHSTATION_CLIENT_EMAIL,
+
+      /** The OAuth2 access token for Flashstation authentication. */
+      FLASHSTATION_ACCESS_TOKEN,
     }
 
     /** AndroidSetPropDecorator property name constants. */
