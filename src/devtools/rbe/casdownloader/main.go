@@ -65,6 +65,7 @@ var (
 	dir           = flag.String("dir", "", "Directory to download the tree. Files in this directory will be overwritten and will not be restored on errors.")
 	dumpJSON      = flag.String("dump-json", "", "Dump download stats to json file.")
 	enableStreamz = flag.Bool("enable-streamz", false, "Enable direct Streamz metrics collection via murdockd.")
+	murdockAddr   = flag.String("murdock-addr", "", "Address (host:port) of murdockd daemon. If empty, defaults to localhost:2444, or the MURDOCK_ADDR environment variable if set.")
 
 	// Flags for local cache
 	disableCache    = flag.Bool("disable-cache", false, "Disable local cache.")
@@ -252,7 +253,15 @@ func runMain() int {
 
 	// Initialize unified metrics collection.
 	if *enableStreamz {
-		monitoring.Init("casdownloader")
+		mAddr := *murdockAddr
+		if mAddr == "" {
+			mAddr = os.Getenv("MURDOCK_ADDR")
+		}
+		var opts []monitoring.Option
+		if mAddr != "" {
+			opts = append(opts, monitoring.WithMurdockAddr(mAddr))
+		}
+		monitoring.Init("casdownloader", opts...)
 		defer monitoring.Shutdown()
 	}
 

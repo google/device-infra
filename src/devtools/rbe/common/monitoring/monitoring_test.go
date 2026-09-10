@@ -9,9 +9,9 @@ func TestMonitoringWorkflows(t *testing.T) {
 	// Initialize monitoring with a mock/test client name
 	Init("test-client")
 
-	expectedEnabled := isBorg || isMurdockdPresent()
+	expectedEnabled := isBorg || isMurdockdPresent("localhost:2444")
 	if enabled != expectedEnabled {
-		t.Errorf("enabled = %v, expected %v (isBorg = %v, isMurdockdPresent = %v)", enabled, expectedEnabled, isBorg, isMurdockdPresent())
+		t.Errorf("enabled = %v, expected %v (isBorg = %v, isMurdockdPresent = %v)", enabled, expectedEnabled, isBorg, isMurdockdPresent("localhost:2444"))
 	}
 
 	t.Logf("isBorg: %v", isBorg)
@@ -88,5 +88,12 @@ func TestMonitoringWorkflows(t *testing.T) {
 	}
 
 	// Signal shutdown to verify flushing logic does not panic or deadlock
+	Shutdown()
+}
+
+func TestMonitoringWithMurdockAddr(t *testing.T) {
+	// Initialize with custom address option
+	Init("casdownloader", WithMurdockAddr("127.0.0.1:2444"))
+	RecordUsage(true, 0)
 	Shutdown()
 }

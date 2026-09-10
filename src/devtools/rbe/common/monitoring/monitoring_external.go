@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func initMetrics(clientName string) {}
+func initMetrics(clientName string, murdockAddr string) {}
 
 var (
 	isBorg     bool
@@ -26,7 +26,7 @@ var (
 	lastRecordedUpstreamRPC   string
 )
 
-func isMurdockdPresent() bool { return false }
+func isMurdockdPresent(addr string) bool { return false }
 
 func recordLatency(success bool, rbeStatus string, duration time.Duration) {
 	lastRecordedLatencyStatus = rbeStatus

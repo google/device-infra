@@ -28,9 +28,27 @@ type DownloadStats struct {
 	Flavor  string
 }
 
+// Option configures monitoring parameters.
+type Option func(*config)
+
+type config struct {
+	murdockAddr string
+}
+
+// WithMurdockAddr sets the address (host:port) for the murdockd daemon.
+func WithMurdockAddr(addr string) Option {
+	return func(c *config) {
+		c.murdockAddr = addr
+	}
+}
+
 // Init initializes monitoring. Inside Google3 it configures Streamz/Murdock.
-func Init(clientName string) {
-	initMetrics(clientName)
+func Init(clientName string, opts ...Option) {
+	var cfg config
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+	initMetrics(clientName, cfg.murdockAddr)
 }
 
 // RecordLatency records download duration.
