@@ -51,12 +51,65 @@ export class FleetSearchResultsComponent {
   readonly store = inject(FleetSearchStore);
   private readonly dialog = inject(MatDialog);
 
+  /** Label representing the current fleet partition. */
+  readonly fleetLabel = computed<string>(() =>
+    this.store.fleet() === 'internal' ? 'Google Internal' : 'ATS Labs',
+  );
+
   /** Derived table columns array including the selection checkbox column. */
   readonly columnsToDisplay = computed<string[]>(() => {
     const cols = this.store.displayColumns().map((col: Column) => col.key);
     if (cols.length === 0) return [];
     return ['checkbox', ...cols];
   });
+
+  /** Display mode for the grouped results accordion. */
+  readonly groupedViewMode = computed<
+    'groups' | 'empty_filtered' | 'empty_all' | 'loading'
+  >(() => {
+    if (this.store.groups().length > 0) return 'groups';
+    if (this.store.isLoading()) return 'loading';
+    return this.store.hasActiveFilters() ? 'empty_filtered' : 'empty_all';
+  });
+
+  /** Display mode for the flat table results view. */
+  readonly flatTableViewMode = computed<
+    'table' | 'empty_filtered' | 'empty_all'
+  >(() => {
+    if (this.store.rows().length > 0 || this.store.isLoading()) {
+      return 'table';
+    }
+    return this.store.hasActiveFilters() ? 'empty_filtered' : 'empty_all';
+  });
+
+  /** Display mode for the select-all-matching banner. */
+  readonly selectedBannerMode = computed<
+    'all_matching' | 'page_only' | 'hidden'
+  >(() => {
+    if (!this.store.showSelectAllMatchingBanner()) return 'hidden';
+    return this.store.selectAllMatching() ? 'all_matching' : 'page_only';
+  });
+
+  /** Text label displayed in the toolbar when rows are selected in flat table mode. */
+  readonly flatToolbarSelectedText = computed<string>(() => {
+    const count = this.store.selectedCount().toLocaleString();
+    const entity = this.store.entity();
+    const label = this.fleetLabel();
+    if (this.store.selectAllMatching()) {
+      return `All ${count} matching ${entity} selected · ${label}`;
+    }
+    return `${count} selected · ${label}`;
+  });
+
+  /** Whether general batch actions can be performed on selected items. */
+  readonly canShowBatchActions = computed<boolean>(
+    () => !this.store.selectAllMatching(),
+  );
+
+  /** Whether device-specific batch actions can be performed. */
+  readonly canShowDeviceBatchActions = computed<boolean>(
+    () => !this.store.selectAllMatching() && this.store.entity() === 'devices',
+  );
 
   /** Opens the column selector dialog to configure visible table columns. */
   openColumnSelector() {
@@ -69,9 +122,8 @@ export class FleetSearchResultsComponent {
       data: {
         entity: this.store.entity(),
         fleet: this.store.fleet(),
-        selectedColumns: Array.from(this.store.visibleColumns()),
-        lockedColumns: this.store.lockedColumns(),
-        defaultColumns: this.store.defaultColumns(),
+        columns: this.store.visibleColumnDescriptors(),
+        defaultColumns: this.store.searchConfig()?.columns?.defaults ?? [],
         activeFilters: this.store.effectiveFilters(),
       },
     });

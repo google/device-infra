@@ -421,7 +421,7 @@ app-root {
     height: calc(100% - 64px);
 
     mat-sidenav {
-      margin-top: 1.5rem;
+      margin-top: 1rem;
       @include common.shared-scrollbar-style();
 
       .sidenav-container {
@@ -511,7 +511,7 @@ app-root {
     color: #787878;
     flex: none;
     font-size: 13px;
-    margin: 20px 20px 4px;
+    margin: 10px 20px 4px;
     display: flex;
     flex-wrap: nowrap;
     place-content: center space-between;

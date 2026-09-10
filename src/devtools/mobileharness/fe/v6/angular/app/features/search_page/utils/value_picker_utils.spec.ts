@@ -8,9 +8,9 @@ import {
   extractAdvancedStateFromChip,
   getPacificTimezoneName,
   isValuePickerSelectionEmpty,
+  pacificToUtc,
   parseDateRange,
-  pdtDateTimeToUtcIso,
-  toDateTimeLocalString,
+  utcToPacific,
 } from './value_picker_utils';
 
 describe('value_picker_utils', () => {
@@ -28,23 +28,48 @@ describe('value_picker_utils', () => {
   ];
 
   describe('buildDisplayValues', () => {
-    it('should return base items if no staged inputs', () => {
+    it('should return base items if no selected inputs', () => {
       const result = buildDisplayValues(mockItems, new Set());
       expect(result.length).toBe(4);
     });
 
-    it('should add missing staged inputs as disabled items', () => {
-      const staged = new Set(['grape', 'apple']);
-      const result = buildDisplayValues(mockItems, staged, false);
-      expect(result.length).toBe(5);
+    it('should add missing selected inputs as interactive items with count 0', () => {
+      const selected = new Set(['grape', 'apple', 'orange']);
+      const result = buildDisplayValues(mockItems, selected, false, false);
+      expect(result.length).toBe(6);
+
       const grape = result.find((i) => i.value === 'grape');
       expect(grape).toBeDefined();
-      expect(grape?.disabled).toBeTrue();
+      expect(grape?.filtered).toBe(0);
+      expect(grape?.total).toBe(0);
+      expect(grape?.disabled).toBeFalsy();
+
+      const orange = result.find((i) => i.value === 'orange');
+      expect(orange).toBeDefined();
+      expect(orange?.filtered).toBe(0);
+      expect(orange?.total).toBe(0);
+      expect(orange?.disabled).toBeFalsy();
+
+      // 'apple' already exists in baseItems, should not be duplicated or overwritten with 0 count
+      const apples = result.filter((i) => i.value === 'apple');
+      expect(apples.length).toBe(1);
+      expect(apples[0].filtered).toBe(10);
+      expect(apples[0].total).toBe(100);
     });
 
-    it('should return base items when loading even with staged inputs', () => {
-      const staged = new Set(['grape']);
-      const result = buildDisplayValues(mockItems, staged, true);
+    it('should set undefined counts for plain lists', () => {
+      const selected = new Set(['custom_host']);
+      const result = buildDisplayValues(mockItems, selected, true, false);
+      const custom = result.find((i) => i.value === 'custom_host');
+      expect(custom).toBeDefined();
+      expect(custom?.filtered).toBeUndefined();
+      expect(custom?.total).toBeUndefined();
+      expect(custom?.disabled).toBeFalsy();
+    });
+
+    it('should return base items when loading even with custom inputs', () => {
+      const selected = new Set(['grape', 'orange']);
+      const result = buildDisplayValues(mockItems, selected, false, true);
       expect(result.length).toBe(4);
     });
   });
@@ -132,6 +157,21 @@ describe('value_picker_utils', () => {
       ]);
     });
 
+    it('should break ties using displayLabel alphabetically when counts are equal', () => {
+      const tiedItems: PickerValueItem[] = [
+        {value: 'pear', displayLabel: 'Pear', filtered: 20, total: 100},
+        {value: 'apricot', displayLabel: 'Apricot', filtered: 20, total: 100},
+        {value: 'mango', displayLabel: 'Mango', filtered: 20, total: 100},
+      ];
+      const result = computeFilteredAndSortedValues({
+        items: tiedItems,
+        query: '',
+        sortBy: 'filtered',
+        sortAsc: false,
+      });
+      expect(result.map((i) => i.value)).toEqual(['apricot', 'mango', 'pear']);
+    });
+
     it('should return all items without slicing to 100', () => {
       const largeItems: PickerValueItem[] = Array.from(
         {length: 150},
@@ -190,27 +230,13 @@ describe('value_picker_utils', () => {
     });
   });
 
-  describe('toDateTimeLocalString, pdtDateTimeToUtcIso & parseDateRange', () => {
-    it('should format ms to Pacific Time datetime string format', () => {
-      // 2026-01-15 22:30 UTC is 2026-01-15 14:30 PST (UTC-8)
-      const pstMs = Date.UTC(2026, 0, 15, 22, 30);
-      expect(toDateTimeLocalString(pstMs)).toBe('2026-01-15T14:30');
-
-      // 2026-07-15 21:30 UTC is 2026-07-15 14:30 PDT (UTC-7)
-      const pdtMs = Date.UTC(2026, 6, 15, 21, 30);
-      expect(toDateTimeLocalString(pdtMs)).toBe('2026-07-15T14:30');
-    });
-
+  describe('pacificToUtc, utcToPacific & parseDateRange', () => {
     it('should convert Pacific Time datetime string to UTC ISO string', () => {
       // PDT test (July, UTC-7)
-      expect(pdtDateTimeToUtcIso('2026-07-15T14:30')).toBe(
-        '2026-07-15T21:30:00.000Z',
-      );
+      expect(pacificToUtc('2026-07-15T14:30')).toBe('2026-07-15T21:30:00.000Z');
 
       // PST test (January, UTC-8)
-      expect(pdtDateTimeToUtcIso('2026-01-15T14:30')).toBe(
-        '2026-01-15T22:30:00.000Z',
-      );
+      expect(pacificToUtc('2026-01-15T14:30')).toBe('2026-01-15T22:30:00.000Z');
     });
 
     it('should return timezone abbreviation for given date', () => {
@@ -244,6 +270,55 @@ describe('value_picker_utils', () => {
       const paddedParsed = parseDateRange(paddedSet);
       expect(paddedParsed.from).toBe('2026-05-10T08:00');
       expect(paddedParsed.to).toBe('2026-05-20T18:00');
+    });
+
+    it('should parse date range from UTC ISO strings and convert to Pacific Time', () => {
+      // 2026-07-15T21:30:00.000Z is 2026-07-15T14:30 PDT
+      // 2026-07-16T21:30:00.000Z is 2026-07-16T14:30 PDT
+      const isoSet = new Set([
+        '2026-07-15T21:30:00.000Z',
+        '2026-07-16T21:30:00.000Z',
+      ]);
+      const parsed = parseDateRange(isoSet);
+      expect(parsed.from).toBe('2026-07-15T14:30');
+      expect(parsed.to).toBe('2026-07-16T14:30');
+    });
+
+    it('should parse date range with spaces in From/To format', () => {
+      const spaceSet = new Set(['From: 2026-01-01 00:00 To: 2026-01-02 00:00']);
+      const parsed = parseDateRange(spaceSet);
+      expect(parsed.from).toBe('2026-01-01T00:00');
+      expect(parsed.to).toBe('2026-01-02T00:00');
+    });
+
+    it('should parse date-only strings into datetime-local format', () => {
+      const dateOnlySet = new Set(['2026-01-01', '2026-01-02']);
+      const parsed = parseDateRange(dateOnlySet);
+      expect(parsed.from).toBe('2026-01-01T00:00');
+      expect(parsed.to).toBe('2026-01-02T00:00');
+    });
+
+    it('should normalize various datetime formats via utcToPacific', () => {
+      expect(utcToPacific('')).toBe('');
+      expect(utcToPacific('2026-01-01T12:00')).toBe('2026-01-01T12:00');
+      expect(utcToPacific('2026-01-01 12:00')).toBe('2026-01-01T12:00');
+      expect(utcToPacific('2026-01-01')).toBe('2026-01-01T00:00');
+      expect(utcToPacific('2026-07-15T21:30:00.000Z')).toBe('2026-07-15T14:30');
+      expect(utcToPacific('2026-07-15 21:30:00 UTC')).toBe('2026-07-15T14:30');
+      // Epoch millisecond timestamp (1784151000000 ms is 2026-07-15T21:30:00 UTC = 2026-07-15T14:30 PDT)
+      expect(utcToPacific('1784151000000')).toBe('2026-07-15T14:30');
+    });
+
+    it('should calculate 24h fallback range correctly when only single bound is provided', () => {
+      const singleFrom = new Set(['From: 2026-01-02T12:00']);
+      const parsedFrom = parseDateRange(singleFrom);
+      expect(parsedFrom.from).toBe('2026-01-02T12:00');
+      expect(parsedFrom.to).toBe('2026-01-03T12:00');
+
+      const singleTo = new Set(['To: 2026-01-03T12:00']);
+      const parsedTo = parseDateRange(singleTo);
+      expect(parsedTo.from).toBe('2026-01-02T12:00');
+      expect(parsedTo.to).toBe('2026-01-03T12:00');
     });
   });
 
@@ -305,14 +380,14 @@ describe('value_picker_utils', () => {
       });
     });
 
-    it('should include pending search query if not already in selected list', () => {
+    it('should not include search query in selected list when applying', () => {
       const event = buildValuePickerApplyEvent({
         isAdvanced: false,
         negated: true,
         selectedSet: new Set(['item1']),
         searchQuery: 'item2',
       });
-      expect(event.selected).toEqual(['item1', 'item2']);
+      expect(event.selected).toEqual(['item1']);
       expect(event.negate).toBeTrue();
     });
   });

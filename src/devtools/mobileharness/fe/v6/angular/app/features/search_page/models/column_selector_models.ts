@@ -5,11 +5,9 @@ import {EntityType} from './search_page_ui';
 export interface ColumnSelectorDialogData {
   entity: EntityType;
   fleet: string;
-  selectedColumns: string[];
-  lockedColumns?: string[];
-  defaultColumns?: string[];
+  columns?: FleetColumnDescriptor[];
+  defaultColumns?: FleetColumnDescriptor[];
   activeFilters?: Filter[];
-  recentKeys?: string[];
 }
 
 /** Dialog output payload on apply. */

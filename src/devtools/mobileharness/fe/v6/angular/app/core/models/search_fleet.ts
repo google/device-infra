@@ -2,7 +2,7 @@
  * @fileoverview Inventory search data models extracted from search_fleet.proto
  */
 
-import {Column, KeyDescriptor, Row, TextSegment} from './search_common';
+import {Column, Row, TextSegment} from './search_common';
 
 /** Fleet search entity type enum. */
 export enum SearchEntity {
@@ -80,7 +80,6 @@ export declare interface MatchesAtLeast {
 // ================GetFleetSearchConfig - FleetSearchConfig===========================
 /** Fleet column config. */
 export declare interface FleetColumnConfig {
-  recommended?: KeyDescriptor[];
   defaults?: FleetColumnDescriptor[];
 }
 

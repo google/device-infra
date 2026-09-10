@@ -23,33 +23,33 @@
         [cdkDropListData]="draftColumns()"
         (cdkDropListDropped)="drop($event)"
       >
-        @for (key of draftColumns(); track key) {
+        @for (col of draftColumns(); track col.key) {
           <div
             class="cs-sel-row"
             role="listitem"
-            [class.cs-locked]="isLocked(key)"
+            [class.cs-locked]="isLocked(col.key)"
             cdkDrag
-            [cdkDragDisabled]="isLocked(key)"
+            [cdkDragDisabled]="isLocked(col.key)"
             cdkDragLockAxis="y"
           >
-            @if (isLocked(key)) {
+            @if (isLocked(col.key)) {
               <mat-icon class="cs-grip cs-grip-locked" title="Locked to first" aria-hidden="true">lock</mat-icon>
-              <span class="cs-row-name" [title]="getColumnDisplayName(key)">{{ getColumnDisplayName(key) }}</span>
+              <span class="cs-row-name" [title]="col.displayName">{{ col.displayName }}</span>
               <span class="cs-row-meta">locked</span>
             } @else {
               <mat-icon
                 class="cs-grip"
                 cdkDragHandle
                 aria-roledescription="sortable column"
-                [attr.aria-label]="'Drag to reorder ' + getColumnDisplayName(key)"
+                [attr.aria-label]="'Drag to reorder ' + col.displayName"
               >drag_indicator</mat-icon>
-              <span class="cs-row-name" [title]="getColumnDisplayName(key)">{{ getColumnDisplayName(key) }}</span>
+              <span class="cs-row-name" [title]="col.displayName">{{ col.displayName }}</span>
               <button
                 class="cs-x"
                 type="button"
-                [title]="'Remove ' + getColumnDisplayName(key)"
-                [attr.aria-label]="'Remove ' + getColumnDisplayName(key)"
-                (click)="removeColumn(key)"
+                [title]="'Remove ' + col.displayName"
+                [attr.aria-label]="'Remove ' + col.displayName"
+                (click)="removeColumn(col.key)"
               >
                 <mat-icon>close</mat-icon>
               </button>
@@ -97,51 +97,39 @@
       <div class="cs-pane-body">
         @if (isCatalogLoading()) {
           <div class="cs-empty">Loading columns…</div>
+        } @else if (viewCatalogSections().length === 0 && debouncedQuery()) {
+          <div class="cs-empty">No column matches “{{ debouncedQuery() }}”</div>
         } @else if (viewCatalogSections().length === 0) {
-          <div class="cs-empty">
-            @if (debouncedQuery()) {
-              No column matches “{{ debouncedQuery() }}”
-            } @else {
-              No columns available
-            }
-          </div>
+          <div class="cs-empty">No columns available</div>
         } @else {
           @for (section of viewCatalogSections(); track section.heading) {
-            @if (section.entries; as entries) {
-              @if (entries.length > 0) {
-                <section class="cs-section">
-                  <h3 class="cs-head">
-                    <span>{{ section.heading }}</span>
-                    @if (section.totalAvailable; as total) {
-                      @if (total > entries.length) {
-                        <span class="cs-hint">showing top {{ entries.length }} of {{ total | number }}</span>
-                      }
-                    }
-                  </h3>
-                  @for (entry of entries; track entry.key) {
-                    <label class="cs-row" [class.cs-row-selected]="isSelected(entry.key)">
-                      <mat-checkbox
-                        [checked]="isSelected(entry.key)"
-                        [disabled]="isLocked(entry.key)"
-                        (change)="toggleColumn(entry.key, $event.checked)"
-                        [attr.aria-label]="'Select column ' + entry.displayName"
-                      ></mat-checkbox>
-                      <span class="cs-row-name" [title]="entry.displayName">{{ entry.displayName }}</span>
-                      @if (entry.reason; as reason) {
-                        <span class="cs-row-meta cs-row-reason">{{ reason }}</span>
-                      } @else if (entry.deviceCount; as count) {
-                        <span class="cs-row-meta">{{ count | number }} {{ entityUnit() }}</span>
-                      }
-                    </label>
+            <section class="cs-section">
+              <h3 class="cs-head">
+                <span>{{ section.heading }}</span>
+                @if ((section.totalAvailable ?? 0) > (section.entries?.length ?? 0)) {
+                  <span class="cs-hint">showing top {{ section.entries?.length }} of {{ section.totalAvailable | number }}</span>
+                }
+              </h3>
+              @for (entry of section.entries ?? []; track entry.key) {
+                <label class="cs-row" [class.cs-row-selected]="isSelected(entry.key)">
+                  <mat-checkbox
+                    [checked]="isSelected(entry.key)"
+                    [disabled]="isLocked(entry.key)"
+                    (change)="toggleColumn(entry, $event.checked)"
+                    [attr.aria-label]="'Select column ' + entry.displayName"
+                  ></mat-checkbox>
+                  <span class="cs-row-name" [title]="entry.displayName">{{ entry.displayName }}</span>
+                  @if (entry.reason) {
+                    <span class="cs-row-meta cs-row-reason">{{ entry.reason }}</span>
+                  } @else if (entry.deviceCount) {
+                    <span class="cs-row-meta">{{ entry.deviceCount | number }} {{ entityUnit() }}</span>
                   }
-                  @if (section.totalAvailable; as total) {
-                    @if (total > entries.length) {
-                      <div class="cs-more">Search above to find more</div>
-                    }
-                  }
-                </section>
+                </label>
               }
-            }
+              @if ((section.totalAvailable ?? 0) > (section.entries?.length ?? 0)) {
+                <div class="cs-more">Search above to find more</div>
+              }
+            </section>
           }
         }
       </div>

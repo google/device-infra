@@ -22,61 +22,71 @@ export interface FilterSortOptions {
   readonly sortBy: 'value' | 'filtered' | 'total';
   /** Sort direction flag (true = ascending, false = descending). */
   readonly sortAsc: boolean;
-  /** Staged custom user inputs added manually that are not in base items. */
-  readonly stagedCustomInputs?: ReadonlySet<string>;
+  /** Set of currently selected value strings. */
+  readonly selectedValues?: ReadonlySet<string>;
+  /** Whether the candidate items are plain values without count columns. */
+  readonly isPlain?: boolean;
   /** Loading flag indicating whether backend values are currently fetching. */
   readonly isLoading?: boolean;
 }
 
 /**
- * Pure function: Combines base candidate items with staged custom free-text inputs.
+ * Pure function: Combines base candidate items with selected custom free-text inputs.
  *
  * @param baseValues List of candidate items returned by backend or configuration.
- * @param staged Set of custom inputs entered by user.
+ * @param selectedValues Set of currently selected value strings.
+ * @param isPlain Whether the candidate items are plain values without count columns.
  * @param isLoading Whether candidate values are currently loading.
  * @return Array of combined PickerValueItem elements.
  */
 export function buildDisplayValues(
   baseValues: readonly PickerValueItem[],
-  staged: ReadonlySet<string> | undefined,
+  selectedValues?: ReadonlySet<string>,
+  isPlain = false,
   isLoading = false,
 ): PickerValueItem[] {
-  if (isLoading || !staged || staged.size === 0) {
+  if (isLoading || !selectedValues?.size) {
     return [...baseValues];
   }
 
-  const baseLower = new Set<string>();
-  for (const v of baseValues) {
-    baseLower.add(normalizeKey(v.value));
-    baseLower.add(normalizeKey(v.displayLabel));
+  const existingKeys = new Set(
+    baseValues.flatMap((v) => [
+      normalizeKey(v.value),
+      normalizeKey(v.displayLabel),
+    ]),
+  );
+
+  const missingItems: PickerValueItem[] = [];
+  for (const raw of selectedValues) {
+    const trimmed = raw.trim();
+    const key = normalizeKey(trimmed);
+    if (!trimmed || existingKeys.has(key)) continue;
+
+    existingKeys.add(key);
+    missingItems.push({
+      value: trimmed,
+      displayLabel: trimmed,
+      filtered: isPlain ? undefined : 0,
+      total: isPlain ? undefined : 0,
+    });
   }
 
-  const missingStaged: PickerValueItem[] = [];
-  for (const customVal of staged) {
-    if (!baseLower.has(normalizeKey(customVal))) {
-      missingStaged.push({
-        value: customVal,
-        displayLabel: customVal,
-        disabled: true,
-      });
-    }
-  }
-
-  return [...baseValues, ...missingStaged];
+  return [...baseValues, ...missingItems];
 }
 
 /**
  * Pure function: Filters and multi-column sorts candidate items for display in the picker UI.
  *
  * @param opts Options specifying items, search query, sort column, and sort direction.
- * @returns Filtered and sorted candidate items.
+ * @return Filtered and sorted candidate items.
  */
 export function computeFilteredAndSortedValues(
   opts: FilterSortOptions,
 ): PickerValueItem[] {
   const displayItems = buildDisplayValues(
     opts.items,
-    opts.stagedCustomInputs,
+    opts.selectedValues,
+    opts.isPlain,
     opts.isLoading,
   );
   const q = normalizeKey(opts.query);
@@ -102,7 +112,12 @@ export function computeFilteredAndSortedValues(
 
     const valA = (opts.sortBy === 'filtered' ? a.filtered : a.total) ?? 0;
     const valB = (opts.sortBy === 'filtered' ? b.filtered : b.total) ?? 0;
-    return opts.sortAsc ? valA - valB : valB - valA;
+    if (valA !== valB) {
+      return opts.sortAsc ? valA - valB : valB - valA;
+    }
+    return a.displayLabel
+      .toLowerCase()
+      .localeCompare(b.displayLabel.toLowerCase());
   });
 
   return [...normalItems, ...disabledItems];
@@ -125,9 +140,8 @@ export function computePinnedValues(
   isLoading: boolean,
   threshold = 20,
 ): PickerValueItem[] {
-  const hasQuery = query.trim().length > 0;
   if (
-    hasQuery ||
+    query.trim().length > 0 ||
     isLoading ||
     items.length <= threshold ||
     selectedSet.size === 0
@@ -135,9 +149,16 @@ export function computePinnedValues(
     return [];
   }
 
+  const selectedNorm = new Set(Array.from(selectedSet, normalizeKey));
+
   return items
-    .filter((v) => selectedSet.has(v.value))
-    .sort((a, b) => a.displayLabel.localeCompare(b.displayLabel));
+    .filter(
+      (v) =>
+        selectedSet.has(v.value) || selectedNorm.has(normalizeKey(v.value)),
+    )
+    .sort((a, b) =>
+      a.displayLabel.toLowerCase().localeCompare(b.displayLabel.toLowerCase()),
+    );
 }
 
 /**
@@ -146,53 +167,63 @@ export function computePinnedValues(
  */
 export const getPacificTimezoneName = dateUtils.getPacificTimezoneName;
 
-/**
- * Pure function: Formats millisecond timestamp into datetime-local HTML input format YYYY-MM-DDTHH:MM.
- *
- * @param ms Epoch timestamp in milliseconds.
- * @return Formatted datetime-local string.
- */
-export const toDateTimeLocalString = dateUtils.toDateTimeLocalString;
 
 /**
  * Converts a datetime-local string in Pacific Time (America/Los_Angeles) to UTC ISO-8601 string.
- * Delegates to shared dateUtils.
  */
-export const pdtDateTimeToUtcIso = dateUtils.pdtDateTimeToUtcIso;
+export const pacificToUtc = dateUtils.pacificToUtc;
+
+/**
+ * Converts a UTC timestamp to Pacific Time HTML datetime-local format string `YYYY-MM-DDTHH:MM`.
+ */
+export const utcToPacific = dateUtils.utcToPacific;
 
 /**
  * Pure function: Extracts From and To date strings from selected values set or returns default 24h range in Pacific Time.
  *
  * @param selectedValues Set of selected value strings.
- * @return Object containing 'from' and 'to' datetime-local strings.
+ * @return Object containing 'from' and 'to' datetime-local strings in Pacific Time.
  */
 export function parseDateRange(selectedValues: ReadonlySet<string>): {
   from: string;
   to: string;
 } {
-  const selected = Array.from(selectedValues);
-  if (selected.length >= 2) {
-    return {
-      from: (selected[0] || '').trim(),
-      to: (selected[1] || '').trim(),
-    };
+  const selected = Array.from(selectedValues, (s) => s.trim()).filter(Boolean);
+  let rawFrom = selected[0] || '';
+  let rawTo = selected[1] || '';
+
+  if (selected.length === 1) {
+    const str = selected[0];
+    const fromMatch = str.match(/From:\s*(.*?)(?=\s+To:|$)/i);
+    const toMatch = str.match(/To:\s*(.*)/i);
+    if (fromMatch || toMatch) {
+      rawFrom = fromMatch?.[1]?.trim() || '';
+      rawTo = toMatch?.[1]?.trim() || '';
+    } else {
+      const parts = str
+        .split(/[~,]|(?:\s+-\s+)/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      rawFrom = parts[0] || '';
+      rawTo = parts[1] || '';
+    }
   }
 
-  const t = selected[0] || '';
-  const match = t.match(/From:\s*([^\s]+)\s*To:\s*([^\s]+)/i);
-  if (match) {
-    return {from: match[1], to: match[2]};
-  }
+  const from = utcToPacific(rawFrom);
+  const to = utcToPacific(rawTo);
 
-  const matchTilde = t.match(/([^\s~]+)\s*~\s*([^\s~]+)/);
-  if (matchTilde) {
-    return {from: matchTilde[1], to: matchTilde[2]};
-  }
+  const calcOffset = (dateTimeStr: string, offsetMs: number): string => {
+    const ms = new Date(pacificToUtc(dateTimeStr)).getTime();
+    return utcToPacific(isNaN(ms) ? Date.now() + offsetMs : ms + offsetMs);
+  };
 
-  const now = Date.now();
   return {
-    from: toDateTimeLocalString(now - 86400000),
-    to: toDateTimeLocalString(now),
+    from:
+      from ||
+      (to ? calcOffset(to, -86400000) : utcToPacific(Date.now() - 86400000)),
+    to:
+      to ||
+      (from ? calcOffset(from, 86400000) : utcToPacific(Date.now())),
   };
 }
 
@@ -235,7 +266,7 @@ export interface ApplyEventPayload {
 export function buildValuePickerApplyEvent(
   payload: ApplyEventPayload,
 ): ValuePickerApplyEvent {
-  const {type, isAdvanced, negated, selectedSet, searchQuery} = payload;
+  const {type, isAdvanced, negated, selectedSet} = payload;
 
   switch (type) {
     case 'range': {
@@ -274,10 +305,6 @@ export function buildValuePickerApplyEvent(
   }
 
   const selectedList = Array.from(selectedSet);
-  const pendingQuery = searchQuery.trim();
-  if (pendingQuery && !selectedList.includes(pendingQuery) && !isAdvanced) {
-    selectedList.push(pendingQuery);
-  }
 
   return {
     selected: selectedList,

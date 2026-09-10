@@ -3,6 +3,7 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   Injector,
   OnInit,
@@ -39,6 +40,18 @@ export class SearchPage implements OnInit {
   private readonly injector = inject(Injector);
 
   readonly searchBox = viewChild(SearchBox);
+
+  /** Active view mode for the search page (landing loading, launcher, or results). */
+  readonly pageViewMode = computed<
+    'landing_loading' | 'landing_launcher' | 'fleet_results' | 'tjs_results'
+  >(() => {
+    if (this.store.isLandingState()) {
+      return this.store.isConfigLoading() && !this.store.searchConfig()
+        ? 'landing_loading'
+        : 'landing_launcher';
+    }
+    return this.store.isTjs() ? 'tjs_results' : 'fleet_results';
+  });
 
   ngOnInit() {
     this.loadingService.hide();

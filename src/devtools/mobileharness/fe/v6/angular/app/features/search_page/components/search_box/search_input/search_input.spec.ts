@@ -92,18 +92,30 @@ describe('SearchInput', () => {
     expect(chips.length).toBe(3);
 
     // Chip 1: normal
-    expect(chips[0].querySelector('.chip-label').textContent.trim()).toBe('status');
-    expect(chips[0].querySelector('.chip-value').textContent.trim()).toBe('(IDLE)');
+    expect(chips[0].querySelector('.chip-label').textContent.trim()).toBe(
+      'status',
+    );
+    expect(chips[0].querySelector('.chip-value').textContent.trim()).toBe(
+      '(IDLE)',
+    );
 
     // Chip 2: negated
     expect(chips[1].classList).toContain('exclude');
-    expect(chips[1].querySelector('.chip-label').textContent.trim()).toBe('model');
-    expect(chips[1].querySelector('.chip-value').textContent.trim()).toBe('(!Pixel 8)');
+    expect(chips[1].querySelector('.chip-label').textContent.trim()).toBe(
+      'model',
+    );
+    expect(chips[1].querySelector('.chip-value').textContent.trim()).toBe(
+      '(!Pixel 8)',
+    );
 
     // Chip 3: group by
     expect(chips[2].classList).toContain('group-by-chip');
-    expect(chips[2].querySelector('.chip-label').textContent.trim()).toBe('group by');
-    expect(chips[2].querySelector('.chip-value').textContent.trim()).toBe('driver');
+    expect(chips[2].querySelector('.chip-label').textContent.trim()).toBe(
+      'group by',
+    );
+    expect(chips[2].querySelector('.chip-value').textContent.trim()).toBe(
+      'driver',
+    );
   });
 
   it('should trigger removeFilterChip when close icon is clicked', () => {
@@ -164,10 +176,77 @@ describe('SearchInput', () => {
   });
 
   it('should trigger executeSearch when refresh button is clicked', () => {
-    const refreshBtn = fixture.nativeElement.querySelector('.query-refresh-btn');
+    const refreshBtn =
+      fixture.nativeElement.querySelector('.query-refresh-btn');
     expect(refreshBtn).toBeTruthy();
     refreshBtn.click();
 
     expect(mockStore.executeSearch).toHaveBeenCalled();
+  });
+
+  it('should render collapse button when multi-row and collapse into composite chips', () => {
+    mockStore.activeChips.set([
+      {
+        key: 'status',
+        pillKey: 'status',
+        pillCondition: 'IDLE',
+        isGroupBy: false,
+      },
+      {
+        key: 'model',
+        pillKey: 'model',
+        pillCondition: 'Pixel 8',
+        isGroupBy: false,
+      },
+      {
+        key: 'driver',
+        pillKey: 'driver',
+        pillCondition: 'driver',
+        isGroupBy: true,
+      },
+    ]);
+    component.isMultiRow.set(true);
+    fixture.detectChanges();
+
+    const collapseBtn = fixture.nativeElement.querySelector(
+      '.search-collapse-btn',
+    );
+    expect(collapseBtn).toBeTruthy();
+    expect(collapseBtn.textContent).toContain('unfold_less');
+
+    collapseBtn.click();
+    fixture.detectChanges();
+
+    expect(component.isCollapsed()).toBeTrue();
+    expect(component.showCompositeFilterChip()).toBeTrue();
+    expect(component.showCompositeGroupByChip()).toBeTrue();
+    expect(component.showActiveChipList()).toBeFalse();
+    // After collapsing, collapse button is hidden
+    expect(
+      fixture.nativeElement.querySelector('.search-collapse-btn'),
+    ).toBeNull();
+
+    // Composite chips should be rendered
+    const compositeFilters =
+      fixture.nativeElement.querySelector('.composite-filters');
+    const compositeGroupBy =
+      fixture.nativeElement.querySelector('.composite-groupby');
+    expect(compositeFilters).toBeTruthy();
+    expect(compositeFilters.textContent).toContain('Filters (2)');
+    expect(compositeGroupBy).toBeTruthy();
+    expect(compositeGroupBy.textContent).toContain('group by (1)');
+
+    // Clicking composite chip should re-expand
+    compositeFilters.click();
+    fixture.detectChanges();
+
+    expect(component.isCollapsed()).toBeFalse();
+    expect(component.showCompositeFilterChip()).toBeFalse();
+    expect(component.showCompositeGroupByChip()).toBeFalse();
+    expect(component.showActiveChipList()).toBeTrue();
+    const chips = fixture.nativeElement.querySelectorAll(
+      '.search-chip:not(.composite-chip)',
+    );
+    expect(chips.length).toBe(3);
   });
 });

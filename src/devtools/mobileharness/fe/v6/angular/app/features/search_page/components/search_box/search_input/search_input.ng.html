@@ -24,40 +24,68 @@
     <div
       #searchBox
       class="search-box"
+      [class.chips-collapsed]="isCollapsed()"
+      [class.chips-expanded]="!isCollapsed() && isMultiRow()"
       (click)="onSearchBoxClick($event)"
     >
       <mat-icon class="material-symbols-outlined search-icon">search</mat-icon>
-      <div class="search-input-area">
-        <div class="active-chips-container">
-          @for (chip of store.activeChips(); track getChipKey(chip) + chip.pillCondition) {
+      <div class="search-input-area" [class.collapsed]="isCollapsed()">
+        <div #chipsContainer class="active-chips-container">
+          @if (showCompositeFilterChip()) {
             <span
-              #chipEl
-              class="search-chip"
-              [attr.data-chip-key]="getChipKey(chip)"
-              [class.group-by-chip]="chip.isGroupBy"
-              [class.exclude]="chip.negated"
-              [class.active]="store.isChipPickerActive(chip)"
-              (click)="openPickerForChip(chip, chipEl, $event)"
+              class="search-chip composite-chip composite-filters"
+              (click)="expandChips($event)"
+              title="Show all filters"
             >
-              @if (chip.isGroupBy) {
-                <span class="chip-label">group by</span>
-                <span
-                  class="chip-value"
-                  [matTooltip]="chip.pillKey"
-                  tooltipIfTruncated
-                >{{ chip.pillKey }}</span>
-              } @else {
-                <span class="chip-label">{{ chip.pillKey }}</span>
-                <span
-                  class="chip-value"
-                  [matTooltip]="chip.pillCondition"
-                  tooltipIfTruncated
-                >({{ chip.pillCondition }})</span>
-              }
-              <button class="chip-remove" (click)="store.removeFilterChip(chip); $event.stopPropagation()">
-                <mat-icon class="material-symbols-outlined">close</mat-icon>
-              </button>
+              <span class="chip-label">Filters ({{ filterChipsCount() }})</span>
             </span>
+          }
+          @if (showCompositeGroupByChip()) {
+            <span
+              class="search-chip composite-chip composite-groupby"
+              (click)="expandChips($event)"
+              title="Show all group by"
+            >
+              <span class="chip-label">group by ({{ groupByChipsCount() }})</span>
+            </span>
+          }
+          @if (showActiveChipList()) {
+            @for (chip of store.activeChips(); track getChipKey(chip) + chip.pillCondition) {
+              <span
+                #chipEl
+                class="search-chip"
+                [attr.data-chip-key]="getChipKey(chip)"
+                [class.group-by-chip]="chip.isGroupBy"
+                [class.exclude]="chip.negated"
+                [class.active]="store.isChipPickerActive(chip)"
+                (click)="openPickerForChip(chip, chipEl, $event)"
+              >
+                @if (chip.isGroupBy) {
+                  <span class="chip-label">group by</span>
+                  <span
+                    class="chip-value"
+                    [matTooltip]="chip.pillKey"
+                    tooltipIfTruncated
+                  >{{ chip.pillKey }}</span>
+                } @else {
+                  <span class="chip-label">{{ chip.pillKey }}</span>
+                  <span
+                    class="chip-value"
+                    [matTooltip]="chip.pillCondition"
+                    tooltipIfTruncated
+                  >({{ chip.pillCondition }})</span>
+                }
+                <button
+                  class="chip-remove"
+                  type="button"
+                  (click)="store.removeFilterChip(chip); $event.stopPropagation()"
+                  title="Remove filter"
+                  aria-label="Remove filter"
+                >
+                  <mat-icon class="material-symbols-outlined">close</mat-icon>
+                </button>
+              </span>
+            }
           }
         </div>
         <input
@@ -73,11 +101,30 @@
           (keydown)="onKeyDown($event)"
         />
       </div>
-      @if (store.showSearchClear()) {
-        <button mat-icon-button class="search-clear-btn" (click)="store.resetSearchState()" title="Clear search">
-          <mat-icon class="material-symbols-outlined">close</mat-icon>
-        </button>
-      }
+      <div class="search-actions">
+        @if (canCollapse()) {
+          <button
+            mat-icon-button
+            class="search-collapse-btn"
+            (click)="collapseChips($event)"
+            title="Collapse filters"
+            aria-label="Collapse filters"
+          >
+            <mat-icon class="material-symbols-outlined">unfold_less</mat-icon>
+          </button>
+        }
+        @if (store.showSearchClear()) {
+          <button
+            mat-icon-button
+            class="search-clear-btn"
+            (click)="store.resetSearchState()"
+            title="Clear search"
+            aria-label="Clear search"
+          >
+            <mat-icon class="material-symbols-outlined">close</mat-icon>
+          </button>
+        }
+      </div>
     </div>
 
     <!-- Suggestion Popover -->

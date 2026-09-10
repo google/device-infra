@@ -142,15 +142,12 @@ describe('FilterValuePicker', () => {
   });
 
   it('should pin selected items when list exceeds threshold', () => {
-    const largeList: PickerValueItem[] = Array.from(
-      {length: 25},
-      (_, idx) => ({
-        value: `val_${idx}`,
-        displayLabel: `Value ${idx.toString().padStart(2, '0')}`,
-        filtered: 10,
-        total: 50,
-      }),
-    );
+    const largeList: PickerValueItem[] = Array.from({length: 25}, (_, idx) => ({
+      value: `val_${idx}`,
+      displayLabel: `Value ${idx.toString().padStart(2, '0')}`,
+      filtered: 10,
+      total: 50,
+    }));
     mockStore.effectivePickerState.set({
       ...INITIAL_VALUE_PICKER_STATE,
       values: largeList,
@@ -278,5 +275,128 @@ describe('FilterValuePicker', () => {
     expect(component.showAdvancedMenu()).toBeFalse();
     expect(component.showSearchInput()).toBeFalse();
     expect(component.showRowActions()).toBeFalse();
+  });
+
+  it('should fold custom selected items not in backend values with count 0 and dimmed style, and allow deselecting', () => {
+    mockStore.effectivePickerState.set({
+      ...INITIAL_VALUE_PICKER_STATE,
+      values: [
+        {value: 'IDLE', displayLabel: 'Idle', filtered: 10, total: 100},
+        {value: 'BUSY', displayLabel: 'Busy', filtered: 20, total: 200},
+      ],
+      selectedValues: new Set(['IDLE', 'CUSTOM_STATUS']),
+    });
+    fixture.detectChanges();
+
+    const displayed = component.displayList();
+    const customItem = displayed.find((i) => i.value === 'CUSTOM_STATUS');
+    expect(customItem).toBeDefined();
+    expect(customItem?.filtered).toBe(0);
+    expect(customItem?.total).toBe(0);
+    expect(customItem?.disabled).toBeFalsy();
+
+    // The user can deselect the custom item
+    expect(component.selectedSet().has('CUSTOM_STATUS')).toBeTrue();
+    component.toggleValue(customItem!);
+    expect(component.selectedSet().has('CUSTOM_STATUS')).toBeFalse();
+  });
+
+  it('should duplicate custom selected items in pinned section when list exceeds threshold', () => {
+    const largeList: PickerValueItem[] = Array.from({length: 25}, (_, idx) => ({
+      value: `val_${idx}`,
+      displayLabel: `Value ${idx.toString().padStart(2, '0')}`,
+      filtered: 10,
+      total: 50,
+    }));
+    mockStore.effectivePickerState.set({
+      ...INITIAL_VALUE_PICKER_STATE,
+      values: largeList,
+      selectedValues: new Set(['val_1', 'CUSTOM_STATUS']),
+    });
+    fixture.detectChanges();
+
+    const pinned = component.pinnedValues();
+    expect(pinned.length).toBe(2);
+    expect(pinned.some((i) => i.value === 'CUSTOM_STATUS')).toBeTrue();
+    expect(pinned.some((i) => i.value === 'val_1')).toBeTrue();
+
+    const customPinned = pinned.find((i) => i.value === 'CUSTOM_STATUS');
+    expect(customPinned?.filtered).toBe(0);
+    expect(customPinned?.total).toBe(0);
+  });
+
+  it('should stage custom input on search enter only when loading is true', () => {
+    mockStore.effectivePickerState.set({
+      ...INITIAL_VALUE_PICKER_STATE,
+      loading: true,
+      values: [],
+      selectedValues: new Set(),
+    });
+    fixture.detectChanges();
+
+    component.searchQuery.set('custom_while_loading');
+    component.onSearchEnter();
+
+    expect(component.selectedSet().has('custom_while_loading')).toBeTrue();
+    expect(mockStore.applyValuePicker).not.toHaveBeenCalled();
+  });
+
+  it('should not stage custom input on search enter when loading is false, but apply current search state', () => {
+    mockStore.effectivePickerState.set({
+      ...INITIAL_VALUE_PICKER_STATE,
+      loading: false,
+      values: [
+        {value: 'IDLE', displayLabel: 'Idle', filtered: 10, total: 100},
+        {value: 'BUSY', displayLabel: 'Busy', filtered: 20, total: 200},
+      ],
+      selectedValues: new Set(['IDLE']),
+    });
+    fixture.detectChanges();
+
+    component.searchQuery.set('custom_query');
+    component.onSearchEnter();
+
+    expect(component.selectedSet().has('custom_query')).toBeFalse();
+    expect(mockStore.applyValuePicker).toHaveBeenCalled();
+  });
+
+  it('should emit empty selected array on apply if no items are checked even if searchQuery has text', () => {
+    mockStore.effectivePickerState.set({
+      ...INITIAL_VALUE_PICKER_STATE,
+      loading: false,
+      values: [{value: 'IDLE', displayLabel: 'Idle', filtered: 10, total: 100}],
+      selectedValues: new Set(),
+    });
+    fixture.detectChanges();
+
+    component.searchQuery.set('unselected_query');
+    component.onApply();
+
+    expect(mockStore.applyValuePicker).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        selected: [],
+      }),
+    );
+  });
+
+  it('should reset searchQuery when picker is closed and reopened', () => {
+    component.searchQuery.set('previous_query');
+    expect(component.searchQuery()).toBe('previous_query');
+
+    // Close picker
+    mockStore.showValuePicker.set(false);
+    mockStore.pickerConfig.set(null);
+    fixture.detectChanges();
+
+    // Reopen picker
+    mockStore.pickerConfig.set({
+      key: 'status',
+      title: 'Device Status',
+      type: 'list',
+    });
+    mockStore.showValuePicker.set(true);
+    fixture.detectChanges();
+
+    expect(component.searchQuery()).toBe('');
   });
 });

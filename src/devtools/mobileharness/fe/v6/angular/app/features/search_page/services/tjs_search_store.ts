@@ -37,7 +37,7 @@ import {
   extractRawValuesFromTjsFilter,
   getChipKey,
   mapToSearchBoxSuggestion,
-  pdtDateTimeToUtcIso,
+  pacificToUtc,
   resolveInitialChips,
   toTjsEntityProto,
 } from '../utils';
@@ -137,10 +137,7 @@ export class TjsSearchStore extends SearchPageStore {
     TjsSearchConfig | null,
     EntityType | undefined
   >({
-    params: () => {
-      if (!this.isCurrentRouteActive()) return undefined;
-      return this.entity();
-    },
+    params: () => this.entity(),
     stream: ({params: entity}) => {
       if (!entity) return of(null);
       return this.searchService
@@ -172,34 +169,51 @@ export class TjsSearchStore extends SearchPageStore {
     this.searchConfigResource.isLoading(),
   );
 
-  /** Tracks whether the initial route entry contained filter query parameters. */
-  private readonly hasInitialUrlFilters = !!(
-    this.route.snapshot?.queryParams?.['f'] ||
-    this.route.snapshot?.queryParams?.['gb']
-  );
+  /** Helper to determine if current route snapshot has filter or group-by query parameters. */
+  private hasUrlFilters(): boolean {
+    const qp = this.route.snapshot?.queryParams;
+    return !!(qp?.['f'] || qp?.['gb']);
+  }
 
   /**
    * Synchronizes active filter chips with search configuration default chips
    * using Angular 20+ linkedSignal.
    *
-   * On initial route entry with filters, retains URL filters.
-   * On clean route entry, populates default chips once searchConfig resolves.
-   * Subsequent user modifications are preserved.
+   * On cold store instantiation:
+   * - If route contains initial URL filters, initializes with URL filters.
+   * - If route is clean, populates default chips as soon as searchConfig is available.
+   * - Local user modifications during the active tab visit (clearing/adding chips) are preserved.
    */
   override readonly activeChips = linkedSignal<
     TjsSearchConfig | null,
     FilterChip[]
   >({
     source: () => this.searchConfig(),
-    computation: (cfg, previous) => {
-      if (!previous) {
-        return resolveInitialChips(this.route);
+    computation: (config, previous) => {
+      // 1. If cold-start was initially waiting for config, populate defaults once config resolves
+      if (previous && !previous.source && config && !this.hasUrlFilters()) {
+        return this.mapDefaultChips(config);
       }
-      if (!this.hasInitialUrlFilters && cfg && previous.value.length === 0) {
-        const defaults = this.mapDefaultChips(cfg);
-        if (defaults.length > 0) return defaults;
+
+      // 2. Preserve user modifications during active tab usage
+      if (previous) {
+        return previous.value;
       }
-      return previous.value;
+
+      // 3. Initial evaluation on store instantiation with URL filters
+      const urlChips = this.hasUrlFilters()
+        ? resolveInitialChips(this.route)
+        : [];
+      if (urlChips.length > 0) {
+        return urlChips;
+      }
+
+      // 4. Initial clean load with search configuration loaded
+      if (config) {
+        return this.mapDefaultChips(config);
+      }
+
+      return [];
     },
   });
 
@@ -280,7 +294,7 @@ export class TjsSearchStore extends SearchPageStore {
       if (!this.isCurrentRouteActive()) return undefined;
 
       // On clean page entry, wait for searchConfig to load and populate default chips
-      if (!this.hasInitialUrlFilters && !this.searchConfig?.()) {
+      if (!this.hasUrlFilters() && !this.searchConfig?.()) {
         return undefined;
       }
 
@@ -380,8 +394,8 @@ export class TjsSearchStore extends SearchPageStore {
     if (meta?.timeRange) {
       const fromStr = chip.rawValues?.[0] || '';
       const toStr = chip.rawValues?.[1] || '';
-      const isoFrom = this.toIsoString(fromStr);
-      const isoTo = this.toIsoString(toStr);
+      const isoFrom = pacificToUtc(fromStr) || undefined;
+      const isoTo = pacificToUtc(toStr) || undefined;
 
       if (!isoFrom && !isoTo) {
         return null;
@@ -442,12 +456,6 @@ export class TjsSearchStore extends SearchPageStore {
     }
 
     return null;
-  }
-
-  /** Converts ISO or PDT timestamp string to UTC ISO format string. */
-  private toIsoString(val: string): string | undefined {
-    if (!val) return undefined;
-    return pdtDateTimeToUtcIso(val) || undefined;
   }
 
   // ===========================================================================
@@ -633,13 +641,13 @@ export class TjsSearchStore extends SearchPageStore {
 
     let selectedVals = new Set<string>();
     if (activeChip) {
-      if (activeChip.tjsFilter) {
+      if (activeChip.rawValues && activeChip.rawValues.length > 0) {
+        selectedVals = new Set(activeChip.rawValues);
+      } else if (activeChip.tjsFilter) {
         const rawVals = extractRawValuesFromTjsFilter(activeChip.tjsFilter);
         if (rawVals && rawVals.length > 0) {
           selectedVals = new Set(rawVals);
         }
-      } else if (activeChip.rawValues && activeChip.rawValues.length > 0) {
-        selectedVals = new Set(activeChip.rawValues);
       } else if (activeChip.pillCondition) {
         const existingVals = activeChip.pillCondition
           .split(',')

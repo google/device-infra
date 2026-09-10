@@ -13,7 +13,10 @@ import {
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {of} from 'rxjs';
 
-import {FleetColumnCatalogResponse} from '../../../../../../core/models/search';
+import {
+  FleetColumnCatalogResponse,
+  FleetColumnDescriptor,
+} from '../../../../../../core/models/search';
 import {
   SEARCH_SERVICE,
   SearchService,
@@ -63,9 +66,19 @@ describe('ColumnSelectorComponent', () => {
   const dialogData: ColumnSelectorDialogData = {
     entity: 'devices',
     fleet: 'self',
-    selectedColumns: ['id', 'status', 'type', 'owner'],
-    lockedColumns: ['id'],
-    defaultColumns: ['id', 'status', 'type', 'owner', 'model'],
+    columns: [
+      {key: 'id', displayName: 'Device ID', locked: true},
+      {key: 'status', displayName: 'Status'},
+      {key: 'type', displayName: 'Device Type'},
+      {key: 'owner', displayName: 'Owner'},
+    ],
+    defaultColumns: [
+      {key: 'id', displayName: 'Device ID', locked: true},
+      {key: 'status', displayName: 'Status'},
+      {key: 'type', displayName: 'Device Type'},
+      {key: 'owner', displayName: 'Owner'},
+      {key: 'model', displayName: 'Model'},
+    ],
     activeFilters: [],
   };
 
@@ -105,7 +118,7 @@ describe('ColumnSelectorComponent', () => {
   });
 
   it('initializes draft columns from input data with locked columns first', () => {
-    expect(component.draftColumns()).toEqual(['id', 'status', 'type', 'owner']);
+    expect(component.draftColumns()).toEqual(dialogData.columns!);
     expect(component.isLocked('id')).toBeTrue();
     expect(component.isLocked('status')).toBeFalse();
   });
@@ -129,58 +142,77 @@ describe('ColumnSelectorComponent', () => {
 
   it('removes non-locked column when remove button is clicked', () => {
     component.removeColumn('type');
-    expect(component.draftColumns()).toEqual(['id', 'status', 'owner']);
+    expect(component.draftColumns()).toEqual([
+      {key: 'id', displayName: 'Device ID', locked: true},
+      {key: 'status', displayName: 'Status'},
+      {key: 'owner', displayName: 'Owner'},
+    ]);
   });
 
   it('does not remove locked column', () => {
     component.removeColumn('id');
-    expect(component.draftColumns()).toContain('id');
+    expect(component.draftColumns().some((c) => c.key === 'id')).toBeTrue();
   });
 
   it('toggles column selection via checkbox', () => {
     expect(component.isSelected('ip')).toBeFalse();
-    component.toggleColumn('ip', true);
+    component.toggleColumn({key: 'ip', displayName: 'IP Address'}, true);
     expect(component.isSelected('ip')).toBeTrue();
     expect(component.draftColumns()).toEqual([
-      'id',
-      'status',
-      'type',
-      'owner',
-      'ip',
+      {key: 'id', displayName: 'Device ID', locked: true},
+      {key: 'status', displayName: 'Status'},
+      {key: 'type', displayName: 'Device Type'},
+      {key: 'owner', displayName: 'Owner'},
+      {key: 'ip', displayName: 'IP Address'},
     ]);
 
-    component.toggleColumn('ip', false);
+    component.toggleColumn({key: 'ip', displayName: 'IP Address'}, false);
     expect(component.isSelected('ip')).toBeFalse();
-    expect(component.draftColumns()).toEqual(['id', 'status', 'type', 'owner']);
+    expect(component.draftColumns()).toEqual([
+      {key: 'id', displayName: 'Device ID', locked: true},
+      {key: 'status', displayName: 'Status'},
+      {key: 'type', displayName: 'Device Type'},
+      {key: 'owner', displayName: 'Owner'},
+    ]);
   });
 
   it('reorders columns with drag and drop respecting locked columns', () => {
     // previousIndex: 2 (type), currentIndex: 1 (status)
-    const dropEvent: CdkDragDrop<string[]> = {
+    const dropEvent: CdkDragDrop<FleetColumnDescriptor[]> = {
       previousIndex: 2,
       currentIndex: 1,
-    } as unknown as CdkDragDrop<string[]>;
+    } as unknown as CdkDragDrop<FleetColumnDescriptor[]>;
 
     component.drop(dropEvent);
-    expect(component.draftColumns()).toEqual(['id', 'type', 'status', 'owner']);
+    expect(component.draftColumns().map((c) => c.key)).toEqual([
+      'id',
+      'type',
+      'status',
+      'owner',
+    ]);
   });
 
   it('does not move column before locked column in drag and drop', () => {
     // previousIndex: 2 (type), currentIndex: 0 (locked position)
-    const dropEvent: CdkDragDrop<string[]> = {
+    const dropEvent: CdkDragDrop<FleetColumnDescriptor[]> = {
       previousIndex: 2,
       currentIndex: 0,
-    } as unknown as CdkDragDrop<string[]>;
+    } as unknown as CdkDragDrop<FleetColumnDescriptor[]>;
 
     component.drop(dropEvent);
     // Should be clamped to index 1
-    expect(component.draftColumns()).toEqual(['id', 'type', 'status', 'owner']);
+    expect(component.draftColumns().map((c) => c.key)).toEqual([
+      'id',
+      'type',
+      'status',
+      'owner',
+    ]);
   });
 
   it('resets draft columns to defaultColumns on reset() without closing dialog', () => {
     component.removeColumn('status');
     component.removeColumn('type');
-    expect(component.draftColumns()).toEqual(['id', 'owner']);
+    expect(component.draftColumns().map((c) => c.key)).toEqual(['id', 'owner']);
 
     const resetBtn = document.querySelector(
       '.cs-btn-reset',
@@ -189,13 +221,7 @@ describe('ColumnSelectorComponent', () => {
     resetBtn.click();
     fixture.detectChanges();
 
-    expect(component.draftColumns()).toEqual([
-      'id',
-      'status',
-      'type',
-      'owner',
-      'model',
-    ]);
+    expect(component.draftColumns()).toEqual(dialogData.defaultColumns!);
     expect(mockDialogRef.close).not.toHaveBeenCalled();
   });
 
@@ -204,21 +230,24 @@ describe('ColumnSelectorComponent', () => {
     expect(mockDialogRef.close).toHaveBeenCalledWith();
   });
 
-  it('closes dialog with selected columns and descriptors on apply()', () => {
-    component.draftColumns.set(['id', 'status', 'dim::sdk', 'ip']);
+  it('closes dialog with selected column descriptors on apply()', () => {
+    component.draftColumns.set([
+      {key: 'id', displayName: 'Device ID', locked: true},
+      {key: 'status', displayName: 'Status'},
+      {key: 'dim::sdk', displayName: 'SDK Version'},
+      {key: 'ip', displayName: 'IP Address'},
+    ]);
     component.apply();
 
-    expect(mockDialogRef.close).toHaveBeenCalledWith(
-      jasmine.objectContaining({
-        columns: [
-          {key: 'id', displayName: 'Device ID'},
-          {key: 'status', displayName: 'Status'},
-          {key: 'dim::sdk', displayName: 'SDK Version'},
-          {key: 'ip', displayName: 'IP Address'},
-        ],
-        isReset: false,
-      }),
-    );
+    expect(mockDialogRef.close).toHaveBeenCalledWith({
+      columns: [
+        {key: 'id', displayName: 'Device ID', locked: true},
+        {key: 'status', displayName: 'Status'},
+        {key: 'dim::sdk', displayName: 'SDK Version'},
+        {key: 'ip', displayName: 'IP Address'},
+      ],
+      isReset: false,
+    });
   });
 
   it('closes dialog with isReset: true on apply() when reset() was called', () => {
@@ -233,7 +262,6 @@ describe('ColumnSelectorComponent', () => {
   });
 
   it('computes recentKeys from non-locked initial columns', () => {
-    // dialogData.selectedColumns is ['id', 'status', 'type', 'owner'], locked is ['id']
     expect(component.recentKeys()).toEqual(['status', 'type', 'owner']);
   });
 
@@ -291,4 +319,39 @@ describe('ColumnSelectorComponent', () => {
 
     expect(component.matchedColumnsCount()).toBe(10);
   });
+
+  it('preserves selected column display names in left pane when filtering catalog via search query', fakeAsync(() => {
+    // Return filtered catalog when searching "battery"
+    mockSearchService.getFleetColumnCatalog.and.callFake((req) => {
+      if (req.query === 'battery') {
+        return of({
+          sections: [
+            {
+              heading: 'Dimensions',
+              entries: [
+                {
+                  key: 'dim::battery',
+                  displayName: 'Battery Level',
+                  deviceCount: 5,
+                },
+              ],
+            },
+          ],
+        });
+      }
+      return of(mockCatalogResponse);
+    });
+
+    // Enter search query
+    component.searchQuery.set('battery');
+    tick(250);
+    fixture.detectChanges();
+
+    // Selected columns in left pane should still display human-readable names directly from draftColumns
+    const rows = document.querySelectorAll('.cs-sel-row');
+    expect(rows[0]?.textContent).toContain('Device ID');
+    expect(rows[1]?.textContent).toContain('Status');
+    expect(rows[2]?.textContent).toContain('Device Type');
+    expect(rows[3]?.textContent).toContain('Owner');
+  }));
 });

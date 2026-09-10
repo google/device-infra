@@ -28,6 +28,7 @@ import {catchError, debounceTime, distinctUntilChanged} from 'rxjs/operators';
 
 import {
   Filter,
+  FleetColumnCatalogEntry,
   FleetColumnCatalogRequest,
   FleetColumnCatalogResponse,
   FleetColumnCatalogSection,
@@ -40,7 +41,10 @@ import {
   ColumnSelectorResult,
   EntityType,
 } from '../../../../models';
-import {toFleetProto, toSearchEntityProto} from '../../../../utils';
+import {
+  toFleetProto,
+  toSearchEntityProto,
+} from '../../../../utils';
 
 /**
  * Material 3 two-pane Column Selector Dialog for customizing visible table columns.
@@ -88,30 +92,37 @@ export class ColumnSelectorComponent {
     () => this.data?.activeFilters ?? [],
   );
 
-  /** Default columns fallback when resetting. */
-  readonly defaultColumns = computed<string[]>(() => {
+  /** Default column descriptors fallback when resetting. */
+  readonly defaultColumns = computed<FleetColumnDescriptor[]>(() => {
     return this.data?.defaultColumns ?? [];
   });
 
-  /** Locked identity columns pinned to the beginning. */
+  /** Locked identity column keys derived from locked descriptors. */
   readonly lockedColumns = computed<string[]>(() => {
-    return this.data?.lockedColumns ?? [];
+    const defaults = this.defaultColumns();
+    const lockedFromDefaults = defaults
+      .filter((c) => c.locked)
+      .map((c) => c.key);
+    if (lockedFromDefaults.length > 0) {
+      return lockedFromDefaults;
+    }
+    const current = this.data?.columns ?? [];
+    return current.filter((c) => c.locked).map((c) => c.key);
   });
 
-  /** Initial selected columns from dialog data. */
-  private readonly initialColumns = computed<string[]>(() => {
-    const fromData = this.data?.selectedColumns;
+  /** Initial selected column descriptors from dialog data. */
+  private readonly initialColumns = computed<FleetColumnDescriptor[]>(() => {
+    const fromData = this.data?.columns;
     if (fromData && fromData.length > 0) {
       return fromData;
     }
     return this.defaultColumns();
   });
 
-  /** Working draft array of selected column keys. */
-  readonly draftColumns = linkedSignal<string[], string[]>({
-    source: () => this.initialColumns(),
-    computation: (initial) => this.normalizeInitialDraft(initial),
-  });
+  /** Working draft array of selected column descriptors. */
+  readonly draftColumns = linkedSignal<FleetColumnDescriptor[]>(() =>
+    this.initialColumns(),
+  );
 
   /** Whether the user has explicitly requested a reset to default configuration. */
   readonly isReset = signal<boolean>(false);
@@ -128,14 +139,11 @@ export class ColumnSelectorComponent {
     {initialValue: ''},
   );
 
-  /** Active recent column keys passed explicitly or derived from non-locked selected columns. */
+  /** Current non-locked column keys passed to backend for recommendation context. */
   readonly recentKeys = computed<string[]>(() => {
-    const explicit = this.data?.recentKeys;
-    if (explicit && explicit.length > 0) {
-      return explicit;
-    }
-    const locked = this.lockedColumns();
-    return this.initialColumns().filter((k) => !locked.includes(k));
+    return this.initialColumns()
+      .filter((c) => !c.locked)
+      .map((c) => c.key);
   });
 
   /** Reactive resource fetching column catalog from backend. */
@@ -174,7 +182,9 @@ export class ColumnSelectorComponent {
 
   /** Pre-formatted catalog sections using FleetColumnCatalogSection model directly from protobuf response. */
   readonly viewCatalogSections = computed<FleetColumnCatalogSection[]>(() => {
-    return this.catalogResource.value()?.sections || [];
+    return (this.catalogResource.value()?.sections || []).filter(
+      (s) => (s.entries?.length ?? 0) > 0,
+    );
   });
 
   /** Total count of matching entries across all visible catalog sections. */
@@ -195,47 +205,24 @@ export class ColumnSelectorComponent {
     return this.entity() === 'hosts' ? 'hosts' : 'devices';
   });
 
-  /** Map of key -> displayName derived from pre-formatted catalog ViewModels. */
-  readonly knownDisplayNameMap = computed<Map<string, string>>(() => {
-    const allEntries = this.viewCatalogSections().flatMap(
-      (s) => s.entries ?? [],
-    );
-    const map = new Map<string, string>();
-    for (const entry of allEntries) {
-      if (entry.displayName) {
-        map.set(entry.key, entry.displayName);
-      }
-    }
-    return map;
+  /** Selected column keys set for O(1) template lookup. */
+  readonly selectedKeySet = computed<Set<string>>(() => {
+    return new Set(this.draftColumns().map((col) => col.key));
   });
 
-  /** Normalizes initial column list ensuring locked columns appear first. */
-  private normalizeInitialDraft(initial: string[]): string[] {
-    const locked = this.lockedColumns();
-    const activeLocked = initial.filter((k) => locked.includes(k));
-    const nonLocked = initial.filter((k) => !locked.includes(k));
-    // If none of the locked columns were in initial, add the primary locked column
-    if (activeLocked.length === 0 && locked.length > 0) {
-      return [locked[0], ...nonLocked];
-    }
-    return [...activeLocked, ...nonLocked];
-  }
+  /** Locked column keys set for O(1) template lookup. */
+  readonly lockedKeySet = computed<Set<string>>(() => {
+    return new Set(this.lockedColumns());
+  });
 
   /** Checks whether a given column key is locked. */
   isLocked(key: string): boolean {
-    return this.lockedColumns().includes(key);
+    return this.lockedKeySet().has(key);
   }
 
-  /** Checks whether a column key is currently selected in draft. */
+  /** Checks whether a column key is currently selected in draft (O(1)). */
   isSelected(key: string): boolean {
-    return this.draftColumns().includes(key);
-  }
-
-  /** Gets display name for a column key. */
-  getColumnDisplayName(key: string): string {
-    const catalogName = this.knownDisplayNameMap().get(key);
-    if (catalogName) return catalogName;
-    return key;
+    return this.selectedKeySet().has(key);
   }
 
   /** Handles input in search box. */
@@ -249,17 +236,20 @@ export class ColumnSelectorComponent {
     this.searchQuery.set('');
   }
 
-  /** Toggles column selection checkbox. */
-  toggleColumn(key: string, checked: boolean) {
-    if (this.isLocked(key)) return;
+  /** Toggles column selection checkbox from catalog. */
+  toggleColumn(entry: FleetColumnCatalogEntry, checked: boolean) {
+    if (this.isLocked(entry.key)) return;
     this.isReset.set(false);
 
-    if (checked) {
-      if (!this.draftColumns().includes(key)) {
-        this.draftColumns.update((cols) => [...cols, key]);
-      }
-    } else {
-      this.draftColumns.update((cols) => cols.filter((k) => k !== key));
+    if (checked && !this.isSelected(entry.key)) {
+      this.draftColumns.update((cols) => [
+        ...cols,
+        {key: entry.key, displayName: entry.displayName},
+      ]);
+    } else if (!checked) {
+      this.draftColumns.update((cols) =>
+        cols.filter((col) => col.key !== entry.key),
+      );
     }
   }
 
@@ -267,17 +257,19 @@ export class ColumnSelectorComponent {
   removeColumn(key: string) {
     if (this.isLocked(key)) return;
     this.isReset.set(false);
-    this.draftColumns.update((cols) => cols.filter((k) => k !== key));
+    this.draftColumns.update((cols) => cols.filter((col) => col.key !== key));
   }
 
   /** Handles drag-and-drop reordering. Locked columns cannot be displaced. */
-  drop(event: CdkDragDrop<string[]>) {
+  drop(event: CdkDragDrop<FleetColumnDescriptor[]>) {
     if (event.previousIndex === event.currentIndex) return;
 
     const currentDraft = [...this.draftColumns()];
-    const lockedCount = currentDraft.filter((k) => this.isLocked(k)).length;
+    const lockedCount = currentDraft.filter((col) =>
+      this.isLocked(col.key),
+    ).length;
 
-    // Do not allow moving locked columns or dropping before locked columns
+    // Do not allow moving locked columns
     if (event.previousIndex < lockedCount) return;
 
     this.isReset.set(false);
@@ -288,8 +280,7 @@ export class ColumnSelectorComponent {
 
   /** Resets draft columns to default configuration. */
   reset() {
-    const defs = this.defaultColumns();
-    this.draftColumns.set(this.normalizeInitialDraft(defs));
+    this.draftColumns.set(this.defaultColumns());
     this.isReset.set(true);
   }
 
@@ -300,20 +291,9 @@ export class ColumnSelectorComponent {
 
   /** Applies draft column selection and returns typed descriptors to dialog caller. */
   apply() {
-    const finalCols = this.draftColumns();
-    const normalizedDefaults = this.normalizeInitialDraft(
-      this.defaultColumns(),
-    );
-    const isReset =
-      this.isReset() ||
-      (finalCols.length === normalizedDefaults.length &&
-        finalCols.every((k, i) => k === normalizedDefaults[i]));
-
-    const columns: FleetColumnDescriptor[] = finalCols.map((key) => ({
-      key,
-      displayName: this.getColumnDisplayName(key),
-    }));
-
-    this.dialogRef?.close({columns, isReset});
+    this.dialogRef?.close({
+      columns: this.draftColumns(),
+      isReset: this.isReset(),
+    });
   }
 }

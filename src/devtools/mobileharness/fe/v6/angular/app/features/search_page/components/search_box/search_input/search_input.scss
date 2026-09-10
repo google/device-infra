@@ -121,6 +121,16 @@
   min-width: 0;
   box-sizing: border-box;
 
+  &.chips-collapsed {
+    max-height: 56px;
+    overflow: hidden;
+  }
+
+  &.chips-expanded {
+    max-height: 184px;
+    overflow: hidden auto;
+  }
+
   &:focus-within {
     border-color: #0b57d0;
     box-shadow: 0 0 0 2px rgba(11, 87, 208, 0.2);
@@ -147,6 +157,11 @@
   gap: 8px;
   flex: 1;
   min-width: 0;
+
+  &.collapsed {
+    flex-wrap: nowrap;
+    overflow: hidden;
+  }
 }
 
 .active-chips-container {
@@ -180,6 +195,10 @@
     outline-offset: -1px;
   }
 
+  &.group-by-chip {
+    background-color: #c2e7ff;
+  }
+
   &.exclude,
   &.negated {
     background-color: #fce9e7;
@@ -191,6 +210,17 @@
       &:hover {
         background-color: rgba(140, 29, 24, 0.12);
       }
+    }
+  }
+
+  &.composite-chip {
+    background-color: #ffdcc2;
+    color: #2f1500;
+    padding: 2px 14px;
+    font-weight: 600;
+
+    &:hover {
+      filter: brightness(0.97);
     }
   }
 
@@ -216,15 +246,27 @@
     cursor: pointer;
     display: flex;
     align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    margin-left: 2px;
     padding: 0;
     color: #041e49;
-    font-size: 16px;
     flex-shrink: 0;
+    transition: background-color 0.15s;
 
-    .mat-icon {
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.08);
+    }
+
+    .mat-icon,
+    .material-symbols-outlined {
       font-size: 16px;
       width: 16px;
       height: 16px;
+      line-height: 16px;
+      display: inline-block;
     }
   }
 }
@@ -245,14 +287,21 @@
   }
 }
 
+.search-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.search-collapse-btn,
 .search-clear-btn,
 .query-refresh-btn {
   border: none;
   background: transparent;
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  min-height: 40px;
   padding: 0;
   border-radius: 50%;
   display: inline-flex;
@@ -277,4 +326,19 @@
     margin: 0;
     display: inline-block;
   }
+}
+
+.search-collapse-btn,
+.search-clear-btn {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+}
+
+.query-refresh-btn {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
 }

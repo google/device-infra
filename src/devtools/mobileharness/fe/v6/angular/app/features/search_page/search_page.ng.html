@@ -1,13 +1,14 @@
 <div class="search-page-container">
   <app-search-box></app-search-box>
 
-  @if (store.isLandingState()) {
-    @if (store.isConfigLoading() && !store.searchConfig()) {
+  @switch (pageViewMode()) {
+    @case ('landing_loading') {
       <!-- Landing State Loading -->
       <div class="rt-landing rt-landing-loading">
         <mat-spinner diameter="32" class="landing-spinner"></mat-spinner>
       </div>
-    } @else {
+    }
+    @case ('landing_launcher') {
       <!-- Landing State (Launcher) -->
       <div class="rt-landing">
         @let landing = store.searchConfig()?.landing;
@@ -36,11 +37,10 @@
         }
       </div>
     }
-  } @else {
-    <!-- Search Results Component (Fleet vs TJS) -->
-    @if (!store.isTjs()) {
+    @case ('fleet_results') {
       <app-fleet-search-results></app-fleet-search-results>
-    } @else {
+    }
+    @case ('tjs_results') {
       <app-tjs-search-results></app-tjs-search-results>
     }
   }

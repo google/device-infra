@@ -115,17 +115,13 @@ const ALL_MOCK_HOST_ROWS = generateMockHostRows();
 /** Mock search configuration for lab fleet search. */
 export const MOCK_FLEET_SEARCH_CONFIG: FleetSearchConfig = {
   columns: {
-    recommended: [
-      {key: 'field::status', displayName: 'Status'},
-      {key: 'dim::model', displayName: 'Model'},
-    ],
     defaults: [
-      {key: 'id', displayName: 'Device ID / UUID', locked: true},
-      {key: 'hostName', displayName: 'Host Name'},
-      {key: 'status', displayName: 'Status'},
-      {key: 'type', displayName: 'Device Type'},
-      {key: 'owner', displayName: 'Owner'},
-      {key: 'model', displayName: 'Model'},
+      {key: 'field::uuid', displayName: 'Device ID / UUID', locked: true},
+      {key: 'host::host_name', displayName: 'Host Name'},
+      {key: 'field::status', displayName: 'Status'},
+      {key: 'field::type', displayName: 'Device Type'},
+      {key: 'field::owner', displayName: 'Owner'},
+      {key: 'dim::model', displayName: 'Model'},
     ],
   },
   landing: {
@@ -242,10 +238,10 @@ export const MOCK_FLEET_COLUMN_CATALOG: FleetColumnCatalogResponse = {
     {
       heading: 'Suggested for you',
       entries: [
-        {key: 'status', displayName: 'Status', reason: 'Active filter'},
-        {key: 'model', displayName: 'Model', reason: 'Active filter'},
+        {key: 'field::status', displayName: 'Status', reason: 'Active filter'},
+        {key: 'dim::model', displayName: 'Model', reason: 'Active filter'},
         {
-          key: 'battery_level',
+          key: 'dim::battery_level',
           displayName: 'Battery Level',
           reason: 'Recently used',
         },
@@ -255,12 +251,12 @@ export const MOCK_FLEET_COLUMN_CATALOG: FleetColumnCatalogResponse = {
       heading: 'Built-in fields',
       totalAvailable: 6,
       entries: [
-        {key: 'id', displayName: 'Device ID', deviceCount: 14},
-        {key: 'status', displayName: 'Status', deviceCount: 14},
-        {key: 'type', displayName: 'Device Type', deviceCount: 14},
-        {key: 'owner', displayName: 'Owner', deviceCount: 14},
-        {key: 'hostName', displayName: 'Host Name', deviceCount: 14},
-        {key: 'ip', displayName: 'IP Address', deviceCount: 12},
+        {key: 'field::uuid', displayName: 'Device ID', deviceCount: 14},
+        {key: 'field::status', displayName: 'Status', deviceCount: 14},
+        {key: 'field::type', displayName: 'Device Type', deviceCount: 14},
+        {key: 'field::owner', displayName: 'Owner', deviceCount: 14},
+        {key: 'host::host_name', displayName: 'Host Name', deviceCount: 14},
+        {key: 'host::ip', displayName: 'IP Address', deviceCount: 12},
       ],
     },
     {

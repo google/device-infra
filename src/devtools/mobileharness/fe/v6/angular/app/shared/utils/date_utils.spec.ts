@@ -42,6 +42,11 @@ describe('dateUtils', () => {
       expect(parsed.toISOString()).toBe('2025-01-15T10:11:15.000Z');
     });
 
+    it('should parse timestamp with UTC suffix', () => {
+      const parsed = dateUtils.parseUtcTimestamp('2025-07-09 10:11:15 UTC');
+      expect(parsed.toISOString()).toBe('2025-07-09T10:11:15.000Z');
+    });
+
     it('should parse formatted timestamp without hyphen', () => {
       const parsed = dateUtils.parseUtcTimestamp('Jul 9, 2025, 11:30:00 AM');
       expect(parsed.toISOString()).toBe('2025-07-09T11:30:00.000Z');
@@ -134,52 +139,141 @@ describe('dateUtils', () => {
     });
   });
 
-  describe('toDateTimeLocalString', () => {
-    it('should format ms to Pacific Time datetime-local string', () => {
-      // 2026-01-15 22:30 UTC is 2026-01-15 14:30 PST (UTC-8)
-      const pstMs = Date.UTC(2026, 0, 15, 22, 30);
-      expect(dateUtils.toDateTimeLocalString(pstMs)).toBe('2026-01-15T14:30');
 
-      // 2026-07-15 21:30 UTC is 2026-07-15 14:30 PDT (UTC-7)
-      const pdtMs = Date.UTC(2026, 6, 15, 21, 30);
-      expect(dateUtils.toDateTimeLocalString(pdtMs)).toBe('2026-07-15T14:30');
-    });
-  });
-
-  describe('pdtDateTimeToUtcIso', () => {
+  describe('pacificToUtc', () => {
     it('should convert Pacific Time datetime-local string to UTC ISO string during PDT and PST', () => {
       // PDT test (July, UTC-7)
-      expect(dateUtils.pdtDateTimeToUtcIso('2026-07-15T14:30')).toBe(
+      expect(dateUtils.pacificToUtc('2026-07-15T14:30')).toBe(
         '2026-07-15T21:30:00.000Z',
       );
 
       // PST test (January, UTC-8)
-      expect(dateUtils.pdtDateTimeToUtcIso('2026-01-15T14:30')).toBe(
+      expect(dateUtils.pacificToUtc('2026-01-15T14:30')).toBe(
         '2026-01-15T22:30:00.000Z',
       );
     });
 
-    it('returns empty string for missing or invalid inputs without T separator', () => {
-      expect(dateUtils.pdtDateTimeToUtcIso('')).toBe('');
-      expect(dateUtils.pdtDateTimeToUtcIso('invalid')).toBe('');
-      expect(dateUtils.pdtDateTimeToUtcIso('2026-07-15')).toBe('');
-      expect(dateUtils.pdtDateTimeToUtcIso('T14:30')).toBe('');
-      expect(dateUtils.pdtDateTimeToUtcIso('2026-07-15T')).toBe('');
+    it('should handle space separator, timezone suffixes, and date-only inputs', () => {
+      expect(dateUtils.pacificToUtc('2026-07-15 14:30')).toBe(
+        '2026-07-15T21:30:00.000Z',
+      );
+      expect(dateUtils.pacificToUtc('2026-07-15 14:30 (PDT)')).toBe(
+        '2026-07-15T21:30:00.000Z',
+      );
+      expect(dateUtils.pacificToUtc('2026-07-15')).toBe(
+        '2026-07-15T07:00:00.000Z',
+      );
     });
 
-    it('falls back to approx UTC ISO string if toLocaleString format does not match regex (line 321)', () => {
-      const origToLocaleString = Date.prototype.toLocaleString;
-      spyOn(Date.prototype, 'toLocaleString').and.returnValue(
-        'non-matching-format',
+    it('returns empty string for missing or invalid inputs', () => {
+      expect(dateUtils.pacificToUtc('')).toBe('');
+      expect(dateUtils.pacificToUtc(null)).toBe('');
+      expect(dateUtils.pacificToUtc('invalid')).toBe('');
+      expect(dateUtils.pacificToUtc('2026-99-99')).toBe('');
+    });
+
+    it('returns valid ISO string if input is already a UTC ISO string with Z', () => {
+      expect(dateUtils.pacificToUtc('2026-07-15T21:30:00.000Z')).toBe(
+        '2026-07-15T21:30:00.000Z',
       );
-      try {
-        const result = dateUtils.pdtDateTimeToUtcIso('2026-07-15T14:30');
-        expect(result).toBe(
-          new Date(Date.UTC(2026, 6, 15, 14, 30)).toISOString(),
-        );
-      } finally {
-        Date.prototype.toLocaleString = origToLocaleString;
-      }
+      expect(dateUtils.pacificToUtc('2026-07-15T21:30:00Z')).toBe(
+        '2026-07-15T21:30:00.000Z',
+      );
+    });
+  });
+
+  describe('formatDetailedLocal', () => {
+    it('should format Date to detailed local string', () => {
+      const date = new Date('2025-07-09T10:11:15Z');
+      const result = dateUtils.formatDetailedLocal(date);
+      expect(result).toBeTruthy();
+      expect(result).toContain('2025');
+    });
+  });
+
+  describe('formatFileTimestamp', () => {
+    it('should format Date or ISO string into YYYYMMDD_hhmm', () => {
+      const date = new Date(2026, 6, 15, 14, 30);
+      expect(dateUtils.formatFileTimestamp(date)).toBe('20260715_1430');
+      expect(dateUtils.formatFileTimestamp('2026-07-15T14:30:00')).toBe(
+        '20260715_1430',
+      );
+    });
+  });
+
+  describe('formatDateRange', () => {
+    it('should format start and end date range', () => {
+      const start = new Date(2026, 0, 1);
+      const end = new Date(2026, 0, 15);
+      const formatted = dateUtils.formatDateRange(start, end);
+      expect(formatted).toContain('Jan 1, 2026 - Jan 15, 2026');
+    });
+  });
+
+  describe('formatTimeAgo', () => {
+    it('should format relative elapsed time strings', () => {
+      expect(dateUtils.formatTimeAgo(null)).toBe('');
+      expect(dateUtils.formatTimeAgo('')).toBe('');
+      expect(dateUtils.formatTimeAgo('invalid')).toBe('unknown time ago');
+
+      const now = Date.now();
+      expect(dateUtils.formatTimeAgo(new Date(now - 10000).toISOString())).toBe(
+        'just now',
+      );
+      expect(
+        dateUtils.formatTimeAgo(new Date(now - 10 * 60 * 1000).toISOString()),
+      ).toBe('10m ago');
+      expect(
+        dateUtils.formatTimeAgo(
+          new Date(now - 3 * 3600 * 1000).toISOString(),
+        ),
+      ).toBe('3h ago');
+      expect(
+        dateUtils.formatTimeAgo(
+          new Date(now - 2 * 24 * 3600 * 1000).toISOString(),
+        ),
+      ).toBe('2d ago');
+    });
+  });
+
+  describe('toGoogleDate', () => {
+    it('should convert string and Date objects to GoogleDate format', () => {
+      expect(dateUtils.toGoogleDate('2026-07-15')).toEqual({
+        year: 2026,
+        month: 7,
+        day: 15,
+      });
+
+      const date = new Date(2026, 6, 15);
+      expect(dateUtils.toGoogleDate(date)).toEqual({
+        year: 2026,
+        month: 7,
+        day: 15,
+      });
+    });
+  });
+
+  describe('utcToPacific', () => {
+    it('should normalize various UTC formats into Pacific Time datetime-local string', () => {
+      expect(dateUtils.utcToPacific('')).toBe('');
+      expect(dateUtils.utcToPacific(null)).toBe('');
+      expect(dateUtils.utcToPacific(undefined)).toBe('');
+      expect(dateUtils.utcToPacific('2026-01-01T12:00')).toBe('2026-01-01T12:00');
+      expect(dateUtils.utcToPacific('2026-01-01 12:00')).toBe('2026-01-01T12:00');
+      expect(dateUtils.utcToPacific('2026-01-01')).toBe('2026-01-01T00:00');
+      expect(dateUtils.utcToPacific('2026-07-15T21:30:00.000Z')).toBe(
+        '2026-07-15T14:30',
+      );
+      expect(dateUtils.utcToPacific('2026-07-15 21:30:00 UTC')).toBe(
+        '2026-07-15T14:30',
+      );
+      // Epoch millisecond timestamp
+      expect(dateUtils.utcToPacific(1784151000000)).toBe('2026-07-15T14:30');
+      expect(dateUtils.utcToPacific('1784151000000')).toBe('2026-07-15T14:30');
+      // Date object
+      expect(dateUtils.utcToPacific(new Date('2026-07-15T21:30:00.000Z'))).toBe(
+        '2026-07-15T14:30',
+      );
     });
   });
 });

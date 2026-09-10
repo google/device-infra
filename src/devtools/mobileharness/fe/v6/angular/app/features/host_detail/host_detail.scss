@@ -1,12 +1,8 @@
 @use '../../shared/styles/action_bar';
-
-$labconsole-font: Roboto, sans-serif;
+@use '../../shared/styles/common';
 
 :host {
-  display: block;
-  min-height: 100%;
-  padding: 1.5rem; // p-6
-  font-family: $labconsole-font;
+  @include common.page-host();
 }
 
 :host(.has-background) {
@@ -47,7 +43,6 @@ $labconsole-font: Roboto, sans-serif;
     color: #6b7280; // text-gray-500
     min-width: 0;
     flex-grow: 1;
-    font-family: $labconsole-font;
 
     .chevron-icon {
       color: #d1d5db; // text-gray-400
@@ -166,12 +161,12 @@ $labconsole-font: Roboto, sans-serif;
 
 .card-body {
   padding: 1rem 1.5rem; // p-4 sm:p-6
-  font-family: $labconsole-font;
 
   .host-title-bar {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    margin-bottom: 1rem;
   }
 
   .title-icon-wrapper {

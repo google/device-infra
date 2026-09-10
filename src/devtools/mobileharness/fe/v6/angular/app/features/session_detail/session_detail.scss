@@ -2,13 +2,10 @@
 @use '../../shared/styles/common';
 
 :host {
-  display: block;
+  @include common.page-host();
   height: 100%;
   min-height: 0;
   overflow-y: auto;
-  box-sizing: border-box;
-  padding: 1.5rem;
-  font-family: overview.$labconsole-font;
   @include common.shared-scrollbar-style();
 }
 
@@ -227,7 +224,6 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-family: overview.$labconsole-font;
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
@@ -430,7 +426,6 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       display: inline-block;
-      font-family: overview.$labconsole-font;
       font-size: 0.75rem;
     }
   }
@@ -452,7 +447,6 @@
 .tab-link {
   padding: 0.75rem 0.25rem;
   font-size: 0.9rem;
-  font-family: overview.$labconsole-font;
   border: none;
   border-bottom: 2px solid transparent;
   background: none;

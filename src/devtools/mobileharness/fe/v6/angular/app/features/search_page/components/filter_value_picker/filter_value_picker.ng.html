@@ -7,6 +7,7 @@
     [cdkConnectedOverlayPush]="true"
     [cdkConnectedOverlayViewportMargin]="8"
     [cdkConnectedOverlayFlexibleDimensions]="true"
+    [cdkConnectedOverlayPanelClass]="'value-picker-overlay-pane'"
     (overlayOutsideClick)="store.closeValuePicker()"
     (detach)="store.closeValuePicker()"
   >
@@ -290,6 +291,7 @@
                   class="vp-item"
                   [class.vp-pinned-item]="isPinned"
                   [class.is-no-value-row]="item.isNoValue"
+                  [class.dimmed]="!isPlain() && !state().loading && (item.total ?? 0) === 0"
                   [class.disabled]="item.disabled"
                   (click)="toggleValue(item)"
                 >

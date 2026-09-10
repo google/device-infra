@@ -15,8 +15,11 @@ $labconsole-font: Roboto, sans-serif;
 }
 
 ::ng-deep .mat-mdc-menu-panel.date-range-menu {
-  max-width: none;
-  border-radius: 12px;
+  @include mat.menu-overrides((
+    container-shape: 12px,
+  ));
+  max-width: min(560px, calc(100vw - 16px));
+  max-height: min(540px, calc(100vh - 24px), calc(100dvh - 24px));
   overflow: hidden;
 }
 
@@ -24,6 +27,8 @@ $labconsole-font: Roboto, sans-serif;
   display: flex;
   padding: 1rem;
   gap: 1.5rem;
+  box-sizing: border-box;
+  max-width: min(560px, calc(100vw - 16px));
 }
 
 .presets, .apply-button {
@@ -54,6 +59,8 @@ $labconsole-font: Roboto, sans-serif;
 .custom-range {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
 
   .date-inputs {
     @include mat.form-field-overrides((
@@ -69,9 +76,12 @@ $labconsole-font: Roboto, sans-serif;
     display: flex;
     gap: 8px;
     margin: 8px 0;
+    flex-wrap: wrap;
 
     mat-form-field {
       width: 180px;
+      flex: 1 1 160px;
+      min-width: 140px;
     }
   }
 
@@ -86,4 +96,40 @@ $labconsole-font: Roboto, sans-serif;
   display: flex;
   justify-content: flex-end;
   margin-top: 1rem;
+}
+
+@media (max-width: 540px) {
+  .date-range-container {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0.75rem;
+  }
+
+  .presets {
+    border-right: none;
+    border-bottom: 1px solid #ccc;
+    padding-right: 0;
+    padding-bottom: 8px;
+    flex-flow: row wrap;
+    justify-content: flex-start;
+    gap: 0.5rem;
+
+    button {
+      flex: 1 1 auto;
+      text-align: center;
+    }
+  }
+
+  .custom-range {
+    .date-inputs {
+      flex-direction: column;
+      width: 100%;
+      gap: 8px;
+
+      mat-form-field {
+        width: 100%;
+        min-width: 0;
+      }
+    }
+  }
 }

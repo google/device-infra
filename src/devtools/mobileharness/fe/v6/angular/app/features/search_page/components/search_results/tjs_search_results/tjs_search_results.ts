@@ -41,4 +41,17 @@ export class TjsSearchResultsComponent {
   readonly columnsToDisplay = computed<string[]>(() => {
     return this.store.displayColumns().map((col: Column) => col.key);
   });
+
+  /** Result display mode: initial loading, empty match state, or data table. */
+  readonly viewMode = computed<'loading_initial' | 'empty' | 'table'>(() => {
+    const isLoading = this.store.isLoading();
+    const rows = this.store.rows();
+    if (isLoading && rows.length === 0) {
+      return 'loading_initial';
+    }
+    if (!isLoading && rows.length === 0) {
+      return 'empty';
+    }
+    return 'table';
+  });
 }

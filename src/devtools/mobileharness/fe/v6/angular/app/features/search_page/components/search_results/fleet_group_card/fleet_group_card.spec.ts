@@ -165,4 +165,56 @@ describe('FleetGroupCardComponent', () => {
     prevBtn.nativeElement.click();
     expect(emittedToken).toBe('token-prev');
   });
+
+  it('renders loading state when groupState is undefined or loading is true', () => {
+    fixture.componentRef.setInput('group', mockGroup);
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.componentRef.setInput('groupState', undefined);
+    fixture.detectChanges();
+
+    expect(component.isLoading()).toBeTrue();
+    let loadingEl = fixture.debugElement.query(By.css('.rt-group-loading'));
+    expect(loadingEl).not.toBeNull();
+    expect(loadingEl.nativeElement.textContent).toContain('Loading devices...');
+
+    fixture.componentRef.setInput('groupState', {loading: true});
+    fixture.detectChanges();
+
+    expect(component.isLoading()).toBeTrue();
+    loadingEl = fixture.debugElement.query(By.css('.rt-group-loading'));
+    expect(loadingEl).not.toBeNull();
+  });
+
+  it('renders error message when groupState has an error', () => {
+    fixture.componentRef.setInput('group', mockGroup);
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.componentRef.setInput('groupState', {
+      loading: false,
+      error: 'Network connection failed',
+    });
+    fixture.detectChanges();
+
+    expect(component.errorMessage()).toBe('Network connection failed');
+    const errorEl = fixture.debugElement.query(By.css('.rt-group-error-msg'));
+    expect(errorEl).not.toBeNull();
+    expect(errorEl.nativeElement.textContent).toContain('Network connection failed');
+  });
+
+  it('renders empty message when group has no rows', () => {
+    fixture.componentRef.setInput('group', mockGroup);
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.componentRef.setInput('groupState', {
+      loading: false,
+      data: {
+        rows: [],
+        columns: [],
+      },
+    });
+    fixture.detectChanges();
+
+    expect(component.hasGroupRows()).toBeFalse();
+    const emptyEl = fixture.debugElement.query(By.css('.rt-group-empty'));
+    expect(emptyEl).not.toBeNull();
+    expect(emptyEl.nativeElement.textContent).toContain('No devices in this group.');
+  });
 });

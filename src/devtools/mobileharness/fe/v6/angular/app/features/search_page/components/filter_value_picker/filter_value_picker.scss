@@ -21,6 +21,12 @@
   }
 }
 
+::ng-deep .cdk-overlay-pane.value-picker-overlay-pane {
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  box-sizing: border-box;
+}
+
 .value-picker {
   position: relative;
   z-index: 400;
@@ -53,12 +59,18 @@
     gap: 8px;
     flex-shrink: 0;
     position: relative;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .vp-title {
     font-size: 0.875rem;
     font-weight: 600;
     color: #1f1f1f;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
   }
 
   .vp-polarity-wrap {
@@ -629,6 +641,9 @@
     flex-direction: column;
     gap: 12px;
     overflow-y: auto;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
     @include common.shared-scrollbar-style();
   }
 
@@ -637,6 +652,8 @@
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .vp-dt-op {
@@ -652,12 +669,13 @@
   }
 
   .vp-daterange input[type='datetime-local'] {
-    flex: 1 1 180px;
-    min-width: 140px;
+    flex: 1 1 140px;
+    min-width: 0;
+    width: 100%;
     max-width: 100%;
     height: 36px;
     box-sizing: border-box;
-    padding: 0 12px;
+    padding: 0 8px;
     font-size: 0.8125rem;
     font-family: inherit;
     color: #1f1f1f;
@@ -673,10 +691,35 @@
 
   @media (max-width: 480px) {
     width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
     border-radius: 8px;
 
     .vp-header {
       padding: 10px 12px 6px;
+    }
+
+    .vp-daterange {
+      padding: 0 12px 10px;
+      gap: 10px;
+    }
+
+    .vp-dt-row {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 4px;
+    }
+
+    .vp-dt-op {
+      width: 100%;
+      min-width: 0;
+      line-height: normal;
+      font-size: 0.75rem;
+    }
+
+    .vp-daterange input[type='datetime-local'] {
+      width: 100%;
+      flex: 1 1 auto;
+      min-width: 0;
     }
 
     .vp-item {

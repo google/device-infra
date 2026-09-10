@@ -1227,9 +1227,9 @@ export class FleetSearchStore extends SearchPageStore {
     }
   }
 
-  /** Resets search state including group view expand states and selected items. */
-  override resetSearchState(updateUrl = true) {
-    super.resetSearchState(updateUrl);
+  /** Resets transient UI state including group view expand states and selected items. */
+  protected override resetTransientUiState() {
+    super.resetTransientUiState();
 
     this.openGroupIds.set(new Set());
     this.expandedGroupPages.set(new Map());

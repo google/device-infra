@@ -445,7 +445,7 @@ export abstract class SearchPageStore {
         this.lastSyncedUrlKey = incomingKey;
 
         if (fParams.length === 0 && gbKeys.length === 0) {
-          this.resetIfSearchActive(false);
+          this.restoreDefaultState(false);
           return;
         }
 
@@ -469,9 +469,8 @@ export abstract class SearchPageStore {
         if (!this.isCurrentRouteActive()) return;
         if (this.isInternalUrlSync) return;
         const qp = this.route.snapshot?.queryParams;
-        if (!qp?.['f'] && !qp?.['gb']) {
-          this.resetIfSearchActive(false);
-        }
+        if (qp?.['f'] || qp?.['gb']) return;
+        this.restoreIfSearchActive(false);
       });
   }
 
@@ -674,21 +673,34 @@ export abstract class SearchPageStore {
     this.pickerAnchor.set(null);
   }
 
-  /** Resets the entire search state back to default (clears query, restores default chips, closes overlays). */
-  resetSearchState(updateUrl = true) {
+  /** Resets transient UI state (query, overlays, suggestions). Override in subclasses to clear custom state. */
+  protected resetTransientUiState() {
     this.searchQuery.set('');
-
-    const defaultChips = this.getDefaultChips();
-    this.activeChips.set(defaultChips);
     this.browseAll.set(false);
     this.showSuggestions.set(false);
     this.closeValuePicker();
+  }
+
+  /** Resets the entire search state (clears query, clears all filter chips, closes overlays). */
+  resetSearchState(updateUrl = true) {
+    this.applySearchState([], updateUrl);
+  }
+
+  /** Restores local search state back to default configuration (including default chips). */
+  restoreDefaultState(updateUrl = false) {
+    this.applySearchState(this.getDefaultChips(), updateUrl);
+  }
+
+  /** Resets UI overlays and applies the specified active chips and URL synchronization. */
+  protected applySearchState(chips: FilterChip[], updateUrl: boolean) {
+    this.resetTransientUiState();
+    this.activeChips.set(chips);
     if (updateUrl) {
-      this.syncUrl(defaultChips);
+      this.syncUrl(chips);
     }
   }
 
-  /** Returns true if the store is currently in its clean default state. */
+  /** Returns true if the store is currently in its clean default/empty state. */
   private isDefaultState(): boolean {
     if (this.browseAll() || this.searchQuery().trim().length > 0) {
       return false;
@@ -697,26 +709,18 @@ export abstract class SearchPageStore {
       return false;
     }
 
-    const defaultChips = this.getDefaultChips();
-    const currentChips = this.activeChips();
-
-    if (currentChips.length !== defaultChips.length) {
-      return false;
-    }
-    if (defaultChips.length === 0) {
-      return true;
-    }
-
-    return (
-      getSerializedChipsKey(currentChips, this.fleet()) ===
-      getSerializedChipsKey(defaultChips, this.fleet())
+    const currentKey = getSerializedChipsKey(this.activeChips(), this.fleet());
+    const defaultKey = getSerializedChipsKey(
+      this.getDefaultChips(),
+      this.fleet(),
     );
+    return currentKey === defaultKey;
   }
 
-  /** Resets local search state back to default if currently in a non-default search state. */
-  private resetIfSearchActive(updateUrl = false) {
+  /** Restores local search state back to default if currently in a non-default search state. */
+  private restoreIfSearchActive(updateUrl = false) {
     if (!this.isDefaultState()) {
-      this.resetSearchState(updateUrl);
+      this.restoreDefaultState(updateUrl);
     }
   }
 }

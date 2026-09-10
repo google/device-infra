@@ -42,6 +42,23 @@ const DETAILED_UTC_FORMATTER = new Intl.DateTimeFormat('en-US', {
   timeZoneName: 'short',
 });
 
+const PACIFIC_TIMEZONE = 'America/Los_Angeles';
+
+const PACIFIC_DATE_FORMATTER = new Intl.DateTimeFormat('en-CA', {
+  timeZone: PACIFIC_TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+const PACIFIC_TIME_FORMATTER = new Intl.DateTimeFormat('en-GB', {
+  timeZone: PACIFIC_TIMEZONE,
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
+
 /**
  * Date utility functions.
  */
@@ -51,17 +68,23 @@ export const dateUtils = {
    */
   parseUtcTimestamp: (val: string | null): Date => {
     if (!val) return new Date(NaN);
+    const trimmed = val.trim();
+    if (!trimmed) return new Date(NaN);
 
-    // For formatted human-readable date strings (e.g. "Jul 9, 2025, 11:30:00 AM")
-    if (!val.includes('-') && !val.includes('T')) {
-      const cleanVal = /GMT|UTC|PDT|PST/i.test(val) ? val : `${val} UTC`;
-      return new Date(cleanVal);
+    // Human-readable date strings (e.g. "Jul 9, 2025, 11:30:00 AM")
+    if (!trimmed.includes('-') && !trimmed.includes('T')) {
+      const withUtc = /GMT|UTC|PDT|PST/i.test(trimmed)
+        ? trimmed
+        : `${trimmed} UTC`;
+      return new Date(withUtc);
     }
 
-    // For ISO-8601 strings (e.g. "2025-07-09 10:11:15" or "2025-07-09T10:11:15Z")
-    let cleanVal = val.endsWith('Z') ? val.slice(0, -1) : val;
-    cleanVal = cleanVal.replace(' ', 'T');
-    return new Date(`${cleanVal}Z`);
+    // Standard ISO-8601 strings (e.g. "2025-07-09 10:11:15", "2025-07-09T10:11:15Z", "2025-07-09 10:11:15 UTC")
+    const isoStr = trimmed
+      .replace(/\s*(UTC|GMT)$/i, '')
+      .replace(/Z$/i, '')
+      .replace(' ', 'T');
+    return new Date(`${isoStr}Z`);
   },
 
   /**
@@ -163,19 +186,6 @@ export const dateUtils = {
   },
 
   /**
-   * Formats a date object to a YYYY-MM-DD string.
-   *
-   * @param date The date object to format.
-   * @return The formatted date string.
-   */
-  formatDate: (date: Date): string => {
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  },
-
-  /**
    * Formats a date range.
    *
    * @param start The start date.
@@ -220,23 +230,6 @@ export const dateUtils = {
   },
 
   /**
-   * Formats duration milliseconds into a readable scale representation (h/m/s).
-   */
-  formatDuration: (val: string | number | undefined | null): string | null => {
-    if (!val) return null;
-    const num = Number(val);
-    if (isNaN(num)) return String(val) || null;
-    const sec = Math.round(num / 1000);
-    if (sec < 60) return `${sec}s`;
-    const min = Math.floor(sec / 60);
-    const remSec = sec % 60;
-    if (min < 60) return remSec > 0 ? `${min}m ${remSec}s` : `${min}m`;
-    const hrs = Math.floor(min / 60);
-    const remMin = min % 60;
-    return remMin > 0 ? `${hrs}h ${remMin}m` : `${hrs}h`;
-  },
-
-  /**
    * Converts a date string or object to a Google Date object (year, month, day).
    *
    * @param date The date object or string to convert.
@@ -259,71 +252,96 @@ export const dateUtils = {
    * Returns the active Pacific timezone abbreviation ('PDT' or 'PST') for a given date/timestamp.
    *
    * @param dateOrMs Date or epoch timestamp in milliseconds (defaults to now).
-   * @returns 'PDT' or 'PST'.
+   * @return 'PDT' or 'PST'.
    */
   getPacificTimezoneName: (dateOrMs: Date | number = Date.now()): string => {
     const d = typeof dateOrMs === 'number' ? new Date(dateOrMs) : dateOrMs;
     const str = d.toLocaleTimeString('en-US', {
-      timeZone: 'America/Los_Angeles',
+      timeZone: PACIFIC_TIMEZONE,
       timeZoneName: 'short',
     });
     const match = str.match(/\b(PDT|PST)\b/i);
     return match ? match[1].toUpperCase() : 'PDT';
   },
 
+
   /**
-   * Formats millisecond timestamp into datetime-local HTML input format YYYY-MM-DDTHH:MM in Pacific Time (America/Los_Angeles).
+   * Converts a Pacific Time (America/Los_Angeles) datetime string to an RFC 3339 UTC ISO-8601 string.
+   * Outbound transformation (UI presentation -> Backend RPC / URL state).
    *
-   * @param ms Epoch timestamp in milliseconds.
-   * @returns Formatted datetime-local string in Pacific Time.
+   * @param dateTimeStr Pacific Time datetime string (e.g. "2026-07-15T14:30", "2026-07-15 14:30", "2026-07-15", or UTC ISO string).
+   * @return UTC ISO-8601 formatted string (e.g. "2026-07-15T21:30:00.000Z"), or empty string on invalid input.
    */
-  toDateTimeLocalString: (ms: number): string => {
-    const d = new Date(ms);
-    const dateStr = d.toLocaleDateString('en-US', {
-      timeZone: 'America/Los_Angeles',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-    const timeStr = d.toLocaleTimeString('en-US', {
-      timeZone: 'America/Los_Angeles',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
-    const [mm, dd, yyyy] = dateStr.split('/');
-    let [hh, min] = timeStr.split(':');
-    if (hh === '24') hh = '00';
-    return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}T${hh.padStart(2, '0')}:${min.padStart(2, '0')}`;
+  pacificToUtc: (dateTimeStr?: string | null): string => {
+    if (!dateTimeStr) return '';
+    const trimmed = String(dateTimeStr).trim();
+    if (!trimmed) return '';
+
+    // 1. If already in UTC ISO format (e.g. ending with Z)
+    if (trimmed.endsWith('Z') || trimmed.endsWith('z')) {
+      const d = new Date(trimmed);
+      return isNaN(d.getTime()) ? '' : d.toISOString();
+    }
+
+    // 2. Parse "YYYY-MM-DD" or "YYYY-MM-DD[T| ]HH:MM(:SS)?" (ignoring optional timezone suffix)
+    const match = trimmed.match(
+      /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?/i,
+    );
+    if (!match) return '';
+
+    const [, yStr, mStr, dStr, hStr = '0', minStr = '0', sStr = '0'] = match;
+    const [y, m, d, h, min, s] = [
+      Number(yStr),
+      Number(mStr),
+      Number(dStr),
+      Number(hStr),
+      Number(minStr),
+      Number(sStr),
+    ];
+
+    if (m < 1 || m > 12 || d < 1 || d > 31 || h > 23 || min > 59 || s > 59) {
+      return '';
+    }
+
+    // 3. Exact Pacific offset inversion
+    const approxUtcMs = Date.UTC(y, m - 1, d, h, min, s);
+    const pLocal = dateUtils.utcToPacific(approxUtcMs);
+    const [pDate, pTime] = pLocal.split('T');
+    const [py, pm, pd] = pDate.split('-').map(Number);
+    const [ph, pmin] = pTime.split(':').map(Number);
+    const pacificAsUtcMs = Date.UTC(py, pm - 1, pd, ph, pmin, s);
+    const offsetMs = approxUtcMs - pacificAsUtcMs;
+    return new Date(approxUtcMs + offsetMs).toISOString();
   },
 
   /**
-   * Converts a datetime-local string in Pacific Time (America/Los_Angeles) to UTC ISO-8601 string.
+   * Converts a UTC timestamp (ISO string, epoch ms, Date) to Pacific Time "YYYY-MM-DDTHH:MM".
+   * Inbound transformation (Backend RPC / URL state -> UI presentation).
    *
-   * @param dateTimeStr Datetime string formatted as YYYY-MM-DDTHH:MM.
-   * @returns UTC ISO-8601 formatted string (e.g. 2026-07-15T21:30:00.000Z).
+   * @param raw UTC timestamp representation.
+   * @return Pacific Time datetime string (YYYY-MM-DDTHH:MM), or empty string on invalid input.
    */
-  pdtDateTimeToUtcIso: (dateTimeStr: string): string => {
-    if (!dateTimeStr) return '';
-    const [datePart, timePart] = dateTimeStr.split('T');
-    if (!datePart || !timePart) return '';
-    const [y, m, d] = datePart.split('-').map(Number);
-    const [h, min] = timePart.split(':').map(Number);
+  utcToPacific: (raw?: string | number | Date | null): string => {
+    if (!raw) return '';
 
-    const approxUtcMs = Date.UTC(y, m - 1, d, h, min);
-    const dt = new Date(approxUtcMs);
-    const laStr = dt.toLocaleString('en-US', {
-      timeZone: 'America/Los_Angeles',
-      hour12: false,
-    });
-    const localMatch = laStr.match(/(\d+)\/(\d+)\/(\d+),\s+(\d+):(\d+):(\d+)/);
-    if (!localMatch) {
-      return new Date(Date.UTC(y, m - 1, d, h, min)).toISOString();
+    // If already in Pacific format ("YYYY-MM-DD" / "YYYY-MM-DDTHH:MM"), return directly without timezone shift
+    if (typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}([T\s]\d{2}:\d{2})?$/.test(raw.trim())) {
+      const s = raw.trim().replace(' ', 'T');
+      return s.length === 10 ? `${s}T00:00` : s.substring(0, 16);
     }
-    const [_, lM, lD, lY, lH, lMin, lS] = localMatch.map(Number);
-    const laAsUtc = Date.UTC(lY, lM - 1, lD, lH, lMin, lS);
-    const offsetMs = approxUtcMs - laAsUtc;
-    const realUtcMs = approxUtcMs + offsetMs;
-    return new Date(realUtcMs).toISOString();
+
+    let d: Date;
+    if (raw instanceof Date) {
+      d = raw;
+    } else if (typeof raw === 'number' || /^\d{10,13}$/.test(String(raw).trim())) {
+      d = new Date(Number(raw));
+    } else {
+      d = dateUtils.parseUtcTimestamp(String(raw));
+    }
+
+    if (isNaN(d.getTime())) return '';
+    const date = PACIFIC_DATE_FORMATTER.format(d);
+    const time = PACIFIC_TIME_FORMATTER.format(d).replace(/^24:/, '00:');
+    return `${date}T${time}`;
   },
 };

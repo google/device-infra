@@ -100,9 +100,41 @@ export class FleetGroupCardComponent {
   /** Event emitted when user requests inner page change (token passed). */
   readonly loadGroupPage = output<string | undefined>();
 
+  /** Whether the group is currently fetching row data (or state not yet initialized). */
+  readonly isLoading = computed<boolean>(() => {
+    const state = this.groupState();
+    return !state || !!state.loading;
+  });
+
+  /** Error message if group row fetch failed. */
+  readonly errorMessage = computed<string | undefined>(
+    () => this.groupState()?.error,
+  );
+
   /** Group rows for the current expanded group page. */
   readonly groupRows = computed<Row[]>(
     () => this.groupState()?.data?.rows || [],
+  );
+
+  /** Whether the expanded group has rows to display. */
+  readonly hasGroupRows = computed<boolean>(
+    () => this.groupRows().length > 0,
+  );
+
+  /** Effective columns for the inner table (from state or default fallback). */
+  readonly innerColumns = computed<Column[]>(() => {
+    const cols = this.groupState()?.data?.columns;
+    return cols && cols.length > 0 ? cols : this.columns();
+  });
+
+  /** Previous page token for inner pagination. */
+  readonly prevPageToken = computed<string | undefined>(
+    () => this.groupState()?.data?.prevPageToken,
+  );
+
+  /** Next page token for inner pagination. */
+  readonly nextPageToken = computed<string | undefined>(
+    () => this.groupState()?.data?.nextPageToken,
   );
 
   /** Whether all rows on the current group page are selected. */

@@ -2,8 +2,12 @@ import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
+  afterNextRender,
+  computed,
   inject,
+  linkedSignal,
   signal,
   viewChild,
 } from '@angular/core';
@@ -39,6 +43,7 @@ import {SearchSuggestions} from '../search_suggestions/search_suggestions';
 export class SearchInput {
   /** Shared search page state store injected via Angular Dependency Injection. */
   readonly store = inject(SearchPageStore);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** Helper to safely extract chip keys. */
   readonly getChipKey = getChipKey;
@@ -49,8 +54,120 @@ export class SearchInput {
   /** Signal reference targeting the search box outer container DOM element for CDK overlay positioning. */
   readonly searchBoxOrigin = viewChild<ElementRef<HTMLElement>>('searchBox');
 
+  /** Signal reference targeting the active chips container for multi-row overflow calculation. */
+  readonly chipsContainer =
+    viewChild<ElementRef<HTMLElement>>('chipsContainer');
+
   /** Active highlighted index during keyboard navigation over auto-complete suggestions (-1 when unselected). */
   readonly activeSuggestionIndex = signal<number>(-1);
+
+  /** Whether the active chips span across multiple rows in the search box. */
+  readonly isMultiRow = signal<boolean>(false);
+
+  /**
+   * Whether the user has collapsed active filters into composite chips.
+   * Uses linkedSignal: automatically resets to false when active chips are completely cleared.
+   */
+  readonly isCollapsed = linkedSignal<boolean, boolean>({
+    source: () => this.store.activeChips().length === 0,
+    computation: (isEmpty, previous) =>
+      isEmpty ? false : (previous?.value ?? false),
+  });
+
+  /** Whether the collapse button should be shown (when multi-row and not collapsed). */
+  readonly canCollapse = computed<boolean>(
+    () => !this.isCollapsed() && this.isMultiRow(),
+  );
+
+  /** Total count of active filter chips (excluding group-by). */
+  readonly filterChipsCount = computed<number>(
+    () => this.store.activeChips().filter((c) => !c.isGroupBy).length,
+  );
+
+  /** Total count of active group-by chips. */
+  readonly groupByChipsCount = computed<number>(
+    () => this.store.activeChips().filter((c) => c.isGroupBy).length,
+  );
+
+  /** Whether the composite filter count chip is visible in collapsed mode. */
+  readonly showCompositeFilterChip = computed<boolean>(
+    () => this.isCollapsed() && this.filterChipsCount() > 0,
+  );
+
+  /** Whether the composite group-by count chip is visible in collapsed mode. */
+  readonly showCompositeGroupByChip = computed<boolean>(
+    () => this.isCollapsed() && this.groupByChipsCount() > 0,
+  );
+
+  /** Whether individual active chips are visible (expanded mode). */
+  readonly showActiveChipList = computed<boolean>(() => !this.isCollapsed());
+
+  constructor() {
+    afterNextRender(() => {
+      this.setupResizeObserver();
+    });
+  }
+
+  /** Sets up native ResizeObserver with RAF throttling to monitor responsive layout wrapping. */
+  private setupResizeObserver() {
+    const container = this.chipsContainer()?.nativeElement;
+    if (!container || typeof ResizeObserver === 'undefined') return;
+
+    let rafId: number | null = null;
+    const observer = new ResizeObserver(() => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        this.checkMultiRow();
+        rafId = null;
+      });
+    });
+
+    observer.observe(container);
+
+    const box = this.searchBoxOrigin()?.nativeElement;
+    if (box) {
+      observer.observe(box);
+    }
+
+    this.destroyRef.onDestroy(() => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      observer.disconnect();
+    });
+  }
+
+  /** Checks whether chips span across multiple vertical rows in the search box. */
+  checkMultiRow() {
+    if (this.isCollapsed()) return;
+    const container = this.chipsContainer()?.nativeElement;
+    if (!container) {
+      this.isMultiRow.set(false);
+      return;
+    }
+    const chips = container.querySelectorAll('.search-chip');
+    if (chips.length <= 1) {
+      this.isMultiRow.set(false);
+      return;
+    }
+    const firstTop = (chips[0] as HTMLElement).offsetTop;
+    const lastTop = (chips[chips.length - 1] as HTMLElement).offsetTop;
+    const isMulti = lastTop > firstTop + 4;
+    this.isMultiRow.set(isMulti);
+  }
+
+  /** Collapses chips into composite chips. */
+  collapseChips(event?: MouseEvent) {
+    event?.stopPropagation();
+    this.isCollapsed.set(true);
+  }
+
+  /** Expands composite chips back to show all individual chips. */
+  expandChips(event?: MouseEvent) {
+    event?.stopPropagation();
+    this.isCollapsed.set(false);
+    requestAnimationFrame(() => {
+      this.checkMultiRow();
+    });
+  }
 
   /**
    * Handles user selection of an auto-complete suggestion item.
@@ -115,7 +232,8 @@ export class SearchInput {
     if (
       target === this.searchInput()?.nativeElement ||
       target?.closest('.search-chip') ||
-      target?.closest('.search-clear-btn')
+      target?.closest('.search-clear-btn') ||
+      target?.closest('.search-collapse-btn')
     ) {
       return;
     }

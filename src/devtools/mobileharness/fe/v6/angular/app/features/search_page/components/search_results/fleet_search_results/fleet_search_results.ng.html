@@ -75,41 +75,42 @@
       <mat-progress-bar mode="indeterminate" class="table-progress-bar"></mat-progress-bar>
     }
     <div class="rt-accordion" [class.stale-loading]="isLoading">
-      @let groups = store.groups();
-      @if (groups.length > 0) {
-        @for (g of groups; track g.groupId) {
-          <app-fleet-group-card
-            [group]="g"
-            [isOpen]="store.openGroupIds().has(g.groupId)"
-            [groupState]="store.expandedGroupPages().get(g.groupId)"
-            [entity]="entity"
-            [columns]="store.displayColumns()"
-            [selectedSet]="selectedGroupItems"
-            (toggleGroup)="store.toggleGroup($event)"
-            (toggleSelectGroupPage)="store.toggleSelectRows($event)"
-            (toggleSelectRow)="store.toggleSelectRow($event)"
-            (loadGroupPage)="store.onLoadGroupRows(g.groupId, $event)"
-          ></app-fleet-group-card>
+      @switch (groupedViewMode()) {
+        @case ('groups') {
+          @for (g of store.groups(); track g.groupId) {
+            <app-fleet-group-card
+              [group]="g"
+              [isOpen]="store.openGroupIds().has(g.groupId)"
+              [groupState]="store.expandedGroupPages().get(g.groupId)"
+              [entity]="entity"
+              [columns]="store.displayColumns()"
+              [selectedSet]="selectedGroupItems"
+              (toggleGroup)="store.toggleGroup($event)"
+              (toggleSelectGroupPage)="store.toggleSelectRows($event)"
+              (toggleSelectRow)="store.toggleSelectRow($event)"
+              (loadGroupPage)="store.onLoadGroupRows(g.groupId, $event)"
+            ></app-fleet-group-card>
+          }
         }
-      } @else {
-        @if (!isLoading) {
+        @case ('empty_filtered') {
           <div class="rt-empty-state">
-            @if (store.hasActiveFilters()) {
-              <mat-icon class="material-symbols-outlined rt-empty-icon">search_off</mat-icon>
-              <div class="rt-empty-title">No {{ entity }} match your filters</div>
-              <div class="rt-empty-sub">Try removing a filter or broadening your search.</div>
-              <button type="button" class="rt-btn-outlined" (click)="store.resetSearchState()">Clear all filters</button>
-            } @else {
-              <mat-icon class="material-symbols-outlined rt-empty-icon">inbox</mat-icon>
-              <div class="rt-empty-title">No groups found</div>
-            }
+            <mat-icon class="material-symbols-outlined rt-empty-icon">search_off</mat-icon>
+            <div class="rt-empty-title">No {{ entity }} match your filters</div>
+            <div class="rt-empty-sub">Try removing a filter or broadening your search.</div>
+            <button type="button" class="rt-btn-outlined" (click)="store.resetSearchState()">Clear all filters</button>
+          </div>
+        }
+        @case ('empty_all') {
+          <div class="rt-empty-state">
+            <mat-icon class="material-symbols-outlined rt-empty-icon">inbox</mat-icon>
+            <div class="rt-empty-title">No groups found</div>
           </div>
         }
       }
     </div>
 
     <!-- Group Pagination Footer -->
-    @if (store.groups().length > 0) {
+    @if (groupedViewMode() === 'groups') {
       <app-search-pagination
         [rangeText]="store.rangeText()"
         [hasPrev]="store.hasPrevPage()"
@@ -125,11 +126,7 @@
     <div class="rt-toolbar" [class.rt-toolbar-active]="selectedCount > 0">
       @if (selectedCount > 0) {
         <span class="rt-count">
-          @if (store.selectAllMatching()) {
-            All {{ selectedCount | number }} matching {{ entity }} selected · {{ fleetLabel }}
-          } @else {
-            {{ selectedCount | number }} selected · {{ fleetLabel }}
-          }
+          {{ flatToolbarSelectedText() }}
         </span>
         <ng-container *ngTemplateOutlet="selectionActions"></ng-container>
       } @else {
@@ -175,122 +172,130 @@
     }
 
     @let rows = store.rows();
-    @if (!isLoading && rows.length === 0) {
-      <div class="rt-empty-state">
-        @if (store.hasActiveFilters()) {
+    @switch (flatTableViewMode()) {
+      @case ('empty_filtered') {
+        <div class="rt-empty-state">
           <mat-icon class="material-symbols-outlined rt-empty-icon">search_off</mat-icon>
           <div class="rt-empty-title">No {{ entity }} match your filters</div>
           <div class="rt-empty-sub">Try removing a filter or broadening your search.</div>
           <button type="button" class="rt-btn-outlined" (click)="store.resetSearchState()">Clear all filters</button>
-        } @else {
+        </div>
+      }
+      @case ('empty_all') {
+        <div class="rt-empty-state">
           <mat-icon class="material-symbols-outlined rt-empty-icon">inbox</mat-icon>
           <div class="rt-empty-title">No {{ entity }} found</div>
-        }
-      </div>
-    } @else {
-      <mat-card-content class="results-card-content">
-        <!-- Select-All-Matching Banner -->
-        @if (store.showSelectAllMatchingBanner()) {
-          <div class="rt-banner rt-banner-info" id="rt-selall-banner">
-            <mat-icon class="material-symbols-outlined">info</mat-icon>
-            @if (store.selectAllMatching()) {
-              <span>
-                All <b>{{ totalCount | number }}</b> {{ entity }} matching your filters are selected
-                @if (store.excludedCount() > 0) {
-                  <span class="rt-excluded">({{ store.excludedCount() | number }} excluded)</span>
-                }
-                .
-              </span>
-              <button class="rt-btn-text" (click)="store.clearSelection()">Clear selection</button>
-            } @else {
-              <span>All {{ rows.length }} {{ entity }} on this page are selected.</span>
-              <button class="rt-btn-text" (click)="store.selectAllMatchingRecords()">
-                Select all {{ totalCount | number }} matching your filters
-              </button>
+        </div>
+      }
+      @case ('table') {
+        <mat-card-content class="results-card-content">
+          <!-- Select-All-Matching Banner -->
+          @switch (selectedBannerMode()) {
+            @case ('all_matching') {
+              <div class="rt-banner rt-banner-info" id="rt-selall-banner">
+                <mat-icon class="material-symbols-outlined">info</mat-icon>
+                <span>
+                  All <b>{{ totalCount | number }}</b> {{ entity }} matching your filters are selected
+                  @if (store.excludedCount() > 0) {
+                    <span class="rt-excluded">({{ store.excludedCount() | number }} excluded)</span>
+                  }
+                  .
+                </span>
+                <button class="rt-btn-text" (click)="store.clearSelection()">Clear selection</button>
+              </div>
             }
-          </div>
-        }
+            @case ('page_only') {
+              <div class="rt-banner rt-banner-info" id="rt-selall-banner">
+                <mat-icon class="material-symbols-outlined">info</mat-icon>
+                <span>All {{ rows.length }} {{ entity }} on this page are selected.</span>
+                <button class="rt-btn-text" (click)="store.selectAllMatchingRecords()">
+                  Select all {{ totalCount | number }} matching your filters
+                </button>
+              </div>
+            }
+          }
 
-        <!-- Data Table -->
-        <div
-          class="table-container"
-          [class]="'density-' + store.density()"
-          [class.stale-loading]="isLoading"
-        >
-          <table mat-table [dataSource]="rows" class="results-table">
-            <!-- Checkbox Column -->
-            <ng-container matColumnDef="checkbox">
-              <th mat-header-cell *matHeaderCellDef class="checkbox-col">
-                <mat-checkbox
-                  [checked]="store.isAllSelected()"
-                  [indeterminate]="store.isSomeSelected()"
-                  (change)="store.toggleSelectAll()"
-                ></mat-checkbox>
-              </th>
-              <td mat-cell *matCellDef="let row" class="checkbox-col">
-                <mat-checkbox
-                  [checked]="store.isRowSelected(row.id)"
-                  (change)="store.toggleSelectRow(row.id)"
-                ></mat-checkbox>
-              </td>
-            </ng-container>
-
-            <!-- Dynamic Columns -->
-            @for (col of store.displayColumns(); track col.key; let colIdx = $index) {
-              <ng-container [matColumnDef]="col.key">
-                <th mat-header-cell *matHeaderCellDef (click)="store.toggleSort(col.key)" class="sortable-header" [class]="'col-' + col.key">
-                  <span class="header-content">
-                    {{ col.displayName }}
-                    @if (store.sortColumn() === col.key) {
-                      <mat-icon class="material-symbols-outlined sort-icon">
-                        {{ store.sortAsc() ? 'arrow_upward' : 'arrow_downward' }}
-                      </mat-icon>
-                    }
-                  </span>
+          <!-- Data Table -->
+          <div
+            class="table-container"
+            [class]="'density-' + store.density()"
+            [class.stale-loading]="isLoading"
+          >
+            <table mat-table [dataSource]="rows" class="results-table">
+              <!-- Checkbox Column -->
+              <ng-container matColumnDef="checkbox">
+                <th mat-header-cell *matHeaderCellDef class="checkbox-col">
+                  <mat-checkbox
+                    [checked]="store.isAllSelected()"
+                    [indeterminate]="store.isSomeSelected()"
+                    (change)="store.toggleSelectAll()"
+                  ></mat-checkbox>
                 </th>
-                <td mat-cell *matCellDef="let row" [class]="'col-' + col.key">
-                  <app-search-cell [cell]="row.cells?.[colIdx]" [column]="col"></app-search-cell>
+                <td mat-cell *matCellDef="let row" class="checkbox-col">
+                  <mat-checkbox
+                    [checked]="store.isRowSelected(row.id)"
+                    (change)="store.toggleSelectRow(row.id)"
+                  ></mat-checkbox>
                 </td>
               </ng-container>
-            }
 
-            <tr mat-header-row *matHeaderRowDef="columnsToDisplay(); sticky: true"></tr>
-            <tr mat-row *matRowDef="let row; columns: columnsToDisplay()" [class.selected-row]="store.isRowSelected(row.id)"></tr>
-          </table>
-        </div>
-      </mat-card-content>
+              <!-- Dynamic Columns -->
+              @for (col of store.displayColumns(); track col.key; let colIdx = $index) {
+                <ng-container [matColumnDef]="col.key">
+                  <th mat-header-cell *matHeaderCellDef (click)="store.toggleSort(col.key)" class="sortable-header" [class]="'col-' + col.key">
+                    <span class="header-content">
+                      {{ col.displayName }}
+                      @if (store.sortColumn() === col.key) {
+                        <mat-icon class="material-symbols-outlined sort-icon">
+                          {{ store.sortAsc() ? 'arrow_upward' : 'arrow_downward' }}
+                        </mat-icon>
+                      }
+                    </span>
+                  </th>
+                  <td mat-cell *matCellDef="let row" [class]="'col-' + col.key">
+                    <app-search-cell [cell]="row.cells?.[colIdx]" [column]="col"></app-search-cell>
+                  </td>
+                </ng-container>
+              }
 
-      <!-- Pagination Footer -->
-      <app-search-pagination
-        [pageSize]="store.pageSize()"
-        [rangeText]="store.rangeText()"
-        [hasPrev]="store.hasPrevPage()"
-        [hasNext]="store.hasNextPage()"
-        (pageSizeChange)="store.setPageSize($event)"
-        (prev)="store.prevPage()"
-        (next)="store.nextPage()"
-      ></app-search-pagination>
+              <tr mat-header-row *matHeaderRowDef="columnsToDisplay(); sticky: true"></tr>
+              <tr mat-row *matRowDef="let row; columns: columnsToDisplay()" [class.selected-row]="store.isRowSelected(row.id)"></tr>
+            </table>
+          </div>
+        </mat-card-content>
+
+        <!-- Pagination Footer -->
+        <app-search-pagination
+          [pageSize]="store.pageSize()"
+          [rangeText]="store.rangeText()"
+          [hasPrev]="store.hasPrevPage()"
+          [hasNext]="store.hasNextPage()"
+          (pageSizeChange)="store.setPageSize($event)"
+          (prev)="store.prevPage()"
+          (next)="store.nextPage()"
+        ></app-search-pagination>
+      }
     }
   }
 
   <!-- Shared Selection Action Toolbar Fragment -->
   <ng-template #selectionActions>
     <span class="rt-divider"></span>
-    @if (!store.selectAllMatching()) {
+    @if (canShowBatchActions()) {
       <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
         <mat-icon class="material-symbols-outlined">gpp_bad</mat-icon>
         Quarantine
       </button>
-      @if (store.entity() === 'devices') {
-        <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
-          <mat-icon class="material-symbols-outlined">wifi</mat-icon>
-          Configure Wi-Fi
-        </button>
-        <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
-          <mat-icon class="material-symbols-outlined">tune</mat-icon>
-          Configuration
-        </button>
-      }
+    }
+    @if (canShowDeviceBatchActions()) {
+      <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
+        <mat-icon class="material-symbols-outlined">wifi</mat-icon>
+        Configure Wi-Fi
+      </button>
+      <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
+        <mat-icon class="material-symbols-outlined">tune</mat-icon>
+        Configuration
+      </button>
     }
 
     <button class="rt-btn-text" [disabled]="true" title="Feature is under development">

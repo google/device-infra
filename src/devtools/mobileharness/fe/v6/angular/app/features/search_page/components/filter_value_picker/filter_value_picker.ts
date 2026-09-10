@@ -12,7 +12,6 @@ import {
   ElementRef,
   inject,
   linkedSignal,
-  signal,
   viewChild,
 } from '@angular/core';
 import {FormsModule} from '@angular/forms';
@@ -24,6 +23,7 @@ import {TooltipIfTruncatedDirective} from '../../../../shared/directives/tooltip
 import {AdvancedMatchMode, PickerValueItem} from '../../models';
 import {SearchPageStore} from '../../services/search_page_store';
 import {
+  buildDisplayValues,
   buildValuePickerApplyEvent,
   computeFilteredAndSortedValues,
   computePinnedValues,
@@ -66,12 +66,19 @@ export class FilterValuePicker {
   /** Reference to the search input element inside the picker popover. */
   readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
 
-  /** Angular CDK Overlay positioning strategies (bottom-start preferred, top-start fallback). */
+  /** Angular CDK Overlay positioning strategies with intelligent fallbacks (bottom-start, bottom-end, top-start, top-end, center). */
   readonly pickerOverlayPositions: ConnectionPositionPair[] = [
     {
       originX: 'start',
       originY: 'bottom',
       overlayX: 'start',
+      overlayY: 'top',
+      offsetY: 6,
+    },
+    {
+      originX: 'end',
+      originY: 'bottom',
+      overlayX: 'end',
       overlayY: 'top',
       offsetY: 6,
     },
@@ -82,6 +89,27 @@ export class FilterValuePicker {
       overlayY: 'bottom',
       offsetY: -6,
     },
+    {
+      originX: 'end',
+      originY: 'top',
+      overlayX: 'end',
+      overlayY: 'bottom',
+      offsetY: -6,
+    },
+    {
+      originX: 'center',
+      originY: 'bottom',
+      overlayX: 'center',
+      overlayY: 'top',
+      offsetY: 6,
+    },
+    {
+      originX: 'center',
+      originY: 'top',
+      overlayX: 'center',
+      overlayY: 'bottom',
+      offsetY: -6,
+    },
   ];
 
   // ===================== Local Draft Reactive State =====================
@@ -89,11 +117,6 @@ export class FilterValuePicker {
   readonly selectedSet = linkedSignal(
     () => new Set(this.state().selectedValues),
   );
-  /** Set of manually staged custom free-text inputs added by user. */
-  readonly stagedCustomInputs = linkedSignal({
-    source: () => this.state().selectedValues,
-    computation: () => new Set<string>(),
-  });
   /** Polarity flag (true = IS NOT / exclude, false = IS / include). */
   readonly isNegated = linkedSignal(() => !!this.state().negated);
   /** Flag indicating whether advanced match view is active. */
@@ -137,8 +160,11 @@ export class FilterValuePicker {
   /** Text value string for plain text picker type. */
   readonly textVal = linkedSignal(() => this.selectedValuesList().join(', '));
 
-  /** Local search query entered in popover filter input. */
-  readonly searchQuery = signal<string>('');
+  /** Local search query entered in popover filter input, reset whenever picker key or visibility changes. */
+  readonly searchQuery = linkedSignal({
+    source: () => `${this.config()?.key || ''}:${this.store.showValuePicker()}`,
+    computation: () => '',
+  });
   /** Whether the candidate items are plain values without count columns. */
   readonly isPlain = computed(() => {
     if (this.config()?.valuesType === 'plain') return true;
@@ -160,9 +186,15 @@ export class FilterValuePicker {
     computation: (plain) => (plain ? true : false),
   });
   /** Polarity menu open state flag. */
-  readonly showPolarityMenu = signal<boolean>(false);
+  readonly showPolarityMenu = linkedSignal({
+    source: () => `${this.config()?.key || ''}:${this.store.showValuePicker()}`,
+    computation: () => false,
+  });
   /** More/Overflow options menu open state flag. */
-  readonly showOverflowMenu = signal<boolean>(false);
+  readonly showOverflowMenu = linkedSignal({
+    source: () => `${this.config()?.key || ''}:${this.store.showValuePicker()}`,
+    computation: () => false,
+  });
 
   // ===================== Computed Derived Signals =====================
   /** Whether the target filter key represents plural items. */
@@ -204,9 +236,7 @@ export class FilterValuePicker {
   /** Whether row actions ('only', 'copy') are enabled (Fleet list-type filters with counts only). */
   readonly showRowActions = computed(
     () =>
-      !this.store.isTjs() &&
-      this.config()?.type === 'list' &&
-      !this.isPlain(),
+      !this.store.isTjs() && this.config()?.type === 'list' && !this.isPlain(),
   );
 
   /** Height of an individual candidate item row in pixels. */
@@ -224,7 +254,8 @@ export class FilterValuePicker {
       query: this.searchQuery(),
       sortBy: this.sortBy(),
       sortAsc: this.sortAsc(),
-      stagedCustomInputs: this.stagedCustomInputs(),
+      selectedValues: this.selectedSet(),
+      isPlain: this.isPlain(),
       isLoading: !!this.state().loading,
     }),
   );
@@ -237,30 +268,34 @@ export class FilterValuePicker {
   });
 
   /** Pinned selected items pinned to top when list exceeds threshold. */
-  readonly pinnedValues = computed(() =>
-    computePinnedValues(
+  readonly pinnedValues = computed(() => {
+    const allItems = buildDisplayValues(
       this.state().values || [],
+      this.selectedSet(),
+      this.isPlain(),
+      !!this.state().loading,
+    );
+    return computePinnedValues(
+      allItems,
       this.selectedSet(),
       this.searchQuery(),
       !!this.state().loading,
-    ),
-  );
+    );
+  });
 
   /** Whether "Add custom input" row should be displayed while loading. */
   readonly showAddRow = computed(() => {
-    if (!this.state().loading) return false;
     const q = this.searchQuery().trim().toLowerCase();
-    if (!q) return false;
+    if (!this.state().loading || !q) return false;
 
     const inSelected = Array.from(this.selectedSet()).some(
       (s) => s.toLowerCase() === q,
     );
     if (inSelected) return false;
 
-    const inValues = (this.state().values || []).some(
+    return !(this.state().values || []).some(
       (v) => v.value.toLowerCase() === q || v.displayLabel.toLowerCase() === q,
     );
-    return !inValues;
   });
 
   /** Footer status summary text indicating selected/excluded count or advanced values count. */
@@ -342,17 +377,13 @@ export class FilterValuePicker {
     const nextSel = new Set(this.selectedSet());
     nextSel.add(q);
     this.selectedSet.set(nextSel);
-
-    const nextStaged = new Set(this.stagedCustomInputs());
-    nextStaged.add(q);
-    this.stagedCustomInputs.set(nextStaged);
     this.searchQuery.set('');
   }
 
   /** Handles Enter keypress inside popover search input box. */
   onSearchEnter() {
     const q = this.searchQuery().trim();
-    if (q) {
+    if (this.state().loading && q) {
       this.addCustomInput(q);
       return;
     }

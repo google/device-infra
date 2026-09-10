@@ -1,10 +1,8 @@
 @use '../../shared/styles/overview';
+@use '../../shared/styles/common';
 
 :host {
-  display: block;
-  min-height: 100%;
-  padding: 1.5rem;
-  font-family: overview.$labconsole-font;
+  @include common.page-host();
 }
 
 .job-detail-container {
@@ -268,7 +266,6 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-family: overview.$labconsole-font;
     font-size: 0.75rem;
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
@@ -347,7 +344,6 @@
         text-transform: uppercase;
         letter-spacing: 0.05em;
         margin-bottom: 4px;
-        font-family: overview.$labconsole-font;
       }
 
       .panel-section-value {
@@ -649,7 +645,6 @@
 .tab-link {
   padding: 0.75rem 0.25rem;
   font-size: 0.9rem;
-  font-family: overview.$labconsole-font;
   border: none;
   border-bottom: 2px solid transparent;
   background: none;
