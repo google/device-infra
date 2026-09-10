@@ -78,13 +78,6 @@ public final class FleetGroupSearcher {
   /** Maximum number of group-by keys, matching the prototype's {@code [:3]} cap. */
   private static final int MAX_GROUP_BY_KEYS = 3;
 
-  /**
-   * Maximum number of distinct groups a grouping may produce before it is refused. Ported from the
-   * prototype's {@code MAX_GROUPS}. Beyond this a grouped view is not useful, so the response is an
-   * empty group list rather than an unbounded card wall.
-   */
-  private static final int MAX_GROUPS = 10_000;
-
   /** Header display string for the bucket of records that lack a group-by key entirely. */
   private static final String NO_VALUE_DISPLAY = "(no value)";
 
@@ -148,8 +141,6 @@ public final class FleetGroupSearcher {
     Map<ImmutableList<ImmutableList<String>>, List<Integer>> buckets =
         partition(corpus, baseFilters, keys);
     if (buckets.isEmpty()) {
-      // Either nothing matched or the grouping exceeded MAX_GROUPS. The proto has no error field on
-      // grouped results, so both cases are represented as an empty group list with zero totals.
       return result.build();
     }
 
@@ -238,8 +229,7 @@ public final class FleetGroupSearcher {
   }
 
   /**
-   * Buckets the base filtered records by the combination of the group-by keys' value sets. Returns
-   * null when the number of distinct combinations exceeds {@link #MAX_GROUPS}, signalling refusal.
+   * Buckets the base filtered records by the combination of the group-by keys' value sets.
    *
    * <p>Each key contributes its whole lowercased value set, sorted so that ["bob", "alice"] and
    * ["alice", "bob"] name the same group. An empty set marks a record that lacks the key, which is
@@ -255,11 +245,6 @@ public final class FleetGroupSearcher {
         combo.add(ImmutableList.sortedCopyOf(corpus.valuesForKey(recordIndex, keyId)));
       }
       buckets.put(combo.build(), recordIndex);
-      if (buckets.keySet().size() > MAX_GROUPS) {
-        // Refuse a grouping that is too large to be useful. An empty map signals the refusal, which
-        // the caller renders as an empty grouped result (the proto carries no error field).
-        return ImmutableMap.of();
-      }
     }
     return Multimaps.asMap(buckets);
   }

@@ -342,6 +342,30 @@ public final class FleetGroupSearcherTest {
     return ids.build();
   }
 
+  @Test
+  public void groupByUuid_overTenThousandGroups_returnsResultsWithPagination() {
+    int count = 10_005;
+    FleetSnapshot largeSnapshot =
+        Guice.createInjector()
+            .getInstance(FleetIndexBuilder.class)
+            .build(uniformAndroidFleet(count), BUILD_TIME);
+    LazyPostings largePostings = new LazyPostings(largeSnapshot.devices());
+    DeviceCorpus largeCorpus = new DeviceCorpus(largeSnapshot, largePostings, null);
+
+    FleetGroupedResults results =
+        searcher.searchGrouped(
+            largeCorpus,
+            ImmutableList.of(),
+            ImmutableList.of("device_field::uuid"),
+            FleetGroupSort.getDefaultInstance(),
+            FleetPageRequest.newBuilder().setPageSize(25).build());
+
+    assertThat(results.getTotalGroups()).isEqualTo(count);
+    assertThat(results.getTotalItems()).isEqualTo(count);
+    assertThat(results.getGroupsCount()).isEqualTo(25);
+    assertThat(results.getNextPageToken()).isNotEmpty();
+  }
+
   // --- Synthetic fleets ---
 
   private static LabQueryResult fleet() {
