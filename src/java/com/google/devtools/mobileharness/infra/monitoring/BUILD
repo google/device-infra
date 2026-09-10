@@ -31,6 +31,8 @@ java_library(
         "LabInfoPullerImpl.java",
         "PubsubClientImpl.java",
     ],
+    runtime_deps = [
+    ],
     deps = [
         ":monitor_lib",
         ":monitor_pipeline_launcher",
