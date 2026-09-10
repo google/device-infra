@@ -40,7 +40,6 @@ import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.SubTestStatus
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.TestMessage;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -200,7 +199,6 @@ public class LabResponseProtoGenerator {
     GetTestStatusResponse.Builder builder =
         GetTestStatusResponse.newBuilder()
             .setTestStatus(testStatus)
-            .setTestResult(TestResult.valueOf(testResult.type().name()))
             .setTestResultType(testResult.type())
             .addAllTestMessage(bufferedTestMessages);
     testResult.causeProto().ifPresent(builder::setTestResultCause);

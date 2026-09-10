@@ -76,14 +76,6 @@ public final class ResultUtil {
     }
   }
 
-  /**
-   * Converts a current result type back to the legacy one, for RPC and storage protos that still
-   * carry the legacy enum.
-   */
-  public static Job.TestResult downgradeTestResult(TestResult newType) {
-    return Job.TestResult.valueOf(newType.name());
-  }
-
   /** Gets test result with the given exception. */
   public static TestResult getResultByException(MobileHarnessException e) {
     return TestResult.ERROR;
