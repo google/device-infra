@@ -251,7 +251,7 @@ public final class RunCommandTest {
     assertThat(runCommand.getProductTypes()).containsExactly("product1");
     assertThat(runCommand.getDevicePropertiesMap())
         .containsExactly("name1", "value1", "name2", "value2");
-    assertThat(runCommand.getExtraRunCmdArgs())
+    assertThat(runCommand.options.getExtraRunCmdArgs())
         .containsExactly("tf-arg0", "tf-arg1", "-opt0", "-opt1", "opt1-value", "-opt2");
 
     commandLine.parseArgs("cts", "--property", "name1", "value1");
@@ -339,7 +339,7 @@ public final class RunCommandTest {
         .containsExactly("key1", "value1", "key2", "value2");
     assertThat(runCommand.getModuleMetadataExcludeFilters())
         .containsExactly("key3", "value3", "key4", "value4");
-    assertThat(runCommand.getExtraRunCmdArgs())
+    assertThat(runCommand.options.getExtraRunCmdArgs())
         .containsExactly("tf-arg0", "tf-arg1", "-opt0", "-opt1", "opt1-value", "-opt2");
   }
 
