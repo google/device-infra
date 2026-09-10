@@ -30,7 +30,7 @@ public final class Version implements Comparable<Version> {
 
   public static final Version LAB_VERSION = new Version(4, 383, 0);
 
-  public static final Version MIN_LAB_VERSION = new Version(4, 126, 0);
+  public static final Version MIN_LAB_VERSION = new Version(4, 334, 0);
 
   public static final Version MASTER_V5_VERSION = new Version(5, 29, 0);
 
