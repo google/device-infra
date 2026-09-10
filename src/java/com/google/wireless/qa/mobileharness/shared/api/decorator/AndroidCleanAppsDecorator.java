@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVer
 import com.google.devtools.mobileharness.platform.android.shared.constant.PackageConstants;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemsetting.PostSetDmVerityDeviceOp;
+import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.android.WifiUtil;
@@ -52,8 +53,11 @@ import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -85,6 +89,7 @@ public class AndroidCleanAppsDecorator extends SetupOnlyDecorator implements And
   private final AndroidFileUtil androidFileUtil;
   private final AndroidPackageManagerUtil androidPackageManagerUtil;
   private final AndroidSystemSettingUtil androidSystemSettingUtil;
+  private final AndroidUserUtil androidUserUtil;
   private final ApkInstaller apkInstaller;
   private final DeviceDaemonApkInfoProvider deviceDaemonApkInfoProvider;
   private final SystemStateManager systemStateManager;
@@ -98,6 +103,7 @@ public class AndroidCleanAppsDecorator extends SetupOnlyDecorator implements And
       AndroidFileUtil androidFileUtil,
       AndroidPackageManagerUtil androidPackageManagerUtil,
       AndroidSystemSettingUtil androidSystemSettingUtil,
+      AndroidUserUtil androidUserUtil,
       ApkInstaller apkInstaller,
       DeviceDaemonApkInfoProvider deviceDaemonApkInfoProvider,
       SystemStateManager systemStateManager,
@@ -107,6 +113,7 @@ public class AndroidCleanAppsDecorator extends SetupOnlyDecorator implements And
     this.androidFileUtil = androidFileUtil;
     this.androidPackageManagerUtil = androidPackageManagerUtil;
     this.androidSystemSettingUtil = androidSystemSettingUtil;
+    this.androidUserUtil = androidUserUtil;
     this.apkInstaller = apkInstaller;
     this.deviceDaemonApkInfoProvider = deviceDaemonApkInfoProvider;
     this.systemStateManager = systemStateManager;
@@ -311,61 +318,141 @@ public class AndroidCleanAppsDecorator extends SetupOnlyDecorator implements And
           AndroidErrorId.ANDROID_CLEAN_APPS_DECORATOR_CANNOT_REMOVE_1P_APP_IN_NONROOT_DEVICE,
           "Cannot remove system apps from an unrooted device. Consider adding \"rooted\": \"true\""
               + " to the device dimensions.");
-    } else {
-      // Uninstall updates to system apps, if any were installed. Errors are ignored+logged.
-      Log testLog = testInfo.log();
-      String deviceId = getDevice().getDeviceId();
-      // Only removes the ones installed under current device.
-      Set<String> systemPackagesToRemove =
-          androidPackageManagerUtil.listPackages(deviceId, PackageType.SYSTEM);
-      systemPackagesToRemove.retainAll(packagesToUninstall);
-      for (String packageName : systemPackagesToRemove) {
-        apkInstaller.uninstallApk(getDevice(), packageName, /* logFailures= */ true, testLog);
-      }
-      systemPackagesToRemove = androidPackageManagerUtil.listPackages(deviceId, PackageType.SYSTEM);
-      systemPackagesToRemove.retainAll(packagesToUninstall);
+    }
 
-      if (!systemPackagesToRemove.isEmpty()) {
+    Log testLog = testInfo.log();
+    String deviceId = getDevice().getDeviceId();
+    int deviceSdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(deviceId);
+
+    // Only removes the ones installed under current device.
+    Set<String> systemPackagesToRemove =
+        androidPackageManagerUtil.listPackages(deviceId, PackageType.SYSTEM);
+    systemPackagesToRemove.retainAll(packagesToUninstall);
+
+    // Step 1: Cache system APK paths upfront before uninstallation.
+    Map<String, String> packageToSystemApkPath =
+        cacheSystemApkPaths(deviceId, systemPackagesToRemove, testLog);
+
+    // Step 2: Get all active users for multi-user cleanup.
+    List<Integer> userIds = getActiveUserIds(deviceId, deviceSdkVersion, testLog);
+
+    // Step 3: Uninstall package updates across all active users.
+    uninstallSystemPackageUpdates(systemPackagesToRemove, userIds, testLog);
+
+    // Step 4: Physically remove system APKs using cached paths.
+    physicallyRemoveSystemApks(
+        deviceId, deviceSdkVersion, packageToSystemApkPath, packagesToUninstall, testLog);
+  }
+
+  /**
+   * Caches physical system APK paths for the specified packages upfront before update
+   * uninstallation.
+   *
+   * <p>Note: We cannot use {@code androidPackageManagerUtil.getInstalledPath()} here because it
+   * relies on {@code pm path}, which returns the updated APK path in {@code /data/app/...} if
+   * updates are installed, rather than the underlying base APK path on the {@code /system} or
+   * {@code /product} partition. Furthermore, {@code dumpsys package} directly reveals the physical
+   * partition path regardless of update status.
+   */
+  private Map<String, String> cacheSystemApkPaths(
+      String deviceId, Set<String> systemPackagesToRemove, Log testLog)
+      throws MobileHarnessException, InterruptedException {
+    Map<String, String> packageToSystemApkPath = new HashMap<>();
+    for (String packageName : systemPackagesToRemove) {
+      Optional<String> systemApkPath =
+          androidPackageManagerUtil.getSystemInstalledPath(deviceId, packageName);
+      if (systemApkPath.isPresent()) {
+        packageToSystemApkPath.put(packageName, systemApkPath.get());
+      } else {
+        testLog
+            .atWarning()
+            .alsoTo(logger)
+            .log("Could not find system APK path for package: %s", packageName);
+      }
+    }
+    return packageToSystemApkPath;
+  }
+
+  /** Retrieves active user IDs on the device for multi-user cleanup. */
+  private List<Integer> getActiveUserIds(String deviceId, int deviceSdkVersion, Log testLog)
+      throws InterruptedException {
+    List<Integer> userIds = ImmutableList.of(0);
+    if (deviceSdkVersion >= 17) {
+      try {
+        List<Integer> users = androidUserUtil.listUsers(deviceId, deviceSdkVersion);
+        if (!users.isEmpty()) {
+          userIds = users;
+        }
+      } catch (MobileHarnessException e) {
+        testLog.atWarning().alsoTo(logger).log("Failed to list users: %s", e.getMessage());
+      }
+    }
+    return userIds;
+  }
+
+  /** Uninstalls system package updates across all users on the device. */
+  private void uninstallSystemPackageUpdates(
+      Set<String> systemPackagesToRemove, List<Integer> userIds, Log testLog)
+      throws InterruptedException {
+    for (String packageName : systemPackagesToRemove) {
+      for (int userId : userIds) {
         testLog
             .atInfo()
             .alsoTo(logger)
-            .log(
-                "System packages requested to be removed:\n - %s",
-                Joiner.on("\n - ").join(systemPackagesToRemove));
-
-        // Disable verity.  This was added in Lollipop 5.1 (22).
-        if (androidSystemSettingUtil.getDeviceSdkVersion(deviceId) >= 22
-            && androidSystemSettingUtil
-                .setDmVerityChecking(deviceId, false)
-                .equals(PostSetDmVerityDeviceOp.REBOOT)) {
-          testLog.atInfo().alsoTo(logger).log("Disabling verity and rebooting");
-          cacheDeviceStateAndReboot(testLog);
-
-          // Check if system package is actually present after disabling verity b/64258732
-          systemPackagesToRemove =
-              androidPackageManagerUtil.listPackages(deviceId, PackageType.SYSTEM);
-          systemPackagesToRemove.retainAll(packagesToUninstall);
-        }
-
-        if (!systemPackagesToRemove.isEmpty()) {
-          androidFileUtil.remount(deviceId);
-          for (String packageName : systemPackagesToRemove) {
-            String apkPath = androidPackageManagerUtil.getInstalledPath(deviceId, packageName);
-            testLog.atInfo().alsoTo(logger).log("Removing system apk: %s", apkPath);
-            androidFileUtil.removeFiles(deviceId, apkPath);
-          }
-          cacheDeviceStateAndReboot(testLog);
-        } else {
-          testLog
-              .atInfo()
-              .alsoTo(logger)
-              .log(
-                  "Device did not list package names for system packages to be removed after "
-                      + "disabling verity and reboot.");
-        }
-      } else if (!packagesToUninstall.isEmpty()) {
-        testLog.atInfo().alsoTo(logger).log("Not removing any system packages.");
+            .log("Uninstalling system package updates: %s for user %d", packageName, userId);
+        apkInstaller.uninstallApk(
+            getDevice(), String.valueOf(userId), packageName, /* logFailures= */ true, testLog);
       }
+    }
+  }
+
+  /**
+   * Physically removes the system APK files from the system/product partition.
+   *
+   * <p>Note: We deliberately operate on the cached {@code packageToSystemApkPath} rather than
+   * querying {@code listPackages()} again after uninstallation or reboot. After update
+   * uninstallation or disabling verity (b/64258732), PackageManager may temporarily fail to list
+   * packages that are disabled or undergoing scan, which previously caused loopholes where base
+   * system APKs were missed. Using cached physical paths ensures physical removal is idempotent and
+   * reliable.
+   */
+  private void physicallyRemoveSystemApks(
+      String deviceId,
+      int deviceSdkVersion,
+      Map<String, String> packageToSystemApkPath,
+      List<String> packagesToUninstall,
+      Log testLog)
+      throws MobileHarnessException, InterruptedException {
+    if (!packageToSystemApkPath.isEmpty()) {
+      testLog
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "System packages requested to be removed physically:\n - %s",
+              Joiner.on("\n - ").join(packageToSystemApkPath.keySet()));
+
+      // Disable verity.  This was added in Lollipop 5.1 (22).
+      if (deviceSdkVersion >= 22
+          && androidSystemSettingUtil
+              .setDmVerityChecking(deviceId, false)
+              .equals(PostSetDmVerityDeviceOp.REBOOT)) {
+        testLog.atInfo().alsoTo(logger).log("Disabling verity and rebooting");
+        cacheDeviceStateAndReboot(testLog);
+        // Note: We deliberately do not re-query listPackages() here (previously b/64258732).
+        // Operating directly on the cached packageToSystemApkPath ensures physical APKs are
+        // removed even if PackageManager has not finished scanning packages after reboot.
+      }
+
+      androidFileUtil.remount(deviceId);
+      for (Map.Entry<String, String> entry : packageToSystemApkPath.entrySet()) {
+        String packageName = entry.getKey();
+        String apkPath = entry.getValue();
+        testLog.atInfo().alsoTo(logger).log("Removing system apk: %s (%s)", apkPath, packageName);
+        androidFileUtil.removeFiles(deviceId, apkPath);
+      }
+      cacheDeviceStateAndReboot(testLog);
+    } else if (!packagesToUninstall.isEmpty()) {
+      testLog.atInfo().alsoTo(logger).log("Not removing any system packages physically.");
     }
   }
 

@@ -125,6 +125,9 @@ public class AndroidPackageManagerUtil {
   /** Suffix of apex files. */
   private static final String APEX_SUFFIX = ".apex";
 
+  /** Regex pattern to parse codePath from dumpsys package output. */
+  private static final Pattern CODE_PATH_PATTERN = Pattern.compile("codePath=(\\S+)");
+
   /** Timeout of cleaning package. */
   @VisibleForTesting static final Duration CLEAR_PACKAGE_TIMEOUT = Duration.ofSeconds(30);
 
@@ -803,6 +806,40 @@ public class AndroidPackageManagerUtil {
               : output);
     }
     return ImmutableList.copyOf(installedPaths);
+  }
+
+  /**
+   * Gets the system APK path of the package.
+   *
+   * @param serial serial number of the device
+   * @param packageName package name of the application
+   * @return {@link Optional} containing the system APK path (e.g. starting with /system or
+   *     /product), or empty if not found
+   * @throws MobileHarnessException if failed to run dumpsys
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   */
+  public Optional<String> getSystemInstalledPath(String serial, String packageName)
+      throws MobileHarnessException, InterruptedException {
+    String output;
+    try {
+      output = adbUtil.dumpSys(serial, DumpSysType.PACKAGE, packageName);
+    } catch (MobileHarnessException e) {
+      // Package might not be installed at all, or dumpsys failed.
+      // Log the warning and return empty to indicate system path not found.
+      logger.atWarning().log(
+          "Failed to dump package %s on device %s: %s",
+          packageName, serial, MoreThrowables.shortDebugString(e));
+      return Optional.empty();
+    }
+
+    Matcher matcher = CODE_PATH_PATTERN.matcher(output);
+    while (matcher.find()) {
+      String path = matcher.group(1);
+      if (!path.startsWith("/data/")) {
+        return Optional.of(path);
+      }
+    }
+    return Optional.empty();
   }
 
   /**
