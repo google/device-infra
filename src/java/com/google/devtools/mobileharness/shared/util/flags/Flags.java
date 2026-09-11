@@ -189,16 +189,25 @@ public class Flags {
   @FlagSpec(
       name = "android_jit_emulator_cpus",
       help =
-          "The number of CPUs for each android Just-in-time emulator instance. If not set or <= 0,"
+          "The number of CPUs for each android Just-in-time emulator instance. If not set or 0,"
               + " defaults to 4.")
-  public static final Flag<Integer> androidJitEmulatorCpus = Flag.value(0);
+  public static final Flag<Integer> androidJitEmulatorCpus = Flag.nonnegativeValue(0);
 
   @FlagSpec(
       name = "android_jit_emulator_memory_mb",
       help =
-          "The memory in MB for each android Just-in-time emulator instance. If not set or <= 0,"
+          "The memory in MB for each android Just-in-time emulator instance. If not set or 0,"
               + " defaults to 8192.")
-  public static final Flag<Integer> androidJitEmulatorMemoryMb = Flag.value(0);
+  public static final Flag<Integer> androidJitEmulatorMemoryMb = Flag.nonnegativeValue(0);
+
+  @FlagSpec(
+      name = "android_jit_emulator_modem_simulator_sim_type",
+      help =
+          "The SIM the modem simulator emulates for each android Just-in-time emulator instance: 1"
+              + " for a regular SIM, 2 for a SIM with carrier privileges (required by"
+              + " CtsCarrierApiTestCases). If not set or 0, defaults to 1.")
+  public static final Flag<Integer> androidJitEmulatorModemSimulatorSimType =
+      Flag.nonnegativeValue(0);
 
   @FlagSpec(
       name = "android_jit_emulator_num",
@@ -206,6 +215,13 @@ public class Flags {
           "The maximum number of android Just-in-time emulators that could be run on the local"
               + " server simultaneously.")
   public static final Flag<Integer> androidJitEmulatorNum = Flag.value(0);
+
+  @FlagSpec(
+      name = "android_jit_emulator_use_sdcard",
+      help =
+          "Whether to create a blank SD card image and expose it to the guest for each android"
+              + " Just-in-time emulator instance.")
+  public static final Flag<Boolean> androidJitEmulatorUseSdcard = Flag.value(true);
 
   @FlagSpec(name = "api_config", help = "Path of the text format protobuf API config file.")
   public static final Flag<String> apiConfigFile = Flag.value("");
@@ -1660,6 +1676,16 @@ public class Flags {
             || !Flags.keepTestHarnessFalse.getNonNull(),
         "--reset_device_in_android_real_device_setup and --keep_test_harness_false cannot be both"
             + " true.");
+
+    // 0 means unset. The values mirror Cuttlefish's launch_cvd --modem_simulator_sim_type, see
+    // VirtualDeviceConfig#SIM_TYPE_NORMAL and #SIM_TYPE_CTS_CARRIER_API (not referenced directly to
+    // keep this low-level flag class free of dependencies on the emulator libraries).
+    int modemSimulatorSimType = Flags.androidJitEmulatorModemSimulatorSimType.getNonNull();
+    checkArgument(
+        modemSimulatorSimType == 0 || modemSimulatorSimType == 1 || modemSimulatorSimType == 2,
+        "--android_jit_emulator_modem_simulator_sim_type must be 1 (a regular SIM) or 2 (a SIM with"
+            + " carrier privileges), but was %s.",
+        modemSimulatorSimType);
   }
 
   private Flags() {}
