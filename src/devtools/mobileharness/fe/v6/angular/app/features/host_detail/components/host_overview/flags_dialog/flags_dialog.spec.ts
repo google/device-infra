@@ -40,13 +40,13 @@ describe('FlagsDialog', () => {
     ]);
     dialog = jasmine.createSpyObj('MatDialog', ['open']);
     const configService = jasmine.createSpyObj('CONFIG_SERVICE', [
-      'checkDeviceWritePermission',
-      'checkHostWritePermission',
+      'checkDeviceConfigPermission',
+      'checkHostConfigPermission',
     ]);
-    configService.checkDeviceWritePermission.and.returnValue(
+    configService.checkDeviceConfigPermission.and.returnValue(
       of({hasPermission: true}),
     );
-    configService.checkHostWritePermission.and.returnValue(
+    configService.checkHostConfigPermission.and.returnValue(
       of({hasPermission: true}),
     );
 

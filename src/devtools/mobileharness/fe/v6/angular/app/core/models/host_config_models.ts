@@ -232,9 +232,9 @@ export declare interface UpdateHostConfigResult {
 }
 
 /**
- * Result of checking host write permission.
+ * Result of checking host config permission.
  */
-export declare interface CheckHostWritePermissionResult
+export declare interface CheckHostConfigPermissionResult
   extends WritePermissionResult {}
 
 /**

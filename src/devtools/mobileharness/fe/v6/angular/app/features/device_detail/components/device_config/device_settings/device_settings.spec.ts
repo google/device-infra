@@ -43,7 +43,7 @@ describe('Device Settings Component', () => {
     spyOn(fakeConfigService, 'getDeviceConfig').and.callFake(() =>
       of(deviceConfigResponse),
     );
-    spyOn(fakeConfigService, 'checkDeviceWritePermission').and.returnValue(
+    spyOn(fakeConfigService, 'checkDeviceConfigPermission').and.returnValue(
       of({hasPermission: true, userName: 'test-user'}),
     );
 
