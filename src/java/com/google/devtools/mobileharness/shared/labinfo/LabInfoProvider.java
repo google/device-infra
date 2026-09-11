@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.shared.labinfo;
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 
 /** Provider for providing {@link LabView}. */
@@ -25,4 +26,14 @@ public interface LabInfoProvider {
 
   /** Gets information of lab(s). */
   LabView getLabInfos(Filter filter) throws MobileHarnessException;
+
+  /**
+   * Gets information of lab(s), applying projection push-down if a {@link Mask} is provided.
+   *
+   * <p>Providers that support projection push-down should override this method to avoid
+   * constructing intermediate unmasked protobuf subtrees on the heap.
+   */
+  default LabView getLabInfos(Filter filter, Mask mask) throws MobileHarnessException {
+    return getLabInfos(filter);
+  }
 }
