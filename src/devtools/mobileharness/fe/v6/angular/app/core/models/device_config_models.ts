@@ -198,3 +198,62 @@ export declare interface UpdateDeviceConfigRequest {
   universe?: string;
 }
 
+/**
+ * Current Wi-Fi configuration and authorization for a target device in batch Wi-Fi operations.
+ */
+export declare interface DeviceCurrentWifi {
+  deviceId: string;
+  wifi?: WifiConfig;
+  writable: boolean;
+  unwritableReason?: string;
+}
+
+/**
+ * A candidate Wi-Fi network available to pick from in batch Wi-Fi operations.
+ */
+export declare interface CandidateWifi {
+  ssid: string;
+  psk?: string;
+  scanSsid: boolean;
+  deviceCount: number;
+}
+
+/**
+ * Request for GetBatchWifiContext.
+ */
+export declare interface GetBatchWifiContextRequest {
+  deviceIds: string[];
+}
+
+/**
+ * Response for GetBatchWifiContext.
+ */
+export declare interface GetBatchWifiContextResponse {
+  current: DeviceCurrentWifi[];
+  candidateWifis: CandidateWifi[];
+}
+
+/**
+ * Request for BatchUpdateDeviceConfig.
+ */
+export declare interface BatchUpdateDeviceConfigRequest {
+  deviceIds: string[];
+  wifi?: Partial<WifiConfig>;
+  dimension?: unknown;
+}
+
+/**
+ * Error detail for a failed device update in BatchUpdateDeviceConfig.
+ */
+export declare interface BatchUpdateError {
+  code?: string;
+  message?: string;
+}
+
+/**
+ * Response for BatchUpdateDeviceConfig.
+ */
+export declare interface BatchUpdateDeviceConfigResponse {
+  errors?: Record<string, BatchUpdateError | string>;
+}
+

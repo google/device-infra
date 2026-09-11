@@ -1,11 +1,16 @@
 import {signal} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {MatDialog} from '@angular/material/dialog';
+import {MatDialog, MatDialogRef} from '@angular/material/dialog';
 import {By} from '@angular/platform-browser';
 import {provideNoopAnimations} from '@angular/platform-browser/animations';
 
+import {of} from 'rxjs';
 import {Column, Row} from '../../../../../core/models/search';
 import {FleetSearchStore} from '../../../services/fleet_search_store';
+import {
+  BulkConfigWifiDialog,
+  BulkConfigWifiDialogResult,
+} from './bulk_config_wifi_dialog/bulk_config_wifi_dialog';
 import {FleetSearchResultsComponent} from './fleet_search_results';
 
 class MockFleetSearchStore {
@@ -225,6 +230,27 @@ describe('FleetSearchResultsComponent', () => {
       mockStore.selectAllMatching.set(true);
       expect(component.canShowBatchActions()).toBeFalse();
       expect(component.canShowDeviceBatchActions()).toBeFalse();
+    });
+
+    it('opens BulkConfigWifiDialog with selected devices and clears selection on update', () => {
+      mockStore.selectedItems.set(new Set(['dev-1', 'dev-2']));
+      const openSpy = spyOn(component['dialog'], 'open').and.returnValue({
+        afterClosed: () => of({updated: true}),
+      } as unknown as MatDialogRef<BulkConfigWifiDialog, BulkConfigWifiDialogResult>);
+
+      component.openBulkConfigWifiDialog();
+
+      expect(openSpy).toHaveBeenCalledWith(
+        BulkConfigWifiDialog,
+        jasmine.objectContaining({
+          panelClass: 'bulk-config-wifi-dialog-panel',
+          data: {
+            deviceIds: ['dev-1', 'dev-2'],
+          },
+        }),
+      );
+      expect(mockStore.clearSelection).toHaveBeenCalled();
+      expect(mockStore.executeSearch).toHaveBeenCalled();
     });
   });
 });

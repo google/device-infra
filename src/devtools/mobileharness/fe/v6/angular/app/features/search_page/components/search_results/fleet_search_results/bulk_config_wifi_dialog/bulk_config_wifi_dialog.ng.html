@@ -1,0 +1,335 @@
+@let applying = isApplying();
+@let result = applyResult();
+@let currentStep = step();
+@let label = deviceLabel();
+@let ssid = targetSsid();
+@let psk = targetPsk();
+@let scanSsid = targetScanSsid();
+@let errList = applyErrors();
+
+<app-dialog
+  [dialogTitle]="headline()"
+  [subtitle]="supportText()"
+  width="56rem"
+  height="48rem"
+  maxHeight="90vh"
+  footerType="none"
+>
+  <!-- Body -->
+  <div class="bw-body custom-scrollbar scroll-container">
+    @if (isLoading()) {
+      <div class="bw-loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <span>Loading Wi-Fi configurations...</span>
+      </div>
+    } @else if (loadError(); as errorMsg) {
+      <div class="bw-error-container">
+        <mat-icon>error</mat-icon>
+        <span>Failed to load: {{ errorMsg }}</span>
+      </div>
+    } @else if (applying) {
+      <!-- Applying State -->
+      <div class="bw-applying">
+        <div class="bw-applying-badge">
+          <svg class="bw-spinner" viewBox="0 0 48 48" role="progressbar" aria-label="Applying Wi-Fi">
+            <circle cx="24" cy="24" r="18" fill="none" stroke-width="4"></circle>
+          </svg>
+        </div>
+        <div class="bw-success-headline">Applying to {{ label }}</div>
+        <div class="bw-success-support">This usually takes a few seconds.</div>
+      </div>
+    } @else if (result === 'success') {
+      <!-- Success State -->
+      <div class="bw-success">
+        <div class="bw-success-badge">
+          <mat-icon>check</mat-icon>
+        </div>
+        <div class="bw-success-headline">{{ label }} updated</div>
+        <div class="bw-success-support">Every selected device now uses this network.</div>
+        <div class="bw-new-card bw-success-card">
+          <div class="bw-new-label">New Wi-Fi</div>
+          <div class="bw-success-card-wifi">
+            <mat-icon>wifi</mat-icon>
+            <span class="bw-success-card-ssid">{{ ssid }}</span>
+          </div>
+          @if (psk) {
+            <div class="bw-success-card-detail">Password: {{ psk }}</div>
+          } @else {
+            <div class="bw-success-card-detail">Open network</div>
+          }
+          @if (scanSsid) {
+            <div class="bw-success-card-tag"><span class="bw-tag">Hidden</span></div>
+          }
+        </div>
+      </div>
+    } @else if (result === 'errors') {
+      <!-- Failure / Errors State -->
+      <div class="bw-table-section">
+        <div class="bw-review-banner bw-review-banner-error">
+          <mat-icon>error</mat-icon>
+          <span>
+            Applied to {{ applySuccessCount() }} {{ applySuccessCount() === 1 ? 'device' : 'devices' }};
+            <b>{{ errList.length }} {{ errList.length === 1 ? 'device' : 'devices' }} failed</b>.
+          </span>
+        </div>
+        <div class="bw-table-container custom-scrollbar scroll-container">
+          <table class="bw-table" aria-label="Failed devices">
+            <colgroup>
+              <col style="width: 34%">
+              <col style="width: 66%">
+            </colgroup>
+            <thead>
+              <tr>
+                <th scope="col">Device ID</th>
+                <th scope="col">Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (err of errList; track err.deviceId) {
+                <tr>
+                  <td class="bw-li-mono" [title]="err.deviceId">{{ err.deviceId }}</td>
+                  <td class="bw-error-cell" [title]="err.reason">{{ err.reason }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+    } @else if (currentStep === 1) {
+      <!-- Step 1: Choose a network -->
+      <div class="bw-step1">
+        <!-- Top band: Wi-Fi to apply -->
+        <div class="bw-apply-band">
+          <div class="bw-apply-head">
+            <h4 class="bw-apply-title">Wi-Fi to apply</h4>
+            <span class="bw-apply-sub">Applied to all {{ label }}</span>
+          </div>
+          <div class="bw-apply-fields">
+            <!-- SSID input -->
+            <div class="bw-tf">
+              <input
+                type="text"
+                id="bw-ssid"
+                class="bw-tf-input"
+                placeholder=" "
+                [ngModel]="ssid"
+                (ngModelChange)="targetSsid.set($event)"
+                (keydown.enter)="canGoNext() && goToStep2()"
+                required
+                aria-required="true"
+                autocomplete="off"
+              />
+              <label class="bw-tf-label" for="bw-ssid">Network name (SSID)</label>
+            </div>
+            <!-- Password input -->
+            <div class="bw-tf bw-tf-trailing">
+              <input
+                [type]="showPassword() ? 'text' : 'password'"
+                id="bw-psk"
+                class="bw-tf-input"
+                placeholder=" "
+                [ngModel]="psk"
+                (ngModelChange)="targetPsk.set($event)"
+                (keydown.enter)="canGoNext() && goToStep2()"
+                autocomplete="current-password"
+              />
+              <label class="bw-tf-label" for="bw-psk">Password</label>
+              <button
+                type="button"
+                class="bw-tf-icon"
+                (click)="togglePasswordVisibility()"
+                [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+                [title]="showPassword() ? 'Hide password' : 'Show password'"
+              >
+                <mat-icon>{{ showPassword() ? 'visibility' : 'visibility_off' }}</mat-icon>
+              </button>
+            </div>
+            <!-- Hidden checkbox -->
+            <label class="bw-check" for="bw-hidden">
+              <input
+                type="checkbox"
+                id="bw-hidden"
+                [ngModel]="scanSsid"
+                (ngModelChange)="targetScanSsid.set($event)"
+              />
+              <span>Hidden network</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Aggregated list: distinct networks in use + candidate wifis -->
+        <div class="bw-panel">
+          <div class="bw-panel-head">Current Wi-Fi networks across selected devices</div>
+          <div class="bw-panel-search">
+            <mat-icon>search</mat-icon>
+            <input
+              type="text"
+              placeholder="Search by SSID"
+              aria-label="Search by SSID"
+              [ngModel]="searchFilter()"
+              (ngModelChange)="searchFilter.set($event)"
+              autocomplete="off"
+            />
+          </div>
+          <div class="bw-panel-list custom-scrollbar scroll-container" role="list">
+            @for (src of filteredSources(); track src.key) {
+              <div
+                class="bw-li"
+                role="listitem"
+                [class.bw-li-active]="src.key === targetConfigKey() || src.key === activeSourceKey()"
+                [class.bw-li-static]="src.isNotConfigured"
+              >
+                <mat-icon class="bw-li-lead">
+                  {{ src.isNotConfigured ? 'block' : 'wifi' }}
+                </mat-icon>
+                <span class="bw-li-body">
+                  @if (src.isNotConfigured) {
+                    <span class="bw-li-headline bd-muted">Not configured</span>
+                    <span class="bw-li-support">{{ src.selectedCount }} {{ src.selectedCount === 1 ? 'device' : 'devices' }}</span>
+                  } @else {
+                    <span class="bw-li-headline">{{ src.ssid }}</span>
+                    <span class="bw-li-support">
+                      @if (src.selectedCount > 0) {
+                        Used by {{ src.selectedCount }} {{ src.selectedCount === 1 ? 'device' : 'devices' }}
+                      } @else if (src.fleetCount) {
+                        Suggested · {{ src.fleetCount | number }} in fleet
+                      } @else {
+                        Suggested · Lab network
+                      }
+                    </span>
+                  }
+                </span>
+                @if (!src.isNotConfigured && !src.psk) {
+                  <span class="bw-li-open">Open</span>
+                }
+                @if (!src.isNotConfigured) {
+                  <button
+                    type="button"
+                    class="bw-text-btn"
+                    (click)="selectSource(src)"
+                  >
+                    Use this
+                  </button>
+                }
+              </div>
+            } @empty {
+              <div class="bw-list-empty">No matching network found.</div>
+            }
+          </div>
+        </div>
+      </div>
+    } @else if (currentStep === 2) {
+      <!-- Step 2: Review and apply -->
+      <div class="bw-step2">
+        <!-- Review Banner -->
+        <div class="bw-review-banner">
+          <mat-icon>swap_horiz</mat-icon>
+          <span>
+            Applying sets Wi-Fi <b>{{ ssid }}</b> on <b>{{ changedCount() }} {{ changedCount() === 1 ? 'device' : 'devices' }}</b>.
+            @if (skippedCount() > 0) {
+              <span class="bw-banner-skipped">{{ skippedCount() }} {{ skippedCount() === 1 ? 'device' : 'devices' }} skipped (read-only).</span>
+            } @else if (sameCount() > 0) {
+              <span>{{ sameCount() }} {{ sameCount() === 1 ? 'device' : 'devices' }} already match.</span>
+            }
+            Nothing changes until you apply.
+          </span>
+        </div>
+
+        <!-- Table section -->
+        <div class="bw-table-section">
+          <div class="bw-table-container custom-scrollbar scroll-container">
+            <table class="bw-table" aria-label="Device Wi-Fi change review table">
+              <colgroup>
+                <col style="width: 24%">
+                <col style="width: 31%">
+                <col style="width: 31%">
+                <col style="width: 14%">
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col">Device ID</th>
+                  <th scope="col">Current Wi-Fi</th>
+                  <th scope="col">New Wi-Fi</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of reviewRows(); track row.deviceId) {
+                  @let current = row.currentWifi;
+                  <tr>
+                    <td class="bw-li-mono" [title]="row.deviceId">{{ row.deviceId }}</td>
+                    <td>
+                      @if (current?.ssid) {
+                        <span class="bw-wifi-chip" [matTooltip]="current.ssid + (current.scanSsid ? ' (Hidden)' : '')">
+                          <mat-icon class="bw-wifi-icon">wifi</mat-icon>
+                          <span class="bw-wifi-name">{{ current.ssid }}</span>
+                        </span>
+                      } @else {
+                        <span class="bd-muted">Not configured</span>
+                      }
+                    </td>
+                    <td>
+                      @if (!row.writable) {
+                        <span class="bd-muted" [title]="row.unwritableReason">
+                          Unchanged ({{ row.unwritableReason || 'read-only' }})
+                        </span>
+                      } @else {
+                        <span class="bw-wifi-chip" [matTooltip]="ssid + (scanSsid ? ' (Hidden)' : '')">
+                          <mat-icon class="bw-wifi-icon">wifi</mat-icon>
+                          <span class="bw-wifi-name">{{ ssid }}</span>
+                        </span>
+                      }
+                    </td>
+                    <td>
+                      @if (!row.writable) {
+                        <span class="bd-unwritable-badge" [title]="row.unwritableReason">Skipped</span>
+                      } @else if (row.isChanged) {
+                        <span class="bw-status-update">Will update</span>
+                      } @else {
+                        <span class="bw-status-nochange">No change</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Footer -->
+  <div class="bw-footer">
+    @if (result === 'success') {
+      <button type="button" class="cs-apply" (click)="done()">Done</button>
+    } @else if (result === 'errors') {
+      <button type="button" class="cs-apply" (click)="close()">Close</button>
+    } @else if (!applying && !isLoading() && !loadError()) {
+      @switch (currentStep) {
+        @case (1) {
+          <button type="button" class="bw-text-btn" (click)="close()">Cancel</button>
+          <button
+            type="button"
+            class="cs-apply"
+            [disabled]="!canGoNext()"
+            (click)="goToStep2()"
+          >
+            Next
+          </button>
+        }
+        @case (2) {
+          <button type="button" class="bw-text-btn" (click)="backToStep1()">Back</button>
+          <button
+            type="button"
+            class="cs-apply"
+            [disabled]="!hasWritableDevices()"
+            (click)="apply()"
+          >
+            Apply to {{ label }}
+          </button>
+        }
+      }
+    }
+  </div>
+</app-dialog>

@@ -288,7 +288,7 @@
       </button>
     }
     @if (canShowDeviceBatchActions()) {
-      <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
+      <button class="rt-btn-text" (click)="openBulkConfigWifiDialog()">
         <mat-icon class="material-symbols-outlined">wifi</mat-icon>
         Configure Wi-Fi
       </button>
