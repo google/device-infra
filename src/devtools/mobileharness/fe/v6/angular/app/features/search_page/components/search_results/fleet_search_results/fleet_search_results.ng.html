@@ -1,5 +1,5 @@
 @let isGrouped = store.groupByKeys().length > 0;
-@let fleetLabel = store.fleet() === 'internal' ? 'Google Internal' : 'ATS Labs';
+@let label = fleetLabel();
 @let entity = store.entity();
 @let isLoading = store.isLoading();
 
@@ -16,13 +16,13 @@
     >
       @if (selectedGroupItems.size > 0) {
         <span class="rt-count">
-          {{ selectedGroupItems.size | number }} selected · {{ fleetLabel }}
+          {{ selectedGroupItems.size | number }} selected · {{ label }}
         </span>
         <ng-container *ngTemplateOutlet="selectionActions"></ng-container>
       } @else {
         <span class="rt-count">
           {{ (store.groupedResults()?.totalItems || 0) | number }} {{ entity }} in
-          {{ (store.groupedResults()?.totalGroups || 0) | number }} groups · {{ fleetLabel }}
+          {{ (store.groupedResults()?.totalGroups || 0) | number }} groups · {{ label }}
         </span>
         <span class="rt-divider"></span>
         @if (store.groupKeysText()) {
@@ -150,7 +150,7 @@
         <ng-container *ngTemplateOutlet="selectionActions"></ng-container>
       } @else {
         <span class="rt-count">
-          {{ totalCount | number }} {{ entity }} · {{ fleetLabel }}
+          {{ totalCount | number }} {{ entity }} · {{ label }}
         </span>
         <span class="rt-divider"></span>
 
@@ -307,7 +307,7 @@
       </button>
     }
     @if (canShowDeviceBatchActions()) {
-      <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
+      <button class="rt-btn-text" (click)="openBulkConfigWifiDialog()">
         <mat-icon class="material-symbols-outlined">wifi</mat-icon>
         Configure Wi-Fi
       </button>

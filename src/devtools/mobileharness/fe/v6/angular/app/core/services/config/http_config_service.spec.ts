@@ -6,12 +6,18 @@ import {
 import {TestBed} from '@angular/core/testing';
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
+  BatchGetDeviceWifiConfigsRequest,
+  BatchGetDeviceWifiConfigsResponse,
+  BatchUpdateDeviceWifiConfigsRequest,
+  BatchUpdateDeviceWifiConfigsResponse,
   DeviceConfig,
   GetDeviceConfigResult,
+  GetWifiSuggestionsResponse,
   RecommendedWifi,
   UpdateDeviceConfigRequest,
 } from '../../models/device_config_models';
 import {UpdateHostConfigRequest} from '../../models/host_config_models';
+import {Fleet} from '../../models/search';
 import {normalizeHostConfig} from '../../utils/host_config_utils';
 import {CONFIG_SERVICE} from './config_service';
 import {HttpConfigService} from './http_config_service';
@@ -189,5 +195,124 @@ describe('HttpConfigService', () => {
     );
     expect(req.request.method).toBe('GET');
     req.flush(mockHostConfigResult);
+  });
+
+  it('should retrieve wifi suggestions via GET', () => {
+    const mockSuggestions: GetWifiSuggestionsResponse = {
+      candidateWifis: [
+        {
+          ssid: 'suggested-wifi',
+          scanSsid: false,
+          fleetInUse: {deviceCount: 15},
+        },
+      ],
+    };
+
+    service.getWifiSuggestions().subscribe((res) => {
+      expect(res).toEqual(mockSuggestions);
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/configs/wifi:suggestions',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(mockSuggestions);
+  });
+
+  it('should retrieve wifi suggestions with fleet query parameter via GET', () => {
+    const mockSuggestions: GetWifiSuggestionsResponse = {
+      candidateWifis: [
+        {
+          ssid: 'ats-wifi',
+          scanSsid: false,
+          fleetInUse: {deviceCount: 42},
+        },
+      ],
+    };
+
+    service.getWifiSuggestions({fleet: Fleet.FLEET_ATS}).subscribe((res) => {
+      expect(res).toEqual(mockSuggestions);
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/configs/wifi:suggestions?fleet=FLEET_ATS',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(mockSuggestions);
+  });
+
+  it('should batch get device wifi configs via POST', () => {
+    const mockResponse: BatchGetDeviceWifiConfigsResponse = {
+      devices: [
+        {
+          deviceId: 'dev-1',
+          wifi: {type: 'custom', ssid: 'wifi-1', psk: '', scanSsid: false},
+          writable: true,
+        },
+      ],
+    };
+
+    const mockRequest: BatchGetDeviceWifiConfigsRequest = {
+      deviceIds: ['dev-1'],
+    };
+
+    service.batchGetDeviceWifiConfigs(mockRequest).subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/devices:batchGetWifiConfigs',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(mockRequest);
+    req.flush(mockResponse);
+  });
+
+  it('should batch update device wifi configs via POST', () => {
+    const mockRequest: BatchUpdateDeviceWifiConfigsRequest = {
+      deviceIds: ['dev-1'],
+      wifi: {ssid: 'wifi-1', psk: 'secret', scanSsid: false},
+    };
+
+    service.batchUpdateDeviceWifiConfigs(mockRequest).subscribe((res) => {
+      expect(res.errors).toEqual({});
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/devices:batchUpdateWifiConfigs',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(mockRequest);
+    req.flush({errors: {}});
+  });
+
+  it('should batch update device wifi configs and return errors map with UpdateError', () => {
+    const mockRequest: BatchUpdateDeviceWifiConfigsRequest = {
+      deviceIds: ['dev-1', 'dev-2'],
+      wifi: {ssid: 'wifi-1', psk: 'secret', scanSsid: false},
+    };
+    const mockResponse: BatchUpdateDeviceWifiConfigsResponse = {
+      errors: {
+        'dev-2': {
+          code: 'PERMISSION_DENIED',
+          message: 'User does not have write access to device',
+        },
+      },
+    };
+
+    service.batchUpdateDeviceWifiConfigs(mockRequest).subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+      expect(res.errors?.['dev-2'].code).toBe('PERMISSION_DENIED');
+      expect(res.errors?.['dev-2'].message).toBe(
+        'User does not have write access to device',
+      );
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/devices:batchUpdateWifiConfigs',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(mockRequest);
+    req.flush(mockResponse);
   });
 });

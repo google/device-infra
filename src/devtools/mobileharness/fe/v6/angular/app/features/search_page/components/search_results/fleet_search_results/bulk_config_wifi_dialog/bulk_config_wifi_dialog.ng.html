@@ -1,0 +1,432 @@
+@let applying = isApplying();
+@let result = applyResult();
+@let currentStep = step();
+@let target = targetWifi();
+@let loading = isLoading();
+@let error = loadError();
+
+<app-dialog
+  [dialogTitle]="headline()"
+  [subtitle]="supportText()"
+  width="56rem"
+  height="48rem"
+  maxHeight="90vh"
+  footerType="normal"
+>
+  <!-- Body -->
+  <div class="bw-body">
+    @if (loading) {
+      <div class="bw-loading-container">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>{{ currentStep === 1 ? 'Loading Wi-Fi suggestions…' : 'Loading device configurations…' }}</span>
+      </div>
+    } @else if (error) {
+      <div class="bw-error-container">
+        <mat-icon>error</mat-icon>
+        <span>Failed to load: {{ error }}</span>
+      </div>
+    } @else if (applying) {
+      <!-- Applying State -->
+      <div class="bw-applying">
+        <div class="bw-applying-badge">
+          <mat-spinner diameter="48"></mat-spinner>
+        </div>
+        <div class="bw-success-headline">Applying to {{ willUpdateLabel() }}</div>
+        <div class="bw-success-support">This usually takes a few seconds.</div>
+      </div>
+    } @else if (result === 'success') {
+      <!-- Success State -->
+      <div class="bw-success">
+        <div class="bw-success-badge">
+          <mat-icon>check</mat-icon>
+        </div>
+        <div class="bw-success-headline">{{ willUpdateLabel() }} updated</div>
+        <div class="bw-success-support">Every selected device now uses this network.</div>
+        <div class="bw-new-card bw-success-card">
+          <div class="bw-new-label">New Wi-Fi</div>
+          <div class="bw-success-card-wifi">
+            <mat-icon>wifi</mat-icon>
+            <span class="bw-success-card-ssid">{{ target.ssid }}</span>
+          </div>
+          @if (target.psk) {
+            <div class="bw-success-card-detail">Password: {{ target.psk }}</div>
+          } @else {
+            <div class="bw-success-card-detail">Open network</div>
+          }
+          @if (target.scanSsid) {
+            <div class="bw-success-card-tag"><span class="bw-tag">Hidden</span></div>
+          }
+        </div>
+      </div>
+    } @else if (result === 'errors') {
+      <!-- Failure / Errors State -->
+      @let errList = applyErrors();
+      <div class="bw-table-section">
+        <div class="bw-review-banner bw-review-banner-error">
+          <mat-icon>error</mat-icon>
+          <span>
+            Applied to {{ formatDeviceCount(applySuccessCount()) }};
+            <b>{{ formatDeviceCount(errList.length) }} failed</b>.
+          </span>
+        </div>
+        <div class="bw-table-container">
+          <table
+            mat-table
+            [dataSource]="errList"
+            [trackBy]="trackByDeviceId"
+            class="bw-table bw-error-table"
+            aria-label="Failed devices"
+          >
+            <!-- Device ID Column -->
+            <ng-container matColumnDef="deviceId">
+              <th mat-header-cell *matHeaderCellDef scope="col">Device ID</th>
+              <td
+                mat-cell
+                *matCellDef="let err"
+                class="bw-li-mono"
+                [title]="err.deviceId"
+              >
+                {{ err.deviceId }}
+              </td>
+            </ng-container>
+
+            <!-- Reason Column -->
+            <ng-container matColumnDef="reason">
+              <th mat-header-cell *matHeaderCellDef scope="col">Reason</th>
+              <td
+                mat-cell
+                *matCellDef="let err"
+                class="bw-error-cell"
+                [title]="err.reason"
+              >
+                {{ err.reason }}
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="errorColumns; sticky: true"></tr>
+            <tr mat-row *matRowDef="let row; columns: errorColumns"></tr>
+          </table>
+        </div>
+      </div>
+    } @else if (currentStep === 1) {
+      <!-- Step 1: Choose a network -->
+      <div class="bw-step1">
+        <!-- Top band: Wi-Fi to apply -->
+        <div class="bw-apply-band">
+          <div class="bw-apply-head">
+            <h4 class="bw-apply-title">Wi-Fi to apply</h4>
+            <span class="bw-apply-sub">Applied to all {{ deviceLabel }}</span>
+          </div>
+          <div class="bw-apply-fields">
+            <!-- SSID input -->
+            <div class="bw-tf">
+              <input
+                type="text"
+                id="bw-ssid"
+                class="bw-tf-input"
+                placeholder=" "
+                [ngModel]="target.ssid"
+                (ngModelChange)="updateTargetWifi({ssid: $event})"
+                (keydown.enter)="goToStep2()"
+                required
+                aria-required="true"
+                autocomplete="off"
+              />
+              <label class="bw-tf-label" for="bw-ssid">Network name (SSID)</label>
+            </div>
+            <!-- Password input -->
+            <div class="bw-tf bw-tf-trailing">
+              <input
+                [type]="showPassword() ? 'text' : 'password'"
+                id="bw-psk"
+                class="bw-tf-input"
+                placeholder=" "
+                [ngModel]="target.psk"
+                (ngModelChange)="updateTargetWifi({psk: $event})"
+                (keydown.enter)="goToStep2()"
+                autocomplete="current-password"
+              />
+              <label class="bw-tf-label" for="bw-psk">Password</label>
+              <button
+                type="button"
+                class="bw-tf-icon"
+                (click)="togglePasswordVisibility()"
+                [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+                [title]="showPassword() ? 'Hide password' : 'Show password'"
+              >
+                <mat-icon>{{ showPassword() ? 'visibility' : 'visibility_off' }}</mat-icon>
+              </button>
+            </div>
+            <!-- Hidden checkbox -->
+            <label class="bw-check" for="bw-hidden">
+              <input
+                type="checkbox"
+                id="bw-hidden"
+                [ngModel]="target.scanSsid"
+                (ngModelChange)="updateTargetWifi({scanSsid: $event})"
+              />
+              <span>Hidden network</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Candidate Wi-Fi networks list -->
+        <div class="bw-panel">
+          <div class="bw-panel-head">Suggested Wi-Fi networks</div>
+          <div class="bw-panel-search">
+            <mat-icon>search</mat-icon>
+            <input
+              type="text"
+              placeholder="Search by SSID"
+              aria-label="Search by SSID"
+              [(ngModel)]="searchFilter"
+              autocomplete="off"
+            />
+          </div>
+          <div class="bw-panel-list" role="list">
+            @for (src of filteredSources(); track src.ssid + (src.scanSsid ? ':hidden' : '')) {
+              <div
+                class="bw-li"
+                role="listitem"
+                [class.bw-li-active]="isWifiMatchingTarget(src)"
+              >
+                <mat-icon class="bw-li-lead">wifi</mat-icon>
+                <span class="bw-li-body">
+                  <span class="bw-li-headline">{{ src.ssid }}</span>
+                  @let count = src.fleetInUse?.deviceCount;
+                  @if (count !== undefined && count !== null) {
+                    <span class="bw-li-support">{{ formatDeviceCount(count) }}</span>
+                  }
+                </span>
+                @if (!src.psk) {
+                  <span class="bw-li-open">Open</span>
+                }
+                <button
+                  type="button"
+                  class="bw-text-btn"
+                  (click)="selectSource(src)"
+                >
+                  Use this
+                </button>
+              </div>
+            } @empty {
+              <div class="bw-list-empty">No matching network found.</div>
+            }
+          </div>
+        </div>
+      </div>
+    } @else if (currentStep === 2) {
+      <!-- Step 2: Review and apply -->
+      <div class="bw-step2">
+        <!-- Review Banner -->
+        <div class="bw-review-banner">
+          <div class="bw-review-target">
+            <div class="bw-review-target-icon">
+              <mat-icon>wifi</mat-icon>
+            </div>
+            <div class="bw-review-target-text">
+              <div class="bw-review-target-headline">{{ target.ssid }}</div>
+              <div class="bw-review-target-sub">{{ targetSecurityMeta() }}</div>
+            </div>
+          </div>
+          <div class="bw-review-counts">
+            @let matchCount = alreadyMatchCount();
+            @let skipCount = skippedCount();
+            @if (canApply()) {
+              <span class="bw-count-chip bw-count-chip-update">
+                {{ willUpdateLabel() }} will update
+              </span>
+            }
+            @if (matchCount > 0) {
+              <span class="bw-count-chip bw-count-chip-same">
+                {{ formatDeviceCount(matchCount) }} already match
+              </span>
+            }
+            @if (skipCount > 0) {
+              <span class="bw-count-chip bw-count-chip-skip">
+                {{ formatDeviceCount(skipCount) }} read-only
+              </span>
+            }
+          </div>
+        </div>
+
+        <!-- Table section -->
+        <div class="bw-table-section">
+          <div class="bw-table-container">
+            <table
+              mat-table
+              [dataSource]="deviceItems()"
+              [trackBy]="trackByDeviceId"
+              class="bw-table bw-review-table"
+              aria-label="Device Wi-Fi change review table"
+            >
+              <!-- Device ID Column -->
+              <ng-container matColumnDef="deviceId">
+                <th mat-header-cell *matHeaderCellDef scope="col">Device ID</th>
+                <td
+                  mat-cell
+                  *matCellDef="let row"
+                  class="bw-li-mono"
+                  [title]="row.deviceId"
+                >
+                  {{ row.deviceId }}
+                </td>
+              </ng-container>
+
+              <!-- Current Wi-Fi Column -->
+              <ng-container matColumnDef="currentWifi">
+                <th mat-header-cell *matHeaderCellDef scope="col">Current Wi-Fi</th>
+                <td mat-cell *matCellDef="let row">
+                  @if (row.wifi?.ssid) {
+                    <span
+                      class="bw-wifi-chip"
+                      #curOrigin="cdkOverlayOrigin"
+                      cdkOverlayOrigin
+                      (mouseenter)="showWifiTip(curOrigin, row.wifi)"
+                      (mouseleave)="scheduleHideTip()"
+                    >
+                      <mat-icon class="bw-wifi-icon">wifi</mat-icon>
+                      <span class="bw-wifi-name">{{ row.wifi?.ssid }}</span>
+                    </span>
+                  } @else {
+                    <span class="bw-cell-unset">Not configured</span>
+                  }
+                </td>
+              </ng-container>
+
+              <!-- Status Column -->
+              <ng-container matColumnDef="status">
+                <th mat-header-cell *matHeaderCellDef scope="col">Status</th>
+                <td mat-cell *matCellDef="let row">
+                  @if (!row.writable) {
+                    <span class="bw-status-pill bw-status-skip" [title]="row.unwritableReason || 'Read-only'">Read-only</span>
+                  } @else if (!isWifiMatchingTarget(row.wifi)) {
+                    <span class="bw-status-pill bw-status-update">Will update</span>
+                  } @else {
+                    <span class="bw-status-pill bw-status-same">Already matches</span>
+                  }
+                </td>
+              </ng-container>
+
+              <tr mat-header-row *matHeaderRowDef="reviewColumns; sticky: true"></tr>
+              <tr mat-row *matRowDef="let row; columns: reviewColumns"></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Footer Actions -->
+  <ng-template #actionsTemplate>
+    @if (result === 'success') {
+      <button type="button" class="dialog-button dialog-button-primary" (click)="close()">Done</button>
+    } @else if (result === 'errors') {
+      <button type="button" class="dialog-button dialog-button-primary" (click)="close()">Close</button>
+    } @else if (error) {
+      @if (currentStep === 2) {
+        <button type="button" class="dialog-button dialog-button-secondary" (click)="backToStep1()">Back</button>
+      } @else {
+        <button type="button" class="dialog-button dialog-button-secondary" (click)="close()">Close</button>
+      }
+      <button type="button" class="dialog-button dialog-button-primary" (click)="retryLoad()">Retry</button>
+    } @else if (!applying && !loading) {
+      @switch (currentStep) {
+        @case (1) {
+          <button type="button" class="dialog-button dialog-button-secondary" (click)="close()">Cancel</button>
+          <button
+            type="button"
+            class="dialog-button dialog-button-primary"
+            [disabled]="!canGoNext()"
+            (click)="goToStep2()"
+          >
+            Next
+          </button>
+        }
+        @case (2) {
+          <button type="button" class="dialog-button dialog-button-secondary" (click)="backToStep1()">Back</button>
+          @if (canApply()) {
+            <button
+              type="button"
+              class="dialog-button dialog-button-primary"
+              (click)="apply()"
+            >
+              Apply to {{ willUpdateLabel() }}
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="dialog-button dialog-button-primary"
+              (click)="close()"
+            >
+              {{ alreadyMatchCount() > 0 ? 'Done' : 'Close' }}
+            </button>
+          }
+        }
+      }
+    }
+  </ng-template>
+</app-dialog>
+
+@if (activeTip(); as tip) {
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="tip.origin"
+    [cdkConnectedOverlayOpen]="true"
+    [cdkConnectedOverlayPositions]="tipPositions"
+    (detach)="closeTip()"
+  >
+    <div
+      class="bw-tip"
+      (mouseenter)="cancelHideTip()"
+      (mouseleave)="scheduleHideTip()"
+    >
+      <div class="bw-tip-header">
+        <mat-icon class="bw-tip-icon">wifi</mat-icon>
+        <div class="bw-tip-ssid">{{ tip.wifi.ssid }}</div>
+      </div>
+      <div class="bw-tip-rows">
+        <div class="bw-tip-row">
+          <span class="bw-tip-k">{{ tip.wifi.psk ? 'Password' : 'Security' }}</span>
+          <span class="bw-tip-v">
+            @if (tip.wifi.psk) {
+              <span class="bw-psk-dots">
+                {{ showTipPsk() ? tip.wifi.psk : '••••••••••' }}
+              </span>
+              <button
+                type="button"
+                class="bw-psk-eye"
+                (click)="toggleTipPsk()"
+                [attr.aria-label]="showTipPsk() ? 'Hide password' : 'Show password'"
+                [title]="showTipPsk() ? 'Hide password' : 'Show password'"
+              >
+                <mat-icon>{{ showTipPsk() ? 'visibility' : 'visibility_off' }}</mat-icon>
+              </button>
+              <button
+                type="button"
+                class="bw-copy"
+                (click)="copyTipPsk(tip.wifi.psk)"
+                [attr.aria-label]="copiedTipPsk() ? 'Copied' : 'Copy password'"
+                [title]="copiedTipPsk() ? 'Copied' : 'Copy password'"
+              >
+                <mat-icon>{{ copiedTipPsk() ? 'check' : 'content_copy' }}</mat-icon>
+              </button>
+            } @else {
+              <span class="bw-tip-muted">Open network (no password)</span>
+            }
+          </span>
+        </div>
+        <div class="bw-tip-row">
+          <span class="bw-tip-k">Visibility</span>
+          <span class="bw-tip-v">
+            @if (tip.wifi.scanSsid) {
+              <span class="bw-tip-hidden">Hidden network</span>
+            } @else {
+              <span class="bw-tip-muted">Broadcast SSID (normal)</span>
+            }
+          </span>
+        </div>
+      </div>
+    </div>
+  </ng-template>
+}

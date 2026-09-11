@@ -157,4 +157,54 @@ describe('FakeConfigService', () => {
         done();
       });
   });
+
+  it('should retrieve wifi suggestions', (done) => {
+    service.getWifiSuggestions().subscribe((res) => {
+      expect(res).toBeDefined();
+      expect(res.candidateWifis).toBeDefined();
+      expect(res.candidateWifis!.length).toBeGreaterThan(0);
+      expect(res.candidateWifis![0].ssid).toBe('lab-guest-5g');
+      done();
+    });
+  });
+
+  it('should batch get device wifi configs from scenarios', (done) => {
+    service
+      .batchGetDeviceWifiConfigs({
+        deviceIds: ['43021FDAQ000UM', 'HOST-DEVICE-001-ineligible-no-acid'],
+      })
+      .subscribe((res) => {
+        expect(res).toBeDefined();
+        expect(res.devices).toBeDefined();
+        expect(res.devices!.length).toBe(2);
+        expect(res.devices![0].deviceId).toBe('43021FDAQ000UM');
+        expect(res.devices![0].wifi?.ssid).toBe('GoogleGuest');
+        expect(res.devices![0].writable).toBeTrue();
+        expect(res.devices![1].deviceId).toBe(
+          'HOST-DEVICE-001-ineligible-no-acid',
+        );
+        expect(res.devices![1].writable).toBeFalse();
+        expect(res.devices![1].unwritableReason).toContain(
+          'Managed by host shared config',
+        );
+        done();
+      });
+  });
+
+  it('should batch update device wifi configs and return scenario errors', (done) => {
+    service
+      .batchUpdateDeviceWifiConfigs({
+        deviceIds: ['43021FDAQ000UM', 'android-logical-error-01'],
+        wifi: {ssid: 'new-wifi', psk: 'pass', scanSsid: false},
+      })
+      .subscribe((res) => {
+        expect(res.errors).toBeDefined();
+        expect(res.errors!['43021FDAQ000UM']).toBeUndefined();
+        expect(res.errors!['android-logical-error-01']).toEqual({
+          code: 'VALIDATION_ERROR',
+          message: 'Device offline or unreachable',
+        });
+        done();
+      });
+  });
 });
