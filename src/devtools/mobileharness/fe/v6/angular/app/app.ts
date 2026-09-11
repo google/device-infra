@@ -91,7 +91,14 @@ export class App implements OnDestroy {
   }
 
   isNavActive(
-    section: 'home' | 'devices' | 'hosts' | 'tests' | 'jobs' | 'sessions',
+    section:
+      | 'home'
+      | 'devices'
+      | 'hosts'
+      | 'tests'
+      | 'jobs'
+      | 'sessions'
+      | 'assistant',
   ): boolean {
     const path = this.getCurrentRoutePath();
 
@@ -182,7 +189,8 @@ export class App implements OnDestroy {
       path === 'hosts' ||
       path === 'tests' ||
       path === 'jobs' ||
-      path === 'sessions'
+      path === 'sessions' ||
+      path === 'assistant'
     ) {
       this.showContent = true;
     } else if (path === 'devices/:id' && params['id']) {
