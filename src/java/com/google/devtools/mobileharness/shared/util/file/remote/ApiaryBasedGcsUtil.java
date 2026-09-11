@@ -85,7 +85,6 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
   private static final Duration HTTP_READ_TIMEOUT = Duration.ofMinutes(1);
 
   private final Storage client;
-  private final SystemUtil systemUtil;
 
   /**
    * Constructs a ApiaryBasedGcsUtil given the related parameters about the storage.
@@ -95,7 +94,6 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
   public ApiaryBasedGcsUtil(GcsParams storageParams) throws MobileHarnessException {
     super(storageParams);
     this.client = getClient(storageParams);
-    this.systemUtil = new SystemUtil();
   }
 
   @VisibleForTesting
@@ -106,9 +104,8 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
       ChecksumUtil crc32cChecksumUtil,
       LocalFileUtil localFileUtil,
       SystemUtil systemUtil) {
-    super(storageParams, checksumUtil, crc32cChecksumUtil, localFileUtil);
+    super(storageParams, checksumUtil, crc32cChecksumUtil, localFileUtil, systemUtil);
     this.client = client;
-    this.systemUtil = systemUtil;
   }
 
   private static Storage getClient(GcsParams storageParams) throws MobileHarnessException {

@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.shared.util.file.checksum.ChecksumUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.ByteString;
@@ -244,24 +245,29 @@ public abstract class GcsUtil {
 
   protected final LocalFileUtil localFileUtil;
 
+  protected final SystemUtil systemUtil;
+
   /** Constructs a CloudStorageUtil given the related parameters about the storage. */
   protected GcsUtil(GcsParams storageParams) {
     this(
         storageParams,
         new ChecksumUtil(Hashing.murmur3_128()),
         new ChecksumUtil(Hashing.crc32c()),
-        new LocalFileUtil());
+        new LocalFileUtil(),
+        new SystemUtil());
   }
 
   protected GcsUtil(
       GcsParams storageParams,
       ChecksumUtil checksumUtil,
       ChecksumUtil crc32cChecksumUtil,
-      LocalFileUtil localFileUtil) {
+      LocalFileUtil localFileUtil,
+      SystemUtil systemUtil) {
     this.storageParams = storageParams;
     this.checksumUtil = checksumUtil;
     this.crc32cChecksumUtil = crc32cChecksumUtil;
     this.localFileUtil = localFileUtil;
+    this.systemUtil = systemUtil;
   }
 
   /**
