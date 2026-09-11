@@ -20,6 +20,7 @@ package(
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
     ],
 )
 
@@ -48,6 +49,7 @@ java_library(
         ":secondary_user_handler",
         ":secondary_user_on_default_display_handler",
         ":secondary_user_on_secondary_display_handler",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params/multiuser:hsu_as_login_screen_parameter_handler",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params/multiuser:run_on_clone_profile_parameter_handler",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params/multiuser:run_on_private_profile_parameter_handler",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params/multiuser:run_on_secondary_user_parameter_handler",

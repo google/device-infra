@@ -29,6 +29,12 @@ java_library(
 )
 
 java_library(
+    name = "hsu_as_login_screen_parameter_handler",
+    srcs = ["HsuAsLoginScreenParameterHandler.java"],
+    deps = ["//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params:module_parameter_handler_interface"],
+)
+
+java_library(
     name = "run_on_secondary_user_parameter_handler",
     srcs = ["RunOnSecondaryUserParameterHandler.java"],
     deps = ["//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params:module_parameter_handler_interface"],

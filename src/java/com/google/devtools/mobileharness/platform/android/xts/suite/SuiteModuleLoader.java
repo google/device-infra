@@ -241,10 +241,21 @@ public class SuiteModuleLoader {
         // Avoid processing the same parameter twice
         continue;
       }
+      ModuleParameters moduleParameter;
+      try {
+        moduleParameter = ModuleParameters.valueOf(Ascii.toUpperCase(p));
+      } catch (IllegalArgumentException e) {
+        // The module declares a parameter this binary doesn't know about, which happens whenever a
+        // new parameter is added to Tradefed before it is mirrored here. Skip the parameter rather
+        // than failing the whole suite load, which would otherwise block every module. See
+        // b/560151802.
+        logger.atWarning().log(
+            "Skipping unknown suite parameter '%s' declared by module %s.", p, moduleName);
+        continue;
+      }
       ImmutableMap<ModuleParameters, IModuleParameterHandler> suiteParams =
           ModuleParametersHelper.resolveParam(
-              ModuleParameters.valueOf(Ascii.toUpperCase(p)),
-              /* withOptional= */ allowOptionalParameterizedModules);
+              moduleParameter, /* withOptional= */ allowOptionalParameterizedModules);
       for (Entry<ModuleParameters, IModuleParameterHandler> suiteParamEntry :
           suiteParams.entrySet()) {
         ModuleParameters suiteParam = suiteParamEntry.getKey();

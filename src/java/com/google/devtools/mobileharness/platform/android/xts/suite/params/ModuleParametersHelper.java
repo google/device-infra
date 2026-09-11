@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.xts.suite.params;
 
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.ALL_FOLDABLE_STATES;
+import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.HSU_AS_LOGIN_SCREEN;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.INSTANT_APP;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.MULTIUSER;
 import static com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters.MULTI_ABI;
@@ -40,6 +41,7 @@ import static com.google.devtools.mobileharness.platform.android.xts.suite.param
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.platform.android.xts.suite.params.multiuser.HsuAsLoginScreenParameterHandler;
 import com.google.devtools.mobileharness.platform.android.xts.suite.params.multiuser.RunOnCloneProfileParameterHandler;
 import com.google.devtools.mobileharness.platform.android.xts.suite.params.multiuser.RunOnPrivateProfileParameterHandler;
 import com.google.devtools.mobileharness.platform.android.xts.suite.params.multiuser.RunOnSecondaryUserParameterHandler;
@@ -52,30 +54,22 @@ import java.util.Set;
 public final class ModuleParametersHelper {
 
   private static final ImmutableMap<ModuleParameters, IModuleParameterHandler> HANDLER_MAP =
-      ImmutableMap.of(
-          INSTANT_APP,
-          new InstantAppHandler(),
-          NOT_INSTANT_APP,
-          new NegativeHandler(),
+      ImmutableMap.<ModuleParameters, IModuleParameterHandler>builder()
+          .put(INSTANT_APP, new InstantAppHandler())
+          .put(NOT_INSTANT_APP, new NegativeHandler())
           // line separator
-          MULTI_ABI,
-          new NegativeHandler(),
-          NOT_MULTI_ABI,
-          new NotMultiAbiHandler(),
+          .put(MULTI_ABI, new NegativeHandler())
+          .put(NOT_MULTI_ABI, new NotMultiAbiHandler())
           // line separator
-          RUN_ON_WORK_PROFILE,
-          new RunOnWorkProfileParameterHandler(),
-          RUN_ON_SECONDARY_USER,
-          new RunOnSecondaryUserParameterHandler(),
+          .put(RUN_ON_WORK_PROFILE, new RunOnWorkProfileParameterHandler())
+          .put(RUN_ON_SECONDARY_USER, new RunOnSecondaryUserParameterHandler())
+          .put(HSU_AS_LOGIN_SCREEN, new HsuAsLoginScreenParameterHandler())
           // line separator
-          NO_FOLDABLE_STATES,
-          new NegativeHandler(),
-          ALL_FOLDABLE_STATES,
-          new FoldableExpandingHandler(),
-          RUN_ON_CLONE_PROFILE,
-          new RunOnCloneProfileParameterHandler(),
-          RUN_ON_PRIVATE_PROFILE,
-          new RunOnPrivateProfileParameterHandler());
+          .put(NO_FOLDABLE_STATES, new NegativeHandler())
+          .put(ALL_FOLDABLE_STATES, new FoldableExpandingHandler())
+          .put(RUN_ON_CLONE_PROFILE, new RunOnCloneProfileParameterHandler())
+          .put(RUN_ON_PRIVATE_PROFILE, new RunOnPrivateProfileParameterHandler())
+          .buildOrThrow();
 
   private static final ImmutableMap<ModuleParameters, ImmutableSet<ModuleParameters>> GROUP_MAP =
       ImmutableMap.of(
