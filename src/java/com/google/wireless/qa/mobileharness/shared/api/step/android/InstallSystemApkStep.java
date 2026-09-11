@@ -326,6 +326,10 @@ public class InstallSystemApkStep {
     }
 
     logger.atInfo().log("Remounting in order to push system applications.");
-    fileUtil.remount(deviceId);
+    if (!fileUtil.remount(deviceId)) {
+      logger.atInfo().log("Rebooting device %s to make remount effective.", deviceId);
+      rebootDevice(deviceId, deviceClassName, DeviceRebootType.HARD_REBOOT);
+      fileUtil.remount(deviceId);
+    }
   }
 }

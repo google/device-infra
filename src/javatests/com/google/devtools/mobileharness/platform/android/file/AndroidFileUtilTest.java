@@ -1241,6 +1241,31 @@ public final class AndroidFileUtilTest {
   }
 
   @Test
+  public void remount_exitCode7_noPartitions() throws Exception {
+    String adbRemountOutput =
+        "Failed command with exit_code=7 and success_exit_codes=[0], result=[code=7, out=[Skipping"
+            + " /system for remount\n"
+            + "Skipping /system_ext for remount\n"
+            + "Skipping /product for remount\n"
+            + "Skipping /vendor for remount\n"
+            + "remount failed\n"
+            + "Skipping /vendor_dlkm for remount\n"
+            + "Skipping /odm for remount\n"
+            + "Skipping /odm_dlkm for remount\n"
+            + "No partitions to remount\n"
+            + "], err=[]], command=[adb remount]";
+    when(adb.run(eq(SERIAL), aryEq(new String[] {AndroidFileUtil.ADB_ARG_REMOUNT})))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, adbRemountOutput));
+    when(androidSystemSpecUtil.isEmulator(eq(SERIAL))).thenReturn(false);
+
+    assertThat(androidFileUtil.remount(SERIAL)).isFalse();
+
+    verify(adb).run(eq(SERIAL), aryEq(new String[] {AndroidFileUtil.ADB_ARG_REMOUNT}));
+  }
+
+  @Test
   public void remountSDK30Emulator() throws Exception {
     when(adb.run(eq(SERIAL), aryEq(new String[] {"shell", "mount", "-o", "rw,remount", "/"})))
         .thenReturn("")
