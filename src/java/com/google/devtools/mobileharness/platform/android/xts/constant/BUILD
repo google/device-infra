@@ -39,6 +39,7 @@ java_library(
 java_library(
     name = "xts_constants",
     srcs = ["XtsConstants.java"],
+    deps = ["@maven//:com_google_guava_guava"],
 )
 
 java_library(

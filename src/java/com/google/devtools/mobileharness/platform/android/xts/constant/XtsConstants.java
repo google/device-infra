@@ -16,10 +16,31 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.constant;
 
+import com.google.common.collect.ImmutableList;
 import java.util.regex.Pattern;
 
 /** Constants for xTS tests. */
 public class XtsConstants {
+
+  /**
+   * List of Tradefed exception keywords indicating that an invocation failed early before or during
+   * module execution (e.g. device unavailable, runtime error, target setup failure).
+   */
+  public static final ImmutableList<String> FATAL_TRADEFED_ERROR_KEYWORDS =
+      ImmutableList.of(
+          // Subclasses of DeviceNotAvailableException (checked HarnessException):
+          "DeviceNotAvailableException",
+          "DeviceUnresponsiveException",
+          "DeviceDisconnectedException",
+          // Other checked HarnessException subclasses:
+          "TargetSetupError",
+          "BuildError",
+          "ConfigurationException",
+          // Subclasses of unchecked HarnessRuntimeException:
+          "DeviceRuntimeException",
+          "NoDeviceException",
+          "FatalHostError",
+          "HarnessRuntimeException");
 
   public static final String TRADEFED_TESTS_PASSED = "tradefed_tests_passed";
   public static final String TRADEFED_TESTS_FAILED = "tradefed_tests_failed";
