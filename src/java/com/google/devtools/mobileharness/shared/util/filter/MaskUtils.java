@@ -117,12 +117,13 @@ public final class MaskUtils {
   }
 
   private static DeviceList trimDeviceList(DeviceList deviceList, DeviceInfoMask deviceInfoMask) {
-    if (!deviceInfoMask.hasFieldMask()) {
+    if (!deviceInfoMask.hasFieldMask()
+        && !deviceInfoMask.hasSupportedDimensionsMask()
+        && !deviceInfoMask.hasRequiredDimensionsMask()) {
       return deviceList;
     }
 
-    FieldMask fieldMask = deviceInfoMask.getFieldMask();
-    if (fieldMask.getPathsList().isEmpty()) {
+    if (deviceInfoMask.hasFieldMask() && deviceInfoMask.getFieldMask().getPathsList().isEmpty()) {
       return DeviceList.newBuilder().setDeviceTotalCount(deviceList.getDeviceTotalCount()).build();
     }
     List<DeviceInfo> deviceInfos = deviceList.getDeviceInfoList();
@@ -163,11 +164,6 @@ public final class MaskUtils {
   }
 
   private static DeviceInfo trimDeviceInfo(DeviceInfo deviceInfo, DeviceInfoMask deviceInfoMask) {
-    FieldMask fieldMask = deviceInfoMask.getFieldMask();
-    if (fieldMask.getPathsList().isEmpty()) {
-      return deviceInfo;
-    }
-
     DeviceInfo.Builder deviceInfoBuilder = deviceInfo.toBuilder();
     if (deviceInfoMask.hasSupportedDimensionsMask()) {
       deviceInfoBuilder
@@ -190,6 +186,13 @@ public final class MaskUtils {
                   deviceInfoMask.getRequiredDimensionsMask().getDimensionNamesList()));
     }
 
+    if (!deviceInfoMask.hasFieldMask()) {
+      return deviceInfoBuilder.build();
+    }
+    FieldMask fieldMask = deviceInfoMask.getFieldMask();
+    if (fieldMask.getPathsList().isEmpty()) {
+      return deviceInfoBuilder.build();
+    }
     return trim(fieldMask, deviceInfoBuilder.build());
   }
 
