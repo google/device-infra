@@ -434,6 +434,23 @@ public class CloudOrchestratorClientTest {
   }
 
   @Test
+  public void createCvdWithEnvConfigAndWait_defaultConfig_setsDefaultSdcardAndSimType()
+      throws Exception {
+    server.enqueue(new MockResponse().setBody("{\"name\": \"op-123\", \"done\": true}"));
+    server.enqueue(
+        new MockResponse()
+            .setBody("{\"cvds\": [{\"webrtc_device_id\": \"cvd-1\"}]}")
+            .addHeader("Content-Type", "application/json"));
+
+    var cvd = client.createCvdWithEnvConfigAndWait("host-1", "cvd-1", "branch-1", "target-1");
+
+    assertThat(cvd.webrtcDeviceId).isEqualTo("cvd-1");
+    String body = server.takeRequest().getBody().readUtf8();
+    assertThat(body).contains("\"use_sdcard\":true");
+    assertThat(body).contains("\"modem_simulator_sim_type\":1");
+  }
+
+  @Test
   public void createCvdWithEnvConfigAndWait_customHardwareSpecs_setsCpusAndMemory()
       throws Exception {
     server.enqueue(new MockResponse().setBody("{\"name\": \"op-123\", \"done\": true}"));
@@ -449,7 +466,12 @@ public class CloudOrchestratorClientTest {
             "branch-1",
             "build-1",
             "target-1",
-            VirtualDeviceConfig.builder().setCpus(8).setMemoryMb(16384).build());
+            VirtualDeviceConfig.builder()
+                .setCpus(8)
+                .setMemoryMb(16384)
+                .setModemSimulatorSimType(VirtualDeviceConfig.SIM_TYPE_CTS_CARRIER_API)
+                .setUseSdcard(false)
+                .build());
 
     assertThat(cvd.webrtcDeviceId).isEqualTo("cvd-1");
     var req = server.takeRequest();
@@ -457,6 +479,8 @@ public class CloudOrchestratorClientTest {
     String body = req.getBody().readUtf8();
     assertThat(body).contains("\"cpus\":8");
     assertThat(body).contains("\"memory_mb\":16384");
+    assertThat(body).contains("\"use_sdcard\":false");
+    assertThat(body).contains("\"modem_simulator_sim_type\":2");
   }
 
   @Test
@@ -769,7 +793,12 @@ public class CloudOrchestratorClientTest {
             "dir-host",
             "dir-device",
             "target-1",
-            VirtualDeviceConfig.builder().setCpus(16).setMemoryMb(32768).build());
+            VirtualDeviceConfig.builder()
+                .setCpus(16)
+                .setMemoryMb(32768)
+                .setModemSimulatorSimType(VirtualDeviceConfig.SIM_TYPE_CTS_CARRIER_API)
+                .setUseSdcard(false)
+                .build());
 
     assertThat(cvd.webrtcDeviceId).isEqualTo("cvd-1");
     var req = server.takeRequest();
@@ -777,6 +806,8 @@ public class CloudOrchestratorClientTest {
     String body = req.getBody().readUtf8();
     assertThat(body).contains("\"cpus\":16");
     assertThat(body).contains("\"memory_mb\":32768");
+    assertThat(body).contains("\"use_sdcard\":false");
+    assertThat(body).contains("\"modem_simulator_sim_type\":2");
   }
 
   @Test

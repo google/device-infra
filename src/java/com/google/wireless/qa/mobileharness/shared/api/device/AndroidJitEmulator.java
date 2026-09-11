@@ -241,24 +241,7 @@ public class AndroidJitEmulator extends AndroidDevice {
     }
     String buildId = testInfo.jobInfo().params().get(PARAM_BUILD_ID, "");
 
-    VirtualDeviceConfig.Builder configBuilder = VirtualDeviceConfig.builder();
-    int flagCpus = Flags.androidJitEmulatorCpus.getNonNull();
-    if (flagCpus > 0) {
-      configBuilder.setCpus(flagCpus);
-    } else if (flagCpus < 0) {
-      logger.atWarning().log(
-          "Invalid android_jit_emulator_cpus=%d; defaulting to %d",
-          flagCpus, VirtualDeviceConfig.DEFAULT_CPUS);
-    }
-    int flagMemoryMb = Flags.androidJitEmulatorMemoryMb.getNonNull();
-    if (flagMemoryMb > 0) {
-      configBuilder.setMemoryMb(flagMemoryMb);
-    } else if (flagMemoryMb < 0) {
-      logger.atWarning().log(
-          "Invalid android_jit_emulator_memory_mb=%d; defaulting to %d",
-          flagMemoryMb, VirtualDeviceConfig.DEFAULT_MEMORY_MB);
-    }
-    VirtualDeviceConfig virtualDeviceConfig = configBuilder.build();
+    VirtualDeviceConfig virtualDeviceConfig = virtualDeviceConfigFromFlags();
     logger.atInfo().log("Creating CVD with virtual device config: %s", virtualDeviceConfig);
 
     Cvd cvd;
@@ -323,6 +306,27 @@ public class AndroidJitEmulator extends AndroidDevice {
     } else if (cvd.adbSerial != null && !cvd.adbSerial.isEmpty()) {
       androidAdbUtil.connect(cvd.adbSerial);
     }
+  }
+
+  /**
+   * Builds the virtual device config from the lab server flags, falling back to the {@link
+   * VirtualDeviceConfig} defaults for any flag that is unset. Flag values are validated when the
+   * lab server starts, see {@code Flags#checkConstraints}.
+   */
+  private static VirtualDeviceConfig virtualDeviceConfigFromFlags() {
+    VirtualDeviceConfig.Builder configBuilder =
+        VirtualDeviceConfig.builder().setUseSdcard(Flags.androidJitEmulatorUseSdcard.getNonNull());
+    unlessUnset(Flags.androidJitEmulatorCpus.getNonNull()).ifPresent(configBuilder::setCpus);
+    unlessUnset(Flags.androidJitEmulatorMemoryMb.getNonNull())
+        .ifPresent(configBuilder::setMemoryMb);
+    unlessUnset(Flags.androidJitEmulatorModemSimulatorSimType.getNonNull())
+        .ifPresent(configBuilder::setModemSimulatorSimType);
+    return configBuilder.build();
+  }
+
+  /** Returns {@code flagValue}, or empty if it is 0, which means the flag is unset. */
+  private static Optional<Integer> unlessUnset(int flagValue) {
+    return flagValue == 0 ? Optional.empty() : Optional.of(flagValue);
   }
 
   public void pullCvdLogs(TestInfo testInfo) {

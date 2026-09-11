@@ -16,17 +16,23 @@
 
 package com.google.devtools.mobileharness.shared.util.flags;
 
+import static org.junit.Assert.assertThrows;
+
 import com.google.common.truth.Truth;
 import com.google.devtools.mobileharness.shared.util.flags.core.FlagSpec;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class FlagsTest {
+
+  @Rule public final SetFlags flags = new SetFlags();
 
   @Test
   public void flags_areOrderedByName() {
@@ -44,6 +50,32 @@ public class FlagsTest {
             "Flags in Flags.java should be sorted by @FlagSpec.name alphabetically.")
         .that(flagNames)
         .isInOrder();
+  }
+
+  @Test
+  public void checkConstraints_unknownModemSimulatorSimType_throwsException() {
+    flags.set("android_jit_emulator_modem_simulator_sim_type", "3");
+
+    IllegalArgumentException e =
+        assertThrows(IllegalArgumentException.class, Flags::checkConstraints);
+
+    Truth.assertThat(e)
+        .hasMessageThat()
+        .contains("--android_jit_emulator_modem_simulator_sim_type");
+  }
+
+  @Test
+  public void checkConstraints_knownModemSimulatorSimTypes_pass() {
+    flags.set("android_jit_emulator_modem_simulator_sim_type", "1");
+    Flags.checkConstraints();
+
+    flags.set("android_jit_emulator_modem_simulator_sim_type", "2");
+    Flags.checkConstraints();
+  }
+
+  @Test
+  public void checkConstraints_unsetModemSimulatorSimType_passes() {
+    Flags.checkConstraints();
   }
 
   private static FlagSpec getFlagSpecOss(Field field) {
