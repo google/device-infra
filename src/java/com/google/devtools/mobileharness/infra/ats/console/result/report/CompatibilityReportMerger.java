@@ -599,7 +599,11 @@ public class CompatibilityReportMerger {
    */
   private static final ImmutableList<String> UNEXECUTED_MODULE_ERROR_KEYWORDS =
       ImmutableList.of(
-          "DeviceNotAvailableException", "TargetSetupError", "HarnessRuntimeException");
+          "DeviceNotAvailableException",
+          "DeviceUnresponsiveException",
+          "DeviceDisconnectedException",
+          "TargetSetupError",
+          "HarnessRuntimeException");
 
   /**
    * Decides if the infra should insert unexecuted modules into the result, so the final XML report

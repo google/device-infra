@@ -1538,13 +1538,23 @@ final class NewMultiCommandRequestHandler {
     return Optional.empty();
   }
 
+  private static final ImmutableList<String> FATAL_TRADEFED_ERROR_KEYWORDS =
+      ImmutableList.of(
+          "TargetSetupError",
+          "DeviceUnresponsiveException",
+          "DeviceNotAvailableException",
+          "DeviceDisconnectedException",
+          "HarnessRuntimeException");
+
   /**
    * Returns true if the Tradefed error message indicates a fatal infrastructure breakdown (e.g.
-   * TargetSetupError during GSI device Wi-Fi configuration or hardware provisioning) that should
-   * not be ignored and must be surfaced directly to the user. The list of fatal errors will grow.
+   * TargetSetupError during GSI device Wi-Fi configuration, DeviceUnresponsiveException,
+   * DeviceNotAvailableException, DeviceDisconnectedException, HarnessRuntimeException) that should
+   * not be ignored and must be surfaced directly to the user.
    */
   private static boolean isFatalTradefedError(String errorMessage) {
-    return errorMessage != null && errorMessage.contains("TargetSetupError");
+    return errorMessage != null
+        && FATAL_TRADEFED_ERROR_KEYWORDS.stream().anyMatch(errorMessage::contains);
   }
 
   private ErrorReason getErrorReason(MobileHarnessException e) {
