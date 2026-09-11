@@ -63,4 +63,8 @@ message DeviceConfig {
   // The customized configuration of a device in case any configuration could
   // not be covered in BasicDeviceConfig, e.g. testbed config.
   google.protobuf.Any customized_config = 3;
+
+  // The source path that generated this configuration, if it is managed in
+  // source control.
+  string generated_source_path = 5;
 }
