@@ -24,6 +24,7 @@ import static java.util.stream.Collectors.joining;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -45,6 +46,8 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
+import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.Gson;
@@ -97,6 +100,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
           "compatibility-host-provider-preconditions");
 
   private static final String TF_PATH_KEY = "TF_PATH";
+  private static final String TF_JVM_OPTIONS_KEY = "TF_JVM_OPTIONS";
 
   // The max zip file is around 20GB, disk write speed is 100MB/s, and normally no more than 10
   // tests are doing unzip operation at the same time, therefore each test can unzip at 10MB/s speed
@@ -615,9 +619,22 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
     return ImmutableList.of(XtsCommandUtil.getXtsRootJavaProperty(xtsType, workDir));
   }
 
+  /**
+   * Returns extra JVM flags for xTS Tradefed runs, configured via the {@code TF_JVM_OPTIONS}
+   * environment variable (from xts-tradefed script).
+   */
   @Override
   public ImmutableList<String> getExtraJvmFlags(Path workDir) {
-    return ImmutableList.of("-Djdk.xml.totalEntitySizeLimit=0");
+    ImmutableList.Builder<String> extraJvmFlags = ImmutableList.builder();
+    String tfJvmOptions = systemUtil.getEnv(TF_JVM_OPTIONS_KEY);
+    if (!Strings.isNullOrEmpty(tfJvmOptions)) {
+      try {
+        extraJvmFlags.addAll(ShellUtils.tokenize(tfJvmOptions));
+      } catch (TokenizationException e) {
+        logger.atWarning().withCause(e).log("Failed to parse TF_JVM_OPTIONS: %s", tfJvmOptions);
+      }
+    }
+    return extraJvmFlags.build();
   }
 
   @Override

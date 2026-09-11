@@ -77,6 +77,7 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil.JavaVersion;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.TextFormat.ParseException;
@@ -468,10 +469,14 @@ public class TradefedTest extends BaseDriver
         Path.of(testInfo.getGenFileDir())
             .resolve(XtsConstants.TRADEFED_TEST_MODULE_RESULTS_FILE_NAME);
 
+    String javaPath = tradefedRunStrategy.getJavaPath(workDir);
+
     // Creates JVM flags.
     ImmutableList.Builder<String> jvmFlagsBuilder =
         ImmutableList.<String>builder()
-            .add("-Xmx" + Flags.xtsTfXmx.getNonNull(), "-XX:+HeapDumpOnOutOfMemoryError");
+            .add("-Xmx" + Flags.xtsTfXmx.getNonNull(), "-XX:+HeapDumpOnOutOfMemoryError")
+            .add("-Djdk.xml.totalEntitySizeLimit=0", "-Djdk.xml.enableExtensionFunctions=true");
+    jvmFlagsBuilder.addAll(getJavaVersionJvmFlags(javaPath));
     if (Flags.enableXtsTradefedInvocationAgent.getNonNull()) {
       jvmFlagsBuilder.add(
           String.format(
@@ -487,7 +492,7 @@ public class TradefedTest extends BaseDriver
                 TF_PATH_KEY, tradefedRunStrategy.getConcatenatedJarPath(workDir, spec)));
     ImmutableList<String> cmd =
         xtsCommandUtil.getTradefedJavaCommand(
-            tradefedRunStrategy.getJavaPath(workDir),
+            javaPath,
             jvmFlagsBuilder.build(),
             classpath,
             tradefedRunStrategy.getJvmDefines(workDir),
@@ -835,6 +840,48 @@ public class TradefedTest extends BaseDriver
               sdkToolPath, possibleSdkTool));
     }
     return Path.of(result.stdout().trim());
+  }
+
+  /**
+   * Returns JVM flags required for Tradefed based on the detected Java major version.
+   *
+   * <ul>
+   *   <li>Java 11+: Modular reflection {@code --add-opens} flags.
+   *   <li>Java 21+: {@code --enable-native-access} for foreign functions and JNI (JEP 454).
+   *   <li>Java 24+: {@code --sun-misc-unsafe-memory-access=allow} for unsafe memory access (JEP
+   *       471).
+   * </ul>
+   */
+  private ImmutableList<String> getJavaVersionJvmFlags(String javaPath)
+      throws InterruptedException {
+    ImmutableList.Builder<String> flags = ImmutableList.builder();
+    try {
+      JavaVersion javaVersion = systemUtil.getJavaVersion(Path.of(javaPath));
+      int majorVersion = javaVersion.majorVersion();
+
+      // Java 11+: Modular reflection access
+      if (majorVersion >= 11) {
+        flags.add(
+            "--add-opens=java.base/java.lang=ALL-UNNAMED",
+            "--add-opens=java.base/java.lang.invoke=ALL-UNNAMED",
+            "--add-opens=java.base/java.nio=ALL-UNNAMED",
+            "--add-opens=java.base/sun.reflect.annotation=ALL-UNNAMED");
+      }
+
+      // Java 21+: Foreign function & native JNI access (JEP 454)
+      if (majorVersion >= 21) {
+        flags.add("--enable-native-access=ALL-UNNAMED");
+      }
+
+      // Java 24+: Unsafe memory access (JEP 471)
+      if (majorVersion >= 24) {
+        flags.add("--sun-misc-unsafe-memory-access=allow");
+      }
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to get java version for %s; skipping version-based JVM flags.", javaPath);
+    }
+    return flags.build();
   }
 
   private ImmutableList<String> getTradefedRunCommandArgs(
