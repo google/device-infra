@@ -29,6 +29,10 @@ import com.google.devtools.mobileharness.fe.v6.service.host.HostServiceGrpcImpl;
 import com.google.devtools.mobileharness.fe.v6.service.host.HostServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.job.JobServiceGrpcImpl;
 import com.google.devtools.mobileharness.fe.v6.service.job.OssJobServiceModule;
+import com.google.devtools.mobileharness.fe.v6.service.search.SearchServiceGrpcImpl;
+import com.google.devtools.mobileharness.fe.v6.service.search.SearchServiceModule;
+import com.google.devtools.mobileharness.fe.v6.service.search.refresh.CoreFleetDataRefresher;
+import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionCatalogRefresher;
 import com.google.devtools.mobileharness.fe.v6.service.session.OssSessionServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.session.SessionServiceGrpcImpl;
 import com.google.devtools.mobileharness.fe.v6.service.shared.OssStubsModule;
@@ -44,12 +48,15 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.protobuf.services.ProtoReflectionService;
 import java.io.IOException;
+import java.time.Duration;
 import java.time.InstantSource;
 import javax.inject.Inject;
 
 /** Main class for the open-source FE gRPC server. */
 public final class OssFeServer {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final Duration REFRESH_INTERVAL = Duration.ofMinutes(2);
 
   private final int port;
   private final DeviceServiceGrpcImpl deviceService;
@@ -59,6 +66,9 @@ public final class OssFeServer {
   private final TestServiceGrpcImpl testService;
   private final JobServiceGrpcImpl jobService;
   private final SessionServiceGrpcImpl sessionService;
+  private final SearchServiceGrpcImpl searchService;
+  private final CoreFleetDataRefresher refresher;
+  private final DimensionCatalogRefresher dimensionCatalogRefresher;
   private volatile Server grpcServer;
 
   @Inject
@@ -70,6 +80,9 @@ public final class OssFeServer {
       TestServiceGrpcImpl testService,
       JobServiceGrpcImpl jobService,
       SessionServiceGrpcImpl sessionService,
+      SearchServiceGrpcImpl searchService,
+      CoreFleetDataRefresher refresher,
+      DimensionCatalogRefresher dimensionCatalogRefresher,
       @ServerPort int port) {
     this.deviceService = deviceService;
     this.hostService = hostService;
@@ -78,6 +91,9 @@ public final class OssFeServer {
     this.testService = testService;
     this.jobService = jobService;
     this.sessionService = sessionService;
+    this.searchService = searchService;
+    this.refresher = refresher;
+    this.dimensionCatalogRefresher = dimensionCatalogRefresher;
     this.port = port;
   }
 
@@ -92,8 +108,12 @@ public final class OssFeServer {
             .addService(testService)
             .addService(jobService)
             .addService(sessionService)
+            .addService(searchService)
             .addService(ProtoReflectionService.newInstance())
             .build();
+    dimensionCatalogRefresher.start();
+    refresher.buildInitialIndexWithRetry();
+    refresher.start(REFRESH_INTERVAL);
     grpcServer.start();
     logger.atInfo().log("FE Server started on port %d", port);
     Runtime.getRuntime().addShutdownHook(new Thread(this::stopServer));
@@ -102,6 +122,8 @@ public final class OssFeServer {
   /** Stops the server. */
   @VisibleForTesting
   void stopServer() {
+    refresher.stop();
+    dimensionCatalogRefresher.stop();
     if (grpcServer != null) {
       logger.atWarning().log("*** shutting down gRPC server since JVM is shutting down");
       grpcServer.shutdown();
@@ -128,6 +150,7 @@ public final class OssFeServer {
             new OssTestServiceModule(),
             new OssJobServiceModule(),
             new OssSessionServiceModule(),
+            new SearchServiceModule(),
             new OssStubsModule(),
             new AbstractModule() {
               @Override

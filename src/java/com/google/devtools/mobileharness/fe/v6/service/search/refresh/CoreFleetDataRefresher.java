@@ -41,7 +41,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -151,6 +150,48 @@ public final class CoreFleetDataRefresher {
     }
   }
 
+  private static final int MAX_STARTUP_ATTEMPTS = 3;
+  private static final Duration INITIAL_RETRY_BACKOFF = Duration.ofSeconds(2);
+
+  /**
+   * Builds the initial fleet search index across all fleets with retries.
+   *
+   * <p>Attempts up to {@value #MAX_STARTUP_ATTEMPTS} times with backoff (2s, 4s). If all fleets
+   * succeed on any attempt, this method returns. If all attempts are exhausted and not all fleets
+   * have published snapshots, throws {@link IllegalStateException} to fail fast during server
+   * startup, preventing the server from declaring healthy with an unpopulated index.
+   */
+  public void buildInitialIndexWithRetry() {
+    for (int attempt = 1; attempt <= MAX_STARTUP_ATTEMPTS; attempt++) {
+      refreshOnce();
+      boolean allReady = true;
+      for (Fleet fleet : sources.keySet()) {
+        if (!snapshotStore.hasSnapshot(fleet)) {
+          allReady = false;
+          break;
+        }
+      }
+      if (allReady) {
+        logger.atInfo().log(
+            "Initial fleet search index built successfully on attempt %d/%d.",
+            attempt, MAX_STARTUP_ATTEMPTS);
+        return;
+      }
+      if (attempt < MAX_STARTUP_ATTEMPTS) {
+        long backoffMs = INITIAL_RETRY_BACKOFF.toMillis() * attempt;
+        logger.atWarning().log(
+            "Initial fleet search index build attempt %d/%d incomplete. Retrying in %d ms...",
+            attempt, MAX_STARTUP_ATTEMPTS, backoffMs);
+        Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(backoffMs));
+      }
+    }
+    throw new IllegalStateException(
+        String.format(
+            "Failed to build initial fleet search index across all fleets after %d attempts."
+                + " Failing fast to prevent routing traffic to an unindexed server.",
+            MAX_STARTUP_ATTEMPTS));
+  }
+
   /**
    * Starts the periodic refresh on a single daemon thread. The first refresh runs immediately, then
    * again {@code interval} after each prior refresh completes.
@@ -163,15 +204,9 @@ public final class CoreFleetDataRefresher {
     periodicExecutor =
         Executors.newSingleThreadScheduledExecutor(
             new ThreadFactoryBuilder().setNameFormat(REFRESH_THREAD_NAME).setDaemon(true).build());
-    // Stagger the first refresh by a random delay within [0, interval) so that replicas behind
-    // the same GSLB VIP spread their pulls across the refresh window instead of all firing at
-    // startup. This reduces the peak concurrent load on the upstream master.
-    long jitterMs = ThreadLocalRandom.current().nextLong(interval.toMillis());
-    logger.atInfo().log(
-        "Fleet search refresh starting with %d ms jitter (interval %s).", jitterMs, interval);
     scheduledTask =
         periodicExecutor.scheduleWithFixedDelay(
-            this::refreshOnce, jitterMs, interval.toMillis(), MILLISECONDS);
+            this::refreshOnce, interval.toMillis(), interval.toMillis(), MILLISECONDS);
   }
 
   /**
