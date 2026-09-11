@@ -816,4 +816,12 @@ public final class MctsDynamicDownloadPluginTest {
             "https://dl.google.com/dl/android/xts/mcts/tool/36/jdk.zip",
             "/android/xts/mcts/tool/36/jdk.zip");
   }
+
+  @Test
+  public void parse_invokesDeviceAdbAndPackageManagerOnlyOnce() throws Exception {
+    assertThat(spyMctsDynamicDownloadPlugin.parse(mockEvent)).isNotNull();
+
+    verify(mockAdbInternalUtil).getDeviceSerialsByState(any(), any());
+    verify(mockAndroidPackageManagerUtil).listModuleInfos(any());
+  }
 }

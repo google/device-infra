@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.controller.test.util.xtsdownloader;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 
@@ -24,6 +25,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
@@ -181,11 +183,21 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   @SuppressWarnings("BeforeSnippet")
   public XtsDynamicDownloadInfo parse(LocalTestStartingEvent event)
       throws MobileHarnessException, InterruptedException {
-    String aospVersion = getAospVersion(event);
+    String deviceId = getDeviceId(event);
+    String aospVersion = getAospVersion(deviceId);
+    ImmutableSet<String> preloadedMainlineModules = getPreloadedMainlineModules(deviceId);
+    // Relay to the session plugin whether this device has any preloaded Mainline modules. Devices
+    // with none (e.g. Auto / AOSP builds) do not need a dynamic MCTS test job.
+    event
+        .getTest()
+        .properties()
+        .add(
+            XtsConstants.XTS_DYNAMIC_DOWNLOAD_HAS_PRELOADED_MAINLINE_MODULES_PROPERTY_KEY,
+            String.valueOf(!preloadedMainlineModules.isEmpty()));
     ListMultimap<String, String> mctsNamesOfAllModules =
-        getMctsNamesOfAllMainlineModules(event, aospVersion);
+        getMctsNamesOfAllMainlineModules(deviceId, aospVersion, preloadedMainlineModules);
 
-    String deviceAbiRaw = getAbiVersion(event);
+    String deviceAbiRaw = getAbiVersion(deviceId);
     String deviceAbi = DEVICE_ABI_MAP.get(deviceAbiRaw);
     if (deviceAbi == null) {
       throw new MobileHarnessException(
@@ -198,7 +210,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
             .setXtsType("cts")
             .setProject(XtsDynamicDownloadInfo.Project.MAINLINE);
     List<String> downloadLinkUrls = new ArrayList<>();
-    String tvpVersionCode = getTvpVersion(event);
+    String tvpVersionCode = getTvpVersion(deviceId, preloadedMainlineModules);
     if (tvpVersionCode.length() >= 2) {
       downloadInfoBuilder.setJdkSdkVersion(tvpVersionCode.substring(0, 2));
     }
@@ -467,37 +479,39 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
                     "No online device found for the current job."));
   }
 
-  private ImmutableList<String> getPreloadedMainlineModules(String deviceId)
+  private ImmutableSet<String> getPreloadedMainlineModules(String deviceId)
       throws InterruptedException {
     try {
       return androidPackageManagerUtil.listModuleInfos(deviceId).stream()
           .map(ModuleInfo::packageName)
-          .collect(toImmutableList());
+          .collect(toImmutableSet());
     } catch (MobileHarnessException e) {
       logger.atInfo().log(
           "Cannot get preloaded module info, handle this exception since this device might be built"
               + " from AOSP.");
-      return ImmutableList.of();
+      return ImmutableSet.of();
     }
   }
 
   /**
    * Gets the MCTS names of all mainline modules.
    *
-   * <p>This method retrieves the list of preloaded mainline modules from the device and categorizes
-   * them into preloaded and non-preloaded lists. The result is a ListMultimap where keys are {@link
-   * #PRELOADED_KEY} and {@link #NON_PRELOADED_KEY}.
+   * <p>This method categorizes the given preloaded mainline modules into preloaded and
+   * non-preloaded lists. The result is a ListMultimap where keys are {@link #PRELOADED_KEY} and
+   * {@link #NON_PRELOADED_KEY}.
    *
    * <ul>
    *   <li>For {@link #PRELOADED_KEY}, the values are strings in the format "mctsName:versioncode".
    *   <li>For {@link #NON_PRELOADED_KEY}, the values are strings representing the mctsName.
    * </ul>
    *
-   * @param event The test starting event, used to access device information.
+   * @param deviceId The ID of the online device.
    * @param aospVersion The AOSP version of the device.
+   * @param preloadedMainlineModules The set of preloaded mainline module package names on the
+   *     device.
    */
   private ListMultimap<String, String> getMctsNamesOfAllMainlineModules(
-      LocalTestStartingEvent event, String aospVersion)
+      String deviceId, String aospVersion, Set<String> preloadedMainlineModules)
       throws MobileHarnessException, InterruptedException {
     String configFilePath =
         resUtil.getResourceFile(
@@ -521,16 +535,6 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     Set<String> preloadedModulesMctsAndVersioncode = new HashSet<>();
     Map<String, String> modulePackageToModuleInfoMap =
         moduleInfoMap.getModulePackageToModuleInfoMap();
-    String deviceId = getDeviceId(event);
-    ImmutableList<String> preloadedMainlineModules = getPreloadedMainlineModules(deviceId);
-    // Relay to the session plugin whether this device has any preloaded Mainline modules. Devices
-    // with none (e.g. Auto / AOSP builds) do not need a dynamic MCTS test job.
-    event
-        .getTest()
-        .properties()
-        .add(
-            XtsConstants.XTS_DYNAMIC_DOWNLOAD_HAS_PRELOADED_MAINLINE_MODULES_PROPERTY_KEY,
-            String.valueOf(!preloadedMainlineModules.isEmpty()));
     for (String moduleName : preloadedMainlineModules) {
       if (modulePackageToModuleInfoMap.containsKey(moduleName)) {
         String mctsName = modulePackageToModuleInfoMap.get(moduleName);
@@ -724,9 +728,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
    *
    * @throws MobileHarnessException if the AOSP version cannot be fetched from the device.
    */
-  private String getAospVersion(LocalTestStartingEvent event)
+  private String getAospVersion(String deviceId)
       throws MobileHarnessException, InterruptedException {
-    String deviceId = getDeviceId(event);
     String sdkVersion = adbUtil.getProperty(deviceId, AndroidProperty.SDK_VERSION);
     // For Android 36+, there will be minor SDK bumps, e.g. 36.0 -> 36.1.
     try {
@@ -744,9 +747,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
    *
    * @throws MobileHarnessException if the ABI version cannot be fetched from the device.
    */
-  private String getAbiVersion(LocalTestStartingEvent event)
+  private String getAbiVersion(String deviceId)
       throws MobileHarnessException, InterruptedException {
-    String deviceId = getDeviceId(event);
     return adbUtil.getProperty(deviceId, AndroidProperty.ABI);
   }
 
@@ -788,10 +790,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
    *
    * @throws MobileHarnessException if the TVP version cannot be fetched from the device.
    */
-  private String getTvpVersion(LocalTestStartingEvent event)
+  private String getTvpVersion(String deviceId, Set<String> preloadedMainlineModules)
       throws MobileHarnessException, InterruptedException {
-    String deviceId = getDeviceId(event);
-    ImmutableList<String> preloadedMainlineModules = getPreloadedMainlineModules(deviceId);
     // If the TVP version is 310000000, that means all the mainline modules were built
     // from source, rather than prebuilt dropped. 310000000 is just the default value in
     // http://ac/vendor/unbundled_google/modules/ModuleMetadataGoogle/Primary_AndroidManifest.xml
