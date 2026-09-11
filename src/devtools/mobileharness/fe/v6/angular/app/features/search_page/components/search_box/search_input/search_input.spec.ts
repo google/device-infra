@@ -162,6 +162,33 @@ describe('SearchInput', () => {
 
     expect(mockStore.searchQuery()).toBe('pixel');
     expect(mockStore.showSuggestions()).toBeTrue();
+    expect(mockStore.closeValuePicker).toHaveBeenCalled();
+  });
+
+  it('should close value picker and show suggestions when search input is focused', () => {
+    mockStore.showValuePicker.set(true);
+    const input = fixture.nativeElement.querySelector(
+      'input.search-input',
+    ) as HTMLInputElement;
+
+    input.dispatchEvent(new Event('focus'));
+    fixture.detectChanges();
+
+    expect(mockStore.closeValuePicker).toHaveBeenCalled();
+    expect(mockStore.showSuggestions()).toBeTrue();
+  });
+
+  it('should close value picker and show suggestions on input click', () => {
+    mockStore.showValuePicker.set(true);
+    const input = fixture.nativeElement.querySelector(
+      'input.search-input',
+    ) as HTMLInputElement;
+
+    input.click();
+    fixture.detectChanges();
+
+    expect(mockStore.closeValuePicker).toHaveBeenCalled();
+    expect(mockStore.showSuggestions()).toBeTrue();
   });
 
   it('should trigger resetSearchState when clear button is clicked', () => {

@@ -23,6 +23,10 @@ import {DensityDropdownComponent} from '../common/density_dropdown/density_dropd
 import {SearchCellComponent} from '../common/search_cell/search_cell';
 import {SearchPaginationComponent} from '../common/search_pagination/search_pagination';
 import {FleetGroupCardComponent} from '../fleet_group_card/fleet_group_card';
+import {
+  BulkConfigWifiDialog,
+  BulkConfigWifiDialogResult,
+} from './bulk_config_wifi_dialog/bulk_config_wifi_dialog';
 
 /** Component representing search results for lab fleet (devices/hosts). */
 @Component({
@@ -134,6 +138,31 @@ export class FleetSearchResultsComponent {
         this.store.resetVisibleColumns();
       } else if (res.columns && res.columns.length > 0) {
         this.store.setVisibleColumns(res.columns);
+      }
+    });
+  }
+
+  /** Opens the Bulk Wi-Fi configuration dialog for currently selected devices. */
+  openBulkConfigWifiDialog() {
+    const selected = Array.from(this.store.selectedItems());
+    if (selected.length === 0) return;
+
+    const dialogRef = this.dialog.open<
+      BulkConfigWifiDialog,
+      unknown,
+      BulkConfigWifiDialogResult
+    >(BulkConfigWifiDialog, {
+      panelClass: 'bulk-config-wifi-dialog-panel',
+      autoFocus: false,
+      data: {
+        deviceIds: selected,
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((res?: BulkConfigWifiDialogResult) => {
+      if (res?.updated) {
+        this.store.clearSelection();
+        this.store.executeSearch();
       }
     });
   }

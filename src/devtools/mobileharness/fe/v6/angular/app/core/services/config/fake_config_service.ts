@@ -2,10 +2,15 @@ import {Injectable} from '@angular/core';
 import {Observable, of, throwError} from 'rxjs';
 import {delay} from 'rxjs/operators';
 import {
+  BatchUpdateDeviceConfigRequest,
+  BatchUpdateDeviceConfigResponse,
+  CandidateWifi,
   CheckDeviceWritePermissionResult,
   ConfigSection,
   DeviceConfig,
   DeviceConfigUiStatus,
+  DeviceCurrentWifi,
+  GetBatchWifiContextResponse,
   GetDeviceConfigResult,
   RecommendedWifi,
   UpdateDeviceConfigRequest,
@@ -293,6 +298,85 @@ export class FakeConfigService extends ConfigService {
       {ssid: 'Auto-Testing-Network', psk: 'automation_bot_pass'},
       {ssid: 'Voice-Isolation-Lab', psk: 'audio_lab_key_456'},
     ]).pipe(delay(1000));
+  }
+
+  override getBatchWifiContext(
+    deviceIds: string[],
+  ): Observable<GetBatchWifiContextResponse> {
+    const current: DeviceCurrentWifi[] = deviceIds.map((did, i) => {
+      let wifi = undefined;
+      if (i % 5 === 1 || i % 5 === 2) {
+        wifi = {
+          type: 'custom' as const,
+          ssid: 'lab-guest-5g',
+          psk: '',
+          scanSsid: false,
+        };
+      } else if (i % 5 === 3) {
+        wifi = {
+          type: 'custom' as const,
+          ssid: 'xiaomi-test-ap',
+          psk: '',
+          scanSsid: true,
+        };
+      } else if (i % 5 === 4) {
+        wifi = {
+          type: 'custom' as const,
+          ssid: 'test-net-2g',
+          psk: '',
+          scanSsid: false,
+        };
+      }
+
+      let writable = true;
+      let unwritableReason = '';
+      if (i % 7 === 1) {
+        writable = false;
+        unwritableReason =
+          'Managed by host shared config (update host config instead)';
+      } else if (i % 7 === 2) {
+        writable = false;
+        unwritableReason = 'Managed by Config Pusher';
+      } else if (i % 7 === 3) {
+        writable = false;
+        unwritableReason = 'No permission (not an authorized owner)';
+      }
+
+      return {
+        deviceId: did,
+        wifi,
+        writable,
+        unwritableReason,
+      };
+    });
+
+    const candidateWifis: CandidateWifi[] = [
+      {ssid: 'lab-guest-5g', scanSsid: false, deviceCount: 1240},
+      {ssid: 'xiaomi-test-ap', scanSsid: true, deviceCount: 450},
+      {ssid: 'test-net-2g', scanSsid: false, deviceCount: 310},
+      {ssid: 'lab-guest-2g', scanSsid: false, deviceCount: 180},
+      {ssid: 'ap-floor2', scanSsid: false, deviceCount: 95},
+    ];
+
+    return of({
+      current,
+      candidateWifis,
+    }).pipe(delay(500));
+  }
+
+  override batchUpdateDeviceConfig(
+    request: BatchUpdateDeviceConfigRequest,
+  ): Observable<BatchUpdateDeviceConfigResponse> {
+    const errors: Record<string, {code: string; message: string}> = {};
+    for (const did of request.deviceIds) {
+      if (did.includes('fail') || did.includes('error')) {
+        errors[did] = {
+          code: 'FAILED_PRECONDITION',
+          message: 'Device offline or unreachable',
+        };
+      }
+    }
+    return of({errors}).pipe(delay(800));
   }
 
   // ===== Host Config Methods =====
