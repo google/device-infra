@@ -2,7 +2,7 @@ import {Injectable} from '@angular/core';
 import {Observable, of, throwError} from 'rxjs';
 import {delay} from 'rxjs/operators';
 import {
-  CheckDeviceWritePermissionResult,
+  CheckDeviceConfigPermissionResult,
   ConfigSection,
   DeviceConfig,
   DeviceConfigUiStatus,
@@ -12,7 +12,7 @@ import {
   UpdateDeviceConfigResult,
 } from '../../models/device_config_models';
 import {
-  CheckHostWritePermissionResult,
+  CheckHostConfigPermissionResult,
   GetHostConfigResult,
   UnlockHostPropertiesResponse,
   UpdateHostConfigRequest,
@@ -152,10 +152,10 @@ export class FakeConfigService extends ConfigService {
     }).pipe(delay(1000));
   }
 
-  override checkDeviceWritePermission(
+  override checkDeviceConfigPermission(
     deviceId: string,
     universe?: string,
-  ): Observable<CheckDeviceWritePermissionResult> {
+  ): Observable<CheckDeviceConfigPermissionResult> {
     const scenario = this.mockDeviceScenarios.find((s) => s.id === deviceId);
 
     if (!scenario || !scenario.config) {
@@ -324,10 +324,10 @@ export class FakeConfigService extends ConfigService {
     return of(result).pipe(delay(1000));
   }
 
-  override checkHostWritePermission(
+  override checkHostConfigPermission(
     hostName: string,
     universe?: string,
-  ): Observable<CheckHostWritePermissionResult> {
+  ): Observable<CheckHostConfigPermissionResult> {
     const scenario = this.mockHostScenarios.find(
       (s) => s.hostName === hostName,
     );

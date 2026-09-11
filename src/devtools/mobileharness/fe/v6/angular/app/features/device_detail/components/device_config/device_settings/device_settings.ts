@@ -31,7 +31,7 @@ import {
   DEFAULT_DEVICE_CONFIG_UI_STATUS,
 } from '../../../../../core/constants/device_config_constants';
 import {
-  type CheckDeviceWritePermissionResult,
+  type CheckDeviceConfigPermissionResult,
   ConfigSection,
   type DeviceConfig,
   type DeviceConfigUiStatus,
@@ -404,7 +404,7 @@ export class DeviceSettings implements OnInit {
     );
   }
 
-  handlePermissionChange(result: CheckDeviceWritePermissionResult) {
+  handlePermissionChange(result: CheckDeviceConfigPermissionResult) {
     this.hasPermission.set(result.hasPermission);
   }
 

@@ -93,13 +93,13 @@ describe('HttpConfigService', () => {
     req.flush({recommendations: mockRecommendedWifi});
   });
 
-  it('should check device write permission via POST', () => {
+  it('should check device config permission via POST', () => {
     service
-      .checkDeviceWritePermission('test-device', 'test-universe')
+      .checkDeviceConfigPermission('test-device', 'test-universe')
       .subscribe();
 
     const req = httpMock.expectOne(
-      'http://testdomain.com/v6/devices/test-device/config:checkWritePermission',
+      'http://testdomain.com/v6/devices/test-device/config:checkConfigPermission',
     );
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({
@@ -109,11 +109,11 @@ describe('HttpConfigService', () => {
     req.flush({hasPermission: true});
   });
 
-  it('should check host write permission via POST', () => {
-    service.checkHostWritePermission('test-host', 'test-universe').subscribe();
+  it('should check host config permission via POST', () => {
+    service.checkHostConfigPermission('test-host', 'test-universe').subscribe();
 
     const req = httpMock.expectOne(
-      'http://testdomain.com/v6/hosts/test-host/config:checkWritePermission',
+      'http://testdomain.com/v6/hosts/test-host/config:checkConfigPermission',
     );
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({

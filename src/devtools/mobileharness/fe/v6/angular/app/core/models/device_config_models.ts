@@ -151,9 +151,9 @@ export declare interface GetDeviceConfigResult {
 }
 
 /**
- * The result object returned when checking device write permissions.
+ * The result object returned when checking device config permissions.
  */
-export declare interface CheckDeviceWritePermissionResult
+export declare interface CheckDeviceConfigPermissionResult
   extends WritePermissionResult {}
 
 /**

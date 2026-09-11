@@ -1,7 +1,7 @@
 import {InjectionToken} from '@angular/core';
 import {Observable} from 'rxjs';
 import {
-  CheckDeviceWritePermissionResult,
+  CheckDeviceConfigPermissionResult,
   DeviceConfig,
   GetDeviceConfigResult,
   RecommendedWifi,
@@ -9,7 +9,7 @@ import {
   UpdateDeviceConfigResult,
 } from '../../models/device_config_models';
 import {
-  CheckHostWritePermissionResult,
+  CheckHostConfigPermissionResult,
   GetHostConfigResult,
   UnlockHostPropertiesResponse,
   UpdateHostConfigRequest,
@@ -48,10 +48,10 @@ export abstract class ConfigService {
    * @param deviceId The unique identifier of the device.
    * @return An Observable emitting the permission check result.
    */
-  abstract checkDeviceWritePermission(
+  abstract checkDeviceConfigPermission(
     deviceId: string,
     universe?: string,
-  ): Observable<CheckDeviceWritePermissionResult>;
+  ): Observable<CheckDeviceConfigPermissionResult>;
 
   /**
    * Updates the configuration for a specific device.
@@ -93,10 +93,10 @@ export abstract class ConfigService {
    * @param hostName The name of the host.
    * @return An Observable emitting the permission check result.
    */
-  abstract checkHostWritePermission(
+  abstract checkHostConfigPermission(
     hostName: string,
     universe?: string,
-  ): Observable<CheckHostWritePermissionResult>;
+  ): Observable<CheckHostConfigPermissionResult>;
 
   /**
    * Updates the configuration for a specific host.
