@@ -37,6 +37,8 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
 
   private static final String TEST_ARG_DUT_NAME = "dut_name";
   private static final String TEST_ARG_NEEDS_PROVISION_REPAIR = "needs_provision_repair";
+  public static final String PARAM_IGNORE_DEVICE_PRE_RUN_ADB_CONNECT_FAILURE =
+      "ignore_device_pre_run_adb_connect_failure";
   private volatile String deviceIdOverride;
 
   private final AndroidDesktopDeviceHelper androidDesktopDeviceHelper;
@@ -111,6 +113,16 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
         adbInternalUtil.connect(deviceIdOverride);
       } catch (MobileHarnessException e) {
         testInfo.log().atWarning().alsoTo(logger).log("Failed to connect to %s", deviceIdOverride);
+        if (testInfo.jobInfo().params().isTrue(PARAM_IGNORE_DEVICE_PRE_RUN_ADB_CONNECT_FAILURE)) {
+          testInfo
+              .log()
+              .atInfo()
+              .alsoTo(logger)
+              .log(
+                  "Failed to connect to %s, but continuing because %s is set.",
+                  deviceIdOverride, PARAM_IGNORE_DEVICE_PRE_RUN_ADB_CONNECT_FAILURE);
+          return;
+        }
         testInfo.log().atWarning().log(
             "Failed to connect to %s. Setting device to needs_repair.", deviceIdOverride);
         try {
