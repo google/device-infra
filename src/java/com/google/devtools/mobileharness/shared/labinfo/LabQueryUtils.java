@@ -80,8 +80,11 @@ public class LabQueryUtils {
     LabQueryResult.Builder result =
         LabQueryResult.newBuilder().setTimestamp(TimeUtils.toProtoTimestamp(Instant.now()));
 
-    // Gets filtered lab/device info from device manager.
-    LabView rawLabView = labInfoProvider.getLabInfos(query.getFilter());
+    // Gets filtered lab/device info from device manager with projection push-down.
+    LabView rawLabView =
+        query.hasMask()
+            ? labInfoProvider.getLabInfos(query.getFilter(), query.getMask())
+            : labInfoProvider.getLabInfos(query.getFilter());
 
     // Sets lab view / device view, sorts all LabInfo/DeviceInfo in it.
     setViewAndSort(result, rawLabView, query);
@@ -89,8 +92,11 @@ public class LabQueryUtils {
     // Groups devices if necessary, handles device limit in group and group limit.
     groupDevice(result, query.getDeviceViewRequest());
 
-    // Removes fields and dimensions from all LabInfo/DeviceInfo if necessary.
-    applyMask(result, query.getMask());
+    // Removes fields and dimensions from all LabInfo/DeviceInfo if necessary (only when the
+    // provider did not already apply projection push-down).
+    if (!labInfoProvider.supportsProjectionPushDown()) {
+      applyMask(result, query.getMask());
+    }
 
     return result.build();
   }
@@ -142,7 +148,7 @@ public class LabQueryUtils {
    * Sorts the {@link DeviceInfo} list in a {@link LabData} by the given {@link
    * DeviceInfoComparator}.
    */
-  public static LabData sortDeviceListInLabData(
+  private static LabData sortDeviceListInLabData(
       LabData labData, DeviceInfoComparator deviceInfoComparator) {
     LabData.Builder result = labData.toBuilder();
     DeviceList.Builder deviceListBuilder = result.getDeviceListBuilder();
@@ -466,8 +472,8 @@ public class LabQueryUtils {
                 // Adds device group for each distinct dimension value, sorted by dimension name.
                 deviceInfoList.stream()
                     .flatMap(deviceInfo -> getDimensionValues(deviceInfo, dimensionName))
-                    .distinct()
                     .sorted()
+                    .distinct()
                     .map(
                         dimensionValue ->
                             immutableEntry(
