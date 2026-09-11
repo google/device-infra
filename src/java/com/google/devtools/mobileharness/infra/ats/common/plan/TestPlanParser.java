@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.common.plan;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -71,7 +72,7 @@ public class TestPlanParser {
 
   public TestPlanFilter parseFilters(Path xtsRootPath, String type, String rootTestPlan)
       throws MobileHarnessException {
-    if (rootTestPlan.equals("retry")) {
+    if (shouldSkipParsing(rootTestPlan)) {
       // Skip parsing the retry test plan since it is not a valid XML.
       return TestPlanFilter.create(
           ImmutableSet.of(),
@@ -90,6 +91,14 @@ public class TestPlanParser {
   @VisibleForTesting
   TestPlanFilter parseFilters(Path xtsTradefedJarPath, String rootTestPlan)
       throws MobileHarnessException {
+    if (shouldSkipParsing(rootTestPlan)) {
+      return TestPlanFilter.create(
+          ImmutableSet.of(),
+          ImmutableSet.of(),
+          ImmutableMultimap.of(),
+          ImmutableMultimap.of(),
+          ImmutableSet.of());
+    }
     Set<String> includeFilters = new HashSet<>();
     Set<String> excludeFilters = new HashSet<>();
     ListMultimap<String, String> metadataIncludeFilters = ArrayListMultimap.create();
@@ -233,6 +242,11 @@ public class TestPlanParser {
     if (classNode != null) {
       tests.add(classNode.getNodeValue());
     }
+  }
+
+  /** Returns {@code true} if XML filter parsing should be skipped for the given test plan. */
+  private static boolean shouldSkipParsing(String testPlan) {
+    return testPlan != null && Ascii.equalsIgnoreCase(testPlan, "retry");
   }
 
   /** A data class for all filters collected from the test plan. */
