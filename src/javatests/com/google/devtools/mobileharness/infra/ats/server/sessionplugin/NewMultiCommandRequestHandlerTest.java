@@ -193,10 +193,10 @@ public final class NewMultiCommandRequestHandlerTest {
                 .build());
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     when(xtsTypeLoader.getXtsType(eq(xtsRootDir), any())).thenReturn("cts");
-    doReturn(true).when(localFileUtil).isDirExist(endsWith("/android-cts/testcases"));
-    doReturn(ImmutableList.of(new File("some_testcase")))
+    doReturn(true).when(localFileUtil).isDirExist(endsWith("/tools"));
+    doReturn(ImmutableList.of(new File("some_tool")))
         .when(localFileUtil)
-        .listFiles(endsWith("/android-cts/testcases"), eq(false));
+        .listFiles(endsWith("/tools"), eq(false));
     commandInfo =
         CommandInfo.newBuilder()
             .setName("command")
@@ -406,10 +406,6 @@ public final class NewMultiCommandRequestHandlerTest {
             .build();
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/android-sts";
     when(xtsTypeLoader.getXtsType(eq(xtsRootDir), any())).thenReturn("sts");
-    doReturn(true).when(localFileUtil).isDirExist(endsWith("/android-sts/testcases"));
-    doReturn(ImmutableList.of(new File("some_testcase")))
-        .when(localFileUtil)
-        .listFiles(endsWith("/android-sts/testcases"), eq(false));
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
@@ -1297,6 +1293,235 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(createJobsResult.errorReason().get()).isEqualTo(ErrorReason.INVALID_REQUEST);
     assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
     assertThat(createJobsResult.errorMessage().get()).contains("COMMAND_NOT_AVAILABLE");
+  }
+
+  @Test
+  public void createTradefedJobs_chunkedTestcases_restoresTestcasesSuccessfully() throws Exception {
+    when(clock.instant())
+        .thenReturn(
+            Instant.ofEpochMilli(1000L), Instant.ofEpochMilli(2000L), Instant.ofEpochMilli(3000L));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    String chunkedZipUrl = "file:///path/to/xts/zip/android-chunked-cts.zip";
+    String chunkedZipName = "android-chunked-cts.zip";
+    request =
+        request.toBuilder()
+            .clearTestResources()
+            .addTestResources(
+                TestResource.newBuilder().setUrl(chunkedZipUrl).setName(chunkedZipName).build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///data/path/to/file1")
+                    .setName("test-name-1")
+                    .build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///data/path/to/file2")
+                    .setName("test-name-2")
+                    .build())
+            .build();
+
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/android-chunked-cts";
+    String chunkedTestcasesDir = xtsRootDir + "/android-cts/chunked-testcases";
+    String testcasesDir = xtsRootDir + "/android-cts/testcases";
+    String restorerPath = xtsRootDir + "/android-cts/tools/cts_restorer";
+
+    when(xtsTypeLoader.getXtsType(eq(xtsRootDir), any())).thenReturn("cts");
+    doReturn(true).when(localFileUtil).isDirExist(chunkedTestcasesDir);
+    doReturn(true).when(localFileUtil).isFileExist(restorerPath);
+    doNothing().when(localFileUtil).grantFileOrDirFullAccess(restorerPath);
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.RUNNING);
+
+    // Verify fuse-zip mount was attempted.
+    String zipFilePath = "/path/to/xts/zip/android-chunked-cts.zip";
+    Command mountCommand =
+        Command.of("fuse-zip", "-r", zipFilePath, xtsRootDir).timeout(Duration.ofMinutes(10));
+    verify(commandExecutor).run(mountCommand);
+
+    // Verify restorer was granted access and executed.
+    verify(localFileUtil).grantFileOrDirFullAccess(restorerPath);
+    Command restoreCommand =
+        Command.of(
+                restorerPath,
+                "--chunked-dir-path",
+                chunkedTestcasesDir,
+                "--output-dir-path",
+                testcasesDir)
+            .timeout(Duration.ofMinutes(10));
+    verify(commandExecutor).run(restoreCommand);
+  }
+
+  @Test
+  public void createTradefedJobs_chunkedTestcasesRestorationFailed_throwsError() throws Exception {
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    String chunkedZipUrl = "file:///path/to/xts/zip/android-chunked-cts.zip";
+    String chunkedZipName = "android-chunked-cts.zip";
+    request =
+        request.toBuilder()
+            .clearTestResources()
+            .addTestResources(
+                TestResource.newBuilder().setUrl(chunkedZipUrl).setName(chunkedZipName).build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///data/path/to/file1")
+                    .setName("test-name-1")
+                    .build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///data/path/to/file2")
+                    .setName("test-name-2")
+                    .build())
+            .build();
+
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/android-chunked-cts";
+    String chunkedTestcasesDir = xtsRootDir + "/android-cts/chunked-testcases";
+    String testcasesDir = xtsRootDir + "/android-cts/testcases";
+    String restorerPath = xtsRootDir + "/android-cts/tools/cts_restorer";
+
+    when(xtsTypeLoader.getXtsType(eq(xtsRootDir), any())).thenReturn("cts");
+    doReturn(true).when(localFileUtil).isDirExist(chunkedTestcasesDir);
+    doReturn(true).when(localFileUtil).isFileExist(restorerPath);
+    doNothing().when(localFileUtil).grantFileOrDirFullAccess(restorerPath);
+
+    Command restoreCommand =
+        Command.of(
+                restorerPath,
+                "--chunked-dir-path",
+                chunkedTestcasesDir,
+                "--output-dir-path",
+                testcasesDir)
+            .timeout(Duration.ofMinutes(10));
+    CommandException commandException = Mockito.mock(CommandException.class);
+    when(commandException.getMessage()).thenReturn("Restoration failed");
+    when(commandExecutor.run(restoreCommand)).thenThrow(commandException);
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).isEmpty();
+    assertThat(createJobsResult.errorReason().get()).isEqualTo(ErrorReason.INVALID_REQUEST);
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
+    assertThat(createJobsResult.errorMessage().get()).contains("Failed to restore xts testcases");
+  }
+
+  @Test
+  public void createTradefedJobs_chunkedTestcasesWithNonCtsXtsType_usesCtsRestorer()
+      throws Exception {
+    when(clock.instant())
+        .thenReturn(
+            Instant.ofEpochMilli(1000L), Instant.ofEpochMilli(2000L), Instant.ofEpochMilli(3000L));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    String chunkedZipUrl = "file:///path/to/xts/zip/android-chunked-mcts.zip";
+    String chunkedZipName = "android-chunked-mcts.zip";
+    request =
+        request.toBuilder()
+            .clearTestResources()
+            .addTestResources(
+                TestResource.newBuilder().setUrl(chunkedZipUrl).setName(chunkedZipName).build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///data/path/to/file1")
+                    .setName("test-name-1")
+                    .build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///data/path/to/file2")
+                    .setName("test-name-2")
+                    .build())
+            .build();
+
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/android-chunked-mcts";
+    String chunkedTestcasesDir = xtsRootDir + "/android-mcts/chunked-testcases";
+    String testcasesDir = xtsRootDir + "/android-mcts/testcases";
+    String restorerPath = xtsRootDir + "/android-mcts/tools/cts_restorer";
+
+    when(xtsTypeLoader.getXtsType(eq(xtsRootDir), any())).thenReturn("mcts");
+    doReturn(true).when(localFileUtil).isDirExist(chunkedTestcasesDir);
+    doReturn(true).when(localFileUtil).isFileExist(restorerPath);
+    doNothing().when(localFileUtil).grantFileOrDirFullAccess(restorerPath);
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.RUNNING);
+
+    // Verify cts_restorer was granted access and executed.
+    verify(localFileUtil).grantFileOrDirFullAccess(restorerPath);
+    Command restoreCommand =
+        Command.of(
+                restorerPath,
+                "--chunked-dir-path",
+                chunkedTestcasesDir,
+                "--output-dir-path",
+                testcasesDir)
+            .timeout(Duration.ofMinutes(10));
+    verify(commandExecutor).run(restoreCommand);
+  }
+
+  @Test
+  public void createTradefedJobs_chunkedTestcasesNoRestorer_skipsRestoration() throws Exception {
+    when(clock.instant())
+        .thenReturn(
+            Instant.ofEpochMilli(1000L), Instant.ofEpochMilli(2000L), Instant.ofEpochMilli(3000L));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    String chunkedZipUrl = "file:///path/to/xts/zip/android-chunked-cts.zip";
+    String chunkedZipName = "android-chunked-cts.zip";
+    request =
+        request.toBuilder()
+            .clearTestResources()
+            .addTestResources(
+                TestResource.newBuilder().setUrl(chunkedZipUrl).setName(chunkedZipName).build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///data/path/to/file1")
+                    .setName("test-name-1")
+                    .build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///data/path/to/file2")
+                    .setName("test-name-2")
+                    .build())
+            .build();
+
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/android-chunked-cts";
+    String chunkedTestcasesDir = xtsRootDir + "/android-cts/chunked-testcases";
+    String testcasesDir = xtsRootDir + "/android-cts/testcases";
+    String restorerPath = xtsRootDir + "/android-cts/tools/cts_restorer";
+
+    when(xtsTypeLoader.getXtsType(eq(xtsRootDir), any())).thenReturn("cts");
+    doReturn(true).when(localFileUtil).isDirExist(chunkedTestcasesDir);
+    doReturn(false).when(localFileUtil).isFileExist(restorerPath);
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.RUNNING);
+
+    // Verify restorer was NOT executed.
+    verify(localFileUtil, never()).grantFileOrDirFullAccess(restorerPath);
+    Command restoreCommand =
+        Command.of(
+                restorerPath,
+                "--chunked-dir-path",
+                chunkedTestcasesDir,
+                "--output-dir-path",
+                testcasesDir)
+            .timeout(Duration.ofMinutes(10));
+    verify(commandExecutor, never()).run(restoreCommand);
   }
 
   @Test

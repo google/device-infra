@@ -150,7 +150,7 @@ final class NewMultiCommandRequestHandler {
 
   @VisibleForTesting static final String OUTPUT_MANIFEST_FILE_NAME = "FILES";
   private static final Pattern ANDROID_XTS_ZIP_FILENAME_REGEX =
-      Pattern.compile("android-[a-z]+\\.zip_?");
+      Pattern.compile("android-[a-z-]+\\.zip_?");
   private static final String ACLOUD_FILENAME = "acloud_prebuilt";
 
   private static final String ATS_GOOGLE_CLOUD_STORAGE_PREFIX = "mtt:///google_cloud_storage/";
@@ -840,6 +840,7 @@ final class NewMultiCommandRequestHandler {
     if (mountedXtsRootDir.isEmpty()) {
       localFileUtil.prepareDir(xtsRootDir);
       mountOrUnzipXtsZip(androidXtsZipPath, xtsRootDir, androidXtsZipPassword);
+      restoreTestcases(xtsRootDir, getXtsType(xtsRootDir, androidXtsZipPath));
       mountedXtsRootDir = xtsRootDir;
     }
     String xtsType = getXtsType(xtsRootDir, androidXtsZipPath);
@@ -1626,6 +1627,45 @@ final class NewMultiCommandRequestHandler {
     }
   }
 
+  private void restoreTestcases(String xtsRootDir, String xtsType)
+      throws MobileHarnessException, InterruptedException {
+    String restorerPath = PathUtil.join(xtsRootDir, "android-" + xtsType, "tools", "cts_restorer");
+    String chunkedTestcasesDir =
+        PathUtil.join(xtsRootDir, "android-" + xtsType, "chunked-testcases");
+    String testcasesDir = PathUtil.join(xtsRootDir, "android-" + xtsType, "testcases");
+
+    if (!localFileUtil.isFileExist(restorerPath)
+        || !localFileUtil.isDirExist(chunkedTestcasesDir)) {
+      return;
+    }
+
+    localFileUtil.grantFileOrDirFullAccess(restorerPath);
+    Command command =
+        Command.of(
+                restorerPath,
+                "--chunked-dir-path",
+                chunkedTestcasesDir,
+                "--output-dir-path",
+                testcasesDir)
+            .timeout(SLOW_CMD_TIMEOUT);
+    logger.atInfo().log(
+        "Restoring xts testcases from %s to %s using %s",
+        chunkedTestcasesDir, testcasesDir, restorerPath);
+    try {
+      commandExecutor.run(command);
+    } catch (MobileHarnessException e) {
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR,
+          String.format(
+              "Failed to restore xts testcases using %s: %s. Aborting execution to prevent running"
+                  + " with incomplete testcases. Please download and use a non-chunked"
+                  + " android-%s.zip for testing.",
+              restorerPath, e.getMessage(), xtsType),
+          e);
+    }
+    logger.atInfo().log("Successfully restored xts testcases to %s", testcasesDir);
+  }
+
   /**
    * Set command error and log the stack trace.
    *
@@ -1660,20 +1700,19 @@ final class NewMultiCommandRequestHandler {
       return false;
     }
     try {
-      String testcasesDir = PathUtil.join(xtsRootDir, "android-" + xtsType, "testcases");
-      if (!localFileUtil.isDirExist(testcasesDir)) {
+      String toolsDir = PathUtil.join(xtsRootDir, "android-" + xtsType, "tools");
+      if (!localFileUtil.isDirExist(toolsDir)) {
         logger.atWarning().log(
-            "Testcases dir %s in mounted XTS root directory does not exist.", testcasesDir);
+            "Tools dir %s in mounted XTS root directory does not exist.", toolsDir);
         return false;
       }
-      if (localFileUtil.listFiles(testcasesDir, false).isEmpty()) {
-        logger.atWarning().log(
-            "Testcases dir %s in mounted XTS root directory is empty.", testcasesDir);
+      if (localFileUtil.listFiles(toolsDir, false).isEmpty()) {
+        logger.atWarning().log("Tools dir %s in mounted XTS root directory is empty.", toolsDir);
         return false;
       }
       return true;
     } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log("Failed to check testcases dir for %s.", xtsRootDir);
+      logger.atWarning().withCause(e).log("Failed to check tools dir for %s.", xtsRootDir);
       return false;
     }
   }
