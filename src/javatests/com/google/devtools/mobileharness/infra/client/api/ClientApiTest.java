@@ -23,6 +23,7 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutur
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaInstant;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
 import static com.google.devtools.mobileharness.shared.util.truth.Correspondences.containsAll;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
@@ -48,6 +49,7 @@ import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.Mess
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDriverStartingEvent;
+import com.google.devtools.mobileharness.api.testrunner.event.test.TestEndedEvent;
 import com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalModeRule;
@@ -62,7 +64,6 @@ import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.junit.rule.CaptureLogs;
 import com.google.devtools.mobileharness.shared.util.junit.rule.PrintTestName;
-import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Provides;
@@ -83,6 +84,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import javax.inject.Inject;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -110,6 +112,7 @@ public class ClientApiTest {
   private final List<MessageReception> receivingMessageReceptions = new ArrayList<>();
   private final SettableFuture<ImmutableList<MessageReception>> messageReceptions =
       SettableFuture.create();
+  private final SettableFuture<TestEndedEvent> testEnded = SettableFuture.create();
 
   @Before
   public void setUp() {
@@ -137,6 +140,11 @@ public class ClientApiTest {
               }
             })
         .injectMembers(this);
+  }
+
+  @After
+  public void tearDown() {
+    scheduledThreadPool.shutdownNow();
   }
 
   @Test
@@ -215,7 +223,7 @@ public class ClientApiTest {
     clientApi.startJob(jobInfo, localModeRule.getLocalMode(), ImmutableList.of(this));
 
     clientApi.waitForJob(jobInfo.locator().getId());
-    Sleeper.defaultSleeper().sleep(Duration.ofSeconds(2L));
+    testEnded.get(10L, SECONDS);
 
     TestInfo testInfo = jobInfo.tests().getOnly();
     assertThat(testInfo.log().get(0)).contains("Interrupted from sleep");
@@ -227,6 +235,7 @@ public class ClientApiTest {
 
     clientApi.startJob(jobInfo, localModeRule.getLocalMode(), ImmutableList.of(this));
     clientApi.waitForJob(jobInfo.locator().getId());
+    testEnded.get(10L, SECONDS);
 
     Timestamp expectedResult = toProtoTimestamp(Instant.ofEpochSecond(246L));
     MessageSubscriberInfo messageSubscriberInfo =
@@ -292,6 +301,11 @@ public class ClientApiTest {
           Level.WARNING,
           "Error when killing job");
     }
+  }
+
+  @Subscribe
+  private void onTestEnded(TestEndedEvent event) {
+    testEnded.set(event);
   }
 
   @SubscribeMessage
