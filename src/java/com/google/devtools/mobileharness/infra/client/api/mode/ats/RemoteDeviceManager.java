@@ -62,6 +62,8 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.LabInfoMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
@@ -85,6 +87,8 @@ import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimens
 import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager.DeviceTempRequiredDimensions;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.util.comm.server.GrpcContexts;
+import com.google.devtools.mobileharness.shared.util.filter.CompiledDeviceInfoMask;
+import com.google.devtools.mobileharness.shared.util.filter.MaskUtils;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.VersionUtil;
@@ -237,6 +241,13 @@ class RemoteDeviceManager implements LabInfoProvider {
 
   @Override
   public LabQueryResult.LabView getLabInfos(Filter filter) {
+    return getLabInfos(filter, Mask.getDefaultInstance());
+  }
+
+  @Override
+  public LabQueryResult.LabView getLabInfos(Filter filter, Mask mask) {
+    CompiledDeviceInfoMask deviceMask = CompiledDeviceInfoMask.of(mask.getDeviceInfoMask());
+    LabInfoMask labInfoMask = mask.getLabInfoMask();
     ImmutableMap<LabKey, LabQueryProto.LabData.Builder> filteredLabs;
     Instant timestamp = instantSource.instant();
     synchronized (lock) {
@@ -257,26 +268,35 @@ class RemoteDeviceManager implements LabInfoProvider {
       for (DeviceData deviceData : devices.values()) {
         LabQueryProto.LabData.Builder labBuilder = filteredLabs.get(deviceData.deviceKey.labKey());
         if (labBuilder != null && devicePredicate.test(deviceData)) {
-          labBuilder
-              .getDeviceListBuilder()
-              .addDeviceInfo(deviceData.toLabQueryDeviceInfo(deviceTempRequiredDimensionManager));
+          if (deviceMask.keepsDeviceInfo()) {
+            labBuilder
+                .getDeviceListBuilder()
+                .addDeviceInfo(
+                    deviceData.toLabQueryDeviceInfo(
+                        deviceTempRequiredDimensionManager, deviceMask));
+          } else {
+            DeviceList.Builder deviceList = labBuilder.getDeviceListBuilder();
+            deviceList.setDeviceTotalCount(deviceList.getDeviceTotalCount() + 1);
+          }
         }
       }
     }
-    // Adds OLC host name and GitHub version to lab server feature of each lab.
-    additionalHostProperties.forEach(
-        hostProperty ->
-            logger.atInfo().log(
-                "Adding additional host property:  %s", shortDebugString(hostProperty)));
-    filteredLabs
-        .values()
-        .forEach(
-            labBuilder ->
-                labBuilder
-                    .getLabInfoBuilder()
-                    .getLabServerFeatureBuilder()
-                    .getHostPropertiesBuilder()
-                    .addAllHostProperty(additionalHostProperties));
+    // Adds OLC host name and GitHub version to lab server feature of each lab if requested.
+    if (!additionalHostProperties.isEmpty()) {
+      additionalHostProperties.forEach(
+          hostProperty ->
+              logger.atInfo().log(
+                  "Adding additional host property:  %s", shortDebugString(hostProperty)));
+      filteredLabs
+          .values()
+          .forEach(
+              labBuilder ->
+                  labBuilder
+                      .getLabInfoBuilder()
+                      .getLabServerFeatureBuilder()
+                      .getHostPropertiesBuilder()
+                      .addAllHostProperty(additionalHostProperties));
+    }
     Duration queryTime = Duration.between(timestamp, instantSource.instant());
     logger.atInfo().log(
         "Get lab info, filter=[%s], time_used=%s", shortDebugString(filter), queryTime);
@@ -289,7 +309,16 @@ class RemoteDeviceManager implements LabInfoProvider {
                 .map(
                     labBuilder -> {
                       DeviceList.Builder deviceList = labBuilder.getDeviceListBuilder();
-                      deviceList.setDeviceTotalCount(deviceList.getDeviceInfoCount());
+                      if (deviceMask.keepsDeviceInfo()) {
+                        deviceList.setDeviceTotalCount(deviceList.getDeviceInfoCount());
+                      }
+                      Optional<LabInfo> trimmedLabInfo =
+                          MaskUtils.trimLabInfo(labInfoMask, labBuilder.getLabInfo());
+                      if (trimmedLabInfo.isPresent()) {
+                        labBuilder.setLabInfo(trimmedLabInfo.get());
+                      } else {
+                        labBuilder.clearLabInfo();
+                      }
                       return labBuilder.build();
                     })
                 .collect(toImmutableList()))
@@ -607,20 +636,18 @@ class RemoteDeviceManager implements LabInfoProvider {
   @GuardedBy("lock")
   private void updateScheduler(DeviceData deviceData) {
     switch (deviceData.statusFromLab) {
-      case IDLE:
-        // Adds device to scheduler if it is IDLE.
-        scheduler.upsertDevice(
-            deviceData.getDataFromLabWithTempRequiredDimensions(deviceTempRequiredDimensionManager),
-            new LabScheduleUnit(deviceData.dataFromLab.locator().labLocator()));
-        break;
-      case BUSY:
-        // Does nothing if it is BUSY.
-        break;
-      default:
-        // Removes device from scheduler if it is not IDLE or BUSY.
-        scheduler.unallocate(
-            deviceData.dataFromLab.locator(), /* removeDevices= */ true, /* closeTest= */ true);
-        break;
+      case IDLE ->
+          // Adds device to scheduler if it is IDLE.
+          scheduler.upsertDevice(
+              deviceData.getDataFromLabWithTempRequiredDimensions(
+                  deviceTempRequiredDimensionManager),
+              new LabScheduleUnit(deviceData.dataFromLab.locator().labLocator()));
+      case BUSY -> {}
+      // Does nothing if it is BUSY.
+      default ->
+          // Removes device from scheduler if it is not IDLE or BUSY.
+          scheduler.unallocate(
+              deviceData.dataFromLab.locator(), /* removeDevices= */ true, /* closeTest= */ true);
     }
   }
 
@@ -834,12 +861,17 @@ class RemoteDeviceManager implements LabInfoProvider {
     }
 
     private LabInfo createLabInfo() {
-      return LabInfo.newBuilder()
-          .setLabLocator(labLocator.toProto())
-          .setLabServerSetting(labServerSetting)
-          .setLabServerFeature(labServerFeature)
-          .setLabStatus(labStatus)
-          .build();
+      LabInfo.Builder builder = LabInfo.newBuilder().setLabLocator(labLocator.toProto());
+      if (labServerSetting != null) {
+        builder.setLabServerSetting(labServerSetting);
+      }
+      if (labServerFeature != null) {
+        builder.setLabServerFeature(labServerFeature);
+      }
+      if (labStatus != null) {
+        builder.setLabStatus(labStatus);
+      }
+      return builder.build();
     }
 
     private LabRecordManager.LabRecordData createLabRecordData() {
@@ -1038,32 +1070,35 @@ class RemoteDeviceManager implements LabInfoProvider {
     }
 
     private LabQueryProto.DeviceInfo toLabQueryDeviceInfo(
-        DeviceTempRequiredDimensionManager manager) {
+        DeviceTempRequiredDimensionManager manager, CompiledDeviceInfoMask mask) {
       LabQueryProto.DeviceInfo.Builder builder =
           LabQueryProto.DeviceInfo.newBuilder()
               .setDeviceLocator(dataFromLab.locator().toProto())
-              .setDeviceStatus(statusFromLab)
-              .setDeviceFeature(getDataFromLabWithTempRequiredDimensions(manager).toFeature());
-
-      manager
-          .getDimensions(dtrdmDeviceKey)
-          .ifPresent(
-              dimensions -> {
-                DeviceCondition.Builder conditionBuilder = DeviceCondition.newBuilder();
-                dimensions
-                    .dimensions()
-                    .forEach(
-                        (name, value) ->
-                            conditionBuilder.addTempDimension(
-                                TempDimension.newBuilder()
-                                    .setDimension(
-                                        DeviceDimension.newBuilder().setName(name).setValue(value))
-                                    .setExpireTimestampMs(dimensions.expireTime().toEpochMilli())
-                                    .setRequired(true)));
-                builder.setDeviceCondition(conditionBuilder.build());
-              });
-
-      return builder.build();
+              .setDeviceStatus(statusFromLab);
+      if (mask.keepsDeviceCondition()) {
+        Optional<DeviceTempRequiredDimensions> dimensions = manager.getDimensions(dtrdmDeviceKey);
+        if (dimensions.isPresent()) {
+          DeviceCondition.Builder conditionBuilder = DeviceCondition.newBuilder();
+          dimensions
+              .get()
+              .dimensions()
+              .forEach(
+                  (name, value) ->
+                      conditionBuilder.addTempDimension(
+                          TempDimension.newBuilder()
+                              .setDimension(
+                                  DeviceDimension.newBuilder().setName(name).setValue(value))
+                              .setExpireTimestampMs(dimensions.get().expireTime().toEpochMilli())
+                              .setRequired(true)));
+          builder.setDeviceCondition(conditionBuilder.build());
+        }
+      }
+      if (mask.keepsDeviceFeature()) {
+        builder.setDeviceFeature(
+            mask.projectDeviceFeature(
+                getDataFromLabWithTempRequiredDimensions(manager).toFeature()));
+      }
+      return mask.trimFields(builder.build());
     }
 
     private DeviceQuery.DeviceInfo toDeviceQueryDeviceInfo(
@@ -1130,22 +1165,20 @@ class RemoteDeviceManager implements LabInfoProvider {
     }
 
     private static Predicate<LabData> createLabMatcher(LabMatchCondition labMatchCondition) {
-      switch (labMatchCondition.getConditionCase()) {
-        case LAB_HOST_NAME_MATCH_CONDITION:
-          return createStringMatcher(
-              labMatchCondition.getLabHostNameMatchCondition().getCondition(),
-              labData -> labData.labLocator.hostName());
-        case PROPERTY_MATCH_CONDITION:
-          return createStringMultimapMatcher(
-              labMatchCondition.getPropertyMatchCondition().getCondition(),
-              labData ->
-                  labData.labServerFeature.getHostProperties().getHostPropertyList().stream()
-                      .collect(
-                          toImmutableListMultimap(HostProperty::getKey, HostProperty::getValue)));
-        case CONDITION_NOT_SET:
-          break;
-      }
-      return labData -> true;
+      return switch (labMatchCondition.getConditionCase()) {
+        case LAB_HOST_NAME_MATCH_CONDITION ->
+            createStringMatcher(
+                labMatchCondition.getLabHostNameMatchCondition().getCondition(),
+                labData -> labData.labLocator.hostName());
+        case PROPERTY_MATCH_CONDITION ->
+            createStringMultimapMatcher(
+                labMatchCondition.getPropertyMatchCondition().getCondition(),
+                labData ->
+                    labData.labServerFeature.getHostProperties().getHostPropertyList().stream()
+                        .collect(
+                            toImmutableListMultimap(HostProperty::getKey, HostProperty::getValue)));
+        case CONDITION_NOT_SET -> labData -> true;
+      };
     }
   }
 

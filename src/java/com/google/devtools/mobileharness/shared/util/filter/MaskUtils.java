@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInf
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.GroupedDevices;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.LabInfoMask;
@@ -36,11 +37,52 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.protobuf.FieldMask;
 import java.util.List;
+import java.util.Optional;
 
 /** Utility class to trim the {@link LabQueryResult} based on the {@link Mask}. */
 public final class MaskUtils {
 
   private MaskUtils() {}
+
+  /**
+   * Whether {@code path} is touched by {@code fieldMask}: the path is listed, an ancestor of it is
+   * listed (so it is fully covered), or a descendant of it is listed (so it is partially needed).
+   * An empty field mask touches nothing.
+   *
+   * <p>Compiled masks use this to decide, once per query, whether the few fields worth avoiding at
+   * build time (an expensive subtree or a value-whitelisted list) are requested. Cheap fields are
+   * built unconditionally and removed by {@link #trimLabQueryResult}.
+   */
+  public static boolean isFieldRequested(FieldMask fieldMask, String path) {
+    for (String candidate : fieldMask.getPathsList()) {
+      if (candidate.equals(path)
+          || path.startsWith(candidate + ".")
+          || candidate.startsWith(path + ".")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Trims a fully built {@link LabInfo} to the lab field mask, per record. Returns empty when the
+   * field mask is present but empty (the LabInfo is dropped), and the unchanged {@code labInfo}
+   * when no field mask is set.
+   */
+  public static Optional<LabInfo> trimLabInfo(LabInfoMask labInfoMask, LabInfo labInfo) {
+    if (!labInfoMask.hasFieldMask()) {
+      return Optional.of(labInfo);
+    }
+    if (labInfoMask.getFieldMask().getPathsCount() == 0) {
+      return Optional.empty();
+    }
+    return Optional.of(trim(labInfoMask.getFieldMask(), labInfo));
+  }
+
+  /** Whether LabInfo is retained; a present but empty field mask drops it. */
+  public static boolean keepsLabInfo(LabInfoMask labInfoMask) {
+    return !labInfoMask.hasFieldMask() || labInfoMask.getFieldMask().getPathsCount() > 0;
+  }
 
   /**
    * Trims the {@link LabQueryResult} based on the {@link Mask}.
@@ -117,12 +159,13 @@ public final class MaskUtils {
   }
 
   private static DeviceList trimDeviceList(DeviceList deviceList, DeviceInfoMask deviceInfoMask) {
-    if (!deviceInfoMask.hasFieldMask()) {
+    if (!deviceInfoMask.hasFieldMask()
+        && !deviceInfoMask.hasSupportedDimensionsMask()
+        && !deviceInfoMask.hasRequiredDimensionsMask()) {
       return deviceList;
     }
 
-    FieldMask fieldMask = deviceInfoMask.getFieldMask();
-    if (fieldMask.getPathsList().isEmpty()) {
+    if (deviceInfoMask.hasFieldMask() && deviceInfoMask.getFieldMask().getPathsList().isEmpty()) {
       return DeviceList.newBuilder().setDeviceTotalCount(deviceList.getDeviceTotalCount()).build();
     }
     List<DeviceInfo> deviceInfos = deviceList.getDeviceInfoList();
@@ -163,11 +206,6 @@ public final class MaskUtils {
   }
 
   private static DeviceInfo trimDeviceInfo(DeviceInfo deviceInfo, DeviceInfoMask deviceInfoMask) {
-    FieldMask fieldMask = deviceInfoMask.getFieldMask();
-    if (fieldMask.getPathsList().isEmpty()) {
-      return deviceInfo;
-    }
-
     DeviceInfo.Builder deviceInfoBuilder = deviceInfo.toBuilder();
     if (deviceInfoMask.hasSupportedDimensionsMask()) {
       deviceInfoBuilder
@@ -190,6 +228,13 @@ public final class MaskUtils {
                   deviceInfoMask.getRequiredDimensionsMask().getDimensionNamesList()));
     }
 
+    if (!deviceInfoMask.hasFieldMask()) {
+      return deviceInfoBuilder.build();
+    }
+    FieldMask fieldMask = deviceInfoMask.getFieldMask();
+    if (fieldMask.getPathsList().isEmpty()) {
+      return deviceInfoBuilder.build();
+    }
     return trim(fieldMask, deviceInfoBuilder.build());
   }
 
