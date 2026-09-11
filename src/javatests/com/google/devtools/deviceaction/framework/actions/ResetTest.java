@@ -129,19 +129,16 @@ public final class ResetTest {
 
     reset.perform();
     switch (option) {
-      case TEST_HARNESS:
-        verify(mockDevice, times(2)).enableTestharness();
-        break;
-      case OTA_SIDELOAD:
+      case TEST_HARNESS -> verify(mockDevice, times(2)).enableTestharness();
+      case OTA_SIDELOAD -> {
         verify(mockSideloader).sideload(eq(otaFile), any(Duration.class), anyBoolean());
         verify(mockDevice).enableTestharness();
-        break;
-      case FASTBOOT_WITH_PARTITION_IMAGES:
+      }
+      case FASTBOOT_WITH_PARTITION_IMAGES -> {
         verify(mockFlasher).flashDevice(eq(imageZipFile), eq("flash-all.sh"), any(Duration.class));
         verify(mockDevice).enableTestharness();
-        break;
-      default:
-        break;
+      }
+      default -> {}
     }
     if (needPreloadModulesRecovery) {
       verify(mockPusher)

@@ -349,21 +349,18 @@ public final class InstallMainlineTest {
     List<AndroidPackage> androidPackages = new ArrayList<>(collectionArgumentCaptor.getValue());
     assertThat(androidPackages).hasSize(2);
     switch (type) {
-      case PACKAGE_FILE:
-        assertThat(androidPackages.stream().flatMap(ap -> ap.files().stream()))
-            .containsExactly(apexFile, apkFile);
-        break;
-      case SPLIT_FOLDER:
-        assertThat(androidPackages.stream().flatMap(ap -> ap.files().stream()))
-            .containsExactly(apexExtractFile, apkExtractFile1, apkExtractFile2);
-        break;
-      default:
-        assertThat(androidPackages)
-            .comparingElementsUsing(
-                Correspondence.<AndroidPackage, File>transforming(
-                    ap -> ap.apksFile().orElseThrow(), "has apks file"))
-            .containsExactly(apexApksFile, apkApksFile);
-        break;
+      case PACKAGE_FILE ->
+          assertThat(androidPackages.stream().flatMap(ap -> ap.files().stream()))
+              .containsExactly(apexFile, apkFile);
+      case SPLIT_FOLDER ->
+          assertThat(androidPackages.stream().flatMap(ap -> ap.files().stream()))
+              .containsExactly(apexExtractFile, apkExtractFile1, apkExtractFile2);
+      default ->
+          assertThat(androidPackages)
+              .comparingElementsUsing(
+                  Correspondence.<AndroidPackage, File>transforming(
+                      ap -> ap.apksFile().orElseThrow(), "has apks file"))
+              .containsExactly(apexApksFile, apkApksFile);
     }
     if (devKey) {
       verify(mockPusher).pushModules(mapArgumentCaptor.capture(), eq(softRebootAfterPush));
@@ -489,20 +486,11 @@ public final class InstallMainlineTest {
             .build();
     ImmutableMultimap.Builder<String, File> filesBuilder = ImmutableMultimap.builder();
     switch (moduleType) {
-      case ZIP:
-        filesBuilder.putAll("apks_zips", trainZip1, trainZip2);
-        break;
-      case APKS:
-        filesBuilder.put("train_folder", apksFolder);
-        break;
-      case PACKAGE_FILE:
-        filesBuilder.putAll("mainline_modules", apexFile, apkFile);
-        break;
-      case SPLIT_FOLDER:
-        filesBuilder.putAll("train_folder", splitFolder);
-        break;
-      default:
-        break;
+      case ZIP -> filesBuilder.putAll("apks_zips", trainZip1, trainZip2);
+      case APKS -> filesBuilder.put("train_folder", apksFolder);
+      case PACKAGE_FILE -> filesBuilder.putAll("mainline_modules", apexFile, apkFile);
+      case SPLIT_FOLDER -> filesBuilder.putAll("train_folder", splitFolder);
+      default -> {}
     }
     setUpAction(spec, filesBuilder.build());
   }

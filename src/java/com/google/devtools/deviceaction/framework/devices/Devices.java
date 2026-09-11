@@ -65,7 +65,7 @@ public class Devices {
 
   public String getDeviceKey(Operand operand) throws DeviceActionException, InterruptedException {
     switch (operand.getDeviceType()) {
-      case ANDROID_PHONE:
+      case ANDROID_PHONE -> {
         try {
           String brand = androidAdbUtil.getProperty(operand.getUuid(), AndroidProperty.BRAND);
           String model = androidAdbUtil.getProperty(operand.getUuid(), AndroidProperty.MODEL);
@@ -83,11 +83,12 @@ public class Devices {
         } catch (MobileHarnessException e) {
           throw new DeviceActionException(e, "Failed to get property");
         }
-      default:
-        throw new DeviceActionException(
-            "ILLEGAL_DEVICE_TYPE",
-            ErrorType.CUSTOMER_ISSUE,
-            "Device key method not implemented for device type " + operand.getDeviceType());
+      }
+      default ->
+          throw new DeviceActionException(
+              "ILLEGAL_DEVICE_TYPE",
+              ErrorType.CUSTOMER_ISSUE,
+              "Device key method not implemented for device type " + operand.getDeviceType());
     }
   }
 
