@@ -383,27 +383,14 @@ class ListDevicesCommandHandler {
     boolean androidRecoveryDevice = false;
     for (String deviceType : deviceTypes) {
       switch (deviceType) {
-        case "AndroidLocalEmulator":
-        case AndroidRealDeviceConstants.ANDROID_ONLINE_DEVICE:
-          androidOnlineDevice = true;
-          break;
-        case AndroidRealDeviceConstants.ANDROID_FASTBOOT_DEVICE:
-          androidFastbootDevice = true;
-          break;
-        case AndroidRealDeviceConstants.ANDROID_FLASHABLE_DEVICE:
-          androidFlashableDevice = true;
-          break;
-        case "AndroidOfflineDevice":
-          androidOfflineDevice = true;
-          break;
-        case "AndroidUnauthorizedDevice":
-          androidUnauthorizedDevice = true;
-          break;
-        case AndroidRealDeviceConstants.ANDROID_RECOVERY_DEVICE:
-          androidRecoveryDevice = true;
-          break;
-        default:
-          break;
+        case "AndroidLocalEmulator", AndroidRealDeviceConstants.ANDROID_ONLINE_DEVICE ->
+            androidOnlineDevice = true;
+        case AndroidRealDeviceConstants.ANDROID_FASTBOOT_DEVICE -> androidFastbootDevice = true;
+        case AndroidRealDeviceConstants.ANDROID_FLASHABLE_DEVICE -> androidFlashableDevice = true;
+        case "AndroidOfflineDevice" -> androidOfflineDevice = true;
+        case "AndroidUnauthorizedDevice" -> androidUnauthorizedDevice = true;
+        case AndroidRealDeviceConstants.ANDROID_RECOVERY_DEVICE -> androidRecoveryDevice = true;
+        default -> {}
       }
     }
     if (androidOnlineDevice) {
@@ -429,15 +416,10 @@ class ListDevicesCommandHandler {
     boolean androidFastbootDevice = false;
     for (String deviceType : deviceTypes) {
       switch (deviceType) {
-        case "AndroidLocalEmulator":
-        case AndroidRealDeviceConstants.ANDROID_ONLINE_DEVICE:
-          androidOnlineDevice = true;
-          break;
-        case AndroidRealDeviceConstants.ANDROID_FASTBOOT_DEVICE:
-          androidFastbootDevice = true;
-          break;
-        default:
-          break;
+        case "AndroidLocalEmulator", AndroidRealDeviceConstants.ANDROID_ONLINE_DEVICE ->
+            androidOnlineDevice = true;
+        case AndroidRealDeviceConstants.ANDROID_FASTBOOT_DEVICE -> androidFastbootDevice = true;
+        default -> {}
       }
     }
     if (androidOnlineDevice) {
@@ -453,19 +435,13 @@ class ListDevicesCommandHandler {
     Optional<DeviceStatus> statusEnum =
         Enums.getIfPresent(DeviceStatus.class, toUpperCase(deviceStatus)).toJavaUtil();
     if (statusEnum.isPresent()) {
-      switch (statusEnum.get()) {
-        case IDLE:
-          return "Available";
-        case BUSY:
-          return "Allocated";
-        case INIT:
-        case PREPPING:
-        case DYING:
-          return "Checking_Availability";
-        case LAMEDUCK:
-          return "Unavailable";
-        default:
-      }
+      return switch (statusEnum.get()) {
+        case IDLE -> "Available";
+        case BUSY -> "Allocated";
+        case INIT, PREPPING, DYING -> "Checking_Availability";
+        case LAMEDUCK -> "Unavailable";
+        default -> CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, deviceStatus);
+      };
     }
     return CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, deviceStatus);
   }

@@ -68,32 +68,23 @@ public class DeviceFilter {
     filterTypes.forEach(
         diagnosticFilter -> {
           switch (diagnosticFilter) {
-            case ACCESS:
-              filter.addOwnerRegex("public|" + job.jobUser().getRunAs());
-              break;
-            case DECORATOR:
-              filter.addAllDecoratorRegex(subDeviceSpec.decorators().getAll());
-              break;
-            case DIMENSION:
-              subDeviceSpec
-                  .dimensions()
-                  .getAll()
-                  .forEach(
-                      (name, value) ->
-                          convertForDeviceQueryApi(value)
-                              .ifPresent(
-                                  valueRegex ->
-                                      filter.addDimensionFilter(
-                                          DimensionFilter.newBuilder()
-                                              .setName(name)
-                                              .setValueRegex(valueRegex))));
-              break;
-            case DRIVER:
-              filter.addDriverRegex(job.type().getDriver());
-              break;
-            case STATUS:
-              filter.addStatus("idle");
-              break;
+            case ACCESS -> filter.addOwnerRegex("public|" + job.jobUser().getRunAs());
+            case DECORATOR -> filter.addAllDecoratorRegex(subDeviceSpec.decorators().getAll());
+            case DIMENSION ->
+                subDeviceSpec
+                    .dimensions()
+                    .getAll()
+                    .forEach(
+                        (name, value) ->
+                            convertForDeviceQueryApi(value)
+                                .ifPresent(
+                                    valueRegex ->
+                                        filter.addDimensionFilter(
+                                            DimensionFilter.newBuilder()
+                                                .setName(name)
+                                                .setValueRegex(valueRegex))));
+            case DRIVER -> filter.addDriverRegex(job.type().getDriver());
+            case STATUS -> filter.addStatus("idle");
           }
         });
     List<DimensionFilter> dedupedDimensionFilters =
@@ -127,17 +118,16 @@ public class DeviceFilter {
    * </ol>
    */
   private static Optional<String> convertForDeviceQueryApi(String jobDimensionValue) {
-    switch (jobDimensionValue) {
-      case Value.EXCLUDE:
-        return Optional.empty();
-      case Value.ALL_VALUE_FOR_DEVICE:
-        return Optional.of(".*");
-      default:
+    return switch (jobDimensionValue) {
+      case Value.EXCLUDE -> Optional.empty();
+      case Value.ALL_VALUE_FOR_DEVICE -> Optional.of(".*");
+      default -> {
         if (jobDimensionValue.startsWith(Value.PREFIX_REGEX)) {
-          return Optional.of(jobDimensionValue.substring(Value.PREFIX_REGEX.length()));
+          yield Optional.of(jobDimensionValue.substring(Value.PREFIX_REGEX.length()));
         } else {
-          return Optional.of(jobDimensionValue);
+          yield Optional.of(jobDimensionValue);
         }
-    }
+      }
+    };
   }
 }

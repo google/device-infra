@@ -52,16 +52,17 @@ public class PluginOutputPrinter {
    */
   @CanIgnoreReturnValue
   public static int printOutput(AtsSessionPluginOutput output, ConsoleUtil consoleUtil) {
-    switch (output.getResultCase()) {
-      case SUCCESS:
+    return switch (output.getResultCase()) {
+      case SUCCESS -> {
         consoleUtil.printlnStdout(output.getSuccess().getOutputMessage());
-        return ExitCode.OK;
-      case FAILURE:
+        yield ExitCode.OK;
+      }
+      case FAILURE -> {
         consoleUtil.printlnStderr("Error: %s", output.getFailure().getErrorMessage());
-        break;
-      default:
-    }
-    return ExitCode.SOFTWARE;
+        yield ExitCode.SOFTWARE;
+      }
+      case RESULT_NOT_SET -> ExitCode.SOFTWARE;
+    };
   }
 
   /** Prints output of "list commands" command. */

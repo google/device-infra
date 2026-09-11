@@ -210,15 +210,12 @@ public class TradefedConfigGenerator {
       XmlSerializer serializer, DeviceActionConfigObject configObject) throws IOException {
     String actionTag;
     switch (configObject.getType()) {
-      case TARGET_PREPARER:
-        actionTag = TARGET_PREPARER_TAG;
-        break;
-      case RESULT_REPORTER:
-        actionTag = RESULT_REPORTER_TAG;
-        break;
-      default:
+      case TARGET_PREPARER -> actionTag = TARGET_PREPARER_TAG;
+      case RESULT_REPORTER -> actionTag = RESULT_REPORTER_TAG;
+      default -> {
         // Skip for non-TF device action
         return;
+      }
     }
     serializer.startTag(NULL_NS, actionTag);
     serializer.attribute(NULL_NS, CLASS_ATTR, configObject.getClassName());
