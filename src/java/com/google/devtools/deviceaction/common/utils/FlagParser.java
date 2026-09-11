@@ -56,17 +56,21 @@ public final class FlagParser {
 
     boolean parseKeyValue(String key, String val) {
       switch (key) {
-        case "--action":
+        case "--action" -> {
           parseValueToBuilder(actionOptionsBuilder, val);
           return true;
-        case "--device1":
+        }
+        case "--device1" -> {
           parseValueToBuilder(firstOptionsBuilder, val);
           return true;
-        case "--device2":
+        }
+        case "--device2" -> {
           parseValueToBuilder(secondOptionsBuilder, val);
           return true;
-        default:
+        }
+        default -> {
           return false;
+        }
       }
     }
 

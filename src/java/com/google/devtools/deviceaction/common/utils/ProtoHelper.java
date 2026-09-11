@@ -132,7 +132,7 @@ public class ProtoHelper {
    */
   public static ActionSpec getActionSpec(ActionOptions options) throws DeviceActionException {
     switch (options.command()) {
-      case INSTALL_MAINLINE:
+      case INSTALL_MAINLINE -> {
         Conditions.checkArgument(
             options.firstDevice() != null,
             ErrorType.CUSTOMER_ISSUE,
@@ -141,7 +141,8 @@ public class ProtoHelper {
         InstallMainlineSpec installMainlineSpec =
             buildProtoByOptions(options.action(), InstallMainlineSpec.class);
         return getActionSpecForInstallMainline(installMainlineSpec, getUuid(options.firstDevice()));
-      case RESET:
+      }
+      case RESET -> {
         Conditions.checkArgument(
             options.firstDevice() != null,
             ErrorType.CUSTOMER_ISSUE,
@@ -149,8 +150,9 @@ public class ProtoHelper {
             options);
         ResetSpec resetSpec = buildProtoByOptions(options.action(), ResetSpec.class);
         return getActionSpecForReset(resetSpec, getUuid(options.firstDevice()));
-      default:
-        throw new DeviceActionException(INVALID_CMD, ErrorType.CUSTOMER_ISSUE, "Not supported");
+      }
+      default ->
+          throw new DeviceActionException(INVALID_CMD, ErrorType.CUSTOMER_ISSUE, "Not supported");
     }
   }
 
@@ -164,24 +166,26 @@ public class ProtoHelper {
    */
   private static ActionSpec getActionSpec(Command cmd, DeviceConfig deviceConfig)
       throws DeviceActionException {
-    switch (cmd) {
-      case INSTALL_MAINLINE:
+    return switch (cmd) {
+      case INSTALL_MAINLINE -> {
         InstallMainlineSpec installMainlineSpec =
             deviceConfig.getExtension(InstallMainlineSpec.installMainlineSpec);
-        return ActionSpec.newBuilder()
+        yield ActionSpec.newBuilder()
             .setUnary(
                 Unary.newBuilder()
                     .setExtension(InstallMainlineSpec.ext, installMainlineSpec)
                     .build())
             .build();
-      case RESET:
+      }
+      case RESET -> {
         ResetSpec resetSpec = deviceConfig.getExtension(ResetSpec.resetSpec);
-        return ActionSpec.newBuilder()
+        yield ActionSpec.newBuilder()
             .setUnary(Unary.newBuilder().setExtension(ResetSpec.ext, resetSpec).build())
             .build();
-      default:
-        throw new DeviceActionException(INVALID_CMD, ErrorType.CUSTOMER_ISSUE, "Not supported");
-    }
+      }
+      default ->
+          throw new DeviceActionException(INVALID_CMD, ErrorType.CUSTOMER_ISSUE, "Not supported");
+    };
   }
 
   /**
@@ -246,7 +250,7 @@ public class ProtoHelper {
     for (FieldDescriptor fieldDescriptor : fields) {
       String name = fieldDescriptor.getName();
       switch (fieldDescriptor.getType()) {
-        case BOOL:
+        case BOOL -> {
           if (!fieldDescriptor.isRepeated()) {
             if (options.trueBoolOptions().contains(name)) {
               builder.setField(fieldDescriptor, /* value= */ true);
@@ -254,8 +258,8 @@ public class ProtoHelper {
               builder.setField(fieldDescriptor, /* value= */ false);
             }
           }
-          break;
-        case STRING:
+        }
+        case STRING -> {
           if (fieldDescriptor.isRepeated()) {
             for (String val : options.keyValues().get(name)) {
               builder.addRepeatedField(fieldDescriptor, val);
@@ -263,8 +267,8 @@ public class ProtoHelper {
           } else {
             options.getOnlyValue(name).ifPresent(v -> builder.setField(fieldDescriptor, v));
           }
-          break;
-        case ENUM:
+        }
+        case ENUM -> {
           EnumDescriptor enumDescriptor = fieldDescriptor.getEnumType();
           if (fieldDescriptor.isRepeated()) {
             for (EnumValueDescriptor valueDescriptor :
@@ -279,8 +283,8 @@ public class ProtoHelper {
                 .ifPresent(
                     v -> builder.setField(fieldDescriptor, enumDescriptor.findValueByName(v)));
           }
-          break;
-        case MESSAGE:
+        }
+        case MESSAGE -> {
           if (fieldDescriptor.getMessageType().getName().equals("FileSpec")) {
             if (fieldDescriptor.isRepeated()) {
               for (Entry<String, String> entry : options.fileOptions().entries()) {
@@ -298,9 +302,8 @@ public class ProtoHelper {
                               fieldDescriptor, TimeUtils.toProtoDuration(Duration.parse(v))));
             }
           }
-          break;
-        default:
-          break;
+        }
+        default -> {}
       }
     }
     // Safe by contract of newBuilderForType().
@@ -319,17 +322,13 @@ public class ProtoHelper {
   private static ExtensionRegistry getExtensionRegistry(Command cmd) throws DeviceActionException {
     ExtensionRegistry registry = ExtensionRegistry.newInstance();
     switch (cmd) {
-      case INSTALL_MAINLINE:
-        registry.add(InstallMainlineSpec.installMainlineSpec);
-        break;
-      case RESET:
-        registry.add(ResetSpec.resetSpec);
-        break;
-      default:
-        throw new DeviceActionException(
-            INVALID_CMD,
-            ErrorType.CUSTOMER_ISSUE,
-            String.format("The cmd %s is not supported.", cmd));
+      case INSTALL_MAINLINE -> registry.add(InstallMainlineSpec.installMainlineSpec);
+      case RESET -> registry.add(ResetSpec.resetSpec);
+      default ->
+          throw new DeviceActionException(
+              INVALID_CMD,
+              ErrorType.CUSTOMER_ISSUE,
+              String.format("The cmd %s is not supported.", cmd));
     }
     return registry;
   }

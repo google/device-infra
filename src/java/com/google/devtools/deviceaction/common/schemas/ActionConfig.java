@@ -52,13 +52,11 @@ public abstract class ActionConfig {
     /** Sets the {@link DeviceSpec} at the position {@code devicePosition}. */
     @CanIgnoreReturnValue
     public Builder setDeviceSpec(DevicePosition devicePosition, DeviceSpec deviceSpec) {
-      switch (devicePosition) {
-        case FIRST:
-          return this.setFirstSpec(deviceSpec);
-        case SECOND:
-          return this.setSecondSpec(deviceSpec);
-      }
-      return this;
+      return switch (devicePosition) {
+        case FIRST -> this.setFirstSpec(deviceSpec);
+        case SECOND -> this.setSecondSpec(deviceSpec);
+        default -> this;
+      };
     }
 
     public abstract ActionConfig build();

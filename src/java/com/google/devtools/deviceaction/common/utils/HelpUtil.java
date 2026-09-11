@@ -294,14 +294,9 @@ public final class HelpUtil {
   /** Prints the help info for the {@code command}. */
   public void help(String command) throws DeviceActionException {
     switch (Command.of(command)) {
-      case RESET:
-        RESET_HELP.printDetails(out);
-        break;
-      case INSTALL_MAINLINE:
-        INSTALL_MAINLINE_HELP.printDetails(out);
-        break;
-      default:
-        break;
+      case RESET -> RESET_HELP.printDetails(out);
+      case INSTALL_MAINLINE -> INSTALL_MAINLINE_HELP.printDetails(out);
+      default -> {}
     }
   }
 }
