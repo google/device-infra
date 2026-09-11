@@ -5,8 +5,11 @@ import {map} from 'rxjs/operators';
 
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
+  BatchUpdateDeviceConfigRequest,
+  BatchUpdateDeviceConfigResponse,
   CheckDeviceWritePermissionResult,
   DeviceConfig,
+  GetBatchWifiContextResponse,
   GetDeviceConfigResult,
   GetRecommendedWifiResponse,
   RecommendedWifi,
@@ -94,6 +97,24 @@ export class HttpConfigService extends ConfigService {
         `${this.apiUrl}/configs/wifi/recommendations`,
       )
       .pipe(map((response) => response.recommendations || []));
+  }
+
+  override getBatchWifiContext(
+    deviceIds: string[],
+  ): Observable<GetBatchWifiContextResponse> {
+    return this.http.post<GetBatchWifiContextResponse>(
+      `${this.apiUrl}/devices:batchGetWifiContext`,
+      {deviceIds},
+    );
+  }
+
+  override batchUpdateDeviceConfig(
+    request: BatchUpdateDeviceConfigRequest,
+  ): Observable<BatchUpdateDeviceConfigResponse> {
+    return this.http.post<BatchUpdateDeviceConfigResponse>(
+      `${this.apiUrl}/devices:batchUpdateConfig`,
+      request,
+    );
   }
 
   // ===== Host Config Methods =====
