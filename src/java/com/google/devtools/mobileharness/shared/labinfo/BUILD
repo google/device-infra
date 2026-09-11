@@ -84,6 +84,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/device",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_status_info",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
+        "//src/java/com/google/devtools/mobileharness/shared/util/filter:mask_utils",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
