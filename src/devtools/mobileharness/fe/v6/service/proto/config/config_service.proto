@@ -441,6 +441,17 @@ message GetConfigurableDimensionsResponse {
   bool allow_custom_dimensions = 3;
 }
 
+// Identifies a target device in batch configuration operations.
+// Both device_id and host_name are provided so the backend can disambiguate
+// and evaluate devices with unrecognizable or non-unique device IDs.
+message DeviceTarget {
+  // The device identifier (e.g., serial or control ID).
+  string device_id = 1;
+
+  // The host name of the lab server managing the device.
+  string host_name = 2;
+}
+
 // Request for BatchGetConfigurableDimensionKeys.
 message BatchGetConfigurableDimensionKeysRequest {
   // Explicit device IDs selected by the operator.
@@ -665,8 +676,8 @@ message GetWifiSuggestionsResponse {
 
 // Request for BatchGetDeviceWifiConfigs.
 message BatchGetDeviceWifiConfigsRequest {
-  // Explicit device IDs selected by the operator.
-  repeated string device_ids = 1;
+  // Explicit devices selected by the operator.
+  repeated DeviceTarget devices = 1;
 
   // Optional target Wi-Fi to compare against. When omitted (Step 1 initial
   // load), writable devices return DEVICE_CONFIG_CHANGE_STATUS_WRITABLE. When
@@ -693,6 +704,8 @@ message BatchGetDeviceWifiConfigsResponse {
     // host-managed shared config, Config Pusher, no permission, or config
     // read error).
     string read_only_reason = 4;
+    // Host name of the lab the device connects to.
+    string host_name = 5;
   }
 
   repeated DeviceWifiConfigEntry entries = 1;
@@ -700,8 +713,8 @@ message BatchGetDeviceWifiConfigsResponse {
 
 // Request for BatchUpdateDeviceWifiConfigs.
 message BatchUpdateDeviceWifiConfigsRequest {
-  // Target device IDs to update (only the devices with WILL_UPDATE status).
-  repeated string device_ids = 1;
+  // Target devices to update (only the devices with WILL_UPDATE status).
+  repeated DeviceTarget devices = 1;
 
   // Target Wi-Fi state to apply. Required; an unset target is rejected with
   // INVALID_ARGUMENT.

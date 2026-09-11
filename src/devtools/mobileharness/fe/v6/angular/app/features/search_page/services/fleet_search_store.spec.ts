@@ -643,15 +643,16 @@ describe('FleetSearchStore', () => {
     store.showSuggestions.set(true);
     expect(store.isSuggestionsPanelOpen()).toBeTrue();
   });
-  describe('row selection', () => {
-    it('toggles row selection, computes isAllSelected and isSomeSelected, and clears selection', async () => {
+  describe('row selection and column management', () => {
+    it('toggles row selection, computes selectionState, and clears selection', async () => {
       mockSearchService.searchFleet.and.returnValue(
         of({
           flat: {
+            columns: [{key: 'id', displayName: 'Device ID'}],
             rows: [{id: 'dev-1'}, {id: 'dev-2'}],
             rangeStart: 1,
             rangeEnd: 2,
-            totalItems: 2,
+            total: 2,
           },
         }),
       );
@@ -668,32 +669,283 @@ describe('FleetSearchStore', () => {
       });
       await flushAsync();
 
-      expect(store.isAllSelected()).toBeFalse();
-      expect(store.isSomeSelected()).toBeFalse();
+      expect(store.selectionState()).toEqual({all: false, some: false});
+      expect(store.rangeText()).toBe('1–2 of 2');
 
-      // Toggle single row via toggleSelectRow
-      store.toggleSelectRow('dev-1');
+      // Ignore empty/undefined rows
+      store.toggleSelectRows(undefined);
+      store.toggleSelectRows([]);
+      expect(store.selectedItems().size).toBe(0);
+
+      // Select single row
+      store.toggleSelectRows([{id: 'dev-1'}]);
       expect(store.selectedItems().has('dev-1')).toBeTrue();
-      expect(store.isAllSelected()).toBeFalse();
-      expect(store.isSomeSelected()).toBeTrue();
+      expect(store.selectionState()).toEqual({all: false, some: true});
 
-      store.toggleSelectRow('dev-1');
-      expect(store.selectedItems().has('dev-1')).toBeFalse();
-
-      // Select all rows via toggleSelectRows
+      // Select all rows
       store.toggleSelectRows([{id: 'dev-1'}, {id: 'dev-2'}]);
       expect(store.selectedItems().size).toBe(2);
-      expect(store.isAllSelected()).toBeTrue();
-      expect(store.isSomeSelected()).toBeFalse();
+      expect(store.selectionState()).toEqual({all: true, some: false});
 
       // Deselect all when all are selected
       store.toggleSelectRows([{id: 'dev-1'}, {id: 'dev-2'}]);
       expect(store.selectedItems().size).toBe(0);
 
       // Clear selection
-      store.toggleSelectRow('dev-1');
+      store.toggleSelectRows([{id: 'dev-1'}]);
       store.clearSelection();
       expect(store.selectedItems().size).toBe(0);
+
+      // Grouped rangeText formatting
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          grouped: {
+            groups: [],
+            rangeStart: 1,
+            rangeEnd: 5,
+            totalGroups: 12,
+            totalItems: 60,
+          },
+        }),
+      );
+      store.addFilterChip({
+        key: 'dimension::model',
+        pillKey: 'Model',
+        pillCondition: '',
+        isGroupBy: true,
+      });
+      await flushAsync();
+      expect(store.rangeText()).toBe('1–5 of 12 groups');
+    });
+
+    it('updates visible columns and resets when matching defaults', async () => {
+      mockSearchService.getFleetSearchConfig.and.returnValue(
+        of({
+          columns: {
+            defaults: [
+              {key: 'id', displayName: 'Device ID', locked: true},
+              {key: 'status', displayName: 'Status'},
+            ],
+          },
+        }),
+      );
+      const store = await createStoreAt({});
+
+      expect(store.sortColumn()).toBe('id');
+
+      const customCols = [
+        {key: 'id', displayName: 'Device ID', locked: true},
+        {key: 'model', displayName: 'Model'},
+      ];
+      store.setVisibleColumns(customCols);
+      expect(store.visibleColumnDescriptors()).toEqual(customCols);
+
+      // Setting back to default columns triggers resetVisibleColumns
+      const defaultCols = [
+        {key: 'id', displayName: 'Device ID', locked: true},
+        {key: 'status', displayName: 'Status'},
+      ];
+      store.setVisibleColumns(defaultCols);
+      expect(store.visibleColumnDescriptors()).toEqual(defaultCols);
+    });
+  });
+
+  describe('row selection in selectedItems', () => {
+    it('selects all rows including unrecognizable device IDs without filtering and keys by deviceId@@hostName', async () => {
+      const store = await createStoreAt({});
+      const rows = [
+        {
+          id: '43021FDAQ000UM',
+          cells: [
+            {
+              link: {
+                text: '43021FDAQ000UM',
+                target: {
+                  device: {
+                    id: '43021FDAQ000UM',
+                    hostName: 'mh-lab-01.google.com',
+                  },
+                },
+              },
+            },
+          ],
+        },
+        {
+          id: 'FailedToInitDevice-0',
+          cells: [
+            {
+              link: {
+                text: 'FailedToInitDevice-0',
+                target: {
+                  device: {
+                    id: 'FailedToInitDevice-0',
+                    hostName: 'mh-lab-02.google.com',
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ];
+
+      store.toggleSelectRows(rows);
+
+      expect(Array.from(store.selectedItems().keys())).toEqual([
+        '43021FDAQ000UM@@mh-lab-01.google.com',
+        'FailedToInitDevice-0@@mh-lab-02.google.com',
+      ]);
+      expect(Array.from(store.selectedItems().values())).toEqual(rows);
+
+      // Toggling again when all are selected deselects all
+      store.toggleSelectRows(rows);
+      expect(store.selectedItems().size).toBe(0);
+      expect(Array.from(store.selectedItems().values())).toEqual([]);
+    });
+
+    it('toggles individual row selection via toggleSelectRows([row]) and falls back to host cell link when device link lacks hostName', async () => {
+      const store = await createStoreAt({});
+      const rowWithHostCell = {
+        id: 'DisconnectedDevice-1',
+        cells: [
+          {text: {value: 'DisconnectedDevice-1'}},
+          {
+            link: {
+              text: 'mh-lab-03.google.com',
+              target: {host: {hostName: 'mh-lab-03.google.com'}},
+            },
+          },
+        ],
+      };
+
+      store.toggleSelectRows([rowWithHostCell]);
+      expect(
+        store.selectedItems().has('DisconnectedDevice-1@@mh-lab-03.google.com'),
+      ).toBeTrue();
+      expect(Array.from(store.selectedItems().values())).toEqual([
+        rowWithHostCell,
+      ]);
+
+      store.toggleSelectRows([rowWithHostCell]);
+      expect(
+        store.selectedItems().has('DisconnectedDevice-1@@mh-lab-03.google.com'),
+      ).toBeFalse();
+      expect(Array.from(store.selectedItems().values())).toEqual([]);
+    });
+
+    it('distinguishes and independently selects error devices sharing non-unique deviceId (e.g. 000000000000) across different hosts', async () => {
+      const store = await createStoreAt({});
+      const zeroRowHost1 = {
+        id: '000000000000',
+        cells: [
+          {
+            link: {
+              text: '000000000000',
+              target: {
+                device: {
+                  id: '000000000000',
+                  hostName: 'mh-lab-01.google.com',
+                },
+              },
+            },
+          },
+        ],
+      };
+      const zeroRowHost2 = {
+        id: '000000000000',
+        cells: [
+          {
+            link: {
+              text: '000000000000',
+              target: {
+                device: {
+                  id: '000000000000',
+                  hostName: 'mh-lab-02.google.com',
+                },
+              },
+            },
+          },
+        ],
+      };
+
+      // Select only host 1's 000000000000 row
+      store.toggleSelectRows([zeroRowHost1]);
+      expect(store.selectedItems().size).toBe(1);
+      expect(
+        store.selectedItems().has('000000000000@@mh-lab-01.google.com'),
+      ).toBeTrue();
+      expect(
+        store.selectedItems().has('000000000000@@mh-lab-02.google.com'),
+      ).toBeFalse();
+
+      // Selecting both rows adds host 2's 000000000000 row without overwriting host 1's
+      store.toggleSelectRows([zeroRowHost1, zeroRowHost2]);
+      expect(store.selectedItems().size).toBe(2);
+      expect(Array.from(store.selectedItems().values())).toEqual([
+        zeroRowHost1,
+        zeroRowHost2,
+      ]);
+
+      // Toggling only host 1's row leaves host 2's row selected
+      store.toggleSelectRows([zeroRowHost1]);
+      expect(store.selectedItems().size).toBe(1);
+      expect(Array.from(store.selectedItems().values())).toEqual([
+        zeroRowHost2,
+      ]);
+    });
+
+    it('builds initial ValuePicker state for simple, advanced, and empty chips and applies ValuePicker', async () => {
+      mockSearchService.resolveFleetChips.and.returnValue(
+        of({
+          filterChips: [
+            {invalid: {reason: 'Invalid chip'}},
+            {
+              valid: {
+                keyDisplayName: 'Model',
+                pillKey: 'Model',
+                pillCondition: 'pixel',
+              },
+            },
+          ],
+        }),
+      );
+      const store = await createStoreAt({});
+
+      // Open without active chip
+      store.openValuePicker('dimension::model', null, 'Model', undefined, [
+        'pixel-8',
+      ]);
+      expect(Array.from(store.pickerState().selectedValues)).toEqual([
+        'pixel-8',
+      ]);
+
+      // Apply value picker (triggers unwrapValidFilterChip for invalid + valid)
+      store.applyValuePicker({
+        selected: ['pixel'],
+        negate: false,
+        isAdvanced: false,
+      });
+      await flushAsync();
+      expect(mockSnackBarService.showWarning).toHaveBeenCalledWith(
+        'Invalid chip',
+      );
+      expect(
+        store.activeChips().some((c) => c.key === 'dimension::model'),
+      ).toBeTrue();
+
+      // Open with simple active chip
+      store.openValuePicker('dimension::model', null, 'Model');
+      expect(Array.from(store.pickerState().selectedValues)).toEqual(['pixel']);
+
+      // Open with advanced active chip
+      store.addFilterChip({
+        key: 'dimension::pool',
+        pillKey: 'Pool',
+        pillCondition: '^shared',
+        complex: {matchesRegex: {value: '^shared'}},
+      });
+      store.openValuePicker('dimension::pool', null, 'Pool');
+      expect(store.pickerState().advanced.active).toBeTrue();
+      expect(store.pickerState().advanced.text).toBe('^shared');
     });
   });
 

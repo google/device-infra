@@ -3,8 +3,10 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   inject,
 } from '@angular/core';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {MatCardModule} from '@angular/material/card';
 import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatDialog, MatDialogModule} from '@angular/material/dialog';
@@ -18,9 +20,10 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {Column} from '../../../../../core/models/search';
 import {KeyDescriptionTooltipDirective} from '../../../../../shared/directives/key_description_tooltip/key_description_tooltip';
 import {TooltipIfTruncatedDirective} from '../../../../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
-import {FleetSearchStore} from '../../../services/fleet_search_store';
-
 import {ColumnSelectorDialogData, ColumnSelectorResult} from '../../../models';
+import {FleetSearchStore} from '../../../services/fleet_search_store';
+import {getDeviceTargetKey} from '../../../utils';
+import {useBulkConfigActions} from '../../bulk_config/bulk_config_actions';
 import {ColumnSelectorComponent} from '../common/column_selector/column_selector';
 import {DensityDropdownComponent} from '../common/density_dropdown/density_dropdown';
 import {SearchCellComponent} from '../common/search_cell/search_cell';
@@ -56,7 +59,20 @@ import {FleetGroupCardComponent} from '../fleet_group_card/fleet_group_card';
 })
 export class FleetSearchResultsComponent {
   readonly store = inject(FleetSearchStore);
+  readonly bulkConfig = useBulkConfigActions();
   private readonly dialog = inject(MatDialog);
+  private readonly destroyRef = inject(DestroyRef);
+
+  /** Flat table rows with pre-computed composite tracking keys and selection state. */
+  readonly tableRows = computed(() => {
+    const selected = this.store.selectedItems();
+    return this.store.rows().map((row) => {
+      const key = getDeviceTargetKey(row);
+      return {row, key, selected: selected.has(key)};
+    });
+  });
+
+  readonly trackByRow = (_: number, item: {key: string}) => item.key;
 
   /** Label representing the current fleet partition. */
   readonly fleetLabel = computed<string>(() =>
@@ -106,13 +122,16 @@ export class FleetSearchResultsComponent {
       },
     });
 
-    dialogRef.afterClosed().subscribe((res?: ColumnSelectorResult) => {
-      if (!res) return;
-      if (res.isReset) {
-        this.store.resetVisibleColumns();
-      } else if (res.columns && res.columns.length > 0) {
-        this.store.setVisibleColumns(res.columns);
-      }
-    });
+    dialogRef
+      .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((res?: ColumnSelectorResult) => {
+        if (!res) return;
+        if (res.isReset) {
+          this.store.resetVisibleColumns();
+        } else if (res.columns && res.columns.length > 0) {
+          this.store.setVisibleColumns(res.columns);
+        }
+      });
   }
 }
