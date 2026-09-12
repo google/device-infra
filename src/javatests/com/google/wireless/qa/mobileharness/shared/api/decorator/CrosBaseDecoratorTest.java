@@ -257,4 +257,47 @@ public class CrosBaseDecoratorTest {
     assertThat(decorator.deviceName("test_device2:1234")).isEqualTo("test_device2");
     assertThat(decorator.deviceName("test_device3:5555")).isEqualTo("test_device3");
   }
+
+  @Test
+  public void getParam_exactMatch_returnsTrimmedValue() {
+    when(params.has("my_param")).thenReturn(true);
+    when(params.get("my_param")).thenReturn("  val1  ");
+    assertThat(decorator.getParam(testInfo, "my_param")).isEqualTo("val1");
+  }
+
+  @Test
+  public void getParam_kebabCaseAlternateMatch_returnsValue() {
+    when(params.has("my_param")).thenReturn(false);
+    when(params.has("my-param")).thenReturn(true);
+    when(params.get("my-param")).thenReturn("val2");
+    assertThat(decorator.getParam(testInfo, "my_param")).isEqualTo("val2");
+  }
+
+  @Test
+  public void getParam_underscoreAlternateMatch_returnsValue() {
+    when(params.has("my-param")).thenReturn(false);
+    when(params.has("my_param")).thenReturn(true);
+    when(params.get("my_param")).thenReturn("val3");
+    assertThat(decorator.getParam(testInfo, "my-param")).isEqualTo("val3");
+  }
+
+  @Test
+  public void getParam_nullParamName_returnsDefaultValue() {
+    assertThat(decorator.getParam(testInfo, null, "def_val")).isEqualTo("def_val");
+  }
+
+  @Test
+  public void getParam_emptyStringValue_returnsEmptyStringAndDoesNotFallbackToDefault() {
+    when(params.has("my_param")).thenReturn(true);
+    when(params.get("my_param")).thenReturn("   ");
+    assertThat(decorator.getParam(testInfo, "my_param", "def_val")).isEmpty();
+  }
+
+  @Test
+  public void getParam_missingParam_returnsDefaultValue() {
+    when(params.has("missing_param")).thenReturn(false);
+    when(params.has("missing-param")).thenReturn(false);
+    assertThat(decorator.getParam(testInfo, "missing_param", "def_val")).isEqualTo("def_val");
+    assertThat(decorator.getParam(testInfo, "missing_param")).isNull();
+  }
 }
