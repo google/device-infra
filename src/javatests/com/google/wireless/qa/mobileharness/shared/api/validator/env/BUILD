@@ -24,7 +24,7 @@ package(
 java_library(
     name = "tests",
     srcs = glob(["*.java"]),
-    visibility = ["//javatests/com/google/wireless/qa/mobileharness/shared/api/validator/env:__pkg__"],
+    visibility = ["//visibility:private"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
