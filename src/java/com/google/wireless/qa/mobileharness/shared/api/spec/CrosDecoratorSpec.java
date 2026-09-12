@@ -31,6 +31,44 @@ public interface CrosDecoratorSpec {
   /** The path to the lsnexus CIPD package within {@link #CIPD_DIR}. */
   String LSNEXUS_CIPD_PATH = CIPD_DIR + "lsnexus";
 
+  /**
+   * CIPD package name for dt-converter.
+   *
+   * <p>Currently built and published for linux-amd64 in ChromeOS test infrastructure.
+   */
+  String DT_CONVERTER_PACKAGE = "chromiumos/infra/dt-converter/linux-amd64";
+
+  /**
+   * CIPD package name for lsnexus.
+   *
+   * <p>Currently built and published for linux-amd64 in ChromeOS test infrastructure.
+   */
+  String LSNEXUS_PACKAGE = "chromiumos/infra/cft/lsnexus/linux-amd64";
+
+  /**
+   * The default CIPD tag used to pull production packages at runtime when no custom tag is
+   * specified.
+   */
+  String DEFAULT_CIPD_TAG = "prod";
+
+  /** Parameter name for dt-converter CIPD package tag, version, or instance hash. */
+  @ParamAnnotation(
+      help =
+          "CIPD tag, version, or instance hash to pull dt-converter dynamically at runtime."
+              + " Defaults to 'prod' to pull the production package. If empty (\"\"), falls back"
+              + " to the pre-installed container binary.",
+      required = false)
+  String DT_CONVERTER_CIPD_TAG = "dt_converter_cipd_tag";
+
+  /** Parameter name for lsnexus CIPD package tag, version, or instance hash. */
+  @ParamAnnotation(
+      help =
+          "CIPD tag, version, or instance hash to pull lsnexus dynamically at runtime."
+              + " Defaults to 'prod' to pull the production package. If empty (\"\"), falls back"
+              + " to the pre-installed container binary.",
+      required = false)
+  String LSNEXUS_CIPD_TAG = "lsnexus_cipd_tag";
+
   // Inventory service related constants.
   /** Parameter name for the hostname or IP address of the inventory service. */
   @ParamAnnotation(help = "Hostname or IP address of the inventory service.", required = false)
