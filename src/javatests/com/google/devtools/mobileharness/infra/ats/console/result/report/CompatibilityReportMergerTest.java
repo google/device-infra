@@ -720,4 +720,61 @@ public final class CompatibilityReportMergerTest {
     assertThat(report.getModuleInfo(1).getAbi()).isEqualTo("armeabi-v7a");
     assertThat(report.getModuleInfo(1).getDone()).isFalse();
   }
+
+  @Test
+  public void parseResultBundles_deviceRuntimeException_insertsUnexecutedModules()
+      throws Exception {
+    String xmlContent =
+        "<?xml version='1.0' encoding='UTF-8' standalone='no' ?>\n"
+            + "<Result start=\"1678951330449\" end=\"1678951395733\">\n"
+            + "  <Summary pass=\"0\" failed=\"0\" warning=\"0\" modules_done=\"0\""
+            + " modules_total=\"0\" />\n"
+            + "</Result>";
+    Path xmlReportFile = Files.createTempFile("empty_cts_test_result", ".xml");
+    xmlReportFile.toFile().deleteOnExit();
+    Files.writeString(xmlReportFile, xmlContent);
+
+    TestRecord testRecord =
+        TestRecord.newBuilder()
+            .setDebugInfo(
+                DebugInfo.newBuilder()
+                    .setErrorMessage(
+                        "com.android.tradefed.device.DeviceRuntimeException: 'adb -s"
+                            + " 4B182JEBF04342 shell pm list users' failed: 'adb: device"
+                            + " 4B182JEBF04342 not found'")
+                    .setTrace(
+                        "com.android.tradefed.device.DeviceRuntimeException: 'adb -s 4B182JEBF04342"
+                            + " shell pm list users' failed: 'adb: device 4B182JEBF04342 not"
+                            + " found'\n"
+                            + "\tat com.android.tradefed.device.TestDevice.tokenizeListUserPostT\n"
+                            + "\tat com.android.tradefed.device.TestDevice.listUsers\n"
+                            + "\tat com.android.compatibility.common.tradefed.targetprep.DeviceInfoCollector.setUp"))
+            .build();
+    Path testRecordFile = Files.createTempFile("test_record", ".pb");
+    testRecordFile.toFile().deleteOnExit();
+    try (OutputStream outputStream = Files.newOutputStream(testRecordFile)) {
+      testRecord.writeDelimitedTo(outputStream);
+    }
+
+    List<ParseResult> res =
+        reportMerger.parseResultBundles(
+            ImmutableList.of(
+                TradefedResultBundle.of(
+                    xmlReportFile,
+                    Optional.of(testRecordFile),
+                    ImmutableList.of(
+                        TradefedResultBundle.ModuleInfo.of("arm64-v8a", "Module1"),
+                        TradefedResultBundle.ModuleInfo.of("armeabi-v7a", "Module2")))));
+
+    assertThat(res).hasSize(1);
+    assertThat(res.get(0).report()).isPresent();
+    Result report = res.get(0).report().get();
+    assertThat(report.getModuleInfoList()).hasSize(2);
+    assertThat(report.getModuleInfo(0).getName()).isEqualTo("Module1");
+    assertThat(report.getModuleInfo(0).getAbi()).isEqualTo("arm64-v8a");
+    assertThat(report.getModuleInfo(0).getDone()).isFalse();
+    assertThat(report.getModuleInfo(1).getName()).isEqualTo("Module2");
+    assertThat(report.getModuleInfo(1).getAbi()).isEqualTo("armeabi-v7a");
+    assertThat(report.getModuleInfo(1).getDone()).isFalse();
+  }
 }
