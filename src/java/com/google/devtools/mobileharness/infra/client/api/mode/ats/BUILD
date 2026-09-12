@@ -214,6 +214,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/filter:filter_utils",
+        "//src/java/com/google/devtools/mobileharness/shared/util/filter:mask_utils",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/version",

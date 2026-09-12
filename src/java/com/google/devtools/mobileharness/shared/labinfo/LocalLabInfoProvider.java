@@ -26,19 +26,23 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
-import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusInfo;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager.DeviceKey;
+import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager.DeviceTempRequiredDimensions;
 import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
+import com.google.devtools.mobileharness.shared.util.filter.CompiledDeviceInfoMask;
+import com.google.devtools.mobileharness.shared.util.filter.MaskUtils;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import java.util.Map;
+import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
@@ -58,6 +62,15 @@ public class LocalLabInfoProvider implements LabInfoProvider {
 
   @Override
   public LabView getLabInfos(Filter filter) {
+    return getLabInfos(filter, Mask.getDefaultInstance());
+  }
+
+  @Override
+  public LabView getLabInfos(Filter filter, Mask mask) {
+    CompiledDeviceInfoMask deviceMask = CompiledDeviceInfoMask.of(mask.getDeviceInfoMask());
+    if (!deviceMask.keepsDeviceInfo() && !MaskUtils.keepsLabInfo(mask.getLabInfoMask())) {
+      return LabView.getDefaultInstance();
+    }
     // Gets device information from device manager.
     Map<Device, DeviceStatusInfo> devices;
     try {
@@ -67,7 +80,14 @@ public class LocalLabInfoProvider implements LabInfoProvider {
       devices = ImmutableMap.of();
     }
 
-    // TODO: Supports Filter/LabInfo/LabLocator.
+    if (!deviceMask.keepsDeviceInfo()) {
+      return LabView.newBuilder()
+          .setLabTotalCount(1)
+          .addLabData(
+              LabData.newBuilder()
+                  .setDeviceList(DeviceList.newBuilder().setDeviceTotalCount(devices.size())))
+          .build();
+    }
 
     // Creates DeviceInfo.
     ImmutableList<DeviceInfo> deviceInfos =
@@ -75,50 +95,59 @@ public class LocalLabInfoProvider implements LabInfoProvider {
             .map(
                 entry -> {
                   Device device = entry.getKey();
-                  DeviceStatus deviceStatus =
-                      entry.getValue().getDeviceStatusWithTimestamp().getStatus();
+                  DeviceKey devKey =
+                      new DeviceKey(LabLocator.LOCALHOST.hostName(), device.getDeviceUuid());
                   DeviceInfo.Builder builder =
                       DeviceInfo.newBuilder()
                           .setDeviceLocator(
-                              DeviceLocator.newBuilder().setId(device.getDeviceUuid()))
-                          .setDeviceStatus(deviceStatus);
-                  DeviceFeature.Builder featureBuilder = device.toFeature().toBuilder();
-
-                  if (tempRequiredDimensionManager != null) {
-                    DeviceKey deviceKey =
-                        new DeviceKey(LabLocator.LOCALHOST.hostName(), device.getDeviceUuid());
-                    tempRequiredDimensionManager
-                        .getDimensions(deviceKey)
-                        .ifPresent(
-                            dimensions -> {
-                              DeviceCondition.Builder conditionBuilder =
-                                  DeviceCondition.newBuilder();
-                              dimensions
-                                  .dimensions()
-                                  .forEach(
-                                      (name, value) -> {
-                                        conditionBuilder.addTempDimension(
-                                            TempDimension.newBuilder()
-                                                .setDimension(
-                                                    DeviceDimension.newBuilder()
-                                                        .setName(name)
-                                                        .setValue(value))
-                                                .setExpireTimestampMs(
-                                                    dimensions.expireTime().toEpochMilli())
-                                                .setRequired(true));
-
-                                        featureBuilder
-                                            .getCompositeDimensionBuilder()
-                                            .addRequiredDimension(
-                                                DeviceDimension.newBuilder()
-                                                    .setName(name)
-                                                    .setValue(value));
-                                      });
-                              builder.setDeviceCondition(conditionBuilder.build());
-                            });
+                              DeviceLocator.newBuilder().setId(device.getDeviceUuid()).build())
+                          .setDeviceStatus(
+                              entry.getValue().getDeviceStatusWithTimestamp().getStatus());
+                  if (deviceMask.keepsDeviceCondition() && tempRequiredDimensionManager != null) {
+                    Optional<DeviceTempRequiredDimensions> dimensions =
+                        tempRequiredDimensionManager.getDimensions(devKey);
+                    if (dimensions.isPresent()) {
+                      DeviceCondition.Builder conditionBuilder = DeviceCondition.newBuilder();
+                      dimensions
+                          .get()
+                          .dimensions()
+                          .forEach(
+                              (name, value) ->
+                                  conditionBuilder.addTempDimension(
+                                      TempDimension.newBuilder()
+                                          .setDimension(
+                                              DeviceDimension.newBuilder()
+                                                  .setName(name)
+                                                  .setValue(value))
+                                          .setExpireTimestampMs(
+                                              dimensions.get().expireTime().toEpochMilli())
+                                          .setRequired(true)));
+                      builder.setDeviceCondition(conditionBuilder.build());
+                    }
                   }
-
-                  return builder.setDeviceFeature(featureBuilder.build()).build();
+                  if (deviceMask.keepsDeviceFeature()) {
+                    DeviceFeature fullFeature = device.toFeature();
+                    if (tempRequiredDimensionManager != null) {
+                      Optional<DeviceTempRequiredDimensions> tempDimensions =
+                          tempRequiredDimensionManager.getDimensions(devKey);
+                      if (tempDimensions.isPresent()) {
+                        DeviceFeature.Builder fb = fullFeature.toBuilder();
+                        tempDimensions
+                            .get()
+                            .dimensions()
+                            .forEach(
+                                (name, value) ->
+                                    fb.getCompositeDimensionBuilder()
+                                        .addRequiredDimension(
+                                            DeviceDimension.newBuilder()
+                                                .setName(name)
+                                                .setValue(value)));
+                        fullFeature = fb.build();
+                      }
+                    }
+                    builder.setDeviceFeature(deviceMask.projectDeviceFeature(fullFeature));
+                  }
+                  return deviceMask.trimFields(builder.build());
                 })
             .collect(toImmutableList());
 
