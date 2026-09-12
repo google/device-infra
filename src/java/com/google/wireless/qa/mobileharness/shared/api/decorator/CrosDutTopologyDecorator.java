@@ -18,11 +18,14 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.platform.androiddesktop.device.CrosCipdUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
@@ -30,6 +33,7 @@ import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleD
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import java.nio.file.Path;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,13 +47,17 @@ import javax.inject.Inject;
 public class CrosDutTopologyDecorator extends CrosBaseDecorator {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   private final CommandExecutor commandExecutor;
+  private final LocalFileUtil fileUtil;
+
+  private String resolvedDtConverterPath = DT_CONVERTER_CIPD_PATH;
+  private Path cipdDownloadedDir = null;
 
   @Inject
-  @VisibleForTesting
   CrosDutTopologyDecorator(
       Driver decoratedDriver, TestInfo testInfo, CommandExecutor commandExecutor) {
     super(decoratedDriver, testInfo);
     this.commandExecutor = commandExecutor;
+    this.fileUtil = new LocalFileUtil();
   }
 
   @Override
@@ -61,6 +69,10 @@ public class CrosDutTopologyDecorator extends CrosBaseDecorator {
         .atInfo()
         .alsoTo(logger)
         .log("CrosDutTopologyDecorator is running on device: %s", deviceId());
+
+    resolveDtConverterPath(testInfo);
+    CrosCipdUtil.printVersion(commandExecutor, resolvedDtConverterPath, testInfo);
+
     List<String> dutNames = new ArrayList<>();
     String deviceName = deviceName(deviceId());
     dutNames.add(deviceName);
@@ -76,9 +88,67 @@ public class CrosDutTopologyDecorator extends CrosBaseDecorator {
     return SetupResult.continueDecorated();
   }
 
+  /**
+   * Resolves the dt-converter binary path.
+   *
+   * <p>By default, dynamically pulls the production package using {@link #DEFAULT_CIPD_TAG}
+   * ("prod"). If a custom {@link #DT_CONVERTER_CIPD_TAG} is specified (tag or instance ID), that
+   * version is downloaded. If the tag is explicitly set to empty ({@code ""}), skips downloading
+   * and falls back to pre-installed {@link #DT_CONVERTER_CIPD_PATH}.
+   */
+  @VisibleForTesting
+  void resolveDtConverterPath(TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
+    String cipdTag = getParam(testInfo, DT_CONVERTER_CIPD_TAG, DEFAULT_CIPD_TAG);
+    if (!Strings.isNullOrEmpty(cipdTag)) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Pulling dt-converter CIPD package with tag/version: %s", cipdTag);
+      Path downloaded =
+          CrosCipdUtil.downloadPackage(
+              commandExecutor,
+              fileUtil,
+              DT_CONVERTER_PACKAGE,
+              cipdTag,
+              /* destDir= */ null,
+              "dt-converter",
+              testInfo,
+              CrosCipdUtil.DEFAULT_CIPD_TIMEOUT);
+      resolvedDtConverterPath = downloaded.toAbsolutePath().toString();
+      cipdDownloadedDir = CrosCipdUtil.getPackageRootDir(downloaded, "dt-converter");
+      return;
+    }
+
+    testInfo
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log(
+            "No CIPD tag/version specified for dt-converter; using pre-installed binary at %s",
+            DT_CONVERTER_CIPD_PATH);
+    resolvedDtConverterPath = DT_CONVERTER_CIPD_PATH;
+  }
+
+  @VisibleForTesting
+  String getResolvedDtConverterPath() {
+    return resolvedDtConverterPath;
+  }
+
+  @VisibleForTesting
+  Path getCipdDownloadedDir() {
+    return cipdDownloadedDir;
+  }
+
   @Override
   protected void cleanUp(TeardownContext context) {
-    // Do nothing.
+    if (cipdDownloadedDir != null) {
+      TestInfo testInfo = context == null ? getTest() : context.testInfo();
+      CrosCipdUtil.cleanupTempDir(fileUtil, cipdDownloadedDir, testInfo);
+      cipdDownloadedDir = null;
+    }
+    resolvedDtConverterPath = DT_CONVERTER_CIPD_PATH;
   }
 
   /**
@@ -153,7 +223,7 @@ public class CrosDutTopologyDecorator extends CrosBaseDecorator {
       throws MobileHarnessException {
     String deviceName = deviceName(deviceId());
     List<String> args = new ArrayList<>();
-    args.add(DT_CONVERTER_CIPD_PATH);
+    args.add(resolvedDtConverterPath);
     args.add("convert");
     for (String dutName : dutNames) {
       args.add("-unit");
