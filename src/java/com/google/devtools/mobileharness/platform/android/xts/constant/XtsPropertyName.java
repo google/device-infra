@@ -62,5 +62,8 @@ public interface XtsPropertyName extends PropertyName {
 
     /** Session id. */
     SESSION_ID,
+
+    /** File path of the SVR subplan. */
+    SVR_SUBPLAN_FILE_PATH,
   }
 }

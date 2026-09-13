@@ -117,3 +117,25 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "system_vendor_reuse_plugin",
+    srcs = ["SystemVendorReusePlugin.java"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_property_name",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",
+        "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:lab_test_events",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_code_gson_gson",
+        "@maven//:com_google_guava_guava",
+    ],
+)
