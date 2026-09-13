@@ -143,7 +143,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
         new GcsFileManager(
             params.homeDir().resolve("gcs"),
             params.cloudFileTransferBucket(),
-            Optional.of(FileTransferConstant.getCloudCacheTtl()),
+            params.cloudCacheTtl(),
             FileTransferConstant.getLocalCacheTtl(),
             Optional.of(params.uploadShardSize()),
             Optional.of(params.downloadShardSize()),
@@ -194,7 +194,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
           checksum,
           relativePath,
           /* isCompressed= */ gcsFileManager.isCompressed(Path.of(checksum)));
-    } else if (isFileExists(Path.of(local)) || localFileUtil.isDirExist(local)) {
+    } else if (gcsFileManager.canUpload(Path.of(local))) {
       FileOperationStatus result =
           sendDirectlyIfSmall(metadata, Path.of(local), checksum, relativePath);
       if (result.isFinished()) {
@@ -239,8 +239,7 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
   public boolean isSendable(String path, @Nullable String checksum)
       throws MobileHarnessException, InterruptedException {
     return (checksum != null && gcsFileManager.fileExistAndFresh(Path.of(checksum)))
-        || (isFileExists(Path.of(path)))
-        || localFileUtil.isDirExist(path);
+        || gcsFileManager.canUpload(Path.of(path));
   }
 
   /**

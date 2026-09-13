@@ -424,6 +424,11 @@ public class GcsFileManager {
     }
   }
 
+  /** Returns whether {@link #upload} can read what is at {@code fileOrDir}. */
+  public boolean canUpload(Path fileOrDir) {
+    return localFileUtil.isDirExist(fileOrDir) || fileExists(fileOrDir);
+  }
+
   private boolean fileExists(Path fileOrDir) {
     return localFileUtil.isFileOrDirExist(fileOrDir);
   }

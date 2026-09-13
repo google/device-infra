@@ -22,6 +22,7 @@ import com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.com
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Optional;
 
 /** Parameters to create a file transfer client. */
 @AutoValue
@@ -61,6 +62,21 @@ public abstract class FileTransferParameters {
 
   public abstract String cloudFileTransferBucket();
 
+  /**
+   * How long a staged object counts as usable, if the client is to care.
+   *
+   * <p>Within it, an object is sent by telling the peer to download it. Past it, a client holding
+   * the file uploads it again, which both serves the peer and renews the object.
+   *
+   * <p>Absent, age is not considered and any object that exists is used. That suits a client with
+   * nothing to upload, as one sending what an earlier job staged has only the object, and failing
+   * over its age would strand a file the peer can still read.
+   */
+  public abstract Optional<Duration> cloudCacheTtl();
+
+  /** Returns a builder holding these parameters, for a caller overriding one of them. */
+  public abstract Builder toBuilder();
+
   public static Builder builder() {
     return new AutoValue_FileTransferParameters.Builder()
         .setZipStoreOnly(false)
@@ -72,6 +88,7 @@ public abstract class FileTransferParameters {
         .setTimeout(FileTransferConstant.getTimeout())
         .setEnableCloudFileTransfer(true)
         .setCloudFileTransferBucket(FileTransferConstant.getBucket())
+        .setCloudCacheTtl(Optional.of(FileTransferConstant.getCloudCacheTtl()))
         .setHomeDir(createHomeDir());
   }
 
@@ -107,6 +124,8 @@ public abstract class FileTransferParameters {
     public abstract Builder setHomeDir(Path homeDir);
 
     public abstract Builder setCloudFileTransferBucket(String bucket);
+
+    public abstract Builder setCloudCacheTtl(Optional<Duration> cloudCacheTtl);
 
     public abstract FileTransferParameters build();
   }
