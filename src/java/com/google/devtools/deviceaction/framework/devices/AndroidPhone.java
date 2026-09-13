@@ -363,21 +363,16 @@ public class AndroidPhone implements Device {
     try {
       switch (mode) {
         // Handle bootloader case using fastboot.
-        case BOOTLOADER:
-        case FASTBOOT:
-          return;
-        case RECOVERY:
-        case SIDELOAD:
-        case SIDELOAD_AUTO_REBOOT:
-          androidSystemStateUtil.waitForState(
-              uuid, mode.getTargetState(), positiveOrElse(timeout, DEFAULT_REBOOT_TIMEOUT));
-          return;
-        case SYSTEM_IMAGE:
+        case BOOTLOADER, FASTBOOT -> {}
+        case RECOVERY, SIDELOAD, SIDELOAD_AUTO_REBOOT ->
+            androidSystemStateUtil.waitForState(
+                uuid, mode.getTargetState(), positiveOrElse(timeout, DEFAULT_REBOOT_TIMEOUT));
+        case SYSTEM_IMAGE -> {
           androidSystemStateUtil.waitForState(
               uuid, mode.getTargetState(), positiveOrElse(timeout, DEFAULT_REBOOT_TIMEOUT));
           androidSystemStateUtil.waitUntilReady(
               uuid, positiveOrElse(timeout, DEFAULT_DEVICE_READY_TIMEOUT));
-          return;
+        }
       }
     } catch (MobileHarnessException e) {
       throw new DeviceActionException(e, "Failed to reboot device %s to %s", uuid, mode);

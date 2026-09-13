@@ -97,22 +97,20 @@ public class Reset implements Action {
   public void perform() throws DeviceActionException, InterruptedException {
     logger.atInfo().log("Start to reset the device %s with spec:\n%s", device.getUuid(), spec);
     switch (resetOption()) {
-      case TEST_HARNESS:
-        device.enableTestharness();
-        break;
-      case OTA_SIDELOAD:
+      case TEST_HARNESS -> device.enableTestharness();
+      case OTA_SIDELOAD -> {
         checkArgument(
             otaPackage().isPresent(), ErrorType.CUSTOMER_ISSUE, "OTA package not provided.");
         otaSideloader.sideload(otaPackage().get(), sideloadTimeout(), useAutoReboot());
-        break;
-      case FASTBOOT_WITH_PARTITION_IMAGES:
+      }
+      case FASTBOOT_WITH_PARTITION_IMAGES -> {
         checkArgument(
             imageZip().isPresent(), ErrorType.CUSTOMER_ISSUE, "Image zip file is not provided.");
         imageZipFlasher.flashDevice(imageZip().get(), flashScript(), flashTimeout());
-        break;
-      default:
-        throw new DeviceActionException(
-            "NOT_SUPPORTED", ErrorType.CUSTOMER_ISSUE, "The reset option is not supported yet.");
+      }
+      default ->
+          throw new DeviceActionException(
+              "NOT_SUPPORTED", ErrorType.CUSTOMER_ISSUE, "The reset option is not supported yet.");
     }
 
     if (needPreloadModulesRecovery()) {

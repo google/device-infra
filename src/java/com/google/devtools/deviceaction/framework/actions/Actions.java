@@ -76,17 +76,15 @@ public class Actions {
   /** Creates an {@code Action} from a config. */
   public Action create(ActionConfig actionConfig)
       throws DeviceActionException, InterruptedException {
-    switch (actionConfig.cmd()) {
-      case INSTALL_MAINLINE:
-        return createInstallMainline(actionConfig);
-      case RESET:
-        return createReset(actionConfig);
-      default:
-        throw new DeviceActionException(
-            "UNKNOWN_COMMAND",
-            ErrorType.CUSTOMER_ISSUE,
-            "The command " + actionConfig.cmd() + " is not recognized");
-    }
+    return switch (actionConfig.cmd()) {
+      case INSTALL_MAINLINE -> createInstallMainline(actionConfig);
+      case RESET -> createReset(actionConfig);
+      default ->
+          throw new DeviceActionException(
+              "UNKNOWN_COMMAND",
+              ErrorType.CUSTOMER_ISSUE,
+              "The command " + actionConfig.cmd() + " is not recognized");
+    };
   }
 
   /** Performs all tasks before an action. */
