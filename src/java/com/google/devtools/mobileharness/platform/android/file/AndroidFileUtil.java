@@ -101,6 +101,8 @@ public class AndroidFileUtil {
 
   private static final String ADB_REMOUNT_REBOOT_INDICATOR = "reboot your device";
   private static final String ADB_REMOUNT_EXIT_CODE_INDICATOR = "exit_code=11";
+  private static final String ADB_REMOUNT_EXIT_CODE_7_INDICATOR = "exit_code=7";
+  private static final String ADB_REMOUNT_NO_PARTITIONS_INDICATOR = "No partitions to remount";
 
   /** Indicator for a file showed in "adb shell ls -l". */
   private static final char ADB_SHELL_LIST_FILE_INDICATOR = '-';
@@ -510,7 +512,7 @@ public class AndroidFileUtil {
    * "/data". Note that the returned storage has non-negative values and it might be zero.
    *
    * @param serial serial number of the device
-   * @param isExternal whether getting external storage or intenral storage info
+   * @param isExternal whether getting external storage or internal storage info
    * @throws MobileHarnessException if failed to run the command, or no valid disk information is
    *     found (API Level < 10), or the total internal storage space is negative.
    * @throws InterruptedException if the thread executing the commands is interrupted.
@@ -1054,9 +1056,14 @@ public class AndroidFileUtil {
     } catch (MobileHarnessException e) {
       // b/296730927, sometimes the exit code is 11 instead of 0, which is also an indication
       // of success run.
+      // On freshly flashed devices with dynamic partitions, adb remount may return exit code 7
+      // ("No partitions to remount") requiring a reboot to initialize the overlay scratch
+      // partition.
       if (e.getErrorId().equals(AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE)
-          && e.getMessage().contains(ADB_REMOUNT_REBOOT_INDICATOR)
-          && e.getMessage().contains(ADB_REMOUNT_EXIT_CODE_INDICATOR)) {
+          && ((e.getMessage().contains(ADB_REMOUNT_REBOOT_INDICATOR)
+                  && e.getMessage().contains(ADB_REMOUNT_EXIT_CODE_INDICATOR))
+              || (e.getMessage().contains(ADB_REMOUNT_NO_PARTITIONS_INDICATOR)
+                  && e.getMessage().contains(ADB_REMOUNT_EXIT_CODE_7_INDICATOR)))) {
         logger.atWarning().log(
             "Needs to reboot device %s to make remount effective because [%s].",
             serial, MoreThrowables.shortDebugString(e));
