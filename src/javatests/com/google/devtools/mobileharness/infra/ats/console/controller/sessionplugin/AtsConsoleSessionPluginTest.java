@@ -898,4 +898,41 @@ public final class AtsConsoleSessionPluginTest {
     verify(runCommandHandler)
         .createTradefedJobs(eq(runCommand), any(), /* skipDynamicMctsJob= */ eq(true));
   }
+
+  @Test
+  public void onJobEnd_svrSetupJobEnds_schedulesJobs() throws Exception {
+    RunCommand runCommand =
+        RunCommand.newBuilder().setTestPlan("cts-svr").setXtsType("cts").build();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
+                .build());
+    atsConsoleSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    JobInfo setupJob = mock(JobInfo.class);
+    when(setupJob.locator())
+        .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
+    when(setupJob.properties()).thenReturn(new Properties(new Timing()));
+    TestInfos testInfos = mock(TestInfos.class);
+    when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of());
+    when(setupJob.tests()).thenReturn(testInfos);
+
+    JobInfo tfJob = mock(JobInfo.class);
+    when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job"));
+    when(tfJob.properties()).thenReturn(new Properties(new Timing()));
+
+    when(runCommandHandler.createTradefedJobs(any(), any(), anyBoolean()))
+        .thenReturn(ImmutableList.of(tfJob));
+    when(runCommandHandler.createNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
+    when(runCommandHandler.createTeardownJob()).thenReturn(Optional.empty());
+
+    atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
+
+    atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
+
+    verify(sessionInfo).addJob(tfJob);
+  }
 }

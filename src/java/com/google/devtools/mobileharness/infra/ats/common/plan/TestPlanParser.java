@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.infra.ats.common.plan;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Ascii;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -27,6 +26,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
+import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.nio.file.Path;
@@ -35,6 +35,7 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
@@ -73,7 +74,6 @@ public class TestPlanParser {
   public TestPlanFilter parseFilters(Path xtsRootPath, String type, String rootTestPlan)
       throws MobileHarnessException {
     if (shouldSkipParsing(rootTestPlan)) {
-      // Skip parsing the retry test plan since it is not a valid XML.
       return TestPlanFilter.create(
           ImmutableSet.of(),
           ImmutableSet.of(),
@@ -245,8 +245,9 @@ public class TestPlanParser {
   }
 
   /** Returns {@code true} if XML filter parsing should be skipped for the given test plan. */
-  private static boolean shouldSkipParsing(String testPlan) {
-    return testPlan != null && Ascii.equalsIgnoreCase(testPlan, "retry");
+  private static boolean shouldSkipParsing(@Nullable String testPlan) {
+    return SessionHandlerHelper.isRunRetry(testPlan)
+        || SessionHandlerHelper.isSvrTestPlan(testPlan);
   }
 
   /** A data class for all filters collected from the test plan. */

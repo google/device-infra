@@ -22,6 +22,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
@@ -411,6 +412,12 @@ class RunCommandOptions {
     }
     if (Objects.equals(getTestPlan(), "retry")) {
       validateRunRetryCommandParameters();
+    }
+    if (SessionHandlerHelper.isSvrTestPlan(getTestPlan()) && !isNullOrEmpty(subPlanName)) {
+      throw new ParameterException(
+          spec.commandLine(),
+          Ansi.AUTO.string(
+              "Option '--subplan <subplan_name>' is not supported for SVR test plan.\n"));
     }
     if (!isNullOrEmpty(subPlanName) && !isSubPlanExist(subPlanName)) {
       throw new ParameterException(

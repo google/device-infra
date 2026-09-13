@@ -22,6 +22,7 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.TestSuiteVersion;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteVersionUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -59,8 +60,13 @@ public class SessionHandlerHelper {
               create(12, 0, 0, 1));
 
   /** Checks if the test plan is retry. */
-  public static boolean isRunRetry(String testPlan) {
-    return Ascii.equalsIgnoreCase(testPlan, "retry");
+  public static boolean isRunRetry(@Nullable String testPlan) {
+    return testPlan != null && Ascii.equalsIgnoreCase(testPlan, "retry");
+  }
+
+  /** Returns {@code true} if the test plan is SVR (System-Vendor Reuse). */
+  public static boolean isSvrTestPlan(@Nullable String testPlan) {
+    return testPlan != null && Ascii.equalsIgnoreCase(testPlan, XtsConstants.CTS_SVR_TEST_PLAN);
   }
 
   public static boolean useTfRetry(
@@ -89,6 +95,16 @@ public class SessionHandlerHelper {
 
   public static Path getSubPlanFilePath(Path xtsRootDir, String xtsType, String subPlanName) {
     return XtsDirUtil.getXtsSubPlansDir(xtsRootDir, xtsType).resolve(subPlanName + ".xml");
+  }
+
+  /** Gets the SVR (System-Vendor Reuse) subplan file name for the given {@code sessionId}. */
+  public static String getSvrSubPlanFileName(String sessionId) {
+    return String.format("svr_%s", sessionId);
+  }
+
+  /** Gets the SVR (System-Vendor Reuse) subplan file path for the given {@code sessionId}. */
+  public static Path getSvrSubPlanFilePath(Path xtsRootDir, String xtsType, String sessionId) {
+    return getSubPlanFilePath(xtsRootDir, xtsType, getSvrSubPlanFileName(sessionId));
   }
 
   public static void checkSubPlanFileExist(File subPlanFile) throws MobileHarnessException {
