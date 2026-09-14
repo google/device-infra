@@ -157,4 +157,51 @@ describe('FakeConfigService', () => {
         done();
       });
   });
+
+  it('should retrieve batch wifi context', (done) => {
+    service.getBatchWifiContext(['dev-1', 'dev-2']).subscribe((res) => {
+      expect(res).toBeDefined();
+      expect(res.current.length).toBe(2);
+      expect(res.candidateWifis.length).toBeGreaterThan(0);
+      done();
+    });
+  });
+
+  it('should batch update device config', (done) => {
+    service
+      .batchUpdateDeviceConfig({
+        deviceIds: ['dev-1', 'fail-device-2'],
+        wifi: {ssid: 'new-wifi', psk: 'pass', scanSsid: false},
+      })
+      .subscribe((res) => {
+        expect(res.errors).toBeDefined();
+        expect(res.errors!['fail-device-2']).toBeDefined();
+        done();
+      });
+  });
+
+  it('should retrieve configurable dimensions with and without query', (done) => {
+    service.getConfigurableDimensions().subscribe((res) => {
+      expect(res).toBeDefined();
+      expect(res.dimensions.length).toBeGreaterThan(0);
+      expect(res.allowCustomDimensions).toBeTrue();
+
+      service.getConfigurableDimensions({query: 'pool'}).subscribe((filtered) => {
+        expect(filtered.dimensions.length).toBe(1);
+        expect(filtered.dimensions[0].key).toBe('pool');
+        done();
+      });
+    });
+  });
+
+  it('should retrieve batch dimension context', (done) => {
+    service
+      .getBatchDimensionContext({deviceIds: ['dev-1', 'dev-2'], key: 'recovery'})
+      .subscribe((res) => {
+        expect(res).toBeDefined();
+        expect(res.current.length).toBe(2);
+        expect(res.candidateValues.length).toBeGreaterThan(0);
+        done();
+      });
+  });
 });

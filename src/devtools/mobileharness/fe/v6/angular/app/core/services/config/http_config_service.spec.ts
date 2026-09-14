@@ -6,7 +6,11 @@ import {
 import {TestBed} from '@angular/core/testing';
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
+  BatchUpdateDeviceConfigRequest,
   DeviceConfig,
+  GetBatchDimensionContextResponse,
+  GetBatchWifiContextResponse,
+  GetConfigurableDimensionsResponse,
   GetDeviceConfigResult,
   RecommendedWifi,
   UpdateDeviceConfigRequest,
@@ -189,5 +193,110 @@ describe('HttpConfigService', () => {
     );
     expect(req.request.method).toBe('GET');
     req.flush(mockHostConfigResult);
+  });
+
+  it('should retrieve batch wifi context via POST', () => {
+    const mockResponse: GetBatchWifiContextResponse = {
+      current: [
+        {
+          deviceId: 'dev-1',
+          wifi: {type: 'custom', ssid: 'wifi-1', psk: '', scanSsid: false},
+          writable: true,
+        },
+      ],
+      candidateWifis: [{ssid: 'wifi-1', scanSsid: false, deviceCount: 10}],
+    };
+
+    service.getBatchWifiContext(['dev-1']).subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/devices:batchGetWifiContext',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({deviceIds: ['dev-1']});
+    req.flush(mockResponse);
+  });
+
+  it('should batch update device config via POST', () => {
+    const mockRequest: BatchUpdateDeviceConfigRequest = {
+      deviceIds: ['dev-1'],
+      wifi: {ssid: 'wifi-1', psk: 'secret', scanSsid: false},
+    };
+
+    service.batchUpdateDeviceConfig(mockRequest).subscribe((res) => {
+      expect(res.errors).toEqual({});
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/devices:batchUpdateConfig',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(mockRequest);
+    req.flush({errors: {}});
+  });
+
+  it('should retrieve configurable dimensions via GET with optional query param', () => {
+    const mockResponse: GetConfigurableDimensionsResponse = {
+      dimensions: [
+        {
+          key: 'recovery',
+          displayName: 'recovery',
+          scope: 'SUPPORTED',
+          configuredDeviceCount: 100,
+        },
+      ],
+      allowCustomDimensions: true,
+    };
+
+    service.getConfigurableDimensions().subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+
+    const req1 = httpMock.expectOne(
+      'http://testdomain.com/v6/configs/dimensions:configurable',
+    );
+    expect(req1.request.method).toBe('GET');
+    req1.flush(mockResponse);
+
+    service.getConfigurableDimensions({query: 'rec'}).subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+
+    const req2 = httpMock.expectOne(
+      'http://testdomain.com/v6/configs/dimensions:configurable?query=rec',
+    );
+    expect(req2.request.method).toBe('GET');
+    req2.flush(mockResponse);
+  });
+
+  it('should retrieve batch dimension context via POST', () => {
+    const mockResponse: GetBatchDimensionContextResponse = {
+      current: [
+        {
+          deviceId: 'dev-1',
+          values: ['true'],
+          writable: true,
+        },
+      ],
+      candidateValues: [{values: ['true'], deviceCount: 50}],
+    };
+
+    service
+      .getBatchDimensionContext({deviceIds: ['dev-1'], key: 'recovery'})
+      .subscribe((res) => {
+        expect(res).toEqual(mockResponse);
+      });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/devices:batchGetDimensionContext',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({
+      deviceIds: ['dev-1'],
+      key: 'recovery',
+    });
+    req.flush(mockResponse);
   });
 });

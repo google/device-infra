@@ -1,0 +1,494 @@
+@use '../../../../../../shared/styles/common';
+@use '../../../../../../shared/styles/action_bar';
+
+:host {
+  display: block;
+  box-sizing: border-box;
+}
+
+.custom-scrollbar,
+.scroll-container {
+  @include common.shared-scrollbar-style();
+}
+
+// --- Body ---
+.bw-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 24px;
+  gap: 20px;
+  overflow-y: auto;
+  @include common.shared-scrollbar-style();
+}
+
+// Loading & Error States
+.bw-loading-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: #49454f;
+  font-size: 0.875rem;
+}
+
+.bw-error-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #b3261e;
+  font-size: 0.875rem;
+}
+
+// --- Step 1 Layout ---
+.bw-step1 {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 20px;
+}
+
+// Top band: Value to apply
+.bw-apply-band {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bw-apply-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.bw-apply-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.5rem;
+  color: #1f1f1f;
+}
+
+.bw-apply-sub {
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  color: #49454f;
+}
+
+.bd-band-actions {
+  margin-left: auto;
+}
+
+.bw-text-btn {
+  border: none;
+  background: transparent;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #0b57d0;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: #d3e3fd;
+  }
+}
+
+// Unified M3 Chip input field
+.bd-chips {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 8px 12px;
+  background: #dde3ea;
+  border-radius: 4px 4px 0 0;
+  border-bottom: 1px solid #49454f;
+  cursor: text;
+  transition: border-bottom-color 0.15s ease, border-bottom-width 0.15s ease;
+
+  &:hover {
+    border-bottom-color: #1f1f1f;
+  }
+
+  &:focus-within {
+    border-bottom: 2px solid #0b57d0;
+    padding-bottom: 7px;
+  }
+}
+
+.bd-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 32px;
+  padding: 0 6px 0 12px;
+  border-radius: 8px;
+  background: #d3e3fd;
+  color: #041e49;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+}
+
+.bd-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 50%;
+  color: #041e49;
+  opacity: 0.75;
+  transition: opacity 0.12s ease, background 0.12s ease;
+
+  &:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.12);
+  }
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.bd-chip-input {
+  flex: 1;
+  min-width: 140px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: #1f1f1f;
+
+  &::placeholder {
+    color: #49454f;
+    opacity: 0.7;
+  }
+}
+
+// Panel: Aggregated Suggestions
+.bw-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #c4c7c5;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.bw-panel-head {
+  padding: 12px 16px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  color: #1f1f1f;
+  background: #f0f4f9;
+  border-bottom: 1px solid #c4c7c5;
+}
+
+.bw-panel-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 0;
+  @include common.shared-scrollbar-style();
+}
+
+.bw-li {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  gap: 16px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: #f0f4f9;
+  }
+
+  &.bd-agg-row {
+    cursor: default;
+
+    &:hover {
+      background-color: transparent;
+    }
+  }
+}
+
+.bw-li-lead {
+  color: #49454f;
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.bw-li-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bw-li-headline {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1f1f1f;
+}
+
+.bw-li-support {
+  font-size: 0.75rem;
+  color: #49454f;
+}
+
+.bd-agg-vals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bd-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: #e1e3e1;
+  color: #1f1f1f;
+}
+
+.bd-muted {
+  color: #74777f;
+  font-style: italic;
+}
+
+.bw-list-empty {
+  padding: 24px;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #49454f;
+}
+
+// --- Step 2 Layout ---
+.bw-step2 {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 16px;
+}
+
+.bw-review-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #e8def8;
+  color: #1d192b;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  &.error-banner {
+    background: #ffdad6;
+    color: #410002;
+  }
+
+  .skipped-highlight {
+    color: #b3261e;
+    font-weight: 500;
+  }
+}
+
+.bw-table-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #c4c7c5;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.bw-table-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  @include common.shared-scrollbar-style();
+}
+
+.bw-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+
+  th,
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid #e0e2e0;
+    vertical-align: middle;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    background: #f0f4f9;
+    font-weight: 500;
+    color: #49454f;
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+    z-index: 1;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.bw-li-mono {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.8125rem;
+  color: #1f1f1f;
+}
+
+.bd-unwritable-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #ffdad6;
+  color: #410002;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.bd-change {
+  color: #0b57d0;
+  font-weight: 500;
+  font-size: 0.8125rem;
+}
+
+.bd-nochange {
+  color: #49454f;
+  font-size: 0.8125rem;
+}
+
+.error-cell {
+  color: #b3261e;
+}
+
+// Applying state
+.bw-applying {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 48px 24px;
+}
+
+.bw-applying-badge {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// Success state
+.bw-success {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.bw-success-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #c4eed0;
+  color: #072711;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  mat-icon {
+    font-size: 28px;
+    width: 28px;
+    height: 28px;
+  }
+}
+
+.bw-success-headline {
+  font-size: 1.25rem;
+  font-weight: 500;
+  line-height: 1.75rem;
+  color: #1f1f1f;
+}
+
+.bw-success-support {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #49454f;
+  max-width: 360px;
+}
+
+.bw-new-card {
+  margin-top: 8px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  background: #f0f4f9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 200px;
+}
+
+.bw-new-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #49454f;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}

@@ -1,0 +1,327 @@
+@let currentStep = step();
+@let n = totalCount();
+@let isApplyingNow = isApplying();
+@let result = applyResult();
+@let dimName = dimensionDisplayName();
+@let target = targetValues();
+
+<app-dialog
+  [dialogTitle]="headline()"
+  [subtitle]="supportText()"
+  width="56rem"
+  height="48rem"
+  maxHeight="90vh"
+  footerType="normal"
+>
+  <div class="bw-body custom-scrollbar scroll-container">
+    <!-- Applying State -->
+    @if (isApplyingNow) {
+      <div class="bw-applying">
+        <div class="bw-applying-badge">
+          <mat-spinner diameter="36"></mat-spinner>
+        </div>
+        <div class="bw-success-headline">Applying to {{ deviceLabel() }}</div>
+        <div class="bw-success-support">This usually takes a few seconds.</div>
+      </div>
+    }
+
+    <!-- Result: Success State -->
+    @else if (result === 'success') {
+      <div class="bw-success">
+        <div class="bw-success-badge">
+          <mat-icon>check</mat-icon>
+        </div>
+        <div class="bw-success-headline">{{ deviceLabel() }} updated</div>
+        <div class="bw-success-support">
+          @if (target.length === 0) {
+            Removed {{ dimName }} from every selected device.
+          } @else {
+            Every selected device now uses this {{ dimName }} value.
+          }
+        </div>
+        <div class="bw-new-card bw-success-card">
+          <div class="bw-new-label">{{ target.length === 0 ? 'Removed' : 'New value' }}</div>
+          @if (target.length === 0) {
+            <span class="bd-muted">Not set</span>
+          } @else {
+            <div class="bd-agg-vals">
+              @for (val of target; track val) {
+                <span class="bd-pill">{{ val }}</span>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Result: Errors State -->
+    @else if (result === 'errors') {
+      @let failedCount = applyErrors().length;
+      <div class="bw-step2">
+        <div class="bw-review-banner error-banner">
+          <mat-icon>error</mat-icon>
+          <span>
+            Applied to {{ n - failedCount | number }} {{ n - failedCount === 1 ? 'device' : 'devices' }};
+            <strong>{{ failedCount | number }} {{ failedCount === 1 ? 'device' : 'devices' }} failed</strong>.
+          </span>
+        </div>
+        <div class="bw-table-section">
+          <div class="bw-table-container custom-scrollbar">
+            <table class="bw-table">
+              <colgroup>
+                <col style="width: 35%" />
+                <col style="width: 65%" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col">Device ID</th>
+                  <th scope="col">Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (err of applyErrors(); track err.deviceId) {
+                  <tr>
+                    <td class="bw-li-mono" [title]="err.deviceId">{{ err.deviceId }}</td>
+                    <td class="error-cell" [title]="err.reason">{{ err.reason }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Loading State -->
+    @else if (isLoading()) {
+      <div class="bw-loading-container">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>Loading dimension context…</span>
+      </div>
+    }
+
+    <!-- Load Error State -->
+    @else if (loadError()) {
+      <div class="bw-error-container">
+        <mat-icon>error</mat-icon>
+        <span>{{ loadError() }}</span>
+      </div>
+    }
+
+    <!-- Wizard Step 1: Choose Value -->
+    @else if (currentStep === 1) {
+      <div class="bw-step1">
+        <!-- Top band: Value to apply -->
+        <div class="bw-apply-band">
+          <div class="bw-apply-head">
+            <h4 class="bw-apply-title">Value to apply</h4>
+            <span class="bw-apply-sub">Applied to all {{ deviceLabel() }}</span>
+            <button
+              type="button"
+              class="bw-text-btn bd-band-actions"
+              (click)="clearTarget()"
+              [title]="'Clear the value, which removes ' + dimName + ' from the devices'"
+            >
+              Clear values
+            </button>
+          </div>
+
+          <div class="bd-chips" (click)="focusChipInput($event)">
+            @for (v of target; track v; let i = $index) {
+              <span class="bd-chip">
+                <span>{{ v }}</span>
+                <button
+                  type="button"
+                  class="bd-chip-remove"
+                  (click)="removeChip(i)"
+                  title="Remove"
+                  aria-label="Remove chip"
+                >
+                  <mat-icon>close</mat-icon>
+                </button>
+              </span>
+            }
+            <input
+              #chipInput
+              type="text"
+              class="bd-chip-input"
+              [placeholder]="chipPlaceholder()"
+              [ngModel]="inputValue()"
+              (ngModelChange)="inputValue.set($event)"
+              (keydown)="onInputKeydown($event)"
+              (paste)="onInputPaste($event)"
+              (blur)="onInputBlur()"
+              autocomplete="off"
+            />
+          </div>
+        </div>
+
+        <!-- Aggregated list: distinct values across selection + suggestions -->
+        <div class="bw-panel">
+          <div class="bw-panel-head">Current values across selected devices</div>
+          <div class="bw-panel-list custom-scrollbar">
+            @for (sug of aggregatedSuggestions(); track sug.key) {
+              <div class="bw-li bd-agg-row">
+                <mat-icon class="bw-li-lead">{{ sug.isNotSet ? 'block' : 'label' }}</mat-icon>
+                <div class="bw-li-body">
+                  @if (sug.isNotSet) {
+                    <span class="bw-li-headline bd-muted">Not set</span>
+                  } @else {
+                    <div class="bd-agg-vals">
+                      @for (v of sug.values; track v) {
+                        <span class="bd-pill">{{ v }}</span>
+                      }
+                    </div>
+                  }
+                  <span class="bw-li-support">
+                    @if (sug.selectedCount > 0) {
+                      Used by {{ sug.selectedCount | number }} {{ sug.selectedCount === 1 ? 'device' : 'devices' }}
+                    } @else {
+                      Suggested · {{ (sug.fleetCount || 0) | number }} in fleet
+                    }
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  class="bw-text-btn"
+                  (click)="useValueSet(sug.values)"
+                >
+                  Use this
+                </button>
+              </div>
+            } @empty {
+              <div class="bw-list-empty">No values found.</div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Wizard Step 2: Review and Apply -->
+    @else if (currentStep === 2) {
+      <div class="bw-step2">
+        <!-- Review Banner -->
+        <div class="bw-review-banner">
+          <mat-icon>swap_horiz</mat-icon>
+          <span>
+            @if (target.length === 0) {
+              Applying removes <strong>{{ dimName }}</strong> from <strong>{{ changedCount() | number }} {{ changedCount() === 1 ? 'device' : 'devices' }}</strong>.
+            } @else {
+              Applying sets <strong>{{ dimName }}</strong> on <strong>{{ changedCount() | number }} {{ changedCount() === 1 ? 'device' : 'devices' }}</strong>.
+            }
+            @if (skippedCount() > 0) {
+              <span class="skipped-highlight">
+                {{ skippedCount() | number }} {{ skippedCount() === 1 ? 'device' : 'devices' }} skipped (read-only).
+              </span>
+            } @else if (sameCount() > 0) {
+              {{ sameCount() | number }} {{ sameCount() === 1 ? 'device' : 'devices' }} already match.
+            }
+            Nothing changes until you apply.
+          </span>
+        </div>
+
+        <!-- Per-device Comparison Table -->
+        <div class="bw-table-section">
+          <div class="bw-table-container custom-scrollbar">
+            <table class="bw-table">
+              <colgroup>
+                <col style="width: 24%" />
+                <col style="width: 31%" />
+                <col style="width: 31%" />
+                <col style="width: 14%" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th scope="col">Device ID</th>
+                  <th scope="col">Current value</th>
+                  <th scope="col">New value</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of reviewRows(); track row.deviceId) {
+                  <tr>
+                    <td class="bw-li-mono" [title]="row.deviceId">{{ row.deviceId }}</td>
+                    <td>
+                      @if (row.currentValues.length === 0) {
+                        <span class="bd-muted">Not set</span>
+                      } @else {
+                        <div class="bd-agg-vals">
+                          @for (v of row.currentValues; track v) {
+                            <span class="bd-pill">{{ v }}</span>
+                          }
+                        </div>
+                      }
+                    </td>
+                    <td>
+                      @if (!row.writable) {
+                        <span class="bd-muted" [title]="row.unwritableReason">
+                          Unchanged ({{ row.unwritableReason || 'read-only' }})
+                        </span>
+                      } @else if (target.length === 0) {
+                        <span class="bd-muted">Not set</span>
+                      } @else {
+                        <div class="bd-agg-vals">
+                          @for (v of target; track v) {
+                            <span class="bd-pill">{{ v }}</span>
+                          }
+                        </div>
+                      }
+                    </td>
+                    <td>
+                      @if (!row.writable) {
+                        <span
+                          class="bd-unwritable-badge"
+                          [matTooltip]="row.unwritableReason"
+                        >
+                          Skipped
+                        </span>
+                      } @else if (row.isChanged) {
+                        <span class="bd-change">Will update</span>
+                      } @else {
+                        <span class="bd-nochange">No change</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Footer Actions -->
+  <ng-template #actionsTemplate>
+    @if (result === 'success') {
+      <button type="button" class="dialog-button dialog-button-primary" (click)="done()">Done</button>
+    } @else if (result === 'errors') {
+      <button type="button" class="dialog-button dialog-button-primary" (click)="close()">Close</button>
+    } @else if (!isApplyingNow && !isLoading() && !loadError()) {
+      @switch (currentStep) {
+        @case (1) {
+          <button type="button" class="dialog-button dialog-button-secondary" (click)="close()">Cancel</button>
+          <button
+            type="button"
+            class="dialog-button dialog-button-primary"
+            (click)="goToStep2()"
+          >
+            Next
+          </button>
+        }
+        @case (2) {
+          <button type="button" class="dialog-button dialog-button-secondary" (click)="backToStep1()">Back</button>
+          <button
+            type="button"
+            class="dialog-button dialog-button-primary"
+            [disabled]="!hasWritableDevices()"
+            (click)="apply()"
+          >
+            Apply to {{ deviceLabel() }}
+          </button>
+        }
+      }
+    }
+  </ng-template>
+</app-dialog>

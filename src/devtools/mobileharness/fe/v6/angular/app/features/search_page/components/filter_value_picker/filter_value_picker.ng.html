@@ -128,6 +128,8 @@
                   [placeholder]="config()?.namePlaceholder || 'Name'"
                   [ngModel]="propName()"
                   (ngModelChange)="propName.set($event)"
+                  (keydown.enter)="onApply()"
+                  (keydown.escape)="onCancel()"
                 />
               </div>
             }
@@ -353,7 +355,13 @@
         }
         <span class="vp-grow"></span>
         <button class="vp-btn vp-cancel" (click)="onCancel()">Cancel</button>
-        <button class="vp-btn vp-apply" (click)="onApply()">Apply</button>
+        <button
+          class="vp-btn vp-apply"
+          [disabled]="isApplyDisabled()"
+          (click)="onApply()"
+        >
+          Apply
+        </button>
       </div>
     </div>
   </ng-template>
