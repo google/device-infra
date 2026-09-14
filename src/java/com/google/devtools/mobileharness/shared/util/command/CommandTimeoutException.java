@@ -46,5 +46,9 @@ public class CommandTimeoutException extends CommandExecutionException {
         /* cause= */ null,
         command,
         commandResult);
+    addMetadata("timeout", finalizedTimeout.toString());
+    if (finalizedStartTimeout != null) {
+      addMetadata("start_timeout", finalizedStartTimeout.toString());
+    }
   }
 }

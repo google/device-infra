@@ -62,7 +62,13 @@ public class ErrorModelConverterTest {
                                   .setClassName("foo.goo.Class1")
                                   .setMethodName("method1")
                                   .setFileName("Class1.java")
-                                  .setLineNumber(123))))
+                                  .setLineNumber(123)))
+                  .addMetadata(
+                      ExceptionSummary.MetadataEntry.newBuilder().setKey("key1").setValue("value1"))
+                  .addMetadata(
+                      ExceptionSummary.MetadataEntry.newBuilder()
+                          .setKey("key2")
+                          .setValue("value2")))
           .setCause(
               ExceptionDetail.newBuilder()
                   .setSummary(
@@ -88,7 +94,15 @@ public class ErrorModelConverterTest {
                                           .setClassName("foo.goo.Class2")
                                           .setMethodName("method2")
                                           .setFileName("Class2.java")
-                                          .setLineNumber(456)))))
+                                          .setLineNumber(456)))
+                          .addMetadata(
+                              ExceptionSummary.MetadataEntry.newBuilder()
+                                  .setKey("key3")
+                                  .setValue("value3"))
+                          .addMetadata(
+                              ExceptionSummary.MetadataEntry.newBuilder()
+                                  .setKey("key4")
+                                  .setValue("value4"))))
           .addSuppressed(
               ExceptionDetail.newBuilder()
                   .setSummary(
@@ -110,24 +124,34 @@ public class ErrorModelConverterTest {
                                           .setClassName("foo.goo.Class3")
                                           .setMethodName("method3")
                                           .setFileName("Class3.java")
-                                          .setLineNumber(789)))))
+                                          .setLineNumber(789)))
+                          .addMetadata(
+                              ExceptionSummary.MetadataEntry.newBuilder()
+                                  .setKey("key5")
+                                  .setValue("value5"))
+                          .addMetadata(
+                              ExceptionSummary.MetadataEntry.newBuilder()
+                                  .setKey("key6")
+                                  .setValue("value6"))))
           .build();
 
   public static final String DEVICE_INFRA_EXCEPTION_STRING =
       "com.google.devtools.deviceinfra.api.error.DeviceInfraException: Failed to load"
-          + " class [MH|UNDETERMINED|REFLECTION_LOAD_CLASS_ERROR|4000001] [DeviceInfraException]\n"
+          + " class [MH|UNDETERMINED|REFLECTION_LOAD_CLASS_ERROR|4000001] [DeviceInfraException],"
+          + " metadata={key1=value1, key2=value2}\n"
           + "\tat foo.goo.Class1.method1(Class1.java:123)\n"
           + "\tSuppressed:"
-          + " java.lang.InterruptedException: Message of suppressed [InterruptedException]\n"
+          + " java.lang.InterruptedException: Message of suppressed [InterruptedException],"
+          + " metadata={key5=value5, key6=value6}\n"
           + "\t\tat foo.goo.Class3.method3(Class3.java:789)\n"
           + "Caused by:"
           + " com.google.devtools.deviceinfra.api.error.DeviceInfraException: Message"
           + " of cause [MH|UNDETERMINED|REFLECTION_LOAD_CLASS_TYPE_MISMATCH|4000002]"
-          + " [DeviceInfraException]\n"
+          + " [DeviceInfraException], metadata={key3=value3, key4=value4}\n"
           + "\tat foo.goo.Class2.method2(Class2.java:456)\n";
 
   @Test
-  public void toDeserializedException_toExceptionDetail() {
+  public void exceptionDetailProto_toDeserializedException_toExceptionDetailProto() {
     ExceptionDetail.Builder expectedExceptionDetail = DEVICE_INFRA_EXCEPTION_DETAIL.toBuilder();
     expectedExceptionDetail
         .getSummaryBuilder()
@@ -167,7 +191,7 @@ public class ErrorModelConverterTest {
   }
 
   @Test
-  public void toDeserializedException() {
+  public void exceptionDetailProto_toDeserializedException() {
     DeserializedException exception =
         ErrorModelConverter.toDeserializedException(DEVICE_INFRA_EXCEPTION_DETAIL);
 
@@ -210,7 +234,7 @@ public class ErrorModelConverterTest {
   }
 
   @Test
-  public void exceptionDetail_toFlattenedExceptionDetail_success() {
+  public void exceptionDetailProto_toFlattenedExceptionDetail_success() {
     ExceptionDetail.Builder detail = DEVICE_INFRA_EXCEPTION_DETAIL.toBuilder();
     detail.getCauseBuilder().setCause(DEVICE_INFRA_EXCEPTION_DETAIL);
     detail.getCauseBuilder().getCauseBuilder().setCause(DEVICE_INFRA_EXCEPTION_DETAIL);
@@ -517,27 +541,37 @@ public class ErrorModelConverterTest {
   }
 
   @Test
-  public void toDeserializedException_fromFlattenedExceptionDetail() {
+  public void flattenedExceptionDetailProto_toDeserializedException() {
     FlattenedExceptionDetail flattened =
         ErrorModelConverter.toFlattenedExceptionDetail(DEVICE_INFRA_EXCEPTION_DETAIL);
 
     DeserializedException deserialized = ErrorModelConverter.toDeserializedException(flattened);
 
     assertThat(deserialized.getErrorId().code()).isEqualTo(4000001);
+    assertThat(deserialized.getMetadata()).containsExactly("key1", "value1", "key2", "value2");
     assertThat(deserialized.getCause()).isNotNull();
-    assertThat(((DeserializedException) deserialized.getCause()).getErrorId().code())
-        .isEqualTo(4000002);
+    assertThat(deserialized.getCause().getErrorId().code()).isEqualTo(4000002);
+    assertThat(deserialized.getCause().getMetadata())
+        .containsExactly("key3", "value3", "key4", "value4");
   }
 
   @Test
-  public void toExceptionDetail_fromFlattenedExceptionDetail() {
+  public void flattenedExceptionDetailProto_toExceptionDetail() {
     FlattenedExceptionDetail flattened =
         ErrorModelConverter.toFlattenedExceptionDetail(DEVICE_INFRA_EXCEPTION_DETAIL);
 
     ExceptionDetail detail = ErrorModelConverter.toExceptionDetail(flattened);
 
     assertThat(detail.getSummary().getErrorId().getCode()).isEqualTo(4000001);
+    assertThat(detail.getSummary().getMetadataList())
+        .containsExactly(
+            ExceptionSummary.MetadataEntry.newBuilder().setKey("key1").setValue("value1").build(),
+            ExceptionSummary.MetadataEntry.newBuilder().setKey("key2").setValue("value2").build());
     assertThat(detail.hasCause()).isTrue();
     assertThat(detail.getCause().getSummary().getErrorId().getCode()).isEqualTo(4000002);
+    assertThat(detail.getCause().getSummary().getMetadataList())
+        .containsExactly(
+            ExceptionSummary.MetadataEntry.newBuilder().setKey("key3").setValue("value3").build(),
+            ExceptionSummary.MetadataEntry.newBuilder().setKey("key4").setValue("value4").build());
   }
 }
