@@ -294,6 +294,7 @@ public class SessionResultHandlerUtil {
     ImmutableMap.Builder<String, String> testReportProperties = ImmutableMap.builder();
     ImmutableList.Builder<TradefedResultBundle> tradefedResultBundlesBuilder =
         ImmutableList.builder();
+    ImmutableList.Builder<Module> unexecutedTradefedModulesBuilder = ImmutableList.builder();
     boolean curSessionHasNonTfJob = false;
     boolean curSessionHasTfJob = false;
     boolean previousSessionHasNonTfModule = false;
@@ -325,17 +326,21 @@ public class SessionResultHandlerUtil {
           String.format(
               "Failed to copy tradefed test [%s]'s log files to log dir [%s].",
               test.locator().getId(), logDir));
-      callAndLogException(
-          () -> {
-            Optional<TradefedResultBundle> bundle =
-                copyTradefedTestResultFiles(test, tmpTradefedTestResultsDir, resultDir);
-            bundle.ifPresent(tradefedResultBundlesBuilder::add);
-            return null;
-          },
-          String.format(
-              "Failed to copy tradefed test [%s]'s result files to tmp result dir [%s], result dir"
-                  + " [%s].",
-              test.locator().getId(), tmpTradefedTestResultsDir, resultDir));
+      Optional<TradefedResultBundle> bundle =
+          callAndLogException(
+                  () -> copyTradefedTestResultFiles(test, tmpTradefedTestResultsDir, resultDir),
+                  String.format(
+                      "Failed to copy tradefed test [%s]'s result files to tmp result dir [%s],"
+                          + " result dir [%s].",
+                      test.locator().getId(), tmpTradefedTestResultsDir, resultDir))
+              .orElse(Optional.empty());
+      if (bundle.isPresent()) {
+        tradefedResultBundlesBuilder.add(bundle.get());
+      } else if (test.resultWithCause().get().type() != TestResult.PASS) {
+        // If Tradefed failed without creating result files, insert assigned modules as unexecuted
+        // (done=false) so that subsequent retries can include them.
+        unexecutedTradefedModulesBuilder.addAll(getUnexecutedTradefedModules(test));
+      }
     }
     ImmutableList<TradefedResultBundle> tradefedResultBundles =
         tradefedResultBundlesBuilder.build();
@@ -445,6 +450,11 @@ public class SessionResultHandlerUtil {
     mergedNonTradefedReport.ifPresent(reportList::add);
     if (!skippedNonTradefedModules.isEmpty()) {
       reportList.add(Result.newBuilder().addAllModuleInfo(skippedNonTradefedModules).build());
+    }
+    // Adds unexecuted Tradefed modules (from failed runs lacking result files) into the report.
+    ImmutableList<Module> unexecutedTradefedModules = unexecutedTradefedModulesBuilder.build();
+    if (!unexecutedTradefedModules.isEmpty()) {
+      reportList.add(Result.newBuilder().addAllModuleInfo(unexecutedTradefedModules).build());
     }
 
     Optional<Result> mergedReport =
@@ -862,19 +872,7 @@ public class SessionResultHandlerUtil {
     // subplan) expanded module names (e.g. `arm64-v8a CtsBatteryHealthTestCases`) for the Tradefed
     // test, from test properties.
     ImmutableList<TradefedResultBundle.ModuleInfo> filteredExpandedTradefedModules =
-        Splitter.on(",")
-            .omitEmptyStrings()
-            .splitToStream(
-                tradefedTestInfo
-                    .properties()
-                    .getOptional(
-                        XtsConstants.TRADEFED_FILTERED_EXPANDED_MODULES_FOR_TEST_PROPERTY_KEY)
-                    .orElse(""))
-            .map(AbiUtil::parseId)
-            .map(
-                id ->
-                    TradefedResultBundle.ModuleInfo.of(/* abi= */ id.get(0), /* name= */ id.get(1)))
-            .collect(toImmutableList());
+        getTradefedModules(tradefedTestInfo);
     Path deviceInfoDir = Path.of(tradefedTestInfo.getGenFileDir(), DEVICE_INFO_DIR_NAME);
     if (localFileUtil.isDirExist(deviceInfoDir)) {
       Path destDir = resultDirInZip.resolve(DEVICE_INFO_DIR_NAME);
@@ -886,6 +884,39 @@ public class SessionResultHandlerUtil {
             resultXmlFile ->
                 TradefedResultBundle.of(
                     resultXmlFile, testRecordFile, filteredExpandedTradefedModules));
+  }
+
+  /**
+   * Returns the list of unexecuted {@link Module}s with {@code done=false} for the given Tradefed
+   * test, converted from its assigned module list.
+   */
+  private static ImmutableList<Module> getUnexecutedTradefedModules(TestInfo test) {
+    return getTradefedModules(test).stream()
+        .map(
+            module ->
+                Module.newBuilder()
+                    .setAbi(module.abi())
+                    .setName(module.name())
+                    .setDone(false)
+                    .build())
+        .collect(toImmutableList());
+  }
+
+  /**
+   * Retrieves the list of filtered (by include/exclude filters, the given module names, or subplan)
+   * expanded module names (e.g. {@code arm64-v8a CtsBatteryHealthTestCases}) for the Tradefed test,
+   * from test properties.
+   */
+  private static ImmutableList<TradefedResultBundle.ModuleInfo> getTradefedModules(TestInfo test) {
+    return Splitter.on(",")
+        .omitEmptyStrings()
+        .splitToStream(
+            test.properties()
+                .getOptional(XtsConstants.TRADEFED_FILTERED_EXPANDED_MODULES_FOR_TEST_PROPERTY_KEY)
+                .orElse(""))
+        .map(AbiUtil::parseId)
+        .map(id -> TradefedResultBundle.ModuleInfo.of(/* abi= */ id.get(0), /* name= */ id.get(1)))
+        .collect(toImmutableList());
   }
 
   /**
@@ -1128,12 +1159,18 @@ public class SessionResultHandlerUtil {
     }
   }
 
-  private static void callAndLogException(MobileHarnessCallable<Void> callable, String errorMessage)
-      throws InterruptedException {
+  /**
+   * Invokes the given {@link MobileHarnessCallable} and logs a warning if an exception occurs,
+   * returning an empty {@link Optional}.
+   */
+  @CanIgnoreReturnValue
+  private static <T> Optional<T> callAndLogException(
+      MobileHarnessCallable<T> callable, String errorMessage) throws InterruptedException {
     try {
-      callable.call();
+      return Optional.ofNullable(callable.call());
     } catch (MobileHarnessException | RuntimeException | Error e) {
       logger.atWarning().with(IMPORTANCE, IMPORTANT).withCause(e).log("%s", errorMessage);
+      return Optional.empty();
     }
   }
 
