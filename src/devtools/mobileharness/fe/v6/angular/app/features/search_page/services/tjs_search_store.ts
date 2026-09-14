@@ -21,11 +21,11 @@ import {
 } from '../../../core/models/search';
 import {SnackBarService} from '../../../shared/services/snackbar_service';
 import {
+  createInitialValuePickerState,
   EntityType,
   FilterChip,
   FilterKeyMetadata,
   FilterPair,
-  PickerValueItem,
   PromotedFilterKeyItem,
   SearchBoxSuggestion,
   ValuePickerApplyEvent,
@@ -568,54 +568,40 @@ export class TjsSearchStore extends SearchPageStore {
     key: string,
     activeChip?: FilterChip,
     metadata?: FilterKeyMetadata,
-    stagedValues?: string[],
+    stagedValues: string[] = [],
   ): ValuePickerState {
     const meta = metadata || this.getKeyMetadata(key);
-
-    let enumOptions: PickerValueItem[] = [];
     const enumPicker =
       typeof meta?.enumPicker === 'object' ? meta.enumPicker : undefined;
-    if (enumPicker?.options && enumPicker.options.length > 0) {
-      enumOptions = enumPicker.options.map((o) => ({
+    const values =
+      enumPicker?.options?.map((o) => ({
         value: o.value,
         displayLabel: o.label || o.value,
-      }));
-    }
+      })) ?? [];
 
-    let selectedVals = new Set<string>();
-    if (activeChip) {
-      if (activeChip.rawValues && activeChip.rawValues.length > 0) {
-        selectedVals = new Set(activeChip.rawValues);
-      } else if (activeChip.tjsFilter) {
-        const rawVals = extractRawValuesFromTjsFilter(activeChip.tjsFilter);
-        if (rawVals && rawVals.length > 0) {
-          selectedVals = new Set(rawVals);
-        }
-      } else if (activeChip.pillCondition) {
-        const existingVals = activeChip.pillCondition
-          .split(',')
-          .map((s: string) => s.trim())
-          .filter(Boolean);
-        selectedVals = new Set(existingVals);
-      }
-    }
-
-    if (stagedValues && stagedValues.length > 0) {
-      selectedVals = new Set([...selectedVals, ...stagedValues]);
-    }
+    const chipValues = this.extractInitialChipValues(activeChip);
 
     return {
-      loading: false,
-      values: enumOptions,
-      selectedValues: selectedVals,
-      negated: false,
-      advanced: {
-        active: false,
-        mode: 'prefix',
-        text: '',
-        values: [],
-      },
+      ...createInitialValuePickerState(),
+      values,
+      selectedValues: new Set([...chipValues, ...stagedValues]),
     };
+  }
+
+  /** Resolves initial selected values from an existing TJS FilterChip. */
+  private extractInitialChipValues(chip?: FilterChip): string[] {
+    if (!chip) return [];
+    if (chip.rawValues?.length) return chip.rawValues;
+    if (chip.tjsFilter) {
+      return extractRawValuesFromTjsFilter(chip.tjsFilter) ?? [];
+    }
+    if (chip.pillCondition) {
+      return chip.pillCondition
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    return [];
   }
 
   /** Handles ValuePicker apply events by resolving chips from API. */

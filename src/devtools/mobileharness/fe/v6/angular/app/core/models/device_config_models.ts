@@ -157,6 +157,24 @@ export declare interface CheckDeviceConfigPermissionResult
   extends WritePermissionResult {}
 
 /**
+ * Error code for update operations matching config_service.proto UpdateError.Code.
+ */
+export type UpdateErrorCode =
+  | 'CODE_UNSPECIFIED'
+  | 'SELF_LOCKOUT_DETECTED'
+  | 'PERMISSION_DENIED'
+  | 'VALIDATION_ERROR'
+  | 'UNKNOWN';
+
+/**
+ * Error details for update operations matching config_service.proto UpdateError.
+ */
+export declare interface UpdateError {
+  code: UpdateErrorCode;
+  message?: string;
+}
+
+/**
  * The result object returned after attempting to update a device's
  * configuration.
  */
@@ -164,15 +182,7 @@ export declare interface UpdateDeviceConfigResult {
   /** True if the update operation was successful. */
   success: boolean;
   /** Details about the error if the update failed. */
-  error?: {
-    code:
-      | 'CODE_UNSPECIFIED'
-      | 'SELF_LOCKOUT_DETECTED'
-      | 'PERMISSION_DENIED'
-      | 'VALIDATION_ERROR'
-      | 'UNKNOWN';
-    message?: string;
-  };
+  error?: UpdateError;
 }
 
 /**
@@ -196,5 +206,353 @@ export declare interface UpdateDeviceConfigRequest {
   section: ConfigSection;
   options?: {overrideSelfLockout?: boolean};
   universe?: string;
+}
+
+/**
+ * Change classification for a selected device in a batch configuration dialog.
+ * Aligns with config_service.proto DeviceConfigChangeStatus.
+ */
+export enum DeviceConfigChangeStatus {
+  DEVICE_CONFIG_CHANGE_STATUS_UNSPECIFIED = 'DEVICE_CONFIG_CHANGE_STATUS_UNSPECIFIED',
+  /**
+   * The device configuration can be modified by the current user, and no
+   * target value was supplied in the request yet (Step 1 initial load).
+   */
+  DEVICE_CONFIG_CHANGE_STATUS_WRITABLE = 'DEVICE_CONFIG_CHANGE_STATUS_WRITABLE',
+  /**
+   * The device is writable and its current configuration differs from the
+   * requested target configuration (Step 2 review).
+   */
+  DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE = 'DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE',
+  /**
+   * The device is writable and its current configuration already matches the
+   * requested target configuration (Step 2 review). No write is needed.
+   */
+  DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES = 'DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES',
+  /**
+   * The device configuration cannot be modified by the current user (e.g.
+   * locked by host-level configuration, Config Pusher, insufficient
+   * permission, or per-device config read failure).
+   */
+  DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY = 'DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY',
+}
+
+/**
+ * Default Wi-Fi network parameters on a device in batch Wi-Fi operations.
+ * Unlike single-device WifiConfig, carries no legacy UI "type" field.
+ * Aligns with config_service.proto DeviceWifi.
+ */
+export declare interface DeviceWifi {
+  /** Wi-Fi network name (SSID). Empty when no default Wi-Fi is configured. */
+  ssid: string;
+  /** Password (PSK) for the Wi-Fi network. Empty for open networks. */
+  psk?: string;
+  /** True if the network hides its SSID and requires active scanning. */
+  scanSsid?: boolean;
+}
+
+/**
+ * Clears the default Wi-Fi network on the target devices.
+ * Aligns with config_service.proto ClearDeviceWifi.
+ */
+export declare interface ClearDeviceWifi {}
+
+/**
+ * Target Wi-Fi state to preview or apply in a batch operation.
+ * Aligns with config_service.proto TargetDeviceWifi.
+ */
+export declare interface TargetDeviceWifi {
+  /** Removes default_wifi from the target devices (sets Wi-Fi to None). */
+  clearWifi?: ClearDeviceWifi;
+  /** Sets default_wifi to this network on the target devices. */
+  wifi?: DeviceWifi;
+}
+
+/**
+ * Indicates the network comes from the curated credential store (1P),
+ * where fleet-wide device counts do not apply.
+ * Aligns with config_service.proto GetWifiSuggestionsResponse.CuratedWifiPreset.
+ */
+export declare interface CuratedWifiPreset {}
+
+/**
+ * Indicates the network is aggregated from active device configurations
+ * in the fleet (ATS), carrying the fleet usage count.
+ * Aligns with config_service.proto GetWifiSuggestionsResponse.FleetWifiInUse.
+ */
+export declare interface FleetWifiInUse {
+  deviceCount?: number;
+}
+
+/**
+ * A candidate Wi-Fi network available to pick from in batch Wi-Fi operations.
+ * Aligns with config_service.proto GetWifiSuggestionsResponse.CandidateWifi.
+ */
+export declare interface CandidateWifi {
+  /** Network credentials (ssid, psk, scan_ssid). */
+  wifi: DeviceWifi;
+  curatedPreset?: CuratedWifiPreset;
+  fleetInUse?: FleetWifiInUse;
+}
+
+/**
+ * Request for GetWifiSuggestions.
+ * Aligns with config_service.proto GetWifiSuggestionsRequest.
+ */
+export declare interface GetWifiSuggestionsRequest {
+  universe?: string;
+  fleet?: string;
+}
+
+/**
+ * Response for GetWifiSuggestions.
+ * Aligns with config_service.proto GetWifiSuggestionsResponse.
+ */
+export declare interface GetWifiSuggestionsResponse {
+  candidateWifis?: CandidateWifi[];
+}
+
+/**
+ * Identifies a target device in batch configuration operations.
+ * Both deviceId and hostName are provided so the backend can disambiguate
+ * and evaluate devices with unrecognizable or non-unique device IDs.
+ * Aligns with config_service.proto DeviceTarget.
+ */
+export declare interface DeviceTarget {
+  deviceId: string;
+  hostName?: string;
+}
+
+/**
+ * Current Wi-Fi configuration and change status for a single selected device.
+ * Aligns with config_service.proto BatchGetDeviceWifiConfigsResponse.DeviceWifiConfigEntry.
+ */
+export declare interface DeviceWifiConfigEntry {
+  deviceId: string;
+  /** Current default Wi-Fi configuration (empty ssid if unconfigured). */
+  currentWifi?: DeviceWifi;
+  /** Change status for this device. */
+  status: DeviceConfigChangeStatus;
+  /** Explanation when status is DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY. */
+  readOnlyReason?: string;
+  /** Host name of the lab the device connects to. */
+  hostName?: string;
+}
+
+/**
+ * Request for BatchGetDeviceWifiConfigs.
+ * Aligns with config_service.proto BatchGetDeviceWifiConfigsRequest.
+ */
+export declare interface BatchGetDeviceWifiConfigsRequest {
+  devices: DeviceTarget[];
+  target?: TargetDeviceWifi;
+  universe?: string;
+  fleet?: string;
+}
+
+/**
+ * Response for BatchGetDeviceWifiConfigs.
+ * Aligns with config_service.proto BatchGetDeviceWifiConfigsResponse.
+ */
+export declare interface BatchGetDeviceWifiConfigsResponse {
+  entries?: DeviceWifiConfigEntry[];
+}
+
+/**
+ * Selects which dimension list in composite_dimension is read or updated.
+ * Aligns with config_service.proto DimensionList.
+ */
+export enum DimensionList {
+  DIMENSION_LIST_UNSPECIFIED = 'DIMENSION_LIST_UNSPECIFIED',
+  DIMENSION_LIST_SUPPORTED = 'DIMENSION_LIST_SUPPORTED',
+  DIMENSION_LIST_REQUIRED = 'DIMENSION_LIST_REQUIRED',
+}
+
+/**
+ * Metadata for a configurable dimension in the selection toolbar.
+ * Aligns with config_service.proto ConfigurableDimension.
+ */
+export declare interface ConfigurableDimension {
+  /** Dimension name in DeviceConfig (e.g. "recovery", "skip_suw_app", "pool"). */
+  dimensionName: string;
+  /** Exact label shown in toolbar menu and dialog header. */
+  displayName: string;
+  /** Which dimension list in composite_dimension this entry configures. */
+  dimensionList: DimensionList;
+}
+
+/**
+ * Request for GetConfigurableDimensions.
+ * Aligns with config_service.proto GetConfigurableDimensionsRequest.
+ */
+export declare interface GetConfigurableDimensionsRequest {
+  universe?: string;
+  fleet?: string;
+}
+
+/**
+ * Response for GetConfigurableDimensions.
+ * Aligns with config_service.proto GetConfigurableDimensionsResponse.
+ */
+export declare interface GetConfigurableDimensionsResponse {
+  enabled?: boolean;
+  dimensions: ConfigurableDimension[];
+  allowCustomDimensions: boolean;
+}
+
+/**
+ * A configurable dimension key present in DeviceConfig.
+ * Aligns with config_service.proto BatchGetConfigurableDimensionKeysResponse.CandidateDimensionKey.
+ */
+export declare interface CandidateDimensionKey {
+  dimensionName: string;
+  selectedDeviceCount: number;
+  fleetDeviceCount: number;
+}
+
+/**
+ * Request for BatchGetConfigurableDimensionKeys.
+ * Aligns with config_service.proto BatchGetConfigurableDimensionKeysRequest.
+ */
+export declare interface BatchGetConfigurableDimensionKeysRequest {
+  devices: DeviceTarget[];
+  dimensionList: DimensionList;
+  universe?: string;
+  fleet?: string;
+}
+
+/**
+ * Response for BatchGetConfigurableDimensionKeys.
+ * Aligns with config_service.proto BatchGetConfigurableDimensionKeysResponse.
+ */
+export declare interface BatchGetConfigurableDimensionKeysResponse {
+  candidateKeys?: CandidateDimensionKey[];
+  systemDimensionNames?: string[];
+}
+
+/**
+ * A distinct value-set available as a one-click suggestion.
+ * Aligns with config_service.proto GetDimensionValueSuggestionsResponse.CandidateDimensionValue.
+ */
+export declare interface CandidateDimensionValue {
+  values: string[];
+  deviceCount: number;
+}
+
+/**
+ * Request for GetDimensionValueSuggestions.
+ * Aligns with config_service.proto GetDimensionValueSuggestionsRequest.
+ */
+export declare interface GetDimensionValueSuggestionsRequest {
+  dimensionName: string;
+  dimensionList: DimensionList;
+  universe?: string;
+  fleet?: string;
+}
+
+/**
+ * Response for GetDimensionValueSuggestions.
+ * Aligns with config_service.proto GetDimensionValueSuggestionsResponse.
+ */
+export declare interface GetDimensionValueSuggestionsResponse {
+  candidateValues?: CandidateDimensionValue[];
+}
+
+/**
+ * Clears all entries for the target dimension key from composite_dimension.
+ * Aligns with config_service.proto ClearDimensionValues.
+ */
+export declare interface ClearDimensionValues {}
+
+/**
+ * A set of dimension values to assign to a dimension key.
+ * Aligns with config_service.proto DimensionValueList.
+ */
+export declare interface DimensionValueList {
+  values: string[];
+}
+
+/**
+ * Target dimension value state to preview or apply in a batch operation.
+ * Aligns with config_service.proto TargetDimensionValues.
+ */
+export declare interface TargetDimensionValues {
+  clearValues?: ClearDimensionValues;
+  valueList?: DimensionValueList;
+}
+
+/**
+ * Current value-set and change status for a single selected device.
+ * Aligns with config_service.proto BatchGetDeviceDimensionConfigsResponse.DeviceDimensionConfigEntry.
+ */
+export declare interface DeviceDimensionConfigEntry {
+  deviceId: string;
+  values?: string[];
+  status: DeviceConfigChangeStatus;
+  readOnlyReason?: string;
+  hostName?: string;
+}
+
+/**
+ * Request for BatchGetDeviceDimensionConfigs.
+ * Aligns with config_service.proto BatchGetDeviceDimensionConfigsRequest.
+ */
+export declare interface BatchGetDeviceDimensionConfigsRequest {
+  devices: DeviceTarget[];
+  dimensionName: string;
+  dimensionList: DimensionList;
+  target?: TargetDimensionValues;
+  universe?: string;
+  fleet?: string;
+}
+
+/**
+ * Response for BatchGetDeviceDimensionConfigs.
+ * Aligns with config_service.proto BatchGetDeviceDimensionConfigsResponse.
+ */
+export declare interface BatchGetDeviceDimensionConfigsResponse {
+  entries?: DeviceDimensionConfigEntry[];
+}
+
+/**
+ * Request for BatchUpdateDeviceDimensionConfigs.
+ * Aligns with config_service.proto BatchUpdateDeviceDimensionConfigsRequest.
+ */
+export declare interface BatchUpdateDeviceDimensionConfigsRequest {
+  devices: DeviceTarget[];
+  dimensionName: string;
+  dimensionList: DimensionList;
+  target: TargetDimensionValues;
+  universe?: string;
+  fleet?: string;
+}
+
+/**
+ * Response for BatchUpdateDeviceDimensionConfigs.
+ * Aligns with config_service.proto BatchUpdateDeviceDimensionConfigsResponse.
+ */
+export declare interface BatchUpdateDeviceDimensionConfigsResponse {
+  errors?: Record<string, UpdateError>;
+}
+
+/**
+ * Request for BatchUpdateDeviceWifiConfigs.
+ * Aligns with config_service.proto BatchUpdateDeviceWifiConfigsRequest.
+ */
+export declare interface BatchUpdateDeviceWifiConfigsRequest {
+  devices: DeviceTarget[];
+  target: TargetDeviceWifi;
+  universe?: string;
+  fleet?: string;
+}
+
+/**
+ * Response for BatchUpdateDeviceWifiConfigs.
+ * Maps failed device_id to its corresponding UpdateError.
+ * An empty map indicates all target devices succeeded.
+ * Aligns with config_service.proto BatchUpdateDeviceWifiConfigsResponse.
+ */
+export declare interface BatchUpdateDeviceWifiConfigsResponse {
+  errors?: Record<string, UpdateError>;
 }
 

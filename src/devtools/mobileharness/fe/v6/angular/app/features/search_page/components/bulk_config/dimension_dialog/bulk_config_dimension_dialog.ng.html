@@ -1,0 +1,355 @@
+@let mode = wizard.viewMode();
+@let target = targetValues();
+@let summary = wizard.reviewSummary();
+@let dn = displayName();
+
+<app-dialog
+  [dialogTitle]="headline()"
+  [subtitle]="supportText()"
+  width="56rem"
+  height="48rem"
+  maxHeight="90vh"
+  footerType="normal"
+>
+  <div class="bw-body">
+    @switch (mode) {
+      @case ('key') {
+        <!-- Key Selection Step (Custom Dimension Step 1) -->
+        <div class="bw-step1">
+          <!-- Top band: Dimension key input -->
+          <div class="bw-apply-band">
+            <div class="bw-apply-head">
+              <h4 class="bw-apply-title">Dimension key to configure</h4>
+              <span class="bw-apply-sub">
+                Choose an existing {{ isRequired ? 'required' : 'supported' }} dimension key or enter a new key for {{ deviceLabel }}
+              </span>
+            </div>
+            <div class="bw-apply-fields">
+              <div class="bw-tf bd-key-tf" [class.error]="customKeyError()">
+                <input
+                  #customKeyInput
+                  type="text"
+                  id="bd-custom-key-input"
+                  class="bw-tf-input"
+                  placeholder=" "
+                  [ngModel]="customKey()"
+                  (ngModelChange)="onCustomKeyInput($event)"
+                  (keydown.enter)="goFromKeyToValues()"
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+                <label class="bw-tf-label" for="bd-custom-key-input">Dimension key</label>
+              </div>
+            </div>
+            @if (customKeyError()) {
+              <div class="bd-key-error-msg">
+                <mat-icon class="error-icon material-symbols-outlined">error</mat-icon>
+                <span>{{ customKeyError() }}</span>
+              </div>
+            }
+            <div class="bd-key-hint-msg">
+              Use lowercase letters, digits, underscores (<code>_</code>), dashes (<code>-</code>), or dots (<code>.</code>). Dimensions automatically detected by OmniLab cannot be configured manually.
+            </div>
+          </div>
+
+          <!-- Existing dimensions in fleet panel -->
+          <div class="bw-panel">
+            <div class="bw-panel-head">
+              Existing {{ isRequired ? 'required' : 'supported' }} dimensions in fleet
+            </div>
+            <div class="bw-panel-list" role="list">
+              @if (isNewKey()) {
+                <div
+                  class="bw-li bw-li-active bd-agg-row"
+                  role="listitem"
+                >
+                  <mat-icon class="bw-li-lead new-key-lead material-symbols-outlined">add_circle</mat-icon>
+                  <div class="bw-li-body">
+                    <span class="bw-li-headline">{{ customKey() }}</span>
+                    <span class="bw-li-support">
+                      New {{ isRequired ? 'required' : 'supported' }} dimension · Not yet used in fleet
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    class="bw-text-btn"
+                    (click)="goFromKeyToValues()"
+                  >
+                    Next
+                  </button>
+                </div>
+              }
+
+              @for (k of filteredCandidateKeys(); track k.dimensionName) {
+                <div
+                  class="bw-li bd-agg-row"
+                  role="listitem"
+                  [class.bw-li-active]="customKey() === k.dimensionName.toLowerCase()"
+                >
+                  <mat-icon class="bw-li-lead material-symbols-outlined">label</mat-icon>
+                  <div class="bw-li-body">
+                    <span class="bw-li-headline">{{ k.dimensionName }}</span>
+                    <span class="bw-li-support">{{ k.fleetDeviceCount | number }} devices in fleet</span>
+                  </div>
+                  @if (k.badge) {
+                    <span class="bw-count-chip bw-count-chip-update">
+                      {{ k.badge }}
+                    </span>
+                  }
+                  <button
+                    type="button"
+                    class="bw-text-btn"
+                    (click)="pickKey(k.dimensionName)"
+                  >
+                    Use this
+                  </button>
+                </div>
+              } @empty {
+                @if (!isNewKey()) {
+                  <div class="bw-list-empty">No matching dimension key found.</div>
+                }
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      @case ('values') {
+        <!-- Values Step (Step 1 for Curated, Step 2 for Custom) -->
+        <div class="bw-step1">
+          <!-- Top band: Value to apply -->
+          <div class="bw-apply-band">
+            <div class="bw-apply-head">
+              <h4 class="bw-apply-title">Value to apply</h4>
+              <span class="bw-apply-sub">Applied to all {{ deviceLabel }}</span>
+              <button
+                type="button"
+                class="bw-text-btn bd-band-actions"
+                (click)="useValueSet([])"
+                [title]="'Clear the value, which removes ' + dn + ' from the devices'"
+              >
+                Clear values
+              </button>
+            </div>
+
+            <div class="bw-apply-fields">
+              <div
+                class="bd-chips"
+                role="group"
+                aria-label="Target dimension values"
+                (click)="chipInput.focus()"
+              >
+                @for (v of target; track v; let i = $index) {
+                  <span class="bd-chip">
+                    <span>{{ v }}</span>
+                    <button
+                      type="button"
+                      class="bd-chip-remove"
+                      (click)="$event.stopPropagation(); removeChip(i)"
+                      [title]="'Remove ' + v"
+                      [attr.aria-label]="'Remove ' + v"
+                    >
+                      <mat-icon class="material-symbols-outlined">close</mat-icon>
+                    </button>
+                  </span>
+                }
+                <input
+                  #chipInput
+                  type="text"
+                  class="bd-chip-input"
+                  [placeholder]="chipPlaceholder()"
+                  [(ngModel)]="inputValue"
+                  (keydown)="onInputKeydown($event)"
+                  (paste)="onInputPaste($event)"
+                  (blur)="commitInput()"
+                  autocomplete="off"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Suggested values panel -->
+          <div class="bw-panel">
+            <div class="bw-panel-head">Suggested values</div>
+            <div class="bw-panel-list" role="list">
+              @for (sug of candidateValues(); track (sug.values.join('::') || '__unset__')) {
+                <div class="bw-li bd-agg-row" role="listitem">
+                  <mat-icon class="bw-li-lead material-symbols-outlined">{{ sug.values.length === 0 ? 'block' : 'label' }}</mat-icon>
+                  <div class="bw-li-body">
+                    @if (sug.values.length === 0) {
+                      <span class="bw-li-headline bd-muted">Not set</span>
+                    } @else {
+                      <ng-container
+                        *ngTemplateOutlet="pillList; context: {$implicit: sug.values}"
+                      />
+                    }
+                    <span class="bw-li-support">{{ sug.deviceCount | number }} devices in fleet</span>
+                  </div>
+                  <button
+                    type="button"
+                    class="bw-text-btn"
+                    (click)="useValueSet(sug.values)"
+                  >
+                    Use this
+                  </button>
+                </div>
+              } @empty {
+                <div class="bw-list-empty">No values found.</div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      @case ('review') {
+        <!-- Review Step (Step 2 for Curated, Step 3 for Custom) -->
+        <div class="bw-step2">
+          <app-bulk-review-header-banner
+            [icon]="target.length === 0 ? 'block' : 'label'"
+            [subtitle]="'Target ' + dn"
+            [summary]="summary"
+            [nothingToUpdateMessage]="nothingToUpdateMessage()"
+          >
+            @if (target.length === 0) {
+              <span class="bw-cell-unset">Clear dimension (remove {{ dn }})</span>
+            } @else {
+              <ng-container
+                *ngTemplateOutlet="pillList; context: {$implicit: target}"
+              />
+            }
+          </app-bulk-review-header-banner>
+
+          <app-bulk-review-table
+            [rows]="reviewRows()"
+            currentHeader="Current value"
+            ariaLabel="Device dimension change review table"
+          >
+            <ng-template #currentValueCell let-row>
+              @if (row.visibleValues.length === 0) {
+                <span class="bw-cell-unset">Not set</span>
+              } @else {
+                <div
+                  class="bd-agg-vals bd-review-vals"
+                  [class.is-expanded]="row.isExpanded"
+                >
+                  @for (v of row.visibleValues; track v) {
+                    <span class="bd-pill" [title]="v">{{ v }}</span>
+                  }
+                  @if (row.hiddenCount > 0) {
+                    <button
+                      type="button"
+                      class="bd-pill"
+                      [class.bd-pill-action]="row.isExpanded"
+                      [class.bd-pill-more]="!row.isExpanded"
+                      [matTooltip]="row.hiddenTooltip"
+                      matTooltipPosition="above"
+                      (click)="toggleExpandDeviceValues(row)"
+                      [attr.aria-label]="row.isExpanded ? null : '+' + row.hiddenCount + ' more values for ' + row.deviceId"
+                    >
+                      {{ row.isExpanded ? 'Show less' : '+' + row.hiddenCount + ' more' }}
+                    </button>
+                  }
+                </div>
+              }
+            </ng-template>
+          </app-bulk-review-table>
+        </div>
+      }
+
+      @default {
+        <app-bulk-wizard-status-view
+          [mode]="mode"
+          [message]="wizard.statusMessage()"
+          [willUpdateCount]="summary.willUpdateCount"
+          [applyErrors]="wizard.applyErrors()"
+          [successSupportText]="successSupportText()"
+        >
+          <div class="bw-new-card bw-success-card">
+            <div class="bw-new-label">{{ target.length === 0 ? 'Removed' : 'New value' }}</div>
+            @if (target.length === 0) {
+              <span class="bd-muted">Not set</span>
+            } @else {
+              <ng-container
+                *ngTemplateOutlet="pillList; context: {$implicit: target}"
+              />
+            }
+          </div>
+        </app-bulk-wizard-status-view>
+      }
+    }
+
+    <ng-template #pillList let-values>
+      <div class="bd-agg-vals">
+        @for (v of values; track v) {
+          <span class="bd-pill">{{ v }}</span>
+        }
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Footer Actions -->
+  <ng-template #actionsTemplate>
+    @let hasBack = canGoBack();
+    @switch (mode) {
+      @case ('success') {
+        <button type="button" class="dialog-button dialog-button-primary" (click)="wizard.close()">Done</button>
+      }
+      @case ('errors') {
+        <button type="button" class="dialog-button dialog-button-primary" (click)="wizard.close()">Close</button>
+      }
+      @case ('loading') {
+        @if (hasBack) {
+          <button type="button" class="dialog-button dialog-button-secondary" disabled>Back</button>
+        }
+      }
+      @case ('step_error') {
+        @if (hasBack) {
+          <button type="button" class="dialog-button dialog-button-secondary" (click)="goBack()">Back</button>
+        } @else {
+          <button type="button" class="dialog-button dialog-button-secondary" (click)="wizard.close()">Close</button>
+        }
+        <button type="button" class="dialog-button dialog-button-primary" (click)="wizard.retryStep()">Retry</button>
+      }
+      @case ('key') {
+        <button type="button" class="dialog-button dialog-button-secondary" (click)="wizard.close()">Cancel</button>
+        <button
+          type="button"
+          class="dialog-button dialog-button-primary"
+          [disabled]="!canGoNext()"
+          (click)="goNext()"
+        >
+          Next
+        </button>
+      }
+      @case ('values') {
+        @if (hasBack) {
+          <button type="button" class="dialog-button dialog-button-secondary" (click)="goBack()">Back</button>
+        } @else {
+          <button type="button" class="dialog-button dialog-button-secondary" (click)="wizard.close()">Cancel</button>
+        }
+        <button
+          type="button"
+          class="dialog-button dialog-button-primary"
+          [disabled]="!canGoNext()"
+          (click)="goNext()"
+        >
+          Next
+        </button>
+      }
+      @case ('review') {
+        <button type="button" class="dialog-button dialog-button-secondary" (click)="goBack()">Back</button>
+        @if (summary.willUpdateCount === 0) {
+          <button type="button" class="dialog-button dialog-button-primary" (click)="wizard.close()">Close</button>
+        } @else {
+          <button
+            type="button"
+            class="dialog-button dialog-button-primary"
+            (click)="apply()"
+          >
+            Apply to {{ summary.willUpdateLabel }}
+          </button>
+        }
+      }
+    }
+  </ng-template>
+</app-dialog>
