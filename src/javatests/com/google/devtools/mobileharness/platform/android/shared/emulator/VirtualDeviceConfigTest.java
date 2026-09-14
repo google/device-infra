@@ -32,15 +32,26 @@ public final class VirtualDeviceConfigTest {
 
     assertThat(config.cpus()).isEqualTo(VirtualDeviceConfig.DEFAULT_CPUS);
     assertThat(config.memoryMb()).isEqualTo(VirtualDeviceConfig.DEFAULT_MEMORY_MB);
+    assertThat(config.modemSimulatorSimType())
+        .isEqualTo(VirtualDeviceConfig.DEFAULT_MODEM_SIMULATOR_SIM_TYPE);
+    assertThat(config.useSdcard()).isEqualTo(VirtualDeviceConfig.DEFAULT_USE_SDCARD);
   }
 
   @Test
   public void builder_customValues_success() {
     VirtualDeviceConfig config =
-        VirtualDeviceConfig.builder().setCpus(8).setMemoryMb(16384).build();
+        VirtualDeviceConfig.builder()
+            .setCpus(8)
+            .setMemoryMb(16384)
+            .setModemSimulatorSimType(VirtualDeviceConfig.SIM_TYPE_CTS_CARRIER_API)
+            .setUseSdcard(false)
+            .build();
 
     assertThat(config.cpus()).isEqualTo(8);
     assertThat(config.memoryMb()).isEqualTo(16384);
+    assertThat(config.modemSimulatorSimType())
+        .isEqualTo(VirtualDeviceConfig.SIM_TYPE_CTS_CARRIER_API);
+    assertThat(config.useSdcard()).isFalse();
   }
 
   @Test
@@ -60,5 +71,30 @@ public final class VirtualDeviceConfigTest {
     VirtualDeviceConfig.Builder negativeMemoryBuilder =
         VirtualDeviceConfig.builder().setMemoryMb(-1024);
     assertThrows(IllegalArgumentException.class, negativeMemoryBuilder::build);
+  }
+
+  @Test
+  public void builder_invalidModemSimulatorSimType_throwsException() {
+    VirtualDeviceConfig.Builder zeroSimTypeBuilder =
+        VirtualDeviceConfig.builder().setModemSimulatorSimType(0);
+    assertThrows(IllegalArgumentException.class, zeroSimTypeBuilder::build);
+
+    VirtualDeviceConfig.Builder unknownSimTypeBuilder =
+        VirtualDeviceConfig.builder().setModemSimulatorSimType(3);
+    assertThrows(IllegalArgumentException.class, unknownSimTypeBuilder::build);
+  }
+
+  @Test
+  public void isValidModemSimulatorSimType_onlyAcceptsKnownSimTypes() {
+    assertThat(
+            VirtualDeviceConfig.isValidModemSimulatorSimType(VirtualDeviceConfig.SIM_TYPE_NORMAL))
+        .isTrue();
+    assertThat(
+            VirtualDeviceConfig.isValidModemSimulatorSimType(
+                VirtualDeviceConfig.SIM_TYPE_CTS_CARRIER_API))
+        .isTrue();
+    assertThat(VirtualDeviceConfig.isValidModemSimulatorSimType(0)).isFalse();
+    assertThat(VirtualDeviceConfig.isValidModemSimulatorSimType(-1)).isFalse();
+    assertThat(VirtualDeviceConfig.isValidModemSimulatorSimType(3)).isFalse();
   }
 }

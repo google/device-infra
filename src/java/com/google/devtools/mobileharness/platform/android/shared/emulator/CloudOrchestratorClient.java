@@ -530,12 +530,17 @@ public class CloudOrchestratorClient {
     vm.put("memory_mb", virtualDeviceConfig.memoryMb());
     vm.put("setupwizard_mode", "OPTIONAL");
     vm.put("cpus", virtualDeviceConfig.cpus());
+    vm.put("use_sdcard", virtualDeviceConfig.useSdcard());
     if (isX86Target(target)) {
       Map<String, Object> crosvm = new HashMap<>();
       crosvm.put("vhost_user_vsock", "true");
       vm.put("crosvm", crosvm);
     }
     instance.put("vm", vm);
+
+    Map<String, Object> connectivity = new HashMap<>();
+    connectivity.put("modem_simulator_sim_type", virtualDeviceConfig.modemSimulatorSimType());
+    instance.put("connectivity", connectivity);
 
     Map<String, Object> streaming = new HashMap<>();
     streaming.put("device_id", cvdId);
