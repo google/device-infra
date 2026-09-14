@@ -28,6 +28,7 @@ import {MatDividerModule} from '@angular/material/divider';
 import {MatIconModule} from '@angular/material/icon';
 import {MatListModule} from '@angular/material/list';
 import {MatMenuModule} from '@angular/material/menu';
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatSidenavModule} from '@angular/material/sidenav';
 import {MatToolbarModule} from '@angular/material/toolbar';
 import {MatTooltipModule} from '@angular/material/tooltip';
@@ -37,8 +38,6 @@ import {
   Router,
   RouterModule,
 } from '@angular/router';
-// an example of using absolute path for source code import.
-import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {
   APP_DATA,
   type AppData,
@@ -48,6 +47,12 @@ import {navigateWithPreservedParams} from '@deviceinfra/app/core/utils/url_utils
 import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
 import {ReplaySubject} from 'rxjs';
 import {filter, takeUntil} from 'rxjs/operators';
+function isAssistantEnabled(
+  queryParamMap?: unknown,
+  appData?: unknown,
+): boolean {
+  return false;
+}
 
 /** Homepage */
 @Component({
@@ -85,13 +90,25 @@ export class App implements OnDestroy {
   isEmbeddedMode = true;
   isFakeData = false;
   showContent = true;
+  isAssistantEnabled = false;
 
   get isStandaloneMode(): boolean {
     return !this.isEmbeddedMode;
   }
 
+  isAssistantFeatureEnabled(): boolean {
+    return this.isAssistantEnabled;
+  }
+
   isNavActive(
-    section: 'home' | 'devices' | 'hosts' | 'tests' | 'jobs' | 'sessions',
+    section:
+      | 'home'
+      | 'devices'
+      | 'hosts'
+      | 'tests'
+      | 'jobs'
+      | 'sessions'
+      | 'assistant',
   ): boolean {
     const path = this.getCurrentRoutePath();
 
@@ -108,6 +125,8 @@ export class App implements OnDestroy {
         return path.startsWith('jobs') && !path.includes('tests');
       case 'sessions':
         return path.startsWith('sessions');
+      case 'assistant':
+        return path.startsWith('assistant');
       default:
         return false;
     }
@@ -125,6 +144,9 @@ export class App implements OnDestroy {
     if (universe) {
       qParams['universe'] = universe;
     }
+    if (this.isAssistantFeatureEnabled()) {
+      qParams['enable_assistant'] = 'true';
+    }
     return qParams;
   }
 
@@ -137,11 +159,16 @@ export class App implements OnDestroy {
   }
 
   constructor() {
+    this.isAssistantEnabled = isAssistantEnabled(
+      this.route.snapshot?.queryParamMap,
+      this.appData,
+    );
     this.route.queryParamMap
       .pipe(takeUntil(this.destroy))
       .subscribe((params) => {
         this.isEmbeddedMode = params.get('is_embedded_mode') === 'true';
         this.isFakeData = params.get('fake_data') === 'true';
+        this.isAssistantEnabled = isAssistantEnabled(params, this.appData);
         this.updateShowContent();
         this.cdr.markForCheck();
       });
@@ -182,7 +209,8 @@ export class App implements OnDestroy {
       path === 'hosts' ||
       path === 'tests' ||
       path === 'jobs' ||
-      path === 'sessions'
+      path === 'sessions' ||
+      path === 'assistant'
     ) {
       this.showContent = true;
     } else if (path === 'devices/:id' && params['id']) {
