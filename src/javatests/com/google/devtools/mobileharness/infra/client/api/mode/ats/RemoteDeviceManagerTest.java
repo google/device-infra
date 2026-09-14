@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static org.mockito.Mockito.verify;
@@ -24,6 +25,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.net.InetAddresses;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
@@ -93,6 +95,10 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import io.grpc.netty.NettyServerBuilder;
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.time.Instant;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -819,5 +825,50 @@ public class RemoteDeviceManagerTest {
     assertThat(deviceInfo.getDimensionList())
         .contains(
             Dimension.newBuilder().setName("host_name").setValue(reqLab2.getLabHostName()).build());
+  }
+
+  @Test
+  public void getIp_ipv4_returnsHostAddress() {
+    SocketAddress address = new InetSocketAddress(InetAddresses.forString("127.0.0.1"), 12345);
+    assertThat(RemoteDeviceManager.getIp(address)).hasValue("127.0.0.1");
+  }
+
+  @Test
+  public void getIp_ipv6_returnsCanonicalCompressedAddress() throws Exception {
+    SocketAddress address =
+        new InetSocketAddress(
+            InetAddress.getByAddress(new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}),
+            12345);
+    assertThat(RemoteDeviceManager.getIp(address)).hasValue("::1");
+  }
+
+  @Test
+  public void getIp_ipv6NonLoopback_returnsCanonicalCompressedAddress() {
+    SocketAddress address =
+        new InetSocketAddress(InetAddresses.forString("2001:db8:0:0:0:0:0:1"), 12345);
+    assertThat(RemoteDeviceManager.getIp(address)).hasValue("2001:db8::1");
+  }
+
+  @Test
+  public void getIp_ipv6WithScopeId_returnsCanonicalAddressWithScopeId() throws Exception {
+    Inet6Address inet6Address =
+        Inet6Address.getByAddress(
+            "fe80::1",
+            new byte[] {(byte) 0xfe, (byte) 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+            2);
+    SocketAddress address = new InetSocketAddress(inet6Address, 12345);
+    assertThat(RemoteDeviceManager.getIp(address)).hasValue("fe80::1%2");
+  }
+
+  @Test
+  public void getIp_unresolvedAddress_returnsEmpty() {
+    SocketAddress address = InetSocketAddress.createUnresolved("unresolved.host", 12345);
+    assertThat(RemoteDeviceManager.getIp(address)).isEmpty();
+  }
+
+  @Test
+  public void getIp_nonInetSocketAddress_returnsEmpty() {
+    SocketAddress address = new SocketAddress() {};
+    assertThat(RemoteDeviceManager.getIp(address)).isEmpty();
   }
 }

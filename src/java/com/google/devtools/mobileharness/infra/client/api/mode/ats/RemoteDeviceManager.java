@@ -29,6 +29,7 @@ import static com.google.devtools.mobileharness.shared.util.filter.FilterUtils.c
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
@@ -36,6 +37,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.net.InetAddresses;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
@@ -99,7 +101,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimen
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import io.grpc.BindableService;
 import io.grpc.stub.StreamObserver;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
@@ -1217,9 +1218,10 @@ class RemoteDeviceManager implements LabInfoProvider {
     }
   }
 
-  private static Optional<String> getIp(SocketAddress address) {
+  @VisibleForTesting
+  static Optional<String> getIp(SocketAddress address) {
     if (address instanceof InetSocketAddress inetSocketAddress) {
-      return Optional.ofNullable(inetSocketAddress.getAddress()).map(InetAddress::getHostAddress);
+      return Optional.ofNullable(inetSocketAddress.getAddress()).map(InetAddresses::toAddrString);
     } else {
       return Optional.empty();
     }
