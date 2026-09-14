@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared;
 
 import static com.google.common.base.Preconditions.checkState;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
@@ -38,11 +39,13 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.ConsoleHandler;
+import java.util.logging.ErrorManager;
 import java.util.logging.FileHandler;
 import java.util.logging.Filter;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.logging.StreamHandler;
 import javax.annotation.Nullable;
 
 /**
@@ -235,11 +238,12 @@ public class MobileHarnessLogger {
     }
   }
 
-  /** Sets formatter/filter/level of a {@link Handler}. */
+  /** Sets formatter/filter/level/errorManager of a {@link Handler}. */
   private static void configureHandler(Handler handler) {
     handler.setFormatter(MobileHarnessLogFormatter.getDefaultFormatter());
     addFilter(handler, FILTER);
     handler.setLevel(Level.INFO);
+    handler.setErrorManager(new SafeErrorManager());
   }
 
   private static void prepareDir(String dir) throws MobileHarnessException {
@@ -256,6 +260,41 @@ public class MobileHarnessLogger {
     Logger logger = Logger.getLogger(loggerName);
     configuredLoggers.put(loggerName, logger);
     return logger;
+  }
+
+  /**
+   * An {@link ErrorManager} that suppresses the race-condition {@link NullPointerException} thrown
+   * by {@code StreamHandler.publish} during JVM shutdown (JDK-8349206).
+   */
+  @VisibleForTesting
+  static class SafeErrorManager extends ErrorManager {
+
+    private static final String STREAM_HANDLER_CLASS_NAME = StreamHandler.class.getName();
+    private static final String PUBLISH_METHOD_NAME = "publish";
+
+    @Override
+    public void error(String msg, Exception ex, int code) {
+      if (isStreamHandlerRaceNpe(ex, code)) {
+        return;
+      }
+      super.error(msg, ex, code);
+    }
+
+    @VisibleForTesting
+    static boolean isStreamHandlerRaceNpe(@Nullable Exception ex, int code) {
+      if (code != WRITE_FAILURE || !(ex instanceof NullPointerException)) {
+        return false;
+      }
+      StackTraceElement[] stackTrace = ex.getStackTrace();
+      if (stackTrace != null && stackTrace.length > 0) {
+        StackTraceElement topFrame = stackTrace[0];
+        return topFrame.getClassName().equals(STREAM_HANDLER_CLASS_NAME)
+            && topFrame.getMethodName().equals(PUBLISH_METHOD_NAME);
+      }
+      // Handles -XX:+OmitStackTraceInFastThrow where stack trace is omitted.
+      String message = ex.getMessage();
+      return message != null && (message.contains("Writer.write") || message.contains("writer"));
+    }
   }
 
   private static class HandlerRemover implements NonThrowingAutoCloseable {
