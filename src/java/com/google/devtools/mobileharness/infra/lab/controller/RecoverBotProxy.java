@@ -32,11 +32,14 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.time.Instant;
 import java.time.InstantSource;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.Nullable;
@@ -48,8 +51,8 @@ import purejavacomm.SerialPort;
  * A proxy server that listens for JSON commands on a socket and translates them into serial
  * commands for an Arduino-based recovery bot.
  *
- * <p>It scans serial ports for a device with the signature "auto recovery controller" and then
- * forwards commands like button press/release to it.
+ * <p>It scans serial ports for devices with the signature "auto recovery controller" and forwards
+ * commands like button press/release to the appropriate controller based on board address.
  */
 public class RecoverBotProxy implements Runnable {
   private static final Logger logger = Logger.getLogger(RecoverBotProxy.class.getName());
@@ -63,41 +66,102 @@ public class RecoverBotProxy implements Runnable {
   private static final int SOCKET_READ_TIMEOUT_MS = 2000;
   private static final int MAX_SOCKET_BYTES = 65536;
 
-  private final Gson gson = new Gson();
-  private final Object serialLock = new Object();
-  private final ExecutorService clientExecutor = Executors.newCachedThreadPool();
+  /** Factory for creating {@link ServerSocket} instances, allowing test injection. */
+  interface ServerSocketFactory {
+    ServerSocket create() throws IOException;
+  }
 
-  SerialPort serialPort;
-  InputStream serialIn;
-  OutputStream serialOut;
+  private final Gson gson = new Gson();
+  private final ExecutorService clientExecutor = Executors.newCachedThreadPool();
+  private final Supplier<Enumeration<CommPortIdentifier>> portIdentifiersSupplier;
+  private final ServerSocketFactory serverSocketFactory;
+
+  /** Represents an active serial connection to a single M5Stack controller. */
+  static class SerialConnection {
+    final String portName;
+    @Nullable final SerialPort serialPort;
+    final InputStream serialIn;
+    final OutputStream serialOut;
+
+    SerialConnection(
+        String portName,
+        @Nullable SerialPort serialPort,
+        InputStream serialIn,
+        OutputStream serialOut) {
+      this.portName = portName;
+      this.serialPort = serialPort;
+      this.serialIn = serialIn;
+      this.serialOut = serialOut;
+    }
+
+    @Nullable
+    synchronized String sendCommand(String cmdToSend) throws IOException {
+      logger.info(String.format("[proxy][%s] Sending command: %s", portName, cmdToSend.trim()));
+      serialOut.write(cmdToSend.getBytes(UTF_8));
+      serialOut.flush();
+      String rawResponse = readLineWithTimeout(serialIn, SERIAL_READ_TIMEOUT_MS);
+      return rawResponse != null ? rawResponse.trim() : null;
+    }
+
+    void close() {
+      closeQuietly(serialPort, portName);
+    }
+  }
+
+  final List<SerialConnection> connections = new ArrayList<>();
+
+  public RecoverBotProxy() {
+    this(CommPortIdentifier::getPortIdentifiers, ServerSocket::new);
+  }
+
+  RecoverBotProxy(
+      Supplier<Enumeration<CommPortIdentifier>> portIdentifiersSupplier,
+      ServerSocketFactory serverSocketFactory) {
+    this.portIdentifiersSupplier = portIdentifiersSupplier;
+    this.serverSocketFactory = serverSocketFactory;
+  }
 
   /**
    * Main loop of the proxy server.
    *
-   * <p>Finds and connects to the recovery bot via serial, then starts a socket server to accept
-   * client commands.
+   * <p>Finds and connects to all available recovery bots via serial, then starts a socket server to
+   * accept client commands.
    */
   @Override
   public void run() {
     try {
-      CommPortIdentifier portId = findSerialPort();
-      if (portId == null) {
+      List<CommPortIdentifier> portIds = findSerialPorts();
+      if (portIds.isEmpty()) {
         throw new VerifyException("No controller device with expected signature found.");
       }
 
-      serialPort = (SerialPort) portId.open("RecoverBotProxy", 2000);
-      serialPort.setSerialPortParams(
-          BAUDRATE, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
+      for (CommPortIdentifier portId : portIds) {
+        SerialPort sp = null;
+        try {
+          sp = (SerialPort) portId.open("RecoverBotProxy", 2000);
+          sp.setSerialPortParams(
+              BAUDRATE, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
+          SerialConnection conn =
+              new SerialConnection(sp.getName(), sp, sp.getInputStream(), sp.getOutputStream());
+          connections.add(conn);
+          logger.info("[proxy] Serial connected: " + sp.getName());
+        } catch (Exception e) {
+          logger.log(Level.WARNING, "Failed to open serial port " + portId.getName(), e);
+          closeQuietly(sp, portId.getName());
+        }
+      }
 
-      serialIn = serialPort.getInputStream();
-      serialOut = serialPort.getOutputStream();
+      if (connections.isEmpty()) {
+        throw new VerifyException("Failed to open any discovered controller serial ports.");
+      }
 
-      logger.info("[proxy] Serial connected: " + serialPort.getName());
-
-      try (ServerSocket serverSocket = new ServerSocket()) {
+      try (ServerSocket serverSocket = serverSocketFactory.create()) {
         serverSocket.setReuseAddress(true);
         serverSocket.bind(new InetSocketAddress("0.0.0.0", SOCKET_PORT));
-        logger.info("[proxy] Listening on port " + SOCKET_PORT + "...");
+        logger.info(
+            String.format(
+                "[proxy] Listening on port %d with %d controller(s)...",
+                SOCKET_PORT, connections.size()));
 
         while (!Thread.currentThread().isInterrupted()) {
           Socket client = serverSocket.accept();
@@ -107,27 +171,23 @@ public class RecoverBotProxy implements Runnable {
     } catch (Exception e) {
       logger.log(Level.SEVERE, "Fatal server error", e);
     } finally {
-      try {
-        if (serialPort != null) {
-          serialPort.close();
-        }
-      } catch (RuntimeException e) {
-        logger.log(Level.WARNING, "Error closing serial port", e);
+      for (SerialConnection conn : connections) {
+        conn.close();
       }
       clientExecutor.shutdownNow();
     }
   }
 
   /**
-   * Scans all serial ports for a recovery bot device.
+   * Scans all serial ports for recovery bot devices.
    *
    * <p>It probes each port by sending a "ping" command and looking for HELLO_SIGNATURE in response.
    *
-   * @return CommPortIdentifier of the first device found, or null if no device is found.
+   * @return List of CommPortIdentifiers for all matching devices found.
    */
-  @Nullable
-  private CommPortIdentifier findSerialPort() {
-    Enumeration<CommPortIdentifier> ports = CommPortIdentifier.getPortIdentifiers();
+  List<CommPortIdentifier> findSerialPorts() {
+    List<CommPortIdentifier> matchedPorts = new ArrayList<>();
+    Enumeration<CommPortIdentifier> ports = portIdentifiersSupplier.get();
 
     while (ports.hasMoreElements()) {
       CommPortIdentifier pid = ports.nextElement();
@@ -138,16 +198,13 @@ public class RecoverBotProxy implements Runnable {
       logger.info("Trying port: " + pid.getName());
 
       SerialPort probePort = null;
-      InputStream in = null;
-      OutputStream out = null;
-
       try {
         probePort = (SerialPort) pid.open("RecoverBotProxy probe", 2000);
         probePort.setSerialPortParams(
             BAUDRATE, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
 
-        in = probePort.getInputStream();
-        out = probePort.getOutputStream();
+        InputStream in = probePort.getInputStream();
+        OutputStream out = probePort.getOutputStream();
 
         Thread.sleep(SERIAL_PROBE_PAUSE_MS);
 
@@ -160,7 +217,7 @@ public class RecoverBotProxy implements Runnable {
 
         if (line != null && line.toLowerCase(Locale.ROOT).contains(HELLO_SIGNATURE)) {
           logger.info("[proxy] Found target device on " + pid.getName());
-          return pid;
+          matchedPorts.add(pid);
         }
       } catch (PortInUseException e) {
         logger.warning("Could not open port " + pid.getName() + " (in use / permission).");
@@ -170,16 +227,20 @@ public class RecoverBotProxy implements Runnable {
         }
         logger.log(Level.WARNING, "Probe error on " + pid.getName(), e);
       } finally {
-        try {
-          if (probePort != null) {
-            probePort.close();
-          }
-        } catch (RuntimeException e) {
-          logger.log(Level.WARNING, "Error closing probe port " + pid.getName(), e);
-        }
+        closeQuietly(probePort, pid.getName());
       }
     }
-    return null;
+    return matchedPorts;
+  }
+
+  private static void closeQuietly(@Nullable SerialPort port, String portName) {
+    if (port != null) {
+      try {
+        port.close();
+      } catch (RuntimeException e) {
+        logger.log(Level.WARNING, "Error closing serial port " + portName, e);
+      }
+    }
   }
 
   /**
@@ -241,16 +302,7 @@ public class RecoverBotProxy implements Runnable {
         default -> throw new IllegalArgumentException("Unknown command: " + command);
       }
 
-      String rawResponse;
-      synchronized (serialLock) {
-        logger.info("[proxy] Sending command: " + cmdToSend.trim());
-        serialOut.write(cmdToSend.getBytes(UTF_8));
-        serialOut.flush();
-        rawResponse = readLineWithTimeout(serialIn, SERIAL_READ_TIMEOUT_MS);
-        if (rawResponse != null) {
-          rawResponse = rawResponse.trim();
-        }
-      }
+      String rawResponse = executeSerialCommand(cmdToSend);
 
       JsonObject resp = new JsonObject();
       resp.addProperty("status", "OK");
@@ -269,6 +321,25 @@ public class RecoverBotProxy implements Runnable {
     } catch (RuntimeException e) {
       sendError(clientSocket, "ERROR", "Unexpected error: " + e.getMessage(), e);
     }
+  }
+
+  /**
+   * Executes a serial command across connected M5Stack controllers sequentially until a controller
+   * handles the request (i.e. does not report "ERR: board not found").
+   */
+  @Nullable
+  String executeSerialCommand(String cmdToSend) throws IOException {
+    if (connections.isEmpty()) {
+      throw new IllegalStateException("No serial connections available.");
+    }
+    String lastResponse = null;
+    for (SerialConnection conn : connections) {
+      lastResponse = conn.sendCommand(cmdToSend);
+      if (lastResponse == null || !lastResponse.contains("ERR: board not found")) {
+        return lastResponse;
+      }
+    }
+    return lastResponse;
   }
 
   /**
