@@ -320,10 +320,10 @@ public final class AtsServerSessionPluginTest {
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     when(xtsTypeLoader.getXtsType(any(), any())).thenReturn("cts");
     when(commandExecutor.run(any())).thenReturn("command output.");
-    doReturn(true).when(localFileUtil).isDirExist(endsWith("/android-cts/testcases"));
-    doReturn(ImmutableList.of(new File("some_testcase")))
+    doReturn(true).when(localFileUtil).isDirExist(endsWith("/tools"));
+    doReturn(ImmutableList.of(new File("some_tool")))
         .when(localFileUtil)
-        .listFiles(endsWith("/android-cts/testcases"), eq(false));
+        .listFiles(endsWith("/tools"), eq(false));
     when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any(), anyBoolean()))
         .thenReturn(
             ImmutableList.of(
