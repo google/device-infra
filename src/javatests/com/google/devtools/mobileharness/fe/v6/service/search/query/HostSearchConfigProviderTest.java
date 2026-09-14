@@ -32,7 +32,6 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSearchConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSearchConfigRequest;
-import com.google.devtools.mobileharness.fe.v6.service.proto.search.KeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
@@ -62,22 +61,10 @@ public final class HostSearchConfigProviderTest {
   private final AtsCuration curation = new AtsCuration();
 
   @Test
-  public void host_recommendedColumnsAreAtsOneHostList() {
+  public void host_recommendedColumnsAreEmpty() {
     FleetSearchConfig config = provider.getConfig(snapshot, hostRequest(), curation);
 
-    List<String> keys = new ArrayList<>();
-    for (KeyDescriptor descriptor : config.getColumns().getRecommendedList()) {
-      keys.add(descriptor.getKey());
-    }
-    assertThat(keys)
-        .containsExactly(
-            "host_field::host_name",
-            "host_field::connectivity",
-            "host_field::device_count",
-            "host_property::host_os",
-            "host_field::lab_server_version",
-            "host_field::host_ip")
-        .inOrder();
+    assertThat(config.getColumns().getRecommendedList()).isEmpty();
   }
 
   @Test
@@ -115,6 +102,8 @@ public final class HostSearchConfigProviderTest {
 
     assertThat(config.getLanding().getBrowseAllCount()).isEqualTo(snapshot.hosts().size());
     assertThat(config.getLanding().getBrowseAllCount()).isEqualTo(2);
+    assertThat(config.getLanding().getTryCategoriesList()).isNotEmpty();
+    assertThat(config.getLanding().getTryCategories(0).getLabel()).isEqualTo("a value");
   }
 
   @Test
