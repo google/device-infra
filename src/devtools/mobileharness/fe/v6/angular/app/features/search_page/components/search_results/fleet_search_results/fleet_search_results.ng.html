@@ -1,5 +1,5 @@
 @let isGrouped = store.groupByKeys().length > 0;
-@let fleetLabel = store.fleet() === 'internal' ? 'Google Internal' : 'ATS Labs';
+@let label = fleetLabel();
 @let entity = store.entity();
 @let isLoading = store.isLoading();
 
@@ -16,13 +16,13 @@
     >
       @if (selectedGroupItems.size > 0) {
         <span class="rt-count">
-          {{ selectedGroupItems.size | number }} selected · {{ fleetLabel }}
+          {{ selectedGroupItems.size | number }} selected · {{ label }}
         </span>
         <ng-container *ngTemplateOutlet="selectionActions"></ng-container>
       } @else {
         <span class="rt-count">
           {{ (store.groupedResults()?.totalItems || 0) | number }} {{ entity }} in
-          {{ (store.groupedResults()?.totalGroups || 0) | number }} groups · {{ fleetLabel }}
+          {{ (store.groupedResults()?.totalGroups || 0) | number }} groups · {{ label }}
         </span>
         <span class="rt-divider"></span>
         @if (store.groupKeysText()) {
@@ -150,7 +150,7 @@
         <ng-container *ngTemplateOutlet="selectionActions"></ng-container>
       } @else {
         <span class="rt-count">
-          {{ totalCount | number }} {{ entity }} · {{ fleetLabel }}
+          {{ totalCount | number }} {{ entity }} · {{ label }}
         </span>
         <span class="rt-divider"></span>
 
@@ -305,16 +305,62 @@
         <mat-icon class="material-symbols-outlined">gpp_bad</mat-icon>
         Quarantine
       </button>
-    }
-    @if (canShowDeviceBatchActions()) {
-      <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
-        <mat-icon class="material-symbols-outlined">wifi</mat-icon>
-        Configure Wi-Fi
-      </button>
-      <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
-        <mat-icon class="material-symbols-outlined">tune</mat-icon>
-        Configuration
-      </button>
+      @if (entity === 'devices') {
+        <button class="rt-btn-text" (click)="bulkConfig.openBulkConfigWifiDialog()">
+          <mat-icon class="material-symbols-outlined">wifi</mat-icon>
+          Configure Wi-Fi
+        </button>
+        @if (bulkConfig.isDimensionConfigEnabled()) {
+          <button
+            class="rt-btn-text"
+            [class.is-loading]="bulkConfig.isLoadingDimensions()"
+            [matMenuTriggerFor]="configureMenu"
+            [disabled]="bulkConfig.isLoadingDimensions()"
+            (click)="bulkConfig.loadConfigurableDimensions()"
+            title="Configure device dimensions"
+          >
+            @if (bulkConfig.isLoadingDimensions()) {
+              <mat-spinner diameter="16" class="shared-button-spinner"></mat-spinner>
+            } @else {
+              <mat-icon class="material-symbols-outlined">tune</mat-icon>
+            }
+            Configuration
+            <mat-icon class="material-symbols-outlined rt-caret">arrow_drop_down</mat-icon>
+          </button>
+          <mat-menu #configureMenu="matMenu" class="configure-dropdown-menu">
+            <div class="configure-menu-items">
+              @for (dim of bulkConfig.configurableDimensions(); track dim.dimensionName) {
+                <button mat-menu-item (click)="bulkConfig.openBulkConfigDimensionDialog(dim)">
+                  <span>{{ dim.displayName || dim.dimensionName }}</span>
+                </button>
+              } @empty {
+                @if (!bulkConfig.allowCustomDimensions()) {
+                  <div class="menu-empty-message">No dimensions available</div>
+                }
+              }
+            </div>
+            @if (bulkConfig.allowCustomDimensions()) {
+              <mat-divider></mat-divider>
+              <div class="configure-menu-footer">
+                <button
+                  mat-menu-item
+                  (click)="bulkConfig.openCustomDimensionDialog(DimensionList.DIMENSION_LIST_SUPPORTED)"
+                >
+                  <mat-icon class="material-symbols-outlined">add</mat-icon>
+                  <span>Supported Dimension…</span>
+                </button>
+                <button
+                  mat-menu-item
+                  (click)="bulkConfig.openCustomDimensionDialog(DimensionList.DIMENSION_LIST_REQUIRED)"
+                >
+                  <mat-icon class="material-symbols-outlined">add</mat-icon>
+                  <span>Required Dimension…</span>
+                </button>
+              </div>
+            }
+          </mat-menu>
+        }
+      }
     }
 
     <button class="rt-btn-text" [disabled]="true" title="Feature is under development">

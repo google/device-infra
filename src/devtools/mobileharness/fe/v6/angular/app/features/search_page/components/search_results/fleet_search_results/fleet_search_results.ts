@@ -3,23 +3,28 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   inject,
 } from '@angular/core';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {MatCardModule} from '@angular/material/card';
 import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatDialog, MatDialogModule} from '@angular/material/dialog';
+import {MatDividerModule} from '@angular/material/divider';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatSelectModule} from '@angular/material/select';
 import {MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
 
+import {DimensionList} from '../../../../../core/models/device_config_models';
 import {Column} from '../../../../../core/models/search';
 import {TooltipIfTruncatedDirective} from '../../../../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
-import {FleetSearchStore} from '../../../services/fleet_search_store';
-
 import {ColumnSelectorDialogData, ColumnSelectorResult} from '../../../models';
+import {FleetSearchStore} from '../../../services/fleet_search_store';
+import {useBulkConfigActions} from '../../bulk_config/bulk_config_actions';
 import {ColumnSelectorComponent} from '../common/column_selector/column_selector';
 import {DensityDropdownComponent} from '../common/density_dropdown/density_dropdown';
 import {SearchCellComponent} from '../common/search_cell/search_cell';
@@ -39,9 +44,11 @@ import {FleetGroupCardComponent} from '../fleet_group_card/fleet_group_card';
     MatCardModule,
     MatCheckboxModule,
     MatDialogModule,
+    MatDividerModule,
     MatIconModule,
     MatMenuModule,
     MatProgressBarModule,
+    MatProgressSpinnerModule,
     MatSelectModule,
     MatTableModule,
     MatTooltipModule,
@@ -54,7 +61,10 @@ import {FleetGroupCardComponent} from '../fleet_group_card/fleet_group_card';
 })
 export class FleetSearchResultsComponent {
   readonly store = inject(FleetSearchStore);
+  readonly bulkConfig = useBulkConfigActions();
+  readonly DimensionList = DimensionList;
   private readonly dialog = inject(MatDialog);
+  private readonly destroyRef = inject(DestroyRef);
 
   /** Label representing the current fleet partition. */
   readonly fleetLabel = computed<string>(() =>
@@ -106,14 +116,9 @@ export class FleetSearchResultsComponent {
     return `${count} selected · ${label}`;
   });
 
-  /** Whether general batch actions can be performed on selected items. */
+  /** Whether batch actions can be performed on selected items. */
   readonly canShowBatchActions = computed<boolean>(
     () => !this.store.selectAllMatching(),
-  );
-
-  /** Whether device-specific batch actions can be performed. */
-  readonly canShowDeviceBatchActions = computed<boolean>(
-    () => !this.store.selectAllMatching() && this.store.entity() === 'devices',
   );
 
   /** Opens the column selector dialog to configure visible table columns. */
@@ -133,13 +138,16 @@ export class FleetSearchResultsComponent {
       },
     });
 
-    dialogRef.afterClosed().subscribe((res?: ColumnSelectorResult) => {
-      if (!res) return;
-      if (res.isReset) {
-        this.store.resetVisibleColumns();
-      } else if (res.columns && res.columns.length > 0) {
-        this.store.setVisibleColumns(res.columns);
-      }
-    });
+    dialogRef
+      .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((res?: ColumnSelectorResult) => {
+        if (!res) return;
+        if (res.isReset) {
+          this.store.resetVisibleColumns();
+        } else if (res.columns && res.columns.length > 0) {
+          this.store.setVisibleColumns(res.columns);
+        }
+      });
   }
 }

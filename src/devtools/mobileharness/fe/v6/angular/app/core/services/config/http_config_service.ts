@@ -5,10 +5,26 @@ import {map} from 'rxjs/operators';
 
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
+  BatchGetConfigurableDimensionKeysRequest,
+  BatchGetConfigurableDimensionKeysResponse,
+  BatchGetDeviceDimensionConfigsRequest,
+  BatchGetDeviceDimensionConfigsResponse,
+  BatchGetDeviceWifiConfigsRequest,
+  BatchGetDeviceWifiConfigsResponse,
+  BatchUpdateDeviceDimensionConfigsRequest,
+  BatchUpdateDeviceDimensionConfigsResponse,
+  BatchUpdateDeviceWifiConfigsRequest,
+  BatchUpdateDeviceWifiConfigsResponse,
   CheckDeviceConfigPermissionResult,
   DeviceConfig,
+  GetConfigurableDimensionsRequest,
+  GetConfigurableDimensionsResponse,
   GetDeviceConfigResult,
+  GetDimensionValueSuggestionsRequest,
+  GetDimensionValueSuggestionsResponse,
   GetRecommendedWifiResponse,
+  GetWifiSuggestionsRequest,
+  GetWifiSuggestionsResponse,
   RecommendedWifi,
   UpdateDeviceConfigRequest,
   UpdateDeviceConfigResult,
@@ -94,6 +110,106 @@ export class HttpConfigService extends ConfigService {
         `${this.apiUrl}/configs/wifi/recommendations`,
       )
       .pipe(map((response) => response.recommendations || []));
+  }
+
+  override getWifiSuggestions(
+    request?: GetWifiSuggestionsRequest,
+  ): Observable<GetWifiSuggestionsResponse> {
+    const params = {
+      ...(request?.fleet && {fleet: request.fleet}),
+      ...(request?.universe && {universe: request.universe}),
+    };
+    return this.http.get<GetWifiSuggestionsResponse>(
+      `${this.apiUrl}/configs/wifi:suggestions`,
+      {params},
+    );
+  }
+
+  override batchGetDeviceWifiConfigs(
+    request: BatchGetDeviceWifiConfigsRequest,
+  ): Observable<BatchGetDeviceWifiConfigsResponse> {
+    const params = request.fleet ? {fleet: request.fleet} : undefined;
+    return this.http.post<BatchGetDeviceWifiConfigsResponse>(
+      `${this.apiUrl}/devices:batchGetWifiConfigs`,
+      request,
+      params ? {params} : undefined,
+    );
+  }
+
+  override batchUpdateDeviceWifiConfigs(
+    request: BatchUpdateDeviceWifiConfigsRequest,
+  ): Observable<BatchUpdateDeviceWifiConfigsResponse> {
+    const params = request.fleet ? {fleet: request.fleet} : undefined;
+    return this.http.post<BatchUpdateDeviceWifiConfigsResponse>(
+      `${this.apiUrl}/devices:batchUpdateWifiConfigs`,
+      request,
+      params ? {params} : undefined,
+    );
+  }
+
+  override getConfigurableDimensions(
+    request?: GetConfigurableDimensionsRequest,
+  ): Observable<GetConfigurableDimensionsResponse> {
+    const params = {
+      ...(request?.fleet && {fleet: request.fleet}),
+      ...(request?.universe && {universe: request.universe}),
+    };
+    return this.http.get<GetConfigurableDimensionsResponse>(
+      `${this.apiUrl}/configs/dimensions:configurable`,
+      {params},
+    );
+  }
+
+  override batchGetConfigurableDimensionKeys(
+    request: BatchGetConfigurableDimensionKeysRequest,
+  ): Observable<BatchGetConfigurableDimensionKeysResponse> {
+    const params = request.fleet ? {fleet: request.fleet} : undefined;
+    return this.http.post<BatchGetConfigurableDimensionKeysResponse>(
+      `${this.apiUrl}/devices:batchGetConfigurableDimensionKeys`,
+      request,
+      params ? {params} : undefined,
+    );
+  }
+
+  override getDimensionValueSuggestions(
+    request: GetDimensionValueSuggestionsRequest,
+  ): Observable<GetDimensionValueSuggestionsResponse> {
+    let params = new HttpParams().set('dimension_name', request.dimensionName);
+    if (request.dimensionList) {
+      params = params.set('dimension_list', request.dimensionList);
+    }
+    if (request.universe) {
+      params = params.set('universe', request.universe);
+    }
+    if (request.fleet) {
+      params = params.set('fleet', request.fleet);
+    }
+    return this.http.get<GetDimensionValueSuggestionsResponse>(
+      `${this.apiUrl}/configs/dimensions:valueSuggestions`,
+      {params},
+    );
+  }
+
+  override batchGetDeviceDimensionConfigs(
+    request: BatchGetDeviceDimensionConfigsRequest,
+  ): Observable<BatchGetDeviceDimensionConfigsResponse> {
+    const params = request.fleet ? {fleet: request.fleet} : undefined;
+    return this.http.post<BatchGetDeviceDimensionConfigsResponse>(
+      `${this.apiUrl}/devices:batchGetDimensionConfigs`,
+      request,
+      params ? {params} : undefined,
+    );
+  }
+
+  override batchUpdateDeviceDimensionConfigs(
+    request: BatchUpdateDeviceDimensionConfigsRequest,
+  ): Observable<BatchUpdateDeviceDimensionConfigsResponse> {
+    const params = request.fleet ? {fleet: request.fleet} : undefined;
+    return this.http.post<BatchUpdateDeviceDimensionConfigsResponse>(
+      `${this.apiUrl}/devices:batchUpdateDimensionConfigs`,
+      request,
+      params ? {params} : undefined,
+    );
   }
 
   // ===== Host Config Methods =====
