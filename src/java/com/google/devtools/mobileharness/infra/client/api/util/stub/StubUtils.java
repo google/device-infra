@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.infra.client.api.util.stub;
 
 import static com.google.devtools.mobileharness.infra.client.api.mode.remote.LabServerLocator.longRunningLabServer;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.net.HostAndPort;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Lab;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.LabServerLocator;
@@ -102,12 +104,15 @@ public final class StubUtils {
     }
   }
 
-  private static String getGrpcTargetByIp(String ip, int grpcPort) {
-    return String.format(
-        "%s:%s", Flags.reverseTunnelingLabServer.getNonNull() ? "localhost" : ip, grpcPort);
+  @VisibleForTesting
+  static String getGrpcTargetByIp(String ip, int grpcPort) {
+    return HostAndPort.fromParts(
+            Flags.reverseTunnelingLabServer.getNonNull() ? "localhost" : ip, grpcPort)
+        .toString();
   }
 
-  private static String getGrpcTargetByHostName(String hostName, int grpcPort) {
+  @VisibleForTesting
+  static String getGrpcTargetByHostName(String hostName, int grpcPort) {
     return String.format(
         "dns:///%s:%s",
         Flags.reverseTunnelingLabServer.getNonNull() ? "localhost" : hostName, grpcPort);

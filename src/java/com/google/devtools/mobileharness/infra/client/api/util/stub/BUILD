@@ -21,6 +21,7 @@ package(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/serverlocator:__pkg__",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/relay:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/util/stub:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api/util/stub:__pkg__",
     ],
 )
 
@@ -116,5 +117,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/dualconduit/proxy:server_type",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/dualconduit/proxy:util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "@maven//:com_google_guava_guava",
     ],
 )
