@@ -19,16 +19,17 @@ load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_sui
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
-    name = "android_desktop_device_helper_test",
+    name = "device",
     testonly = True,
-    srcs = [
-        "AndroidDesktopDeviceHelperTest.java",
-    ],
+    srcs = glob(["*.java"]),
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/androiddesktop/device:android_desktop_device_helper",
+        "//src/java/com/google/devtools/mobileharness/platform/androiddesktop/device:cros_cipd_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/command/testing",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:base_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
@@ -43,5 +44,5 @@ junit_test_suites(
     sizes = [
         "small",
     ],
-    deps = [":android_desktop_device_helper_test"],
+    deps = [":device"],
 )
