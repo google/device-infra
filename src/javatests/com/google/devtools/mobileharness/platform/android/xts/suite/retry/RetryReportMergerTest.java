@@ -590,4 +590,78 @@ public final class RetryReportMergerTest {
     assertThat(merged.getSummary().getModulesTotal()).isEqualTo(2);
     assertThat(merged.getSummary().getModulesDone()).isEqualTo(2);
   }
+
+  @Test
+  public void
+      mergeReports_retryReportHasUnexecutedModulesNotInPreviousReport_dropsUnexecutedModules()
+          throws Exception {
+    Result prevReport =
+        Result.newBuilder()
+            .setBuild(BuildInfo.newBuilder().setBuildFingerprint("fingerprint_1").build())
+            .addModuleInfo(
+                Module.newBuilder()
+                    .setAbi("arm64-v8a")
+                    .setName("GtsAssistIntentTestCases")
+                    .setDone(true)
+                    .setPassed(2)
+                    .setFailedTests(1)
+                    .setIsNonTfModule(false)
+                    .build())
+            .addModuleInfo(
+                Module.newBuilder()
+                    .setAbi("arm64-v8a")
+                    .setName("GtsCalendarTests")
+                    .setDone(true)
+                    .setPassed(2)
+                    .setFailedTests(0)
+                    .setIsNonTfModule(false)
+                    .build())
+            .build();
+    Result retryReport =
+        Result.newBuilder()
+            .setBuild(BuildInfo.newBuilder().setBuildFingerprint("fingerprint_1").build())
+            .addModuleInfo(
+                Module.newBuilder()
+                    .setAbi("arm64-v8a")
+                    .setName("GtsAssistIntentTestCases")
+                    .setDone(false)
+                    .setPassed(0)
+                    .setFailedTests(0)
+                    .setTotalTests(0)
+                    .setIsNonTfModule(false)
+                    .build())
+            // Unexecuted dummy module dumped by Tradefed on abort, not present in previous report
+            .addModuleInfo(
+                Module.newBuilder()
+                    .setAbi("arm64-v8a")
+                    .setName("GtsUnrelatedModule")
+                    .setDone(false)
+                    .setPassed(0)
+                    .setFailedTests(0)
+                    .setTotalTests(0)
+                    .setIsNonTfModule(false)
+                    .build())
+            .build();
+    when(previousResultLoader.loadPreviousResult(
+            RESULTS_DIR_PATH, 0, /* previousSessionResultDirName= */ null))
+        .thenReturn(prevReport);
+
+    SubPlan subPlan = new SubPlan();
+    subPlan.addIncludeFilter("arm64-v8a GtsAssistIntentTestCases");
+    when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
+
+    MergedResult mergedResult =
+        retryReportMerger.mergeReports(
+            RESULTS_DIR_PATH,
+            0,
+            /* previousSessionResultDirName= */ null,
+            /* retryType= */ null,
+            retryReport,
+            /* passedInModules= */ ImmutableList.of());
+
+    Result merged = mergedResult.mergedResult();
+    assertThat(merged.getModuleInfoList().stream().map(Module::getName))
+        .containsExactly("GtsAssistIntentTestCases", "GtsCalendarTests");
+    assertThat(merged.getSummary().getModulesTotal()).isEqualTo(2);
+  }
 }

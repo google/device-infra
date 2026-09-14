@@ -294,6 +294,7 @@ public class RetryReportMerger {
     modulesFromRetry.values().stream()
         .filter(
             module -> !prevModuleIds.contains(AbiUtil.createId(module.getAbi(), module.getName())))
+        .filter(module -> module.getDone() || module.getTotalTests() > 0)
         .forEach(mergedResult::addModuleInfo);
 
     // Prepare the Summary
