@@ -23,6 +23,7 @@ import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleD
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.CrosDecoratorSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 
 /**
  * Base decorator for ChromeOS devices. This class provides common functionality for interacting
@@ -83,5 +84,59 @@ public abstract class CrosBaseDecorator extends LifecycleDecorator implements Cr
       return deviceId.substring(0, lastColonIndex);
     }
     return deviceId;
+  }
+
+  /**
+   * Retrieves a parameter from the test job info, trying both the provided name and its
+   * hyphenated/underscored variant (e.g. "param_name" and "param-name").
+   *
+   * @param testInfo the test context
+   * @param paramName the parameter key
+   * @return the trimmed parameter value if found, or {@code null} otherwise
+   */
+  protected String getParam(TestInfo testInfo, String paramName) {
+    return getParam(testInfo, paramName, null);
+  }
+
+  /**
+   * Retrieves a parameter from the test job info, trying both the provided name and its
+   * hyphenated/underscored variant (e.g. "param_name" and "param-name").
+   *
+   * <p>If the parameter is present in params, its trimmed value is returned (which may be empty
+   * {@code ""} if explicitly set to empty to trigger fallback). If the parameter is not set, {@code
+   * defaultValue} is returned.
+   *
+   * @param testInfo the test context
+   * @param paramName the parameter key
+   * @param defaultValue the default value to return if the parameter is not present
+   * @return the parameter value, or {@code defaultValue} if not present
+   */
+  protected String getParam(TestInfo testInfo, String paramName, String defaultValue) {
+    if (testInfo == null
+        || testInfo.jobInfo() == null
+        || testInfo.jobInfo().params() == null
+        || paramName == null) {
+      return defaultValue;
+    }
+    var params = testInfo.jobInfo().params();
+    if (params.has(paramName)) {
+      return getTrimmedParam(params, paramName);
+    }
+    if (paramName.contains("_") || paramName.contains("-")) {
+      String alternate = paramName.replace('_', '-');
+      if (!alternate.equals(paramName) && params.has(alternate)) {
+        return getTrimmedParam(params, alternate);
+      }
+      alternate = paramName.replace('-', '_');
+      if (!alternate.equals(paramName) && params.has(alternate)) {
+        return getTrimmedParam(params, alternate);
+      }
+    }
+    return defaultValue;
+  }
+
+  private static String getTrimmedParam(Params params, String key) {
+    String value = params.get(key);
+    return value == null ? "" : value.trim();
   }
 }
