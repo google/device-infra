@@ -411,9 +411,9 @@ export class TjsSearchStore extends SearchPageStore {
     }
 
     if (meta?.namedPair) {
-      const name = chip.rawValues?.[0] || '';
-      const value = chip.rawValues?.[1] || '';
-      if (!name && !value) return null;
+      const name = (chip.rawValues?.[0] || '').trim();
+      const value = (chip.rawValues?.[1] || '').trim();
+      if (!name || !value) return null;
       return {
         key: rawKey,
         namedValue: {

@@ -1,8 +1,11 @@
 import {InjectionToken} from '@angular/core';
 import {Observable} from 'rxjs';
 import {
+  BatchUpdateDeviceConfigRequest,
+  BatchUpdateDeviceConfigResponse,
   CheckDeviceWritePermissionResult,
   DeviceConfig,
+  GetBatchWifiContextResponse,
   GetDeviceConfigResult,
   RecommendedWifi,
   UpdateDeviceConfigRequest,
@@ -68,6 +71,24 @@ export abstract class ConfigService {
    * @return An Observable emitting the list of recommended Wi-Fi configurations.
    */
   abstract getRecommendedWifi(): Observable<RecommendedWifi[]>;
+
+  /**
+   * Retrieves current Wi-Fi configuration and candidate networks for target devices.
+   * @param deviceIds The unique identifiers of the target devices.
+   * @return An Observable emitting the batch Wi-Fi context.
+   */
+  abstract getBatchWifiContext(
+    deviceIds: string[],
+  ): Observable<GetBatchWifiContextResponse>;
+
+  /**
+   * Applies a batch configuration change across target devices.
+   * @param request The batch update request object.
+   * @return An Observable emitting per-device update errors.
+   */
+  abstract batchUpdateDeviceConfig(
+    request: BatchUpdateDeviceConfigRequest,
+  ): Observable<BatchUpdateDeviceConfigResponse>;
 
   // ===== Host Config Methods =====
 
