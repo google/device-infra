@@ -41,8 +41,8 @@ describe('HostConfig Component', () => {
           provide: CONFIG_SERVICE,
           useValue: {
             getHostConfig: mockGetHostConfig,
-            checkHostWritePermission: () => of({hasPermission: true}),
-            checkDeviceWritePermission: () => of({hasPermission: true}),
+            checkHostConfigPermission: () => of({hasPermission: true}),
+            checkDeviceConfigPermission: () => of({hasPermission: true}),
           },
         },
       ],

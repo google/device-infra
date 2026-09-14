@@ -5,7 +5,7 @@ import {map} from 'rxjs/operators';
 
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
-  CheckDeviceWritePermissionResult,
+  CheckDeviceConfigPermissionResult,
   DeviceConfig,
   GetDeviceConfigResult,
   GetRecommendedWifiResponse,
@@ -14,7 +14,7 @@ import {
   UpdateDeviceConfigResult,
 } from '../../models/device_config_models';
 import {
-  CheckHostWritePermissionResult,
+  CheckHostConfigPermissionResult,
   GetHostConfigResult,
   GetHostDefaultDeviceConfigResponse,
   UnlockHostPropertiesResponse,
@@ -69,12 +69,12 @@ export class HttpConfigService extends ConfigService {
       );
   }
 
-  override checkDeviceWritePermission(
+  override checkDeviceConfigPermission(
     deviceId: string,
     universe?: string,
-  ): Observable<CheckDeviceWritePermissionResult> {
-    return this.http.post<CheckDeviceWritePermissionResult>(
-      `${this.apiUrl}/devices/${deviceId}/config:checkWritePermission`,
+  ): Observable<CheckDeviceConfigPermissionResult> {
+    return this.http.post<CheckDeviceConfigPermissionResult>(
+      `${this.apiUrl}/devices/${deviceId}/config:checkConfigPermission`,
       {id: deviceId, universe},
     );
   }
@@ -122,12 +122,12 @@ export class HttpConfigService extends ConfigService {
       );
   }
 
-  override checkHostWritePermission(
+  override checkHostConfigPermission(
     hostName: string,
     universe?: string,
-  ): Observable<CheckHostWritePermissionResult> {
-    return this.http.post<CheckHostWritePermissionResult>(
-      `${this.apiUrl}/hosts/${hostName}/config:checkWritePermission`,
+  ): Observable<CheckHostConfigPermissionResult> {
+    return this.http.post<CheckHostConfigPermissionResult>(
+      `${this.apiUrl}/hosts/${hostName}/config:checkConfigPermission`,
       {hostName, universe},
     );
   }

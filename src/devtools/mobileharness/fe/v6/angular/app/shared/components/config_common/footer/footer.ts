@@ -69,8 +69,8 @@ export class Footer implements OnInit, OnChanges {
         }
         const checkPermission =
           this.type === 'device'
-            ? this.configService.checkDeviceWritePermission(id, universe)
-            : this.configService.checkHostWritePermission(id, universe);
+            ? this.configService.checkDeviceConfigPermission(id, universe)
+            : this.configService.checkHostConfigPermission(id, universe);
 
         return checkPermission.pipe(
           map((result) => {

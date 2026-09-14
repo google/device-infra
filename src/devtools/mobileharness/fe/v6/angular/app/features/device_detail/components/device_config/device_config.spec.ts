@@ -25,7 +25,7 @@ describe('DeviceConfig Component', () => {
               provide: CONFIG_SERVICE,
               useValue: {
                 getDeviceConfig: () => of({deviceConfig: null}),
-                checkDeviceWritePermission: () => of({hasPermission: true}),
+                checkDeviceConfigPermission: () => of({hasPermission: true}),
               },
             },
           ],

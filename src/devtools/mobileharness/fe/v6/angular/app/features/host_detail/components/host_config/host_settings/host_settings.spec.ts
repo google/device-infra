@@ -50,12 +50,12 @@ describe('HostSettings Component', () => {
   beforeEach(async () => {
     mockConfigService = jasmine.createSpyObj<ConfigService>('ConfigService', [
       'getDeviceConfig',
-      'checkDeviceWritePermission',
+      'checkDeviceConfigPermission',
       'updateDeviceConfig',
       'getRecommendedWifi',
       'getHostDefaultDeviceConfig',
       'getHostConfig',
-      'checkHostWritePermission',
+      'checkHostConfigPermission',
       'updateHostConfig',
       'unlockHostProperties',
     ]);
@@ -97,10 +97,10 @@ describe('HostSettings Component', () => {
     mockConfigService.getHostConfig.and.callFake(() => of(hostConfigResponse));
     mockConfigService.updateHostConfig.and.returnValue(of({success: true}));
     mockConfigService.unlockHostProperties.and.returnValue(of({success: true}));
-    mockConfigService.checkHostWritePermission.and.returnValue(
+    mockConfigService.checkHostConfigPermission.and.returnValue(
       of({hasPermission: true}),
     );
-    mockConfigService.checkDeviceWritePermission.and.returnValue(
+    mockConfigService.checkDeviceConfigPermission.and.returnValue(
       of({hasPermission: true}),
     );
     mockConfigService.getRecommendedWifi.and.returnValue(of([]));

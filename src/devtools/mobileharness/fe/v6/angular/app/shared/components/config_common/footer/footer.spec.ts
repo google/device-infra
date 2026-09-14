@@ -11,15 +11,15 @@ describe('Footer Component', () => {
   let component: Footer;
   let fixture: ComponentFixture<Footer>;
   const mockConfigService = jasmine.createSpyObj('CONFIG_SERVICE', [
-    'checkDeviceWritePermission',
-    'checkHostWritePermission',
+    'checkDeviceConfigPermission',
+    'checkHostConfigPermission',
   ]);
 
   beforeEach(async () => {
-    mockConfigService.checkDeviceWritePermission.and.returnValue(
+    mockConfigService.checkDeviceConfigPermission.and.returnValue(
       of({hasPermission: true, userName: 'derekchen'}),
     );
-    mockConfigService.checkHostWritePermission.and.returnValue(
+    mockConfigService.checkHostConfigPermission.and.returnValue(
       of({hasPermission: true, userName: 'derekchen'}),
     );
 
@@ -46,13 +46,13 @@ describe('Footer Component', () => {
 
   it('should be created', () => {
     expect(component).toBeTruthy();
-    expect(mockConfigService.checkDeviceWritePermission).toHaveBeenCalledWith(
+    expect(mockConfigService.checkDeviceConfigPermission).toHaveBeenCalledWith(
       'test_device',
       '',
     );
   });
   it('should re-run permission check only when id or universe changes', () => {
-    mockConfigService.checkDeviceWritePermission.calls.reset();
+    mockConfigService.checkDeviceConfigPermission.calls.reset();
 
     // Change to same param
     fixture.componentRef.setInput('param', {
@@ -61,7 +61,7 @@ describe('Footer Component', () => {
       universe: '',
     });
     fixture.detectChanges();
-    expect(mockConfigService.checkDeviceWritePermission).not.toHaveBeenCalled();
+    expect(mockConfigService.checkDeviceConfigPermission).not.toHaveBeenCalled();
 
     // Change id
     fixture.componentRef.setInput('param', {
@@ -70,12 +70,12 @@ describe('Footer Component', () => {
       universe: '',
     });
     fixture.detectChanges();
-    expect(mockConfigService.checkDeviceWritePermission).toHaveBeenCalledWith(
+    expect(mockConfigService.checkDeviceConfigPermission).toHaveBeenCalledWith(
       'test_device_2',
       '',
     );
 
-    mockConfigService.checkDeviceWritePermission.calls.reset();
+    mockConfigService.checkDeviceConfigPermission.calls.reset();
 
     // Change universe
     fixture.componentRef.setInput('param', {
@@ -84,14 +84,14 @@ describe('Footer Component', () => {
       universe: 'prod',
     });
     fixture.detectChanges();
-    expect(mockConfigService.checkDeviceWritePermission).toHaveBeenCalledWith(
+    expect(mockConfigService.checkDeviceConfigPermission).toHaveBeenCalledWith(
       'test_device_2',
       'prod',
     );
   });
 
   it('should display custom denied message when permission is denied', () => {
-    mockConfigService.checkDeviceWritePermission.and.returnValue(
+    mockConfigService.checkDeviceConfigPermission.and.returnValue(
       of({hasPermission: false, userName: 'user'}),
     );
     fixture.componentRef.setInput('deniedMessage', 'Custom Denied Message');
@@ -108,7 +108,7 @@ describe('Footer Component', () => {
   });
 
   it('should display custom granted message when permission is granted', () => {
-    mockConfigService.checkDeviceWritePermission.and.returnValue(
+    mockConfigService.checkDeviceConfigPermission.and.returnValue(
       of({hasPermission: true, userName: 'user'}),
     );
     fixture.componentRef.setInput('grantedMessage', 'Custom Granted Message');
@@ -125,7 +125,7 @@ describe('Footer Component', () => {
   });
 
   it('should NOT display custom granted message when permission is denied', () => {
-    mockConfigService.checkDeviceWritePermission.and.returnValue(
+    mockConfigService.checkDeviceConfigPermission.and.returnValue(
       of({hasPermission: false, userName: 'user'}),
     );
     fixture.componentRef.setInput('grantedMessage', 'Custom Granted Message');

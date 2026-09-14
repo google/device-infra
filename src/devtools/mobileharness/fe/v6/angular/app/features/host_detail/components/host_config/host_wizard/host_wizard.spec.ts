@@ -37,8 +37,8 @@ describe('HostWizard Component', () => {
           provide: CONFIG_SERVICE,
           useValue: {
             updateHostConfig: () => of({success: true}),
-            checkHostWritePermission: () => of({hasPermission: true}),
-            checkDeviceWritePermission: () => of({hasPermission: true}),
+            checkHostConfigPermission: () => of({hasPermission: true}),
+            checkDeviceConfigPermission: () => of({hasPermission: true}),
           },
         },
         {

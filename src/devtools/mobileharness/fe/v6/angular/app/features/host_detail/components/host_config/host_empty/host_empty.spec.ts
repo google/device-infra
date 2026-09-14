@@ -25,8 +25,8 @@ describe('HostEmpty Component', () => {
               provide: CONFIG_SERVICE,
               useValue: {
                 getHostConfig: () => of({hostConfig: null}),
-                checkHostWritePermission: () => of({hasPermission: true}),
-                checkDeviceWritePermission: () => of({hasPermission: true}),
+                checkHostConfigPermission: () => of({hasPermission: true}),
+                checkDeviceConfigPermission: () => of({hasPermission: true}),
               },
             },
           ],

@@ -23,8 +23,8 @@ describe('WizardStepper Component', () => {
         {
           provide: CONFIG_SERVICE,
           useValue: {
-            checkHostWritePermission: () => of({hasPermission: true}),
-            checkDeviceWritePermission: () => of({hasPermission: true}),
+            checkHostConfigPermission: () => of({hasPermission: true}),
+            checkDeviceConfigPermission: () => of({hasPermission: true}),
           },
         },
       ],

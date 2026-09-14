@@ -13,12 +13,12 @@ describe('DeviceEmpty Component', () => {
   const mockConfigService = jasmine.createSpyObj('CONFIG_SERVICE', [
     'getHostDefaultDeviceConfig',
     'getDeviceConfig',
-    'checkDeviceWritePermission',
+    'checkDeviceConfigPermission',
   ]);
 
   beforeEach(async () => {
     mockConfigService.getHostDefaultDeviceConfig.and.returnValue(of({}));
-    mockConfigService.checkDeviceWritePermission.and.returnValue(
+    mockConfigService.checkDeviceConfigPermission.and.returnValue(
         of({hasPermission: true, userName: 'test-user'}),
     );
 
