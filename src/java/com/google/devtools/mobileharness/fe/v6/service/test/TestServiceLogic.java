@@ -23,12 +23,13 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestLogRequ
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestLogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestResponse;
+import java.util.Optional;
 
 /** Logic interface for the Test Detail service. */
 public interface TestServiceLogic {
 
   /** Gets the full test detail (overview, execution details, troubleshooting, sub-tests). */
-  ListenableFuture<GetTestResponse> getTest(GetTestRequest request);
+  ListenableFuture<GetTestResponse> getTest(GetTestRequest request, Optional<String> caller);
 
   /** Gets the test log from the request offset to the end of the log. */
   ListenableFuture<GetTestLogResponse> getTestLog(GetTestLogRequest request);

@@ -1,6 +1,6 @@
 import {Injectable} from '@angular/core';
 import {Observable, of, throwError} from 'rxjs';
-import {delay} from 'rxjs/operators';
+import {delay, tap} from 'rxjs/operators';
 import {
   GetJobFileRequest,
   GetJobFileResponse,
@@ -13,7 +13,7 @@ import {
   KillJobRequest,
   KillJobResponse,
 } from '../../models/job_overview';
-import {MOCK_JOB_SCENARIOS} from '../mock_data';
+import {MOCK_JOB_SCENARIOS, MOCK_TEST_SCENARIOS} from '../mock_data';
 import {JobService} from './job_service';
 
 /**
@@ -141,16 +141,41 @@ export class FakeJobService extends JobService {
         () => new Error(`Job with ID '${id}' not found in mock data.`),
       );
     }
-    scenario.overview.status = JobStatus.JOB_STATUS_DONE;
-    scenario.overview.result = JobResult.JOB_RESULT_ABORT;
-    if (scenario.actions?.kill) {
-      Object.assign(scenario.actions.kill, {
-        visible: false,
-        enabled: false,
-        isReady: false,
-        tooltip: '',
-      });
-    }
-    return of({}).pipe(delay(500));
+    return of({}).pipe(
+      delay(2000),
+      tap(() => {
+        scenario.overview.status = JobStatus.JOB_STATUS_DONE;
+        scenario.overview.result = JobResult.JOB_RESULT_ABORT;
+        if (scenario.actions?.kill) {
+          Object.assign(scenario.actions.kill, {
+            visible: false,
+            enabled: false,
+            isReady: false,
+            tooltip: '',
+          });
+        }
+
+        for (const testScenario of MOCK_TEST_SCENARIOS) {
+          if (
+            testScenario.overview.job?.id === id ||
+            (id === 'c3578d2a-776d-49e3-b065-c66624b9d665' &&
+              testScenario.id === 'test-inprogress-1')
+          ) {
+            if (testScenario.overview.job) {
+              testScenario.overview.job.status = JobStatus.JOB_STATUS_DONE;
+              testScenario.overview.job.result = JobResult.JOB_RESULT_ABORT;
+            }
+            if (testScenario.actions?.killJob) {
+              Object.assign(testScenario.actions.killJob, {
+                visible: false,
+                enabled: false,
+                isReady: false,
+                tooltip: '',
+              });
+            }
+          }
+        }
+      }),
+    );
   }
 }

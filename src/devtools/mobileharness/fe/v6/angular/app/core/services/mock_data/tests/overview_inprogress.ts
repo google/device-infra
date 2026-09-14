@@ -20,6 +20,14 @@ export const SCENARIO_TEST_IN_PROGRESS: MockTestScenario = {
 [09:30:29] Verification passed. Saving results.`,
   cloudLogLink:
     'https://console.cloud.example.com/logs/query;query=resource.type%3D%22mobileharness_test%22%20AND%20labels.test_id%3D%22test-inprogress-1%22',
+  actions: {
+    killJob: {
+      enabled: true,
+      visible: true,
+      tooltip: 'Click to terminate this running job immediately.',
+      isReady: true,
+    },
+  },
   overview: {
     id: 'test-inprogress-1',
     name: 'com.google.devtools.mobileharness.infra.HarnessActiveTest#testRun',

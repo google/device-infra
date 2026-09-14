@@ -81,7 +81,7 @@ export class FakeTestService extends TestService {
           }
         : undefined,
     };
-    return of({test: overview}).pipe(delay(1000));
+    return of({test: overview, actions: scenario.actions}).pipe(delay(1000));
   }
 
   /**

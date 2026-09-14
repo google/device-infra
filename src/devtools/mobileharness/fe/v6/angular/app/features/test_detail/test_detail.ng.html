@@ -26,6 +26,22 @@
           }
           <span class="device-id-text monospaced-text" title="Test ID: {{ test.id }}">{{ test.id }}</span>
         </div>
+
+        <div class="header-actions">
+          @if (killActionState(); as killAction) {
+            <app-action-button
+              [action]="killAction"
+              [label]="jobActionUiConfig.kill.label"
+              [icon]="jobActionUiConfig.kill.icon"
+              [customClass]="jobActionUiConfig.kill.customClass || ''"
+              [testId]="jobActionUiConfig.kill.testIdPrefix"
+              [loading]="isKillingJob()"
+              [loadingLabel]="jobActionUiConfig.kill.loadingLabel"
+              (actionClick)="onKillJobClicked(jobId())"
+            >
+            </app-action-button>
+          }
+        </div>
       </header>
 
       <div class="card-body">
@@ -108,6 +124,25 @@
                             </div>
                           }
                           <div class="panel-footer-links mt-2">
+                            @if (killActionState(); as killAction) {
+                              @if (killAction.visible) {
+                                <button
+                                  type="button"
+                                  class="panel-kill-job-btn"
+                                  [disabled]="!killAction.enabled || isKillingJob()"
+                                  [matTooltip]="killAction.tooltip"
+                                  (click)="onKillJobClicked(job.id)"
+                                >
+                                  @if (isKillingJob()) {
+                                    <mat-icon class="spin-animation">sync</mat-icon>
+                                    <span>{{ jobActionUiConfig.kill.loadingLabel || 'Killing...' }}</span>
+                                  } @else {
+                                    <mat-icon>cancel</mat-icon>
+                                    <span>Kill Job</span>
+                                  }
+                                </button>
+                              }
+                            }
                             <a [href]="job.spongeLink || 'http://sponge/mock-job-link'" target="_blank" class="sponge-link">
                               <span>View on Sponge</span>
                               <mat-icon>open_in_new</mat-icon>

@@ -15,8 +15,10 @@ import {catchError, map} from 'rxjs/operators';
 
 import {NavLink} from '@deviceinfra/app/shared/components/nav_link/nav_link';
 import {useCopyToClipboard} from '@deviceinfra/app/shared/composables/copy';
+import {useJobActions} from '@deviceinfra/app/shared/composables/job_actions';
 import {usePageTitle} from '@deviceinfra/app/shared/composables/page_title';
 import {useSilentResource} from '@deviceinfra/app/shared/composables/silent_resource';
+import {JOB_ACTION_UI_CONFIG} from '../../core/constants/action_bar_config';
 import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
 import {
   GetTestRequest,
@@ -24,6 +26,7 @@ import {
   TestStatus,
 } from '../../core/models/test_overview';
 import {TEST_SERVICE} from '../../core/services/test/test_service';
+import {ActionButton} from '../../shared/components/action_button/action_button';
 import {LegacyConsoleBanner} from '../../shared/components/legacy_console_banner/legacy_console_banner';
 import {TooltipIfTruncatedDirective} from '../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
 import {TestFilesTab} from './components/test_files_tab/test_files_tab';
@@ -59,14 +62,18 @@ import {
     NavLink,
     TooltipIfTruncatedDirective,
     LegacyConsoleBanner,
+    ActionButton,
   ],
 })
 export class TestDetail {
   private readonly route = inject(ActivatedRoute);
   private readonly testService = inject(TEST_SERVICE);
   private readonly appData = inject(APP_DATA);
+  protected readonly jobActions = useJobActions();
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
   readonly copyToClipboard = useCopyToClipboard();
+  readonly jobActionUiConfig = JOB_ACTION_UI_CONFIG;
+  readonly isKillingJob = this.jobActions.isKillingJob;
 
   readonly testId = toSignal(
     this.route.paramMap.pipe(map((params) => params.get('id'))),
@@ -127,6 +134,7 @@ export class TestDetail {
           (response) =>
             ({
               testOverviewData: response.test,
+              actions: response.actions,
               jobId,
             }) as TestPageData,
         ),
@@ -212,4 +220,14 @@ export class TestDetail {
       this.silentResourceResult.reloadSilent();
     }
   }
+
+  readonly killActionState = computed(
+    () => this.testPageData()?.actions?.killJob || null,
+  );
+
+  readonly onKillJobClicked = (jobId: string) => {
+    this.jobActions.killJob(jobId, () => {
+      this.silentResourceResult.reloadSilent();
+    });
+  };
 }
