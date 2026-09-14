@@ -436,6 +436,81 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
+  public void createTradefedJobs_forChunkedCtsZip_success() throws Exception {
+    when(clock.instant())
+        .thenReturn(
+            Instant.ofEpochMilli(1000L), Instant.ofEpochMilli(2000L), Instant.ofEpochMilli(3000L));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    request =
+        request.toBuilder()
+            .clearTestResources()
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///path/to/xts/zip/android-chunked-cts.zip")
+                    .setName("android-chunked-cts.zip")
+                    .build())
+            .build();
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/android-chunked-cts";
+    when(xtsTypeLoader.getXtsType(eq(xtsRootDir), any())).thenReturn("cts");
+
+    // Trigger the handler.
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+    verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+
+    // Verify that the chunked zip is recognized as the xTS zip instead of an extra test resource.
+    SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    String zipFile = "/path/to/xts/zip/android-chunked-cts.zip";
+    assertThat(sessionRequestInfo.getXtsRootDir()).isEqualTo(xtsRootDir);
+    assertThat(sessionRequestInfo.getXtsType()).isEqualTo("cts");
+    assertThat(
+            sessionRequestInfo.hasAndroidXtsZip()
+                ? Optional.of(sessionRequestInfo.getAndroidXtsZip())
+                : Optional.empty())
+        .hasValue("ats-file-server::" + zipFile);
+    verify(files, never()).add(eq("android-chunked-cts.zip"), anyString());
+  }
+
+  @Test
+  public void createTradefedJobs_withCtsMediaZip_ctsMediaZipIsNotXtsZip() throws Exception {
+    when(clock.instant())
+        .thenReturn(
+            Instant.ofEpochMilli(1000L), Instant.ofEpochMilli(2000L), Instant.ofEpochMilli(3000L));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    request =
+        request.toBuilder()
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file:///data/path/to/android-cts-media-1.5.zip")
+                    .setName("android-cts-media-1.5.zip")
+                    .build())
+            .build();
+
+    // Trigger the handler.
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+    verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+
+    // Verify that the cts media zip is still treated as an additional test resource, and that the
+    // xTS zip is still the android-cts.zip resource.
+    SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.getXtsRootDir())
+        .isEqualTo(DirUtil.getPublicGenDir() + "/session_session_id/file");
+    assertThat(
+            sessionRequestInfo.hasAndroidXtsZip()
+                ? Optional.of(sessionRequestInfo.getAndroidXtsZip())
+                : Optional.empty())
+        .hasValue("ats-file-server::/path/to/xts/zip/file.zip");
+    verify(files).add(eq("android-cts-media-1.5.zip"), anyString());
+  }
+
+  @Test
   public void createTradefedJobs_withAcloud_success() throws Exception {
     when(clock.instant())
         .thenReturn(
@@ -1208,6 +1283,78 @@ public final class NewMultiCommandRequestHandlerTest {
     verifyUnmountRootDir(xtsRootDir);
     // Verify that handler has unzipped the zip file.
     verify(localFileUtil).unzipFile(zipFile, xtsRootDir, Duration.ofHours(1));
+  }
+
+  @Test
+  public void createTradefedJobs_chunkedXtsZip_testCasesRestored() throws Exception {
+    when(clock.instant())
+        .thenReturn(
+            Instant.ofEpochMilli(1000L), Instant.ofEpochMilli(2000L), Instant.ofEpochMilli(3000L));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    String zipFile = "/path/to/xts/zip/file.zip";
+    doReturn(true).when(localFileUtil).isDirExist(endsWith("/android-cts/chunked-testcases"));
+    doReturn(true).when(localFileUtil).isFileExist(endsWith("/android-cts/tools/cts_restorer"));
+    doReturn("output").when(localFileUtil).unzipFile(anyString(), anyString(), any(Duration.class));
+
+    // Trigger the handler.
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.RUNNING);
+
+    // Verify that handler has unzipped the zip file instead of using the read-only mounted dir.
+    verifyUnmountRootDir(xtsRootDir);
+    verify(localFileUtil).unzipFile(zipFile, xtsRootDir, Duration.ofHours(1));
+    // Verify that handler has restored the test cases from the chunked test cases dir.
+    verify(commandExecutor).run(restoreChunkedTestCasesCommand(xtsRootDir));
+  }
+
+  @Test
+  public void createTradefedJobs_chunkedXtsZipWithoutRestorer_errorWithInvalidResourceError()
+      throws Exception {
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    doReturn(true).when(localFileUtil).isDirExist(endsWith("/android-cts/chunked-testcases"));
+    doReturn("output").when(localFileUtil).unzipFile(anyString(), anyString(), any(Duration.class));
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).isEmpty();
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
+    assertThat(createJobsResult.errorReason()).hasValue(ErrorReason.INVALID_RESOURCE);
+    verify(commandExecutor, never()).run(restoreChunkedTestCasesCommand(xtsRootDir));
+  }
+
+  @Test
+  public void createTradefedJobs_restoreChunkedTestCasesFailed_errorWithInvalidResourceError()
+      throws Exception {
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    doReturn(true).when(localFileUtil).isDirExist(endsWith("/android-cts/chunked-testcases"));
+    doReturn(true).when(localFileUtil).isFileExist(endsWith("/android-cts/tools/cts_restorer"));
+    doReturn("output").when(localFileUtil).unzipFile(anyString(), anyString(), any(Duration.class));
+    // A real exception (rather than a Mockito mock) is required here because the error handling
+    // path renders the cause's stack trace, which a mocked Throwable does not have.
+    MobileHarnessException restoreException =
+        new MobileHarnessException(BasicErrorId.COMMAND_EXEC_FAIL, "restore failed");
+    when(commandExecutor.run(restoreChunkedTestCasesCommand(xtsRootDir)))
+        .thenAnswer(
+            invocation -> {
+              throw restoreException;
+            });
+
+    CreateJobsResult createJobsResult =
+        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+
+    assertThat(createJobsResult.jobInfos()).isEmpty();
+    assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
+    assertThat(createJobsResult.errorReason()).hasValue(ErrorReason.INVALID_RESOURCE);
   }
 
   @Test
@@ -2464,6 +2611,16 @@ public final class NewMultiCommandRequestHandlerTest {
         Command.of("fusermount", "-u", xtsRootDir).timeout(Duration.ofMinutes(10));
     verify(commandExecutor).run(unmountCommand);
     verify(sleeper).sleep(Duration.ofSeconds(5));
+  }
+
+  private static Command restoreChunkedTestCasesCommand(String xtsRootDir) {
+    return Command.of(
+            xtsRootDir + "/android-cts/tools/cts_restorer",
+            "--chunked-dir-path",
+            xtsRootDir + "/android-cts/chunked-testcases",
+            "--output-dir-path",
+            xtsRootDir + "/android-cts/testcases")
+        .timeout(Duration.ofHours(1));
   }
 
   private void mockProcessResult(ReportProto.Result result) throws Exception {

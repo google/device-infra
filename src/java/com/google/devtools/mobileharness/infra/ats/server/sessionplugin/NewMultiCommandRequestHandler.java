@@ -148,9 +148,21 @@ final class NewMultiCommandRequestHandler {
 
   private static final Duration UNZIP_TIMEOUT = Duration.ofHours(1);
 
+  /** Timeout of restoring the test cases of a chunked xTS package. */
+  private static final Duration RESTORE_CHUNKED_TEST_CASES_TIMEOUT = Duration.ofHours(1);
+
+  /** Directory which contains the chunks of the test cases in a chunked xTS package. */
+  private static final String CHUNKED_TEST_CASES_DIR_NAME = "chunked-testcases";
+
+  /** Binary in the xTS package which restores {@link #CHUNKED_TEST_CASES_DIR_NAME}. */
+  private static final String XTS_RESTORER_BINARY_NAME = "cts_restorer";
+
   @VisibleForTesting static final String OUTPUT_MANIFEST_FILE_NAME = "FILES";
+  // Matches xTS zip names like "android-cts.zip", "android-sts.zip_" and
+  // "android-chunked-cts.zip". Names containing digits or dots before ".zip" (e.g.
+  // "android-cts-media-1.5.zip") are intentionally excluded since they are not xTS packages.
   private static final Pattern ANDROID_XTS_ZIP_FILENAME_REGEX =
-      Pattern.compile("android-[a-z]+\\.zip_?");
+      Pattern.compile("android-[a-z-]+\\.zip_?");
   private static final String ACLOUD_FILENAME = "acloud_prebuilt";
 
   private static final String ATS_GOOGLE_CLOUD_STORAGE_PREFIX = "mtt:///google_cloud_storage/";
@@ -167,7 +179,8 @@ final class NewMultiCommandRequestHandler {
       ImmutableSet.of(
           BasicErrorId.LOCAL_MOUNT_ZIP_TO_DIR_ERROR,
           BasicErrorId.LOCAL_FILE_UNZIP_ERROR,
-          InfraErrorId.ATS_SERVER_INVALID_TEST_RESOURCE);
+          InfraErrorId.ATS_SERVER_INVALID_TEST_RESOURCE,
+          InfraErrorId.ATS_SERVER_RESTORE_CHUNKED_TEST_CASES_ERROR);
 
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   private final SessionResultHandlerUtil sessionResultHandlerUtil;
@@ -841,6 +854,7 @@ final class NewMultiCommandRequestHandler {
       localFileUtil.prepareDir(xtsRootDir);
       mountOrUnzipXtsZip(androidXtsZipPath, xtsRootDir, androidXtsZipPassword);
       mountedXtsRootDir = xtsRootDir;
+      restoreChunkedTestCases(xtsRootDir, getXtsType(xtsRootDir, androidXtsZipPath));
     }
     String xtsType = getXtsType(xtsRootDir, androidXtsZipPath);
     String commandLine = commandInfo.getCommandLine();
@@ -1627,6 +1641,62 @@ final class NewMultiCommandRequestHandler {
   }
 
   /**
+   * Restores the test cases of a chunked xTS package (e.g. {@code android-chunked-cts.zip}), if the
+   * given xTS root dir contains a chunked test cases dir.
+   *
+   * <p>A chunked xTS package ships its test cases as FastCDC chunks in {@code
+   * android-<xts_type>/chunked-testcases} instead of {@code android-<xts_type>/testcases}, so the
+   * chunks must be restored before running any test. This does the same as what the {@code
+   * cts-tradefed} launcher script does for ATS console.
+   *
+   * <p>The chunked test cases dir is removed by the restorer binary after a successful restoration,
+   * so this method is a no-op for a non-chunked xTS package or an already restored one.
+   */
+  private void restoreChunkedTestCases(String xtsRootDir, String xtsType)
+      throws MobileHarnessException, InterruptedException {
+    String xtsDir = PathUtil.join(xtsRootDir, "android-" + xtsType);
+    String chunkedTestCasesDir = PathUtil.join(xtsDir, CHUNKED_TEST_CASES_DIR_NAME);
+    if (!localFileUtil.isDirExist(chunkedTestCasesDir)) {
+      return;
+    }
+    String testCasesDir = PathUtil.join(xtsDir, "testcases");
+    String restorerBinary = PathUtil.join(xtsDir, "tools", XTS_RESTORER_BINARY_NAME);
+    if (!localFileUtil.isFileExist(restorerBinary)) {
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.ATS_SERVER_RESTORE_CHUNKED_TEST_CASES_ERROR,
+          String.format(
+              "Cannot restore test cases from %s because the restorer binary %s doesn't exist in"
+                  + " the xTS package. Please download and use a non-chunked xTS package (e.g."
+                  + " android-cts.zip) for the testing.",
+              chunkedTestCasesDir, restorerBinary),
+          /* cause= */ null);
+    }
+    logger.atInfo().log("Restoring test cases from %s to %s", chunkedTestCasesDir, testCasesDir);
+    Command command =
+        Command.of(
+                restorerBinary,
+                "--chunked-dir-path",
+                chunkedTestCasesDir,
+                "--output-dir-path",
+                testCasesDir)
+            .timeout(RESTORE_CHUNKED_TEST_CASES_TIMEOUT);
+    String output;
+    try {
+      output = commandExecutor.run(command);
+    } catch (MobileHarnessException e) {
+      throw MobileHarnessExceptionFactory.createUserFacingException(
+          InfraErrorId.ATS_SERVER_RESTORE_CHUNKED_TEST_CASES_ERROR,
+          String.format(
+              "Failed to restore test cases from %s to %s. Aborting the request to prevent running"
+                  + " with incomplete test cases. Please download and use a non-chunked xTS package"
+                  + " (e.g. android-cts.zip) for the testing.",
+              chunkedTestCasesDir, testCasesDir),
+          e);
+    }
+    logger.atInfo().log("Restored test cases to %s, output: %s", testCasesDir, output);
+  }
+
+  /**
    * Set command error and log the stack trace.
    *
    * <p>Command error on ATS UI could show the stack trace properly. Ideally, setCommandError should
@@ -1660,6 +1730,17 @@ final class NewMultiCommandRequestHandler {
       return false;
     }
     try {
+      String chunkedTestcasesDir =
+          PathUtil.join(xtsRootDir, "android-" + xtsType, CHUNKED_TEST_CASES_DIR_NAME);
+      if (localFileUtil.isDirExist(chunkedTestcasesDir)) {
+        // The test cases of a chunked XTS package need to be restored into the XTS root directory,
+        // which is not possible in a read-only mounted directory.
+        logger.atWarning().log(
+            "Chunked testcases dir %s exists in mounted XTS root directory, which is read-only and"
+                + " doesn't allow restoring the test cases.",
+            chunkedTestcasesDir);
+        return false;
+      }
       String testcasesDir = PathUtil.join(xtsRootDir, "android-" + xtsType, "testcases");
       if (!localFileUtil.isDirExist(testcasesDir)) {
         logger.atWarning().log(
