@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.protobuf.util.FieldMaskUtil.trim;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroup;
@@ -36,11 +37,48 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.protobuf.FieldMask;
 import java.util.List;
+import java.util.Optional;
 
 /** Utility class to trim the {@link LabQueryResult} based on the {@link Mask}. */
 public final class MaskUtils {
 
   private MaskUtils() {}
+
+  /**
+   * Whether {@code path} is touched by {@code fieldMask}: the path is listed, an ancestor of it is
+   * listed (so it is fully covered), or a descendant of it is listed (so it is partially needed).
+   * An empty field mask touches nothing.
+   */
+  public static boolean isFieldRequested(FieldMask fieldMask, String path) {
+    for (String candidate : fieldMask.getPathsList()) {
+      if (candidate.equals(path)
+          || path.startsWith(candidate + ".")
+          || candidate.startsWith(path + ".")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Trims any fields or dimensions that were temporarily retained by {@link CompiledLabInfoMask} or
+   * {@link CompiledDeviceInfoMask} to satisfy sorting or grouping in {@code LabQuery}. When neither
+   * mask retained temporary sort or group-by fields, this method is a no-op.
+   */
+  public static void trimLabQueryResult(
+      LabQueryResult.Builder resultBuilder,
+      CompiledLabInfoMask labInfoMask,
+      CompiledDeviceInfoMask deviceInfoMask) {
+    Optional<LabInfoMask> deferredLabMask = labInfoMask.deferredTrimMask();
+    Optional<DeviceInfoMask> deferredDeviceMask = deviceInfoMask.deferredTrimMask();
+    if (deferredLabMask.isEmpty() && deferredDeviceMask.isEmpty()) {
+      return;
+    }
+    Mask.Builder maskBuilder = Mask.newBuilder();
+    deferredLabMask.ifPresent(maskBuilder::setLabInfoMask);
+    deferredDeviceMask.ifPresent(maskBuilder::setDeviceInfoMask);
+    trimLabQueryResult(resultBuilder, maskBuilder.build());
+  }
 
   /**
    * Trims the {@link LabQueryResult} based on the {@link Mask}.
@@ -117,12 +155,13 @@ public final class MaskUtils {
   }
 
   private static DeviceList trimDeviceList(DeviceList deviceList, DeviceInfoMask deviceInfoMask) {
-    if (!deviceInfoMask.hasFieldMask()) {
+    if (!deviceInfoMask.hasFieldMask()
+        && !deviceInfoMask.hasSupportedDimensionsMask()
+        && !deviceInfoMask.hasRequiredDimensionsMask()) {
       return deviceList;
     }
 
-    FieldMask fieldMask = deviceInfoMask.getFieldMask();
-    if (fieldMask.getPathsList().isEmpty()) {
+    if (deviceInfoMask.hasFieldMask() && deviceInfoMask.getFieldMask().getPathsList().isEmpty()) {
       return DeviceList.newBuilder().setDeviceTotalCount(deviceList.getDeviceTotalCount()).build();
     }
     List<DeviceInfo> deviceInfos = deviceList.getDeviceInfoList();
@@ -163,11 +202,6 @@ public final class MaskUtils {
   }
 
   private static DeviceInfo trimDeviceInfo(DeviceInfo deviceInfo, DeviceInfoMask deviceInfoMask) {
-    FieldMask fieldMask = deviceInfoMask.getFieldMask();
-    if (fieldMask.getPathsList().isEmpty()) {
-      return deviceInfo;
-    }
-
     DeviceInfo.Builder deviceInfoBuilder = deviceInfo.toBuilder();
     if (deviceInfoMask.hasSupportedDimensionsMask()) {
       deviceInfoBuilder
@@ -190,6 +224,13 @@ public final class MaskUtils {
                   deviceInfoMask.getRequiredDimensionsMask().getDimensionNamesList()));
     }
 
+    if (!deviceInfoMask.hasFieldMask()) {
+      return deviceInfoBuilder.build();
+    }
+    FieldMask fieldMask = deviceInfoMask.getFieldMask();
+    if (fieldMask.getPathsList().isEmpty()) {
+      return deviceInfoBuilder.build();
+    }
     return trim(fieldMask, deviceInfoBuilder.build());
   }
 
@@ -200,7 +241,7 @@ public final class MaskUtils {
     }
 
     ImmutableSet<String> dimensionNamesLowerCase =
-        dimensionNames.stream().map(String::toLowerCase).collect(toImmutableSet());
+        dimensionNames.stream().map(Ascii::toLowerCase).collect(toImmutableSet());
 
     return dimensions.stream()
         .filter(dimension -> dimensionNamesLowerCase.contains(toLowerCase(dimension.getName())))

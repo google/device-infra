@@ -54,13 +54,14 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupCondition;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupOperation;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Order.DeviceOrder;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Order.LabOrder;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
+import com.google.devtools.mobileharness.shared.util.filter.CompiledDeviceInfoMask;
+import com.google.devtools.mobileharness.shared.util.filter.CompiledLabInfoMask;
 import com.google.devtools.mobileharness.shared.util.filter.MaskUtils;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import java.time.Instant;
@@ -80,8 +81,14 @@ public class LabQueryUtils {
     LabQueryResult.Builder result =
         LabQueryResult.newBuilder().setTimestamp(TimeUtils.toProtoTimestamp(Instant.now()));
 
-    // Gets filtered lab/device info from device manager.
-    LabView rawLabView = labInfoProvider.getLabInfos(query.getFilter());
+    CompiledLabInfoMask labInfoMask = CompiledLabInfoMask.of(query);
+    CompiledDeviceInfoMask deviceInfoMask = CompiledDeviceInfoMask.of(query);
+
+    // Gets filtered lab/device info from device manager with projection push-down.
+    LabView rawLabView =
+        query.hasMask()
+            ? labInfoProvider.getLabInfos(query.getFilter(), labInfoMask, deviceInfoMask)
+            : labInfoProvider.getLabInfos(query.getFilter());
 
     // Sets lab view / device view, sorts all LabInfo/DeviceInfo in it.
     setViewAndSort(result, rawLabView, query);
@@ -89,8 +96,8 @@ public class LabQueryUtils {
     // Groups devices if necessary, handles device limit in group and group limit.
     groupDevice(result, query.getDeviceViewRequest());
 
-    // Removes fields and dimensions from all LabInfo/DeviceInfo if necessary.
-    applyMask(result, query.getMask());
+    // Trims any sort or group-by fields temporarily retained for sorting/grouping.
+    MaskUtils.trimLabQueryResult(result, labInfoMask, deviceInfoMask);
 
     return result.build();
   }
@@ -142,7 +149,7 @@ public class LabQueryUtils {
    * Sorts the {@link DeviceInfo} list in a {@link LabData} by the given {@link
    * DeviceInfoComparator}.
    */
-  public static LabData sortDeviceListInLabData(
+  private static LabData sortDeviceListInLabData(
       LabData labData, DeviceInfoComparator deviceInfoComparator) {
     LabData.Builder result = labData.toBuilder();
     DeviceList.Builder deviceListBuilder = result.getDeviceListBuilder();
@@ -466,8 +473,8 @@ public class LabQueryUtils {
                 // Adds device group for each distinct dimension value, sorted by dimension name.
                 deviceInfoList.stream()
                     .flatMap(deviceInfo -> getDimensionValues(deviceInfo, dimensionName))
-                    .distinct()
                     .sorted()
+                    .distinct()
                     .map(
                         dimensionValue ->
                             immutableEntry(
@@ -547,11 +554,6 @@ public class LabQueryUtils {
         compositeDimension.getRequiredDimensionList().stream()
             .filter(dimension -> dimension.getName().equals(dimensionName))
             .map(DeviceDimension::getValue));
-  }
-
-  /** Applies the given {@link Mask} to the {@link LabQueryResult}. */
-  private static void applyMask(LabQueryResult.Builder result, Mask mask) {
-    MaskUtils.trimLabQueryResult(result, mask);
   }
 
   /** Gets a page of the result. */
