@@ -43,6 +43,26 @@ public final class MaskUtils {
   private MaskUtils() {}
 
   /**
+   * Whether {@code path} is touched by {@code fieldMask}: the path is listed, an ancestor of it is
+   * listed (so it is fully covered), or a descendant of it is listed (so it is partially needed).
+   * An empty field mask touches nothing.
+   *
+   * <p>Compiled masks use this to decide, once per query, whether the few fields worth avoiding at
+   * build time (an expensive subtree or a value-whitelisted list) are requested. Cheap fields are
+   * built unconditionally and removed by {@link #trimLabQueryResult}.
+   */
+  public static boolean isFieldRequested(FieldMask fieldMask, String path) {
+    for (String candidate : fieldMask.getPathsList()) {
+      if (candidate.equals(path)
+          || path.startsWith(candidate + ".")
+          || candidate.startsWith(path + ".")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Trims the {@link LabQueryResult} based on the {@link Mask}.
    *
    * <p>If the LabInfoMask exists, LabInfo will be trimmed based on the field mask.
@@ -117,12 +137,13 @@ public final class MaskUtils {
   }
 
   private static DeviceList trimDeviceList(DeviceList deviceList, DeviceInfoMask deviceInfoMask) {
-    if (!deviceInfoMask.hasFieldMask()) {
+    if (!deviceInfoMask.hasFieldMask()
+        && !deviceInfoMask.hasSupportedDimensionsMask()
+        && !deviceInfoMask.hasRequiredDimensionsMask()) {
       return deviceList;
     }
 
-    FieldMask fieldMask = deviceInfoMask.getFieldMask();
-    if (fieldMask.getPathsList().isEmpty()) {
+    if (deviceInfoMask.hasFieldMask() && deviceInfoMask.getFieldMask().getPathsList().isEmpty()) {
       return DeviceList.newBuilder().setDeviceTotalCount(deviceList.getDeviceTotalCount()).build();
     }
     List<DeviceInfo> deviceInfos = deviceList.getDeviceInfoList();
@@ -163,11 +184,6 @@ public final class MaskUtils {
   }
 
   private static DeviceInfo trimDeviceInfo(DeviceInfo deviceInfo, DeviceInfoMask deviceInfoMask) {
-    FieldMask fieldMask = deviceInfoMask.getFieldMask();
-    if (fieldMask.getPathsList().isEmpty()) {
-      return deviceInfo;
-    }
-
     DeviceInfo.Builder deviceInfoBuilder = deviceInfo.toBuilder();
     if (deviceInfoMask.hasSupportedDimensionsMask()) {
       deviceInfoBuilder
@@ -190,6 +206,13 @@ public final class MaskUtils {
                   deviceInfoMask.getRequiredDimensionsMask().getDimensionNamesList()));
     }
 
+    if (!deviceInfoMask.hasFieldMask()) {
+      return deviceInfoBuilder.build();
+    }
+    FieldMask fieldMask = deviceInfoMask.getFieldMask();
+    if (fieldMask.getPathsList().isEmpty()) {
+      return deviceInfoBuilder.build();
+    }
     return trim(fieldMask, deviceInfoBuilder.build());
   }
 
