@@ -16,7 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.ats.common;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.startsWith;
@@ -25,6 +27,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -61,6 +64,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
@@ -69,6 +73,7 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.Spy;
@@ -625,5 +630,113 @@ public final class SessionResultHandlerUtilTest {
         .isTrue();
     assertThat(resultDeviceInfoDir.resolve("device_compatibility_matrix.xml").toFile().exists())
         .isFalse();
+  }
+
+  @Test
+  public void processResult_tradefedJobFailedWithoutResultFiles_insertsUnexecutedModules()
+      throws Exception {
+    flags.set("tmp_dir_root", folder.newFolder("tmp_dir_root_1").toString());
+    Path resultDir = folder.newFolder("tf_fail_result_dir").toPath();
+    Path logDir = folder.newFolder("tf_fail_log_dir").toPath();
+
+    TestInfos testInfos = mock(TestInfos.class);
+    com.google.devtools.mobileharness.api.model.job.out.Result result =
+        mock(com.google.devtools.mobileharness.api.model.job.out.Result.class);
+    when(jobProperties.getBoolean(Job.IS_XTS_TF_JOB)).thenReturn(Optional.of(true));
+    when(jobInfo.tests()).thenReturn(testInfos);
+    when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
+    when(testInfo.resultWithCause()).thenReturn(result);
+    when(result.get())
+        .thenReturn(
+            ResultTypeWithCause.create(
+                TestResult.ERROR,
+                new MobileHarnessException(
+                    InfraErrorId.DM_RESERVE_BUSY_DEVICE, "Device is not available.")));
+    when(testProperties.getOptional(
+            XtsConstants.TRADEFED_FILTERED_EXPANDED_MODULES_FOR_TEST_PROPERTY_KEY))
+        .thenReturn(Optional.of("arm64-v8a CtsModule1,arm64-v8a CtsModule2"));
+    when(testInfo.getGenFileDir()).thenReturn(folder.newFolder("test_gen_files_1").toString());
+    when(sessionInfo.getSessionId()).thenReturn("session_id");
+
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.newBuilder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsRootDir("xtsRootDir")
+            .setXtsType("cts")
+            .build();
+
+    sessionResultHandlerUtil.processResult(
+        resultDir,
+        logDir,
+        /* latestResultLink= */ null,
+        /* latestLogLink= */ null,
+        ImmutableList.of(jobInfo),
+        sessionRequestInfo);
+
+    @SuppressWarnings("unchecked") // safe by specification
+    ArgumentCaptor<List<Result>> reportListCaptor = ArgumentCaptor.forClass(List.class);
+    verify(compatibilityReportMerger)
+        .mergeReports(reportListCaptor.capture(), eq(true), anyBoolean());
+
+    List<Result> reportList = reportListCaptor.getValue();
+    assertThat(reportList).isNotEmpty();
+    ImmutableList<Module> unexecutedModules =
+        reportList.stream().flatMap(r -> r.getModuleInfoList().stream()).collect(toImmutableList());
+    assertThat(unexecutedModules).hasSize(2);
+    assertThat(unexecutedModules.get(0).getName()).isEqualTo("CtsModule1");
+    assertThat(unexecutedModules.get(0).getAbi()).isEqualTo("arm64-v8a");
+    assertThat(unexecutedModules.get(0).getDone()).isFalse();
+    assertThat(unexecutedModules.get(1).getName()).isEqualTo("CtsModule2");
+    assertThat(unexecutedModules.get(1).getAbi()).isEqualTo("arm64-v8a");
+    assertThat(unexecutedModules.get(1).getDone()).isFalse();
+  }
+
+  @Test
+  public void processResult_tradefedJobPassedWithoutResultFiles_doesNotInsertUnexecutedModules()
+      throws Exception {
+    flags.set("tmp_dir_root", folder.newFolder("tmp_dir_root_2").toString());
+    Path resultDir = folder.newFolder("tf_pass_result_dir").toPath();
+    Path logDir = folder.newFolder("tf_pass_log_dir").toPath();
+
+    TestInfos testInfos = mock(TestInfos.class);
+    com.google.devtools.mobileharness.api.model.job.out.Result result =
+        mock(com.google.devtools.mobileharness.api.model.job.out.Result.class);
+    when(jobProperties.getBoolean(Job.IS_XTS_TF_JOB)).thenReturn(Optional.of(true));
+    when(jobInfo.tests()).thenReturn(testInfos);
+    when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
+    when(testInfo.resultWithCause()).thenReturn(result);
+    when(result.get()).thenReturn(ResultTypeWithCause.create(TestResult.PASS, /* cause= */ null));
+    when(testProperties.getOptional(
+            XtsConstants.TRADEFED_FILTERED_EXPANDED_MODULES_FOR_TEST_PROPERTY_KEY))
+        .thenReturn(Optional.of("arm64-v8a CtsModule1,arm64-v8a CtsModule2"));
+    when(testInfo.getGenFileDir()).thenReturn(folder.newFolder("test_gen_files_2").toString());
+    when(sessionInfo.getSessionId()).thenReturn("session_id");
+
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.newBuilder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsRootDir("xtsRootDir")
+            .setXtsType("cts")
+            .build();
+
+    sessionResultHandlerUtil.processResult(
+        resultDir,
+        logDir,
+        /* latestResultLink= */ null,
+        /* latestLogLink= */ null,
+        ImmutableList.of(jobInfo),
+        sessionRequestInfo);
+
+    @SuppressWarnings("unchecked") // safe by specification
+    ArgumentCaptor<List<Result>> reportListCaptor = ArgumentCaptor.forClass(List.class);
+    verify(compatibilityReportMerger)
+        .mergeReports(reportListCaptor.capture(), eq(true), anyBoolean());
+
+    List<Result> reportList = reportListCaptor.getValue();
+    ImmutableList<Module> unexecutedModules =
+        reportList.stream().flatMap(r -> r.getModuleInfoList().stream()).collect(toImmutableList());
+    assertThat(unexecutedModules).isEmpty();
   }
 }
