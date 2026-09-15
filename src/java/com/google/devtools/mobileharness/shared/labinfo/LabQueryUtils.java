@@ -61,6 +61,8 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
+import com.google.devtools.mobileharness.shared.util.filter.CompiledDeviceInfoMask;
+import com.google.devtools.mobileharness.shared.util.filter.CompiledLabInfoMask;
 import com.google.devtools.mobileharness.shared.util.filter.MaskUtils;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import java.time.Instant;
@@ -80,8 +82,14 @@ public class LabQueryUtils {
     LabQueryResult.Builder result =
         LabQueryResult.newBuilder().setTimestamp(TimeUtils.toProtoTimestamp(Instant.now()));
 
-    // Gets filtered lab/device info from device manager.
-    LabView rawLabView = labInfoProvider.getLabInfos(query.getFilter());
+    CompiledLabInfoMask labInfoMask = CompiledLabInfoMask.of(query);
+    CompiledDeviceInfoMask deviceInfoMask = CompiledDeviceInfoMask.of(query);
+
+    // Gets filtered lab/device info from device manager with projection push-down.
+    LabView rawLabView =
+        query.hasMask()
+            ? labInfoProvider.getLabInfos(query.getFilter(), labInfoMask, deviceInfoMask)
+            : labInfoProvider.getLabInfos(query.getFilter());
 
     // Sets lab view / device view, sorts all LabInfo/DeviceInfo in it.
     setViewAndSort(result, rawLabView, query);
@@ -89,8 +97,10 @@ public class LabQueryUtils {
     // Groups devices if necessary, handles device limit in group and group limit.
     groupDevice(result, query.getDeviceViewRequest());
 
-    // Removes fields and dimensions from all LabInfo/DeviceInfo if necessary.
-    applyMask(result, query.getMask());
+    // Removes temporary sort/group fields only when required by the compiled masks.
+    if (labInfoMask.needsPostSortTrim() || deviceInfoMask.needsPostSortTrim()) {
+      applyMask(result, query.getMask());
+    }
 
     return result.build();
   }
@@ -142,7 +152,7 @@ public class LabQueryUtils {
    * Sorts the {@link DeviceInfo} list in a {@link LabData} by the given {@link
    * DeviceInfoComparator}.
    */
-  public static LabData sortDeviceListInLabData(
+  private static LabData sortDeviceListInLabData(
       LabData labData, DeviceInfoComparator deviceInfoComparator) {
     LabData.Builder result = labData.toBuilder();
     DeviceList.Builder deviceListBuilder = result.getDeviceListBuilder();
@@ -466,8 +476,8 @@ public class LabQueryUtils {
                 // Adds device group for each distinct dimension value, sorted by dimension name.
                 deviceInfoList.stream()
                     .flatMap(deviceInfo -> getDimensionValues(deviceInfo, dimensionName))
-                    .distinct()
                     .sorted()
+                    .distinct()
                     .map(
                         dimensionValue ->
                             immutableEntry(
