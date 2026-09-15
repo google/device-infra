@@ -844,7 +844,8 @@ public abstract class XtsJobCreator {
     // can't be statically configured in the config file.
     if ((decoratorName.equals("DeviceInfoCollectorDecorator")
             || decoratorName.equals("AndroidAtsDynamicConfigPusherDecorator")
-            || decoratorName.equals("ApkPreconditionCheckDecorator"))
+            || decoratorName.equals("ApkPreconditionCheckDecorator")
+            || decoratorName.equals("ReportIntegrityCollectorDecorator"))
         && specJson != null) {
       specJson.addProperty(
           "xts_test_dir",

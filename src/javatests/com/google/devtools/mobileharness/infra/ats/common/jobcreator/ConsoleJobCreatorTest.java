@@ -70,6 +70,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidFilePullerDecoratorSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.DeviceInfoCollectorDecoratorSpec;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.ReportIntegrityCollectorDecoratorSpec;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.file.Files;
@@ -974,6 +975,13 @@ public final class ConsoleJobCreatorTest {
               + "        <option name=\"dest_dir\" value=\"device-info-files/\"/>\n"
               + "    </target_preparer>\n"
               + "    <target_preparer"
+              + " class=\"com.google.wireless.qa.mobileharness.shared.api.decorator.ReportIntegrityCollectorDecorator\">\n"
+              + "        <option name=\"apk\" value=\"ReportIntegrityInfo.apk\"/>\n"
+              + "        <option name=\"package_name\""
+              + " value=\"com.android.compatibility.common.reportintegrityinfo\"/>\n"
+              + "        <option name=\"src_dir\" value=\"/sdcard/device-info-files/\"/>\n"
+              + "    </target_preparer>\n"
+              + "    <target_preparer"
               + " class=\"com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidFilePullerDecorator\">\n"
               + "        <option name=\"file_path_on_device\" value=\"/sys/fs/selinux/policy\"/>\n"
               + "        <option name=\"pulled_file_dir\" value=\"vintf-files/sepolicy\"/>\n"
@@ -1017,6 +1025,7 @@ public final class ConsoleJobCreatorTest {
         .containsExactly(
             "AndroidCleanAppsDecorator",
             "DeviceInfoCollectorDecorator",
+            "ReportIntegrityCollectorDecorator",
             "AndroidFilePullerDecorator")
         .inOrder();
     DeviceInfoCollectorDecoratorSpec spec =
@@ -1029,6 +1038,22 @@ public final class ConsoleJobCreatorTest {
             .asMessage(DeviceInfoCollectorDecoratorSpec.class);
     assertThat(spec).isNotNull();
     assertThat(spec.getApk()).isEqualTo("CtsDeviceInfo.apk");
+    ReportIntegrityCollectorDecoratorSpec reportIntegritySpec =
+        setupJob
+            .subDeviceSpecs()
+            .getAllSubDevices()
+            .get(0)
+            .scopedSpecs()
+            .get("ReportIntegrityCollectorDecoratorSpec")
+            .asMessage(ReportIntegrityCollectorDecoratorSpec.class);
+    assertThat(reportIntegritySpec).isNotNull();
+    assertThat(reportIntegritySpec.getApk()).isEqualTo("ReportIntegrityInfo.apk");
+    assertThat(reportIntegritySpec.getPackageName())
+        .isEqualTo("com.android.compatibility.common.reportintegrityinfo");
+    assertThat(reportIntegritySpec.getSrcDir()).isEqualTo("/sdcard/device-info-files/");
+    // xts_test_dir can't be statically configured in the config file so it is injected.
+    assertThat(reportIntegritySpec.getXtsTestDir())
+        .isEqualTo(folder.getRoot().toPath().resolve("android-cts/testcases").toString());
     AndroidFilePullerDecoratorSpec pullerSpec =
         setupJob
             .subDeviceSpecs()

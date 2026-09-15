@@ -146,6 +146,7 @@ public final class DriverDecoratorMetadata {
     builder.put("MoblyDecoratorAdapter", "MoblyDecoratorAdapterSpec");
     builder.put("NoOpDecorator", "NoOpDecoratorSpec");
     builder.put("PythonVersionCheckDecorator", "PythonVersionCheckDecoratorSpec");
+    builder.put("ReportIntegrityCollectorDecorator", "ReportIntegrityCollectorDecoratorSpec");
     builder.put("ReportLogCollectorDecorator", "ReportLogCollectorDecoratorSpec");
     // keep-sorted end
 
