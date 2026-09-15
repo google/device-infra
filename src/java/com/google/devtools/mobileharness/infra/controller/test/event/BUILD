@@ -41,7 +41,9 @@ java_library(
         "TestStartedEventImpl.java",
         "TestStartingEventImpl.java",
     ],
-    visibility = ["//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
+    ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
