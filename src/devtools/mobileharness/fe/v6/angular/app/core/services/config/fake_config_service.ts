@@ -2,10 +2,23 @@ import {Injectable} from '@angular/core';
 import {Observable, of, throwError} from 'rxjs';
 import {delay} from 'rxjs/operators';
 import {
+  BatchUpdateDeviceConfigRequest,
+  BatchUpdateDeviceConfigResponse,
+  CandidateDimensionValue,
+  CandidateWifi,
   CheckDeviceConfigPermissionResult,
   ConfigSection,
+  ConfigurableDimension,
   DeviceConfig,
   DeviceConfigUiStatus,
+  DeviceCurrentDimension,
+  DeviceCurrentWifi,
+  DimensionScope,
+  GetBatchDimensionContextRequest,
+  GetBatchDimensionContextResponse,
+  GetBatchWifiContextResponse,
+  GetConfigurableDimensionsRequest,
+  GetConfigurableDimensionsResponse,
   GetDeviceConfigResult,
   RecommendedWifi,
   UpdateDeviceConfigRequest,
@@ -293,6 +306,206 @@ export class FakeConfigService extends ConfigService {
       {ssid: 'Auto-Testing-Network', psk: 'automation_bot_pass'},
       {ssid: 'Voice-Isolation-Lab', psk: 'audio_lab_key_456'},
     ]).pipe(delay(1000));
+  }
+
+  override getBatchWifiContext(
+    deviceIds: string[],
+  ): Observable<GetBatchWifiContextResponse> {
+    const current: DeviceCurrentWifi[] = deviceIds.map((did, i) => {
+      let wifi = undefined;
+      if (i % 5 === 1 || i % 5 === 2) {
+        wifi = {
+          type: 'custom' as const,
+          ssid: 'lab-guest-5g',
+          psk: '',
+          scanSsid: false,
+        };
+      } else if (i % 5 === 3) {
+        wifi = {
+          type: 'custom' as const,
+          ssid: 'xiaomi-test-ap',
+          psk: '',
+          scanSsid: true,
+        };
+      } else if (i % 5 === 4) {
+        wifi = {
+          type: 'custom' as const,
+          ssid: 'test-net-2g',
+          psk: '',
+          scanSsid: false,
+        };
+      }
+
+      let writable = true;
+      let unwritableReason = '';
+      if (i % 7 === 1) {
+        writable = false;
+        unwritableReason =
+          'Managed by host shared config (update host config instead)';
+      } else if (i % 7 === 2) {
+        writable = false;
+        unwritableReason = 'Managed by Config Pusher';
+      } else if (i % 7 === 3) {
+        writable = false;
+        unwritableReason = 'No permission (not an authorized owner)';
+      }
+
+      return {
+        deviceId: did,
+        wifi,
+        writable,
+        unwritableReason,
+      };
+    });
+
+    const candidateWifis: CandidateWifi[] = [
+      {ssid: 'lab-guest-5g', scanSsid: false, deviceCount: 1240},
+      {ssid: 'xiaomi-test-ap', scanSsid: true, deviceCount: 450},
+      {ssid: 'test-net-2g', scanSsid: false, deviceCount: 310},
+      {ssid: 'lab-guest-2g', scanSsid: false, deviceCount: 180},
+      {ssid: 'ap-floor2', scanSsid: false, deviceCount: 95},
+    ];
+
+    return of({
+      current,
+      candidateWifis,
+    }).pipe(delay(500));
+  }
+
+  override getConfigurableDimensions(
+    request?: GetConfigurableDimensionsRequest,
+  ): Observable<GetConfigurableDimensionsResponse> {
+    const allDimensions: ConfigurableDimension[] = [
+      {
+        key: 'recovery',
+        displayName: 'recovery',
+        scope: DimensionScope.SUPPORTED,
+        configuredDeviceCount: 8420,
+      },
+      {
+        key: 'skip_suw_app',
+        displayName: 'skip_suw_app',
+        scope: DimensionScope.SUPPORTED,
+        configuredDeviceCount: 6150,
+      },
+      {
+        key: 'pool',
+        displayName: 'pool',
+        scope: DimensionScope.SUPPORTED,
+        configuredDeviceCount: 5280,
+      },
+      {
+        key: 'persist_test_harness',
+        displayName: 'persist_test_harness',
+        scope: DimensionScope.SUPPORTED,
+        configuredDeviceCount: 3110,
+      },
+      {
+        key: 'sim_operator',
+        displayName: 'sim_operator',
+        scope: DimensionScope.SUPPORTED,
+        configuredDeviceCount: 1940,
+      },
+    ];
+
+    const q = (request?.query || '').trim().toLowerCase();
+    const filtered = q
+      ? allDimensions.filter(
+          (d) =>
+            d.key.toLowerCase().includes(q) ||
+            d.displayName.toLowerCase().includes(q),
+        )
+      : allDimensions;
+
+    return of({
+      dimensions: filtered,
+      allowCustomDimensions: true,
+    }).pipe(delay(200));
+  }
+
+  override getBatchDimensionContext(
+    request: GetBatchDimensionContextRequest,
+  ): Observable<GetBatchDimensionContextResponse> {
+    const current: DeviceCurrentDimension[] = request.deviceIds.map(
+      (did, i) => {
+        let values: string[] = [];
+        if (request.key === 'recovery') {
+          values = i % 2 === 0 ? ['true'] : ['false'];
+        } else if (request.key === 'pool') {
+          values =
+            i % 3 === 0
+              ? ['shared_pool']
+              : i % 3 === 1
+                ? ['dedicated_pool']
+                : [];
+        } else {
+          values = i % 2 === 0 ? ['val-1'] : [];
+        }
+
+        let writable = true;
+        let unwritableReason = '';
+        if (i % 7 === 1) {
+          writable = false;
+          unwritableReason =
+            'Managed by host shared config (update host config instead)';
+        } else if (i % 7 === 2) {
+          writable = false;
+          unwritableReason = 'Managed by Config Pusher';
+        } else if (i % 7 === 3) {
+          writable = false;
+          unwritableReason = 'No permission (not an authorized owner)';
+        }
+
+        return {
+          deviceId: did,
+          values,
+          writable,
+          unwritableReason,
+        };
+      },
+    );
+
+    let candidateValues: CandidateDimensionValue[] = [];
+    if (request.key === 'recovery') {
+      candidateValues = [
+        {values: ['true'], deviceCount: 5420},
+        {values: ['false'], deviceCount: 2100},
+        {values: [], deviceCount: 900},
+      ];
+    } else if (request.key === 'pool') {
+      candidateValues = [
+        {values: ['shared_pool'], deviceCount: 3800},
+        {values: ['dedicated_pool'], deviceCount: 1200},
+        {values: ['staging_pool'], deviceCount: 280},
+        {values: [], deviceCount: 150},
+      ];
+    } else {
+      candidateValues = [
+        {values: ['true'], deviceCount: 1500},
+        {values: ['false'], deviceCount: 800},
+        {values: [], deviceCount: 200},
+      ];
+    }
+
+    return of({
+      current,
+      candidateValues,
+    }).pipe(delay(400));
+  }
+
+  override batchUpdateDeviceConfig(
+    request: BatchUpdateDeviceConfigRequest,
+  ): Observable<BatchUpdateDeviceConfigResponse> {
+    const errors: Record<string, {code: string; message: string}> = {};
+    for (const did of request.deviceIds) {
+      if (did.includes('fail') || did.includes('error')) {
+        errors[did] = {
+          code: 'FAILED_PRECONDITION',
+          message: 'Device offline or unreachable',
+        };
+      }
+    }
+    return of({errors}).pipe(delay(800));
   }
 
   // ===== Host Config Methods =====

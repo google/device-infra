@@ -217,6 +217,71 @@ describe('FilterValuePicker', () => {
 
     expect(component.propName()).toBe('custom_key');
     expect(component.propVal()).toBe('custom_value');
+    expect(component.isApplyDisabled()).toBeFalse();
+  });
+
+  it('should disable apply button when namedPair has empty key or empty value', () => {
+    mockStore.pickerConfig.set({
+      key: 'property',
+      title: 'Property',
+      type: 'namedPair',
+      needsName: true,
+    });
+    mockStore.effectivePickerState.set({
+      ...INITIAL_VALUE_PICKER_STATE,
+      values: [],
+      selectedValues: new Set(),
+    });
+    fixture.detectChanges();
+
+    // 1. Both key and value are initially empty
+    expect(component.propName()).toBe('');
+    expect(component.propVal()).toBe('');
+    expect(component.isApplyDisabled()).toBeTrue();
+    const applyBtn = overlayContainerElement.querySelector(
+      '.vp-btn.vp-apply',
+    ) as HTMLButtonElement;
+    expect(applyBtn.disabled).toBeTrue();
+
+    // Attempting to apply does nothing
+    component.onApply();
+    expect(mockStore.applyValuePicker).not.toHaveBeenCalled();
+
+    // 2. Only key is filled
+    component.propName.set('my_key');
+    fixture.detectChanges();
+    expect(component.isApplyDisabled()).toBeTrue();
+    expect(applyBtn.disabled).toBeTrue();
+
+    component.onApply();
+    expect(mockStore.applyValuePicker).not.toHaveBeenCalled();
+
+    // 3. Only value is filled (key cleared or whitespace)
+    component.propName.set('   ');
+    component.propVal.set('my_value');
+    fixture.detectChanges();
+    expect(component.isApplyDisabled()).toBeTrue();
+    expect(applyBtn.disabled).toBeTrue();
+
+    component.onApply();
+    expect(mockStore.applyValuePicker).not.toHaveBeenCalled();
+
+    // 4. Both key and value are filled
+    component.propName.set('my_key');
+    component.propVal.set('my_value');
+    fixture.detectChanges();
+    expect(component.isApplyDisabled()).toBeFalse();
+    expect(applyBtn.disabled).toBeFalse();
+
+    // 5. Clicking apply dispatches event with both key and value
+    applyBtn.click();
+    expect(mockStore.applyValuePicker).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        propName: 'my_key',
+        textVal: 'my_value',
+        selected: ['my_value'],
+      }),
+    );
   });
 
   it('should handle plain text picker type', () => {

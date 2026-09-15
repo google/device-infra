@@ -1,12 +1,29 @@
 import {signal} from '@angular/core';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {MatDialog} from '@angular/material/dialog';
+import {ComponentFixture, TestBed, fakeAsync, tick} from '@angular/core/testing';
+import {MatDialog, MatDialogRef} from '@angular/material/dialog';
+import {MatMenu, MatMenuTrigger} from '@angular/material/menu';
 import {By} from '@angular/platform-browser';
 import {provideNoopAnimations} from '@angular/platform-browser/animations';
 
+import {Subject, of, throwError} from 'rxjs';
+import {
+  ConfigurableDimension,
+  DimensionScope,
+  GetConfigurableDimensionsResponse,
+} from '../../../../../core/models/device_config_models';
 import {Column, Row} from '../../../../../core/models/search';
+import {CONFIG_SERVICE, ConfigService} from '../../../../../core/services/config/config_service';
 import {FleetSearchStore} from '../../../services/fleet_search_store';
+import {
+  BulkConfigDimensionDialog,
+  BulkConfigDimensionDialogResult,
+} from './bulk_config_dimension_dialog/bulk_config_dimension_dialog';
+import {
+  BulkConfigWifiDialog,
+  BulkConfigWifiDialogResult,
+} from './bulk_config_wifi_dialog/bulk_config_wifi_dialog';
 import {FleetSearchResultsComponent} from './fleet_search_results';
+import {MoreDimensionsDialog} from './more_dimensions_dialog/more_dimensions_dialog';
 
 class MockFleetSearchStore {
   readonly groupByKeys = signal<string[]>([]);
@@ -73,10 +90,27 @@ describe('FleetSearchResultsComponent', () => {
   let fixture: ComponentFixture<FleetSearchResultsComponent>;
   let mockStore: MockFleetSearchStore;
   let mockDialog: jasmine.SpyObj<MatDialog>;
+  let mockConfigService: jasmine.SpyObj<ConfigService>;
 
   beforeEach(async () => {
     mockStore = new MockFleetSearchStore();
     mockDialog = jasmine.createSpyObj<MatDialog>('MatDialog', ['open']);
+    mockConfigService = jasmine.createSpyObj<ConfigService>('ConfigService', [
+      'getConfigurableDimensions',
+    ]);
+    mockConfigService.getConfigurableDimensions.and.returnValue(
+      of({
+        dimensions: [
+          {
+            key: 'recovery',
+            displayName: 'recovery',
+            scope: DimensionScope.SUPPORTED,
+            configuredDeviceCount: 8420,
+          },
+        ],
+        allowCustomDimensions: true,
+      }),
+    );
 
     await TestBed.configureTestingModule({
       imports: [FleetSearchResultsComponent],
@@ -84,6 +118,7 @@ describe('FleetSearchResultsComponent', () => {
         provideNoopAnimations(),
         {provide: FleetSearchStore, useValue: mockStore},
         {provide: MatDialog, useValue: mockDialog},
+        {provide: CONFIG_SERVICE, useValue: mockConfigService},
       ],
     }).compileComponents();
 
@@ -225,6 +260,142 @@ describe('FleetSearchResultsComponent', () => {
       mockStore.selectAllMatching.set(true);
       expect(component.canShowBatchActions()).toBeFalse();
       expect(component.canShowDeviceBatchActions()).toBeFalse();
+    });
+
+    it('opens BulkConfigWifiDialog with selected devices and clears selection on update', () => {
+      mockStore.selectedItems.set(new Set(['dev-1', 'dev-2']));
+      const openSpy = spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      ).and.returnValue({
+        afterClosed: () => of({updated: true}),
+      } as unknown as MatDialogRef<BulkConfigWifiDialog, BulkConfigWifiDialogResult>);
+
+      component.openBulkConfigWifiDialog();
+
+      expect(openSpy).toHaveBeenCalledWith(
+        BulkConfigWifiDialog,
+        jasmine.objectContaining({
+          panelClass: 'bulk-config-wifi-dialog-panel',
+          data: {
+            deviceIds: ['dev-1', 'dev-2'],
+          },
+        }),
+      );
+      expect(mockStore.clearSelection).toHaveBeenCalled();
+      expect(mockStore.executeSearch).toHaveBeenCalled();
+    });
+
+    it('loads configurable dimensions on demand', () => {
+      component.loadConfigurableDimensions();
+
+      expect(mockConfigService.getConfigurableDimensions).toHaveBeenCalled();
+      expect(component.configurableDimensions().length).toBe(1);
+      expect(component.configurableDimensions()[0].key).toBe('recovery');
+      expect(component.allowCustomDimensions()).toBeTrue();
+      expect(component.hasLoadedDimensions()).toBeTrue();
+      expect(component.isLoadingDimensions()).toBeFalse();
+    });
+
+    it('disables button and displays loading state during dimension loading', () => {
+      const subject = new Subject<GetConfigurableDimensionsResponse>();
+      mockConfigService.getConfigurableDimensions.and.returnValue(subject);
+
+      component.loadConfigurableDimensions();
+
+      expect(component.isLoadingDimensions()).toBeTrue();
+      expect(component.hasLoadedDimensions()).toBeFalse();
+
+      subject.next({dimensions: [], allowCustomDimensions: true});
+      subject.complete();
+
+      expect(component.isLoadingDimensions()).toBeFalse();
+      expect(component.hasLoadedDimensions()).toBeTrue();
+    });
+
+    it('opens menu once dimensions are successfully loaded when trigger is provided', fakeAsync(() => {
+      const mockTrigger = jasmine.createSpyObj<MatMenuTrigger>('MatMenuTrigger', ['openMenu']);
+      const mockMenu: MatMenu = jasmine.createSpyObj<MatMenu>('MatMenu', ['focusFirstItem']);
+
+      component.loadConfigurableDimensions(mockTrigger, mockMenu);
+      tick();
+
+      expect(mockTrigger.openMenu).toHaveBeenCalled();
+    }));
+
+    it('does not re-fetch dimensions if already loaded', () => {
+      component.loadConfigurableDimensions();
+      expect(mockConfigService.getConfigurableDimensions).toHaveBeenCalledTimes(1);
+
+      component.loadConfigurableDimensions();
+      expect(mockConfigService.getConfigurableDimensions).toHaveBeenCalledTimes(1);
+    });
+
+    it('handles error during loadConfigurableDimensions gracefully', () => {
+      mockConfigService.getConfigurableDimensions.and.returnValue(
+        throwError(() => new Error('Service down')),
+      );
+
+      component.loadConfigurableDimensions();
+
+      expect(component.isLoadingDimensions()).toBeFalse();
+      expect(component.hasLoadedDimensions()).toBeFalse();
+    });
+
+    it('opens BulkConfigDimensionDialog with selected devices and dimension', () => {
+      mockStore.selectedItems.set(new Set(['dev-1', 'dev-2']));
+      const openSpy = spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      ).and.returnValue({
+        afterClosed: () => of({updated: true}),
+      } as unknown as MatDialogRef<
+        BulkConfigDimensionDialog,
+        BulkConfigDimensionDialogResult
+      >);
+
+      const dim: ConfigurableDimension = {
+        key: 'recovery',
+        displayName: 'recovery',
+        scope: DimensionScope.SUPPORTED,
+      };
+
+      component.openBulkConfigDimensionDialog(dim);
+
+      expect(openSpy).toHaveBeenCalledWith(
+        BulkConfigDimensionDialog,
+        jasmine.objectContaining({
+          panelClass: 'bulk-config-dimension-dialog-panel',
+          data: {
+            deviceIds: ['dev-1', 'dev-2'],
+            dimension: dim,
+          },
+        }),
+      );
+      expect(mockStore.clearSelection).toHaveBeenCalled();
+      expect(mockStore.executeSearch).toHaveBeenCalled();
+    });
+
+    it('opens MoreDimensionsDialog and delegates to BulkConfigDimensionDialog on selection', () => {
+      mockStore.selectedItems.set(new Set(['dev-1']));
+      const dim: ConfigurableDimension = {
+        key: 'custom_dim',
+        displayName: 'custom_dim',
+        scope: DimensionScope.SUPPORTED,
+      };
+
+      spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      ).and.returnValue({
+        afterClosed: () => of(dim),
+      } as unknown as MatDialogRef<MoreDimensionsDialog, ConfigurableDimension>);
+
+      const bulkSpy = spyOn(component, 'openBulkConfigDimensionDialog');
+
+      component.openMoreDimensionsDialog();
+
+      expect(bulkSpy).toHaveBeenCalledWith(dim);
     });
   });
 });

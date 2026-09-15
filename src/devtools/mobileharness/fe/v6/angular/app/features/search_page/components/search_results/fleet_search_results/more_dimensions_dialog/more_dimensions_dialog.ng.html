@@ -1,0 +1,86 @@
+<app-dialog
+  dialogTitle="Select dimension to configure"
+  width="40rem"
+  footerType="none"
+>
+  <div class="more-dims-body">
+    <!-- Search Bar -->
+    <div class="more-dims-searchbar">
+      <mat-icon class="search-icon">search</mat-icon>
+      <input
+        type="text"
+        class="more-dims-input"
+        placeholder="Search or enter dimension name..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="onSearchInput($event)"
+        autocomplete="off"
+      />
+      @if (searchQuery()) {
+        <button
+          type="button"
+          class="clear-button"
+          (click)="clearSearch()"
+          aria-label="Clear search"
+        >
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </div>
+
+    <!-- Reserved System Property Warning -->
+    @if (isReservedSystemKey()) {
+      <div class="more-dims-warn" role="alert">
+        <mat-icon>warning</mat-icon>
+        <span>
+          "<strong>{{ searchQuery().trim() }}</strong>" is an auto-detected system property and cannot be manually configured.
+        </span>
+      </div>
+    }
+
+    <!-- Custom Dimension Affordance -->
+    @if (showCustomAffordance()) {
+      <button
+        type="button"
+        class="more-dims-new"
+        (click)="selectCustomDimension()"
+      >
+        <mat-icon>add</mat-icon>
+        <span>Use "<strong>{{ searchQuery().trim() }}</strong>" as a new dimension</span>
+      </button>
+    }
+
+    <!-- Loading State -->
+    @if (isLoading()) {
+      <div class="more-dims-loading">
+        <mat-spinner diameter="28"></mat-spinner>
+      </div>
+    } @else if (loadError()) {
+      <div class="more-dims-error">
+        <mat-icon>error</mat-icon>
+        <span>{{ loadError() }}</span>
+      </div>
+    } @else if (!isReservedSystemKey()) {
+      <!-- Dimension List -->
+      <div class="more-dims-list custom-scrollbar">
+        @for (dim of dimensions(); track dim.key) {
+          <button
+            type="button"
+            class="more-dims-item"
+            (click)="selectDimension(dim)"
+          >
+            <span class="more-dims-key">{{ dim.displayName || dim.key }}</span>
+            @if (dim.configuredDeviceCount !== undefined && dim.configuredDeviceCount !== null) {
+              <span class="more-dims-cnt">
+                {{ dim.configuredDeviceCount | number }} {{ dim.configuredDeviceCount === 1 ? 'device' : 'devices' }}
+              </span>
+            }
+          </button>
+        } @empty {
+          @if (!showCustomAffordance()) {
+            <div class="more-dims-empty">No dimensions found.</div>
+          }
+        }
+      </div>
+    }
+  </div>
+</app-dialog>

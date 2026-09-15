@@ -148,13 +148,17 @@ export class FilterValuePicker {
   /** Property key name for namedPair picker type. */
   readonly propName = linkedSignal(() => {
     const vals = this.selectedValuesList();
-    if (this.config()?.needsName && vals.length >= 2) return vals[0] || '';
+    if (this.config()?.needsName) {
+      return vals[0] || '';
+    }
     return this.config()?.title || '';
   });
   /** Property value string for namedPair picker type. */
   readonly propVal = linkedSignal(() => {
     const vals = this.selectedValuesList();
-    if (this.config()?.needsName && vals.length >= 2) return vals[1] || '';
+    if (this.config()?.needsName) {
+      return vals[1] || '';
+    }
     return vals.join(', ');
   });
   /** Text value string for plain text picker type. */
@@ -233,6 +237,14 @@ export class FilterValuePicker {
   readonly showSearchInput = computed(
     () => this.config()?.type === 'list' && !this.isAdvanced(),
   );
+
+  /** Whether the Apply button should be disabled (e.g. key-value type requires both key and value). */
+  readonly isApplyDisabled = computed<boolean>(() => {
+    if (this.config()?.type === 'namedPair') {
+      return !this.propName().trim() || !this.propVal().trim();
+    }
+    return false;
+  });
   /** Whether row actions ('only', 'copy') are enabled (Fleet list-type filters with counts only). */
   readonly showRowActions = computed(
     () =>
@@ -382,6 +394,9 @@ export class FilterValuePicker {
 
   /** Handles Enter keypress inside popover search input box. */
   onSearchEnter() {
+    if (this.isApplyDisabled()) {
+      return;
+    }
     const q = this.searchQuery().trim();
     if (this.state().loading && q) {
       this.addCustomInput(q);
@@ -392,6 +407,9 @@ export class FilterValuePicker {
 
   /** Dispatches ValuePickerApplyEvent to store and closes popover overlay. */
   onApply() {
+    if (this.isApplyDisabled()) {
+      return;
+    }
     const isAdv = this.isAdvanced();
     const event = buildValuePickerApplyEvent({
       type: this.config()?.type,
