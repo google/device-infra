@@ -1016,6 +1016,11 @@ public class Flags {
   public static final Flag<Duration> fileTransferLocalCacheTtl = DurationFlag.hours(3);
 
   @FlagSpec(
+      name = "flashstation_cache_dir",
+      help = "Specifies a directory locally where flashstations can share cache.")
+  public static final Flag<String> flashstationCacheDir = Flag.nullString();
+
+  @FlagSpec(
       name = "force_device_reboot_after_test",
       help =
           "Whether to force a device reboot after each test. This option has the highest priority"
