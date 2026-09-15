@@ -34,7 +34,7 @@ import java.util.Set;
 public class PixelRomRecoveryWatcher implements Runnable {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final Duration CHECK_INTERVAL = Duration.ofSeconds(5);
+  private static final Duration CHECK_INTERVAL = Duration.ofSeconds(30);
 
   private static final String SERVICE_ACCOUNT_JSON_PRIVATE_KEY_PATH =
       "/usr/local/google/mobileharness/android_tradefed_test_key.json";
@@ -42,7 +42,7 @@ public class PixelRomRecoveryWatcher implements Runnable {
       "/usr/local/google/mobileharness/ate/cl_rom_recovery";
   private static final String ADB_PATH = "/usr/local/google/mobileharness/ate/adb";
 
-  private static final Duration RECOVERY_COMMAND_TIMEOUT = Duration.ofMinutes(2);
+  private static final Duration RECOVERY_COMMAND_TIMEOUT = Duration.ofMinutes(5);
 
   private final CommandExecutor commandExecutor;
   private final Sleeper sleeper;
