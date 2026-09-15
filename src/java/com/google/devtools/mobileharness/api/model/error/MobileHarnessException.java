@@ -16,16 +16,26 @@
 
 package com.google.devtools.mobileharness.api.model.error;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.common.metrics.stability.model.ErrorIdProvider;
+import com.google.devtools.common.metrics.stability.model.MetadataProvider;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import javax.annotation.Nullable;
 
 /** Base class of all Mobile Harness exceptions. */
 @SuppressWarnings("OverrideThrowableToString")
-public class MobileHarnessException extends Exception implements ErrorIdProvider<ErrorId> {
+public class MobileHarnessException extends Exception
+    implements ErrorIdProvider<ErrorId>, MetadataProvider {
 
   private static final StackTraceElement[] EMPTY_STACK_TRACE = new StackTraceElement[0];
 
   private final ErrorId errorId;
+  private final ConcurrentMap<String, String> metadata = new ConcurrentHashMap<>();
 
   public MobileHarnessException(ErrorId errorId, String message) {
     this(errorId, message, /* cause= */ null);
@@ -60,10 +70,38 @@ public class MobileHarnessException extends Exception implements ErrorIdProvider
   }
 
   @Override
+  public void addMetadata(String key, String value) {
+    checkNotNull(key, "key");
+    checkNotNull(value, "value");
+    metadata.put(key, value);
+  }
+
+  @Override
+  public void addMetadata(Map<String, String> metadata) {
+    this.metadata.putAll(metadata);
+  }
+
+  @Override
+  public ImmutableMap<String, String> getMetadata() {
+    return ImmutableMap.copyOf(metadata);
+  }
+
+  @Override
+  public Optional<String> getMetadata(String key) {
+    return Optional.ofNullable(metadata.get(key));
+  }
+
+  @Override
   public String toString() {
-    String classSimpleName = getClass().getSimpleName();
+    StringBuilder result = new StringBuilder(getClass().getSimpleName());
     String message = getLocalizedMessage();
-    return message == null ? classSimpleName : classSimpleName + ": " + message;
+    if (message != null) {
+      result.append(": ").append(message);
+    }
+    if (metadata != null && !metadata.isEmpty()) {
+      result.append(", metadata=").append(getMetadata());
+    }
+    return result.toString();
   }
 
   private static String getMessageSuffix(ErrorId errorId) {

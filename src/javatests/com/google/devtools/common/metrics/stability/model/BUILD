@@ -14,25 +14,26 @@
 #
 
 load("@rules_java//java:defs.bzl", "java_library")
+load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
-DEFAULT_VISIBILITY = [
-    "//:deviceinfra_all_pkg",
-]
-
-package(
-    default_applicable_licenses = ["//:license"],
-    default_visibility = DEFAULT_VISIBILITY,
-)
+package(default_applicable_licenses = ["//:license"])
 
 java_library(
-    name = "error_id",
-    srcs = [
-        "ErrorId.java",
-        "ErrorIdProvider.java",
-        "MetadataProvider.java",
-    ],
+    name = "model",
+    testonly = True,
+    srcs = glob(["*.java"]),
     deps = [
-        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
+        "@maven//:junit_junit",
     ],
+)
+
+junit_test_suites(
+    name = "gen_tests",
+    sizes = [
+        "small",
+    ],
+    deps = [":model"],
 )

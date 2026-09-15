@@ -22,6 +22,7 @@ import static java.util.Arrays.stream;
 import com.google.common.base.Throwables;
 import com.google.devtools.common.metrics.stability.model.ErrorId;
 import com.google.devtools.common.metrics.stability.model.ErrorIdProvider;
+import com.google.devtools.common.metrics.stability.model.MetadataProvider;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorIdProto;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto;
@@ -37,7 +38,23 @@ import java.util.stream.Stream;
 /**
  * Converter for converting UDCluster exception data models.
  *
- * <p>This class is only for UDCluster error handling system.
+ * <p>Supported conversions:
+ *
+ * <pre>{@code
+ * +------------------+      +--------------------------------+      +----------------------------+
+ * |                  | ---> |    ExceptionDetail (Proto)     | ---> |                            |
+ * |                  |      +--------------------------------+      |                            |
+ * | Throwable (Java) |                      ^                       |  DeserializedException     |
+ * |                  |                      |                       |         (Java)             |
+ * |                  |                      v                       |                            |
+ * |                  |      +--------------------------------+      |                            |
+ * |                  |----> |FlattenedExceptionDetail (Proto)| ---> |                            |
+ * +------------------+      +--------------------------------+      +----------------------------+
+ *
+ * +------------------+      +--------------------------------+      +----------------------------+
+ * |  ErrorId (Java)  | ---> |        ErrorId (Proto)         | ---> | DeserializedErrorId (Java) |
+ * +------------------+      +--------------------------------+      +----------------------------+
+ * }</pre>
  */
 public class ErrorModelConverter {
   /**
@@ -120,6 +137,18 @@ public class ErrorModelConverter {
     if (addStackTrace) {
       result.setStackTrace(getStackTrace(throwable));
     }
+    if (throwable instanceof MetadataProvider metadataProvider) {
+      var metadata = metadataProvider.getMetadata();
+      if (metadata != null) {
+        metadata.forEach(
+            (key, value) ->
+                result.addMetadata(
+                    ExceptionSummary.MetadataEntry.newBuilder()
+                        .setKey(key)
+                        .setValue(value)
+                        .build()));
+      }
+    }
     return result.build();
   }
 
@@ -161,6 +190,9 @@ public class ErrorModelConverter {
             exceptionSummary.getMessage(),
             exceptionSummary.getClassType().getClassName());
     setStackTrace(result, exceptionSummary.getStackTrace());
+    for (ExceptionSummary.MetadataEntry entry : exceptionSummary.getMetadataList()) {
+      result.addMetadata(entry.getKey(), entry.getValue());
+    }
     return result;
   }
 

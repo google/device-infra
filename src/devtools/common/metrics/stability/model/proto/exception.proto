@@ -43,6 +43,16 @@ message ExceptionSummary {
   ExceptionClassType class_type = 3;
   // Required.
   StackTrace stack_trace = 4;
+  // Entry of key-value metadata.
+  // Explicit message instead of map<string, string> because Spanner SDL does
+  // not support protobuf map fields in non-BLOB proto columns.
+  message MetadataEntry {
+    string key = 1;
+    string value = 2;
+  }
+
+  // Optional.
+  repeated MetadataEntry metadata = 5;
 }
 
 message ExceptionClassType {

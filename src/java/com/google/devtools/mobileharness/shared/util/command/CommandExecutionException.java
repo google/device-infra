@@ -41,6 +41,8 @@ public class CommandExecutionException extends CommandException {
         cause,
         command);
     this.commandResult = commandResult;
+    addMetadata("exit_code", Integer.toString(commandResult.exitCode()));
+    addMetadata("is_timeout", Boolean.toString(commandResult.isTimeout()));
   }
 
   /** The result of the command. */
