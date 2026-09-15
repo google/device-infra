@@ -608,20 +608,18 @@ class RemoteDeviceManager implements LabInfoProvider {
   @GuardedBy("lock")
   private void updateScheduler(DeviceData deviceData) {
     switch (deviceData.statusFromLab) {
-      case IDLE:
-        // Adds device to scheduler if it is IDLE.
-        scheduler.upsertDevice(
-            deviceData.getDataFromLabWithTempRequiredDimensions(deviceTempRequiredDimensionManager),
-            new LabScheduleUnit(deviceData.dataFromLab.locator().labLocator()));
-        break;
-      case BUSY:
-        // Does nothing if it is BUSY.
-        break;
-      default:
-        // Removes device from scheduler if it is not IDLE or BUSY.
-        scheduler.unallocate(
-            deviceData.dataFromLab.locator(), /* removeDevices= */ true, /* closeTest= */ true);
-        break;
+      case IDLE ->
+          // Adds device to scheduler if it is IDLE.
+          scheduler.upsertDevice(
+              deviceData.getDataFromLabWithTempRequiredDimensions(
+                  deviceTempRequiredDimensionManager),
+              new LabScheduleUnit(deviceData.dataFromLab.locator().labLocator()));
+      case BUSY -> {}
+      // Does nothing if it is BUSY.
+      default ->
+          // Removes device from scheduler if it is not IDLE or BUSY.
+          scheduler.unallocate(
+              deviceData.dataFromLab.locator(), /* removeDevices= */ true, /* closeTest= */ true);
     }
   }
 
@@ -1131,22 +1129,20 @@ class RemoteDeviceManager implements LabInfoProvider {
     }
 
     private static Predicate<LabData> createLabMatcher(LabMatchCondition labMatchCondition) {
-      switch (labMatchCondition.getConditionCase()) {
-        case LAB_HOST_NAME_MATCH_CONDITION:
-          return createStringMatcher(
-              labMatchCondition.getLabHostNameMatchCondition().getCondition(),
-              labData -> labData.labLocator.hostName());
-        case PROPERTY_MATCH_CONDITION:
-          return createStringMultimapMatcher(
-              labMatchCondition.getPropertyMatchCondition().getCondition(),
-              labData ->
-                  labData.labServerFeature.getHostProperties().getHostPropertyList().stream()
-                      .collect(
-                          toImmutableListMultimap(HostProperty::getKey, HostProperty::getValue)));
-        case CONDITION_NOT_SET:
-          break;
-      }
-      return labData -> true;
+      return switch (labMatchCondition.getConditionCase()) {
+        case LAB_HOST_NAME_MATCH_CONDITION ->
+            createStringMatcher(
+                labMatchCondition.getLabHostNameMatchCondition().getCondition(),
+                labData -> labData.labLocator.hostName());
+        case PROPERTY_MATCH_CONDITION ->
+            createStringMultimapMatcher(
+                labMatchCondition.getPropertyMatchCondition().getCondition(),
+                labData ->
+                    labData.labServerFeature.getHostProperties().getHostPropertyList().stream()
+                        .collect(
+                            toImmutableListMultimap(HostProperty::getKey, HostProperty::getValue)));
+        default -> labData -> true;
+      };
     }
   }
 

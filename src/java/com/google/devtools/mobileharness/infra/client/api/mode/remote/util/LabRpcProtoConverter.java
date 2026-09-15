@@ -255,18 +255,16 @@ public class LabRpcProtoConverter {
       Result testResult) {
 
     switch (resultType) {
-      case PASS:
+      case PASS -> {
         testResult.setPass();
         if (resultCause != null) {
           logger.atWarning().log(
               "GetTestStatusResponse has PASS test result with test result cause [%s]",
               resultCause);
         }
-        break;
-      case UNKNOWN:
-        logger.atFine().log("Ignore UNKNOWN test result from lab side");
-        break;
-      default:
+      }
+      case UNKNOWN -> logger.atFine().log("Ignore UNKNOWN test result from lab side");
+      default -> {
         if (resultCause == null) {
           ResultInternalUtil.setNonPassing(
               testResult,
@@ -279,6 +277,7 @@ public class LabRpcProtoConverter {
           ResultInternalUtil.setNonPassing(
               testResult, resultType, resultCause, /* logStackTrace= */ false);
         }
+      }
     }
   }
 

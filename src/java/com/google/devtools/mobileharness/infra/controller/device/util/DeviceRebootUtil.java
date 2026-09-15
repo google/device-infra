@@ -105,38 +105,34 @@ public class DeviceRebootUtil {
       return true;
     }
 
-    boolean needReboot = false;
-    switch (testExecutionResult.testResult()) {
-      case PASS:
-        break;
-      case ERROR:
-      case FAIL:
+    return switch (testExecutionResult.testResult()) {
+      case PASS -> false;
+      case ERROR, FAIL -> {
         int consecutiveFail = deviceStat.getConsecutiveFinishedFail();
         if (consecutiveFail % maxConsecutiveFail == 0) {
           logger.atInfo().log(
               "Will reboot device %s:\n - Consecutive fail tests on the device: %s"
                   + "\n - max_consecutive_fail setting: %s",
               device.getDeviceId(), consecutiveFail, maxConsecutiveFail);
-          needReboot = true;
+          yield true;
         } else {
           logger.atInfo().log(
               "Skip rebooting device %s:\n - Consecutive fail tests on the device: %s"
                   + "\n - max_consecutive_fail setting: %s",
               device.getDeviceId(), consecutiveFail, maxConsecutiveFail);
+          yield false;
         }
-        break;
-      case TIMEOUT:
+      }
+      case TIMEOUT -> {
         logger.atInfo().log("Will reboot device %s because test TIMEOUT", device.getDeviceId());
-        needReboot = true;
-        break;
-      case UNKNOWN:
-      default:
+        yield true;
+      }
+      default -> {
         logger.atSevere().log(
             "Will reboot device %s for unknown test result: %s",
             device.getDeviceId(), testExecutionResult.testResult());
-        needReboot = true;
-        break;
-    }
-    return needReboot;
+        yield true;
+      }
+    };
   }
 }
