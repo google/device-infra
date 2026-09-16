@@ -22,6 +22,7 @@ import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.net.InetAddresses;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
@@ -84,7 +85,7 @@ public class NetUtil {
     try {
       // In Mac machine, sometimes InetAddress.getLocalHost().getHostAddress() will return
       // 127.0.0.1, which is not the real IP.
-      return LocalHost.getAddress().getHostAddress();
+      return InetAddresses.toAddrString(LocalHost.getAddress());
     } catch (UnknownHostException e) {
       throw new MobileHarnessException(BasicErrorId.LOCAL_NETWORK_ERROR, e.getMessage(), e);
     }
@@ -184,7 +185,7 @@ public class NetUtil {
               });
       // Could return site local address if it is the only one address in system.
       if (ips.size() == 1) {
-        return Optional.of(ips.get(0).getHostAddress());
+        return Optional.of(InetAddresses.toAddrString(ips.get(0)));
       }
 
       // List the non-site-local IP addresses.
@@ -192,7 +193,7 @@ public class NetUtil {
           ips.stream().filter(address -> !address.isSiteLocalAddress()).collect(toImmutableList());
       // If only one non-site-local address in the list.
       if (corpAddressList != null && corpAddressList.size() == 1) {
-        return Optional.of(corpAddressList.get(0).getHostAddress());
+        return Optional.of(InetAddresses.toAddrString(corpAddressList.get(0)));
       }
     }
     return Optional.empty();

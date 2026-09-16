@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.shared.util.comm.dualconduit.proxy;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.flogger.FluentLogger;
+import com.google.common.net.HostAndPort;
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.client.DualConduitClient;
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proto.DualConduitProto.EstablishSessionResponse;
 import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
@@ -157,7 +158,8 @@ public class ReverseProxiedServer extends Server {
     delegate.start();
     logger.atInfo().log("Delegate server started, establishing session...");
     try {
-      String destinationEndpoint = dconConfig.dconHostname() + ":" + delegate.getPort();
+      String destinationEndpoint =
+          HostAndPort.fromParts(dconConfig.dconHostname(), delegate.getPort()).toString();
       EstablishSessionResponse response =
           client.establishReverseGrpcConduitSession(
               serverName,

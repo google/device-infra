@@ -74,6 +74,28 @@ public final class ReverseProxiedServerTest {
   }
 
   @Test
+  public void start_withIpv6Backend_formatsBracketedEndpoint() throws Exception {
+    proxyServer =
+        new ReverseProxiedServer(
+            delegate, client, "my-server", DualConduitProxyConfig.of("localhost", "2001:db8::1"));
+    when(client.establishReverseGrpcConduitSession(anyString(), anyString(), anyString(), anyInt()))
+        .thenReturn(
+            EstablishSessionResponse.newBuilder()
+                .setSessionId("fake-session-id")
+                .addEstablishConduitResponses(
+                    EstablishConduitResponse.newBuilder().setConduitId("fake-conduit-id").build())
+                .build());
+    when(delegate.start()).thenReturn(delegate);
+    when(delegate.getPort()).thenReturn(50051);
+
+    var unused = proxyServer.start();
+
+    verify(delegate).start();
+    verify(client)
+        .establishReverseGrpcConduitSession("my-server", "localhost", "[2001:db8::1]:50051", 1);
+  }
+
+  @Test
   public void start_establishConduitFailed_shutdownDelegateAndTriggerCallbacks() throws Exception {
     when(delegate.start()).thenReturn(delegate);
     when(delegate.getPort()).thenReturn(50051);

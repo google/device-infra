@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
@@ -452,7 +453,7 @@ public class PrepareTestServiceImpl {
     }
     GrpcLocator.Builder grpcLocator =
         GrpcLocator.newBuilder()
-            .setGrpcTarget(String.format("dns:///%s:%s", labHostName, labGrpcPort))
+            .setGrpcTarget("dns:///" + HostAndPort.fromParts(labHostName, labGrpcPort))
             .setHostName(labHostName)
             .setGrpcPort(labGrpcPort);
     labHostIp.ifPresent(grpcLocator::setHostIp);

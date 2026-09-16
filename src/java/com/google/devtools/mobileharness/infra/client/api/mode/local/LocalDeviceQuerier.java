@@ -22,6 +22,7 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.net.InetAddresses;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -150,7 +151,7 @@ class LocalDeviceQuerier implements DeviceQuerier {
                                       .setValue(LocalHost.getHostName())
                                       .build());
                       try {
-                        String ipAddress = LocalHost.getAddress().getHostAddress();
+                        String ipAddress = InetAddresses.toAddrString(LocalHost.getAddress());
                         builder.addDimension(
                             Dimension.newBuilder()
                                 .setName(Ascii.toLowerCase(Name.HOST_IP.name()))
@@ -193,7 +194,7 @@ class LocalDeviceQuerier implements DeviceQuerier {
       throws MobileHarnessException, InterruptedException {
     String ipAddress = "";
     try {
-      ipAddress = LocalHost.getAddress().getHostAddress();
+      ipAddress = InetAddresses.toAddrString(LocalHost.getAddress());
     } catch (UnknownHostException e) {
       logger.atWarning().withCause(e).log("Unable to determine host IP address");
     }

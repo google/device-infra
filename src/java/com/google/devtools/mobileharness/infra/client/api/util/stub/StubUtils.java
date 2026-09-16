@@ -113,9 +113,9 @@ public final class StubUtils {
 
   @VisibleForTesting
   static String getGrpcTargetByHostName(String hostName, int grpcPort) {
-    return String.format(
-        "dns:///%s:%s",
-        Flags.reverseTunnelingLabServer.getNonNull() ? "localhost" : hostName, grpcPort);
+    return "dns:///"
+        + HostAndPort.fromParts(
+            Flags.reverseTunnelingLabServer.getNonNull() ? "localhost" : hostName, grpcPort);
   }
 
   private static LabServerLocator getLabServerLocator(Lab.LabLocator labLocator) {
