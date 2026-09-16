@@ -17,9 +17,11 @@
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -28,11 +30,14 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginNotification;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionNotificationEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartedEvent;
@@ -50,6 +55,7 @@ import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.Any;
 import com.google.protobuf.TextFormat;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
+import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
@@ -178,6 +184,7 @@ public final class AtsConsoleSessionPluginTest {
   public void onJobEnd_callsRunCommandHandler() throws Exception {
     JobInfo jobInfo = mock(JobInfo.class);
     when(jobInfo.locator()).thenReturn(new JobLocator("job_id", "job_name"));
+    when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
 
     JobEndEvent event = new JobEndEvent(jobInfo, /* jobError= */ null);
 
@@ -635,12 +642,16 @@ public final class AtsConsoleSessionPluginTest {
     when(teardownJob.locator())
         .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
     when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
+    TestInfos emptyTeardownTests = mock(TestInfos.class);
+    when(emptyTeardownTests.getAll()).thenReturn(ImmutableListMultimap.of());
+    when(teardownJob.tests()).thenReturn(emptyTeardownTests);
 
     when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJob1, tfJob2));
     when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
     when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
     when(runCommandHandler.createTeardownJob()).thenReturn(Optional.of(teardownJob));
+    when(runCommandHandler.shouldEnableModuleSharding()).thenReturn(true);
 
     atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
@@ -703,6 +714,7 @@ public final class AtsConsoleSessionPluginTest {
     when(teardownJob.locator())
         .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
     when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
+    when(teardownJob.tests()).thenReturn(testInfos);
 
     when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJob1Static, tfJob2Mcts));
@@ -934,5 +946,46 @@ public final class AtsConsoleSessionPluginTest {
     atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
 
     verify(sessionInfo).addJob(tfJob);
+  }
+
+  @Test
+  public void onSessionEnded_whenResultProcessingThrows_stillInvalidatesCachedDevices()
+      throws Exception {
+    RunCommand runCommand = RunCommand.getDefaultInstance();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
+                .build());
+    atsConsoleSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    TestInfo testInfo = mock(TestInfo.class);
+    TestLocator locator = mock(TestLocator.class);
+    when(testInfo.locator()).thenReturn(locator);
+    when(locator.getId()).thenReturn("test_id");
+    JobInfo jobInfo = mock(JobInfo.class);
+    when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+    when(testInfo.jobInfo()).thenReturn(jobInfo);
+
+    LocalTestStartingEvent startingEvent = mock(LocalTestStartingEvent.class);
+    Allocation allocation = mock(Allocation.class);
+    when(startingEvent.getTest()).thenReturn(testInfo);
+    when(startingEvent.getAllocation()).thenReturn(allocation);
+    when(allocation.getAllDeviceLocators()).thenReturn(ImmutableList.of());
+    when(startingEvent.getLocalDevices())
+        .thenReturn(ImmutableMap.of("device_control_id_1", mock(Device.class)));
+
+    atsConsoleSessionPlugin.onTestStarting(startingEvent);
+
+    MobileHarnessException expectedException =
+        new MobileHarnessException(BasicErrorId.USER_PLUGIN_ERROR, "Result processing failed");
+    doThrow(expectedException).when(runCommandHandler).handleResultProcessing(any(), any());
+
+    assertThrows(
+        MobileHarnessException.class,
+        () -> atsConsoleSessionPlugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null)));
+
+    verify(sessionDeviceCache).invalidateCache(any());
   }
 }
