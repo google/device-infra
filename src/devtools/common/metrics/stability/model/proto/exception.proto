@@ -43,6 +43,14 @@ message ExceptionSummary {
   ExceptionClassType class_type = 3;
   // Required.
   StackTrace stack_trace = 4;
+  // Entry of key-value metadata. If duplicate keys exist, the last one wins.
+  message MetadataEntry {
+    string key = 1;
+    string value = 2;
+  }
+
+  // Optional.
+  repeated MetadataEntry metadata = 5;
 }
 
 message ExceptionClassType {

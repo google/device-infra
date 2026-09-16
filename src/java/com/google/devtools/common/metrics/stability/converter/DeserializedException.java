@@ -16,9 +16,16 @@
 
 package com.google.devtools.common.metrics.stability.converter;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedMap;
 import com.google.devtools.common.metrics.stability.model.ErrorId;
 import com.google.devtools.common.metrics.stability.model.ErrorIdProvider;
+import com.google.devtools.common.metrics.stability.model.MetadataProvider;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import javax.annotation.Nullable;
 
 /**
@@ -34,7 +41,8 @@ import javax.annotation.Nullable;
  * <p>Its stack trace is equal to the stack trace of the serialized original exception.
  */
 @SuppressWarnings("OverrideThrowableToString")
-public class DeserializedException extends Exception implements ErrorIdProvider<ErrorId> {
+public class DeserializedException extends Exception
+    implements ErrorIdProvider<ErrorId>, MetadataProvider {
 
   private static final ImmutableSet<String> KNOWN_EXCEPTION_CLASS_NAMES =
       ImmutableSet.of(
@@ -45,6 +53,7 @@ public class DeserializedException extends Exception implements ErrorIdProvider<
   private final String originalExceptionClassName;
   private final String originalExceptionClassSimpleName;
   private final boolean displayClassSimpleName;
+  private final ConcurrentMap<String, String> metadata = new ConcurrentHashMap<>();
 
   /** Do not make it public. */
   DeserializedException(
@@ -63,15 +72,42 @@ public class DeserializedException extends Exception implements ErrorIdProvider<
 
   @Override
   public String toString() {
-    String displayClassName =
-        displayClassSimpleName ? originalExceptionClassSimpleName : originalExceptionClassName;
+    StringBuilder result =
+        new StringBuilder(
+            displayClassSimpleName ? originalExceptionClassSimpleName : originalExceptionClassName);
     String message = getLocalizedMessage();
-    return message == null ? displayClassName : displayClassName + ": " + message;
+    if (message != null) {
+      result.append(": ").append(message);
+    }
+    if (metadata != null && !metadata.isEmpty()) {
+      result.append(", metadata=").append(getMetadata());
+    }
+    return result.toString();
   }
 
   @Override
   public ErrorId getErrorId() {
     return errorId;
+  }
+
+  @Override
+  public void addMetadata(String key, String value) {
+    metadata.put(key, value);
+  }
+
+  @Override
+  public void addMetadata(Map<String, String> metadata) {
+    this.metadata.putAll(metadata);
+  }
+
+  @Override
+  public ImmutableMap<String, String> getMetadata() {
+    return ImmutableSortedMap.copyOf(metadata);
+  }
+
+  @Override
+  public Optional<String> getMetadata(String key) {
+    return Optional.ofNullable(metadata.get(key));
   }
 
   /**

@@ -36,6 +36,7 @@ public class CommandException extends MobileHarnessException {
       ErrorId errorId, String errorMessage, @Nullable Throwable cause, Command command) {
     super(errorId, errorMessage + ", command=[" + command + "]", cause);
     this.command = command;
+    addMetadata("command", command.toString());
   }
 
   public Command command() {
