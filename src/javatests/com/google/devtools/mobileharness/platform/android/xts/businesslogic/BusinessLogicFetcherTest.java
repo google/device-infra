@@ -17,15 +17,25 @@
 package com.google.devtools.mobileharness.platform.android.xts.businesslogic;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableSetMultimap;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.Optional;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public final class BusinessLogicFetcherTest {
+
+  private static final String SCOPE = "https://www.googleapis.com/auth/cloud-platform";
+
+  @Rule public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
   public void buildUrl_noTokenWithApiKey_appendsKey() {
@@ -66,5 +76,33 @@ public final class BusinessLogicFetcherTest {
             Optional.empty(),
             ImmutableSetMultimap.of("param1", "value1"));
     assertThat(url).isEqualTo("http://fake-url/logic?param1=value1&key=fake_api_key");
+  }
+
+  @Test
+  public void getAccessToken_noKeyPath_returnsEmpty() throws Exception {
+    assertThat(BusinessLogicFetcher.getAccessToken(/* apiKeyPath= */ null, SCOPE)).isEmpty();
+  }
+
+  /** An unset {@code APE_API_KEY} may arrive as "", which resolves to the working directory. */
+  @Test
+  public void getAccessToken_emptyKeyPath_returnsEmpty() throws Exception {
+    assertThat(BusinessLogicFetcher.getAccessToken("", SCOPE)).isEmpty();
+  }
+
+  @Test
+  public void getAccessToken_missingKeyFile_returnsEmpty() throws Exception {
+    String missingPath = new File(temporaryFolder.getRoot(), "absent.json").getAbsolutePath();
+
+    assertThat(BusinessLogicFetcher.getAccessToken(missingPath, SCOPE)).isEmpty();
+  }
+
+  @Test
+  public void getAccessToken_malformedKeyFile_throws() throws Exception {
+    File keyFile = temporaryFolder.newFile("malformed.json");
+    Files.writeString(keyFile.toPath(), "not valid json");
+
+    assertThrows(
+        IOException.class,
+        () -> BusinessLogicFetcher.getAccessToken(keyFile.getAbsolutePath(), SCOPE));
   }
 }
