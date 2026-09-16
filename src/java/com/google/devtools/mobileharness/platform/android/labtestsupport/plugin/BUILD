@@ -21,6 +21,8 @@ java_library(
     name = "android_lab_test_support_resolve_plugin",
     srcs = ["AndroidLabTestSupportResolvePlugin.java"],
     visibility = [
+        "//java/com/google/devtools/mobileharness/service/gateway/worker/plugin:__pkg__",
+        "//javatests/com/google/devtools/mobileharness/service/gateway/worker/plugin:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/labtestsupport/plugin:__pkg__",
     ],
