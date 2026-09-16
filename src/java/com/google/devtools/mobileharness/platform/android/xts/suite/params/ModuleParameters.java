@@ -38,7 +38,7 @@ public enum ModuleParameters {
 
   // Secondary user started on background, visible in the default display
   SECONDARY_USER_ON_DEFAULT_DISPLAY(
-      "secondary_user_on_defauilt_display",
+      "secondary_user_on_default_display",
       ModuleParameters.SECONDARY_USER_ON_DEFAULT_DISPLAY_FAMILY),
   NOT_SECONDARY_USER_ON_DEFAULT_DISPLAY(
       "not_secondary_user_on_default_display",
@@ -48,6 +48,7 @@ public enum ModuleParameters {
   MULTIUSER("multiuser", ModuleParameters.MULTIUSER_FAMILY),
   RUN_ON_WORK_PROFILE("run_on_work_profile", ModuleParameters.RUN_ON_WORK_PROFILE_FAMILY),
   RUN_ON_SECONDARY_USER("run_on_secondary_user", ModuleParameters.RUN_ON_SECONDARY_USER_FAMILY),
+  HSU_AS_LOGIN_SCREEN("hsu_as_login_screen", ModuleParameters.HSU_AS_LOGIN_SCREEN_FAMILY),
   RUN_ON_CLONE_PROFILE("run_on_clone_profile", ModuleParameters.RUN_ON_CLONE_PROFILE_FAMILY),
   RUN_ON_PRIVATE_PROFILE("run_on_private_profile", ModuleParameters.RUN_ON_PRIVATE_PROFILE_FAMILY),
 
@@ -61,7 +62,14 @@ public enum ModuleParameters {
 
   // PCC sandbox mode
   RUN_ON_PCC_SANDBOX("run_on_pcc_sandbox", ModuleParameters.RUN_ON_PCC_SANDBOX_FAMILY),
-  NOT_RUN_ON_PCC_SANDBOX("not_run_on_pcc_sandbox", ModuleParameters.RUN_ON_PCC_SANDBOX_FAMILY);
+  NOT_RUN_ON_PCC_SANDBOX("not_run_on_pcc_sandbox", ModuleParameters.RUN_ON_PCC_SANDBOX_FAMILY),
+
+  CONCURRENT_FOREGROUND_AND_VISIBLE_BACKGROUND_USER(
+      "concurrent_foreground_and_visible_background_user", ModuleParameters.CONCURRENT_FAMILY),
+
+  // Compatibility mode
+  COMPATIBILITY_MODE("compatibility_mode", ModuleParameters.COMPATIBILITY_FAMILY),
+  NOT_COMPATIBILITY_MODE("not_compatibility_mode", ModuleParameters.COMPATIBILITY_FAMILY);
 
   public static final String INSTANT_APP_FAMILY = "instant_app_family";
   public static final String MULTI_ABI_FAMILY = "multi_abi_family";
@@ -75,9 +83,12 @@ public enum ModuleParameters {
   public static final String RUN_ON_SDK_SANDBOX_FAMILY = "run_on_sdk_sandbox_family";
   public static final String RUN_ON_WORK_PROFILE_FAMILY = "run_on_work_profile_family";
   public static final String RUN_ON_SECONDARY_USER_FAMILY = "run_on_secondary_user_family";
+  public static final String HSU_AS_LOGIN_SCREEN_FAMILY = "hsu_as_login_screen_family";
   public static final String RUN_ON_CLONE_PROFILE_FAMILY = "run_on_clone_profile_family";
   public static final String RUN_ON_PRIVATE_PROFILE_FAMILY = "run_on_private_profile_family";
   public static final String RUN_ON_PCC_SANDBOX_FAMILY = "run_on_pcc_sandbox_family";
+  public static final String CONCURRENT_FAMILY = "concurrent_family";
+  public static final String COMPATIBILITY_FAMILY = "compatibility_family";
 
   private final String name;
 

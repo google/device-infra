@@ -37,6 +37,8 @@ java_library(
     name = "module_parameters_helper",
     srcs = ["ModuleParametersHelper.java"],
     deps = [
+        ":compat_handler",
+        ":concurrent_foreground_and_visible_background_user_handler",
         ":foldable_expanding_handler",
         ":instant_app_handler",
         ":module_parameter_handler_interface",
@@ -48,12 +50,25 @@ java_library(
         ":secondary_user_handler",
         ":secondary_user_on_default_display_handler",
         ":secondary_user_on_secondary_display_handler",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params/multiuser:hsu_as_login_screen_parameter_handler",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params/multiuser:run_on_clone_profile_parameter_handler",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params/multiuser:run_on_private_profile_parameter_handler",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params/multiuser:run_on_secondary_user_parameter_handler",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params/multiuser:run_on_work_profile_parameter_handler",
         "@maven//:com_google_guava_guava",
     ],
+)
+
+java_library(
+    name = "compat_handler",
+    srcs = ["CompatHandler.java"],
+    deps = [":module_parameter_handler_interface"],
+)
+
+java_library(
+    name = "concurrent_foreground_and_visible_background_user_handler",
+    srcs = ["ConcurrentForegroundAndVisibleBackgroundUserHandler.java"],
+    deps = [":module_parameter_handler_interface"],
 )
 
 java_library(

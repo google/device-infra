@@ -65,7 +65,9 @@ public final class ListModulesCommandHandlerTest {
             "CtsMultiUserTestCases[run-on-clone-profile]",
             "CtsMultiUserTestCases[run-on-secondary-user]",
             "CtsMultiUserTestCases[run-on-work-profile]",
-            "CtsMultiUserTestCases[run-on-private-profile]");
+            "CtsMultiUserTestCases[run-on-private-profile]",
+            "CtsHsuLoginScreenTestCases[hsu-as-login-screen]",
+            "CtsConcurrentMultiUserTestCases[concurrent_foreground_and_visible_background_user]");
   }
 
   @Test
