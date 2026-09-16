@@ -197,6 +197,8 @@ public final class AtsServerSessionPluginTest {
     timing = new Timing(baseTime);
     timing.start(baseTime.plusMillis(1));
     when(sessionInfo.getSessionId()).thenReturn("session_id");
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(SessionPluginExecutionConfig.getDefaultInstance());
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator wirelessLocator =
         mock(com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator.class);
@@ -273,6 +275,13 @@ public final class AtsServerSessionPluginTest {
                     .setName("android-cts.zip")
                     .build())
             .build();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
@@ -851,7 +860,7 @@ public final class AtsServerSessionPluginTest {
     verify(sessionInfo).addJob(jobInfo);
 
     properties.add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
-    properties.add(XtsConstants.XTS_JOB_NAME, "command_name-" + XtsConstants.STATIC_XTS_JOB_NAME);
+    properties.add(XtsConstants.XTS_JOB_NAME, XtsConstants.STATIC_XTS_JOB_NAME);
     Timing timing = new Timing();
     when(jobInfo.timing()).thenReturn(timing);
     timing.start();
@@ -889,7 +898,7 @@ public final class AtsServerSessionPluginTest {
     verify(sessionInfo).addJob(jobInfo);
 
     properties.add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
-    properties.add(XtsConstants.XTS_JOB_NAME, "command_name-" + XtsConstants.STATIC_XTS_JOB_NAME);
+    properties.add(XtsConstants.XTS_JOB_NAME, XtsConstants.STATIC_XTS_JOB_NAME);
     Timing timing = new Timing();
     when(jobInfo.timing()).thenReturn(timing);
     timing.start();
@@ -924,7 +933,7 @@ public final class AtsServerSessionPluginTest {
     verify(sessionInfo).addJob(jobInfo);
 
     properties.add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
-    properties.add(XtsConstants.XTS_JOB_NAME, "command_name-" + XtsConstants.STATIC_XTS_JOB_NAME);
+    properties.add(XtsConstants.XTS_JOB_NAME, XtsConstants.STATIC_XTS_JOB_NAME);
     Timing timing = new Timing();
     when(jobInfo.timing()).thenReturn(timing);
     timing.start();
@@ -1869,5 +1878,121 @@ public final class AtsServerSessionPluginTest {
             eq(
                 new InvalidateCacheRequest(
                     LabLocator.LOCALHOST, ImmutableList.of("device_id_100"), "xts", "session_id")));
+  }
+
+  @Test
+  public void onSessionStarting_invalidRequestDuringSetupJobCreation_setsCommandAndRequestError()
+      throws Exception {
+    when(sessionRequestHandlerUtil.addXtsModuleInfo(any()))
+        .thenThrow(
+            new MobileHarnessException(
+                InfraErrorId.ATS_SERVER_INVALID_TEST_RESOURCE, "invalid resource"));
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    verify(sessionInfo, times(2))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    assertThat(requestDetail.getCommandDetailsMap()).containsKey(commandId);
+    assertThat(requestDetail.getCommandDetailsMap().get(commandId).getState())
+        .isEqualTo(CommandState.ERROR);
+  }
+
+  @Test
+  public void onJobEnded_setupJobAndNonTradefedOnlySession_retainsRunningCommandDetail()
+      throws Exception {
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    JobInfo setupJob = mock(JobInfo.class);
+    when(setupJob.locator())
+        .thenReturn(new JobLocator("setup_job_id", XtsConstants.SETUP_JOB_NAME));
+    Properties setupProps = new Properties(new Timing());
+    when(setupJob.properties()).thenReturn(setupProps);
+    when(setupJob.files()).thenReturn(new Files(new Timing(), new LocalFileUtil()));
+    TestInfos setupTests = mock(TestInfos.class);
+    when(setupTests.getAll()).thenReturn(LinkedListMultimap.create());
+    when(setupJob.tests()).thenReturn(setupTests);
+    when(setupJob.timing()).thenReturn(timing);
+    when(setupJob.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result setupResult =
+        new Result(timing.toNewTiming(), new Params(timing).toNewParams()).setPass();
+    when(setupJob.resultWithCause()).thenReturn(setupResult);
+
+    when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsTradefedTestJob(any(), any(), anyBoolean()))
+        .thenReturn(ImmutableList.of());
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of(moblyJobInfo));
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(setupJob));
+
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(setupJob);
+
+    plugin.onJobEnded(new JobEndEvent(setupJob, null));
+    verify(sessionInfo).addJob(moblyJobInfo);
+
+    verify(sessionInfo, times(3))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    assertThat(requestDetail.getCommandDetailsMap().get(commandId).getState())
+        .isEqualTo(CommandState.RUNNING);
+  }
+
+  @Test
+  public void onJobEnded_slateRequest_doesNotTriggerOrchestrator() throws Exception {
+    CommandInfo slateCommand = commandInfo.toBuilder().setCommandLine("slate --target=foo").build();
+    NewMultiCommandRequest slateRequest =
+        request.toBuilder()
+            .clearCommands()
+            .addCommands(slateCommand)
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setName("slate_binary")
+                    .setUrl("file://data/local/tmp/slate_binary")
+                    .build())
+            .build();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder()
+                            .setNewMultiCommandRequest(slateRequest)
+                            .build()))
+                .build());
+    when(sessionRequestHandlerUtil.createJobGenDir(any()))
+        .thenReturn(tmpFolder.newFolder("slate_gen").toPath());
+    when(sessionRequestHandlerUtil.createJobTmpDir(any()))
+        .thenReturn(tmpFolder.newFolder("slate_tmp").toPath());
+
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    ArgumentCaptor<JobInfo> slateJobCaptor = ArgumentCaptor.forClass(JobInfo.class);
+    verify(sessionInfo).addJob(slateJobCaptor.capture());
+    JobInfo slateJob = slateJobCaptor.getValue();
+    slateJob.timing().start();
+    assertThat(slateJob.timing().end()).isTrue();
+    slateJob.status().set(TestStatus.DONE);
+    slateJob.resultWithCause().setPass();
+
+    plugin.onJobEnded(new JobEndEvent(slateJob, null));
+
+    verify(xtsJobCreator, never()).createXtsTradefedTestJob(any());
+    verify(xtsJobCreator, never()).createXtsNonTradefedJobs(any());
   }
 }

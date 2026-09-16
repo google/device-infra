@@ -226,9 +226,19 @@ final class NewMultiCommandRequestHandler {
     this.atsServerSessionUtil = atsServerSessionUtil;
   }
 
-  CreateJobsResult createTradefedJobs(NewMultiCommandRequest request, SessionInfo sessionInfo)
+  CreateJobsResult createTradefedJobs(
+      NewMultiCommandRequest request,
+      SessionInfo sessionInfo,
+      ImmutableSet<String> dynamicMctsModules,
+      boolean skipDynamicMctsJob)
       throws InterruptedException {
-    return createJobs(request, sessionInfo, this::createXtsTradefedTestJob, "tradefed");
+    return createJobs(
+        request,
+        sessionInfo,
+        (req, cmdInfo, sessInfo, cmdDetailsBuilder) ->
+            createXtsTradefedTestJob(
+                req, cmdInfo, sessInfo, cmdDetailsBuilder, dynamicMctsModules, skipDynamicMctsJob),
+        "tradefed");
   }
 
   CreateJobsResult createNonTradefedJobs(NewMultiCommandRequest request, SessionInfo sessionInfo)
@@ -313,10 +323,37 @@ final class NewMultiCommandRequestHandler {
       SessionInfo sessionInfo,
       ImmutableMap.Builder<String, CommandDetail> commandDetailsBuilder)
       throws InterruptedException, MobileHarnessException {
-    SessionRequestInfo sessionRequestInfo =
-        getSessionRequestInfo(request, commandInfo, sessionInfo);
+    String commandId = getCommandId(commandInfo, request);
+    // Initialize CommandDetail before validating SessionRequestInfo or creating jobs so that any
+    // non-skippable exception records CommandState.ERROR in RequestDetail (overwriting the initial
+    // RUNNING placeholder created in AtsServerSessionPlugin.onSessionStarting).
+    CommandDetail.Builder commandDetailBuilder =
+        CommandDetail.newBuilder()
+            .setCommandLine(commandInfo.getCommandLine())
+            .setOriginalCommandInfo(commandInfo)
+            .setCreateTime(Timestamps.fromMillis(clock.millis()))
+            .setStartTime(Timestamps.fromMillis(clock.millis()))
+            .setUpdateTime(Timestamps.fromMillis(clock.millis()))
+            .setRequestId(sessionInfo.getSessionId())
+            .setCommandAttemptId(getCommandAttemptId(commandId, sessionInfo.getSessionId()))
+            .setId(commandId)
+            .setState(CommandState.UNKNOWN_STATE);
 
-    ImmutableListMultimap<String, JobInfo> commandToJobsMap = getCommandToJobsMap(sessionInfo);
+    SessionRequestInfo sessionRequestInfo;
+    try {
+      sessionRequestInfo = getSessionRequestInfo(request, commandInfo, sessionInfo);
+    } catch (MobileHarnessException e) {
+      ErrorReason errorReason = getErrorReason(e);
+      setCommandError(commandDetailBuilder, errorReason, e);
+      commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
+      throw e;
+    }
+
+    commandDetailBuilder.addAllDeviceSerials(sessionRequestInfo.getDeviceSerialsList());
+    if (!sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
+      commandDetailBuilder.setHostIp(
+          sessionRequestHandlerUtil.getHostIp(sessionRequestInfo.getDeviceSerials(0)));
+    }
 
     ImmutableList<JobInfo> jobInfos;
     try {
@@ -328,49 +365,29 @@ final class NewMultiCommandRequestHandler {
             commandInfo.getCommandLine(), shortDebugString(e));
         return ImmutableList.of();
       }
+      ErrorReason errorReason = getErrorReason(e);
+      setCommandError(commandDetailBuilder, errorReason, e);
+      commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
       throw e;
     }
 
-    Optional<CommandDetail.Builder> commandDetail;
-    String commandId = getCommandId(commandInfo, request);
-    String hostIp = "";
-    if (!sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
-      hostIp = sessionRequestHandlerUtil.getHostIp(sessionRequestInfo.getDeviceSerials(0));
-    }
-    if (!commandToJobsMap.containsKey(commandId)) {
-      commandDetail =
-          Optional.of(
-              CommandDetail.newBuilder()
-                  .addAllDeviceSerials(sessionRequestInfo.getDeviceSerialsList())
-                  .setHostIp(hostIp)
-                  .setCommandLine(commandInfo.getCommandLine())
-                  .setOriginalCommandInfo(commandInfo)
-                  .setCreateTime(Timestamps.fromMillis(clock.millis()))
-                  .setStartTime(Timestamps.fromMillis(clock.millis()))
-                  .setUpdateTime(Timestamps.fromMillis(clock.millis()))
-                  .setRequestId(sessionInfo.getSessionId())
-                  .setCommandAttemptId(getCommandAttemptId(commandId, sessionInfo.getSessionId()))
-                  .setId(commandId)
-                  .setState(CommandState.RUNNING));
-    } else {
-      commandDetail = Optional.empty();
+    if (jobInfos.isEmpty()) {
+      return ImmutableList.of();
     }
 
+    commandDetailBuilder.setState(CommandState.RUNNING);
     for (JobInfo jobInfo : jobInfos) {
       try {
         reformatResourcePathForNonTradefedJob(jobInfo);
       } catch (MobileHarnessException e) {
-        commandDetail.ifPresent(
-            builder -> {
-              ErrorReason errorReason = getErrorReason(e);
-              setCommandError(builder, errorReason, e);
-              commandDetailsBuilder.put(commandId, builder.build());
-            });
+        ErrorReason errorReason = getErrorReason(e);
+        setCommandError(commandDetailBuilder, errorReason, e);
+        commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
         throw e;
       }
       jobInfo.properties().add(XtsPropertyName.Job.XTS_COMMAND_ID, commandId);
     }
-    commandDetail.ifPresent(builder -> commandDetailsBuilder.put(commandId, builder.build()));
+    commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
     return jobInfos;
   }
 
@@ -418,8 +435,37 @@ final class NewMultiCommandRequestHandler {
       XtsJobCreatorFunction jobCreatorFunction,
       String jobType)
       throws InterruptedException, MobileHarnessException {
-    SessionRequestInfo sessionRequestInfo =
-        getSessionRequestInfo(request, commandInfo, sessionInfo);
+    String commandId = getCommandId(commandInfo, request);
+    // Initialize CommandDetail upfront because AtsSessionOrchestrator invokes createSetupJob() and
+    // createTeardownJob() before createTradefedJobs(); any validation or creation failure here must
+    // populate CommandState.ERROR in commandDetailsBuilder.
+    CommandDetail.Builder commandDetailBuilder =
+        CommandDetail.newBuilder()
+            .setCommandLine(commandInfo.getCommandLine())
+            .setOriginalCommandInfo(commandInfo)
+            .setCreateTime(toProtoTimestamp(clock.instant()))
+            .setStartTime(toProtoTimestamp(clock.instant()))
+            .setUpdateTime(toProtoTimestamp(clock.instant()))
+            .setRequestId(sessionInfo.getSessionId())
+            .setCommandAttemptId(getCommandAttemptId(commandId, sessionInfo.getSessionId()))
+            .setId(commandId)
+            .setState(CommandState.UNKNOWN_STATE);
+
+    SessionRequestInfo sessionRequestInfo;
+    try {
+      sessionRequestInfo = getSessionRequestInfo(request, commandInfo, sessionInfo);
+    } catch (MobileHarnessException e) {
+      ErrorReason errorReason = getErrorReason(e);
+      setCommandError(commandDetailBuilder, errorReason, e);
+      commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
+      throw e;
+    }
+
+    commandDetailBuilder.addAllDeviceSerials(sessionRequestInfo.getDeviceSerialsList());
+    if (!sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
+      commandDetailBuilder.setHostIp(
+          sessionRequestHandlerUtil.getHostIp(sessionRequestInfo.getDeviceSerials(0)));
+    }
 
     ImmutableListMultimap<String, JobInfo> commandToJobsMap = getCommandToJobsMap(sessionInfo);
 
@@ -433,6 +479,9 @@ final class NewMultiCommandRequestHandler {
             jobType, commandInfo.getCommandLine(), shortDebugString(e));
         return ImmutableList.of();
       }
+      ErrorReason errorReason = getErrorReason(e);
+      setCommandError(commandDetailBuilder, errorReason, e);
+      commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
       throw e;
     }
 
@@ -440,45 +489,22 @@ final class NewMultiCommandRequestHandler {
       return ImmutableList.of();
     }
 
-    Optional<CommandDetail.Builder> commandDetail;
-    String commandId = getCommandId(commandInfo, request);
-    String hostIp = "";
-    if (!sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
-      hostIp = sessionRequestHandlerUtil.getHostIp(sessionRequestInfo.getDeviceSerials(0));
-    }
-    if (!commandToJobsMap.containsKey(commandId)) {
-      commandDetail =
-          Optional.of(
-              CommandDetail.newBuilder()
-                  .addAllDeviceSerials(sessionRequestInfo.getDeviceSerialsList())
-                  .setHostIp(hostIp)
-                  .setCommandLine(commandInfo.getCommandLine())
-                  .setOriginalCommandInfo(commandInfo)
-                  .setCreateTime(toProtoTimestamp(clock.instant()))
-                  .setStartTime(toProtoTimestamp(clock.instant()))
-                  .setUpdateTime(toProtoTimestamp(clock.instant()))
-                  .setRequestId(sessionInfo.getSessionId())
-                  .setCommandAttemptId(getCommandAttemptId(commandId, sessionInfo.getSessionId()))
-                  .setId(commandId)
-                  .setState(CommandState.RUNNING));
-    } else {
-      commandDetail = Optional.empty();
-    }
-
     JobInfo jobInfo = jobInfoOpt.get();
     try {
       reformatResourcePathForNonTradefedJob(jobInfo);
     } catch (MobileHarnessException e) {
-      commandDetail.ifPresent(
-          builder -> {
-            ErrorReason errorReason = getErrorReason(e);
-            setCommandError(builder, errorReason, e);
-            commandDetailsBuilder.put(commandId, builder.build());
-          });
+      ErrorReason errorReason = getErrorReason(e);
+      setCommandError(commandDetailBuilder, errorReason, e);
+      commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
       throw e;
     }
     jobInfo.properties().add(XtsPropertyName.Job.XTS_COMMAND_ID, commandId);
-    commandDetail.ifPresent(builder -> commandDetailsBuilder.put(commandId, builder.build()));
+    // Avoid overwriting an existing CommandDetail if jobs for this command were already added to
+    // the session (e.g. when lazily creating the teardown job upon session resumption).
+    if (!commandToJobsMap.containsKey(commandId)) {
+      commandDetailsBuilder.put(
+          commandId, commandDetailBuilder.setState(CommandState.RUNNING).build());
+    }
     return ImmutableList.of(jobInfo);
   }
 
@@ -509,7 +535,9 @@ final class NewMultiCommandRequestHandler {
       NewMultiCommandRequest request,
       CommandInfo commandInfo,
       SessionInfo sessionInfo,
-      ImmutableMap.Builder<String, CommandDetail> commandDetailsBuilder)
+      ImmutableMap.Builder<String, CommandDetail> commandDetailsBuilder,
+      ImmutableSet<String> dynamicMctsModules,
+      boolean skipDynamicMctsJob)
       throws InterruptedException, MobileHarnessException {
     SessionRequestInfo sessionRequestInfo;
     CommandDetail.Builder commandDetailBuilder =
@@ -543,13 +571,23 @@ final class NewMultiCommandRequestHandler {
     }
     ImmutableList<JobInfo> jobInfoList;
     try {
-      jobInfoList = xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo);
+      if (dynamicMctsModules.isEmpty() && !skipDynamicMctsJob) {
+        jobInfoList = xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo);
+      } else {
+        jobInfoList =
+            xtsJobCreator.createXtsTradefedTestJob(
+                sessionRequestInfo, dynamicMctsModules, skipDynamicMctsJob);
+      }
     } catch (MobileHarnessException e) {
       if (XtsJobCreator.isSkippableException(e)) {
         logger.atInfo().log(
             "Unable to create tradefed jobs for command [%s] due to skippable exception: [%s].",
             commandInfo.getCommandLine(), shortDebugString(e));
-        commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
+        // Only record UNKNOWN_STATE if no prior job (e.g. a setup job) is already running for this
+        // command; otherwise we would clobber the command's RUNNING state in RequestDetail.
+        if (!getCommandToJobsMap(sessionInfo).containsKey(commandId)) {
+          commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
+        }
         return ImmutableList.of();
       }
       ErrorReason errorReason = getErrorReason(e);
@@ -573,8 +611,13 @@ final class NewMultiCommandRequestHandler {
           jobInfo.locator().getId(), sessionInfo.getSessionId());
     }
 
-    CommandDetail commandDetail = commandDetailBuilder.build();
-    commandDetailsBuilder.put(commandDetail.getId(), commandDetail);
+    // If no Tradefed jobs were created, only write CommandDetail (in UNKNOWN_STATE) when no prior
+    // job (e.g. a setup job) has been added for this command, preserving any existing RUNNING
+    // state.
+    if (!jobInfoList.isEmpty() || !getCommandToJobsMap(sessionInfo).containsKey(commandId)) {
+      CommandDetail commandDetail = commandDetailBuilder.build();
+      commandDetailsBuilder.put(commandDetail.getId(), commandDetail);
+    }
     return jobInfoList;
   }
 
