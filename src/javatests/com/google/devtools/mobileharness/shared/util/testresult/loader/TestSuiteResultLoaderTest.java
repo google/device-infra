@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.platform.android.instrumentation.result;
+package com.google.devtools.mobileharness.shared.util.testresult.loader;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -68,13 +68,29 @@ public final class TestSuiteResultLoaderTest {
   }
 
   @Test
-  public void loadTestResult_resultFileExists_returnsParsedResult() throws Exception {
+  public void loadTestResult_androidResultFileExists_returnsParsedResult() throws Exception {
     String genFileDir = testInfo.getGenFileDir();
     TestSuiteResult testSuiteResult =
         TestSuiteResult.newBuilder().setTestStatus(TestStatus.PASSED).build();
     byte[] testSuiteResultBytes = testSuiteResult.toByteArray();
 
     String testSuiteResultPbPath = PathUtil.join(genFileDir, "instrument_test_result.pb");
+    realLocalFileUtil.writeToFile(testSuiteResultPbPath, testSuiteResultBytes);
+
+    Optional<TestSuiteResult> result = loader.loadTestResult(testInfo);
+
+    assertThat(result).isPresent();
+    assertThat(result.get().getTestStatus()).isEqualTo(TestStatus.PASSED);
+  }
+
+  @Test
+  public void loadTestResult_iosResultFileExists_returnsParsedResult() throws Exception {
+    String genFileDir = testInfo.getGenFileDir();
+    TestSuiteResult testSuiteResult =
+        TestSuiteResult.newBuilder().setTestStatus(TestStatus.PASSED).build();
+    byte[] testSuiteResultBytes = testSuiteResult.toByteArray();
+
+    String testSuiteResultPbPath = PathUtil.join(genFileDir, "xctest_test_result.pb");
     realLocalFileUtil.writeToFile(testSuiteResultPbPath, testSuiteResultBytes);
 
     Optional<TestSuiteResult> result = loader.loadTestResult(testInfo);

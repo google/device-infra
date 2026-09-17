@@ -21,11 +21,11 @@ import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.platform.android.instrumentation.result.TestSuiteResultLoader;
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestCase;
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestResult;
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestStatus;
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestSuiteResult;
+import com.google.devtools.mobileharness.shared.util.testresult.loader.TestSuiteResultLoader;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
