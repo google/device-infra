@@ -33,6 +33,8 @@
               [icon]="jobActionUiConfig.kill.icon"
               [customClass]="jobActionUiConfig.kill.customClass || ''"
               [testId]="jobActionUiConfig.kill.testIdPrefix"
+              [loading]="isKillingJob()"
+              [loadingLabel]="jobActionUiConfig.kill.loadingLabel"
               (actionClick)="onKillJobClicked(job)"
             ></app-action-button>
           }

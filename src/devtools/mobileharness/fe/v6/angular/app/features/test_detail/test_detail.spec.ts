@@ -20,6 +20,7 @@ import {
   TestResult,
   TestStatus,
 } from '../../core/models/test_overview';
+import {JOB_SERVICE, JobService} from '../../core/services/job/job_service';
 import {TEST_SERVICE, TestService} from '../../core/services/test/test_service';
 import {ClipboardService} from '../../shared/services/clipboard_service';
 import {LoadingService} from '../../shared/services/loading_service';
@@ -30,6 +31,7 @@ describe('TestDetail Component', () => {
   let fixture: ComponentFixture<TestDetail>;
   let component: TestDetail;
   let mockTestService: jasmine.SpyObj<TestService>;
+  let mockJobService: jasmine.SpyObj<JobService>;
   let mockClipboardService: jasmine.SpyObj<ClipboardService>;
   let mockSnackBarService: jasmine.SpyObj<SnackBarService>;
   let mockLoadingService: jasmine.SpyObj<LoadingService>;
@@ -76,6 +78,7 @@ describe('TestDetail Component', () => {
       'getTestLog',
       'getTestFile',
     ]);
+    mockJobService = jasmine.createSpyObj('JobService', ['killJob']);
     mockTestService.getTest.and.returnValue(of({test: mockOverviewData}));
     mockTestService.getTestLog.and.returnValue(
       of({
@@ -94,6 +97,7 @@ describe('TestDetail Component', () => {
     mockClipboardService.copyToClipboard.and.returnValue(true);
     mockSnackBarService = jasmine.createSpyObj('SnackBarService', [
       'showSuccess',
+      'showError',
     ]);
     mockLoadingService = jasmine.createSpyObj('LoadingService', [
       'show',
@@ -110,6 +114,7 @@ describe('TestDetail Component', () => {
       providers: [
         provideRouter([]),
         {provide: TEST_SERVICE, useValue: mockTestService},
+        {provide: JOB_SERVICE, useValue: mockJobService},
         {provide: ClipboardService, useValue: mockClipboardService},
         {provide: SnackBarService, useValue: mockSnackBarService},
         {provide: LoadingService, useValue: mockLoadingService},

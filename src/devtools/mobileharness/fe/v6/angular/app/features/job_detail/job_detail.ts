@@ -8,12 +8,11 @@ import {
   signal,
 } from '@angular/core';
 import {toSignal} from '@angular/core/rxjs-interop';
-import {MatDialog} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {ActivatedRoute, RouterModule} from '@angular/router';
 import {of} from 'rxjs';
-import {catchError, map, take} from 'rxjs/operators';
+import {catchError, map} from 'rxjs/operators';
 import {JOB_ACTION_UI_CONFIG} from '../../core/constants/action_bar_config';
 import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
 import {
@@ -24,18 +23,16 @@ import {
 } from '../../core/models/job_overview';
 import {JOB_SERVICE} from '../../core/services/job/job_service';
 import {ActionButton} from '../../shared/components/action_button/action_button';
-import {ConfirmDialog} from '../../shared/components/confirm_dialog/confirm_dialog';
 import {LegacyConsoleBanner} from '../../shared/components/legacy_console_banner/legacy_console_banner';
 import {useCopyToClipboard} from '../../shared/composables/copy';
+import {useJobActions} from '../../shared/composables/job_actions';
 import {usePageTitle} from '../../shared/composables/page_title';
 import {useSilentResource} from '../../shared/composables/silent_resource';
 import {TooltipIfTruncatedDirective} from '../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
-import {SnackBarService} from '../../shared/services/snackbar_service';
 import {JobFilesTab} from './components/job_files_tab/job_files_tab';
 import {JobLogTab} from './components/job_log_tab/job_log_tab';
 import {JobOverviewTab} from './components/job_overview_tab/job_overview_tab';
 import {JobTimelineTab} from './components/job_timeline_tab/job_timeline_tab';
-
 import {JobPageData} from './models/job_page_ui';
 
 /**
@@ -66,10 +63,10 @@ import {JobPageData} from './models/job_page_ui';
 export class JobDetail {
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly jobService = inject(JOB_SERVICE);
-  private readonly snackBar = inject(SnackBarService);
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
-  private readonly dialog = inject(MatDialog);
   private readonly appData = inject(APP_DATA);
+  protected readonly jobActions = useJobActions();
+  readonly isKillingJob = this.jobActions.isKillingJob;
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
   readonly copyToClipboard = useCopyToClipboard();
 
@@ -200,41 +197,10 @@ export class JobDetail {
   }
 
   readonly onKillJobClicked = (job: JobOverviewData) => {
-    const dialogRef = this.dialog.open(ConfirmDialog, {
-      panelClass: 'confirm-dialog-panel',
-      data: {
-        title: 'Kill Job?',
-        content: `Are you sure you want to terminate job ${job.id}? This action will abort all running child tests immediately and cannot be undone.`,
-        type: 'error',
-        primaryButtonLabel: 'Kill Job',
-        secondaryButtonLabel: 'Cancel',
-      },
-      disableClose: true,
+    this.jobActions.killJob(job.id, () => {
+      this.silentResourceResult.reloadSilent();
     });
-
-    dialogRef
-      .afterClosed()
-      .pipe(take(1))
-      .subscribe((result) => {
-        if (result === 'primary') {
-          this.executeKillJob(job);
-        }
-      });
   };
-
-  private executeKillJob(job: JobOverviewData) {
-    this.jobService.killJob(job.id).subscribe({
-      next: () => {
-        this.snackBar.showSuccess('Job aborted successfully.');
-        this.silentResourceResult.reloadSilent();
-      },
-      error: (err: unknown) => {
-        console.error('Failed to kill job:', err);
-        const e = err as {message?: string};
-        this.snackBar.showError(e?.message || 'Failed to terminate job.');
-      },
-    });
-  }
 
   copyJobId(id: string) {
     this.copyToClipboard(id, 'Job ID copied to clipboard!');
