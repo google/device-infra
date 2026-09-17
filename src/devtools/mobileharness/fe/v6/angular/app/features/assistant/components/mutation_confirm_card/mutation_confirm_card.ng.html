@@ -1,0 +1,69 @@
+<mat-card class="mutation-card" [class.mutation-card--resolved]="action().status !== ActionDecisionStatus.PENDING">
+  <div class="mutation-card__header">
+    <div class="mutation-card__title-group">
+      <mat-icon class="mutation-card__shield-icon">gpp_maybe</mat-icon>
+      <span class="mutation-card__tool-name">{{ action().toolName }}</span>
+    </div>
+    <span class="risk-badge" [class]="riskClass()">{{ riskLabel() }}</span>
+  </div>
+
+  <div class="mutation-card__body">
+    <div class="mutation-card__meta">
+      <span class="mutation-card__label">Target Entity:</span>
+      <code class="mutation-card__entity-id">{{ action().targetEntity }}</code>
+    </div>
+    <p class="mutation-card__summary">{{ action().summary }}</p>
+
+    @if (formattedParams()) {
+      <details class="mutation-card__params">
+        <summary>Inspect Action Parameters</summary>
+        <pre class="mutation-card__params-code">{{ formattedParams() }}</pre>
+      </details>
+    }
+  </div>
+
+  <div class="mutation-card__footer">
+    @switch (action().status) {
+      @case (ActionDecisionStatus.PENDING) {
+        <div class="mutation-card__actions">
+          <button
+            mat-flat-button
+            color="primary"
+            class="approve-button"
+            [disabled]="disabled()"
+            (click)="onApprove()">
+            <mat-icon>check</mat-icon>
+            Approve Action
+          </button>
+          <button
+            mat-stroked-button
+            color="warn"
+            class="reject-button"
+            [disabled]="disabled()"
+            (click)="onReject()">
+            <mat-icon>close</mat-icon>
+            Reject
+          </button>
+        </div>
+      }
+      @case (ActionDecisionStatus.APPROVED) {
+        <div class="mutation-card__status-banner status-banner--approved">
+          <mat-icon>check_circle</mat-icon>
+          <span>Approved</span>
+          @if (action().resolvedBy) {
+            <span class="resolved-by">by {{ action().resolvedBy }}</span>
+          }
+        </div>
+      }
+      @case (ActionDecisionStatus.REJECTED) {
+        <div class="mutation-card__status-banner status-banner--rejected">
+          <mat-icon>cancel</mat-icon>
+          <span>Rejected</span>
+          @if (action().resolvedBy) {
+            <span class="resolved-by">by {{ action().resolvedBy }}</span>
+          }
+        </div>
+      }
+    }
+  </div>
+</mat-card>

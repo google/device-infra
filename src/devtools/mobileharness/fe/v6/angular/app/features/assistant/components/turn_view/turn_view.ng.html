@@ -1,0 +1,150 @@
+<div class="turn-wrapper">
+  <!-- User Prompt Bubble -->
+  <div class="user-prompt-row">
+    <div class="user-prompt-bubble">
+      {{ turn().userPrompt }}
+    </div>
+  </div>
+
+  <!-- Assistant Response Container -->
+  <div class="assistant-response-row">
+    <div class="assistant-avatar">
+      <mat-icon class="avatar-icon">smart_toy</mat-icon>
+    </div>
+
+    <div class="assistant-content-column">
+      <!-- Collapsible Thought Tray -->
+      @if (hasReasoningOrTools()) {
+        <mat-expansion-panel
+          class="thought-expansion-panel"
+          [expanded]="isThoughtExpanded()"
+          (opened)="onThoughtToggle(true)"
+          (closed)="onThoughtToggle(false)">
+          <mat-expansion-panel-header class="thought-panel-header">
+            <mat-panel-title class="thought-panel-title">
+              @if (isStreaming()) {
+                <mat-spinner diameter="16" class="thought-spinner" />
+              } @else {
+                <mat-icon class="thought-icon">psychology</mat-icon>
+              }
+              <span class="thought-header-text">{{ thoughtHeaderLabel() }}</span>
+            </mat-panel-title>
+          </mat-expansion-panel-header>
+
+          <div class="thought-panel-body">
+            @if (turn().thoughts) {
+              <div class="thoughts-text">{{ turn().thoughts }}</div>
+            }
+
+            <!-- Tool Execution Chips inside Thought Tray -->
+            @if (turn().toolExecutions && turn().toolExecutions!.length > 0) {
+              <div class="tools-tray">
+                @for (tool of turn().toolExecutions; track tool.callId) {
+                  <button
+                    type="button"
+                    class="tool-chip"
+                    [class.tool-success]="tool.success"
+                    [class.tool-error]="!tool.success"
+                    (click)="openToolDialog(tool)"
+                    [matTooltip]="'Inspect tool arguments and output'">
+                    <mat-icon class="tool-chip-icon">
+                      {{ tool.success ? 'build_circle' : 'error_outline' }}
+                    </mat-icon>
+                    <span class="tool-chip-name">{{ tool.toolName }}</span>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        </mat-expansion-panel>
+      }
+
+      <!-- Standalone Tool Chips when Thought Tray is collapsed -->
+      @if (!isThoughtExpanded() && turn().toolExecutions && turn().toolExecutions!.length > 0) {
+        <div class="tools-summary-bar">
+          @for (tool of turn().toolExecutions; track tool.callId) {
+            <button
+              type="button"
+              class="tool-chip compact"
+              [class.tool-success]="tool.success"
+              [class.tool-error]="!tool.success"
+              (click)="openToolDialog(tool)"
+              [matTooltip]="'Click to inspect ' + tool.toolName + ' payload'">
+              <mat-icon class="tool-chip-icon">
+                {{ tool.success ? 'check_circle' : 'error_outline' }}
+              </mat-icon>
+              <span class="tool-chip-name">{{ tool.toolName }}</span>
+            </button>
+          }
+        </div>
+      }
+
+      <!-- Assistant Response Markdown Body -->
+      @if (turn().responseMarkdown) {
+        <div class="markdown-response-box">
+          <app-markdown-viewer [content]="turn().responseMarkdown || ''" />
+        </div>
+      }
+
+      <!-- Human-in-the-Loop Action Confirmation Cards -->
+      @if (turn().actionConfirmations && turn().actionConfirmations!.length > 0) {
+        <div class="action-confirmations-tray">
+          @for (action of turn().actionConfirmations; track action.actionId) {
+            <app-mutation-confirm-card
+              [action]="action"
+              (approve)="actionApproved.emit($event)"
+              (reject)="actionRejected.emit($event)" />
+          }
+        </div>
+      }
+
+      <!-- Error / Cancelled Status Banner -->
+      @if (turn().status === TurnStatus.FAILED) {
+        <div class="status-banner error-banner">
+          <mat-icon class="banner-icon">error_outline</mat-icon>
+          <span>{{ turn().errorMessage || 'An error occurred during turn execution.' }}</span>
+        </div>
+      }
+
+      @if (turn().status === TurnStatus.CANCELLED) {
+        <div class="status-banner cancelled-banner">
+          <mat-icon class="banner-icon">cancel</mat-icon>
+          <span>Execution stopped by user.</span>
+        </div>
+      }
+
+      <!-- Outbound Deep-Link Tray -->
+      @if (turn().outboundLinks && turn().outboundLinks!.length > 0) {
+        <div class="outbound-links-tray">
+          <span class="links-tray-label">Explore in Fleet Console:</span>
+          <div class="links-chip-list">
+            @for (link of turn().outboundLinks; track link.url) {
+              @let target = parseLink(link);
+              @if (target.isExternal) {
+                <a
+                  mat-stroked-button
+                  class="outbound-link-chip"
+                  [href]="target.path"
+                  target="_blank"
+                  rel="noopener noreferrer">
+                  <mat-icon class="link-icon">open_in_new</mat-icon>
+                  <span>{{ link.title }}</span>
+                </a>
+              } @else {
+                <a
+                  mat-stroked-button
+                  class="outbound-link-chip"
+                  [routerLink]="target.path"
+                  [queryParams]="target.queryParams"
+                  queryParamsHandling="merge">
+                  <mat-icon class="link-icon">filter_alt</mat-icon>
+                  <span>{{ link.title }}</span>
+                </a>
+              }
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>

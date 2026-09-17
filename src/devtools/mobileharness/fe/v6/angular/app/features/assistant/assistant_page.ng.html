@@ -1,0 +1,100 @@
+<div class="assistant-page-layout">
+  <!-- Left Sidebar Drawer -->
+  @if (isDrawerOpen()) {
+    <div class="sidebar-drawer" aria-label="Conversation History">
+      <app-conversation-list
+        [conversations]="conversations()"
+        [selectedConversationId]="selectedConversationId()"
+        [isLoading]="isLoadingConversations()"
+        (conversationSelected)="selectConversation($event)"
+        (newConversationRequested)="onNewConversation()">
+      </app-conversation-list>
+    </div>
+  }
+
+  <!-- Right Main Chat Pane -->
+  <div class="main-chat-pane">
+    <!-- Top Header Bar -->
+    <div class="chat-pane-header">
+      <div class="header-left">
+        <button
+          mat-icon-button
+          class="drawer-toggle-btn"
+          (click)="toggleDrawer()"
+          [matTooltip]="isDrawerOpen() ? 'Hide conversations' : 'Show conversations'"
+          aria-label="Toggle conversation drawer">
+          <mat-icon>{{ isDrawerOpen() ? 'menu_open' : 'menu' }}</mat-icon>
+        </button>
+
+        <h1 class="conversation-title">
+          {{ activeConversation()?.title || 'OmniLab Assistant' }}
+        </h1>
+      </div>
+
+      <div class="header-right">
+        <span class="mode-badge">
+          <mat-icon class="mode-badge-icon">
+            {{ currentMode() === ConversationMode.TEAM_ASSISTANT ? 'smart_toy' : 'person' }}
+          </mat-icon>
+          <span>
+            {{ currentMode() === ConversationMode.TEAM_ASSISTANT ? 'Team Assistant' : 'Personal User' }}
+          </span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Scrollable Transcript Container -->
+    <div class="transcript-scroll-container">
+      @if (activeTurns().length === 0) {
+        <!-- Welcome Hero State -->
+        <div class="welcome-hero">
+          <div class="hero-icon-wrapper">
+            <mat-icon class="hero-icon">smart_toy</mat-icon>
+          </div>
+          <h2 class="hero-title">OmniLab Assistant</h2>
+          <p class="hero-subtitle">
+            AI co-pilot for device fleet diagnostics, host health triage, and test failure debugging.
+          </p>
+
+          <!-- Quick-Start Suggestion Cards -->
+          <div class="suggestion-grid">
+            @for (card of suggestions; track card.title) {
+              <button
+                type="button"
+                class="suggestion-card"
+                (click)="onSendMessage(card.prompt)">
+                <div class="suggestion-card-header">
+                  <mat-icon class="suggestion-card-icon">{{ card.icon }}</mat-icon>
+                  <span class="suggestion-card-title">{{ card.title }}</span>
+                </div>
+                <p class="suggestion-card-desc">{{ card.description }}</p>
+              </button>
+            }
+          </div>
+        </div>
+      } @else {
+        <!-- Turn Stream List -->
+        <div class="turns-list">
+          @for (turn of activeTurns(); track turn.turnId) {
+            <app-turn-view
+              [turn]="turn"
+              (actionApproved)="onActionDecision(turn, $event, true)"
+              (actionRejected)="onActionDecision(turn, $event, false)">
+            </app-turn-view>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Bottom Floating Input Console -->
+    <div class="chat-pane-footer">
+      <app-prompt-input
+        [isStreaming]="isStreaming()"
+        [mode]="currentMode()"
+        (submitPrompt)="onSendMessage($event)"
+        (stopRequested)="onCancelTurn()"
+        (modeChanged)="onModeChanged($event)">
+      </app-prompt-input>
+    </div>
+  </div>
+</div>

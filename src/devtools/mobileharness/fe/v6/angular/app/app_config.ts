@@ -14,6 +14,9 @@ import {forceReadyInterceptor} from './core/interceptors/force_ready_interceptor
 import {loginInterceptor} from './core/interceptors/login_interceptor';
 import {universeInterceptor} from './core/interceptors/universe_interceptor';
 import {APP_DATA, getAppData} from './core/models/app_data';
+import {ASSISTANT_SERVICE} from './core/services/assistant/assistant_service';
+import {FakeAssistantService} from './core/services/assistant/fake_assistant_service';
+import {HttpAssistantService} from './core/services/assistant/http_assistant_service';
 import {CONFIG_SERVICE} from './core/services/config/config_service';
 import {FakeConfigService} from './core/services/config/fake_config_service';
 import {HttpConfigService} from './core/services/config/http_config_service';
@@ -122,6 +125,20 @@ export const appConfig: ApplicationConfig = {
       useFactory: (route: ActivatedRoute) => {
         const useFakeData = route.snapshot.queryParams['fake_data'] === 'true';
         return useFakeData ? new FakeHomeService() : new HttpHomeService();
+      },
+      deps: [ActivatedRoute],
+    },
+    {
+      provide: ASSISTANT_SERVICE,
+      useFactory: (route: ActivatedRoute) => {
+        const useFakeData =
+          route.snapshot.queryParams['fake_data'] === 'true' ||
+          (typeof window !== 'undefined' &&
+            new URLSearchParams(window.location.search).get('fake_data') ===
+              'true');
+        return useFakeData
+          ? new FakeAssistantService()
+          : new HttpAssistantService();
       },
       deps: [ActivatedRoute],
     },
