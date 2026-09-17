@@ -173,6 +173,33 @@ public class FlakyTestRetryStrategyTest {
   }
 
   @Test
+  public void decideRetryOnTestEnd_errorRetry_customInfraErrorAttempts_retriesCorrectly()
+      throws Exception {
+    TestInfo currentAttempt = mockTestInfo("attempt_id", TestResult.ERROR);
+    currentAttempt.properties().add("flaky_attempt_index", "0");
+    currentAttempt.properties().add("error_attempt_index", "1");
+    jobParams.add("flaky_test_attempts", "3");
+    jobParams.add("infra_error_attempts", "3");
+
+    TestInfo otherAttempt = mockTestInfo("other_attempt_id", TestResult.ERROR);
+    otherAttempt.properties().add("flaky_attempt_index", "0");
+    otherAttempt.properties().add("error_attempt_index", "0");
+
+    // 2 error attempts so far. Since infra_error_attempts is 3, it retries.
+    when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(currentAttempt, otherAttempt));
+
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(currentAttempt);
+
+    assertThat(retryInfos)
+        .containsExactly(
+            new RetryInfo(
+                "TEST_ERROR",
+                ImmutableMap.of(
+                    "error_attempt_index", "2",
+                    "flaky_attempt_index", "0")));
+  }
+
+  @Test
   public void decideRetryOnTestEnd_errorRetry_limitReached() throws Exception {
     TestInfo currentAttempt = mockTestInfo("attempt_id", TestResult.ERROR);
     currentAttempt.properties().add("flaky_attempt_index", "0");
@@ -234,6 +261,22 @@ public class FlakyTestRetryStrategyTest {
                 ImmutableMap.of(
                     "error_attempt_index", "1",
                     "flaky_attempt_index", "1")));
+  }
+
+  @Test
+  public void decideRetryOnTestEnd_errorRetry_zeroInfraErrorAttempts_disablesRetry()
+      throws Exception {
+    TestInfo currentAttempt = mockTestInfo("attempt_id", TestResult.ERROR);
+    currentAttempt.properties().add("flaky_attempt_index", "0");
+    jobParams.add("flaky_test_attempts", "3");
+    jobParams.add("infra_error_attempts", "0");
+
+    // infra_error_attempts <= 0 is treated as 1 (no retries beyond the initial run).
+    when(testInfos.getByName(TEST_NAME)).thenReturn(ImmutableList.of(currentAttempt));
+
+    List<RetryInfo> retryInfos = retryStrategy.decideRetryOnTestEnd(currentAttempt);
+
+    assertThat(retryInfos).isEmpty();
   }
 
   @Test
@@ -319,6 +362,7 @@ public class FlakyTestRetryStrategyTest {
     return mockTestInfo(testId, result, null);
   }
 
+  @SuppressWarnings("DoNotMockAutoValue")
   private TestInfo mockTestInfo(String testId, TestResult result, @Nullable ErrorId errorId) {
     TestInfo testInfo = mock(TestInfo.class);
 

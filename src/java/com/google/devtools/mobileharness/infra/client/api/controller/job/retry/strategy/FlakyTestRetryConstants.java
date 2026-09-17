@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.client.api.controller.job.retry.
 /** Constants used in flaky test retry. */
 public final class FlakyTestRetryConstants {
 
+  public static final String PARAM_INFRA_ERROR_ATTEMPTS = "infra_error_attempts";
   public static final String PARAM_FLAKY_TEST_ATTEMPTS = "flaky_test_attempts";
   public static final String PARAM_FLAKY_TEST_PARALLEL_RETRY = "flaky_test_parallel_retry";
 
@@ -26,7 +27,7 @@ public final class FlakyTestRetryConstants {
   public static final String TEST_PROP_ERROR_ATTEMPT_INDEX = "error_attempt_index";
   public static final String TEST_PROP_FLAKY_TEST_PARALLEL_RETRY = "flaky_test_parallel_retry";
 
-  public static final int MAX_ERROR_ATTEMPTS = 2;
+  public static final int DEFAULT_INFRA_ERROR_ATTEMPTS = 2;
 
   private FlakyTestRetryConstants() {}
 }
