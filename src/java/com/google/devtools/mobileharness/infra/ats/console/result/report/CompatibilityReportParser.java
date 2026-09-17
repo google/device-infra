@@ -108,16 +108,10 @@ public class CompatibilityReportParser {
         XMLEvent event = xmlEventReader.nextEvent();
 
         switch (event.getEventType()) {
-          case XMLStreamConstants.START_ELEMENT:
-            enteringTag(event.asStartElement(), context);
-            break;
-          case XMLStreamConstants.END_ELEMENT:
-            exitingTag(event.asEndElement(), context);
-            break;
-          case XMLStreamConstants.CHARACTERS:
-            characters(event.asCharacters(), context);
-            break;
-          default: // do nothing
+          case XMLStreamConstants.START_ELEMENT -> enteringTag(event.asStartElement(), context);
+          case XMLStreamConstants.END_ELEMENT -> exitingTag(event.asEndElement(), context);
+          case XMLStreamConstants.CHARACTERS -> characters(event.asCharacters(), context);
+          default -> {} // do nothing
         }
 
         // For a shallow parse, stop when the Summary section is parsed.
@@ -146,72 +140,68 @@ public class CompatibilityReportParser {
     context.tagStack.push(element);
     String elementName = element.getName().getLocalPart();
     switch (elementName) {
-      case XmlConstants.RESULT_TAG:
-        handleResult(element, context);
-        break;
-      case XmlConstants.BUILD_TAG:
+      case XmlConstants.RESULT_TAG -> handleResult(element, context);
+      case XmlConstants.BUILD_TAG -> {
         if (parentIs(context.tagStack, XmlConstants.RESULT_TAG)) {
           handleBuildInfo(element, context);
         }
-        break;
-      case XmlConstants.RUN_HISTORY_TAG:
+      }
+      case XmlConstants.RUN_HISTORY_TAG -> {
         if (parentIs(context.tagStack, XmlConstants.RESULT_TAG)) {
           handleRunHistory(context);
         }
-        break;
-      case XmlConstants.RUN_TAG:
+      }
+      case XmlConstants.RUN_TAG -> {
         if (parentIs(context.tagStack, XmlConstants.RUN_HISTORY_TAG)) {
           handleRunInRunHistory(element, context);
         }
-        break;
-      case XmlConstants.SUMMARY_TAG:
+      }
+      case XmlConstants.SUMMARY_TAG -> {
         if (parentIs(context.tagStack, XmlConstants.RESULT_TAG)) {
           handleSummary(element, context);
         }
-        break;
-      case XmlConstants.MODULE_TAG:
+      }
+      case XmlConstants.MODULE_TAG -> {
         if (parentIs(context.tagStack, XmlConstants.RESULT_TAG)) {
           handleModule(element, context);
         }
-        break;
-      case XmlConstants.MODULES_NOT_DONE_REASON:
+      }
+      case XmlConstants.MODULES_NOT_DONE_REASON -> {
         if (parentIs(context.tagStack, XmlConstants.MODULE_TAG)) {
           handleModuleReason(element, context);
         }
-        break;
-      case XmlConstants.CASE_TAG:
+      }
+      case XmlConstants.CASE_TAG -> {
         if (parentIs(context.tagStack, XmlConstants.MODULE_TAG)) {
           handleTestCase(element, context);
         }
-        break;
-      case XmlConstants.TEST_TAG:
+      }
+      case XmlConstants.TEST_TAG -> {
         if (parentIs(context.tagStack, XmlConstants.CASE_TAG)) {
           handleTest(element, context);
         }
-        break;
-      case XmlConstants.FAILURE_TAG:
+      }
+      case XmlConstants.FAILURE_TAG -> {
         if (parentIs(context.tagStack, XmlConstants.TEST_TAG)) {
           handleTestFailure(element, context);
         }
-        break;
-      case XmlConstants.STACKTRACE_TAG:
+      }
+      case XmlConstants.STACKTRACE_TAG -> {
         if (parentIs(context.tagStack, XmlConstants.FAILURE_TAG)) {
           handleTestFailureStackTrace(context);
         }
-        break;
-      case XmlConstants.BUGREPORT_TAG:
-      case XmlConstants.LOGCAT_TAG:
-      case XmlConstants.SCREENSHOT_TAG:
+      }
+      case XmlConstants.BUGREPORT_TAG, XmlConstants.LOGCAT_TAG, XmlConstants.SCREENSHOT_TAG -> {
         if (parentIs(context.tagStack, XmlConstants.TEST_TAG)) {
           handleLoggedFile(element, context);
         }
-        break;
-      case XmlConstants.METRIC_TAG:
+      }
+      case XmlConstants.METRIC_TAG -> {
         if (parentIs(context.tagStack, XmlConstants.TEST_TAG)) {
           handleMetric(element, context);
         }
-        break;
-      default: // fall out
+      }
+      default -> {} // fall out
     }
   }
 
@@ -219,33 +209,16 @@ public class CompatibilityReportParser {
     context.tagStack.pop();
     String elementName = element.getName().getLocalPart();
     switch (elementName) {
-      case XmlConstants.RUN_HISTORY_TAG:
-        handleEndRunHistory(context);
-        break;
-      case XmlConstants.MODULE_TAG:
-        handleEndModule(context);
-        break;
-      case XmlConstants.CASE_TAG:
-        handleEndTestCase(context);
-        break;
-      case XmlConstants.TEST_TAG:
-        handleEndTest(context);
-        break;
-      case XmlConstants.FAILURE_TAG:
-        handleEndTestFailure(context);
-        break;
-      case XmlConstants.STACKTRACE_TAG:
-        handleEndTestFailureStackTrace(context);
-        break;
-      case XmlConstants.BUGREPORT_TAG:
-      case XmlConstants.LOGCAT_TAG:
-      case XmlConstants.SCREENSHOT_TAG:
-        handleEndLoggedFile(elementName, context);
-        break;
-      case XmlConstants.METRIC_TAG:
-        handleEndMetric(context);
-        break;
-      default: // fall out
+      case XmlConstants.RUN_HISTORY_TAG -> handleEndRunHistory(context);
+      case XmlConstants.MODULE_TAG -> handleEndModule(context);
+      case XmlConstants.CASE_TAG -> handleEndTestCase(context);
+      case XmlConstants.TEST_TAG -> handleEndTest(context);
+      case XmlConstants.FAILURE_TAG -> handleEndTestFailure(context);
+      case XmlConstants.STACKTRACE_TAG -> handleEndTestFailureStackTrace(context);
+      case XmlConstants.BUGREPORT_TAG, XmlConstants.LOGCAT_TAG, XmlConstants.SCREENSHOT_TAG ->
+          handleEndLoggedFile(elementName, context);
+      case XmlConstants.METRIC_TAG -> handleEndMetric(context);
+      default -> {} // fall out
     }
   }
 
@@ -256,14 +229,13 @@ public class CompatibilityReportParser {
     StartElement tag = context.tagStack.peek();
     String tagName = tag.getName().getLocalPart();
     switch (tagName) {
-      case XmlConstants.STACKTRACE_TAG:
-      case XmlConstants.BUGREPORT_TAG:
-      case XmlConstants.LOGCAT_TAG:
-      case XmlConstants.SCREENSHOT_TAG:
-      case XmlConstants.METRIC_TAG:
-        handleElementTextContent(tagName, element, context);
-        break;
-      default: // fall out
+      case XmlConstants.STACKTRACE_TAG,
+          XmlConstants.BUGREPORT_TAG,
+          XmlConstants.LOGCAT_TAG,
+          XmlConstants.SCREENSHOT_TAG,
+          XmlConstants.METRIC_TAG ->
+          handleElementTextContent(tagName, element, context);
+      default -> {} // fall out
     }
   }
 
@@ -528,22 +500,22 @@ public class CompatibilityReportParser {
     String elementName = loggedFile.getName().getLocalPart();
     if (attributeMap.containsKey(XmlConstants.LOG_FILE_NAME_ATTR)) {
       switch (elementName) {
-        case XmlConstants.BUGREPORT_TAG:
+        case XmlConstants.BUGREPORT_TAG -> {
           context.currentBugReport = LoggedFile.newBuilder();
           context.currentBugReport.setFileName(
               attributeMap.get(XmlConstants.LOG_FILE_NAME_ATTR).trim());
-          break;
-        case XmlConstants.LOGCAT_TAG:
+        }
+        case XmlConstants.LOGCAT_TAG -> {
           context.currentLogcat = LoggedFile.newBuilder();
           context.currentLogcat.setFileName(
               attributeMap.get(XmlConstants.LOG_FILE_NAME_ATTR).trim());
-          break;
-        case XmlConstants.SCREENSHOT_TAG:
+        }
+        case XmlConstants.SCREENSHOT_TAG -> {
           context.currentScreenshot = LoggedFile.newBuilder();
           context.currentScreenshot.setFileName(
               attributeMap.get(XmlConstants.LOG_FILE_NAME_ATTR).trim());
-          break;
-        default: // fall out
+        }
+        default -> {} // fall out
       }
     }
   }
@@ -621,25 +593,25 @@ public class CompatibilityReportParser {
 
   private static void handleEndLoggedFile(String elementName, Context context) {
     switch (elementName) {
-      case XmlConstants.BUGREPORT_TAG:
+      case XmlConstants.BUGREPORT_TAG -> {
         if (context.currentBugReport != null) {
           context.currentTest.setBugReport(context.currentBugReport.build());
           context.currentBugReport = null;
         }
-        break;
-      case XmlConstants.LOGCAT_TAG:
+      }
+      case XmlConstants.LOGCAT_TAG -> {
         if (context.currentLogcat != null) {
           context.currentTest.setLogcat(context.currentLogcat.build());
           context.currentLogcat = null;
         }
-        break;
-      case XmlConstants.SCREENSHOT_TAG:
+      }
+      case XmlConstants.SCREENSHOT_TAG -> {
         if (context.currentScreenshot != null) {
           context.currentTest.addScreenshot(context.currentScreenshot.build());
           context.currentScreenshot = null;
         }
-        break;
-      default: // fall out
+      }
+      default -> {} // fall out
     }
   }
 
@@ -657,22 +629,12 @@ public class CompatibilityReportParser {
     }
     String textContent = content.getData().trim();
     switch (elementName) {
-      case XmlConstants.STACKTRACE_TAG:
-        context.currentStackTrace.setContent(textContent);
-        break;
-      case XmlConstants.BUGREPORT_TAG:
-        context.currentBugReport.setContent(textContent);
-        break;
-      case XmlConstants.LOGCAT_TAG:
-        context.currentLogcat.setContent(textContent);
-        break;
-      case XmlConstants.SCREENSHOT_TAG:
-        context.currentScreenshot.setContent(textContent);
-        break;
-      case XmlConstants.METRIC_TAG:
-        context.currentMetric.setContent(textContent);
-        break;
-      default: // fall out
+      case XmlConstants.STACKTRACE_TAG -> context.currentStackTrace.setContent(textContent);
+      case XmlConstants.BUGREPORT_TAG -> context.currentBugReport.setContent(textContent);
+      case XmlConstants.LOGCAT_TAG -> context.currentLogcat.setContent(textContent);
+      case XmlConstants.SCREENSHOT_TAG -> context.currentScreenshot.setContent(textContent);
+      case XmlConstants.METRIC_TAG -> context.currentMetric.setContent(textContent);
+      default -> {} // fall out
     }
   }
 

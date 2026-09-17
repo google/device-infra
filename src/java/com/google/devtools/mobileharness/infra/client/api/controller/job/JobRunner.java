@@ -325,7 +325,7 @@ public class JobRunner implements Runnable {
     scopedEventBus.add(EventScope.JAR_PLUGIN, new EventBus(jarPluginExceptionHandler));
     this.jobChecker = jobChecker;
     switch (jobInfo.setting().getAllocationExitStrategy()) {
-      case FAIL_FAST_NO_IDLE:
+      case FAIL_FAST_NO_IDLE -> {
         deviceQueryFilters =
             jobInfo.subDeviceSpecs().getAllSubDevices().stream()
                 .map(
@@ -346,8 +346,8 @@ public class JobRunner implements Runnable {
                 : Duration.ZERO;
         queryDeviceInterval = Duration.ZERO;
         maxQueryDeviceTimes = 1;
-        break;
-      case FAIL_FAST_NO_MATCH:
+      }
+      case FAIL_FAST_NO_MATCH -> {
         deviceQueryFilters =
             jobInfo.subDeviceSpecs().getAllSubDevices().stream()
                 .map(
@@ -367,8 +367,8 @@ public class JobRunner implements Runnable {
                 : Duration.ZERO;
         queryDeviceInterval = Duration.ZERO;
         maxQueryDeviceTimes = 1;
-        break;
-      default:
+      }
+      default -> {
         deviceQueryFilters =
             jobInfo.subDeviceSpecs().getAllSubDevices().stream()
                 .map(
@@ -385,7 +385,7 @@ public class JobRunner implements Runnable {
         startQueryDeviceLatency = NORMAL_START_QUERY_DEVICE_LATENCY;
         queryDeviceInterval = NORMAL_QUERY_DEVICE_INTERVAL;
         maxQueryDeviceTimes = NORMAL_MAX_QUERY_DEVICE_TIMES;
-        break;
+      }
     }
   }
 
@@ -1303,7 +1303,7 @@ public class JobRunner implements Runnable {
     for (TestInfo testInfo : jobInfo.tests().getFinalized().values()) {
       testCount++;
       switch (testInfo.status().get()) {
-        case NEW:
+        case NEW -> {
           if (isDeviceAllocatorSetUp) {
             if (jobInfo.params().getBool(JobInfo.PARAM_IGNORE_NOT_ASSIGNED_TESTS, false)) {
               jobInfo
@@ -1380,8 +1380,8 @@ public class JobRunner implements Runnable {
           }
           testInfo.status().set(TestStatus.DONE);
           testInfo.properties().add(PropertyName.Test.UNSTARTED_TEST, "true");
-          break;
-        case SUSPENDED:
+        }
+        case SUSPENDED -> {
           ErrorId errorId = InfraErrorId.CLIENT_JR_MNM_ALLOC_DEVICE_EXCEEDS_CEILING;
           String errMsg = "Test is suspended for quota issues. ";
           testInfo
@@ -1396,32 +1396,25 @@ public class JobRunner implements Runnable {
               createExceptionWithoutStackTrace(errorId, errMsg),
               /* logStackTrace= */ false);
           hasSuspendedTests = true;
-          break;
-        case ASSIGNED:
-        case RUNNING:
-        case DONE:
+        }
+        case ASSIGNED, RUNNING, DONE -> {
           switch (testInfo.resultWithCause().get().type()) {
-            case PASS:
-              break;
-            case SKIP:
-              skipTestCount++;
-              break;
-            case FAIL:
+            case PASS -> {}
+            case SKIP -> skipTestCount++;
+            case FAIL -> {
               hasFailTests = true;
               testIdForDisplayMhfeLink = testInfo.locator().getId();
-              break;
-            case ERROR:
-            case TIMEOUT:
-            case UNKNOWN:
+            }
+            case ERROR, TIMEOUT, UNKNOWN -> {
               hasErrorTests = true;
               testIdForDisplayMhfeLink = testInfo.locator().getId();
-              break;
-            default:
-              throw createExceptionWithoutStackTrace(
-                  InfraErrorId.CLIENT_JR_TEST_HAS_UNKNOWN_RESULT,
-                  "Unknown test result " + testInfo.resultWithCause().get().type());
+            }
+            default ->
+                throw createExceptionWithoutStackTrace(
+                    InfraErrorId.CLIENT_JR_TEST_HAS_UNKNOWN_RESULT,
+                    "Unknown test result " + testInfo.resultWithCause().get().type());
           }
-          break;
+        }
       }
     }
 

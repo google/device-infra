@@ -274,10 +274,8 @@ class DumpCommand implements Callable<Integer> {
           runDumpCommandSession(DUMP_STACK_TRACE_SESSION_NAME, DUMP_STACK_TRACE_COMMAND);
       String serverStackTrace;
       switch (output.getResultCase()) {
-        case SUCCESS:
-          serverStackTrace = output.getSuccess().getOutputMessage();
-          break;
-        case FAILURE:
+        case SUCCESS -> serverStackTrace = output.getSuccess().getOutputMessage();
+        case FAILURE -> {
           logger
               .atWarning()
               .with(IMPORTANCE, IMPORTANT)
@@ -285,13 +283,15 @@ class DumpCommand implements Callable<Integer> {
                   "Failed to get server stack trace, reason: %s",
                   output.getFailure().getErrorMessage());
           return;
-        default:
+        }
+        default -> {
           logger
               .atWarning()
               .with(IMPORTANCE, IMPORTANT)
               .log(
                   "Failed to get server stack trace, plugin_output=[%s]", shortDebugString(output));
           return;
+        }
       }
 
       // Saves server stack trace to file.
