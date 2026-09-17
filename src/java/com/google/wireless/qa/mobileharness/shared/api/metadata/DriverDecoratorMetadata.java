@@ -119,6 +119,7 @@ public final class DriverDecoratorMetadata {
         "AndroidAtsDynamicConfigPusherDecoratorSpec");
     builder.put(
         "AndroidBusinessLogicSkipModuleDecorator", "AndroidBusinessLogicSkipModuleDecoratorSpec");
+    builder.put("AndroidDesktopOtaUpdateDecorator", "AndroidDesktopOtaUpdateDecoratorSpec");
     builder.put("AndroidDeviceFeaturesCheckDecorator", "AndroidDeviceFeaturesCheckDecoratorSpec");
     builder.put("AndroidDeviceSettingsDecorator", "AndroidDeviceSettingsDecoratorSpec");
     builder.put("AndroidEmulatorVideoDecorator", "AndroidEmulatorVideoDecoratorSpec");
@@ -165,6 +166,7 @@ public final class DriverDecoratorMetadata {
         "AndroidAtsDynamicConfigPusherTeardownOnlyDecorator", DecoratorType.TEARDOWN_ONLY);
     typeBuilder.put("AndroidBusinessLogicSkipModuleDecorator", DecoratorType.SETUP_ONLY);
     typeBuilder.put("AndroidCleanAppsDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("AndroidDesktopOtaUpdateDecorator", DecoratorType.SETUP_ONLY);
     typeBuilder.put("AndroidDeviceFeaturesCheckDecorator", DecoratorType.SETUP_ONLY);
     typeBuilder.put("AndroidDumpSysDecorator", DecoratorType.TEARDOWN_ONLY);
     typeBuilder.put("AndroidFilePusherDecorator", DecoratorType.SETUP_ONLY);
