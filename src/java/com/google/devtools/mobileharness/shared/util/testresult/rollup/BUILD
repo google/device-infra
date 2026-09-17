@@ -27,6 +27,7 @@ java_library(
     srcs = ["JobResultUtil.java"],
     deps = [
         ":android_instrumentation_test_suite_result_converter",
+        ":junit_test_suite_result_converter",
         ":outcome",
         ":state",
         ":test_case",
@@ -34,16 +35,13 @@ java_library(
         ":test_result",
         ":test_suite_overview",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
-        "//src/devtools/mobileharness/platform/android/instrumentation/result/proto:test_suite_result_java_proto",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/processor:retry_tests_grouper",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/platform/android/instrumentation/result:test_suite_result_loader",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "//src/java/com/google/devtools/mobileharness/shared/util/testresult/loader:junit_xml_result_loader",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
-        "@protobuf//:protobuf_java",
     ],
 )
 
@@ -130,6 +128,22 @@ java_library(
         "//src/devtools/mobileharness/platform/android/instrumentation/result/proto:test_suite_result_java_proto",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_protobuf_protobuf_java",
+    ],
+)
+
+java_library(
+    name = "junit_test_suite_result_converter",
+    srcs = ["JunitTestSuiteResultConverter.java"],
+    deps = [
+        ":outcome",
+        ":stack_trace",
+        ":state",
+        ":test_case",
+        ":test_case_reference",
+        ":test_result",
+        ":test_suite_overview",
+        "//src/java/com/google/devtools/mobileharness/shared/util/testresult/loader:junit_xml_result_loader",
+        "@maven//:com_google_guava_guava",
     ],
 )
 

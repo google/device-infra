@@ -32,8 +32,11 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.Rule;
@@ -587,6 +590,76 @@ public final class JobResultUtilTest {
     assertThat(result.testCases()).isEmpty();
   }
 
+  @Test
+  public void computeJobRunResult_iosXctest_readsJunitXml() throws Exception {
+    // The IosNativeXcTest driver only writes junit.xml, and groups test cases by target.
+    TestInfo testA =
+        mockIosTestRun(
+            "test_shard_0",
+            "0",
+            com.google.devtools.mobileharness.api.model.proto.Test.TestResult.PASS,
+            "<?xml version='1.0' encoding='UTF-8'?>\n"
+                + "<testsuites>\n"
+                + "  <testsuite name='' tests='2' failures='0' skipped='0' errors='0' time='7'>\n"
+                + "    <testcase name='testCase1'"
+                + " classname='MyIosTarget.MyIosTestClass' time='5' />\n"
+                + "    <testcase name='testCase2'"
+                + " classname='MyIosTarget.MyIosTestClass' time='2' />\n"
+                + "  </testsuite>\n"
+                + "</testsuites>\n");
+
+    JobInfo jobInfo = mock(JobInfo.class, Mockito.RETURNS_DEEP_STUBS);
+    when(jobInfo.tests().getAll().values()).thenReturn(ImmutableList.of(testA));
+
+    com.google.devtools.mobileharness.shared.util.testresult.rollup.TestResult result =
+        JobResultUtil.computeJobRunResult(jobInfo);
+
+    assertThat(result.outcome().summary()).isEqualTo(OutcomeSummary.SUCCESS);
+    assertThat(result.testCases())
+        .containsExactly(
+            buildExpectedTestCase(
+                "MyIosTarget.MyIosTestClass",
+                "testCase1",
+                "MyIosTarget",
+                com.google.devtools.mobileharness.shared.util.testresult.rollup.TestCase.TestStatus
+                    .PASSED,
+                Duration.ofSeconds(5)),
+            buildExpectedTestCase(
+                "MyIosTarget.MyIosTestClass",
+                "testCase2",
+                "MyIosTarget",
+                com.google.devtools.mobileharness.shared.util.testresult.rollup.TestCase.TestStatus
+                    .PASSED,
+                Duration.ofSeconds(2)));
+    assertThat(result.testSuiteOverviews())
+        .containsExactly(
+            TestSuiteOverview.builder()
+                .setName("MyIosTarget")
+                .setTotalCount(2)
+                .setElapsedTime(Duration.ofSeconds(7))
+                .build());
+  }
+
+  @Test
+  public void computeJobRunResult_iosXctest_noJunitXml_fallsBackToSimpleTestResult()
+      throws Exception {
+    TestInfo testA =
+        mockIosTestRun(
+            "test_shard_0",
+            "0",
+            com.google.devtools.mobileharness.api.model.proto.Test.TestResult.FAIL,
+            /* junitXml= */ null);
+
+    JobInfo jobInfo = mock(JobInfo.class, Mockito.RETURNS_DEEP_STUBS);
+    when(jobInfo.tests().getAll().values()).thenReturn(ImmutableList.of(testA));
+
+    com.google.devtools.mobileharness.shared.util.testresult.rollup.TestResult result =
+        JobResultUtil.computeJobRunResult(jobInfo);
+
+    assertThat(result.outcome().summary()).isEqualTo(OutcomeSummary.FAILURE);
+    assertThat(result.testCases()).isEmpty();
+  }
+
   private static final class TestCaseInfo {
     final String testClass;
     final String testMethod;
@@ -611,8 +684,54 @@ public final class JobResultUtilTest {
       TestStatus suiteStatus,
       ImmutableList<TestCaseInfo> cases)
       throws Exception {
-    TestInfo testInfo = mock(TestInfo.class, Mockito.RETURNS_DEEP_STUBS);
     File genDir = tempFolder.newFolder();
+    if (testSuiteName != null) {
+      writeProto(
+          genDir,
+          "instrument_test_result.pb",
+          buildTestSuiteResult(testSuiteName, suiteStatus, cases));
+    }
+    return mockTestRun(
+        shardName,
+        shardIndex,
+        mockResult,
+        flakyAttemptIndex,
+        errorAttemptIndex,
+        "AndroidInstrumentation",
+        genDir);
+  }
+
+  private TestInfo mockIosTestRun(
+      String shardName,
+      String shardIndex,
+      com.google.devtools.mobileharness.api.model.proto.Test.TestResult mockResult,
+      String junitXml)
+      throws Exception {
+    File genDir = tempFolder.newFolder();
+    if (junitXml != null) {
+      Files.writeString(new File(genDir, "junit.xml").toPath(), junitXml, StandardCharsets.UTF_8);
+    }
+    return mockTestRun(
+        shardName,
+        shardIndex,
+        mockResult,
+        /* flakyAttemptIndex= */ 0,
+        /* errorAttemptIndex= */ 0,
+        "IosNativeXcTest",
+        genDir);
+  }
+
+  private TestInfo mockTestRun(
+      String shardName,
+      String shardIndex,
+      com.google.devtools.mobileharness.api.model.proto.Test.TestResult mockResult,
+      int flakyAttemptIndex,
+      int errorAttemptIndex,
+      String driver,
+      File genDir)
+      throws Exception {
+    TestInfo testInfo = mock(TestInfo.class, Mockito.RETURNS_DEEP_STUBS);
+    when(testInfo.jobInfo().type()).thenReturn(JobType.newBuilder().setDriver(driver).build());
     when(testInfo.getGenFileDir()).thenReturn(genDir.getAbsolutePath());
 
     Properties properties = new Properties(new Timing());
@@ -627,11 +746,6 @@ public final class JobResultUtilTest {
 
     when(testInfo.locator().getName()).thenReturn(shardName);
     when(testInfo.resultWithCause().get().type()).thenReturn(mockResult);
-
-    if (testSuiteName != null) {
-      TestSuiteResult testSuiteResult = buildTestSuiteResult(testSuiteName, suiteStatus, cases);
-      writeProto(genDir, "instrument_test_result.pb", testSuiteResult);
-    }
 
     return testInfo;
   }

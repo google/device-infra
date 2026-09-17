@@ -27,7 +27,9 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/platform/android/instrumentation/result/proto:test_suite_result_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/testresult/loader:junit_xml_result_loader",
         "//src/java/com/google/devtools/mobileharness/shared/util/testresult/rollup:job_result_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/testresult/rollup:junit_test_suite_result_converter",
         "//src/java/com/google/devtools/mobileharness/shared/util/testresult/rollup:outcome",
         "//src/java/com/google/devtools/mobileharness/shared/util/testresult/rollup:stack_trace",
         "//src/java/com/google/devtools/mobileharness/shared/util/testresult/rollup:state",
@@ -38,6 +40,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/testresult/rollup:test_suite_overview_converter",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
