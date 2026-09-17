@@ -16,19 +16,28 @@
 
 package com.google.devtools.mobileharness.fe.v6.server;
 
+import static com.google.common.util.concurrent.Futures.immediateFuture;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import com.google.devtools.mobileharness.fe.v6.server.Annotations.ServerPort;
 import com.google.devtools.mobileharness.fe.v6.service.admin.AdminServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.config.ConfigServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.device.DeviceServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.host.HostServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.job.OssJobServiceModule;
+import com.google.devtools.mobileharness.fe.v6.service.search.SearchServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.session.OssSessionServiceModule;
 import com.google.devtools.mobileharness.fe.v6.service.shared.OssStubsModule;
 import com.google.devtools.mobileharness.fe.v6.service.test.OssTestServiceModule;
 import com.google.devtools.mobileharness.fe.v6.shared.util.concurrent.OssExecutorModule;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.util.Modules;
 import java.time.InstantSource;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -39,6 +48,10 @@ public final class OssFeServerTest {
 
   @Test
   public void startAndStop() throws Exception {
+    LabInfoStub labInfoStub = mock(LabInfoStub.class);
+    when(labInfoStub.getLabInfoAsync(any()))
+        .thenReturn(immediateFuture(GetLabInfoResponse.getDefaultInstance()));
+
     Injector injector =
         Guice.createInjector(
             new OssExecutorModule(),
@@ -49,7 +62,15 @@ public final class OssFeServerTest {
             new OssTestServiceModule(),
             new OssJobServiceModule(),
             new OssSessionServiceModule(),
-            new OssStubsModule(),
+            new SearchServiceModule(),
+            Modules.override(new OssStubsModule())
+                .with(
+                    new AbstractModule() {
+                      @Override
+                      protected void configure() {
+                        bind(LabInfoStub.class).toInstance(labInfoStub);
+                      }
+                    }),
             new AbstractModule() {
               @Override
               protected void configure() {
