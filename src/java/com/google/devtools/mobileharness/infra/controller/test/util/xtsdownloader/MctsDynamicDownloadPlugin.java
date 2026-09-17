@@ -365,6 +365,12 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       cleanUpWorkDir(testInfo);
       return;
     }
+    if (isDynamicMctsJob(testInfo) && hasSetupJobPreparedDynamicDownloadDir(testInfo)) {
+      logger.atInfo().log(
+          "Dynamic MCTS job: Dynamic download files already prepared by setup job, skipping"
+              + " dynamic download.");
+      return;
+    }
 
     try {
       logger
@@ -401,6 +407,24 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     return Objects.equals(
         testInfo.jobInfo().properties().get(XtsConstants.XTS_JOB_NAME),
         XtsConstants.TEARDOWN_JOB_NAME);
+  }
+
+  private boolean isDynamicMctsJob(TestInfo testInfo) {
+    return Objects.equals(
+        testInfo.jobInfo().properties().get(XtsConstants.XTS_JOB_NAME),
+        XtsConstants.DYNAMIC_MCTS_JOB_NAME);
+  }
+
+  private boolean hasSetupJobPreparedDynamicDownloadDir(TestInfo testInfo) {
+    try {
+      String sessionId = getSessionId(testInfo);
+      Path mctsJdkDir = XtsDirUtil.getXtsDynamicDownloadJdkDir(sessionId);
+      return fileUtil.isDirExist(mctsJdkDir);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to get session ID to check dynamic download JDK dir for dynamic MCTS job.");
+      return false;
+    }
   }
 
   private void cleanUpWorkDir(TestInfo testInfo) {

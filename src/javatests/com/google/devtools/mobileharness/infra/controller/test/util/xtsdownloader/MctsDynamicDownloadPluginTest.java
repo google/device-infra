@@ -378,6 +378,47 @@ public final class MctsDynamicDownloadPluginTest {
   }
 
   @Test
+  public void onTestStarting_dynamicMctsJob_jdkDirExists_skipsDynamicDownload() throws Exception {
+    Path sessionDir = XtsDirUtil.getXtsDynamicDownloadDir("test_session_id");
+    Path jdkDir = XtsDirUtil.getXtsDynamicDownloadJdkDir("test_session_id");
+    localFileUtil.prepareDir(jdkDir.toString());
+
+    when(jobProperties.get(XtsConstants.XTS_JOB_NAME))
+        .thenReturn(XtsConstants.DYNAMIC_MCTS_JOB_NAME);
+
+    try {
+      spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
+
+      // Verify that dynamic download was skipped because JDK dir was already prepared by setup job.
+      Mockito.verify(spyMctsDynamicDownloadPlugin, Mockito.never())
+          .downloadPublicUrlFiles(any(), any());
+    } finally {
+      localFileUtil.removeFileOrDir(sessionDir.toString());
+    }
+  }
+
+  @Test
+  public void onTestStarting_dynamicMctsJob_jdkDirDoesNotExist_proceedsWithDynamicDownload()
+      throws Exception {
+    when(jobProperties.get(XtsConstants.XTS_JOB_NAME))
+        .thenReturn(XtsConstants.DYNAMIC_MCTS_JOB_NAME);
+    generateTestZipFilesForDynamicJob();
+
+    try {
+      spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
+
+      verify(spyMctsDynamicDownloadPlugin)
+          .downloadPublicUrlFiles(
+              "https://dl.google.com/dl/android/xts/mcts/tool/35/jdk.zip",
+              "/android/xts/mcts/tool/35/jdk.zip");
+      verifyDownloadAndUnzipFile();
+    } finally {
+      localFileUtil.removeFileOrDir(
+          XtsDirUtil.getXtsDynamicDownloadDir("test_session_id").toString());
+    }
+  }
+
+  @Test
   public void onTestStarting_sdk36_usesSdkFullVersion() throws Exception {
     when(jobProperties.getOptional(XtsConstants.XTS_JOB_NAME))
         .thenReturn(Optional.of(XtsConstants.SETUP_JOB_NAME));

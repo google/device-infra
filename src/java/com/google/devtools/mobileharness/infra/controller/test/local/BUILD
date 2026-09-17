@@ -60,6 +60,9 @@ java_library(
 java_library(
     name = "local_test_builtin_plugins",
     srcs = ["LocalTestBuiltinPlugins.java"],
+    visibility = [
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/test/local:__subpackages__",
+    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",

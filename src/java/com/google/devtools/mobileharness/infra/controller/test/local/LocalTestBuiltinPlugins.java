@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.controller.test.local;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -159,7 +160,8 @@ class LocalTestBuiltinPlugins {
     }
   }
 
-  private static boolean shouldAddMctsDynamicDownloadPlugin(JobInfo jobInfo) {
+  @VisibleForTesting
+  static boolean shouldAddMctsDynamicDownloadPlugin(JobInfo jobInfo) {
     if (!jobInfo
         .properties()
         .getBoolean(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED)
@@ -167,8 +169,13 @@ class LocalTestBuiltinPlugins {
       return false;
     }
     String xtsJobName = jobInfo.properties().get(XtsConstants.XTS_JOB_NAME);
+    // In ATS Console sessions, MctsDynamicDownloadPlugin runs during SETUP and TEARDOWN jobs.
+    // In ATS Server sessions, SETUP jobs are not yet scheduled (work in progress), so the plugin
+    // is also attached to DYNAMIC_MCTS jobs. The plugin self-disables if the setup job has already
+    // downloaded the JDK.
     return Objects.equals(xtsJobName, XtsConstants.SETUP_JOB_NAME)
-        || Objects.equals(xtsJobName, XtsConstants.TEARDOWN_JOB_NAME);
+        || Objects.equals(xtsJobName, XtsConstants.TEARDOWN_JOB_NAME)
+        || Objects.equals(xtsJobName, XtsConstants.DYNAMIC_MCTS_JOB_NAME);
   }
 
   private static boolean isMoblyResultstoreUploadEnabled(JobInfo jobInfo) {
