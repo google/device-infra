@@ -30,24 +30,24 @@ import java.util.List;
 import java.util.Map;
 import javax.inject.Inject;
 
-/** Driver for running Playwright tests on Android devices via CDP. */
-@DriverAnnotation(help = "For running Playwright tests on Android devices.")
+/** Driver for running Puppeteer tests on Android devices via CDP. */
+@DriverAnnotation(help = "For running Puppeteer tests on Android devices.")
 @TestAnnotation(
     required = false,
     help = "Leave it empty and Mobile Harness will simply use your job name as test name.")
-public class PlaywrightWebDriver extends BaseWebTestDriver {
+public class PuppeteerWebDriver extends BaseWebTestDriver {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  @FileAnnotation(required = true, help = "The Playwright test binary or wrapper script.")
-  public static final String TAG_PLAYWRIGHT_TEST_FILE = "playwright_test_file";
+  @FileAnnotation(required = true, help = "The Puppeteer test binary or wrapper script.")
+  public static final String TAG_PUPPETEER_TEST_FILE = "puppeteer_test_file";
 
   @Inject
-  PlaywrightWebDriver(Device device, TestInfo testInfo) {
+  PuppeteerWebDriver(Device device, TestInfo testInfo) {
     super(device, testInfo);
   }
 
-  PlaywrightWebDriver(
+  PuppeteerWebDriver(
       Device device,
       TestInfo testInfo,
       CommandExecutor cmdExecutor,
@@ -58,12 +58,12 @@ public class PlaywrightWebDriver extends BaseWebTestDriver {
 
   @Override
   protected String getTestFileTag() {
-    return TAG_PLAYWRIGHT_TEST_FILE;
+    return TAG_PUPPETEER_TEST_FILE;
   }
 
   @Override
   protected String getLogPrefix() {
-    return "[Playwright]";
+    return "[Puppeteer]";
   }
 
   @Override
@@ -72,14 +72,13 @@ public class PlaywrightWebDriver extends BaseWebTestDriver {
     getDebuggerAddress(testInfo)
         .ifPresent(
             address -> {
-              // Playwright expects ws:// scheme for CDP WebSocket connection
               String wsEndpoint = "ws://" + address;
-              extraEnv.put("PLAYWRIGHT_WS_ENDPOINT", wsEndpoint);
+              extraEnv.put("PUPPETEER_WS_ENDPOINT", wsEndpoint);
               testInfo
                   .log()
                   .atInfo()
                   .alsoTo(logger)
-                  .log("Set PLAYWRIGHT_WS_ENDPOINT to %s", wsEndpoint);
+                  .log("Set PUPPETEER_WS_ENDPOINT to %s", wsEndpoint);
             });
 
     getBaseUrl(testInfo)
@@ -94,7 +93,11 @@ public class PlaywrightWebDriver extends BaseWebTestDriver {
   protected void populateCommandArgs(TestInfo testInfo, List<String> commandList)
       throws MobileHarnessException {
     getDebuggerAddress(testInfo)
-        .ifPresent(address -> commandList.add("--debuggerAddress=" + address));
+        .ifPresent(
+            address -> {
+              commandList.add("--browserWSEndpoint=ws://" + address);
+              commandList.add("--debuggerAddress=" + address);
+            });
     getBaseUrl(testInfo).ifPresent(url -> commandList.add("--baseUrl=" + url));
   }
 }
