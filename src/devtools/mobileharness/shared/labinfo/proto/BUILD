@@ -23,7 +23,10 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_all_pkg",
+        "//wireless/android/pixel/testing/labs:__subpackages__",
+        "//wireless/android/pixel/testing/labs/monitoring:__subpackages__",
         "//wireless/android/pixel/testtools/djar:__subpackages__",
+        "//wireless/android/test_tools/dual_home_lab:__subpackages__",
     ],
 )
 
