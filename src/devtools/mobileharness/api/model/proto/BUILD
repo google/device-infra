@@ -27,6 +27,19 @@ package(
 )
 
 proto_library(
+    name = "diagnostic_proto",
+    srcs = ["diagnostic.proto"],
+    deps = [
+        "//src/devtools/common/metrics/stability/model/proto:error_proto",
+    ],
+)
+
+java_proto_library(
+    name = "diagnostic_java_proto",
+    deps = [":diagnostic_proto"],
+)
+
+proto_library(
     name = "device_proto",
     srcs = ["device.proto"],
     deps = [
