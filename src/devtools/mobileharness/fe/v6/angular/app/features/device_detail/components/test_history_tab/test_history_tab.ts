@@ -236,10 +236,11 @@ export class TestHistoryTab implements OnInit {
     }
     if (columnKey === 'start_time') {
       const ms = Number(value);
-      return Number.isNaN(ms) ? '-' : new Date(ms).toLocaleString();
+      return Number.isNaN(ms) ? value : new Date(ms).toLocaleString();
     }
     if (columnKey === 'duration') {
-      return this.formatDuration(Number(value));
+      const ms = Number(value);
+      return Number.isNaN(ms) ? value : this.formatDuration(ms);
     }
     return value;
   }
@@ -254,7 +255,7 @@ export class TestHistoryTab implements OnInit {
     if (Number.isNaN(ms) || ms <= 0) {
       return '-';
     }
-    const totalSeconds = Math.floor(ms / 1000);
+    const totalSeconds = Math.round(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
