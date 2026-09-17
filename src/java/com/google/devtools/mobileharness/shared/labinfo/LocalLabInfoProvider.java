@@ -26,7 +26,6 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
-import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
@@ -36,9 +35,13 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusInfo;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager.DeviceKey;
+import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager.DeviceTempRequiredDimensions;
 import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
+import com.google.devtools.mobileharness.shared.util.filter.CompiledDeviceInfoMask;
+import com.google.devtools.mobileharness.shared.util.filter.CompiledLabInfoMask;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import java.util.Map;
+import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
@@ -58,6 +61,12 @@ public class LocalLabInfoProvider implements LabInfoProvider {
 
   @Override
   public LabView getLabInfos(Filter filter) {
+    return getLabInfos(filter, CompiledLabInfoMask.retainAll(), CompiledDeviceInfoMask.retainAll());
+  }
+
+  @Override
+  public LabView getLabInfos(
+      Filter filter, CompiledLabInfoMask labMask, CompiledDeviceInfoMask deviceMask) {
     // Gets device information from device manager.
     Map<Device, DeviceStatusInfo> devices;
     try {
@@ -72,54 +81,8 @@ public class LocalLabInfoProvider implements LabInfoProvider {
     // Creates DeviceInfo.
     ImmutableList<DeviceInfo> deviceInfos =
         devices.entrySet().stream()
-            .map(
-                entry -> {
-                  Device device = entry.getKey();
-                  DeviceStatus deviceStatus =
-                      entry.getValue().getDeviceStatusWithTimestamp().getStatus();
-                  DeviceInfo.Builder builder =
-                      DeviceInfo.newBuilder()
-                          .setDeviceLocator(
-                              DeviceLocator.newBuilder().setId(device.getDeviceUuid()))
-                          .setDeviceStatus(deviceStatus);
-                  DeviceFeature.Builder featureBuilder = device.toFeature().toBuilder();
-
-                  if (tempRequiredDimensionManager != null) {
-                    DeviceKey deviceKey =
-                        new DeviceKey(LabLocator.LOCALHOST.hostName(), device.getDeviceUuid());
-                    tempRequiredDimensionManager
-                        .getDimensions(deviceKey)
-                        .ifPresent(
-                            dimensions -> {
-                              DeviceCondition.Builder conditionBuilder =
-                                  DeviceCondition.newBuilder();
-                              dimensions
-                                  .dimensions()
-                                  .forEach(
-                                      (name, value) -> {
-                                        conditionBuilder.addTempDimension(
-                                            TempDimension.newBuilder()
-                                                .setDimension(
-                                                    DeviceDimension.newBuilder()
-                                                        .setName(name)
-                                                        .setValue(value))
-                                                .setExpireTimestampMs(
-                                                    dimensions.expireTime().toEpochMilli())
-                                                .setRequired(true));
-
-                                        featureBuilder
-                                            .getCompositeDimensionBuilder()
-                                            .addRequiredDimension(
-                                                DeviceDimension.newBuilder()
-                                                    .setName(name)
-                                                    .setValue(value));
-                                      });
-                              builder.setDeviceCondition(conditionBuilder.build());
-                            });
-                  }
-
-                  return builder.setDeviceFeature(featureBuilder.build()).build();
-                })
+            .map(entry -> createDeviceInfo(entry.getKey(), entry.getValue(), deviceMask))
+            .flatMap(Optional::stream)
             .collect(toImmutableList());
 
     // Creates LabView.
@@ -129,8 +92,70 @@ public class LocalLabInfoProvider implements LabInfoProvider {
             LabData.newBuilder()
                 .setDeviceList(
                     DeviceList.newBuilder()
-                        .setDeviceTotalCount(deviceInfos.size())
+                        .setDeviceTotalCount(devices.size())
                         .addAllDeviceInfo(deviceInfos)))
         .build();
+  }
+
+  private Optional<DeviceInfo> createDeviceInfo(
+      Device device, DeviceStatusInfo deviceStatusInfo, CompiledDeviceInfoMask deviceMask) {
+    Optional<DeviceTempRequiredDimensions> tempDimensions =
+        Optional.ofNullable(tempRequiredDimensionManager)
+            .flatMap(
+                manager ->
+                    manager.getDimensions(
+                        new DeviceKey(LabLocator.LOCALHOST.hostName(), device.getDeviceUuid())));
+    return deviceMask
+        .newMaskedDeviceInfoBuilder()
+        .setMaskedDeviceLocator(
+            device,
+            Device::getDeviceUuid,
+            currentDevice ->
+                DeviceLocator.newBuilder().setId(currentDevice.getDeviceUuid()).build())
+        .setMaskedDeviceStatus(
+            deviceStatusInfo, statusInfo -> statusInfo.getDeviceStatusWithTimestamp().getStatus())
+        .setMaskedDeviceCondition(tempDimensions, LocalLabInfoProvider::toDeviceCondition)
+        .setMaskedDeviceFeature(
+            device, currentDevice -> toDeviceFeature(currentDevice, tempDimensions))
+        .build();
+  }
+
+  private static Optional<DeviceCondition> toDeviceCondition(
+      Optional<DeviceTempRequiredDimensions> tempDimensions) {
+    return tempDimensions.map(
+        dimensions -> {
+          DeviceCondition.Builder conditionBuilder = DeviceCondition.newBuilder();
+          dimensions
+              .dimensions()
+              .forEach(
+                  (name, value) ->
+                      conditionBuilder.addTempDimension(
+                          TempDimension.newBuilder()
+                              .setDimension(
+                                  DeviceDimension.newBuilder().setName(name).setValue(value))
+                              .setExpireTimestampMs(dimensions.expireTime().toEpochMilli())
+                              .setRequired(true)));
+          return conditionBuilder.build();
+        });
+  }
+
+  private static DeviceFeature toDeviceFeature(
+      Device device, Optional<DeviceTempRequiredDimensions> tempDimensions) {
+    DeviceFeature fullFeature = device.toFeature();
+    return tempDimensions
+        .map(
+            dimensions -> {
+              DeviceFeature.Builder featureBuilder = fullFeature.toBuilder();
+              dimensions
+                  .dimensions()
+                  .forEach(
+                      (name, value) ->
+                          featureBuilder
+                              .getCompositeDimensionBuilder()
+                              .addRequiredDimension(
+                                  DeviceDimension.newBuilder().setName(name).setValue(value)));
+              return featureBuilder.build();
+            })
+        .orElse(fullFeature);
   }
 }
