@@ -6,7 +6,9 @@ import {
 import {TestBed} from '@angular/core/testing';
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
+  BatchUpdateDeviceConfigRequest,
   DeviceConfig,
+  GetBatchWifiContextResponse,
   GetDeviceConfigResult,
   RecommendedWifi,
   UpdateDeviceConfigRequest,
@@ -189,5 +191,47 @@ describe('HttpConfigService', () => {
     );
     expect(req.request.method).toBe('GET');
     req.flush(mockHostConfigResult);
+  });
+
+  it('should retrieve batch wifi context via POST', () => {
+    const mockResponse: GetBatchWifiContextResponse = {
+      current: [
+        {
+          deviceId: 'dev-1',
+          wifi: {type: 'custom', ssid: 'wifi-1', psk: '', scanSsid: false},
+          writable: true,
+        },
+      ],
+      candidateWifis: [{ssid: 'wifi-1', scanSsid: false, deviceCount: 10}],
+    };
+
+    service.getBatchWifiContext(['dev-1']).subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/devices:batchGetWifiContext',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({deviceIds: ['dev-1']});
+    req.flush(mockResponse);
+  });
+
+  it('should batch update device config via POST', () => {
+    const mockRequest: BatchUpdateDeviceConfigRequest = {
+      deviceIds: ['dev-1'],
+      wifi: {ssid: 'wifi-1', psk: 'secret', scanSsid: false},
+    };
+
+    service.batchUpdateDeviceConfig(mockRequest).subscribe((res) => {
+      expect(res.errors).toEqual({});
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/devices:batchUpdateConfig',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(mockRequest);
+    req.flush({errors: {}});
   });
 });

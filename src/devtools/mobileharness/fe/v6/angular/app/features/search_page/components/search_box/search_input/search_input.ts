@@ -195,6 +195,7 @@ export class SearchInput {
    * @param val Current text value in the search input box.
    */
   onSearchInput(val: string) {
+    this.store.closeValuePicker();
     this.store.searchQuery.set(val);
     this.store.showSuggestions.set(true);
     this.activeSuggestionIndex.set(-1);
@@ -202,12 +203,14 @@ export class SearchInput {
 
   /** Focuses the native search input element and displays the suggestions popover. */
   focusInput() {
+    this.store.closeValuePicker();
     this.searchInput()?.nativeElement.focus();
     this.store.showSuggestions.set(true);
   }
 
   /** Handles focus event on the input element by opening the suggestions popover. */
   onInputFocus() {
+    this.store.closeValuePicker();
     this.store.showSuggestions.set(true);
   }
 
@@ -218,6 +221,7 @@ export class SearchInput {
    */
   onInputClick(event?: MouseEvent) {
     event?.stopPropagation();
+    this.store.closeValuePicker();
     this.store.showSuggestions.set(true);
   }
 
