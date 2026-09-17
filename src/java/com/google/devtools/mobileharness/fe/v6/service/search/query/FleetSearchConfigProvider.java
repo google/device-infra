@@ -21,7 +21,6 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnD
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetLandingConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSearchConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSearchConfigRequest;
-import com.google.devtools.mobileharness.fe.v6.service.proto.search.KeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
@@ -59,12 +58,6 @@ public final class FleetSearchConfigProvider {
 
     if (host) {
       String identifierKey = HostKeys.HOST_NAME.id();
-      for (HostKeyDescriptor descriptor : curation.hostRecommendedColumns()) {
-        columns.addRecommended(
-            KeyDescriptor.newBuilder()
-                .setKey(descriptor.id())
-                .setDisplayName(descriptor.display().name()));
-      }
       for (HostKeyDescriptor descriptor : curation.hostDefaultColumns()) {
         columns.addDefaults(
             FleetColumnDescriptor.newBuilder()
@@ -74,12 +67,6 @@ public final class FleetSearchConfigProvider {
       }
     } else {
       String identifierKey = DeviceKeys.UUID.id();
-      for (DeviceKeyDescriptor descriptor : curation.deviceRecommendedColumns()) {
-        columns.addRecommended(
-            KeyDescriptor.newBuilder()
-                .setKey(descriptor.id())
-                .setDisplayName(descriptor.display().name()));
-      }
       for (DeviceKeyDescriptor descriptor : curation.deviceDefaultColumns()) {
         columns.addDefaults(
             FleetColumnDescriptor.newBuilder()
@@ -93,6 +80,8 @@ public final class FleetSearchConfigProvider {
         FleetLandingConfig.newBuilder()
             .setEnabled(curation.landingEnabled())
             .setBrowseAllCount(browseAllCount(snapshot, request.getEntity()))
+            .addAllTryCategories(
+                host ? curation.hostTryCategories() : curation.deviceTryCategories())
             .build();
 
     return FleetSearchConfig.newBuilder().setColumns(columns).setLanding(landing).build();

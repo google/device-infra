@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetTryCategory;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetTryExample;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
@@ -92,4 +94,23 @@ public interface ScenarioCuration {
    * page opens straight into results.
    */
   boolean landingEnabled();
+
+  /** Try-it example categories shown on the device search landing page. */
+  default ImmutableList<FleetTryCategory> deviceTryCategories() {
+    return ImmutableList.of();
+  }
+
+  /** Try-it example categories shown on the host search landing page. */
+  default ImmutableList<FleetTryCategory> hostTryCategories() {
+    return ImmutableList.of();
+  }
+
+  /** Creates a {@link FleetTryCategory} with the given label and example texts. */
+  static FleetTryCategory tryCategory(String label, String... examples) {
+    FleetTryCategory.Builder category = FleetTryCategory.newBuilder().setLabel(label);
+    for (String example : examples) {
+      category.addExamples(FleetTryExample.newBuilder().setText(example));
+    }
+    return category.build();
+  }
 }

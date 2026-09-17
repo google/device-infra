@@ -115,10 +115,12 @@ public final class SearchServiceLogicImplTest {
     FleetColumnDescriptor first = config.getColumns().getDefaults(0);
     assertThat(first.getKey()).isEqualTo("device_field::uuid");
     assertThat(first.getLocked()).isTrue();
-    assertThat(config.getColumns().getRecommendedList()).isNotEmpty();
+    assertThat(config.getColumns().getRecommendedList()).isEmpty();
     // The synthetic fleet has three devices, and the ats-one build browses directly (no landing).
     assertThat(config.getLanding().getBrowseAllCount()).isEqualTo(3);
     assertThat(config.getLanding().getEnabled()).isFalse();
+    assertThat(config.getLanding().getTryCategoriesList()).isNotEmpty();
+    assertThat(config.getLanding().getTryCategories(0).getLabel()).isEqualTo("a value");
   }
 
   @Test
