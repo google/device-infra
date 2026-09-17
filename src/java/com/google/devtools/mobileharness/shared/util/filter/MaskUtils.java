@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.shared.util.filter;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.protobuf.util.FieldMaskUtil.trim;
-import static java.util.Objects.requireNonNull;
 
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroup;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupResult;
@@ -26,6 +25,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInf
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.GroupedDevices;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask.DimensionsMask;
@@ -37,10 +37,35 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
-/** Utility class to trim the {@link LabQueryResult} based on the {@link Mask}. */
+/**
+ * Post-build trimming of lab query data, plus the field-mask path predicate that {@link
+ * CompiledLabInfoMask} and {@link CompiledDeviceInfoMask} compile against.
+ *
+ * <p>{@link #trimLabView} applies compiled masks to a {@link LabView} that was built in full; it is
+ * how a data source without push-down still honours the masks it is given. {@link
+ * #trimLabQueryResult} trims a finished result by the client's {@link Mask}; the query layer uses
+ * it once, after ordering and grouping, to remove the fields those steps needed but the client did
+ * not ask for.
+ */
 public final class MaskUtils {
 
   private MaskUtils() {}
+
+  /**
+   * Whether {@code path} is touched by {@code fieldMask}: the path is listed, an ancestor of it is
+   * listed (so it is fully covered), or a descendant of it is listed (so it is partially needed).
+   * An empty field mask touches nothing.
+   */
+  public static boolean isFieldRequested(FieldMask fieldMask, String path) {
+    for (String candidate : fieldMask.getPathsList()) {
+      if (candidate.equals(path)
+          || path.startsWith(candidate + ".")
+          || candidate.startsWith(path + ".")) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   /**
    * Trims the {@link LabQueryResult} based on the {@link Mask}.
@@ -77,6 +102,25 @@ public final class MaskUtils {
     }
   }
 
+  /**
+   * Applies compiled masks to a fully built {@link LabView}. Lab and device counts are kept as they
+   * are; a {@link LabInfo} or {@link DeviceInfo} the masks drop entirely is removed.
+   */
+  public static LabView trimLabView(
+      LabView labView, CompiledLabInfoMask labInfoMask, CompiledDeviceInfoMask deviceInfoMask) {
+    if (labInfoMask == CompiledLabInfoMask.retainAll()
+        && deviceInfoMask == CompiledDeviceInfoMask.retainAll()) {
+      return labView;
+    }
+    return labView.toBuilder()
+        .clearLabData()
+        .addAllLabData(
+            labView.getLabDataList().stream()
+                .map(labData -> trimLabData(labData, labInfoMask, deviceInfoMask))
+                .collect(toImmutableList()))
+        .build();
+  }
+
   private static void trimLabView(LabView.Builder labViewBuilder, Mask mask) {
     // If LabInfoMask is present, trims the LabInfo in LabData. Otherwise, returns all fields of
     // LabInfo.
@@ -103,6 +147,25 @@ public final class MaskUtils {
     }
   }
 
+  private static LabData trimLabData(
+      LabData labData, CompiledLabInfoMask labInfoMask, CompiledDeviceInfoMask deviceInfoMask) {
+    LabData.Builder trimmed = labData.toBuilder().clearLabInfo();
+    if (labData.hasLabInfo()) {
+      labInfoMask.project(labData.getLabInfo()).ifPresent(trimmed::setLabInfo);
+    }
+    if (labData.hasDeviceList()) {
+      trimmed
+          .getDeviceListBuilder()
+          .clearDeviceInfo()
+          .addAllDeviceInfo(
+              labData.getDeviceList().getDeviceInfoList().stream()
+                  .map(deviceInfoMask::project)
+                  .flatMap(Optional::stream)
+                  .collect(toImmutableList()));
+    }
+    return trimmed.build();
+  }
+
   private static void trimLabData(LabData.Builder labDataBuilder, LabInfoMask labInfoMask) {
     if (!labInfoMask.hasFieldMask()) {
       return;
@@ -122,6 +185,7 @@ public final class MaskUtils {
    */
   private static final class DeviceInfoTrimmer {
 
+    /** Null when the mask has no field_mask, in which case every field is kept. */
     @Nullable private final FieldMask fieldMask;
 
     /** Empty when the corresponding {@code DimensionsMask} is absent or lists no names. */
@@ -153,10 +217,10 @@ public final class MaskUtils {
     }
 
     DeviceList trimDeviceList(DeviceList deviceList) {
-      if (fieldMask == null) {
+      if (fieldMask == null && supportedDimensions.isEmpty() && requiredDimensions.isEmpty()) {
         return deviceList;
       }
-      if (fieldMask.getPathsList().isEmpty()) {
+      if (fieldMask != null && fieldMask.getPathsList().isEmpty()) {
         return DeviceList.newBuilder()
             .setDeviceTotalCount(deviceList.getDeviceTotalCount())
             .build();
@@ -220,8 +284,10 @@ public final class MaskUtils {
                             .getCompositeDimension()
                             .getRequiredDimensionList()));
       }
-
-      return trim(requireNonNull(fieldMask), deviceInfoBuilder.build());
+      if (fieldMask == null || fieldMask.getPathsList().isEmpty()) {
+        return deviceInfoBuilder.build();
+      }
+      return trim(fieldMask, deviceInfoBuilder.build());
     }
   }
 }
