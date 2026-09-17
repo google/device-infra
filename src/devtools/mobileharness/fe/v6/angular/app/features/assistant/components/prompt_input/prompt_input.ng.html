@@ -1,0 +1,61 @@
+<div class="prompt-input-container" [class.disabled]="disabled()">
+  <div class="prompt-card">
+    <textarea
+      cdkTextareaAutosize
+      cdkAutosizeMinRows="1"
+      cdkAutosizeMaxRows="6"
+      class="prompt-textarea"
+      [placeholder]="placeholder()"
+      [value]="promptText()"
+      [disabled]="disabled() || isStreaming()"
+      (input)="onInputChange($event)"
+      (keydown)="onKeyDown($event)"
+      aria-label="Prompt input"></textarea>
+
+    <div class="prompt-toolbar">
+      <div class="toolbar-left">
+        <button
+          type="button"
+          class="mode-badge-button"
+          [class.team-mode]="mode() === ConversationMode.TEAM_ASSISTANT"
+          (click)="onToggleMode()"
+          [disabled]="disabled() || isStreaming()"
+          [matTooltip]="getModeTooltip()"
+          aria-label="Toggle assistant identity mode">
+          <mat-icon class="mode-icon">{{ getModeIcon() }}</mat-icon>
+          <span class="mode-text">{{ getModeLabel() }}</span>
+          <mat-icon class="dropdown-icon">swap_horiz</mat-icon>
+        </button>
+      </div>
+
+      <div class="toolbar-right">
+        @if (isStreaming()) {
+          <button
+            mat-icon-button
+            type="button"
+            class="stop-button"
+            (click)="onStop()"
+            matTooltip="Stop streaming response"
+            aria-label="Stop response">
+            <mat-icon>stop_circle</mat-icon>
+          </button>
+        } @else {
+          <button
+            mat-icon-button
+            type="button"
+            class="send-button"
+            (click)="onSubmit()"
+            [disabled]="isSendDisabled()"
+            matTooltip="Send prompt (Enter)"
+            aria-label="Send prompt">
+            <mat-icon>send</mat-icon>
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="prompt-footer-hint">
+    OmniLab Assistant can execute diagnostics and fleet queries. Press <strong>Enter</strong> to send, <strong>Shift + Enter</strong> for new line.
+  </div>
+</div>
