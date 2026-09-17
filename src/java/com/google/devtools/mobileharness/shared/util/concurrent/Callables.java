@@ -28,6 +28,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
@@ -138,6 +139,25 @@ public final class Callables {
   }
 
   /**
+   * Executes all {@link MobileHarnessCallable}s sequentially and handles any thrown {@link
+   * Exception} (including {@link MobileHarnessException}, {@link InterruptedException}, and {@link
+   * RuntimeException}) with {@code errorHandler}.
+   *
+   * <p>All callables will be executed regardless of any errors thrown by previous callables. If any
+   * errors occur, the first error is passed to {@code errorHandler} with subsequent errors attached
+   * as suppressed exceptions.
+   */
+  public static void callAllCatching(
+      Consumer<? super Exception> errorHandler, MobileHarnessCallable<?>... callables) {
+    checkNotNull(errorHandler);
+    try {
+      callAll(callables);
+    } catch (MobileHarnessException | InterruptedException | RuntimeException e) {
+      errorHandler.accept(e);
+    }
+  }
+
+  /**
    * Executes all {@link Runnable}s in the given list sequentially. All runnables will be executed
    * regardless of any {@link Throwable}s thrown by previous runnables.
    *
@@ -218,6 +238,25 @@ public final class Callables {
       callables[i] = new MobileHarnessRunnableAdapter(runnables[i]);
     }
     callAll(callables);
+  }
+
+  /**
+   * Executes all {@link MobileHarnessRunnable}s sequentially and handles any thrown {@link
+   * Exception} (including {@link MobileHarnessException}, {@link InterruptedException}, and {@link
+   * RuntimeException}) with {@code errorHandler}.
+   *
+   * <p>All runnables will be executed regardless of any errors thrown by previous runnables. If any
+   * errors occur, the first error is passed to {@code errorHandler} with subsequent errors attached
+   * as suppressed exceptions.
+   */
+  public static void runAllCatching(
+      Consumer<? super Exception> errorHandler, MobileHarnessRunnable... runnables) {
+    checkNotNull(errorHandler);
+    try {
+      runAll(runnables);
+    } catch (MobileHarnessException | InterruptedException | RuntimeException e) {
+      errorHandler.accept(e);
+    }
   }
 
   /**
