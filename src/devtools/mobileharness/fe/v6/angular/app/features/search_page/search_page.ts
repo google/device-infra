@@ -4,6 +4,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   Injector,
   OnInit,
@@ -12,6 +13,7 @@ import {
 import {MatButtonModule} from '@angular/material/button';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 
+import {UrlService} from '../../core/services/url_service';
 import {LoadingService} from '../../shared/services/loading_service';
 import {SearchBox} from './components/search_box/search_box';
 import {FleetSearchResultsComponent} from './components/search_results/fleet_search_results/fleet_search_results';
@@ -38,8 +40,9 @@ export class SearchPage implements OnInit {
   readonly store = inject(SearchPageStore);
   private readonly loadingService = inject(LoadingService);
   private readonly injector = inject(Injector);
+  private readonly urlService = inject(UrlService);
 
-  readonly searchBox = viewChild(SearchBox);
+  private readonly searchBox = viewChild(SearchBox);
 
   /** Active view mode for the search page (landing loading, launcher, or results). */
   readonly pageViewMode = computed<
@@ -54,6 +57,25 @@ export class SearchPage implements OnInit {
   });
 
   ngOnInit() {
+    // Create effect to sync state to parent
+    effect(
+      () => {
+        const q = this.store.searchQuery();
+        const filters = this.store.serializedActiveFilters();
+        const groupBys = this.store.groupByKeys();
+        const fleet = this.store.fleet();
+
+        const params: Record<string, string | string[]> = {};
+        if (q) params['q'] = q;
+        if (filters.length > 0) params['f'] = filters;
+        if (groupBys.length > 0) params['gb'] = groupBys.join(',');
+        if (fleet !== 'internal') params['fleet'] = fleet;
+
+        this.urlService.notifySearchStateChanged(params);
+      },
+      {injector: this.injector},
+    );
+
     this.loadingService.hide();
   }
 

@@ -4,6 +4,7 @@ import {provideNoopAnimations} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
 
 import {Cell, Column, Indicator} from '../../../../../../core/models/search';
+import {UrlService} from '../../../../../../core/services/url_service';
 import {SearchCellComponent} from './search_cell';
 
 @Component({
@@ -21,12 +22,16 @@ class TestHostComponent {
 describe('SearchCellComponent', () => {
   let fixture: ComponentFixture<TestHostComponent>;
   let host: TestHostComponent;
+  let urlService: UrlService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [TestHostComponent],
       providers: [provideNoopAnimations(), provideRouter([])],
     }).compileComponents();
+
+    urlService = TestBed.inject(UrlService);
+    spyOn(urlService, 'notifyNavigated');
 
     fixture = TestBed.createComponent(TestHostComponent);
     host = fixture.componentInstance;
@@ -112,5 +117,51 @@ describe('SearchCellComponent', () => {
     expect(links.length).toBe(2);
     expect(links[0].textContent.trim()).toBe('Host A');
     expect(links[1].textContent.trim()).toBe('Host B');
+  });
+
+  it('should notify UrlService when device link is clicked', () => {
+    host.cell = {
+      link: {
+        text: 'device-12345',
+        target: {device: {id: 'device-12345'}},
+      },
+    };
+    host.column = {key: 'id', displayName: 'Device ID'};
+    fixture.detectChanges();
+
+    const anchor = fixture.nativeElement.querySelector(
+      'a.device-link',
+    ) as HTMLAnchorElement;
+    anchor.click();
+
+    expect(urlService.notifyNavigated).toHaveBeenCalledWith(
+      'device_details',
+      jasmine.objectContaining({
+        'uuid': 'device-12345',
+      }),
+    );
+  });
+
+  it('should notify UrlService when host link is clicked', () => {
+    host.cell = {
+      link: {
+        text: 'host-1',
+        target: {host: {hostName: 'host-1'}},
+      },
+    };
+    host.column = {key: 'host', displayName: 'Host'};
+    fixture.detectChanges();
+
+    const anchor = fixture.nativeElement.querySelector(
+      'a.device-link',
+    ) as HTMLAnchorElement;
+    anchor.click();
+
+    expect(urlService.notifyNavigated).toHaveBeenCalledWith(
+      'host_details',
+      jasmine.objectContaining({
+        'host_name': 'host-1',
+      }),
+    );
   });
 });
