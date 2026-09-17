@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.businesslogic;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.joining;
 
@@ -91,22 +92,28 @@ public class BusinessLogicFetcher {
     }
   }
 
-  private Optional<String> getAccessToken(String apiKeyPath, String scope) {
-    if (apiKeyPath == null) {
+  /**
+   * Returns an access token from the service account key at {@code apiKeyPath}, or {@link
+   * Optional#empty()} if no key path is configured or no file exists there.
+   *
+   * @throws IOException if a key file exists but no token could be obtained from it, for example
+   *     because the key is unreadable or malformed, or the token endpoint cannot be reached.
+   */
+  @VisibleForTesting
+  static Optional<String> getAccessToken(@Nullable String apiKeyPath, String scope)
+      throws IOException {
+    if (isNullOrEmpty(apiKeyPath) || !new File(apiKeyPath).exists()) {
+      logger.atInfo().log(
+          "No service account key file at '%s'. Proceeding without authentication.", apiKeyPath);
       return Optional.empty();
     }
-    File keyFile = new File(apiKeyPath);
-    try (FileInputStream fis = new FileInputStream(keyFile)) {
+    try (FileInputStream fis = new FileInputStream(apiKeyPath)) {
       GoogleCredentials credentials = GoogleCredentials.fromStream(fis);
       if (!scope.isEmpty()) {
         credentials = credentials.createScoped(scope);
       }
       credentials.refresh();
       return Optional.of(credentials.getAccessToken().getTokenValue());
-    } catch (IOException e) {
-      logger.atWarning().withCause(e).log(
-          "Failed to load credentials from %s. Proceeding without authentication.", apiKeyPath);
-      return Optional.empty();
     }
   }
 
