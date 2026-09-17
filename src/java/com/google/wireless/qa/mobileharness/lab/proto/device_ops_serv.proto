@@ -65,6 +65,7 @@ message GetDeviceDebugInfoRequest {
     UHUBCTL_LIST = 13;
     CFGUTIL_LIST = 14;
     DEVICECTL_LIST = 15;
+    SECURITY_FIND_IDENTITY = 16;
   }
   repeated GetDeviceDebugInfoCommand command = 1;
 }
