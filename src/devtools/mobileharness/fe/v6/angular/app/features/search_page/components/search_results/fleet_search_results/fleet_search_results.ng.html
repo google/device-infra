@@ -288,14 +288,51 @@
       </button>
     }
     @if (canShowDeviceBatchActions()) {
-      <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
+      <button class="rt-btn-text" (click)="openBulkConfigWifiDialog()">
         <mat-icon class="material-symbols-outlined">wifi</mat-icon>
         Configure Wi-Fi
       </button>
-      <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
-        <mat-icon class="material-symbols-outlined">tune</mat-icon>
+      <button
+        #configureMenuTrigger="matMenuTrigger"
+        class="rt-btn-text"
+        [class.is-loading]="isLoadingDimensions()"
+        [matMenuTriggerFor]="hasLoadedDimensions() ? configureMenu : null"
+        [disabled]="isLoadingDimensions()"
+        (click)="loadConfigurableDimensions(configureMenuTrigger, configureMenu)"
+        title="Configure device dimensions"
+      >
+        @if (isLoadingDimensions()) {
+          <mat-spinner diameter="16" class="shared-button-spinner"></mat-spinner>
+        } @else {
+          <mat-icon class="material-symbols-outlined">tune</mat-icon>
+        }
         Configuration
+        <mat-icon class="material-symbols-outlined rt-caret">arrow_drop_down</mat-icon>
       </button>
+      <mat-menu #configureMenu="matMenu" class="configure-dropdown-menu">
+        <div class="configure-menu-items">
+          @for (dim of configurableDimensions(); track dim.key) {
+            <button mat-menu-item (click)="openBulkConfigDimensionDialog(dim)">
+              <span>{{ dim.displayName || dim.key }}</span>
+              @if (dim.configuredDeviceCount !== undefined && dim.configuredDeviceCount !== null) {
+                <span class="dim-device-count"> ({{ dim.configuredDeviceCount | number }})</span>
+              }
+            </button>
+          } @empty {
+            @if (!allowCustomDimensions()) {
+              <div class="menu-empty-message">No dimensions available</div>
+            }
+          }
+        </div>
+        @if (allowCustomDimensions()) {
+          <mat-divider></mat-divider>
+          <div class="configure-menu-footer">
+            <button mat-menu-item (click)="openMoreDimensionsDialog()">
+              <span>More…</span>
+            </button>
+          </div>
+        }
+      </mat-menu>
     }
 
     <button class="rt-btn-text" [disabled]="true" title="Feature is under development">

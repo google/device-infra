@@ -5,8 +5,15 @@ import {map} from 'rxjs/operators';
 
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
+  BatchUpdateDeviceConfigRequest,
+  BatchUpdateDeviceConfigResponse,
   CheckDeviceConfigPermissionResult,
   DeviceConfig,
+  GetBatchDimensionContextRequest,
+  GetBatchDimensionContextResponse,
+  GetBatchWifiContextResponse,
+  GetConfigurableDimensionsRequest,
+  GetConfigurableDimensionsResponse,
   GetDeviceConfigResult,
   GetRecommendedWifiResponse,
   RecommendedWifi,
@@ -94,6 +101,46 @@ export class HttpConfigService extends ConfigService {
         `${this.apiUrl}/configs/wifi/recommendations`,
       )
       .pipe(map((response) => response.recommendations || []));
+  }
+
+  override getBatchWifiContext(
+    deviceIds: string[],
+  ): Observable<GetBatchWifiContextResponse> {
+    return this.http.post<GetBatchWifiContextResponse>(
+      `${this.apiUrl}/devices:batchGetWifiContext`,
+      {deviceIds},
+    );
+  }
+
+  override getConfigurableDimensions(
+    request?: GetConfigurableDimensionsRequest,
+  ): Observable<GetConfigurableDimensionsResponse> {
+    let params = new HttpParams();
+    if (request?.query) {
+      params = params.set('query', request.query);
+    }
+    return this.http.get<GetConfigurableDimensionsResponse>(
+      `${this.apiUrl}/configs/dimensions:configurable`,
+      {params},
+    );
+  }
+
+  override getBatchDimensionContext(
+    request: GetBatchDimensionContextRequest,
+  ): Observable<GetBatchDimensionContextResponse> {
+    return this.http.post<GetBatchDimensionContextResponse>(
+      `${this.apiUrl}/devices:batchGetDimensionContext`,
+      request,
+    );
+  }
+
+  override batchUpdateDeviceConfig(
+    request: BatchUpdateDeviceConfigRequest,
+  ): Observable<BatchUpdateDeviceConfigResponse> {
+    return this.http.post<BatchUpdateDeviceConfigResponse>(
+      `${this.apiUrl}/devices:batchUpdateConfig`,
+      request,
+    );
   }
 
   // ===== Host Config Methods =====

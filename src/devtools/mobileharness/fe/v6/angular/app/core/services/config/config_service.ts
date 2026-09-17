@@ -1,8 +1,15 @@
 import {InjectionToken} from '@angular/core';
 import {Observable} from 'rxjs';
 import {
+  BatchUpdateDeviceConfigRequest,
+  BatchUpdateDeviceConfigResponse,
   CheckDeviceConfigPermissionResult,
   DeviceConfig,
+  GetBatchDimensionContextRequest,
+  GetBatchDimensionContextResponse,
+  GetBatchWifiContextResponse,
+  GetConfigurableDimensionsRequest,
+  GetConfigurableDimensionsResponse,
   GetDeviceConfigResult,
   RecommendedWifi,
   UpdateDeviceConfigRequest,
@@ -68,6 +75,42 @@ export abstract class ConfigService {
    * @return An Observable emitting the list of recommended Wi-Fi configurations.
    */
   abstract getRecommendedWifi(): Observable<RecommendedWifi[]>;
+
+  /**
+   * Retrieves current Wi-Fi configuration and candidate networks for target devices.
+   * @param deviceIds The unique identifiers of the target devices.
+   * @return An Observable emitting the batch Wi-Fi context.
+   */
+  abstract getBatchWifiContext(
+    deviceIds: string[],
+  ): Observable<GetBatchWifiContextResponse>;
+
+  /**
+   * Retrieves dimensions available for batch configuration.
+   * @param request Optional request containing search query to filter dimensions.
+   * @return An Observable emitting the configurable dimensions response.
+   */
+  abstract getConfigurableDimensions(
+    request?: GetConfigurableDimensionsRequest,
+  ): Observable<GetConfigurableDimensionsResponse>;
+
+  /**
+   * Retrieves current dimension values and candidate values for target devices.
+   * @param request The batch dimension context request object.
+   * @return An Observable emitting the batch dimension context.
+   */
+  abstract getBatchDimensionContext(
+    request: GetBatchDimensionContextRequest,
+  ): Observable<GetBatchDimensionContextResponse>;
+
+  /**
+   * Applies a batch configuration change across target devices.
+   * @param request The batch update request object.
+   * @return An Observable emitting per-device update errors.
+   */
+  abstract batchUpdateDeviceConfig(
+    request: BatchUpdateDeviceConfigRequest,
+  ): Observable<BatchUpdateDeviceConfigResponse>;
 
   // ===== Host Config Methods =====
 

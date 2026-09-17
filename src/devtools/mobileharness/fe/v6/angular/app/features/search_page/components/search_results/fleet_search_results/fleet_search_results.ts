@@ -4,17 +4,22 @@ import {
   Component,
   computed,
   inject,
+  signal,
 } from '@angular/core';
 import {MatCardModule} from '@angular/material/card';
 import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatDialog, MatDialogModule} from '@angular/material/dialog';
+import {MatDividerModule} from '@angular/material/divider';
 import {MatIconModule} from '@angular/material/icon';
-import {MatMenuModule} from '@angular/material/menu';
+import {MatMenu, MatMenuModule, MatMenuTrigger} from '@angular/material/menu';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatSelectModule} from '@angular/material/select';
 import {MatTableModule} from '@angular/material/table';
 
+import {ConfigurableDimension} from '../../../../../core/models/device_config_models';
 import {Column} from '../../../../../core/models/search';
+import {CONFIG_SERVICE} from '../../../../../core/services/config/config_service';
 import {FleetSearchStore} from '../../../services/fleet_search_store';
 
 import {ColumnSelectorResult} from '../../../models';
@@ -23,6 +28,15 @@ import {DensityDropdownComponent} from '../common/density_dropdown/density_dropd
 import {SearchCellComponent} from '../common/search_cell/search_cell';
 import {SearchPaginationComponent} from '../common/search_pagination/search_pagination';
 import {FleetGroupCardComponent} from '../fleet_group_card/fleet_group_card';
+import {
+  BulkConfigDimensionDialog,
+  BulkConfigDimensionDialogResult,
+} from './bulk_config_dimension_dialog/bulk_config_dimension_dialog';
+import {
+  BulkConfigWifiDialog,
+  BulkConfigWifiDialogResult,
+} from './bulk_config_wifi_dialog/bulk_config_wifi_dialog';
+import {MoreDimensionsDialog} from './more_dimensions_dialog/more_dimensions_dialog';
 
 /** Component representing search results for lab fleet (devices/hosts). */
 @Component({
@@ -36,9 +50,11 @@ import {FleetGroupCardComponent} from '../fleet_group_card/fleet_group_card';
     MatCardModule,
     MatCheckboxModule,
     MatDialogModule,
+    MatDividerModule,
     MatIconModule,
     MatMenuModule,
     MatProgressBarModule,
+    MatProgressSpinnerModule,
     MatSelectModule,
     MatTableModule,
     DensityDropdownComponent,
@@ -134,6 +150,119 @@ export class FleetSearchResultsComponent {
         this.store.resetVisibleColumns();
       } else if (res.columns && res.columns.length > 0) {
         this.store.setVisibleColumns(res.columns);
+      }
+    });
+  }
+
+  /** Opens the Bulk Wi-Fi configuration dialog for currently selected devices. */
+  openBulkConfigWifiDialog() {
+    const selected = Array.from(this.store.selectedItems());
+    if (selected.length === 0) return;
+
+    const dialogRef = this.dialog.open<
+      BulkConfigWifiDialog,
+      unknown,
+      BulkConfigWifiDialogResult
+    >(BulkConfigWifiDialog, {
+      panelClass: 'bulk-config-wifi-dialog-panel',
+      autoFocus: false,
+      data: {
+        deviceIds: selected,
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((res?: BulkConfigWifiDialogResult) => {
+      if (res?.updated) {
+        this.store.clearSelection();
+        this.store.executeSearch();
+      }
+    });
+  }
+
+  private readonly configService = inject(CONFIG_SERVICE);
+
+  /** Configurable dimensions loaded from backend for the Configuration dropdown. */
+  readonly configurableDimensions = signal<ConfigurableDimension[]>([]);
+
+  /** Whether custom dimensions are allowed by backend. */
+  readonly allowCustomDimensions = signal<boolean>(false);
+
+  /** Loading state for configurable dimensions button. */
+  readonly isLoadingDimensions = signal<boolean>(false);
+
+  /** Whether configurable dimensions have already been loaded. */
+  readonly hasLoadedDimensions = signal<boolean>(false);
+
+  /** Loads configurable dimensions when clicking the Configuration button. */
+  loadConfigurableDimensions(trigger?: MatMenuTrigger, menu?: MatMenu) {
+    if (this.isLoadingDimensions()) return;
+    if (this.hasLoadedDimensions()) {
+      return;
+    }
+
+    this.isLoadingDimensions.set(true);
+    this.configService.getConfigurableDimensions().subscribe({
+      next: (res) => {
+        this.configurableDimensions.set(res.dimensions || []);
+        this.allowCustomDimensions.set(!!res.allowCustomDimensions);
+        this.hasLoadedDimensions.set(true);
+        this.isLoadingDimensions.set(false);
+        if (trigger && menu) {
+          trigger.menu = menu;
+          setTimeout(() => {
+            trigger.openMenu();
+          });
+        }
+      },
+      error: () => {
+        this.isLoadingDimensions.set(false);
+      },
+    });
+  }
+
+  /** Opens the Bulk Dimension configuration dialog for the selected dimension. */
+  openBulkConfigDimensionDialog(dimension: ConfigurableDimension) {
+    const selected = Array.from(this.store.selectedItems());
+    if (selected.length === 0) return;
+
+    const dialogRef = this.dialog.open<
+      BulkConfigDimensionDialog,
+      unknown,
+      BulkConfigDimensionDialogResult
+    >(BulkConfigDimensionDialog, {
+      panelClass: 'bulk-config-dimension-dialog-panel',
+      autoFocus: false,
+      data: {
+        deviceIds: selected,
+        dimension,
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((res?: BulkConfigDimensionDialogResult) => {
+      if (res?.updated) {
+        this.store.clearSelection();
+        this.store.executeSearch();
+      }
+    });
+  }
+
+  /** Opens the More Dimensions dialog to search, browse, or specify custom dimension. */
+  openMoreDimensionsDialog() {
+    const dialogRef = this.dialog.open<
+      MoreDimensionsDialog,
+      unknown,
+      ConfigurableDimension | null
+    >(MoreDimensionsDialog, {
+      panelClass: 'more-dimensions-dialog-panel',
+      autoFocus: false,
+      data: {
+        allowCustomDimensions: this.allowCustomDimensions(),
+      },
+    });
+
+    dialogRef.afterClosed().subscribe((dimension?: ConfigurableDimension | null) => {
+      if (dimension) {
+        this.openBulkConfigDimensionDialog(dimension);
       }
     });
   }

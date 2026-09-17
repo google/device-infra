@@ -198,3 +198,140 @@ export declare interface UpdateDeviceConfigRequest {
   universe?: string;
 }
 
+
+/**
+ * Current Wi-Fi configuration and authorization for a target device in batch Wi-Fi operations.
+ */
+export declare interface DeviceCurrentWifi {
+  deviceId: string;
+  wifi?: WifiConfig;
+  writable: boolean;
+  unwritableReason?: string;
+}
+
+/**
+ * A candidate Wi-Fi network available to pick from in batch Wi-Fi operations.
+ */
+export declare interface CandidateWifi {
+  ssid: string;
+  psk?: string;
+  scanSsid: boolean;
+  deviceCount: number;
+}
+
+/**
+ * Request for GetBatchWifiContext.
+ */
+export declare interface GetBatchWifiContextRequest {
+  deviceIds: string[];
+}
+
+/**
+ * Response for GetBatchWifiContext.
+ */
+export declare interface GetBatchWifiContextResponse {
+  current: DeviceCurrentWifi[];
+  candidateWifis: CandidateWifi[];
+}
+
+/**
+ * Scope of the dimension in device config.
+ */
+export enum DimensionScope {
+  DIMENSION_SCOPE_UNSPECIFIED = 'DIMENSION_SCOPE_UNSPECIFIED',
+  SUPPORTED = 'SUPPORTED',
+  REQUIRED = 'REQUIRED',
+}
+
+/**
+ * Metadata for a configurable dimension.
+ */
+export declare interface ConfigurableDimension {
+  key: string;
+  displayName: string;
+  scope: DimensionScope | string;
+  configuredDeviceCount?: number;
+}
+
+/**
+ * Request for GetConfigurableDimensions.
+ */
+export declare interface GetConfigurableDimensionsRequest {
+  query?: string;
+}
+
+/**
+ * Response for GetConfigurableDimensions.
+ */
+export declare interface GetConfigurableDimensionsResponse {
+  dimensions: ConfigurableDimension[];
+  allowCustomDimensions: boolean;
+}
+
+/**
+ * Current dimension values and authorization for a target device in batch dimension operations.
+ */
+export declare interface DeviceCurrentDimension {
+  deviceId: string;
+  values: string[];
+  writable: boolean;
+  unwritableReason?: string;
+}
+
+/**
+ * A candidate value set available to pick from in batch dimension operations.
+ */
+export declare interface CandidateDimensionValue {
+  values: string[];
+  deviceCount: number;
+}
+
+/**
+ * Request for GetBatchDimensionContext.
+ */
+export declare interface GetBatchDimensionContextRequest {
+  deviceIds: string[];
+  key: string;
+}
+
+/**
+ * Response for GetBatchDimensionContext.
+ */
+export declare interface GetBatchDimensionContextResponse {
+  current: DeviceCurrentDimension[];
+  candidateValues: CandidateDimensionValue[];
+}
+
+/**
+ * Target dimension configuration to update across devices.
+ */
+export declare interface DimensionUpdate {
+  key: string;
+  values: string[];
+  scope?: DimensionScope | string;
+}
+
+/**
+ * Request for BatchUpdateDeviceConfig.
+ */
+export declare interface BatchUpdateDeviceConfigRequest {
+  deviceIds: string[];
+  wifi?: Partial<WifiConfig>;
+  dimension?: DimensionUpdate;
+}
+
+/**
+ * Error detail for a failed device update in BatchUpdateDeviceConfig.
+ */
+export declare interface BatchUpdateError {
+  code?: string;
+  message?: string;
+}
+
+/**
+ * Response for BatchUpdateDeviceConfig.
+ */
+export declare interface BatchUpdateDeviceConfigResponse {
+  errors?: Record<string, BatchUpdateError | string>;
+}
+
