@@ -276,10 +276,17 @@ func (c *LocalCache) Close() error {
 }
 
 // NewLocalCache creates a new LocalCache instance.
-func NewLocalCache(cacheDir string, cacheMaxSize int64, enableLock bool, useHardlink bool) (*LocalCache, error) {
+//
+// cacheMaxSize bounds the logical size of the cache, while cacheMinFreeSpace bounds the physical
+// free space remaining on the filesystem hosting cacheDir. Both are enforced by trimming the least
+// recently used entries. cacheMinFreeSpace is the only bound that accounts for space consumed
+// outside the cache (the download destination, filesystem block overhead, and other tenants on the
+// same volume), so it should be kept non-zero to avoid running the disk out of space.
+func NewLocalCache(cacheDir string, cacheMaxSize int64, cacheMinFreeSpace int64, enableLock bool, useHardlink bool) (*LocalCache, error) {
 	os.MkdirAll(cacheDir, 0755)
 	cachePolicies := lucicache.Policies{
-		MaxSize: units.Size(cacheMaxSize),
+		MaxSize:      units.Size(cacheMaxSize),
+		MinFreeSpace: units.Size(cacheMinFreeSpace),
 	}
 
 	c := &LocalCache{

@@ -55,6 +55,9 @@ const (
 	DefaultBatchReadBlobsTimeout = time.Minute // 1m to match current CAS default.
 	// DefaultGetTreeTimeout is the default RPC timeout for GetTree.
 	DefaultGetTreeTimeout = time.Minute // 1m to match current CAS default.
+	// DefaultCacheMinFreeSpace is the default amount of free space, in bytes, kept available on the
+	// filesystem holding the local cache.
+	DefaultCacheMinFreeSpace = 1024 * 1024 * 1024 // 1GB
 )
 
 var (
@@ -74,6 +77,11 @@ var (
 	enableCacheLock = flag.Bool("cache-lock", false,
 		"Enable cache lock. When using local cache (-cache-dir is set) and enable cache lock, the downloader will add lock when it changes cache, so you can safely run multiple downloader instances simultaneously.")
 	useHardlink = flag.Bool("use-hardlink", true, "By default local cache will use hardlink when push and pull files.")
+	// This defaults to a non-zero value because -cache-max-size defaults to 0 (unbounded), and even
+	// when it is set it only bounds the logical size of the cache, so neither bound on its own
+	// prevents the volume from filling up.
+	cacheMinFreeSpace = flag.Int64("cache-min-free-space", DefaultCacheMinFreeSpace,
+		"Cache is trimmed if free space on the filesystem holding the cache drops below this value, in bytes. If 0, free space is not enforced.")
 
 	// Flags for RBE CAS configurations
 	casInstance    = flag.String("cas-instance", "", "RBE instance")
@@ -372,7 +380,7 @@ func run(ctx context.Context) error {
 		}
 	}()
 
-	cache, err := createCache(*disableCache, *cacheDir, *cacheMaxSize, *enableCacheLock, *useHardlink)
+	cache, err := createCache(*disableCache, *cacheDir, *cacheMaxSize, *cacheMinFreeSpace, *enableCacheLock, *useHardlink)
 	if err != nil {
 		return err
 	}
@@ -423,7 +431,7 @@ func run(ctx context.Context) error {
 		}
 
 		// Re-initialize cache since the previous attempt closed it.
-		cache, err = createCache(*disableCache, *cacheDir, *cacheMaxSize, *enableCacheLock, *useHardlink)
+		cache, err = createCache(*disableCache, *cacheDir, *cacheMaxSize, *cacheMinFreeSpace, *enableCacheLock, *useHardlink)
 		if err != nil {
 			return fmt.Errorf("failed to re-initialize cache for direct RBE fallback: %w", err)
 		}
@@ -475,13 +483,13 @@ func logAdcCredentials() {
 	log.Infof("adc_credentials.sh output: %s", output)
 }
 
-func createCache(disableCache bool, cacheDir string, cacheMaxSize int64, enableCacheLock bool, useHardlink bool) (cache.Cache, error) {
+func createCache(disableCache bool, cacheDir string, cacheMaxSize int64, cacheMinFreeSpace int64, enableCacheLock bool, useHardlink bool) (cache.Cache, error) {
 	if disableCache {
 		return nil, nil
 	}
 	var localCache cache.Cache
 	var err error
-	localCache, err = cache.NewLocalCache(cacheDir, cacheMaxSize, enableCacheLock, useHardlink)
+	localCache, err = cache.NewLocalCache(cacheDir, cacheMaxSize, cacheMinFreeSpace, enableCacheLock, useHardlink)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create local cache: %v", err)
 	}
