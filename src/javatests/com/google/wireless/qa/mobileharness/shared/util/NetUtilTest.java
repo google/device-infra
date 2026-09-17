@@ -22,12 +22,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil.NetworkInterfaceInfo;
 import java.net.InetAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.Mock;
@@ -39,6 +42,7 @@ import org.mockito.junit.MockitoRule;
 public class NetUtilTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+  @Rule public final TemporaryFolder temporaryFolder = new TemporaryFolder();
   @Mock private NetworkUtil networkUtil;
 
   private NetUtil netUtil;
@@ -122,5 +126,40 @@ public class NetUtilTest {
     }
 
     return Optional.of(networkInterfaceInfoList);
+  }
+
+  @Test
+  public void getLinuxNetworkSpeed_success() throws Exception {
+    Path sysNet = temporaryFolder.newFolder("sys_class_net").toPath();
+    Path eth0 = Files.createDirectories(sysNet.resolve("eth0"));
+    Files.writeString(eth0.resolve("speed"), "1000\n");
+
+    Optional<List<NetworkInterfaceInfo>> interfaces = mockNetworkInterfaceInfo("192.168.1.100");
+    assertThat(netUtil.getLinuxNetworkSpeed(sysNet, interfaces)).hasValue("1000 Mbps");
+  }
+
+  @Test
+  public void getLinuxNetworkSpeed_negativeOrZeroSpeed_returnsEmpty() throws Exception {
+    Path sysNet = temporaryFolder.newFolder("sys_class_net_unknown").toPath();
+    Path eth0 = Files.createDirectories(sysNet.resolve("eth0"));
+    Files.writeString(eth0.resolve("speed"), "-1\n");
+
+    Optional<List<NetworkInterfaceInfo>> interfaces = mockNetworkInterfaceInfo("192.168.1.100");
+    assertThat(netUtil.getLinuxNetworkSpeed(sysNet, interfaces)).isEmpty();
+  }
+
+  @Test
+  public void getLinuxNetworkSpeed_speedFileNotFound_returnsEmpty() throws Exception {
+    Path sysNet = temporaryFolder.newFolder("sys_class_net_nofile").toPath();
+    Files.createDirectories(sysNet.resolve("eth0"));
+
+    Optional<List<NetworkInterfaceInfo>> interfaces = mockNetworkInterfaceInfo("192.168.1.100");
+    assertThat(netUtil.getLinuxNetworkSpeed(sysNet, interfaces)).isEmpty();
+  }
+
+  @Test
+  public void getLinuxNetworkSpeed_noInterfaces_returnsEmpty() throws Exception {
+    Path sysNet = temporaryFolder.newFolder("sys_class_net_empty").toPath();
+    assertThat(netUtil.getLinuxNetworkSpeed(sysNet, Optional.empty())).isEmpty();
   }
 }
