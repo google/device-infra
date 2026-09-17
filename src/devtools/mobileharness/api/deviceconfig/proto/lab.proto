@@ -58,6 +58,9 @@ message LabConfig {
   // The SSH groups of this lab.
   repeated SshGroup ssh_group = 12;
 
+  // Default WIFI that will be used by all devices in this lab.
+  WifiConfig default_wifi = 14;
+
   reserved 7, 8, 10;
 }
 
