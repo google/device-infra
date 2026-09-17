@@ -23,6 +23,7 @@ java_library(
     ],
     visibility = [
         "//:omnilab_fusion",
+        "//java/com/google/devtools/mobileharness/platform/maneki/utils:__pkg__",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/app/devicedaemon:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/networkconnector:__pkg__",
