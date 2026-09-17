@@ -113,6 +113,21 @@
               <span>Sessions</span>
             </a>
 
+            @if (isAssistantFeatureEnabled()) {
+              <mat-divider></mat-divider>
+
+              <a
+                mat-list-item
+                routerLink="/assistant"
+                [class.active]="isNavActive('assistant')"
+                [queryParams]="getPreservedQueryParams()"
+                [matTooltip]="'Assistant'"
+              >
+                <mat-icon matListItemIcon class="material-symbols-outlined">smart_toy</mat-icon>
+                <span>Assistant</span>
+              </a>
+            }
+
             <mat-divider></mat-divider>
 
             <a

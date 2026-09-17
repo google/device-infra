@@ -1,0 +1,59 @@
+<div class="tool-dialog-container">
+  <div class="dialog-header">
+    <div class="title-group">
+      <mat-icon class="tool-icon">build</mat-icon>
+      <h2 mat-dialog-title class="dialog-title">{{ data.toolName }}</h2>
+      <span
+        class="status-badge"
+        [class.status-success]="data.success"
+        [class.status-error]="!data.success">
+        {{ data.success ? 'Success' : 'Failed' }}
+      </span>
+    </div>
+    <button
+      mat-icon-button
+      mat-dialog-close
+      class="close-button"
+      aria-label="Close dialog">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <mat-dialog-content class="dialog-body">
+    <div class="section">
+      <div class="section-header">
+        <span class="section-label">Input Arguments</span>
+        <button
+          mat-button
+          type="button"
+          class="copy-btn"
+          (click)="copyArguments()"
+          [matTooltip]="copiedArgs() ? 'Copied' : 'Copy JSON'">
+          <mat-icon class="copy-icon">{{ copiedArgs() ? 'check' : 'content_copy' }}</mat-icon>
+          <span>{{ copiedArgs() ? 'Copied' : 'Copy' }}</span>
+        </button>
+      </div>
+      <pre class="code-box"><code class="code-content">{{ formattedArguments() }}</code></pre>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <span class="section-label">Execution Output</span>
+        <button
+          mat-button
+          type="button"
+          class="copy-btn"
+          (click)="copyResult()"
+          [matTooltip]="copiedResult() ? 'Copied' : 'Copy output'">
+          <mat-icon class="copy-icon">{{ copiedResult() ? 'check' : 'content_copy' }}</mat-icon>
+          <span>{{ copiedResult() ? 'Copied' : 'Copy' }}</span>
+        </button>
+      </div>
+      <pre class="code-box" [class.error-box]="!data.success"><code class="code-content">{{ formattedResult() }}</code></pre>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end" class="dialog-actions">
+    <button mat-flat-button color="primary" mat-dialog-close>Close</button>
+  </mat-dialog-actions>
+</div>
