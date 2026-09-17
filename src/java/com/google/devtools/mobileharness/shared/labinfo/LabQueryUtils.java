@@ -54,14 +54,12 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupCondition;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.DeviceViewRequest.DeviceGroupOperation;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Order.DeviceOrder;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Order.LabOrder;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.DeviceView;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
-import com.google.devtools.mobileharness.shared.util.filter.MaskUtils;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import java.time.Instant;
 import java.util.Collection;
@@ -75,13 +73,27 @@ import java.util.stream.Stream;
 /** Utilities for doing lab query. */
 public class LabQueryUtils {
 
+  /** The {@code LabInfo} field {@link LabInfoComparator} reads. */
+  static final String LAB_SORT_KEY_PATH = "lab_locator.host_name";
+
+  /** The {@code DeviceInfo} field {@link DeviceInfoComparator} reads. */
+  static final String DEVICE_SORT_KEY_PATH = "device_locator.id";
+
   public static LabQueryResult createNewLabQueryResult(
       LabQuery query, LabInfoProvider labInfoProvider) throws MobileHarnessException {
     LabQueryResult.Builder result =
         LabQueryResult.newBuilder().setTimestamp(TimeUtils.toProtoTimestamp(Instant.now()));
 
-    // Gets filtered lab/device info from device manager.
-    LabView rawLabView = labInfoProvider.getLabInfos(query.getFilter());
+    Projection projection = Projection.of(query);
+
+    // Gets filtered lab/device info from the provider. A masked query is built under the push-down
+    // masks; a mask-less query takes the plain overload so that path is exactly what it was without
+    // masks.
+    LabView rawLabView =
+        query.hasMask()
+            ? labInfoProvider.getLabInfos(
+                query.getFilter(), projection.labInfoMask(), projection.deviceInfoMask())
+            : labInfoProvider.getLabInfos(query.getFilter());
 
     // Sets lab view / device view, sorts all LabInfo/DeviceInfo in it.
     setViewAndSort(result, rawLabView, query);
@@ -89,8 +101,8 @@ public class LabQueryUtils {
     // Groups devices if necessary, handles device limit in group and group limit.
     groupDevice(result, query.getDeviceViewRequest());
 
-    // Removes fields and dimensions from all LabInfo/DeviceInfo if necessary.
-    applyMask(result, query.getMask());
+    // Removes the fields that were kept only for ordering and grouping.
+    projection.undoWidening(result);
 
     return result.build();
   }
@@ -547,11 +559,6 @@ public class LabQueryUtils {
         compositeDimension.getRequiredDimensionList().stream()
             .filter(dimension -> dimension.getName().equals(dimensionName))
             .map(DeviceDimension::getValue));
-  }
-
-  /** Applies the given {@link Mask} to the {@link LabQueryResult}. */
-  private static void applyMask(LabQueryResult.Builder result, Mask mask) {
-    MaskUtils.trimLabQueryResult(result, mask);
   }
 
   /** Gets a page of the result. */
