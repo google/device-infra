@@ -24,7 +24,7 @@ option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.de
 option java_multiple_files = true;
 
 // Specs for {@link InstallApkStep}.
-// Next tag: 16
+// Next tag: 17
 message InstallApkStepSpec {
   extend DecoratorSpec {
     optional InstallApkStepSpec ext = 241344121;
@@ -128,4 +128,10 @@ message InstallApkStepSpec {
             "Default is false."
     }
   ];
+
+  optional string device_groups = 16 [(field_detail) = {
+    help: "Comma-separated device groups to pass to bundletool install-apks "
+          "via --device-groups (e.g., 'group1,group2'). Only applicable when "
+          "installing .apks archives."
+  }];
 }

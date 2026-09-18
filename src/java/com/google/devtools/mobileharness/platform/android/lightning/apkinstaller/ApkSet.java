@@ -17,7 +17,9 @@
 package com.google.devtools.mobileharness.platform.android.lightning.apkinstaller;
 
 import com.google.auto.value.AutoBuilder;
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.platform.android.lightning.bundletool.InstallApksArgs;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.nio.file.Path;
 import java.time.Duration;
 
@@ -28,20 +30,23 @@ public record ApkSet(
     boolean allowTestOnly,
     boolean grantRuntimePermissions,
     boolean allowUninstallAndRetry,
+    ImmutableList<String> deviceGroups,
     Duration sleepAfterInstall,
     Duration commandTimeout)
     implements Installable {
 
   InstallApksArgs toInstallApksArgs(String deviceId) {
-    return InstallApksArgs.builder()
-        .setApks(apks())
-        .setDeviceId(deviceId)
-        .setAllowDowngrade(allowDowngrade())
-        .setAllowTestOnly(allowTestOnly())
-        .setGrantRuntimePermissions(grantRuntimePermissions())
-        .setCommandTimeout(commandTimeout())
-        .setAdbCommandTimeout(commandTimeout())
-        .build();
+    InstallApksArgs.Builder builder =
+        InstallApksArgs.builder()
+            .setApks(apks())
+            .setDeviceId(deviceId)
+            .setAllowDowngrade(allowDowngrade())
+            .setAllowTestOnly(allowTestOnly())
+            .setGrantRuntimePermissions(grantRuntimePermissions())
+            .setCommandTimeout(commandTimeout())
+            .setAdbCommandTimeout(commandTimeout());
+    builder.deviceGroupsBuilder().addAll(deviceGroups());
+    return builder.build();
   }
 
   public static Builder builder() {
@@ -72,6 +77,15 @@ public record ApkSet(
 
     /** Whether to uninstall and retry installation if the 1st attempt fails (default false). */
     public abstract Builder setAllowUninstallAndRetry(boolean allowUninstallAndRetry);
+
+    /** Device groups the device belongs to for matching modules (default empty). */
+    public abstract ImmutableList.Builder<String> deviceGroupsBuilder();
+
+    @CanIgnoreReturnValue
+    public Builder addDeviceGroups(String deviceGroup) {
+      deviceGroupsBuilder().add(deviceGroup);
+      return this;
+    }
 
     /** Sleep after install (default zero / no sleep). */
     public abstract Builder setSleepAfterInstall(Duration sleepAfterInstall);
