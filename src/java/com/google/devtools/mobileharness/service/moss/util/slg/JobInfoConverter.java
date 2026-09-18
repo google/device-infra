@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.service.moss.util.slg;
 
+import com.google.devtools.mobileharness.api.model.job.out.Findings;
 import com.google.devtools.mobileharness.api.model.job.out.JobOutInternalFactory;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Warnings;
@@ -113,6 +114,7 @@ public final class JobInfoConverter {
             log,
             properties,
             warnings,
+            new Findings(log), // TODO: Add Findings to JobInfoProto.
             jobInfoProto.getJobSpec());
     if (jobInfoProto.getTestInfoCount() > 0) {
       JobHelper.addTests(

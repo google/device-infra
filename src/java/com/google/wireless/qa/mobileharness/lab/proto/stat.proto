@@ -20,6 +20,7 @@ package mobileharness.lab;
 
 import "src/devtools/common/metrics/stability/model/proto/exception.proto";
 import "src/devtools/mobileharness/api/model/proto/device.proto";
+import "src/devtools/mobileharness/api/model/proto/diagnostic.proto";
 import "src/devtools/mobileharness/api/model/proto/test.proto";
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/common.proto";
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/job.proto";
@@ -52,7 +53,7 @@ message Job {
 }
 
 // Information of a historical test.
-// Next ID: 15
+// Next ID: 16
 message Test {
   // Id of the test.
   optional string id = 8;  // required.
@@ -66,7 +67,9 @@ message Test {
   optional mobileharness.shared.TestResult result = 4 [deprecated = true];
   optional mobileharness.api.model.TestResult result_type = 14;
   optional stability.model.ExceptionDetail result_cause = 12;
-  repeated stability.model.ExceptionDetail warning = 13;
+  // Deprecated. Use finding instead.
+  repeated stability.model.ExceptionDetail warning = 13 [deprecated = true];
+  repeated mobileharness.api.model.Finding finding = 15;
   // Test output logs.
   optional string log = 5;
   // Test properties.

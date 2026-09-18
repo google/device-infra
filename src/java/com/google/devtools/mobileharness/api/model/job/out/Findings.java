@@ -22,6 +22,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.common.metrics.stability.model.ErrorId;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
+import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.FlattenedExceptionDetail;
 import com.google.devtools.common.metrics.stability.util.ErrorIdComparator;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Diagnostic;
@@ -84,6 +85,16 @@ public class Findings {
   @CanIgnoreReturnValue
   public Finding add(Diagnostic.Finding findingProto) {
     return add(new Finding(findingProto));
+  }
+
+  /**
+   * Records the exception as a finding.
+   *
+   * @return the finding that was added.
+   */
+  @CanIgnoreReturnValue
+  public Finding add(Severity severity, FlattenedExceptionDetail flattenedExceptionDetail) {
+    return add(new Finding(severity, flattenedExceptionDetail));
   }
 
   /**

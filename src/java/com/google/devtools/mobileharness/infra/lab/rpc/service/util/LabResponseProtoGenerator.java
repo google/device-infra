@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Finding;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.infra.lab.controller.FilePublisher;
@@ -89,6 +90,10 @@ public class LabResponseProtoGenerator {
     // Test warnings.
     builder.addAllTestWarningExceptionDetail(testInfo.warnings().getAll());
 
+    // Test findings.
+    builder.addAllFinding(
+        testInfo.findings().getAll().stream().map(Finding::toProto).collect(toImmutableList()));
+
     // Generated files.
     if (testInfo.hasGenFileDir()) {
       String genFileDir = testInfo.getGenFileDir();
@@ -104,13 +109,14 @@ public class LabResponseProtoGenerator {
       if (builder.getGenFileRelatedPathCount() > 0) {
         builder.setGenFileDir(genFileDir);
       }
-      logger.atInfo().log(
-          "Get gen data of test %s: %d properties, %d warnings, %d gen files",
-          testId,
-          builder.getTestPropertyCount(),
-          builder.getTestWarningExceptionDetailCount(),
-          builder.getGenFileRelatedPathCount());
     }
+    logger.atInfo().log(
+        "Get gen data of test %s: %d properties, %d warnings, %d findings, %d gen files",
+        testId,
+        builder.getTestPropertyCount(),
+        builder.getTestWarningExceptionDetailCount(),
+        builder.getFindingCount(),
+        builder.getGenFileRelatedPathCount());
 
     List<StrPair> testProperties = new ArrayList<>(builder.getTestPropertyList());
     StrPairUtil.sort(testProperties);

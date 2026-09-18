@@ -51,6 +51,7 @@ proto_library(
         ":stat_proto",
         "//src/devtools/common/metrics/stability/model/proto:error_proto",
         "//src/devtools/mobileharness/api/model/proto:device_proto",
+        "//src/devtools/mobileharness/api/model/proto:diagnostic_proto",
         "//src/devtools/mobileharness/api/model/proto:job_proto",
         "//src/devtools/mobileharness/api/model/proto:test_proto",
         "//src/devtools/mobileharness/shared/trace/proto:span_proto",
@@ -79,6 +80,7 @@ proto_library(
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_proto",
         "//src/devtools/mobileharness/api/model/proto:device_proto",
+        "//src/devtools/mobileharness/api/model/proto:diagnostic_proto",
         "//src/devtools/mobileharness/api/model/proto:test_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_proto",

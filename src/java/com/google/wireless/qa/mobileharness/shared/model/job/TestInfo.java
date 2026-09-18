@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Findings;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Warnings;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionUnit;
@@ -73,8 +74,13 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
   /** Test properties. */
   private final Properties properties;
 
-  /** Test warnings. */
-  private final Warnings warnings;
+  /**
+   * @deprecated Use {@link #findings()} with {@code Severity.WARNING} instead.
+   */
+  @Deprecated private final Warnings warnings;
+
+  /** Test findings. */
+  private final Findings findings;
 
   /** Utilities for local file operations. */
   private final LocalFileUtil fileUtil;
@@ -98,7 +104,8 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
       Result result,
       Log log,
       Properties properties,
-      Warnings warnings) {
+      Warnings warnings,
+      Findings findings) {
     super(testLocator, timing);
     this.jobInfo = jobInfo;
     this.parentTest = parentTest;
@@ -111,6 +118,7 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
     this.log = log;
     this.properties = properties;
     this.warnings = warnings;
+    this.findings = findings;
     testExecutionUnitSupplier =
         Suppliers.memoize(
             () ->
@@ -150,6 +158,7 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
                             "j_" + jobInfo.locator().getId(),
                             "test_" + locator().getId())));
     warnings = new Warnings(log, timing().toNewTiming());
+    findings = new Findings(log);
     properties = new Properties(timing());
     result = new Result(timing().toNewTiming(), jobInfo.params().toNewParams());
     status = new Status(timing());
@@ -283,6 +292,17 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
   }
 
   /**
+   * Findings that occur during execution.
+   *
+   * <p>This is still under development. Once ready, we will deprecate {@link Warnings} and migrate
+   * to this feature.
+   */
+  @Beta
+  public Findings findings() {
+    return findings;
+  }
+
+  /**
    * Timer of the test which starts when the test starts and expires when the test expires. If this
    * is a sub-test, it is decided by its root test.
    */
@@ -369,9 +389,7 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
     return iter;
   }
 
-  /**
-   * @return whether the test is the root test (<tt>parentTest() == null</tt>)
-   */
+  /** Returns whether the test is the root test (<tt>parentTest() == null</tt>). */
   public boolean isRootTest() {
     return parentTest() == null;
   }

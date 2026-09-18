@@ -20,6 +20,7 @@ package mobileharness.lab;
 
 import "src/devtools/common/metrics/stability/model/proto/exception.proto";
 import "src/devtools/mobileharness/api/model/proto/device.proto";
+import "src/devtools/mobileharness/api/model/proto/diagnostic.proto";
 import "src/devtools/mobileharness/api/model/proto/job.proto";
 import "src/devtools/mobileharness/api/model/proto/test.proto";
 import "src/devtools/mobileharness/shared/trace/proto/span.proto";
@@ -203,8 +204,11 @@ message GetTestGenDataResponse {
   optional string gen_file_dir = 7;
   // Gen data of the sub tests.
   repeated SubTestGenDataResponse sub_test = 8;
-  // Test warnings.
-  repeated stability.model.ExceptionDetail test_warning_exception_detail = 10;
+  // Deprecated. Use finding instead.
+  repeated stability.model.ExceptionDetail test_warning_exception_detail = 10
+      [deprecated = true];
+  // Host side findings.
+  repeated mobileharness.api.model.Finding finding = 11;
 
   reserved 1, 3 to 5, 9;
 }

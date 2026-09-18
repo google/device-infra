@@ -25,6 +25,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Finding;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceHelperFactory;
@@ -363,8 +364,11 @@ public class ExecTestServiceImpl {
     testResult.causeProto().ifPresent(testProto::setResultCause);
     testProto.setLog(testInfo.log().get(0));
     testInfo.warnings().getAll().forEach(testProto::addWarning);
-    testProto.addAllProperty(StrPairUtil.convertMapToList(testInfo.properties().getAll()));
-    return testProto.build();
+    return testProto
+        .addAllFinding(
+            testInfo.findings().getAll().stream().map(Finding::toProto).collect(toImmutableList()))
+        .addAllProperty(StrPairUtil.convertMapToList(testInfo.properties().getAll()))
+        .build();
   }
 
   /** Converts the internal {@link JobInfo} object to proto buffer version. */

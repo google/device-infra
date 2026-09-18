@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.model.job;
 
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
 
+import com.google.common.annotations.Beta;
 import com.google.common.base.Joiner;
 import com.google.common.base.Joiner.MapJoiner;
 import com.google.common.base.Preconditions;
@@ -25,6 +26,7 @@ import com.google.common.base.Suppliers;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Findings;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Warnings;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
@@ -268,8 +270,13 @@ public class JobInfo extends JobScheduleUnit {
   /** Job properties. */
   private final Properties properties;
 
-  /** Job warnings. */
-  private final Warnings warnings;
+  /**
+   * @deprecated Use {@link #findings()} with {@code Severity.WARNING} instead.
+   */
+  @Deprecated private final Warnings warnings;
+
+  /** Job findings. */
+  private final Findings findings;
 
   /** Job spec which contains the structured parameters and files. */
   private final ProtoJobSpec spec;
@@ -305,6 +312,7 @@ public class JobInfo extends JobScheduleUnit {
       Log log,
       Properties properties,
       Warnings warnings,
+      Findings findings,
       JobSpec jobSpec) {
     super(locator, jobUser, type, setting, timing, params, scopedSpecs, subDeviceSpecs);
     this.files = files;
@@ -315,6 +323,7 @@ public class JobInfo extends JobScheduleUnit {
     this.log = log;
     this.properties = properties;
     this.warnings = warnings;
+    this.findings = findings;
     this.spec = new ProtoJobSpec(jobSpec);
     this.tests = new TestInfos(this);
     this.jobExecutionUnitSupplier =
@@ -363,6 +372,7 @@ public class JobInfo extends JobScheduleUnit {
     log = new Log(timing());
     properties = new Properties(timing());
     warnings = new Warnings(log, timing().toNewTiming());
+    findings = new Findings(log);
     spec = new ProtoJobSpec();
     tests = new TestInfos(this);
 
@@ -475,9 +485,25 @@ public class JobInfo extends JobScheduleUnit {
     return properties;
   }
 
-  /** Warnings that occur during execution. */
+  /**
+   * Warnings that occur during execution.
+   *
+   * <p>Prefer {@link #findings()} with {@code Severity.WARNING} for new code. Once findings are out
+   * of beta this accessor will be deprecated.
+   */
   public Warnings warnings() {
     return warnings;
+  }
+
+  /**
+   * Findings that occur during execution.
+   *
+   * <p>This is a beta feature. It is still under development. Once ready, we will deprecate {@link
+   * Warnings} and migrate to this feature.
+   */
+  @Beta
+  public Findings findings() {
+    return findings;
   }
 
   /** Timer of the job which starts when the job starts and expires when the job expires. */

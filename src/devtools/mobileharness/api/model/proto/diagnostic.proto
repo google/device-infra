@@ -27,7 +27,7 @@ option java_outer_classname = "Diagnostic";
 // noteworthy.
 message Finding {
   // Details of the finding.
-  stability.model.ExceptionDetail detail = 1;
+  stability.model.FlattenedExceptionDetail detail = 1;
 
   // Severity of the finding.
   enum Severity {

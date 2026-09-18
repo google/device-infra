@@ -21,9 +21,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSortedMap;
+import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.common.metrics.stability.model.MetadataProvider;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionSummary;
+import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.FlattenedExceptionDetail;
 import com.google.devtools.mobileharness.api.model.proto.Diagnostic;
 import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import java.util.Optional;
@@ -39,11 +41,11 @@ import java.util.concurrent.ConcurrentMap;
 public class Finding implements MetadataProvider {
 
   private final ConcurrentMap<String, String> metadata = new ConcurrentHashMap<>();
-  private final ExceptionDetail exceptionDetailWithoutMetadata;
+  private final FlattenedExceptionDetail exceptionDetailWithoutMetadata;
   private final Severity severity;
 
   @VisibleForTesting
-  Finding(Severity severity, ExceptionDetail exceptionDetail) {
+  Finding(Severity severity, FlattenedExceptionDetail exceptionDetail) {
     this.severity = severity;
     if (exceptionDetail.getSummary().getMetadataCount() > 0) {
       // If duplicate keys exist, the last one wins.
@@ -51,7 +53,7 @@ public class Finding implements MetadataProvider {
         metadata.put(entry.getKey(), entry.getValue());
       }
 
-      ExceptionDetail.Builder exceptionDetailBuilder = exceptionDetail.toBuilder();
+      FlattenedExceptionDetail.Builder exceptionDetailBuilder = exceptionDetail.toBuilder();
       exceptionDetailBuilder.getSummaryBuilder().clearMetadata();
       exceptionDetailWithoutMetadata = exceptionDetailBuilder.build();
     } else {
@@ -60,15 +62,21 @@ public class Finding implements MetadataProvider {
   }
 
   @VisibleForTesting
+  Finding(Severity severity, ExceptionDetail exceptionDetail) {
+    this(severity, ErrorModelConverter.toFlattenedExceptionDetail(exceptionDetail));
+  }
+
+  @VisibleForTesting
   Finding(Diagnostic.Finding findingProto) {
     this(findingProto.getSeverity(), findingProto.getDetail());
   }
 
-  public ExceptionDetail getDetail() {
+  public FlattenedExceptionDetail getDetail() {
     if (metadata.isEmpty()) {
       return exceptionDetailWithoutMetadata;
     }
-    ExceptionDetail.Builder exceptionDetailBuilder = exceptionDetailWithoutMetadata.toBuilder();
+    FlattenedExceptionDetail.Builder exceptionDetailBuilder =
+        exceptionDetailWithoutMetadata.toBuilder();
     ExceptionSummary.Builder summaryBuilder = exceptionDetailBuilder.getSummaryBuilder();
     // Sorts by key so that the resulting proto is deterministic, since equals()/hashCode() compare
     // the proto and repeated fields are order-sensitive.

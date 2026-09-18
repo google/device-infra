@@ -50,6 +50,7 @@ java_library(
         ":lab_server_locator",
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:diagnostic_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",

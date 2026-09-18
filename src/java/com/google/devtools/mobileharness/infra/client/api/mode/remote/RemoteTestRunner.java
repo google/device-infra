@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.util.LabRpcProtoConverter;
 import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ResourceFederation;
@@ -893,14 +894,13 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
           if (consecutiveNonFatalRpcErrorStartingTime == null) {
             consecutiveNonFatalRpcErrorStartingTime = currentTime;
             // Only adds the warning to the test info once for consecutive non-fatal errors.
-            testInfo
-                .warnings()
-                .addAndLog(
-                    createExceptionWithoutStackTrace(
-                        InfraErrorId.CLIENT_REMOTE_MODE_TEST_GET_STATUS_ERROR,
-                        errMsg,
-                        e.getApplicationError().isPresent() ? e.getApplicationError().get() : e),
-                    logger);
+            MobileHarnessException warning =
+                createExceptionWithoutStackTrace(
+                    InfraErrorId.CLIENT_REMOTE_MODE_TEST_GET_STATUS_ERROR,
+                    errMsg,
+                    e.getApplicationError().isPresent() ? e.getApplicationError().get() : e);
+            testInfo.warnings().addAndLog(warning, logger);
+            testInfo.findings().add(Severity.WARNING, warning);
           } else if (Duration.between(consecutiveNonFatalRpcErrorStartingTime, currentTime)
                   .compareTo(maxConsecutiveErrorDuration)
               > 0) {
@@ -941,14 +941,13 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     try {
       resp = execTestStub.getTestGenData(builder.build(), impersonationUser);
     } catch (RpcExceptionWithErrorId e) {
-      testInfo
-          .warnings()
-          .addAndLog(
-              createExceptionWithoutStackTrace(
-                  InfraErrorId.CLIENT_REMOTE_MODE_TEST_GET_GEN_DATA_ERROR,
-                  "Failed to get test generated data from " + testEngineLocator,
-                  e),
-              logger);
+      MobileHarnessException warning =
+          createExceptionWithoutStackTrace(
+              InfraErrorId.CLIENT_REMOTE_MODE_TEST_GET_GEN_DATA_ERROR,
+              "Failed to get test generated data from " + testEngineLocator,
+              e);
+      testInfo.warnings().addAndLog(warning, logger);
+      testInfo.findings().add(Severity.SEVERE, warning);
       return;
     }
 

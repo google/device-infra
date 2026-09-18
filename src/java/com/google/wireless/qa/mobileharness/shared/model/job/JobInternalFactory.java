@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.model.job;
 
 import com.google.devtools.mobileharness.api.model.job.in.Dirs;
+import com.google.devtools.mobileharness.api.model.job.out.Findings;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Warnings;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
@@ -69,6 +70,7 @@ public final class JobInternalFactory {
       Log log,
       Properties properties,
       Warnings warnings,
+      Findings findings,
       JobSpec jobSpec) {
     return new JobInfo(
         locator,
@@ -87,6 +89,7 @@ public final class JobInternalFactory {
         log,
         properties,
         warnings,
+        findings,
         jobSpec);
   }
 
@@ -105,7 +108,8 @@ public final class JobInternalFactory {
       Result result,
       Log log,
       Properties properties,
-      Warnings warnings) {
+      Warnings warnings,
+      Findings findings) {
     return new TestInfo(
         testLocator,
         timing,
@@ -117,6 +121,7 @@ public final class JobInternalFactory {
         result,
         log,
         properties,
-        warnings);
+        warnings,
+        findings);
   }
 }
