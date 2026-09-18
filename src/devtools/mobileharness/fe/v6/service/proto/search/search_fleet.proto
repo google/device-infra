@@ -770,3 +770,67 @@ message FleetColumnCatalogEntry {
   // filters", "recently used"). Empty for non-suggested sections.
   string reason = 4;
 }
+
+// =============================================================================
+// Legacy Alkali Arsenal URL query translation
+// =============================================================================
+
+// A syntactically unpacked filter condition from an Alkali Arsenal URL
+// (`filter=<key>:<match_type>[:<value_type>[:<val1,val2>]]`).
+message ArsenalFilterParam {
+  // Decoded Arsenal filter key (e.g. "dimension_pool", "status", "universe").
+  string key = 1;
+
+  // Arsenal match type token (e.g. "match", "not_match", "any_match",
+  // "none_match", "exact_match", "match_at_least", "empty", "non_empty").
+  string match_type = 2;
+
+  // Arsenal value type token (e.g. "values", "substring", "regex").
+  // Empty when match_type is "empty" or "non_empty".
+  string value_type = 3;
+
+  // Decoded values (for "values") or single pattern element (for "substring" /
+  // "regex").
+  repeated string values = 4;
+}
+
+// Request to translate syntactically unpacked Alkali Arsenal search parameters
+// into canonical FE v6 Fleet search state.
+message TranslateArsenalSearchRequest {
+  SearchEntity entity = 1;
+
+  // Syntactically unpacked 'filter' entries from Arsenal's query string.
+  repeated ArsenalFilterParam filters = 2;
+
+  // Syntactically unpacked 'column' keys from Arsenal's query string
+  // (e.g. ["uuid", "version", "dimension_pool"]).
+  repeated string columns = 3;
+
+  // Syntactically unpacked 'group_by' keys from Arsenal's query string
+  // (e.g. ["model", "version"]).
+  repeated string group_by_keys = 4;
+}
+
+// Canonical FE v6 Fleet search state produced by translating an Arsenal query.
+message TranslateArsenalSearchResponse {
+  // Resolved target fleet (FLEET_SELF for google_1p, FLEET_ATS for ATS
+  // universes).
+  Fleet fleet = 1;
+
+  // Canonical FE v6 Filter protos translated from Arsenal's filters.
+  repeated Filter filters = 2;
+
+  // Resolved filter chips parallel to `filters` (carrying pill_key,
+  // pill_condition, metadata, or invalid.reason).
+  repeated FleetResolvedFilterChip filter_chips = 3;
+
+  // Canonical FE v6 group-by key IDs translated from Arsenal's group_by_keys.
+  repeated string group_by_keys = 4;
+
+  // Resolved group-by chips parallel to `group_by_keys`.
+  repeated FleetResolvedGroupByChip group_by_chips = 5;
+
+  // Canonical FE v6 column descriptors translated from Arsenal's columns.
+  // Empty if columns was empty in the request.
+  repeated FleetColumnDescriptor columns = 6;
+}
