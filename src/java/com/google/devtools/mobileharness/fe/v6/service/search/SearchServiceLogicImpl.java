@@ -47,7 +47,10 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueLi
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.GetGlobalSummaryRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.GlobalSummary;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.TranslateArsenalSearchRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.TranslateArsenalSearchResponse;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.query.ArsenalSearchTranslator;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetChipResolver;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetColumnCataloger;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetFilterKeyCataloger;
@@ -90,6 +93,7 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
   private final FleetColumnCataloger columnCataloger;
   private final FleetFilterKeyCataloger filterKeyCataloger;
   private final FleetGroupByKeyCataloger groupByKeyCataloger;
+  private final ArsenalSearchTranslator arsenalTranslator;
   private final GlobalSummaryProvider globalSummaryProvider;
 
   @Inject
@@ -106,6 +110,7 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
       FleetColumnCataloger columnCataloger,
       FleetFilterKeyCataloger filterKeyCataloger,
       FleetGroupByKeyCataloger groupByKeyCataloger,
+      ArsenalSearchTranslator arsenalTranslator,
       GlobalSummaryProvider globalSummaryProvider) {
     this.executor = executor;
     this.overlayStore = overlayStore;
@@ -119,6 +124,7 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
     this.columnCataloger = columnCataloger;
     this.filterKeyCataloger = filterKeyCataloger;
     this.groupByKeyCataloger = groupByKeyCataloger;
+    this.arsenalTranslator = arsenalTranslator;
     this.globalSummaryProvider = globalSummaryProvider;
   }
 
@@ -256,6 +262,12 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
                         corpusFactory.getCorpus(fleet, request.getEntity(), overlays), request),
                 executor),
         executor);
+  }
+
+  @Override
+  public ListenableFuture<TranslateArsenalSearchResponse> translateArsenalSearch(
+      TranslateArsenalSearchRequest request) {
+    return Futures.submit(() -> arsenalTranslator.translate(request), executor);
   }
 
   @Override

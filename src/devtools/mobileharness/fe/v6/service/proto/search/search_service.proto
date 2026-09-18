@@ -45,7 +45,7 @@ option java_outer_classname = "SearchServiceProto";
 // (device vs host, or test vs job vs session).
 service SearchService {
   // ===========================================================================
-  // Fleet (device/host) search — 9 RPCs
+  // Fleet (device/host) search — 10 RPCs
   // ===========================================================================
 
   // Returns page-load configuration: column setup and landing page content.
@@ -143,6 +143,17 @@ service SearchService {
       returns (FleetGroupByKeyCatalogResponse) {
     option (google.api.http) = {
       post: "/v6/fleet-search/group-by-key-catalog"
+      body: "*"
+    };
+  }
+
+  // Translates unpacked Alkali Arsenal search parameters into canonical FE v6
+  // Fleet search state (resolved filter chips, group-by chips, fleet scope,
+  // and table column descriptors).
+  rpc TranslateArsenalSearch(TranslateArsenalSearchRequest)
+      returns (TranslateArsenalSearchResponse) {
+    option (google.api.http) = {
+      post: "/v6/fleet-search/translate-arsenal"
       body: "*"
     };
   }
