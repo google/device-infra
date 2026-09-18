@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListM
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMultimapMatchCondition;
 import java.util.Map.Entry;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -124,13 +125,13 @@ public final class FilterUtils {
     try {
       switch (condition.getConditionCase()) {
         case ANY_MATCH:
-          return entity ->
-              stringListExtractor.apply(entity).stream()
-                  .anyMatch(createStringMatcher(condition.getAnyMatch().getCondition(), s -> s));
+          Predicate<String> anyMatcher =
+              createStringMatcher(condition.getAnyMatch().getCondition(), s -> s);
+          return entity -> stringListExtractor.apply(entity).stream().anyMatch(anyMatcher);
         case NONE_MATCH:
-          return entity ->
-              stringListExtractor.apply(entity).stream()
-                  .noneMatch(createStringMatcher(condition.getNoneMatch().getCondition(), s -> s));
+          Predicate<String> noneMatcher =
+              createStringMatcher(condition.getNoneMatch().getCondition(), s -> s);
+          return entity -> stringListExtractor.apply(entity).stream().noneMatch(noneMatcher);
         case SUBSET_MATCH:
           ImmutableSet<String> expectedSubsetValues =
               ImmutableSet.copyOf(
@@ -221,28 +222,57 @@ public final class FilterUtils {
   public static <T> Predicate<T> createStringMultimapMatcher(
       StringMultimapMatchCondition condition,
       Function<T, ImmutableListMultimap<String, String>> stringMapExtractor) {
+    return createStringMultimapMatcherByKey(
+        condition,
+        (entity, key) ->
+            valuesOfKeyIgnoreCase(
+                stringMapExtractor.apply(entity).entries(), Entry::getKey, Entry::getValue, key));
+  }
+
+  /**
+   * Same as {@link #createStringMultimapMatcher} but lets the caller answer "which values does this
+   * entity have for this key" directly, without materializing the whole multimap of the entity.
+   * Prefer this when the entity holds many entries and the predicate runs over many entities.
+   *
+   * <p>The extractor receives the key from the condition and must compare keys case-insensitively,
+   * matching the behavior of {@link #createStringMultimapMatcher}; {@link #valuesOfKeyIgnoreCase}
+   * does that over any entry representation.
+   *
+   * <p>The value matcher is built once per predicate, and the extractor is invoked once per entity.
+   */
+  public static <T> Predicate<T> createStringMultimapMatcherByKey(
+      StringMultimapMatchCondition condition,
+      BiFunction<T, String, ImmutableSet<String>> valuesOfKeyExtractor) {
     if (condition.getKey().isEmpty() || !condition.hasValueCondition()) {
       return entity -> false;
     }
     try {
-      return entity ->
-          createStringListMatcher(
-                  condition.getValueCondition(),
-                  value ->
-                      stringMapExtractor.apply(entity).entries().stream()
-                          .filter(
-                              entry -> Ascii.equalsIgnoreCase(entry.getKey(), condition.getKey()))
-                          .map(Entry::getValue)
-                          .collect(toImmutableSet()))
-              .test(
-                  stringMapExtractor.apply(entity).entries().stream()
-                      .filter(entry -> Ascii.equalsIgnoreCase(entry.getKey(), condition.getKey()))
-                      .map(Entry::getValue)
-                      .collect(toImmutableSet()));
+      String key = condition.getKey();
+      Predicate<ImmutableSet<String>> valueMatcher =
+          createStringListMatcher(condition.getValueCondition(), Function.identity());
+      return entity -> valueMatcher.test(valuesOfKeyExtractor.apply(entity, key));
     } catch (RuntimeException e) {
       logger.atWarning().log(
           "Invalid StringMultimapMatchCondition [%s], cause=[%s]", condition, shortDebugString(e));
       return entity -> false;
     }
+  }
+
+  /**
+   * Returns the distinct values of the entries whose key equals {@code key} ignoring ASCII case,
+   * the key comparison every multimap matcher in this class applies. Works over any entry
+   * representation (multimap entries, dimension protos, host property protos) through the given key
+   * and value accessors, so {@link #createStringMultimapMatcherByKey} extractors can read the
+   * entity's own storage without first copying it into a multimap.
+   */
+  public static <E> ImmutableSet<String> valuesOfKeyIgnoreCase(
+      Iterable<E> entries, Function<E, String> keyOf, Function<E, String> valueOf, String key) {
+    ImmutableSet.Builder<String> values = ImmutableSet.builder();
+    for (E entry : entries) {
+      if (Ascii.equalsIgnoreCase(keyOf.apply(entry), key)) {
+        values.add(valueOf.apply(entry));
+      }
+    }
+    return values.build();
   }
 }

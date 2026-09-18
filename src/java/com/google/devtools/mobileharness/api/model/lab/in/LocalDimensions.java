@@ -16,12 +16,15 @@
 
 package com.google.devtools.mobileharness.api.model.lab.in;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.List;
+import java.util.Map;
 import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -60,6 +63,19 @@ public class LocalDimensions implements Dimensions {
     synchronized (dimensions) {
       return ImmutableList.copyOf(dimensions.get(name));
     }
+  }
+
+  @Override
+  public ImmutableSet<String> getIgnoreCase(String name) {
+    ImmutableSet.Builder<String> values = ImmutableSet.builder();
+    synchronized (dimensions) {
+      for (Map.Entry<String, String> entry : dimensions.entries()) {
+        if (Ascii.equalsIgnoreCase(entry.getKey(), name)) {
+          values.add(entry.getValue());
+        }
+      }
+    }
+    return values.build();
   }
 
   @Override

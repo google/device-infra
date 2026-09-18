@@ -18,21 +18,20 @@ package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static com.google.devtools.mobileharness.shared.util.filter.FilterUtils.createStringListMatcher;
 import static com.google.devtools.mobileharness.shared.util.filter.FilterUtils.createStringMatcher;
-import static com.google.devtools.mobileharness.shared.util.filter.FilterUtils.createStringMultimapMatcher;
+import static com.google.devtools.mobileharness.shared.util.filter.FilterUtils.createStringMultimapMatcherByKey;
+import static com.google.devtools.mobileharness.shared.util.filter.FilterUtils.valuesOfKeyIgnoreCase;
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.Subscribe;
@@ -1137,12 +1136,14 @@ class RemoteDeviceManager implements LabInfoProvider {
               labMatchCondition.getLabHostNameMatchCondition().getCondition(),
               labData -> labData.labLocator.hostName());
         case PROPERTY_MATCH_CONDITION:
-          return createStringMultimapMatcher(
+          return createStringMultimapMatcherByKey(
               labMatchCondition.getPropertyMatchCondition().getCondition(),
-              labData ->
-                  labData.labServerFeature.getHostProperties().getHostPropertyList().stream()
-                      .collect(
-                          toImmutableListMultimap(HostProperty::getKey, HostProperty::getValue)));
+              (labData, key) ->
+                  valuesOfKeyIgnoreCase(
+                      labData.labServerFeature.getHostProperties().getHostPropertyList(),
+                      HostProperty::getKey,
+                      HostProperty::getValue,
+                      key));
         case CONDITION_NOT_SET:
           break;
       }
@@ -1201,17 +1202,23 @@ class RemoteDeviceManager implements LabInfoProvider {
                 deviceMatchCondition.getDecoratorMatchCondition().getCondition(),
                 deviceData -> deviceData.dataFromLab.decorators().getAll());
         case DIMENSION_MATCH_CONDITION ->
-            createStringMultimapMatcher(
+            createStringMultimapMatcherByKey(
                 deviceMatchCondition.getDimensionMatchCondition().getCondition(),
-                deviceData -> {
-                  ImmutableListMultimap.Builder<String, String> builder =
-                      ImmutableListMultimap.<String, String>builder()
-                          .putAll(deviceData.dataFromLab.dimensions().supported().getAll())
-                          .putAll(deviceData.dataFromLab.dimensions().required().getAll());
+                (deviceData, key) -> {
+                  ImmutableSet.Builder<String> values = ImmutableSet.builder();
+                  values.addAll(deviceData.dataFromLab.dimensions().supported().getIgnoreCase(key));
+                  values.addAll(deviceData.dataFromLab.dimensions().required().getIgnoreCase(key));
                   deviceTempRequiredDimensionManager
                       .getDimensions(deviceData.dtrdmDeviceKey)
-                      .ifPresent(dimensions -> builder.putAll(dimensions.dimensions()));
-                  return builder.build();
+                      .ifPresent(
+                          dimensions ->
+                              values.addAll(
+                                  valuesOfKeyIgnoreCase(
+                                      dimensions.dimensions().entries(),
+                                      Map.Entry::getKey,
+                                      Map.Entry::getValue,
+                                      key)));
+                  return values.build();
                 });
         default -> deviceData -> true;
       };
