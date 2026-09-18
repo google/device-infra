@@ -180,6 +180,25 @@ java_library(
 )
 
 java_library(
+    name = "arsenal_search_translator",
+    srcs = ["ArsenalSearchTranslator.java"],
+    deps = [
+        ":ats_curation",
+        ":device_key_displays",
+        ":fleet_chip_resolver",
+        ":host_key_displays",
+        ":scenario_curation",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_registry",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "scenario_curation",
     srcs = ["ScenarioCuration.java"],
     deps = [
