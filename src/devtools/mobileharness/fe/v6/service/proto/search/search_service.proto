@@ -45,7 +45,7 @@ option java_outer_classname = "SearchServiceProto";
 // (device vs host, or test vs job vs session).
 service SearchService {
   // ===========================================================================
-  // Fleet (device/host) search — 9 RPCs
+  // Fleet (device/host) search — 10 RPCs
   // ===========================================================================
 
   // Returns page-load configuration: column setup and landing page content.
