@@ -13,6 +13,7 @@ import {
   Column,
   ComplexMatch,
   Filter,
+  Fleet,
   FleetChipResolverRequest,
   FleetColumnDescriptor,
   FleetFilterChipMetadata,
@@ -45,6 +46,7 @@ import {
 } from '../models';
 import {
   buildComplexMatchFromEvent,
+  buildFilterChipFromResolved,
   buildFleetFilterFromChip,
   buildFleetGroupSort,
   buildResolvedFilterChips,
@@ -60,6 +62,7 @@ import {
   isChipNegated,
   isValuePickerSelectionEmpty,
   mapToSearchBoxSuggestion,
+  parseArsenalQueryParam,
   saveStoredVisibleColumns,
   toFleetProto,
   toSearchEntityProto,
@@ -1040,6 +1043,92 @@ export class FleetSearchStore extends SearchPageStore {
       // TODO: Uniformly handle backend RPC error / 500 / offline display in search UI.
       catchError(() => of([])),
     );
+  }
+
+  /** Intercepts ?arsenal_query=... on cold load, delegates translation to BFF, and rewrites URL in-place. */
+  protected override handleLegacyQueryParams(
+    params: Record<string, unknown>,
+  ): boolean {
+    const rawArsenalQuery = params['arsenal_query'];
+    if (typeof rawArsenalQuery !== 'string' || !rawArsenalQuery.trim()) {
+      return false;
+    }
+
+    const unpacked = parseArsenalQueryParam(rawArsenalQuery);
+    this.searchService
+      .translateArsenalSearch({
+        entity: toSearchEntityProto(this.entity()),
+        filters: unpacked.filters.length > 0 ? unpacked.filters : undefined,
+        columns: unpacked.columns.length > 0 ? unpacked.columns : undefined,
+        groupByKeys:
+          unpacked.groupByKeys.length > 0 ? unpacked.groupByKeys : undefined,
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          const targetFleet: 'internal' | 'ats' =
+            res.fleet === Fleet.FLEET_ATS ? 'ats' : 'internal';
+          if (this.fleet() !== targetFleet) {
+            this.fleet.set(targetFleet);
+          }
+
+          if (res.columns && res.columns.length > 0) {
+            this.visibleColumnDescriptors.set(res.columns);
+            saveStoredVisibleColumns(this.entity(), targetFleet, res.columns);
+          }
+
+          const resolvedFilterChips: FilterChip[] = [];
+          const filters = res.filters || [];
+          const filterChips = res.filterChips || [];
+          for (let i = 0; i < filters.length; i++) {
+            const f = filters[i];
+            const fc = filterChips[i];
+            if (fc?.invalid?.reason) {
+              this.snackBarService.showWarning(fc.invalid.reason);
+            }
+            if (fc?.valid) {
+              resolvedFilterChips.push(
+                buildFilterChipFromResolved(f, fc.valid),
+              );
+            }
+          }
+
+          const resolvedGroupByChips: FilterChip[] = [];
+          const gbKeys = res.groupByKeys || [];
+          const gbChips = res.groupByChips || [];
+          for (let i = 0; i < gbKeys.length; i++) {
+            const gbKey = gbKeys[i];
+            const gbc = gbChips[i];
+            if (gbc?.invalid?.reason) {
+              this.snackBarService.showWarning(gbc.invalid.reason);
+            }
+            if (gbc?.invalid) {
+              continue;
+            }
+            resolvedGroupByChips.push(
+              createGroupByChip(
+                gbKey,
+                gbc?.valid?.displayName || gbc?.valid?.pillKey || gbKey,
+              ),
+            );
+          }
+
+          const allChips = [...resolvedFilterChips, ...resolvedGroupByChips];
+          this.browseAll.set(allChips.length === 0);
+          this.activeChips.set(allChips);
+          this.syncUrl(allChips, targetFleet, /* replaceUrl= */ true);
+          this.executeSearch();
+        },
+        error: () => {
+          this.syncUrl(
+            this.activeChips(),
+            this.fleet(),
+            /* replaceUrl= */ true,
+          );
+        },
+      });
+
+    return true;
   }
 
   /** Constructs Fleet-specific ValuePicker configuration. */
