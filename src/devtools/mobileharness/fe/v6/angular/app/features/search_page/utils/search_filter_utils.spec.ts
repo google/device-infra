@@ -15,6 +15,7 @@ import {
   EMPTY_FILTER_VALUE,
   adaptCatalogSections,
   areFilterArraysEqual,
+  buildFilterChipFromResolved,
   buildFleetFilterFromChip,
   buildFleetGroupSort,
   buildResolvedFilterChips,
@@ -37,6 +38,7 @@ import {
   isSearchRouteActive,
   mapToSearchBoxSuggestion,
   normalizeKey,
+  parseArsenalQueryParam,
   parseComplexCondition,
   parseQueryFilterParam,
   parseUrlChips,
@@ -137,7 +139,7 @@ describe('search_filter_utils', () => {
       });
     });
 
-    it('parses exactly and atleast comma-separated lists', () => {
+    it('parses exactly and at-least comma-separated lists', () => {
       expect(parseComplexCondition('exactly~IDLE,BUSY')).toEqual({
         matchesExactly: {values: ['IDLE', 'BUSY']},
       });
@@ -444,7 +446,7 @@ describe('search_filter_utils', () => {
   });
 
   describe('serializeComplexCondition', () => {
-    it('serializes starts, contains, regex, exactly, atleast conditions to Scheme B DSL', () => {
+    it('serializes starts, contains, regex, exactly, at-least conditions to Scheme B DSL', () => {
       expect(serializeComplexCondition({startsWith: {value: 'Pixel'}})).toBe(
         'starts~Pixel',
       );
@@ -1449,7 +1451,6 @@ describe('search_filter_utils', () => {
       expect(getSerializedChipsKey(chipsA)).toBe(getSerializedChipsKey(chipsB));
     });
   });
-
   describe('adaptCatalogSections', () => {
     it('returns empty array when sections is undefined or empty', () => {
       expect(adaptCatalogSections(undefined, 'filter')).toEqual([]);
@@ -1667,6 +1668,66 @@ describe('search_filter_utils', () => {
       ).toEqual(['env', 'prod']);
 
       expect(extractRawValuesFromTjsFilter({key: 'empty'})).toBeUndefined();
+    });
+  });
+
+  describe('parseArsenalQueryParam', () => {
+    it('syntactically unpacks filter, column, and group_by parameters', () => {
+      const rawQuery =
+        'filter=dimension_pool:any_match:values:shared,dedicated&filter=host_name:match:substring:mtv&column=uuid,version,dimension_pool&group_by=model,version';
+      const unpacked = parseArsenalQueryParam(rawQuery);
+
+      expect(unpacked.filters).toEqual([
+        {
+          key: 'dimension_pool',
+          matchType: 'any_match',
+          valueType: 'values',
+          values: ['shared', 'dedicated'],
+        },
+        {
+          key: 'host_name',
+          matchType: 'match',
+          valueType: 'substring',
+          values: ['mtv'],
+        },
+      ]);
+      expect(unpacked.columns).toEqual(['uuid', 'version', 'dimension_pool']);
+      expect(unpacked.groupByKeys).toEqual(['model', 'version']);
+    });
+
+    it('preserves spaces and encoded commas inside unpacked values', () => {
+      const rawQuery =
+        'filter=host_name%3Amatch%3Aregex%3A%2520%255Elab%252C%255B0-9%255D%2520';
+      const unpacked = parseArsenalQueryParam(rawQuery);
+
+      expect(unpacked.filters).toEqual([
+        {
+          key: 'host_name',
+          matchType: 'match',
+          valueType: 'regex',
+          values: [' ^lab,[0-9] '],
+        },
+      ]);
+    });
+  });
+
+  describe('buildFilterChipFromResolved', () => {
+    it('constructs a FilterChip from a resolved backend filter and valid chip', () => {
+      const chip = buildFilterChipFromResolved(
+        {
+          key: 'device_field::sdk_or_software_version',
+          simple: {values: [{value: '34'}], negated: false},
+        },
+        {
+          pillKey: 'SDK or Software Version',
+          pillCondition: '34',
+        },
+      );
+      expect(chip.key).toBe('device_field::sdk_or_software_version');
+      expect(chip.pillKey).toBe('SDK or Software Version');
+      expect(chip.pillCondition).toBe('34');
+      expect(chip.rawValues).toEqual(['34']);
+      expect(chip.negated).toBeFalse();
     });
   });
 });

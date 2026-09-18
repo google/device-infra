@@ -49,6 +49,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSearchReq
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSearchResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSuggestionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSuggestionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.TranslateArsenalSearchRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.TranslateArsenalSearchResponse;
 import com.google.devtools.mobileharness.fe.v6.service.search.allsite.AllSiteQueryResolver;
 import com.google.devtools.mobileharness.fe.v6.service.search.tjs.TjsSearchLogic;
 import io.grpc.stub.StreamObserver;
@@ -196,6 +198,19 @@ public final class SearchServiceGrpcImpl extends SearchServiceGrpc.SearchService
         executor,
         SearchServiceGrpc.getServiceDescriptor(),
         SearchServiceGrpc.getGetFleetGroupByKeyCatalogMethod());
+  }
+
+  @Override
+  public void translateArsenalSearch(
+      TranslateArsenalSearchRequest request,
+      StreamObserver<TranslateArsenalSearchResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        fleetLogic::translateArsenalSearch,
+        executor,
+        SearchServiceGrpc.getServiceDescriptor(),
+        SearchServiceGrpc.getTranslateArsenalSearchMethod());
   }
 
   // ===========================================================================

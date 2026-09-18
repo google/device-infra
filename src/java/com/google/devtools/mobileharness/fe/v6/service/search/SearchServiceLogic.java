@@ -37,6 +37,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueLi
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.GetGlobalSummaryRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.GlobalSummary;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.TranslateArsenalSearchRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.TranslateArsenalSearchResponse;
 
 /**
  * Core logic of the fleet (device and host) search service.
@@ -84,6 +86,10 @@ public interface SearchServiceLogic {
   /** Returns the browsable group-by-key catalog for the "Add a group-by" dialog. */
   ListenableFuture<FleetGroupByKeyCatalogResponse> getFleetGroupByKeyCatalog(
       FleetGroupByKeyCatalogRequest request);
+
+  /** Translates unpacked Alkali Arsenal search parameters into canonical FE v6 search state. */
+  ListenableFuture<TranslateArsenalSearchResponse> translateArsenalSearch(
+      TranslateArsenalSearchRequest request);
 
   /** Returns the Home page global summary ("OmniLab Summary" card). */
   ListenableFuture<GlobalSummary> getGlobalSummary(GetGlobalSummaryRequest request);
