@@ -76,8 +76,8 @@ import javax.inject.Inject;
  *       network_activity_logging_report.pb}
  * </ol>
  *
- * <p>The MTaaS DeviceAdmin app needs to be pre-installed on the device and be the device owner.
- * This is the case for Core Lab devices, or certain OmniLab-managed labs.
+ * <p>The MTaaS DeviceAdmin app needs to be pre-installed on the device. If it is not already set as
+ * the device owner, this decorator will attempt to set it as the device owner.
  *
  * <p>See https://developer.android.com/work/dpc/logging for more details about the network activity
  * logging feature.
@@ -88,6 +88,9 @@ public class AndroidNetworkActivityLoggingDecorator extends LifecycleDecorator
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final String DEVICE_ADMIN_PACKAGE_ID = "com.google.android.apps.mtaas.deviceadmin";
+  private static final String DEVICE_ADMIN_COMPONENT =
+      DEVICE_ADMIN_PACKAGE_ID + "/.DeviceAdminReceiver";
+  private static final String CHECK_ADMIN_STATUS_INSTRUMENTATION = ".CheckAdminStatus";
   private static final String ENABLE_NETWORK_LOGGING_INSTRUMENTATION = ".EnableNetworkLogging";
 
   /** Path the MTaaS DeviceAdmin app writes the network logs to. */
@@ -139,7 +142,9 @@ public class AndroidNetworkActivityLoggingDecorator extends LifecycleDecorator
     deviceAdminAvailable = checkDeviceAdminAvailability();
 
     if (deviceAdminAvailable) {
-      enableLogging(testInfo);
+      int deviceSdkVersion = systemSettingUtil.getDeviceSdkVersion(getDevice().getDeviceId());
+      setupDeviceAdminIfNeeded(testInfo, deviceSdkVersion);
+      enableLogging(testInfo, deviceSdkVersion);
       tryDismissNotification();
     }
     return SetupResult.continueDecorated();
@@ -176,25 +181,44 @@ public class AndroidNetworkActivityLoggingDecorator extends LifecycleDecorator
     }
   }
 
-  private void enableLogging(TestInfo testInfo) throws InterruptedException {
+  private void setupDeviceAdminIfNeeded(TestInfo testInfo, int deviceSdkVersion)
+      throws InterruptedException {
+    boolean isDeviceOwner = false;
     try {
-      int deviceSdkVersion = systemSettingUtil.getDeviceSdkVersion(getDevice().getDeviceId());
       String result =
-          instrumentationUtil.instrument(
-              getDevice().getDeviceId(),
-              deviceSdkVersion,
-              AndroidInstrumentationSetting.create(
-                  DEVICE_ADMIN_PACKAGE_ID,
-                  ENABLE_NETWORK_LOGGING_INSTRUMENTATION,
-                  /* className= */ null,
-                  /* otherOptions= */ null,
-                  /* async= */ false,
-                  /* showRawResults= */ true,
-                  /* prefixAndroidTest= */ false,
-                  /* noIsolatedStorage= */ false,
-                  /* useTestStorageService= */ false,
-                  /* enableCoverage= */ false),
-              /* timeout= */ SHORT_COMMAND_TIMEOUT);
+          runDeviceAdminInstrumentation(deviceSdkVersion, CHECK_ADMIN_STATUS_INSTRUMENTATION);
+      isDeviceOwner = result.contains("INSTRUMENTATION_CODE: -1");
+    } catch (MobileHarnessException e) {
+      testInfo
+          .log()
+          .atWarning()
+          .withCause(e)
+          .alsoTo(logger)
+          .log("Failed to check device admin status");
+    }
+
+    if (!isDeviceOwner) {
+      try {
+        testInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log("Setting MTaaS Device Admin as the device owner");
+        String unused =
+            adb.runShellWithRetry(
+                getDevice().getDeviceId(),
+                "dpm set-device-owner " + DEVICE_ADMIN_COMPONENT,
+                SHORT_COMMAND_TIMEOUT);
+      } catch (MobileHarnessException e) {
+        testInfo.log().atWarning().withCause(e).alsoTo(logger).log("Failed to set device owner");
+      }
+    }
+  }
+
+  private void enableLogging(TestInfo testInfo, int deviceSdkVersion) throws InterruptedException {
+    try {
+      String result =
+          runDeviceAdminInstrumentation(deviceSdkVersion, ENABLE_NETWORK_LOGGING_INSTRUMENTATION);
       if (!result.contains("INSTRUMENTATION_CODE: -1")) {
         testInfo
             .log()
@@ -206,6 +230,25 @@ public class AndroidNetworkActivityLoggingDecorator extends LifecycleDecorator
     } catch (MobileHarnessException e) {
       testInfo.log().atWarning().withCause(e).alsoTo(logger).log("Enabling network logging failed");
     }
+  }
+
+  private String runDeviceAdminInstrumentation(int deviceSdkVersion, String instrumentation)
+      throws MobileHarnessException, InterruptedException {
+    return instrumentationUtil.instrument(
+        getDevice().getDeviceId(),
+        deviceSdkVersion,
+        AndroidInstrumentationSetting.create(
+            DEVICE_ADMIN_PACKAGE_ID,
+            instrumentation,
+            /* className= */ null,
+            /* otherOptions= */ null,
+            /* async= */ false,
+            /* showRawResults= */ true,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ false,
+            /* enableCoverage= */ false),
+        /* timeout= */ SHORT_COMMAND_TIMEOUT);
   }
 
   private void tryDismissNotification() throws MobileHarnessException, InterruptedException {
@@ -255,9 +298,10 @@ public class AndroidNetworkActivityLoggingDecorator extends LifecycleDecorator
   private void triggerLogDump(TestInfo testInfo) throws InterruptedException {
     logger.atInfo().log("Triggering network log dump");
     try {
-      String unused =
+      String output =
           adb.runShellWithRetry(
               getDevice().getDeviceId(), "dpm force-network-logs", SHORT_COMMAND_TIMEOUT);
+      logger.atFine().log("Force network logs output: %s", output);
     } catch (MobileHarnessException e) {
       testInfo
           .log()
