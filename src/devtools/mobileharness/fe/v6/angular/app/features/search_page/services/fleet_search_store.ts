@@ -13,10 +13,12 @@ import {
   Column,
   ComplexMatch,
   Filter,
+  Fleet,
   FleetChipResolverRequest,
   FleetColumnDescriptor,
   FleetGroup,
   FleetPromotedKeysRequest,
+  FleetResolvedGroupByChip,
   FleetSearchConfig,
   FleetSearchConfigRequest,
   FleetSearchRequest,
@@ -25,6 +27,7 @@ import {
   FleetSuggestionRequest,
   FleetValueListRequest,
   Row,
+  TranslateArsenalSearchResponse,
 } from '../../../core/models/search';
 import {SnackBarService} from '../../../shared/services/snackbar_service';
 import {
@@ -33,6 +36,7 @@ import {
   FilterChip,
   FilterKeyMetadata,
   FilterPair,
+  FleetScope,
   GroupPageState,
   PickerValueItem,
   PromotedFilterKeyItem,
@@ -45,6 +49,7 @@ import {
 import {
   areFilterArraysEqual,
   buildComplexMatchFromEvent,
+  buildFilterChipFromResolved,
   buildFleetFilterFromChip,
   buildFleetGroupSort,
   buildResolvedFilterChips,
@@ -59,6 +64,7 @@ import {
   getStoredVisibleColumns,
   isChipNegated,
   isValuePickerSelectionEmpty,
+  parseArsenalQueryParam,
   saveStoredVisibleColumns,
   toFleetProto,
   toSearchEntityProto,
@@ -997,30 +1003,112 @@ export class FleetSearchStore extends SearchPageStore {
           },
         );
 
-        // Scenario 6: Group-by chips are resolved and appended cleanly; invalid keys show warning
-        const updatedGroupByChips: FilterChip[] = [];
-        groupByKeys.forEach((gb, idx) => {
-          const gbc = res.groupByChips?.[idx];
-          if (gbc?.invalid?.reason) {
-            this.snackBarService.showWarning(gbc.invalid.reason);
-          }
-          if (gbc?.invalid) {
-            return;
-          }
-          if (gbc?.valid) {
-            updatedGroupByChips.push(
-              createGroupByChip(gb, gbc.valid.displayName || gbc.valid.pillKey),
-            );
-            return;
-          }
-          updatedGroupByChips.push(createGroupByChip(gb));
-        });
+        const updatedGroupByChips = this.resolveGroupByChips(
+          groupByKeys,
+          res.groupByChips,
+        );
 
         return [...updatedFilterChips, ...updatedGroupByChips];
       }),
       // TODO: Uniformly handle backend RPC error / 500 / offline display in search UI.
       catchError(() => of([])),
     );
+  }
+
+  /** Intercepts ?arsenal_query=... on cold load, delegates translation to BFF, and rewrites URL in-place. */
+  protected override handleLegacyQueryParams(
+    params: Record<string, unknown>,
+  ): boolean {
+    const rawArsenalQuery = params['arsenal_query'];
+    if (typeof rawArsenalQuery !== 'string' || !rawArsenalQuery.trim()) {
+      return false;
+    }
+
+    const unpacked = parseArsenalQueryParam(rawArsenalQuery);
+    this.searchService
+      .translateArsenalSearch({
+        entity: toSearchEntityProto(this.entity()),
+        filters: unpacked.filters.length > 0 ? unpacked.filters : undefined,
+        columns: unpacked.columns.length > 0 ? unpacked.columns : undefined,
+        groupByKeys:
+          unpacked.groupByKeys.length > 0 ? unpacked.groupByKeys : undefined,
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res) => {
+          this.applyArsenalTranslation(res);
+        },
+        error: () => {
+          this.snackBarService.showWarning(
+            'Could not translate legacy Arsenal query.',
+          );
+        },
+      });
+
+    return true;
+  }
+
+  private applyArsenalTranslation(res: TranslateArsenalSearchResponse) {
+    const targetFleet: FleetScope =
+      res.fleet === Fleet.FLEET_ATS ? 'ats' : 'internal';
+    if (this.fleet() !== targetFleet) {
+      this.fleet.set(targetFleet);
+    }
+
+    if (res.columns && res.columns.length > 0) {
+      this.visibleColumnDescriptors.set(res.columns);
+      saveStoredVisibleColumns(this.entity(), targetFleet, res.columns);
+    }
+
+    const filters = res.filters || [];
+    const filterChips = res.filterChips || [];
+    const resolvedFilterChips: FilterChip[] = [];
+    for (let i = 0; i < filters.length; i++) {
+      const fc = filterChips[i];
+      if (fc?.invalid?.reason) {
+        this.snackBarService.showWarning(fc.invalid.reason);
+      }
+      if (fc?.valid) {
+        resolvedFilterChips.push(
+          buildFilterChipFromResolved(filters[i], fc.valid),
+        );
+      }
+    }
+
+    const resolvedGroupByChips = this.resolveGroupByChips(
+      res.groupByKeys || [],
+      res.groupByChips,
+    );
+
+    const allChips = [...resolvedFilterChips, ...resolvedGroupByChips];
+    this.browseAll.set(allChips.length === 0);
+    this.activeChips.set(allChips);
+    this.syncUrl(allChips, targetFleet, /* replaceUrl= */ true);
+    this.executeSearch();
+  }
+
+  private resolveGroupByChips(
+    groupByKeys: string[],
+    groupByChips: FleetResolvedGroupByChip[] | undefined,
+  ): FilterChip[] {
+    const resolved: FilterChip[] = [];
+    for (let i = 0; i < groupByKeys.length; i++) {
+      const gbKey = groupByKeys[i];
+      const gbc = groupByChips?.[i];
+      if (gbc?.invalid?.reason) {
+        this.snackBarService.showWarning(gbc.invalid.reason);
+      }
+      if (gbc?.invalid) {
+        continue;
+      }
+      resolved.push(
+        createGroupByChip(
+          gbKey,
+          gbc?.valid?.displayName || gbc?.valid?.pillKey || gbKey,
+        ),
+      );
+    }
+    return resolved;
   }
 
   /** Constructs Fleet-specific ValuePicker configuration. */

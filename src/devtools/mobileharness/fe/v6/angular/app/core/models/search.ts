@@ -4,10 +4,12 @@
 
 import {Column, Row} from './search_common';
 import {
+  ArsenalFilterParam,
   Filter,
   Fleet,
   FleetColumnCatalogSection,
   FleetColumnConfig,
+  FleetColumnDescriptor,
   FleetCountedValueList,
   FleetFilterKeySection,
   FleetFlatResults,
@@ -170,6 +172,23 @@ export declare interface FleetGroupByKeyCatalogResponse {
   sections?: FleetGroupByKeySection[];
 }
 
+/** Request to translate unpacked Alkali Arsenal search parameters into FE v6 Fleet search state. */
+export declare interface TranslateArsenalSearchRequest {
+  entity: SearchEntity;
+  filters?: ArsenalFilterParam[];
+  columns?: string[];
+  groupByKeys?: string[];
+}
+
+/** Canonical FE v6 Fleet search state produced by translating an Arsenal query. */
+export declare interface TranslateArsenalSearchResponse {
+  fleet?: Fleet;
+  filters?: Filter[];
+  filterChips?: FleetResolvedFilterChip[];
+  groupByKeys?: string[];
+  groupByChips?: FleetResolvedGroupByChip[];
+  columns?: FleetColumnDescriptor[];
+}
 /** TJS search config request. */
 export declare interface TjsSearchConfigRequest {
   entity: TjsEntity;

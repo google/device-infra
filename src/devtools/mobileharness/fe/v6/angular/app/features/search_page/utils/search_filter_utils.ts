@@ -1,6 +1,7 @@
 import {ActivatedRoute, Params, Router} from '@angular/router';
 
 import {
+  ArsenalFilterParam,
   ComplexMatch,
   Filter,
   FilterValue,
@@ -12,6 +13,7 @@ import {
   FleetGroupByKeySection,
   FleetGroupSort,
   FleetSuggestion,
+  FleetValidFilterChip,
   SearchEntity,
   TjsEntity,
   TjsFilter,
@@ -874,7 +876,6 @@ export function resolveInitialFleet(route: ActivatedRoute): FleetScope {
   const fleetParam = route.snapshot?.queryParams?.['fleet'];
   return fleetParam === 'ats' ? 'ats' : 'internal';
 }
-
 // ============================================================================
 // Catalog Response Adapters (BFF Anti-Corruption Layer)
 // ============================================================================
@@ -935,4 +936,78 @@ export function adaptCatalogSections(
       };
     }),
   }));
+}
+
+/**
+ * Syntactically unpacks an opaque Alkali Arsenal query string (`?arsenal_query=...`)
+ * into structured filter tokens, column keys, and group-by keys without any domain key logic.
+ */
+export function parseArsenalQueryParam(rawQuery: string): {
+  filters: ArsenalFilterParam[];
+  columns: string[];
+  groupByKeys: string[];
+} {
+  const clean = rawQuery.trim().replace(/^\?/, '');
+  const searchParams = new URLSearchParams(clean);
+
+  const filters: ArsenalFilterParam[] = [];
+  for (const rawFilter of searchParams.getAll('filter')) {
+    if (!rawFilter.trim()) continue;
+    const parts = rawFilter.split(':');
+    const key = safeDecodeURIComponent(parts[0] || '').trim();
+    const matchType = safeDecodeURIComponent(parts[1] || '').trim();
+    if (!key || !matchType) continue;
+
+    const valueType = safeDecodeURIComponent(parts[2] || '').trim();
+    const rawValuePart = parts.slice(3).join(':');
+    const values = rawValuePart
+      ? rawValuePart.split(',').map((v) => safeDecodeURIComponent(v))
+      : [];
+    filters.push({
+      key,
+      matchType,
+      valueType: valueType || undefined,
+      values: values.length > 0 ? values : undefined,
+    });
+  }
+
+  const columns = searchParams
+    .getAll('column')
+    .flatMap((c) => c.split(','))
+    .map((k) => safeDecodeURIComponent(k).trim())
+    .filter(Boolean);
+
+  const groupByKeys = searchParams
+    .getAll('group_by')
+    .flatMap((g) => g.split(','))
+    .map((k) => safeDecodeURIComponent(k).trim())
+    .filter(Boolean);
+
+  return {filters, columns, groupByKeys};
+}
+
+/** Constructs a FilterChip from a canonical backend Filter and FleetValidFilterChip. */
+export function buildFilterChipFromResolved(
+  filter: Filter,
+  valid: FleetValidFilterChip,
+): FilterChip {
+  const rawVals = filter.simple?.values
+    ?.map((v) => v.value || (v.noValue ? EMPTY_FILTER_VALUE : ''))
+    .filter(Boolean);
+
+  return {
+    key: filter.key,
+    pillKey: valid.pillKey || filter.key,
+    pillCondition: valid.pillCondition || '',
+    isGroupBy: false,
+    metadata: valid.metadata,
+    rawValues: rawVals && rawVals.length > 0 ? rawVals : undefined,
+    negated: isChipNegated({
+      complex: filter.complex,
+      negated: filter.simple?.negated,
+      pillCondition: valid.pillCondition,
+    }),
+    complex: filter.complex,
+    fleetFilter: filter,
+  };
 }

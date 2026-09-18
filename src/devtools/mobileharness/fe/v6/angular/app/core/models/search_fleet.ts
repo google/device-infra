@@ -400,3 +400,12 @@ export declare interface GroupCountInfo {
     count: number;
   };
 }
+
+// =======================TranslateArsenalSearch=======================
+/** A syntactically unpacked filter condition from an Alkali Arsenal URL. */
+export declare interface ArsenalFilterParam {
+  key: string;
+  matchType: string;
+  valueType?: string;
+  values?: string[];
+}
