@@ -363,6 +363,15 @@ public final class FleetIndexBuilder {
     for (Map.Entry<String, List<String>> entry : dimMap.entrySet()) {
       valuesBuilder.put(entry.getKey(), ImmutableList.copyOf(entry.getValue()));
     }
+    ImmutableList<String> sdkOrSoftwareVersions =
+        Stream.concat(
+                dimMap.getOrDefault(DeviceKeys.SDK_VERSION.id(), ImmutableList.of()).stream(),
+                dimMap.getOrDefault(DeviceKeys.SOFTWARE_VERSION.id(), ImmutableList.of()).stream())
+            .distinct()
+            .collect(toImmutableList());
+    if (!sdkOrSoftwareVersions.isEmpty()) {
+      valuesBuilder.put(DeviceKeys.SDK_OR_SOFTWARE_VERSION.id(), sdkOrSoftwareVersions);
+    }
   }
 
   private static ImmutableList<String> nonEmptyList(List<String> list) {
