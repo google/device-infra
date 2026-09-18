@@ -351,6 +351,13 @@ public class InstallApkStep implements InstallApkStepConstants {
             .setAllowTestOnly(true)
             .setGrantRuntimePermissions(spec.getGrantPermissionsOnInstall())
             .setAllowUninstallAndRetry(true);
+    if (spec.hasDeviceGroups() && !spec.getDeviceGroups().isEmpty()) {
+      Splitter.on(',')
+          .trimResults()
+          .omitEmptyStrings()
+          .split(spec.getDeviceGroups())
+          .forEach(apkSetBuilder::addDeviceGroups);
+    }
     installTimeout.ifPresent(apkSetBuilder::setCommandTimeout);
     sleepAfterInstall.ifPresent(apkSetBuilder::setSleepAfterInstall);
     // Make sure Bundletool use the same temp directory as the test.
@@ -427,6 +434,9 @@ public class InstallApkStep implements InstallApkStepConstants {
     }
     if (jobInfo.params().has(PARAM_SLEEP_AFTER_INSTALL_GMS_SEC)) {
       spec.setSleepAfterInstallGmsSec(jobInfo.params().getLong(PARAM_SLEEP_AFTER_INSTALL_GMS_SEC));
+    }
+    if (jobInfo.params().has(PARAM_DEVICE_GROUPS)) {
+      spec.setDeviceGroups(jobInfo.params().get(PARAM_DEVICE_GROUPS));
     }
     return spec.build();
   }
