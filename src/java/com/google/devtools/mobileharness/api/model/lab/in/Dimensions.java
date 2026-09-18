@@ -22,6 +22,7 @@ import static com.google.common.collect.Streams.stream;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
@@ -31,6 +32,7 @@ import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -82,6 +84,24 @@ public interface Dimensions {
   /** Gets the dimension value of the given dimension name. */
   default List<String> get(Dimension.Name name) {
     return get(Ascii.toLowerCase(name.name()));
+  }
+
+  /**
+   * Gets the distinct dimension values whose dimension name equals the given name ignoring ASCII
+   * case. This is the lookup device filters apply, since filter conditions do not normalize the
+   * case of dimension names.
+   *
+   * <p>The default walks the copy returned by {@link #getAll()}; implementations that own the
+   * storage should override it to scan in place.
+   */
+  default ImmutableSet<String> getIgnoreCase(String name) {
+    ImmutableSet.Builder<String> values = ImmutableSet.builder();
+    for (Map.Entry<String, String> entry : getAll().entries()) {
+      if (Ascii.equalsIgnoreCase(entry.getKey(), name)) {
+        values.add(entry.getValue());
+      }
+    }
+    return values.build();
   }
 
   /**
