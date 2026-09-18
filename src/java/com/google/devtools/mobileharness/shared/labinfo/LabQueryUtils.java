@@ -75,6 +75,12 @@ import java.util.stream.Stream;
 /** Utilities for doing lab query. */
 public class LabQueryUtils {
 
+  /** The {@code LabInfo} field {@link LabInfoComparator} reads. */
+  static final String LAB_SORT_KEY_PATH = "lab_locator.host_name";
+
+  /** The {@code DeviceInfo} field {@link DeviceInfoComparator} reads. */
+  static final String DEVICE_SORT_KEY_PATH = "device_locator.id";
+
   public static LabQueryResult createNewLabQueryResult(
       LabQuery query, LabInfoProvider labInfoProvider) throws MobileHarnessException {
     LabQueryResult.Builder result =
