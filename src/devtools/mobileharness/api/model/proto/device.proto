@@ -50,8 +50,9 @@ enum DeviceStatus {
   // Used in Master only:
   // If the Lab Server doesn't send any heartbeat of a device to the Master for
   // >= 2 minutes, the Master will mark the device as MISSING.
-  // If no heartbeat for >= 4 weeks, the device will be actually removed from
-  // the Master DB.
+  // If no heartbeat for >= device_removal_threshold (default 14 days, or
+  // ephemeral_removal_threshold for emulators), the device will be actually
+  // removed from the Master DB.
   MISSING = 7;
   // The device is failed to prepare. This indicates that there may be an issue
   // with the device that was not able to be recovered automatically.
