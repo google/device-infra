@@ -347,4 +347,14 @@ describe('TjsSearchStore', () => {
     expect(store.showSuggestions()).toBeTrue();
     expect(store.focusInputTrigger()).toBeTrue();
   });
+
+  it('should ignore ?arsenal_query because TJS pages have no legacy query translation', async () => {
+    activatedRouteStub.snapshot.queryParams = {'arsenal_query': 'filter=x'};
+    queryParams$.next({'arsenal_query': 'filter=x'});
+    await flushAsync();
+
+    expect(store.entity()).toBe('tests');
+    expect(store.activeChips().map((c) => c.key)).toEqual(['user']);
+    expect(mockSnackBarService.showError).not.toHaveBeenCalled();
+  });
 });
