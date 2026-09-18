@@ -35,11 +35,28 @@ java_library(
 )
 
 java_library(
-    name = "mask_utils",
-    srcs = ["MaskUtils.java"],
+    name = "dimension_name_matcher",
+    srcs = ["DimensionNameMatcher.java"],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "mask_utils",
+    srcs = [
+        "CompiledLabInfoMask.java",
+        "MaskUtils.java",
+    ],
+    deps = [
+        ":dimension_name_matcher",
+        "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_protobuf_protobuf_java",
         "@protobuf//:protobuf_java_util",
