@@ -154,42 +154,58 @@ public final class CoreFleetDataRefresher {
   private static final Duration INITIAL_RETRY_BACKOFF = Duration.ofSeconds(2);
 
   /**
-   * Builds the initial fleet search index across all fleets with retries.
+   * Builds the initial fleet search index with retries and fails fast if a required fleet still has
+   * no snapshot afterwards.
    *
-   * <p>Attempts up to {@value #MAX_STARTUP_ATTEMPTS} times with backoff (2s, 4s). If all fleets
-   * succeed on any attempt, this method returns. If all attempts are exhausted and not all fleets
-   * have published snapshots, throws {@link IllegalStateException} to fail fast during server
-   * startup, preventing the server from declaring healthy with an unpopulated index.
+   * <p>Attempts up to {@value #MAX_STARTUP_ATTEMPTS} times with backoff (2s, 4s). Every bound fleet
+   * is refreshed on each attempt, but only the fleets whose source is not {@link
+   * FleetDataSource#isOptionalAtStartup() optional at startup} gate the result: as soon as all of
+   * them have a published snapshot this method returns, logging a warning for any optional fleet
+   * that is still empty. If all attempts are exhausted with a required fleet still missing, throws
+   * {@link IllegalStateException} so the server does not declare healthy with an unpopulated index.
    */
   public void buildInitialIndexWithRetry() {
+    List<Fleet> missingRequired = new ArrayList<>();
     for (int attempt = 1; attempt <= MAX_STARTUP_ATTEMPTS; attempt++) {
       refreshOnce();
-      boolean allReady = true;
-      for (Fleet fleet : sources.keySet()) {
-        if (!snapshotStore.hasSnapshot(fleet)) {
-          allReady = false;
-          break;
+      missingRequired.clear();
+      List<Fleet> missingOptional = new ArrayList<>();
+      for (Map.Entry<Fleet, FleetDataSource> entry : sources.entrySet()) {
+        if (snapshotStore.hasSnapshot(entry.getKey())) {
+          continue;
+        }
+        if (entry.getValue().isOptionalAtStartup()) {
+          missingOptional.add(entry.getKey());
+        } else {
+          missingRequired.add(entry.getKey());
         }
       }
-      if (allReady) {
+      if (missingRequired.isEmpty()) {
         logger.atInfo().log(
             "Initial fleet search index built successfully on attempt %d/%d.",
             attempt, MAX_STARTUP_ATTEMPTS);
+        for (Fleet fleet : missingOptional) {
+          logger.atWarning().log(
+              "Fleet %s has no snapshot at startup. It serves empty until its next successful"
+                  + " refresh.",
+              fleet);
+        }
         return;
       }
       if (attempt < MAX_STARTUP_ATTEMPTS) {
         long backoffMs = INITIAL_RETRY_BACKOFF.toMillis() * attempt;
         logger.atWarning().log(
-            "Initial fleet search index build attempt %d/%d incomplete. Retrying in %d ms...",
-            attempt, MAX_STARTUP_ATTEMPTS, backoffMs);
+            "Initial fleet search index build attempt %d/%d has no snapshot for required fleets %s"
+                + " yet. Retrying in %d ms...",
+            attempt, MAX_STARTUP_ATTEMPTS, missingRequired, backoffMs);
         Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(backoffMs));
       }
     }
     throw new IllegalStateException(
         String.format(
-            "Failed to build initial fleet search index across all fleets after %d attempts."
-                + " Failing fast to prevent routing traffic to an unindexed server.",
-            MAX_STARTUP_ATTEMPTS));
+            "Failed to build the initial fleet search index for required fleets %s after %d"
+                + " attempts. Failing fast to prevent routing traffic to an unindexed server.",
+            missingRequired, MAX_STARTUP_ATTEMPTS));
   }
 
   /**

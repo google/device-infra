@@ -118,6 +118,56 @@ public final class CoreFleetDataRefresherTest {
     assertThat(store.hasSnapshot(Fleet.FLEET_SELF)).isFalse();
   }
 
+  @Test
+  public void buildInitialIndexWithRetry_optionalFleetFails_startsWithRequiredFleetsOnly() {
+    FakeFleetDataSource selfSource = new FakeFleetDataSource(Fleet.FLEET_SELF);
+    FakeFleetDataSource atsSource = new FakeFleetDataSource(Fleet.FLEET_ATS);
+    atsSource.setOptionalAtStartup(true);
+    selfSource.setResult(deviceResult(2));
+    atsSource.setFailure(new RuntimeException("LabInventoryService: permission denied"));
+
+    // The optional fleet cannot be pulled, but the server must still come up on the required
+    // fleet; the optional fleet starts empty and fills in on a later periodic refresh.
+    refresher(selfSource, atsSource).buildInitialIndexWithRetry();
+
+    assertThat(store.hasSnapshot(Fleet.FLEET_SELF)).isTrue();
+    assertThat(store.get(Fleet.FLEET_SELF).deviceCount()).isEqualTo(2);
+    assertThat(store.hasSnapshot(Fleet.FLEET_ATS)).isFalse();
+  }
+
+  @Test
+  public void buildInitialIndexWithRetry_secondRequiredFleetFails_throws() {
+    FakeFleetDataSource selfSource = new FakeFleetDataSource(Fleet.FLEET_SELF);
+    FakeFleetDataSource atsSource = new FakeFleetDataSource(Fleet.FLEET_ATS);
+    selfSource.setResult(deviceResult(2));
+    atsSource.setFailure(new RuntimeException("ats controller unavailable"));
+    CoreFleetDataRefresher refresher = refresher(selfSource, atsSource);
+
+    // By default every fleet is required, so a failing second fleet still blocks startup.
+    IllegalStateException e =
+        assertThrows(IllegalStateException.class, refresher::buildInitialIndexWithRetry);
+    assertThat(e).hasMessageThat().contains("FLEET_ATS");
+    assertThat(e).hasMessageThat().doesNotContain("FLEET_SELF");
+    assertThat(store.hasSnapshot(Fleet.FLEET_SELF)).isTrue();
+    assertThat(store.hasSnapshot(Fleet.FLEET_ATS)).isFalse();
+  }
+
+  @Test
+  public void buildInitialIndexWithRetry_requiredFleetFails_throwsEvenIfOptionalFleetSucceeds() {
+    FakeFleetDataSource selfSource = new FakeFleetDataSource(Fleet.FLEET_SELF);
+    FakeFleetDataSource atsSource = new FakeFleetDataSource(Fleet.FLEET_ATS);
+    atsSource.setOptionalAtStartup(true);
+    selfSource.setFailure(new RuntimeException("master unreachable"));
+    atsSource.setResult(deviceResult(1));
+    CoreFleetDataRefresher refresher = refresher(selfSource, atsSource);
+
+    IllegalStateException e =
+        assertThrows(IllegalStateException.class, refresher::buildInitialIndexWithRetry);
+    assertThat(e).hasMessageThat().contains("FLEET_SELF");
+    assertThat(store.hasSnapshot(Fleet.FLEET_SELF)).isFalse();
+    assertThat(store.hasSnapshot(Fleet.FLEET_ATS)).isTrue();
+  }
+
   private CoreFleetDataRefresher refresher(FleetDataSource... sources) {
     ImmutableMap.Builder<Fleet, FleetDataSource> map = ImmutableMap.builder();
     for (FleetDataSource source : sources) {
@@ -150,6 +200,7 @@ public final class CoreFleetDataRefresherTest {
   /** In-memory {@link FleetDataSource} that returns a configured result or a failed future. */
   private static final class FakeFleetDataSource implements FleetDataSource {
     private final Fleet fleet;
+    private boolean optionalAtStartup;
     private ListenableFuture<CoreFleetRawData> result =
         immediateFuture(CoreFleetRawData.ofLabData(LabQueryResult.getDefaultInstance()));
 
@@ -163,6 +214,15 @@ public final class CoreFleetDataRefresherTest {
 
     void setFailure(RuntimeException failure) {
       this.result = immediateFailedFuture(failure);
+    }
+
+    void setOptionalAtStartup(boolean optionalAtStartup) {
+      this.optionalAtStartup = optionalAtStartup;
+    }
+
+    @Override
+    public boolean isOptionalAtStartup() {
+      return optionalAtStartup;
     }
 
     @Override

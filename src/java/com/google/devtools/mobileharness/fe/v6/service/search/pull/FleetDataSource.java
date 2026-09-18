@@ -64,4 +64,17 @@ public interface FleetDataSource {
   default ListenableFuture<ImmutableSet<String>> pullDimensionNames() {
     return immediateFuture(ImmutableSet.of());
   }
+
+  /**
+   * Whether the server may declare itself healthy before this fleet has published its first
+   * snapshot.
+   *
+   * <p>Defaults to {@code false}: the fleet gates startup, so traffic never reaches a server that
+   * would answer every search for it with nothing. A source whose fleet depends on external
+   * services or ACLs may return {@code true} so that an outage there lets the server start with
+   * that fleet empty; the fleet then fills in on its next successful periodic refresh.
+   */
+  default boolean isOptionalAtStartup() {
+    return false;
+  }
 }
