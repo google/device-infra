@@ -1,11 +1,12 @@
 @switch (cellKind()) {
   @case ('link') {
-    @let target = linkTarget();
+    @let navConfig = navLinkConfig();
     @let linkObj = cell()!.link!;
-    @if (target) {
+    @if (navConfig) {
       <a
-        [routerLink]="target"
-        queryParamsHandling="preserve"
+        app-nav-link
+        [config]="navConfig"
+        queryParamsHandling="merge"
         class="device-link"
         [matTooltip]="linkObj.text"
         tooltipIfTruncated
@@ -32,10 +33,11 @@
   @case ('multiLink') {
     <div class="multilink-list">
       @for (entry of multiLinkEntries(); track entry.text || $index) {
-        @if (entry.routerLink) {
+        @if (entry.navConfig) {
           <a
-            [routerLink]="entry.routerLink"
-            queryParamsHandling="preserve"
+            app-nav-link
+            [config]="entry.navConfig"
+            queryParamsHandling="merge"
             class="device-link"
             [matTooltip]="entry.text"
             tooltipIfTruncated
