@@ -43,6 +43,22 @@ public final class MaskUtils {
   private MaskUtils() {}
 
   /**
+   * Whether {@code path} is touched by {@code fieldMask}: the path is listed, an ancestor of it is
+   * listed (so it is fully covered), or a descendant of it is listed (so it is partially needed).
+   * An empty field mask touches nothing.
+   */
+  public static boolean isFieldRequested(FieldMask fieldMask, String path) {
+    for (String candidate : fieldMask.getPathsList()) {
+      if (candidate.equals(path)
+          || path.startsWith(candidate + ".")
+          || candidate.startsWith(path + ".")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * Trims the {@link LabQueryResult} based on the {@link Mask}.
    *
    * <p>If the LabInfoMask exists, LabInfo will be trimmed based on the field mask.
