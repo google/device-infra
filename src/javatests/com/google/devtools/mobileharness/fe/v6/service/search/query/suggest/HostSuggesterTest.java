@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.fe.v6.service.search.query;
+package com.google.devtools.mobileharness.fe.v6.service.search.query.suggest;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
@@ -38,6 +37,9 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextSegment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.query.AtsCuration;
+import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetFilterEngine;
+import com.google.devtools.mobileharness.fe.v6.service.search.query.HostCorpus;
 import com.google.inject.Guice;
 import java.time.Instant;
 import org.junit.Test;
@@ -68,12 +70,10 @@ public final class HostSuggesterTest {
   private final HostCorpus corpus =
       new HostCorpus(snapshot, LazyPostings.forHosts(snapshot.hosts()), new AtsCuration());
 
-  // FleetSuggester needs the per-fleet ScenarioCuration map; bind the OSS ats curation under
-  // FLEET_SELF so its host key ranking drives the ordering assertions below.
+  // FleetSuggester and FleetFilterEngine have package-private @Inject constructors; obtain the
+  // engine through Guice. Host key ranking comes from the corpus curation (the OSS ats curation).
   private final FleetSuggester suggester =
-      new FleetSuggester(
-          Guice.createInjector().getInstance(FleetFilterEngine.class),
-          ImmutableMap.of(Fleet.FLEET_SELF, new AtsCuration()));
+      new FleetSuggester(Guice.createInjector().getInstance(FleetFilterEngine.class));
 
   @Test
   public void emptyQuery_returnsNoSuggestions() {
@@ -131,6 +131,19 @@ public final class HostSuggesterTest {
   }
 
   @Test
+  public void keyName_closesWithGroupByRowForTheMatchedHostKey() {
+    // "connectivity" is a host alias of Lab Server Connectivity; the list ends with its group-by.
+    FleetSuggestionResponse response = suggester.suggest(corpus, request("connectivity"));
+
+    FleetSuggestion last = response.getItems(response.getItemsCount() - 1);
+    assertThat(last.getAddGroupBy().getKey()).isEqualTo("host_field::connectivity");
+    assertThat(last.getAddGroupBy().getPillKey()).isEqualTo("Lab Server Connectivity");
+    assertThat(last.getCount()).isEqualTo(2);
+    assertThat(response.getItemsList().stream().filter(FleetSuggestion::hasAddGroupBy).count())
+        .isEqualTo(1);
+  }
+
+  @Test
   public void deviceCountAlias_resolvesToHostDeviceCountKey() {
     // Typing the alias "device count" resolves onto the host device-count key, offering its picker.
     FleetSuggestionResponse response = suggester.suggest(corpus, request("device count"));
@@ -151,6 +164,38 @@ public final class HostSuggesterTest {
     assertThat(suggestion.getApplyFilter().getResultingFilter().getSimple().getValues(0).getValue())
         .isEqualTo("special_val");
     assertThat(suggestion.hasCount()).isFalse();
+  }
+
+  @Test
+  public void hostSearch_neverSuggestsDeviceDimensionsOrFields() {
+    // Typing "status" on a host corpus must never return dimension::* or device_field::* keys.
+    FleetSuggestionResponse statusResponse = suggester.suggest(corpus, request("status"));
+    for (FleetSuggestion item : statusResponse.getItemsList()) {
+      if (item.hasOpenPicker()) {
+        assertThat(item.getOpenPicker().getKey()).doesNotContain("dimension::");
+        assertThat(item.getOpenPicker().getKey()).doesNotContain("device_field::");
+      }
+      if (item.hasApplyFilter()) {
+        assertThat(item.getApplyFilter().getResultingFilter().getKey())
+            .doesNotContain("dimension::");
+        assertThat(item.getApplyFilter().getResultingFilter().getKey())
+            .doesNotContain("device_field::");
+      }
+    }
+
+    // Neither a device alias nor an explicit dimension namespace may produce a device filter.
+    FleetSuggestionResponse modelKv = suggester.suggest(corpus, request("model is pixel"));
+    for (FleetSuggestion item : modelKv.getItemsList()) {
+      if (item.hasApplyFilter()) {
+        assertThat(item.getApplyFilter().getResultingFilter().getKey())
+            .doesNotContain("dimension::");
+        assertThat(item.getApplyFilter().getResultingFilter().getKey())
+            .doesNotContain("device_field::");
+      }
+    }
+    FleetSuggestionResponse explicitDimKv =
+        suggester.suggest(corpus, request("dimension:battery_status is ok"));
+    assertThat(explicitDimKv.getItemsList()).isEmpty();
   }
 
   // --- Helpers ---
