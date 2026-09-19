@@ -546,6 +546,25 @@ public final class FleetSuggesterTest {
     }
   }
 
+  @Test
+  public void deviceSearch_neverLeaksHostOnlyKeysOrColdFallbackOnIndexedKeys() {
+    // 1. Host-only alias "device count" must never resolve to host_field::device_count on
+    // DeviceCorpus.
+    FleetSuggestionResponse deviceCountKv = suggester.suggest(corpus, request("device count is 5"));
+    for (FleetSuggestion item : deviceCountKv.getItemsList()) {
+      if (item.hasApplyFilter()) {
+        assertThat(item.getApplyFilter().getResultingFilter().getKey())
+            .isNotEqualTo("host_field::device_count");
+      }
+    }
+
+    // 2. Built-in indexed field "device_field::status" with an unmatched value must not emit a
+    // cold long-tail fallback suggestion.
+    FleetSuggestionResponse bogusStatusKv =
+        suggester.suggest(corpus, request("status is nonexistent_status"));
+    assertThat(bogusStatusKv.getItemsList()).isEmpty();
+  }
+
   // --- Synthetic fleets ---
 
   private static LabQueryResult fleet() {

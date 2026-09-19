@@ -247,7 +247,12 @@ java_library(
 
 java_library(
     name = "fleet_suggester",
-    srcs = ["FleetSuggester.java"],
+    srcs = [
+        "DeviceSuggestAdapter.java",
+        "FleetSuggester.java",
+        "HostSuggestAdapter.java",
+        "SuggestEntityAdapter.java",
+    ],
     deps = [
         ":device_corpus",
         ":device_key_displays",

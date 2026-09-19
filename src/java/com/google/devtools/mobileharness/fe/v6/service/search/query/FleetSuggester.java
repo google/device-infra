@@ -16,15 +16,13 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.primitives.Booleans.falseFirst;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.SuggestEntityAdapter.normalize;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.MultimapBuilder;
-import com.google.common.collect.SetMultimap;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FilterValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
@@ -45,63 +43,71 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.KeyCount;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.ValueKeyPair;
+import com.google.devtools.mobileharness.fe.v6.service.search.query.SuggestEntityAdapter.KeyMatch;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionCatalogStore;
-import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
-import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
-import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
-import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
-import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import java.util.ArrayList;
 import java.util.BitSet;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.function.ToIntFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /**
- * Turns a partial search-bar string into a ranked list of {@link FleetSuggestion}s. This is the
- * Java port of the search prototype's {@code suggest}, {@code _dispatch}, and {@code _rank}
- * (suggest_engine.py at depot HEAD, CL 959511642), following the algorithm spec
- * (filter_condition_suggestion_algorithm.md).
+ * Entity-agnostic suggestion engine that turns a partial search-bar query into a ranked list of
+ * {@link FleetSuggestion}s for Device Search and Host Search.
  *
- * <p>The engine classifies the input into exactly one pattern, produces raw candidate suggestions
- * for that pattern, then ranks them. Every suggestion carries structured display text ({@link
- * TextSegment}s with the matched value emphasized), an optional device count, and a typed action:
- * apply a new filter chip, open the value picker for an existing key, or add a group-by key. The
- * frontend never infers behavior from the text.
+ * <h2>Why this exists</h2>
  *
- * <p>Intent patterns ported here (dispatch order matches the prototype's first-match-wins order):
+ * <p>As users type in the OmniLab Console search bar, they may express a filter condition ({@code
+ * status is idle}), a negated condition ({@code pool is not shared}), an empty/presence check
+ * ({@code no owner}, {@code has pool}), a bare value ({@code pixel}), a key name ({@code status}),
+ * a multi-value disjunction ({@code idle, busy}), or a grouping directive ({@code group by model}).
+ * Evaluating these intents against live snapshot postings and active filter chips requires a
+ * deterministic pipeline that classifies the input, generates valid candidates with exact BitSet
+ * counts, suppresses contradictory chip modifications, and ranks results by scenario priority and
+ * match quality. All entity-specific key schemas and alias catalogs are delegated to {@link
+ * SuggestEntityAdapter} ({@link DeviceSuggestAdapter} or {@link HostSuggestAdapter}), keeping this
+ * core engine completely independent of device or host key definitions.
+ *
+ * <h2>How to use it</h2>
+ *
+ * <ol>
+ *   <li>Inject {@link FleetSuggester} via Guice (backed by {@link FleetFilterEngine}, the per-fleet
+ *       {@link ScenarioCuration} map, and {@link DimensionCatalogStore}).
+ *   <li>Invoke {@link #suggest(SearchCorpus, FleetSuggestionRequest)} with the snapshot {@link
+ *       SearchCorpus} ({@link DeviceCorpus} or {@link HostCorpus}) and the client request.
+ *   <li>Every returned {@link FleetSuggestion} carries structured display segments ({@link
+ *       TextSegment}), an exact entity count (when applicable), and an explicit typed action
+ *       ({@link FleetApplyFilter}, {@link FleetOpenPicker}, or {@link FleetAddGroupBy}) so the
+ *       frontend executes suggestions without parsing display strings.
+ * </ol>
+ *
+ * <h2>Suggestion semantics</h2>
  *
  * <ul>
- *   <li>group-by prefix ({@code group by <key>}) to an add-group-by suggestion;
- *   <li>empty / non-empty ({@code no <key>} / {@code has <key>});
- *   <li>key-value negate ({@code <key> is not <value>});
- *   <li>key with a trailing operator and no value yet ({@code <key> is}) to that key's top values;
- *   <li>key-value ({@code <key> is <value>});
- *   <li>bare negation ({@code not <value>});
- *   <li>comma-separated values (multi-value OR, key undetermined);
- *   <li>a single token, tried as both a key name and a value.
+ *   <li><b>First-match intent dispatch</b>: A non-empty query is matched against ordered patterns:
+ *       {@code group by <key>}, empty/non-empty ({@code no <key>}, {@code has <key>}), negated
+ *       key-value ({@code <key> is not <value>}), trailing operator ({@code <key> is}), positive
+ *       key-value ({@code <key> is <value>}), bare negation ({@code not <value>}), comma-separated
+ *       OR values, and single-token key + value search.
+ *   <li><b>Chip-aware actions and polarity suppression</b>: When a candidate key already has an
+ *       active chip with conflicting polarity or complex mode, value suggestions for that key are
+ *       suppressed. When the active chip shares the candidate's polarity, the action stages the
+ *       value in the existing picker ({@link FleetStagedModification}) and reports the OR delta
+ *       ({@code +N}).
+ *   <li><b>Two-phase ranking</b>: Candidates are deduplicated by {@code (label, mainText)} and
+ *       sorted by scenario key priority, match-quality tier, personalization, count, and
+ *       lexicographic text. When active filters are present, intersection counts against the
+ *       filtered BitSet are computed before re-sorting and zero-match conditions are dropped.
  * </ul>
- *
- * <p>An identifier typed on its own resolves through the single-token value path: a device UUID
- * matches {@code field::uuid} and a user name matches {@code field::owner} via the value index, so
- * those intents fall out of ordinary value matching rather than a dedicated regex detector.
- *
- * <p>Ranking is by match quality, then personalization, then device count, then scenario key
- * priority, then a stable text tie-break. Personalization (recent and frequent suggestions) is a
- * ranking input in the spec but is deferred, so this port emits no personalized items and treats
- * every candidate as non-personalized. See the TODO on {@link #PERSONALIZED_KEYS}.
  */
 public final class FleetSuggester {
 
@@ -110,8 +116,7 @@ public final class FleetSuggester {
 
   /**
    * Above this bucket count a suggested grouping is flagged {@code over_max}: the accordion becomes
-   * a wall. Ported from the prototype's {@code GROUP_SUGGEST_MAX}. This is the "usable group count"
-   * threshold the proto's {@code over_max} documents as a backend decision.
+   * a wall. Ported from the prototype's {@code GROUP_SUGGEST_MAX}.
    */
   private static final int GROUP_SUGGEST_MAX = 50;
 
@@ -132,23 +137,12 @@ public final class FleetSuggester {
 
   /**
    * Personalized (recent / frequent) key set. Personalization is deferred (backend plan and
-   * adaptation guide §11), so this is empty and no candidate is ever treated as personalized.
-   *
-   * <p>TODO: when personalization ships, populate this per request from the user's query and view
-   * history, and add recent-condition and recent-key candidates as the prototype's {@code
-   * recent_conditions} / {@code recent_kids} do. Until then the ranking's personalization tier is a
-   * no-op.
+   * adaptation guide section 11), so this is empty and no candidate is ever treated as
+   * personalized.
    */
   private static final ImmutableSet<String> PERSONALIZED_KEYS = ImmutableSet.of();
 
-  // --- Static alias catalog (prototype BUILTIN_DEVICE + BUILTIN_HOST). ---
-
-  private static final ImmutableMap<String, ImmutableList<String>> ALIAS_TO_KEYS = buildAliasMap();
-
   private static final Pattern WHITESPACE = Pattern.compile("\\s+");
-  private static final Pattern NAMESPACE_DIM =
-      Pattern.compile("^(?:device[ _])?dimension[ _:]+(.+)$");
-  private static final Pattern NAMESPACE_PROP = Pattern.compile("^host[ _]?property[ _:]+(.+)$");
   private static final Pattern EMPTY_NO = Pattern.compile("^no[ _]+(.+)$");
   private static final Pattern EMPTY_HAS = Pattern.compile("^has[ _]+(.+)$");
   private static final Pattern NON_EMPTY =
@@ -179,15 +173,7 @@ public final class FleetSuggester {
   private static final Pattern BARE_NEGATE = Pattern.compile("^not\\s+(.+)$");
 
   private final FleetFilterEngine filterEngine;
-
-  /**
-   * The per-fleet curations, keyed by {@link Fleet}. The scenario key ranking used by {@link #rank}
-   * and {@link #suggestGroupBy} comes from {@link ScenarioCuration#keyPriority} of the entry for
-   * the request's fleet. Empty until activation installs the {@link ScenarioCurationModule}
-   * MapBinder, in which case ranking falls back to a neutral priority (see {@link #suggest}).
-   */
   private final Map<Fleet, ScenarioCuration> curations;
-
   private final DimensionCatalogStore dimensionCatalogStore;
 
   @Inject
@@ -204,7 +190,7 @@ public final class FleetSuggester {
     this(filterEngine, curations, new DimensionCatalogStore());
   }
 
-  /** Returns ranked suggestions for the request against the given snapshot. */
+  /** Returns ranked suggestions for the request against the given snapshot corpus. */
   public FleetSuggestionResponse suggest(SearchCorpus corpus, FleetSuggestionRequest request) {
     int limit = request.getLimit() > 0 ? request.getLimit() : DEFAULT_LIMIT;
     String query = WHITESPACE.matcher(request.getInput()).replaceAll(" ").trim();
@@ -219,54 +205,32 @@ public final class FleetSuggester {
     ImmutableList<Integer> current = filterEngine.match(corpus, filters);
     BitSet currentBits = toBitSet(current);
 
-    // FLEET_UNSPECIFIED defaults to FLEET_SELF (see the Fleet proto). Resolve the curation for the
-    // request's fleet and derive its scenario key ranking. If no curation is installed (the
-    // MapBinder is wired at activation), fall back to a neutral priority that treats every key as
-    // the lowest tier, so suggestions still return in a stable order rather than failing.
     Fleet fleet = request.getFleet();
     ScenarioCuration curation =
         curations.get(fleet == Fleet.FLEET_UNSPECIFIED ? Fleet.FLEET_SELF : fleet);
-    // The key ranking is entity aware: host keys rank by the host tier table, devices by the device
-    // one. For the device entity the entity-aware curation call resolves to the same device
-    // ranking,
-    // so device suggestions are unchanged.
-    ToIntFunction<String> keyPriority;
-    if (curation == null) {
-      keyPriority = keyId -> 0;
-    } else if (corpus instanceof DeviceCorpus deviceCorpus) {
-      keyPriority =
-          keyId ->
-              (keyId == null
-                  ? 0
-                  : deviceCorpus
-                      .getKey(keyId)
-                      .map(curation.keyPriority()::devicePriority)
-                      .orElse(0));
+
+    SuggestEntityAdapter adapter;
+    if (corpus instanceof DeviceCorpus deviceCorpus) {
+      adapter =
+          new DeviceSuggestAdapter(
+              deviceCorpus, curation, dimensionCatalogStore.getDimensionNames(fleet));
     } else if (corpus instanceof HostCorpus hostCorpus) {
-      keyPriority =
-          keyId ->
-              (keyId == null
-                  ? 0
-                  : hostCorpus.getKey(keyId).map(curation.keyPriority()::hostPriority).orElse(0));
+      adapter = new HostSuggestAdapter(hostCorpus, curation);
     } else {
-      keyPriority = keyId -> 0;
+      throw new IllegalArgumentException("Unsupported SearchCorpus: " + corpus.getClass());
     }
 
-    ImmutableSet<String> catalogDimensions = dimensionCatalogStore.getDimensionNames(fleet);
     Context context =
         new Context(
-            fleet,
-            curation,
             corpus,
+            adapter,
             index,
             filters,
             hasFilters,
             activeKeys,
             current,
             currentBits,
-            keyPriority,
-            corpus.postings(),
-            catalogDimensions);
+            corpus.postings());
 
     if (query.isEmpty()) {
       return FleetSuggestionResponse.getDefaultInstance();
@@ -387,19 +351,10 @@ public final class FleetSuggester {
 
   private List<Cand> suggestKv(Context context, String keyToken, String rawValue, boolean exclude) {
     List<Cand> out = new ArrayList<>();
-    ImmutableList<String> keyIds = resolveKey(context, keyToken);
+    SuggestEntityAdapter adapter = context.adapter();
+    ImmutableList<String> keyIds = adapter.resolveKey(keyToken, context.index());
     if (keyIds.isEmpty()) {
-      // When built-in keys (and known catalog/index keys) did not match, fallback to treating the
-      // bare token as an arbitrary dimension name (or host property for HostCorpus) so long-tail
-      // dimensions can be filtered even before the dimension catalog is populated.
-      String bareName = normalize(keyToken);
-      if (!bareName.isEmpty()) {
-        keyIds =
-            ImmutableList.of(
-                context.corpus() instanceof HostCorpus
-                    ? HostKeys.PREFIX_HOST_PROPERTY + bareName
-                    : DeviceKeys.PREFIX_DIMENSION + bareName);
-      }
+      keyIds = adapter.fallbackKvKeyIds(keyToken);
     }
 
     // Comma outside quotes: a multi-value OR under the resolved key.
@@ -413,9 +368,10 @@ public final class FleetSuggester {
       }
       if (out.isEmpty() && !keyIds.isEmpty() && !parts.isEmpty()) {
         for (String keyId : keyIds) {
-          if (!context.activeKeys().contains(keyId)) {
-            String display = displayName(context.corpus(), keyId);
-            String verb = isPlural(context.corpus(), keyId) ? "are" : "is";
+          if (adapter.isColdUnindexedKey(keyId, context.index())
+              && !context.activeKeys().contains(keyId)) {
+            String display = adapter.titleDisplayName(keyId);
+            String verb = adapter.isPlural(keyId) ? "are" : "is";
             if (exclude) {
               verb += " not";
             }
@@ -430,7 +386,7 @@ public final class FleetSuggester {
                 FleetSuggestion.newBuilder()
                     .setLabel("Add filter")
                     .addAllMainText(mainText)
-                    .setApplyFilter(applyFilter(context.corpus(), context.index(), keyId, filter));
+                    .setApplyFilter(applyFilter(adapter, context.index(), keyId, filter));
             Cand cand = new Cand(Kind.CONDITION, keyId, 1.0, builder, mainTextString(mainText));
             cand.needsCount = false;
             cand.noCount = true;
@@ -443,6 +399,9 @@ public final class FleetSuggester {
 
     String value = Ascii.toLowerCase(stripQuotes(rawValue.trim()));
     for (String keyId : keyIds) {
+      if (!adapter.isKnownKey(keyId)) {
+        continue;
+      }
       boolean hadMatches = false;
       for (Match match :
           matchValues(context.corpus(), context.index(), keyId, value, /* allowContains= */ true)) {
@@ -452,10 +411,13 @@ public final class FleetSuggester {
           hadMatches = true;
         }
       }
-      // Cold long-tail fallback: if the key is valid but has no index entries in core/overlay,
-      // and is not already in active filters, emit a ready-to-apply filter condition with no count.
-      if (!hadMatches && !value.isEmpty() && !context.activeKeys().contains(keyId)) {
-        String display = displayName(context.corpus(), keyId);
+      // Cold long-tail fallback: if the key is an unindexed long-tail dimension/property and is
+      // not already in active filters, emit a ready-to-apply filter condition with no count.
+      if (!hadMatches
+          && !value.isEmpty()
+          && adapter.isColdUnindexedKey(keyId, context.index())
+          && !context.activeKeys().contains(keyId)) {
+        String display = adapter.titleDisplayName(keyId);
         String op = exclude ? "is not" : "is";
         ImmutableList<TextSegment> mainText = segments(display + " " + op + " ", rawValue.trim());
         Filter filter =
@@ -470,7 +432,7 @@ public final class FleetSuggester {
             FleetSuggestion.newBuilder()
                 .setLabel("Add filter")
                 .addAllMainText(mainText)
-                .setApplyFilter(applyFilter(context.corpus(), context.index(), keyId, filter));
+                .setApplyFilter(applyFilter(adapter, context.index(), keyId, filter));
         Cand cand = new Cand(Kind.CONDITION, keyId, 1.0, builder, mainTextString(mainText));
         cand.needsCount = false;
         cand.noCount = true;
@@ -484,10 +446,11 @@ public final class FleetSuggester {
 
   private List<Cand> suggestEmpty(Context context, String keyToken, boolean empty) {
     List<Cand> out = new ArrayList<>();
+    SuggestEntityAdapter adapter = context.adapter();
     FleetIndex index = context.index();
     int globalTotal = context.corpus().recordCount();
-    for (String keyId : resolveKey(index, keyToken)) {
-      if (!index.keyIds().contains(keyId) || !isKeyKnown(context.corpus(), keyId)) {
+    for (String keyId : adapter.resolveKey(keyToken, index)) {
+      if (!index.keyIds().contains(keyId) || !adapter.isKnownKey(keyId)) {
         continue;
       }
 
@@ -497,15 +460,10 @@ public final class FleetSuggester {
       int globalPresent = devicesWithKey(context.postings(), keyId).cardinality();
       if (empty) {
         if (globalTotal - globalPresent <= 0) {
-          // Globally every entity has this key (e.g. host_name, device_id, status).
-          // "is empty" globally has 0 hits. Drop completely.
           continue;
         }
       } else {
         if (globalPresent <= 0 || globalPresent == globalTotal) {
-          // Globally no entity has it, or every entity already has it (e.g. host_name is not
-          // empty).
-          // Globally useless filter. Drop completely.
           continue;
         }
       }
@@ -515,12 +473,11 @@ public final class FleetSuggester {
       int present = presenceCount(context, keyId);
       int count = empty ? (base - present) : present;
       if (count <= 0) {
-        // In current filtered scope, 0 matches. Do not suggest a dead-end filter.
         continue;
       }
 
-      String display = displayName(context.corpus(), keyId);
-      boolean isPlural = isPlural(context.corpus(), keyId);
+      String display = adapter.titleDisplayName(keyId);
+      boolean isPlural = adapter.isPlural(keyId);
       String verb = isPlural ? "are" : "is";
       Filter filter;
       ImmutableList<TextSegment> mainText;
@@ -534,22 +491,18 @@ public final class FleetSuggester {
       boolean inChip = context.activeKeys().contains(keyId);
       FleetSuggestion.Builder builder =
           FleetSuggestion.newBuilder()
-              .setLabel(label(context.corpus(), keyId, inChip))
+              .setLabel(label(adapter, keyId, inChip))
               .addAllMainText(mainText);
       if (inChip) {
-        builder.setOpenPicker(openPickerViewExisting(context.corpus(), keyId));
+        builder.setOpenPicker(openPickerViewExisting(adapter, keyId));
       } else {
-        builder.setApplyFilter(applyFilter(context.corpus(), index, keyId, filter));
+        builder.setApplyFilter(applyFilter(adapter, index, keyId, filter));
       }
 
-      // Standard condition tier is 3.0.
-      // If active filters are present and all records in the filtered subset happen to match
-      // (count == base), this is a minor local demotion (tier 2.0 instead of 3.0),
-      // because the key is globally valid and discriminative, but temporarily full-coverage here.
       double tier = 3.0;
       int rankCount = count;
       if (context.hasFilters() && count == base) {
-        tier = 2.0; // 小降
+        tier = 2.0;
         rankCount = 1;
       }
 
@@ -566,7 +519,7 @@ public final class FleetSuggester {
 
   private List<Cand> suggestKeyValues(Context context, String keyToken, boolean exclude) {
     List<Cand> out = new ArrayList<>();
-    for (String keyId : resolveKey(context, keyToken)) {
+    for (String keyId : context.adapter().resolveKey(keyToken, context.index())) {
       for (Match match : topValues(context, keyId, KEY_VALUES_PER_KEY)) {
         Cand cand = condition(context, keyId, match.value(), 3, exclude);
         if (cand != null) {
@@ -581,6 +534,7 @@ public final class FleetSuggester {
 
   private List<Cand> suggestValue(
       Context context, String token, boolean exclude, ImmutableList<String> multi) {
+    SuggestEntityAdapter adapter = context.adapter();
     FleetIndex index = context.index();
 
     if (multi != null) {
@@ -591,7 +545,7 @@ public final class FleetSuggester {
       }
       ImmutableList<String> values = lowered.build();
       for (String keyId : index.keyIds()) {
-        if (!isKeyKnown(context.corpus(), keyId)) {
+        if (!adapter.isKnownKey(keyId)) {
           continue;
         }
         if (hasAllValues(index, keyId, values)) {
@@ -606,8 +560,6 @@ public final class FleetSuggester {
     Set<String> seen = new HashSet<>();
 
     // 1. Exact matches (all keys, via globalExact) for O(1) lookup.
-    // TODO: Consider extracting a composite(keyId, value) helper for
-    // null-separated composite key lookups.
     for (KeyCount kc : index.globalExact().getOrDefault(value, ImmutableList.of())) {
       if (seen.add(kc.key() + '\u0000' + value)) {
         Cand cand = condition(context, kc.key(), value, 3, exclude);
@@ -646,7 +598,7 @@ public final class FleetSuggester {
       int ihi = FleetFilterEngine.lowerBound(keyValues, value + '\uffff');
       int matchCount = ihi - ilo;
       if (matchCount > 0) {
-        String identDisplay = displayName(context.corpus(), identKey);
+        String identDisplay = adapter.titleDisplayName(identKey);
         ImmutableList<TextSegment> mainText =
             ImmutableList.of(
                 text(identDisplay + " starts with ", false),
@@ -657,7 +609,7 @@ public final class FleetSuggester {
                 .setLabel("Add filter")
                 .addAllMainText(mainText)
                 .setCount(matchCount)
-                .setOpenPicker(openPickerNewChip(context.corpus(), identKey));
+                .setOpenPicker(openPickerNewChip(adapter, identKey));
         Cand cand = new Cand(Kind.KEY, identKey, 1, builder, mainTextString(mainText));
         cand.needsCount = false;
         cand.noCount = true;
@@ -672,7 +624,8 @@ public final class FleetSuggester {
 
   private List<Cand> suggestKey(Context context, String token) {
     List<Cand> out = new ArrayList<>();
-    List<KeyMatch> matched = matchKeyIds(context, token);
+    SuggestEntityAdapter adapter = context.adapter();
+    List<KeyMatch> matched = adapter.matchKeys(token, context.index());
     int rank = 0;
     for (KeyMatch keyMatch : matched) {
       String keyId = keyMatch.keyId();
@@ -688,16 +641,16 @@ public final class FleetSuggester {
       }
       // The bare filter key: opens the value picker. Ranks just below a concrete condition.
       boolean inChip = context.activeKeys().contains(keyId);
-      String display = displayName(context.corpus(), keyId);
+      String display = adapter.titleDisplayName(keyId);
       ImmutableList<TextSegment> mainText = segments(display, null);
       FleetSuggestion.Builder builder =
           FleetSuggestion.newBuilder()
-              .setLabel(label(context.corpus(), keyId, inChip))
+              .setLabel(label(adapter, keyId, inChip))
               .addAllMainText(mainText)
               .setOpenPicker(
                   inChip
-                      ? openPickerViewExisting(context.corpus(), keyId)
-                      : openPickerNewChip(context.corpus(), keyId));
+                      ? openPickerViewExisting(adapter, keyId)
+                      : openPickerNewChip(adapter, keyId));
       Cand cand = new Cand(Kind.KEY, keyId, tier - 0.4, builder, mainTextString(mainText));
       cand.needsCount = false;
       cand.noCount = true;
@@ -711,29 +664,28 @@ public final class FleetSuggester {
 
   private FleetSuggestionResponse suggestGroupBy(
       Context context, String term, List<String> applied, int limit) {
+    SuggestEntityAdapter adapter = context.adapter();
     FleetIndex index = context.index();
     if (applied.size() >= 3) {
       return FleetSuggestionResponse.getDefaultInstance();
     }
     Set<String> appliedSet = new HashSet<>(applied);
 
-    // A bare prefix offers the curated candidates; a term widens to any key whose display name or
-    // bare id matches, ranked by match quality (exact 0, prefix 1, contains 2).
     List<String> candidates = new ArrayList<>();
     Map<String, Integer> matchRank = new HashMap<>();
     if (term.isEmpty()) {
-      candidates.addAll(groupByCandidates(context));
+      candidates.addAll(adapter.defaultGroupByCandidates());
     } else {
       String normTerm = normalize(term);
-      for (String keyId : resolveKey(index, term)) {
+      for (String keyId : adapter.resolveKey(term, index)) {
         matchRank.put(keyId, 0);
       }
       for (String keyId : index.keyIds()) {
-        if (matchRank.containsKey(keyId) || !isKeyKnown(context.corpus(), keyId)) {
+        if (matchRank.containsKey(keyId) || !adapter.isKnownKey(keyId)) {
           continue;
         }
-        String display = normalize(displayName(context.corpus(), keyId));
-        String bare = normalize(bareName(context.corpus(), keyId));
+        String display = normalize(adapter.titleDisplayName(keyId));
+        String bare = normalize(adapter.bareName(keyId));
         if (display.startsWith(normTerm) || bare.startsWith(normTerm)) {
           matchRank.put(keyId, 1);
         } else if (display.contains(normTerm) || bare.contains(normTerm)) {
@@ -747,7 +699,7 @@ public final class FleetSuggester {
     for (String keyId : candidates) {
       if (!index.keyIds().contains(keyId)
           || appliedSet.contains(keyId)
-          || !isKeyKnown(context.corpus(), keyId)) {
+          || !adapter.isKnownKey(keyId)) {
         continue;
       }
       int groups = groupCount(context, keyId);
@@ -755,7 +707,7 @@ public final class FleetSuggester {
         continue;
       }
       boolean overMax = groups > GROUP_SUGGEST_MAX;
-      String display = displayName(context.corpus(), keyId);
+      String display = adapter.titleDisplayName(keyId);
       ImmutableList<TextSegment> mainText = segments("", display);
       FleetSuggestion.Builder builder =
           FleetSuggestion.newBuilder()
@@ -764,7 +716,7 @@ public final class FleetSuggester {
               .setCount(groups)
               .setCountUnit("groups")
               .setOverMax(overMax)
-              .setAddGroupBy(addGroupBy(context.corpus(), keyId));
+              .setAddGroupBy(addGroupBy(adapter, keyId));
       Cand cand = new Cand(Kind.GROUP_BY, keyId, 0, builder, mainTextString(mainText));
       cand.groupRank = matchRank.getOrDefault(keyId, 0);
       cand.overMax = overMax;
@@ -773,7 +725,7 @@ public final class FleetSuggester {
     }
 
     out.sort(
-        Comparator.<Cand>comparingInt(c -> -context.keyPriority().applyAsInt(c.keyId))
+        Comparator.<Cand>comparingInt(c -> -adapter.keyPriority(c.keyId))
             .thenComparingInt(c -> c.groupRank)
             .thenComparing(c -> c.overMax, falseFirst())
             .thenComparingInt(c -> c.count == null ? 0 : c.count));
@@ -790,8 +742,9 @@ public final class FleetSuggester {
   @Nullable
   private Cand condition(
       Context context, String keyId, String valueLower, double tier, boolean exclude) {
+    SuggestEntityAdapter adapter = context.adapter();
     FleetIndex index = context.index();
-    if (!index.keyIds().contains(keyId) || !isKeyKnown(context.corpus(), keyId)) {
+    if (!index.keyIds().contains(keyId) || !adapter.isKnownKey(keyId)) {
       return null;
     }
     // Eligibility gate (spec section 11.1): the value must exist somewhere in the fleet.
@@ -802,8 +755,7 @@ public final class FleetSuggester {
     boolean inChip = context.activeKeys().contains(keyId);
 
     // Polarity-conflict and complex-chip rules (spec section 7): when the key already carries a
-    // chip whose polarity conflicts, or a complex chip, suppress the value suggestion. Only the
-    // key-level "Modify <Key>" affordance remains (emitted separately by the key path).
+    // chip whose polarity conflicts, or a complex chip, suppress the value suggestion.
     if (inChip) {
       Filter chip = chipFor(context.filters(), keyId);
       if (chip != null) {
@@ -819,26 +771,22 @@ public final class FleetSuggester {
       }
     }
 
-    String display = displayName(context.corpus(), keyId);
+    String display = adapter.titleDisplayName(keyId);
     String shown = displayValue(index, keyId, valueLower);
     FleetSuggestion.Builder builder = FleetSuggestion.newBuilder();
     ImmutableList<TextSegment> mainText;
     if (inChip) {
-      // Editing an existing simple, same-polarity chip: stage the value in the picker. One-click
-      // apply is reserved for brand-new chips.
       String verb = exclude ? "exclude " : "add ";
       mainText = segments(verb, shown);
-      builder.setOpenPicker(openPickerStaged(context.corpus(), keyId, ImmutableList.of(shown)));
+      builder.setOpenPicker(openPickerStaged(adapter, keyId, ImmutableList.of(shown)));
     } else {
       String op =
-          isPlural(context.corpus(), keyId)
-              ? (exclude ? "are not" : "are")
-              : (exclude ? "is not" : "is");
+          adapter.isPlural(keyId) ? (exclude ? "are not" : "are") : (exclude ? "is not" : "is");
       mainText = segments(display + " " + op + " ", shown);
       Filter filter = valueFilter(keyId, ImmutableList.of(shown), exclude);
-      builder.setApplyFilter(applyFilter(context.corpus(), index, keyId, filter));
+      builder.setApplyFilter(applyFilter(adapter, index, keyId, filter));
     }
-    builder.setLabel(label(context.corpus(), keyId, inChip)).addAllMainText(mainText);
+    builder.setLabel(label(adapter, keyId, inChip)).addAllMainText(mainText);
 
     Cand cand = new Cand(Kind.CONDITION, keyId, tier, builder, mainTextString(mainText));
     cand.value = valueLower;
@@ -855,8 +803,9 @@ public final class FleetSuggester {
       String keyId,
       ImmutableList<String> valuesLower,
       boolean exclude) {
+    SuggestEntityAdapter adapter = context.adapter();
     FleetIndex index = context.index();
-    if (!index.keyIds().contains(keyId) || !isKeyKnown(context.corpus(), keyId)) {
+    if (!index.keyIds().contains(keyId) || !adapter.isKnownKey(keyId)) {
       return;
     }
     ImmutableList.Builder<String> presentBuilder = ImmutableList.builder();
@@ -877,8 +826,8 @@ public final class FleetSuggester {
 
     int orCount = unionCount(context, keyId, present);
     boolean inChip = context.activeKeys().contains(keyId);
-    String display = displayName(context.corpus(), keyId);
-    String verb = isPlural(context.corpus(), keyId) ? "are" : "is";
+    String display = adapter.titleDisplayName(keyId);
+    String verb = adapter.isPlural(keyId) ? "are" : "is";
     if (exclude) {
       verb += " not";
     }
@@ -897,13 +846,13 @@ public final class FleetSuggester {
     ImmutableList<TextSegment> mainText = ImmutableList.copyOf(segmentList);
     FleetSuggestion.Builder builder =
         FleetSuggestion.newBuilder()
-            .setLabel(label(context.corpus(), keyId, inChip))
+            .setLabel(label(adapter, keyId, inChip))
             .addAllMainText(mainText);
     if (inChip) {
-      builder.setOpenPicker(openPickerStaged(context.corpus(), keyId, shown));
+      builder.setOpenPicker(openPickerStaged(adapter, keyId, shown));
     } else {
       builder.setApplyFilter(
-          applyFilter(context.corpus(), index, keyId, valueFilter(keyId, shown, exclude)));
+          applyFilter(adapter, index, keyId, valueFilter(keyId, shown, exclude)));
     }
     Cand cand = new Cand(Kind.CONDITION, keyId, 3, builder, mainTextString(mainText));
     cand.rankCount = orCount;
@@ -915,7 +864,7 @@ public final class FleetSuggester {
   // ---- Ranking (spec section 11.2, section 11.3, section 10.3) ----
 
   private FleetSuggestionResponse rank(Context context, List<Cand> raw, int limit) {
-    // Dedupe by (label, main text).
+    SuggestEntityAdapter adapter = context.adapter();
     Set<String> seen = new HashSet<>();
     List<Cand> uniq = new ArrayList<>();
     for (Cand cand : raw) {
@@ -928,12 +877,8 @@ public final class FleetSuggester {
       }
     }
 
-    // Ranking order (matches prototype suggest_engine.py _rank sort_key): key priority is the
-    // PRIMARY sort so core keys (e.g. dimension::model) outrank raw dims (e.g.
-    // dimension::supported_model)
-    // regardless of match count, then match quality (tier), personalization, count, text.
     uniq.sort(
-        Comparator.<Cand>comparingInt(c -> -context.keyPriority().applyAsInt(c.keyId))
+        Comparator.<Cand>comparingInt(c -> -adapter.keyPriority(c.keyId))
             .thenComparingInt(c -> -(int) Math.round(c.tier))
             .thenComparingInt(c -> -(PERSONALIZED_KEYS.contains(c.keyId) ? 1 : 0))
             .thenComparingInt(c -> -c.rankCount)
@@ -947,13 +892,11 @@ public final class FleetSuggester {
       }
       return response.build();
     }
-    // Under active filters, compute filtered count for all candidates, then re-sort by filtered
-    // count and drop zero-count conditions.
     for (Cand cand : uniq) {
       applyCount(context, cand);
     }
     uniq.sort(
-        Comparator.<Cand>comparingInt(c -> -context.keyPriority().applyAsInt(c.keyId))
+        Comparator.<Cand>comparingInt(c -> -adapter.keyPriority(c.keyId))
             .thenComparingInt(c -> -(int) Math.round(c.tier))
             .thenComparingInt(c -> -(PERSONALIZED_KEYS.contains(c.keyId) ? 1 : 0))
             .thenComparingInt(c -> -(c.count != null ? c.count : 0))
@@ -971,11 +914,6 @@ public final class FleetSuggester {
     return response.build();
   }
 
-  /**
-   * Sets the displayed count (spec section 10.3) for a shown candidate. A modify-include suggestion
-   * carries the OR-broadening delta with a "+" prefix; every other value suggestion carries the
-   * resulting absolute total.
-   */
   private void applyCount(Context context, Cand cand) {
     if (!cand.needsCount) {
       return;
@@ -983,14 +921,12 @@ public final class FleetSuggester {
     int base = context.hasFilters() ? context.current().size() : context.corpus().recordCount();
 
     if (cand.inChip && !cand.exclude) {
-      // Modify include: the true delta is how many devices matching the OTHER chips and this value
-      // are not already in the result.
       BitSet baseK =
           toBitSet(
               filterEngine.match(context.corpus(), otherFilters(context.filters(), cand.keyId)));
       int added = 0;
-      for (int deviceIndex : context.postings().get(cand.keyId, cand.value)) {
-        if (baseK.get(deviceIndex) && !context.currentBits().get(deviceIndex)) {
+      for (int recordIndex : context.postings().get(cand.keyId, cand.value)) {
+        if (baseK.get(recordIndex) && !context.currentBits().get(recordIndex)) {
           added++;
         }
       }
@@ -1018,8 +954,8 @@ public final class FleetSuggester {
   private static int unionCount(Context context, String keyId, ImmutableList<String> valuesLower) {
     BitSet union = new BitSet();
     for (String value : valuesLower) {
-      for (int deviceIndex : context.postings().get(keyId, value)) {
-        union.set(deviceIndex);
+      for (int recordIndex : context.postings().get(keyId, value)) {
+        union.set(recordIndex);
       }
     }
     if (context.hasFilters()) {
@@ -1047,7 +983,6 @@ public final class FleetSuggester {
     ImmutableMap<String, Integer> counts = index.valueCounts(keyId);
     List<Match> out = new ArrayList<>();
     Set<String> exactHits = new HashSet<>();
-    // Full match, normalizing space and underscore both ways (spec section 2.3).
     for (String variant : new String[] {query, query.replace(' ', '_'), query.replace('_', ' ')}) {
       if (counts.containsKey(variant) && exactHits.add(variant)) {
         out.add(new Match(variant, 3));
@@ -1087,137 +1022,13 @@ public final class FleetSuggester {
     return all.subList(0, Math.min(all.size(), n));
   }
 
-  // ---- Key resolution (spec section 2.2) ----
-
-  private static ImmutableList<String> resolveKey(Context context, String token) {
-    return resolveKey(context.index(), context.catalogDimensions(), token);
-  }
-
-  private static ImmutableList<String> resolveKey(FleetIndex index, String token) {
-    return resolveKey(index, ImmutableSet.of(), token);
-  }
-
-  private static ImmutableList<String> resolveKey(
-      FleetIndex index, ImmutableSet<String> catalogDimensions, String token) {
-    String raw = token.trim();
-    String low = Ascii.toLowerCase(raw);
-
-    Matcher dim = NAMESPACE_DIM.matcher(low);
-    if (dim.matches()) {
-      String dimName = normalize(dim.group(1));
-      String keyId = DeviceKeys.dimensionKeyId(dimName);
-      return ImmutableList.of(keyId);
-    }
-    Matcher prop = NAMESPACE_PROP.matcher(low);
-    if (prop.matches()) {
-      String keyId = HostKeys.hostPropertyKeyId(normalize(prop.group(1)));
-      return ImmutableList.of(keyId);
-    }
-    ImmutableList<String> aliased = ALIAS_TO_KEYS.get(normalize(raw));
-    if (aliased != null) {
-      return aliased;
-    }
-    // Case 3: a bare token equal to a dimension or host-property key present in the fleet.
-    String bareDimName = normalize(raw);
-    String bareDim = DeviceKeys.dimensionKeyId(bareDimName);
-    if (index.keyIds().contains(bareDim) || catalogDimensions.contains(bareDimName)) {
-      return ImmutableList.of(bareDim);
-    }
-    String bareProp = HostKeys.hostPropertyKeyId(normalize(raw));
-    if (index.keyIds().contains(bareProp)) {
-      return ImmutableList.of(bareProp);
-    }
-    return ImmutableList.of();
-  }
-
-  /**
-   * Resolves a key token to matched keys with a match-quality tier, looser than {@link
-   * #resolveKey}: beyond exact alias hits it also offers prefix and contains matches over key
-   * display names, including discovered long-tail dimensions from {@code DimensionCatalogStore}.
-   */
-  private static List<KeyMatch> matchKeyIds(Context context, String token) {
-    FleetIndex index = context.index();
-    List<KeyMatch> out = new ArrayList<>();
-    Set<String> seen = new HashSet<>();
-    for (String keyId : resolveKey(context, token)) {
-      if ((index.keyIds().contains(keyId)
-              || isDiscoveredDimension(context, keyId)
-              || isDimensionOrProperty(context.corpus(), keyId))
-          && seen.add(keyId)) {
-        out.add(new KeyMatch(keyId, 3));
-      }
-    }
-    String normTerm = normalize(token);
-    if (normTerm.isEmpty()) {
-      return out;
-    }
-    for (String keyId : index.keyIds()) {
-      if (seen.contains(keyId) || !isKeyKnown(context.corpus(), keyId)) {
-        continue;
-      }
-      String display = normalize(displayName(context.corpus(), keyId));
-      String bare = normalize(bareName(context.corpus(), keyId));
-      if (display.startsWith(normTerm) || bare.startsWith(normTerm)) {
-        out.add(new KeyMatch(keyId, 2));
-        seen.add(keyId);
-      }
-    }
-    for (String dimName : context.catalogDimensions()) {
-      String keyId = DeviceKeys.dimensionKeyId(dimName);
-      if (seen.contains(keyId)) {
-        continue;
-      }
-      String display = normalize(displayName(context.corpus(), keyId));
-      String bare = normalize(dimName);
-      if (display.startsWith(normTerm) || bare.startsWith(normTerm)) {
-        out.add(new KeyMatch(keyId, 2));
-        seen.add(keyId);
-      }
-    }
-    for (String keyId : index.keyIds()) {
-      if (seen.contains(keyId) || !isKeyKnown(context.corpus(), keyId)) {
-        continue;
-      }
-      String display = normalize(displayName(context.corpus(), keyId));
-      String bare = normalize(bareName(context.corpus(), keyId));
-      if (display.contains(normTerm) || bare.contains(normTerm)) {
-        out.add(new KeyMatch(keyId, 1));
-        seen.add(keyId);
-      }
-    }
-    for (String dimName : context.catalogDimensions()) {
-      String keyId = DeviceKeys.dimensionKeyId(dimName);
-      if (seen.contains(keyId)) {
-        continue;
-      }
-      String display = normalize(displayName(context.corpus(), keyId));
-      String bare = normalize(dimName);
-      if (display.contains(normTerm) || bare.contains(normTerm)) {
-        out.add(new KeyMatch(keyId, 1));
-        seen.add(keyId);
-      }
-    }
-    return out;
-  }
-
-  private static boolean isDiscoveredDimension(Context context, String keyId) {
-    if (context.corpus() instanceof DeviceCorpus deviceCorpus) {
-      return deviceCorpus
-          .getKey(keyId)
-          .filter(DeviceKeyDescriptor::isDimension)
-          .map(d -> context.catalogDimensions().contains(d.bareName()))
-          .orElse(false);
-    }
-    return false;
-  }
-
-  // ---- Group-by counting (mirrors FleetPromotedKeysProvider) ----
+  // ---- Group-by counting ----
 
   private static int groupCount(Context context, String keyId) {
     Set<String> combos = new HashSet<>();
     boolean hasMissing = false;
-    for (int deviceIndex : context.current()) {
-      ImmutableSet<String> values = context.corpus().valuesForKey(deviceIndex, keyId);
+    for (int recordIndex : context.current()) {
+      ImmutableSet<String> values = context.corpus().valuesForKey(recordIndex, keyId);
       if (values.isEmpty()) {
         hasMissing = true;
       } else {
@@ -1230,61 +1041,50 @@ public final class FleetSuggester {
   // ---- Action builders ----
 
   private static FleetApplyFilter applyFilter(
-      SearchCorpus corpus, FleetIndex index, String keyId, Filter filter) {
+      SuggestEntityAdapter adapter, FleetIndex index, String keyId, Filter filter) {
     return FleetApplyFilter.newBuilder()
         .setResultingFilter(filter)
-        .setPillKey(pillKey(corpus, keyId))
+        .setPillKey(adapter.pillKey(keyId))
         .setPillCondition(pillCondition(index, filter))
-        .setMetadata(metadata(corpus, keyId))
+        .setMetadata(metadata(adapter, keyId))
         .build();
   }
 
-  private static FleetOpenPicker openPickerNewChip(SearchCorpus corpus, String keyId) {
+  private static FleetOpenPicker openPickerNewChip(SuggestEntityAdapter adapter, String keyId) {
     return FleetOpenPicker.newBuilder()
         .setKey(keyId)
-        .setMetadata(metadata(corpus, keyId))
+        .setMetadata(metadata(adapter, keyId))
         .setNewChip(FleetNewChip.getDefaultInstance())
         .build();
   }
 
-  private static FleetOpenPicker openPickerViewExisting(SearchCorpus corpus, String keyId) {
+  private static FleetOpenPicker openPickerViewExisting(
+      SuggestEntityAdapter adapter, String keyId) {
     return FleetOpenPicker.newBuilder()
         .setKey(keyId)
-        .setMetadata(metadata(corpus, keyId))
+        .setMetadata(metadata(adapter, keyId))
         .setViewExisting(FleetViewExisting.getDefaultInstance())
         .build();
   }
 
   private static FleetOpenPicker openPickerStaged(
-      SearchCorpus corpus, String keyId, ImmutableList<String> values) {
+      SuggestEntityAdapter adapter, String keyId, ImmutableList<String> values) {
     return FleetOpenPicker.newBuilder()
         .setKey(keyId)
-        .setMetadata(metadata(corpus, keyId))
+        .setMetadata(metadata(adapter, keyId))
         .setStagedModify(FleetStagedModification.newBuilder().addAllValues(values))
         .build();
   }
 
-  private static FleetAddGroupBy addGroupBy(SearchCorpus corpus, String keyId) {
-    return FleetAddGroupBy.newBuilder().setKey(keyId).setPillKey(pillKey(corpus, keyId)).build();
+  private static FleetAddGroupBy addGroupBy(SuggestEntityAdapter adapter, String keyId) {
+    return FleetAddGroupBy.newBuilder().setKey(keyId).setPillKey(adapter.pillKey(keyId)).build();
   }
 
-  private static boolean isDimensionOrProperty(SearchCorpus corpus, String keyId) {
-    if (corpus instanceof DeviceCorpus deviceCorpus) {
-      return deviceCorpus
-          .getKey(keyId)
-          .map(k -> k.isDimension() || k.isHostProperty())
-          .orElse(false);
-    } else if (corpus instanceof HostCorpus hostCorpus) {
-      return hostCorpus.getKey(keyId).map(HostKeyDescriptor::isHostProperty).orElse(false);
-    }
-    return false;
-  }
-
-  private static FleetFilterChipMetadata metadata(SearchCorpus corpus, String keyId) {
+  private static FleetFilterChipMetadata metadata(SuggestEntityAdapter adapter, String keyId) {
     return FleetFilterChipMetadata.newBuilder()
-        .setKeyDisplayName(displayName(corpus, keyId))
+        .setKeyDisplayName(adapter.titleDisplayName(keyId))
         .setCanUseAdvanced(true)
-        .setIsPlural(isPlural(corpus, keyId))
+        .setIsPlural(adapter.isPlural(keyId))
         .build();
   }
 
@@ -1310,69 +1110,14 @@ public final class FleetSuggester {
 
   // ---- Display helpers ----
 
-  private static String label(SearchCorpus corpus, String keyId, boolean inChip) {
-    return inChip ? "Modify " + displayName(corpus, keyId) : "Add filter";
-  }
-
-  private static String displayName(SearchCorpus corpus, String keyId) {
-    if (corpus instanceof DeviceCorpus deviceCorpus) {
-      return deviceCorpus.getKey(keyId).map(DeviceKeyDisplays::titleDisplayName).orElse(keyId);
-    }
-    if (corpus instanceof HostCorpus hostCorpus) {
-      return hostCorpus.getKey(keyId).map(HostKeyDisplays::titleDisplayName).orElse(keyId);
-    }
-    return keyId;
-  }
-
-  private static String bareName(SearchCorpus corpus, String keyId) {
-    if (corpus instanceof DeviceCorpus deviceCorpus) {
-      return deviceCorpus.getKey(keyId).map(DeviceKeyDescriptor::bareName).orElse(keyId);
-    }
-    if (corpus instanceof HostCorpus hostCorpus) {
-      return hostCorpus.getKey(keyId).map(HostKeyDescriptor::bareName).orElse(keyId);
-    }
-    return keyId;
-  }
-
-  private static String pillKey(SearchCorpus corpus, String keyId) {
-    if (corpus instanceof DeviceCorpus deviceCorpus) {
-      return deviceCorpus.getKey(keyId).map(DeviceKeyDisplays::pillKey).orElse(keyId);
-    }
-    if (corpus instanceof HostCorpus hostCorpus) {
-      return hostCorpus.getKey(keyId).map(HostKeyDisplays::pillKey).orElse(keyId);
-    }
-    return keyId;
-  }
-
-  private static boolean isPlural(SearchCorpus corpus, String keyId) {
-    if (corpus instanceof DeviceCorpus deviceCorpus) {
-      return deviceCorpus.getKey(keyId).map(k -> k.display().isPlural()).orElse(false);
-    }
-    if (corpus instanceof HostCorpus hostCorpus) {
-      return hostCorpus.getKey(keyId).map(k -> k.display().isPlural()).orElse(false);
-    }
-    return false;
-  }
-
-  private static boolean isKeyKnown(SearchCorpus corpus, String keyId) {
-    if (corpus instanceof DeviceCorpus deviceCorpus) {
-      return deviceCorpus.getKey(keyId).isPresent();
-    }
-    if (corpus instanceof HostCorpus hostCorpus) {
-      return hostCorpus.getKey(keyId).isPresent();
-    }
-    return false;
+  private static String label(SuggestEntityAdapter adapter, String keyId, boolean inChip) {
+    return inChip ? "Modify " + adapter.titleDisplayName(keyId) : "Add filter";
   }
 
   private static String displayValue(FleetIndex index, String keyId, String valueLower) {
     return index.valueDisplays(keyId).getOrDefault(valueLower, valueLower);
   }
 
-  /**
-   * Compact condition text for the resulting chip pill, mirroring {@link FleetChipResolver}. A
-   * single value shows itself, several collapse to their count, an exclude is prefixed with the
-   * not-equal sign, and a lone no-value entry reads as "empty" or "not empty".
-   */
   private static String pillCondition(FleetIndex index, Filter filter) {
     if (filter.getModeCase() != Filter.ModeCase.SIMPLE) {
       return "\u2026";
@@ -1433,32 +1178,6 @@ public final class FleetSuggester {
 
   // ---- Small utilities ----
 
-  private static ImmutableList<String> groupByCandidates(Context context) {
-    ScenarioCuration curation = context.corpus().curation();
-    if (context.corpus() instanceof DeviceCorpus) {
-      if (curation != null) {
-        return curation.deviceGroupByCandidates().stream()
-            .map(DeviceKeyDescriptor::id)
-            .collect(toImmutableList());
-      }
-      return ImmutableList.of(
-          DeviceKeys.STATUS.id(),
-          DeviceKeys.MODEL.id(),
-          DeviceKeys.TYPE.id(),
-          DeviceKeys.HOST_NAME.id());
-    }
-    if (context.corpus() instanceof HostCorpus) {
-      if (curation != null) {
-        return curation.hostGroupByCandidates().stream()
-            .map(HostKeyDescriptor::id)
-            .collect(toImmutableList());
-      }
-      return ImmutableList.of(
-          HostKeys.HOST_NAME.id(), HostKeys.CONNECTIVITY.id(), HostKeys.DEVICE_COUNT.id());
-    }
-    return ImmutableList.of();
-  }
-
   private static Optional<String> groupByPrefix(String query) {
     String low = Ascii.toLowerCase(query);
     for (String prefix : GROUP_BY_PREFIXES) {
@@ -1470,10 +1189,6 @@ public final class FleetSuggester {
       }
     }
     return Optional.empty();
-  }
-
-  private static String normalize(String value) {
-    return value.strip().toLowerCase(Locale.ROOT).replaceAll("[\\s_]+", "_");
   }
 
   private static String stripQuotes(String value) {
@@ -1530,8 +1245,8 @@ public final class FleetSuggester {
   private static BitSet devicesWithKey(Postings postings, String keyId) {
     BitSet withKey = new BitSet();
     for (int[] posting : postings.forKey(keyId).values()) {
-      for (int deviceIndex : posting) {
-        withKey.set(deviceIndex);
+      for (int recordIndex : posting) {
+        withKey.set(recordIndex);
       }
     }
     return withKey;
@@ -1539,8 +1254,8 @@ public final class FleetSuggester {
 
   private static int intersectionCount(int[] posting, BitSet filteredSet) {
     int count = 0;
-    for (int deviceIndex : posting) {
-      if (filteredSet.get(deviceIndex)) {
+    for (int recordIndex : posting) {
+      if (filteredSet.get(recordIndex)) {
         count++;
       }
     }
@@ -1549,8 +1264,8 @@ public final class FleetSuggester {
 
   private static BitSet toBitSet(ImmutableList<Integer> indices) {
     BitSet set = new BitSet();
-    for (int deviceIndex : indices) {
-      set.set(deviceIndex);
+    for (int recordIndex : indices) {
+      set.set(recordIndex);
     }
     return set;
   }
@@ -1568,108 +1283,6 @@ public final class FleetSuggester {
       }
     }
     return lo;
-  }
-
-  private static ImmutableMap<String, ImmutableList<String>> buildAliasMap() {
-    SetMultimap<String, String> map =
-        MultimapBuilder.linkedHashKeys().linkedHashSetValues().build();
-    addAliases(map, DeviceKeys.UUID.id(), "uuid", "id", "device id", "device uuid");
-    addAliases(map, DeviceKeys.TYPE.id(), "type(s)", "device type(s)");
-    addAliases(map, DeviceKeys.STATUS.id(), "status", "device status");
-    addAliases(map, DeviceKeys.PREFIX_DEVICE_FIELD + "owner", "owner(s)", "device owner(s)");
-    addAliases(
-        map,
-        DeviceKeys.DRIVER.id(),
-        "driver(s)",
-        "supported driver(s)",
-        "device supported driver(s)");
-    addAliases(
-        map,
-        DeviceKeys.DECORATOR.id(),
-        "decorator(s)",
-        "supported decorator(s)",
-        "device supported decorator(s)");
-    addAliases(
-        map, DeviceKeys.PREFIX_DEVICE_FIELD + "executor", "executor(s)", "device executor(s)");
-    addAliases(map, DeviceKeys.OS.id(), "os", "device os");
-    addAliases(map, DeviceKeys.MODEL.id(), "model", "device model");
-    addAliases(map, DeviceKeys.SDK_VERSION.id(), "sdk version", "version");
-    addAliases(map, DeviceKeys.SOFTWARE_VERSION.id(), "software version", "version");
-    addAliases(map, DeviceKeys.DEVICE_FORM.id(), "form", "device form");
-    addAliases(map, DeviceKeys.PREFIX_DEVICE_FIELD + "quarantined", "quarantine", "quarantined");
-    addAliases(
-        map, DeviceKeys.DEVICE_CLASS_NAME.id(), "device class", "class", "device class name");
-    addAliases(map, DeviceKeys.MANUFACTURER.id(), "manufacturer", "make", "brand");
-    addAliases(
-        map,
-        AtsDeviceKeys.WIFI_SSID.id(),
-        "wifi",
-        "wi-fi",
-        "ssid",
-        "wifi ssid",
-        "wi-fi ssid",
-        "network");
-    addAliases(map, HostKeys.HOST_NAME.id(), "host name", "hostname", "host");
-    addAliases(map, HostKeys.HOST_IP.id(), "host ip", "ip");
-    addAliases(map, HostKeys.HOST_OS.id(), "host os");
-    addAliases(map, HostKeys.PREFIX_HOST_FIELD + "lab_type", "lab type");
-    addAliases(map, HostKeys.CONNECTIVITY.id(), "connectivity", "lab server connectivity");
-    addAliases(map, "host_field::lab_server_activity", "activity", "lab server activity");
-    addAliases(
-        map,
-        HostKeys.PREFIX_HOST_FIELD + "daemon_status",
-        "daemon",
-        "daemon status",
-        "daemon server status");
-    addAliases(
-        map,
-        HostKeys.PREFIX_HOST_FIELD + "daemon_server_version",
-        "daemon version",
-        "daemon server version",
-        "host daemon server version");
-    addAliases(map, HostKeys.PREFIX_HOST_FIELD + "release_status", "release status", "release");
-    addAliases(map, HostKeys.LAB_SERVER_VERSION.id(), "lab server version");
-    addAliases(
-        map, HostKeys.PREFIX_HOST_FIELD + "release_type", "release type", "host release type");
-    addAliases(
-        map,
-        HostKeys.PREFIX_HOST_FIELD + "ats_lab_display_name",
-        "ats lab",
-        "lab",
-        "lab name",
-        "ats lab name");
-    addAliases(
-        map,
-        HostKeys.PREFIX_HOST_FIELD + "ats_controller_id",
-        "controller",
-        "controller id",
-        "ats controller",
-        "ats controller id");
-    // Host device-count aliases. host::device_count is a host-only key, absent from the device
-    // index, so these resolve to nothing under device search and only take effect for host search.
-    addAliases(map, HostKeys.DEVICE_COUNT.id(), "device count", "device_count", "devices");
-
-    ImmutableMap.Builder<String, ImmutableList<String>> built = ImmutableMap.builder();
-    for (Map.Entry<String, Collection<String>> entry : map.asMap().entrySet()) {
-      built.put(entry.getKey(), ImmutableList.copyOf(entry.getValue()));
-    }
-    return built.buildOrThrow();
-  }
-
-  private static void addAliases(SetMultimap<String, String> map, String keyId, String... aliases) {
-    for (String alias : aliases) {
-      for (String expanded : expandPlural(alias)) {
-        map.put(normalize(expanded), keyId);
-      }
-    }
-  }
-
-  private static ImmutableList<String> expandPlural(String alias) {
-    if (alias.contains("(s)")) {
-      String base = alias.replace("(s)", "");
-      return ImmutableList.of(base, base + "s");
-    }
-    return ImmutableList.of(alias);
   }
 
   // ---- Internal types ----
@@ -1729,23 +1342,17 @@ public final class FleetSuggester {
   /** A matched value with its match-quality tier (3 full, 2 prefix, 1 contains). */
   private record Match(String value, int tier) {}
 
-  /** A matched key with its match-quality tier (3 exact, 2 prefix, 1 contains). */
-  private record KeyMatch(String keyId, double tier) {}
-
   /** Per-request query context, so helpers avoid threading many parameters. */
   private record Context(
-      Fleet fleet,
-      ScenarioCuration curation,
       SearchCorpus corpus,
+      SuggestEntityAdapter adapter,
       FleetIndex index,
       List<Filter> filters,
       boolean hasFilters,
       Set<String> activeKeys,
       ImmutableList<Integer> current,
       BitSet currentBits,
-      ToIntFunction<String> keyPriority,
-      Postings postings,
-      ImmutableSet<String> catalogDimensions) {}
+      Postings postings) {}
 
   /**
    * A candidate suggestion before ranking. Holds the partially built proto (label, main text, and

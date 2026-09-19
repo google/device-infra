@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
@@ -38,6 +39,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextSegment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionCatalogStore;
 import com.google.inject.Guice;
 import java.time.Instant;
 import org.junit.Test;
@@ -151,6 +153,56 @@ public final class HostSuggesterTest {
     assertThat(suggestion.getApplyFilter().getResultingFilter().getSimple().getValues(0).getValue())
         .isEqualTo("special_val");
     assertThat(suggestion.hasCount()).isFalse();
+  }
+
+  @Test
+  public void hostSearch_withPopulatedDimensionCatalog_neverSuggestsDeviceDimensionsOrFields() {
+    DimensionCatalogStore catalogStore = new DimensionCatalogStore();
+    catalogStore.setDimensionNames(
+        Fleet.FLEET_SELF,
+        ImmutableList.of(
+            "battery_status",
+            "external_storage_status",
+            "host_identity_status",
+            "internal_storage_status",
+            "monsoon_status"));
+    FleetSuggester suggesterWithCatalog =
+        new FleetSuggester(
+            Guice.createInjector().getInstance(FleetFilterEngine.class),
+            ImmutableMap.of(Fleet.FLEET_SELF, new AtsCuration()),
+            catalogStore);
+
+    // 1. Typing "status" on HostCorpus must never return dimension::* or device_field::*.
+    FleetSuggestionResponse statusResponse =
+        suggesterWithCatalog.suggest(corpus, request("status"));
+    for (FleetSuggestion item : statusResponse.getItemsList()) {
+      if (item.hasOpenPicker()) {
+        assertThat(item.getOpenPicker().getKey()).doesNotContain("dimension::");
+        assertThat(item.getOpenPicker().getKey()).doesNotContain("device_field::");
+      }
+      if (item.hasApplyFilter()) {
+        assertThat(item.getApplyFilter().getResultingFilter().getKey())
+            .doesNotContain("dimension::");
+        assertThat(item.getApplyFilter().getResultingFilter().getKey())
+            .doesNotContain("device_field::");
+      }
+    }
+
+    // 2. Typing "model is pixel" or "dimension:battery_status is ok" on HostCorpus must never emit
+    // dimension::* or device_field::* filters.
+    FleetSuggestionResponse modelKv =
+        suggesterWithCatalog.suggest(corpus, request("model is pixel"));
+    for (FleetSuggestion item : modelKv.getItemsList()) {
+      if (item.hasApplyFilter()) {
+        assertThat(item.getApplyFilter().getResultingFilter().getKey())
+            .doesNotContain("dimension::");
+        assertThat(item.getApplyFilter().getResultingFilter().getKey())
+            .doesNotContain("device_field::");
+      }
+    }
+    FleetSuggestionResponse explicitDimKv =
+        suggesterWithCatalog.suggest(corpus, request("dimension:battery_status is ok"));
+    assertThat(explicitDimKv.getItemsList()).isEmpty();
   }
 
   // --- Helpers ---
