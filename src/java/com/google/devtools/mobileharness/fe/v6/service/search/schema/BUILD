@@ -45,6 +45,7 @@ java_library(
     srcs = [
         "DeviceKeyDescriptor.java",
         "HostKeyDescriptor.java",
+        "KeyDescriptor.java",
         "KeyDisplay.java",
     ],
     deps = [

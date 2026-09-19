@@ -83,6 +83,19 @@ public abstract class HostKeyRegistry {
   }
 
   /**
+   * The host key a bare host property name denotes: the built-in descriptor if this deployment
+   * declares one (so {@code "host_os"} yields {@link HostKeys#HOST_OS}, not a long-tail twin),
+   * otherwise a long-tail mint; empty for a blank name. This is how a name typed by a user or read
+   * from data becomes a key without any caller forming an id.
+   */
+  public Optional<HostKeyDescriptor> hostPropertyKey(String propertyKey) {
+    if (propertyKey == null || propertyKey.trim().isEmpty()) {
+      return Optional.empty();
+    }
+    return getKey(HostKeys.hostPropertyKeyId(propertyKey));
+  }
+
+  /**
    * Mints a long-tail host-property key for a property discovered from data, or returns empty if
    * the property key is null or empty.
    */
