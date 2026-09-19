@@ -14,11 +14,21 @@ import {FilesTab} from '../../../../shared/components/files_tab/files_tab';
 })
 export class TestFilesTab {
   readonly testId = input.required<string>();
+  readonly subTestId = input<string | undefined>(undefined);
   readonly jobId = input<string>('');
   readonly fileExplorer = input.required<FileExplorer>();
 
   private readonly testService = inject(TEST_SERVICE);
 
-  readonly getFileContent = (path: string) =>
-    this.testService.getTestFile(this.testId(), this.jobId(), path);
+  readonly getFileContent = (path: string) => {
+    const subTestId = this.subTestId();
+    return subTestId
+      ? this.testService.getTestFile(
+          this.testId(),
+          this.jobId(),
+          path,
+          subTestId,
+        )
+      : this.testService.getTestFile(this.testId(), this.jobId(), path);
+  };
 }

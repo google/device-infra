@@ -105,6 +105,7 @@ export declare interface GetTestRequest {
 /** Request structure for the getTestLog API. */
 export declare interface GetTestLogRequest {
   testId: string;
+  subTestId?: string;
   offset: number;
   jobId: string;
   contentHash?: string;

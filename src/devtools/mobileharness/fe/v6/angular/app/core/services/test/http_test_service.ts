@@ -43,6 +43,9 @@ export class HttpTestService extends TestService {
       'job_id': request.jobId,
       'offset': request.offset,
     };
+    if (request.subTestId) {
+      params['sub_test_id'] = request.subTestId;
+    }
     if (request.contentHash) {
       params['content_hash'] = request.contentHash;
     }
@@ -56,11 +59,15 @@ export class HttpTestService extends TestService {
     testId: string,
     jobId: string,
     filePath: string,
+    subTestId?: string,
   ): Observable<string> {
     const params: {[key: string]: string} = {
       'job_id': jobId,
       'file_path': filePath,
     };
+    if (subTestId) {
+      params['sub_test_id'] = subTestId;
+    }
     return this.http
       .get<{content: string}>(`${this.apiUrl}/${testId}/file`, {params})
       .pipe(map((resp) => resp.content || ''));
