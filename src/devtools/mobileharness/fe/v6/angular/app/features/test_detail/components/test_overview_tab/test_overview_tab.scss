@@ -1,5 +1,6 @@
 @use '@angular/material' as mat;
 @use '../../../../shared/styles/overview';
+@use '../../../../shared/styles/common';
 
 :host {
   display: block;
@@ -8,6 +9,140 @@
   .error-info-card .info-card-content,
   .warning-info-card .info-card-content {
     padding: 0;
+  }
+}
+
+.table-container {
+  width: 100%;
+  max-height: 380px;
+  overflow: auto;
+  @include common.shared-scrollbar-style();
+}
+
+.data-table {
+  width: 100%;
+  min-width: 650px;
+  border-collapse: collapse;
+  background-color: transparent;
+  letter-spacing: normal;
+
+  tr.mat-mdc-header-row {
+    height: 45px;
+  }
+
+  th.mat-mdc-header-cell,
+  td.mat-mdc-cell {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+    vertical-align: middle;
+    font-size: 0.875rem;
+    background-color: transparent;
+    letter-spacing: normal;
+  }
+
+  th.mat-mdc-header-cell {
+    font-weight: 500;
+    color: #5f6368;
+    height: 45px;
+    padding-top: 0;
+    padding-bottom: 0;
+    background-color: #f9fafb;
+  }
+
+  td.mat-mdc-cell {
+    color: #3c4043;
+  }
+
+  .mat-column-id {
+    font-family: overview.$labconsole-font;
+    font-size: 0.75rem;
+  }
+
+  th.mat-column-status,
+  td.mat-column-status {
+    text-align: center;
+    width: 100px;
+  }
+
+  th.mat-column-result,
+  td.mat-column-result {
+    text-align: center;
+    width: 90px;
+  }
+
+  .mat-column-startTime {
+    color: #5f6368;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    width: 170px;
+  }
+
+  th.mat-column-duration,
+  td.mat-column-duration {
+    text-align: center;
+    color: #5f6368;
+    font-size: 0.75rem;
+    width: 90px;
+  }
+
+  .mat-column-host,
+  .mat-column-device {
+    font-family: overview.$labconsole-font;
+    font-size: 0.75rem;
+    color: #5f6368;
+
+    a {
+      color: #1a73e8;
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}
+
+.test-id-container {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.test-id-link {
+  display: inline-block;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #2563eb;
+  font-weight: 500;
+  vertical-align: middle;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  @media (min-width: 1024px) {
+    max-width: 180px;
+  }
+
+  @media (min-width: 1280px) {
+    max-width: none;
+  }
+}
+
+.test-name-text {
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  @media (min-width: 1024px) {
+    max-width: 320px;
+  }
+
+  @media (min-width: 1280px) {
+    max-width: 400px;
   }
 }
 

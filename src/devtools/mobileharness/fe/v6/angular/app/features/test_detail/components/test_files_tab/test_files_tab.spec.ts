@@ -14,6 +14,7 @@ class MockTestService {
     testId: string,
     jobId: string,
     filePath: string,
+    subTestId?: string,
   ): Observable<string> {
     return of(`mock content for ${filePath} (test: ${testId}, job: ${jobId})`);
   }

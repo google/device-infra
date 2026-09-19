@@ -24,13 +24,24 @@
             </a>
             <mat-icon class="chevron-icon">chevron_right</mat-icon>
           }
+          @if (isSubTest()) {
+            <a app-nav-link
+              [config]="{type: 'test', jobId: jobId(), testId: rootTestId()}"
+              queryParamsHandling="merge"
+              class="host-link monospaced-text"
+              title="Navigate to root test: {{ rootTestId() }}"
+            >
+              {{ rootTestId() }}
+            </a>
+            <mat-icon class="chevron-icon">chevron_right</mat-icon>
+          }
           <span class="device-id-text monospaced-text" title="Test ID: {{ test.id }}">{{ test.id }}</span>
         </div>
       </header>
 
       <div class="card-body">
         <app-legacy-console-banner
-          [legacyUrl]="legacyFeUrl + '/testdetailview/' + jobId() + '/' + test.id"
+          [legacyUrl]="legacyTestDetailUrl()"
           bannerType="test">
         </app-legacy-console-banner>
         <!-- Test Title Bar -->
@@ -228,7 +239,7 @@
               -->
               <div class="under-development-container">
                 <p class="under-development-text">
-                  This feature is currently under development in V6. Please view this timeline in the <a [href]="legacyFeUrl + '/testdetailview/' + jobId() + '/' + test.id + '?tab=2'" target="_blank">legacy page</a>.
+                  This feature is currently under development in V6. Please view this timeline in the <a [href]="legacyTestDetailUrl() + (isSubTest() ? '&tab=2' : '?tab=2')" target="_blank">legacy page</a>.
                 </p>
               </div>
             </div>
@@ -239,7 +250,8 @@
             <div class="tab-content">
               @defer {
                 <app-test-log-tab
-                  [testId]="test.id"
+                  [testId]="rootTestId()"
+                  [subTestId]="subTestId()"
                   [jobId]="jobId()"
                   [cloudLogLink]="test.executionDetails?.cloudLogLink || ''"
                   [initialStatus]="test.status"
@@ -256,7 +268,8 @@
             <div class="tab-content">
               @defer {
                 <app-test-files-tab
-                  [testId]="test.id"
+                  [testId]="rootTestId()"
+                  [subTestId]="subTestId()"
                   [jobId]="jobId()"
                   [fileExplorer]="test.fileExplorer"
                 ></app-test-files-tab>

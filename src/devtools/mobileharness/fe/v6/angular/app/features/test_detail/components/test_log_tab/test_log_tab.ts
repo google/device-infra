@@ -27,6 +27,7 @@ import {
 export class TestLogTab {
   /** The unique test ID passed from the parent component. */
   readonly testId = input.required<string>();
+  readonly subTestId = input<string | undefined>(undefined);
   readonly jobId = input.required<string>();
   readonly cloudLogLink = input<string>('');
   readonly initialStatus = input<TestStatus>(
@@ -43,10 +44,12 @@ export class TestLogTab {
   readonly logLines = computed(() => this.logViewer()?.logLines() || []);
   readonly logViewport = computed(() => this.logViewer()?.logViewport());
 
-  readonly logStrategy: LogFetchStrategy = (offset: number, hash?: string) =>
-    this.testService
+  readonly logStrategy: LogFetchStrategy = (offset: number, hash?: string) => {
+    const subTestId = this.subTestId();
+    return this.testService
       .getTestLog({
         testId: this.testId(),
+        ...(subTestId ? {subTestId} : {}),
         jobId: this.jobId(),
         offset,
         contentHash: hash,
@@ -62,4 +65,5 @@ export class TestLogTab {
           hash: resp.contentHash,
         })),
       );
+  };
 }

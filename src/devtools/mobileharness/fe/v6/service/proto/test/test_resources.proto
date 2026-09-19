@@ -94,7 +94,6 @@ message SubTestsInfo {
   // Sub / nested tests. When a sub-test's full detail is requested (via
   // GetTestRequest.sub_test_id), root_test_id is set to the root test's ID so
   // the UI can render the full sub-test tree.
-  // TODO: b/529253317 - Implement sub-test detail support.
   string root_test_id = 1;
   TestSummaries sub_tests = 2;
 }

@@ -161,9 +161,11 @@ export class FakeTestService extends TestService {
     testId: string,
     jobId: string,
     filePath: string,
+    subTestId?: string,
   ): Observable<string> {
+    const subTestLine = subTestId ? `\nSub-Test ID: ${subTestId}` : '';
     return of(
-      `[Simulated File Content]\nTest ID: ${testId}\nJob ID: ${jobId}\nFile: ${filePath}\n\nThis is simulated test file content.`,
+      `[Simulated File Content]\nTest ID: ${testId}${subTestLine}\nJob ID: ${jobId}\nFile: ${filePath}\n\nThis is simulated test file content.`,
     ).pipe(delay(200));
   }
 }

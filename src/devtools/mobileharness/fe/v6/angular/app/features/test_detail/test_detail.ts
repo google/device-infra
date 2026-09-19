@@ -164,6 +164,31 @@ export class TestDetail {
     () => this.testOverview()?.job?.id || this.testPageData()?.jobId || '',
   );
 
+  readonly subTestId = computed(() => this.routeParams()?.subTestId);
+
+  readonly rootTestId = computed(
+    () =>
+      this.testOverview()?.subTestsInfo?.rootTestId ||
+      this.testId() ||
+      this.testOverview()?.id ||
+      '',
+  );
+
+  readonly isSubTest = computed(() => {
+    const test = this.testOverview();
+    const rootId = this.rootTestId();
+    return Boolean(this.subTestId() || (test && rootId && rootId !== test.id));
+  });
+
+  readonly legacyTestDetailUrl = computed(() => {
+    const test = this.testOverview();
+    if (!test) return '';
+    const base = `${this.legacyFeUrl}/testdetailview/${this.jobId()}/${this.rootTestId()}`;
+    return this.isSubTest()
+      ? `${base}?sub_test=${encodeURIComponent(test.id)}`
+      : base;
+  });
+
   readonly pageTitle = computed(() => {
     const test = this.testOverview();
     const id = this.testId();
@@ -198,8 +223,8 @@ export class TestDetail {
   readonly getTestFileContent = (path: string) => {
     const test = this.testOverview();
     const jobId = test?.job?.id || this.testPageData()?.jobId || '';
-    const testId = this.testId() || '';
-    return this.testService.getTestFile(testId, jobId, path);
+    const testId = this.rootTestId();
+    return this.testService.getTestFile(testId, jobId, path, this.subTestId());
   };
 
   setActiveTab(tab: 'overview' | 'timeline' | 'log' | 'files') {
