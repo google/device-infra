@@ -51,14 +51,43 @@ public final class HostCorpus implements SearchCorpus {
   private final Postings postings;
   @Nullable private final ScenarioCuration curation;
   private final HostKeyRegistry registry;
+  private final KeyVocabulary vocabulary;
   private final HostCellMapper cellMapper = new HostCellMapper();
 
-  public HostCorpus(
-      FleetSnapshot snapshot, Postings postings, @Nullable ScenarioCuration curation) {
+  /**
+   * The production constructor, used by {@link SearchCorpusFactory}, which owns the fleet-scoped
+   * collaborators and passes them to every corpus of that fleet.
+   */
+  HostCorpus(
+      FleetSnapshot snapshot,
+      Postings postings,
+      @Nullable ScenarioCuration curation,
+      HostKeyRegistry registry,
+      KeyAliasTable aliases) {
     this.snapshot = snapshot;
     this.postings = postings;
     this.curation = curation;
-    this.registry = curation != null ? curation.hostKeyRegistry() : new AtsHostKeyRegistry();
+    this.registry = registry;
+    this.vocabulary = new HostKeyVocabulary(registry, aliases, snapshot.hostIndex(), curation);
+  }
+
+  /** Builds the fleet-scoped collaborators itself; for tests and one-off corpora. */
+  public HostCorpus(
+      FleetSnapshot snapshot, Postings postings, @Nullable ScenarioCuration curation) {
+    this(snapshot, postings, curation, registryFor(curation));
+  }
+
+  private HostCorpus(
+      FleetSnapshot snapshot,
+      Postings postings,
+      @Nullable ScenarioCuration curation,
+      HostKeyRegistry registry) {
+    this(snapshot, postings, curation, registry, KeyAliasTable.of(registry.builtInKeys()));
+  }
+
+  /** The curation's registry, or the standalone ATS registry before a curation is installed. */
+  static HostKeyRegistry registryFor(@Nullable ScenarioCuration curation) {
+    return curation != null ? curation.hostKeyRegistry() : new AtsHostKeyRegistry();
   }
 
   @Override
@@ -143,5 +172,10 @@ public final class HostCorpus implements SearchCorpus {
   @Nullable
   public ScenarioCuration curation() {
     return curation;
+  }
+
+  @Override
+  public KeyVocabulary vocabulary() {
+    return vocabulary;
   }
 }
