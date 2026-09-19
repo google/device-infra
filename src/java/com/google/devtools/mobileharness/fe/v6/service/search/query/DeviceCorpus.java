@@ -90,19 +90,39 @@ public final class DeviceCorpus implements SearchCorpus {
   private final OverlayView overlayView;
   @Nullable private final ScenarioCuration curation;
   private final DeviceKeyRegistry registry;
+  private final KeyVocabulary vocabulary;
   private final FleetCellMapper cellMapper = new FleetCellMapper();
 
+  /**
+   * @param snapshot the serving snapshot whose devices are the records
+   * @param postings posting lists over the snapshot's devices
+   * @param curation the fleet's curation, or null before one is installed
+   * @param overlayView on-demand long-tail dimension overlays loaded for this query
+   * @param catalogDimensionNames dimension names discovered fleet-wide but possibly unindexed; they
+   *     widen what the vocabulary can resolve and discover without pulling their values
+   */
   public DeviceCorpus(
       FleetSnapshot snapshot,
       Postings postings,
       @Nullable ScenarioCuration curation,
-      OverlayView overlayView) {
+      OverlayView overlayView,
+      ImmutableSet<String> catalogDimensionNames) {
     this.snapshot = checkNotNull(snapshot);
     this.overlayView = checkNotNull(overlayView);
     this.index = new CompositeFleetIndex(snapshot.index(), overlayView);
     this.postings = new CompositePostings(postings, overlayView);
     this.curation = curation;
     this.registry = curation != null ? curation.deviceKeyRegistry() : new AtsDeviceKeyRegistry();
+    this.vocabulary =
+        new DeviceKeyVocabulary(registry, index, checkNotNull(catalogDimensionNames), curation);
+  }
+
+  public DeviceCorpus(
+      FleetSnapshot snapshot,
+      Postings postings,
+      @Nullable ScenarioCuration curation,
+      OverlayView overlayView) {
+    this(snapshot, postings, curation, overlayView, ImmutableSet.of());
   }
 
   public DeviceCorpus(
@@ -229,6 +249,11 @@ public final class DeviceCorpus implements SearchCorpus {
   @Nullable
   public ScenarioCuration curation() {
     return curation;
+  }
+
+  @Override
+  public KeyVocabulary vocabulary() {
+    return vocabulary;
   }
 
   /**

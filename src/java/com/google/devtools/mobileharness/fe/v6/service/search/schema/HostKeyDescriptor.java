@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.schema;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * The declarative metadata for one key usable in host search.
@@ -35,21 +36,29 @@ import com.google.common.collect.ImmutableList;
  * property minted on demand by the registry. See {@link DeviceKeyDescriptor#isLongTail()}.
  */
 @AutoValue
-public abstract class HostKeyDescriptor {
+public abstract class HostKeyDescriptor implements KeyDescriptor {
 
   /** The unique, type-safe identifier of the host key (e.g. {@code "host_field::host_name"}). */
+  @Override
   public abstract String id();
 
   /** {@code GetLabInfo} LabInfo extractions; union drives the {@code LabInfoMask}. */
   public abstract ImmutableList<LabInfoSource> labInfoSources();
 
   /** The host-search display (name + plural grammar). */
+  @Override
   public abstract KeyDisplay display();
 
+  /** The host-search aliases; see {@link KeyDescriptor#aliases()}. */
+  @Override
+  public abstract ImmutableSet<String> aliases();
+
   /** Whether this descriptor was minted for a discovered (non-built-in) host property. */
+  @Override
   public abstract boolean isLongTail();
 
   /** Whether this descriptor represents a host property. */
+  @Override
   public abstract boolean isHostProperty();
 
   /** Whether this descriptor represents a native host field. */
@@ -58,6 +67,7 @@ public abstract class HostKeyDescriptor {
   }
 
   /** Returns the bare name of this key without its namespace prefix. */
+  @Override
   public String bareName() {
     int separator = id().lastIndexOf("::");
     return separator >= 0 ? id().substring(separator + 2) : id();
@@ -67,6 +77,7 @@ public abstract class HostKeyDescriptor {
   public static Builder builder() {
     return new AutoValue_HostKeyDescriptor.Builder()
         .setLabInfoSources(ImmutableList.of())
+        .setAliases(ImmutableSet.of())
         .setIsLongTail(false)
         .setIsHostProperty(false);
   }
@@ -84,6 +95,13 @@ public abstract class HostKeyDescriptor {
     }
 
     public abstract Builder setDisplay(KeyDisplay display);
+
+    public abstract Builder setAliases(ImmutableSet<String> aliases);
+
+    /** Convenience for declaring aliases inline in a catalog. */
+    public final Builder setAliases(String... aliases) {
+      return setAliases(ImmutableSet.copyOf(aliases));
+    }
 
     public abstract Builder setIsLongTail(boolean isLongTail);
 

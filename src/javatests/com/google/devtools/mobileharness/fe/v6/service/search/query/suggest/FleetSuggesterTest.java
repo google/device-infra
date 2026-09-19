@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.fe.v6.service.search.query;
+package com.google.devtools.mobileharness.fe.v6.service.search.query.suggest;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
@@ -43,7 +42,10 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextSegment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
-import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionCatalogStore;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.OverlayView;
+import com.google.devtools.mobileharness.fe.v6.service.search.query.AtsCuration;
+import com.google.devtools.mobileharness.fe.v6.service.search.query.DeviceCorpus;
+import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetFilterEngine;
 import com.google.inject.Guice;
 import java.time.Instant;
 import org.junit.Test;
@@ -68,15 +70,10 @@ public final class FleetSuggesterTest {
   private final LazyPostings postings = new LazyPostings(snapshot.devices());
   private final DeviceCorpus corpus = new DeviceCorpus(snapshot, postings, new AtsCuration());
 
-  // FleetSuggester needs the per-fleet ScenarioCuration map, which the production MapBinder wires
-  // at activation. Construct it directly through the package-private @Inject constructor, binding
-  // the OSS ats curation under FLEET_SELF so its scenario key ranking drives the ordering
-  // assertions below. FleetFilterEngine has a package-private @Inject constructor, so obtain it
-  // through Guice.
+  // FleetSuggester and FleetFilterEngine have package-private @Inject constructors; obtain the
+  // engine through Guice. Key ranking comes from the corpus curation (the OSS ats curation here).
   private final FleetSuggester suggester =
-      new FleetSuggester(
-          Guice.createInjector().getInstance(FleetFilterEngine.class),
-          ImmutableMap.of(Fleet.FLEET_SELF, new AtsCuration()));
+      new FleetSuggester(Guice.createInjector().getInstance(FleetFilterEngine.class));
 
   @Test
   public void valuePrefix_suggestsApplyFilterUnderMatchingKey() {
@@ -167,7 +164,8 @@ public final class FleetSuggesterTest {
     LazyPostings manyPoolsPostings = new LazyPostings(manyPools.devices());
     FleetSuggestionResponse response =
         suggester.suggest(
-            new DeviceCorpus(manyPools, manyPoolsPostings, null), request("group by pool"));
+            new DeviceCorpus(manyPools, manyPoolsPostings, new AtsCuration()),
+            request("group by pool"));
 
     FleetSuggestion group = firstAddGroupBy(response, "dimension::pool");
     assertThat(group.getLabel()).isEqualTo("Group by");
@@ -200,7 +198,8 @@ public final class FleetSuggesterTest {
 
     LazyPostings fleetPostings = new LazyPostings(fleet.devices());
     FleetSuggestionResponse response =
-        suggester.suggest(new DeviceCorpus(fleet, fleetPostings, null), request("zephyr"));
+        suggester.suggest(
+            new DeviceCorpus(fleet, fleetPostings, new AtsCuration()), request("zephyr"));
 
     assertThat(response.getItemsCount()).isAtLeast(2);
     assertThat(response.getItems(0).getApplyFilter().getResultingFilter().getKey())
@@ -330,17 +329,10 @@ public final class FleetSuggesterTest {
 
   @Test
   public void keyMatch_discoveredDimensionInCatalog_suggestsAddFilterDimension() {
-    DimensionCatalogStore catalogStore = new DimensionCatalogStore();
-    catalogStore.setDimensionNames(Fleet.FLEET_SELF, ImmutableSet.of("build", "carrier"));
-    FleetSuggester suggesterWithCatalog =
-        new FleetSuggester(
-            Guice.createInjector().getInstance(FleetFilterEngine.class),
-            ImmutableMap.of(Fleet.FLEET_SELF, new AtsCuration()),
-            catalogStore);
-
     FleetSuggestionResponse response =
-        suggesterWithCatalog.suggest(
-            corpus, FleetSuggestionRequest.newBuilder().setInput("build").setLimit(5).build());
+        suggester.suggest(
+            corpusWithCatalog("build", "carrier"),
+            FleetSuggestionRequest.newBuilder().setInput("build").setLimit(5).build());
 
     FleetSuggestion suggestion = firstOpenPicker(response, "dimension::build");
     assertThat(suggestion.getLabel()).isEqualTo("Add filter");
@@ -349,17 +341,9 @@ public final class FleetSuggesterTest {
 
   @Test
   public void keyMatch_explicitDimensionPrefix_suggestsAddFilterDimension() {
-    DimensionCatalogStore catalogStore = new DimensionCatalogStore();
-    catalogStore.setDimensionNames(Fleet.FLEET_SELF, ImmutableSet.of("build", "carrier"));
-    FleetSuggester suggesterWithCatalog =
-        new FleetSuggester(
-            Guice.createInjector().getInstance(FleetFilterEngine.class),
-            ImmutableMap.of(Fleet.FLEET_SELF, new AtsCuration()),
-            catalogStore);
-
     FleetSuggestionResponse response =
-        suggesterWithCatalog.suggest(
-            corpus,
+        suggester.suggest(
+            corpusWithCatalog("build", "carrier"),
             FleetSuggestionRequest.newBuilder().setInput("dimension build").setLimit(5).build());
 
     FleetSuggestion suggestion = firstOpenPicker(response, "dimension::build");
@@ -369,17 +353,11 @@ public final class FleetSuggesterTest {
 
   @Test
   public void keyMatch_namespaceColon_withCatalogOnlyOrIndexOnlyDimension() {
-    DimensionCatalogStore catalogStore = new DimensionCatalogStore();
-    catalogStore.setDimensionNames(Fleet.FLEET_SELF, ImmutableSet.of("build"));
-    FleetSuggester suggesterWithCatalog =
-        new FleetSuggester(
-            Guice.createInjector().getInstance(FleetFilterEngine.class),
-            ImmutableMap.of(Fleet.FLEET_SELF, new AtsCuration()),
-            catalogStore);
+    DeviceCorpus withCatalog = corpusWithCatalog("build");
 
     FleetSuggestionResponse catalogResponse =
-        suggesterWithCatalog.suggest(
-            corpus,
+        suggester.suggest(
+            withCatalog,
             FleetSuggestionRequest.newBuilder()
                 .setInput("dimension:build is prod")
                 .setFleet(Fleet.FLEET_SELF)
@@ -388,8 +366,8 @@ public final class FleetSuggesterTest {
         .isEqualTo("Add filter");
 
     FleetSuggestionResponse indexResponse =
-        suggesterWithCatalog.suggest(
-            corpus,
+        suggester.suggest(
+            withCatalog,
             FleetSuggestionRequest.newBuilder()
                 .setInput("dimension:model is pixel")
                 .setFleet(Fleet.FLEET_SELF)
@@ -400,53 +378,32 @@ public final class FleetSuggesterTest {
 
   @Test
   public void keyMatch_catalogOnlyDimension_prefixMatch() {
-    DimensionCatalogStore catalogStore = new DimensionCatalogStore();
-    catalogStore.setDimensionNames(
-        Fleet.FLEET_SELF, ImmutableSet.of("screen_density", "big_screen"));
-    FleetSuggester suggesterWithCatalog =
-        new FleetSuggester(
-            Guice.createInjector().getInstance(FleetFilterEngine.class),
-            ImmutableMap.of(Fleet.FLEET_SELF, new AtsCuration()),
-            catalogStore);
-
     FleetSuggestionResponse response =
-        suggesterWithCatalog.suggest(
-            corpus,
+        suggester.suggest(
+            corpusWithCatalog("screen_density", "big_screen"),
             FleetSuggestionRequest.newBuilder()
                 .setInput("screen")
                 .setFleet(Fleet.FLEET_SELF)
                 .build());
 
-    // Prefix match ("screen_density", tier 2) must rank before substring match ("big_screen", tier
-    // 1),
-    // killing mutant on prefix loop.
+    // A prefix match ("screen_density") ranks before a substring match ("big_screen").
     assertThat(response.getItems(0).getMainText(0).getText()).isEqualTo("Dimension screen_density");
     assertThat(response.getItems(1).getMainText(0).getText()).isEqualTo("Dimension big_screen");
   }
 
   @Test
   public void keyMatch_catalogOnlyDimension_namespaceMatch() {
-    DimensionCatalogStore catalogStore = new DimensionCatalogStore();
-    catalogStore.setDimensionNames(Fleet.FLEET_SELF, ImmutableSet.of("screen_density"));
-    FleetSuggester suggesterWithCatalog =
-        new FleetSuggester(
-            Guice.createInjector().getInstance(FleetFilterEngine.class),
-            ImmutableMap.of(Fleet.FLEET_SELF, new AtsCuration()),
-            catalogStore);
-
     FleetSuggestionResponse response =
-        suggesterWithCatalog.suggest(
-            corpus,
+        suggester.suggest(
+            corpusWithCatalog("screen_density"),
             FleetSuggestionRequest.newBuilder()
                 .setInput("device dimension screen_density")
                 .setFleet(Fleet.FLEET_SELF)
                 .build());
 
-    // 'device dimension screen_density' matches NAMESPACE_DIM in resolveKey, but normTerm
-    // ('device_dimension_screen_density') cannot match display or bareName via startsWith or
-    // contains.
-    // Therefore, it exclusively depends on isDiscoveredDimension, killing mutant on lines
-    // 1147-1150.
+    // The namespaced spelling resolves exactly even though the normalized text
+    // ("device_dimension_screen_density") matches no display or bare name by prefix or substring,
+    // so only the catalog can make this key discoverable.
     assertThat(response.getItemsList()).isNotEmpty();
     FleetSuggestion suggestion = firstOpenPicker(response, "dimension::screen_density");
     assertThat(suggestion.getMainText(0).getText()).isEqualTo("Dimension screen_density");
@@ -454,17 +411,9 @@ public final class FleetSuggesterTest {
 
   @Test
   public void keyMatch_catalogOnlyDimension_substringMatch() {
-    DimensionCatalogStore catalogStore = new DimensionCatalogStore();
-    catalogStore.setDimensionNames(Fleet.FLEET_SELF, ImmutableSet.of("screen_density"));
-    FleetSuggester suggesterWithCatalog =
-        new FleetSuggester(
-            Guice.createInjector().getInstance(FleetFilterEngine.class),
-            ImmutableMap.of(Fleet.FLEET_SELF, new AtsCuration()),
-            catalogStore);
-
     FleetSuggestionResponse response =
-        suggesterWithCatalog.suggest(
-            corpus,
+        suggester.suggest(
+            corpusWithCatalog("screen_density"),
             FleetSuggestionRequest.newBuilder()
                 .setInput("density")
                 .setFleet(Fleet.FLEET_SELF)
@@ -473,6 +422,16 @@ public final class FleetSuggesterTest {
     FleetSuggestion suggestion = firstOpenPicker(response, "dimension::screen_density");
     assertThat(suggestion.getLabel()).isEqualTo("Add filter");
     assertThat(suggestion.getMainText(0).getText()).isEqualTo("Dimension screen_density");
+  }
+
+  /** The test corpus with the given dimension names discovered fleet-wide but not indexed. */
+  private DeviceCorpus corpusWithCatalog(String... dimensionNames) {
+    return new DeviceCorpus(
+        snapshot,
+        postings,
+        new AtsCuration(),
+        OverlayView.empty(),
+        ImmutableSet.copyOf(dimensionNames));
   }
 
   @Test
@@ -544,6 +503,25 @@ public final class FleetSuggesterTest {
             .isNotEqualTo("dimension::custom_tag");
       }
     }
+  }
+
+  @Test
+  public void deviceSearch_neverLeaksHostOnlyKeysOrColdFallbackOnIndexedKeys() {
+    // 1. Host-only alias "device count" must never resolve to host_field::device_count on
+    // DeviceCorpus.
+    FleetSuggestionResponse deviceCountKv = suggester.suggest(corpus, request("device count is 5"));
+    for (FleetSuggestion item : deviceCountKv.getItemsList()) {
+      if (item.hasApplyFilter()) {
+        assertThat(item.getApplyFilter().getResultingFilter().getKey())
+            .isNotEqualTo("host_field::device_count");
+      }
+    }
+
+    // 2. Built-in indexed field "device_field::status" with an unmatched value must not emit a
+    // cold long-tail fallback suggestion.
+    FleetSuggestionResponse bogusStatusKv =
+        suggester.suggest(corpus, request("status is nonexistent_status"));
+    assertThat(bogusStatusKv.getItemsList()).isEmpty();
   }
 
   // --- Synthetic fleets ---
