@@ -204,12 +204,19 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
   @Override
   public ListenableFuture<FleetColumnCatalogResponse> getFleetColumnCatalog(
       FleetColumnCatalogRequest request) {
-    return Futures.submit(
-        () -> {
-          Fleet fleet = normalize(request.getFleet());
-          return columnCataloger.getColumnCatalog(
-              corpusFactory.getCorpus(fleet, request.getEntity()), request);
-        },
+    Fleet fleet = normalize(request.getFleet());
+    DeviceKeyRegistry registry = corpusFactory.getDeviceKeyRegistry(fleet);
+    ImmutableSet<DeviceKeyDescriptor> overlayKeys =
+        extractFilterAndGroupOverlayKeys(
+            registry, request.getEntity(), request.getFiltersList(), request.getRecentKeysList());
+    return Futures.transformAsync(
+        overlayStore.loadOverlaysAsync(fleet, overlayKeys, executor),
+        overlays ->
+            Futures.submit(
+                () ->
+                    columnCataloger.getColumnCatalog(
+                        corpusFactory.getCorpus(fleet, request.getEntity(), overlays), request),
+                executor),
         executor);
   }
 
