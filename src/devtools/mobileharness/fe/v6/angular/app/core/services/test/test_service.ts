@@ -37,5 +37,6 @@ export abstract class TestService {
     testId: string,
     jobId: string,
     filePath: string,
+    subTestId?: string,
   ): Observable<string>;
 }

@@ -217,4 +217,34 @@ describe('TestOverviewTab Component', () => {
       'error-panel-1-trigger',
     );
   });
+
+  it('should show sub-tests card and nav item when subTestsInfo has sub-tests', () => {
+    const testWithSubTests: TestOverviewData = {
+      ...mockTest,
+      subTestsInfo: {
+        rootTestId: 'test_123',
+        subTests: {
+          test: [
+            {
+              id: 'sub_01',
+              name: 'SubTestCase1',
+              status: TestStatus.TEST_STATUS_DONE,
+              result: TestResult.TEST_RESULT_PASS,
+            },
+          ],
+        },
+      },
+    };
+    fixture.componentInstance.test = testWithSubTests;
+    fixture.detectChanges();
+
+    expect(component.overviewNavList()).toEqual([
+      {id: 'test-sub-tests', label: 'Sub-tests'},
+      {id: 'overview-execution', label: 'Execution Details'},
+      {id: 'overview-properties', label: 'Test Properties'},
+    ]);
+
+    const subTestsCard = fixture.debugElement.query(By.css('#test-sub-tests'));
+    expect(subTestsCard).not.toBeNull();
+  });
 });
