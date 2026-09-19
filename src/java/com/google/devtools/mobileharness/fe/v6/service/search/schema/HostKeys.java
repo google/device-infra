@@ -32,7 +32,15 @@ import com.google.common.collect.ImmutableList;
  */
 public final class HostKeys {
 
+  /**
+   * Namespace markers of host-search key ids. They exist for the registry's id parsing and for the
+   * long-tail minting helper. A built-in key's id is spelled once, in its descriptor below or in a
+   * deployment catalog, and is referenced everywhere else through that descriptor constant or
+   * {@link HostKeyRegistry#getKey}; no caller combines a prefix with a name to refer to a built-in
+   * key.
+   */
   public static final String PREFIX_HOST_FIELD = "host_field::";
+
   public static final String PREFIX_HOST_PROPERTY = "host_property::";
 
   public static final HostKeyDescriptor HOST_NAME =
@@ -42,6 +50,7 @@ public final class HostKeys {
               LabInfoSource.field(
                   "lab_locator.host_name", li -> nonEmpty(li.getLabLocator().getHostName())))
           .setDisplay(KeyDisplay.of("Host Name"))
+          .setAliases("hostname", "host", "name")
           .build();
 
   public static final HostKeyDescriptor HOST_IP =
@@ -50,6 +59,7 @@ public final class HostKeys {
           .setLabInfoSource(
               LabInfoSource.field("lab_locator.ip", li -> nonEmpty(li.getLabLocator().getIp())))
           .setDisplay(KeyDisplay.of("Host IP"))
+          .setAliases("ip")
           .build();
 
   public static final HostKeyDescriptor CONNECTIVITY =
@@ -58,6 +68,7 @@ public final class HostKeys {
           .setLabInfoSource(
               LabInfoSource.field("lab_status", li -> ImmutableList.of(li.getLabStatus().name())))
           .setDisplay(KeyDisplay.of("Lab Server Connectivity"))
+          .setAliases("connectivity")
           .build();
 
   public static final HostKeyDescriptor HOST_OS =
@@ -65,6 +76,7 @@ public final class HostKeys {
           .setId(PREFIX_HOST_PROPERTY + "host_os")
           .setLabInfoSource(LabInfoSource.hostProperty("host_os"))
           .setDisplay(KeyDisplay.of("Host OS"))
+          .setAliases("os")
           .setIsHostProperty(true)
           .build();
 
@@ -73,6 +85,7 @@ public final class HostKeys {
           .setId(PREFIX_HOST_FIELD + "lab_server_version")
           .setLabInfoSource(LabInfoSource.hostProperty("host_version"))
           .setDisplay(KeyDisplay.of("Lab Server Version"))
+          .setAliases("version")
           .build();
 
   /** Synthesized from the device list, so it contributes no mask. Host search only. */
@@ -80,6 +93,7 @@ public final class HostKeys {
       HostKeyDescriptor.builder()
           .setId(PREFIX_HOST_FIELD + "device_count")
           .setDisplay(KeyDisplay.of("Device Count"))
+          .setAliases("devices")
           .build();
 
   /** Standard Group 1 common host keys (present in every deployment). */
@@ -107,7 +121,12 @@ public final class HostKeys {
     return value.isEmpty() ? ImmutableList.of() : ImmutableList.of(value);
   }
 
-  /** Returns the canonical key ID for a host property key. */
+  /**
+   * The canonical id for a host property name discovered from data or typed by a user. This is the
+   * only sanctioned way to form a {@code host_property::} id outside a catalog; pass the result to
+   * {@link HostKeyRegistry#getKey} or {@link DeviceKeyRegistry#getKey} rather than treating it as a
+   * key. A built-in key is referenced by its descriptor constant, never rebuilt from its name.
+   */
   public static String hostPropertyKeyId(String propertyKey) {
     return PREFIX_HOST_PROPERTY + propertyKey;
   }

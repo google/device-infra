@@ -277,7 +277,7 @@ public final class FleetFilterEngine {
    * Locates the first index in the sorted list whose value is greater than or equal to the key. The
    * list must be sorted ascending, matching {@link FleetIndex#sortedValues(String)}.
    */
-  static int lowerBound(List<String> sorted, String key) {
+  public static int lowerBound(List<String> sorted, String key) {
     int lo = 0;
     int hi = sorted.size();
     while (lo < hi) {

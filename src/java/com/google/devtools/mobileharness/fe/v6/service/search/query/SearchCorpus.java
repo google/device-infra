@@ -102,4 +102,11 @@ public interface SearchCorpus {
    */
   @Nullable
   ScenarioCuration curation();
+
+  /**
+   * The key vocabulary of this corpus's entity: how typed text resolves to keys, which keys can be
+   * discovered, how they are displayed and ranked. Query classes that interpret user-typed key
+   * names must go through this and never inspect key id prefixes themselves.
+   */
+  KeyVocabulary vocabulary();
 }
