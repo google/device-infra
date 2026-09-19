@@ -51,6 +51,7 @@ public final class HostCorpus implements SearchCorpus {
   private final Postings postings;
   @Nullable private final ScenarioCuration curation;
   private final HostKeyRegistry registry;
+  private final KeyVocabulary vocabulary;
   private final HostCellMapper cellMapper = new HostCellMapper();
 
   public HostCorpus(
@@ -59,6 +60,7 @@ public final class HostCorpus implements SearchCorpus {
     this.postings = postings;
     this.curation = curation;
     this.registry = curation != null ? curation.hostKeyRegistry() : new AtsHostKeyRegistry();
+    this.vocabulary = new HostKeyVocabulary(registry, snapshot.hostIndex(), curation);
   }
 
   @Override
@@ -143,5 +145,10 @@ public final class HostCorpus implements SearchCorpus {
   @Nullable
   public ScenarioCuration curation() {
     return curation;
+  }
+
+  @Override
+  public KeyVocabulary vocabulary() {
+    return vocabulary;
   }
 }

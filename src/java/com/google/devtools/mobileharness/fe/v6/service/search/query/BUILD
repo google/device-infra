@@ -24,11 +24,39 @@ java_library(
     name = "search_corpus",
     srcs = ["SearchCorpus.java"],
     deps = [
+        ":key_vocabulary",
         ":scenario_curation",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:postings",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+# The entity boundary of the suggester: the vocabulary interface, its two implementations, and the
+# alias index they derive from their registries. Kept in one target because both implementations
+# share the token and alias helpers and the corpora need both.
+java_library(
+    name = "key_vocabulary",
+    srcs = [
+        "DeviceKeyVocabulary.java",
+        "HostKeyVocabulary.java",
+        "KeyAliasTable.java",
+        "KeyTokens.java",
+        "KeyVocabulary.java",
+    ],
+    deps = [
+        ":device_key_displays",
+        ":host_key_displays",
+        ":scenario_curation",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_registry",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
@@ -52,6 +80,7 @@ java_library(
     deps = [
         ":device_key_displays",
         ":fleet_cell_mapper",
+        ":key_vocabulary",
         ":scenario_curation",
         ":search_corpus",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
@@ -77,6 +106,7 @@ java_library(
     deps = [
         ":host_cell_mapper",
         ":host_key_displays",
+        ":key_vocabulary",
         ":scenario_curation",
         ":search_corpus",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
@@ -334,6 +364,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:dimension_overlay",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:overlay_view",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:dimension_catalog_store",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:fleet_snapshot_store",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_registry",
         "@maven//:com_google_code_findbugs_jsr305",

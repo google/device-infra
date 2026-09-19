@@ -34,7 +34,15 @@ import com.google.common.collect.ImmutableList;
  */
 public final class DeviceKeys {
 
+  /**
+   * Namespace markers of device-search key ids. They exist for the registry's id parsing and for
+   * the long-tail minting helpers. A built-in key's id is spelled once, in its descriptor below or
+   * in a deployment catalog, and is referenced everywhere else through that descriptor constant or
+   * {@link DeviceKeyRegistry#getKey}; no caller combines a prefix with a name to refer to a
+   * built-in key.
+   */
   public static final String PREFIX_DEVICE_FIELD = "device_field::";
+
   public static final String PREFIX_DIMENSION = "dimension::";
   public static final String PREFIX_DEVICE_CONFIG = "device_config::";
 
@@ -46,6 +54,7 @@ public final class DeviceKeys {
               DeviceInfoSource.field(
                   "device_locator.id", d -> nonEmpty(d.getDeviceLocator().getId())))
           .setDisplay(KeyDisplay.of("UUID"))
+          .setAliases("id", "device id", "device uuid")
           .build();
 
   public static final DeviceKeyDescriptor STATUS =
@@ -55,6 +64,7 @@ public final class DeviceKeys {
               DeviceInfoSource.field(
                   "device_status", d -> ImmutableList.of(d.getDeviceStatus().name())))
           .setDisplay(KeyDisplay.of("Status"))
+          .setAliases("device status")
           .build();
 
   public static final DeviceKeyDescriptor TYPE =
@@ -65,6 +75,7 @@ public final class DeviceKeys {
                   "device_feature.type",
                   d -> ImmutableList.copyOf(d.getDeviceFeature().getTypeList())))
           .setDisplay(KeyDisplay.of("Type"))
+          .setAliases("type(s)", "device type(s)")
           .build();
 
   public static final DeviceKeyDescriptor DRIVER =
@@ -75,6 +86,7 @@ public final class DeviceKeys {
                   "device_feature.driver",
                   d -> ImmutableList.copyOf(d.getDeviceFeature().getDriverList())))
           .setDisplay(KeyDisplay.plural("Supported Drivers"))
+          .setAliases("driver(s)", "supported driver(s)", "device supported driver(s)")
           .build();
 
   public static final DeviceKeyDescriptor DECORATOR =
@@ -85,21 +97,25 @@ public final class DeviceKeys {
                   "device_feature.decorator",
                   d -> ImmutableList.copyOf(d.getDeviceFeature().getDecoratorList())))
           .setDisplay(KeyDisplay.plural("Supported Decorators"))
+          .setAliases("decorator(s)", "supported decorator(s)", "device supported decorator(s)")
           .build();
 
-  // Group 1: Universal common core dimensions.
-  public static final DeviceKeyDescriptor MODEL = dimensionKey("model", KeyDisplay.of("Model"));
-  public static final DeviceKeyDescriptor OS = dimensionKey("os", KeyDisplay.of("OS"));
+  // Group 1: Universal common core dimensions. "version" alone is shared; SDK version is declared
+  // first in COMMON_DEVICE_KEYS and is therefore the preferred resolution.
+  public static final DeviceKeyDescriptor MODEL =
+      dimensionKey("model", KeyDisplay.of("Model"), "device model");
+  public static final DeviceKeyDescriptor OS = dimensionKey("os", KeyDisplay.of("OS"), "device os");
   public static final DeviceKeyDescriptor SDK_VERSION =
-      dimensionKey("sdk_version", KeyDisplay.of("SDK Version"));
+      dimensionKey("sdk_version", KeyDisplay.of("SDK Version"), "version");
   public static final DeviceKeyDescriptor SOFTWARE_VERSION =
-      dimensionKey("software_version", KeyDisplay.of("Software Version"));
+      dimensionKey("software_version", KeyDisplay.of("Software Version"), "version");
   public static final DeviceKeyDescriptor DEVICE_FORM =
-      dimensionKey("device_form", KeyDisplay.of("Form"));
+      dimensionKey("device_form", KeyDisplay.of("Form"), "device form");
   public static final DeviceKeyDescriptor DEVICE_CLASS_NAME =
-      dimensionKey("device_class_name", KeyDisplay.of("Device Class"));
+      dimensionKey(
+          "device_class_name", KeyDisplay.of("Device Class"), "class", "device class name");
   public static final DeviceKeyDescriptor MANUFACTURER =
-      dimensionKey("manufacturer", KeyDisplay.of("Manufacturer"));
+      dimensionKey("manufacturer", KeyDisplay.of("Manufacturer"), "make", "brand");
 
   /** Standard Group 1 common device-native keys (present in every deployment). */
   public static final ImmutableList<DeviceKeyDescriptor> COMMON_DEVICE_KEYS =
@@ -122,35 +138,45 @@ public final class DeviceKeys {
    * device). {@code device_count} is deliberately not projected: it is a host-only numeric key.
    */
   public static final DeviceKeyDescriptor HOST_NAME =
-      projectHostKey(HostKeys.HOST_NAME, KeyDisplay.of("Host Name"));
+      projectHostKey(HostKeys.HOST_NAME, KeyDisplay.of("Host Name"), "hostname", "host");
 
   public static final DeviceKeyDescriptor HOST_IP =
-      projectHostKey(HostKeys.HOST_IP, KeyDisplay.of("Host IP"));
+      projectHostKey(HostKeys.HOST_IP, KeyDisplay.of("Host IP"), "ip");
   public static final DeviceKeyDescriptor HOST_CONNECTIVITY =
-      projectHostKey(HostKeys.CONNECTIVITY, KeyDisplay.of("Host Lab Server Connectivity"));
+      projectHostKey(
+          HostKeys.CONNECTIVITY,
+          KeyDisplay.of("Host Lab Server Connectivity"),
+          "connectivity",
+          "lab server connectivity");
   public static final DeviceKeyDescriptor HOST_OS =
       projectHostKey(HostKeys.HOST_OS, KeyDisplay.of("Host OS"));
   public static final DeviceKeyDescriptor HOST_LAB_SERVER_VERSION =
-      projectHostKey(HostKeys.LAB_SERVER_VERSION, KeyDisplay.of("Host Lab Server Version"));
+      projectHostKey(
+          HostKeys.LAB_SERVER_VERSION,
+          KeyDisplay.of("Host Lab Server Version"),
+          "lab server version");
 
   public static final ImmutableList<DeviceKeyDescriptor> COMMON_HOST_PROJECTIONS =
       ImmutableList.of(HOST_NAME, HOST_IP, HOST_CONNECTIVITY, HOST_OS, HOST_LAB_SERVER_VERSION);
 
   // The helpers below are package-private by design. They are catalog-authoring helpers shared
   // across the schema catalogs (DeviceKeys, AtsDeviceKeys, InternalDeviceKeys,
-  // PartnerAtsDeviceKeys)
-  // and the registry. They are deliberately NOT public: the sole public way to obtain a key is
-  // through the registry (DeviceKeyRegistry#getKey / #dimensionKey / #hostPropertyKey), so no
-  // caller
-  // can hand-build or mint a key while bypassing the registry, which is the single key-id
-  // authority.
+  // PartnerAtsDeviceKeys) and the registry. They are deliberately NOT public: the sole public way
+  // to obtain a key is through the registry (DeviceKeyRegistry#getKey, #dimensionKey,
+  // #hostPropertyKey), so no caller can hand-build or mint a key while bypassing the registry,
+  // which is the single key-id authority.
 
-  /** Builds a built-in device key backed by a single named composite dimension. */
-  static DeviceKeyDescriptor dimensionKey(String dimensionName, KeyDisplay display) {
+  /**
+   * Builds a built-in device key backed by a single named composite dimension, with the words a
+   * user may type for it besides its display name.
+   */
+  static DeviceKeyDescriptor dimensionKey(
+      String dimensionName, KeyDisplay display, String... aliases) {
     return DeviceKeyDescriptor.builder()
         .setId(PREFIX_DIMENSION + dimensionName)
         .setDeviceInfoSource(DeviceInfoSource.dimension(dimensionName))
         .setDisplay(display)
+        .setAliases(aliases)
         .setIsDimension(true)
         .build();
   }
@@ -177,21 +203,30 @@ public final class DeviceKeys {
   }
 
   /**
-   * Projects a host key into device search: same id and lab sources, a device-search display name.
-   * Preserves the host key's long-tail flag so a projected discovered host property stays
-   * long-tail.
+   * Projects a host key into device search: same id and lab sources, a device-search display name
+   * and device-search aliases (the host key's own aliases are not inherited, because the same
+   * attribute is named differently from a device row, for example {@code "host os"} rather than
+   * {@code "os"}). Preserves the host key's long-tail flag so a projected discovered host property
+   * stays long-tail.
    */
-  static DeviceKeyDescriptor projectHostKey(HostKeyDescriptor host, KeyDisplay deviceDisplay) {
+  static DeviceKeyDescriptor projectHostKey(
+      HostKeyDescriptor host, KeyDisplay deviceDisplay, String... deviceAliases) {
     return DeviceKeyDescriptor.builder()
         .setId(host.id())
         .setLabInfoSources(host.labInfoSources())
         .setDisplay(deviceDisplay)
+        .setAliases(deviceAliases)
         .setIsLongTail(host.isLongTail())
         .setIsHostProperty(host.isHostProperty())
         .build();
   }
 
-  /** Returns the canonical key ID for a dimension name. */
+  /**
+   * The canonical id for a dimension name discovered from data or typed by a user. This is the only
+   * sanctioned way to form a {@code dimension::} id outside a catalog; pass the result to {@link
+   * DeviceKeyRegistry#getKey} rather than treating it as a key. A built-in key is referenced by its
+   * descriptor constant, never rebuilt from its name.
+   */
   public static String dimensionKeyId(String dimensionName) {
     return PREFIX_DIMENSION + dimensionName;
   }
