@@ -17,8 +17,12 @@
 package com.google.devtools.mobileharness.fe.v6.service.search;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
@@ -32,21 +36,33 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FilterValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFlatView;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupExpandView;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupHeaderView;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSearchConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSearchConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSearchRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSearchResults;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.FleetDataSource;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.ScenarioCurationModule;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.FleetSnapshotStore;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.summary.GlobalSummaryProvider;
 import com.google.devtools.mobileharness.fe.v6.service.search.summary.NoOpGlobalSummaryProvider;
 import com.google.inject.AbstractModule;
@@ -89,7 +105,32 @@ public final class SearchServiceLogicImplTest {
               protected void configure() {
                 bind(ListeningExecutorService.class).toInstance(newDirectExecutorService());
                 bind(GlobalSummaryProvider.class).to(NoOpGlobalSummaryProvider.class);
-                MapBinder.newMapBinder(binder(), Fleet.class, FleetDataSource.class);
+                MapBinder.newMapBinder(binder(), Fleet.class, FleetDataSource.class)
+                    .addBinding(Fleet.FLEET_SELF)
+                    .toInstance(
+                        new FleetDataSource() {
+                          @Override
+                          public Fleet fleet() {
+                            return Fleet.FLEET_SELF;
+                          }
+
+                          @Override
+                          public ListenableFuture<CoreFleetRawData> pull() {
+                            throw new UnsupportedOperationException();
+                          }
+
+                          @Override
+                          public ListenableFuture<DimensionOverlayRaw> pullDimension(
+                              DeviceKeyDescriptor dimensionKey) {
+                            return immediateFuture(
+                                DimensionOverlayRaw.create(
+                                    dimensionKey.id(),
+                                    ImmutableMap.of(
+                                        "device-0", ImmutableList.of("mh"),
+                                        "device-1", ImmutableList.of("mh"),
+                                        "device-2", ImmutableList.of("mh"))));
+                          }
+                        });
               }
             });
     FleetSnapshotStore store = injector.getInstance(FleetSnapshotStore.class);
@@ -172,6 +213,86 @@ public final class SearchServiceLogicImplTest {
             .get();
 
     assertThat(results.getFlat().getTotal()).isEqualTo(3);
+  }
+
+  @Test
+  public void longTailOverlay_valueListPromotedSuggestionsAndGroupExpand_allBindOverlay()
+      throws Exception {
+    Filter overlayFilter =
+        Filter.newBuilder()
+            .setKey("dimension::provisioned_by")
+            .setSimple(SimpleMatch.newBuilder().addValues(FilterValue.newBuilder().setValue("mh")))
+            .build();
+
+    // 1. Value list with same long-tail key in both request.key and request.filters succeeds.
+    FleetValueListResponse valueList =
+        logic
+            .getFleetValueList(
+                FleetValueListRequest.newBuilder()
+                    .setEntity(SearchEntity.SEARCH_ENTITY_DEVICE)
+                    .setFleet(Fleet.FLEET_SELF)
+                    .setKey("dimension::provisioned_by")
+                    .addFilters(overlayFilter)
+                    .build())
+            .get();
+    assertThat(valueList.getCounted().getValuesList()).hasSize(1);
+    assertThat(valueList.getCounted().getValues(0).getValue()).isEqualTo("mh");
+    assertThat(valueList.getCounted().getValues(0).getTotal()).isEqualTo(3);
+
+    // 2. Promoted keys with active long-tail filter binds overlay and retains non-empty filter
+    // keys.
+    FleetPromotedKeysResponse promoted =
+        logic
+            .getFleetPromotedKeys(
+                FleetPromotedKeysRequest.newBuilder()
+                    .setEntity(SearchEntity.SEARCH_ENTITY_DEVICE)
+                    .setFleet(Fleet.FLEET_SELF)
+                    .addFilters(overlayFilter)
+                    .build())
+            .get();
+    assertThat(promoted.getFilterKeysList()).isNotEmpty();
+
+    // 3. Suggestions with active long-tail filter binds overlay and reports non-zero counts.
+    FleetSuggestionResponse suggestions =
+        logic
+            .getFleetSuggestions(
+                FleetSuggestionRequest.newBuilder()
+                    .setEntity(SearchEntity.SEARCH_ENTITY_DEVICE)
+                    .setFleet(Fleet.FLEET_SELF)
+                    .setInput("IDLE")
+                    .addFilters(overlayFilter)
+                    .build())
+            .get();
+    assertThat(suggestions.getItemsList()).isNotEmpty();
+    assertThat(suggestions.getItems(0).getCount()).isEqualTo(2);
+
+    // 4. Grouped search by long-tail dimension followed by GROUP_EXPAND binds overlay from groupId.
+    FleetSearchResults grouped =
+        logic
+            .searchFleet(
+                FleetSearchRequest.newBuilder()
+                    .setEntity(SearchEntity.SEARCH_ENTITY_DEVICE)
+                    .setFleet(Fleet.FLEET_SELF)
+                    .setGroupHeader(
+                        FleetGroupHeaderView.newBuilder().addGroupBy("dimension::provisioned_by"))
+                    .build())
+            .get();
+    assertThat(grouped.getGrouped().getGroupsList()).hasSize(1);
+    String groupId = grouped.getGrouped().getGroups(0).getGroupId();
+
+    FleetSearchResults expanded =
+        logic
+            .searchFleet(
+                FleetSearchRequest.newBuilder()
+                    .setEntity(SearchEntity.SEARCH_ENTITY_DEVICE)
+                    .setFleet(Fleet.FLEET_SELF)
+                    .setGroupExpand(
+                        FleetGroupExpandView.newBuilder()
+                            .setGroupId(groupId)
+                            .addColumns("device_field::uuid"))
+                    .build())
+            .get();
+    assertThat(expanded.getFlat().getRowsList()).hasSize(3);
   }
 
   // --- Synthetic fleet: three devices across two hosts. ---

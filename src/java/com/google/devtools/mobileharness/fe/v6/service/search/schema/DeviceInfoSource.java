@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -84,6 +85,16 @@ public abstract class DeviceInfoSource {
     public ImmutableList<String> extract(DeviceInfo deviceInfo) {
       return getter.apply(deviceInfo);
     }
+
+    @Override
+    public boolean equals(Object other) {
+      return other instanceof FieldSource that && Objects.equals(this.protoPath, that.protoPath);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(protoPath);
+    }
   }
 
   private static final class DimensionSource extends DeviceInfoSource {
@@ -115,6 +126,16 @@ public abstract class DeviceInfoSource {
           .filter(dimension -> dimension.getName().equals(name))
           .map(DeviceDimension::getValue)
           .collect(toImmutableList());
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      return other instanceof DimensionSource that && Objects.equals(this.name, that.name);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(name);
     }
   }
 }

@@ -16,12 +16,14 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetChipResolverRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetChipResolverResponse;
@@ -39,6 +41,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueLi
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.GetGlobalSummaryRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.GlobalSummary;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetChipResolver;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetColumnCataloger;
@@ -53,6 +56,9 @@ import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionO
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.summary.GlobalSummaryProvider;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -135,11 +141,19 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
   @Override
   public ListenableFuture<FleetSuggestionResponse> getFleetSuggestions(
       FleetSuggestionRequest request) {
-    return Futures.submit(
-        () -> {
-          Fleet fleet = normalize(request.getFleet());
-          return suggester.suggest(corpusFactory.getCorpus(fleet, request.getEntity()), request);
-        },
+    Fleet fleet = normalize(request.getFleet());
+    DeviceKeyRegistry registry = corpusFactory.getDeviceKeyRegistry(fleet);
+    ImmutableSet<DeviceKeyDescriptor> overlayKeys =
+        extractFilterAndGroupOverlayKeys(
+            registry, request.getEntity(), request.getFiltersList(), request.getGroupByList());
+    return Futures.transformAsync(
+        overlayStore.loadOverlaysAsync(fleet, overlayKeys, executor),
+        overlays ->
+            Futures.submit(
+                () ->
+                    suggester.suggest(
+                        corpusFactory.getCorpus(fleet, request.getEntity(), overlays), request),
+                executor),
         executor);
   }
 
@@ -171,12 +185,19 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
   @Override
   public ListenableFuture<FleetPromotedKeysResponse> getFleetPromotedKeys(
       FleetPromotedKeysRequest request) {
-    return Futures.submit(
-        () -> {
-          Fleet fleet = normalize(request.getFleet());
-          return promotedKeysProvider.getPromotedKeys(
-              corpusFactory.getCorpus(fleet, request.getEntity()), request);
-        },
+    Fleet fleet = normalize(request.getFleet());
+    DeviceKeyRegistry registry = corpusFactory.getDeviceKeyRegistry(fleet);
+    ImmutableSet<DeviceKeyDescriptor> overlayKeys =
+        extractFilterAndGroupOverlayKeys(
+            registry, request.getEntity(), request.getFiltersList(), request.getGroupByList());
+    return Futures.transformAsync(
+        overlayStore.loadOverlaysAsync(fleet, overlayKeys, executor),
+        overlays ->
+            Futures.submit(
+                () ->
+                    promotedKeysProvider.getPromotedKeys(
+                        corpusFactory.getCorpus(fleet, request.getEntity(), overlays), request),
+                executor),
         executor);
   }
 
@@ -195,6 +216,22 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
   @Override
   public ListenableFuture<GlobalSummary> getGlobalSummary(GetGlobalSummaryRequest request) {
     return globalSummaryProvider.getGlobalSummary(request);
+  }
+
+  private static ImmutableSet<DeviceKeyDescriptor> extractFilterAndGroupOverlayKeys(
+      DeviceKeyRegistry registry,
+      SearchEntity entity,
+      List<Filter> filters,
+      List<String> groupByKeys) {
+    if (entity == SearchEntity.SEARCH_ENTITY_HOST || registry == null) {
+      return ImmutableSet.of();
+    }
+    return Stream.concat(filters.stream().map(Filter::getKey), groupByKeys.stream())
+        .distinct()
+        .map(registry::getKey)
+        .flatMap(Optional::stream)
+        .filter(DeviceKeyDescriptor::isOverlay)
+        .collect(toImmutableSet());
   }
 
   private static Fleet normalize(Fleet fleet) {

@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.pull.FleetDataSour
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -97,9 +98,13 @@ public final class DimensionOverlayStore {
         inFlight.computeIfAbsent(fleet, f -> new ConcurrentHashMap<>());
 
     List<ListenableFuture<Map.Entry<String, DimensionOverlay>>> futures = new ArrayList<>();
+    Set<String> seenKeyIds = new HashSet<>();
 
     for (DeviceKeyDescriptor key : keys) {
       String keyId = key.id();
+      if (!seenKeyIds.add(keyId)) {
+        continue;
+      }
       DimensionOverlay cached = cache.getIfPresent(keyId);
       if (cached != null) {
         futures.add(immediateFuture(Map.entry(keyId, cached)));

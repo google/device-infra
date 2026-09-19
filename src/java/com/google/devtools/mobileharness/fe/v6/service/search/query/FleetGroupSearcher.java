@@ -45,6 +45,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 
 /**
@@ -386,6 +387,11 @@ public final class FleetGroupSearcher {
       }
     }
     return encodeField(raw.toString());
+  }
+
+  /** Returns the group-by key IDs encoded in an opaque group id. */
+  public static Stream<String> extractGroupIdKeys(String groupId) {
+    return decodeGroupId(groupId).stream().map(GroupEntry::key);
   }
 
   /**

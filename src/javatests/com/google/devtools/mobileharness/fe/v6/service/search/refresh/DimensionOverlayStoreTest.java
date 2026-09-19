@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOver
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.FleetDataSource;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.KeyDisplay;
 import java.time.Instant;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Before;
@@ -125,6 +126,42 @@ public final class DimensionOverlayStoreTest {
 
     assertThat(future1.get()).containsKey("dimension::carrier");
     assertThat(future2.get()).containsKey("dimension::carrier");
+    assertThat(dataSource.pullCount.get()).isEqualTo(1);
+  }
+
+  @Test
+  public void loadOverlaysAsync_duplicateKeyIdsInInputSet_deduplicatesWithoutConflict()
+      throws Exception {
+    dataSource.rawResult =
+        DimensionOverlayRaw.create(
+            "dimension::provisioned_by", ImmutableMap.of("dev-1", ImmutableList.of("mh")));
+    DeviceKeyDescriptor key1 =
+        DeviceKeyDescriptor.builder()
+            .setId("dimension::provisioned_by")
+            .setDisplay(KeyDisplay.of("provisioned_by"))
+            .setIsDimension(true)
+            .setIsLongTail(true)
+            .build();
+    DeviceKeyDescriptor key2 =
+        DeviceKeyDescriptor.builder()
+            .setId("dimension::provisioned_by")
+            .setDisplay(KeyDisplay.of("Provisioned By"))
+            .setIsDimension(true)
+            .setIsLongTail(true)
+            .build();
+
+    // First call populates cache; second call hits cache with two distinct descriptors sharing id.
+    ImmutableMap<String, DimensionOverlay> firstResult =
+        overlayStore
+            .loadOverlaysAsync(Fleet.FLEET_SELF, ImmutableSet.of(key1, key2), executor)
+            .get();
+    ImmutableMap<String, DimensionOverlay> secondResult =
+        overlayStore
+            .loadOverlaysAsync(Fleet.FLEET_SELF, ImmutableSet.of(key1, key2), executor)
+            .get();
+
+    assertThat(firstResult.keySet()).containsExactly("dimension::provisioned_by");
+    assertThat(secondResult.keySet()).containsExactly("dimension::provisioned_by");
     assertThat(dataSource.pullCount.get()).isEqualTo(1);
   }
 

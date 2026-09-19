@@ -217,6 +217,7 @@ public final class FleetValueLister {
     }
     return Stream.concat(
             Stream.of(request.getKey()), request.getFiltersList().stream().map(Filter::getKey))
+        .distinct()
         .map(registry::getKey)
         .flatMap(Optional::stream)
         .filter(DeviceKeyDescriptor::isOverlay)

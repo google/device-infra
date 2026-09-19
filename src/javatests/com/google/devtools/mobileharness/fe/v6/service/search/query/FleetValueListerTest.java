@@ -37,11 +37,13 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FilterValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetCountedValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetCountedValueList;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPlainValue;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
 import com.google.inject.Guice;
 import java.time.Instant;
 import org.junit.Test;
@@ -204,6 +206,18 @@ public final class FleetValueListerTest {
     assertThat(response.getCounted().getValuesList()).isEmpty();
     // An unknown key must not report the whole fleet as lacking it.
     assertThat(response.getCounted().hasNoValueEntry()).isFalse();
+  }
+
+  @Test
+  public void extractOverlayKeys_sameLongTailDimensionInKeyAndFilter_deduplicates() {
+    AtsDeviceKeyRegistry registry = new AtsDeviceKeyRegistry();
+    FleetValueListRequest request =
+        FleetValueListRequest.newBuilder()
+            .setKey("dimension::provisioned_by")
+            .addFilters(simple("dimension::provisioned_by", "foo"))
+            .build();
+
+    assertThat(FleetValueLister.extractOverlayKeys(registry, request)).hasSize(1);
   }
 
   // --- Helpers ---

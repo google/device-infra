@@ -91,8 +91,12 @@ public final class DeviceKeyRegistryTest {
 
     assertThat(registry.createLongTailDimensionKey("carrier")).isPresent();
     assertThat(registry.createLongTailDimensionKey("carrier").get().isLongTail()).isTrue();
+    assertThat(registry.getKey("dimension::carrier"))
+        .isEqualTo(registry.getKey("dimension::carrier"));
     assertThat(registry.createProjectLongTailHostPropertyKey("rack")).isPresent();
     assertThat(registry.createProjectLongTailHostPropertyKey("rack").get().isLongTail()).isTrue();
+    assertThat(registry.getKey("host_property::rack"))
+        .isEqualTo(registry.getKey("host_property::rack"));
 
     // Rejects bare prefixes and empty/blank/null values gracefully.
     assertThat(registry.getKey("dimension::")).isEmpty();

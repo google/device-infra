@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
+import java.util.Objects;
 import java.util.function.Function;
 
 /**
@@ -77,6 +78,16 @@ public abstract class LabInfoSource {
     public ImmutableList<String> extract(LabInfo labInfo) {
       return getter.apply(labInfo);
     }
+
+    @Override
+    public boolean equals(Object other) {
+      return other instanceof FieldSource that && Objects.equals(this.protoPath, that.protoPath);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(protoPath);
+    }
   }
 
   private static final class HostPropertySource extends LabInfoSource {
@@ -100,6 +111,16 @@ public abstract class LabInfoSource {
           .filter(property -> property.getKey().equals(key))
           .map(HostProperty::getValue)
           .collect(toImmutableList());
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      return other instanceof HostPropertySource that && Objects.equals(this.key, that.key);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(key);
     }
   }
 }

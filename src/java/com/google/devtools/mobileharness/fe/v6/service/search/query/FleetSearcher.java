@@ -120,10 +120,14 @@ public final class FleetSearcher {
                 ? Stream.concat(groupBys, Stream.of(header.getSort().getField().getGroupKey()))
                 : groupBys;
           }
-          case GROUP_EXPAND -> request.getGroupExpand().getColumnsList().stream();
+          case GROUP_EXPAND ->
+              Stream.concat(
+                  request.getGroupExpand().getColumnsList().stream(),
+                  FleetGroupSearcher.extractGroupIdKeys(request.getGroupExpand().getGroupId()));
           case VIEW_NOT_SET -> Stream.empty();
         };
     return Stream.concat(filterKeys, viewKeys)
+        .distinct()
         .map(registry::getKey)
         .flatMap(Optional::stream)
         .filter(DeviceKeyDescriptor::isOverlay)
