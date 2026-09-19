@@ -50,6 +50,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_value_lister",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:host_column_cataloger",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:host_corpus",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:key_vocabulary",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:scenario_curation",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:dimension_catalog_store",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:ats_device_keys",
