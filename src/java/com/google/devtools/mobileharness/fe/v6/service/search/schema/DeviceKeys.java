@@ -94,6 +94,15 @@ public final class DeviceKeys {
       dimensionKey("sdk_version", KeyDisplay.of("SDK Version"));
   public static final DeviceKeyDescriptor SOFTWARE_VERSION =
       dimensionKey("software_version", KeyDisplay.of("Software Version"));
+  public static final DeviceKeyDescriptor SDK_OR_SOFTWARE_VERSION =
+      DeviceKeyDescriptor.builder()
+          .setId(PREFIX_DEVICE_FIELD + "sdk_or_software_version")
+          .setDeviceInfoSources(
+              ImmutableList.of(
+                  DeviceInfoSource.dimension("sdk_version"),
+                  DeviceInfoSource.dimension("software_version")))
+          .setDisplay(KeyDisplay.of("SDK or Software Version"))
+          .build();
   public static final DeviceKeyDescriptor DEVICE_FORM =
       dimensionKey("device_form", KeyDisplay.of("Form"));
   public static final DeviceKeyDescriptor DEVICE_CLASS_NAME =
@@ -113,6 +122,7 @@ public final class DeviceKeys {
           OS,
           SDK_VERSION,
           SOFTWARE_VERSION,
+          SDK_OR_SOFTWARE_VERSION,
           DEVICE_FORM,
           DEVICE_CLASS_NAME,
           MANUFACTURER);

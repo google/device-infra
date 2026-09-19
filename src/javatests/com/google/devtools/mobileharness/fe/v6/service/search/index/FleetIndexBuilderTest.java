@@ -606,6 +606,59 @@ public final class FleetIndexBuilderTest {
     return DeviceDimension.newBuilder().setName(name).setValue(value).build();
   }
 
+  @Test
+  public void build_sdkOrSoftwareVersion_combinesAndDeduplicatesSdkAndSoftwareVersions() {
+    DeviceInfo androidAndSoftwareDevice =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("dev-both"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(dimension("sdk_version", "34"))
+                            .addSupportedDimension(dimension("software_version", "34"))
+                            .addSupportedDimension(dimension("software_version", "UQ1A.240205"))))
+            .build();
+    DeviceInfo iosDevice =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("dev-ios"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(dimension("software_version", "17.4.1"))))
+            .build();
+    LabQueryResult labResult =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab-ver",
+                            "10.0.0.1",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            androidAndSoftwareDevice,
+                            iosDevice)))
+            .build();
+
+    FleetSnapshot snapshot = builder.build(labResult, BUILD_TIME);
+    assertThat(snapshot.devices().get(0).values("device_field::sdk_or_software_version"))
+        .containsExactly("34", "UQ1A.240205")
+        .inOrder();
+    assertThat(snapshot.devices().get(1).values("device_field::sdk_or_software_version"))
+        .containsExactly("17.4.1");
+    assertThat(snapshot.index().valueCount("device_field::sdk_or_software_version", "34"))
+        .isEqualTo(1);
+    assertThat(snapshot.index().valueCount("device_field::sdk_or_software_version", "uq1a.240205"))
+        .isEqualTo(1);
+    assertThat(snapshot.index().valueCount("device_field::sdk_or_software_version", "17.4.1"))
+        .isEqualTo(1);
+  }
+
   private static List<Integer> posting(LazyPostings postings, String keyId, String value) {
     int[] arr = postings.get(keyId, value);
     List<Integer> result = new ArrayList<>(arr.length);

@@ -23,6 +23,8 @@ import {
   TjsSearchResponse,
   TjsSuggestionRequest,
   TjsSuggestionResponse,
+  TranslateArsenalSearchRequest,
+  TranslateArsenalSearchResponse,
 } from '../../models/search';
 
 /** Injection token for referencing SearchService implementations. */
@@ -62,6 +64,10 @@ export abstract class SearchService {
   abstract getFleetColumnCatalog(
     request: FleetColumnCatalogRequest,
   ): Observable<FleetColumnCatalogResponse>;
+
+  abstract translateArsenalSearch(
+    request: TranslateArsenalSearchRequest,
+  ): Observable<TranslateArsenalSearchResponse>;
 
   // --- TJS (test/job/session) Search RPCs ---
   abstract getTjsSearchConfig(
