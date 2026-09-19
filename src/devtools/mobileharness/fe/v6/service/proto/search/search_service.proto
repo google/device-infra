@@ -121,6 +121,17 @@ service SearchService {
     };
   }
 
+  // Translates unpacked Alkali Arsenal search parameters into canonical FE v6
+  // Fleet search state (resolved filter chips, group-by chips, fleet scope,
+  // and table column descriptors).
+  rpc TranslateArsenalSearch(TranslateArsenalSearchRequest)
+      returns (TranslateArsenalSearchResponse) {
+    option (google.api.http) = {
+      post: "/v6/fleet-search/translate-arsenal"
+      body: "*"
+    };
+  }
+
   // ===========================================================================
   // TJS (test/job/session) search — 4 RPCs
   // ===========================================================================
