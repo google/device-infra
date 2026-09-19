@@ -40,8 +40,8 @@ service TestService {
   // Gets the log of a test by its ID, returning the log from `offset` to the
   // end.
   //
-  // Non-path fields (job_id, offset, content_hash) are automatically mapped to
-  // query parameters by the gRPC-JSON transcoder.
+  // Non-path fields (job_id, sub_test_id, offset, content_hash) are
+  // automatically mapped to query parameters by the gRPC-JSON transcoder.
   rpc GetTestLog(GetTestLogRequest) returns (GetTestLogResponse) {
     option (google.api.http) = {
       get: "/v6/tests/{test_id}/log"
@@ -50,8 +50,8 @@ service TestService {
 
   // Gets the content of a test file by its path.
   //
-  // Non-path fields (job_id, file_path) are automatically mapped to query
-  // parameters by the gRPC-JSON transcoder.
+  // Non-path fields (job_id, sub_test_id, file_path) are automatically mapped
+  // to query parameters by the gRPC-JSON transcoder.
   rpc GetTestFile(GetTestFileRequest) returns (GetTestFileResponse) {
     option (google.api.http) = {
       get: "/v6/tests/{test_id}/file"
@@ -66,7 +66,6 @@ message GetTestRequest {
   // Optional. If set, the backend fetches the root test, walks the sub-test
   // tree to find this sub-test, and returns its full TestDetail (with
   // root_test_id set to test_id). This mirrors FE v5's ?sub_test= param.
-  // TODO: b/529253317 - Implement sub-test detail support in the backend.
   string sub_test_id = 2;
 
   // The ID of the parent job. The backend requires both job_id and test_id
@@ -101,6 +100,10 @@ message GetTestLogRequest {
   // The client treats this as an opaque string — it never computes or inspects
   // it. On the first request (offset=0), omit this field.
   string content_hash = 4;
+
+  // Optional. If set, resolves this sub-test inside the root test (`test_id`)
+  // and returns the sub-test's log and lifecycle status.
+  string sub_test_id = 5;
 }
 
 message GetTestLogResponse {
@@ -142,7 +145,7 @@ message GetTestLogResponse {
 }
 
 message GetTestFileRequest {
-  // The ID of the test whose file to retrieve.
+  // The ID of the root test whose file (or sub-test file) to retrieve.
   string test_id = 1;
 
   // The ID of the parent job.
@@ -150,6 +153,10 @@ message GetTestFileRequest {
 
   // The relative path of the file to retrieve.
   string file_path = 3;
+
+  // Optional. If set, resolves this sub-test inside the root test (`test_id`)
+  // and reads the file from the sub-test's `gen_file` list.
+  string sub_test_id = 4;
 }
 
 message GetTestFileResponse {
