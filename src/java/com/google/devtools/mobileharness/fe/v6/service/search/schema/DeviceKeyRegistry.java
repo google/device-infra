@@ -29,6 +29,7 @@ import com.google.protobuf.FieldMask;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
+import javax.annotation.Nullable;
 
 /**
  * The per-deployment catalog of built-in keys usable in device search, and the factory/parser for
@@ -84,7 +85,7 @@ public abstract class DeviceKeyRegistry {
    * minted long-tail descriptor for a {@code dimension::} or cross-entity {@code host_property::}
    * id, otherwise empty.
    */
-  public Optional<DeviceKeyDescriptor> getKey(String keyId) {
+  public Optional<DeviceKeyDescriptor> getKey(@Nullable String keyId) {
     if (keyId == null) {
       return Optional.empty();
     }
@@ -108,10 +109,30 @@ public abstract class DeviceKeyRegistry {
   }
 
   /**
+   * The device key a bare dimension name denotes: the built-in descriptor if this deployment
+   * declares one (so {@code "model"} yields {@link DeviceKeys#MODEL}, not a long-tail twin),
+   * otherwise a long-tail mint; empty for a blank name. This is how a name typed by a user or read
+   * from data becomes a key without any caller forming an id.
+   */
+  public Optional<DeviceKeyDescriptor> dimensionKey(String dimensionName) {
+    // Stripped once here, so a padded name reaches the same built-in as its trimmed spelling
+    // instead of minting a long-tail twin whose id carries the padding.
+    return getKey(DeviceKeys.dimensionKeyId(dimensionName.strip()));
+  }
+
+  /**
+   * The device key a bare host property name denotes, projected into device search: the built-in
+   * descriptor if this deployment declares one, otherwise a long-tail mint; empty for a blank name.
+   */
+  public Optional<DeviceKeyDescriptor> hostPropertyKey(String propertyKey) {
+    return getKey(HostKeys.hostPropertyKeyId(propertyKey.strip()));
+  }
+
+  /**
    * Mints a long-tail device dimension key for a dimension discovered from data, or returns empty
    * if the dimension name is null or empty.
    */
-  public Optional<DeviceKeyDescriptor> createLongTailDimensionKey(String dimensionName) {
+  public Optional<DeviceKeyDescriptor> createLongTailDimensionKey(@Nullable String dimensionName) {
     if (dimensionName == null || dimensionName.trim().isEmpty()) {
       return Optional.empty();
     }
@@ -122,7 +143,8 @@ public abstract class DeviceKeyRegistry {
    * Mints a long-tail host-property key projected into device search (a cross-entity host attribute
    * discovered from data), or returns empty if the property key is null or empty.
    */
-  public Optional<DeviceKeyDescriptor> createProjectLongTailHostPropertyKey(String propertyKey) {
+  public Optional<DeviceKeyDescriptor> createProjectLongTailHostPropertyKey(
+      @Nullable String propertyKey) {
     if (propertyKey == null || propertyKey.trim().isEmpty()) {
       return Optional.empty();
     }

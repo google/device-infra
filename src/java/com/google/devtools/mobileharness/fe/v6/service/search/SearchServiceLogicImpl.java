@@ -48,10 +48,10 @@ import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetColumnC
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetPromotedKeysProvider;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetSearchConfigProvider;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetSearcher;
-import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetSuggester;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetValueLister;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.ScenarioCuration;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.SearchCorpusFactory;
+import com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.FleetSuggester;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionOverlayStore;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
