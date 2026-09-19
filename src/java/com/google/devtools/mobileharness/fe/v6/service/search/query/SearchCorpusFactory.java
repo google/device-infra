@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DimensionOverlay;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.OverlayView;
+import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionCatalogStore;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.FleetSnapshotStore;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
 import java.util.Map;
@@ -34,17 +35,26 @@ import javax.inject.Singleton;
 /**
  * Factory for constructing entity-specific {@link SearchCorpus} projections and accessing scenario
  * curations.
+ *
+ * <p>A device corpus is built with the fleet's discovered dimension names from the {@link
+ * DimensionCatalogStore}, so the corpus (and its vocabulary) is the single owner of that knowledge;
+ * query classes never read the catalog store directly.
  */
 @Singleton
 public final class SearchCorpusFactory {
 
   private final FleetSnapshotStore store;
   private final Map<Fleet, ScenarioCuration> curations;
+  private final DimensionCatalogStore dimensionCatalogStore;
 
   @Inject
-  SearchCorpusFactory(FleetSnapshotStore store, Map<Fleet, ScenarioCuration> curations) {
+  SearchCorpusFactory(
+      FleetSnapshotStore store,
+      Map<Fleet, ScenarioCuration> curations,
+      DimensionCatalogStore dimensionCatalogStore) {
     this.store = checkNotNull(store);
     this.curations = checkNotNull(curations);
+    this.dimensionCatalogStore = checkNotNull(dimensionCatalogStore);
   }
 
   /**
@@ -58,7 +68,12 @@ public final class SearchCorpusFactory {
     }
     FleetSnapshot snapshot = store.get(fleet);
     OverlayView overlayView = OverlayView.bind(snapshot, overlays);
-    return new DeviceCorpus(snapshot, store.postings(fleet), curations.get(fleet), overlayView);
+    return new DeviceCorpus(
+        snapshot,
+        store.postings(fleet),
+        curations.get(fleet),
+        overlayView,
+        dimensionCatalogStore.getDimensionNames(fleet));
   }
 
   /** Constructs a {@link SearchCorpus} without overlay data (e.g. for suggestions or catalogs). */
