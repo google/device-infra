@@ -197,6 +197,8 @@ public final class AtsServerSessionPluginTest {
     timing = new Timing(baseTime);
     timing.start(baseTime.plusMillis(1));
     when(sessionInfo.getSessionId()).thenReturn("session_id");
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(SessionPluginExecutionConfig.getDefaultInstance());
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator wirelessLocator =
         mock(com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator.class);
@@ -273,6 +275,13 @@ public final class AtsServerSessionPluginTest {
                     .setName("android-cts.zip")
                     .build())
             .build();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
