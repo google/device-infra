@@ -58,7 +58,12 @@ export function generateMockDeviceRows(): Row[] {
             target: {device: {id}},
           },
         },
-        {text: {value: hostName}},
+        {
+          link: {
+            text: hostName,
+            target: {host: {hostName}},
+          },
+        },
         {status: {text: statusText, indicator: getStatusIndicator(statusText)}},
         {text: {value: type}},
         {text: {value: owner}},

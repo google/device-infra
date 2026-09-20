@@ -4,6 +4,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   Injector,
   OnInit,
@@ -12,6 +13,8 @@ import {
 import {MatButtonModule} from '@angular/material/button';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 
+import {EnvUniverseService} from '../../core/services/env_universe_service';
+import {UrlService} from '../../core/services/url_service';
 import {LoadingService} from '../../shared/services/loading_service';
 import {SearchBox} from './components/search_box/search_box';
 import {FleetSearchResultsComponent} from './components/search_results/fleet_search_results/fleet_search_results';
@@ -38,8 +41,10 @@ export class SearchPage implements OnInit {
   readonly store = inject(SearchPageStore);
   private readonly loadingService = inject(LoadingService);
   private readonly injector = inject(Injector);
+  private readonly urlService = inject(UrlService);
+  private readonly envUniverseService = inject(EnvUniverseService);
 
-  readonly searchBox = viewChild(SearchBox);
+  private readonly searchBox = viewChild(SearchBox);
 
   /** Active view mode for the search page (landing loading, launcher, or results). */
   readonly pageViewMode = computed<
@@ -54,6 +59,32 @@ export class SearchPage implements OnInit {
   });
 
   ngOnInit() {
+    // Only register the search state synchronization effect in embedded mode
+    // within the ATS/OSS environment (e.g. running inside MTT UI2 iframe).
+    // In standalone or internal mode, this avoids unnecessary effect scheduling,
+    // reactive signal subscriptions, and postMessage overhead.
+    if (this.envUniverseService.isAts() && this.urlService.isInEmbeddedMode()) {
+      effect(
+        () => {
+          const filters = this.store.serializedActiveFilters();
+          const groupBys = this.store.groupByKeys();
+
+          // const q = this.store.searchQuery();
+          // const fleet = this.store.fleet();
+          // if (q) params['q'] = q;  // no parent window support q yet.
+          // no parent window support fleet yet.
+          // if (fleet !== 'internal') params['fleet'] = fleet;
+
+          const params: Record<string, string | string[]> = {};
+          if (filters.length > 0) params['f'] = filters;
+          if (groupBys.length > 0) params['gb'] = groupBys.join(',');
+
+          this.urlService.notifySearchStateChanged(params);
+        },
+        {injector: this.injector},
+      );
+    }
+
     this.loadingService.hide();
   }
 

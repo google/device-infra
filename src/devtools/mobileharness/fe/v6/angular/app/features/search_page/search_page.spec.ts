@@ -7,10 +7,10 @@ import {By} from '@angular/platform-browser';
 import {provideNoopAnimations} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
 
+import {LoadingService} from '../../shared/services/loading_service';
 import {EntityType, SearchPageConfig} from './models';
 import {SearchPage} from './search_page';
 import {SearchPageStore} from './services/search_page_store';
-import {LoadingService} from '../../shared/services/loading_service';
 
 @Component({
   selector: 'app-search-box',
@@ -44,6 +44,9 @@ class MockSearchPageStore {
   readonly searchQuery = signal('');
   readonly showSuggestions = signal(false);
   readonly browseAll = signal(false);
+  readonly serializedActiveFilters = signal<string[]>([]);
+  readonly groupByKeys = signal<string[]>([]);
+  readonly fleet = signal<'internal' | 'ats'>('internal');
   readonly executeSearch = jasmine.createSpy('executeSearch');
 }
 

@@ -85,7 +85,13 @@ describe('NavLink', () => {
 
     expect(event.preventDefault).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/hosts/host1'], {
-      queryParams: {'host_name': null},
+      queryParams: {
+        'host_name': null,
+        'f': null,
+        'gb': null,
+        'fleet': null,
+        'q': null,
+      },
       queryParamsHandling: '',
     });
   });
@@ -107,7 +113,14 @@ describe('NavLink', () => {
 
     expect(event.preventDefault).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/hosts/host1'], {
-      queryParams: {universe: 'my_universe', 'host_name': null},
+      queryParams: {
+        universe: 'my_universe',
+        'host_name': null,
+        'f': null,
+        'gb': null,
+        'fleet': null,
+        'q': null,
+      },
       queryParamsHandling: '',
     });
   });
@@ -129,7 +142,13 @@ describe('NavLink', () => {
 
     expect(event.preventDefault).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/hosts/host1'], {
-      queryParams: {'host_name': null},
+      queryParams: {
+        'host_name': null,
+        'f': null,
+        'gb': null,
+        'fleet': null,
+        'q': null,
+      },
       queryParamsHandling: 'merge',
     });
   });
@@ -151,7 +170,13 @@ describe('NavLink', () => {
 
     expect(event.preventDefault).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/hosts/host1'], {
-      queryParams: {'host_name': null},
+      queryParams: {
+        'host_name': null,
+        'f': null,
+        'gb': null,
+        'fleet': null,
+        'q': null,
+      },
       queryParamsHandling: '',
     });
   });
@@ -306,7 +331,13 @@ describe('NavLink', () => {
       },
     );
     expect(router.navigate).toHaveBeenCalledWith(['/devices/dev1'], {
-      queryParams: {'host_name': 'host1'},
+      queryParams: {
+        'host_name': 'host1',
+        'f': null,
+        'gb': null,
+        'fleet': null,
+        'q': null,
+      },
       queryParamsHandling: '',
     });
   });
@@ -328,7 +359,13 @@ describe('NavLink', () => {
 
     expect(mockUrlService.notifyNavigated).not.toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/jobs/job_123'], {
-      queryParams: {'host_name': null},
+      queryParams: {
+        'host_name': null,
+        'f': null,
+        'gb': null,
+        'fleet': null,
+        'q': null,
+      },
       queryParamsHandling: '',
     });
   });
@@ -353,7 +390,13 @@ describe('NavLink', () => {
     expect(router.navigate).toHaveBeenCalledWith(
       ['/jobs/job_123/tests/test_456'],
       {
-        queryParams: {'host_name': null},
+        queryParams: {
+          'host_name': null,
+          'f': null,
+          'gb': null,
+          'fleet': null,
+          'q': null,
+        },
         queryParamsHandling: '',
       },
     );
@@ -375,8 +418,38 @@ describe('NavLink', () => {
 
     expect(mockUrlService.notifyNavigated).not.toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/sessions/session_123'], {
-      queryParams: {'host_name': null},
+      queryParams: {
+        'host_name': null,
+        'f': null,
+        'gb': null,
+        'fleet': null,
+        'q': null,
+      },
       queryParamsHandling: '',
     });
+  });
+
+  it('should remove search page query parameters (f, gb, fleet, q) from fullPageLink in standalone mode', () => {
+    const mockDocument = TestBed.inject(DOCUMENT);
+    spyOnProperty(mockDocument, 'defaultView', 'get').and.returnValue({
+      location: {
+        search: '?param1=value1&f=filter1&gb=groupBy1&fleet=ats&q=pixel',
+        origin: 'http://localhost:4200',
+      },
+    } as unknown as Window & typeof globalThis);
+
+    fixture.componentRef.setInput('config', {
+      type: 'device',
+      hostName: 'host1',
+      hostIp: '1.1.1.1',
+      deviceId: 'dev1',
+    });
+    mockUrlService.getExternalUrl.and.returnValue(NEVER);
+
+    fixture.detectChanges();
+
+    expect(component.fullPageLink()).toBe(
+      '/devices/dev1?param1=value1&host_name=host1',
+    );
   });
 });

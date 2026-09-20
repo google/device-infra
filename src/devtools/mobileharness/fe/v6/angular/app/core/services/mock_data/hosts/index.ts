@@ -1,4 +1,5 @@
 import {MockHostScenario, MockHostScenarioWrapper} from '../models';
+import {scenarioHostLocalMtt} from './local_mtt_host';
 import {SCENARIO_HOST_NO_CONFIG} from './01_no_config';
 import {SCENARIO_HOST_BASIC_EDITABLE} from './02_basic_editable';
 import {SCENARIO_HOST_SHARED_MODE} from './03_shared_mode';
@@ -49,6 +50,7 @@ function wrapHost(
 
 /** Central registry of all mock host scenarios. */
 export const MOCK_HOST_SCENARIOS: MockHostScenarioWrapper[] = [
+  wrapHost(scenarioHostLocalMtt),
   wrapHost(overviewRefreshFactory),
   wrapHost(SCENARIO_HOST_NO_CONFIG),
   wrapHost(SCENARIO_HOST_BASIC_EDITABLE),
@@ -84,3 +86,5 @@ export const MOCK_HOST_SCENARIOS: MockHostScenarioWrapper[] = [
   wrapHost(OVERVIEW_13),
   wrapHost(OVERVIEW_14),
 ];
+
+export {scenarioHostLocalMtt} from './local_mtt_host';

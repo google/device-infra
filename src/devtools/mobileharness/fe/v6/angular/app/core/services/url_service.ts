@@ -35,6 +35,14 @@ export interface NavigatedMessage {
 }
 
 /**
+ * Interface for the message sent to the parent window when search state changes.
+ */
+export interface SearchStateChangedMessage {
+  type: 'SEARCH_STATE_CHANGED';
+  params: Record<string, string | string[]>;
+}
+
+/**
  * Interface for the message received from the parent window to trigger navigation.
  */
 export interface NavigateMessage {
@@ -188,6 +196,26 @@ export class UrlService implements OnDestroy {
     const message: NavigatedMessage = {
       type: 'NAVIGATED',
       page,
+      params,
+    };
+
+    const urlParams = new URLSearchParams(this.win.location.search);
+    const origin = urlParams.get('origin') || '*';
+    this.win.parent.postMessage(message, origin);
+  }
+
+  /**
+   * Notifies the parent window that search state has changed.
+   *
+   * @param params The new search parameters.
+   */
+  notifySearchStateChanged(params: Record<string, string | string[]>) {
+    if (!this.isEmbeddedMode || !this.win) {
+      return;
+    }
+
+    const message: SearchStateChangedMessage = {
+      type: 'SEARCH_STATE_CHANGED',
       params,
     };
 
