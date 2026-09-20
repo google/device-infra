@@ -27,6 +27,7 @@ import com.google.protobuf.FieldMask;
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
+import javax.annotation.Nullable;
 
 /**
  * The per-deployment catalog of built-in keys usable in host search, and the factory/parser for
@@ -68,7 +69,7 @@ public abstract class HostKeyRegistry {
    * Returns the descriptor for {@code keyId}: the built-in descriptor if registered, otherwise a
    * minted long-tail descriptor for a {@code host_property::} id, otherwise empty.
    */
-  public Optional<HostKeyDescriptor> getKey(String keyId) {
+  public Optional<HostKeyDescriptor> getKey(@Nullable String keyId) {
     if (keyId == null) {
       return Optional.empty();
     }
@@ -83,10 +84,22 @@ public abstract class HostKeyRegistry {
   }
 
   /**
+   * The host key a bare host property name denotes: the built-in descriptor if this deployment
+   * declares one (so {@code "host_os"} yields {@link HostKeys#HOST_OS}, not a long-tail twin),
+   * otherwise a long-tail mint; empty for a blank name. This is how a name typed by a user or read
+   * from data becomes a key without any caller forming an id.
+   */
+  public Optional<HostKeyDescriptor> hostPropertyKey(String propertyKey) {
+    // Stripped once here, so a padded name reaches the same built-in as its trimmed spelling
+    // instead of minting a long-tail twin whose id carries the padding.
+    return getKey(HostKeys.hostPropertyKeyId(propertyKey.strip()));
+  }
+
+  /**
    * Mints a long-tail host-property key for a property discovered from data, or returns empty if
    * the property key is null or empty.
    */
-  public Optional<HostKeyDescriptor> createLongTailHostPropertyKey(String propertyKey) {
+  public Optional<HostKeyDescriptor> createLongTailHostPropertyKey(@Nullable String propertyKey) {
     if (propertyKey == null || propertyKey.trim().isEmpty()) {
       return Optional.empty();
     }

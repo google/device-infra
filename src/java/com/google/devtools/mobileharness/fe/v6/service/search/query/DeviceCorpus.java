@@ -90,24 +90,84 @@ public final class DeviceCorpus implements SearchCorpus {
   private final OverlayView overlayView;
   @Nullable private final ScenarioCuration curation;
   private final DeviceKeyRegistry registry;
+  private final KeyVocabulary vocabulary;
   private final FleetCellMapper cellMapper = new FleetCellMapper();
+
+  /**
+   * The production constructor, used by {@link SearchCorpusFactory}, which owns the fleet-scoped
+   * collaborators and passes them to every corpus of that fleet.
+   *
+   * @param snapshot the serving snapshot whose devices are the records
+   * @param postings posting lists over the snapshot's devices
+   * @param curation the fleet's curation, or null before one is installed
+   * @param registry the fleet's device key registry
+   * @param aliases the spellings of the registry's built-in keys, built once per fleet
+   * @param overlayView on-demand long-tail dimension overlays loaded for this query
+   * @param catalogDimensionNames dimension names discovered fleet-wide but possibly unindexed; they
+   *     widen what the vocabulary can resolve and discover without pulling their values
+   */
+  DeviceCorpus(
+      FleetSnapshot snapshot,
+      Postings postings,
+      @Nullable ScenarioCuration curation,
+      DeviceKeyRegistry registry,
+      KeyAliasTable aliases,
+      OverlayView overlayView,
+      ImmutableSet<String> catalogDimensionNames) {
+    this.snapshot = checkNotNull(snapshot);
+    this.overlayView = checkNotNull(overlayView);
+    this.index = new CompositeFleetIndex(snapshot.index(), overlayView);
+    this.postings = new CompositePostings(postings, overlayView);
+    this.curation = curation;
+    this.registry = checkNotNull(registry);
+    this.vocabulary =
+        new DeviceKeyVocabulary(
+            registry, aliases, index, checkNotNull(catalogDimensionNames), curation);
+  }
+
+  /** Builds the fleet-scoped collaborators itself; for tests and one-off corpora. */
+  public DeviceCorpus(
+      FleetSnapshot snapshot,
+      Postings postings,
+      @Nullable ScenarioCuration curation,
+      OverlayView overlayView,
+      ImmutableSet<String> catalogDimensionNames) {
+    this(snapshot, postings, curation, registryFor(curation), overlayView, catalogDimensionNames);
+  }
+
+  private DeviceCorpus(
+      FleetSnapshot snapshot,
+      Postings postings,
+      @Nullable ScenarioCuration curation,
+      DeviceKeyRegistry registry,
+      OverlayView overlayView,
+      ImmutableSet<String> catalogDimensionNames) {
+    this(
+        snapshot,
+        postings,
+        curation,
+        registry,
+        KeyAliasTable.of(registry.builtInKeys()),
+        overlayView,
+        catalogDimensionNames);
+  }
 
   public DeviceCorpus(
       FleetSnapshot snapshot,
       Postings postings,
       @Nullable ScenarioCuration curation,
       OverlayView overlayView) {
-    this.snapshot = checkNotNull(snapshot);
-    this.overlayView = checkNotNull(overlayView);
-    this.index = new CompositeFleetIndex(snapshot.index(), overlayView);
-    this.postings = new CompositePostings(postings, overlayView);
-    this.curation = curation;
-    this.registry = curation != null ? curation.deviceKeyRegistry() : new AtsDeviceKeyRegistry();
+    this(snapshot, postings, curation, overlayView, ImmutableSet.of());
   }
 
   public DeviceCorpus(
       FleetSnapshot snapshot, Postings postings, @Nullable ScenarioCuration curation) {
     this(snapshot, postings, curation, OverlayView.empty());
+  }
+
+  /** The curation's registry, or the standalone ATS registry before a curation is installed. */
+  static DeviceKeyRegistry registryFor(@Nullable ScenarioCuration curation) {
+    return curation != null ? curation.deviceKeyRegistry() : new AtsDeviceKeyRegistry();
   }
 
   @Override
@@ -229,6 +289,11 @@ public final class DeviceCorpus implements SearchCorpus {
   @Nullable
   public ScenarioCuration curation() {
     return curation;
+  }
+
+  @Override
+  public KeyVocabulary vocabulary() {
+    return vocabulary;
   }
 
   /**

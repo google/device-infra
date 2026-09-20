@@ -45,6 +45,7 @@ java_library(
     srcs = [
         "DeviceKeyDescriptor.java",
         "HostKeyDescriptor.java",
+        "KeyDescriptor.java",
         "KeyDisplay.java",
     ],
     deps = [
@@ -102,6 +103,7 @@ java_library(
         ":key_descriptor",
         ":lab_info_source",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_protobuf_protobuf_java",
     ],
