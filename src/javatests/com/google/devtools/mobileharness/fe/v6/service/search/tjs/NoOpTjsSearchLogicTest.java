@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSearchCon
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSearchRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSuggestionRequest;
 import io.grpc.Status;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,7 +47,26 @@ public final class NoOpTjsSearchLogicTest {
     ExecutionException thrown =
         assertThrows(
             ExecutionException.class,
-            () -> logic.getTjsSearchConfig(TjsSearchConfigRequest.getDefaultInstance()).get());
+            () ->
+                logic
+                    .getTjsSearchConfig(
+                        TjsSearchConfigRequest.getDefaultInstance(), Optional.empty())
+                    .get());
+    assertThat(thrown).hasCauseThat().isInstanceOf(FeServiceException.class);
+    FeServiceException feEx = (FeServiceException) thrown.getCause();
+    assertThat(feEx.getCode()).isEqualTo(Status.Code.UNIMPLEMENTED);
+  }
+
+  @Test
+  public void getTjsSearchConfig_withCaller_returnsUnimplemented() {
+    ExecutionException thrown =
+        assertThrows(
+            ExecutionException.class,
+            () ->
+                logic
+                    .getTjsSearchConfig(
+                        TjsSearchConfigRequest.getDefaultInstance(), Optional.of("user"))
+                    .get());
     assertThat(thrown).hasCauseThat().isInstanceOf(FeServiceException.class);
     FeServiceException feEx = (FeServiceException) thrown.getCause();
     assertThat(feEx.getCode()).isEqualTo(Status.Code.UNIMPLEMENTED);

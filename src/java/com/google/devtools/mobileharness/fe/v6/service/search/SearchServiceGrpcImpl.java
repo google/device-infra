@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSuggestio
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSuggestionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.search.tjs.TjsSearchLogic;
 import io.grpc.stub.StreamObserver;
+import java.util.Optional;
 import javax.inject.Inject;
 
 /**
@@ -184,7 +185,7 @@ public final class SearchServiceGrpcImpl extends SearchServiceGrpc.SearchService
     FeGrpcInvoker.invokeAsync(
         request,
         responseObserver,
-        tjsLogic::getTjsSearchConfig,
+        req -> tjsLogic.getTjsSearchConfig(req, Optional.empty()),
         executor,
         SearchServiceGrpc.getServiceDescriptor(),
         SearchServiceGrpc.getGetTjsSearchConfigMethod());
