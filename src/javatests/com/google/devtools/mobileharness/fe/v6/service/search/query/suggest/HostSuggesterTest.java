@@ -131,6 +131,18 @@ public final class HostSuggesterTest {
   }
 
   @Test
+  public void keyName_closesWithGroupByRowForTheMatchedHostKey() {
+    // "connectivity" is a host alias of Lab Server Connectivity; the list ends with its group-by.
+    FleetSuggestionResponse response = suggester.suggest(corpus, request("connectivity"));
+
+    FleetSuggestion last = response.getItems(response.getItemsCount() - 1);
+    assertThat(last.getAddGroupBy().getKey()).isEqualTo("host_field::connectivity");
+    assertThat(last.getAddGroupBy().getPillKey()).isEqualTo("Lab Server Connectivity");
+    assertThat(last.getCount()).isEqualTo(2);
+    assertThat(response.getItemsList().stream().filter(FleetSuggestion::hasAddGroupBy)).hasSize(1);
+  }
+
+  @Test
   public void deviceCountAlias_resolvesToHostDeviceCountKey() {
     // Typing the alias "device count" resolves onto the host device-count key, offering its picker.
     FleetSuggestionResponse response = suggester.suggest(corpus, request("device count"));

@@ -87,7 +87,8 @@ final class SuggestionRanker {
                     .reversed()
                     .thenComparingInt(SuggestionCandidate::groupRank)
                     .thenComparing(SuggestionCandidate::overMax, falseFirst())
-                    .thenComparingInt(SuggestionCandidate::rankCount))
+                    .thenComparingInt(SuggestionCandidate::rankCount)
+                    .thenComparing(SuggestionCandidate::mainText))
             .limit(limit)
             .toList();
     FleetSuggestionResponse.Builder response = FleetSuggestionResponse.newBuilder();

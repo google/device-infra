@@ -149,6 +149,64 @@ public final class FleetSuggesterTest {
   }
 
   @Test
+  public void keyName_closesWithGroupByRowForTheMatchedKey() {
+    // A token that names a key also offers to group by it, as the last row, so the user can pivot
+    // to grouping without typing "group by".
+    FleetSuggestionResponse response = suggester.suggest(corpus, request("status"));
+
+    FleetSuggestion last = response.getItems(response.getItemsCount() - 1);
+    assertThat(last.hasAddGroupBy()).isTrue();
+    assertThat(last.getAddGroupBy().getKey()).isEqualTo("device_field::status");
+    assertThat(last.getLabel()).isEqualTo("Group by");
+    assertThat(last.getCount()).isEqualTo(2); // IDLE and BUSY
+    assertThat(last.getMainTextList())
+        .containsExactly(TextSegment.newBuilder().setText("Status").setEmphasized(true).build());
+    assertThat(response.getItemsList().stream().filter(FleetSuggestion::hasAddGroupBy)).hasSize(1);
+  }
+
+  @Test
+  public void keyName_prefixMatchGroupsByTheBestMatchedKey() {
+    FleetSuggestionResponse response = suggester.suggest(corpus, request("mod"));
+
+    FleetSuggestion last = response.getItems(response.getItemsCount() - 1);
+    assertThat(last.getAddGroupBy().getKey()).isEqualTo("dimension::model");
+  }
+
+  @Test
+  public void keyName_groupByRowTakesOneSlotOfTheLimitAndStaysLast() {
+    FleetSuggestionResponse response =
+        suggester.suggest(corpus, request("model").toBuilder().setLimit(2).build());
+
+    assertThat(response.getItemsCount()).isEqualTo(2);
+    assertThat(response.getItems(0).hasAddGroupBy()).isFalse();
+    assertThat(response.getItems(1).getAddGroupBy().getKey()).isEqualTo("dimension::model");
+  }
+
+  @Test
+  public void keyName_omitsGroupByRowWhenAlreadyGroupedOrAtTheCap() {
+    FleetSuggestionResponse alreadyGrouped =
+        suggester.suggest(corpus, requestWithGroupBys("status", "device_field::status"));
+    assertThat(alreadyGrouped.getItemsList().stream().noneMatch(FleetSuggestion::hasAddGroupBy))
+        .isTrue();
+
+    FleetSuggestionResponse atCap =
+        suggester.suggest(
+            corpus,
+            requestWithGroupBys(
+                "status", "dimension::model", "dimension::pool", "device_field::type"));
+    assertThat(atCap.getItemsList().stream().noneMatch(FleetSuggestion::hasAddGroupBy)).isTrue();
+  }
+
+  @Test
+  public void valueOnlyToken_hasNoGroupByRow() {
+    // "pixel" is a value of Model, not the name of any key, so nothing is offered to group by.
+    FleetSuggestionResponse response = suggester.suggest(corpus, request("pixel"));
+
+    assertThat(response.getItemsCount()).isGreaterThan(0);
+    assertThat(response.getItemsList().stream().noneMatch(FleetSuggestion::hasAddGroupBy)).isTrue();
+  }
+
+  @Test
   public void modifyExistingChip_usesPlusCountPrefixAndStagesValue() {
     // A chip already filters model=pixel. Typing another model value offers a modify: stage the
     // value in the picker, with the count shown as a "+" delta.
@@ -189,6 +247,12 @@ public final class FleetSuggesterTest {
     assertThat(group.getMainTextList())
         .containsExactly(
             TextSegment.newBuilder().setText("Dimension pool").setEmphasized(true).build());
+
+    // A substring value match over the same 60-pool corpus caps the contains scan at 24 hits.
+    DeviceCorpus manyPoolsCorpus =
+        new DeviceCorpus(manyPools, manyPoolsPostings, new AtsCuration());
+    assertThat(suggester.suggest(manyPoolsCorpus, request("pool is -")).getItemsCount())
+        .isEqualTo(12);
   }
 
   @Test
@@ -229,6 +293,56 @@ public final class FleetSuggesterTest {
     assertThat(response.getItems(0).getAddGroupBy().getKey()).isEqualTo("dimension::lab_location");
     assertThat(response.getItems(1).getAddGroupBy().getKey())
         .isEqualTo("dimension::lab_location_zone");
+  }
+
+  @Test
+  public void groupByPrefix_suggestsColdLongTailDimensionsAndDropsUnindexedBuiltIns() {
+    DeviceCorpus withCatalog =
+        corpusWithCatalog("lab_location_extra_b", "lab_location_extra_a", "Monsoon_Status");
+
+    // Prefix match on "lab_location" finds the exact indexed dimension (matchRank 0, counted), the
+    // indexed prefix match (matchRank 1, counted), and the two cold catalog prefix matches
+    // (matchRank 1, uncounted, ordered alphabetically after the counted match).
+    FleetSuggestionResponse response =
+        suggester.suggest(withCatalog, request("group by lab_location"));
+    assertThat(response.getItemsList().stream().map(item -> item.getAddGroupBy().getKey()).toList())
+        .containsExactly(
+            "dimension::lab_location",
+            "dimension::lab_location_zone",
+            "dimension::lab_location_extra_a",
+            "dimension::lab_location_extra_b")
+        .inOrder();
+    assertThat(response.getItems(1).hasCount()).isTrue();
+    assertThat(response.getItems(2).hasCount()).isFalse();
+    assertThat(response.getItems(2).getMainText(0).getText())
+        .isEqualTo("Dimension lab_location_extra_a");
+
+    // Catalog-only mixed-case dimension resolves by prefix ("group by monsoon") and closes a
+    // single-token query ("monsoon_status") with an uncounted Group by row.
+    FleetSuggestion byPrefix =
+        firstAddGroupBy(
+            suggester.suggest(withCatalog, request("group by monsoon")),
+            "dimension::Monsoon_Status");
+    assertThat(byPrefix.getLabel()).isEqualTo("Group by");
+    assertThat(byPrefix.hasCount()).isFalse();
+    assertThat(byPrefix.getMainText(0).getText()).isEqualTo("Dimension Monsoon_Status");
+
+    FleetSuggestionResponse singleToken = suggester.suggest(withCatalog, request("monsoon_status"));
+    FleetSuggestion closingGroupBy = singleToken.getItems(singleToken.getItemsCount() - 1);
+    assertThat(closingGroupBy.getAddGroupBy().getKey()).isEqualTo("dimension::Monsoon_Status");
+    assertThat(closingGroupBy.hasCount()).isFalse();
+
+    // An uncataloged cold long-tail dimension name mints an uncounted Group by row.
+    FleetSuggestion minted =
+        firstAddGroupBy(
+            suggester.suggest(corpus, request("group by brand_new_dim")),
+            "dimension::brand_new_dim");
+    assertThat(minted.hasCount()).isFalse();
+    assertThat(minted.getMainText(0).getText()).isEqualTo("Dimension brand_new_dim");
+
+    // An unindexed built-in key (SDK_VERSION has 0 devices in this snapshot and isLongTail=false)
+    // is not a cold overlay, so it is not offered for grouping.
+    assertThat(suggester.suggest(corpus, request("group by sdk_version")).getItemsList()).isEmpty();
   }
 
   @Test
@@ -543,6 +657,10 @@ public final class FleetSuggesterTest {
       builder.addFilters(filter);
     }
     return builder.build();
+  }
+
+  private static FleetSuggestionRequest requestWithGroupBys(String input, String... groupBys) {
+    return request(input).toBuilder().addAllGroupBy(ImmutableList.copyOf(groupBys)).build();
   }
 
   private static Filter simple(String key, String value) {

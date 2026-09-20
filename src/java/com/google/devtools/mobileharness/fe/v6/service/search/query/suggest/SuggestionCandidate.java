@@ -222,6 +222,28 @@ final class SuggestionCandidate {
         overMax);
   }
 
+  /**
+   * A group-by row for a cold long-tail key whose overlay is not loaded yet, so no bucket count is
+   * shown. {@code rankCount} is {@link Integer#MAX_VALUE} so counted groupings of the same priority
+   * and match quality rank ahead of uncounted ones.
+   */
+  static SuggestionCandidate uncountedGroupBy(
+      KeyDescriptor key, FleetSuggestion.Builder proto, int groupRank) {
+    return new SuggestionCandidate(
+        Kind.GROUP_BY,
+        key,
+        /* tier= */ 0,
+        proto,
+        Counting.NONE,
+        "",
+        false,
+        false,
+        /* rankCount= */ Integer.MAX_VALUE,
+        /* count= */ null,
+        groupRank,
+        /* overMax= */ false);
+  }
+
   Kind kind() {
     return kind;
   }

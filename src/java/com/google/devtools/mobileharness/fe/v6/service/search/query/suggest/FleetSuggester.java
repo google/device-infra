@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.query.KeyTokens;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.KeyVocabulary;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.SearchCorpus;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionIntentParser.Intent;
+import com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionIntentParser.IntentPattern;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.KeyDescriptor;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -87,7 +88,8 @@ import javax.inject.Inject;
  *   <li>{@code <key> is} with no value yet (1): {@link #suggestTopValuesOfKey};
  *   <li>{@code not <value>} (7) and a bare value (4): {@link #suggestValues};
  *   <li>comma-separated values (2): {@link #suggestValueList};
- *   <li>a single token as a key name (3): {@link #suggestKeyNames}.
+ *   <li>a single token as a key name (3) and, from three characters, as a value (4): {@link
+ *       #suggestSingleToken}, which also closes the list with a group-by row for a matched key.
  * </ul>
  *
  * <p>An identifier typed on its own resolves through the value path: a device UUID matches the UUID
@@ -156,28 +158,83 @@ public final class FleetSuggester {
     }
 
     Intent intent = SuggestionIntentParser.parse(query);
-    ImmutableList<SuggestionCandidate> raw =
-        switch (intent.pattern()) {
-          case KEY_VALUE ->
-              suggestKeyValue(context, intent.key(), intent.value(), /* exclude= */ false);
-          case KEY_VALUE_NEGATED ->
-              suggestKeyValue(context, intent.key(), intent.value(), /* exclude= */ true);
-          case EMPTINESS -> suggestEmptiness(context, intent.key(), intent.isEmpty());
-          case KEY_WITH_OPERATOR -> suggestTopValuesOfKey(context, intent.key(), intent.exclude());
-          case NEGATED_VALUE -> suggestValues(context, intent.value(), /* exclude= */ true);
-          case VALUE_LIST -> suggestValueList(context, intent.values(), /* exclude= */ false);
-          case SINGLE_TOKEN -> {
-            // Key names match at any length; values only from MIN_VALUE_SEARCH_LENGTH, so very
-            // short inputs are not flooded with value matches.
-            ImmutableList.Builder<SuggestionCandidate> both = ImmutableList.builder();
-            both.addAll(suggestKeyNames(context, query));
-            if (query.length() >= MIN_VALUE_SEARCH_LENGTH) {
-              both.addAll(suggestValues(context, query, /* exclude= */ false));
-            }
-            yield both.build();
-          }
-        };
-    return ranker.rank(context, raw, limit);
+    if (intent.pattern() == IntentPattern.SINGLE_TOKEN) {
+      return suggestSingleToken(context, query, request.getGroupByList(), limit);
+    }
+    return ranker.rank(context, conditionCandidates(context, intent), limit);
+  }
+
+  /**
+   * Raw candidates for every shape in which the user spelled out a key, a value, or an operator.
+   */
+  private ImmutableList<SuggestionCandidate> conditionCandidates(
+      SuggestionContext context, Intent intent) {
+    return switch (intent.pattern()) {
+      case KEY_VALUE ->
+          suggestKeyValue(context, intent.key(), intent.value(), /* exclude= */ false);
+      case KEY_VALUE_NEGATED ->
+          suggestKeyValue(context, intent.key(), intent.value(), /* exclude= */ true);
+      case EMPTINESS -> suggestEmptiness(context, intent.key(), intent.isEmpty());
+      case KEY_WITH_OPERATOR -> suggestTopValuesOfKey(context, intent.key(), intent.exclude());
+      case NEGATED_VALUE -> suggestValues(context, intent.value(), /* exclude= */ true);
+      case VALUE_LIST -> suggestValueList(context, intent.values(), /* exclude= */ false);
+      case SINGLE_TOKEN ->
+          throw new IllegalArgumentException("a single token is handled by suggestSingleToken");
+    };
+  }
+
+  // ---- a single token ----
+
+  /**
+   * A single token is tried as a key name at any length and, from {@link #MIN_VALUE_SEARCH_LENGTH}
+   * characters, as a value, so very short inputs are not flooded with value matches. When the token
+   * names a key, the list closes with one {@code Group by <Key>} row for the best matched key that
+   * can be grouped, so a user who typed a key can pivot to grouping without spelling out {@code
+   * group by}. That row takes one slot of the limit and is always last; it is subject to the same
+   * eligibility as the {@code group by} prefix.
+   */
+  private FleetSuggestionResponse suggestSingleToken(
+      SuggestionContext context, String token, List<String> appliedGroupBys, int limit) {
+    ImmutableList<KeyMatch> keyMatches = matchKeyNames(context, token);
+    ImmutableList.Builder<SuggestionCandidate> raw = ImmutableList.builder();
+    raw.addAll(suggestKeyNames(context, keyMatches));
+    if (token.length() >= MIN_VALUE_SEARCH_LENGTH) {
+      raw.addAll(suggestValues(context, token, /* exclude= */ false));
+    }
+
+    FleetSuggestionResponse groupByRow =
+        ranker.rankGroupBys(
+            context, groupByForMatchedKey(context, keyMatches, appliedGroupBys), /* limit= */ 1);
+    if (groupByRow.getItemsCount() == 0) {
+      return ranker.rank(context, raw.build(), limit);
+    }
+    return ranker.rank(context, raw.build(), Math.max(limit - 1, 0)).toBuilder()
+        .addAllItems(groupByRow.getItemsList())
+        .build();
+  }
+
+  /**
+   * The group-by row for the best matched key that can be grouped in this request, as a list of at
+   * most one candidate. Matches are tried best first, so an exact key wins over a prefix match.
+   */
+  private static ImmutableList<SuggestionCandidate> groupByForMatchedKey(
+      SuggestionContext context, ImmutableList<KeyMatch> keyMatches, List<String> appliedGroupBys) {
+    if (appliedGroupBys.size() >= MAX_APPLIED_GROUP_BYS) {
+      return ImmutableList.of();
+    }
+    Set<String> appliedKeys = new HashSet<>(appliedGroupBys);
+    return keyMatches.stream()
+        .flatMap(
+            match ->
+                groupByCandidate(context, match.key(), matchRank(match.tier()), appliedKeys)
+                    .stream())
+        .limit(1)
+        .collect(toImmutableList());
+  }
+
+  /** Group-by match rank from a key-name match tier: 0 exact, 1 prefix, 2 contains. */
+  private static int matchRank(double tier) {
+    return TIER_FULL - (int) Math.round(tier);
   }
 
   // ---- <key> is <value> ----
@@ -387,15 +444,15 @@ public final class FleetSuggester {
   // ---- a key name ----
 
   /**
-   * For each key whose name matches the token: ready-to-apply conditions on its top values (for the
+   * For each matched key, best first: ready-to-apply conditions on its top values (for the
    * strongest few keys) and the bare key, which opens the picker and ranks just below a condition.
    */
   private ImmutableList<SuggestionCandidate> suggestKeyNames(
-      SuggestionContext context, String token) {
+      SuggestionContext context, ImmutableList<KeyMatch> keyMatches) {
     KeyVocabulary vocabulary = context.vocabulary();
     ImmutableList.Builder<SuggestionCandidate> out = ImmutableList.builder();
     int rank = 0;
-    for (KeyMatch keyMatch : matchKeyNames(context, token)) {
+    for (KeyMatch keyMatch : keyMatches) {
       KeyDescriptor key = keyMatch.key();
       double tier = keyMatch.tier();
       if (rank < TOP_VALUE_KEYS) {
@@ -450,61 +507,79 @@ public final class FleetSuggester {
   // ---- group by <key> ----
 
   /**
-   * Group-by rows. A bare prefix offers the curated candidates; a term widens to any indexed key
-   * whose name matches, ranked by match quality. Keys already grouped by, keys producing fewer than
-   * two buckets, and requests that already carry the maximum number of group-bys yield nothing.
+   * Group-by rows for the {@code group by} prefix. A bare prefix offers the curated candidates; a
+   * term widens to any discoverable key whose name matches (or a minted cold long-tail key when
+   * nothing discoverable matches), ranked by match quality. Requests that already carry the maximum
+   * number of group-bys yield nothing.
    */
-  private ImmutableList<SuggestionCandidate> groupByCandidates(
+  private static ImmutableList<SuggestionCandidate> groupByCandidates(
       SuggestionContext context, String term, List<String> applied) {
     if (applied.size() >= MAX_APPLIED_GROUP_BYS) {
       return ImmutableList.of();
     }
     KeyVocabulary vocabulary = context.vocabulary();
     Set<String> appliedKeys = new HashSet<>(applied);
-
-    // Match quality per key: 0 exact resolution or curated candidate, 1 name prefix, 2 contains.
-    Map<KeyDescriptor, Integer> matchRank = new LinkedHashMap<>();
     if (term.isEmpty()) {
-      vocabulary.groupByCandidates().forEach(key -> matchRank.put(key, 0));
-    } else {
-      String normalized = KeyTokens.normalize(term);
-      vocabulary.resolve(term).forEach(key -> matchRank.put(key, 0));
-      for (String keyId : context.index().keyIds()) {
-        Optional<KeyDescriptor> indexed = vocabulary.describe(keyId);
-        if (indexed.isEmpty() || matchRank.containsKey(indexed.get())) {
-          continue;
-        }
-        if (nameStartsWith(vocabulary, indexed.get(), normalized)) {
-          matchRank.put(indexed.get(), 1);
-        } else if (nameContains(vocabulary, indexed.get(), normalized)) {
-          matchRank.put(indexed.get(), 2);
-        }
-      }
+      return vocabulary.groupByCandidates().stream()
+          .flatMap(key -> groupByCandidate(context, key, /* matchRank= */ 0, appliedKeys).stream())
+          .collect(toImmutableList());
     }
+    ImmutableList<KeyMatch> matches = matchKeyNames(context, term);
+    if (matches.isEmpty()) {
+      matches =
+          vocabulary
+              .mintLongTailKey(term)
+              .map(key -> ImmutableList.of(new KeyMatch(key, TIER_FULL)))
+              .orElse(ImmutableList.of());
+    }
+    return matches.stream()
+        .flatMap(
+            match ->
+                groupByCandidate(context, match.key(), matchRank(match.tier()), appliedKeys)
+                    .stream())
+        .collect(toImmutableList());
+  }
 
-    ImmutableList.Builder<SuggestionCandidate> out = ImmutableList.builder();
-    for (Map.Entry<KeyDescriptor, Integer> entry : matchRank.entrySet()) {
-      KeyDescriptor key = entry.getKey();
-      String keyId = key.id();
-      if (!context.isIndexed(keyId) || appliedKeys.contains(keyId)) {
-        continue;
+  /**
+   * The group-by row for one key, or empty when the key cannot be grouped in this request: it is
+   * already grouped by, it is an unindexed built-in key, or it is indexed and would produce fewer
+   * than two buckets. A cold long-tail key (from the dimension catalog or minted from the term) has
+   * no overlay loaded during typeahead, so it is offered without a group count; its overlay is
+   * pulled when the grouping is executed. {@code matchRank} is the key-name match quality (0 exact,
+   * 1 prefix, 2 contains) used for ordering.
+   */
+  private static Optional<SuggestionCandidate> groupByCandidate(
+      SuggestionContext context, KeyDescriptor key, int matchRank, Set<String> appliedKeys) {
+    String keyId = key.id();
+    if (appliedKeys.contains(keyId)) {
+      return Optional.empty();
+    }
+    KeyVocabulary vocabulary = context.vocabulary();
+    if (!context.isIndexed(keyId)) {
+      if (!key.isLongTail()) {
+        return Optional.empty();
       }
-      int groups = groupCount(context, keyId);
-      if (groups < GROUP_SUGGEST_MIN) {
-        continue;
-      }
-      boolean overMax = groups > GROUP_SUGGEST_MAX;
       FleetSuggestion.Builder proto =
           FleetSuggestion.newBuilder()
               .setLabel("Group by")
               .addAllMainText(segments("", vocabulary.titleDisplayName(key)))
-              .setCount(groups)
-              .setCountUnit("groups")
-              .setOverMax(overMax)
               .setAddGroupBy(SuggestionActions.addGroupBy(vocabulary, key));
-      out.add(SuggestionCandidate.groupBy(key, proto, groups, entry.getValue(), overMax));
+      return Optional.of(SuggestionCandidate.uncountedGroupBy(key, proto, matchRank));
     }
-    return out.build();
+    int groups = groupCount(context, keyId);
+    if (groups < GROUP_SUGGEST_MIN) {
+      return Optional.empty();
+    }
+    boolean overMax = groups > GROUP_SUGGEST_MAX;
+    FleetSuggestion.Builder proto =
+        FleetSuggestion.newBuilder()
+            .setLabel("Group by")
+            .addAllMainText(segments("", vocabulary.titleDisplayName(key)))
+            .setCount(groups)
+            .setCountUnit("groups")
+            .setOverMax(overMax)
+            .setAddGroupBy(SuggestionActions.addGroupBy(vocabulary, key));
+    return Optional.of(SuggestionCandidate.groupBy(key, proto, groups, matchRank, overMax));
   }
 
   /**
@@ -697,7 +772,7 @@ public final class FleetSuggester {
         && !context.corpus().isIdentifierKey(keyId)
         && out.size() < KEY_VALUES_PER_KEY) {
       for (String value : sorted) {
-        if (value.contains(query) && !value.startsWith(query) && !value.equals(query)) {
+        if (value.contains(query) && !value.startsWith(query)) {
           out.add(new ValueMatch(value, TIER_CONTAINS));
           if (out.size() >= KEY_VALUES_PER_KEY * 3) {
             break;
@@ -752,7 +827,7 @@ public final class FleetSuggester {
   }
 
   private static ImmutableList<String> splitCommaLower(String raw) {
-    return Arrays.stream(raw.split(",", -1))
+    return Arrays.stream(raw.split(","))
         .map(String::trim)
         .filter(part -> !part.isEmpty())
         .map(Ascii::toLowerCase)
@@ -761,8 +836,7 @@ public final class FleetSuggester {
 
   private static boolean hasAllValues(
       FleetIndex index, String keyId, ImmutableList<String> valuesLower) {
-    return !valuesLower.isEmpty()
-        && valuesLower.stream().allMatch(value -> index.valueCount(keyId, value) > 0);
+    return valuesLower.stream().allMatch(value -> index.valueCount(keyId, value) > 0);
   }
 
   /** Lower bound binary search over the sorted global value index. */
