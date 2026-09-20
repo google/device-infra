@@ -17,7 +17,9 @@
 package com.google.devtools.mobileharness.shared.util.filter;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.devtools.mobileharness.shared.util.filter.FilterUtils.valuesOfKeyIgnoreCase;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.IntegerMatch;
@@ -36,6 +38,9 @@ import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatch
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition.Include;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMatchCondition.MatchesRegex;
 import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMultimapMatchCondition;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map.Entry;
 import java.util.function.Predicate;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -377,5 +382,106 @@ public class FilterUtilsTest {
         .isTrue();
     assertThat(matcher.test(ImmutableListMultimap.of("pool", "private", "label", "test")))
         .isFalse();
+  }
+
+  @Test
+  public void createStringMultimapMatcherByKey_passesConditionKeyAndExtractsOncePerEntity() {
+    StringMultimapMatchCondition condition =
+        StringMultimapMatchCondition.newBuilder()
+            .setKey("pool")
+            .setValueCondition(
+                StringListMatchCondition.newBuilder()
+                    .setAnyMatch(
+                        AnyMatch.newBuilder()
+                            .setCondition(
+                                StringMatchCondition.newBuilder()
+                                    .setInclude(Include.newBuilder().addExpected("shared")))))
+            .build();
+    List<String> requestedKeys = new ArrayList<>();
+    Predicate<ImmutableListMultimap<String, String>> matcher =
+        FilterUtils.createStringMultimapMatcherByKey(
+            condition,
+            (entity, key) -> {
+              requestedKeys.add(key);
+              return valuesOfKeyIgnoreCase(entity.entries(), Entry::getKey, Entry::getValue, key);
+            });
+
+    assertThat(matcher.test(ImmutableListMultimap.of("pool", "shared"))).isTrue();
+    assertThat(matcher.test(ImmutableListMultimap.of("pool", "private", "label", "test")))
+        .isFalse();
+    assertThat(matcher.test(ImmutableListMultimap.of("label", "test"))).isFalse();
+
+    // One extraction per tested entity, always with the key from the condition.
+    assertThat(requestedKeys).containsExactly("pool", "pool", "pool");
+  }
+
+  @Test
+  public void createStringMultimapMatcherByKey_invalidCondition_matchesNothing() {
+    Predicate<ImmutableListMultimap<String, String>> noKey =
+        FilterUtils.createStringMultimapMatcherByKey(
+            StringMultimapMatchCondition.newBuilder()
+                .setValueCondition(StringListMatchCondition.getDefaultInstance())
+                .build(),
+            (entity, key) ->
+                valuesOfKeyIgnoreCase(entity.entries(), Entry::getKey, Entry::getValue, key));
+    Predicate<ImmutableListMultimap<String, String>> noValueCondition =
+        FilterUtils.createStringMultimapMatcherByKey(
+            StringMultimapMatchCondition.newBuilder().setKey("pool").build(),
+            (entity, key) ->
+                valuesOfKeyIgnoreCase(entity.entries(), Entry::getKey, Entry::getValue, key));
+
+    assertThat(noKey.test(ImmutableListMultimap.of("pool", "shared"))).isFalse();
+    assertThat(noValueCondition.test(ImmutableListMultimap.of("pool", "shared"))).isFalse();
+  }
+
+  @Test
+  public void createStringMultimapMatcher_regexAnyMatch_sameResultsAsByKey() {
+    StringMultimapMatchCondition condition =
+        StringMultimapMatchCondition.newBuilder()
+            .setKey("host_name")
+            .setValueCondition(
+                StringListMatchCondition.newBuilder()
+                    .setAnyMatch(
+                        AnyMatch.newBuilder()
+                            .setCondition(
+                                StringMatchCondition.newBuilder()
+                                    .setMatchesRegex(
+                                        MatchesRegex.newBuilder().setRegex("slaas.*blr.*")))))
+            .build();
+    Predicate<ImmutableListMultimap<String, String>> viaMultimap =
+        FilterUtils.createStringMultimapMatcher(condition, s -> s);
+    Predicate<ImmutableListMultimap<String, String>> viaKey =
+        FilterUtils.createStringMultimapMatcherByKey(
+            condition,
+            (entity, key) ->
+                valuesOfKeyIgnoreCase(entity.entries(), Entry::getKey, Entry::getValue, key));
+
+    ImmutableList<ImmutableListMultimap<String, String>> entities =
+        ImmutableList.of(
+            ImmutableListMultimap.of("host_name", "slaas-1.blr.corp"),
+            ImmutableListMultimap.of("HOST_NAME", "slaas-2.blr.corp", "pool", "shared"),
+            ImmutableListMultimap.of("host_name", "mtv-1.corp"),
+            ImmutableListMultimap.of("pool", "shared"));
+    for (ImmutableListMultimap<String, String> entity : entities) {
+      assertThat(viaKey.test(entity)).isEqualTo(viaMultimap.test(entity));
+    }
+    assertThat(viaMultimap.test(entities.get(0))).isTrue();
+    assertThat(viaMultimap.test(entities.get(1))).isTrue();
+    assertThat(viaMultimap.test(entities.get(2))).isFalse();
+    assertThat(viaMultimap.test(entities.get(3))).isFalse();
+  }
+
+  @Test
+  public void valuesOfKeyIgnoreCase_matchesKeyIgnoringCaseAndDedupesValues() {
+    ImmutableListMultimap<String, String> entries =
+        ImmutableListMultimap.of(
+            "pool", "shared", "POOL", "private", "Pool", "shared", "label", "test");
+
+    assertThat(valuesOfKeyIgnoreCase(entries.entries(), Entry::getKey, Entry::getValue, "pool"))
+        .containsExactly("shared", "private");
+    assertThat(valuesOfKeyIgnoreCase(entries.entries(), Entry::getKey, Entry::getValue, "LABEL"))
+        .containsExactly("test");
+    assertThat(valuesOfKeyIgnoreCase(entries.entries(), Entry::getKey, Entry::getValue, "owner"))
+        .isEmpty();
   }
 }
