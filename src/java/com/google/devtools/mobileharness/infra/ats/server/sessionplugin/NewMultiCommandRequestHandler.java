@@ -226,9 +226,19 @@ final class NewMultiCommandRequestHandler {
     this.atsServerSessionUtil = atsServerSessionUtil;
   }
 
-  CreateJobsResult createTradefedJobs(NewMultiCommandRequest request, SessionInfo sessionInfo)
+  CreateJobsResult createTradefedJobs(
+      NewMultiCommandRequest request,
+      SessionInfo sessionInfo,
+      ImmutableSet<String> dynamicMctsModules,
+      boolean skipDynamicMctsJob)
       throws InterruptedException {
-    return createJobs(request, sessionInfo, this::createXtsTradefedTestJob, "tradefed");
+    return createJobs(
+        request,
+        sessionInfo,
+        (req, cmdInfo, sessInfo, cmdDetailsBuilder) ->
+            createXtsTradefedTestJob(
+                req, cmdInfo, sessInfo, cmdDetailsBuilder, dynamicMctsModules, skipDynamicMctsJob),
+        "tradefed");
   }
 
   CreateJobsResult createNonTradefedJobs(NewMultiCommandRequest request, SessionInfo sessionInfo)
@@ -509,7 +519,9 @@ final class NewMultiCommandRequestHandler {
       NewMultiCommandRequest request,
       CommandInfo commandInfo,
       SessionInfo sessionInfo,
-      ImmutableMap.Builder<String, CommandDetail> commandDetailsBuilder)
+      ImmutableMap.Builder<String, CommandDetail> commandDetailsBuilder,
+      ImmutableSet<String> dynamicMctsModules,
+      boolean skipDynamicMctsJob)
       throws InterruptedException, MobileHarnessException {
     SessionRequestInfo sessionRequestInfo;
     CommandDetail.Builder commandDetailBuilder =
@@ -543,7 +555,13 @@ final class NewMultiCommandRequestHandler {
     }
     ImmutableList<JobInfo> jobInfoList;
     try {
-      jobInfoList = xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo);
+      if (dynamicMctsModules.isEmpty() && !skipDynamicMctsJob) {
+        jobInfoList = xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo);
+      } else {
+        jobInfoList =
+            xtsJobCreator.createXtsTradefedTestJob(
+                sessionRequestInfo, dynamicMctsModules, skipDynamicMctsJob);
+      }
     } catch (MobileHarnessException e) {
       if (XtsJobCreator.isSkippableException(e)) {
         logger.atInfo().log(
