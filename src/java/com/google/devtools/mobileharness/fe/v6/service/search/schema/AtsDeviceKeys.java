@@ -32,6 +32,7 @@ public final class AtsDeviceKeys {
       DeviceKeyDescriptor.builder()
           .setId(DeviceKeys.PREFIX_DEVICE_CONFIG + "wifi_ssid")
           .setDisplay(KeyDisplay.of("WiFi SSID"))
+          .setAliases("wifi", "wi-fi", "ssid", "wi-fi ssid", "network")
           .build();
 
   /** Group 2: Standalone ATS exclusive device keys. */

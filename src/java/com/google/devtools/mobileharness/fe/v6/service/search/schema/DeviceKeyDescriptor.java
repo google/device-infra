@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.schema;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * The declarative metadata for one key usable in device search: either a device-native key or a
@@ -40,9 +41,10 @@ import com.google.common.collect.ImmutableList;
  * the same type, and only the registry knows which is which, so it records that fact here.
  */
 @AutoValue
-public abstract class DeviceKeyDescriptor {
+public abstract class DeviceKeyDescriptor implements KeyDescriptor {
 
   /** The unique, type-safe identifier of the key (e.g. {@code "device_field::uuid"}). */
+  @Override
   public abstract String id();
 
   /** {@code GetLabInfo} DeviceInfo extractions; union drives the {@code DeviceInfoMask}. */
@@ -55,15 +57,22 @@ public abstract class DeviceKeyDescriptor {
   public abstract ImmutableList<LabInfoSource> labInfoSources();
 
   /** The device-search display (name + plural grammar). */
+  @Override
   public abstract KeyDisplay display();
 
+  /** The device-search aliases; see {@link KeyDescriptor#aliases()}. */
+  @Override
+  public abstract ImmutableSet<String> aliases();
+
   /** Whether this descriptor was minted for a discovered (non-built-in) key. */
+  @Override
   public abstract boolean isLongTail();
 
   /** Whether this descriptor represents a composite device dimension. */
   public abstract boolean isDimension();
 
   /** Whether this descriptor represents a projected host property. */
+  @Override
   public abstract boolean isHostProperty();
 
   /** Whether this descriptor represents an on-demand long-tail dimension overlay. */
@@ -72,6 +81,7 @@ public abstract class DeviceKeyDescriptor {
   }
 
   /** Returns the bare name of this key without its namespace prefix. */
+  @Override
   public String bareName() {
     int separator = id().lastIndexOf("::");
     return separator >= 0 ? id().substring(separator + 2) : id();
@@ -82,6 +92,7 @@ public abstract class DeviceKeyDescriptor {
     return new AutoValue_DeviceKeyDescriptor.Builder()
         .setDeviceInfoSources(ImmutableList.of())
         .setLabInfoSources(ImmutableList.of())
+        .setAliases(ImmutableSet.of())
         .setIsLongTail(false)
         .setIsDimension(false)
         .setIsHostProperty(false);
@@ -107,6 +118,13 @@ public abstract class DeviceKeyDescriptor {
     }
 
     public abstract Builder setDisplay(KeyDisplay display);
+
+    public abstract Builder setAliases(ImmutableSet<String> aliases);
+
+    /** Convenience for declaring aliases inline in a catalog. */
+    public final Builder setAliases(String... aliases) {
+      return setAliases(ImmutableSet.copyOf(aliases));
+    }
 
     public abstract Builder setIsLongTail(boolean isLongTail);
 
