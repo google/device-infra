@@ -63,6 +63,12 @@ export function getLegacyFeUrl(applicationId: string): string {
   return '';
 }
 
+/** Gets the OmniLab url. */
+export function getOmniLabUrl(applicationId: string): string {
+  let url = '';
+  return url;
+}
+
 
 const OSS_DEFAULTS = {
   // for OSS, we use the localhost:8080 as the default lab console server url.

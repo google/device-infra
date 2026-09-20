@@ -172,6 +172,8 @@ describe('App Component', () => {
   });
 
   it('should call logout without error', () => {
-    expect(() => { component.logout(); }).not.toThrow();
+    expect(() => {
+      component.logout();
+    }).not.toThrow();
   });
 });
