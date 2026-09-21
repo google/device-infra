@@ -121,7 +121,15 @@ describe('TestHistoryTab Component', () => {
 
   it('formats duration and start time text cells', () => {
     expect(component.formatText('duration', '125000')).toBe('2m 5s');
+    expect(component.formatText('duration', '2m 5s')).toBe('2m 5s');
     expect(component.formatText('duration', '')).toBe('-');
+    expect(
+      component.formatText('start_time', 'Aug 3, 2026, 11:20:58 PM PDT'),
+    ).toBe('Aug 3, 2026, 11:20:58 PM PDT');
+    const timestampMs = 1700000000000;
+    expect(component.formatText('start_time', String(timestampMs))).toBe(
+      new Date(timestampMs).toLocaleString(),
+    );
     expect(component.formatText('user', 'dafeng')).toBe('dafeng');
   });
 
