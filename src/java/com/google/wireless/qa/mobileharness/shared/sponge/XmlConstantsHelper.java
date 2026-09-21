@@ -82,6 +82,10 @@ public final class XmlConstantsHelper {
     return com.google.devtools.mobileharness.shared.util.xml.XMLConstants.ATTR_PROPERTY_VALUE;
   }
 
+  public static String getElementSkipped() {
+    return com.google.devtools.mobileharness.shared.util.xml.XMLConstants.ELEMENT_SKIPPED;
+  }
+
   public static String getResultSkipped() {
     return com.google.devtools.mobileharness.shared.util.xml.XMLConstants.RESULT_SKIPPED;
   }

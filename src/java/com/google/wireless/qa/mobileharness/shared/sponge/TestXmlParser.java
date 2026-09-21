@@ -507,6 +507,9 @@ public class TestXmlParser {
         spongeTestCase.addProperty(Property.create("test_error_name", errorId.name()));
         spongeTestCase.addProperty(Property.create("test_error_type", errorId.type().name()));
         break;
+      } else if (childNode.getNodeName().equals(XmlConstantsHelper.getElementSkipped())) {
+        spongeTestCase.setSkipped();
+        break;
       }
     }
     return spongeTestCase;
@@ -527,8 +530,13 @@ public class TestXmlParser {
                 : String.format("%s#%s", testClass, testName));
     String timeSec = propertiesMap.get(XmlConstantsHelper.getAttrTestcaseTime());
     if (timeSec != null) {
-      long timeMillis = (long) (Double.parseDouble(timeSec) * 1000);
-      spongeNode.setRunTime(Duration.ofMillis(timeMillis));
+      try {
+        long timeMillis = (long) (Double.parseDouble(timeSec) * 1000);
+        spongeNode.setRunTime(Duration.ofMillis(timeMillis));
+      } catch (NumberFormatException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to parse time [%s]. Skip setting time.", timeSec);
+      }
       propertiesMap.remove(XmlConstantsHelper.getAttrTestcaseTime());
     }
     for (Map.Entry<String, String> property : propertiesMap.entrySet()) {
