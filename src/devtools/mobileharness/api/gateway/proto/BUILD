@@ -37,6 +37,7 @@ proto_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_config_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:job_spec_proto",
+        "@googleapis//google/api:field_behavior_proto",
         "@protobuf//:timestamp_proto",
     ],
 )
