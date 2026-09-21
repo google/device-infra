@@ -43,6 +43,10 @@ public class ErrorModelConverter {
       cause = toMobileHarnessException(detail.getCause());
     }
     MobileHarnessException result = new MobileHarnessException(errorId, errorMessage, cause);
+    detail
+        .getSummary()
+        .getMetadataList()
+        .forEach(metadata -> result.addMetadata(metadata.getKey(), metadata.getValue()));
     result.setStackTrace(getStackTrace(detail.getSummary()));
     detail
         .getSuppressedList()

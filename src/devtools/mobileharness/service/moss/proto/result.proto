@@ -20,6 +20,7 @@ package mobileharness.service.moss;
 
 import "src/devtools/common/metrics/stability/model/proto/error_id.proto";
 import "src/devtools/common/metrics/stability/model/proto/exception.proto";
+import "src/devtools/mobileharness/api/model/proto/diagnostic.proto";
 import "src/devtools/mobileharness/api/model/proto/job.proto";
 import "src/devtools/mobileharness/api/model/proto/test.proto";
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/common.proto";
@@ -172,7 +173,7 @@ message DeviceRequirement {
   repeated mobileharness.shared.StrPair dimension = 3;
 }
 
-// Next ID: 24
+// Next ID: 25
 message JobSummary {
   optional string id = 1;
   optional string name = 2;
@@ -191,7 +192,7 @@ message JobSummary {
   repeated FileDetail gen_file = 15;
   optional int32 total_test_count = 16;
 
-  // Deprecated. Use warning instead. This field can be removed after 1) all
+  // Deprecated. Use finding instead. This field can be removed after 1) all
   // Client >= 4.33.0 and 2) after 2026-10-10.
   repeated ErrorInfo deprecated_warning = 17 [deprecated = true];
 
@@ -199,13 +200,16 @@ message JobSummary {
   // all Client >= 4.33.0 and 2) after 2026-10-10.
   optional ErrorInfo deprecated_result_cause = 18 [deprecated = true];
 
-  // The warnings of during the test execution. Even the passing test can also
-  // have warnings.
-  repeated stability.model.FlattenedExceptionDetail warning = 22;
+  // Deprecated. Use finding instead.
+  repeated stability.model.FlattenedExceptionDetail warning = 22
+      [deprecated = true];
 
   // The error causing the non-passing result. It is null if the
   // session result is PASS.
   optional stability.model.FlattenedExceptionDetail result_cause = 23;
+
+  // The findings of the job.
+  repeated mobileharness.api.model.Finding finding = 24;
 
   optional DeviceRequirements device_requirements = 19;
 
