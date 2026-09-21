@@ -894,13 +894,15 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
           if (consecutiveNonFatalRpcErrorStartingTime == null) {
             consecutiveNonFatalRpcErrorStartingTime = currentTime;
             // Only adds the warning to the test info once for consecutive non-fatal errors.
-            MobileHarnessException warning =
-                createExceptionWithoutStackTrace(
-                    InfraErrorId.CLIENT_REMOTE_MODE_TEST_GET_STATUS_ERROR,
-                    errMsg,
-                    e.getApplicationError().isPresent() ? e.getApplicationError().get() : e);
-            testInfo.warnings().addAndLog(warning, logger);
-            testInfo.findings().add(Severity.WARNING, warning);
+            testInfo
+                .findings()
+                .addAndLog(
+                    Severity.WARNING,
+                    createExceptionWithoutStackTrace(
+                        InfraErrorId.CLIENT_REMOTE_MODE_TEST_GET_STATUS_ERROR,
+                        errMsg,
+                        e.getApplicationError().isPresent() ? e.getApplicationError().get() : e),
+                    logger);
           } else if (Duration.between(consecutiveNonFatalRpcErrorStartingTime, currentTime)
                   .compareTo(maxConsecutiveErrorDuration)
               > 0) {
@@ -941,13 +943,15 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     try {
       resp = execTestStub.getTestGenData(builder.build(), impersonationUser);
     } catch (RpcExceptionWithErrorId e) {
-      MobileHarnessException warning =
-          createExceptionWithoutStackTrace(
-              InfraErrorId.CLIENT_REMOTE_MODE_TEST_GET_GEN_DATA_ERROR,
-              "Failed to get test generated data from " + testEngineLocator,
-              e);
-      testInfo.warnings().addAndLog(warning, logger);
-      testInfo.findings().add(Severity.SEVERE, warning);
+      testInfo
+          .findings()
+          .addAndLog(
+              Severity.SEVERE,
+              createExceptionWithoutStackTrace(
+                  InfraErrorId.CLIENT_REMOTE_MODE_TEST_GET_GEN_DATA_ERROR,
+                  "Failed to get test generated data from " + testEngineLocator,
+                  e),
+              logger);
       return;
     }
 

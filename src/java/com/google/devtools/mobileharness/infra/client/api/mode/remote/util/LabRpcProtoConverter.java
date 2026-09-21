@@ -310,37 +310,8 @@ public class LabRpcProtoConverter {
       }
       testInfo.getRootTest().log().atInfo().alsoTo(logger).log("%s", buf.toString());
     }
-
-    // Copies the lab server side warnings.
-    if (resp.getTestWarningExceptionDetailCount() > 0) {
-      testInfo
-          .log()
-          .atInfo()
-          .alsoTo(logger)
-          .log("Lab Server side test warning count: %d", resp.getTestWarningExceptionDetailCount());
-      resp.getTestWarningExceptionDetailList()
-          .forEach(
-              exceptionDetail -> {
-                String errorMessage = exceptionDetail.getSummary().getMessage();
-                testInfo
-                    .warnings()
-                    .add(
-                        exceptionDetail.toBuilder()
-                            .setSummary(
-                                exceptionDetail.getSummary().toBuilder()
-                                    .setMessage("(L)" + errorMessage)
-                                    .build())
-                            .build());
-              });
-    } else {
-      testInfo
-          .getRootTest()
-          .log()
-          .atInfo()
-          .alsoTo(logger)
-          .log("No test warnings on Lab Server side%s", subTestLogPostfix);
-    }
-    // Copies the lab server side findings.
+    // For Lab Server with version >= 4.385, it will start populating the findings field. We will
+    // prioritize using the findings field over the test warning field.
     if (resp.getFindingCount() > 0) {
       testInfo
           .log()
@@ -366,13 +337,35 @@ public class LabRpcProtoConverter {
                               .build());
                 }
               });
+    } else if (resp.getTestWarningExceptionDetailCount() > 0) {
+      // For Lab Server with version < 4.385, it doesn't support findings, so we will use the
+      // test warning field.
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Lab Server side test warning count: %d", resp.getTestWarningExceptionDetailCount());
+      resp.getTestWarningExceptionDetailList()
+          .forEach(
+              exceptionDetail -> {
+                String errorMessage = exceptionDetail.getSummary().getMessage();
+                testInfo
+                    .warnings()
+                    .add(
+                        exceptionDetail.toBuilder()
+                            .setSummary(
+                                exceptionDetail.getSummary().toBuilder()
+                                    .setMessage("(L)" + errorMessage)
+                                    .build())
+                            .build());
+              });
     } else {
       testInfo
           .getRootTest()
           .log()
           .atInfo()
           .alsoTo(logger)
-          .log("No findings on Lab Server side%s", subTestLogPostfix);
+          .log("No findings/warnings on Lab Server side%s", subTestLogPostfix);
     }
   }
 }

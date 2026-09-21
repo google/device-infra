@@ -67,9 +67,17 @@ message Test {
   optional mobileharness.shared.TestResult result = 4 [deprecated = true];
   optional mobileharness.api.model.TestResult result_type = 14;
   optional stability.model.ExceptionDetail result_cause = 12;
+
   // Deprecated. Use finding instead.
+  //
+  // For the Client with version >= 4.34, it will start using the findings
+  // field. After all Clients are upgraded to 4.34 or higher, we can remove
+  // the warnings field.
   repeated stability.model.ExceptionDetail warning = 13 [deprecated = true];
+
+  // Host side findings. Since MH lab server 4.385.
   repeated mobileharness.api.model.Finding finding = 15;
+
   // Test output logs.
   optional string log = 5;
   // Test properties.

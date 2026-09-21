@@ -16,53 +16,62 @@
 
 package com.google.devtools.mobileharness.api.model.job.out;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.common.metrics.stability.model.ErrorId;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
-import com.google.devtools.common.metrics.stability.util.ErrorIdComparator;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
-/** Warnings of the job/test occur during the execution. */
+/**
+ * Warnings of the job/test occur during the execution.
+ *
+ * <p>This class is a thin wrapper of {@link Findings}: every warning is stored as a {@link Finding}
+ * with severity {@link Severity#WARNING}. Prefer using {@link Findings} directly in new code.
+ *
+ * <p>Note that {@link #getAll()} and {@link #get(ErrorId)} rebuild the {@link ExceptionDetail}s
+ * from the {@linkplain com.google.devtools.common.metrics.stability.model.proto.ExceptionProto
+ * .FlattenedExceptionDetail flattened} ones stored in the findings, so the stack traces of the
+ * cause exceptions and the suppressed exceptions are not preserved.
+ */
 public class Warnings {
-  /** Job/Test warnings. */
-  private final ConcurrentLinkedDeque<ExceptionDetail> warnings = new ConcurrentLinkedDeque<>();
 
-  /** The log of the job/test. */
-  private final LogCollector<?> log;
+  /** Job/Test findings which back the warnings. All of them have severity {@code WARNING}. */
+  private final Findings findings;
 
   /** The time records of the job/test. */
   private final TouchableTiming timing;
 
-  /** Creates the warning segment of a job/test. */
+  /**
+   * DO NOT USE. It creates a new {@link Findings} instance internally. It breaks the assumption
+   * that the warnings of a job/test are stored in a single {@link Findings} instance.
+   *
+   * <p>This is used by some unit tests for backward compatibility. This will be removed after all
+   * usages are migrated to the new constructor.
+   */
+  @Deprecated
   public Warnings(LogCollector<?> log, TouchableTiming timing) {
-    this.log = log;
-    this.timing = timing;
+    this(timing, new Findings(log));
   }
 
-  /**
-   * Creates the warning segment of a job/test by the given collection of {@link ExceptionDetail}s.
-   * Note: please don't make this public at any time.
-   */
-  Warnings(
-      LogCollector<?> log, TouchableTiming timing, Collection<ExceptionDetail> exceptionDetails) {
-    this.log = log;
+  /** Creates the warning segment of a job/test. */
+  public Warnings(TouchableTiming timing, Findings findings) {
+    this.findings = findings;
     this.timing = timing;
-    this.warnings.addAll(exceptionDetails);
   }
 
   /** Records the exception as a warning. */
   @CanIgnoreReturnValue
   public Warnings add(ExceptionDetail exceptionDetail) {
-    warnings.add(exceptionDetail);
+    findings.add(Severity.WARNING, exceptionDetail);
     timing.touch();
     return this;
   }
@@ -70,7 +79,9 @@ public class Warnings {
   /** Records the exception as a warning. */
   @CanIgnoreReturnValue
   public Warnings add(MobileHarnessException e) {
-    return add(ErrorModelConverter.toExceptionDetail(e));
+    findings.add(Severity.WARNING, e);
+    timing.touch();
+    return this;
   }
 
   /**
@@ -80,8 +91,7 @@ public class Warnings {
   @CanIgnoreReturnValue
   public Warnings add(
       com.google.devtools.mobileharness.api.model.error.ErrorId errorId, String errorMessage) {
-    return add(
-        ErrorModelConverter.toExceptionDetail(new MobileHarnessException(errorId, errorMessage)));
+    return add(errorId, errorMessage, null);
   }
 
   /**
@@ -93,9 +103,9 @@ public class Warnings {
       com.google.devtools.mobileharness.api.model.error.ErrorId errorId,
       String errorMessage,
       @Nullable Throwable cause) {
-    return add(
-        ErrorModelConverter.toExceptionDetail(
-            new MobileHarnessException(errorId, errorMessage, cause)));
+    findings.add(Severity.WARNING, errorId, errorMessage, cause);
+    timing.touch();
+    return this;
   }
 
   /** Records all the warnings. */
@@ -116,8 +126,8 @@ public class Warnings {
   /** Records the warning. Also logs the warning to the logger. */
   @CanIgnoreReturnValue
   public Warnings addAndLog(ExceptionDetail exceptionDetail, @Nullable FluentLogger logger) {
-    add(exceptionDetail);
-    log(ErrorModelConverter.toDeserializedException(exceptionDetail), logger, /* errorId= */ null);
+    findings.addAndLog(Severity.WARNING, exceptionDetail, logger);
+    timing.touch();
     return this;
   }
 
@@ -130,8 +140,8 @@ public class Warnings {
   /** Records the warning. Also logs the warning to the logger. */
   @CanIgnoreReturnValue
   public Warnings addAndLog(MobileHarnessException e, @Nullable FluentLogger logger) {
-    add(ErrorModelConverter.toExceptionDetail(e));
-    log(e, logger, /* errorId= */ null);
+    findings.addAndLog(Severity.WARNING, e, logger);
+    timing.touch();
     return this;
   }
 
@@ -139,7 +149,9 @@ public class Warnings {
   @CanIgnoreReturnValue
   public Warnings addAndLog(
       com.google.devtools.mobileharness.api.model.error.ErrorId errorId, String errorMessage) {
-    return addAndLog(new MobileHarnessException(errorId, errorMessage));
+    findings.addAndLog(Severity.WARNING, errorId, errorMessage);
+    timing.touch();
+    return this;
   }
 
   /** Saves and logs the warning. */
@@ -148,7 +160,9 @@ public class Warnings {
       com.google.devtools.mobileharness.api.model.error.ErrorId errorId,
       String errorMessage,
       @Nullable Throwable cause) {
-    return addAndLog(new MobileHarnessException(errorId, errorMessage, cause));
+    findings.addAndLog(Severity.WARNING, errorId, errorMessage, cause);
+    timing.touch();
+    return this;
   }
 
   /** Saves and logs the warning. */
@@ -157,7 +171,9 @@ public class Warnings {
       com.google.devtools.mobileharness.api.model.error.ErrorId errorId,
       String errorMessage,
       @Nullable FluentLogger logger) {
-    return addAndLog(new MobileHarnessException(errorId, errorMessage), logger);
+    findings.addAndLog(Severity.WARNING, errorId, errorMessage, logger);
+    timing.touch();
+    return this;
   }
 
   /** Saves and logs the warning. */
@@ -167,50 +183,45 @@ public class Warnings {
       String errorMessage,
       @Nullable Throwable cause,
       @Nullable FluentLogger logger) {
-    return addAndLog(new MobileHarnessException(errorId, errorMessage, cause), logger);
+    findings.addAndLog(Severity.WARNING, errorId, errorMessage, cause, logger);
+    timing.touch();
+    return this;
   }
 
   /** Returns all warnings. */
   public ImmutableList<ExceptionDetail> getAll() {
-    return ImmutableList.copyOf(warnings);
+    return toExceptionDetails(findings.getAll(Severity.WARNING));
   }
 
   /** Returns the warnings with the given warning ID. */
   public List<ExceptionDetail> get(ErrorId errorId) {
-    return warnings.stream()
-        .filter(
-            exceptionDetail ->
-                ErrorIdComparator.equal(exceptionDetail.getSummary().getErrorId(), errorId))
-        .collect(Collectors.toList());
+    return findings.get(errorId).stream()
+        .filter(finding -> finding.getSeverity().equals(Severity.WARNING))
+        .map(finding -> ErrorModelConverter.toExceptionDetail(finding.getDetail()))
+        .collect(toImmutableList());
   }
 
   /** Cleans up all warnings. */
   @CanIgnoreReturnValue
   public Warnings clear() {
-    warnings.clear();
+    findings.clear(Severity.WARNING);
     timing.touch();
     return this;
   }
 
   /** Returns the size of the warning list. */
   public int size() {
-    return warnings.size();
+    return findings.size(Severity.WARNING);
   }
 
   /** Returns whether the warning list is empty. */
   public boolean isEmpty() {
-    return warnings.isEmpty();
+    return findings.isEmpty(Severity.WARNING);
   }
 
-  private void log(Throwable throwable, @Nullable FluentLogger logger, @Nullable ErrorId errorId) {
-    if (errorId == null) {
-      log.atWarning().alsoTo(logger).withCauseStack().withCause(throwable).log(null);
-    } else {
-      log.atWarning()
-          .alsoTo(logger)
-          .withCauseStack()
-          .withCause(throwable)
-          .log("Error %s(%d)[%s]", errorId.name(), errorId.code(), errorId.namespace());
-    }
+  private static ImmutableList<ExceptionDetail> toExceptionDetails(Collection<Finding> findings) {
+    return findings.stream()
+        .map(finding -> ErrorModelConverter.toExceptionDetail(finding.getDetail()))
+        .collect(toImmutableList());
   }
 }

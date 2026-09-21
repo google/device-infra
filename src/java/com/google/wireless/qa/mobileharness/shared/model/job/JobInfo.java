@@ -371,8 +371,8 @@ public class JobInfo extends JobScheduleUnit {
     result = new Result(timing().toNewTiming(), params().toNewParams());
     log = new Log(timing());
     properties = new Properties(timing());
-    warnings = new Warnings(log, timing().toNewTiming());
     findings = new Findings(log);
+    warnings = new Warnings(timing().toNewTiming(), findings);
     spec = new ProtoJobSpec();
     tests = new TestInfos(this);
 

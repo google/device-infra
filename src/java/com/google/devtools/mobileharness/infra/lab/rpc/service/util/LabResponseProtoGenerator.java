@@ -87,10 +87,11 @@ public class LabResponseProtoGenerator {
         GetTestGenDataResponse.newBuilder()
             .addAllTestProperty(StrPairUtil.convertMapToList(testInfo.properties().getAll()));
 
-    // Test warnings.
+    // For the MH Client with version >= 4.34, it will start using the findings field. After all MH
+    // Clients are upgraded to 4.34 or higher, we can remove the warnings field.
     builder.addAllTestWarningExceptionDetail(testInfo.warnings().getAll());
 
-    // Test findings.
+    // Since MH lab server 4.385, it will start populating the findings field.
     builder.addAllFinding(
         testInfo.findings().getAll().stream().map(Finding::toProto).collect(toImmutableList()));
 

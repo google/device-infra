@@ -17,9 +17,9 @@
 package com.google.devtools.mobileharness.service.moss.util.slg;
 
 import com.google.devtools.mobileharness.api.model.job.out.Findings;
-import com.google.devtools.mobileharness.api.model.job.out.JobOutInternalFactory;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Warnings;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestStatus;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.FilesProto;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.TestExtraInfo;
@@ -75,9 +75,11 @@ public final class TestInfoConverter {
     Result result = ResultConverter.fromProto(timing, jobInfo.params(), testInfoProto.getResult());
     Log log = new Log(timing);
     Properties properties = PropertiesConverter.fromProto(timing, testInfoProto.getProperties());
-    Warnings warnings =
-        JobOutInternalFactory.createWarnings(
-            log, timing.toNewTiming(), testInfoProto.getErrorList());
+    // TODO: Add Findings to TestInfoProto. For now the persisted errors are restored as
+    // findings with severity WARNING.
+    Findings findings = new Findings(log);
+    findings.addAll(Severity.WARNING, testInfoProto.getErrorList());
+    Warnings warnings = new Warnings(timing.toNewTiming(), findings);
     TestInfo testInfo =
         JobInternalFactory.createTestInfo(
             testLocator,
@@ -91,7 +93,7 @@ public final class TestInfoConverter {
             log,
             properties,
             warnings,
-            new Findings(log)); // TODO: Add Findings to TestInfoProto.
+            findings);
     if (testInfoProto.getSubTestInfoCount() > 0) {
       JobHelper.addTests(
           testInfo.subTests(),

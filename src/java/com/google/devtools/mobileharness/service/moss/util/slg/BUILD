@@ -31,6 +31,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/simple/persistence:__subpackages__",
     ],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:diagnostic_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/service/moss/proto:result_java_proto",

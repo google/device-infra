@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.api.model.job.out;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
@@ -235,6 +237,13 @@ public class Findings {
     return ImmutableList.copyOf(findings);
   }
 
+  /** Returns all findings with the given severity. */
+  public ImmutableList<Finding> getAll(Severity severity) {
+    return findings.stream()
+        .filter(finding -> finding.getSeverity().equals(severity))
+        .collect(toImmutableList());
+  }
+
   /** Returns the findings with the given error ID. */
   public List<Finding> get(ErrorId errorId) {
     return findings.stream()
@@ -251,14 +260,32 @@ public class Findings {
     return this;
   }
 
+  /** Cleans up all findings with the given severity. */
+  @CanIgnoreReturnValue
+  public Findings clear(Severity severity) {
+    findings.removeIf(finding -> finding.getSeverity().equals(severity));
+    return this;
+  }
+
   /** Returns the size of the finding list. */
   public int size() {
     return findings.size();
   }
 
+  /** Returns the size of the finding list with the given severity. */
+  public int size(Severity severity) {
+    return (int)
+        findings.stream().filter(finding -> finding.getSeverity().equals(severity)).count();
+  }
+
   /** Returns whether the finding list is empty. */
   public boolean isEmpty() {
     return findings.isEmpty();
+  }
+
+  /** Returns whether the finding list with the given severity is empty. */
+  public boolean isEmpty(Severity severity) {
+    return findings.stream().noneMatch(finding -> finding.getSeverity().equals(severity));
   }
 
   private void log(Severity severity, Throwable throwable, @Nullable FluentLogger logger) {

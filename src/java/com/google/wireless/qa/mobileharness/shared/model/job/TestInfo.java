@@ -157,8 +157,8 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
                             remoteFileDir,
                             "j_" + jobInfo.locator().getId(),
                             "test_" + locator().getId())));
-    warnings = new Warnings(log, timing().toNewTiming());
     findings = new Findings(log);
+    warnings = new Warnings(timing().toNewTiming(), findings);
     properties = new Properties(timing());
     result = new Result(timing().toNewTiming(), jobInfo.params().toNewParams());
     status = new Status(timing());

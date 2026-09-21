@@ -16,12 +16,9 @@
 
 package com.google.devtools.mobileharness.api.model.job.out;
 
-import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.job.in.Params;
 import com.google.devtools.mobileharness.service.moss.proto.Result.TimeDetail;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.ResultProto;
-import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
-import java.util.Collection;
 
 /**
  * The factory to help create instances under this package. It's only used internally to support
@@ -43,14 +40,5 @@ public final class JobOutInternalFactory {
   /** Creates a {@link TouchableTiming} instance by the given {@link TimeDetail}. */
   public static TouchableTiming createTouchableTiming(TimeDetail timeDetail) {
     return new TouchableTiming(timeDetail);
-  }
-
-  /**
-   * Creates a {@link Warnings} instance by the given job/test log, {@link TouchableTiming} and a
-   * collection of {@link ExceptionDetail}s
-   */
-  public static Warnings createWarnings(
-      LogCollector<?> log, TouchableTiming timing, Collection<ExceptionDetail> exceptionDetails) {
-    return new Warnings(log, timing, exceptionDetails);
   }
 }

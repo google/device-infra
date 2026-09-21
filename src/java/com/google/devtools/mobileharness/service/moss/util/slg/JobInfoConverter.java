@@ -17,9 +17,9 @@
 package com.google.devtools.mobileharness.service.moss.util.slg;
 
 import com.google.devtools.mobileharness.api.model.job.out.Findings;
-import com.google.devtools.mobileharness.api.model.job.out.JobOutInternalFactory;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Warnings;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.FilesProto;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.JobInfoProto;
@@ -87,9 +87,11 @@ public final class JobInfoConverter {
     Result result = ResultConverter.fromProto(timing, params, jobInfoProto.getResult());
     Log log = new Log(timing);
     Properties properties = PropertiesConverter.fromProto(timing, jobInfoProto.getProperties());
-    Warnings warnings =
-        JobOutInternalFactory.createWarnings(
-            log, timing.toNewTiming(), jobInfoProto.getErrorList());
+    // TODO: Add Findings to JobInfoProto. For now the persisted errors are restored as
+    // findings with severity WARNING.
+    Findings findings = new Findings(log);
+    findings.addAll(Severity.WARNING, jobInfoProto.getErrorList());
+    Warnings warnings = new Warnings(timing.toNewTiming(), findings);
     JobUser jobUser;
     if (jobScheduleUnitProto.hasJobUser()) {
       jobUser = jobScheduleUnitProto.getJobUser();
@@ -114,7 +116,7 @@ public final class JobInfoConverter {
             log,
             properties,
             warnings,
-            new Findings(log), // TODO: Add Findings to JobInfoProto.
+            findings,
             jobInfoProto.getJobSpec());
     if (jobInfoProto.getTestInfoCount() > 0) {
       JobHelper.addTests(
