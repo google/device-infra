@@ -54,6 +54,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.tjs.TjsSearchLogic
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.Before;
 import org.junit.Test;
@@ -164,12 +165,12 @@ public final class SearchServiceGrpcImplTest {
   @Test
   public void getTjsSearchConfig_callsTjsLogic() {
     TjsSearchConfigRequest request = TjsSearchConfigRequest.getDefaultInstance();
-    when(tjsLogic.getTjsSearchConfig(any()))
+    when(tjsLogic.getTjsSearchConfig(any(), any()))
         .thenReturn(immediateFuture(TjsSearchConfig.getDefaultInstance()));
 
     service.getTjsSearchConfig(request, noOpObserver());
 
-    verify(tjsLogic).getTjsSearchConfig(eq(request));
+    verify(tjsLogic).getTjsSearchConfig(eq(request), eq(Optional.empty()));
   }
 
   @Test
