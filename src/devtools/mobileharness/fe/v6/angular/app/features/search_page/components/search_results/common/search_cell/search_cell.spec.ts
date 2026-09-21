@@ -4,6 +4,7 @@ import {provideNoopAnimations} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
 
 import {Cell, Column, Indicator} from '../../../../../../core/models/search';
+import {CommonParamsService} from '../../../../../../core/services/common_params_service';
 import {UrlService} from '../../../../../../core/services/url_service';
 import {SearchCellComponent} from './search_cell';
 
@@ -23,6 +24,7 @@ describe('SearchCellComponent', () => {
   let fixture: ComponentFixture<TestHostComponent>;
   let host: TestHostComponent;
   let urlService: UrlService;
+  let commonParamsService: CommonParamsService;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
@@ -32,6 +34,8 @@ describe('SearchCellComponent', () => {
 
     urlService = TestBed.inject(UrlService);
     spyOn(urlService, 'notifyNavigated');
+    commonParamsService = TestBed.inject(CommonParamsService);
+    spyOn(commonParamsService, 'isEmbeddedMode').and.returnValue(true);
 
     fixture = TestBed.createComponent(TestHostComponent);
     host = fixture.componentInstance;
@@ -58,15 +62,16 @@ describe('SearchCellComponent', () => {
     host.cell = {
       link: {
         text: 'device-12345',
-        target: {device: {id: 'device-12345'}},
+        target: {device: {id: 'device-12345', hostName: 'host1', universe: 'vivo'}},
       },
     };
     host.column = {key: 'id', displayName: 'Device ID'};
     fixture.detectChanges();
 
-    const anchor = fixture.nativeElement.querySelector('a.device-link');
+    const anchor = fixture.nativeElement.querySelector('a.device-link') as HTMLAnchorElement;
     expect(anchor).toBeTruthy();
     expect(anchor.textContent.trim()).toBe('device-12345');
+    expect(anchor.getAttribute('href')).toBe('/devices/device-12345?host_name=host1&universe=vivo');
   });
 
   it('should render status cell with status dot and text', () => {
@@ -116,7 +121,9 @@ describe('SearchCellComponent', () => {
     const links = fixture.nativeElement.querySelectorAll('a.device-link');
     expect(links.length).toBe(2);
     expect(links[0].textContent.trim()).toBe('Host A');
+    expect(links[0].getAttribute('href')).toBe('/hosts/host-a');
     expect(links[1].textContent.trim()).toBe('Host B');
+    expect(links[1].getAttribute('href')).toBe('/hosts/host-b');
   });
 
   it('should notify UrlService when device link is clicked', () => {
