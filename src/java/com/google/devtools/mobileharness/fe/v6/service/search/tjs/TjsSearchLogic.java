@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSearchReq
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSearchResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSuggestionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSuggestionResponse;
+import java.util.Optional;
 
 /**
  * Core logic for Test / Job / Session (TJS) search.
@@ -35,8 +36,12 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSuggestio
  */
 public interface TjsSearchLogic {
 
-  /** Returns page-load configuration (entity label, default chips, promoted filter keys). */
-  ListenableFuture<TjsSearchConfig> getTjsSearchConfig(TjsSearchConfigRequest request);
+  /**
+   * Returns page-load configuration (entity label, default chips, promoted filter keys) for the
+   * specified caller user.
+   */
+  ListenableFuture<TjsSearchConfig> getTjsSearchConfig(
+      TjsSearchConfigRequest request, Optional<String> callerUser);
 
   /** Executes a TJS search query (filters + page_token); returns columns, rows, and next token. */
   ListenableFuture<TjsSearchResponse> searchTjs(TjsSearchRequest request);
