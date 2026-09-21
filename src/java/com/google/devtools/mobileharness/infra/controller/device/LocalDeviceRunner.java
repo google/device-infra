@@ -288,44 +288,48 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
       while (isReady()) {
         extendExpireTime();
         try {
-          // Try to reserve device for 5 seconds. Even it failed, we can try in another iteration.
-          deviceReservation =
-              externalDeviceManager.reserveDevice(
-                  device.getDeviceId(),
-                  device.getClass().getSimpleName(),
-                  device.getDeviceTypes(),
-                  Duration.ofSeconds(5));
-          if (!deviceReservation.getReservationId().isEmpty()) {
-            device
-                .info()
-                .properties()
-                .put(DEVICE_PROPERTY_RESERVATION_ID, deviceReservation.getReservationId());
-          }
-          // Check if the device is allocated before checking the device state. This will prevent
-          // devices allocated for remote use from cleaning up or interfering with the remote usage.
-          if (!isAllocated() && checkDevice()) {
-            postDeviceChangeEvent("changed detected");
-          }
-          if (test != null) {
-            deviceReservation.markRunningTest();
-            if (checkNRunTest()) {
-              needReboot = true;
+          try {
+            // Try to reserve device for 5 seconds. Even it failed, we can try in another iteration.
+            deviceReservation =
+                externalDeviceManager.reserveDevice(
+                    device.getDeviceId(),
+                    device.getClass().getSimpleName(),
+                    device.getDeviceTypes(),
+                    Duration.ofSeconds(5));
+          } catch (MobileHarnessException e) {
+            if (e.getErrorId() == InfraErrorId.LAB_EXTERNAL_DEVICE_MANAGER_DEVICE_UNAVAILABLE_IN_TF
+                || e.getErrorId()
+                    == InfraErrorId.LAB_EXTERNAL_DEVICE_MANAGER_RESERVE_RPC_DEADLINE_EXCEEDED
+                || e.getErrorId()
+                    == InfraErrorId.LAB_EXTERNAL_DEVICE_MANAGER_RESERVE_FAIL_WHEN_DRAIN) {
+              // Need to quit the loop for fatal errors or when it's draining.
+              throw e;
             }
-            // prepare the device if needed.
-            mayPrepareDeviceAfterTest(needReboot);
-          }
-        } catch (MobileHarnessException e) {
-          if (e.getErrorId() == InfraErrorId.LAB_EXTERNAL_DEVICE_MANAGER_DEVICE_UNAVAILABLE_IN_TF
-              || e.getErrorId()
-                  == InfraErrorId.LAB_EXTERNAL_DEVICE_MANAGER_RESERVE_RPC_DEADLINE_EXCEEDED
-              || e.getErrorId()
-                  == InfraErrorId.LAB_EXTERNAL_DEVICE_MANAGER_RESERVE_FAIL_WHEN_DRAIN) {
-            // Need to quit the loop for fatal errors or when it's draining.
-            throw e;
-          } else {
-            // Otherwise, just log the warning.
+            // Otherwise, just log the warning and retry the reservation in the next iteration.
             logger.atWarning().withCause(e).log(
-                "Failed to reserve device %s or run test.", device.getDeviceId());
+                "Failed to reserve device %s.", device.getDeviceId());
+          }
+          if (deviceReservation != null) {
+            if (!deviceReservation.getReservationId().isEmpty()) {
+              device
+                  .info()
+                  .properties()
+                  .put(DEVICE_PROPERTY_RESERVATION_ID, deviceReservation.getReservationId());
+            }
+            // Check if the device is allocated before checking the device state. This will prevent
+            // devices allocated for remote use from cleaning up or interfering with the remote
+            // usage.
+            if (!isAllocated() && checkDevice()) {
+              postDeviceChangeEvent("changed detected");
+            }
+            if (test != null) {
+              deviceReservation.markRunningTest();
+              if (checkNRunTest()) {
+                needReboot = true;
+              }
+              // prepare the device if needed.
+              mayPrepareDeviceAfterTest(needReboot);
+            }
           }
         } finally {
           device.info().properties().remove(DEVICE_PROPERTY_RESERVATION_ID);
