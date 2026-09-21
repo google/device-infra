@@ -149,12 +149,14 @@ public final class FleetFlatSearcherTest {
     assertThat(uuidCell.getLink().getTarget().getDevice().getId()).isEqualTo("device-0");
     assertThat(uuidCell.getLink().getTarget().getDevice().getHostName()).isEqualTo("lab1");
     assertThat(uuidCell.getLink().getTarget().getDevice().getHostIp()).isEqualTo("1.1.1.1");
+    assertThat(uuidCell.getLink().getTarget().getDevice().getUniverse()).isEmpty();
 
     Cell hostCell = row.getCells(1);
     assertThat(hostCell.getKindCase()).isEqualTo(Cell.KindCase.LINK);
     assertThat(hostCell.getLink().getText()).isEqualTo("lab1");
     assertThat(hostCell.getLink().getTarget().getHost().getHostName()).isEqualTo("lab1");
     assertThat(hostCell.getLink().getTarget().getHost().getHostIp()).isEqualTo("1.1.1.1");
+    assertThat(hostCell.getLink().getTarget().getHost().getUniverse()).isEmpty();
 
     Cell statusCell = row.getCells(2);
     assertThat(statusCell.getKindCase()).isEqualTo(Cell.KindCase.STATUS);
@@ -267,6 +269,7 @@ public final class FleetFlatSearcherTest {
                         .setReleaseStatus(Optional.of("RUNNING"))
                         .setDaemonStatus(Optional.of("RUNNING"))
                         .setLabServerVersion(Optional.of("1.2.3"))
+                        .setAtsControllerId(Optional.of("vivo"))
                         .build()))
             .build();
     FleetSnapshot enriched =
@@ -286,16 +289,19 @@ public final class FleetFlatSearcherTest {
 
     assertThat(rowIds(results)).containsExactly("device-0", "device-1", "device-2").inOrder();
 
-    // device-0 on lab1: lab_server_version is 1.2.3, host_os is debian.
+    // device-0 on lab1: lab_server_version is 1.2.3, host_os is debian, universe is vivo.
     Row lab1Row = results.getRows(0);
+    Cell uuidCell = lab1Row.getCells(0);
+    assertThat(uuidCell.getLink().getTarget().getDevice().getUniverse()).isEqualTo("vivo");
     Cell versionCell = lab1Row.getCells(1);
     assertThat(versionCell.getKindCase()).isEqualTo(Cell.KindCase.TEXT);
     assertThat(versionCell.getText().getValue()).isEqualTo("1.2.3");
     assertThat(lab1Row.getCells(2).getText().getValue()).isEqualTo("debian");
 
     // device-2 on lab2: no lab_server_version, so that cell is blank; host os still
-    // renders from the LabInfo host property.
+    // renders from the LabInfo host property. universe is empty.
     Row lab2Row = results.getRows(2);
+    assertThat(lab2Row.getCells(0).getLink().getTarget().getDevice().getUniverse()).isEmpty();
     assertThat(lab2Row.getCells(1).getText().getValue()).isEmpty();
     assertThat(lab2Row.getCells(2).getText().getValue()).isEqualTo("macos");
   }
