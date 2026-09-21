@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSearchReq
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSearchResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSuggestionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSuggestionResponse;
+import java.util.Optional;
 
 /**
  * No-op implementation of {@link TjsSearchLogic} used in OSS / ATS environments where no MOSS
@@ -41,7 +42,8 @@ public final class NoOpTjsSearchLogic implements TjsSearchLogic {
   private static final String TJS_UNIMPLEMENTED_MESSAGE = "TJS search is not implemented";
 
   @Override
-  public ListenableFuture<TjsSearchConfig> getTjsSearchConfig(TjsSearchConfigRequest request) {
+  public ListenableFuture<TjsSearchConfig> getTjsSearchConfig(
+      TjsSearchConfigRequest request, Optional<String> callerUser) {
     return immediateFailedFuture(FeServiceException.unimplemented(TJS_UNIMPLEMENTED_MESSAGE));
   }
 
