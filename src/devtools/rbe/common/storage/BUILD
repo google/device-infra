@@ -24,6 +24,8 @@ go_library(
     name = "storage",
     srcs = [
         "evictor.go",
+        "hardlink.go",
+        "stats.go",
         "storage.go",
     ],
     importpath = "github.com/google/device-infra/src/devtools/rbe/common/storage",
@@ -37,6 +39,8 @@ go_test(
     name = "storage_test",
     srcs = [
         "evictor_test.go",
+        "hardlink_test.go",
+        "stats_test.go",
         "storage_test.go",
     ],
     embed = [":storage"],

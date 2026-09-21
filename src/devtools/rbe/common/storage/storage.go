@@ -22,14 +22,61 @@ var (
 type Storage struct {
 	rootDir string
 	evictor *Evictor
+
+	// hardlinkDisabled makes HardlinkTo and HardlinkFrom copy without first
+	// attempting link(2). See WithoutHardlinks.
+	hardlinkDisabled bool
+
+	// counters accumulates diagnostic totals for conditions that occur too
+	// often to log individually. See stats.go. Every field is an atomic, so
+	// this does not compromise the lock-free contract above.
+	counters counters
+}
+
+// An Option configures a Storage at construction time.
+type Option func(*Storage)
+
+// WithoutHardlinks declares that hard linking between the cache and the
+// caller's working area cannot work, so HardlinkTo and HardlinkFrom should
+// copy immediately instead of attempting link(2) first.
+//
+// This is a statement of fact about the deployment, not a preference. The
+// motivating case is a cache directory that reaches the process through a
+// mount, as with containerized Cuttlefish on ARM hosts: the cache and the
+// download directory are on different devices, so every link(2) is guaranteed
+// to fail with EXDEV.
+//
+// Passing this option is never required for correctness. Both operations
+// already fall back to copying when the filesystem refuses the link, so an
+// undeclared cross-device setup still produces correct results. What the
+// option buys is honesty in two places:
+//
+//   - One futile syscall per blob is skipped. Individually trivial, but
+//     casdownloader materializes thousands of blobs per invocation.
+//   - The copy-fallback counters keep their meaning. CopyFallbackEXDEV exists
+//     to say "this host is silently writing every blob twice, go look at it."
+//     A deployment that is cross-device by design would otherwise trip that
+//     signal on every single blob and drown the cases that are genuinely
+//     worth investigating.
+//
+// The fallback stays in place regardless. Leaving this option off on a host
+// that turns out to be cross-device is safe, which matters because the
+// detection that usually decides this compares st_dev of two directories at
+// startup and cannot see a destination that lands on a different mount later.
+func WithoutHardlinks() Option {
+	return func(s *Storage) { s.hardlinkDisabled = true }
 }
 
 // New creates a new Storage instance rooted at rootDir.
-func New(rootDir string) (*Storage, error) {
+func New(rootDir string, opts ...Option) (*Storage, error) {
 	if err := os.MkdirAll(rootDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create storage root directory %s: %w", rootDir, err)
 	}
-	return &Storage{rootDir: rootDir}, nil
+	s := &Storage{rootDir: rootDir}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s, nil
 }
 
 // blobPath returns the sharded filepath for a given hash.
