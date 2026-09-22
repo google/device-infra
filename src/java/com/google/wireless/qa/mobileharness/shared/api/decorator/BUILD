@@ -301,6 +301,33 @@ java_library(
 )
 
 java_library(
+    name = "android_desktop_ota_update_decorator",
+    srcs = ["AndroidDesktopOtaUpdateDecorator.java"],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemstate:system_state_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:setup_only_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_desktop_ota_update_decorator_spec_java_proto",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "android_device_features_check_decorator",
     srcs = ["AndroidDeviceFeaturesCheckDecorator.java"],
     deps = [
