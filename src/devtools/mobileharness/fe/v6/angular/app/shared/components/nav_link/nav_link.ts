@@ -33,6 +33,8 @@ export type NavLinkConfig =
   | {type: 'test'; jobId: string; testId: string}
   | {type: 'session'; sessionId: string};
 
+const SEARCH_QUERY_PARAMS_TO_REMOVE = ['f', 'gb', 'fleet', 'q'] as const;
+
 /**
  * A customized link component to centralize navigation behavior.
  * For detailed design doc, including the behavior matrix and resolution logic,
@@ -49,6 +51,7 @@ export type NavLinkConfig =
  *
  *   - if the link is for device detail page, we will always keep the `host_name` in the URL.
  *   - for other pages, we will always remove the `host_name`.
+ *   - search-page-only query parameters (f, gb, fleet, q) are always removed when navigating to detail pages.
  */
 @Component({
   selector: 'a[app-nav-link]',
@@ -199,6 +202,12 @@ export class NavLink implements OnInit, OnDestroy {
       queryParams['host_name'] = cfg.hostName;
     } else {
       queryParams['host_name'] = null;
+    }
+
+    for (const param of SEARCH_QUERY_PARAMS_TO_REMOVE) {
+      if (this.customQueryParams()[param] === undefined) {
+        queryParams[param] = null;
+      }
     }
 
     return queryParams;
