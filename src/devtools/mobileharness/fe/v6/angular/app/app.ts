@@ -46,7 +46,6 @@ import {
   getOmniLabUrl,
 } from '@deviceinfra/app/core/models/app_data';
 import {UrlService} from '@deviceinfra/app/core/services/url_service';
-import {navigateWithPreservedParams} from '@deviceinfra/app/core/utils/url_utils';
 import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
 import {ReplaySubject} from 'rxjs';
 import {filter, takeUntil} from 'rxjs/operators';
@@ -160,7 +159,8 @@ export class App implements OnDestroy {
       });
 
     this.urlService.navigate$.pipe(takeUntil(this.destroy)).subscribe((url) => {
-      navigateWithPreservedParams(url, this.router, this.route);
+      const newUrl = new URL(url, window.location.origin);
+      this.router.navigateByUrl(newUrl.pathname + newUrl.search);
     });
   }
 
