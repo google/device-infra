@@ -94,7 +94,7 @@ public class PixelRomRecoveryWatcher implements Runnable {
       try {
         logger.atInfo().log("Checking devices in ROM recovery mode.");
         recoverP24Devices();
-        recoverP25P26Devices();
+        recoverP25PlusDevices();
       } catch (InterruptedException e) {
         logger.atWarning().withCause(e).log("Interrupted");
         Thread.currentThread().interrupt();
@@ -118,7 +118,7 @@ public class PixelRomRecoveryWatcher implements Runnable {
     logger.atInfo().log("[NOT IMPLEMENTED] Checking P24 devices in ROM recovery mode.");
   }
 
-  private void recoverP25P26Devices() throws InterruptedException, MobileHarnessException {
+  private void recoverP25PlusDevices() throws InterruptedException, MobileHarnessException {
     logger.atInfo().log("Checking P25+ devices in ROM recovery mode.");
 
     Set<String> fastbootDeviceSerials = fastboot.getDeviceSerials();
@@ -146,6 +146,10 @@ public class PixelRomRecoveryWatcher implements Runnable {
         case "mbu" -> {
           logger.atInfo().log("P26 ROM recovery device detected: %s", serial);
           recoverDevice(serial, "malibu");
+        }
+        case "laj" -> {
+          logger.atInfo().log("P27 ROM recovery device detected: %s", serial);
+          recoverDevice(serial, "lajolla");
         }
         default -> logger.atInfo().log("Skipping device %s (Not ROM Recovery device)", serial);
       }
