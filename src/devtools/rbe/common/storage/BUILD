@@ -23,6 +23,7 @@ package(
 go_library(
     name = "storage",
     srcs = [
+        "config.go",
         "evictor.go",
         "hardlink.go",
         "headroom.go",
@@ -39,6 +40,7 @@ go_library(
 go_test(
     name = "storage_test",
     srcs = [
+        "config_test.go",
         "evictor_test.go",
         "hardlink_test.go",
         "headroom_test.go",
