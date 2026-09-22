@@ -137,6 +137,18 @@ service ConfigService {
     };
   }
 
+  // Retrieves existing configurable dimension keys from DeviceConfig (for the
+  // selected devices and across the fleet) along with the system-detected
+  // dimension blocklist for Step 1 of custom dimension configuration.
+  rpc BatchGetConfigurableDimensionKeys(
+      BatchGetConfigurableDimensionKeysRequest)
+      returns (BatchGetConfigurableDimensionKeysResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices:batchGetConfigurableDimensionKeys"
+      body: "*"
+    };
+  }
+
   // Retrieves fleet-wide candidate value-sets for a specific (dimension_name,
   // required) target.
   rpc GetDimensionValueSuggestions(GetDimensionValueSuggestionsRequest)
@@ -395,6 +407,47 @@ message GetConfigurableDimensionsResponse {
   // Whether operators are permitted to configure custom dimensions.
   // Strictly false in ATS and OSS builds; true in 1P internal builds.
   bool allow_custom_dimensions = 2;
+}
+
+// Request for BatchGetConfigurableDimensionKeys.
+message BatchGetConfigurableDimensionKeysRequest {
+  // Explicit device IDs selected by the operator.
+  repeated string device_ids = 1;
+
+  // True to inspect composite_dimension.required_dimension;
+  // false to inspect composite_dimension.supported_dimension.
+  bool required = 2;
+}
+
+// Response for BatchGetConfigurableDimensionKeys.
+message BatchGetConfigurableDimensionKeysResponse {
+  // A configurable dimension key present in DeviceConfig (excluding
+  // OmniLab system-detected dimensions).
+  message CandidateDimensionKey {
+    // Dimension key name in DeviceConfig (e.g. "pool", "label", "cluster").
+    string dimension_name = 1;
+
+    // Number of selected devices (from request.device_ids) that currently
+    // have this dimension_name configured in the target scope
+    // (required_dimension when required=true; supported_dimension when
+    // required=false).
+    int32 selected_device_count = 2;
+
+    // Total number of devices across the fleet that have this
+    // dimension_name configured in DeviceConfig in the target scope.
+    int32 fleet_device_count = 3;
+  }
+
+  // Candidate configurable dimension keys ranked with keys present on the
+  // selected devices first (by selected_device_count descending, then
+  // fleet_device_count descending), followed by fleet-wide keys (by
+  // fleet_device_count descending).
+  repeated CandidateDimensionKey candidate_keys = 1;
+
+  // Dimension key names automatically detected by OmniLab detectors and
+  // system properties (e.g. "model", "sdk_version", "battery_level").
+  // Operators are not permitted to configure these keys manually.
+  repeated string system_dimension_names = 2;
 }
 
 // Request for GetDimensionValueSuggestions.
