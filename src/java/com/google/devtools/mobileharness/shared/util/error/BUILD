@@ -28,11 +28,8 @@ java_library(
     srcs = ["ErrorModelConverter.java"],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
-        "//src/java/com/google/devtools/common/metrics/stability/converter",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/model/error:unknown_error",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
-        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
 )

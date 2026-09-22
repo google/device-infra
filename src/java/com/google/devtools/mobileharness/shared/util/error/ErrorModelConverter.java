@@ -18,16 +18,12 @@ package com.google.devtools.mobileharness.shared.util.error;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
-import com.google.common.base.Throwables;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto;
-import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.FlattenedExceptionDetail;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.model.error.UnknownErrorId;
-import com.google.wireless.qa.mobileharness.shared.proto.Common.ErrorInfo;
 import java.util.Objects;
-import javax.annotation.Nullable;
 
 /** For converting between new and old data models of exceptions/errors. */
 public class ErrorModelConverter {
@@ -67,58 +63,6 @@ public class ErrorModelConverter {
       errorId = BasicErrorId.NON_MH_EXCEPTION;
     }
     return errorId;
-  }
-
-  /**
-   * Returns the ErrorId of the MobileHarnessException if the given Throwable is a MobileHarness and
-   * ignores the given ErrorId. If the given Throwable is not a MobileHarnessException, uses the
-   * given ErrorId if not null, or use {@link BasicErrorId#NON_MH_EXCEPTION} if null.
-   */
-  static ErrorId finalizeErrorId(Throwable throwable, @Nullable ErrorId errorId) {
-    if (throwable instanceof MobileHarnessException mhException) {
-      errorId = mhException.getErrorId();
-    } else if (errorId == null) {
-      errorId = BasicErrorId.NON_MH_EXCEPTION;
-    }
-    return errorId;
-  }
-
-  private static String getCompleteStackTrace(ExceptionProto.ExceptionDetail detail) {
-    return Throwables.getStackTraceAsString(
-        com.google.devtools.common.metrics.stability.converter.ErrorModelConverter
-            .toDeserializedException(detail));
-  }
-
-  public static ErrorInfo toLegacyErrorInfo(ExceptionProto.ExceptionSummary summary) {
-    ErrorInfo.Builder errorInfo = ErrorInfo.newBuilder();
-    if (summary.getErrorId().getCode() != 0) {
-      errorInfo.setCode(summary.getErrorId().getCode());
-    }
-    if (!summary.getErrorId().getName().isEmpty()) {
-      errorInfo.setName(summary.getErrorId().getName());
-    }
-    if (!summary.getMessage().isEmpty()) {
-      errorInfo.setMessage(summary.getMessage());
-    }
-    return errorInfo
-        .setType(summary.getErrorId().getType())
-        .setNamespace(summary.getErrorId().getNamespace())
-        .build();
-  }
-
-  public static ErrorInfo toLegacyErrorInfo(ExceptionProto.ExceptionDetail detail) {
-    return toLegacyErrorInfo(detail.getSummary()).toBuilder()
-        .setStackTrace(getCompleteStackTrace(detail))
-        .build();
-  }
-
-  public static ErrorInfo toLegacyErrorInfo(FlattenedExceptionDetail flattenedExceptionDetail) {
-    ErrorInfo.Builder errorInfo =
-        toLegacyErrorInfo(flattenedExceptionDetail.getSummary()).toBuilder();
-    if (flattenedExceptionDetail.hasCompleteStackTrace()) {
-      errorInfo.setStackTrace(flattenedExceptionDetail.getCompleteStackTrace());
-    }
-    return errorInfo.build();
   }
 
   private static StackTraceElement[] getStackTrace(ExceptionProto.ExceptionSummary summary) {
