@@ -46,6 +46,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:unlock_host_properties_handler",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:update_device_config_handler",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:update_host_config_handler",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/errors",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
