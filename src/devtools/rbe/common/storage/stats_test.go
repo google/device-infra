@@ -207,19 +207,37 @@ func TestSummaryOmitsZeroCounters(t *testing.T) {
 	clean := Stats{HardlinkHits: 900, HardlinkMisses: 100, Ingested: 100}
 	got := clean.Summary()
 
-	if strings.Contains(got, "copy fallback") {
-		t.Errorf("Summary of a clean run mentions copy fallbacks, want them omitted:\n%s", got)
+	for _, unwanted := range []string{"copy fallback", "headroom", "watermark", "peer"} {
+		if strings.Contains(got, unwanted) {
+			t.Errorf("Summary of a clean run mentions %q, want it omitted:\n%s", unwanted, got)
+		}
 	}
 	if !strings.Contains(got, "900 hits") {
 		t.Errorf("Summary is missing the hit count:\n%s", got)
 	}
 }
 
-func TestSummaryReportsCopyFallbacks(t *testing.T) {
-	s := Stats{HardlinkHits: 10, CopyFallbackEMLINK: 7, CopyFallbackEXDEV: 3}
+func TestSummaryReportsAnomalies(t *testing.T) {
+	s := Stats{
+		HardlinkHits:           10,
+		CopyFallbackEMLINK:     7,
+		CopyFallbackEXDEV:      3,
+		HeadroomChecks:         100,
+		HeadroomEvictions:      2,
+		HeadroomReclaimedBytes: 5 << 30,
+		HeadroomBelowWatermark: 40,
+		HeadroomPeerWaits:      1,
+	}
 	got := s.Summary()
 
-	for _, want := range []string{"10 copy fallbacks", "EMLINK 7", "EXDEV 3"} {
+	for _, want := range []string{
+		"10 copy fallbacks",
+		"EMLINK 7",
+		"EXDEV 3",
+		"2 headroom evictions",
+		"40 of 100 writes",
+		"1 writes timed out",
+	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("Summary is missing %q:\n%s", want, got)
 		}

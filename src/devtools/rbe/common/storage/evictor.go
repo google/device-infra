@@ -379,23 +379,10 @@ func (f *evictionFlight) isEligible(modTime, now time.Time) bool {
 	return isBlobEligible(modTime, now, f.cfg.minBlobAge)
 }
 
-// checkAndEvict queries disk stats and triggers eviction if free space is below the high watermark.
-// It captures a consistent point-in-time snapshot of the configuration for the cycle.
+// checkAndEvict is the background loop's entry point. It delegates to
+// EvictIfNeeded and discards the outcome, which the loop has no use for.
 func (e *Evictor) checkAndEvict(ctx context.Context) {
-	stats, err := e.statfs(e.rootDir)
-	if err != nil {
-		return
-	}
-
-	snap := e.snapshot(stats)
-	effectiveTotal, effectiveFree, _ := ComputeEffectiveSpace(stats, snap.reservedBytes)
-	monitoring.RecordStorageUsage(effectiveTotal, effectiveFree)
-
-	// Trigger eviction if effective free space is below the minimum threshold
-	if effectiveFree < snap.minFreeBytes {
-		flight := e.newFlight(snap)
-		_, _, _ = flight.run(ctx)
-	}
+	_, _, _ = e.EvictIfNeeded(ctx)
 }
 
 // EvictOnce executes a single eviction flight to restore free space above TargetFreeSpace.

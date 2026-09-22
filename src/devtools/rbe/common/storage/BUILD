@@ -25,6 +25,7 @@ go_library(
     srcs = [
         "evictor.go",
         "hardlink.go",
+        "headroom.go",
         "stats.go",
         "storage.go",
     ],
@@ -40,6 +41,7 @@ go_test(
     srcs = [
         "evictor_test.go",
         "hardlink_test.go",
+        "headroom_test.go",
         "stats_test.go",
         "storage_test.go",
     ],
