@@ -109,4 +109,11 @@ public interface InstallApkStepConstants {
       required = false,
       help = "Whether to check installed GMS core version before the test (default true)")
   String PARAM_CHECK_INSTALLED_GMS_CORE_VERSION = "check_installed_gms_core_version";
+
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Comma-separated device groups to pass to bundletool install-apks via --device-groups "
+              + "(e.g., 'group1,group2'). Only applicable when installing .apks archives.")
+  String PARAM_APK_SET_DEVICE_GROUPS = "apk_set_device_groups";
 }
