@@ -16,66 +16,64 @@
 
 package com.google.devtools.mobileharness.shared.util.testresult.rollup;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.collect.ImmutableList;
-import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestResult;
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestStatus;
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestSuiteResult;
 import com.google.devtools.mobileharness.shared.util.testresult.rollup.Outcome.OutcomeSummary;
 import com.google.protobuf.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collection;
 
 /** Helper converter class for Android Instrumentation test result formats. */
 public final class AndroidInstrumentationTestSuiteResultConverter {
 
   private AndroidInstrumentationTestSuiteResultConverter() {}
 
-  /**
-   * Converts a {@link TestSuiteResult} to a rollup {@link
-   * com.google.devtools.mobileharness.shared.util.testresult.rollup.TestResult}.
-   */
-  public static com.google.devtools.mobileharness.shared.util.testresult.rollup.TestResult
-      toTestResult(TestSuiteResult testSuiteResult) {
-    ImmutableList.Builder<TestCase> testCasesBuilder = ImmutableList.builder();
+  /** Converts a {@link TestSuiteResult} to a rollup {@link TestResult}. */
+  public static TestResult toTestResult(TestSuiteResult testSuiteResult) {
     String suiteName =
         testSuiteResult.hasTestSuiteMetaData()
             ? testSuiteResult.getTestSuiteMetaData().getTestSuiteName()
             : "";
 
-    for (TestResult testResult : testSuiteResult.getTestResultList()) {
-      testCasesBuilder.add(toTestCase(testResult, suiteName));
-    }
+    ImmutableList<TestCase> testCases =
+        testSuiteResult.getTestResultList().stream()
+            .map(testResult -> toTestCase(testResult, suiteName))
+            .collect(toImmutableList());
 
-    ImmutableList<TestCase> testCases = testCasesBuilder.build();
-    Duration totalElapsed =
-        testCases.stream().map(TestCase::elapsedTime).reduce(Duration.ZERO, Duration::plus);
     TestSuiteOverview suiteOverview =
-        TestSuiteOverview.builder().setName(suiteName).setElapsedTime(totalElapsed).build();
+        TestSuiteOverview.builder()
+            .setName(suiteName)
+            .setElapsedTime(getTotalElapsedTime(testCases))
+            .build();
 
-    OutcomeSummary outcomeSummary =
-        getOutcomeSummaryFromTestStatus(testSuiteResult.getTestStatus());
-    Outcome outcome = Outcome.create(outcomeSummary);
-    State state = State.COMPLETE;
-
-    return com.google.devtools.mobileharness.shared.util.testresult.rollup.TestResult.create(
-        testCases, ImmutableList.of(suiteOverview), outcome, state);
+    Outcome outcome =
+        Outcome.create(getOutcomeSummaryFromTestStatus(testSuiteResult.getTestStatus()));
+    return TestResult.create(testCases, ImmutableList.of(suiteOverview), outcome, State.COMPLETE);
   }
 
-  /** Converts an Android Instrumentation test case {@link TestResult} to a {@link TestCase}. */
-  public static TestCase toTestCase(TestResult testResult, String suiteName) {
-    com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestCase
-        instrumentationTestCase = testResult.getTestCase();
+  /**
+   * Converts an Android Instrumentation test case {@link
+   * com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestResult} to
+   * a {@link TestCase}.
+   */
+  public static TestCase toTestCase(
+      com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestResult
+          testResult,
+      String suiteName) {
+    var testCase = testResult.getTestCase();
 
     String className =
-        instrumentationTestCase.getTestPackage().isEmpty()
-            ? instrumentationTestCase.getTestClass()
-            : instrumentationTestCase.getTestPackage()
-                + "."
-                + instrumentationTestCase.getTestClass();
+        testCase.getTestPackage().isEmpty()
+            ? testCase.getTestClass()
+            : testCase.getTestPackage() + "." + testCase.getTestClass();
 
     TestCaseReference testCaseRef =
         TestCaseReference.builder()
-            .setName(instrumentationTestCase.getTestMethod())
+            .setName(testCase.getTestMethod())
             .setClassName(className)
             .setTestSuiteName(suiteName)
             .build();
@@ -83,14 +81,14 @@ public final class AndroidInstrumentationTestSuiteResultConverter {
     TestCase.Builder testCaseBuilder = TestCase.builder().setTestCaseReference(testCaseRef);
 
     Instant startInstant = null;
-    if (instrumentationTestCase.hasStartTime()) {
-      Timestamp ts = instrumentationTestCase.getStartTime();
+    if (testCase.hasStartTime()) {
+      Timestamp ts = testCase.getStartTime();
       startInstant = Instant.ofEpochSecond(ts.getSeconds(), ts.getNanos());
       testCaseBuilder.setStartTime(startInstant);
     }
     Instant endInstant = null;
-    if (instrumentationTestCase.hasEndTime()) {
-      Timestamp ts = instrumentationTestCase.getEndTime();
+    if (testCase.hasEndTime()) {
+      Timestamp ts = testCase.getEndTime();
       endInstant = Instant.ofEpochSecond(ts.getSeconds(), ts.getNanos());
       testCaseBuilder.setEndTime(endInstant);
     }
@@ -111,24 +109,20 @@ public final class AndroidInstrumentationTestSuiteResultConverter {
     return testCaseBuilder.build();
   }
 
-  private static com.google.devtools.mobileharness.shared.util.testresult.rollup.TestCase.TestStatus
-      getTestCaseStatus(TestStatus status) {
+  private static Duration getTotalElapsedTime(Collection<TestCase> testCases) {
+    return testCases.stream().map(TestCase::elapsedTime).reduce(Duration.ZERO, Duration::plus);
+  }
+
+  private static TestCase.TestStatus getTestCaseStatus(TestStatus status) {
     if (status == null) {
-      return com.google.devtools.mobileharness.shared.util.testresult.rollup.TestCase.TestStatus
-          .ERROR;
+      return TestCase.TestStatus.ERROR;
     }
     return switch (status) {
-      case PASSED ->
-          com.google.devtools.mobileharness.shared.util.testresult.rollup.TestCase.TestStatus
-              .PASSED;
-      case FAILED ->
-          com.google.devtools.mobileharness.shared.util.testresult.rollup.TestCase.TestStatus
-              .FAILED;
-      case IGNORED, SKIPPED ->
-          com.google.devtools.mobileharness.shared.util.testresult.rollup.TestCase.TestStatus
-              .SKIPPED;
+      case PASSED -> TestCase.TestStatus.PASSED;
+      case FAILED -> TestCase.TestStatus.FAILED;
+      case IGNORED, SKIPPED -> TestCase.TestStatus.SKIPPED;
       case ERROR, ABORTED, CANCELLED, TEST_STATUS_UNSPECIFIED, UNRECOGNIZED ->
-          com.google.devtools.mobileharness.shared.util.testresult.rollup.TestCase.TestStatus.ERROR;
+          TestCase.TestStatus.ERROR;
     };
   }
 
