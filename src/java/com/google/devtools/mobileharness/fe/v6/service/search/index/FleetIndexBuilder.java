@@ -37,7 +37,6 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostConnectivityStatuses;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.UiLabType;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
@@ -76,6 +75,9 @@ public final class FleetIndexBuilder {
   public static final String DEVICE_FIELD_QUARANTINED =
       DeviceKeys.PREFIX_DEVICE_FIELD + "quarantined";
   public static final String HOST_FIELD_LAB_TYPE = HostKeys.PREFIX_HOST_FIELD + "lab_type";
+  public static final String HOST_FIELD_DEVICE_MANAGER_TYPE =
+      HostKeys.PREFIX_HOST_FIELD + "device_manager_type";
+  public static final String HOST_FIELD_ATE = HostKeys.PREFIX_HOST_FIELD + "ate";
   public static final String HOST_FIELD_DAEMON_STATUS =
       HostKeys.PREFIX_HOST_FIELD + "daemon_status";
   public static final String HOST_FIELD_DAEMON_SERVER_VERSION =
@@ -139,10 +141,23 @@ public final class FleetIndexBuilder {
                   Optional<String> releaseTypeOpt =
                       hostEnrichment.flatMap(HostEnrichment::releaseType);
                   ImmutableList<String> labTypes =
-                      HostTypes.determineUiLabTypes(Optional.of(labInfo), releaseTypeOpt).stream()
-                          .filter(labType -> labType != UiLabType.UNKNOWN)
-                          .map(HostTypes::labTypeDisplayName)
-                          .collect(toImmutableList());
+                      HostTypes.determineSearchLabType(Optional.of(labInfo), releaseTypeOpt)
+                          .map(ImmutableList::of)
+                          .orElse(ImmutableList.of());
+                  boolean is1pHost =
+                      hostEnrichment.isPresent()
+                          || !labTypes.isEmpty()
+                          || hostProperties.containsKey("dm_type");
+                  Optional<String> deviceManagerType =
+                      is1pHost
+                          ? Optional.of(
+                              HostTypes.determineDeviceManagerType(
+                                  Optional.of(labInfo), releaseTypeOpt))
+                          : Optional.empty();
+                  Optional<String> ate =
+                      is1pHost
+                          ? Optional.of(HostTypes.isAteLab(releaseTypeOpt) ? "Yes" : "No")
+                          : Optional.empty();
                   String hostOs = hostProperties.getOrDefault("host_os", "Unknown");
                   String hostConnectivity =
                       HostConnectivityStatuses.create(Optional.of(labInfo)).getTitle();
@@ -155,6 +170,8 @@ public final class FleetIndexBuilder {
                           hostProperties,
                           deviceList,
                           labTypes,
+                          deviceManagerType,
+                          ate,
                           hostOs,
                           hostConnectivity,
                           hostEnrichment);
@@ -221,6 +238,8 @@ public final class FleetIndexBuilder {
       ImmutableMap<String, String> hostProperties,
       DeviceList deviceList,
       ImmutableList<String> labTypes,
+      Optional<String> deviceManagerType,
+      Optional<String> ate,
       String hostOs,
       String hostConnectivity,
       Optional<HostEnrichment> enrichment) {
@@ -238,6 +257,9 @@ public final class FleetIndexBuilder {
     if (!labTypes.isEmpty()) {
       values.put(HOST_FIELD_LAB_TYPE, labTypes);
     }
+    deviceManagerType.ifPresent(
+        dm -> values.put(HOST_FIELD_DEVICE_MANAGER_TYPE, ImmutableList.of(dm)));
+    ate.ifPresent(a -> values.put(HOST_FIELD_ATE, ImmutableList.of(a)));
     enrichment
         .flatMap(HostEnrichment::daemonStatus)
         .filter(s -> !s.isEmpty())
