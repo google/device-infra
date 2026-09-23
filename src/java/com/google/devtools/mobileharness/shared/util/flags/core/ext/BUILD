@@ -20,9 +20,6 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "duration_flag",
     srcs = ["DurationFlag.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/shared/util/flags:__subpackages__",
-    ],
+    visibility = ["//src/javatests/com/google/devtools/mobileharness/shared/util/flags:__subpackages__"],
     deps = ["//src/java/com/google/devtools/mobileharness/shared/util/flags/core:flag"],
 )
