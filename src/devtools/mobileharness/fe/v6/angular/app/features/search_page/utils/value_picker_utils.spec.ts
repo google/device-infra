@@ -9,9 +9,11 @@ import {
   getPacificTimezoneName,
   isValuePickerSelectionEmpty,
   pacificToUtc,
+  getDefault24hRange,
   parseDateRange,
   utcToPacific,
 } from './value_picker_utils';
+import {EMPTY_FILTER_VALUE} from './search_filter_utils';
 
 describe('value_picker_utils', () => {
   const mockItems: PickerValueItem[] = [
@@ -309,16 +311,54 @@ describe('value_picker_utils', () => {
       expect(utcToPacific('1784151000000')).toBe('2026-07-15T14:30');
     });
 
-    it('should calculate 24h fallback range correctly when only single bound is provided', () => {
+    it('should populate with empty when only single bound is provided', () => {
       const singleFrom = new Set(['From: 2026-01-02T12:00']);
       const parsedFrom = parseDateRange(singleFrom);
       expect(parsedFrom.from).toBe('2026-01-02T12:00');
-      expect(parsedFrom.to).toBe('2026-01-03T12:00');
+      expect(parsedFrom.to).toBe('');
 
       const singleTo = new Set(['To: 2026-01-03T12:00']);
       const parsedTo = parseDateRange(singleTo);
-      expect(parsedTo.from).toBe('2026-01-02T12:00');
+      expect(parsedTo.from).toBe('');
       expect(parsedTo.to).toBe('2026-01-03T12:00');
+
+      const setWithEmptyTo = new Set(['2026-10-06T23:35', EMPTY_FILTER_VALUE]);
+      const parsedEmptyTo = parseDateRange(setWithEmptyTo);
+      expect(parsedEmptyTo.from).toBe('2026-10-06T23:35');
+      expect(parsedEmptyTo.to).toBe('');
+
+      const setWithEmptyFrom = new Set([EMPTY_FILTER_VALUE, '2026-10-06T23:35']);
+      const parsedEmptyFrom = parseDateRange(setWithEmptyFrom);
+      expect(parsedEmptyFrom.from).toBe('');
+      expect(parsedEmptyFrom.to).toBe('2026-10-06T23:35');
+
+      const geSet = new Set(['≥ 2026-01-01T00:00:00Z']);
+      const parsedGe = parseDateRange(geSet);
+      expect(parsedGe.from).toBe('2025-12-31T16:00');
+      expect(parsedGe.to).toBe('');
+
+      const leSet = new Set(['≤ 2026-01-02T00:00:00Z']);
+      const parsedLe = parseDateRange(leSet);
+      expect(parsedLe.from).toBe('');
+      expect(parsedLe.to).toBe('2026-01-01T16:00');
+    });
+
+    it('should defensively handle null, undefined, and Array inputs', () => {
+      const defaultRange = getDefault24hRange(1767225600000); // 2026-01-01T00:00:00Z
+      expect(defaultRange.from).toBe('2025-12-30T16:00');
+      expect(defaultRange.to).toBe('2025-12-31T16:00');
+
+      const parsedNull = parseDateRange(null);
+      expect(parsedNull.from).toBeTruthy();
+      expect(parsedNull.to).toBeTruthy();
+
+      const parsedUndefined = parseDateRange(undefined);
+      expect(parsedUndefined.from).toBeTruthy();
+      expect(parsedUndefined.to).toBeTruthy();
+
+      const parsedArray = parseDateRange(['From: 2026-01-02T12:00']);
+      expect(parsedArray.from).toBe('2026-01-02T12:00');
+      expect(parsedArray.to).toBe('');
     });
   });
 

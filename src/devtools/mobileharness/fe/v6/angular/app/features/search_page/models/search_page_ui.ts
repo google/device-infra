@@ -17,6 +17,8 @@ export interface SearchBoxSuggestion {
   countPrefix?: string;
   countUnit?: string;
   overMax?: boolean;
+  openPicker?: unknown;
+  addGroupBy?: unknown;
   rawItem?: unknown;
 }
 

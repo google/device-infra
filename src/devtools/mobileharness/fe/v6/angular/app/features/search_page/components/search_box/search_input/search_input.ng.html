@@ -3,6 +3,7 @@
   @if (store.showScopeSwitcher()) {
     <div class="scope-switcher" role="group" aria-label="Search fleet">
       <button
+        type="button"
         class="scope-seg"
         [class.active]="store.fleet() === 'internal'"
         (click)="store.setFleet('internal')"
@@ -10,6 +11,7 @@
         <span>Internal</span>
       </button>
       <button
+        type="button"
         class="scope-seg"
         [class.active]="store.fleet() === 'ats'"
         (click)="store.setFleet('ats')"
@@ -20,65 +22,102 @@
   }
 
   <!-- Smart Search Bar -->
-  <div class="search-wrap">
+  <div class="search-wrap" [class.panel-open]="isPanelOpen()">
     <div
       #searchBox
       class="search-box"
       [class.chips-collapsed]="isCollapsed()"
-      [class.chips-expanded]="!isCollapsed() && isMultiRow()"
       (click)="onSearchBoxClick($event)"
     >
-      <mat-icon class="material-symbols-outlined search-icon">search</mat-icon>
-      <div class="search-input-area" [class.collapsed]="isCollapsed()">
-        <div #chipsContainer class="active-chips-container">
+      <mat-icon class="material-symbols-outlined search-icon">filter_list</mat-icon>
+      <div class="search-input-area" [class.collapsed]="isDocked() || store.activeChips().length > 0">
+        <div class="active-chips-container">
           @if (showCompositeFilterChip()) {
             <span
-              class="search-chip composite-chip composite-filters"
-              (click)="expandChips($event)"
-              title="Show all filters"
+              #compositeFiltersEl
+              class="search-chip summary-chip composite-chip composite-filters"
+              [class.active]="isCompositeFilterPickerActive()"
+              (mousedown)="$event.preventDefault()"
+              (click)="onCompositeChipClick('filters', $event)"
+              [title]="filterSummaryTooltip()"
             >
-              <span class="chip-label">Filters ({{ filterChipsCount() }})</span>
+              <span class="chip-label">{{ filterChipsCount() }} filters</span>
+              <button
+                class="chip-remove"
+                type="button"
+                (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                (click)="onRemoveCompositeFilters($event)"
+                title="Remove all filters"
+                aria-label="Remove all filters"
+              >
+                <mat-icon class="material-symbols-outlined">close</mat-icon>
+              </button>
             </span>
-          }
-          @if (showCompositeGroupByChip()) {
-            <span
-              class="search-chip composite-chip composite-groupby"
-              (click)="expandChips($event)"
-              title="Show all group by"
-            >
-              <span class="chip-label">group by ({{ groupByChipsCount() }})</span>
-            </span>
-          }
-          @if (showActiveChipList()) {
-            @for (chip of store.activeChips(); track getChipKey(chip) + chip.pillCondition) {
+          } @else {
+            @for (chip of filterChips(); track getChipKey(chip) + chip.pillCondition) {
               <span
                 #chipEl
-                class="search-chip"
+                class="search-chip box-chip"
                 [attr.data-chip-key]="getChipKey(chip)"
-                [class.group-by-chip]="chip.isGroupBy"
                 [class.exclude]="chip.negated"
                 [class.active]="store.isChipPickerActive(chip)"
                 (click)="openPickerForChip(chip, chipEl, $event)"
               >
-                @if (chip.isGroupBy) {
-                  <span class="chip-label">group by</span>
-                  <span
-                    class="chip-value"
-                    [matTooltip]="chip.pillKey"
-                    tooltipIfTruncated
-                  >{{ chip.pillKey }}</span>
-                } @else {
-                  <span class="chip-label">{{ chip.pillKey }}</span>
-                  <span
-                    class="chip-value"
-                    [matTooltip]="chip.pillCondition"
-                    tooltipIfTruncated
-                  >({{ chip.pillCondition }})</span>
-                }
+                <span class="chip-label">{{ chip.pillKey }}</span>
+                <span
+                  class="chip-value"
+                  [matTooltip]="chip.pillCondition"
+                  tooltipIfTruncated
+                >({{ chip.pillCondition }})</span>
                 <button
                   class="chip-remove"
                   type="button"
-                  (click)="store.removeFilterChip(chip); $event.stopPropagation()"
+                  (click)="onRemoveChip(chip, $event)"
+                  title="Remove filter"
+                  aria-label="Remove filter"
+                >
+                  <mat-icon class="material-symbols-outlined">close</mat-icon>
+                </button>
+              </span>
+            }
+          }
+          @if (showCompositeGroupByChip()) {
+            <span
+              class="search-chip summary-chip composite-chip composite-groupby"
+              (mousedown)="$event.preventDefault()"
+              (click)="onCompositeChipClick('groupby', $event)"
+              [title]="groupBySummaryTooltip()"
+            >
+              <span class="chip-label">{{ groupByChipsCount() }} group-by</span>
+              <button
+                class="chip-remove"
+                type="button"
+                (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+                (click)="onRemoveCompositeGroupBy($event)"
+                title="Remove all group-by"
+                aria-label="Remove all group-by"
+              >
+                <mat-icon class="material-symbols-outlined">close</mat-icon>
+              </button>
+            </span>
+          } @else {
+            @for (chip of groupByChips(); track getChipKey(chip) + chip.pillCondition) {
+              <span
+                #groupChipEl
+                class="search-chip group-by-chip box-chip"
+                [attr.data-chip-key]="getChipKey(chip)"
+                (click)="openPickerForChip(chip, groupChipEl, $event)"
+              >
+                <span class="chip-label gb-prefix">group by</span>
+                <span
+                  class="chip-value"
+                  [matTooltip]="chip.pillKey"
+                  tooltipIfTruncated
+                >{{ chip.pillKey }}</span>
+                <button
+                  class="chip-remove"
+                  type="button"
+                  (click)="onRemoveChip(chip, $event)"
                   title="Remove filter"
                   aria-label="Remove filter"
                 >
@@ -92,34 +131,25 @@
           #searchInput
           type="text"
           class="search-input"
-          [placeholder]="store.searchPlaceholder()"
+          [placeholder]="effectivePlaceholder()"
           [value]="store.searchQuery()"
           (input)="onSearchInput(searchInput.value)"
           (focus)="onInputFocus()"
           (click)="onInputClick($event)"
-          (blur)="onInputBlur()"
+          (blur)="onInputBlur($event)"
           (keydown)="onKeyDown($event)"
         />
       </div>
       <div class="search-actions">
-        @if (canCollapse()) {
-          <button
-            mat-icon-button
-            class="search-collapse-btn"
-            (click)="collapseChips($event)"
-            title="Collapse filters"
-            aria-label="Collapse filters"
-          >
-            <mat-icon class="material-symbols-outlined">unfold_less</mat-icon>
-          </button>
-        }
         @if (store.showSearchClear()) {
           <button
             mat-icon-button
+            type="button"
             class="search-clear-btn"
-            (click)="store.resetSearchState()"
-            title="Clear search"
-            aria-label="Clear search"
+            (mousedown)="$event.preventDefault(); $event.stopPropagation()"
+            (click)="onClearInput($event)"
+            title="Clear input"
+            aria-label="Clear input"
           >
             <mat-icon class="material-symbols-outlined">close</mat-icon>
           </button>
@@ -130,12 +160,19 @@
     <!-- Suggestion Popover -->
     <app-search-suggestions
       [activeIndex]="activeSuggestionIndex()"
+      [highlightedGroup]="highlightedGroup()"
       (selectSuggestion)="onSelectSuggestion($event)"
+      (editChip)="onEditChipFromSuggestions($event)"
+      (addFilter)="onAddFilter($event)"
+      (addGroupBy)="onAddGroupBy($event)"
+      (collapsePanel)="onCollapsePanel()"
     ></app-search-suggestions>
   </div>
 
   <!-- Refresh Button -->
-  <button mat-icon-button class="query-refresh-btn" (click)="store.executeSearch()" title="Refresh results">
-    <mat-icon class="material-symbols-outlined">refresh</mat-icon>
-  </button>
+  @if (!store.isLandingState()) {
+    <button type="button" mat-icon-button class="query-refresh-btn" (click)="store.executeSearch()" title="Refresh results">
+      <mat-icon class="material-symbols-outlined">refresh</mat-icon>
+    </button>
+  }
 </div>

@@ -144,9 +144,7 @@ describe('FleetSearchResultsComponent', () => {
       fixture.detectChanges();
 
       expect(component.groupedViewMode()).toBe('groups');
-      const cardEl = fixture.debugElement.query(
-        By.css('app-fleet-group-card'),
-      );
+      const cardEl = fixture.debugElement.query(By.css('app-fleet-group-card'));
       expect(cardEl).toBeTruthy();
     });
 
@@ -225,6 +223,23 @@ describe('FleetSearchResultsComponent', () => {
       mockStore.selectAllMatching.set(true);
       expect(component.canShowBatchActions()).toBeFalse();
       expect(component.canShowDeviceBatchActions()).toBeFalse();
+    });
+  });
+
+  describe('Grouped Mode Layout', () => {
+    it('renders grouped toolbar and results-area container when groupByKeys are set', () => {
+      mockStore.groupByKeys.set(['host']);
+      mockStore.groupKeysText.set('host');
+      mockStore.groups.set([{groupId: 'group-1', title: 'Host A'}]);
+      fixture.detectChanges();
+
+      const areaEl = fixture.nativeElement.querySelector('.results-area');
+      const tb = fixture.nativeElement.querySelector('.rt-toolbar');
+
+      expect(areaEl).toBeTruthy();
+      expect(areaEl.classList.contains('grouped-mode')).toBeTrue();
+      expect(tb).toBeTruthy();
+      expect(tb.textContent).toContain('by host');
     });
   });
 });

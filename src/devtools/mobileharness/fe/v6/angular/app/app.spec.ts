@@ -1,11 +1,14 @@
+import {BreakpointObserver, BreakpointState} from '@angular/cdk/layout';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {MatTooltip} from '@angular/material/tooltip';
+import {By} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {
   ActivatedRoute,
   convertToParamMap,
   provideRouter,
 } from '@angular/router';
-import {Subject, of} from 'rxjs';
+import {BehaviorSubject, Subject, of} from 'rxjs';
 
 import {App} from './app';
 import {APP_DATA, type AppData} from './core/models/app_data';
@@ -168,6 +171,67 @@ describe('App Component', () => {
       }
       const params = component.getPreservedQueryParams();
       expect(params['universe']).toBe('test-universe');
+    });
+  });
+
+  describe('Navigation tooltips in icon-only mode', () => {
+    let breakpointSubject: BehaviorSubject<BreakpointState>;
+    let mockBreakpointObserver: jasmine.SpyObj<BreakpointObserver>;
+
+    beforeEach(async () => {
+      breakpointSubject = new BehaviorSubject<BreakpointState>({
+        matches: false,
+        breakpoints: {'(max-width: 1100px)': false},
+      });
+
+      mockBreakpointObserver = jasmine.createSpyObj<BreakpointObserver>(
+        'BreakpointObserver',
+        ['observe', 'isMatched'],
+      );
+      mockBreakpointObserver.observe.and.returnValue(breakpointSubject);
+      mockBreakpointObserver.isMatched.and.returnValue(false);
+
+      const standaloneMockActivatedRoute = {
+        snapshot: {
+          queryParams: {},
+          queryParamMap: convertToParamMap({'is_embedded_mode': 'false'}),
+        } as unknown as ActivatedRoute['snapshot'],
+        queryParamMap: of(convertToParamMap({'is_embedded_mode': 'false'})),
+      };
+
+      await TestBed.resetTestingModule();
+      await TestBed.configureTestingModule({
+        imports: [NoopAnimationsModule, App],
+        providers: [
+          provideRouter([]),
+          {provide: APP_DATA, useValue: appData},
+          {provide: UrlService, useValue: mockUrlService},
+          {provide: ActivatedRoute, useValue: standaloneMockActivatedRoute},
+          {provide: BreakpointObserver, useValue: mockBreakpointObserver},
+        ],
+      }).compileComponents();
+    });
+
+    it('should disable nav item tooltips when not in icon-only mode and enable them in icon-only mode', () => {
+      const testFixture = TestBed.createComponent(App);
+      testFixture.detectChanges();
+
+      const homeLink = testFixture.debugElement.query(
+        By.css('mat-nav-list a[routerLink="/home"]'),
+      );
+      const tooltip = homeLink.injector.get(MatTooltip);
+
+      expect(testFixture.componentInstance.isIconOnly()).toBeFalse();
+      expect(tooltip.disabled).toBeTrue();
+
+      breakpointSubject.next({
+        matches: true,
+        breakpoints: {'(max-width: 1100px)': true},
+      });
+      testFixture.detectChanges();
+
+      expect(testFixture.componentInstance.isIconOnly()).toBeTrue();
+      expect(tooltip.disabled).toBeFalse();
     });
   });
 

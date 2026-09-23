@@ -1,0 +1,228 @@
+@use '../../../../../shared/styles/common';
+
+:host {
+  display: block;
+}
+
+::ng-deep {
+  .key-picker-dialog-panel {
+    width: min(560px, 94vw);
+    max-width: 94vw;
+
+    .mat-mdc-dialog-container,
+    .mat-mdc-dialog-surface {
+      width: 100%;
+      border-radius: 28px;
+      background: transparent;
+      box-shadow: none;
+      overflow: visible;
+    }
+  }
+
+  .key-picker-dialog-panel,
+  .key-picker-dialog-host,
+  app-key-picker,
+  :host {
+    app-dialog.key-picker-dialog,
+    app-dialog {
+      width: min(560px, 94vw);
+      max-width: 94vw;
+      display: block;
+    }
+
+    app-dialog.key-picker-dialog div.config-modal-container.config-modal-container,
+    div.config-modal-container.config-modal-container {
+      position: static;
+      padding: 0;
+      width: 100%;
+    }
+
+    app-dialog.key-picker-dialog div.config-modal-container div.config-modal-card.config-modal-card,
+    app-dialog.key-picker-dialog div.config-modal-card.config-modal-card,
+    div.config-modal-card.config-modal-card {
+      width: min(560px, 94vw);
+      max-width: 94vw;
+      border-radius: 28px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+      border: none;
+      background: #fff;
+    }
+
+    app-dialog.key-picker-dialog div.config-modal-container div.config-modal-card.config-modal-card header.config-header.config-header,
+    app-dialog.key-picker-dialog div.config-modal-card.config-modal-card header.config-header.config-header,
+    div.config-modal-card.config-modal-card header.config-header.config-header,
+    header.config-header.config-header {
+      padding: 16px 24px 8px;
+      border-bottom: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+
+      .header-title-container {
+        flex: 1;
+
+        h2.config-title.config-title,
+        .config-title.config-title {
+          margin: 0;
+          font-size: 1.5rem;
+          font-weight: 400;
+          line-height: 32px;
+          color: #1d1b20;
+        }
+      }
+
+      .header-menu-container {
+        .close-button.close-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+          min-width: 40px;
+          min-height: 40px;
+          border: none;
+          border-radius: 20px;
+          padding: 0;
+          background: transparent;
+          cursor: pointer;
+          color: #49454f;
+          transition: background-color 0.15s ease;
+
+          &:hover {
+            background-color: rgba(29, 27, 32, 0.08);
+          }
+
+          mat-icon {
+            font-size: 24px;
+            width: 24px;
+            height: 24px;
+            line-height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+        }
+      }
+    }
+  }
+}
+
+.cs-searchbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  margin: 12px 20px;
+  padding: 0 16px;
+  height: 48px;
+  border-radius: 24px;
+  background: #f3f4f9;
+  color: #49454f;
+
+  input {
+    flex: 1;
+    border: none;
+    background: none;
+    outline: none;
+    font-family: inherit;
+    font-size: 0.875rem;
+    color: #1d1b20;
+
+    &::placeholder {
+      color: #49454f;
+    }
+  }
+}
+
+.kp-body {
+  flex: 1;
+  min-height: 320px;
+  max-height: calc(90vh - 160px);
+  overflow-y: auto;
+  padding: 0 20px 16px;
+  border-top: 1px solid #e0e3e7;
+  @include common.shared-scrollbar-style();
+}
+
+.cs-section {
+  padding: 12px 0;
+
+  & + .cs-section {
+    border-top: 1px solid #e0e3e7;
+  }
+}
+
+.cs-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.1px;
+  color: #1d1b20;
+}
+
+.cs-hint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #444746;
+}
+
+.cs-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #1d1b20;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover:not(.kp-inert) {
+    background-color: rgba(29, 27, 32, 0.08);
+  }
+
+  &.kp-applied .cs-row-name {
+    color: #49454f;
+  }
+
+  &.kp-applied .cs-row-meta {
+    color: #0b57d0;
+    font-weight: 500;
+  }
+
+  &.kp-inert {
+    cursor: default;
+
+    &:hover {
+      background-color: transparent;
+    }
+  }
+}
+
+.cs-row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cs-row-meta {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: #444746;
+}
+
+.cs-more,
+.cs-empty {
+  padding: 8px;
+  font-size: 0.8125rem;
+  color: #444746;
+}

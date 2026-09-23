@@ -1,4 +1,4 @@
-import {CommonModule} from '@angular/common';
+import {DecimalPipe, NgTemplateOutlet} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -13,8 +13,10 @@ import {MatMenuModule} from '@angular/material/menu';
 import {MatProgressBarModule} from '@angular/material/progress-bar';
 import {MatSelectModule} from '@angular/material/select';
 import {MatTableModule} from '@angular/material/table';
+import {MatTooltipModule} from '@angular/material/tooltip';
 
 import {Column} from '../../../../../core/models/search';
+import {TooltipIfTruncatedDirective} from '../../../../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
 import {FleetSearchStore} from '../../../services/fleet_search_store';
 
 import {ColumnSelectorResult} from '../../../models';
@@ -32,7 +34,8 @@ import {FleetGroupCardComponent} from '../fleet_group_card/fleet_group_card';
   styleUrl: './fleet_search_results.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
+    DecimalPipe,
+    NgTemplateOutlet,
     MatCardModule,
     MatCheckboxModule,
     MatDialogModule,
@@ -41,6 +44,8 @@ import {FleetGroupCardComponent} from '../fleet_group_card/fleet_group_card';
     MatProgressBarModule,
     MatSelectModule,
     MatTableModule,
+    MatTooltipModule,
+    TooltipIfTruncatedDirective,
     DensityDropdownComponent,
     FleetGroupCardComponent,
     SearchPaginationComponent,

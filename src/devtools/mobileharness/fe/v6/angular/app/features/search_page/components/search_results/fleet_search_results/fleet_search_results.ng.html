@@ -3,11 +3,17 @@
 @let entity = store.entity();
 @let isLoading = store.isLoading();
 
-<mat-card class="results-area" [class.grouped-mode]="isGrouped">
+<mat-card
+  class="results-area"
+  [class.grouped-mode]="isGrouped"
+>
   @if (isGrouped) {
     @let selectedGroupItems = store.selectedItems();
     <!-- Grouped Mode Toolbar -->
-    <div class="rt-toolbar" [class.rt-toolbar-active]="selectedGroupItems.size > 0">
+    <div
+      class="rt-toolbar"
+      [class.rt-toolbar-active]="selectedGroupItems.size > 0"
+    >
       @if (selectedGroupItems.size > 0) {
         <span class="rt-count">
           {{ selectedGroupItems.size | number }} selected · {{ fleetLabel }}
@@ -20,14 +26,23 @@
         </span>
         <span class="rt-divider"></span>
         @if (store.groupKeysText()) {
-          <span class="rt-groupby-label">by {{ store.groupKeysText() }}</span>
+          <span
+            class="rt-groupby-label"
+            [matTooltip]="'by ' + store.groupKeysText()"
+            tooltipIfTruncated
+          >by {{ store.groupKeysText() }}</span>
           <span class="rt-divider"></span>
         }
 
         <!-- Group Sort Menu -->
-        <button class="rt-btn-text" [matMenuTriggerFor]="groupSortMenuGrouped">
+        <button
+          type="button"
+          class="rt-btn-text rt-btn-sort"
+          [matMenuTriggerFor]="groupSortMenuGrouped"
+          [title]="'Sort groups: ' + store.groupSortActiveLabel()"
+        >
           <mat-icon class="material-symbols-outlined">swap_vert</mat-icon>
-          {{ store.groupSortActiveLabel() }}
+          <span class="rt-btn-label">{{ store.groupSortActiveLabel() }}</span>
           <mat-icon class="material-symbols-outlined rt-caret">arrow_drop_down</mat-icon>
         </button>
         <mat-menu #groupSortMenuGrouped="matMenu" class="sort-dropdown-menu">
@@ -46,26 +61,23 @@
         </mat-menu>
 
         <!-- Columns Button -->
-        <button class="rt-btn-text" (click)="openColumnSelector()" title="Configure table columns">
+        <button
+          type="button"
+          class="rt-btn-text rt-btn-columns"
+          (click)="openColumnSelector()"
+          title="Configure table columns"
+        >
           <mat-icon class="material-symbols-outlined">view_column</mat-icon>
-          Columns
+          <span class="rt-btn-label">Columns</span>
         </button>
 
 
         <span class="rt-grow"></span>
 
-        <!-- Utilization Legend -->
+        <!-- Utilization Legend (Top Toolbar Slot) -->
         @if (entity === 'devices') {
-          <div class="rt-util-key">
-            <span class="rt-util-key-item">
-              <span class="legend-dot color-busy"></span>In Service (BUSY)
-            </span>
-            <span class="rt-util-key-item">
-              <span class="legend-dot color-idle"></span>In Service (IDLE)
-            </span>
-            <span class="rt-util-key-item">
-              <span class="legend-dot color-others"></span>Others
-            </span>
+          <div class="rt-util-key-top">
+            <ng-container *ngTemplateOutlet="utilizationLegend"></ng-container>
           </div>
         }
       }
@@ -117,7 +129,14 @@
         [hasNext]="store.hasNextPage()"
         (prev)="store.prevPage()"
         (next)="store.nextPage()"
-      ></app-search-pagination>
+      >
+        @if (entity === 'devices') {
+          <div paginationLeading class="rt-util-key-bottom">
+            <ng-container *ngTemplateOutlet="utilizationLegend"></ng-container>
+            <span class="rt-divider"></span>
+          </div>
+        }
+      </app-search-pagination>
     }
   } @else {
     <!-- Toolbar -->
@@ -307,5 +326,26 @@
       <mat-icon class="material-symbols-outlined">close</mat-icon>
       Clear
     </button>
+  </ng-template>
+
+  <!-- Shared Utilization Legend Fragment -->
+  <ng-template #utilizationLegend>
+    <div class="rt-util-key">
+      <span class="rt-util-key-item">
+        <span class="legend-dot color-busy"></span>
+        <span class="rt-legend-label-full">In Service (BUSY)</span>
+        <span class="rt-legend-label-short">Busy</span>
+      </span>
+      <span class="rt-util-key-item">
+        <span class="legend-dot color-idle"></span>
+        <span class="rt-legend-label-full">In Service (IDLE)</span>
+        <span class="rt-legend-label-short">Idle</span>
+      </span>
+      <span class="rt-util-key-item">
+        <span class="legend-dot color-others"></span>
+        <span class="rt-legend-label-full">Others</span>
+        <span class="rt-legend-label-short">Others</span>
+      </span>
+    </div>
   </ng-template>
 </mat-card>

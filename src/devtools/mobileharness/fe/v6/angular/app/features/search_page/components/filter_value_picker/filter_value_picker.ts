@@ -27,6 +27,7 @@ import {
   buildValuePickerApplyEvent,
   computeFilteredAndSortedValues,
   computePinnedValues,
+  DateRangeState,
   getPacificTimezoneName,
   parseDateRange,
 } from '../../utils';
@@ -132,7 +133,7 @@ export class FilterValuePicker {
   readonly advValues = linkedSignal(() => this.state().advanced?.values || []);
 
   /** Parsed date range state object for date-range picker type. */
-  readonly rangeState = linkedSignal(() =>
+  readonly rangeState = linkedSignal<DateRangeState>(() =>
     parseDateRange(this.state().selectedValues),
   );
   /** 'From' timestamp string for date-range picker type. */
