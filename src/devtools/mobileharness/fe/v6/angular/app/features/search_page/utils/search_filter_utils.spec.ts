@@ -435,7 +435,7 @@ describe('search_filter_utils', () => {
     it('handles <empty> and blank values properly', () => {
       const res = buildSimpleFleetFilter('driver', [EMPTY_FILTER_VALUE, '']);
       expect(res.simple?.values?.length).toBe(1);
-      expect(res.simple?.values?.[0]?.noValue).toBeTrue();
+      expect(res.simple?.values?.[0]?.noValue).toEqual({});
     });
   });
 
@@ -471,9 +471,9 @@ describe('search_filter_utils', () => {
       expect(serializeComplexCondition(undefined)).toBe('');
       expect(serializeComplexCondition({})).toBe('');
       expect(
-        serializeComplexCondition(
-          {unsupported: {value: 'foo'}} as unknown as ComplexMatch,
-        ),
+        serializeComplexCondition({
+          unsupported: {value: 'foo'},
+        } as unknown as ComplexMatch),
       ).toBe('');
     });
   });
@@ -615,13 +615,13 @@ describe('search_filter_utils', () => {
       expect(res).not.toBeNull();
       expect(res?.key).toBe('driver');
       expect(res?.negated).toBeFalse();
-      expect(res?.fleetFilter?.simple?.values?.[0]?.noValue).toBeTrue();
+      expect(res?.fleetFilter?.simple?.values?.[0]?.noValue).toEqual({});
 
       const negRes = parseQueryFilterParam('!driver~');
       expect(negRes).not.toBeNull();
       expect(negRes?.key).toBe('driver');
       expect(negRes?.negated).toBeTrue();
-      expect(negRes?.fleetFilter?.simple?.values?.[0]?.noValue).toBeTrue();
+      expect(negRes?.fleetFilter?.simple?.values?.[0]?.noValue).toEqual({});
     });
 
     it('parses mixed <empty> and valid values into rawValues and Protobuf filterValues', () => {
@@ -630,7 +630,7 @@ describe('search_filter_utils', () => {
       expect(res?.key).toBe('model');
       expect(res?.rawValues).toEqual([EMPTY_FILTER_VALUE, 'Pixel 8']);
       expect(res?.fleetFilter?.simple?.values).toEqual([
-        {noValue: true},
+        {noValue: {}},
         {value: 'Pixel 8'},
       ]);
 
@@ -641,7 +641,7 @@ describe('search_filter_utils', () => {
         'Pixel 8',
       ]);
       expect(resWithNoValue?.fleetFilter?.simple?.values).toEqual([
-        {noValue: true},
+        {noValue: {}},
         {value: 'Pixel 8'},
       ]);
     });
@@ -873,7 +873,7 @@ describe('search_filter_utils', () => {
       };
       const filter = buildFleetFilterFromChip(chip);
       expect(filter.key).toBe('driver');
-      expect(filter.simple?.values).toEqual([{noValue: true}]);
+      expect(filter.simple?.values).toEqual([{noValue: {}}]);
       expect(filter.simple?.negated).toBeFalse();
     });
   });

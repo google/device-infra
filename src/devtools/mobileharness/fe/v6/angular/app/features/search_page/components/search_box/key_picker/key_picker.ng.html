@@ -1,0 +1,75 @@
+<div
+  class="cs-dialog kp-dialog"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="kp-title"
+  (keydown.escape)="close()"
+>
+  <div class="cs-header">
+    <h2 class="cs-title" id="kp-title">{{ dialogTitle() }}</h2>
+    <button
+      class="cs-close"
+      type="button"
+      (click)="close()"
+      title="Close"
+      aria-label="Close"
+    >
+      <mat-icon class="material-symbols-outlined">close</mat-icon>
+    </button>
+  </div>
+
+  <div class="cs-searchbar">
+    <mat-icon class="material-symbols-outlined">search</mat-icon>
+    <input
+      #searchInput
+      type="text"
+      placeholder="Search all keys"
+      [value]="query()"
+      (input)="onSearch(searchInput.value)"
+      autocomplete="off"
+    />
+  </div>
+
+  <div class="cs-pane-body kp-body" id="kp-body">
+    @if (isLoading()) {
+      <div class="cs-empty">Loading keys…</div>
+    } @else if (currentSections().length === 0) {
+      @if (query().trim()) {
+        <section class="cs-section">
+          <div class="cs-empty">No key matches “{{ query() }}”</div>
+        </section>
+      } @else {
+        <div class="cs-empty">No keys available</div>
+      }
+    } @else {
+      @for (section of currentSections(); track section.heading) {
+        @if (section.entries && section.entries.length > 0) {
+          <section class="cs-section">
+            <h3 class="cs-head">
+              <span>{{ section.heading }}</span>
+              @if (section.totalAvailable && section.totalAvailable > section.entries.length) {
+                <span class="cs-hint">showing top {{ section.entries.length }} of {{ section.totalAvailable | number }}</span>
+              }
+            </h3>
+            @for (entry of section.entries; track entry.key) {
+              <div
+                class="cs-row kp-row"
+                [class.kp-applied]="entry.applied"
+                [class.kp-inert]="isInert(entry)"
+                (click)="onPick(entry)"
+              >
+                <span class="cs-row-name">{{ getEntryName(entry) }}</span>
+                @if (getEntryMeta(entry); as meta) {
+                  <span class="cs-row-meta">{{ meta }}</span>
+                }
+              </div>
+            }
+            @if (section.totalAvailable && section.totalAvailable > section.entries.length) {
+              <div class="cs-more">Search above to find more</div>
+            }
+          </section>
+        }
+      }
+    }
+  </div>
+</div>

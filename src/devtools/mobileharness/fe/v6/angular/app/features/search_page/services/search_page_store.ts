@@ -48,6 +48,7 @@ import {
   getInitialRouterUrl,
   getQueryParamAsArray,
   getSerializedChipsKey,
+  getStoredAutoCollapseAfterApply,
   isChipNegated,
   isSameFilterChip,
   isSearchRouteActive,
@@ -56,6 +57,7 @@ import {
   resolveEntityFromPathOrUrl,
   resolveInitialChips,
   resolveInitialFleet,
+  saveStoredAutoCollapseAfterApply,
   serializeFilterChip,
 } from '../utils';
 
@@ -160,6 +162,28 @@ export abstract class SearchPageStore {
   /** Controls visibility of the search box suggestions popover dropdown. */
   readonly showSuggestions = signal<boolean>(false);
 
+  /** Per-user preference controlling whether the suggestions popover auto-collapses after applying a filter or group-by (defaults to true when absent in localStorage). */
+  readonly autoCollapseAfterApply = linkedSignal<
+    {entity: string; fleet: string; open: boolean},
+    boolean
+  >({
+    source: () => ({
+      entity: this.entity(),
+      fleet: this.fleet(),
+      open: this.showSuggestions(),
+    }),
+    computation: ({entity, fleet}) => {
+      const stored = getStoredAutoCollapseAfterApply(entity, fleet);
+      return stored !== null ? stored : true;
+    },
+  });
+
+  /** Updates and persists the auto-collapse preference to localStorage. */
+  setAutoCollapseAfterApply(enabled: boolean) {
+    this.autoCollapseAfterApply.set(enabled);
+    saveStoredAutoCollapseAfterApply(this.entity(), this.fleet(), enabled);
+  }
+
   // ===========================================================================
   // 3. ValuePicker Overlay State Signals
   // ===========================================================================
@@ -181,6 +205,16 @@ export abstract class SearchPageStore {
 
   /** Display title for the currently open ValuePicker. */
   readonly pickerTitle = computed(() => this.pickerConfig()?.title || '');
+
+  /** Temporary filter key definition staged from a quick filter link before values are applied. */
+  readonly pendingFilter = signal<{
+    key: string;
+    displayName: string;
+    metadata?: unknown;
+  } | null>(null);
+
+  /** Specific chip key currently focused or pulsed inside the suggestions popover. */
+  readonly focusChipKey = signal<string | null>(null);
 
   /**
    * Effective ValuePicker state presented to the popover overlay.
@@ -239,8 +273,15 @@ export abstract class SearchPageStore {
     () => this.activeChips().length > 0 || this.searchQuery().trim().length > 0,
   );
 
-  /** Whether the clear button ('X') in the search bar should be displayed. */
-  readonly showSearchClear = computed(() => this.hasActiveFilters());
+  /** Whether the clear button ('X') in the search bar should be displayed (only when text input is non-empty). */
+  readonly showSearchClear = computed<boolean>(
+    () => this.searchQuery().length > 0,
+  );
+
+  /** Clears only the text input in the search box without removing active filter or group-by chips. */
+  clearSearchQuery() {
+    this.searchQuery.set('');
+  }
 
   /** Whether the search view is currently in its initial landing / empty guide state. */
   readonly isLandingState = computed<boolean>(() => {
@@ -248,13 +289,50 @@ export abstract class SearchPageStore {
     return this.activeChips().length === 0 && !this.browseAll();
   });
 
-  /** List of active group-by field keys extracted from `activeChips`. */
-  readonly groupByKeys = computed<string[]>(
+  /** Active filter chips (excluding group-by chips). */
+  readonly filterChips = computed<FilterChip[]>(() =>
+    this.activeChips().filter((c) => !c.isGroupBy),
+  );
+
+  /** Active group-by chips. */
+  readonly groupByChips = computed<FilterChip[]>(() =>
+    this.activeChips().filter((c) => c.isGroupBy),
+  );
+
+  /** Key of a filter currently being edited in ValuePicker or pending via Quick Filter, not yet applied as an active chip. */
+  readonly pendingFilterKey = computed<string | null>(() => {
+    const pf = this.pendingFilter();
+    const pk = pf?.key || (this.showValuePicker() ? this.pickerKey() : null);
+    if (!pk) return null;
+    const hasApplied = this.filterChips().some(
+      (c) => getChipKey(c).toLowerCase() === pk.toLowerCase(),
+    );
+    return hasApplied ? null : pk;
+  });
+
+  /** Display title for the pending filter key being edited. */
+  readonly pendingFilterTitle = computed<string>(() => {
+    return (
+      this.pendingFilter()?.displayName ||
+      this.pickerTitle() ||
+      this.pendingFilterKey() ||
+      ''
+    );
+  });
+
+  /** Whether the suggestions popover panel should be open and visible below the search box. */
+  readonly isSuggestionsPanelOpen = computed<boolean>(
     () =>
-      this.activeChips()
-        .filter((c) => c.isGroupBy)
-        .map(getChipKey)
-        .filter(Boolean),
+      this.showSuggestions() &&
+      (this.activeChips().length > 0 ||
+        !!this.pendingFilterKey() ||
+        this.isSuggestionsLoading() ||
+        this.suggestions().length > 0),
+  );
+
+  /** List of active group-by field keys extracted from `groupByChips`. */
+  readonly groupByKeys = computed<string[]>(
+    () => this.groupByChips().map(getChipKey).filter(Boolean),
     {
       equal: (a, b) => a.length === b.length && a.every((k, i) => k === b[i]),
     },
@@ -262,10 +340,7 @@ export abstract class SearchPageStore {
 
   /** Serialized active filter parameter strings formatted for URL query. */
   readonly serializedActiveFilters = computed<string[]>(() =>
-    this.activeChips()
-      .filter((c) => !c.isGroupBy)
-      .map(serializeFilterChip)
-      .filter(Boolean),
+    this.filterChips().map(serializeFilterChip).filter(Boolean),
   );
 
   /** Canonical URL query parameter key computed from current active state. */
@@ -283,6 +358,9 @@ export abstract class SearchPageStore {
 
   /** Domain-specific autocomplete and recommendation suggestions for the search box. */
   abstract readonly suggestions: Signal<SearchBoxSuggestion[]>;
+
+  /** Whether search box autocomplete suggestions are currently loading. */
+  readonly isSuggestionsLoading: Signal<boolean> = signal(false);
 
   /** Loading state for primary search result data fetching. */
   abstract readonly isLoading: Signal<boolean>;
@@ -331,6 +409,9 @@ export abstract class SearchPageStore {
   /** Pre-formatted semantic range text for pagination footer display (e.g. "1 – 25 of 1,250", "showing 1–25"). */
   abstract readonly rangeText: Signal<string>;
 
+  /** Total matching count across search modes, or null if not available (e.g. in TJS cursor pagination). */
+  readonly effectiveTotalCount: Signal<number | null> = signal<number | null>(null);
+
   /** Triggers execution of the primary domain search query. */
   abstract executeSearch(): void;
 
@@ -346,8 +427,12 @@ export abstract class SearchPageStore {
   /** Handles user selection of an autocomplete suggestion from the search box popover. */
   selectSuggestion(item: SearchBoxSuggestion, anchor?: HTMLElement | null) {
     if (!item.rawItem) return;
-    this.showSuggestions.set(false);
     this.searchQuery.set('');
+    if (item.openPicker) {
+      this.showSuggestions.set(true);
+    } else {
+      this.showSuggestions.set(!this.autoCollapseAfterApply());
+    }
     this.applySuggestion(item.rawItem, anchor);
   }
 
@@ -555,6 +640,10 @@ export abstract class SearchPageStore {
       this.browseAll.set(false);
     }
 
+    if (this.autoCollapseAfterApply()) {
+      this.showSuggestions.set(false);
+    }
+
     // Automatically close the ValuePicker if all chips are removed or the chip being edited was removed.
     if (this.showValuePicker()) {
       const currentPickerKey = this.pickerConfig()?.key;
@@ -565,6 +654,35 @@ export abstract class SearchPageStore {
       ) {
         this.closeValuePicker();
       }
+    }
+    this.syncUrl(nextChips);
+  }
+
+  /** Removes all active filter chips while preserving any active group-by chips. */
+  clearFilterChips() {
+    const nextChips = this.groupByChips();
+    this.activeChips.set(nextChips);
+    if (nextChips.length === 0 && !this.searchQuery().trim()) {
+      this.browseAll.set(false);
+    }
+    if (this.autoCollapseAfterApply()) {
+      this.showSuggestions.set(false);
+    }
+    if (this.showValuePicker()) {
+      this.closeValuePicker();
+    }
+    this.syncUrl(nextChips);
+  }
+
+  /** Removes all active group-by chips while preserving any active filter chips. */
+  clearGroupByChips() {
+    const nextChips = this.filterChips();
+    this.activeChips.set(nextChips);
+    if (nextChips.length === 0 && !this.searchQuery().trim()) {
+      this.browseAll.set(false);
+    }
+    if (this.autoCollapseAfterApply()) {
+      this.showSuggestions.set(false);
     }
     this.syncUrl(nextChips);
   }
@@ -631,6 +749,98 @@ export abstract class SearchPageStore {
     return true;
   }
 
+  /** Function provided by SearchSuggestions to locate a popover chip's HTMLElement via Angular viewChildren. */
+  readonly locatePopoverChip = signal<
+    ((key: string, title?: string) => HTMLElement | null) | null
+  >(null);
+
+  /** Function provided by SearchSuggestions to locate the popover container element as a fallback anchor. */
+  readonly getPopoverContainer = signal<(() => HTMLElement | null) | null>(null);
+
+  /**
+   * Opens the Quick Filter flow matching prototype UI design:
+   * Opens the suggestions popover, creates a temporary/pending chip if the filter is not yet applied,
+   * focuses the chip in the popover, and opens the ValuePicker anchored to that popover chip in requestAnimationFrame.
+   */
+  openQuickFilter(
+    key: string,
+    title?: string,
+    metadata?: unknown,
+    stagedValues?: string[],
+  ) {
+    this.closeValuePicker();
+    const activeChip = this.activeChips().find(
+      (c) => !c.isGroupBy && isSameFilterChip(c, {key, isGroupBy: false}),
+    );
+    if (!activeChip) {
+      this.pendingFilter.set({
+        key,
+        displayName: title || key,
+        metadata,
+      });
+    } else {
+      this.pendingFilter.set(null);
+    }
+    this.focusChipKey.set(key);
+    this.showSuggestions.set(true);
+
+    const tryOpen = (retries = 10) => {
+      requestAnimationFrame(() => {
+        this.focusChipKey.set(key);
+        const locator = this.locatePopoverChip();
+        const chipEl = locator ? locator(key, title) : null;
+        if (chipEl) {
+          this.openValuePicker(
+            key,
+            chipEl,
+            title,
+            metadata,
+            stagedValues,
+            /* keepSuggestionsOpen= */ true,
+          );
+        } else if (retries > 0) {
+          tryOpen(retries - 1);
+        } else {
+          // If the specific chip element is not yet found after animation frames,
+          // anchor to the suggestions popover container to guarantee ValuePicker opens.
+          const fallback = this.getPopoverContainer()?.() || null;
+          this.openValuePicker(
+            key,
+            fallback,
+            title,
+            metadata,
+            stagedValues,
+            /* keepSuggestionsOpen= */ true,
+          );
+        }
+      });
+    };
+    tryOpen();
+  }
+
+  /**
+   * Opens the Quick Group-by flow matching prototype UI design:
+   * Adds the group-by key if not yet applied.
+   * Clicking an already-selected groupby always opens the suggestions popover to view/locate it;
+   * applying a new groupby respects autoCollapseAfterApply preference.
+   */
+  openQuickGroupBy(key: string, displayName?: string) {
+    const isAlreadyActive = this.groupByKeys().includes(key);
+    if (!isAlreadyActive) {
+      this.toggleGroupBy(key, displayName);
+    }
+    this.closeValuePicker();
+    this.focusChipKey.set(key);
+
+    if (isAlreadyActive) {
+      this.showSuggestions.set(true);
+    } else if (this.autoCollapseAfterApply()) {
+      this.showSuggestions.set(false);
+    } else {
+      this.showSuggestions.set(true);
+    }
+  }
+
   /** Opens the ValuePicker popover for the specified key, configuring layout and initial state. */
   openValuePicker(
     key: string,
@@ -638,7 +848,12 @@ export abstract class SearchPageStore {
     title?: string,
     metadata?: unknown,
     stagedValues?: string[],
+    keepSuggestionsOpen = false,
   ) {
+    if (!keepSuggestionsOpen) {
+      this.showSuggestions.set(false);
+    }
+
     if (this.isKeyPickerActive(key, title)) {
       this.closeValuePicker();
       return;
@@ -671,6 +886,8 @@ export abstract class SearchPageStore {
     this.pickerConfig.set(null);
     this.pickerState.set(INITIAL_VALUE_PICKER_STATE);
     this.pickerAnchor.set(null);
+    this.pendingFilter.set(null);
+    this.focusChipKey.set(null);
   }
 
   /** Resets transient UI state (query, overlays, suggestions). Override in subclasses to clear custom state. */

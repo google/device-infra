@@ -100,10 +100,18 @@ export class TjsSearchStore extends SearchPageStore {
       const show = this.showSuggestions();
       if (!show) return undefined;
 
+      const rawInput = this.searchQuery().trim();
+      const debouncedInput = this.debouncedSearchQuery().trim();
+      const filters = this.effectiveFilters();
+      const hasCriteria = filters.length > 0;
+
+      if (!rawInput && !hasCriteria) return undefined;
+      if (rawInput && !debouncedInput) return undefined;
+
       return {
         entity: this.entity(),
-        input: this.debouncedSearchQuery(),
-        filters: this.effectiveFilters(),
+        input: rawInput ? debouncedInput : '',
+        filters,
       };
     },
     stream: ({params: req}) => {
@@ -121,10 +129,24 @@ export class TjsSearchStore extends SearchPageStore {
     },
   });
 
-  /** Mapped search suggestions for SearchBox popover consumption. */
+  /** Mapped search suggestions for SearchBox popover consumption directly from the BFF response. */
   override readonly suggestions = computed<SearchBoxSuggestion[]>(() => {
-    return (this.suggestionsResource.value() || []).map(
-      mapToSearchBoxSuggestion,
+    const rawInput = this.searchQuery().trim();
+    const hasCriteria = this.effectiveFilters().length > 0;
+    if (!rawInput && !hasCriteria) return [];
+    const items = this.suggestionsResource.value() || [];
+    return items.map(mapToSearchBoxSuggestion);
+  });
+
+  /** Whether autocomplete suggestions are currently being fetched or debounced. */
+  override readonly isSuggestionsLoading = computed<boolean>(() => {
+    if (!this.showSuggestions()) return false;
+    const rawInput = this.searchQuery().trim();
+    const hasCriteria = this.effectiveFilters().length > 0;
+    if (!rawInput && !hasCriteria) return false;
+    return (
+      this.suggestionsResource.isLoading() ||
+      (Boolean(rawInput) && rawInput !== this.debouncedSearchQuery().trim())
     );
   });
 
@@ -682,6 +704,7 @@ export class TjsSearchStore extends SearchPageStore {
     const meta = key ? this.getKeyMetadata(key) : undefined;
     const displayTitle = meta?.keyDisplayName || title;
     this.closeValuePicker();
+    this.showSuggestions.set(!this.autoCollapseAfterApply());
 
     const rawValues = this.extractRawValues(event, meta);
     const draftChip: Partial<FilterChip> = {
@@ -758,7 +781,7 @@ export class TjsSearchStore extends SearchPageStore {
       const op = raw.openPicker;
       const meta = this.getKeyMetadata(op.key);
       const displayTitle = op.keyDisplayName || meta?.keyDisplayName || op.key;
-      this.openValuePicker(op.key, anchor || null, displayTitle, meta);
+      this.openQuickFilter(op.key, displayTitle, meta);
       return;
     }
 

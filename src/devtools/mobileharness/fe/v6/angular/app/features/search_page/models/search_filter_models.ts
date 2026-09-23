@@ -57,6 +57,9 @@ export interface PromotedGroupByKeyItem {
   key: string;
   displayName: string;
   groupCount?: number;
+  disabled?: boolean;
+  disabledReason?: string;
+  reason?: string;
 }
 
 /** Pair binding a FilterChip with its converted backend Protobuf filter contract. */
