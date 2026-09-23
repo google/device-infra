@@ -515,6 +515,12 @@ public class LabServer {
       // Disable exporting hsperf. Because that includes things which read /proc which doesn't
       // exist on OSX.
       System.setProperty("com.google.monitoring.streamz.JvmMetrics.export_hsperf", "false");
+      // Clears JVM HTTP(S) proxy properties so Lab Server network traffic bypasses macOS system
+      // proxy.
+      if (Flags.labServerIgnoreMacProxy.getNonNull()) {
+        System.setProperty("http.proxyHost", "");
+        System.setProperty("https.proxyHost", "");
+      }
     }
   }
 
