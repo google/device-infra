@@ -1125,6 +1125,15 @@ public class Flags {
               + " Default is true.")
   public static final Flag<Boolean> labServerCheckJobsFromMaster = Flag.value(true);
 
+  @FlagSpec(
+      name = "lab_server_ignore_mac_proxy",
+      help =
+          "If true on macOS, clears http.proxyHost and https.proxyHost in the Lab Server JVM to"
+              + " ensure the Lab Server's own network connections connect directly to Google"
+              + " services without using the host's system proxy. This only affects the Lab Server"
+              + " process and does not affect iOS simulators or devices running on the host.")
+  public static final Flag<Boolean> labServerIgnoreMacProxy = Flag.value(false);
+
   @FlagSpec(name = "lab_type", help = "The type of the lab server (e.g., Satellite, Core, SLaaS).")
   public static final Flag<String> labType = Flag.value("Satellite");
 
