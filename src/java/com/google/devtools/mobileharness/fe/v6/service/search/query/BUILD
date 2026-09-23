@@ -213,6 +213,7 @@ java_library(
     name = "scenario_curation",
     srcs = ["ScenarioCuration.java"],
     deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_registry",
         "@maven//:com_google_guava_guava",
@@ -366,7 +367,6 @@ java_library(
     srcs = ["FleetSearchConfigProvider.java"],
     deps = [
         ":scenario_curation",
-        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",

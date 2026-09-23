@@ -34,7 +34,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSearchConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSearchConfigRequest;
-import com.google.devtools.mobileharness.fe.v6.service.proto.search.KeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetTryCategory;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
@@ -132,24 +132,27 @@ public final class FleetSearchConfigProviderTest {
         public boolean landingEnabled() {
           return true;
         }
+
+        @Override
+        public ImmutableList<FleetTryCategory> deviceTryCategories() {
+          return ImmutableList.of(
+              ScenarioCuration.tryCategory("a value", "pixel"),
+              ScenarioCuration.tryCategory("a key", "Status"));
+        }
+
+        @Override
+        public ImmutableList<FleetTryCategory> hostTryCategories() {
+          return ImmutableList.of(
+              ScenarioCuration.tryCategory("a value", "lab-a"),
+              ScenarioCuration.tryCategory("a condition", "lab location is mtv"));
+        }
       };
 
   @Test
-  public void recommended_hasCuratedKeysWithDisplayNamesInOrder() {
+  public void recommended_isEmpty() {
     FleetSearchConfig config = provider.getConfig(snapshot, deviceRequest(), CURATION);
 
-    List<KeyDescriptor> recommended = config.getColumns().getRecommendedList();
-    List<String> keys = new ArrayList<>();
-    for (KeyDescriptor descriptor : recommended) {
-      keys.add(descriptor.getKey());
-      assertThat(descriptor.getDisplayName()).isNotEmpty();
-    }
-    assertThat(keys)
-        .containsExactly("device_field::status", "device_field::type", "dimension::model")
-        .inOrder();
-    assertThat(recommended.get(0).getDisplayName()).isEqualTo("Status");
-    assertThat(recommended.get(1).getDisplayName()).isEqualTo("Type");
-    assertThat(recommended.get(2).getDisplayName()).isEqualTo("Model");
+    assertThat(config.getColumns().getRecommendedList()).isEmpty();
   }
 
   @Test
@@ -188,8 +191,12 @@ public final class FleetSearchConfigProviderTest {
     assertThat(config.getLanding().getEnabled()).isTrue();
     assertThat(config.getLanding().getBrowseAllCount()).isEqualTo(snapshot.deviceCount());
     assertThat(config.getLanding().getBrowseAllCount()).isEqualTo(3);
-    // The try categories are populated by a follow-up, so none are returned yet.
-    assertThat(config.getLanding().getTryCategoriesList()).isEmpty();
+    List<FleetTryCategory> tryCategories = config.getLanding().getTryCategoriesList();
+    assertThat(tryCategories).hasSize(2);
+    assertThat(tryCategories.get(0).getLabel()).isEqualTo("a value");
+    assertThat(tryCategories.get(0).getExamples(0).getText()).isEqualTo("pixel");
+    assertThat(tryCategories.get(1).getLabel()).isEqualTo("a key");
+    assertThat(tryCategories.get(1).getExamples(0).getText()).isEqualTo("Status");
   }
 
   @Test
@@ -201,6 +208,12 @@ public final class FleetSearchConfigProviderTest {
 
     assertThat(config.getLanding().getBrowseAllCount()).isEqualTo(snapshot.hosts().size());
     assertThat(config.getLanding().getBrowseAllCount()).isEqualTo(2);
+    List<FleetTryCategory> tryCategories = config.getLanding().getTryCategoriesList();
+    assertThat(tryCategories).hasSize(2);
+    assertThat(tryCategories.get(0).getLabel()).isEqualTo("a value");
+    assertThat(tryCategories.get(0).getExamples(0).getText()).isEqualTo("lab-a");
+    assertThat(tryCategories.get(1).getLabel()).isEqualTo("a condition");
+    assertThat(tryCategories.get(1).getExamples(0).getText()).isEqualTo("lab location is mtv");
   }
 
   private static FleetSearchConfigRequest deviceRequest() {

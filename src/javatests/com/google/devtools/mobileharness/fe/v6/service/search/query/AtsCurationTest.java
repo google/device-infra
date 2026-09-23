@@ -121,4 +121,24 @@ public final class AtsCurationTest {
   public void landingEnabled_isFalse() {
     assertThat(curation.landingEnabled()).isFalse();
   }
+
+  @Test
+  public void hostTryCategories_isAtsList() {
+    assertThat(curation.hostTryCategories())
+        .containsExactly(
+            ScenarioCuration.tryCategory("a value", "error", "fusion"),
+            ScenarioCuration.tryCategory("a key", "lab location"),
+            ScenarioCuration.tryCategory("a condition", "lab location is mtv"))
+        .inOrder();
+  }
+
+  @Test
+  public void deviceTryCategories_isAtsList() {
+    assertThat(curation.deviceTryCategories())
+        .containsExactly(
+            ScenarioCuration.tryCategory("a value", "Pixel", "IDLE"),
+            ScenarioCuration.tryCategory("a key", "Status", "Model"),
+            ScenarioCuration.tryCategory("a condition", "Status is IDLE", "Model is Pixel 8"))
+        .inOrder();
+  }
 }

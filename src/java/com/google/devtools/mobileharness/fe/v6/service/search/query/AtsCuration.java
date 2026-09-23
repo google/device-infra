@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetTryCategory;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeyRegistry;
@@ -155,5 +156,21 @@ public final class AtsCuration implements ScenarioCuration {
   public boolean landingEnabled() {
     // A single local ATS controller is small enough to browse directly, so no landing page.
     return false;
+  }
+
+  @Override
+  public ImmutableList<FleetTryCategory> hostTryCategories() {
+    return ImmutableList.of(
+        ScenarioCuration.tryCategory("a value", "error", "fusion"),
+        ScenarioCuration.tryCategory("a key", "lab location"),
+        ScenarioCuration.tryCategory("a condition", "lab location is mtv"));
+  }
+
+  @Override
+  public ImmutableList<FleetTryCategory> deviceTryCategories() {
+    return ImmutableList.of(
+        ScenarioCuration.tryCategory("a value", "Pixel", "IDLE"),
+        ScenarioCuration.tryCategory("a key", "Status", "Model"),
+        ScenarioCuration.tryCategory("a condition", "Status is IDLE", "Model is Pixel 8"));
   }
 }
