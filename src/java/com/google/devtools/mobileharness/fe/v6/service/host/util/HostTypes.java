@@ -33,18 +33,15 @@ public final class HostTypes {
   public static final String LAB_TYPE_CORE = "Core Lab";
   public static final String LAB_TYPE_FUSION = "Fusion Lab";
   public static final String LAB_TYPE_SATELLITE = "Satellite Lab";
-  private static final String LAB_TYPE_SLAAS = "SLaaS";
-  private static final String LAB_TYPE_ATE = "ATE Lab";
-  private static final String LAB_TYPE_FIELD = "Riemann Field Lab";
+  public static final String LAB_TYPE_SLAAS = "SLaaS";
+  public static final String DEVICE_MANAGER_TYPE_FUSION = "Fusion";
+  public static final String DEVICE_MANAGER_TYPE_MH = "MH";
   private static final String LAB_TYPE_UNKNOWN = "Unknown";
 
   private static final ImmutableMap<String, UiLabType> ENUM_NAME_TO_UI_LAB_TYPE =
       ImmutableMap.of(
-          "FUSION_LAB", UiLabType.FUSION,
           "SHARED_LAB", UiLabType.CORE,
-          "MH_SATELLITE_LAB", UiLabType.SATELLITE,
-          "MH_ATE_LAB", UiLabType.ATE,
-          "RIEMANN_FIELD_LAB", UiLabType.RIEMANN_FIELD);
+          "MH_SATELLITE_LAB", UiLabType.SATELLITE);
 
   private static final ImmutableMap<String, UiLabType> PROP_TO_UI_LAB_TYPE =
       ImmutableMap.of(
@@ -55,11 +52,8 @@ public final class HostTypes {
   private static final ImmutableMap<UiLabType, String> UI_LAB_TYPE_TO_DISPLAY_NAME =
       new ImmutableMap.Builder<UiLabType, String>()
           .put(UiLabType.CORE, LAB_TYPE_CORE)
-          .put(UiLabType.FUSION, LAB_TYPE_FUSION)
           .put(UiLabType.SATELLITE, LAB_TYPE_SATELLITE)
           .put(UiLabType.SLAAS, LAB_TYPE_SLAAS)
-          .put(UiLabType.ATE, LAB_TYPE_ATE)
-          .put(UiLabType.RIEMANN_FIELD, LAB_TYPE_FIELD)
           .put(UiLabType.UNKNOWN, LAB_TYPE_UNKNOWN)
           .buildOrThrow();
 
@@ -68,40 +62,54 @@ public final class HostTypes {
   }
 
   public static boolean isCoreOrFusion(Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
-    return isCoreOrFusion(determineLabTypeDisplayNames(labInfoOpt, labTypeOpt));
+    return determineUiLabType(labInfoOpt, labTypeOpt)
+            .filter(type -> type == UiLabType.CORE)
+            .isPresent()
+        || determineDeviceManagerType(labInfoOpt, labTypeOpt).equals(DEVICE_MANAGER_TYPE_FUSION);
   }
 
   public static boolean isCoreOrFusionUiLabTypes(List<UiLabType> labTypes) {
     return labTypes.contains(UiLabType.CORE) || labTypes.contains(UiLabType.FUSION);
   }
 
-  // TODO: Better function signature to distinguish between the two sources of lab types.
+  /**
+   * Determines the single semantic {@link UiLabType} of the host ({@code CORE}, {@code SLAAS}, or
+   * {@code SATELLITE}).
+   */
+  public static Optional<UiLabType> determineUiLabType(
+      Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
+    String labTypeProp = getHostProperty(labInfoOpt, "lab_type");
+    UiLabType fromProp = PROP_TO_UI_LAB_TYPE.get(labTypeProp);
+    if (fromProp != null) {
+      return Optional.of(fromProp);
+    }
+    String typeEnumName = labTypeOpt.orElse("LAB_TYPE_UNSPECIFIED");
+    return Optional.ofNullable(ENUM_NAME_TO_UI_LAB_TYPE.get(typeEnumName));
+  }
+
   public static ImmutableList<UiLabType> determineUiLabTypes(
       Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
+    return determineUiLabType(labInfoOpt, labTypeOpt)
+        .map(ImmutableList::of)
+        .orElse(ImmutableList.of());
+  }
 
-    ImmutableList.Builder<UiLabType> builder = ImmutableList.builder();
-
-    String typeEnumName = labTypeOpt.orElse("LAB_TYPE_UNSPECIFIED");
-
-    String labTypeProp = getHostProperty(labInfoOpt, "lab_type");
-    String dmTypeProp = getHostProperty(labInfoOpt, "dm_type");
-
-    // Source 1: lab_type in host properties (Checked first to preserve order)
-    if (labTypeProp.equals("slaas")) {
-      builder.add(UiLabType.SATELLITE).add(UiLabType.SLAAS);
-    } else {
-      Optional.ofNullable(PROP_TO_UI_LAB_TYPE.get(labTypeProp)).ifPresent(builder::add);
+  /**
+   * Determines the Device Manager Type of the host ({@code "Fusion"} when {@code dm_type ==
+   * "fusion"} or {@code labType == "FUSION_LAB"}, otherwise {@code "MH"}).
+   */
+  public static String determineDeviceManagerType(
+      Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
+    if (getHostProperty(labInfoOpt, "dm_type").equals("fusion")
+        || labTypeOpt.filter("FUSION_LAB"::equals).isPresent()) {
+      return DEVICE_MANAGER_TYPE_FUSION;
     }
+    return DEVICE_MANAGER_TYPE_MH;
+  }
 
-    // Source 2: Release Server Host Info
-    Optional.ofNullable(ENUM_NAME_TO_UI_LAB_TYPE.get(typeEnumName)).ifPresent(builder::add);
-
-    // Source 3: dm_type in host properties (only for fusion)
-    if (dmTypeProp.equals("fusion")) {
-      builder.add(UiLabType.FUSION);
-    }
-
-    return builder.build().stream().distinct().collect(toImmutableList());
+  /** Returns true iff the Release Server {@code labType} is {@code "MH_ATE_LAB"}. */
+  public static boolean isAteLab(Optional<String> labTypeOpt) {
+    return labTypeOpt.filter("MH_ATE_LAB"::equals).isPresent();
   }
 
   /** Returns the user-facing display name for a {@link UiLabType} (for example "Core Lab"). */
@@ -110,7 +118,7 @@ public final class HostTypes {
   }
 
   /**
-   * @deprecated Use {@link #determineUiLabTypes(Optional, Optional)} instead. This is retained for
+   * @deprecated Use {@link #determineUiLabType(Optional, Optional)} instead. This is retained for
    *     backward compatibility with older frontends that expect pre-formatted strings.
    */
   @Deprecated

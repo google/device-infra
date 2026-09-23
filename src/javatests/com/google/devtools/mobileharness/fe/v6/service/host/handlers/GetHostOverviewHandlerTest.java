@@ -188,8 +188,10 @@ public final class GetHostOverviewHandlerTest {
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
-    assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Fusion Lab");
-    assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.FUSION);
+    assertThat(overview.getLabTypeDisplayNamesList()).isEmpty();
+    assertThat(overview.getUiLabTypesList()).isEmpty();
+    assertThat(overview.getDeviceManagerType()).isEqualTo("Fusion");
+    assertThat(overview.getIsAte()).isFalse();
     assertThat(overview.getLabServer().getActions().getRelease().getEnabled()).isFalse();
     assertThat(overview.getShowPassThroughFlags()).isFalse();
   }
@@ -207,6 +209,9 @@ public final class GetHostOverviewHandlerTest {
             .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Core Lab");
     assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.CORE);
+    assertThat(overview.getUiLabType()).isEqualTo(UiLabType.CORE);
+    assertThat(overview.getDeviceManagerType()).isEqualTo("MH");
+    assertThat(overview.getIsAte()).isFalse();
   }
 
   @Test
@@ -218,6 +223,8 @@ public final class GetHostOverviewHandlerTest {
             .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Core Lab");
     assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.CORE);
+    assertThat(overview.getUiLabType()).isEqualTo(UiLabType.CORE);
+    assertThat(overview.getDeviceManagerType()).isEqualTo("MH");
     assertThat(overview.getShowPassThroughFlags()).isFalse();
   }
 
@@ -228,12 +235,10 @@ public final class GetHostOverviewHandlerTest {
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
-    assertThat(overview.getLabTypeDisplayNamesList())
-        .containsExactly("Satellite Lab", "SLaaS")
-        .inOrder();
-    assertThat(overview.getUiLabTypesList())
-        .containsExactly(UiLabType.SATELLITE, UiLabType.SLAAS)
-        .inOrder();
+    assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("SLaaS");
+    assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.SLAAS);
+    assertThat(overview.getUiLabType()).isEqualTo(UiLabType.SLAAS);
+    assertThat(overview.getDeviceManagerType()).isEqualTo("MH");
   }
 
   @Test
@@ -245,6 +250,8 @@ public final class GetHostOverviewHandlerTest {
             .getOverviewContent();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Satellite Lab");
     assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.SATELLITE);
+    assertThat(overview.getUiLabType()).isEqualTo(UiLabType.SATELLITE);
+    assertThat(overview.getDeviceManagerType()).isEqualTo("MH");
     assertThat(overview.getShowPassThroughFlags()).isTrue();
   }
 
@@ -306,12 +313,10 @@ public final class GetHostOverviewHandlerTest {
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
-    assertThat(overview.getLabTypeDisplayNamesList())
-        .containsExactly("Satellite Lab", "ATE Lab")
-        .inOrder();
-    assertThat(overview.getUiLabTypesList())
-        .containsExactly(UiLabType.SATELLITE, UiLabType.ATE)
-        .inOrder();
+    assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Satellite Lab");
+    assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.SATELLITE);
+    assertThat(overview.getUiLabType()).isEqualTo(UiLabType.SATELLITE);
+    assertThat(overview.getIsAte()).isTrue();
   }
 
   @Test
@@ -328,12 +333,10 @@ public final class GetHostOverviewHandlerTest {
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
-    assertThat(overview.getLabTypeDisplayNamesList())
-        .containsExactly("Satellite Lab", "Riemann Field Lab")
-        .inOrder();
-    assertThat(overview.getUiLabTypesList())
-        .containsExactly(UiLabType.SATELLITE, UiLabType.RIEMANN_FIELD)
-        .inOrder();
+    assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Satellite Lab");
+    assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.SATELLITE);
+    assertThat(overview.getUiLabType()).isEqualTo(UiLabType.SATELLITE);
+    assertThat(overview.getIsAte()).isFalse();
   }
 
   @Test

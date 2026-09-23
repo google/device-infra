@@ -261,13 +261,19 @@ public final class GetHostOverviewHandler {
     builder.setOs(properties.getOrDefault("host_os", "Unknown")).setCanUpgrade(canUpgrade);
 
     Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
+    Optional<UiLabType> uiLabTypeOpt = HostTypes.determineUiLabType(labInfoOpt, labTypeOpt);
     ImmutableList<UiLabType> uiLabTypes = HostTypes.determineUiLabTypes(labInfoOpt, labTypeOpt);
     ImmutableList<String> labTypes = HostTypes.determineLabTypeDisplayNames(labInfoOpt, labTypeOpt);
-    boolean isCoreOrFusion = HostTypes.isCoreOrFusionUiLabTypes(uiLabTypes);
+    String deviceManagerType = HostTypes.determineDeviceManagerType(labInfoOpt, labTypeOpt);
+    boolean isAte = HostTypes.isAteLab(labTypeOpt);
+    boolean isCoreOrFusion = HostTypes.isCoreOrFusion(labInfoOpt, labTypeOpt);
 
+    uiLabTypeOpt.ifPresent(builder::setUiLabType);
     return builder
         .addAllLabTypeDisplayNames(labTypes) // Legacy field for backward compatibility
         .addAllUiLabTypes(uiLabTypes)
+        .setDeviceManagerType(deviceManagerType)
+        .setIsAte(isAte)
         .setShowPassThroughFlags(!isCoreOrFusion)
         .setLabServer(labServerInfo)
         .setDaemonServer(buildDaemonServerInfo(hostReleaseInfoOpt, releaseStatus))

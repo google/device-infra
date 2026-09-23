@@ -144,10 +144,12 @@ describe('HostOverview Component', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should display all lab types from uiLabTypes', () => {
+  it('should display single lab type and device manager type', () => {
     fixture.componentRef.setInput('host', {
       ...mockHost,
-      uiLabTypes: ['SATELLITE', 'SLAAS'],
+      uiLabType: 'SLAAS',
+      uiLabTypes: ['SLAAS'],
+      deviceManagerType: 'Fusion',
     });
     fixture.detectChanges();
 
@@ -155,8 +157,8 @@ describe('HostOverview Component', () => {
     const chips = compiled.querySelectorAll('.lab-type-wrapper .lab-type-chip');
     if (component.isGoogle1p) {
       expect(chips.length).toBe(2);
-      expect(chips[0].textContent?.trim()).toBe('Satellite');
-      expect(chips[1].textContent?.trim()).toBe('SLaaS');
+      expect(chips[0].textContent?.trim()).toBe('SLaaS');
+      expect(chips[1].textContent?.trim()).toBe('Fusion');
     } else {
       expect(chips.length).toBe(0);
     }
@@ -165,7 +167,7 @@ describe('HostOverview Component', () => {
   it('should correctly identify ATE host', () => {
     fixture.componentRef.setInput('host', {
       ...mockHost,
-      uiLabTypes: ['ATE'],
+      isAte: true,
     });
     expect(component.isAteHost()).toBeTrue();
     expect(component.isSatelliteLab()).toBeFalse();

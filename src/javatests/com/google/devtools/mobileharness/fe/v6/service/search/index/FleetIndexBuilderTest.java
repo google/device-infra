@@ -332,21 +332,25 @@ public final class FleetIndexBuilderTest {
     FleetSnapshot snapshot = builder.build(raw, BUILD_TIME);
     FleetIndex index = snapshot.index();
 
-    assertThat(snapshot.hosts().get(0).values("host_field::lab_type"))
-        .containsExactly("Satellite Lab", "SLaaS", "Core Lab", "Fusion Lab")
-        .inOrder();
+    assertThat(snapshot.hosts().get(0).values("host_field::lab_type")).containsExactly("SLaaS");
+    assertThat(snapshot.hosts().get(0).values("host_field::device_manager_type"))
+        .containsExactly("Fusion");
+    assertThat(snapshot.hosts().get(0).values("host_field::ate")).containsExactly("No");
 
-    assertThat(index.sortedValues("host_field::lab_type"))
-        .containsExactly("core lab", "fusion lab", "satellite lab", "slaas")
-        .inOrder();
+    assertThat(index.sortedValues("host_field::lab_type")).containsExactly("slaas");
     assertThat(index.valueDisplays("host_field::lab_type")).containsEntry("slaas", "SLaaS");
-    assertThat(index.valueDisplays("host_field::lab_type"))
-        .containsEntry("fusion lab", "Fusion Lab");
-    assertThat(index.valueCount("host_field::lab_type", "core lab")).isEqualTo(1);
+    assertThat(index.valueDisplays("host_field::device_manager_type"))
+        .containsEntry("fusion", "Fusion");
+    assertThat(index.valueDisplays("host_field::ate")).containsEntry("no", "No");
+    assertThat(index.valueCount("host_field::lab_type", "slaas")).isEqualTo(1);
+    assertThat(index.valueCount("host_field::device_manager_type", "fusion")).isEqualTo(1);
+    assertThat(index.valueCount("host_field::ate", "no")).isEqualTo(1);
 
     LazyPostings postings = new LazyPostings(snapshot.devices());
-    assertThat(posting(postings, "host_field::lab_type", "core lab")).containsExactly(0);
+    assertThat(posting(postings, "host_field::lab_type", "slaas")).containsExactly(0);
     assertThat(snapshot.hosts().get(1).values("host_field::lab_type")).isEmpty();
+    assertThat(snapshot.hosts().get(1).values("host_field::device_manager_type")).isEmpty();
+    assertThat(snapshot.hosts().get(1).values("host_field::ate")).isEmpty();
     assertThat(posting(postings, "host_field::lab_type", "slaas")).doesNotContain(1);
 
     assertThat(index.valueCount("host_field::daemon_status", "running")).isEqualTo(0);
