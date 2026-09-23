@@ -238,7 +238,7 @@ public class DeviceConditionUtilTest {
 
     assertThat(
             DeviceConditionUtil.shouldRemoveMissingDevice(
-                deviceDao, ImmutableSet.of(), ImmutableSet.of()))
+                deviceDao, ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of()))
         .isTrue();
   }
 
@@ -262,7 +262,7 @@ public class DeviceConditionUtilTest {
 
     assertThat(
             DeviceConditionUtil.shouldRemoveMissingDevice(
-                deviceDao, ImmutableSet.of(), ImmutableSet.of()))
+                deviceDao, ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of()))
         .isTrue();
   }
 
@@ -293,7 +293,7 @@ public class DeviceConditionUtilTest {
 
     assertThat(
             DeviceConditionUtil.shouldRemoveMissingDevice(
-                deviceDao, ImmutableSet.of(), ImmutableSet.of()))
+                deviceDao, ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of()))
         .isTrue();
   }
 
@@ -317,7 +317,7 @@ public class DeviceConditionUtilTest {
 
     assertThat(
             DeviceConditionUtil.shouldRemoveMissingDevice(
-                deviceDao, ImmutableSet.of(), ImmutableSet.of()))
+                deviceDao, ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of()))
         .isTrue();
   }
 
@@ -338,7 +338,7 @@ public class DeviceConditionUtilTest {
         DeviceDao.create(deviceLocator, DeviceProfile.getDefaultInstance(), deviceCondition);
     assertThat(
             DeviceConditionUtil.shouldRemoveMissingDevice(
-                deviceDao, ImmutableSet.of("id"), ImmutableSet.of()))
+                deviceDao, ImmutableSet.of("id"), ImmutableSet.of(), ImmutableSet.of()))
         .isTrue();
   }
 
@@ -359,7 +359,7 @@ public class DeviceConditionUtilTest {
 
     assertThat(
             DeviceConditionUtil.shouldRemoveMissingDevice(
-                deviceDao, ImmutableSet.of(), ImmutableSet.of()))
+                deviceDao, ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of()))
         .isFalse();
 
     deviceCondition =
@@ -376,7 +376,7 @@ public class DeviceConditionUtilTest {
 
     assertThat(
             DeviceConditionUtil.shouldRemoveMissingDevice(
-                deviceDao, ImmutableSet.of(), ImmutableSet.of()))
+                deviceDao, ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of()))
         .isFalse();
   }
 
@@ -396,13 +396,40 @@ public class DeviceConditionUtilTest {
     // Should be removed: the MISSING device's ID matches a soc_id of an alive device.
     assertThat(
             DeviceConditionUtil.shouldRemoveMissingDevice(
-                deviceDao, ImmutableSet.of(), ImmutableSet.of("id")))
+                deviceDao, ImmutableSet.of(), ImmutableSet.of("id"), ImmutableSet.of()))
         .isTrue();
 
     // Should not be removed: the soc_id set doesn't contain the device's ID.
     assertThat(
             DeviceConditionUtil.shouldRemoveMissingDevice(
-                deviceDao, ImmutableSet.of(), ImmutableSet.of("other_soc_id")))
+                deviceDao, ImmutableSet.of(), ImmutableSet.of("other_soc_id"), ImmutableSet.of()))
+        .isFalse();
+  }
+
+  @Test
+  public void shouldRemove_missingDeviceIsAliveTestbedSubDevice() {
+    // The device stopped heartbeating on its own because it was absorbed into a testbed, so its
+    // standalone record went MISSING well before the removal threshold (b/563238216).
+    DeviceCondition deviceCondition =
+        DeviceCondition.newBuilder()
+            .setStatusFromLab(DeviceStatus.MISSING)
+            .setSyncTimeMsFromMaster(Instant.now().toEpochMilli())
+            .setSyncTimeMsFromLab(Instant.now().toEpochMilli())
+            .build();
+    deviceDao =
+        DeviceDao.create(deviceLocator, DeviceProfile.getDefaultInstance(), deviceCondition);
+
+    // Should be removed: the device is a sub-device of an alive testbed, even though it is far
+    // from the removal threshold.
+    assertThat(
+            DeviceConditionUtil.shouldRemoveMissingDevice(
+                deviceDao, ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of("id")))
+        .isTrue();
+
+    // Should not be removed: the device is not claimed by any alive testbed.
+    assertThat(
+            DeviceConditionUtil.shouldRemoveMissingDevice(
+                deviceDao, ImmutableSet.of(), ImmutableSet.of(), ImmutableSet.of("other_id")))
         .isFalse();
   }
 

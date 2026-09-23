@@ -185,17 +185,23 @@ public final class DeviceConditionUtil {
   }
 
   /**
-   * Checks whether the device is MISSING and its timestamp is older than {@link
-   * #missingDeviceRemovalThreshold} or the device appears in other labs, or the device's ID matches
+   * Checks whether the device is MISSING and its timestamp is older than {@code
+   * missingDeviceRemovalThreshold} or the device appears in other labs, or the device's ID matches
    * the soc_id of any alive device (i.e., the device is a ghost SoC chip ID entry from ROM recovery
-   * mode, see b/504622331). If so, we will totally remove it from the Master Central DB.
+   * mode, see b/504622331), or the device is currently a sub-device of an alive testbed on the same
+   * host (i.e., the record is an orphaned standalone stub left behind when the device joined the
+   * testbed, see b/563238216). If so, we will totally remove it from the Master Central DB.
    */
   public static boolean shouldRemoveMissingDevice(
-      DeviceDao deviceDao, Set<String> aliveDevicesInOtherLabs, Set<String> aliveDeviceSocIds) {
+      DeviceDao deviceDao,
+      Set<String> aliveDevicesInOtherLabs,
+      Set<String> aliveDeviceSocIds,
+      Set<String> aliveTestbedSubDeviceIds) {
     return deviceDao.condition().getStatusFromLab().equals(DeviceStatus.MISSING)
         && (exceedRemovalThreshold(deviceDao)
             || aliveDevicesInOtherLabs.contains(deviceDao.locator().id())
-            || aliveDeviceSocIds.contains(deviceDao.locator().id()));
+            || aliveDeviceSocIds.contains(deviceDao.locator().id())
+            || aliveTestbedSubDeviceIds.contains(deviceDao.locator().id()));
   }
 
   private static boolean exceedRemovalThreshold(DeviceDao deviceDao) {
