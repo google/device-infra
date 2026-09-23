@@ -317,6 +317,9 @@ export function createDefaultHostOverview(hostName: string): HostOverview {
     canUpgrade: true,
 
     uiLabTypes: ['SATELLITE'],
+    labType: 'Satellite',
+    deviceManagerType: 'MH',
+    isAte: false,
     labServer: {
       connectivity: {
         state: 'RUNNING',

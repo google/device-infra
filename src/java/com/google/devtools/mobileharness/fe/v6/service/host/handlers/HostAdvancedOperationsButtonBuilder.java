@@ -20,7 +20,6 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostConnectivityStatus;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.UiLabType;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -42,7 +41,8 @@ public final class HostAdvancedOperationsButtonBuilder {
       Optional<String> labTypeOpt,
       HostConnectivityStatus connectivityStatus) {
     boolean isFusion =
-        HostTypes.determineUiLabTypes(labInfoOpt, labTypeOpt).contains(UiLabType.FUSION);
+        HostTypes.determineDeviceManagerType(labInfoOpt, labTypeOpt)
+            .equals(HostTypes.DEVICE_MANAGER_TYPE_FUSION);
     boolean isReady = featureReadiness.isAdvancedOperationsReady();
 
     // Advanced operations run against a live lab server, so they are only enabled when the lab

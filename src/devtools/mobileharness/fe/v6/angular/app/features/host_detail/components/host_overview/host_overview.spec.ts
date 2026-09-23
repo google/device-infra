@@ -44,6 +44,9 @@ describe('HostOverview Component', () => {
       ip: '192.168.1.101',
       labTypeDisplayNames: ['Core Lab'],
       uiLabTypes: ['CORE'],
+      labType: 'Core',
+      deviceManagerType: 'MH',
+      isAte: false,
       labServer: {
         connectivity: {
           state: 'RUNNING',
@@ -144,10 +147,11 @@ describe('HostOverview Component', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should display all lab types from uiLabTypes', () => {
+  it('should display single lab type and device manager type', () => {
     fixture.componentRef.setInput('host', {
       ...mockHost,
-      uiLabTypes: ['SATELLITE', 'SLAAS'],
+      labType: 'SLaaS',
+      deviceManagerType: 'Fusion',
     });
     fixture.detectChanges();
 
@@ -155,29 +159,12 @@ describe('HostOverview Component', () => {
     const chips = compiled.querySelectorAll('.lab-type-wrapper .lab-type-chip');
     if (component.isGoogle1p) {
       expect(chips.length).toBe(2);
-      expect(chips[0].textContent?.trim()).toBe('Satellite');
-      expect(chips[1].textContent?.trim()).toBe('SLaaS');
+      expect(chips[0].textContent?.trim()).toBe('SLaaS');
+      expect(chips[1].textContent?.trim()).toBe('Fusion');
+      expect(chips[1].classList.contains('lab-type-chip-fusion')).toBeTrue();
     } else {
       expect(chips.length).toBe(0);
     }
-  });
-
-  it('should correctly identify ATE host', () => {
-    fixture.componentRef.setInput('host', {
-      ...mockHost,
-      uiLabTypes: ['ATE'],
-    });
-    expect(component.isAteHost()).toBeTrue();
-    expect(component.isSatelliteLab()).toBeFalse();
-  });
-
-  it('should correctly identify Satellite host', () => {
-    fixture.componentRef.setInput('host', {
-      ...mockHost,
-      uiLabTypes: ['SATELLITE'],
-    });
-    expect(component.isAteHost()).toBeFalse();
-    expect(component.isSatelliteLab()).toBeTrue();
   });
 
   it('should display visible lab server actions', () => {
