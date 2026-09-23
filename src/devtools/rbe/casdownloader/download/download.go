@@ -405,9 +405,9 @@ func (d *DownloadJob) downloadWithoutLocalCache(ctx context.Context, outputs []*
 	return nil
 }
 
-func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Cache, outputs []*client.TreeOutput) error {
+func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache, outputs []*client.TreeOutput) error {
 	start := time.Now()
-	cached, missed, err := cache.Pull(ctx, outputs)
+	cached, missed, err := c.Pull(ctx, outputs)
 	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
 			return context.DeadlineExceeded
@@ -429,6 +429,37 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 		sumSize += output.Digest.Size
 	}
 	log.InfoContextf(ctx, "start downloading %d files, estimated size %v", len(toDownload), units.Size(sumSize))
+
+	// Make room before fetching rather than after.
+	//
+	// These bytes land in the output directory, and the cache is only offered
+	// them afterwards, at Push. A cache that evicted on ingest would therefore
+	// always be reacting to a disk that had already filled: that is precisely
+	// how the production ENOSPC arose, since luci's cache trims from Add. The
+	// check belongs here, where the size of what is about to be written is
+	// known and nothing has been written yet.
+	//
+	// Reserving is an optional capability rather than part of Cache, so
+	// LocalCache keeps its existing behavior untouched while the lock-free
+	// implementation rolls out.
+	//
+	// sumSize is a floor, not the true cost: it counts blob contents and not
+	// the filesystem's block rounding, which for a tree of many small files is
+	// not negligible. EnsureHeadroom absorbs some of that slack by also
+	// insisting the low watermark survive the write.
+	if reserver, ok := c.(cache.HeadroomReserver); ok {
+		// A failure here is fatal, because by contract it means the write
+		// cannot fit: falling short of the low watermark is a warning and
+		// returns nil, so an error says free space is genuinely below what we
+		// are about to fetch. The download would then hit ENOSPC on the same
+		// volume moments later. Stopping costs nothing that proceeding would
+		// have saved, and it reports the real reason, before the bytes rather
+		// than after -- which is the whole point of checking here.
+		if err := reserver.EnsureHeadroom(ctx, sumSize); err != nil {
+			removeLeftOverFiles(outputs)
+			return fmt.Errorf("not enough disk space to download %v: %w", units.Size(sumSize), err)
+		}
+	}
 
 	var cancel context.CancelFunc = func() {}
 	if d.MinDownloadMbps > 0 { // only set timeout if minDownloadMbps is positive.
@@ -454,7 +485,7 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, cache cache.Ca
 
 	// Push downloaded files to local cache
 	start = time.Now()
-	if err := cache.Push(ctx, toDownload); err != nil {
+	if err := c.Push(ctx, toDownload); err != nil {
 		removeLeftOverFiles(outputs)
 		if ctx.Err() == context.DeadlineExceeded {
 			return context.DeadlineExceeded
