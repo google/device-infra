@@ -128,6 +128,12 @@ message DeviceRecord {
 
   // The extra dimensions of the device.
   repeated StrPair extra_dimensions = 18;
+
+  // The health category of the device in upper case, e.g.
+  // "HEALTH_CATEGORY_IN_SERVICE", "HEALTH_CATEGORY_IN_TRANSITION",
+  // "HEALTH_CATEGORY_IN_AUTO_RECOVERY", "HEALTH_CATEGORY_NEED_MANUAL_REPAIR",
+  // "HEALTH_CATEGORY_UNSPECIFIED".
+  string health_category = 19;
 }
 
 message StrPair {
