@@ -153,9 +153,8 @@ public final class GetHostOverviewHandler {
               Optional<HostReleaseInfo.ComponentInfo> labReleaseOpt =
                   hostReleaseInfoOpt.flatMap(HostReleaseInfo::labServerReleaseInfo);
               boolean isCoreLab =
-                  HostTypes.determineUiLabTypes(
-                          labInfoOpt, hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType))
-                      .contains(UiLabType.CORE);
+                  HostTypes.isCoreLab(
+                      labInfoOpt, hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType));
               LabServerReleaseStatus releaseStatus = LabActivities.create(labReleaseOpt, isCoreLab);
 
               LabServerInfo labServerInfo =
@@ -226,6 +225,9 @@ public final class GetHostOverviewHandler {
         .build();
   }
 
+  // Populates legacy deprecated lab_type_display_names and ui_lab_types fields for backward
+  // compatibility.
+  @SuppressWarnings("deprecation")
   private HostOverview buildHostOverview(
       String hostName,
       Optional<LabInfo> labInfoOpt,
@@ -261,13 +263,20 @@ public final class GetHostOverviewHandler {
     builder.setOs(properties.getOrDefault("host_os", "Unknown")).setCanUpgrade(canUpgrade);
 
     Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
+    Optional<String> hostDetailLabTypeOpt =
+        HostTypes.determineHostDetailLabType(labInfoOpt, labTypeOpt);
     ImmutableList<UiLabType> uiLabTypes = HostTypes.determineUiLabTypes(labInfoOpt, labTypeOpt);
     ImmutableList<String> labTypes = HostTypes.determineLabTypeDisplayNames(labInfoOpt, labTypeOpt);
-    boolean isCoreOrFusion = HostTypes.isCoreOrFusionUiLabTypes(uiLabTypes);
+    String deviceManagerType = HostTypes.determineDeviceManagerType(labInfoOpt, labTypeOpt);
+    boolean isAte = HostTypes.isAteLab(labTypeOpt);
+    boolean isCoreOrFusion = HostTypes.isCoreOrFusion(labInfoOpt, labTypeOpt);
 
+    hostDetailLabTypeOpt.ifPresent(builder::setLabType);
     return builder
         .addAllLabTypeDisplayNames(labTypes) // Legacy field for backward compatibility
-        .addAllUiLabTypes(uiLabTypes)
+        .addAllUiLabTypes(uiLabTypes) // Legacy field for backward compatibility
+        .setDeviceManagerType(deviceManagerType)
+        .setIsAte(isAte)
         .setShowPassThroughFlags(!isCoreOrFusion)
         .setLabServer(labServerInfo)
         .setDaemonServer(buildDaemonServerInfo(hostReleaseInfoOpt, releaseStatus))
