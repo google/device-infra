@@ -60,7 +60,6 @@ import {
   DiagnosticLink,
   HostConnectivityStatus,
   LabServerReleaseStatus,
-  UiLabType,
   type HostOverview,
 } from '../../../../core/models/host_overview';
 
@@ -266,41 +265,6 @@ export class HostOverviewPage {
         this.loadDevices();
       });
     });
-  }
-
-  readonly isAteHost = computed(() => {
-    return this.localHost().uiLabTypes?.includes('ATE') ?? false;
-  });
-
-  readonly displayLabTypes = computed(() => {
-    return (
-      this.localHost().uiLabTypes?.map((type) =>
-        this.mapUiLabTypeToString(type),
-      ) ?? []
-    );
-  });
-
-  readonly isSatelliteLab = computed(() => {
-    return this.localHost().uiLabTypes?.includes('SATELLITE') ?? false;
-  });
-
-  private mapUiLabTypeToString(type: UiLabType): string {
-    switch (type) {
-      case 'CORE':
-        return 'Core';
-      case 'FUSION':
-        return 'Fusion';
-      case 'SATELLITE':
-        return 'Satellite';
-      case 'SLAAS':
-        return 'SLaaS';
-      case 'ATE':
-        return 'ATE';
-      case 'RIEMANN_FIELD':
-        return 'Riemann Field';
-      default:
-        return 'Unknown';
-    }
   }
 
   readonly passThroughFlags = this.actionService.passThroughFlags;

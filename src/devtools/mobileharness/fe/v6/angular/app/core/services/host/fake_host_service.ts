@@ -89,17 +89,43 @@ export class FakeHostService extends HostService {
         ? structuredClone(scenario.overview)
         : undefined;
 
-      if (overview && overview.labServer && !overview.labServer.actions) {
+      if (overview) {
+        const uiLabTypes = overview.uiLabTypes ?? [];
+        const labType =
+          overview.labType ??
+          (uiLabTypes.includes('CORE')
+            ? 'Core'
+            : uiLabTypes.includes('SLAAS')
+              ? 'SLaaS'
+              : 'Satellite');
+        const deviceManagerType =
+          overview.deviceManagerType ??
+          (uiLabTypes.includes('FUSION') ? 'Fusion' : 'MH');
+        const isAte = overview.isAte ?? uiLabTypes.includes('ATE');
+        const showMissingDaemonWarning =
+          overview.daemonServer?.showMissingDaemonWarning ??
+          (overview.daemonServer?.status?.state === 'MISSING' &&
+            labType === 'Satellite');
+
         overview = {
           ...overview,
+          labType,
+          deviceManagerType,
+          isAte,
+          daemonServer: {
+            ...overview.daemonServer,
+            showMissingDaemonWarning,
+          },
           labServer: {
             ...overview.labServer,
-            actions: createLabServerActions(
-              overview.labServer.connectivity?.state,
-              overview.daemonServer?.labServerReleaseStatus?.state,
-              overview.daemonServer?.status?.state,
-              overview.uiLabTypes,
-            ),
+            actions:
+              overview.labServer?.actions ??
+              createLabServerActions(
+                overview.labServer?.connectivity?.state,
+                overview.daemonServer?.labServerReleaseStatus?.state,
+                overview.daemonServer?.status?.state,
+                overview.uiLabTypes,
+              ),
           },
         };
       }
