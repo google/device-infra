@@ -973,8 +973,27 @@ public class TradefedTest extends BaseDriver
     } else {
       getDeviceIds().forEach(serial -> tradefedRunCommand.add("-s", serial));
     }
+    appendNetworkDeviceFlags(tradefedRunCommand);
     appendInvocationDataFromHelper(tradefedRunCommand);
     return tradefedRunCommand.addAll(tradefedRunStrategy.getExtraRunCommandArgs(testInfo)).build();
+  }
+
+  /**
+   * Appends the flags required by Tradefed when the DUT is reached over TCP/IP instead of a USB
+   * cable
+   */
+  private void appendNetworkDeviceFlags(ImmutableList.Builder<String> tradefedRunCommand) {
+    // AndroidDesktopExecutorDevice currently does not support CompositeDevice or Multi-Dut devices.
+    // We will revisit this for tradefed when we address b/475282063.
+    if (!(getDevice() instanceof AndroidDesktopExecutorDevice)) {
+      return;
+    }
+
+    String deviceId = getDevice().getDeviceId();
+    if (deviceId == null || !deviceId.contains(":")) {
+      return;
+    }
+    tradefedRunCommand.add("--instance-type", "NETWORK_DEVICE", "--no-use-ipv6-for-tcp-fastboot");
   }
 
   private void appendInvocationDataFromHelper(ImmutableList.Builder<String> tradefedRunCommand)
@@ -985,8 +1004,9 @@ public class TradefedTest extends BaseDriver
       return;
     }
 
-    Map<String, String> dimensions =
-        androidDesktopDeviceHelper.getDeviceDimensions(getDevice().getDeviceId());
+    String dutName = getTest().properties().get("dut_name");
+    String targetHost = Strings.isNullOrEmpty(dutName) ? getDevice().getDeviceId() : dutName;
+    Map<String, String> dimensions = androidDesktopDeviceHelper.getDeviceDimensions(targetHost);
     dimensions.forEach((key, value) -> addInvocationData(tradefedRunCommand, key, value));
   }
 

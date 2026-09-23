@@ -129,6 +129,13 @@ public interface CrosDecoratorSpec {
   Duration DEFAULT_FOIL_PROVISION_TIMEOUT = Duration.ofMinutes(60);
 
   // Inventory service related constants.
+  /** Parameter name for the endpoint (host:port) of the inventory service. */
+  @ParamAnnotation(help = "Endpoint (host:port) of the inventory service.", required = false)
+  String INVENTORY_SERVICE = "inventory_service";
+
+  /** The default endpoint for the inventory service. */
+  String DEFAULT_INVENTORY_SERVICE = "localhost:1485";
+
   /** Parameter name for the hostname or IP address of the inventory service. */
   @ParamAnnotation(help = "Hostname or IP address of the inventory service.", required = false)
   String INVENTORY_SERVICE_HOST = "inventory_service_host";
