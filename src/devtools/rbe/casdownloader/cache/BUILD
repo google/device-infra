@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -25,13 +25,26 @@ go_library(
     srcs = [
         "cache.go",
         "localcache.go",
+        "lockfreecache.go",
     ],
     importpath = "github.com/google/device-infra/src/devtools/rbe/casdownloader/cache",
     deps = [
+        "//src/devtools/rbe/common/storage",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/client",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/digest",
         "@com_github_golang_glog//:glog",
         "@org_chromium_go_luci//common/data/caching/cache",
         "@org_chromium_go_luci//common/data/text/units",
+    ],
+)
+
+go_test(
+    name = "cache_test",
+    srcs = ["lockfreecache_test.go"],
+    embed = [":cache"],
+    deps = [
+        "//src/devtools/rbe/common/storage",
+        "@com_github_bazelbuild_remote_apis_sdks//go/pkg/client",
+        "@com_github_bazelbuild_remote_apis_sdks//go/pkg/digest",
     ],
 )
