@@ -44,7 +44,7 @@ option java_outer_classname = "SearchServiceProto";
 // (device vs host, or test vs job vs session).
 service SearchService {
   // ===========================================================================
-  // Fleet (device/host) search — 7 RPCs
+  // Fleet (device/host) search — 9 RPCs
   // ===========================================================================
 
   // Returns page-load configuration: column setup and landing page content.
@@ -117,6 +117,31 @@ service SearchService {
       returns (FleetColumnCatalogResponse) {
     option (google.api.http) = {
       post: "/v6/fleet-search/column-catalog"
+      body: "*"
+    };
+  }
+
+  // Returns the browsable filter-key catalog for the search panel's Add filter
+  // dialog: every key a filter can be placed on, in backend-ordered sections,
+  // with the chip metadata the value picker needs on click. Called when the
+  // dialog opens (browse mode) and on each search keystroke within it.
+  rpc GetFleetFilterKeyCatalog(FleetFilterKeyCatalogRequest)
+      returns (FleetFilterKeyCatalogResponse) {
+    option (google.api.http) = {
+      post: "/v6/fleet-search/filter-key-catalog"
+      body: "*"
+    };
+  }
+
+  // Returns the browsable group-by-key catalog for the search panel's Add
+  // group-by dialog: every key the results can be grouped by, in
+  // backend-ordered sections, each with the number of groups it would produce
+  // under the current filters. Called when the dialog opens (browse mode) and
+  // on each search keystroke within it.
+  rpc GetFleetGroupByKeyCatalog(FleetGroupByKeyCatalogRequest)
+      returns (FleetGroupByKeyCatalogResponse) {
+    option (google.api.http) = {
+      post: "/v6/fleet-search/group-by-key-catalog"
       body: "*"
     };
   }
