@@ -20,7 +20,6 @@ import com.google.devtools.mobileharness.api.model.proto.Lab.LabStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.UiLabType;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
@@ -49,8 +48,7 @@ public class HostDebugButtonBuilder {
       return ActionButtonState.newBuilder().setVisible(false).build();
     }
 
-    boolean isCoreLab =
-        HostTypes.determineUiLabTypes(labInfoOpt, labTypeOpt).contains(UiLabType.CORE);
+    boolean isCoreLab = HostTypes.isCoreLab(labInfoOpt, labTypeOpt);
 
     if (isCoreLab) {
       return ActionButtonState.newBuilder().setVisible(false).build();

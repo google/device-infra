@@ -33,12 +33,38 @@ public final class HostTypes {
   public static final String LAB_TYPE_CORE = "Core Lab";
   public static final String LAB_TYPE_FUSION = "Fusion Lab";
   public static final String LAB_TYPE_SATELLITE = "Satellite Lab";
-  private static final String LAB_TYPE_SLAAS = "SLaaS";
+  public static final String LAB_TYPE_SLAAS = "SLaaS";
   private static final String LAB_TYPE_ATE = "ATE Lab";
   private static final String LAB_TYPE_FIELD = "Riemann Field Lab";
   private static final String LAB_TYPE_UNKNOWN = "Unknown";
 
-  private static final ImmutableMap<String, UiLabType> ENUM_NAME_TO_UI_LAB_TYPE =
+  public static final String LAB_TYPE_DISPLAY_CORE = "Core";
+  public static final String LAB_TYPE_DISPLAY_SLAAS = "SLaaS";
+  public static final String LAB_TYPE_DISPLAY_SATELLITE = "Satellite";
+
+  public static final String DEVICE_MANAGER_TYPE_FUSION = "Fusion";
+  public static final String DEVICE_MANAGER_TYPE_MH = "MH";
+
+  private static final ImmutableMap<String, String> PROP_TO_LAB_TYPE_DISPLAY =
+      ImmutableMap.of(
+          "core", LAB_TYPE_DISPLAY_CORE,
+          "slaas", LAB_TYPE_DISPLAY_SLAAS,
+          "satellite", LAB_TYPE_DISPLAY_SATELLITE);
+
+  private static final ImmutableMap<String, String> ENUM_NAME_TO_LAB_TYPE_DISPLAY =
+      ImmutableMap.of(
+          "SHARED_LAB", LAB_TYPE_DISPLAY_CORE,
+          "MH_SATELLITE_LAB", LAB_TYPE_DISPLAY_SATELLITE);
+
+  private static final ImmutableMap<String, String> DISPLAY_TO_SEARCH_LAB_TYPE =
+      ImmutableMap.of(
+          LAB_TYPE_DISPLAY_CORE, LAB_TYPE_CORE,
+          LAB_TYPE_DISPLAY_SLAAS, LAB_TYPE_SLAAS,
+          LAB_TYPE_DISPLAY_SATELLITE, LAB_TYPE_SATELLITE);
+
+  // Retained for backward compatibility with legacy HostOverview.ui_lab_types field.
+  @SuppressWarnings("deprecation")
+  private static final ImmutableMap<String, UiLabType> LEGACY_ENUM_NAME_TO_UI_LAB_TYPE =
       ImmutableMap.of(
           "FUSION_LAB", UiLabType.FUSION,
           "SHARED_LAB", UiLabType.CORE,
@@ -46,13 +72,17 @@ public final class HostTypes {
           "MH_ATE_LAB", UiLabType.ATE,
           "RIEMANN_FIELD_LAB", UiLabType.RIEMANN_FIELD);
 
-  private static final ImmutableMap<String, UiLabType> PROP_TO_UI_LAB_TYPE =
+  // Retained for backward compatibility with legacy HostOverview.ui_lab_types field.
+  @SuppressWarnings("deprecation")
+  private static final ImmutableMap<String, UiLabType> LEGACY_PROP_TO_UI_LAB_TYPE =
       ImmutableMap.of(
           "core", UiLabType.CORE,
           "slaas", UiLabType.SLAAS,
           "satellite", UiLabType.SATELLITE);
 
-  private static final ImmutableMap<UiLabType, String> UI_LAB_TYPE_TO_DISPLAY_NAME =
+  // Retained for backward compatibility with legacy HostOverview.lab_type_display_names field.
+  @SuppressWarnings("deprecation")
+  private static final ImmutableMap<UiLabType, String> LEGACY_UI_LAB_TYPE_TO_DISPLAY_NAME =
       new ImmutableMap.Builder<UiLabType, String>()
           .put(UiLabType.CORE, LAB_TYPE_CORE)
           .put(UiLabType.FUSION, LAB_TYPE_FUSION)
@@ -68,35 +98,98 @@ public final class HostTypes {
   }
 
   public static boolean isCoreOrFusion(Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
-    return isCoreOrFusion(determineLabTypeDisplayNames(labInfoOpt, labTypeOpt));
+    return isCoreLab(labInfoOpt, labTypeOpt)
+        || determineDeviceManagerType(labInfoOpt, labTypeOpt).equals(DEVICE_MANAGER_TYPE_FUSION);
   }
 
+  /** Returns true if the host's single lab type is Core. */
+  public static boolean isCoreLab(Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
+    return determineLabType(labInfoOpt, labTypeOpt)
+        .filter(LAB_TYPE_DISPLAY_CORE::equals)
+        .isPresent();
+  }
+
+  /** Returns true if the host's single lab type is Satellite. */
+  public static boolean isSatelliteLab(Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
+    return determineLabType(labInfoOpt, labTypeOpt)
+        .filter(LAB_TYPE_DISPLAY_SATELLITE::equals)
+        .isPresent();
+  }
+
+  /**
+   * Determines the single Host Detail display lab type of the host ({@code "Core"}, {@code
+   * "SLaaS"}, or {@code "Satellite"}).
+   */
+  public static Optional<String> determineLabType(
+      Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
+    String labTypeProp = getHostProperty(labInfoOpt, "lab_type");
+    String fromProp = PROP_TO_LAB_TYPE_DISPLAY.get(labTypeProp);
+    if (fromProp != null) {
+      return Optional.of(fromProp);
+    }
+    String typeEnumName = labTypeOpt.orElse("LAB_TYPE_UNSPECIFIED");
+    return Optional.ofNullable(ENUM_NAME_TO_LAB_TYPE_DISPLAY.get(typeEnumName));
+  }
+
+  /**
+   * Determines the single Fleet Search lab type value of the host ({@code "Core Lab"}, {@code
+   * "SLaaS"}, or {@code "Satellite Lab"}).
+   */
+  public static Optional<String> determineSearchLabType(
+      Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
+    return determineLabType(labInfoOpt, labTypeOpt).map(DISPLAY_TO_SEARCH_LAB_TYPE::get);
+  }
+
+  /**
+   * Determines the Device Manager Type of the host ({@code "Fusion"} when {@code dm_type ==
+   * "fusion"} or {@code labType == "FUSION_LAB"}, otherwise {@code "MH"}).
+   */
+  public static String determineDeviceManagerType(
+      Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
+    if (getHostProperty(labInfoOpt, "dm_type").equals("fusion")
+        || labTypeOpt.filter("FUSION_LAB"::equals).isPresent()) {
+      return DEVICE_MANAGER_TYPE_FUSION;
+    }
+    return DEVICE_MANAGER_TYPE_MH;
+  }
+
+  /** Returns true iff the Release Server {@code labType} is {@code "MH_ATE_LAB"}. */
+  public static boolean isAteLab(Optional<String> labTypeOpt) {
+    return labTypeOpt.filter("MH_ATE_LAB"::equals).isPresent();
+  }
+
+  /**
+   * @deprecated Use {@link #isCoreOrFusion(Optional, Optional)} instead.
+   */
+  @Deprecated
+  // Retained for backward compatibility with callers still passing deprecated UiLabType.
+  @SuppressWarnings("deprecation")
   public static boolean isCoreOrFusionUiLabTypes(List<UiLabType> labTypes) {
     return labTypes.contains(UiLabType.CORE) || labTypes.contains(UiLabType.FUSION);
   }
 
-  // TODO: Better function signature to distinguish between the two sources of lab types.
+  /**
+   * @deprecated Use {@link #determineLabType(Optional, Optional)} instead. Retained for backward
+   *     compatibility with older frontends that read {@code HostOverview.ui_lab_types}.
+   */
+  @Deprecated
+  // Retained for backward compatibility with legacy HostOverview.ui_lab_types field.
+  @SuppressWarnings("deprecation")
   public static ImmutableList<UiLabType> determineUiLabTypes(
       Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
-
     ImmutableList.Builder<UiLabType> builder = ImmutableList.builder();
-
     String typeEnumName = labTypeOpt.orElse("LAB_TYPE_UNSPECIFIED");
-
     String labTypeProp = getHostProperty(labInfoOpt, "lab_type");
     String dmTypeProp = getHostProperty(labInfoOpt, "dm_type");
 
-    // Source 1: lab_type in host properties (Checked first to preserve order)
     if (labTypeProp.equals("slaas")) {
       builder.add(UiLabType.SATELLITE).add(UiLabType.SLAAS);
     } else {
-      Optional.ofNullable(PROP_TO_UI_LAB_TYPE.get(labTypeProp)).ifPresent(builder::add);
+      Optional.ofNullable(LEGACY_PROP_TO_UI_LAB_TYPE.get(labTypeProp)).ifPresent(builder::add);
     }
 
-    // Source 2: Release Server Host Info
-    Optional.ofNullable(ENUM_NAME_TO_UI_LAB_TYPE.get(typeEnumName)).ifPresent(builder::add);
+    Optional.ofNullable(LEGACY_ENUM_NAME_TO_UI_LAB_TYPE.get(typeEnumName)).ifPresent(builder::add);
 
-    // Source 3: dm_type in host properties (only for fusion)
     if (dmTypeProp.equals("fusion")) {
       builder.add(UiLabType.FUSION);
     }
@@ -104,20 +197,27 @@ public final class HostTypes {
     return builder.build().stream().distinct().collect(toImmutableList());
   }
 
-  /** Returns the user-facing display name for a {@link UiLabType} (for example "Core Lab"). */
+  /**
+   * @deprecated Use {@link #determineSearchLabType(Optional, Optional)} instead.
+   */
+  @Deprecated
+  // Retained for backward compatibility with callers still passing deprecated UiLabType.
+  @SuppressWarnings("deprecation")
   public static String labTypeDisplayName(UiLabType labType) {
-    return UI_LAB_TYPE_TO_DISPLAY_NAME.getOrDefault(labType, LAB_TYPE_UNKNOWN);
+    return LEGACY_UI_LAB_TYPE_TO_DISPLAY_NAME.getOrDefault(labType, LAB_TYPE_UNKNOWN);
   }
 
   /**
-   * @deprecated Use {@link #determineUiLabTypes(Optional, Optional)} instead. This is retained for
+   * @deprecated Use {@link #determineLabType(Optional, Optional)} instead. This is retained for
    *     backward compatibility with older frontends that expect pre-formatted strings.
    */
   @Deprecated
+  // Retained for backward compatibility with legacy HostOverview.lab_type_display_names field.
+  @SuppressWarnings("deprecation")
   public static ImmutableList<String> determineLabTypeDisplayNames(
       Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
     return determineUiLabTypes(labInfoOpt, labTypeOpt).stream()
-        .map(type -> UI_LAB_TYPE_TO_DISPLAY_NAME.getOrDefault(type, LAB_TYPE_UNKNOWN))
+        .map(type -> LEGACY_UI_LAB_TYPE_TO_DISPLAY_NAME.getOrDefault(type, LAB_TYPE_UNKNOWN))
         .collect(toImmutableList());
   }
 
