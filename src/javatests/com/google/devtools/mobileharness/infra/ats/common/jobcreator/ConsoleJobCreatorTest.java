@@ -390,6 +390,46 @@ public final class ConsoleJobCreatorTest {
         .isEqualTo(XtsConstants.DYNAMIC_MCTS_JOB_NAME);
   }
 
+  @Test
+  public void createXtsTradefedTestJob_runnerShardingWithStaticModuleOnly_skipsDynamicMctsJob()
+      throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts -m CtsWidgetTestCases29")
+                .setXtsType("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .addModuleNames("CtsWidgetTestCases29")
+                .setIsXtsDynamicDownloadEnabled(true));
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(eq(sessionRequestInfo), any()))
+        .thenReturn(ImmutableList.of("CtsWidgetTestCases29"));
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
+        .thenReturn(JobConfig.newBuilder().setName("mock_job").build());
+    when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(eq(sessionRequestInfo), any()))
+        .thenAnswer(
+            invocation -> {
+              TradefedJobInfo tradefedJobInfo = invocation.getArgument(1);
+              JobInfo jobInfo = mock(JobInfo.class);
+              when(jobInfo.locator())
+                  .thenReturn(
+                      new JobLocator(
+                          tradefedJobInfo.jobConfig().getName(),
+                          tradefedJobInfo.jobConfig().getName()));
+              when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+              return jobInfo;
+            });
+
+    ImmutableList<JobInfo> jobInfos =
+        jobCreator.createXtsTradefedTestJob(
+            sessionRequestInfo, ImmutableSet.of("mcts_module"), /* skipDynamicMctsJob= */ false);
+
+    assertThat(jobInfos).hasSize(1);
+    assertThat(jobInfos.get(0).properties().get(XtsConstants.XTS_JOB_NAME))
+        .isEqualTo(XtsConstants.STATIC_XTS_JOB_NAME);
+  }
+
   private static SessionRequestInfo dynamicDownloadSessionRequestInfo() throws Exception {
     return SessionRequestInfoUtil.buildAndValidate(
         SessionRequestInfo.newBuilder()

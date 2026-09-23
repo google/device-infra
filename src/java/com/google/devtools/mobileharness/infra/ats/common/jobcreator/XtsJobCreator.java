@@ -181,10 +181,10 @@ public abstract class XtsJobCreator {
     ImmutableList<String> tfModules =
         sessionRequestHandlerUtil.getFilteredTradefedModules(
             sessionRequestInfo, dynamicMctsModules);
-    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
-        createXtsTradefedTestJobInfo(sessionRequestInfo, tfModules);
 
     if (!isDynamicMctsEnabled(sessionRequestInfo)) {
+      ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+          createXtsTradefedTestJobInfo(sessionRequestInfo, tfModules);
       ImmutableList.Builder<JobInfo> jobInfos = ImmutableList.builder();
       for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
         jobInfos.add(
@@ -194,20 +194,55 @@ public abstract class XtsJobCreator {
       return jobInfos.build();
     }
 
+    ImmutableSet<String> effectiveMctsModules =
+        dynamicMctsModules.isEmpty()
+            ? Optional.ofNullable(sessionRequestHandlerUtil.getStaticMctsModules())
+                .orElse(ImmutableSet.of())
+            : dynamicMctsModules;
     ImmutableList.Builder<JobInfo> jobInfos = ImmutableList.builder();
 
     if (SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)) {
       // In MODULE sharding mode, each module job runs independently. Create exactly ONE job
-      // per module: a DYNAMIC_MCTS job if the module is in dynamicMctsModules, or a STATIC_XTS
+      // per module: a DYNAMIC_MCTS job if the module is in effectiveMctsModules, or a STATIC_XTS
       // job otherwise.
+      ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+          createXtsTradefedTestJobInfo(sessionRequestInfo, tfModules);
       for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
         String moduleName =
             tradefedJobInfo.extraJobProperties().get(XtsPropertyName.Job.FILTERED_TRADEFED_MODULES);
         String jobName =
-            moduleName != null && dynamicMctsModules.contains(moduleName)
+            moduleName != null && effectiveMctsModules.contains(moduleName)
                 ? XtsConstants.DYNAMIC_MCTS_JOB_NAME
                 : XtsConstants.STATIC_XTS_JOB_NAME;
         jobInfos.add(createDynamicJobInfo(sessionRequestInfo, tradefedJobInfo, jobName));
+      }
+    } else if (!sessionRequestInfo.getModuleNamesList().isEmpty()) {
+      // When module filters (-m) are specified in RUNNER sharding mode, partition the matched
+      // Tradefed modules into static xTS modules and dynamic MCTS modules so each job only passes
+      // the -m flags that exist in its testcases directory. Skip creating a job when its module
+      // partition is empty to avoid Tradefed throwing HarnessRuntimeException ("No modules found
+      // matching <module>").
+      ImmutableList<String> staticTfModules =
+          tfModules.stream()
+              .filter(module -> !effectiveMctsModules.contains(module))
+              .collect(toImmutableList());
+      ImmutableList<String> dynamicTfModules =
+          tfModules.stream().filter(effectiveMctsModules::contains).collect(toImmutableList());
+      if (!Flags.runDynamicDownloadMctsOnly.getNonNull() && !staticTfModules.isEmpty()) {
+        for (TradefedJobInfo tradefedJobInfo :
+            createXtsTradefedTestJobInfo(sessionRequestInfo, staticTfModules)) {
+          jobInfos.add(
+              createDynamicJobInfo(
+                  sessionRequestInfo, tradefedJobInfo, XtsConstants.STATIC_XTS_JOB_NAME));
+        }
+      }
+      if (!skipDynamicMctsJob && !dynamicTfModules.isEmpty()) {
+        for (TradefedJobInfo tradefedJobInfo :
+            createXtsTradefedTestJobInfo(sessionRequestInfo, dynamicTfModules)) {
+          jobInfos.add(
+              createDynamicJobInfo(
+                  sessionRequestInfo, tradefedJobInfo, XtsConstants.DYNAMIC_MCTS_JOB_NAME));
+        }
       }
     } else {
       // In RUNNER sharding mode, create the static xTS job first (so it runs first) and the dynamic
@@ -215,6 +250,8 @@ public abstract class XtsJobCreator {
       // ensuring the static job completes before the dynamic jobs and skipping the dynamic jobs if
       // the static job failed. When requested, skip the dynamic MCTS job entirely to avoid
       // booting Tradefed for 0 tests.
+      ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+          createXtsTradefedTestJobInfo(sessionRequestInfo, tfModules);
       ImmutableList<String> dynamicDownloadJobNames;
       if (skipDynamicMctsJob) {
         dynamicDownloadJobNames = ImmutableList.of(XtsConstants.STATIC_XTS_JOB_NAME);

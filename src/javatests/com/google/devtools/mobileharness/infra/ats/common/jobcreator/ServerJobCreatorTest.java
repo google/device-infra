@@ -80,6 +80,7 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -114,6 +115,8 @@ public final class ServerJobCreatorTest {
   @Rule public TemporaryFolder folder = new TemporaryFolder();
   @Rule public final SetFlags flags = new SetFlags();
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
+
+  @Captor private ArgumentCaptor<Map<String, String>> driverParamsCaptor;
 
   @Bind @Mock private SessionRequestHandlerUtil sessionRequestHandlerUtil;
   @Bind @Mock private AtsServerSessionUtil atsServerSessionUtil;
@@ -917,6 +920,136 @@ public final class ServerJobCreatorTest {
         .hasSize(2);
     assertThat(capturedSrIs.get(1).getAtsServerTestEnvironment().getDeviceActionConfigObjectsList())
         .containsExactly(resultReporter);
+  }
+
+  @Test
+  public void createXtsTradefedTestJob_dynamicDownloadEnabled_staticModuleOnly_createsStaticJob()
+      throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts -m CtsWidgetTestCases29")
+                .setXtsType("cts")
+                .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
+                .setXtsRootDir(xtsRootDir)
+                .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
+                .setIsXtsDynamicDownloadEnabled(true)
+                .addModuleNames("CtsWidgetTestCases29")
+                .setSessionId("session_id"));
+    when(sessionRequestHandlerUtil.getStaticMctsModules())
+        .thenReturn(ImmutableSet.of("mcts-module"));
+    when(sessionRequestHandlerUtil.initializeJobConfig(any(), any(), any(), any()))
+        .thenReturn(JobConfig.newBuilder().setName("job_name").build());
+    when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any(), any()))
+        .thenAnswer(
+            invocation -> {
+              JobInfo jobInfo = mock(JobInfo.class);
+              when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+              return jobInfo;
+            });
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any(), any()))
+        .thenReturn(ImmutableList.of("CtsWidgetTestCases29"));
+
+    ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);
+
+    assertThat(jobInfos).hasSize(1);
+    assertThat(jobInfos.get(0).properties().get(XtsConstants.XTS_JOB_NAME))
+        .isEqualTo(XtsConstants.STATIC_XTS_JOB_NAME);
+  }
+
+  @Test
+  public void createXtsTradefedTestJob_dynamicDownloadEnabled_mctsModuleOnly_createsDynamicJob()
+      throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts -m mcts-module")
+                .setXtsType("cts")
+                .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
+                .setXtsRootDir(xtsRootDir)
+                .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
+                .setIsXtsDynamicDownloadEnabled(true)
+                .addModuleNames("mcts-module")
+                .setSessionId("session_id"));
+    when(sessionRequestHandlerUtil.getStaticMctsModules())
+        .thenReturn(ImmutableSet.of("mcts-module"));
+    when(sessionRequestHandlerUtil.initializeJobConfig(any(), any(), any(), any()))
+        .thenReturn(JobConfig.newBuilder().setName("job_name").build());
+    when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any(), any()))
+        .thenAnswer(
+            invocation -> {
+              JobInfo jobInfo = mock(JobInfo.class);
+              when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+              TestInfos testInfos = mock(TestInfos.class);
+              TestInfo testInfo = mock(TestInfo.class);
+              when(testInfo.properties()).thenReturn(new Properties(new Timing()));
+              when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
+              when(jobInfo.tests()).thenReturn(testInfos);
+              return jobInfo;
+            });
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any(), any()))
+        .thenReturn(ImmutableList.of("mcts-module"));
+
+    ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);
+
+    assertThat(jobInfos).hasSize(1);
+    assertThat(jobInfos.get(0).properties().get(XtsConstants.XTS_JOB_NAME))
+        .isEqualTo(XtsConstants.DYNAMIC_MCTS_JOB_NAME);
+  }
+
+  @Test
+  public void createXtsTradefedTestJob_dynamicDownloadEnabled_mixedModules_partitionsModulesPerJob()
+      throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts -m static-module -m mcts-module")
+                .setXtsType("cts")
+                .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
+                .setXtsRootDir(xtsRootDir)
+                .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
+                .setIsXtsDynamicDownloadEnabled(true)
+                .addAllModuleNames(ImmutableList.of("static-module", "mcts-module"))
+                .setSessionId("session_id"));
+    when(sessionRequestHandlerUtil.getStaticMctsModules())
+        .thenReturn(ImmutableSet.of("mcts-module"));
+    when(sessionRequestHandlerUtil.initializeJobConfig(any(), any(), any(), any()))
+        .thenReturn(JobConfig.newBuilder().setName("job_name").build());
+    when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any(), any()))
+        .thenAnswer(
+            invocation -> {
+              JobInfo jobInfo = mock(JobInfo.class);
+              when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+              TestInfos testInfos = mock(TestInfos.class);
+              TestInfo testInfo = mock(TestInfo.class);
+              when(testInfo.properties()).thenReturn(new Properties(new Timing()));
+              when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
+              when(jobInfo.tests()).thenReturn(testInfos);
+              return jobInfo;
+            });
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any(), any()))
+        .thenReturn(ImmutableList.of("static-module", "mcts-module"));
+
+    ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);
+
+    assertThat(jobInfos).hasSize(2);
+    assertThat(jobInfos.get(0).properties().get(XtsConstants.XTS_JOB_NAME))
+        .isEqualTo(XtsConstants.STATIC_XTS_JOB_NAME);
+    assertThat(jobInfos.get(1).properties().get(XtsConstants.XTS_JOB_NAME))
+        .isEqualTo(XtsConstants.DYNAMIC_MCTS_JOB_NAME);
+    verify(sessionRequestHandlerUtil, times(2))
+        .initializeJobConfig(any(), driverParamsCaptor.capture(), any(), any());
+    List<Map<String, String>> capturedDriverParams = driverParamsCaptor.getAllValues();
+    assertThat(capturedDriverParams.get(0).get("run_command_args")).contains("-m static-module");
+    assertThat(capturedDriverParams.get(0).get("run_command_args")).doesNotContain("mcts-module");
+    assertThat(capturedDriverParams.get(1).get("run_command_args")).contains("-m mcts-module");
+    assertThat(capturedDriverParams.get(1).get("run_command_args")).doesNotContain("static-module");
   }
 
   @Test
