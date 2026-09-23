@@ -37,21 +37,6 @@ java_library(
 )
 
 java_library(
-    name = "check_device_write_permission_handler",
-    srcs = ["CheckDeviceWritePermissionHandler.java"],
-    deps = [
-        "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
-        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_util",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
-        "@maven//:com_google_guava_guava",
-        "@maven//:javax_inject_jsr330_api",
-    ],
-)
-
-java_library(
     name = "check_device_config_permission_handler",
     srcs = ["CheckDeviceConfigPermissionHandler.java"],
     deps = [
@@ -134,22 +119,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@maven//:com_google_guava_guava",
-        "@maven//:javax_inject_jsr330_api",
-    ],
-)
-
-java_library(
-    name = "check_host_write_permission_handler",
-    srcs = ["CheckHostWritePermissionHandler.java"],
-    deps = [
-        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
-        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_converter",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_util",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
