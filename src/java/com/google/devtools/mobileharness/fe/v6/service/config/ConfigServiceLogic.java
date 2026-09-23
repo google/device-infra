@@ -19,12 +19,8 @@ package com.google.devtools.mobileharness.fe.v6.service.config;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionResponse;
-import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionRequest;
-import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionResponse;
-import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionRequest;
-import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigRequest;
@@ -45,13 +41,6 @@ import java.util.Optional;
 public interface ConfigServiceLogic {
   ListenableFuture<GetDeviceConfigResponse> getDeviceConfig(GetDeviceConfigRequest request);
 
-  /**
-   * @deprecated Use {@link #checkDeviceConfigPermission} instead.
-   */
-  @Deprecated
-  ListenableFuture<CheckDeviceWritePermissionResponse> checkDeviceWritePermission(
-      CheckDeviceWritePermissionRequest request, Optional<String> username);
-
   ListenableFuture<CheckDeviceConfigPermissionResponse> checkDeviceConfigPermission(
       CheckDeviceConfigPermissionRequest request, Optional<String> username);
 
@@ -65,13 +54,6 @@ public interface ConfigServiceLogic {
       GetHostDefaultDeviceConfigRequest request);
 
   ListenableFuture<GetHostConfigResponse> getHostConfig(GetHostConfigRequest request);
-
-  /**
-   * @deprecated Use {@link #checkHostConfigPermission} instead.
-   */
-  @Deprecated
-  ListenableFuture<CheckHostWritePermissionResponse> checkHostWritePermission(
-      CheckHostWritePermissionRequest request, Optional<String> username);
 
   ListenableFuture<CheckHostConfigPermissionResponse> checkHostConfigPermission(
       CheckHostConfigPermissionRequest request, Optional<String> username);
