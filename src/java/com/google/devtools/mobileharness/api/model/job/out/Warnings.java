@@ -26,7 +26,6 @@ import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.E
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
 import java.util.Collection;
 import java.util.List;
 import javax.annotation.Nullable;
@@ -49,18 +48,6 @@ public class Warnings {
 
   /** The time records of the job/test. */
   private final TouchableTiming timing;
-
-  /**
-   * DO NOT USE. It creates a new {@link Findings} instance internally. It breaks the assumption
-   * that the warnings of a job/test are stored in a single {@link Findings} instance.
-   *
-   * <p>This is used by some unit tests for backward compatibility. This will be removed after all
-   * usages are migrated to the new constructor.
-   */
-  @Deprecated
-  public Warnings(LogCollector<?> log, TouchableTiming timing) {
-    this(timing, new Findings(log));
-  }
 
   /** Creates the warning segment of a job/test. */
   public Warnings(TouchableTiming timing, Findings findings) {
