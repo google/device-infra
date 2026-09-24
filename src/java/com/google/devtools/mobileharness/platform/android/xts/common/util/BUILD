@@ -70,6 +70,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/tradefed:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/common/util:__subpackages__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
@@ -81,6 +82,28 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "xts_chunked_test_cases_restorer",
+    srcs = ["XtsChunkedTestCasesRestorer.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/common/util:__subpackages__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],

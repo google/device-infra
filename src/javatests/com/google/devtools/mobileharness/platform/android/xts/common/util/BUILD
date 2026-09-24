@@ -57,6 +57,21 @@ java_test(
 )
 
 java_test(
+    name = "XtsChunkedTestCasesRestorerTest",
+    size = "small",
+    srcs = ["XtsChunkedTestCasesRestorerTest.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_chunked_test_cases_restorer",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
+    ],
+)
+
+java_test(
     name = "XtsDirUtilTest",
     size = "small",
     srcs = ["XtsDirUtilTest.java"],

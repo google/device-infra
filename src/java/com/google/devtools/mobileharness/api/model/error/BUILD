@@ -58,6 +58,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",

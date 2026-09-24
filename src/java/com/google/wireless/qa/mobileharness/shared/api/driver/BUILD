@@ -318,6 +318,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:log_recorder",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:android_jit_emulator_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_chunked_test_cases_restorer",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_command_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_constants",

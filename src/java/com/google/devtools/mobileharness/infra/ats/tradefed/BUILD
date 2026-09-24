@@ -45,6 +45,7 @@ java_library(
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:android_jit_emulator_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_chunked_test_cases_restorer",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_command_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_constants",

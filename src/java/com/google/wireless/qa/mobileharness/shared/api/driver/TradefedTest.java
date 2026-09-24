@@ -49,6 +49,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.L
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.AndroidJitEmulatorUtil;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsChunkedTestCasesRestorer;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
@@ -153,6 +154,7 @@ public class TradefedTest extends BaseDriver
   private final ResUtil resUtil;
   private final Clock clock;
   private final XtsCommandUtil xtsCommandUtil;
+  private final XtsChunkedTestCasesRestorer xtsChunkedTestCasesRestorer;
   private final XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil;
   private final String testId;
   private TradefedRunStrategy tradefedRunStrategy;
@@ -185,6 +187,7 @@ public class TradefedTest extends BaseDriver
       ResUtil resUtil,
       Clock clock,
       XtsCommandUtil xtsCommandUtil,
+      XtsChunkedTestCasesRestorer xtsChunkedTestCasesRestorer,
       XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil,
       TestMessageUtil testMessageUtil,
       AndroidDesktopDeviceHelper androidDesktopDeviceHelper) {
@@ -204,6 +207,7 @@ public class TradefedTest extends BaseDriver
     this.resUtil = resUtil;
     this.clock = clock;
     this.xtsCommandUtil = xtsCommandUtil;
+    this.xtsChunkedTestCasesRestorer = xtsChunkedTestCasesRestorer;
     this.xtsTradefedRuntimeInfoFileUtil = xtsTradefedRuntimeInfoFileUtil;
     this.testMessageUtil = testMessageUtil;
     this.androidDesktopDeviceHelper = androidDesktopDeviceHelper;
@@ -218,7 +222,13 @@ public class TradefedTest extends BaseDriver
         spec.getXtsType().isEmpty()
             ? new NonXtsRunStrategy(localFileUtil, systemUtil)
             : new XtsRunStrategy(
-                localFileUtil, resUtil, systemUtil, clock, xtsType, xtsCommandUtil);
+                localFileUtil,
+                resUtil,
+                systemUtil,
+                clock,
+                xtsType,
+                xtsCommandUtil,
+                xtsChunkedTestCasesRestorer);
 
     CompositeDeviceUtil.cacheTestbed(testInfo, getDevice());
     Path workDir = null; // This will be TF_WORK_DIR

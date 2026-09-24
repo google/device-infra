@@ -22,6 +22,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static java.util.stream.Collectors.joining;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
@@ -35,6 +36,7 @@ import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.AndroidJitEmulatorUtil;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsChunkedTestCasesRestorer;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
@@ -117,6 +119,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
   private final Clock clock;
   private final String xtsType;
   private final XtsCommandUtil xtsCommandUtil;
+  private final XtsChunkedTestCasesRestorer xtsChunkedTestCasesRestorer;
   private ImmutableSet<String> previousResultDirNames = ImmutableSet.of();
 
   public XtsRunStrategy(
@@ -125,13 +128,15 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
       SystemUtil systemUtil,
       Clock clock,
       String xtsType,
-      XtsCommandUtil xtsCommandUtil) {
+      XtsCommandUtil xtsCommandUtil,
+      XtsChunkedTestCasesRestorer xtsChunkedTestCasesRestorer) {
     this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
     this.resUtil = resUtil;
     this.clock = clock;
     this.xtsType = checkNotNull(xtsType, "xtsType cannot be null for XtsRunStrategy");
     this.xtsCommandUtil = xtsCommandUtil;
+    this.xtsChunkedTestCasesRestorer = xtsChunkedTestCasesRestorer;
   }
 
   private boolean isJarFileIncluded(
@@ -246,25 +251,27 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
     return Path.of(path.toString().replaceFirst(currentPrefix.toString(), newPrefix.toString()));
   }
 
-  private Path getXtsRootDir(TradefedTestDriverSpec spec, TestInfo testInfo)
-      throws MobileHarnessException {
+  @VisibleForTesting
+  Path getXtsRootDir(TradefedTestDriverSpec spec, TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
     if (spec.hasXtsRootDir()) {
+      // The dir is prepared by the client (ATS console or OLCS in local mode), which has already
+      // restored the test cases if the xTS package is chunked.
       return Path.of(spec.getXtsRootDir());
     } else if (spec.hasAndroidXtsZip()) {
       // Unzip android-xts zip file and return the xts root dir
       Path androidXtsZip = Path.of(spec.getAndroidXtsZip());
+      String unzippedPath =
+          PathUtil.join(
+              testInfo.getTmpFileDir(), androidXtsZip.toString().replace('.', '_') + "_unzipped");
       long startTime = clock.instant().toEpochMilli();
       try {
-        String unzippedPath =
-            PathUtil.join(
-                testInfo.getTmpFileDir(), androidXtsZip.toString().replace('.', '_') + "_unzipped");
         localFileUtil.prepareDir(unzippedPath);
         // TODO: cache the unzip result to reduce lab disk usage.
         String password =
             testInfo.jobInfo().properties().getOptional(Job.XTS_ZIP_FILE_PASSWORD).orElse(null);
         localFileUtil.unzipFile(
             androidXtsZip.toString(), unzippedPath, ANDROID_XTS_ZIP_UNCOMPRESS_TIMEOUT, password);
-        return Path.of(unzippedPath);
       } catch (MobileHarnessException | InterruptedException e) {
         if (MoreThrowables.isInterruption(e)) {
           Thread.currentThread().interrupt();
@@ -279,6 +286,12 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
             androidXtsZip,
             Duration.between(Instant.ofEpochMilli(startTime), clock.instant()).toSeconds());
       }
+      // The zip is the original package uploaded by the user, so if it is chunked the test cases
+      // still need to be restored here, even if the client already restored its own copy. Left
+      // outside the try block above so that the user facing restore error isn't masked as an
+      // unzip failure.
+      xtsChunkedTestCasesRestorer.restoreTestCases(unzippedPath, xtsType);
+      return Path.of(unzippedPath);
     }
     throw new MobileHarnessException(
         AndroidErrorId.XTS_TRADEFED_GET_XTS_ROOT_DIR_ERROR,
