@@ -47,6 +47,7 @@ go_test(
     name = "download_test",
     srcs = [
         "download_test.go",
+        "notes_test.go",
         "remote_failed_test.go",
         "tracker_test.go",
     ],
