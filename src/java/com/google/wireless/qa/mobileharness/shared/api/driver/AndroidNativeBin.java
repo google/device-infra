@@ -22,6 +22,8 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.common.metrics.stability.model.ErrorId;
+import com.google.devtools.common.metrics.stability.util.ErrorIdComparator;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
@@ -91,6 +93,15 @@ public class AndroidNativeBin extends BaseDriver implements AndroidNativeBinSpec
 
   /** Reserved time for TestManager to process test result. */
   private static final Duration RESERVED_TIME_FOR_RESULT_PROCESSING = Duration.ofSeconds(20);
+
+  /** The following exceptions for running the binary are considered as test failures. */
+  private static final ImmutableSet<ErrorId> ERROR_IDS_OF_TEST_FAILURES =
+      ImmutableSet.of(
+          AndroidErrorId.NATIVE_BIN_UTIL_RUN_NATIVE_BIN_FAILURE,
+          AndroidErrorId.NATIVE_BIN_UTIL_RUN_NATIVE_BIN_NULL_COMMAND_RESULT_ERROR,
+          AndroidErrorId.NATIVE_BIN_UTIL_RUN_NATIVE_BIN_NON_ZERO_EXIT_CODE_FROM_ECHO,
+          AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_ERROR,
+          AndroidErrorId.ANDROID_ADB_SYNC_CMD_START_ERROR);
 
   @Inject
   AndroidNativeBin(
@@ -215,7 +226,8 @@ public class AndroidNativeBin extends BaseDriver implements AndroidNativeBinSpec
           testInfo, commandResult, Strings.isNullOrEmpty(cpuAffinity) ? "all" : cpuAffinity);
     } catch (MobileHarnessException e) {
       if (binRunTimeMs != 0
-          && AndroidErrorId.NATIVE_BIN_UTIL_RUN_NATIVE_BIN_TIMEOUT.equals(e.getErrorId())) {
+          && ErrorIdComparator.equal(
+              AndroidErrorId.NATIVE_BIN_UTIL_RUN_NATIVE_BIN_TIMEOUT, e.getErrorId())) {
         testInfo
             .log()
             .atInfo()
@@ -228,10 +240,28 @@ public class AndroidNativeBin extends BaseDriver implements AndroidNativeBinSpec
                 PARAM_ANDROID_BIN_TIMEOUT_SEC,
                 binRunTimeMs);
         testInfo.resultWithCause().setPass();
+      } else if (ErrorIdComparator.equal(
+          AndroidErrorId.NATIVE_BIN_UTIL_RUN_NATIVE_BIN_TIMEOUT, e.getErrorId())) {
+        testInfo.resultWithCause().setNonPassing(TestResult.TIMEOUT, e);
+        throw e;
+      } else if (ERROR_IDS_OF_TEST_FAILURES.stream()
+          .anyMatch(errorId -> ErrorIdComparator.equal(errorId, e.getErrorId()))) {
+        testInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log("Finish running test with failure: %s", e.getMessage());
+        testInfo.resultWithCause().setNonPassing(TestResult.FAIL, e);
       } else {
-        if (AndroidErrorId.NATIVE_BIN_UTIL_RUN_NATIVE_BIN_TIMEOUT.equals(e.getErrorId())) {
-          testInfo.resultWithCause().setNonPassing(TestResult.TIMEOUT, e);
-        }
+        // There could be exceptions that caught but not fail the test result, logs these
+        // exceptions
+        // for debugging purpose
+        testInfo
+            .log()
+            .atWarning()
+            .withCause(e)
+            .alsoTo(logger)
+            .log("AndroidNativeBin.run throws exception:%s", e.getMessage());
         throw e;
       }
     }
