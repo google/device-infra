@@ -33,7 +33,7 @@ option java_outer_classname = "Setting";
 
 // Configuration for a single OmniLab job within a Gateway session.
 //
-// Next tag: 20
+// Next tag: 21
 message JobConfig {
   // Name of the job. If multiple jobs in the same session share a name, Gateway
   // appends a `_${index}` suffix to disambiguate them.
@@ -123,6 +123,10 @@ message JobConfig {
   // Scheduling priority of the job.
   optional mobileharness.shared.Priority priority = 15
       [default = DEFAULT, (google.api.field_behavior) = OPTIONAL];
+
+  // Allocation exit strategy of the job.
+  optional mobileharness.api.model.AllocationExitStrategy
+      allocation_exit_strategy = 20 [(google.api.field_behavior) = OPTIONAL];
 
   reserved 9, 10, 13;
 }
