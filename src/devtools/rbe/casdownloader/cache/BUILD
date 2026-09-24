@@ -24,6 +24,7 @@ go_library(
     name = "cache",
     srcs = [
         "cache.go",
+        "evictorconfig.go",
         "localcache.go",
         "lockfreecache.go",
     ],
@@ -40,7 +41,10 @@ go_library(
 
 go_test(
     name = "cache_test",
-    srcs = ["lockfreecache_test.go"],
+    srcs = [
+        "evictorconfig_test.go",
+        "lockfreecache_test.go",
+    ],
     embed = [":cache"],
     deps = [
         "//src/devtools/rbe/common/storage",

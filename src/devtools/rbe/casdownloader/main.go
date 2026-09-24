@@ -82,6 +82,27 @@ var (
 	// prevents the volume from filling up.
 	cacheMinFreeSpace = flag.Int64("cache-min-free-space", DefaultCacheMinFreeSpace,
 		"Cache is trimmed if free space on the filesystem holding the cache drops below this value, in bytes. If 0, free space is not enforced.")
+	enableLockFreeCache = flag.Bool("enable-lock-free-cache", false,
+		"Use the lock-free local cache instead of the default one. The default cache serializes every downloader on the host behind a single file lock and only trims after files are written; the lock-free cache needs no lock and makes room before the download. Blobs are kept in a separate subdirectory of -cache-dir, so switching starts from a cold cache. -cache-max-size and -cache-lock have no effect when this is set.")
+	// Eviction tuning for the lock-free cache. Each defaults to a value derived
+	// from -cache-min-free-space or to the shared evictor's default, and each is
+	// ignored unless -enable-lock-free-cache is set.
+	//
+	// TODO: plumb these through CasOptions so Tradefed hosts can be
+	// tuned per cluster. They are individual scalars rather than a config file
+	// precisely so that each maps onto one @Option.
+	cacheTargetFreeSpace = flag.Int64("cache-target-free-space", 0,
+		"Free space, in bytes, at which eviction stops. Must exceed -cache-min-free-space. If 0, defaults to twice -cache-min-free-space, with a 1GiB floor on the gap between them.")
+	cacheSampleBuckets = flag.Int("cache-eviction-sample-buckets", 0,
+		"Number of random leaf directories sampled to estimate the eviction cutoff age (safe range: 16-64). If 0, the shared default is used. Leave unset unless optimizing.")
+	cacheBatchSize = flag.Int("cache-eviction-batch-size", 0,
+		"Number of file unlinks per batch before yielding (safe range: 200-2000). If 0, the shared default is used. Leave unset unless optimizing.")
+	cacheBatchDelay = flag.Duration("cache-eviction-batch-delay", 0,
+		"Cooperative pause between unlink batches (safe range: 500us-2ms). If 0, the shared default is used. Leave unset unless optimizing.")
+	cacheLazyTouchInterval = flag.Duration("cache-lazy-touch-interval", 0,
+		"Minimum age before a cache hit refreshes a blob's mtime. If 0, the shared default is used. Larger values mean fewer writes and coarser recency.")
+	cacheMinBlobAge = flag.Duration("cache-min-blob-age", 0,
+		"Grace period during which a newly written blob is exempt from eviction. If 0, the shared default is used.")
 
 	// Flags for RBE CAS configurations
 	casInstance    = flag.String("cas-instance", "", "RBE instance")
@@ -182,7 +203,104 @@ func checkFlags() error {
 		log.Warningf("-chunks-only implies -keep-chunks.")
 		*keepChunks = true
 	}
+	if !*disableCache {
+		warnAboutIgnoredCacheFlags(explicitFlags(), *enableLockFreeCache)
+		if *enableLockFreeCache {
+			warnAboutLeftoverStandardCache()
+		}
+	}
 	return nil
+}
+
+// explicitFlags reports which flags the caller actually passed, as opposed to
+// which ones merely have a value.
+//
+// The difference matters twice over: a flag left at its default must not be
+// reported as an operator's choice, and a flag deliberately set to its default
+// must not be treated as absent when it decides precedence against the
+// configuration file.
+func explicitFlags() map[string]bool {
+	set := make(map[string]bool)
+	flag.Visit(func(f *flag.Flag) {
+		set[f.Name] = true
+	})
+	return set
+}
+
+// lockFreeOnlyFlags tune the lock-free cache's evictor and do nothing else.
+var lockFreeOnlyFlags = []string{
+	"cache-target-free-space",
+	"cache-eviction-sample-buckets",
+	"cache-eviction-batch-size",
+	"cache-eviction-batch-delay",
+	"cache-lazy-touch-interval",
+	"cache-min-blob-age",
+}
+
+// standardOnlyFlags are honored by the default cache and by nothing else.
+var standardOnlyFlags = []string{
+	"cache-max-size",
+	"cache-lock",
+}
+
+// warnAboutIgnoredCacheFlags reports, once per run, which of the caller's cache
+// flags the selected implementation will not read.
+//
+// Silence is the failure mode worth guarding against here: a flag that stops
+// taking effect looks exactly like a flag that worked. These arguments are
+// baked into launcher scripts, Borg configs and CasOptions defaults that nobody
+// re-reads, so whichever way -enable-lock-free-cache is set, the operator
+// deserves to be told which of their arguments just became inert.
+//
+// One warning, not one per flag: the useful unit is "here is what this run
+// ignored", and a list stays readable where six consecutive lines would not.
+//
+// TODO: gate CasFileDownloader's -cache-max-size and -cache-lock on
+// the same CasOptions setting that enables the lock-free cache. Both are
+// hardcoded into the argument list it builds, so until then this warning would
+// fire on every Tradefed invocation, naming two flags the operator reading the
+// log cannot remove. That change is a no-op while the option is off, so it can
+// ship on any lab release; once it has, enabling the cache flips both sides at
+// once.
+func warnAboutIgnoredCacheFlags(explicit map[string]bool, lockFree bool) {
+	candidates, advice := standardOnlyFlags, "The lock-free cache bounds free space on the volume rather than the logical size of the cache, and needs no lock to run concurrently. Use -cache-min-free-space instead of -cache-max-size."
+	if !lockFree {
+		candidates, advice = lockFreeOnlyFlags, "These tune the lock-free cache's evictor. Set -enable-lock-free-cache to use them."
+	}
+
+	var ignored []string
+	for _, name := range candidates {
+		if explicit[name] {
+			ignored = append(ignored, "-"+name)
+		}
+	}
+	if len(ignored) == 0 {
+		return
+	}
+	log.Warningf("%s %s is ignored with -enable-lock-free-cache=%t. %s",
+		strings.Join(ignored, ", "), pluralVerb(len(ignored)), lockFree, advice)
+}
+
+// warnAboutLeftoverStandardCache points at the standard cache's files, if any
+// remain, once the lock-free cache has taken over.
+//
+// They are left in place rather than deleted so that turning
+// -enable-lock-free-cache back off resumes from a warm cache. That costs disk
+// on hosts already short of it, which is the whole reason the lock-free cache
+// exists, so the operator is told where the space went and that it is theirs
+// to reclaim.
+func warnAboutLeftoverStandardCache() {
+	if _, err := os.Stat(filepath.Join(*cacheDir, "state.json")); err != nil {
+		return
+	}
+	log.Warningf("A cache from the default implementation remains in %s and is no longer read or trimmed. It is kept so that turning -enable-lock-free-cache back off resumes from a warm cache; delete its contents (not the directory) once the rollout has settled.", *cacheDir)
+}
+
+func pluralVerb(n int) string {
+	if n == 1 {
+		return "is"
+	}
+	return "are"
 }
 
 // ContextWithMetadata attaches metadata to the passed-in context, returning a new context. It uses
@@ -380,7 +498,7 @@ func run(ctx context.Context) error {
 		}
 	}()
 
-	cache, err := createCache(*disableCache, *cacheDir, *cacheMaxSize, *cacheMinFreeSpace, *enableCacheLock, *useHardlink)
+	cache, err := createCache(cacheFlagValues())
 	if err != nil {
 		return err
 	}
@@ -431,7 +549,7 @@ func run(ctx context.Context) error {
 		}
 
 		// Re-initialize cache since the previous attempt closed it.
-		cache, err = createCache(*disableCache, *cacheDir, *cacheMaxSize, *cacheMinFreeSpace, *enableCacheLock, *useHardlink)
+		cache, err = createCache(cacheFlagValues())
 		if err != nil {
 			return fmt.Errorf("failed to re-initialize cache for direct RBE fallback: %w", err)
 		}
@@ -483,17 +601,90 @@ func logAdcCredentials() {
 	log.Infof("adc_credentials.sh output: %s", output)
 }
 
-func createCache(disableCache bool, cacheDir string, cacheMaxSize int64, cacheMinFreeSpace int64, enableCacheLock bool, useHardlink bool) (cache.Cache, error) {
-	if disableCache {
+// cacheOptions is the set of flag values that decide which cache gets built.
+//
+// These arrived as positional parameters, which stopped being readable once
+// three of them were adjacent booleans: a transposed pair would compile,
+// and the resulting cache would be wrong in a way nothing would report.
+type cacheOptions struct {
+	disabled      bool
+	lockFree      bool
+	dir           string
+	maxSize       int64
+	minFreeSpace  int64
+	lock          bool
+	useHardlink   bool
+	overrides     cache.EvictorOverrides
+	explicitFlags map[string]bool
+}
+
+// cacheFlagValues snapshots the flags that configure the cache.
+func cacheFlagValues() cacheOptions {
+	return cacheOptions{
+		disabled:      *disableCache,
+		lockFree:      *enableLockFreeCache,
+		dir:           *cacheDir,
+		maxSize:       *cacheMaxSize,
+		minFreeSpace:  *cacheMinFreeSpace,
+		lock:          *enableCacheLock,
+		useHardlink:   *useHardlink,
+		overrides:     evictorOverrides(explicitFlags()),
+		explicitFlags: explicitFlags(),
+	}
+}
+
+func createCache(opts cacheOptions) (cache.Cache, error) {
+	if opts.disabled {
 		return nil, nil
 	}
-	var localCache cache.Cache
-	var err error
-	localCache, err = cache.NewLocalCache(cacheDir, cacheMaxSize, cacheMinFreeSpace, enableCacheLock, useHardlink)
+	if opts.lockFree {
+		return createLockFreeCache(opts)
+	}
+
+	localCache, err := cache.NewLocalCache(opts.dir, opts.maxSize, opts.minFreeSpace, opts.lock, opts.useHardlink)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create local cache: %v", err)
 	}
-	return localCache, err
+	return localCache, nil
+}
+
+// evictorOverrides collects the eviction tuning flags the caller actually
+// passed.
+//
+// Only flags present in explicit are forwarded. A flag left alone must not be
+// forwarded as a zero, because zero is a legal value for several of these
+// settings and would be indistinguishable from "use the default".
+func evictorOverrides(explicit map[string]bool) cache.EvictorOverrides {
+	var o cache.EvictorOverrides
+	if explicit["cache-target-free-space"] {
+		o.TargetFreeSpaceBytes = cacheTargetFreeSpace
+	}
+	if explicit["cache-eviction-sample-buckets"] {
+		o.SampleBuckets = cacheSampleBuckets
+	}
+	if explicit["cache-eviction-batch-size"] {
+		o.BatchSize = cacheBatchSize
+	}
+	if explicit["cache-eviction-batch-delay"] {
+		o.BatchDelay = cacheBatchDelay
+	}
+	if explicit["cache-lazy-touch-interval"] {
+		o.LazyTouchInterval = cacheLazyTouchInterval
+	}
+	if explicit["cache-min-blob-age"] {
+		o.MinBlobAge = cacheMinBlobAge
+	}
+	return o
+}
+
+func createLockFreeCache(opts cacheOptions) (cache.Cache, error) {
+	cfg := cache.NewEvictorConfig(opts.minFreeSpace, opts.overrides)
+
+	lockFreeCache, err := cache.NewLockFreeCache(opts.dir, cfg, opts.useHardlink)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create lock-free cache: %v", err)
+	}
+	return lockFreeCache, nil
 }
 
 func setMemoryLimit(limit int64) {
