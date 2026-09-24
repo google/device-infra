@@ -27,6 +27,7 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -494,6 +495,13 @@ public class AdbWebSocketBridgeTest {
     } finally {
       pumpBridge.stop();
     }
+  }
+
+  @Test
+  public void sharedClient_pingIntervalIsSixtySeconds() {
+    assertThat(AdbWebSocketBridge.DEFAULT_PING_INTERVAL).isEqualTo(Duration.ofSeconds(60));
+    assertThat(AdbWebSocketBridge.SHARED_CLIENT.get().pingIntervalMillis())
+        .isEqualTo((int) Duration.ofSeconds(60).toMillis());
   }
 
   /** Minimal {@link WebSocket} fake for exercising the TCP to WebSocket pump in isolation. */
