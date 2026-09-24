@@ -27,6 +27,7 @@ go_library(
         "evictorconfig.go",
         "localcache.go",
         "lockfreecache.go",
+        "setup.go",
     ],
     importpath = "github.com/google/device-infra/src/devtools/rbe/casdownloader/cache",
     deps = [
@@ -44,6 +45,7 @@ go_test(
     srcs = [
         "evictorconfig_test.go",
         "lockfreecache_test.go",
+        "setup_test.go",
     ],
     embed = [":cache"],
     deps = [

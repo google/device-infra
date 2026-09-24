@@ -29,6 +29,10 @@ import (
 	"go.chromium.org/luci/common/data/text/units"
 )
 
+// DownloadJob is one download: the tree to fetch, where to put it, and the
+// client, cache and limits to do it with. The caller fills it in and hands it
+// to DoDownload, which may consult it more than once -- a proxy failure is
+// retried directly -- so it describes the work rather than the attempt.
 type DownloadJob struct {
 	Client   *client.Client
 	Digest   string
@@ -49,6 +53,12 @@ type DownloadJob struct {
 	// fetch are attributed to, so it must agree with the address Client dialed.
 	UseProxy bool
 	Tracker  *ProxyHitTracker
+	// Notes carries remarks the caller established before the download began,
+	// which is where anything about setting the job up has to be reported from:
+	// the stats do not exist yet at that point, and on a fallback attempt they
+	// are replaced. Seeded into every attempt's stats so that a condition that
+	// is still true on the retry is still reported on the retry.
+	Notes []string
 
 	// remoteFailed records whether the last DoDownload failed in a call to
 	// Client, as opposed to in local work before or after the fetch. Callers
@@ -117,8 +127,10 @@ type Stats struct {
 	CASProxy            string `json:"casproxy,omitempty"`
 }
 
-// noteSeparator joins the entries in Stats.Notes. sanitizeNote guarantees no
-// entry contains its "|", so splitting on "|" recovers exactly the entries.
+// noteSeparator joins the notes of a single run into the one string the stats
+// carry. Chosen over a newline because the field ends up in a JSON blob that is
+// read by eye as often as by machine. sanitizeNote guarantees no entry contains
+// its "|", so splitting on "|" recovers exactly the entries.
 const noteSeparator = " | "
 
 // noteSanitizer replaces what could make one note read as several: the
@@ -689,8 +701,15 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache,
 //   - Copy duplicates files to target locations
 //   - Dump downloadStats
 func (d *DownloadJob) DoDownload(ctx context.Context) error {
+	// Notes seeded from the caller do not pass through addNote, so they are
+	// sanitized here to keep the separator unambiguous.
+	seeded := make([]string, len(d.Notes))
+	for i, note := range d.Notes {
+		seeded[i] = sanitizeNote(note)
+	}
 	d.DownloadStats = &Stats{
 		CASProxy: d.CASProxyStatus,
+		Notes:    strings.Join(seeded, noteSeparator),
 	}
 	d.remoteFailed = false
 	if d.DownloadTimeout > 0 {

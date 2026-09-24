@@ -1,6 +1,7 @@
 package download
 
 import (
+	"context"
 	"strings"
 	"testing"
 )
@@ -21,6 +22,23 @@ func TestAddNote_SeparatorIsUnambiguous(t *testing.T) {
 		t.Errorf("Notes %q contains a line break", job.Stats().Notes)
 	}
 	if want := "first: a_b | second: line two line three"; job.Stats().Notes != want {
+		t.Errorf("Notes = %q, want %q", job.Stats().Notes, want)
+	}
+}
+
+// TestDoDownload_SeededNotesAreSanitized covers notes the caller hands in
+// through DownloadJob.Notes, which reach the stats without passing through
+// addNote.
+func TestDoDownload_SeededNotesAreSanitized(t *testing.T) {
+	// An unparseable digest fails DoDownload straight after the stats are
+	// seeded, which is all this test needs.
+	job := &DownloadJob{
+		Digest: "INVALID_DIGEST",
+		Notes:  []string{"cache at /a|b unusable", "second\nline"},
+	}
+	_ = job.DoDownload(context.Background())
+
+	if want := "cache at /a_b unusable | second line"; job.Stats().Notes != want {
 		t.Errorf("Notes = %q, want %q", job.Stats().Notes, want)
 	}
 }
