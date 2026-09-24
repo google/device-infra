@@ -84,7 +84,9 @@ message InstallApkStepSpec {
   optional bool force_install_apks = 9 [
     default = false,
     (field_detail) = {
-      help: "Whether to force install apks. Defaults to false."
+      help: "Whether to force install apks. If true, the apks are re-installed "
+            "even if apks with the same MD5 are already installed on the "
+            "device. Defaults to false."
     }
   ];
 

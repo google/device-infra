@@ -322,12 +322,27 @@ public class InstallApkStep implements InstallApkStepConstants {
     }
     installTimeout.ifPresent(installArgsBuilder::setInstallTimeout);
     sleepAfterInstall.ifPresent(installArgsBuilder::setSleepAfterInstall);
-    apkInstaller.installApkIfNotExist(device, installArgsBuilder.build(), testInfo.log());
+    installApk(device, installArgsBuilder.build(), testInfo, spec);
     // If currently not on system user 0, ensure apks are installed on system user too.
     // b/142827104
     if (androidUserUtil.getCurrentUser(device.getDeviceId(), deviceSdkVersion) != 0) {
-      apkInstaller.installApkIfNotExist(
-          device, installArgsBuilder.setUserId("0").build(), testInfo.log());
+      installApk(device, installArgsBuilder.setUserId("0").build(), testInfo, spec);
+    }
+  }
+
+  /**
+   * Installs the APK, honoring {@link InstallApkStepSpec#getForceInstallApks()}.
+   *
+   * <p>When force installation is requested, the APK is re-installed even if an APK with the same
+   * MD5 is already installed on the device. Otherwise the installation is skipped in that case.
+   */
+  private void installApk(
+      Device device, ApkInstallArgs installArgs, TestInfo testInfo, InstallApkStepSpec spec)
+      throws MobileHarnessException, InterruptedException {
+    if (spec.getForceInstallApks()) {
+      apkInstaller.installApkIfExist(device, installArgs, testInfo.log());
+    } else {
+      apkInstaller.installApkIfNotExist(device, installArgs, testInfo.log());
     }
   }
 
