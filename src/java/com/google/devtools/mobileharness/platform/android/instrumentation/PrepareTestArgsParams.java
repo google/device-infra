@@ -20,6 +20,7 @@ import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.job.out.Warnings;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import java.util.Optional;
 
 /** Wrapper for arguments used for preparing test args used in AndroidInstrumentationUtil. */
@@ -53,6 +54,9 @@ public abstract class PrepareTestArgsParams {
   /** Whether to skip clear media provider for multi user case. */
   public abstract boolean skipClearMediaProviderForMultiUserCase();
 
+  /** Output channel for properties (e.g., time spent on preparing test args) to the end user. */
+  public abstract Optional<Properties> properties();
+
   public static Builder builder() {
     return new AutoValue_PrepareTestArgsParams.Builder()
         .setTestArgs(ImmutableMap.of())
@@ -80,6 +84,8 @@ public abstract class PrepareTestArgsParams {
 
     public abstract Builder setSkipClearMediaProviderForMultiUserCase(
         boolean skipClearMediaProviderForMultiUserCase);
+
+    public abstract Builder setProperties(Properties properties);
 
     public abstract PrepareTestArgsParams build();
   }
