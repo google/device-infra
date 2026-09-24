@@ -490,3 +490,93 @@ func TestTrackedClientStream_RecvMsgIdempotent(t *testing.T) {
 		t.Errorf("After second RecvMsg tracker = (bytes:%d, count:%d), want (1024, 2) without double-counting", tracker.WarmBytes(), tracker.WarmCount())
 	}
 }
+
+// newDuplicateDigestsJob returns a cacheless job, as -disable-cache produces,
+// for a tree whose first.txt and second.txt share one blob, along with the
+// blob's contents.
+func newDuplicateDigestsJob(t *testing.T, destDir string) (*DownloadJob, []byte) {
+	t.Helper()
+	ctx := context.Background()
+	fakeServer, err := fakes.NewServer(t)
+	if err != nil {
+		t.Fatalf("Failed to create fake RBE server: %v", err)
+	}
+	t.Cleanup(fakeServer.Stop)
+
+	sharedData := []byte("this blob is referenced from two paths")
+	dShared := fakeServer.CAS.Put(sharedData)
+
+	rootDir := &repb.Directory{
+		Files: []*repb.FileNode{
+			{Name: "first.txt", Digest: &repb.Digest{Hash: dShared.Hash, SizeBytes: dShared.Size}},
+			{Name: "second.txt", Digest: &repb.Digest{Hash: dShared.Hash, SizeBytes: dShared.Size}},
+		},
+	}
+	rootBytes, err := proto.Marshal(rootDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dRootDir := fakeServer.CAS.Put(rootBytes)
+
+	testClient, err := fakeServer.NewTestClient(ctx)
+	if err != nil {
+		t.Fatalf("Failed to create test client: %v", err)
+	}
+	t.Cleanup(func() { testClient.Close() })
+
+	return &DownloadJob{
+		Client: testClient,
+		Digest: fmt.Sprintf("%s/%d", dRootDir.Hash, dRootDir.Size),
+		Dir:    destDir,
+	}, sharedData
+}
+
+// A tree may reference the same blob from several paths. The blob is fetched
+// once, but every path it appears at still has to end up on disk. The local
+// cache path does this by copying the duplicates after the download; the
+// no-cache path has to do it too.
+func TestDoDownload_DuplicateDigests_NoLocalCache(t *testing.T) {
+	destDir := t.TempDir()
+	job, sharedData := newDuplicateDigestsJob(t, destDir)
+
+	if err := job.DoDownload(context.Background()); err != nil {
+		t.Fatalf("DoDownload failed: %v", err)
+	}
+
+	for _, name := range []string{"first.txt", "second.txt"} {
+		got, err := os.ReadFile(filepath.Join(destDir, name))
+		if err != nil {
+			t.Errorf("Failed to read %s: %v", name, err)
+			continue
+		}
+		if !bytes.Equal(got, sharedData) {
+			t.Errorf("%s content = %q, want %q", name, got, sharedData)
+		}
+	}
+}
+
+// If a duplicate cannot be materialized, the download has not produced the
+// tree it was asked for, and must say so rather than report success with a
+// path missing. It must also not leave the fetched copy behind, which would
+// hand the caller a directory that looks like a partial download.
+func TestDoDownload_DuplicateCopyFails_NoLocalCache(t *testing.T) {
+	destDir := t.TempDir()
+	job, _ := newDuplicateDigestsJob(t, destDir)
+
+	// second.txt is the duplicate, materialized from first.txt after the
+	// fetch. Occupying its path makes that step fail.
+	if err := os.WriteFile(filepath.Join(destDir, "second.txt"), []byte("in the way"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	err := job.DoDownload(context.Background())
+	if err == nil {
+		t.Fatal("DoDownload succeeded although a duplicate path could not be materialized")
+	}
+	if !strings.Contains(err.Error(), "duplicated files") {
+		t.Errorf("DoDownload error = %q, want it to name the duplicate copy as the failure", err)
+	}
+	if _, statErr := os.Stat(filepath.Join(destDir, "first.txt")); !os.IsNotExist(statErr) {
+		t.Errorf("first.txt was left behind after the failed download (stat err %v)", statErr)
+	}
+}

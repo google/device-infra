@@ -373,10 +373,15 @@ func calculateAndLogTimeout(ctx context.Context, downloadTimeout time.Duration, 
 }
 
 func (d *DownloadJob) downloadWithoutLocalCache(ctx context.Context, outputs []*client.TreeOutput) error {
-	toDownload := make(map[digest.Digest]*client.TreeOutput)
+	// A blob referenced from several paths is worth fetching only once, but the
+	// paths that were folded away still have to be materialized afterwards.
+	// Building the map by hand here drops them: the download only ever writes
+	// one path per digest, so the rest are silently missing from the output
+	// directory. The local cache path avoids this by copying the duplicates.
+	toDownload, dups := convertTreeOutputListToMap(outputs)
+
 	var sumSize int64
-	for _, output := range outputs {
-		toDownload[output.Digest] = output
+	for _, output := range toDownload {
 		sumSize += output.Digest.Size
 	}
 
@@ -399,6 +404,19 @@ func (d *DownloadJob) downloadWithoutLocalCache(ctx context.Context, outputs []*
 		return fmt.Errorf("failed to download files: %w", err)
 	}
 	log.InfoContextf(ctx, "finished downloading %d files from CAS without local cache, took %s", len(toDownload), time.Since(start))
+
+	if len(dups) > 0 {
+		// Copy duplicates files to the target location
+		start = time.Now()
+		if err := copyFiles(ctx, dups, toDownload); err != nil {
+			removeLeftOverFiles(outputs)
+			if ctx.Err() == context.DeadlineExceeded {
+				return context.DeadlineExceeded
+			}
+			return fmt.Errorf("failed to copy duplicated files: %w", err)
+		}
+		log.InfoContextf(ctx, "finished copying/hard-linking %d duplicated files, took %s", len(dups), time.Since(start))
+	}
 
 	d.updateDownloadStats(outputs, toDownload)
 
