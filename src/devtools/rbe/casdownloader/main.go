@@ -452,7 +452,7 @@ func run(ctx context.Context) error {
 		RPCTimeouts:           rpcTimeouts,
 	}
 
-	tracker := download.NewTracker()
+	tracker := download.NewProxyHitTracker()
 	clientOpts.DialOpts = append(clientOpts.DialOpts,
 		grpc.WithChainStreamInterceptor(tracker.StreamInterceptor()),
 		grpc.WithChainUnaryInterceptor(tracker.UnaryInterceptor()),
@@ -516,6 +516,7 @@ func run(ctx context.Context) error {
 		ChunksOnly:      *chunksOnly,
 		MinDownloadMbps: *minDownloadMbps,
 		DownloadTimeout: *downloadTimeout,
+		UseProxy:        useProxy,
 		Tracker:         tracker,
 	}
 	reportMemoryStats()
@@ -524,7 +525,15 @@ func run(ctx context.Context) error {
 	err = d.DoDownload(ctx)
 
 	// 3. Download-time fallback: If download fails and we were actively using the proxy
-	if err != nil && useProxy {
+	//
+	// Only a failure talking to casproxy warrants it. A local failure -- disk
+	// full, a bad chunk, a timeout while restoring -- would recur against CAS
+	// remote too, and by then Push may already have put casproxy's bytes into
+	// the local cache, where the retry would book them as local hits. Leaving
+	// it alone reports the real error and keeps the proxy tiers accurate.
+	if err != nil && useProxy && !d.RemoteFailed() {
+		log.WarningContextf(ctx, "Download failed locally, not in CAS proxy; not falling back to direct RBE CAS: %v", err)
+	} else if err != nil && useProxy {
 		proxyErr := err
 		log.WarningContextf(ctx, "Download failed mid-run using CAS proxy: %v. Falling back to direct RBE CAS connection...", proxyErr)
 
@@ -554,10 +563,13 @@ func run(ctx context.Context) error {
 			return fmt.Errorf("failed to re-initialize cache for direct RBE fallback: %w", err)
 		}
 
+		// The retry talks to CAS remote, so neither the hits recorded against
+		// casproxy nor the proxied attribution apply to it any more.
 		tracker.Reset()
 		// Reassign client, cache, and updated proxy status to download job
 		d.Client = rbeClient
 		d.Cache = cache
+		d.UseProxy = false
 		d.CASProxyStatus = fmt.Sprintf("fallback: %v", proxyErr)
 
 		err = d.DoDownload(ctx)
@@ -736,9 +748,9 @@ func recordDownloadMetrics(success bool, rbeStatus string, duration time.Duratio
 	// Record download latency.
 	monitoring.RecordLatency(success, rbeStatus, duration)
 
-	// Record download cold payload size.
+	// Record the payload that had to come from CAS remote.
 	if success {
-		monitoring.RecordBytes(true, d.ColdSize())
+		monitoring.RecordBytes(true, d.WANSize())
 	} else {
 		monitoring.RecordBytes(false, 0)
 	}
@@ -755,12 +767,16 @@ func recordDownloadMetrics(success bool, rbeStatus string, duration time.Duratio
 	}
 	caller, bid, branch, flavor := parseInvocationID(*invocationID)
 	mStats := &monitoring.DownloadStats{
-		SizeCold:           stats.SizeCold,
 		SizeHot:            stats.SizeHot,
-		SizeWarm:           stats.SizeWarm,
-		CountCold:          stats.CountCold,
+		SizeDedup:          stats.SizeDedup,
+		SizeProxyHot:       stats.SizeProxyHot,
+		SizeProxyCold:      stats.SizeProxyCold,
+		SizeCold:           stats.SizeCold,
 		CountHot:           stats.CountHot,
-		CountWarm:          stats.CountWarm,
+		CountDedup:         stats.CountDedup,
+		CountProxyHot:      stats.CountProxyHot,
+		CountProxyCold:     stats.CountProxyCold,
+		CountCold:          stats.CountCold,
 		E2ETimeMS:          stats.E2ETimeMS,
 		DirRetrieveTimeMS:  stats.DirRetrieveTimeMS,
 		DirPrepareTimeMS:   stats.DirPrepareTimeMS,

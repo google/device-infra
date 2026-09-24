@@ -67,7 +67,7 @@ func TestDownloadWithLocalCache_ReservesSpaceBeforeDownloading(t *testing.T) {
 	}
 
 	c := &reservingCache{err: errNoSpace}
-	job := &DownloadJob{DownloadStats: &Stats{}, Tracker: NewTracker()}
+	job := &DownloadJob{DownloadStats: &Stats{}, Tracker: NewProxyHitTracker()}
 
 	err := job.downloadWithLocalCache(context.Background(), c, outputs)
 
@@ -97,7 +97,7 @@ func TestDownloadWithLocalCache_ReservationFailureMentionsSpace(t *testing.T) {
 		{Digest: digest.Digest{Hash: "aa", Size: 1 << 30}, Path: filepath.Join(dir, "a")},
 	}
 
-	err := (&DownloadJob{DownloadStats: &Stats{}, Tracker: NewTracker()}).downloadWithLocalCache(
+	err := (&DownloadJob{DownloadStats: &Stats{}, Tracker: NewProxyHitTracker()}).downloadWithLocalCache(
 		context.Background(), &reservingCache{err: errNoSpace}, outputs)
 	if err == nil {
 		t.Fatal("Expected an error, got nil")
@@ -126,7 +126,7 @@ func TestDownloadWithLocalCache_RemovesPulledFilesWhenReservationFails(t *testin
 		{Digest: digest.Digest{Hash: "bb", Size: 10}, Path: filepath.Join(dir, "missing")},
 	}
 
-	if err := (&DownloadJob{DownloadStats: &Stats{}, Tracker: NewTracker()}).downloadWithLocalCache(
+	if err := (&DownloadJob{DownloadStats: &Stats{}, Tracker: NewProxyHitTracker()}).downloadWithLocalCache(
 		context.Background(), &reservingCache{err: errNoSpace}, outputs); err == nil {
 		t.Fatal("Expected an error, got nil")
 	}
@@ -153,7 +153,7 @@ func TestDownloadWithLocalCache_CacheWithoutReservationIsNotRequiredToProvideOne
 	outputs := []*client.TreeOutput{{Digest: digest.Digest{Hash: "aa", Size: 10}, Path: filepath.Join(dir, "a")}}
 	allCached := &everythingCachedCache{}
 
-	if err := (&DownloadJob{DownloadStats: &Stats{}, Tracker: NewTracker()}).downloadWithLocalCache(
+	if err := (&DownloadJob{DownloadStats: &Stats{}, Tracker: NewProxyHitTracker()}).downloadWithLocalCache(
 		context.Background(), allCached, outputs); err != nil {
 		t.Errorf("downloadWithLocalCache with a cache that cannot reserve space failed: %v", err)
 	}

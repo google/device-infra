@@ -43,17 +43,68 @@ type DownloadJob struct {
 	MinDownloadMbps int64
 	DownloadTimeout time.Duration
 	CASProxyStatus  string
-	Tracker         *Tracker
+	// UseProxy reports whether Client is pointed at a casproxy rather than at
+	// CAS remote. It decides which side of the WAN the bytes this job had to
+	// fetch are attributed to, so it must agree with the address Client dialed.
+	UseProxy bool
+	Tracker  *ProxyHitTracker
+
+	// remoteFailed records whether the last DoDownload failed in a call to
+	// Client, as opposed to in local work before or after the fetch. Callers
+	// read it through the [DownloadJob.RemoteFailed] method, whose comment
+	// explains why the distinction matters.
+	remoteFailed bool
+}
+
+// RemoteFailed reports whether the last DoDownload failed while talking to
+// Client: reading the root directory, walking the tree, or fetching blobs.
+//
+// Only such a failure can be blamed on casproxy, so only such a failure
+// justifies retrying against CAS remote. Everything else DoDownload does --
+// pulling from and pushing to the local cache, reserving disk space, copying
+// duplicates, restoring chunks -- is local, and switching remotes cannot fix
+// it. Worse, a retry after Push has run finds casproxy's bytes in the local
+// cache and books them as local hits, erasing the proxy tiers from the stats.
+func (d *DownloadJob) RemoteFailed() bool {
+	return d.remoteFailed
 }
 
 // Stats holds the telemetry data for a download job.
+//
+// The five size fields partition the tree: every byte the job needed is
+// attributed to exactly one of them, and together they sum to the tree's
+// logical size. The counts partition the file list the same way.
+//
+//   - Hot: served by the local cache. Never left the host.
+//   - Dedup: a blob the tree references from more than one path. Only the first
+//     reference is fetched; the rest are linked or copied locally. These bytes
+//     were spared a download, but they say nothing about how well the local
+//     cache is working, which is why they are not folded into Hot.
+//   - ProxyHot: served from casproxy's own disk cache. Crossed the lab, not
+//     the WAN. This is the traffic casproxy exists to eliminate.
+//   - ProxyCold: fetched through casproxy, which did not have the blob. An
+//     upper bound on WAN traffic rather than a measurement of it: casproxy
+//     coalesces concurrent misses for the same blob, so several clients can
+//     each book a blob cold that crossed the WAN exactly once. casproxy's own
+//     wan_bytes metric is the authoritative number.
+//   - Cold: fetched straight from CAS remote with no casproxy in the path,
+//     because none was configured, it was unreachable, or the job fell back to
+//     a direct connection mid-run.
+//
+// Hit rates stay binary per cache, as they should: the local cache's is
+// Hot/total, and casproxy's, as seen by this client, is
+// ProxyHot/(ProxyHot+ProxyCold).
 type Stats struct {
-	SizeCold            int64  `json:"size_cold"`
 	SizeHot             int64  `json:"size_hot"`
-	SizeWarm            int64  `json:"size_warm"`
-	CountCold           int    `json:"count_cold"`
+	SizeDedup           int64  `json:"size_dedup"`
+	SizeProxyHot        int64  `json:"size_proxy_hot"`
+	SizeProxyCold       int64  `json:"size_proxy_cold"`
+	SizeCold            int64  `json:"size_cold"`
 	CountHot            int    `json:"count_hot"`
-	CountWarm           int    `json:"count_warm"`
+	CountDedup          int    `json:"count_dedup"`
+	CountProxyHot       int    `json:"count_proxy_hot"`
+	CountProxyCold      int    `json:"count_proxy_cold"`
+	CountCold           int    `json:"count_cold"`
 	E2ETimeMS           int64  `json:"e2e_time_ms"`
 	DirRetrieveTimeMS   int64  `json:"dir_retrieve_time_ms"`
 	DirPrepareTimeMS    int64  `json:"dir_prepare_time_ms"`
@@ -179,7 +230,13 @@ func fileMode(output *client.TreeOutput) os.FileMode {
 	return os.FileMode(0o600)
 }
 
-func (d *DownloadJob) updateDownloadStats(all []*client.TreeOutput, downloaded map[digest.Digest]*client.TreeOutput) {
+// updateDownloadStats attributes every byte of the tree to exactly one tier.
+// See Stats for what the tiers mean.
+//
+// all is the full file list, including each path a duplicated blob appears at;
+// downloaded is keyed by digest and so holds one entry per blob actually
+// fetched; dups is the remainder, the paths that were folded away.
+func (d *DownloadJob) updateDownloadStats(all []*client.TreeOutput, downloaded map[digest.Digest]*client.TreeOutput, dups []*client.TreeOutput) {
 	var sizeTotal int64
 	for _, output := range all {
 		sizeTotal += output.Digest.Size
@@ -190,33 +247,66 @@ func (d *DownloadJob) updateDownloadStats(all []*client.TreeOutput, downloaded m
 		sizeDownloaded += output.Digest.Size
 	}
 
-	sizeHot := sizeTotal - sizeDownloaded
-	countHot := len(all) - len(downloaded)
+	var sizeDedup int64
+	for _, output := range dups {
+		sizeDedup += output.Digest.Size
+	}
 
-	var sizeWarm int64
-	var countWarm int
+	// Whatever was neither fetched nor deduplicated came out of the local cache.
+	sizeHot := sizeTotal - sizeDownloaded - sizeDedup
+	countHot := len(all) - len(downloaded) - len(dups)
+
+	// What casproxy reported serving from its own disk, via response trailers.
+	var sizeProxyHot int64
+	var countProxyHot int
 	if d.Tracker != nil {
-		sizeWarm = d.Tracker.WarmBytes()
-		countWarm = d.Tracker.WarmCount()
-		if sizeWarm > sizeDownloaded {
-			sizeWarm = sizeDownloaded
-		}
-		if countWarm > len(downloaded) {
-			countWarm = len(downloaded)
+		sizeProxyHot = d.Tracker.HitBytes()
+		countProxyHot = d.Tracker.HitCount()
+		// A blob re-read after a stream failure can be reported twice. Clamping
+		// keeps the partition adding up, but over-reporting is the signature of
+		// a bug, and left silent it looks exactly like a perfect proxy hit rate.
+		if sizeProxyHot > sizeDownloaded || countProxyHot > len(downloaded) {
+			log.Warningf("casproxy reported serving more than was downloaded (%v in %d blobs reported, %v in %d downloaded); clamping, proxy hit rate is understated",
+				units.Size(sizeProxyHot), countProxyHot, units.Size(sizeDownloaded), len(downloaded))
+			if sizeProxyHot > sizeDownloaded {
+				sizeProxyHot = sizeDownloaded
+			}
+			if countProxyHot > len(downloaded) {
+				countProxyHot = len(downloaded)
+			}
 		}
 	}
 
-	sizeCold := sizeDownloaded - sizeWarm
-	countCold := len(downloaded) - countWarm
+	// Everything fetched that casproxy did not serve came over the WAN. Which
+	// side of it the job pulled from is decided once, when the client dials: a
+	// mid-run fallback to CAS remote resets the tracker and restarts the
+	// download, so a single set of stats never mixes the two paths.
+	sizeMissed := sizeDownloaded - sizeProxyHot
+	countMissed := len(downloaded) - countProxyHot
+	var sizeProxyCold, sizeCold int64
+	var countProxyCold, countCold int
+	if d.UseProxy {
+		sizeProxyCold, countProxyCold = sizeMissed, countMissed
+	} else {
+		sizeCold, countCold = sizeMissed, countMissed
+	}
 
-	log.Infof("Stats of cache: SizeHot: %v, SizeWarm: %v, SizeCold: %v, CountHot: %d, CountWarm: %d, CountCold: %d",
-		units.Size(sizeHot), units.Size(sizeWarm), units.Size(sizeCold), countHot, countWarm, countCold)
+	log.Infof("Stats of cache: hot: %v (%d), dedup: %v (%d), proxy-hot: %v (%d), proxy-cold: %v (%d), cold: %v (%d)",
+		units.Size(sizeHot), countHot,
+		units.Size(sizeDedup), len(dups),
+		units.Size(sizeProxyHot), countProxyHot,
+		units.Size(sizeProxyCold), countProxyCold,
+		units.Size(sizeCold), countCold)
 
 	d.DownloadStats.SizeHot = sizeHot
-	d.DownloadStats.SizeWarm = sizeWarm
+	d.DownloadStats.SizeDedup = sizeDedup
+	d.DownloadStats.SizeProxyHot = sizeProxyHot
+	d.DownloadStats.SizeProxyCold = sizeProxyCold
 	d.DownloadStats.SizeCold = sizeCold
 	d.DownloadStats.CountHot = countHot
-	d.DownloadStats.CountWarm = countWarm
+	d.DownloadStats.CountDedup = len(dups)
+	d.DownloadStats.CountProxyHot = countProxyHot
+	d.DownloadStats.CountProxyCold = countProxyCold
 	d.DownloadStats.CountCold = countCold
 }
 
@@ -375,9 +465,7 @@ func calculateAndLogTimeout(ctx context.Context, downloadTimeout time.Duration, 
 func (d *DownloadJob) downloadWithoutLocalCache(ctx context.Context, outputs []*client.TreeOutput) error {
 	// A blob referenced from several paths is worth fetching only once, but the
 	// paths that were folded away still have to be materialized afterwards.
-	// Building the map by hand here drops them: the download only ever writes
-	// one path per digest, so the rest are silently missing from the output
-	// directory. The local cache path avoids this by copying the duplicates.
+	// Building the map by hand here would silently drop them.
 	toDownload, dups := convertTreeOutputListToMap(outputs)
 
 	var sumSize int64
@@ -397,6 +485,7 @@ func (d *DownloadJob) downloadWithoutLocalCache(ctx context.Context, outputs []*
 
 	start := time.Now()
 	if err := d.downloadFilesWithAbsolutePath(ctx, toDownload); err != nil {
+		d.remoteFailed = true
 		removeLeftOverFiles(outputs)
 		if ctx.Err() == context.DeadlineExceeded {
 			return context.DeadlineExceeded
@@ -406,7 +495,6 @@ func (d *DownloadJob) downloadWithoutLocalCache(ctx context.Context, outputs []*
 	log.InfoContextf(ctx, "finished downloading %d files from CAS without local cache, took %s", len(toDownload), time.Since(start))
 
 	if len(dups) > 0 {
-		// Copy duplicates files to the target location
 		start = time.Now()
 		if err := copyFiles(ctx, dups, toDownload); err != nil {
 			removeLeftOverFiles(outputs)
@@ -418,7 +506,7 @@ func (d *DownloadJob) downloadWithoutLocalCache(ctx context.Context, outputs []*
 		log.InfoContextf(ctx, "finished copying/hard-linking %d duplicated files, took %s", len(dups), time.Since(start))
 	}
 
-	d.updateDownloadStats(outputs, toDownload)
+	d.updateDownloadStats(outputs, toDownload, dups)
 
 	return nil
 }
@@ -436,7 +524,7 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache,
 
 	if len(missed) <= 0 {
 		log.InfoContextf(ctx, "All files in cache. Skip downloading files.")
-		d.updateDownloadStats(outputs, nil)
+		d.updateDownloadStats(outputs, nil, nil)
 		return nil
 	}
 
@@ -491,6 +579,7 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache,
 
 	start = time.Now()
 	if err := d.downloadFilesWithAbsolutePath(ctx, toDownload); err != nil {
+		d.remoteFailed = true
 		removeLeftOverFiles(outputs)
 		if ctx.Err() == context.DeadlineExceeded {
 			return context.DeadlineExceeded
@@ -499,7 +588,7 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache,
 	}
 	log.InfoContextf(ctx, "finished downloading %d files from CAS, took %s", len(toDownload), time.Since(start))
 
-	d.updateDownloadStats(outputs, toDownload)
+	d.updateDownloadStats(outputs, toDownload, dups)
 
 	// Push downloaded files to local cache
 	start = time.Now()
@@ -541,6 +630,7 @@ func (d *DownloadJob) DoDownload(ctx context.Context) error {
 	d.DownloadStats = &Stats{
 		CASProxy: d.CASProxyStatus,
 	}
+	d.remoteFailed = false
 	if d.DownloadTimeout > 0 {
 		var cancel context.CancelFunc
 		// Apply the fixed download timeout as a parent context.
@@ -589,11 +679,13 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 
 	rootDir := &repb.Directory{}
 	if _, err := c.ReadProto(ctx, rootDigest, rootDir); err != nil {
+		d.remoteFailed = true
 		return fmt.Errorf("failed to read root directory proto: %v", err)
 	}
 
 	dirs, err := c.GetDirectoryTree(ctx, rootDigest.ToProto())
 	if err != nil {
+		d.remoteFailed = true
 		return fmt.Errorf("failed to get directory tree from RBE: %v", err)
 	}
 	log.InfoContextf(ctx, "Finished GetDirectoryTree")
@@ -702,12 +794,22 @@ func (d *DownloadJob) moveChunksIndexFileIfNeeded() error {
 	return nil
 }
 
-// ColdSize returns the count of downloaded bytes from RBE CAS (cache misses).
-func (d *DownloadJob) ColdSize() int64 {
+// TransferredSize returns the bytes that had to come over the network, whether
+// casproxy served them or not.
+func (d *DownloadJob) TransferredSize() int64 {
 	if d.DownloadStats == nil {
 		return 0
 	}
-	return d.DownloadStats.SizeCold
+	return d.DownloadStats.SizeProxyHot + d.DownloadStats.SizeProxyCold + d.DownloadStats.SizeCold
+}
+
+// WANSize returns the bytes that had to be fetched from CAS remote, either by
+// this client or by casproxy on its behalf. It is an upper bound: see Stats.
+func (d *DownloadJob) WANSize() int64 {
+	if d.DownloadStats == nil {
+		return 0
+	}
+	return d.DownloadStats.SizeProxyCold + d.DownloadStats.SizeCold
 }
 
 // TotalSize returns the sum of all file sizes in the tree.
@@ -715,18 +817,19 @@ func (d *DownloadJob) TotalSize() int64 {
 	if d.DownloadStats == nil {
 		return 0
 	}
-	return d.DownloadStats.SizeCold + d.DownloadStats.SizeHot + d.DownloadStats.SizeWarm
+	s := d.DownloadStats
+	return s.SizeHot + s.SizeDedup + s.SizeProxyHot + s.SizeProxyCold + s.SizeCold
 }
 
-// WarmSize returns the count of downloaded bytes served by CAS proxy cache.
-func (d *DownloadJob) WarmSize() int64 {
+// ProxyHotSize returns the bytes casproxy served out of its own disk cache.
+func (d *DownloadJob) ProxyHotSize() int64 {
 	if d.DownloadStats == nil {
 		return 0
 	}
-	return d.DownloadStats.SizeWarm
+	return d.DownloadStats.SizeProxyHot
 }
 
-// HotSize returns the count of downloaded bytes served by worker local directory cache.
+// HotSize returns the bytes served by the worker's local directory cache.
 func (d *DownloadJob) HotSize() int64 {
 	if d.DownloadStats == nil {
 		return 0

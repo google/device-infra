@@ -45,10 +45,15 @@ go_library(
 
 go_test(
     name = "download_test",
-    srcs = ["download_test.go"],
+    srcs = [
+        "download_test.go",
+        "remote_failed_test.go",
+        "tracker_test.go",
+    ],
     embed = [":download"],
     tags = ["deviceinfra_disable_in_kokoro"],
     deps = [
+        "//src/devtools/rbe/casdownloader/cache",
         "@org_golang_google_grpc//:grpc",
         "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:remote_execution_go_proto",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/client",

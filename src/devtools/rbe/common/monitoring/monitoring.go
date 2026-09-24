@@ -6,13 +6,19 @@ import (
 )
 
 // DownloadStats mirror struct to avoid dependency on casdownloader/download.
+// The size and count fields partition the tree; see the download package's
+// Stats for what each tier means.
 type DownloadStats struct {
-	SizeCold           int64
 	SizeHot            int64
-	SizeWarm           int64
-	CountCold          int
+	SizeDedup          int64
+	SizeProxyHot       int64
+	SizeProxyCold      int64
+	SizeCold           int64
 	CountHot           int
-	CountWarm          int
+	CountDedup         int
+	CountProxyHot      int
+	CountProxyCold     int
+	CountCold          int
 	E2ETimeMS          int64
 	DirRetrieveTimeMS  int64
 	DirPrepareTimeMS   int64

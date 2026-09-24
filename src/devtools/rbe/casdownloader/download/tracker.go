@@ -10,68 +10,103 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// TrailerWarmBytes is the gRPC response trailer key for the number of bytes served from proxy disk cache.
-const TrailerWarmBytes = "x-cas-warm-bytes"
+// TrailerProxyHitBytes is the gRPC response trailer key for the number of bytes
+// casproxy served out of its own disk cache.
+const TrailerProxyHitBytes = "x-cas-proxy-hit-bytes"
 
-// TrailerWarmCount is the gRPC response trailer key for the number of blobs served from proxy disk cache.
-const TrailerWarmCount = "x-cas-warm-count"
+// TrailerProxyHitCount is the gRPC response trailer key for the number of blobs
+// casproxy served out of its own disk cache.
+const TrailerProxyHitCount = "x-cas-proxy-hit-count"
 
-// Tracker tracks warm cache statistics (bytes and blob count) received via gRPC response trailers.
-type Tracker struct {
-	mu        sync.Mutex
-	warmBytes int64
-	warmCount int
+// ProxyHitTracker accumulates what casproxy reported serving from its own disk
+// cache, which it attaches to responses as trailers. Bytes a casproxy did not
+// have came from CAS remote, so what this tracker does not see is what the
+// download cost in WAN traffic.
+//
+// A client talking straight to CAS remote simply never sees the trailers and
+// leaves the tracker at zero.
+type ProxyHitTracker struct {
+	mu       sync.Mutex
+	hitBytes int64
+	hitCount int
 }
 
-// NewTracker creates a new Tracker instance.
-func NewTracker() *Tracker {
-	return &Tracker{}
+// NewProxyHitTracker creates a new ProxyHitTracker instance.
+func NewProxyHitTracker() *ProxyHitTracker {
+	return &ProxyHitTracker{}
 }
 
-// AddWarm records warm bytes and increments the warm files/blobs count.
-func (t *Tracker) AddWarm(bytes int64, count int) {
+// AddHit records bytes and blobs served from casproxy's disk cache.
+func (t *ProxyHitTracker) AddHit(bytes int64, count int) {
 	if t == nil {
 		return
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.warmBytes += bytes
-	t.warmCount += count
+	t.hitBytes += bytes
+	t.hitCount += count
 }
 
-// Reset resets all tracked warm bytes and counts to zero.
-func (t *Tracker) Reset() {
+// Reset resets all tracked bytes and counts to zero. It must be called when a
+// download is restarted against a different endpoint, so that hits recorded
+// against a casproxy are not attributed to a direct CAS remote connection.
+func (t *ProxyHitTracker) Reset() {
 	if t == nil {
 		return
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	t.warmBytes = 0
-	t.warmCount = 0
+	t.hitBytes = 0
+	t.hitCount = 0
 }
 
-// WarmBytes returns the total number of warm bytes recorded from proxy cache hits.
-func (t *Tracker) WarmBytes() int64 {
+// HitBytes returns the total bytes casproxy served from its disk cache.
+func (t *ProxyHitTracker) HitBytes() int64 {
 	if t == nil {
 		return 0
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	return t.warmBytes
+	return t.hitBytes
 }
 
-// WarmCount returns the total number of warm files/blobs recorded from proxy cache hits.
-func (t *Tracker) WarmCount() int {
+// HitCount returns the total blobs casproxy served from its disk cache.
+func (t *ProxyHitTracker) HitCount() int {
 	if t == nil {
 		return 0
 	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	return t.warmCount
+	return t.hitCount
 }
 
-// StreamInterceptor returns a grpc.StreamClientInterceptor that captures x-cas-warm-bytes and x-cas-warm-count response trailers on streaming RPCs (e.g. ByteStream.Read).
-func (t *Tracker) StreamInterceptor() grpc.StreamClientInterceptor {
+// record parses a set of response trailers and accumulates whatever casproxy
+// reported. Trailers are absent on a cache miss and on any server that does not
+// speak them, both of which correctly leave the totals untouched.
+func (t *ProxyHitTracker) record(trailer metadata.MD) {
+	if t == nil {
+		return
+	}
+	vals := trailer.Get(TrailerProxyHitBytes)
+	if len(vals) == 0 {
+		return
+	}
+	hitBytes, err := strconv.ParseInt(vals[0], 10, 64)
+	if err != nil || hitBytes <= 0 {
+		return
+	}
+	hitCount := 1
+	if countVals := trailer.Get(TrailerProxyHitCount); len(countVals) > 0 {
+		if c, err := strconv.Atoi(countVals[0]); err == nil && c > 0 {
+			hitCount = c
+		}
+	}
+	t.AddHit(hitBytes, hitCount)
+}
+
+// StreamInterceptor returns a grpc.StreamClientInterceptor that captures the
+// casproxy hit trailers on streaming RPCs (e.g. ByteStream.Read).
+func (t *ProxyHitTracker) StreamInterceptor() grpc.StreamClientInterceptor {
 	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
 		var trailer metadata.MD
 		opts = append(opts, grpc.Trailer(&trailer))
@@ -90,48 +125,31 @@ func (t *Tracker) StreamInterceptor() grpc.StreamClientInterceptor {
 type trackedClientStream struct {
 	grpc.ClientStream
 	trailer *metadata.MD
-	tracker *Tracker
+	tracker *ProxyHitTracker
 }
 
 func (s *trackedClientStream) RecvMsg(m any) error {
 	err := s.ClientStream.RecvMsg(m)
 	if err == io.EOF {
 		if s.trailer != nil && s.tracker != nil {
-			if vals := s.trailer.Get(TrailerWarmBytes); len(vals) > 0 {
-				if warmBytes, parseErr := strconv.ParseInt(vals[0], 10, 64); parseErr == nil && warmBytes > 0 {
-					warmCount := 1
-					if countVals := s.trailer.Get(TrailerWarmCount); len(countVals) > 0 {
-						if c, err := strconv.Atoi(countVals[0]); err == nil && c > 0 {
-							warmCount = c
-						}
-					}
-					s.tracker.AddWarm(warmBytes, warmCount)
-				}
-			}
-			s.trailer = nil
+			s.tracker.record(*s.trailer)
 		}
+		// Clearing the trailer keeps a second RecvMsg from counting the same
+		// stream twice.
+		s.trailer = nil
 	}
 	return err
 }
 
-// UnaryInterceptor returns a grpc.UnaryClientInterceptor that captures x-cas-warm-bytes and x-cas-warm-count response trailers on unary RPCs (e.g. CAS.BatchReadBlobs).
-func (t *Tracker) UnaryInterceptor() grpc.UnaryClientInterceptor {
+// UnaryInterceptor returns a grpc.UnaryClientInterceptor that captures the
+// casproxy hit trailers on unary RPCs (e.g. CAS.BatchReadBlobs).
+func (t *ProxyHitTracker) UnaryInterceptor() grpc.UnaryClientInterceptor {
 	return func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 		var trailer metadata.MD
 		opts = append(opts, grpc.Trailer(&trailer))
 		err := invoker(ctx, method, req, reply, cc, opts...)
-		if err == nil && t != nil {
-			if vals := trailer.Get(TrailerWarmBytes); len(vals) > 0 {
-				if warmBytes, parseErr := strconv.ParseInt(vals[0], 10, 64); parseErr == nil && warmBytes > 0 {
-					warmCount := 1
-					if countVals := trailer.Get(TrailerWarmCount); len(countVals) > 0 {
-						if c, err := strconv.Atoi(countVals[0]); err == nil && c > 0 {
-							warmCount = c
-						}
-					}
-					t.AddWarm(warmBytes, warmCount)
-				}
-			}
+		if err == nil {
+			t.record(trailer)
 		}
 		return err
 	}

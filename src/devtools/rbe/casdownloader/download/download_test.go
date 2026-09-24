@@ -318,81 +318,204 @@ func TestDoDownload_CASProxyStatusStats(t *testing.T) {
 	}
 }
 
-func TestUpdateDownloadStats_ThreeTierBreakdown(t *testing.T) {
+func TestUpdateDownloadStats_TierBreakdown(t *testing.T) {
 	d1 := digest.Digest{Hash: "hash1", Size: 200}
 	d2 := digest.Digest{Hash: "hash2", Size: 300}
 	d3 := digest.Digest{Hash: "hash3", Size: 200}
 	d4 := digest.Digest{Hash: "hash4", Size: 300}
 
+	// file5 is a second reference to the blob behind file4.
 	allOutputs := []*client.TreeOutput{
 		{Digest: d1, Path: "file1"},
 		{Digest: d2, Path: "file2"},
 		{Digest: d3, Path: "file3"},
 		{Digest: d4, Path: "file4"},
+		{Digest: d4, Path: "file5"},
 	}
 
-	// File 1 is satisfied by local cache, so downloaded files are 2, 3, 4 (total 800 bytes)
+	// File 1 came from the local cache, so 2, 3 and 4 were fetched (800 bytes).
 	downloadedOutputs := map[digest.Digest]*client.TreeOutput{
 		d2: {Digest: d2, Path: "file2"},
 		d3: {Digest: d3, Path: "file3"},
 		d4: {Digest: d4, Path: "file4"},
 	}
+	dups := []*client.TreeOutput{{Digest: d4, Path: "file5"}}
 
-	tracker := NewTracker()
-	// Files 2 and 3 served from proxy cache (300 + 200 = 500 bytes)
-	tracker.AddWarm(500, 2)
+	tracker := NewProxyHitTracker()
+	// casproxy served files 2 and 3 from its disk (300 + 200 = 500 bytes).
+	tracker.AddHit(500, 2)
 
 	job := &DownloadJob{
 		DownloadStats: &Stats{},
 		Tracker:       tracker,
+		UseProxy:      true,
 	}
 
-	job.updateDownloadStats(allOutputs, downloadedOutputs)
+	job.updateDownloadStats(allOutputs, downloadedOutputs, dups)
 
 	stats := job.Stats()
 	if stats.SizeHot != 200 || stats.CountHot != 1 {
 		t.Errorf("Hot stats: got size=%d count=%d, want size=200 count=1", stats.SizeHot, stats.CountHot)
 	}
-	if stats.SizeWarm != 500 || stats.CountWarm != 2 {
-		t.Errorf("Warm stats: got size=%d count=%d, want size=500 count=2", stats.SizeWarm, stats.CountWarm)
+	if stats.SizeDedup != 300 || stats.CountDedup != 1 {
+		t.Errorf("Dedup stats: got size=%d count=%d, want size=300 count=1", stats.SizeDedup, stats.CountDedup)
 	}
+	if stats.SizeProxyHot != 500 || stats.CountProxyHot != 2 {
+		t.Errorf("Proxy-hot stats: got size=%d count=%d, want size=500 count=2", stats.SizeProxyHot, stats.CountProxyHot)
+	}
+	if stats.SizeProxyCold != 300 || stats.CountProxyCold != 1 {
+		t.Errorf("Proxy-cold stats: got size=%d count=%d, want size=300 count=1", stats.SizeProxyCold, stats.CountProxyCold)
+	}
+	// Nothing bypassed the proxy, so no bytes are attributed directly to CAS remote.
+	if stats.SizeCold != 0 || stats.CountCold != 0 {
+		t.Errorf("Cold stats: got size=%d count=%d, want size=0 count=0", stats.SizeCold, stats.CountCold)
+	}
+
+	if got, want := job.TotalSize(), int64(1300); got != want {
+		t.Errorf("TotalSize() = %d, want %d", got, want)
+	}
+	if got, want := job.TransferredSize(), int64(800); got != want {
+		t.Errorf("TransferredSize() = %d, want %d", got, want)
+	}
+	if got, want := job.WANSize(), int64(300); got != want {
+		t.Errorf("WANSize() = %d, want %d", got, want)
+	}
+	if got, want := job.ProxyHotSize(), int64(500); got != want {
+		t.Errorf("ProxyHotSize() = %d, want %d", got, want)
+	}
+	if got, want := job.HotSize(), int64(200); got != want {
+		t.Errorf("HotSize() = %d, want %d", got, want)
+	}
+}
+
+// Without a casproxy in the path, everything fetched is charged to CAS remote.
+func TestUpdateDownloadStats_NoProxy(t *testing.T) {
+	d1 := digest.Digest{Hash: "hash1", Size: 200}
+	d2 := digest.Digest{Hash: "hash2", Size: 300}
+
+	allOutputs := []*client.TreeOutput{
+		{Digest: d1, Path: "file1"},
+		{Digest: d2, Path: "file2"},
+	}
+	downloadedOutputs := map[digest.Digest]*client.TreeOutput{
+		d2: {Digest: d2, Path: "file2"},
+	}
+
+	job := &DownloadJob{DownloadStats: &Stats{}, Tracker: NewProxyHitTracker()}
+	job.updateDownloadStats(allOutputs, downloadedOutputs, nil)
+
+	stats := job.Stats()
 	if stats.SizeCold != 300 || stats.CountCold != 1 {
 		t.Errorf("Cold stats: got size=%d count=%d, want size=300 count=1", stats.SizeCold, stats.CountCold)
 	}
-
-	if got := job.TotalSize(); got != 1000 {
-		t.Errorf("TotalSize() = %d, want 1000", got)
+	if stats.SizeProxyHot != 0 || stats.SizeProxyCold != 0 {
+		t.Errorf("Proxy stats: got hot=%d cold=%d, want 0 and 0", stats.SizeProxyHot, stats.SizeProxyCold)
 	}
-	if got := job.WarmSize(); got != 500 {
-		t.Errorf("WarmSize() = %d, want 500", got)
-	}
-	if got := job.HotSize(); got != 200 {
-		t.Errorf("HotSize() = %d, want 200", got)
-	}
-	if got := job.ColdSize(); got != 300 {
-		t.Errorf("ColdSize() = %d, want 300", got)
+	if got, want := job.WANSize(), int64(300); got != want {
+		t.Errorf("WANSize() = %d, want %d", got, want)
 	}
 }
 
-func TestTracker_AddWarmAndReset(t *testing.T) {
-	tracker := NewTracker()
-	if tracker.WarmBytes() != 0 || tracker.WarmCount() != 0 {
-		t.Errorf("Initial tracker = (bytes:%d, count:%d), want (0, 0)", tracker.WarmBytes(), tracker.WarmCount())
+// An over-reporting proxy must not be able to push the partition out of balance.
+func TestUpdateDownloadStats_ClampsProxyOverReport(t *testing.T) {
+	d1 := digest.Digest{Hash: "hash1", Size: 100}
+
+	allOutputs := []*client.TreeOutput{{Digest: d1, Path: "file1"}}
+	downloadedOutputs := map[digest.Digest]*client.TreeOutput{d1: {Digest: d1, Path: "file1"}}
+
+	tracker := NewProxyHitTracker()
+	// Twice what was downloaded, as a retried read of the same blob would report.
+	tracker.AddHit(200, 2)
+
+	job := &DownloadJob{DownloadStats: &Stats{}, Tracker: tracker, UseProxy: true}
+	job.updateDownloadStats(allOutputs, downloadedOutputs, nil)
+
+	stats := job.Stats()
+	if stats.SizeProxyHot != 100 || stats.CountProxyHot != 1 {
+		t.Errorf("Proxy-hot stats: got size=%d count=%d, want size=100 count=1", stats.SizeProxyHot, stats.CountProxyHot)
+	}
+	if stats.SizeProxyCold != 0 || stats.CountProxyCold != 0 {
+		t.Errorf("Proxy-cold stats: got size=%d count=%d, want 0 and 0", stats.SizeProxyCold, stats.CountProxyCold)
+	}
+	if got, want := job.TotalSize(), int64(100); got != want {
+		t.Errorf("TotalSize() = %d, want %d", got, want)
+	}
+}
+
+// Bytes and blob count are clamped independently. A proxy can over-report
+// one without the other -- a retried read of a blob that was already partly
+// counted inflates the bytes but not the count -- and either alone is enough
+// to unbalance the partition.
+func TestUpdateDownloadStats_ClampsOneSidedProxyOverReport(t *testing.T) {
+	d1 := digest.Digest{Hash: "hash1", Size: 100}
+	d2 := digest.Digest{Hash: "hash2", Size: 100}
+	allOutputs := []*client.TreeOutput{{Digest: d1, Path: "file1"}, {Digest: d2, Path: "file2"}}
+	downloadedOutputs := map[digest.Digest]*client.TreeOutput{
+		d1: {Digest: d1, Path: "file1"},
+		d2: {Digest: d2, Path: "file2"},
 	}
 
-	tracker.AddWarm(1024, 1)
-	tracker.AddWarm(2048, 2)
-	if tracker.WarmBytes() != 3072 || tracker.WarmCount() != 3 {
-		t.Errorf("After AddWarm tracker = (bytes:%d, count:%d), want (3072, 3)", tracker.WarmBytes(), tracker.WarmCount())
+	tests := []struct {
+		name                   string
+		hitBytes               int64
+		hitCount               int
+		wantProxyHotSize       int64
+		wantProxyHotCount      int
+		wantProxyColdSize      int64
+		wantProxyColdBlobCount int
+	}{
+		{
+			name:     "bytes over, count within",
+			hitBytes: 300, hitCount: 1,
+			wantProxyHotSize: 200, wantProxyHotCount: 1,
+			wantProxyColdSize: 0, wantProxyColdBlobCount: 1,
+		},
+		{
+			name:     "count over, bytes within",
+			hitBytes: 100, hitCount: 3,
+			wantProxyHotSize: 100, wantProxyHotCount: 2,
+			wantProxyColdSize: 100, wantProxyColdBlobCount: 0,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tracker := NewProxyHitTracker()
+			tracker.AddHit(tc.hitBytes, tc.hitCount)
+			job := &DownloadJob{DownloadStats: &Stats{}, Tracker: tracker, UseProxy: true}
+			job.updateDownloadStats(allOutputs, downloadedOutputs, nil)
+
+			stats := job.Stats()
+			if stats.SizeProxyHot != tc.wantProxyHotSize || stats.CountProxyHot != tc.wantProxyHotCount {
+				t.Errorf("Proxy-hot stats: got size=%d count=%d, want size=%d count=%d",
+					stats.SizeProxyHot, stats.CountProxyHot, tc.wantProxyHotSize, tc.wantProxyHotCount)
+			}
+			if stats.SizeProxyCold != tc.wantProxyColdSize || stats.CountProxyCold != tc.wantProxyColdBlobCount {
+				t.Errorf("Proxy-cold stats: got size=%d count=%d, want size=%d count=%d",
+					stats.SizeProxyCold, stats.CountProxyCold, tc.wantProxyColdSize, tc.wantProxyColdBlobCount)
+			}
+		})
+	}
+}
+
+func TestProxyHitTracker_AddHitAndReset(t *testing.T) {
+	tracker := NewProxyHitTracker()
+	if tracker.HitBytes() != 0 || tracker.HitCount() != 0 {
+		t.Errorf("Initial tracker = (bytes:%d, count:%d), want (0, 0)", tracker.HitBytes(), tracker.HitCount())
+	}
+
+	tracker.AddHit(1024, 1)
+	tracker.AddHit(2048, 2)
+	if tracker.HitBytes() != 3072 || tracker.HitCount() != 3 {
+		t.Errorf("After AddHit tracker = (bytes:%d, count:%d), want (3072, 3)", tracker.HitBytes(), tracker.HitCount())
 	}
 
 	tracker.Reset()
-	if tracker.WarmBytes() != 0 || tracker.WarmCount() != 0 {
-		t.Errorf("After Reset tracker = (bytes:%d, count:%d), want (0, 0)", tracker.WarmBytes(), tracker.WarmCount())
+	if tracker.HitBytes() != 0 || tracker.HitCount() != 0 {
+		t.Errorf("After Reset tracker = (bytes:%d, count:%d), want (0, 0)", tracker.HitBytes(), tracker.HitCount())
 	}
 }
 
-func TestDoDownload_ThreeTierStats_DumpJSON(t *testing.T) {
+func TestDoDownload_TierStats_DumpJSON(t *testing.T) {
 	ctx := context.Background()
 	fakeServer, err := fakes.NewServer(t)
 	if err != nil {
@@ -400,7 +523,7 @@ func TestDoDownload_ThreeTierStats_DumpJSON(t *testing.T) {
 	}
 	defer fakeServer.Stop()
 
-	fileData := []byte("three tier test file")
+	fileData := []byte("tier stats test file")
 	dFile := fakeServer.CAS.Put(fileData)
 
 	rootDir := &repb.Directory{
@@ -423,9 +546,9 @@ func TestDoDownload_ThreeTierStats_DumpJSON(t *testing.T) {
 	destDir := t.TempDir()
 	dumpFile := filepath.Join(destDir, "stats.json")
 
-	tracker := NewTracker()
-	// Simulate that the file was served warm from proxy cache
-	tracker.AddWarm(dFile.Size, 1)
+	tracker := NewProxyHitTracker()
+	// Simulate casproxy having served the file out of its own disk cache.
+	tracker.AddHit(dFile.Size, 1)
 
 	job := DownloadJob{
 		Client:         testClient,
@@ -433,6 +556,7 @@ func TestDoDownload_ThreeTierStats_DumpJSON(t *testing.T) {
 		Dir:            destDir,
 		DumpJSON:       dumpFile,
 		CASProxyStatus: "",
+		UseProxy:       true,
 		Tracker:        tracker,
 	}
 
@@ -440,9 +564,9 @@ func TestDoDownload_ThreeTierStats_DumpJSON(t *testing.T) {
 		t.Fatalf("DoDownload failed: %v", err)
 	}
 
-	if job.Stats().SizeWarm != dFile.Size || job.Stats().CountWarm != 1 {
-		t.Errorf("Stats.SizeWarm=%d, CountWarm=%d, want size=%d count=1",
-			job.Stats().SizeWarm, job.Stats().CountWarm, dFile.Size)
+	if job.Stats().SizeProxyHot != dFile.Size || job.Stats().CountProxyHot != 1 {
+		t.Errorf("Stats.SizeProxyHot=%d, CountProxyHot=%d, want size=%d count=1",
+			job.Stats().SizeProxyHot, job.Stats().CountProxyHot, dFile.Size)
 	}
 
 	dumpedContent, err := os.ReadFile(dumpFile)
@@ -450,7 +574,10 @@ func TestDoDownload_ThreeTierStats_DumpJSON(t *testing.T) {
 		t.Fatalf("Failed to read dumped stats: %v", err)
 	}
 	contentStr := string(dumpedContent)
-	for _, expectedKey := range []string{`"size_hot"`, `"size_warm"`, `"size_cold"`, `"count_hot"`, `"count_warm"`, `"count_cold"`} {
+	for _, expectedKey := range []string{
+		`"size_hot"`, `"size_dedup"`, `"size_proxy_hot"`, `"size_proxy_cold"`, `"size_cold"`,
+		`"count_hot"`, `"count_dedup"`, `"count_proxy_hot"`, `"count_proxy_cold"`, `"count_cold"`,
+	} {
 		if !strings.Contains(contentStr, expectedKey) {
 			t.Errorf("Dumped JSON does not contain expected key %s: %s", expectedKey, contentStr)
 		}
@@ -466,8 +593,8 @@ func (m *mockEOFClientStream) RecvMsg(msg any) error {
 }
 
 func TestTrackedClientStream_RecvMsgIdempotent(t *testing.T) {
-	tracker := NewTracker()
-	trailer := metadata.Pairs(TrailerWarmBytes, "1024", TrailerWarmCount, "2")
+	tracker := NewProxyHitTracker()
+	trailer := metadata.Pairs(TrailerProxyHitBytes, "1024", TrailerProxyHitCount, "2")
 	stream := &trackedClientStream{
 		ClientStream: &mockEOFClientStream{},
 		trailer:      &trailer,
@@ -478,16 +605,16 @@ func TestTrackedClientStream_RecvMsgIdempotent(t *testing.T) {
 	if err := stream.RecvMsg(nil); err != io.EOF {
 		t.Fatalf("RecvMsg err = %v, want io.EOF", err)
 	}
-	if tracker.WarmBytes() != 1024 || tracker.WarmCount() != 2 {
-		t.Errorf("After first RecvMsg tracker = (bytes:%d, count:%d), want (1024, 2)", tracker.WarmBytes(), tracker.WarmCount())
+	if tracker.HitBytes() != 1024 || tracker.HitCount() != 2 {
+		t.Errorf("After first RecvMsg tracker = (bytes:%d, count:%d), want (1024, 2)", tracker.HitBytes(), tracker.HitCount())
 	}
 
 	// Second RecvMsg returns io.EOF; should not double-count
 	if err := stream.RecvMsg(nil); err != io.EOF {
 		t.Fatalf("Second RecvMsg err = %v, want io.EOF", err)
 	}
-	if tracker.WarmBytes() != 1024 || tracker.WarmCount() != 2 {
-		t.Errorf("After second RecvMsg tracker = (bytes:%d, count:%d), want (1024, 2) without double-counting", tracker.WarmBytes(), tracker.WarmCount())
+	if tracker.HitBytes() != 1024 || tracker.HitCount() != 2 {
+		t.Errorf("After second RecvMsg tracker = (bytes:%d, count:%d), want (1024, 2) without double-counting", tracker.HitBytes(), tracker.HitCount())
 	}
 }
 
