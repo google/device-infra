@@ -24,6 +24,8 @@
 // --- Grouped Accordion Container Styles ---
 mat-card.results-area.grouped-mode,
 .results-area.grouped-mode {
+  container-type: inline-size;
+  container-name: results-card;
   background: transparent;
   border: none;
   box-shadow: none;
@@ -36,12 +38,33 @@ mat-card.results-area.grouped-mode,
     border-radius: 0;
     margin-bottom: 12px;
     flex-shrink: 0;
+    flex-wrap: nowrap;
+    overflow: hidden;
   }
 }
 
 .rt-groupby-label {
   font-size: 0.8125rem;
   color: #444746;
+  white-space: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rt-util-key-top {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.rt-util-key-bottom {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .rt-util-key {
@@ -50,12 +73,17 @@ mat-card.results-area.grouped-mode,
   gap: 16px;
   font-size: 0.75rem;
   color: #444746;
+  white-space: nowrap;
 }
 
 .rt-util-key-item {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.rt-legend-label-short {
+  display: none;
 }
 
 .rt-util-key .legend-dot {
@@ -72,6 +100,122 @@ mat-card.results-area.grouped-mode,
   }
   &.color-others {
     background-color: #747775;
+  }
+}
+
+// --- Container Query Stages for Grouped Toolbar Responsive Adaptation ---
+
+// Stage 1: Collapse Sort and Columns buttons to icon-only (<= 960px)
+@container results-card (max-width: 960px) {
+  .rt-toolbar {
+    .rt-btn-sort .rt-btn-label,
+    .rt-btn-columns .rt-btn-label {
+      display: none;
+    }
+
+    .rt-btn-sort,
+    .rt-btn-columns {
+      padding: 0 8px;
+      min-width: 32px;
+    }
+  }
+}
+
+// Stage 2: Abbreviate legend labels and tighten spacing (<= 820px)
+@container results-card (max-width: 820px) {
+  .rt-legend-label-full {
+    display: none;
+  }
+
+  .rt-legend-label-short {
+    display: inline;
+  }
+
+  .rt-util-key {
+    gap: 12px;
+  }
+
+  .rt-groupby-label {
+    max-width: 160px;
+  }
+}
+
+// Stage 3: Move utilization legend from top toolbar to bottom pagination bar (<= 720px)
+@container results-card (max-width: 720px) {
+  .results-area .rt-util-key-top,
+  .rt-toolbar .rt-util-key-top {
+    display: none;
+  }
+
+  .results-area .rt-util-key-bottom,
+  .rt-pagination-container .rt-util-key-bottom {
+    display: inline-flex;
+
+    .rt-legend-label-full {
+      display: none;
+    }
+
+    .rt-legend-label-short {
+      display: inline;
+    }
+
+    .rt-util-key {
+      gap: 12px;
+    }
+  }
+}
+
+// Fallback utility classes for explicit toggling if needed
+.rt-toolbar.rt-icon-btns {
+  .rt-btn-sort .rt-btn-label,
+  .rt-btn-columns .rt-btn-label {
+    display: none;
+  }
+
+  .rt-btn-sort,
+  .rt-btn-columns {
+    padding: 0 8px;
+    min-width: 32px;
+  }
+}
+
+.rt-toolbar.rt-abbreviated {
+  .rt-legend-label-full {
+    display: none;
+  }
+
+  .rt-legend-label-short {
+    display: inline;
+  }
+
+  .rt-util-key {
+    gap: 12px;
+  }
+
+  .rt-groupby-label {
+    max-width: 160px;
+  }
+}
+
+.results-area.rt-legend-bottom {
+  .rt-util-key-top {
+    display: none;
+  }
+
+  .rt-util-key-bottom {
+    display: inline-flex;
+
+    .rt-legend-label-full {
+      display: none;
+    }
+
+    .rt-legend-label-short {
+      display: inline;
+    }
+
+    .rt-util-key {
+      gap: 12px;
+    }
   }
 }
 

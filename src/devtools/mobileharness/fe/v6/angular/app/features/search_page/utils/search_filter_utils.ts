@@ -201,7 +201,7 @@ export function buildSimpleFleetFilter(
   for (const v of values) {
     if (v === EMPTY_FILTER_VALUE || v === '') {
       if (!hasNoValue) {
-        filterValues.push({noValue: true});
+        filterValues.push({noValue: {}});
         hasNoValue = true;
       }
     } else if (v) {
@@ -598,6 +598,8 @@ export function mapToSearchBoxSuggestion(
     countPrefix: fleetItem.countPrefix,
     countUnit: fleetItem.countUnit,
     overMax: fleetItem.overMax,
+    openPicker: item.openPicker,
+    addGroupBy: fleetItem.addGroupBy,
     rawItem: item,
   };
 }

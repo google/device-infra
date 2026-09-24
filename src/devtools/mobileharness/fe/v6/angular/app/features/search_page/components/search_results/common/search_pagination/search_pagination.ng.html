@@ -1,4 +1,5 @@
 <div class="rt-pagination" [class.compact]="compact()">
+  <ng-content select="[paginationLeading]"></ng-content>
   @if (pageSize() !== undefined) {
     <span class="rt-page-label">Rows per page:</span>
     <mat-select
@@ -28,7 +29,7 @@
     title="Previous page"
   >
     <mat-icon class="material-symbols-outlined">chevron_left</mat-icon>
-    Previous
+    <span class="rt-btn-label">Previous</span>
   </button>
 
   <button
@@ -37,7 +38,7 @@
     (click)="next.emit()"
     title="Next page"
   >
-    Next
+    <span class="rt-btn-label">Next</span>
     <mat-icon class="material-symbols-outlined">chevron_right</mat-icon>
   </button>
 </div>

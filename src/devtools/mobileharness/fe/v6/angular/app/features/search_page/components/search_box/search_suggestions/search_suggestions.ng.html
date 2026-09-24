@@ -1,28 +1,196 @@
-@if (store.showSuggestions() && store.suggestions().length > 0) {
-  <div class="search-suggestions-popover" (mousedown)="$event.preventDefault()">
-    <div class="suggestion-items">
-      @for (item of store.suggestions(); track $index) {
-        <div
-          #suggestionEl
-          class="suggestion-item"
-          [class.active-suggestion]="activeIndex() === $index"
-          (click)="onItemClick(item)"
-        >
-          @if (item.label) {
-            <span class="sg-label">{{ item.label }}</span>
+@if (shouldShowPopover()) {
+  <div #popoverContainer class="search-suggestions-popover" (mousedown)="$event.preventDefault()">
+    @if (hasActiveCriteria()) {
+      <div class="active-criteria-section sp-applied">
+        <div class="sp-head">
+          @if (resultCountLabel()) {
+            <span class="sp-title">{{ resultCountLabel() }}</span>
           }
-          <span class="sg-text">
-            @for (seg of item.mainText; track $index) {
-              <span [class.emphasized]="seg.emphasized">{{ seg.text }}</span>
-            }
-          </span>
-          @if (item.count !== undefined && item.count !== null) {
-            <span class="sg-count" [class.over-max]="item.overMax">
-              {{ item.countPrefix || '' }}{{ item.count | number }}{{ item.countUnit ? ' ' + item.countUnit : '' }}
-            </span>
+          @if (hasActiveChips()) {
+            <button
+              type="button"
+              class="sp-clear"
+              (click)="onClearAll($event)"
+              [title]="showGroupBySection() ? 'Clear all filters and group-by' : 'Clear all filters'"
+            >
+              Clear all
+            </button>
           }
         </div>
-      }
+
+        <div class="criteria-group sp-chips sp-filters">
+          <span class="criteria-group-label sp-sub">Filters:</span>
+          <div class="criteria-chips">
+            @for (chip of activeFilterChips(); track getChipKey(chip) + chip.pillCondition) {
+              <span
+                #popoverChipEl
+                class="search-chip"
+                [attr.data-chip-key]="chip.key || getChipKey(chip)"
+                [attr.data-chip-pill-key]="chip.pillKey"
+                [class.exclude]="chip.negated"
+                [class.active]="store.isChipPickerActive(chip)"
+                [class.sp-new]="highlightedGroup() === 'filters' || store.focusChipKey?.() === getChipKey(chip)"
+                (click)="onChipClick(chip, popoverChipEl, $event)"
+                title="Click to edit values · ✕ to remove"
+              >
+                <span class="chip-label">{{ chip.pillKey }}</span>
+                <span
+                  class="chip-value"
+                  [matTooltip]="chip.pillCondition"
+                  tooltipIfTruncated
+                >({{ chip.pillCondition }})</span>
+                <button
+                  class="chip-remove"
+                  type="button"
+                  (click)="onRemoveChip(chip, $event)"
+                  title="Remove filter"
+                  aria-label="Remove filter"
+                >
+                  <mat-icon class="material-symbols-outlined">close</mat-icon>
+                </button>
+              </span>
+            }
+            @if (pendingFilterKey(); as pKey) {
+              <span
+                #popoverChipEl
+                class="search-chip pending"
+                [attr.data-chip-key]="pKey"
+                [attr.data-chip-pill-key]="pendingFilterTitle()"
+                [class.active]="store.isKeyPickerActive(pKey, pendingFilterTitle())"
+                [class.sp-new]="store.focusChipKey?.() === pKey"
+                (click)="onPendingChipClick({key: pKey, displayName: pendingFilterTitle()}, popoverChipEl, $event)"
+                title="Choose values in the picker"
+              >
+                <span class="chip-label">{{ pendingFilterTitle() }}</span>
+              </span>
+            }
+            <button
+              type="button"
+              class="sp-add add-filter-btn"
+              (click)="onAddFilterClick($event)"
+              title="Add filter"
+            >
+              <mat-icon class="material-symbols-outlined">add</mat-icon>
+              <span>Add filter</span>
+            </button>
+          </div>
+        </div>
+
+        @if (showGroupBySection()) {
+          <div class="criteria-group sp-chips sp-groups">
+            <span class="criteria-group-label sp-sub">Group by:</span>
+            <div class="criteria-chips">
+              @for (chip of activeGroupByChips(); track getChipKey(chip) + chip.pillCondition) {
+                <span
+                  #popoverChipEl
+                  class="search-chip group-by-chip"
+                  [attr.data-chip-key]="chip.key || getChipKey(chip)"
+                  [attr.data-chip-pill-key]="chip.pillKey"
+                  [class.sp-new]="highlightedGroup() === 'groupby' || store.focusChipKey?.() === getChipKey(chip)"
+                  title="✕ to remove"
+                >
+                  <span
+                    class="chip-value"
+                    [matTooltip]="chip.pillKey"
+                    tooltipIfTruncated
+                  >{{ chip.pillKey }}</span>
+                  <button
+                    class="chip-remove"
+                    type="button"
+                    (click)="onRemoveChip(chip, $event)"
+                    title="Remove grouping"
+                    aria-label="Remove grouping"
+                  >
+                    <mat-icon class="material-symbols-outlined">close</mat-icon>
+                  </button>
+                </span>
+              }
+              <button
+                type="button"
+                class="sp-add add-groupby-btn"
+                [disabled]="activeGroupByChips().length >= 3"
+                [title]="activeGroupByChips().length >= 3 ? 'Up to 3 group-by keys' : 'Add group-by'"
+                (click)="onAddGroupByClick($event)"
+              >
+                <mat-icon class="material-symbols-outlined">add</mat-icon>
+                <span>Add group-by</span>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (hasActiveCriteria() && (isSuggestionsLoading() || store.suggestions().length > 0)) {
+      <div class="suggestions-divider sp-divider"></div>
+    }
+
+    @if (isSuggestionsLoading()) {
+      <div
+        id="search-panel-suggestions"
+        class="suggestion-items sp-suggestions"
+        role="status"
+        aria-live="polite"
+      >
+        <div class="suggestion-item suggestion-loading">
+          <mat-spinner diameter="18"></mat-spinner>
+          <span>Loading suggestions…</span>
+        </div>
+      </div>
+    } @else if (store.suggestions().length > 0) {
+      <div id="search-panel-suggestions" class="suggestion-items sp-suggestions">
+        @for (item of store.suggestions(); track $index) {
+          <div
+            class="suggestion-item"
+            [class.active-suggestion]="activeIndex() === $index"
+            [class.sg-key]="!!item.openPicker"
+            [class.sg-groupby]="!!item.addGroupBy"
+            (click)="onItemClick(item)"
+          >
+            <span class="sg-left">
+              @if (item.label) {
+                <span class="sg-mode">{{ item.label }}</span>
+              }
+              <span class="sg-label sg-text">
+                @for (seg of item.mainText; track $index) {
+                  <span
+                    [class.sg-value]="seg.emphasized"
+                    [class.emphasized]="seg.emphasized"
+                  >{{ seg.text }}</span>
+                }
+              </span>
+              @if (item.openPicker) {
+                <span class="sg-ellipsis"> …</span>
+              }
+            </span>
+            @if (item.count !== undefined && item.count !== null) {
+              <span
+                class="sg-count"
+                [class.over-max]="item.overMax"
+                [class.sg-count-warn]="item.overMax"
+                [title]="item.overMax ? 'That many groups is hard to scan — consider filtering first.' : ''"
+              >
+                {{ item.count > 0 ? (item.countPrefix || '') : '' }}{{ item.count | number }}{{ item.countUnit ? ' ' + item.countUnit : '' }}
+              </span>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <div id="search-panel-foot" class="sp-foot">
+      <label class="sp-auto-collapse" (mousedown)="$event.preventDefault()">
+        <input
+          type="checkbox"
+          [checked]="isAutoCollapseChecked()"
+          (change)="onAutoCollapseChange($event)"
+        />
+        <span>Auto-collapse after applying</span>
+      </label>
+      <button type="button" class="sp-collapse" (click)="onCollapse($event)">
+        <mat-icon class="material-symbols-outlined">keyboard_arrow_up</mat-icon>
+        <span>Collapse</span>
+      </button>
     </div>
   </div>
 }

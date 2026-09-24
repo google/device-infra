@@ -1,43 +1,82 @@
-@if (store.isPromotedKeysLoading() && store.promotedFilterKeys().length === 0 && store.promotedGroupByKeys().length === 0) {
+@let promotedFilters = store.promotedFilterKeys();
+@let promotedGroups = store.promotedGroupByKeys();
+@let hasPromotedFilters = promotedFilters.length > 0;
+@let hasPromotedGroups = promotedGroups.length > 0;
+
+@if (store.isPromotedKeysLoading() && !hasPromotedFilters && !hasPromotedGroups) {
   <div class="preset-filters-container loading-placeholder" aria-hidden="true">
     <div class="preset-shimmer-placeholder">
       <div class="preset-shimmer-line"></div>
     </div>
   </div>
-} @else if (store.promotedFilterKeys().length > 0 || store.promotedGroupByKeys().length > 0) {
-  <div class="preset-filters-container">
-    @if (store.promotedFilterKeys().length > 0) {
-      <div class="preset-row">
-        <span class="preset-label">Filter by:</span>
-        @for (k of store.promotedFilterKeys(); track (k.key + (k.metadata?.keyDisplayName || ''))) {
-          <button
-            #presetBtn
-            class="preset-link"
-            [class.active]="store.isKeyPickerActive(k.key, k.metadata?.keyDisplayName || k.key)"
-            (click)="onSelectPromotedFilterKey(k, presetBtn, $event)"
-          >
-            <span>{{ k.metadata?.keyDisplayName || k.key }}</span>
-          </button>
-        }
-      </div>
-    }
-
-    @if (store.promotedGroupByKeys().length > 0) {
-      <div class="preset-row">
-        <span class="preset-label">Group by:</span>
-        @for (k of store.promotedGroupByKeys(); track k.key) {
-          <button
-            class="preset-link"
-            [class.active]="store.groupByKeys().includes(k.key)"
-            (click)="onSelectPromotedGroupBy(k)"
-          >
-            <span>{{ k.displayName }}</span>
-            @if (k.groupCount !== undefined && k.groupCount !== null) {
-              <span class="preset-count">{{ k.groupCount | number }} groups</span>
+} @else if (hasPromotedFilters || hasPromotedGroups) {
+  @if (!isCollapsed()) {
+    <div class="preset-filters-container">
+      <div class="preset-filters-rows">
+        @if (hasPromotedFilters) {
+          <div class="preset-row">
+            <span class="preset-label">Quick Filter:</span>
+            @for (k of promotedFilters; track (k.key + (k.metadata?.keyDisplayName || ''))) {
+              <button
+                type="button"
+                class="preset-link"
+                [attr.data-kid]="k.key"
+                (mousedown)="$event.preventDefault()"
+                (click)="onSelectPromotedFilterKey(k, $event)"
+              >
+                <span>{{ k.metadata?.keyDisplayName || k.key }}</span>
+              </button>
             }
-          </button>
+          </div>
+        }
+
+        @if (hasPromotedGroups) {
+          <div class="preset-row">
+            <span class="preset-label">Quick Group-by:</span>
+            @for (k of promotedGroups; track k.key) {
+              <button
+                type="button"
+                class="preset-link"
+                [attr.data-kid]="k.key"
+                [class.disabled]="k.disabled"
+                [disabled]="k.disabled"
+                [title]="k.disabledReason || k.reason || ''"
+                (mousedown)="$event.preventDefault()"
+                (click)="onSelectPromotedGroupBy(k, $event)"
+              >
+                <span>{{ k.displayName || k.key }}</span>
+              </button>
+            }
+          </div>
         }
       </div>
-    }
-  </div>
+
+      @if (!store.isLandingState()) {
+        <button
+          type="button"
+          class="preset-hide-btn"
+          (click)="toggleCollapsed(true)"
+          title="Hide suggested filters"
+          [attr.aria-expanded]="true"
+        >
+          <span>Hide</span>
+          <mat-icon class="material-symbols-outlined">expand_less</mat-icon>
+        </button>
+      }
+    </div>
+  } @else {
+    <div class="preset-collapsed-bar">
+      <button
+        type="button"
+        class="preset-show-pill"
+        (click)="toggleCollapsed(false)"
+        title="Show suggested filters"
+        [attr.aria-expanded]="false"
+      >
+        <mat-icon class="material-symbols-outlined">filter_list</mat-icon>
+        <span>Suggested filters</span>
+        <mat-icon class="material-symbols-outlined">expand_more</mat-icon>
+      </button>
+    </div>
+  }
 }

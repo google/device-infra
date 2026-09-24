@@ -29,6 +29,7 @@
       <img src="https://www.gstatic.com/mobileharness/images/omnilab_mark_primary_l.png" alt="Omnilab ATS Logo">
 
       <span class="title">OmniLab Console</span>
+      <div #headerSearchDock class="header-search-dock"></div>
       @if (showVersionInfo) {
         <div class="version-info">
           Version: {{ appData.labconsoleVersion }} <br />
@@ -49,6 +50,7 @@
               [class.active]="isNavActive('home')"
               [queryParams]="getPreservedQueryParams()"
               [matTooltip]="'Home'"
+              matTooltipPosition="right"
             >
               <mat-icon matListItemIcon class="material-symbols-outlined">home</mat-icon>
               <span>Home</span>
@@ -62,6 +64,7 @@
               [class.active]="isNavActive('devices')"
               [queryParams]="getPreservedQueryParams()"
               [matTooltip]="'Devices'"
+              matTooltipPosition="right"
             >
               <mat-icon matListItemIcon class="material-symbols-outlined">devices</mat-icon>
               <span>Devices</span>
@@ -73,6 +76,7 @@
               [class.active]="isNavActive('hosts')"
               [queryParams]="getPreservedQueryParams()"
               [matTooltip]="'Hosts'"
+              matTooltipPosition="right"
             >
               <mat-icon matListItemIcon class="material-symbols-outlined">dns</mat-icon>
               <span>Hosts</span>
@@ -86,6 +90,7 @@
               [class.active]="isNavActive('tests')"
               [queryParams]="getPreservedQueryParams()"
               [matTooltip]="'Tests'"
+              matTooltipPosition="right"
             >
               <mat-icon matListItemIcon class="material-symbols-outlined">fact_check</mat-icon>
               <span>Tests</span>
@@ -97,6 +102,7 @@
               [class.active]="isNavActive('jobs')"
               [queryParams]="getPreservedQueryParams()"
               [matTooltip]="'Jobs'"
+              matTooltipPosition="right"
             >
               <mat-icon matListItemIcon class="material-symbols-outlined">task</mat-icon>
               <span>Jobs</span>
@@ -108,6 +114,7 @@
               [class.active]="isNavActive('sessions')"
               [queryParams]="getPreservedQueryParams()"
               [matTooltip]="'Sessions'"
+              matTooltipPosition="right"
             >
               <mat-icon matListItemIcon class="material-symbols-outlined">view_timeline</mat-icon>
               <span>Sessions</span>
@@ -118,6 +125,7 @@
             <a
               mat-list-item
               matTooltip="User Guide"
+              matTooltipPosition="right"
               target="_blank"
               href="https://source.android.com/compatibility/tests/development/android-test-station/ats-user-guide"
             >
@@ -128,6 +136,7 @@
             <a
               mat-list-item
               matTooltip="FAQs"
+              matTooltipPosition="right"
               target="_blank"
               href="https://source.android.com/compatibility/tests/development/android-test-station/faq"
             >

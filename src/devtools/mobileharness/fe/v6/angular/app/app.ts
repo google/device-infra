@@ -19,9 +19,12 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
-  inject,
+  ElementRef,
   OnDestroy,
   ViewEncapsulation,
+  afterNextRender,
+  inject,
+  viewChild,
 } from '@angular/core';
 import {MatButtonModule, MatIconButton} from '@angular/material/button';
 import {MatDividerModule} from '@angular/material/divider';
@@ -45,6 +48,7 @@ import {
   getLegacyFeUrl,
   getOmniLabUrl,
 } from '@deviceinfra/app/core/models/app_data';
+import {HeaderSearchDockService} from '@deviceinfra/app/core/services/search/header_search_dock_service';
 import {UrlService} from '@deviceinfra/app/core/services/url_service';
 import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
 import {ReplaySubject} from 'rxjs';
@@ -84,6 +88,9 @@ export class App implements OnDestroy {
   readonly omniLabUrl = getOmniLabUrl(this.appData.applicationId ?? '');
   readonly loadingService = inject(LoadingService);
   private readonly urlService = inject(UrlService);
+  readonly dockService = inject(HeaderSearchDockService);
+  readonly headerSearchDock =
+    viewChild<ElementRef<HTMLElement>>('headerSearchDock');
   showVersionInfo = true;
   isEmbeddedMode = true;
   isFakeData = false;
@@ -162,6 +169,13 @@ export class App implements OnDestroy {
       const newUrl = new URL(url, window.location.origin);
       this.router.navigateByUrl(newUrl.pathname + newUrl.search);
     });
+
+    afterNextRender(() => {
+      const el = this.headerSearchDock()?.nativeElement;
+      if (el) {
+        this.dockService.registerDockContainer(el);
+      }
+    });
   }
 
   updateShowContent() {
@@ -215,6 +229,7 @@ export class App implements OnDestroy {
   }
 
   ngOnDestroy() {
+    this.dockService.unregisterDockContainer();
     this.destroy.next();
     this.destroy.complete();
   }
