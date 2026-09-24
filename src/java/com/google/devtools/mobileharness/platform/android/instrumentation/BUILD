@@ -47,6 +47,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/constant:splitters",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemspec",
         "//src/java/com/google/devtools/mobileharness/platform/android/user:android_user_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",

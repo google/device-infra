@@ -585,6 +585,15 @@ public interface PropertyName {
 
       /** A comma separated list of test targets (package.class#method) to retry. */
       ANDROID_INSTRUMENTATION_RETRY_TEST_TARGETS,
+
+      /**
+       * Time in milliseconds spent on pushing the test args file to device via "adb push",
+       * including the follow-up media provider clearing and re-indexing wait if applicable.
+       */
+      ANDROID_INSTRUMENTATION_TEST_ARGS_ADB_PUSH_TIME_MS,
+
+      /** Time in milliseconds spent on writing the test args file to device via "content write". */
+      ANDROID_INSTRUMENTATION_TEST_ARGS_CONTENT_WRITE_TIME_MS,
     }
 
     /** AndroidFlashstationDecorator property name constants. */
