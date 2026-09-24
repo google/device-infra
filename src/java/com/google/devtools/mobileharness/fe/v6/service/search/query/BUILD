@@ -141,6 +141,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:device_record",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index_builder",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
@@ -154,6 +155,7 @@ java_library(
     srcs = ["HostCellMapper.java"],
     deps = [
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index_builder",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:host_record",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",

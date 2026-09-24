@@ -1,15 +1,18 @@
 import {DOCUMENT} from '@angular/common';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {provideRouter, Router} from '@angular/router';
+import {CommonParamsService} from '@deviceinfra/app/core/services/common_params_service';
 import {UrlService} from '@deviceinfra/app/core/services/url_service';
 import {NEVER, Observable, of} from 'rxjs';
 import {NavLink} from './nav_link';
+
 
 describe('NavLink', () => {
   let component: NavLink;
   let fixture: ComponentFixture<NavLink>;
   let router: Router;
   let mockUrlService: jasmine.SpyObj<UrlService>;
+  let mockCommonParamsService: jasmine.SpyObj<CommonParamsService>;
 
   beforeEach(async () => {
     mockUrlService = jasmine.createSpyObj('UrlService', [
@@ -21,11 +24,21 @@ describe('NavLink', () => {
     mockUrlService.isInEmbeddedMode.and.returnValue(false);
     mockUrlService.isStandalone.and.returnValue(true);
 
+    mockCommonParamsService = jasmine.createSpyObj('CommonParamsService', [
+      'getCommonParams',
+      'getParam',
+      'hasParam',
+      'isEmbeddedMode',
+    ]);
+    mockCommonParamsService.getCommonParams.and.returnValue({});
+    mockCommonParamsService.isEmbeddedMode.and.returnValue(false);
+
     await TestBed.configureTestingModule({
       imports: [NavLink],
       providers: [
         provideRouter([]),
         {provide: UrlService, useValue: mockUrlService},
+        {provide: CommonParamsService, useValue: mockCommonParamsService},
       ],
     }).compileComponents();
 
@@ -84,16 +97,7 @@ describe('NavLink', () => {
     component.handleClick(event);
 
     expect(event.preventDefault).toHaveBeenCalled();
-    expect(router.navigate).toHaveBeenCalledWith(['/hosts/host1'], {
-      queryParams: {
-        'host_name': null,
-        'f': null,
-        'gb': null,
-        'fleet': null,
-        'q': null,
-      },
-      queryParamsHandling: '',
-    });
+    expect(router.navigate).toHaveBeenCalledWith(['/hosts/host1'], {});
   });
 
   it('should include universe parameter in navigation when provided in config', () => {
@@ -115,42 +119,27 @@ describe('NavLink', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/hosts/host1'], {
       queryParams: {
         universe: 'my_universe',
-        'host_name': null,
-        'f': null,
-        'gb': null,
-        'fleet': null,
-        'q': null,
       },
-      queryParamsHandling: '',
     });
   });
 
-  it('should navigate with router and merge query params if queryParamsHandling="merge" is set', () => {
+  it('should omit universe parameter when universe is google_1p', () => {
     fixture.componentRef.setInput('config', {
       type: 'host',
       hostName: 'host1',
       hostIp: '1.1.1.1',
+      universe: 'google_1p',
     });
     mockUrlService.getExternalUrl.and.returnValue(of('http://parent/host1'));
     mockUrlService.isInEmbeddedMode.and.returnValue(false);
-
-    fixture.componentRef.setInput('queryParamsHandling', 'merge');
     fixture.detectChanges();
+
     const event = new MouseEvent('click');
     spyOn(event, 'preventDefault');
     component.handleClick(event);
 
     expect(event.preventDefault).toHaveBeenCalled();
-    expect(router.navigate).toHaveBeenCalledWith(['/hosts/host1'], {
-      queryParams: {
-        'host_name': null,
-        'f': null,
-        'gb': null,
-        'fleet': null,
-        'q': null,
-      },
-      queryParamsHandling: 'merge',
-    });
+    expect(router.navigate).toHaveBeenCalledWith(['/hosts/host1'], {});
   });
 
   it('should navigate with router even in embedded mode for regular click', () => {
@@ -161,6 +150,7 @@ describe('NavLink', () => {
     });
     mockUrlService.getExternalUrl.and.returnValue(of('http://parent/host1'));
     mockUrlService.isInEmbeddedMode.and.returnValue(true);
+    mockCommonParamsService.isEmbeddedMode.and.returnValue(true);
     mockUrlService.isStandalone.and.returnValue(false);
     fixture.detectChanges();
 
@@ -169,17 +159,9 @@ describe('NavLink', () => {
     component.handleClick(event);
 
     expect(event.preventDefault).toHaveBeenCalled();
-    expect(router.navigate).toHaveBeenCalledWith(['/hosts/host1'], {
-      queryParams: {
-        'host_name': null,
-        'f': null,
-        'gb': null,
-        'fleet': null,
-        'q': null,
-      },
-      queryParamsHandling: '',
-    });
+    expect(router.navigate).toHaveBeenCalledWith(['/hosts/host1'], {});
   });
+
 
   it('should let native behavior happen on special clicks (Ctrl/Meta/Middle)', () => {
     fixture.componentRef.setInput('config', {
@@ -217,11 +199,11 @@ describe('NavLink', () => {
     expect(router.navigate).not.toHaveBeenCalled();
   });
 
-  it('should merge current query parameters into initial fullPageLink', () => {
+  it('should include target specific parameters in initial fullPageLink and exclude foreign parameters', () => {
     const mockDocument = TestBed.inject(DOCUMENT);
     spyOnProperty(mockDocument, 'defaultView', 'get').and.returnValue({
       location: {
-        search: '?param1=value1',
+        search: '?foreign_param=value1',
         origin: 'http://localhost:4200',
       },
     } as unknown as Window & typeof globalThis);
@@ -235,8 +217,9 @@ describe('NavLink', () => {
 
     fixture.detectChanges();
 
-    expect(component.fullPageLink()).toBe('/hosts/host1?param1=value1');
+    expect(component.fullPageLink()).toBe('/hosts/host1');
   });
+
 
   it('should keep local URL on getExternalUrl failure in embedded mode', () => {
     fixture.componentRef.setInput('config', {
@@ -249,6 +232,7 @@ describe('NavLink', () => {
     });
     mockUrlService.getExternalUrl.and.returnValue(error$);
     mockUrlService.isInEmbeddedMode.and.returnValue(true);
+    mockCommonParamsService.isEmbeddedMode.and.returnValue(true);
     mockUrlService.isStandalone.and.returnValue(false);
 
     fixture.detectChanges();
@@ -264,6 +248,7 @@ describe('NavLink', () => {
     });
     mockUrlService.getExternalUrl.and.returnValue(of('http://parent/host1'));
     mockUrlService.isInEmbeddedMode.and.returnValue(true);
+    mockCommonParamsService.isEmbeddedMode.and.returnValue(true);
     mockUrlService.isStandalone.and.returnValue(false);
     (router.navigate as jasmine.Spy).and.returnValue(Promise.resolve(true));
     fixture.detectChanges();
@@ -284,6 +269,7 @@ describe('NavLink', () => {
 
   it('should include device_uuid when fetching external URL in embedded mode for device', () => {
     mockUrlService.isInEmbeddedMode.and.returnValue(true);
+    mockCommonParamsService.isEmbeddedMode.and.returnValue(true);
     mockUrlService.isStandalone.and.returnValue(false);
     mockUrlService.getExternalUrl.and.returnValue(of('http://parent/dev1'));
 
@@ -315,6 +301,7 @@ describe('NavLink', () => {
     });
     mockUrlService.getExternalUrl.and.returnValue(of('http://parent/dev1'));
     mockUrlService.isInEmbeddedMode.and.returnValue(true);
+    mockCommonParamsService.isEmbeddedMode.and.returnValue(true);
     mockUrlService.isStandalone.and.returnValue(false);
     fixture.detectChanges();
 
@@ -328,17 +315,13 @@ describe('NavLink', () => {
         'host_name': 'host1',
         'host_ip': '1.1.1.1',
         'uuid': 'dev1',
+        'device_uuid': 'dev1',
       },
     );
     expect(router.navigate).toHaveBeenCalledWith(['/devices/dev1'], {
       queryParams: {
         'host_name': 'host1',
-        'f': null,
-        'gb': null,
-        'fleet': null,
-        'q': null,
       },
-      queryParamsHandling: '',
     });
   });
 
@@ -358,16 +341,7 @@ describe('NavLink', () => {
     await fixture.whenStable();
 
     expect(mockUrlService.notifyNavigated).not.toHaveBeenCalled();
-    expect(router.navigate).toHaveBeenCalledWith(['/jobs/job_123'], {
-      queryParams: {
-        'host_name': null,
-        'f': null,
-        'gb': null,
-        'fleet': null,
-        'q': null,
-      },
-      queryParamsHandling: '',
-    });
+    expect(router.navigate).toHaveBeenCalledWith(['/jobs/job_123'], {});
   });
 
   it('should generate correct routerLink and navigation params for test', async () => {
@@ -389,16 +363,7 @@ describe('NavLink', () => {
     expect(mockUrlService.notifyNavigated).not.toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(
       ['/jobs/job_123/tests/test_456'],
-      {
-        queryParams: {
-          'host_name': null,
-          'f': null,
-          'gb': null,
-          'fleet': null,
-          'q': null,
-        },
-        queryParamsHandling: '',
-      },
+      {},
     );
   });
 
@@ -417,16 +382,7 @@ describe('NavLink', () => {
     await fixture.whenStable();
 
     expect(mockUrlService.notifyNavigated).not.toHaveBeenCalled();
-    expect(router.navigate).toHaveBeenCalledWith(['/sessions/session_123'], {
-      queryParams: {
-        'host_name': null,
-        'f': null,
-        'gb': null,
-        'fleet': null,
-        'q': null,
-      },
-      queryParamsHandling: '',
-    });
+    expect(router.navigate).toHaveBeenCalledWith(['/sessions/session_123'], {});
   });
 
   it('should remove search page query parameters (f, gb, fleet, q) from fullPageLink in standalone mode', () => {
@@ -449,7 +405,43 @@ describe('NavLink', () => {
     fixture.detectChanges();
 
     expect(component.fullPageLink()).toBe(
-      '/devices/dev1?param1=value1&host_name=host1',
+      '/devices/dev1?host_name=host1',
     );
   });
+
+  it('should preserve common query parameters from CommonParamsService across navigation', () => {
+    mockCommonParamsService.getCommonParams.and.returnValue({
+      'debug': 'true',
+      'is_embedded_mode': 'true',
+    });
+
+    fixture.componentRef.setInput('config', {
+      type: 'device',
+      hostName: 'host1',
+      hostIp: '1.1.1.1',
+      deviceId: 'dev1',
+      universe: 'ats_ctrl_1',
+    });
+    mockUrlService.getExternalUrl.and.returnValue(NEVER);
+
+    fixture.detectChanges();
+
+    expect(component.fullPageLink()).toBe(
+      '/devices/dev1?debug=true&is_embedded_mode=true&host_name=host1&universe=ats_ctrl_1',
+    );
+
+    const event = new MouseEvent('click');
+    spyOn(event, 'preventDefault');
+    component.handleClick(event);
+
+    expect(router.navigate).toHaveBeenCalledWith(['/devices/dev1'], {
+      queryParams: {
+        'debug': 'true',
+        'is_embedded_mode': 'true',
+        'host_name': 'host1',
+        universe: 'ats_ctrl_1',
+      },
+    });
+  });
+
 });

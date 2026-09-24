@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.Row;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.StatusCell;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextCell;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceRecord;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
@@ -83,26 +84,29 @@ public final class FleetCellMapper {
   private static LinkCell deviceLink(DeviceRecord device) {
     String hostName = firstValue(device.values(HostKeys.HOST_NAME.id()));
     String hostIp = firstValue(device.values(HostKeys.HOST_IP.id()));
+    String universe = firstValue(device.values(FleetIndexBuilder.HOST_FIELD_ATS_CONTROLLER_ID));
+    DeviceRef.Builder deviceRef =
+        DeviceRef.newBuilder().setId(device.deviceId()).setHostName(hostName).setHostIp(hostIp);
+    if (!universe.isEmpty()) {
+      deviceRef.setUniverse(universe);
+    }
     return LinkCell.newBuilder()
         .setText(device.deviceId())
-        .setTarget(
-            NavTarget.newBuilder()
-                .setDevice(
-                    DeviceRef.newBuilder()
-                        .setId(device.deviceId())
-                        .setHostName(hostName)
-                        .setHostIp(hostIp)))
+        .setTarget(NavTarget.newBuilder().setDevice(deviceRef))
         .build();
   }
 
   private static LinkCell hostLink(DeviceRecord device) {
     String hostName = firstValue(device.values(HostKeys.HOST_NAME.id()));
     String hostIp = firstValue(device.values(HostKeys.HOST_IP.id()));
+    String universe = firstValue(device.values(FleetIndexBuilder.HOST_FIELD_ATS_CONTROLLER_ID));
+    HostRef.Builder hostRef = HostRef.newBuilder().setHostName(hostName).setHostIp(hostIp);
+    if (!universe.isEmpty()) {
+      hostRef.setUniverse(universe);
+    }
     return LinkCell.newBuilder()
         .setText(hostName)
-        .setTarget(
-            NavTarget.newBuilder()
-                .setHost(HostRef.newBuilder().setHostName(hostName).setHostIp(hostIp)))
+        .setTarget(NavTarget.newBuilder().setHost(hostRef))
         .build();
   }
 

@@ -58,15 +58,16 @@ describe('SearchCellComponent', () => {
     host.cell = {
       link: {
         text: 'device-12345',
-        target: {device: {id: 'device-12345'}},
+        target: {device: {id: 'device-12345', hostName: 'host1', universe: 'vivo'}},
       },
     };
     host.column = {key: 'id', displayName: 'Device ID'};
     fixture.detectChanges();
 
-    const anchor = fixture.nativeElement.querySelector('a.device-link');
+    const anchor = fixture.nativeElement.querySelector('a.device-link') as HTMLAnchorElement;
     expect(anchor).toBeTruthy();
     expect(anchor.textContent.trim()).toBe('device-12345');
+    expect(anchor.getAttribute('href')).toBe('/devices/device-12345?host_name=host1&universe=vivo');
   });
 
   it('should render status cell with status dot and text', () => {
@@ -116,7 +117,9 @@ describe('SearchCellComponent', () => {
     const links = fixture.nativeElement.querySelectorAll('a.device-link');
     expect(links.length).toBe(2);
     expect(links[0].textContent.trim()).toBe('Host A');
+    expect(links[0].getAttribute('href')).toBe('/hosts/host-a');
     expect(links[1].textContent.trim()).toBe('Host B');
+    expect(links[1].getAttribute('href')).toBe('/hosts/host-b');
   });
 
   it('should notify UrlService when device link is clicked', () => {
