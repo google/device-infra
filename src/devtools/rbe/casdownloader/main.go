@@ -498,9 +498,10 @@ func run(ctx context.Context) error {
 		}
 	}()
 
-	cache, err := createCache(cacheFlagValues())
-	if err != nil {
-		return err
+	var jobNotes []string
+	localCache, cacheNote := cache.OpenOrDegrade(ctx, cacheFlagValues(), "the download")
+	if cacheNote != "" {
+		jobNotes = append(jobNotes, cacheNote)
 	}
 
 	d := download.DownloadJob{
@@ -508,7 +509,7 @@ func run(ctx context.Context) error {
 		Digest:          *rootDigest,
 		Dir:             *dir,
 		DumpJSON:        *dumpJSON,
-		Cache:           cache,
+		Cache:           localCache,
 		CASProxyStatus:  proxyStatus,
 		IncludeFilters:  includeFilters,
 		ExcludeFilters:  excludeFilters,
@@ -518,6 +519,7 @@ func run(ctx context.Context) error {
 		DownloadTimeout: *downloadTimeout,
 		UseProxy:        useProxy,
 		Tracker:         tracker,
+		Notes:           jobNotes,
 	}
 	reportMemoryStats()
 
@@ -558,9 +560,9 @@ func run(ctx context.Context) error {
 		}
 
 		// Re-initialize cache since the previous attempt closed it.
-		cache, err = createCache(cacheFlagValues())
-		if err != nil {
-			return fmt.Errorf("failed to re-initialize cache for direct RBE fallback: %w", err)
+		localCache, cacheNote := cache.OpenOrDegrade(ctx, cacheFlagValues(), "the direct RBE retry")
+		if cacheNote != "" {
+			d.Notes = append(d.Notes, cacheNote)
 		}
 
 		// The retry talks to CAS remote, so neither the hits recorded against
@@ -568,7 +570,7 @@ func run(ctx context.Context) error {
 		tracker.Reset()
 		// Reassign client, cache, and updated proxy status to download job
 		d.Client = rbeClient
-		d.Cache = cache
+		d.Cache = localCache
 		d.UseProxy = false
 		d.CASProxyStatus = fmt.Sprintf("fallback: %v", proxyErr)
 
@@ -613,51 +615,18 @@ func logAdcCredentials() {
 	log.Infof("adc_credentials.sh output: %s", output)
 }
 
-// cacheOptions is the set of flag values that decide which cache gets built.
-//
-// These arrived as positional parameters, which stopped being readable once
-// three of them were adjacent booleans: a transposed pair would compile,
-// and the resulting cache would be wrong in a way nothing would report.
-type cacheOptions struct {
-	disabled      bool
-	lockFree      bool
-	dir           string
-	maxSize       int64
-	minFreeSpace  int64
-	lock          bool
-	useHardlink   bool
-	overrides     cache.EvictorOverrides
-	explicitFlags map[string]bool
-}
-
 // cacheFlagValues snapshots the flags that configure the cache.
-func cacheFlagValues() cacheOptions {
-	return cacheOptions{
-		disabled:      *disableCache,
-		lockFree:      *enableLockFreeCache,
-		dir:           *cacheDir,
-		maxSize:       *cacheMaxSize,
-		minFreeSpace:  *cacheMinFreeSpace,
-		lock:          *enableCacheLock,
-		useHardlink:   *useHardlink,
-		overrides:     evictorOverrides(explicitFlags()),
-		explicitFlags: explicitFlags(),
+func cacheFlagValues() cache.Options {
+	return cache.Options{
+		Disabled:     *disableCache,
+		LockFree:     *enableLockFreeCache,
+		Dir:          *cacheDir,
+		MaxSize:      *cacheMaxSize,
+		MinFreeSpace: *cacheMinFreeSpace,
+		Lock:         *enableCacheLock,
+		UseHardlink:  *useHardlink,
+		Overrides:    evictorOverrides(explicitFlags()),
 	}
-}
-
-func createCache(opts cacheOptions) (cache.Cache, error) {
-	if opts.disabled {
-		return nil, nil
-	}
-	if opts.lockFree {
-		return createLockFreeCache(opts)
-	}
-
-	localCache, err := cache.NewLocalCache(opts.dir, opts.maxSize, opts.minFreeSpace, opts.lock, opts.useHardlink)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create local cache: %v", err)
-	}
-	return localCache, nil
 }
 
 // evictorOverrides collects the eviction tuning flags the caller actually
@@ -687,16 +656,6 @@ func evictorOverrides(explicit map[string]bool) cache.EvictorOverrides {
 		o.MinBlobAge = cacheMinBlobAge
 	}
 	return o
-}
-
-func createLockFreeCache(opts cacheOptions) (cache.Cache, error) {
-	cfg := cache.NewEvictorConfig(opts.minFreeSpace, opts.overrides)
-
-	lockFreeCache, err := cache.NewLockFreeCache(opts.dir, cfg, opts.useHardlink)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create lock-free cache: %v", err)
-	}
-	return lockFreeCache, nil
 }
 
 func setMemoryLimit(limit int64) {
@@ -789,5 +748,11 @@ func recordDownloadMetrics(success bool, rbeStatus string, duration time.Duratio
 		Branch:             branch,
 		Flavor:             flavor,
 	}
-	monitoring.RecordDownloadStats(mStats, *casInstance, !*disableCache, *chunksOnly)
+	// Whether the run had a cache, not whether one was asked for. These differ
+	// whenever setup failed and the job degraded to downloading without one,
+	// and the flag would then label a cacheless run as cached -- turning a
+	// handful of hosts with a broken cache directory into an apparently poor
+	// hit rate for the cache itself, which is the number this metric exists to
+	// measure.
+	monitoring.RecordDownloadStats(mStats, *casInstance, d.Cache != nil, *chunksOnly)
 }

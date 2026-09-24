@@ -3,6 +3,7 @@ package download
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -705,5 +706,139 @@ func TestDoDownload_DuplicateCopyFails_NoLocalCache(t *testing.T) {
 	}
 	if _, statErr := os.Stat(filepath.Join(destDir, "first.txt")); !os.IsNotExist(statErr) {
 		t.Errorf("first.txt was left behind after the failed download (stat err %v)", statErr)
+	}
+}
+
+// errCacheVolumeFull stands in for the conditions that actually take a cache
+// volume out of service on a test host: a full disk, a directory someone
+// remounted read-only, an evictor that could not keep up.
+var errCacheVolumeFull = errors.New("simulated: no space left on the cache volume")
+
+// pushFailingCache misses everything, so the download runs, and then refuses
+// to ingest what came back. If cancel is set, Push calls it first, so the
+// refusal arrives together with the job being torn down.
+type pushFailingCache struct {
+	pushCalled bool
+	cancel     context.CancelFunc
+}
+
+func (p *pushFailingCache) Pull(ctx context.Context, all []*client.TreeOutput) ([]*client.TreeOutput, []*client.TreeOutput, error) {
+	return nil, all, nil
+}
+
+func (p *pushFailingCache) Push(ctx context.Context, all map[digest.Digest]*client.TreeOutput) error {
+	p.pushCalled = true
+	if p.cancel != nil {
+		p.cancel()
+	}
+	return errCacheVolumeFull
+}
+
+func (p *pushFailingCache) Close() error { return nil }
+
+// newPushFailingJob returns a job, backed by a fake CAS, that downloads a tree
+// holding one file, artifact.bin, through c. It also returns the file's
+// contents.
+func newPushFailingJob(t *testing.T, c *pushFailingCache) (*DownloadJob, []byte) {
+	t.Helper()
+	fakeServer, err := fakes.NewServer(t)
+	if err != nil {
+		t.Fatalf("Failed to create fake RBE server: %v", err)
+	}
+	t.Cleanup(fakeServer.Stop)
+
+	wantData := []byte("downloaded before the cache refused it")
+	dFile := fakeServer.CAS.Put(wantData)
+
+	rootDir := &repb.Directory{
+		Files: []*repb.FileNode{
+			{Name: "artifact.bin", Digest: &repb.Digest{Hash: dFile.Hash, SizeBytes: dFile.Size}},
+		},
+	}
+	rootBytes, err := proto.Marshal(rootDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dRootDir := fakeServer.CAS.Put(rootBytes)
+
+	testClient, err := fakeServer.NewTestClient(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to create test client: %v", err)
+	}
+	t.Cleanup(func() { testClient.Close() })
+
+	return &DownloadJob{
+		Client: testClient,
+		Digest: fmt.Sprintf("%s/%d", dRootDir.Hash, dRootDir.Size),
+		Dir:    t.TempDir(),
+		Cache:  c,
+	}, wantData
+}
+
+// TestDoDownload_CacheWriteFailureDoesNotFailTheDownload pins the blast radius
+// of a broken cache volume.
+//
+// By the time Push runs, every byte the caller asked for is already on disk and
+// the network work is done. A cache that cannot accept those bytes has cost the
+// next run a fetch and nothing more. Failing here, and deleting the tree on the
+// way out, converted a local and self-healing condition into a failed test run
+// -- and did it on whichever hosts had the fullest disks, which are the hosts
+// where it is least affordable and most likely to repeat.
+func TestDoDownload_CacheWriteFailureDoesNotFailTheDownload(t *testing.T) {
+	c := &pushFailingCache{}
+	job, wantData := newPushFailingJob(t, c)
+
+	if err := job.DoDownload(context.Background()); err != nil {
+		t.Fatalf("DoDownload failed because the cache could not be written: %v", err)
+	}
+	if !c.pushCalled {
+		t.Fatal("Push was never attempted, so this test proves nothing about its failure")
+	}
+
+	got, err := os.ReadFile(filepath.Join(job.Dir, "artifact.bin"))
+	if err != nil {
+		t.Fatalf("Downloaded file was deleted when the cache write failed: %v", err)
+	}
+	if !bytes.Equal(got, wantData) {
+		t.Errorf("artifact.bin content = %q, want %q", got, wantData)
+	}
+
+	// Succeeding quietly would be its own problem: a host whose cache volume
+	// is broken would report a perfectly healthy run forever, at a hit rate of
+	// zero, with nothing in the output to say why.
+	if notes := job.Stats().Notes; !strings.Contains(notes, "Failed to cache") {
+		t.Errorf("Stats notes = %q, want it to report that the files could not be cached", notes)
+	}
+}
+
+// TestDoDownload_CacheWriteFailureStillFailsOnContextCancellation is the limit
+// on tolerating a failed cache write.
+//
+// A cache that cannot accept the bytes has cost the next run a fetch and
+// nothing else, so the download stands. A cancelled context has not: the job
+// is being torn down, nobody is going to read the tree, and reporting success
+// would hand the caller a directory that was never finished. The distinction
+// matters because Push is exactly where the two arrive looking alike -- the
+// cache reports an error either way.
+//
+// The download has to succeed for Push to be reached at all, so the context is
+// cancelled from inside Push rather than up front. DoDownload reports any
+// cancelled context as an error on its own, so the error alone proves little;
+// the tree being cleaned up is what shows the Push branch took the failure
+// path rather than tolerating the write error.
+func TestDoDownload_CacheWriteFailureStillFailsOnContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	c := &pushFailingCache{cancel: cancel}
+	job, _ := newPushFailingJob(t, c)
+
+	if err := job.DoDownload(ctx); err == nil {
+		t.Fatal("DoDownload succeeded although the context was cancelled during Push")
+	}
+	if !c.pushCalled {
+		t.Fatal("Push was never attempted, so this test proves nothing about its failure")
+	}
+	if _, err := os.Stat(filepath.Join(job.Dir, "artifact.bin")); !os.IsNotExist(err) {
+		t.Errorf("artifact.bin was left behind after a cancelled download (stat err %v)", err)
 	}
 }

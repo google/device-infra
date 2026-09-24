@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"strings"
 	"time"
 
 	log "github.com/golang/glog"
@@ -28,6 +29,10 @@ import (
 	"go.chromium.org/luci/common/data/text/units"
 )
 
+// DownloadJob is one download: the tree to fetch, where to put it, and the
+// client, cache and limits to do it with. The caller fills it in and hands it
+// to DoDownload, which may consult it more than once -- a proxy failure is
+// retried directly -- so it describes the work rather than the attempt.
 type DownloadJob struct {
 	Client   *client.Client
 	Digest   string
@@ -48,6 +53,12 @@ type DownloadJob struct {
 	// fetch are attributed to, so it must agree with the address Client dialed.
 	UseProxy bool
 	Tracker  *ProxyHitTracker
+	// Notes carries remarks the caller established before the download began,
+	// which is where anything about setting the job up has to be reported from:
+	// the stats do not exist yet at that point, and on a fallback attempt they
+	// are replaced. Seeded into every attempt's stats so that a condition that
+	// is still true on the retry is still reported on the retry.
+	Notes []string
 
 	// remoteFailed records whether the last DoDownload failed in a call to
 	// Client, as opposed to in local work before or after the fetch. Callers
@@ -114,6 +125,49 @@ type Stats struct {
 	DownloadError       string `json:"download_error,omitempty"`
 	Notes               string `json:"notes,omitempty"`
 	CASProxy            string `json:"casproxy,omitempty"`
+}
+
+// noteSeparator joins the notes of a single run into the one string the stats
+// carry. Chosen over a newline because the field ends up in a JSON blob that is
+// read by eye as often as by machine. sanitizeNote guarantees no entry contains
+// its "|", so splitting on "|" recovers exactly the entries.
+const noteSeparator = " | "
+
+// noteSanitizer replaces what could make one note read as several: the
+// separator's "|", and line breaks, which would also split the field across
+// lines in the stats JSON and in AnTS. "_" is used for "|" because it is ASCII
+// and cannot be mistaken for a separator or for path structure.
+var noteSanitizer = strings.NewReplacer("|", "_", "\r\n", " ", "\r", " ", "\n", " ")
+
+// sanitizeNote makes msg safe to join with noteSeparator.
+func sanitizeNote(msg string) string {
+	return noteSanitizer.Replace(msg)
+}
+
+// addNote records something the operator should know about a run that is going
+// to succeed anyway.
+//
+// It is the counterpart to DownloadError, which is for the reason a run failed.
+// Anything that degrades a download without invalidating it belongs here: the
+// bytes are correct and the caller is not going to be told otherwise, so
+// without a note the only evidence is a log line on one host among thousands.
+//
+// Notes accumulate rather than overwrite. There can be more than one thing
+// worth saying about a run, and the second one is not more important than the
+// first. The log line keeps the message verbatim; only the copy in the stats is
+// sanitized.
+func (d *DownloadJob) addNote(format string, args ...any) {
+	msg := fmt.Sprintf(format, args...)
+	log.Warningf("%s", msg)
+	if d.DownloadStats == nil {
+		return
+	}
+	msg = sanitizeNote(msg)
+	if d.DownloadStats.Notes == "" {
+		d.DownloadStats.Notes = msg
+		return
+	}
+	d.DownloadStats.Notes += noteSeparator + msg
 }
 
 // Stats returns the download stats for the job.
@@ -266,7 +320,7 @@ func (d *DownloadJob) updateDownloadStats(all []*client.TreeOutput, downloaded m
 		// keeps the partition adding up, but over-reporting is the signature of
 		// a bug, and left silent it looks exactly like a perfect proxy hit rate.
 		if sizeProxyHot > sizeDownloaded || countProxyHot > len(downloaded) {
-			log.Warningf("casproxy reported serving more than was downloaded (%v in %d blobs reported, %v in %d downloaded); clamping, proxy hit rate is understated",
+			d.addNote("casproxy reported serving more than was downloaded (%v in %d blobs reported, %v in %d downloaded); clamping, proxy hit rate is understated",
 				units.Size(sizeProxyHot), countProxyHot, units.Size(sizeDownloaded), len(downloaded))
 			if sizeProxyHot > sizeDownloaded {
 				sizeProxyHot = sizeDownloaded
@@ -593,13 +647,33 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache,
 	// Push downloaded files to local cache
 	start = time.Now()
 	if err := c.Push(ctx, toDownload); err != nil {
-		removeLeftOverFiles(outputs)
-		if ctx.Err() == context.DeadlineExceeded {
-			return context.DeadlineExceeded
+		// A cache write failure is not a download failure. Every file the
+		// caller asked for is already on disk, complete, and carrying the
+		// mode the SDK gave it; all that has been lost is the copy that
+		// would have saved a fetch next time. Deleting the tree and failing,
+		// which is what this did before, escalated a local and self-healing
+		// condition -- a full disk, a cache directory someone made read-only,
+		// an evictor that could not keep up -- into a failed test run, and
+		// did so on precisely the hosts least able to afford one.
+		//
+		// A partially ingested cache is fine and needs no unwinding: it is
+		// content-addressed, so every blob that did land is independently
+		// valid and the rest are ordinary misses.
+		//
+		// A context error is the exception. There the job itself is over, the
+		// tree is not going to be used by anyone, and the usual cleanup and
+		// failure are still what the caller expects.
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			removeLeftOverFiles(outputs)
+			if ctxErr == context.DeadlineExceeded {
+				return context.DeadlineExceeded
+			}
+			return fmt.Errorf("failed to push files to cache: %w", err)
 		}
-		return fmt.Errorf("failed to push files to cache: %w", err)
+		d.addNote("Failed to cache %d downloaded files, so they will be fetched again next time: %v", len(toDownload), err)
+	} else {
+		log.InfoContextf(ctx, "finished pushing %d files to local cache, took %s", len(toDownload), time.Since(start))
 	}
-	log.InfoContextf(ctx, "finished pushing %d files to local cache, took %s", len(toDownload), time.Since(start))
 
 	if len(dups) > 0 {
 		// Copy duplicates files to the target location
@@ -627,8 +701,15 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache,
 //   - Copy duplicates files to target locations
 //   - Dump downloadStats
 func (d *DownloadJob) DoDownload(ctx context.Context) error {
+	// Notes seeded from the caller do not pass through addNote, so they are
+	// sanitized here to keep the separator unambiguous.
+	seeded := make([]string, len(d.Notes))
+	for i, note := range d.Notes {
+		seeded[i] = sanitizeNote(note)
+	}
 	d.DownloadStats = &Stats{
 		CASProxy: d.CASProxyStatus,
+		Notes:    strings.Join(seeded, noteSeparator),
 	}
 	d.remoteFailed = false
 	if d.DownloadTimeout > 0 {
@@ -745,8 +826,9 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 	}
 
 	if err := d.moveChunksIndexFileIfNeeded(); err != nil {
-		// This is optional and should not fail the download. Just log it.
-		log.ErrorContext(ctx, err)
+		// Optional, so it does not fail the download, but a run that could not
+		// place its chunks index is not quite the run that was asked for.
+		d.addNote("Failed to move the chunks index file: %v", err)
 	}
 
 	fileDownloadTime := time.Since(start)
@@ -787,9 +869,7 @@ func (d *DownloadJob) moveChunksIndexFileIfNeeded() error {
 		return fmt.Errorf("failed to move chunks index file: %v", err)
 	}
 
-	msg := fmt.Sprintf("Chunks index file moved from %s to %s.", secondaryIndexFile, primaryIndexFile)
-	log.Infof("%s", msg)
-	d.DownloadStats.Notes = msg
+	d.addNote("Chunks index file moved from %s to %s.", secondaryIndexFile, primaryIndexFile)
 
 	return nil
 }
