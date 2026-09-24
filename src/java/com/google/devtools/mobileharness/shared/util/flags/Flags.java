@@ -1273,11 +1273,6 @@ public class Flags {
   @FlagSpec(name = "mhproxy_spec", help = "GSLB blade target for MH Proxy.")
   public static final Flag<String> mhProxySpec = Flag.value("");
 
-  @FlagSpec(
-      name = "monitor_cloudrpc",
-      help = "Whether enable the cloudrpc monitor. default is true.")
-  public static final Flag<Boolean> monitorCloudRpc = Flag.value(true);
-
   @FlagSpec(name = "monitor_gcs", help = "Whether enable the gcs monitor. default is true.")
   public static final Flag<Boolean> monitorGcs = Flag.value(true);
 
