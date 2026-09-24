@@ -339,4 +339,22 @@ public final class NonXtsRunStrategyTest {
 
     assertThat(extraArgs).isEmpty();
   }
+
+  @Test
+  public void getExtraRunCommandArgs_withShardCountAndIndex() {
+    int shardCount = 10;
+    int shardIndex = 2;
+    jobInfo.params().add("ate_shard_count", Integer.toString(shardCount));
+    jobInfo.params().add("ate_shard_index", Integer.toString(shardIndex));
+
+    ImmutableList<String> extraArgs = nonXtsRunStrategy.getExtraRunCommandArgs(testInfo);
+
+    assertThat(extraArgs)
+        .containsExactly(
+            "--shard-count",
+            Integer.toString(shardCount),
+            "--shard-index",
+            Integer.toString(shardIndex))
+        .inOrder();
+  }
 }

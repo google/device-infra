@@ -49,6 +49,8 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
   private static final String WORKUNIT_ID_PROPERTY = "ab_workunit_id";
   private static final String APPEND_ANTS_INVOCATION_DATA_KEY = "APPEND_ANTS_INVOCATION_DATA";
   private static final String APPEND_RDB_INVOCATION_DATA_KEY = "APPEND_RDB_INVOCATION_DATA";
+  private static final String ATE_SHARD_COUNT_PARAM = "ate_shard_count";
+  private static final String ATE_SHARD_INDEX_PARAM = "ate_shard_index";
 
   private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
@@ -224,6 +226,15 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
       addInvocationData(extraArgs, "resultdb_root_invocation_id", resultDbRootInvocationId);
       addInvocationData(extraArgs, "resultdb_work_unit_id", resultDbWorkUnitId);
       addInvocationData(extraArgs, "resultdb_work_unit_update_token", resultDbWorkUnitUpdateToken);
+    }
+
+    int ateShardCount = testInfo.jobInfo().params().getInt(ATE_SHARD_COUNT_PARAM, 0);
+    if (ateShardCount > 0) {
+      extraArgs.add(
+          "--shard-count",
+          Integer.toString(ateShardCount),
+          "--shard-index",
+          Integer.toString(testInfo.jobInfo().params().getInt(ATE_SHARD_INDEX_PARAM, 0)));
     }
 
     return extraArgs.build();
