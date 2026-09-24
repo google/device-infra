@@ -20,16 +20,23 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.WebSocket;
 import okhttp3.WebSocketListener;
@@ -78,7 +85,13 @@ public class AdbWebSocketBridgeTest {
       bridgePort = ss.getLocalPort();
     }
     String wsUrl = server.url("/adb").toString().replace("http", "ws");
-    bridge = new AdbWebSocketBridge(wsUrl, "test-token", bridgePort, Sleeper.noOpSleeper());
+    bridge =
+        new AdbWebSocketBridge(
+            wsUrl,
+            "test-token",
+            bridgePort,
+            Sleeper.noOpSleeper(),
+            AdbWebSocketBridge.DEFAULT_MAX_WS_QUEUE_SIZE_BYTES);
   }
 
   @After
@@ -92,6 +105,11 @@ public class AdbWebSocketBridgeTest {
   public void start_connectAndRelayMessages() throws Exception {
     server.enqueue(new MockResponse().withWebSocketUpgrade(serverListener));
 
+    // Use the public constructor to exercise the production defaults.
+    bridge.stop();
+    bridge =
+        new AdbWebSocketBridge(
+            server.url("/adb").toString().replace("http", "ws"), "test-token", bridgePort);
     bridge.start();
 
     // Small delay to ensure ServerSocket is listening
@@ -272,5 +290,254 @@ public class AdbWebSocketBridgeTest {
     assertThat(read).isEqualTo(-1);
 
     clientSocket.close();
+  }
+
+  @Test
+  public void start_throttlesTcpReadsWhenWebSocketQueueExceedsLimit() throws Exception {
+    CountDownLatch releaseServerReads = new CountDownLatch(1);
+    AtomicInteger totalReceivedBytes = new AtomicInteger(0);
+    CountDownLatch allBytesReceived = new CountDownLatch(1);
+    int payloadSize = 8 * 1024 * 1024; // 8 MiB to exceed OS socket buffers and build ws.queueSize()
+
+    WebSocketListener slowServerListener =
+        new WebSocketListener() {
+          @Override
+          public void onOpen(WebSocket webSocket, Response response) {
+            webSockets.add(webSocket);
+          }
+
+          @Override
+          public void onMessage(WebSocket webSocket, ByteString bytes) {
+            try {
+              if (!releaseServerReads.await(10, SECONDS)) {
+                releaseServerReads.countDown();
+              }
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+            }
+            if (totalReceivedBytes.addAndGet(bytes.size()) >= payloadSize) {
+              allBytesReceived.countDown();
+            }
+          }
+
+          @Override
+          public void onClosing(WebSocket webSocket, int code, String reason) {
+            webSocket.close(1000, "Closing response");
+          }
+        };
+
+    server.enqueue(new MockResponse().withWebSocketUpgrade(slowServerListener));
+
+    AtomicInteger backpressureSleeps = new AtomicInteger(0);
+    Sleeper countingSleeper =
+        duration -> {
+          if (backpressureSleeps.incrementAndGet() >= 3) {
+            releaseServerReads.countDown();
+          }
+          Thread.sleep(5);
+        };
+
+    bridge.stop();
+    bridge =
+        new AdbWebSocketBridge(
+            server.url("/adb").toString().replace("http", "ws"),
+            "test-token",
+            bridgePort,
+            countingSleeper,
+            /* maxWsQueueSizeBytes= */ 64L * 1024);
+    bridge.start();
+    Thread.sleep(1000);
+
+    byte[] chunk = new byte[65536];
+    try (Socket clientSocket = new Socket(InetAddress.getByName("127.0.0.1"), bridgePort)) {
+      clientSocket.setSoTimeout(10000);
+      WebSocket ws = webSockets.poll(10, SECONDS);
+      assertThat(ws).isNotNull();
+
+      OutputStream out = clientSocket.getOutputStream();
+      int written = 0;
+      while (written < payloadSize) {
+        out.write(chunk);
+        written += chunk.length;
+      }
+      out.flush();
+
+      assertThat(allBytesReceived.await(15, SECONDS)).isTrue();
+      assertThat(totalReceivedBytes.get()).isEqualTo(payloadSize);
+      assertThat(backpressureSleeps.get()).isAtLeast(3);
+      ws.close(1000, "Done");
+    }
+  }
+
+  @Test
+  public void start_terminatesSessionWhenBackpressureWaitInterrupted() throws Exception {
+    server.enqueue(new MockResponse().withWebSocketUpgrade(serverListener));
+
+    Sleeper interruptingSleeper =
+        duration -> {
+          throw new InterruptedException("interrupted in test");
+        };
+    bridge.stop();
+    bridge =
+        new AdbWebSocketBridge(
+            server.url("/adb").toString().replace("http", "ws"),
+            "test-token",
+            bridgePort,
+            interruptingSleeper,
+            /* maxWsQueueSizeBytes= */ 0L);
+    bridge.start();
+    Thread.sleep(1000);
+
+    try (Socket clientSocket = new Socket(InetAddress.getByName("127.0.0.1"), bridgePort)) {
+      clientSocket.setSoTimeout(10000);
+      assertThat(webSockets.poll(10, SECONDS)).isNotNull();
+
+      clientSocket.getOutputStream().write("data".getBytes(StandardCharsets.UTF_8));
+      clientSocket.getOutputStream().flush();
+
+      // The pump is interrupted while waiting for queue drain, so the session is terminated
+      // without forwarding the data.
+      assertThat(clientSocket.getInputStream().read()).isEqualTo(-1);
+      assertThat(receivedMessages.poll(1, SECONDS)).isNull();
+    }
+  }
+
+  @Test
+  public void start_truncatesLongRemoteCloseReason() throws Exception {
+    BlockingQueue<String> serverClosedReasons = new LinkedBlockingQueue<>();
+    WebSocketListener recordingServerListener =
+        new WebSocketListener() {
+          @Override
+          public void onOpen(WebSocket webSocket, Response response) {
+            webSockets.add(webSocket);
+          }
+
+          @Override
+          public void onClosed(WebSocket webSocket, int code, String reason) {
+            serverClosedReasons.add(reason);
+          }
+        };
+    server.enqueue(new MockResponse().withWebSocketUpgrade(recordingServerListener));
+
+    bridge.start();
+    Thread.sleep(1000);
+
+    try (Socket clientSocket = new Socket(InetAddress.getByName("127.0.0.1"), bridgePort)) {
+      clientSocket.setSoTimeout(10000);
+      WebSocket ws = webSockets.poll(10, SECONDS);
+      assertThat(ws).isNotNull();
+
+      // A 120-byte remote reason makes the bridge's "Remote closing: <reason>" exceed the 123-byte
+      // RFC 6455 limit, which OkHttp would reject with IllegalArgumentException if not truncated.
+      String longReason = "x".repeat(120);
+      assertThat(ws.close(1000, longReason)).isTrue();
+
+      assertThat(clientSocket.getInputStream().read()).isEqualTo(-1);
+      String echoedReason = serverClosedReasons.poll(10, SECONDS);
+      assertThat(echoedReason).isNotNull();
+      assertThat(echoedReason).startsWith("Remote closing: ");
+      assertThat(ByteString.encodeUtf8(echoedReason).size()).isAtMost(123);
+    }
+  }
+
+  @Test
+  public void pumpTcpToWs_eof_returnsTcpClosed() throws Exception {
+    FakeWebSocket ws = new FakeWebSocket(/* sendResult= */ true);
+
+    String reason =
+        bridge.pumpTcpToWs(
+            new ByteArrayInputStream("abc".getBytes(StandardCharsets.UTF_8)),
+            ws,
+            new AtomicBoolean(false));
+
+    assertThat(reason).isEqualTo("TCP closed");
+    assertThat(ws.sent).containsExactly(ByteString.encodeUtf8("abc"));
+    assertThat(ws.cancelled).isFalse();
+  }
+
+  @Test
+  public void pumpTcpToWs_sendRejected_cancelsWebSocket() throws Exception {
+    FakeWebSocket ws = new FakeWebSocket(/* sendResult= */ false);
+
+    String reason =
+        bridge.pumpTcpToWs(
+            new ByteArrayInputStream("abc".getBytes(StandardCharsets.UTF_8)),
+            ws,
+            new AtomicBoolean(false));
+
+    assertThat(reason).isEqualTo("WebSocket send rejected");
+    assertThat(ws.cancelled).isTrue();
+  }
+
+  @Test
+  public void pumpTcpToWs_sessionClosedDuringBackpressure_stopsWithoutSending() throws Exception {
+    AtomicBoolean closed = new AtomicBoolean(false);
+    FakeWebSocket ws = new FakeWebSocket(/* sendResult= */ true);
+    ws.queueSize = Long.MAX_VALUE;
+    Sleeper closingSleeper = duration -> closed.set(true);
+    AdbWebSocketBridge pumpBridge =
+        new AdbWebSocketBridge(
+            "ws://localhost/adb",
+            "test-token",
+            bridgePort,
+            closingSleeper,
+            /* maxWsQueueSizeBytes= */ 1L);
+
+    try {
+      String reason =
+          pumpBridge.pumpTcpToWs(
+              new ByteArrayInputStream("abc".getBytes(StandardCharsets.UTF_8)), ws, closed);
+
+      assertThat(reason).isEqualTo("TCP closed");
+      assertThat(ws.sent).isEmpty();
+      assertThat(ws.cancelled).isFalse();
+    } finally {
+      pumpBridge.stop();
+    }
+  }
+
+  /** Minimal {@link WebSocket} fake for exercising the TCP to WebSocket pump in isolation. */
+  private static final class FakeWebSocket implements WebSocket {
+    private final boolean sendResult;
+    final List<ByteString> sent = new ArrayList<>();
+    volatile long queueSize = 0;
+    volatile boolean cancelled = false;
+
+    FakeWebSocket(boolean sendResult) {
+      this.sendResult = sendResult;
+    }
+
+    @Override
+    public Request request() {
+      return new Request.Builder().url("http://localhost/adb").build();
+    }
+
+    @Override
+    public long queueSize() {
+      return queueSize;
+    }
+
+    @Override
+    public boolean send(String text) {
+      return send(ByteString.encodeUtf8(text));
+    }
+
+    @Override
+    public boolean send(ByteString bytes) {
+      if (sendResult) {
+        sent.add(bytes);
+      }
+      return sendResult;
+    }
+
+    @Override
+    public boolean close(int code, String reason) {
+      return true;
+    }
+
+    @Override
+    public void cancel() {
+      cancelled = true;
+    }
   }
 }

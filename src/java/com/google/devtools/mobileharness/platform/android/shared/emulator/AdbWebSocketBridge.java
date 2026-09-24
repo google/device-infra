@@ -71,6 +71,24 @@ public class AdbWebSocketBridge {
    */
   private static final int ADB_WS_MAX_FRAME_SIZE = 16384;
 
+  /**
+   * High-water mark (8 MiB) for OkHttp's outbound WebSocket queue ({@link WebSocket#queueSize()}).
+   *
+   * <p>OkHttp's {@code RealWebSocket} enforces a hard 16 MiB {@code MAX_QUEUE_SIZE} limit and
+   * immediately closes the WebSocket with code {@code 1001} ({@code CLOSE_CLIENT_GOING_AWAY}) if
+   * {@code queueSize + data.size > 16 MiB}. Pausing local TCP reads above 8 MiB applies TCP
+   * receive-window backpressure to the local ADB client during large APK installs or file pushes.
+   */
+  @VisibleForTesting static final long DEFAULT_MAX_WS_QUEUE_SIZE_BYTES = 8L * 1024 * 1024;
+
+  private static final Duration BACKPRESSURE_SLEEP_INTERVAL = Duration.ofMillis(5);
+
+  /**
+   * Maximum UTF-8 byte length for a WebSocket Close control frame reason per RFC 6455 section 5.5
+   * (125 max control frame payload minus 2-byte status code).
+   */
+  private static final int MAX_WS_CLOSE_REASON_BYTES = 123;
+
   private static final Supplier<OkHttpClient> SHARED_CLIENT =
       Suppliers.memoize(
           () -> {
@@ -82,7 +100,7 @@ public class AdbWebSocketBridge {
                 .pingInterval(Duration.ofSeconds(10))
                 .connectTimeout(Duration.ofSeconds(10))
                 .readTimeout(Duration.ZERO)
-                .writeTimeout(Duration.ofSeconds(10))
+                .writeTimeout(Duration.ofSeconds(30))
                 .build();
           });
 
@@ -90,21 +108,24 @@ public class AdbWebSocketBridge {
   private final String token;
   private final int adbPort;
   private final Sleeper sleeper;
+  private final long maxWsQueueSizeBytes;
   private final ListeningExecutorService executor =
       ThreadPools.createStandardThreadPool("adb-websocket-bridge");
   private volatile ServerSocket serverSocket;
   private final AtomicBoolean isRunning = new AtomicBoolean(false);
 
   public AdbWebSocketBridge(String webSocketUrl, String token, int adbPort) {
-    this(webSocketUrl, token, adbPort, Sleeper.defaultSleeper());
+    this(webSocketUrl, token, adbPort, Sleeper.defaultSleeper(), DEFAULT_MAX_WS_QUEUE_SIZE_BYTES);
   }
 
   @VisibleForTesting
-  AdbWebSocketBridge(String webSocketUrl, String token, int adbPort, Sleeper sleeper) {
+  AdbWebSocketBridge(
+      String webSocketUrl, String token, int adbPort, Sleeper sleeper, long maxWsQueueSizeBytes) {
     this.webSocketUrl = webSocketUrl;
     this.token = token;
     this.adbPort = adbPort;
     this.sleeper = sleeper;
+    this.maxWsQueueSizeBytes = maxWsQueueSizeBytes;
   }
 
   /** Starts the bridge in the background. */
@@ -235,8 +256,7 @@ public class AdbWebSocketBridge {
             logger.atInfo().atMostEvery(10, SECONDS).log(
                 "WebSocket connection attempt timed out or failed for TCP: %s", tcpSocket);
             if (ws != null) {
-              // Code 1000 indicates a "Normal Closure" per WebSocket protocol (RFC 6455)
-              ws.close(1000, "Connection attempt failed");
+              ws.cancel();
             }
             throw new ConnectException("Failed to establish WebSocket connection");
           }
@@ -359,40 +379,82 @@ public class AdbWebSocketBridge {
     logFailure(
         executor.submit(
             () -> {
+              String terminationReason = "TCP closed";
               try (InputStream in = tcpSocket.getInputStream()) {
-                byte[] buffer = new byte[ADB_WS_MAX_FRAME_SIZE];
-                int bytesRead;
-                while (!closed.get() && (bytesRead = in.read(buffer)) != -1) {
-                  if (!ws.send(ByteString.of(buffer, 0, bytesRead))) {
-                    break;
-                  }
-                }
+                terminationReason = pumpTcpToWs(in, ws, closed);
+              } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                terminationReason = "TCP pump interrupted";
               } catch (IOException e) {
                 // Expected on session close
+                terminationReason = "TCP read error: " + e.getMessage();
               } finally {
-                terminateSession(ws, tcpSocket, closed, "TCP closed", latch);
+                terminateSession(ws, tcpSocket, closed, terminationReason, latch);
               }
             }),
         Level.SEVERE,
         "TCP to WebSocket pump fatal error");
   }
 
+  /**
+   * Pumps bytes from the local TCP input stream to the WebSocket until EOF, session close, or send
+   * rejection. Pauses reading while the WebSocket outbound queue is at or above {@code
+   * maxWsQueueSizeBytes} so the OS TCP receive window throttles the local ADB client.
+   *
+   * @return the session termination reason
+   */
+  @VisibleForTesting
+  String pumpTcpToWs(InputStream in, WebSocket ws, AtomicBoolean closed)
+      throws IOException, InterruptedException {
+    byte[] buffer = new byte[ADB_WS_MAX_FRAME_SIZE];
+    int bytesRead;
+    while (!closed.get() && (bytesRead = in.read(buffer)) != -1) {
+      while (!closed.get() && ws.queueSize() >= maxWsQueueSizeBytes) {
+        sleeper.sleep(BACKPRESSURE_SLEEP_INTERVAL);
+      }
+      if (closed.get()) {
+        break;
+      }
+      if (!ws.send(ByteString.of(buffer, 0, bytesRead))) {
+        ws.cancel();
+        return "WebSocket send rejected";
+      }
+    }
+    return "TCP closed";
+  }
+
   private void terminateSession(
       WebSocket ws, Socket tcpSocket, AtomicBoolean closed, String reason, CountDownLatch latch) {
     if (closed.compareAndSet(false, true)) {
-      logger.atInfo().log(
-          "Terminating bridge session. Reason: %s, WS: %s, TCP: %s", reason, ws, tcpSocket);
-      if (ws != null) {
-        // Code 1000 indicates a "Normal Closure" per WebSocket protocol (RFC 6455)
-        ws.close(1000, reason);
-      }
       try {
-        tcpSocket.close();
-      } catch (IOException ignored) {
-        // Exception ignored intentionally
+        logger.atInfo().log(
+            "Terminating bridge session. Reason: %s, WS: %s, TCP: %s", reason, ws, tcpSocket);
+        if (ws != null) {
+          // Code 1000 indicates a "Normal Closure" per WebSocket protocol (RFC 6455).
+          // RFC 6455 section 5.5 limits the close reason to 123 UTF-8 bytes; exceeding it throws
+          // IllegalArgumentException in OkHttp.
+          String safeReason = truncateCloseReason(reason);
+          if (!ws.close(1000, safeReason)) {
+            ws.cancel();
+          }
+        }
+        try {
+          tcpSocket.close();
+        } catch (IOException ignored) {
+          // Exception ignored intentionally
+        }
+      } finally {
+        latch.countDown();
       }
-      latch.countDown();
     }
+  }
+
+  private static String truncateCloseReason(String reason) {
+    if (ByteString.encodeUtf8(reason).size() <= MAX_WS_CLOSE_REASON_BYTES) {
+      return reason;
+    }
+    // 40 UTF-16 code units are guaranteed to encode to at most 120 UTF-8 bytes (<= 123 bytes).
+    return reason.substring(0, Math.min(reason.length(), 40));
   }
 
   private Request buildRequest() {
