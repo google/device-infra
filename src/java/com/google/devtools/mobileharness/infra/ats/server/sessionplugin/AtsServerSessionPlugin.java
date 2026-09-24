@@ -434,7 +434,11 @@ final class AtsServerSessionPlugin {
       RequestDetail.Builder requestDetail, NewMultiCommandRequest newMultiCommandRequest)
       throws InterruptedException {
     CreateJobsResult createTradefedJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(newMultiCommandRequest, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            newMultiCommandRequest,
+            sessionInfo,
+            /* dynamicMctsModules= */ ImmutableSet.of(),
+            /* skipDynamicMctsJob= */ false);
     tradefedJobs = new ArrayList<>(createTradefedJobsResult.jobInfos());
     updateRequestDetailWithCreateJobsResult(requestDetail, createTradefedJobsResult);
     return createTradefedJobsResult.state().equals(RequestState.RUNNING);
@@ -547,7 +551,10 @@ final class AtsServerSessionPlugin {
     if (tradefedJobs == null) {
       CreateJobsResult createTradefedJobsResult =
           newMultiCommandRequestHandler.createTradefedJobs(
-              requestDetail.getOriginalRequest(), sessionInfo);
+              requestDetail.getOriginalRequest(),
+              sessionInfo,
+              /* dynamicMctsModules= */ ImmutableSet.of(),
+              /* skipDynamicMctsJob= */ false);
       tradefedJobs = new ArrayList<>(createTradefedJobsResult.jobInfos());
       ImmutableSet<String> triggeredJobNames =
           sessionInfo.getAllJobs().stream()
