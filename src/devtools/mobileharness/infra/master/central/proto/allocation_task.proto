@@ -95,6 +95,9 @@ enum AllocationWorkflowStatus {
 
   // Waiting for test execution environment (e.g., Otter) to be ready.
   PENDING_TEST_EXEC_ENV = 9;
+
+  // Waiting to be dispatched to a cluster (e.g., waiting in TestExecEnvBuffer).
+  PENDING_CLUSTER_DISPATCH = 10;
 }
 
 // Contains all intermediate data generated during the allocation workflow.
