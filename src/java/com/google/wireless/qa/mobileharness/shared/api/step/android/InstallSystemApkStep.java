@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidS
 import com.google.devtools.mobileharness.platform.android.systemsetting.PostSetDmVerityDeviceOp;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.time.Duration;
@@ -146,8 +147,6 @@ public class InstallSystemApkStep {
         replaceSystemPackage(
             deviceId, systemApks.get(i), replaceApkPaths.get(i), allowReplaceOfNotInstalled);
       }
-      rebootDevice(deviceId, deviceClassName, deviceRebootType);
-      systemStateUtil.waitUntilReady(deviceId);
     } else {
       // Check the SDK version to determine where to push the system apps.
       String pathOnDevice = SYSTEM_APP_PATH;
@@ -191,11 +190,13 @@ public class InstallSystemApkStep {
       for (int i = 0; i < permissionFiles.size(); ++i) {
         String permissionFile = permissionFiles.get(i);
         String permissionFileInDevice = permissionFilesInDevice.get(i);
+        prepareParentDir(deviceId, permissionFileInDevice);
         logger.atInfo().log("Pushing %s to %s.", permissionFile, permissionFileInDevice);
         fileUtil.push(deviceId, sdkVersion, permissionFile, permissionFileInDevice, null);
       }
     } else if (permissionFiles != null) {
       // Push the permission files to default path.
+      fileUtil.makeDirectory(deviceId, PERMISSIONS_FILE_PATH);
       for (String permissionFile : permissionFiles) {
         logger.atInfo().log("Pushing %s to %s.", permissionFile, PERMISSIONS_FILE_PATH);
         fileUtil.push(deviceId, sdkVersion, permissionFile, PERMISSIONS_FILE_PATH, null);
@@ -203,6 +204,10 @@ public class InstallSystemApkStep {
     }
 
     if (forceInstallation) {
+      if (replaceApkPaths != null && !replaceApkPaths.isEmpty()) {
+        rebootDevice(deviceId, deviceClassName, deviceRebootType);
+        systemStateUtil.waitUntilReady(deviceId);
+      }
       // Reinstall apps.
       for (String systemApk : systemApks) {
         logger.atInfo().log("Reinstalling %s.", systemApk);
@@ -299,6 +304,7 @@ public class InstallSystemApkStep {
     }
 
     fileUtil.removeFiles(deviceId, destApkPath);
+    prepareParentDir(deviceId, destApkPath);
     logger.atInfo().log("Pushing %s to %s.", sourceApk, destApkPath);
     fileUtil.push(deviceId, sdkVersion, sourceApk, destApkPath, null);
   }
@@ -330,6 +336,14 @@ public class InstallSystemApkStep {
       logger.atInfo().log("Rebooting device %s to make remount effective.", deviceId);
       rebootDevice(deviceId, deviceClassName, DeviceRebootType.HARD_REBOOT);
       fileUtil.remount(deviceId);
+    }
+  }
+
+  private void prepareParentDir(String deviceId, String filePath)
+      throws MobileHarnessException, InterruptedException {
+    String parentDir = PathUtil.dirname(filePath);
+    if (!parentDir.isEmpty() && !parentDir.equals(".")) {
+      fileUtil.makeDirectory(deviceId, parentDir);
     }
   }
 }
