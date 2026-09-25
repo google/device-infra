@@ -29,7 +29,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Result;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.dropbox.DropboxExtractor;
 import com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
@@ -50,6 +53,7 @@ import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidLogcatMonitoringDecoratorSpec;
@@ -87,6 +91,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
   @Mock CrashDialogDetector crashDialogDetector;
   @Mock AndroidSystemSettingUtil androidSystemSettingUtil;
 
+  private Result result;
   private LocalFileUtil localFileUtil;
   private Path decoratorOutputDir;
 
@@ -95,13 +100,16 @@ public class AndroidLogcatMonitoringDecoratorTest {
     var genFilesDir = temporaryFolder.newFolder().toPath();
     decoratorOutputDir = genFilesDir.resolve("logcat_monitoring");
     localFileUtil = new LocalFileUtil();
+    var timing = new Timing();
+    result = new Result(timing.toNewTiming(), new Params(timing).toNewParams()).setPass();
 
     when(decoratedDriver.getDevice()).thenReturn(device);
     when(device.getDeviceId()).thenReturn("deviceId");
     when(testInfo.getGenFileDir()).thenReturn(genFilesDir.toString());
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(jobInfo.timer()).thenReturn(timer);
-    when(testInfo.log()).thenReturn(new Log(new Timing()));
+    when(testInfo.log()).thenReturn(new Log(timing));
+    when(testInfo.resultWithCause()).thenReturn(result);
     when(timer.remainingTimeJava()).thenReturn(Duration.ofSeconds(5));
     doNothing().when(decoratedDriver).run(testInfo);
     when(adb.runShell(any(), any())).thenReturn("2025-01-30 10:15:20.000");
@@ -398,6 +406,124 @@ public class AndroidLogcatMonitoringDecoratorTest {
     assertThat(thrown.getErrorId())
         .isEqualTo(
             AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_ORCHESTRATOR_CONNECTION_FAILURE);
+  }
+
+  @Test
+  public void run_appUnderTestCrash_setsFailTestResult() throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addReportAsFailurePackages("com.test.app")
+            .build();
+    when(jobInfo.combinedSpec(any(AndroidLogcatMonitoringDecorator.class))).thenReturn(spec);
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.app",
+                        1,
+                        ProcessCategory.FAILURE,
+                        LogcatEvent.CrashType.ANDROID_RUNTIME),
+                    "RuntimeException: fake exception")));
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil);
+
+    decorator.run(testInfo);
+
+    assertThat(result.get().type()).isEqualTo(TestResult.FAIL);
+    assertThat(result.get().causeExceptionNonEmpty().getErrorId())
+        .isEqualTo(
+            AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_APP_UNDER_TEST_PROCESS_CRASHED);
+  }
+
+  @Test
+  public void run_appUnderTestCrashWhenTestAlreadyFailed_doesNotOverrideFailureCause()
+      throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addReportAsFailurePackages("com.test.app")
+            .build();
+    when(jobInfo.combinedSpec(any(AndroidLogcatMonitoringDecorator.class))).thenReturn(spec);
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.app",
+                        1,
+                        ProcessCategory.FAILURE,
+                        LogcatEvent.CrashType.ANDROID_RUNTIME),
+                    "RuntimeException: fake exception")));
+    result.setNonPassing(
+        TestResult.FAIL,
+        new MobileHarnessException(
+            BasicErrorId.JOB_OR_TEST_RESULT_LEGACY_FAIL, "Existing test failure"));
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil);
+
+    decorator.run(testInfo);
+
+    assertThat(result.get().type()).isEqualTo(TestResult.FAIL);
+    assertThat(result.get().causeExceptionNonEmpty().getErrorId())
+        .isEqualTo(BasicErrorId.JOB_OR_TEST_RESULT_LEGACY_FAIL);
+  }
+
+  @Test
+  public void run_ignoredProcessCrash_doesNotSetFailTestResult() throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addPackagesToIgnore("com.test.ignored")
+            .build();
+    when(jobInfo.combinedSpec(any(AndroidLogcatMonitoringDecorator.class))).thenReturn(spec);
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.ignored",
+                        1,
+                        ProcessCategory.IGNORED,
+                        LogcatEvent.CrashType.ANDROID_RUNTIME),
+                    "RuntimeException: fake exception")));
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil);
+
+    decorator.run(testInfo);
+
+    assertThat(result.get().type()).isEqualTo(TestResult.PASS);
   }
 
   @Test
