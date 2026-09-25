@@ -49,6 +49,7 @@ public final class DeviceConditionUtil {
 
   private static final String ANDROID_REAL_DEVICE_TYPE = "AndroidRealDevice";
   private static final String IOS_REAL_DEVICE_TYPE = "IosRealDevice";
+  private static final String IOS_REAL_DEVICE_ON_LINUX_TYPE = "IosRealDeviceOnLinux";
   private static final String CLOUD_TF_AVD_DEVICE_TYPE = "CloudTFAvdDevice";
   private static final String ANDROID_LOCAL_EMULATOR_TYPE = "AndroidLocalEmulator";
 
@@ -256,7 +257,8 @@ public final class DeviceConditionUtil {
     List<String> types = device.profile().getFeature().getTypeList();
     if (types.contains(ANDROID_REAL_DEVICE_TYPE)) {
       return getDeviceDimension(device, Ascii.toLowerCase(Name.SDK_VERSION.name()));
-    } else if (types.contains(IOS_REAL_DEVICE_TYPE)) {
+    } else if (types.contains(IOS_REAL_DEVICE_TYPE)
+        || types.contains(IOS_REAL_DEVICE_ON_LINUX_TYPE)) {
       return getDeviceDimension(device, Ascii.toLowerCase(Name.SOFTWARE_VERSION.name()));
     }
     return Optional.empty();
@@ -352,7 +354,9 @@ public final class DeviceConditionUtil {
 
     // 1. In Service
     if ((status == DeviceStatus.IDLE || status == DeviceStatus.BUSY)
-        && (types.contains(ANDROID_REAL_DEVICE_TYPE) || types.contains(IOS_REAL_DEVICE_TYPE))) {
+        && (types.contains(ANDROID_REAL_DEVICE_TYPE)
+            || types.contains(IOS_REAL_DEVICE_TYPE)
+            || types.contains(IOS_REAL_DEVICE_ON_LINUX_TYPE))) {
       return HealthCategory.HEALTH_CATEGORY_IN_SERVICE;
     }
 
