@@ -89,7 +89,18 @@ public class AdbWebSocketBridge {
    */
   private static final int MAX_WS_CLOSE_REASON_BYTES = 123;
 
-  private static final Supplier<OkHttpClient> SHARED_CLIENT =
+  /**
+   * Ping interval for WebSocket keepalive.
+   *
+   * <p>Set to 60 seconds to tolerate temporary device or adbd stalls (e.g. disk flushing during
+   * large APK streaming or garbage collection) where the remote orchestrator's TCP write loop to
+   * the device blocks, delaying processing of WebSocket ping control frames queued behind in-flight
+   * data.
+   */
+  @VisibleForTesting static final Duration DEFAULT_PING_INTERVAL = Duration.ofSeconds(60);
+
+  @VisibleForTesting
+  static final Supplier<OkHttpClient> SHARED_CLIENT =
       Suppliers.memoize(
           () -> {
             Dispatcher dispatcher = new Dispatcher();
@@ -97,7 +108,7 @@ public class AdbWebSocketBridge {
             dispatcher.setMaxRequestsPerHost(500);
             return new OkHttpClient.Builder()
                 .dispatcher(dispatcher)
-                .pingInterval(Duration.ofSeconds(10))
+                .pingInterval(DEFAULT_PING_INTERVAL)
                 .connectTimeout(Duration.ofSeconds(10))
                 .readTimeout(Duration.ZERO)
                 .writeTimeout(Duration.ofSeconds(30))
