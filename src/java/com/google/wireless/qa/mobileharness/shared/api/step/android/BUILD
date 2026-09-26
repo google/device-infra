@@ -54,6 +54,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/checksum",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message",
