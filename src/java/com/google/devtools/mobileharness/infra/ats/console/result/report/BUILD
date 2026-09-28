@@ -133,6 +133,7 @@ java_library(
     srcs = ["MoblyReportParser.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
     ],
     runtime_deps = [

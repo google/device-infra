@@ -73,6 +73,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import javax.annotation.Nullable;
@@ -355,12 +356,20 @@ public class SessionResultHandlerUtil {
             testEntry.getKey().locator().getId());
         continue;
       }
-      curSessionHasNonTfJob = true;
+      JobInfo jobInfo = testEntry.getKey();
+      // SETUP/TEARDOWN are synthetic precondition jobs rather than real xTS modules. They must not
+      // contribute to the report, otherwise a session where no module matched at all still produces
+      // a report with no build/suite metadata and zero modules. Their result files are still copied
+      // below so that device-info-files and vintf-files end up in the result dir.
+      boolean isPrecondition = isPreconditionJob(jobInfo);
+      if (!isPrecondition) {
+        curSessionHasNonTfJob = true;
+      }
       TestInfo test = testEntry.getValue().get();
 
       if (!previousSessionHasTfModule) {
         previousSessionHasTfModule =
-            Boolean.parseBoolean(test.jobInfo().properties().get(Job.PREV_SESSION_HAS_TF_MODULE));
+            Boolean.parseBoolean(jobInfo.properties().get(Job.PREV_SESSION_HAS_TF_MODULE));
       }
 
       callAndLogException(
@@ -371,11 +380,7 @@ public class SessionResultHandlerUtil {
           String.format(
               "Failed to copy non-tradefed test [%s]'s log files to log dir [%s].",
               test.locator().getId(), nonTradefedTestLogsDir));
-      if (!test.jobInfo()
-          .properties()
-          .getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS)
-          .orElse(false)) {
-        JobInfo jobInfo = testEntry.getKey();
+      if (!jobInfo.properties().getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)) {
         callAndLogException(
             () -> {
               Optional<NonTradefedTestResult> nonTradefedTestResult =
@@ -383,38 +388,34 @@ public class SessionResultHandlerUtil {
                       test,
                       nonTradefedTestResultsDir,
                       resultDir,
-                      testEntry
-                          .getKey()
-                          .properties()
-                          .get(SessionHandlerHelper.XTS_MODULE_NAME_PROP),
-                      testEntry.getKey().properties().get(SessionHandlerHelper.XTS_MODULE_ABI_PROP),
-                      testEntry
-                          .getKey()
-                          .properties()
-                          .get(SessionHandlerHelper.XTS_MODULE_PARAMETER_PROP));
-              nonTradefedTestResult.ifPresent(
-                  res ->
-                      moblyReportInfos.add(
-                          MoblyReportInfo.of(
-                              res.moduleName(),
-                              res.moduleAbi().orElse(null),
-                              res.moduleParameter().orElse(null),
-                              res.testSummaryFile(),
-                              res.resultAttributesFile(),
-                              res.deviceBuildFingerprint(),
-                              res.buildAttributesFile(),
-                              res.moduleResultFile(),
-                              jobInfo
-                                  .params()
-                                  .getOptional(
-                                      MoblyReportInfo.MOBLY_TEST_ENTRY_CONVERTER_CLASS_PARAM))));
+                      jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_NAME_PROP),
+                      jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_ABI_PROP),
+                      jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_PARAMETER_PROP));
+              if (!isPrecondition) {
+                nonTradefedTestResult.ifPresent(
+                    res ->
+                        moblyReportInfos.add(
+                            MoblyReportInfo.of(
+                                res.moduleName(),
+                                res.moduleAbi().orElse(null),
+                                res.moduleParameter().orElse(null),
+                                res.testSummaryFile(),
+                                res.resultAttributesFile(),
+                                res.deviceBuildFingerprint(),
+                                res.buildAttributesFile(),
+                                res.moduleResultFile(),
+                                jobInfo
+                                    .params()
+                                    .getOptional(
+                                        MoblyReportInfo.MOBLY_TEST_ENTRY_CONVERTER_CLASS_PARAM))));
+              }
               return null;
             },
             String.format(
                 "Failed to copy non-tradefed test [%s]'s result files to result dir [%s].",
                 test.locator().getId(), nonTradefedTestResultsDir));
         // Check if the module is skipped by feature checker.
-        if (jobInfo.resultWithCause().get().type() == TestResult.SKIP) {
+        if (!isPrecondition && jobInfo.resultWithCause().get().type() == TestResult.SKIP) {
           Module skippedModule =
               CompatibilityReportMerger.createSkippedModule(
                   jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_ABI_PROP),
@@ -1295,12 +1296,18 @@ public class SessionResultHandlerUtil {
     }
   }
 
-  /** Returns true if any of the {@code jobInfos} has a test with a completed result. */
+  /**
+   * Returns true if any of the {@code jobInfos} has a test with a completed result. Synthetic
+   * precondition jobs (SETUP/TEARDOWN) are ignored since they don't run any xTS module.
+   */
   public boolean isSessionCompleted(List<JobInfo> jobInfos) {
     if (jobInfos.isEmpty()) {
       return false;
     }
     for (JobInfo jobInfo : jobInfos) {
+      if (isPreconditionJob(jobInfo)) {
+        continue;
+      }
       for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
         if (COMPLETED_RESULTS.contains(testInfo.resultWithCause().get().type())) {
           return true;
@@ -1308,6 +1315,16 @@ public class SessionResultHandlerUtil {
       }
     }
     return false;
+  }
+
+  /**
+   * Returns whether the given job is a synthetic precondition job (SETUP/TEARDOWN) which runs the
+   * precondition decorators rather than a real xTS test module.
+   */
+  private static boolean isPreconditionJob(JobInfo jobInfo) {
+    String xtsJobName = jobInfo.properties().get(XtsConstants.XTS_JOB_NAME);
+    return Objects.equals(xtsJobName, XtsConstants.SETUP_JOB_NAME)
+        || Objects.equals(xtsJobName, XtsConstants.TEARDOWN_JOB_NAME);
   }
 
   /** Copy the previous attempts' result files to current session's result directory */

@@ -18,10 +18,14 @@ package com.google.devtools.mobileharness.infra.ats.common;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.startsWith;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -35,6 +39,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Metric;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
@@ -43,6 +48,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportFormat;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportParser.MoblyReportInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationDescriptor;
@@ -50,6 +56,7 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -61,11 +68,14 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -75,7 +85,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -149,11 +158,9 @@ public final class SessionResultHandlerUtilTest {
   @Test
   public void cleanUpLabGenFileDir_success() throws Exception {
     flags.set("ats_storage_path", "/tmp/ats_storage_path");
-    Mockito.doReturn(true)
-        .when(localFileUtil)
-        .isDirExist(eq("/tmp/ats_storage_path/genfiles/test_id"));
+    doReturn(true).when(localFileUtil).isDirExist(eq("/tmp/ats_storage_path/genfiles/test_id"));
     // when(localFileUtil.isFileExist(eq("/tmp/ats_storage_path/genfiles/test_id"))).thenReturn(true);
-    Mockito.doNothing().when(localFileUtil).removeFileOrDir(anyString());
+    doNothing().when(localFileUtil).removeFileOrDir(anyString());
     sessionResultHandlerUtil.cleanUpLabGenFileDir(testInfo);
     verify(localFileUtil).removeFileOrDir("/tmp/ats_storage_path/genfiles/test_id");
   }
@@ -231,23 +238,11 @@ public final class SessionResultHandlerUtilTest {
             .setFailedTests(2)
             .addTestCase(
                 TestCase.newBuilder()
-                    .addTest(
-                        com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto
-                            .Test.newBuilder()
-                            .setName("test1")
-                            .setResult("pass"))
-                    .addTest(
-                        com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto
-                            .Test.newBuilder()
-                            .setName("test2")
-                            .setResult("fail")))
+                    .addTest(ReportProto.Test.newBuilder().setName("test1").setResult("pass"))
+                    .addTest(ReportProto.Test.newBuilder().setName("test2").setResult("fail")))
             .addTestCase(
                 TestCase.newBuilder()
-                    .addTest(
-                        com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto
-                            .Test.newBuilder()
-                            .setName("test3")
-                            .setResult("fail")));
+                    .addTest(ReportProto.Test.newBuilder().setName("test3").setResult("fail")));
     Result originalReport =
         Result.newBuilder()
             .addModuleInfo(defaultModuleBuilder.setName("module1").build())
@@ -297,14 +292,9 @@ public final class SessionResultHandlerUtilTest {
             .setWarningTests(0)
             .addTestCase(
                 TestCase.newBuilder()
+                    .addTest(ReportProto.Test.newBuilder().setName("test1").setResult("pass"))
                     .addTest(
-                        com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto
-                            .Test.newBuilder()
-                            .setName("test1")
-                            .setResult("pass"))
-                    .addTest(
-                        com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto
-                            .Test.newBuilder()
+                        ReportProto.Test.newBuilder()
                             .setName("test2")
                             .setResult("fail")
                             .addMetric(
@@ -314,11 +304,7 @@ public final class SessionResultHandlerUtilTest {
                                     .build())))
             .addTestCase(
                 TestCase.newBuilder()
-                    .addTest(
-                        com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto
-                            .Test.newBuilder()
-                            .setName("test3")
-                            .setResult("fail")))
+                    .addTest(ReportProto.Test.newBuilder().setName("test3").setResult("fail")))
             .build();
 
     Result originalReport =
@@ -658,21 +644,13 @@ public final class SessionResultHandlerUtilTest {
     when(testInfo.getGenFileDir()).thenReturn(folder.newFolder("test_gen_files_1").toString());
     when(sessionInfo.getSessionId()).thenReturn("session_id");
 
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.newBuilder()
-            .setTestPlan("cts")
-            .setCommandLineArgs("cts")
-            .setXtsRootDir("xtsRootDir")
-            .setXtsType("cts")
-            .build();
-
     sessionResultHandlerUtil.processResult(
         resultDir,
         logDir,
         /* latestResultLink= */ null,
         /* latestLogLink= */ null,
         ImmutableList.of(jobInfo),
-        sessionRequestInfo);
+        newCtsSessionRequestInfo());
 
     @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<List<Result>> reportListCaptor = ArgumentCaptor.forClass(List.class);
@@ -713,21 +691,13 @@ public final class SessionResultHandlerUtilTest {
     when(testInfo.getGenFileDir()).thenReturn(folder.newFolder("test_gen_files_2").toString());
     when(sessionInfo.getSessionId()).thenReturn("session_id");
 
-    SessionRequestInfo sessionRequestInfo =
-        SessionRequestInfo.newBuilder()
-            .setTestPlan("cts")
-            .setCommandLineArgs("cts")
-            .setXtsRootDir("xtsRootDir")
-            .setXtsType("cts")
-            .build();
-
     sessionResultHandlerUtil.processResult(
         resultDir,
         logDir,
         /* latestResultLink= */ null,
         /* latestLogLink= */ null,
         ImmutableList.of(jobInfo),
-        sessionRequestInfo);
+        newCtsSessionRequestInfo());
 
     @SuppressWarnings("unchecked") // safe by specification
     ArgumentCaptor<List<Result>> reportListCaptor = ArgumentCaptor.forClass(List.class);
@@ -738,5 +708,184 @@ public final class SessionResultHandlerUtilTest {
     ImmutableList<Module> unexecutedModules =
         reportList.stream().flatMap(r -> r.getModuleInfoList().stream()).collect(toImmutableList());
     assertThat(unexecutedModules).isEmpty();
+  }
+
+  @Test
+  public void processResult_onlyPreconditionJob_contributesNothingButCopiesDeviceInfoFiles()
+      throws Exception {
+    flags.set("tmp_dir_root", folder.newFolder("tmp_dir_root_3").toString());
+    Path resultDir = folder.newFolder("setup_only_result_dir").toPath();
+    Path logDir = folder.newFolder("setup_only_log_dir").toPath();
+    Path testGenFileDir = folder.newFolder("setup_only_test_gen_files").toPath();
+
+    // The SETUP job still produces device-info-files/vintf-files that must reach the result dir.
+    Path deviceInfoDir = testGenFileDir.resolve("device-info-files");
+    deviceInfoDir.toFile().mkdirs();
+    deviceInfoDir.resolve("PackageDeviceInfo.deviceinfo.json").toFile().createNewFile();
+    Path vintfDir = testGenFileDir.resolve("vintf-files");
+    vintfDir.toFile().mkdirs();
+    vintfDir.resolve("device_manifest.xml").toFile().createNewFile();
+
+    setUpNonTradefedJob(
+        XtsConstants.SETUP_JOB_NAME, TestResult.PASS, /* cause= */ null, testGenFileDir.toString());
+    // Precondition jobs use the job name as their module name.
+    when(jobProperties.get(SessionHandlerHelper.XTS_MODULE_NAME_PROP))
+        .thenReturn(XtsConstants.SETUP_JOB_NAME);
+    // In production a SETUP-only run creates no report at all (mergeReports returns empty for an
+    // empty report list), so stub a report here purely to reach createReport and inspect the test
+    // report properties it would receive.
+    when(compatibilityReportMerger.mergeReports(anyList(), anyBoolean(), anyBoolean()))
+        .thenReturn(Optional.of(Result.getDefaultInstance()));
+
+    sessionResultHandlerUtil.processResult(
+        resultDir,
+        logDir,
+        /* latestResultLink= */ null,
+        /* latestLogLink= */ null,
+        ImmutableList.of(jobInfo),
+        newCtsSessionRequestInfo());
+
+    // The synthetic SETUP job must not contribute any report, otherwise an empty test_result.xml
+    // with no build/suite metadata is generated when no module matched.
+    verify(compatibilityReportMerger, never()).mergeMoblyReports(anyList(), anyBoolean());
+
+    // Nor may it mark the report as having a non-Tradefed module, otherwise a later "run retry"
+    // would try to retry modules that never existed.
+    @SuppressWarnings("unchecked") // safe by specification
+    ArgumentCaptor<Map<String, String>> testReportPropertiesCaptor =
+        ArgumentCaptor.forClass(Map.class);
+    verify(reportCreator)
+        .createReport(
+            any(),
+            any(),
+            any(),
+            any(),
+            anyBoolean(),
+            anyString(),
+            testReportPropertiesCaptor.capture(),
+            any());
+    assertThat(testReportPropertiesCaptor.getValue())
+        .containsEntry(SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE, "false");
+
+    // device-info-files and vintf-files are still copied into the result dir.
+    assertThat(
+            resultDir
+                .resolve("device-info-files")
+                .resolve("PackageDeviceInfo.deviceinfo.json")
+                .toFile()
+                .exists())
+        .isTrue();
+    assertThat(resultDir.resolve("vintf-files").resolve("device_manifest.xml").toFile().exists())
+        .isTrue();
+  }
+
+  @Test
+  public void processResult_allNonTradefedModulesSkipped_stillAddsSkippedModulesToReport()
+      throws Exception {
+    flags.set("tmp_dir_root", folder.newFolder("tmp_dir_root_4").toString());
+    Path resultDir = folder.newFolder("all_skipped_result_dir").toPath();
+    Path logDir = folder.newFolder("all_skipped_log_dir").toPath();
+    Path testGenFileDir = folder.newFolder("all_skipped_test_gen_files").toPath();
+
+    setUpNonTradefedJob(
+        /* xtsJobName= */ null,
+        TestResult.SKIP,
+        new MobileHarnessException(
+            InfraErrorId.DM_RESERVE_BUSY_DEVICE, "Module is skipped by feature checker."),
+        testGenFileDir.toString());
+    when(jobProperties.getOptional(SessionHandlerHelper.XTS_MODULE_NAME_PROP))
+        .thenReturn(Optional.of("CtsNpuManagerMoblyTestCases"));
+    when(jobProperties.get(SessionHandlerHelper.XTS_MODULE_NAME_PROP))
+        .thenReturn("CtsNpuManagerMoblyTestCases");
+    when(jobProperties.get(SessionHandlerHelper.XTS_MODULE_ABI_PROP)).thenReturn("arm64-v8a");
+
+    sessionResultHandlerUtil.processResult(
+        resultDir,
+        logDir,
+        /* latestResultLink= */ null,
+        /* latestLogLink= */ null,
+        ImmutableList.of(jobInfo),
+        newCtsSessionRequestInfo());
+
+    @SuppressWarnings("unchecked") // safe by specification
+    ArgumentCaptor<List<Result>> reportListCaptor = ArgumentCaptor.forClass(List.class);
+    verify(compatibilityReportMerger)
+        .mergeReports(reportListCaptor.capture(), eq(true), anyBoolean());
+
+    ImmutableList<Module> modules =
+        reportListCaptor.getValue().stream()
+            .flatMap(r -> r.getModuleInfoList().stream())
+            .collect(toImmutableList());
+    assertThat(modules).hasSize(1);
+    assertThat(modules.get(0).getName()).isEqualTo("CtsNpuManagerMoblyTestCases");
+    assertThat(modules.get(0).getAbi()).isEqualTo("arm64-v8a");
+    assertThat(modules.get(0).getSkipped()).isTrue();
+
+    // The skipped module is a real module, so its parsed report is still merged. That report is
+    // what carries the build/suite metadata (suite name, plan, fingerprint, start/end); the
+    // skipped-module entries asserted above carry none of it.
+    @SuppressWarnings("unchecked") // safe by specification
+    ArgumentCaptor<List<MoblyReportInfo>> moblyReportInfosCaptor =
+        ArgumentCaptor.forClass(List.class);
+    verify(compatibilityReportMerger)
+        .mergeMoblyReports(moblyReportInfosCaptor.capture(), anyBoolean());
+    assertThat(moblyReportInfosCaptor.getValue()).hasSize(1);
+  }
+
+  @Test
+  public void isSessionCompleted_onlyPreconditionJobPassed_returnsFalse() throws Exception {
+    for (String jobName :
+        ImmutableList.of(XtsConstants.SETUP_JOB_NAME, XtsConstants.TEARDOWN_JOB_NAME)) {
+      setUpNonTradefedJob(jobName, TestResult.PASS, /* cause= */ null, /* genFileDir= */ null);
+
+      assertThat(sessionResultHandlerUtil.isSessionCompleted(ImmutableList.of(jobInfo))).isFalse();
+    }
+  }
+
+  @Test
+  public void isSessionCompleted_realModuleJobPassed_returnsTrue() throws Exception {
+    setUpNonTradefedJob(
+        /* xtsJobName= */ null, TestResult.PASS, /* cause= */ null, /* genFileDir= */ null);
+
+    assertThat(sessionResultHandlerUtil.isSessionCompleted(ImmutableList.of(jobInfo))).isTrue();
+  }
+
+  /**
+   * Stubs {@link #jobInfo} as a non-Tradefed job whose single test ends with {@code testResult}.
+   *
+   * @param xtsJobName value of the {@code xts_job_name} property, or {@code null} if unset (i.e. a
+   *     real module job rather than a SETUP/TEARDOWN precondition job)
+   * @param genFileDir the test gen file dir, or {@code null} if the test doesn't need one
+   */
+  private void setUpNonTradefedJob(
+      @Nullable String xtsJobName,
+      TestResult testResult,
+      @Nullable MobileHarnessException cause,
+      @Nullable String genFileDir)
+      throws MobileHarnessException {
+    TestInfos testInfos = mock(TestInfos.class);
+    com.google.devtools.mobileharness.api.model.job.out.Result result =
+        mock(com.google.devtools.mobileharness.api.model.job.out.Result.class);
+    when(jobProperties.getBoolean(Job.IS_XTS_NON_TF_JOB)).thenReturn(Optional.of(true));
+    when(jobProperties.get(XtsConstants.XTS_JOB_NAME)).thenReturn(xtsJobName);
+    when(jobInfo.params()).thenReturn(mock(Params.class));
+    when(jobInfo.tests()).thenReturn(testInfos);
+    when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
+    when(testInfo.resultWithCause()).thenReturn(result);
+    when(jobInfo.resultWithCause()).thenReturn(result);
+    when(result.get()).thenReturn(ResultTypeWithCause.create(testResult, cause));
+    if (genFileDir != null) {
+      when(testInfo.getGenFileDir()).thenReturn(genFileDir);
+    }
+    when(sessionInfo.getSessionId()).thenReturn("session_id");
+  }
+
+  private static SessionRequestInfo newCtsSessionRequestInfo() {
+    return SessionRequestInfo.newBuilder()
+        .setTestPlan("cts")
+        .setCommandLineArgs("cts")
+        .setXtsRootDir("xtsRootDir")
+        .setXtsType("cts")
+        .build();
   }
 }
