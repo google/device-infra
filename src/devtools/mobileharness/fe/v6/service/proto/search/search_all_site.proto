@@ -1,0 +1,145 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.search;
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.search";
+option java_multiple_files = true;
+option java_outer_classname = "SearchAllSiteProto";
+
+// =============================================================================
+// All-Site ID Resolution types.
+//
+// All-Site search functions as an ID lookup tool: given a raw string query
+// (device serial, host name, test UUID, job ID, or session ID), the system
+// resolves it to canonical entity identifiers for direct detail navigation,
+// candidate disambiguation, or not-found fallback guidance.
+// =============================================================================
+
+// Request to resolve a raw string query across OmniLab entities.
+message ResolveAllSiteQueryRequest {
+  // Matches across all identifier types ("Any ID" in the jump bar).
+  message AnyId {}
+
+  // Identifier types that can be targeted when jumping by ID.
+  enum IdType {
+    ID_TYPE_UNSPECIFIED = 0;
+    ID_TYPE_DEVICE_ID = 1;
+    ID_TYPE_HOST_NAME = 2;
+    ID_TYPE_TEST_ID = 3;
+    ID_TYPE_JOB_ID = 4;
+    ID_TYPE_SESSION_ID = 5;
+  }
+
+  // Raw string identifier entered by the user or extracted from URL parameters.
+  string query = 1;
+
+  // Target identifier scope selected in the jump bar's leading scope chip.
+  oneof scope {
+    // Resolve across all 5 identifier types ("Any ID").
+    AnyId any_id = 2;
+
+    // Resolve only within the specified identifier type ("Device ID",
+    // "Host name", "Test ID", "Job ID", or "Session ID").
+    IdType id_type = 3;
+  }
+}
+
+// Response containing matching entities for the resolved query.
+message ResolveAllSiteQueryResponse {
+  // Matching entities found across OmniLab backends:
+  // - 0 items: Not Found. Frontend presents fallback entity search links.
+  // - 1 item:  Unique match. Frontend immediately navigates to detail page.
+  // - >1 item: Ambiguous. Frontend presents candidate cards for user selection.
+  repeated AllSiteMatch matches = 1;
+}
+
+// A single entity matched by All-Site ID resolution.
+message AllSiteMatch {
+  oneof match {
+    DeviceMatch device = 1;
+    HostMatch host = 2;
+    TestMatch test = 3;
+    JobMatch job = 4;
+    SessionMatch session = 5;
+  }
+
+  // Matched device on a specific lab host.
+  // Route: /devices/{device_id}?host_name={host_name}&universe={universe}
+  // Disambiguation Line 1: [Device] {device_id}
+  // Disambiguation Line 2: Host: {host_name} · Model: {model}
+  message DeviceMatch {
+    // Device UUID or serial (e.g. "emulator-5554", "28161FDH20039P").
+    string device_id = 1;
+
+    // Host FQDN where this device is attached.
+    string host_name = 2;
+
+    // Optional device model (e.g. "Pixel 8 Pro", "Android Cuttlefish").
+    string model = 3;
+
+    // The universe the device belongs to (empty for this deployment's default
+    // universe, or a partner ATS controller identifier when matched in ATS).
+    string universe = 4;
+  }
+
+  // Matched lab host.
+  // Route: /hosts/{host_name}?universe={universe}
+  // Disambiguation Line 1: [Host] {host_name}
+  // Disambiguation Line 2: {attached_device_count} attached devices · IP:
+  // {host_ip}
+  message HostMatch {
+    // Canonical host FQDN (e.g. "lab-host-01.example.com").
+    string host_name = 1;
+
+    // Number of attached devices on this host.
+    int32 attached_device_count = 2;
+
+    // Host IPv4/IPv6 address.
+    string host_ip = 3;
+
+    // The universe the host belongs to (empty for this deployment's default
+    // universe, or a partner ATS controller identifier when matched in ATS).
+    string universe = 4;
+  }
+
+  // Matched MOSS test invocation.
+  // Route: /jobs/{job_id}/tests/{test_id}
+  // Disambiguation Line 1: [Test] {test_id} (single-line)
+  message TestMatch {
+    // MOSS test ID.
+    string test_id = 1;
+
+    // Parent MOSS job ID required to build /jobs/{job_id}/tests/{test_id}.
+    string job_id = 2;
+  }
+
+  // Matched MOSS job.
+  // Route: /jobs/{job_id}
+  // Disambiguation Line 1: [Job] {job_id} (single-line)
+  message JobMatch {
+    string job_id = 1;
+  }
+
+  // Matched MOSS session.
+  // Route: /sessions/{session_id}
+  // Disambiguation Line 1: [Session] {session_id} (single-line)
+  message SessionMatch {
+    string session_id = 1;
+  }
+}

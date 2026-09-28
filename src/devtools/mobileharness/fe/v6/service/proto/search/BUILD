@@ -79,12 +79,25 @@ java_proto_library(
     deps = [":search_tjs_proto"],
 )
 
+# --- All-Site search types ---
+
+proto_library(
+    name = "search_all_site_proto",
+    srcs = ["search_all_site.proto"],
+)
+
+java_proto_library(
+    name = "search_all_site_java_proto",
+    deps = [":search_all_site_proto"],
+)
+
 # --- SearchService definition ---
 
 proto_library(
     name = "search_service_proto",
     srcs = ["search_service.proto"],
     deps = [
+        ":search_all_site_proto",
         ":search_fleet_proto",
         ":search_summary_proto",
         ":search_tjs_proto",

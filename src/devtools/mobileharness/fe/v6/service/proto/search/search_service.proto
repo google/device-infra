@@ -19,6 +19,7 @@ syntax = "proto3";
 package devtools.mobileharness.fe.v6.service.proto.search;
 
 import "google/api/annotations.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/search/search_all_site.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/search/search_fleet.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/search/search_summary.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/search/search_tjs.proto";
@@ -176,6 +177,21 @@ service SearchService {
   rpc GetGlobalSummary(GetGlobalSummaryRequest) returns (GlobalSummary) {
     option (google.api.http) = {
       get: "/v6/fleet-search/global-summary"
+    };
+  }
+
+  // ===========================================================================
+  // All-Site (global ID resolution) — 1 RPC
+  // ===========================================================================
+
+  // Resolves a raw string identifier across all OmniLab entities, returning
+  // matched entities for direct detail navigation, candidate entities for
+  // disambiguation, or an empty list when not found.
+  rpc ResolveAllSiteQuery(ResolveAllSiteQueryRequest)
+      returns (ResolveAllSiteQueryResponse) {
+    option (google.api.http) = {
+      post: "/v6/search/resolve"
+      body: "*"
     };
   }
 }
