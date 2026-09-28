@@ -30,7 +30,8 @@ public abstract class TestSuiteOverview {
    * Name of the test suite.
    *
    * <p>For Android instrumentation tests, this is usually an empty string, i.e., there is only one
-   * test suite. While for iOS tests, the test suite name is the test class name.
+   * test suite. While for iOS XCTest tests, the test suite name is the XCTest test target (bundle)
+   * name, i.e., there is one test suite per test target.
    */
   public abstract String name();
 
