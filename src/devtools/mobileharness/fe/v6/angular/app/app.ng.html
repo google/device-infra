@@ -29,6 +29,9 @@
       <img src="https://www.gstatic.com/mobileharness/images/omnilab_mark_primary_l.png" alt="Omnilab ATS Logo">
 
       <span class="title">OmniLab Console</span>
+      @if (isShowHeaderJumpBar()) {
+        <app-header-jump-bar></app-header-jump-bar>
+      }
       @if (showVersionInfo) {
         <div class="version-info">
           Version: {{ appData.labconsoleVersion }} <br />

@@ -23,8 +23,11 @@ import {
   TestResultStats,
 } from '../../models/device_stats';
 import {DeviceTestHistoryResponse} from '../../models/device_test_history';
-import {MOCK_DEVICE_SCENARIOS} from '../mock_data';
-import {MockDeviceScenario} from '../mock_data/models';
+import {MOCK_DEVICE_SCENARIOS, MOCK_HOST_SCENARIOS} from '../mock_data';
+import {
+  MockDeviceScenario,
+  MockDeviceScenarioWrapper,
+} from '../mock_data/models';
 import {DeviceService} from './device_service';
 import {
   generateHealthinessStats,
@@ -50,6 +53,63 @@ export class FakeDeviceService extends DeviceService {
   }
 
   /**
+   * Looks up a mock device scenario wrapper by its exact device ID.
+   *
+   * Input:
+   *   - id: The unique identifier of the device.
+   * Output:
+   *   - MockDeviceScenarioWrapper if found in `MOCK_DEVICE_SCENARIOS`, or `undefined`.
+   * Explanation:
+   *   Centralizes the device scenario lookup across all `FakeDeviceService` methods
+   *   (`getDeviceOverview`, `getDeviceHeaderInfo`, stats methods, and `getTestbedConfig`).
+   */
+  private findScenarioWrapper(
+    id: string,
+  ): MockDeviceScenarioWrapper | undefined {
+    return MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+  }
+
+  /**
+   * Overrides the device scenario's host metadata when an explicit `hostName` is requested
+   * (e.g. from the `?host_name=...` query parameter on `DeviceDetailPage`).
+   *
+   * Input:
+   *   - scenario: The base MockDeviceScenario matched by device ID.
+   *   - hostName: Optional host name requested by the caller.
+   * Output:
+   *   - MockDeviceScenario with `overview.host` updated to match `hostName` and its IP.
+   * Explanation:
+   *   In `MOCK_DEVICE_SCENARIOS`, each device ID is registered once with a primary host,
+   *   whereas a multi-host device (such as `device-id-for-ambiguous-1` in the All-Site Search
+   *   multi-host disambiguation scenario) can be opened under different hosts via
+   *   `/devices/<id>?host_name=<hostName>`. Overriding `overview.host` ensures the
+   *   Device Detail page displays the exact host selected by the user.
+   */
+  private applyHostOverride(
+    scenario: MockDeviceScenario,
+    hostName?: string,
+  ): MockDeviceScenario {
+    if (!hostName || hostName === scenario.overview.host.name) {
+      return scenario;
+    }
+    const hostWrapper = MOCK_HOST_SCENARIOS.find(
+      (h) => h.hostName === hostName,
+    );
+    const hostIp =
+      hostWrapper?.factory(0).overview?.ip || scenario.overview.host.ip;
+    return {
+      ...scenario,
+      overview: {
+        ...scenario.overview,
+        host: {
+          name: hostName,
+          ip: hostIp,
+        },
+      },
+    };
+  }
+
+  /**
    * Retrieves the detailed overview data for a specific device by its ID
    * from the mock dataset.
    * @param request The request containing the unique identifier of the device.
@@ -59,7 +119,7 @@ export class FakeDeviceService extends DeviceService {
   override getDeviceOverview(
     request: GetDeviceOverviewRequest,
   ): Observable<DeviceOverviewPageData> {
-    const wrapper = MOCK_DEVICE_SCENARIOS.find((s) => s.id === request.id);
+    const wrapper = this.findScenarioWrapper(request.id);
     if (!wrapper) {
       return throwError(
         () =>
@@ -69,7 +129,10 @@ export class FakeDeviceService extends DeviceService {
 
     try {
       this.getDeviceOverviewCallCount++;
-      const scenario = wrapper.factory(this.getDeviceOverviewCallCount);
+      const scenario = this.applyHostOverride(
+        wrapper.factory(this.getDeviceOverviewCallCount),
+        request.hostName,
+      );
       return of({
         overview: scenario.overview,
         headerInfo: this.getMockDeviceHeaderInfo(scenario),
@@ -89,10 +152,13 @@ export class FakeDeviceService extends DeviceService {
     id: string,
     hostName: string,
   ): Observable<DeviceHeaderInfo> {
-    const wrapper = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    const wrapper = this.findScenarioWrapper(id);
     const scenario = wrapper?.factory(this.getDeviceOverviewCallCount);
     if (scenario) {
-      return of(this.getMockDeviceHeaderInfo(scenario)).pipe(delay(1000));
+      const resolvedScenario = this.applyHostOverride(scenario, hostName);
+      return of(this.getMockDeviceHeaderInfo(resolvedScenario)).pipe(
+        delay(1000),
+      );
     } else {
       return throwError(
         () => new Error(`Device with ID '${id}' not found in mock data.`),
@@ -112,7 +178,7 @@ export class FakeDeviceService extends DeviceService {
     startDate: GoogleDate,
     endDate: GoogleDate,
   ): Observable<HealthinessStats> {
-    const wrapper = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    const wrapper = this.findScenarioWrapper(id);
     const scenario = wrapper?.factory(this.getDeviceOverviewCallCount);
     if (scenario) {
       const stats =
@@ -138,7 +204,7 @@ export class FakeDeviceService extends DeviceService {
     startDate: GoogleDate,
     endDate: GoogleDate,
   ): Observable<TestResultStats> {
-    const wrapper = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    const wrapper = this.findScenarioWrapper(id);
     const scenario = wrapper?.factory(this.getDeviceOverviewCallCount);
     if (scenario) {
       const stats =
@@ -163,7 +229,7 @@ export class FakeDeviceService extends DeviceService {
     startDate: GoogleDate,
     endDate: GoogleDate,
   ): Observable<RecoveryTaskStats> {
-    const wrapper = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    const wrapper = this.findScenarioWrapper(id);
     const scenario = wrapper?.factory(this.getDeviceOverviewCallCount);
     if (scenario) {
       const stats =
@@ -352,7 +418,7 @@ export class FakeDeviceService extends DeviceService {
     hostName: string,
   ): Observable<TestbedConfig> {
     console.log(`FakeService: Getting testbed config for ${id}`);
-    const wrapper = MOCK_DEVICE_SCENARIOS.find((s) => s.id === id);
+    const wrapper = this.findScenarioWrapper(id);
     const scenario = wrapper?.factory(this.getDeviceOverviewCallCount);
     if (scenario) {
       return of({

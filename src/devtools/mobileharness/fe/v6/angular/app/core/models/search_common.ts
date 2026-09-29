@@ -90,12 +90,14 @@ export declare interface DeviceRef {
   id: string;
   hostName?: string;
   hostIp?: string;
+  universe?: string;
 }
 
 /** Navigation identity for a host. */
 export declare interface HostRef {
   hostName: string;
   hostIp?: string;
+  universe?: string;
 }
 
 /** Navigation identity for a test. */

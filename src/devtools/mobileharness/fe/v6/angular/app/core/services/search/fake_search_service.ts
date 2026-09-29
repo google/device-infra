@@ -1,5 +1,6 @@
 import {inject, Injectable} from '@angular/core';
 import {Observable, of} from 'rxjs';
+import {delay} from 'rxjs/operators';
 import {APP_DATA, AppData, getAppData} from '../../models/app_data';
 import {
   Cell,
@@ -22,6 +23,8 @@ import {
   FleetSuggestionResponse,
   FleetValueListRequest,
   FleetValueListResponse,
+  ResolveAllSiteQueryRequest,
+  ResolveAllSiteQueryResponse,
   Row,
   SearchEntity,
   TjsEntity,
@@ -54,6 +57,7 @@ import {
   MOCK_TJS_SEARCH_RESPONSE_JOB,
   MOCK_TJS_SEARCH_RESPONSE_SESSION,
   MOCK_TJS_SEARCH_RESPONSE_TEST,
+  resolveMockAllSiteQuery,
 } from '../mock_data';
 import {SearchService} from './search_service';
 
@@ -849,5 +853,22 @@ export class FakeSearchService extends SearchService {
       };
     });
     return of({chips: resolvedChips});
+  }
+
+  /**
+   * Resolves an All-Site Search query against mock data with simulated network latency.
+   *
+   * Input:
+   *   - request: ResolveAllSiteQueryRequest containing the query string and optional idType scope.
+   * Output:
+   *   - Observable<ResolveAllSiteQueryResponse> emitting the resolved matches after 250ms delay.
+   * Explanation:
+   *   Delegates to `resolveMockAllSiteQuery` and pipes through `delay(250)` so the All-Site Search
+   *   loading state is visible and testable.
+   */
+  override resolveAllSiteQuery(
+    request: ResolveAllSiteQueryRequest,
+  ): Observable<ResolveAllSiteQueryResponse> {
+    return of(resolveMockAllSiteQuery(request)).pipe(delay(250));
   }
 }

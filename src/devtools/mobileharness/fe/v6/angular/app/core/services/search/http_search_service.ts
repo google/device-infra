@@ -17,6 +17,8 @@ import {
   FleetSuggestionResponse,
   FleetValueListRequest,
   FleetValueListResponse,
+  ResolveAllSiteQueryRequest,
+  ResolveAllSiteQueryResponse,
   TjsResolveChipsRequest,
   TjsResolveChipsResponse,
   TjsSearchConfig,
@@ -34,6 +36,7 @@ export class HttpSearchService extends SearchService {
   private readonly appData: AppData = inject(APP_DATA);
   private readonly fleetApiUrl = `${this.appData.labConsoleServerUrl}/v6/fleet-search`;
   private readonly tjsApiUrl = `${this.appData.labConsoleServerUrl}/v6/tjs-search`;
+  private readonly searchApiUrl = `${this.appData.labConsoleServerUrl}/v6/search`;
   private readonly http = inject(HttpClient);
 
   constructor() {
@@ -125,6 +128,15 @@ export class HttpSearchService extends SearchService {
   ): Observable<TjsResolveChipsResponse> {
     return this.http.post<TjsResolveChipsResponse>(
       `${this.tjsApiUrl}/resolve-chips`,
+      request,
+    );
+  }
+
+  override resolveAllSiteQuery(
+    request: ResolveAllSiteQueryRequest,
+  ): Observable<ResolveAllSiteQueryResponse> {
+    return this.http.post<ResolveAllSiteQueryResponse>(
+      `${this.searchApiUrl}/resolve`,
       request,
     );
   }

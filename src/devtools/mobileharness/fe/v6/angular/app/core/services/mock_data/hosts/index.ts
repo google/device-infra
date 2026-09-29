@@ -48,6 +48,52 @@ function wrapHost(
   };
 }
 
+function createClonedHostScenario(opts: {
+  hostName: string;
+  scenarioName: string;
+  ip: string;
+  devices: Array<{
+    id: string;
+    model: string;
+    type?: string;
+    status?: string;
+    label?: string;
+  }>;
+}): () => MockHostScenario {
+  return () => {
+    const base = OVERVIEW_01();
+    const baseSummary = base.deviceSummaries![0];
+    return {
+      ...base,
+      hostName: opts.hostName,
+      scenarioName: opts.scenarioName,
+      overview: base.overview
+        ? {
+            ...base.overview,
+            hostName: opts.hostName,
+            ip: opts.ip,
+          }
+        : undefined,
+      deviceSummaries: opts.devices.map((d) => ({
+        ...baseSummary,
+        id: d.id,
+        model: d.model,
+        label: d.label ?? 'golden-pool',
+        deviceStatus: {
+          ...baseSummary.deviceStatus,
+          status: d.status ?? 'IDLE',
+        },
+        types: [
+          {
+            type: d.type ?? 'AndroidRealDevice',
+            isAbnormal: false,
+          },
+        ],
+      })),
+    };
+  };
+}
+
 /** Central registry of all mock host scenarios. */
 export const MOCK_HOST_SCENARIOS: MockHostScenarioWrapper[] = [
   wrapHost(scenarioHostLocalMtt),
@@ -85,6 +131,120 @@ export const MOCK_HOST_SCENARIOS: MockHostScenarioWrapper[] = [
   wrapHost(OVERVIEW_12),
   wrapHost(OVERVIEW_13),
   wrapHost(OVERVIEW_14),
+  wrapHost(
+    createClonedHostScenario({
+      hostName: 'host-for-1-hit-1.example.com',
+      scenarioName: 'All-Site 1-Hit Host #1: Core Lab',
+      ip: '172.16.42.18',
+      devices: [
+        {
+          id: 'device-id-for-1-hit-1',
+          model: 'Pixel 9 Pro',
+          type: 'AndroidRealDevice',
+        },
+        {
+          id: 'device-id-for-1-hit-2',
+          model: 'Pixel 8 Pro',
+          type: 'AndroidRealDevice',
+          status: 'BUSY',
+        },
+        {id: '18261FDF6003KC', model: 'Pixel 8 Pro', type: 'AndroidRealDevice'},
+        {id: '98888FDF6005AB', model: 'Pixel 7a', type: 'AndroidRealDevice'},
+      ],
+    }),
+  ),
+  wrapHost(
+    createClonedHostScenario({
+      hostName: 'host-for-1-hit-2.example.com',
+      scenarioName: 'All-Site 1-Hit Host #2: Satellite Lab',
+      ip: '172.16.42.19',
+      devices: [
+        {
+          id: 'device-id-for-1-hit-1',
+          model: 'Pixel 9 Pro',
+          type: 'AndroidRealDevice',
+        },
+      ],
+    }),
+  ),
+  wrapHost(
+    createClonedHostScenario({
+      hostName: 'host-name-for-ambiguous-1.example.com',
+      scenarioName: 'All-Site Ambiguous Host: Device & Host Collision',
+      ip: '172.16.42.18',
+      devices: [
+        {
+          id: 'host-name-for-ambiguous-1',
+          model: 'LinuxTestbedDevice',
+          type: 'LinuxDevice',
+        },
+        {
+          id: 'device-id-for-1-hit-1',
+          model: 'Pixel 9 Pro',
+          type: 'AndroidRealDevice',
+        },
+      ],
+    }),
+  ),
+  wrapHost(
+    createClonedHostScenario({
+      hostName: 'host-for-ambiguous-device-1.example.com',
+      scenarioName: 'All-Site Multi-Host #1: Cuttlefish Lab 1',
+      ip: '172.16.14.10',
+      devices: [
+        {
+          id: 'device-id-for-ambiguous-1',
+          model: 'Android Cuttlefish',
+          type: 'AndroidRealDevice',
+        },
+      ],
+    }),
+  ),
+  wrapHost(
+    createClonedHostScenario({
+      hostName: 'host-for-ambiguous-device-2.example.com',
+      scenarioName: 'All-Site Multi-Host #2: Cuttlefish Lab 2',
+      ip: '172.20.88.12',
+      devices: [
+        {
+          id: 'device-id-for-ambiguous-1',
+          model: 'Android Cuttlefish',
+          type: 'AndroidRealDevice',
+        },
+      ],
+    }),
+  ),
+  wrapHost(
+    createClonedHostScenario({
+      hostName: 'host-for-ambiguous-device-3.example.com',
+      scenarioName: 'All-Site Multi-Host #3: Cuttlefish Lab 3',
+      ip: '172.24.21.15',
+      devices: [
+        {
+          id: 'device-id-for-ambiguous-1',
+          model: 'Android Cuttlefish',
+          type: 'AndroidRealDevice',
+        },
+      ],
+    }),
+  ),
+  wrapHost(
+    createClonedHostScenario({
+      hostName: 'mt31-dm01-a-x04.moma.example.com',
+      scenarioName: 'Test/Job Referenced Host: mt31-dm01-a-x04',
+      ip: '100.107.201.12',
+      devices: [
+        {id: '43021FDAQ000UM', model: 'Pixel 7 Pro', type: 'AndroidRealDevice'},
+        {id: '99061FFAZ004AA', model: 'Pixel 8 Pro', type: 'AndroidRealDevice'},
+        {
+          id: '4D5A1FDAB001BB',
+          model: 'Pixel 8',
+          type: 'AndroidRealDevice',
+          status: 'BUSY',
+        },
+      ],
+    }),
+  ),
 ];
 
 export {scenarioHostLocalMtt} from './local_mtt_host';

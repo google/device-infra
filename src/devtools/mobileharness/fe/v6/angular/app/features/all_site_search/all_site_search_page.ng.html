@@ -1,0 +1,223 @@
+<div class="page all-site-search-page">
+  <div class="all-site-search-page-container">
+    <!-- 1. Resolving State (Loading) -->
+    @if (viewState() === 'loading') {
+      <div class="all-site-state-card all-site-loading">
+        <div class="all-site-progress-bar">
+          <div class="all-site-progress-indeterminate"></div>
+        </div>
+        <div class="all-site-loading-hero">
+          <div class="all-site-loading-icon-badge">
+            <span class="material-symbols-outlined spin">progress_activity</span>
+          </div>
+          <div class="all-site-hero-text">
+            <div class="all-site-loading-title-row">
+              <h2 class="all-site-loading-title">{{ loadingTitle() }}</h2>
+            </div>
+            <p class="all-site-loading-subtitle">
+              {{ currentScope().resolvingDesc }}
+            </p>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- 2. 404 / Not Found State -->
+    @if (viewState() === 'not_found') {
+      <div class="all-site-state-card all-site-not-found">
+        <div class="all-site-not-found-body">
+          <div class="all-site-not-found-hero">
+            <div class="all-site-not-found-icon-wrap">
+              <span class="material-symbols-outlined not-found-icon">search_off</span>
+            </div>
+            <div class="all-site-hero-text">
+              <h2 class="all-site-not-found-title">{{ notFoundTitle() }}</h2>
+              <p class="all-site-not-found-desc">{{ notFoundDesc() }}</p>
+            </div>
+          </div>
+
+          <div class="all-site-fallback-bar">
+            <span class="all-site-fallback-label">{{ fallbackLabel() }}</span>
+            <div class="all-site-fallback-chips">
+              @if (isScopeSpecific()) {
+                <a
+                  app-nav-link
+                  class="m3-entity-assist-chip"
+                  [config]="scopedFallbackNavConfig()"
+                  [customQueryParams]="fallbackQueryParams()"
+                >
+                  <span class="material-symbols-outlined chip-lead-icon">{{
+                    currentScope().icon
+                  }}</span>
+                  <span
+                    >Search
+                    {{ query() ? '"' + query() + '" ' : '' }}in
+                    {{ currentScope().searchLabel }}</span
+                  >
+                  <span class="material-symbols-outlined chip-trail-icon"
+                    >arrow_forward</span
+                  >
+                </a>
+                <button
+                  type="button"
+                  class="m3-entity-assist-chip"
+                  data-action="try-any-id"
+                  (click)="tryAcrossAnyId()"
+                >
+                  <span class="material-symbols-outlined chip-lead-icon"
+                    >travel_explore</span
+                  >
+                  <span>Try across Any ID</span>
+                  <span class="material-symbols-outlined chip-trail-icon"
+                    >arrow_forward</span
+                  >
+                </button>
+              } @else {
+                @for (chip of fallbackChips; track chip.key) {
+                  <a
+                    app-nav-link
+                    class="m3-entity-assist-chip"
+                    [config]="{type: chip.searchPageType}"
+                    [customQueryParams]="fallbackQueryParams()"
+                  >
+                    <span class="material-symbols-outlined chip-lead-icon">{{
+                      chip.icon
+                    }}</span>
+                    <span>{{ chip.pluralLabel }}</span>
+                    <span class="material-symbols-outlined chip-trail-icon"
+                      >arrow_forward</span
+                    >
+                  </a>
+                }
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- 3. Multi-Target Disambiguation State -->
+    @if (viewState() === 'ambiguous') {
+      <div class="all-site-state-card all-site-ambiguous">
+        <div class="all-site-ambiguous-top">
+          <div class="all-site-ambiguous-icon-wrap">
+            <span class="material-symbols-outlined ambiguous-split-icon"
+              >call_split</span
+            >
+          </div>
+          <div class="all-site-hero-text">
+            <h2 class="all-site-ambiguous-title">{{ ambiguousTitle() }}</h2>
+            <p class="all-site-ambiguous-desc">{{ ambiguousDesc() }}</p>
+          </div>
+        </div>
+
+        <div class="all-site-candidates-list">
+          @for (candidate of candidates(); track candidate.trackKey) {
+            <a
+              app-nav-link
+              class="all-site-candidate-card"
+              [class.single-line]="candidate.isSingleLine"
+              [config]="candidate.navConfig"
+            >
+              <div class="all-site-candidate-icon-wrap">
+                <span class="material-symbols-outlined">{{
+                  candidate.icon
+                }}</span>
+              </div>
+              <div class="all-site-candidate-body">
+                <div class="all-site-candidate-header">
+                  <span class="all-site-type-badge">{{
+                    candidate.typeBadge
+                  }}</span>
+                  <span class="all-site-candidate-title">{{
+                    candidate.title
+                  }}</span>
+                </div>
+                @if (!candidate.isSingleLine) {
+                  <div class="all-site-candidate-subtitle">
+                    @if (candidate.entityKind === 'device') {
+                      @if (candidate.hostName) {
+                        Host: <strong>{{ candidate.hostName }}</strong>
+                      }
+                      @if (candidate.hostName && candidate.modelLabel) {
+                        <span> · </span>
+                      }
+                      @if (candidate.modelLabel) {
+                        <span>Model: {{ candidate.modelLabel }}</span>
+                      }
+                    } @else if (candidate.subtitleText) {
+                      <span>{{ candidate.subtitleText }}</span>
+                    }
+                  </div>
+                }
+              </div>
+              <div class="all-site-candidate-action">
+                <span>Open</span>
+                <span class="material-symbols-outlined candidate-arrow"
+                  >arrow_forward</span
+                >
+              </div>
+            </a>
+          }
+        </div>
+
+        <div class="all-site-fallback-bar">
+          <span class="all-site-fallback-label">{{ fallbackLabel() }}</span>
+          <div class="all-site-fallback-chips">
+            @if (isScopeSpecific()) {
+              <a
+                app-nav-link
+                class="m3-entity-assist-chip"
+                [config]="scopedFallbackNavConfig()"
+                [customQueryParams]="fallbackQueryParams()"
+              >
+                <span class="material-symbols-outlined chip-lead-icon">{{
+                  currentScope().icon
+                }}</span>
+                <span
+                  >Search
+                  {{ query() ? '"' + query() + '" ' : '' }}in
+                  {{ currentScope().searchLabel }}</span
+                >
+                <span class="material-symbols-outlined chip-trail-icon"
+                  >arrow_forward</span
+                >
+              </a>
+              <button
+                type="button"
+                class="m3-entity-assist-chip"
+                data-action="try-any-id"
+                (click)="tryAcrossAnyId()"
+              >
+                <span class="material-symbols-outlined chip-lead-icon"
+                  >travel_explore</span
+                >
+                <span>Try across Any ID</span>
+                <span class="material-symbols-outlined chip-trail-icon"
+                  >arrow_forward</span
+                >
+              </button>
+            } @else {
+              @for (chip of fallbackChips; track chip.key) {
+                <a
+                  app-nav-link
+                  class="m3-entity-assist-chip"
+                  [config]="{type: chip.searchPageType}"
+                  [customQueryParams]="fallbackQueryParams()"
+                >
+                  <span class="material-symbols-outlined chip-lead-icon">{{
+                    chip.icon
+                  }}</span>
+                  <span>{{ chip.pluralLabel }}</span>
+                  <span class="material-symbols-outlined chip-trail-icon"
+                    >arrow_forward</span
+                  >
+                </a>
+              }
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+</div>

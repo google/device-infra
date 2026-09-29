@@ -175,12 +175,19 @@ export class TjsSearchStore extends SearchPageStore {
     return !!(qp?.['f'] || qp?.['gb']);
   }
 
+  /** Helper to determine if current route snapshot has an initial raw search query ('q') parameter. */
+  private hasInitialSearchQuery(): boolean {
+    const qp = this.route.snapshot?.queryParams;
+    return !!(qp?.['q'] || this.searchQuery().trim());
+  }
+
   /**
    * Synchronizes active filter chips with search configuration default chips
    * using Angular 20+ linkedSignal.
    *
    * On cold store instantiation:
    * - If route contains initial URL filters, initializes with URL filters.
+   * - If route contains an initial `q` query parameter, skips default User chip and starts with `[]`.
    * - If route is clean, populates default chips as soon as searchConfig is available.
    * - Local user modifications during the active tab visit (clearing/adding chips) are preserved.
    */
@@ -191,7 +198,14 @@ export class TjsSearchStore extends SearchPageStore {
     source: () => this.searchConfig(),
     computation: (config, previous) => {
       // 1. If cold-start was initially waiting for config, populate defaults once config resolves
-      if (previous && !previous.source && config && !this.hasUrlFilters()) {
+      //    (unless an initial 'q' query parameter is present)
+      if (
+        previous &&
+        !previous.source &&
+        config &&
+        !this.hasUrlFilters() &&
+        !this.hasInitialSearchQuery()
+      ) {
         return this.mapDefaultChips(config);
       }
 
@@ -208,8 +222,8 @@ export class TjsSearchStore extends SearchPageStore {
         return urlChips;
       }
 
-      // 4. Initial clean load with search configuration loaded
-      if (config) {
+      // 4. Initial clean load with search configuration loaded (skip defaults if 'q' is present)
+      if (config && !this.hasInitialSearchQuery()) {
         return this.mapDefaultChips(config);
       }
 
