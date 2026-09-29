@@ -41,12 +41,16 @@ public class AndroidNativeBinJobValidator implements JobValidator {
     if (job.params().has(AndroidNativeBinSpec.PARAM_ANDROID_BIN_TIMEOUT_SEC)) {
       int binRunTime = job.params().getInt(AndroidNativeBinSpec.PARAM_ANDROID_BIN_TIMEOUT_SEC, -1);
       if (binRunTime <= 0) {
-        errors.add("Parameter \"bin_run_time_sec\" should be positive.");
+        errors.add(
+            "Parameter \""
+                + AndroidNativeBinSpec.PARAM_ANDROID_BIN_TIMEOUT_SEC
+                + "\" should be positive.");
       } else if (binRunTime
           >= (int) Duration.ofMillis(job.setting().getTimeout().getTestTimeoutMs()).toSeconds()) {
         errors.add(
-            "AndroidNativeBin binary execution time is no less than"
-                + " timeout time and will mark test result to TIMEOUT.");
+            "Parameter \""
+                + AndroidNativeBinSpec.PARAM_ANDROID_BIN_TIMEOUT_SEC
+                + "\" >= test_timeout_sec, which is not allowed.");
       }
     }
 
@@ -54,7 +58,9 @@ public class AndroidNativeBinJobValidator implements JobValidator {
       String cpuAffinity = job.params().get(AndroidNativeBinSpec.PARAM_CPU_AFFINITY);
       if (!cpuAffinity.matches("\\p{XDigit}+")) {
         errors.add(
-            "Parameter \"cpu_affinity\" should be a bitmask in hexadecimal without prefix \"0x\"");
+            "Parameter \""
+                + AndroidNativeBinSpec.PARAM_CPU_AFFINITY
+                + "\" should be a bitmask in hexadecimal without prefix \"0x\"");
       }
     }
     return errors;

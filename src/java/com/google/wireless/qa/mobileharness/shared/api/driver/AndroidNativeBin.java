@@ -51,7 +51,6 @@ import java.time.Duration;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 
 /** Driver for running Android native binaries on Android real devices/emulators. */
@@ -129,21 +128,7 @@ public class AndroidNativeBin extends BaseDriver implements AndroidNativeBinSpec
     String testUser = params.get(PARAM_TEST_USER);
     String testPath = testInfo.locator().getName();
     String runDir = params.get(PARAM_RUN_DIR, DEFAULT_RUN_DIR);
-    long binRunTimeMs = TimeUnit.SECONDS.toMillis(params.getInt(PARAM_ANDROID_BIN_TIMEOUT_SEC, 0));
-    long timeoutMs = testInfo.timer().remainingTimeJava().toMillis();
     Optional<Integer> sdkVersion = getDeviceSdkVersion();
-
-    if (binRunTimeMs > timeoutMs - RESERVED_TIME_FOR_RESULT_PROCESSING.toMillis()) {
-      // If bin_run_time_sec is set, AndroidNativeBin will terminate the program and set test
-      // result to PASS. In practice, TestManager need to go through other processes and check
-      // timeout again, so that reserving some time is necessary to avoid TestManager overriding
-      // test result.
-      logger.atWarning().log(
-          "Set binary execution time over %d seconds may cause timeout failure, please leave"
-              + " around 20 seconds before timeout for TestManager to handle result.",
-          TimeUnit.MILLISECONDS.toSeconds(
-              timeoutMs - RESERVED_TIME_FOR_RESULT_PROCESSING.toMillis()));
-    }
 
     // Save test binary to device.
     prepareTestBinary(testInfo, runDir);
@@ -168,33 +153,29 @@ public class AndroidNativeBin extends BaseDriver implements AndroidNativeBinSpec
     }
 
     // Runs the binary.
+    Duration actualTimeout = getActualTimeout(testInfo);
     testInfo
         .log()
         .atInfo()
         .alsoTo(logger)
         .log(
             "Start running binary [%s] as %s on CPU %s at \"%s\" with environment (%s) and "
-                + "options [%s] in %dms",
+                + "options [%s] in %s",
             testPath,
             Strings.isNullOrEmpty(testUser) ? "root" : testUser,
             Strings.isNullOrEmpty(cpuAffinity) ? "all" : cpuAffinity,
             runDir,
             runEnvironment,
             options,
-            timeoutMs);
+            actualTimeout);
     CommandResult commandResult = null;
     // TODO: Split and save stdout/stderr to different file.
     try {
-      // If bin_run_time_sec is not set, AndroidNativeBin will use test's timeout time.
-      // If bin_run_time_sec is set, AndroidNative uses it to kill programs that
-      // could not terminate themselves, and result will be set to PASS. In TestManager
-      // level, timeout will be checked again. We encourage all programs MH tests use can
-      // terminate themselves.
       NativeBinArgs.Builder nativeBinArgsBuilder =
           NativeBinArgs.builder()
               .setRunDirectory(runDir)
               .setBinary(testPath)
-              .setCommandTimeout(Duration.ofMillis(binRunTimeMs == 0 ? timeoutMs : binRunTimeMs))
+              .setCommandTimeout(actualTimeout)
               .setStdoutLineCallback(
                   LineCallback.does(line -> testInfo.log().atInfo().log("%s", line)));
       if (testUser != null) {
@@ -225,25 +206,14 @@ public class AndroidNativeBin extends BaseDriver implements AndroidNativeBinSpec
       saveTestResult(
           testInfo, commandResult, Strings.isNullOrEmpty(cpuAffinity) ? "all" : cpuAffinity);
     } catch (MobileHarnessException e) {
-      if (binRunTimeMs != 0
-          && ErrorIdComparator.equal(
-              AndroidErrorId.NATIVE_BIN_UTIL_RUN_NATIVE_BIN_TIMEOUT, e.getErrorId())) {
+      if (ErrorIdComparator.equal(
+          AndroidErrorId.NATIVE_BIN_UTIL_RUN_NATIVE_BIN_TIMEOUT, e.getErrorId())) {
         testInfo
             .log()
-            .atInfo()
+            .atWarning()
             .alsoTo(logger)
-            .log(
-                "Terminate binary [%s] after %dms according to the job param %s=%d. Mark the"
-                    + " result as PASS.",
-                testInfo.locator().getName(),
-                binRunTimeMs,
-                PARAM_ANDROID_BIN_TIMEOUT_SEC,
-                binRunTimeMs);
-        testInfo.resultWithCause().setPass();
-      } else if (ErrorIdComparator.equal(
-          AndroidErrorId.NATIVE_BIN_UTIL_RUN_NATIVE_BIN_TIMEOUT, e.getErrorId())) {
+            .log("Binary [%s] timed out after %s.", testInfo.locator().getName(), actualTimeout);
         testInfo.resultWithCause().setNonPassing(TestResult.TIMEOUT, e);
-        throw e;
       } else if (ERROR_IDS_OF_TEST_FAILURES.stream()
           .anyMatch(errorId -> ErrorIdComparator.equal(errorId, e.getErrorId()))) {
         testInfo
@@ -255,6 +225,58 @@ public class AndroidNativeBin extends BaseDriver implements AndroidNativeBinSpec
       } else {
         throw e;
       }
+    }
+  }
+
+  /**
+   * Returns the actual timeout for the Android native binary execution.
+   *
+   * @throws MobileHarnessException if the remaining test timeout is negative or zero
+   */
+  private Duration getActualTimeout(TestInfo testInfo) throws MobileHarnessException {
+    Duration binTimeout =
+        Duration.ofSeconds(testInfo.jobInfo().params().getInt(PARAM_ANDROID_BIN_TIMEOUT_SEC, 0));
+    Duration remainingTestTimeout =
+        testInfo.timer().remainingTimeJava().minus(RESERVED_TIME_FOR_RESULT_PROCESSING);
+    if (remainingTestTimeout.isNegative() || remainingTestTimeout.isZero()) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_NATIVE_BIN_REMAINING_TEST_TIMEOUT_TOO_SHORT,
+          String.format(
+              "Remaining test_timeout_sec=%s is negative or zero, not enough time to run the"
+                  + " android native binary.",
+              remainingTestTimeout));
+    }
+
+    if (binTimeout.isZero()) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "%s is not set, using the remaining test_timeout_sec: %s as the timeout for the"
+                  + " Android native binary execution",
+              PARAM_ANDROID_BIN_TIMEOUT_SEC, remainingTestTimeout);
+      return remainingTestTimeout;
+    } else if (binTimeout.compareTo(remainingTestTimeout) > 0) {
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .log(
+              "%s time %s > the remaining test_timeout_sec: %s. Using the remaining"
+                  + " test_timeout_sec as the timeout for the Android native binary execution.",
+              PARAM_ANDROID_BIN_TIMEOUT_SEC, binTimeout, remainingTestTimeout);
+      return remainingTestTimeout;
+    } else {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "%s is set to %s, which is less than the remaining test_timeout_sec: %s. Using"
+                  + " %s as the timeout for the Android native binary execution.",
+              PARAM_ANDROID_BIN_TIMEOUT_SEC, binTimeout, remainingTestTimeout, binTimeout);
+      return binTimeout;
     }
   }
 
