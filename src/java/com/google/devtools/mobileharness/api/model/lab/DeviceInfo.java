@@ -41,12 +41,12 @@ public abstract class DeviceInfo {
   /**
    * Does not work in container/sandbox mode. In these modes, this will return an empty instance.
    */
-  public abstract Drivers supportedDecorators();
+  public abstract Decorators supportedDecorators();
 
   /**
    * Does not work in container/sandbox mode. In these modes, this will return an empty instance.
    */
-  public abstract Decorators supportedDrivers();
+  public abstract Drivers supportedDrivers();
 
   /** Clears all device info. */
   public void clearAll() {
@@ -66,6 +66,6 @@ public abstract class DeviceInfo {
   static DeviceInfo create(
       DeviceId deviceId, CompositeDimensions dimensions, Properties properties) {
     return new AutoValue_DeviceInfo(
-        deviceId, dimensions, properties, new Types(), new Drivers(), new Decorators());
+        deviceId, dimensions, properties, new Types(), new Decorators(), new Drivers());
   }
 }
