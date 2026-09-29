@@ -93,7 +93,9 @@ public interface CrosDecoratorSpec {
   @ParamAnnotation(
       help =
           "Target build ID to provision onto the device. If not specified, resolved via"
-              + " dt-converter stable-version.",
+              + " dt-converter stable-version. Only used when the DUT is not yet ADB accessible"
+              + " (still booted into ChromeOS); a DUT already running Android OS is not"
+              + " re-flashed to match this build, which is deferred to downstream flashers.",
       required = false)
   String BUILD_ID = "build_id";
 
@@ -101,7 +103,8 @@ public interface CrosDecoratorSpec {
   @ParamAnnotation(
       help =
           "Target build target (e.g. brya-trunk_staging-userdebug) to provision. If not specified,"
-              + " resolved via dt-converter stable-version.",
+              + " resolved via dt-converter stable-version. Only used when the DUT is not yet ADB"
+              + " accessible (still booted into ChromeOS).",
       required = false)
   String BUILD_TARGET = "build_target";
 

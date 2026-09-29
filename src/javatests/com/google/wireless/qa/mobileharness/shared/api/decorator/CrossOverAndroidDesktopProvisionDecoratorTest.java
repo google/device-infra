@@ -17,25 +17,36 @@
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.wireless.qa.mobileharness.shared.api.decorator.CrossOverAndroidDesktopProvisionDecorator.ADB_CONNECT_CHECK_TIMEOUT;
 import static com.google.wireless.qa.mobileharness.shared.api.decorator.CrossOverAndroidDesktopProvisionDecorator.BUILD_ID;
 import static com.google.wireless.qa.mobileharness.shared.api.decorator.CrossOverAndroidDesktopProvisionDecorator.BUILD_TARGET;
 import static com.google.wireless.qa.mobileharness.shared.api.decorator.CrossOverAndroidDesktopProvisionDecorator.FOIL_PROVISION_CIPD_PATH;
 import static com.google.wireless.qa.mobileharness.shared.api.decorator.CrossOverAndroidDesktopProvisionDecorator.FOIL_PROVISION_CIPD_TAG;
 import static com.google.wireless.qa.mobileharness.shared.api.decorator.CrossOverAndroidDesktopProvisionDecorator.SKIP_STABLE_VERSION;
+import static com.google.wireless.qa.mobileharness.shared.api.decorator.CrossOverAndroidDesktopProvisionDecorator.TEST_ARG_NEEDS_PROVISION_REPAIR;
+import static com.google.wireless.qa.mobileharness.shared.api.decorator.CrossOverAndroidDesktopProvisionDecorator.TEST_PROPERTY_CURRENT_BUILD_ID;
 import static com.google.wireless.qa.mobileharness.shared.api.decorator.CrossOverAndroidDesktopProvisionDecorator.USE_SIGNED_IMAGE;
 import static com.google.wireless.qa.mobileharness.shared.api.decorator.CrossOverAndroidDesktopProvisionDecorator.USE_TEST_RAMDISK;
 import static com.google.wireless.qa.mobileharness.shared.api.spec.CrosDecoratorSpec.DT_CONVERTER_CIPD_PATH;
 import static com.google.wireless.qa.mobileharness.shared.api.spec.CrosDecoratorSpec.DT_CONVERTER_CIPD_TAG;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -55,6 +66,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.After;
 import org.junit.Before;
@@ -64,6 +76,7 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -79,6 +92,7 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
   @Mock private Device device;
   @Mock private CommandExecutor commandExecutor;
   @Mock private LocalFileUtil fileUtil;
+  @Mock private AndroidAdbUtil androidAdbUtil;
   @Mock private TestInfo testInfo;
   @Mock private TestLocator testLocator;
   @Mock private JobInfo jobInfo;
@@ -123,8 +137,19 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
     when(versionResult.exitCode()).thenReturn(0);
     when(versionResult.stdout()).thenReturn("1.0.0");
 
+    // Default ADB state: DUT is booted into ChromeOS (pre-provision connect check fails) and
+    // becomes responsive over ADB after provisioning.
+    doThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_INTERNAL_UTIL_CONNECT_CMD_ERROR, "Connection refused"))
+        .when(androidAdbUtil)
+        .connect("test_dut:5555", ADB_CONNECT_CHECK_TIMEOUT);
+    when(androidAdbUtil.getProperty("test_dut:5555", AndroidProperty.INCREMENTAL_BUILD))
+        .thenReturn("12345678");
+
     decorator =
-        new CrossOverAndroidDesktopProvisionDecorator(driver, testInfo, commandExecutor, fileUtil);
+        new CrossOverAndroidDesktopProvisionDecorator(
+            driver, testInfo, commandExecutor, fileUtil, androidAdbUtil);
   }
 
   @After
@@ -363,12 +388,8 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
     when(params.has(BUILD_TARGET)).thenReturn(true);
     when(params.get(BUILD_TARGET)).thenReturn("brya-trunk_staging-userdebug");
 
-    com.google.devtools.mobileharness.shared.util.command.CommandException cmdException =
-        org.mockito.Mockito.mock(
-            com.google.devtools.mobileharness.shared.util.command.CommandException.class);
-    when(cmdException.getErrorId())
-        .thenReturn(
-            com.google.devtools.mobileharness.api.model.error.BasicErrorId.COMMAND_EXEC_FAIL);
+    CommandException cmdException = mock(CommandException.class);
+    when(cmdException.getErrorId()).thenReturn(BasicErrorId.COMMAND_EXEC_FAIL);
     when(cmdException.getMessage()).thenReturn("Fastboot timeout");
     when(commandExecutor.exec(any(Command.class)))
         .thenReturn(versionResult)
@@ -379,6 +400,9 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
             MobileHarnessException.class, () -> decorator.setUp(SetupContext.create(testInfo)));
     assertThat(thrown).hasMessageThat().contains("foil-provision failed for device test_dut");
     assertThat(thrown).hasMessageThat().contains("Fastboot timeout");
+    assertThat(thrown.getErrorId())
+        .isEqualTo(AndroidErrorId.CROSSOVER_ANDROID_DESKTOP_PROVISION_DECORATOR_PROVISION_ERROR);
+    verify(properties).add(TEST_ARG_NEEDS_PROVISION_REPAIR, "true");
   }
 
   @Test
@@ -461,12 +485,8 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
     when(params.has(BUILD_ID)).thenReturn(false);
     when(params.has(BUILD_TARGET)).thenReturn(false);
 
-    com.google.devtools.mobileharness.shared.util.command.CommandException cmdException =
-        org.mockito.Mockito.mock(
-            com.google.devtools.mobileharness.shared.util.command.CommandException.class);
-    when(cmdException.getErrorId())
-        .thenReturn(
-            com.google.devtools.mobileharness.api.model.error.BasicErrorId.COMMAND_EXEC_FAIL);
+    CommandException cmdException = mock(CommandException.class);
+    when(cmdException.getErrorId()).thenReturn(BasicErrorId.COMMAND_EXEC_FAIL);
     when(cmdException.getMessage()).thenReturn("Labservice connection refused");
     when(commandExecutor.exec(any(Command.class)))
         .thenReturn(versionResult)
@@ -479,6 +499,7 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
         .hasMessageThat()
         .contains("Failed to query stable version for test_dut via dt-converter");
     assertThat(thrown).hasMessageThat().contains("Labservice connection refused");
+    verify(properties, never()).add(TEST_ARG_NEEDS_PROVISION_REPAIR, "true");
   }
 
   @Test
@@ -556,12 +577,12 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
     when(params.has(DT_CONVERTER_CIPD_TAG)).thenReturn(true);
     when(params.get(DT_CONVERTER_CIPD_TAG)).thenReturn("prod");
 
-    java.util.List<Path> downloadedRootDirs = new java.util.ArrayList<>();
+    List<Path> downloadedRootDirs = new ArrayList<>();
     when(commandExecutor.exec(any(Command.class)))
         .thenAnswer(
             invocation -> {
               Command cmd = invocation.getArgument(0);
-              List<String> cmdArgs = cmd.getCommand();
+              ImmutableList<String> cmdArgs = cmd.getCommand();
               int rootIdx = cmdArgs.indexOf("-root");
               if (rootIdx != -1 && rootIdx + 1 < cmdArgs.size()) {
                 Path rootPath = Path.of(cmdArgs.get(rootIdx + 1));
@@ -610,5 +631,179 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
   @Test
   public void cleanUp_withNullContext_doesNotThrow() {
     decorator.cleanUp(null);
+  }
+
+  @Test
+  public void setUp_deviceAlreadyAdbAccessible_skipsProvisioning() throws Exception {
+    // Override default fixture: DUT is already running Android OS.
+    doNothing().when(androidAdbUtil).connect("test_dut:5555", ADB_CONNECT_CHECK_TIMEOUT);
+
+    decorator.setUp(SetupContext.create(testInfo));
+
+    InOrder inOrder = inOrder(androidAdbUtil);
+    inOrder.verify(androidAdbUtil).disconnect("test_dut:5555");
+    inOrder.verify(androidAdbUtil).connect("test_dut:5555", ADB_CONNECT_CHECK_TIMEOUT);
+    inOrder.verify(androidAdbUtil).getProperty("test_dut:5555", AndroidProperty.INCREMENTAL_BUILD);
+    verify(androidAdbUtil).disconnect("test_dut:5555");
+    verify(properties).add(TEST_PROPERTY_CURRENT_BUILD_ID, "12345678");
+    verify(commandExecutor, never()).exec(any(Command.class));
+    verify(properties, never()).add(TEST_ARG_NEEDS_PROVISION_REPAIR, "true");
+  }
+
+  @Test
+  public void setUp_deviceAdbConnectedButEmptyBuildId_provisionsAndReconnectsAdb()
+      throws Exception {
+    when(params.has(BUILD_ID)).thenReturn(true);
+    when(params.get(BUILD_ID)).thenReturn("12345678");
+    when(params.has(BUILD_TARGET)).thenReturn(true);
+    when(params.get(BUILD_TARGET)).thenReturn("brya-trunk_staging-userdebug");
+
+    // Pre-check connect succeeds but returns an empty build ID; post-provision verification
+    // returns a valid one.
+    doNothing().when(androidAdbUtil).connect("test_dut:5555", ADB_CONNECT_CHECK_TIMEOUT);
+    when(androidAdbUtil.getProperty("test_dut:5555", AndroidProperty.INCREMENTAL_BUILD))
+        .thenReturn("")
+        .thenReturn("12345678");
+
+    when(provisionResult.exitCode()).thenReturn(0);
+    when(provisionResult.stdout()).thenReturn("Foil provision completed successfully.");
+    when(commandExecutor.exec(any(Command.class)))
+        .thenReturn(versionResult)
+        .thenReturn(provisionResult);
+
+    decorator.setUp(SetupContext.create(testInfo));
+
+    InOrder inOrder = inOrder(androidAdbUtil, commandExecutor);
+    // Pre-check: clears stale transport first, then attempts connect and build check.
+    inOrder.verify(androidAdbUtil).disconnect("test_dut:5555");
+    inOrder.verify(androidAdbUtil).connect("test_dut:5555", ADB_CONNECT_CHECK_TIMEOUT);
+    inOrder.verify(androidAdbUtil).getProperty("test_dut:5555", AndroidProperty.INCREMENTAL_BUILD);
+    // Stale transport from the pre-check is cleared before provisioning.
+    inOrder.verify(androidAdbUtil).disconnect("test_dut:5555");
+    inOrder.verify(commandExecutor, times(2)).exec(any(Command.class));
+    // Post-provision: disconnect, fresh connect, then verify responsiveness.
+    inOrder.verify(androidAdbUtil).disconnect("test_dut:5555");
+    inOrder.verify(androidAdbUtil).connect("test_dut:5555");
+    inOrder.verify(androidAdbUtil).getProperty("test_dut:5555", AndroidProperty.INCREMENTAL_BUILD);
+    verify(properties, never()).add(TEST_PROPERTY_CURRENT_BUILD_ID, "");
+    verify(properties, never()).add(TEST_ARG_NEEDS_PROVISION_REPAIR, "true");
+  }
+
+  @Test
+  public void setUp_deviceNotAdbAccessible_provisionsAndReconnectsAdb() throws Exception {
+    when(params.has(BUILD_ID)).thenReturn(true);
+    when(params.get(BUILD_ID)).thenReturn("12345678");
+    when(params.has(BUILD_TARGET)).thenReturn(true);
+    when(params.get(BUILD_TARGET)).thenReturn("brya-trunk_staging-userdebug");
+
+    when(provisionResult.exitCode()).thenReturn(0);
+    when(provisionResult.stdout()).thenReturn("Foil provision completed successfully.");
+    when(commandExecutor.exec(any(Command.class)))
+        .thenReturn(versionResult)
+        .thenReturn(provisionResult);
+
+    decorator.setUp(SetupContext.create(testInfo));
+
+    verify(androidAdbUtil).connect("test_dut:5555", ADB_CONNECT_CHECK_TIMEOUT);
+    verify(androidAdbUtil, times(3)).disconnect("test_dut:5555");
+    verify(androidAdbUtil).connect("test_dut:5555");
+    verify(androidAdbUtil).getProperty("test_dut:5555", AndroidProperty.INCREMENTAL_BUILD);
+    verify(commandExecutor, times(2)).exec(any(Command.class));
+    verify(properties, never()).add(TEST_ARG_NEEDS_PROVISION_REPAIR, "true");
+  }
+
+  @Test
+  public void setUp_adbDisconnectFails_isIgnoredAndProvisionSucceeds() throws Exception {
+    when(params.has(BUILD_ID)).thenReturn(true);
+    when(params.get(BUILD_ID)).thenReturn("12345678");
+    when(params.has(BUILD_TARGET)).thenReturn(true);
+    when(params.get(BUILD_TARGET)).thenReturn("brya-trunk_staging-userdebug");
+
+    doThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_INTERNAL_UTIL_DISCONNECT_ERROR, "No such device"))
+        .when(androidAdbUtil)
+        .disconnect("test_dut:5555");
+
+    when(provisionResult.exitCode()).thenReturn(0);
+    when(provisionResult.stdout()).thenReturn("Foil provision completed successfully.");
+    when(commandExecutor.exec(any(Command.class)))
+        .thenReturn(versionResult)
+        .thenReturn(provisionResult);
+
+    decorator.setUp(SetupContext.create(testInfo));
+
+    verify(androidAdbUtil, times(3)).disconnect("test_dut:5555");
+    verify(androidAdbUtil).connect("test_dut:5555");
+    verify(properties, never()).add(TEST_ARG_NEEDS_PROVISION_REPAIR, "true");
+  }
+
+  @Test
+  public void setUp_postProvisionAdbConnectFails_setsNeedsProvisionRepairAndThrows()
+      throws Exception {
+    when(params.has(BUILD_ID)).thenReturn(true);
+    when(params.get(BUILD_ID)).thenReturn("12345678");
+    when(params.has(BUILD_TARGET)).thenReturn(true);
+    when(params.get(BUILD_TARGET)).thenReturn("brya-trunk_staging-userdebug");
+
+    // Post-provision connect fails.
+    doThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_INTERNAL_UTIL_CONNECT_CMD_ERROR, "Connection refused"))
+        .when(androidAdbUtil)
+        .connect("test_dut:5555");
+
+    when(provisionResult.exitCode()).thenReturn(0);
+    when(provisionResult.stdout()).thenReturn("Foil provision completed successfully.");
+    when(commandExecutor.exec(any(Command.class)))
+        .thenReturn(versionResult)
+        .thenReturn(provisionResult);
+
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class, () -> decorator.setUp(SetupContext.create(testInfo)));
+    assertThat(thrown)
+        .hasMessageThat()
+        .contains("Failed to connect to test_dut:5555 via ADB after CrossOver provisioning");
+    assertThat(thrown.getErrorId())
+        .isEqualTo(
+            AndroidErrorId
+                .CROSSOVER_ANDROID_DESKTOP_PROVISION_DECORATOR_POST_PROVISION_CONNECT_ADB_ERROR);
+    verify(properties).add(TEST_ARG_NEEDS_PROVISION_REPAIR, "true");
+  }
+
+  @Test
+  public void setUp_postProvisionAdbSessionNotResponsive_setsNeedsProvisionRepairAndThrows()
+      throws Exception {
+    when(params.has(BUILD_ID)).thenReturn(true);
+    when(params.get(BUILD_ID)).thenReturn("12345678");
+    when(params.has(BUILD_TARGET)).thenReturn(true);
+    when(params.get(BUILD_TARGET)).thenReturn("brya-trunk_staging-userdebug");
+
+    // Post-provision connect reports success (e.g. "already connected") but the session is
+    // offline and returns no build ID.
+    when(androidAdbUtil.getProperty("test_dut:5555", AndroidProperty.INCREMENTAL_BUILD))
+        .thenReturn("");
+
+    when(provisionResult.exitCode()).thenReturn(0);
+    when(provisionResult.stdout()).thenReturn("Foil provision completed successfully.");
+    when(commandExecutor.exec(any(Command.class)))
+        .thenReturn(versionResult)
+        .thenReturn(provisionResult);
+
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class, () -> decorator.setUp(SetupContext.create(testInfo)));
+    assertThat(thrown)
+        .hasMessageThat()
+        .contains(
+            "Failed to connect to test_dut:5555 via ADB after CrossOver provisioning: device did"
+                + " not return a valid Android build ID");
+    assertThat(thrown.getErrorId())
+        .isEqualTo(
+            AndroidErrorId
+                .CROSSOVER_ANDROID_DESKTOP_PROVISION_DECORATOR_POST_PROVISION_DEVICE_NOT_RESPONSIVE);
+    verify(androidAdbUtil).connect("test_dut:5555");
+    verify(properties).add(TEST_ARG_NEEDS_PROVISION_REPAIR, "true");
   }
 }
