@@ -362,6 +362,12 @@ public interface PropertyName {
     /** Update token of the ResultDB work unit. */
     RESULTDB_WORK_UNIT_UPDATE_TOKEN,
 
+    /** Whether the test-level ResultDB invocation has been finalized. */
+    RESULTDB_TEST_INVOCATION_FINALIZED,
+
+    /** Whether the test-level ResultDB work unit has been finalized. */
+    RESULTDB_TEST_WORK_UNIT_FINALIZED,
+
     /** Whether the test is started because a forgoing container-mode test fails. */
     RETRY_AFTER_CONTAINER_FAILS,
 
