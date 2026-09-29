@@ -722,10 +722,14 @@ public abstract class GcsUtil {
           StorageObject metadata =
               new StorageObject().setName(gcsFile.toString()).setContentType(contentType);
 
-          InputStreamContent contentStream =
-              new InputStreamContent(contentType, getInputStream(localFile));
-          contentStream.setLength(getFileSize(localFile));
-          copyContentStreamToCloud(contentStream, metadata);
+          try (InputStream in = getInputStream(localFile)) {
+            InputStreamContent contentStream = new InputStreamContent(contentType, in);
+            contentStream.setLength(getFileSize(localFile));
+            copyContentStreamToCloud(contentStream, metadata);
+          } catch (IOException e) {
+            logger.atWarning().withCause(e).log(
+                "Failed to close input stream after uploading %s", fileInfo);
+          }
           return null;
         },
         "copy " + fileInfo);
