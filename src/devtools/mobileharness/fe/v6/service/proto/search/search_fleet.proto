@@ -761,12 +761,193 @@ message FleetColumnCatalogEntry {
   // User-facing column name.
   string display_name = 2;
 
-  // How many devices/hosts carry this key. Helps the user judge whether a
-  // column is worth adding (a dimension present on 12 of 153,000 devices is
-  // noise, and the number says so). 0 = don't show a count.
-  int32 device_count = 3;
+  // Superseded by `coverage`, which carries the backend's decision on whether
+  // a count is shown at all. Kept while the backend catalogers and the
+  // Angular client still use it; new code reads `coverage`.
+  int32 device_count = 3 [deprecated = true];
 
   // Optional context for why this column is suggested (e.g. "in your active
   // filters", "recently used"). Empty for non-suggested sections.
   string reason = 4;
+
+  // What the row shows for this key's coverage. Always set. Same rule as the
+  // filter-key catalog: a count for dimensions, nothing elsewhere.
+  CoverageInfo coverage = 5;
+}
+
+// =============================================================================
+// Key catalogs ("Add filter" / "Add group-by" dialogs)
+//
+// The search panel's Add filter and Add group-by buttons open a dialog over
+// every key the user can pick, not just the curated few in the quick rows and
+// the blank-input suggestions. The two dialogs ask different questions of a
+// key ("is it worth filtering on?" versus "how many groups would it make?"),
+// so each has its own catalog. Neither is the column catalog: a column is a
+// thing to display, a key here is a thing to act on, and the numbers that
+// help decide differ.
+//
+// Both catalogs share the column catalog's shape: ordered sections with
+// backend-owned headings, rendered generically by the frontend. Keys already
+// in the query are returned marked applied rather than hidden, because the
+// dialog is also where a user looks for a key they half remember adding.
+// =============================================================================
+
+// Request for the filter-key catalog. Called when the Add filter dialog opens
+// (browse mode) and on each search keystroke within it (search mode).
+message FleetFilterKeyCatalogRequest {
+  SearchEntity entity = 1;
+  Fleet fleet = 2;
+
+  // Search text typed in the dialog. Empty = browse mode: curated sections
+  // (built-in fields in full, the most common dimensions and host properties).
+  // Non-empty = search across every key.
+  string query = 3;
+
+  // Current filters. Keys with a chip come back marked `applied`.
+  repeated Filter filters = 4;
+}
+
+// Filter-key catalog response: ordered sections the frontend renders as-is.
+message FleetFilterKeyCatalogResponse {
+  repeated FleetFilterKeySection sections = 1;
+}
+
+// A section of the filter-key catalog (e.g. "Built-in fields", "Dimensions",
+// "Host properties").
+message FleetFilterKeySection {
+  // Section heading displayed to the user.
+  string heading = 1;
+
+  // Entries in this section. Large sections are truncated to the most common
+  // keys; see total_available.
+  repeated FleetFilterKeyEntry entries = 2;
+
+  // Total keys available in this section. When entries is truncated the
+  // frontend can display "showing 10 of 1,583". 0 = don't show a total.
+  int32 total_available = 3;
+}
+
+// One pickable filter key.
+message FleetFilterKeyEntry {
+  // Key identifier (e.g. "dim::model", "field::status").
+  string key = 1;
+
+  // Everything the frontend needs the moment the key is clicked (picker
+  // title, Advanced availability, verb agreement), so the value picker opens
+  // with no second round trip. Same metadata the promoted row and
+  // suggestions carry.
+  FleetFilterChipMetadata metadata = 2;
+
+  // What the row shows for this key's coverage. Always set.
+  CoverageInfo coverage = 3;
+
+  // true = this key already has a filter chip. The frontend marks the row and
+  // a click opens the existing chip's picker rather than adding a second chip.
+  bool applied = 4;
+}
+
+// The coverage display for a key: either nothing, or a count. The backend
+// decides which; the frontend renders what it is given and never derives
+// "don't show" from a zero or from what kind of key it is. The backend shows
+// a count for dimensions only, where it tells a key on 12 of 150,000 devices
+// apart from a real one. Built-in fields are on every entity, so a count says
+// nothing there. Host properties are not counted either: on device search a
+// host property's device count mostly measures how many devices its hosts
+// carry, not how common the property is, and on host search there is no
+// long tail worth telling apart.
+message CoverageInfo {
+  // No coverage is shown for this key.
+  message CoverageNotShown {}
+
+  // A coverage count is shown for this key.
+  message CoverageShown {
+    // How many devices (device entity) or hosts (host entity) carry the key.
+    // Rendered as "Used by N devices" / "Used by N hosts".
+    int32 count = 1;
+  }
+
+  // Exactly one is set. (Nested type names are unique across this file
+  // because API discovery flattens them into a single schema namespace.)
+  oneof display {
+    CoverageNotShown not_shown = 1;
+    CoverageShown shown = 2;
+  }
+}
+
+// Request for the group-by-key catalog. Called when the Add group-by dialog
+// opens (browse mode) and on each search keystroke within it (search mode).
+message FleetGroupByKeyCatalogRequest {
+  SearchEntity entity = 1;
+  Fleet fleet = 2;
+
+  // Search text typed in the dialog. Empty = browse mode: curated sections.
+  // Non-empty = search across every key.
+  string query = 3;
+
+  // Current filters. Group counts are computed over the current result set,
+  // so a key's usefulness reflects the data the user is looking at.
+  repeated Filter filters = 4;
+
+  // Group-by keys already applied. They come back marked `applied`.
+  repeated string group_by = 5;
+}
+
+// Group-by-key catalog response: ordered sections the frontend renders as-is.
+message FleetGroupByKeyCatalogResponse {
+  repeated FleetGroupByKeySection sections = 1;
+}
+
+// A section of the group-by-key catalog.
+message FleetGroupByKeySection {
+  // Section heading displayed to the user.
+  string heading = 1;
+
+  // Entries in this section. Large sections are truncated; see
+  // total_available.
+  repeated FleetGroupByKeyEntry entries = 2;
+
+  // Total keys available in this section. 0 = don't show a total.
+  int32 total_available = 3;
+}
+
+// One pickable group-by key.
+message FleetGroupByKeyEntry {
+  // Key identifier (e.g. "host::lab_type").
+  string key = 1;
+
+  // Display name of the key, as the group-by chip will show it.
+  string display_name = 2;
+
+  // What the row shows for the groups this key would produce. Always set.
+  GroupCountInfo group_count = 3;
+
+  // true = this key is already a group-by. The frontend marks the row and the
+  // row is not pickable again.
+  bool applied = 4;
+}
+
+// The group-count display for a group-by key: either nothing, or a count. The
+// backend decides which; the frontend renders what it is given. The backend
+// shows a count where it computed one (the curated and built-in keys, and
+// every key when no filter is active) and nothing in long-tail search
+// results, where counting every hit is not worth the latency. Keys that would
+// produce fewer than two groups (a no-op grouping) are omitted from the
+// catalog altogether.
+message GroupCountInfo {
+  // No group count is shown for this key.
+  message GroupCountNotShown {}
+
+  // A group count is shown for this key.
+  message GroupCountShown {
+    // Number of groups under the current filters. Same semantics as
+    // FleetPromotedGroupByKey.group_count: distinct value combinations, plus
+    // one for "(no value)" when some entities lack the key.
+    int32 count = 1;
+  }
+
+  // Exactly one is set.
+  oneof display {
+    GroupCountNotShown not_shown = 1;
+    GroupCountShown shown = 2;
+  }
 }
