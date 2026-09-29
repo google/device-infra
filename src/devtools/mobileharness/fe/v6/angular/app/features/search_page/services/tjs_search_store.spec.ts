@@ -252,4 +252,41 @@ describe('TjsSearchStore', () => {
     expect(store.searchQuery()).toBe('');
     expect(store.effectiveFilters()).toEqual([]);
   });
+
+  it('should keep default User chip, populate searchQuery, and open suggestions when arriving with ?q=<id>', async () => {
+    activatedRouteStub.snapshot.queryParams = {
+      'q': 'tjs-id-for-ambiguous-1',
+    };
+    queryParams$.next({'q': 'tjs-id-for-ambiguous-1'});
+    await flushAsync();
+
+    expect(store.activeChips().length).toBe(1);
+    expect(store.activeChips()[0].key).toBe('user');
+    expect(store.searchQuery()).toBe('tjs-id-for-ambiguous-1');
+    expect(store.showSuggestions()).toBeTrue();
+    expect(store.focusInputTrigger()).toBeTrue();
+  });
+
+  it('should keep default User chip, set searchQuery, and trigger focus on repeat visit via NavigationEnd when queryParams did not change', async () => {
+    expect(store.activeChips().length).toBe(1);
+    expect(store.activeChips()[0].key).toBe('user');
+
+    // 1. User leaves /tests while root queryParams becomes {'q': 'non-existent-id-404'} on /search
+    await router.navigateByUrl('/jobs');
+    activatedRouteStub.snapshot.queryParams = {'q': 'non-existent-id-404'};
+    queryParams$.next({'q': 'non-existent-id-404'});
+    await flushAsync();
+    expect(store.isCurrentRouteActive()).toBeFalse();
+
+    // 2. User clicks fallback chip to /tests?q=non-existent-id-404 (queryParams does NOT re-emit)
+    await router.navigateByUrl('/tests?q=non-existent-id-404');
+    await flushAsync();
+
+    expect(store.isCurrentRouteActive()).toBeTrue();
+    expect(store.activeChips().length).toBe(1);
+    expect(store.activeChips()[0].key).toBe('user');
+    expect(store.searchQuery()).toBe('non-existent-id-404');
+    expect(store.showSuggestions()).toBeTrue();
+    expect(store.focusInputTrigger()).toBeTrue();
+  });
 });

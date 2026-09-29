@@ -45,7 +45,10 @@ import {
   getLegacyFeUrl,
   getOmniLabUrl,
 } from '@deviceinfra/app/core/models/app_data';
+import {CommonParamsService} from '@deviceinfra/app/core/services/common_params_service';
 import {UrlService} from '@deviceinfra/app/core/services/url_service';
+import {isHeaderJumpBarVisibleOnRoute} from '@deviceinfra/app/features/all_site_search/all_site_search_scope';
+import {HeaderJumpBar} from '@deviceinfra/app/features/all_site_search/components/header_jump_bar/header_jump_bar';
 import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
 import {ReplaySubject} from 'rxjs';
 import {filter, takeUntil} from 'rxjs/operators';
@@ -60,6 +63,7 @@ import {filter, takeUntil} from 'rxjs/operators';
   templateUrl: './app.ng.html',
   imports: [
     CommonModule,
+    HeaderJumpBar,
     MatButtonModule,
     MatIconButton,
     MatDividerModule,
@@ -84,6 +88,7 @@ export class App implements OnDestroy {
   readonly omniLabUrl = getOmniLabUrl(this.appData.applicationId ?? '');
   readonly loadingService = inject(LoadingService);
   private readonly urlService = inject(UrlService);
+  private readonly commonParamsService = inject(CommonParamsService);
   showVersionInfo = true;
   isEmbeddedMode = true;
   isFakeData = false;
@@ -91,6 +96,22 @@ export class App implements OnDestroy {
 
   get isStandaloneMode(): boolean {
     return !this.isEmbeddedMode;
+  }
+
+  /**
+   * Determines whether the global Header Jump Bar (`<app-header-jump-bar>`) should be shown.
+   *
+   * Input: None.
+   * Output: boolean (`true` on Home, `/search`, and Detail pages; `false` on Entity Search pages).
+   * Explanation:
+   *   Shown in standalone mode on all routes except the 5 Entity Search pages
+   *   (`/devices`, `/hosts`, `/tests`, `/jobs`, `/sessions`).
+   */
+  isShowHeaderJumpBar(): boolean {
+    return (
+      this.isStandaloneMode &&
+      isHeaderJumpBarVisibleOnRoute(this.getCurrentRoutePath())
+    );
   }
 
   isNavActive(
@@ -116,19 +137,15 @@ export class App implements OnDestroy {
     }
   }
 
-  getPreservedQueryParams() {
-    const qParams: Record<string, string> = {};
-    if (this.isFakeData) {
-      qParams['fake_data'] = 'true';
-    }
-    if (this.isEmbeddedMode) {
-      qParams['is_embedded_mode'] = 'true';
-    }
-    const universe = this.route.snapshot?.queryParams?.['universe'];
-    if (universe) {
-      qParams['universe'] = universe;
-    }
-    return qParams;
+  /**
+   * Returns the preserved query parameters from the common params service.
+   */
+  getPreservedQueryParams(): Record<string, string> {
+    return {
+      // for thsoe left side nav menus, when clicked on it, we should
+      // reset all query parameters except the common ones.
+      ...this.commonParamsService.getCommonParams(),
+    };
   }
 
   getCurrentRoutePath(): string {
@@ -182,6 +199,7 @@ export class App implements OnDestroy {
     if (
       !path ||
       path === 'home' ||
+      path === 'search' ||
       path === 'devices' ||
       path === 'hosts' ||
       path === 'tests' ||

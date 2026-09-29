@@ -1,6 +1,7 @@
 import {TestBed} from '@angular/core/testing';
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
+  AllSiteIdType,
   Filter,
   FleetChipResolverResponse,
   FleetColumnCatalogResponse,
@@ -9,6 +10,7 @@ import {
   FleetSearchResults,
   FleetSuggestionResponse,
   FleetValueListResponse,
+  ResolveAllSiteQueryResponse,
   SearchEntity,
   TjsEntity,
   TjsFilter,
@@ -17,6 +19,13 @@ import {
   TjsSearchResponse,
   TjsSuggestionResponse,
 } from '../../models/search';
+import {
+  MOCK_DEVICE_SCENARIOS,
+  MOCK_HOST_SCENARIOS,
+  MOCK_JOB_SCENARIOS,
+  MOCK_SESSION_SCENARIOS,
+  MOCK_TEST_SCENARIOS,
+} from '../mock_data';
 import {FakeSearchService} from './fake_search_service';
 import {SEARCH_SERVICE} from './search_service';
 
@@ -1004,6 +1013,168 @@ describe('FakeSearchService', () => {
             'qiupingf',
           );
           done();
+        });
+    });
+  });
+
+  describe('resolveAllSiteQuery', () => {
+    let randomSpy: jasmine.Spy;
+
+    beforeEach(() => {
+      randomSpy = spyOn(Math, 'random').and.returnValue(0.5);
+    });
+
+    it('should resolve a unique 1-hit device ID that exists in MOCK_DEVICE_SCENARIOS and MOCK_HOST_SCENARIOS', (done) => {
+      service
+        .resolveAllSiteQuery({query: 'device-id-for-1-hit-1', anyId: {}})
+        .subscribe((res: ResolveAllSiteQueryResponse) => {
+          expect(res.matches?.length).toBe(1);
+          const deviceMatch = res.matches?.[0].device;
+          expect(deviceMatch?.deviceId).toBe('device-id-for-1-hit-1');
+          expect(deviceMatch?.hostName).toBe('host-for-1-hit-1.example.com');
+          expect(
+            MOCK_DEVICE_SCENARIOS.some((s) => s.id === deviceMatch?.deviceId),
+          ).toBeTrue();
+          expect(
+            MOCK_HOST_SCENARIOS.some(
+              (h) =>
+                h.hostName === deviceMatch?.hostName &&
+                !!h.factory(0).overview,
+            ),
+          ).toBeTrue();
+          done();
+        });
+    });
+
+    it('should return empty matches for an unknown identifier (404)', (done) => {
+      service
+        .resolveAllSiteQuery({query: 'nonexistent_id_xyz_999', anyId: {}})
+        .subscribe((res: ResolveAllSiteQueryResponse) => {
+          expect(res.matches).toEqual([]);
+          done();
+        });
+    });
+
+    it('should resolve ambiguous device ID across multiple hosts with valid device and host detail scenarios', (done) => {
+      service
+        .resolveAllSiteQuery({query: 'device-id-for-ambiguous-1', anyId: {}})
+        .subscribe((res: ResolveAllSiteQueryResponse) => {
+          expect(res.matches?.length).toBe(3);
+          expect(res.matches?.every((m) => !!m.device)).toBeTrue();
+          for (const match of res.matches || []) {
+            expect(
+              MOCK_DEVICE_SCENARIOS.some(
+                (s) => s.id === match.device?.deviceId,
+              ),
+            ).toBeTrue();
+            expect(
+              MOCK_HOST_SCENARIOS.some(
+                (h) =>
+                  h.hostName === match.device?.hostName &&
+                  !!h.factory(0).overview,
+              ),
+            ).toBeTrue();
+          }
+          done();
+        });
+    });
+
+    it('should resolve ambiguous identifier matching both a Device and a Host with valid detail scenarios', (done) => {
+      service
+        .resolveAllSiteQuery({query: 'host-name-for-ambiguous-1', anyId: {}})
+        .subscribe((res: ResolveAllSiteQueryResponse) => {
+          expect(res.matches?.length).toBe(2);
+          expect(res.matches?.[0].device?.deviceId).toBe(
+            'host-name-for-ambiguous-1',
+          );
+          expect(res.matches?.[1].host?.hostName).toBe(
+            'host-name-for-ambiguous-1.example.com',
+          );
+          expect(
+            MOCK_DEVICE_SCENARIOS.some(
+              (s) => s.id === 'host-name-for-ambiguous-1',
+            ),
+          ).toBeTrue();
+          expect(
+            MOCK_HOST_SCENARIOS.some(
+              (h) =>
+                h.hostName === 'host-name-for-ambiguous-1.example.com' &&
+                !!h.factory(0).overview,
+            ),
+          ).toBeTrue();
+          done();
+        });
+    });
+
+    it('should filter by idType when narrowed to a specific identifier scope', (done) => {
+      service
+        .resolveAllSiteQuery({
+          query: 'host-name-for-ambiguous-1',
+          idType: AllSiteIdType.ID_TYPE_HOST_NAME,
+        })
+        .subscribe((res: ResolveAllSiteQueryResponse) => {
+          expect(res.matches?.length).toBe(1);
+          expect(res.matches?.[0].host?.hostName).toBe(
+            'host-name-for-ambiguous-1.example.com',
+          );
+          done();
+        });
+    });
+
+    it('should resolve ambiguous ID across Test, Job, and Session with valid detail scenarios', (done) => {
+      service
+        .resolveAllSiteQuery({
+          query: 'tjs-id-for-ambiguous-1',
+          anyId: {},
+        })
+        .subscribe((res: ResolveAllSiteQueryResponse) => {
+          expect(res.matches?.length).toBe(3);
+          const testMatch = res.matches?.[0].test;
+          const jobMatch = res.matches?.[1].job;
+          const sessionMatch = res.matches?.[2].session;
+          expect(testMatch?.testId).toBe('tjs-id-for-ambiguous-1');
+          expect(jobMatch?.jobId).toBe('tjs-id-for-ambiguous-1');
+          expect(sessionMatch?.sessionId).toBe('tjs-id-for-ambiguous-1');
+          expect(
+            MOCK_TEST_SCENARIOS.some((s) => s.id === testMatch?.testId),
+          ).toBeTrue();
+          expect(
+            MOCK_JOB_SCENARIOS.some(
+              (s) =>
+                s.id === testMatch?.jobId || s.overview.id === testMatch?.jobId,
+            ),
+          ).toBeTrue();
+          expect(
+            MOCK_JOB_SCENARIOS.some(
+              (s) =>
+                s.id === jobMatch?.jobId || s.overview.id === jobMatch?.jobId,
+            ),
+          ).toBeTrue();
+          expect(
+            MOCK_SESSION_SCENARIOS.some(
+              (s) =>
+                s.id === sessionMatch?.sessionId ||
+                s.overview.id === sessionMatch?.sessionId,
+            ),
+          ).toBeTrue();
+          done();
+        });
+    });
+
+    it('should fail with a simulated error when Math.random() < 0.2', (done) => {
+      randomSpy.and.returnValue(0.1);
+      service
+        .resolveAllSiteQuery({query: 'device-id-for-1-hit-1', anyId: {}})
+        .subscribe({
+          next: () => {
+            fail('Expected resolveAllSiteQuery to fail with simulated error');
+          },
+          error: (err: Error) => {
+            expect(err.message).toContain(
+              'Simulated backend error while resolving query',
+            );
+            done();
+          },
         });
     });
   });

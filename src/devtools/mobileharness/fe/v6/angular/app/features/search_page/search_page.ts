@@ -85,18 +85,37 @@ export class SearchPage implements OnInit {
       );
     }
 
+    // Automatically focus the search input when arriving on the search page with an initial `q` query parameter.
+    effect(
+      () => {
+        if (this.store.focusInputTrigger?.()) {
+          this.focusSearchBox();
+        }
+      },
+      {injector: this.injector},
+    );
+
     this.loadingService.hide();
   }
 
   fillSearch(text: string) {
     this.store.searchQuery.set(text);
     this.store.showSuggestions.set(true);
-    afterNextRender(
-      () => {
-        this.searchBox()?.focusInput();
-      },
-      {injector: this.injector},
-    );
+    this.focusSearchBox();
+  }
+
+  private focusSearchBox() {
+    const box = this.searchBox();
+    if (box) {
+      box.focusInput();
+    } else {
+      afterNextRender(
+        () => {
+          this.searchBox()?.focusInput();
+        },
+        {injector: this.injector},
+      );
+    }
   }
 
   onBrowseAll() {

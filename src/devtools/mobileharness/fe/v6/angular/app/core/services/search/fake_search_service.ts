@@ -1,5 +1,6 @@
 import {inject, Injectable} from '@angular/core';
-import {Observable, of} from 'rxjs';
+import {Observable, of, throwError, timer} from 'rxjs';
+import {delay, switchMap} from 'rxjs/operators';
 import {APP_DATA, AppData, getAppData} from '../../models/app_data';
 import {
   Cell,
@@ -22,6 +23,8 @@ import {
   FleetSuggestionResponse,
   FleetValueListRequest,
   FleetValueListResponse,
+  ResolveAllSiteQueryRequest,
+  ResolveAllSiteQueryResponse,
   Row,
   SearchEntity,
   TjsEntity,
@@ -54,6 +57,7 @@ import {
   MOCK_TJS_SEARCH_RESPONSE_JOB,
   MOCK_TJS_SEARCH_RESPONSE_SESSION,
   MOCK_TJS_SEARCH_RESPONSE_TEST,
+  resolveMockAllSiteQuery,
 } from '../mock_data';
 import {SearchService} from './search_service';
 
@@ -168,7 +172,7 @@ export class FakeSearchService extends SearchService {
         nextPageToken,
         prevPageToken,
       },
-    });
+    }).pipe(delay(1500));
   }
 
   override getFleetSuggestions(
@@ -568,7 +572,7 @@ export class FakeSearchService extends SearchService {
     return of({
       columns,
       rows: filteredRows,
-    });
+    }).pipe(delay(1500));
   }
 
   private matchesTjsFilter(
@@ -849,5 +853,36 @@ export class FakeSearchService extends SearchService {
       };
     });
     return of({chips: resolvedChips});
+  }
+
+  /**
+   * Resolves an All-Site Search query against mock data with simulated network latency
+   * and a 20% simulated error probability.
+   *
+   * Input:
+   *   - request: ResolveAllSiteQueryRequest containing the query string and optional idType scope.
+   * Output:
+   *   - Observable<ResolveAllSiteQueryResponse> emitting the resolved matches (or error) after 1500ms delay.
+   * Explanation:
+   *   Simulates a 20% backend failure rate (`Math.random() < 0.2`); otherwise delegates to
+   *   `resolveMockAllSiteQuery` and pipes through `delay(1500)` so the All-Site Search
+   *   loading and error states are visible and testable.
+   */
+  override resolveAllSiteQuery(
+    request: ResolveAllSiteQueryRequest,
+  ): Observable<ResolveAllSiteQueryResponse> {
+    if (Math.random() < 0.2) {
+      return timer(1500).pipe(
+        switchMap(() =>
+          throwError(
+            () =>
+              new Error(
+                'Simulated backend error while resolving query across OmniLab services.',
+              ),
+          ),
+        ),
+      );
+    }
+    return of(resolveMockAllSiteQuery(request)).pipe(delay(1500));
   }
 }

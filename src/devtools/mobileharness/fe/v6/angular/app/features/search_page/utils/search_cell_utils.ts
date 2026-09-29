@@ -24,6 +24,7 @@ export function getRouterLink(target: NavTarget | undefined): string | null {
   return null;
 }
 
+
 /** Computes the CSS status class name directly from protobuf Indicator. */
 export function getStatusClass(indicator?: Indicator | string): string {
   return (indicator && INDICATOR_CLASS_MAP[indicator]) || 'status-neutral';

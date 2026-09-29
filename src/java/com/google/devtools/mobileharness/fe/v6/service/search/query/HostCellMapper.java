@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.LinkCell;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.NavTarget;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.StatusCell;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextCell;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.HostRecord;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
@@ -76,11 +77,14 @@ public final class HostCellMapper {
   private static LinkCell hostLink(HostRecord host) {
     String hostName = host.hostName();
     String hostIp = firstValue(host.values(HostKeys.HOST_IP.id()));
+    String universe = firstValue(host.values(FleetIndexBuilder.HOST_FIELD_ATS_CONTROLLER_ID));
+    HostRef.Builder hostRef = HostRef.newBuilder().setHostName(hostName).setHostIp(hostIp);
+    if (!universe.isEmpty()) {
+      hostRef.setUniverse(universe);
+    }
     return LinkCell.newBuilder()
         .setText(hostName)
-        .setTarget(
-            NavTarget.newBuilder()
-                .setHost(HostRef.newBuilder().setHostName(hostName).setHostIp(hostIp)))
+        .setTarget(NavTarget.newBuilder().setHost(hostRef))
         .build();
   }
 
