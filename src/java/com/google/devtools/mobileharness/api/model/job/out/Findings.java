@@ -291,7 +291,7 @@ public class Findings {
   private void log(Severity severity, Throwable throwable, @Nullable FluentLogger logger) {
     Level logLevel =
         switch (severity) {
-          case INFO, SUGGESTION -> Level.INFO;
+          case INFO -> Level.INFO;
           case SEVERE -> Level.SEVERE;
           case WARNING, SEVERITY_UNSPECIFIED, UNRECOGNIZED -> Level.WARNING;
         };

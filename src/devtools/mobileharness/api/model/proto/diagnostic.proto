@@ -36,13 +36,12 @@ message Finding {
     SEVERITY_UNSPECIFIED = 0;
     // Non critical finding, providing users with some info about the test run.
     INFO = 1;
-    // Non critical finding, providing users with some hints on improving their
-    // testing experience.
-    SUGGESTION = 2;
     // Potentially critical finding.
     WARNING = 3;
     // Critical finding.
     SEVERE = 4;
+
+    reserved 2;
   }
 
   // Severity of the finding.
