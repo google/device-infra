@@ -1,6 +1,7 @@
 package monitoring
 
 import (
+	"slices"
 	"testing"
 	"time"
 )
@@ -112,6 +113,81 @@ func TestMonitoringWorkflows(t *testing.T) {
 	testMu.Unlock()
 
 	// Signal shutdown to verify flushing logic does not panic or deadlock
+	Shutdown()
+}
+
+func TestDistinctNoteReasons(t *testing.T) {
+	tests := []struct {
+		name string
+		in   []string
+		want []string
+	}{
+		{name: "none", in: nil, want: nil},
+		{name: "one", in: []string{"a"}, want: []string{"a"}},
+		{name: "repeats keep first appearance order", in: []string{"b", "a", "b", "a"}, want: []string{"b", "a"}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := distinctNoteReasons(tc.in); !slices.Equal(got, tc.want) {
+				t.Errorf("distinctNoteReasons(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestRecordDownloadStats_CountsEachReasonOncePerRun pins the note counter's
+// unit: runs affected, not notes written. A run whose cache failed to open on
+// both the proxy attempt and the direct retry carries the reason twice.
+func TestRecordDownloadStats_CountsEachReasonOncePerRun(t *testing.T) {
+	Init("casdownloader")
+	RecordDownloadStats(&DownloadStats{
+		NoteReasons: []string{"cache_setup_failed", "cache_write_failed", "cache_setup_failed"},
+	}, "test-instance", false, false)
+
+	testMu.Lock()
+	got := lastRecordedNoteReasons
+	testMu.Unlock()
+	want := []string{"cache_setup_failed", "cache_write_failed"}
+	if !slices.Equal(got, want) {
+		t.Errorf("recorded note reasons = %q, want %q", got, want)
+	}
+	Shutdown()
+}
+
+func TestRecordDownloadStats_RecordsCaller(t *testing.T) {
+	Init("casdownloader")
+	RecordDownloadStats(&DownloadStats{Caller: "em25-arm"}, "test-instance", false, false)
+
+	testMu.Lock()
+	got := lastRecordedCaller
+	testMu.Unlock()
+	if got != "em25-arm" {
+		t.Errorf("recorded caller = %q, want %q", got, "em25-arm")
+	}
+	Shutdown()
+}
+
+// TestRecordDownloadStats_NilStatsIsNoOp checks that nil stats neither panic
+// nor overwrite what the previous run recorded.
+func TestRecordDownloadStats_NilStatsIsNoOp(t *testing.T) {
+	Init("casdownloader")
+	RecordDownloadStats(&DownloadStats{
+		Caller:      "previous-caller",
+		NoteReasons: []string{"cache_write_failed"},
+	}, "test-instance", false, false)
+
+	RecordDownloadStats(nil, "test-instance", false, false)
+
+	testMu.Lock()
+	gotCaller := lastRecordedCaller
+	gotReasons := lastRecordedNoteReasons
+	testMu.Unlock()
+	if gotCaller != "previous-caller" {
+		t.Errorf("recorded caller after nil stats = %q, want %q", gotCaller, "previous-caller")
+	}
+	if want := []string{"cache_write_failed"}; !slices.Equal(gotReasons, want) {
+		t.Errorf("recorded note reasons after nil stats = %q, want %q", gotReasons, want)
+	}
 	Shutdown()
 }
 

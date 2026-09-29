@@ -21,6 +21,7 @@ var (
 	lastRecordedLatencyStatus string
 	lastRecordedBytes         int64
 	lastRecordedCaller        string
+	lastRecordedNoteReasons   []string
 	lastRecordedMethod        string
 	lastRecordedServedBytes   int64
 	lastRecordedWANBytes      int64
@@ -53,6 +54,7 @@ func recordDownloadStats(stats *DownloadStats, casInstance string, localCacheEna
 	if stats != nil {
 		testMu.Lock()
 		lastRecordedCaller = stats.Caller
+		lastRecordedNoteReasons = distinctNoteReasons(stats.NoteReasons)
 		testMu.Unlock()
 	}
 }

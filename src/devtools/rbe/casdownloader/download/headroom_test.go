@@ -177,8 +177,8 @@ func (e *everythingCachedCache) Pull(ctx context.Context, all []*client.TreeOutp
 func TestAddNote_Accumulates(t *testing.T) {
 	d := &DownloadJob{DownloadStats: &Stats{}}
 
-	d.addNote("first thing worth saying")
-	d.addNote("second thing, about %d files", 3)
+	d.addNote(NoteCacheWriteFailed, "first thing worth saying")
+	d.addNote(NoteCacheWriteFailed, "second thing, about %d files", 3)
 
 	got := d.DownloadStats.Notes
 	for _, want := range []string{"first thing worth saying", "second thing, about 3 files"} {
@@ -192,5 +192,5 @@ func TestAddNote_Accumulates(t *testing.T) {
 // way to crash. A note is never the reason a run matters, so failing to have
 // somewhere to put one must not take the run down with it.
 func TestAddNote_ToleratesMissingStats(t *testing.T) {
-	(&DownloadJob{}).addNote("nowhere to record this")
+	(&DownloadJob{}).addNote(NoteCacheWriteFailed, "nowhere to record this")
 }

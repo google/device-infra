@@ -498,10 +498,10 @@ func run(ctx context.Context) error {
 		}
 	}()
 
-	var jobNotes []string
+	var jobNotes []download.Note
 	localCache, cacheNote := cache.OpenOrDegrade(ctx, cacheFlagValues(), "the download")
 	if cacheNote != "" {
-		jobNotes = append(jobNotes, cacheNote)
+		jobNotes = append(jobNotes, download.Note{Reason: download.NoteCacheSetupFailed, Message: cacheNote})
 	}
 
 	d := download.DownloadJob{
@@ -562,7 +562,7 @@ func run(ctx context.Context) error {
 		// Re-initialize cache since the previous attempt closed it.
 		localCache, cacheNote := cache.OpenOrDegrade(ctx, cacheFlagValues(), "the direct RBE retry")
 		if cacheNote != "" {
-			d.Notes = append(d.Notes, cacheNote)
+			d.Notes = append(d.Notes, download.Note{Reason: download.NoteCacheSetupFailed, Message: cacheNote})
 		}
 
 		// The retry talks to CAS remote, so neither the hits recorded against
@@ -703,6 +703,16 @@ func parseInvocationID(invocationID string) (string, string, string, string) {
 	return caller, bid, branch, flavor
 }
 
+// noteReasonStrings converts note reasons to the plain strings the monitoring
+// package takes, which cannot import the download package.
+func noteReasonStrings(reasons []download.NoteReason) []string {
+	out := make([]string, len(reasons))
+	for i, r := range reasons {
+		out[i] = string(r)
+	}
+	return out
+}
+
 func recordDownloadMetrics(success bool, rbeStatus string, duration time.Duration, d *download.DownloadJob, err error) {
 	// Record download latency.
 	monitoring.RecordLatency(success, rbeStatus, duration)
@@ -742,6 +752,7 @@ func recordDownloadMetrics(success bool, rbeStatus string, duration time.Duratio
 		FileDownloadTimeMS: stats.FileDownloadTimeMS,
 		ChunkRestoreTimeMS: stats.ChunkRestoreTimeMS,
 		DownloadError:      stats.DownloadError,
+		NoteReasons:        noteReasonStrings(stats.NoteReasons),
 		Caller:             caller,
 		Version:            version,
 		BuildID:            bid,

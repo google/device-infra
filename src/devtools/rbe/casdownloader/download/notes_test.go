@@ -2,6 +2,7 @@ package download
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -11,8 +12,8 @@ import (
 // paths, either of which can contain the separator's "|" or a line break.
 func TestAddNote_SeparatorIsUnambiguous(t *testing.T) {
 	job := &DownloadJob{DownloadStats: &Stats{}}
-	job.addNote("first: %v", "a|b")
-	job.addNote("second:\n%s", "line two\r\nline three")
+	job.addNote(NoteCacheWriteFailed, "first: %v", "a|b")
+	job.addNote(NoteChunksIndexMoveFailed, "second:\n%s", "line two\r\nline three")
 
 	got := strings.Split(job.Stats().Notes, "|")
 	if len(got) != 2 {
@@ -34,12 +35,63 @@ func TestDoDownload_SeededNotesAreSanitized(t *testing.T) {
 	// seeded, which is all this test needs.
 	job := &DownloadJob{
 		Digest: "INVALID_DIGEST",
-		Notes:  []string{"cache at /a|b unusable", "second\nline"},
+		Notes: []Note{
+			{Reason: NoteCacheSetupFailed, Message: "cache at /a|b unusable"},
+			{Reason: NoteCacheSetupFailed, Message: "second\nline"},
+		},
 	}
 	_ = job.DoDownload(context.Background())
 
 	if want := "cache at /a_b unusable | second line"; job.Stats().Notes != want {
 		t.Errorf("Notes = %q, want %q", job.Stats().Notes, want)
+	}
+}
+
+// TestAddNote_RecordsReasonsInOrder pins that every note carries its reason,
+// in the order the notes were added, so NoteReasons lines up with Notes.
+func TestAddNote_RecordsReasonsInOrder(t *testing.T) {
+	job := &DownloadJob{DownloadStats: &Stats{}}
+	job.addNote(NoteProxyOverreportClamped, "clamped")
+	job.addNote(NoteCacheWriteFailed, "could not cache")
+	job.addNote(NoteProxyOverreportClamped, "clamped again")
+
+	want := []NoteReason{NoteProxyOverreportClamped, NoteCacheWriteFailed, NoteProxyOverreportClamped}
+	if got := job.Stats().NoteReasons; !slices.Equal(got, want) {
+		t.Errorf("NoteReasons = %q, want %q", got, want)
+	}
+}
+
+// TestDoDownload_SeededNotesCarryReasons covers the other way a note reaches
+// the stats. Seeded notes skip addNote, so without this they could reach the
+// notes text but not the metric.
+func TestDoDownload_SeededNotesCarryReasons(t *testing.T) {
+	job := &DownloadJob{
+		Digest: "INVALID_DIGEST",
+		Notes:  []Note{{Reason: NoteCacheSetupFailed, Message: "cache unusable"}},
+	}
+	_ = job.DoDownload(context.Background())
+
+	want := []NoteReason{NoteCacheSetupFailed}
+	if got := job.Stats().NoteReasons; !slices.Equal(got, want) {
+		t.Errorf("NoteReasons = %q, want %q", got, want)
+	}
+}
+
+// TestDoDownload_RetryDoesNotCarryOverReasons pins that each attempt starts
+// from the seeded notes only. A fallback attempt replaces the stats, so a
+// reason from the failed attempt must not leak into the one that is reported.
+func TestDoDownload_RetryDoesNotCarryOverReasons(t *testing.T) {
+	job := &DownloadJob{
+		Digest: "INVALID_DIGEST",
+		Notes:  []Note{{Reason: NoteCacheSetupFailed, Message: "cache unusable"}},
+	}
+	_ = job.DoDownload(context.Background())
+	job.addNote(NoteCacheWriteFailed, "only on the first attempt")
+	_ = job.DoDownload(context.Background())
+
+	want := []NoteReason{NoteCacheSetupFailed}
+	if got := job.Stats().NoteReasons; !slices.Equal(got, want) {
+		t.Errorf("NoteReasons = %q, want %q", got, want)
 	}
 }
 

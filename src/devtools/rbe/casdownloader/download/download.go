@@ -58,7 +58,7 @@ type DownloadJob struct {
 	// the stats do not exist yet at that point, and on a fallback attempt they
 	// are replaced. Seeded into every attempt's stats so that a condition that
 	// is still true on the retry is still reported on the retry.
-	Notes []string
+	Notes []Note
 
 	// remoteFailed records whether the last DoDownload failed in a call to
 	// Client, as opposed to in local work before or after the fetch. Callers
@@ -125,6 +125,11 @@ type Stats struct {
 	DownloadError       string `json:"download_error,omitempty"`
 	Notes               string `json:"notes,omitempty"`
 	CASProxy            string `json:"casproxy,omitempty"`
+	// NoteReasons classifies Notes, one entry per note in the same order. It
+	// is exported as a metric rather than written to the JSON: the note text
+	// already reaches AnTS, and CF, which does not read the JSON, needs the
+	// metric.
+	NoteReasons []NoteReason `json:"-"`
 }
 
 // noteSeparator joins the notes of a single run into the one string the stats
@@ -144,6 +149,44 @@ func sanitizeNote(msg string) string {
 	return noteSanitizer.Replace(msg)
 }
 
+// NoteReason classifies a note with a bounded code that can be used as a metric
+// field. The note text cannot be: it embeds paths and raw OS errors, so its
+// cardinality is unbounded, and it can carry details that should stay on the
+// host.
+//
+// Every note has exactly one reason, assigned where the note is written. Do not
+// recover a reason from the text afterwards; that silently reclassifies the day
+// a message changes.
+type NoteReason string
+
+// Reasons for notes. Adding one is cheap, but each is a value in a metric
+// field that dashboards and alerts may key on, so an existing value should not
+// be renamed.
+const (
+	// NoteCacheSetupFailed means the local cache could not be opened, so the run
+	// downloaded without one.
+	NoteCacheSetupFailed NoteReason = "cache_setup_failed"
+	// NoteCacheWriteFailed means the download succeeded but its files could not be
+	// pushed to the local cache, so they will be fetched again next time.
+	NoteCacheWriteFailed NoteReason = "cache_write_failed"
+	// NoteChunksIndexMoveFailed means the chunks index could not be moved to its
+	// primary location.
+	NoteChunksIndexMoveFailed NoteReason = "chunks_index_move_failed"
+	// NoteLegacyChunksIndexMoved means the chunks index was found in its legacy
+	// location and moved. Not a degradation; counted so that it is visible when
+	// no build needs that code path any more.
+	NoteLegacyChunksIndexMoved NoteReason = "legacy_chunks_index_moved"
+	// NoteProxyOverreportClamped means casproxy reported serving more than was
+	// downloaded, and the proxy tiers were clamped.
+	NoteProxyOverreportClamped NoteReason = "proxy_overreport_clamped"
+)
+
+// Note is a remark about a run, with the reason that classifies it.
+type Note struct {
+	Reason  NoteReason
+	Message string
+}
+
 // addNote records something the operator should know about a run that is going
 // to succeed anyway.
 //
@@ -156,18 +199,24 @@ func sanitizeNote(msg string) string {
 // worth saying about a run, and the second one is not more important than the
 // first. The log line keeps the message verbatim; only the copy in the stats is
 // sanitized.
-func (d *DownloadJob) addNote(format string, args ...any) {
+func (d *DownloadJob) addNote(reason NoteReason, format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
 	log.Warningf("%s", msg)
 	if d.DownloadStats == nil {
 		return
 	}
-	msg = sanitizeNote(msg)
-	if d.DownloadStats.Notes == "" {
-		d.DownloadStats.Notes = msg
+	d.DownloadStats.appendNote(Note{Reason: reason, Message: msg})
+}
+
+// appendNote adds note to the stats' notes and reasons.
+func (s *Stats) appendNote(note Note) {
+	s.NoteReasons = append(s.NoteReasons, note.Reason)
+	msg := sanitizeNote(note.Message)
+	if s.Notes == "" {
+		s.Notes = msg
 		return
 	}
-	d.DownloadStats.Notes += noteSeparator + msg
+	s.Notes += noteSeparator + msg
 }
 
 // Stats returns the download stats for the job.
@@ -320,7 +369,7 @@ func (d *DownloadJob) updateDownloadStats(all []*client.TreeOutput, downloaded m
 		// keeps the partition adding up, but over-reporting is the signature of
 		// a bug, and left silent it looks exactly like a perfect proxy hit rate.
 		if sizeProxyHot > sizeDownloaded || countProxyHot > len(downloaded) {
-			d.addNote("casproxy reported serving more than was downloaded (%v in %d blobs reported, %v in %d downloaded); clamping, proxy hit rate is understated",
+			d.addNote(NoteProxyOverreportClamped, "casproxy reported serving more than was downloaded (%v in %d blobs reported, %v in %d downloaded); clamping, proxy hit rate is understated",
 				units.Size(sizeProxyHot), countProxyHot, units.Size(sizeDownloaded), len(downloaded))
 			if sizeProxyHot > sizeDownloaded {
 				sizeProxyHot = sizeDownloaded
@@ -670,7 +719,7 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache,
 			}
 			return fmt.Errorf("failed to push files to cache: %w", err)
 		}
-		d.addNote("Failed to cache %d downloaded files, so they will be fetched again next time: %v", len(toDownload), err)
+		d.addNote(NoteCacheWriteFailed, "Failed to cache %d downloaded files, so they will be fetched again next time: %v", len(toDownload), err)
 	} else {
 		log.InfoContextf(ctx, "finished pushing %d files to local cache, took %s", len(toDownload), time.Since(start))
 	}
@@ -701,15 +750,11 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache,
 //   - Copy duplicates files to target locations
 //   - Dump downloadStats
 func (d *DownloadJob) DoDownload(ctx context.Context) error {
-	// Notes seeded from the caller do not pass through addNote, so they are
-	// sanitized here to keep the separator unambiguous.
-	seeded := make([]string, len(d.Notes))
-	for i, note := range d.Notes {
-		seeded[i] = sanitizeNote(note)
-	}
-	d.DownloadStats = &Stats{
-		CASProxy: d.CASProxyStatus,
-		Notes:    strings.Join(seeded, noteSeparator),
+	d.DownloadStats = &Stats{CASProxy: d.CASProxyStatus}
+	// Notes seeded from the caller were logged where they were written, so
+	// they go straight into the stats rather than through addNote.
+	for _, note := range d.Notes {
+		d.DownloadStats.appendNote(note)
 	}
 	d.remoteFailed = false
 	if d.DownloadTimeout > 0 {
@@ -828,7 +873,7 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 	if err := d.moveChunksIndexFileIfNeeded(); err != nil {
 		// Optional, so it does not fail the download, but a run that could not
 		// place its chunks index is not quite the run that was asked for.
-		d.addNote("Failed to move the chunks index file: %v", err)
+		d.addNote(NoteChunksIndexMoveFailed, "Failed to move the chunks index file: %v", err)
 	}
 
 	fileDownloadTime := time.Since(start)
@@ -869,7 +914,7 @@ func (d *DownloadJob) moveChunksIndexFileIfNeeded() error {
 		return fmt.Errorf("failed to move chunks index file: %v", err)
 	}
 
-	d.addNote("Chunks index file moved from %s to %s.", secondaryIndexFile, primaryIndexFile)
+	d.addNote(NoteLegacyChunksIndexMoved, "Chunks index file moved from %s to %s.", secondaryIndexFile, primaryIndexFile)
 
 	return nil
 }

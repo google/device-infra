@@ -25,6 +25,9 @@ type DownloadStats struct {
 	FileDownloadTimeMS int64
 	ChunkRestoreTimeMS int64
 	DownloadError      string
+	// NoteReasons classifies the notes the run carried, one entry per note.
+	// Repeats are allowed; each distinct reason is counted once per run.
+	NoteReasons []string
 
 	// Metadata fields
 	Caller  string
@@ -32,6 +35,23 @@ type DownloadStats struct {
 	BuildID string
 	Branch  string
 	Flavor  string
+}
+
+// distinctNoteReasons returns reasons with repeats removed, in order of first
+// appearance. A run is counted once per reason however many notes of that
+// reason it carried, so the note counter reads as runs affected and can be
+// divided by the download count.
+func distinctNoteReasons(reasons []string) []string {
+	var out []string
+	seen := make(map[string]bool, len(reasons))
+	for _, r := range reasons {
+		if seen[r] {
+			continue
+		}
+		seen[r] = true
+		out = append(out, r)
+	}
+	return out
 }
 
 // Option configures monitoring parameters.
