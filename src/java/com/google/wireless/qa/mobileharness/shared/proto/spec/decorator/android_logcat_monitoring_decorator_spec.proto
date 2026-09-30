@@ -32,7 +32,9 @@ message AndroidLogcatMonitoringDecoratorSpec {
   // Packages whose crashes should be reported as a test failure.
   // This is the primary monitoring tier for the app-under-test. A crash in
   // one of these packages will cause the specific test to be marked as
-  // 'FAILED' but will allow the overall test suite to continue.
+  // 'FAILED' in the monitoring report but not mark the entire test as failed.
+  // Explicitly set 'override_test_result_on_process_crash' field to true to
+  // mark the entire test as failed when the driver marks it as PASS.
   repeated string report_as_failure_packages = 1 [(field_detail) = {
     help: "PackageID of all the apps under which will cause a failure."
   }];
@@ -87,4 +89,13 @@ message AndroidLogcatMonitoringDecoratorSpec {
         help: "Throw an exception to indicate infra error on "
               "crash dialog detection."
       }];
+
+  // Setting to mark the test as failed if the app/packages under test processes
+  // crashes. It will only override the test result when the driver marks it as
+  // PASS.
+  optional bool override_test_result_on_process_crash = 7 [(field_detail) = {
+    help: "Mark the test as failed if the apps under test process crashes. "
+          "It will only override the test result when the driver marks it as "
+          "PASS."
+  }];
 }

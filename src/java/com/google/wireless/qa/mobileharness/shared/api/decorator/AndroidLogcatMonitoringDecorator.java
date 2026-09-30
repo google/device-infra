@@ -16,6 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag.DATA_APP_ANR;
 import static com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag.DATA_APP_CRASH;
 import static com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag.DATA_APP_NATIVE_CRASH;
@@ -33,6 +34,8 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.dropbox.DropboxExtractor;
 import com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
@@ -197,6 +200,7 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
     }
     checkForOrchestratorConnectionErrors();
     checkForInfraError();
+    checkForTestFailureEvents(testInfo);
   }
 
   private void writeMonitoringReport(TestInfo testInfo) throws MobileHarnessException {
@@ -354,6 +358,44 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
                   crashEvent.process().name()));
         }
       }
+    }
+  }
+
+  private void checkForTestFailureEvents(TestInfo testInfo) {
+    ImmutableList<LogcatEvent> logcatEvents = logcatLineProxy.getLogcatEventsFromProcessors();
+    if (logcatEvents.isEmpty()) {
+      return;
+    }
+    var appsUnderTestThatCrashed =
+        logcatEvents.stream()
+            .filter(event -> event instanceof CrashEvent)
+            .map(event -> ((CrashEvent) event).process())
+            .filter(process -> process.category().equals(ProcessCategory.FAILURE))
+            .map(process -> process.name())
+            .collect(toImmutableList());
+    if (appsUnderTestThatCrashed.isEmpty()) {
+      return;
+    }
+    // Only set TestResult to FAIL if the test is currently passing and the spec allows it;
+    // don't override existing non-passing results (e.g. FAIL, ERROR, TIMEOUT).
+    if (testInfo.resultWithCause().get().type().equals(TestResult.PASS)
+        && spec.getOverrideTestResultOnProcessCrash()) {
+      testInfo
+          .resultWithCause()
+          .setNonPassing(
+              TestResult.FAIL,
+              new MobileHarnessException(
+                  AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_APP_UNDER_TEST_PROCESS_CRASHED,
+                  String.format(
+                      "Processes crashed: %s ", Joiner.on(", ").join(appsUnderTestThatCrashed))));
+    } else {
+      testInfo
+          .findings()
+          .add(
+              Severity.SEVERE,
+              AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_APP_UNDER_TEST_PROCESS_CRASHED,
+              "App under test crashed.")
+          .addMetadata("package_names", Joiner.on(",").join(appsUnderTestThatCrashed));
     }
   }
 

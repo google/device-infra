@@ -25,6 +25,7 @@ java_library(
     name = "tests",
     srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:diagnostic_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/platform/android/logcat/proto:logcat_monitoring_report_java_proto",
         "//src/devtools/mobileharness/platform/android/runtimestats:runtime_stats_report_java_proto",
