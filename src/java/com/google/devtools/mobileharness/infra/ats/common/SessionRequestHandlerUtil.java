@@ -489,9 +489,19 @@ public class SessionRequestHandlerUtil {
   private void addUrlToPersistentCacheList(JobInfo jobInfo, String url) {
     List<String> urls =
         new ArrayList<>(
-            jobInfo.params().getList(JobInfo.PARAM_PERISTENT_CACHE_FILE_LIST, ImmutableList.of()));
+            jobInfo
+                .params()
+                .getList(
+                    JobInfo.PARAM_PERSISTENT_CACHE_FILE_LIST,
+                    JobInfo.PERSISTENT_CACHE_FILE_LIST_SEPARATOR,
+                    ImmutableList.of()));
     urls.add(url);
-    jobInfo.params().addList(JobInfo.PARAM_PERISTENT_CACHE_FILE_LIST, urls);
+    jobInfo
+        .params()
+        .addList(
+            JobInfo.PARAM_PERSISTENT_CACHE_FILE_LIST,
+            urls,
+            JobInfo.PERSISTENT_CACHE_FILE_LIST_SEPARATOR);
   }
 
   /** Gets all local tradefed configs. */
