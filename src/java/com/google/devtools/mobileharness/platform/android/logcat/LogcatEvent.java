@@ -34,6 +34,16 @@ public sealed interface LogcatEvent {
     UNKNOWN;
   }
 
+  /** Types of test events detected in logcat. */
+  enum TestEventType {
+    STARTUP_TIME_DEFAULT,
+    STARTUP_TIME_FULLY_DRAWN,
+    START_PROC,
+    LICENSING_PROTECTION_TERMINATION,
+    ANTI_TAMPERING_TERMINATION,
+    UNITY_EXCEPTION;
+  }
+
   /** Record class to hold the crashed process information from logcat. */
   record CrashedProcess(String name, int pid, ProcessCategory category, CrashType type) {}
 
@@ -42,4 +52,8 @@ public sealed interface LogcatEvent {
 
   /** Record class holding device event detected in logcat. */
   record DeviceEvent(String eventName, String tag, String logLines) implements LogcatEvent {}
+
+  /** Record class holding test event detected in logcat. */
+  record TestEvent(TestEventType type, int pid, String tag, String logLines)
+      implements LogcatEvent {}
 }
