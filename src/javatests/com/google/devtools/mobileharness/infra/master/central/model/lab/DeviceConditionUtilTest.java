@@ -603,6 +603,27 @@ public class DeviceConditionUtilTest {
             DeviceProfile.newBuilder()
                 .setFeature(
                     DeviceFeature.newBuilder()
+                        .addType("IosRealDeviceOnLinux")
+                        .setCompositeDimension(
+                            DeviceCompositeDimension.newBuilder()
+                                .addSupportedDimension(
+                                    DeviceDimension.newBuilder()
+                                        .setName("sdk_version")
+                                        .setValue("fake-sdk-version"))
+                                .addSupportedDimension(
+                                    DeviceDimension.newBuilder()
+                                        .setName("software_version")
+                                        .setValue("fake-software-version"))))
+                .build(),
+            DeviceCondition.getDefaultInstance());
+    assertThat(DeviceConditionUtil.getDeviceVersion(deviceDao)).hasValue("fake-software-version");
+
+    deviceDao =
+        DeviceDao.create(
+            deviceLocator,
+            DeviceProfile.newBuilder()
+                .setFeature(
+                    DeviceFeature.newBuilder()
                         .addType("NonRealDevice")
                         .setCompositeDimension(
                             DeviceCompositeDimension.newBuilder()
@@ -634,11 +655,32 @@ public class DeviceConditionUtilTest {
   }
 
   @Test
+  public void calculateHealthCategory_iosOnLinuxIdle_returnsInService() {
+    DeviceDao device =
+        createDevice(DeviceStatus.IDLE, ImmutableList.of("IosDevice", "IosRealDeviceOnLinux"));
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_SERVICE);
+  }
+
+  @Test
   public void calculateHealthCategory_iosBusy_returnsInService() {
     DeviceDao device =
         createDevice(
             DeviceStatus.BUSY,
             ImmutableList.of("IosRealDevice"),
+            TestLocator.newBuilder()
+                .setJobLocator(JobLocator.newBuilder().setName("some_job").build())
+                .build());
+    assertThat(DeviceConditionUtil.calculateHealthCategory(device))
+        .isEqualTo(HealthCategory.HEALTH_CATEGORY_IN_SERVICE);
+  }
+
+  @Test
+  public void calculateHealthCategory_iosOnLinuxBusy_returnsInService() {
+    DeviceDao device =
+        createDevice(
+            DeviceStatus.BUSY,
+            ImmutableList.of("IosDevice", "IosRealDeviceOnLinux"),
             TestLocator.newBuilder()
                 .setJobLocator(JobLocator.newBuilder().setName("some_job").build())
                 .build());
