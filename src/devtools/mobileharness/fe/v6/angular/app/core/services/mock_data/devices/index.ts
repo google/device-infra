@@ -45,6 +45,38 @@ function wrapDevice(
   };
 }
 
+function createClonedDeviceScenario(
+  baseFactory: () => MockDeviceScenario,
+  opts: {
+    id: string;
+    scenarioName: string;
+    model: string;
+    hostName: string;
+    hostIp: string;
+  },
+): () => MockDeviceScenario {
+  return () => {
+    const base = baseFactory();
+    return {
+      ...base,
+      id: opts.id,
+      scenarioName: opts.scenarioName,
+      overview: {
+        ...base.overview,
+        id: opts.id,
+        host: {
+          name: opts.hostName,
+          ip: opts.hostIp,
+        },
+        basicInfo: {
+          ...base.overview.basicInfo,
+          model: opts.model,
+        },
+      },
+    };
+  };
+}
+
 /** List of mock device scenarios. */
 export const MOCK_DEVICE_SCENARIOS: MockDeviceScenarioWrapper[] = [
   ...SCENARIOS_LOCAL_MTT_DEVICES.map(wrapDevice),
@@ -79,6 +111,78 @@ export const MOCK_DEVICE_SCENARIOS: MockDeviceScenarioWrapper[] = [
   wrapDevice(scenarioErrorPermissionDenied),
   wrapDevice(scenarioErrorLogical),
   wrapDevice(scenarioErrorRpc),
+  wrapDevice(
+    createClonedDeviceScenario(SCENARIO_IN_SERVICE_IDLE, {
+      id: 'device-id-for-1-hit-1',
+      scenarioName: 'All-Site 1-Hit #1: Pixel 9 Pro (IDLE)',
+      model: 'Pixel 9 Pro',
+      hostName: 'host-for-1-hit-1.example.com',
+      hostIp: '172.16.42.18',
+    }),
+  ),
+  wrapDevice(
+    createClonedDeviceScenario(SCENARIO_IN_SERVICE_BUSY, {
+      id: 'device-id-for-1-hit-2',
+      scenarioName: 'All-Site 1-Hit #2: Pixel 8 Pro (BUSY)',
+      model: 'Pixel 8 Pro',
+      hostName: 'host-for-1-hit-1.example.com',
+      hostIp: '172.16.42.18',
+    }),
+  ),
+  wrapDevice(
+    createClonedDeviceScenario(SCENARIO_IN_SERVICE_IDLE, {
+      id: 'device-id-for-ambiguous-1',
+      scenarioName: 'All-Site Ambiguous: Android Cuttlefish (Multi-Host)',
+      model: 'Android Cuttlefish',
+      hostName: 'host-for-ambiguous-device-1.example.com',
+      hostIp: '172.16.14.10',
+    }),
+  ),
+  wrapDevice(
+    createClonedDeviceScenario(SCENARIO_LINUX_DEVICE, {
+      id: 'host-name-for-ambiguous-1',
+      scenarioName: 'All-Site Ambiguous: LinuxTestbedDevice (Device & Host)',
+      model: 'LinuxTestbedDevice',
+      hostName: 'host-name-for-ambiguous-1.example.com',
+      hostIp: '172.16.42.18',
+    }),
+  ),
+  wrapDevice(
+    createClonedDeviceScenario(SCENARIO_IN_SERVICE_IDLE, {
+      id: '99061FFAZ004AA',
+      scenarioName: 'Passed Test Device (IDLE)',
+      model: 'Pixel 8 Pro',
+      hostName: 'mt31-dm01-a-x04.moma.example.com',
+      hostIp: '100.107.201.12',
+    }),
+  ),
+  wrapDevice(
+    createClonedDeviceScenario(SCENARIO_IN_SERVICE_BUSY, {
+      id: '4D5A1FDAB001BB',
+      scenarioName: 'In-Progress Job Device (BUSY)',
+      model: 'Pixel 8',
+      hostName: 'mt31-dm01-a-x04.moma.example.com',
+      hostIp: '100.107.201.12',
+    }),
+  ),
+  wrapDevice(
+    createClonedDeviceScenario(SCENARIO_IN_SERVICE_IDLE, {
+      id: '18261FDF6003KC',
+      scenarioName: 'TJS Search Device 1 (IDLE)',
+      model: 'Pixel 8 Pro',
+      hostName: 'host-for-1-hit-1.example.com',
+      hostIp: '172.16.42.18',
+    }),
+  ),
+  wrapDevice(
+    createClonedDeviceScenario(SCENARIO_IN_SERVICE_IDLE, {
+      id: '98888FDF6005AB',
+      scenarioName: 'TJS Search Device 2 (IDLE)',
+      model: 'Pixel 7a',
+      hostName: 'host-for-1-hit-1.example.com',
+      hostIp: '172.16.42.18',
+    }),
+  ),
 ];
 
 export {SCENARIOS_LOCAL_MTT_DEVICES} from './local_mtt_devices';

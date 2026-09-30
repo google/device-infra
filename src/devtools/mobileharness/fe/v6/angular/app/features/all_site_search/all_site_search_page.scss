@@ -1,0 +1,419 @@
+// Styles for the dedicated All-Site Search resolution page (`/search`).
+// Matches the Material 3 design in `site.html` (Loading, 404 Not Found, and Ambiguous states).
+// Note: Avoids ID selectors and `!important` per CSS lint guidelines.
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+// Outer page padding matching the prototype #page-search layout
+.all-site-search-page {
+  padding-top: 16px;
+}
+
+// Maximum width container for resolution state cards
+.all-site-search-page-container {
+  max-width: 860px;
+  margin: 0;
+  width: 100%;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+// Elevated Material 3 surface card for Loading, 404, and Ambiguous states
+.all-site-state-card {
+  background-color: var(--md-sys-color-surface, #fff);
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow:
+    0 1px 2px 0 rgba(0, 0, 0, 0.3),
+    0 1px 3px 1px rgba(0, 0, 0, 0.15);
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+// Shared flex child wrapper for hero title + subtitle text
+.all-site-hero-text {
+  flex: 1;
+  min-width: 0;
+}
+
+// Top indeterminate progress bar track on the Loading card
+.all-site-progress-bar {
+  height: 4px;
+  width: 100%;
+  background-color: var(--md-sys-color-surface-container-highest, #dde3ea);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+}
+
+// Animated indeterminate bar indicator
+.all-site-progress-indeterminate {
+  height: 100%;
+  background-color: var(--md-sys-color-primary, #0b57d0);
+  position: absolute;
+  animation: m3Indeterminate 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  width: 40%;
+}
+
+@keyframes m3Indeterminate {
+  0% {
+    left: -40%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+// Hero row inside the Loading state card
+.all-site-loading-hero {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 4px;
+}
+
+// Primary tonal icon badge used in the Loading state card
+.all-site-loading-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background-color: var(--md-sys-color-primary-container, #d3e3fd);
+  color: var(--md-sys-color-on-primary-container, #041e49);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+// Header row inside the Loading state card
+.all-site-loading-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+// Primary title in the Loading state card
+.all-site-loading-title {
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--md-sys-color-on-surface, #1f1f1f);
+  margin: 0;
+}
+
+// Subtitle description in the Loading state card
+.all-site-loading-subtitle {
+  font-size: 0.875rem;
+  color: var(--md-sys-color-on-surface-variant, #444746);
+  margin: 0;
+  line-height: 1.5;
+}
+
+// Spinning progress icon animation
+.spin {
+  animation: spin 1s linear infinite;
+  color: var(--md-sys-color-primary, #0b57d0);
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+// Outer vertical stack for the 404 Not Found state card
+.all-site-not-found-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+// Hero row inside the 404 Not Found state card
+.all-site-not-found-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+// Neutral surface icon container in the 404 Not Found card
+.all-site-not-found-icon-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background-color: var(--md-sys-color-surface-container, #f0f4f9);
+  color: var(--md-sys-color-on-surface-variant, #444746);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+// Search-off icon sizing in the 404 Not Found card
+.not-found-icon {
+  font-size: 28px;
+}
+
+// Primary title in the 404 Not Found card
+.all-site-not-found-title {
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 1.375rem;
+  font-weight: 400;
+  color: var(--md-sys-color-on-surface, #1f1f1f);
+  margin: 0 0 6px 0;
+}
+
+// Subtitle description in the 404 Not Found card
+.all-site-not-found-desc {
+  font-size: 0.875rem;
+  color: var(--md-sys-color-on-surface-variant, #444746);
+  margin: 0;
+  line-height: 1.5;
+}
+
+// Bottom bar housing fallback entity search Assist Chips
+.all-site-fallback-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid var(--md-sys-color-outline-variant, #c4c7c5);
+  width: 100%;
+}
+
+// Label preceding the fallback chips ("Search "<id>" in:")
+.all-site-fallback-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant, #444746);
+  margin-right: 4px;
+}
+
+// Flex container for the 5 entity Assist Chips
+.all-site-fallback-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+// Material 3 Assist Chip linking to an Entity Search page with ?q=<query>
+.m3-entity-assist-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background-color: var(--md-sys-color-surface, #fff);
+  border: 1px solid var(--md-sys-color-outline-variant, #c4c7c5);
+  color: var(--md-sys-color-on-surface, #1f1f1f);
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    color 0.15s;
+
+  .chip-lead-icon {
+    font-size: 18px;
+    color: var(--md-sys-color-primary, #0b57d0);
+  }
+
+  .chip-trail-icon {
+    font-size: 16px;
+    color: var(--md-sys-color-on-surface-variant, #444746);
+    transition:
+      transform 0.15s,
+      color 0.15s;
+  }
+
+  &:hover {
+    background-color: rgba(11, 87, 208, 0.08);
+    border-color: var(--md-sys-color-primary, #0b57d0);
+    color: var(--md-sys-color-primary, #0b57d0);
+
+    .chip-trail-icon {
+      color: var(--md-sys-color-primary, #0b57d0);
+      transform: translateX(2px);
+    }
+  }
+}
+
+// Top header row inside the Ambiguous disambiguation card
+.all-site-ambiguous-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+// Secondary tonal icon badge in the Ambiguous disambiguation card
+.all-site-ambiguous-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background-color: var(--md-sys-color-secondary-container, #c2e7ff);
+  color: var(--md-sys-color-on-secondary-container, #001d35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+// Call-split icon inside the Ambiguous icon badge
+.ambiguous-split-icon {
+  font-size: 24px;
+}
+
+// Primary title in the Ambiguous disambiguation card
+.all-site-ambiguous-title {
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 1.375rem;
+  font-weight: 400;
+  color: var(--md-sys-color-on-surface, #1f1f1f);
+  margin: 0 0 4px 0;
+}
+
+// Subtitle description in the Ambiguous disambiguation card
+.all-site-ambiguous-desc {
+  font-size: 0.875rem;
+  color: var(--md-sys-color-on-surface-variant, #444746);
+  margin: 0;
+  line-height: 1.5;
+}
+
+// Vertical list of disambiguation candidate cards
+.all-site-candidates-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+// Clickable candidate card for a single disambiguation match
+.all-site-candidate-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 72px;
+  padding: 12px 20px;
+  background-color: var(--md-sys-color-surface-container-low, #f8fafd);
+  border: 1px solid var(--md-sys-color-outline-variant, #c4c7c5);
+  border-radius: 12px;
+  text-decoration: none;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+  cursor: pointer;
+  box-sizing: border-box;
+
+  &.single-line {
+    min-height: 56px;
+    padding: 8px 20px;
+  }
+
+  &:hover {
+    background-color: #eef2f8;
+    border-color: var(--md-sys-color-primary, #0b57d0);
+  }
+}
+
+// Leading icon container inside a candidate card
+.all-site-candidate-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: var(--md-sys-color-primary-container, #d3e3fd);
+  color: var(--md-sys-color-on-primary-container, #041e49);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+// Central text body inside a candidate card
+.all-site-candidate-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+// Line 1 header row (entity badge + identifier title) inside a candidate card
+.all-site-candidate-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+// Entity type pill badge ('Device', 'Host', 'Test', 'Job', 'Session')
+.all-site-type-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background-color: var(--md-sys-color-secondary-container, #c2e7ff);
+  color: var(--md-sys-color-on-secondary-container, #001d35);
+  flex-shrink: 0;
+}
+
+// Primary identifier title inside a candidate card
+.all-site-candidate-title {
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--md-sys-color-on-surface, #1f1f1f);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Line 2 disambiguating metadata subtitle inside a candidate card
+.all-site-candidate-subtitle {
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  color: var(--md-sys-color-on-surface-variant, #444746);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  strong {
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface, #1f1f1f);
+  }
+}
+
+// Trailing "Open ->" call-to-action inside a candidate card
+.all-site-candidate-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--md-sys-color-primary, #0b57d0);
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+// Arrow icon inside the trailing candidate card action
+.candidate-arrow {
+  color: var(--md-sys-color-primary, #0b57d0);
+  font-size: 18px;
+}

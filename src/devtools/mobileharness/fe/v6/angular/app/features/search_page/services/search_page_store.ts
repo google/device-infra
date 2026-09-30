@@ -160,6 +160,9 @@ export abstract class SearchPageStore {
   /** Controls visibility of the search box suggestions popover dropdown. */
   readonly showSuggestions = signal<boolean>(false);
 
+  /** Whether an initial `q` query parameter requests focusing the search input. */
+  readonly focusInputTrigger = signal<boolean>(false);
+
   // ===========================================================================
   // 3. ValuePicker Overlay State Signals
   // ===========================================================================
@@ -425,40 +428,11 @@ export abstract class SearchPageStore {
     this.route.queryParams
       .pipe(observeOn(asapScheduler), takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => {
-        if (!params || !this.isCurrentRouteActive()) return;
-
-        const fleetParam = (params['fleet'] || 'internal') as
-          | 'internal'
-          | 'ats';
-        if (fleetParam !== this.fleet()) {
-          this.fleet.set(fleetParam);
-        }
-
-        const fParams = getQueryParamAsArray(params['f']);
-        const gbParam = params['gb'] || '';
-        const gbKeys = gbParam.split(',').filter(Boolean);
-
-        const incomingKey = buildUrlParamKey(fParams, gbKeys, fleetParam);
-        if (incomingKey === this.lastSyncedUrlKey) {
-          return;
-        }
-        this.lastSyncedUrlKey = incomingKey;
-
-        if (fParams.length === 0 && gbKeys.length === 0) {
-          this.restoreDefaultState(false);
-          return;
-        }
-
-        const {parsedFilters, initialChips} = parseUrlChips(params);
-
-        // Immediately set synchronous initial chips from URL query parameters so UI renders without latency/flicker
-        this.activeChips.set(initialChips);
-
-        // Asynchronously enhance chips with rich backend metadata
-        this.resolveFiltersSubject.next({parsedFilters, gbKeys});
+        this.syncFromQueryParams(params);
       });
 
-    // React to top-level router navigation events (e.g. clicking the active nav menu item to return to landing page)
+    // React to top-level router navigation events (e.g. clicking the active nav menu item to return to landing page,
+    // or navigating from /search?q=<id> to /jobs?q=<id> where root ActivatedRoute.queryParams did not change)
     this.router.events
       .pipe(
         filter((e): e is NavigationEnd => e instanceof NavigationEnd),
@@ -466,12 +440,92 @@ export abstract class SearchPageStore {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe(() => {
-        if (!this.isCurrentRouteActive()) return;
+        if (!this.isCurrentRouteActive()) {
+          this.lastSyncedUrlKey = null;
+          this.focusInputTrigger.set(false);
+          return;
+        }
         if (this.isInternalUrlSync) return;
         const qp = this.route.snapshot?.queryParams;
-        if (qp?.['f'] || qp?.['gb']) return;
+        if (!this.isTjs()) {
+          const fleetParam = (qp?.['fleet'] || 'internal') as
+            | 'internal'
+            | 'ats';
+          if (fleetParam !== this.fleet()) {
+            this.fleet.set(fleetParam);
+          }
+        }
+        if (qp?.['f'] || qp?.['gb'] || qp?.['q']) {
+          this.syncFromQueryParams(qp);
+          return;
+        }
         this.restoreIfSearchActive(false);
       });
+  }
+
+  /**
+   * Synchronizes store state (fleet, active chips, or raw `q` input query) from URL query parameters.
+   *
+   * Input:
+   *   - params: Route query parameters map from `ActivatedRoute.queryParams` or `snapshot.queryParams`.
+   * Output: None.
+   * Explanation:
+   *   Called on both `route.queryParams` emissions and `NavigationEnd` transitions into this store's
+   *   active route so that SPA navigations that preserve identical query parameters (such as jumping
+   *   from `/search?q=<id>` to `/jobs?q=<id>`) still apply `q`, clear default chips, and focus the input.
+   */
+  private syncFromQueryParams(
+    params: Record<string, unknown> | null | undefined,
+  ) {
+    if (!params || !this.isCurrentRouteActive()) return;
+
+    const fleetParam = ((params['fleet'] as string) || 'internal') as
+      | 'internal'
+      | 'ats';
+    if (fleetParam !== this.fleet()) {
+      this.fleet.set(fleetParam);
+    }
+
+    const fParams = getQueryParamAsArray(
+      params['f'] as string | string[] | undefined,
+    );
+    const gbParam = (params['gb'] as string) || '';
+    const gbKeys = gbParam.split(',').filter(Boolean);
+    const qParam = ((params['q'] as string) || '').trim();
+
+    const incomingKey = qParam
+      ? `${buildUrlParamKey(fParams, gbKeys, fleetParam)}|q:${qParam}`
+      : buildUrlParamKey(fParams, gbKeys, fleetParam);
+    if (incomingKey === this.lastSyncedUrlKey) {
+      return;
+    }
+    this.lastSyncedUrlKey = incomingKey;
+
+    if (fParams.length === 0 && gbKeys.length === 0) {
+      if (qParam) {
+        this.resetSearchState(false);
+        this.searchQuery.set(qParam);
+        this.showSuggestions.set(true);
+        this.focusInputTrigger.set(true);
+      } else {
+        this.restoreDefaultState(false);
+      }
+      return;
+    }
+
+    const {parsedFilters, initialChips} = parseUrlChips(params);
+
+    // Immediately set synchronous initial chips from URL query parameters so UI renders without latency/flicker
+    this.activeChips.set(initialChips);
+
+    if (qParam) {
+      this.searchQuery.set(qParam);
+      this.showSuggestions.set(true);
+      this.focusInputTrigger.set(true);
+    }
+
+    // Asynchronously enhance chips with rich backend metadata
+    this.resolveFiltersSubject.next({parsedFilters, gbKeys});
   }
 
   // ===========================================================================
@@ -499,6 +553,7 @@ export abstract class SearchPageStore {
       'f': filters.length > 0 ? filters : null,
       'gb': groupBys.length > 0 ? groupBys.join(',') : null,
       'fleet': fleet !== 'internal' ? fleet : null,
+      'q': null,
     };
 
     this.isInternalUrlSync = true;
@@ -678,6 +733,7 @@ export abstract class SearchPageStore {
     this.searchQuery.set('');
     this.browseAll.set(false);
     this.showSuggestions.set(false);
+    this.focusInputTrigger.set(false);
     this.closeValuePicker();
   }
 
@@ -686,8 +742,11 @@ export abstract class SearchPageStore {
     this.applySearchState([], updateUrl);
   }
 
-  /** Restores local search state back to default configuration (including default chips). */
+  /** Restores local search state back to default configuration (including default chips and fleet). */
   restoreDefaultState(updateUrl = false) {
+    if (!this.isTjs() && this.fleet() !== 'internal') {
+      this.fleet.set('internal');
+    }
     this.applySearchState(this.getDefaultChips(), updateUrl);
   }
 
@@ -706,6 +765,9 @@ export abstract class SearchPageStore {
       return false;
     }
     if (this.showValuePicker() || this.showSuggestions()) {
+      return false;
+    }
+    if (!this.isTjs() && this.fleet() !== 'internal') {
       return false;
     }
 

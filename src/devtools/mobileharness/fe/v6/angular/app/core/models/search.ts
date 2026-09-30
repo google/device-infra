@@ -33,6 +33,7 @@ import {
 } from './search_tjs';
 
 // Re-export all model files under this barrel to maintain compatibility with existing code imports
+export * from './search_all_site';
 export * from './search_common';
 export * from './search_fleet';
 export * from './search_tjs';
