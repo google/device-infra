@@ -115,6 +115,24 @@ public class AndroidDesktopDeviceHelperTest {
   }
 
   @Test
+  public void getDeviceDimensions_missingLabels_doesNotDefaultToUnknown()
+      throws MobileHarnessException, InterruptedException {
+    // GIVEN
+    String jsonOutput = "{\"Dimensions\": {\"label-board\": [\"test_board\"]}}";
+    CommandResult commandResult = FakeCommandResult.of(jsonOutput, "", 0);
+    when(mockCommandExecutor.exec(any(Command.class))).thenReturn(commandResult);
+
+    // WHEN
+    Map<String, String> dimensions = androidDesktopDeviceHelper.getDeviceDimensions(DEVICE_ID);
+
+    // THEN
+    assertThat(dimensions).containsEntry("label-board", "test_board");
+    assertThat(dimensions).containsEntry("board", "test_board");
+    assertThat(dimensions).doesNotContainKey("model");
+    assertThat(dimensions).doesNotContainKey("sku");
+  }
+
+  @Test
   public void updateSchedulingDimensions_invalidJson_doesNotUpdateDimensions()
       throws MobileHarnessException, InterruptedException {
     // GIVEN
@@ -387,6 +405,8 @@ public class AndroidDesktopDeviceHelperTest {
 
     // Setup sub-test structure
     TestInfo parentTestInfo = Mockito.mock(TestInfo.class);
+    Properties parentProperties = Mockito.mock(Properties.class);
+    when(parentTestInfo.properties()).thenReturn(parentProperties);
     TestInfos subtests = Mockito.mock(TestInfos.class);
     when(parentTestInfo.subTests()).thenReturn(subtests);
 
@@ -402,6 +422,14 @@ public class AndroidDesktopDeviceHelperTest {
 
     androidDesktopDeviceHelper.propagateDimensionsToSubLeafTests(parentTestInfo, dimensions);
 
+    verify(parentProperties).add("dimension_dut_name", "my_dut");
+    verify(parentProperties).add("dimension_board", "my_board");
+    verify(parentProperties).add("dimension_model", "my_model");
+    verify(parentProperties).add("dimension_sku", "my_sku");
+    verify(parentProperties, never()).add(eq("dimension_ignored-dim"), anyString());
+    verify(parentProperties, never()).add(eq("dimension_"), anyString());
+    verify(parentProperties, never()).add(eq("dimension_hwid"), anyString());
+
     verify(subTest1Properties).add("dut_name", "my_dut");
     verify(subTest1Properties).add("board", "my_board");
     verify(subTest1Properties).add("model", "my_model");
@@ -412,17 +440,18 @@ public class AndroidDesktopDeviceHelperTest {
   }
 
   @Test
-  public void propagateDimensionsToSubLeafTests_noSubTests_doesNothing() {
+  public void propagateDimensionsToSubLeafTests_noSubTests_populatesRootTestPropertiesOnly() {
     Map<String, String> dimensions = new HashMap<>();
     dimensions.put("board", "my_board");
 
     TestInfo parentTestInfo = Mockito.mock(TestInfo.class);
+    Properties parentProperties = Mockito.mock(Properties.class);
+    when(parentTestInfo.properties()).thenReturn(parentProperties);
     when(parentTestInfo.subTests()).thenReturn(null); // No sub-tests at all
 
-    // Should not crash and do nothing
     androidDesktopDeviceHelper.propagateDimensionsToSubLeafTests(parentTestInfo, dimensions);
 
-    verify(parentTestInfo, never()).properties();
+    verify(parentProperties).add("dimension_board", "my_board");
   }
 
   @Test
@@ -434,6 +463,8 @@ public class AndroidDesktopDeviceHelperTest {
 
     // Setup sub-test structure: Parent -> Child -> Grandchild (leaf)
     TestInfo parentTestInfo = Mockito.mock(TestInfo.class);
+    Properties parentProperties = Mockito.mock(Properties.class);
+    when(parentTestInfo.properties()).thenReturn(parentProperties);
     TestInfos parentSubtests = Mockito.mock(TestInfos.class);
     when(parentTestInfo.subTests()).thenReturn(parentSubtests);
 
@@ -462,7 +493,11 @@ public class AndroidDesktopDeviceHelperTest {
 
     androidDesktopDeviceHelper.propagateDimensionsToSubLeafTests(parentTestInfo, dimensions);
 
-    // Grandchild should get properties
+    // Parent (root TestInfo) should get dimension_ prefixed properties
+    verify(parentProperties).add("dimension_dut_name", "my_dut");
+    verify(parentProperties).add("dimension_board", "my_board");
+
+    // Grandchild should get unprefixed properties
     verify(grandchildProperties).add("dut_name", "my_dut");
     verify(grandchildProperties).add("board", "my_board");
 

@@ -38,6 +38,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -154,10 +155,16 @@ public class AndroidDesktopDeviceHelper {
       }
     }
 
-    // Maps label-board and label-model to board and model dimensions.
-    dimensions.put("board", dimensions.getOrDefault("label-board", "unknown"));
-    dimensions.put("model", dimensions.getOrDefault("label-model", "unknown"));
-    dimensions.put("sku", dimensions.getOrDefault("label-sku", "unknown"));
+    // Maps label-board, label-model, and label-sku to board, model, and sku dimensions.
+    if (dimensions.containsKey("label-board")) {
+      dimensions.put("board", dimensions.get("label-board"));
+    }
+    if (dimensions.containsKey("label-model")) {
+      dimensions.put("model", dimensions.get("label-model"));
+    }
+    if (dimensions.containsKey("label-sku")) {
+      dimensions.put("sku", dimensions.get("label-sku"));
+    }
 
     return dimensions;
   }
@@ -415,7 +422,7 @@ public class AndroidDesktopDeviceHelper {
     return false;
   }
 
-  /** Propagates allowlisted dimensions to sub-tests recursively. */
+  /** Propagates allowlisted dimensions to the root test and sub-tests recursively. */
   public void propagateDimensionsToSubLeafTests(TestInfo testInfo, Map<String, String> dimensions) {
     if (dimensions == null || dimensions.isEmpty()) {
       return;
@@ -449,6 +456,8 @@ public class AndroidDesktopDeviceHelper {
       propertiesToPropagate.put("dut_name", dutName);
     }
     if (!propertiesToPropagate.isEmpty()) {
+      propertiesToPropagate.forEach(
+          (k, v) -> testInfo.properties().add(PropertyName.Test.PREFIX_DIMENSION + k, v));
       propagatePropertiesToSubLeafTests(testInfo, propertiesToPropagate);
     }
   }
