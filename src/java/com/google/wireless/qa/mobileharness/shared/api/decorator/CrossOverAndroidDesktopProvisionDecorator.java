@@ -427,7 +427,11 @@ public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator
       args.add("-use-test-ramdisk");
     }
 
-    return Command.of(args).timeout(DEFAULT_FOIL_PROVISION_TIMEOUT);
+    Command cmd = Command.of(args).timeout(DEFAULT_FOIL_PROVISION_TIMEOUT);
+    if (testInfo.locator() != null && !Strings.isNullOrEmpty(testInfo.locator().getId())) {
+      cmd = cmd.extraEnv("ATE_TASK_ID", testInfo.locator().getId());
+    }
+    return cmd;
   }
 
   @Override

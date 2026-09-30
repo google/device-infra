@@ -45,6 +45,7 @@ import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.CrosDecoratorSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
@@ -76,6 +77,7 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
   @Mock private CommandExecutor commandExecutor;
   @Mock private LocalFileUtil fileUtil;
   @Mock private TestInfo testInfo;
+  @Mock private TestLocator testLocator;
   @Mock private JobInfo jobInfo;
   @Mock private Log log;
   @Mock private Params params;
@@ -91,6 +93,8 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
   @Before
   public void setUp() throws Exception {
     when(testInfo.jobInfo()).thenReturn(jobInfo);
+    when(testInfo.locator()).thenReturn(testLocator);
+    when(testLocator.getId()).thenReturn("ate-task-12345");
     when(testInfo.log()).thenReturn(log);
     when(testInfo.properties()).thenReturn(properties);
     when(testInfo.getGenFileDir()).thenReturn("/tmp/test_gen_files");
@@ -186,6 +190,50 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
             "-log-path",
             "/tmp/test_gen_files")
         .inOrder();
+    assertThat(provisionCommand.getExtraEnvironment())
+        .containsEntry("ATE_TASK_ID", "ate-task-12345");
+  }
+
+  @Test
+  public void setUp_emptyTestLocatorId_omitsAteTaskIdEnv() throws Exception {
+    when(params.has(BUILD_ID)).thenReturn(true);
+    when(params.get(BUILD_ID)).thenReturn("12345678");
+    when(params.has(BUILD_TARGET)).thenReturn(true);
+    when(params.get(BUILD_TARGET)).thenReturn("brya-trunk_staging-userdebug");
+    when(testLocator.getId()).thenReturn("");
+    when(provisionResult.exitCode()).thenReturn(0);
+    when(provisionResult.stdout()).thenReturn("Success");
+    when(commandExecutor.exec(any(Command.class)))
+        .thenReturn(versionResult)
+        .thenReturn(provisionResult);
+
+    decorator.setUp(SetupContext.create(testInfo));
+
+    ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
+    verify(commandExecutor, times(2)).exec(commandCaptor.capture());
+    assertThat(commandCaptor.getAllValues().get(1).getExtraEnvironment())
+        .doesNotContainKey("ATE_TASK_ID");
+  }
+
+  @Test
+  public void setUp_nullTestLocator_omitsAteTaskIdEnv() throws Exception {
+    when(params.has(BUILD_ID)).thenReturn(true);
+    when(params.get(BUILD_ID)).thenReturn("12345678");
+    when(params.has(BUILD_TARGET)).thenReturn(true);
+    when(params.get(BUILD_TARGET)).thenReturn("brya-trunk_staging-userdebug");
+    when(testInfo.locator()).thenReturn(null);
+    when(provisionResult.exitCode()).thenReturn(0);
+    when(provisionResult.stdout()).thenReturn("Success");
+    when(commandExecutor.exec(any(Command.class)))
+        .thenReturn(versionResult)
+        .thenReturn(provisionResult);
+
+    decorator.setUp(SetupContext.create(testInfo));
+
+    ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
+    verify(commandExecutor, times(2)).exec(commandCaptor.capture());
+    assertThat(commandCaptor.getAllValues().get(1).getExtraEnvironment())
+        .doesNotContainKey("ATE_TASK_ID");
   }
 
   @Test
