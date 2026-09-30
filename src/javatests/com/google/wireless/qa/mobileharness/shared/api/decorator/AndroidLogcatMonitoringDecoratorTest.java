@@ -16,6 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
+import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -306,6 +307,12 @@ public class AndroidLogcatMonitoringDecoratorTest {
     assertThat(report.getDeviceEventsList()).hasSize(1);
     assertThat(report.getDeviceEvents(0).getEventName()).isEqualTo("DEVICE_EVENT");
     assertThat(report.hasCrashDialogPackage()).isFalse();
+    assertTestIssueFinding(
+        getOnlyElement(findings.getAll()),
+        AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_APP_UNDER_TEST_PROCESS_CRASHED,
+        "App under test crashed.",
+        "package_names",
+        "com.test.me");
   }
 
   @Test
@@ -641,6 +648,19 @@ public class AndroidLogcatMonitoringDecoratorTest {
         LogcatMonitoringReport.parseFrom(
             Files.readAllBytes(reportPath), ProtoExtensionRegistry.getGeneratedRegistry());
     assertThat(report.getCrashDialogPackage()).isEqualTo("com.test.infra");
+    assertThat(findings.getAll()).hasSize(2);
+    assertTestIssueFinding(
+        findings.getAll().get(0),
+        AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_ANR_CRASH,
+        "Crash event detected in system process: com.test.infra",
+        "process_name",
+        "com.test.infra");
+    assertTestIssueFinding(
+        findings.getAll().get(1),
+        AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_TEST_ISSUE_CRASH_DIALOG,
+        "Crash dialog detected during test.",
+        "crash_package",
+        "com.test.infra");
   }
 
   @Test
@@ -684,6 +704,102 @@ public class AndroidLogcatMonitoringDecoratorTest {
         LogcatMonitoringReport.parseFrom(
             Files.readAllBytes(reportPath), ProtoExtensionRegistry.getGeneratedRegistry());
     assertThat(report.getCrashDialogPackage()).isEqualTo("com.test.infra");
+    assertThat(findings.getAll()).hasSize(2);
+    assertTestIssueFinding(
+        findings.getAll().get(0),
+        AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_ANR_CRASH,
+        "Crash event detected in system process: com.test.infra",
+        "process_name",
+        "com.test.infra");
+    assertTestIssueFinding(
+        findings.getAll().get(1),
+        AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_TEST_ISSUE_CRASH_DIALOG,
+        "Crash dialog detected during test.",
+        "crash_package",
+        "com.test.infra");
+  }
+
+  @Test
+  public void run_errorCrashEvents_addsTestIssueFindings() throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addReportAsFailurePackages("com.test.app")
+            .addErrorOnCrashPackages("com.test.infra1")
+            .addErrorOnCrashPackages("com.test.infra2")
+            .addErrorOnCrashPackages("com.test.infra3")
+            .build();
+    when(jobInfo.combinedSpec(any(AndroidLogcatMonitoringDecorator.class))).thenReturn(spec);
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.infra1",
+                        1,
+                        ProcessCategory.ERROR,
+                        LogcatEvent.CrashType.ANDROID_RUNTIME),
+                    "crash_log1"),
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.infra2", 2, ProcessCategory.ERROR, LogcatEvent.CrashType.NATIVE),
+                    "crash_log2"),
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.infra3", 3, ProcessCategory.ERROR, LogcatEvent.CrashType.ANR),
+                    "crash_log3"),
+                // Should not be reported as a test issue since it is not an error.
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.app", 4, ProcessCategory.FAILURE, LogcatEvent.CrashType.ANR),
+                    "crash_log4"),
+                // Should not be reported as a test issue since it is ignored.
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.ignored",
+                        5,
+                        ProcessCategory.IGNORED,
+                        LogcatEvent.CrashType.NATIVE),
+                    "crash_log5")));
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil);
+
+    // The ANDROID_RUNTIME crash of the infra process fails the test, but the test issues should
+    // still be recorded.
+    MobileHarnessException thrown =
+        assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
+    assertThat(thrown.getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_INFRA_PROCESS_CRASHED);
+
+    assertThat(findings.getAll()).hasSize(3);
+    assertTestIssueFinding(
+        findings.getAll().get(0),
+        AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_FATAL_CRASH,
+        "Crash event detected in system process: com.test.infra1",
+        "process_name",
+        "com.test.infra1");
+    assertTestIssueFinding(
+        findings.getAll().get(1),
+        AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_NATIVE_CRASH,
+        "Crash event detected in system process: com.test.infra2",
+        "process_name",
+        "com.test.infra2");
+    assertTestIssueFinding(
+        findings.getAll().get(2),
+        AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_ANR_CRASH,
+        "Crash event detected in system process: com.test.infra3",
+        "process_name",
+        "com.test.infra3");
   }
 
   @Test
@@ -818,5 +934,21 @@ public class AndroidLogcatMonitoringDecoratorTest {
 
     Path reportPath = decoratorOutputDir.resolve("logcat_monitoring_report.proto");
     assertThat(Files.exists(reportPath)).isFalse();
+  }
+
+  private static void assertTestIssueFinding(
+      Finding finding,
+      AndroidErrorId expectedErrorId,
+      String expectedMessage,
+      String expectedMetadataKey,
+      String expectedMetadataValue) {
+    assertThat(finding.getSeverity()).isEqualTo(Severity.SEVERE);
+    assertThat(finding.getDetail().getSummary().getErrorId().getCode())
+        .isEqualTo(expectedErrorId.code());
+    assertThat(finding.getDetail().getSummary().getErrorId().getName())
+        .isEqualTo(expectedErrorId.name());
+    // MobileHarnessException appends the error ID info to the message.
+    assertThat(finding.getDetail().getSummary().getMessage()).startsWith(expectedMessage);
+    assertThat(finding.getMetadata()).containsExactly(expectedMetadataKey, expectedMetadataValue);
   }
 }
