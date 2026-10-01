@@ -96,8 +96,7 @@ java_library(
 java_library(
     name = "files",
     srcs = ["Files.java"],
-    visibility = [
-    ],
+    visibility = ["//visibility:private"],
     deps = [
         "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
