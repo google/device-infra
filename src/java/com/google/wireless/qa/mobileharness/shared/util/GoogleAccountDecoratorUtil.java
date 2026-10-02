@@ -22,11 +22,14 @@ import static com.google.wireless.qa.mobileharness.shared.api.spec.GoogleAccount
 
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Ascii;
+import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -34,7 +37,17 @@ import java.util.stream.IntStream;
 /** Common helper methods for AndroidAccountDecorator and IosGoogleAccountDecorator. */
 public final class GoogleAccountDecoratorUtil {
 
+  public static final String REDACTED_CREDENTIAL_VALUE = "[REDACTED]";
+
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  private static final Joiner COMMA_JOINER = Joiner.on(',');
+  private static final ImmutableList<PropertyName> SENSITIVE_CREDENTIAL_PROPERTIES =
+      ImmutableList.of(
+          PropertyName.Test.AndroidAccountDecorator.ANDROID_ACCOUNT_DECORATOR_LSTS_FROM_TAS,
+          PropertyName.Test.AndroidAccountDecorator.ANDROID_ACCOUNT_DECORATOR_PASSWORDS,
+          PropertyName.Test.AndroidAccountDecorator.ANDROID_ACCOUNT_DECORATOR_AUTHCODES,
+          PropertyName.Test.IosGoogleAccountDecorator.IOS_GOOGLE_ACCOUNT_DECORATOR_LSTS_FROM_TAS,
+          PropertyName.Test.IosGoogleAccountDecorator.IOS_GOOGLE_ACCOUNT_DECORATOR_PASSWORDS);
 
   /** AutoValue class for LST (Login Scope Token) and obfuscated Gaia ID. */
   @AutoValue
@@ -157,6 +170,58 @@ public final class GoogleAccountDecoratorUtil {
     return emails.stream()
         .map(email -> email.contains("@") ? email : email + "@gmail.com")
         .collect(toImmutableList());
+  }
+
+  /** Redacts sensitive account credential properties in both {@code testInfo} and its root test. */
+  public static void redactSensitiveProperties(TestInfo testInfo) {
+    redactSensitiveProperties(testInfo, /* redactRootTest= */ true);
+  }
+
+  /**
+   * Redacts sensitive account credential properties in {@code testInfo}, and optionally in its root
+   * test if {@code redactRootTest} is true.
+   */
+  public static void redactSensitiveProperties(TestInfo testInfo, boolean redactRootTest) {
+    redactSensitiveProperties(testInfo.properties(), testInfo.getRootTest().properties());
+    if (redactRootTest) {
+      TestInfo rootTest = testInfo.getRootTest();
+      if (!testInfo.isRootTest()) {
+        redactSensitiveProperties(rootTest.properties(), rootTest.properties());
+      }
+      for (TestInfo subTest : rootTest.subTests().getAll().values()) {
+        redactSensitiveProperties(subTest.properties(), subTest.properties());
+      }
+    }
+  }
+
+  private static void redactSensitiveProperties(
+      Properties targetProperties, Properties fallbackProperties) {
+    for (PropertyName propertyName : SENSITIVE_CREDENTIAL_PROPERTIES) {
+      String value = targetProperties.get(propertyName);
+      if (Strings.isNullOrEmpty(value)) {
+        value = fallbackProperties.get(propertyName);
+      }
+      if (!Strings.isNullOrEmpty(value)) {
+        int count = Math.max(1, SPLITTER.splitToList(value).size());
+        targetProperties.add(
+            propertyName, COMMA_JOINER.join(Collections.nCopies(count, REDACTED_CREDENTIAL_VALUE)));
+      }
+    }
+  }
+
+  /**
+   * Returns true if any sensitive account credential property in {@code testInfo} has been
+   * redacted.
+   */
+  public static boolean hasRedactedSensitiveProperties(TestInfo testInfo) {
+    Properties properties = testInfo.properties();
+    for (PropertyName propertyName : SENSITIVE_CREDENTIAL_PROPERTIES) {
+      String value = properties.get(propertyName);
+      if (value != null && value.contains(REDACTED_CREDENTIAL_VALUE)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private GoogleAccountDecoratorUtil() {}

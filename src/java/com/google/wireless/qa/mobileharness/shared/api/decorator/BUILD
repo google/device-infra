@@ -990,6 +990,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message/event",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:google_account_decorator_util",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -1064,6 +1065,7 @@ java_library(
     srcs = ["MoblyDecoratorAdapter.java"],
     deps = [
         ":composite_device_decorator",
+        ":decorator",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/testbed:runner_util",

@@ -27,6 +27,7 @@ import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.util.GoogleAccountDecoratorUtil;
 import java.util.Collection;
 import java.util.List;
 
@@ -71,7 +72,42 @@ public abstract class CompositeDeviceAdapterBase extends BaseDecorator {
 
   protected void runInParallel(TestInfo testInfo, Collection<SubDeviceDecoratorStack> stacks)
       throws MobileHarnessException, InterruptedException {
-    TestbedTestRunnerUtil.runParallelSubDeviceStacks(testInfo, stacks, getDecorated());
+    try {
+      TestbedTestRunnerUtil.runParallelSubDeviceStacks(
+          testInfo,
+          stacks,
+          new BaseDecorator(getDecorated(), testInfo) {
+            @Override
+            public void run(TestInfo rootTestInfo)
+                throws MobileHarnessException, InterruptedException {
+              syncRedactedSensitiveProperties(rootTestInfo, stacks, /* forceRedact= */ false);
+              getDecorated().run(rootTestInfo);
+            }
+          });
+    } finally {
+      syncRedactedSensitiveProperties(testInfo, stacks, /* forceRedact= */ true);
+    }
+  }
+
+  private static void syncRedactedSensitiveProperties(
+      TestInfo rootTestInfo, Collection<SubDeviceDecoratorStack> stacks, boolean forceRedact) {
+    boolean shouldRedact = forceRedact;
+    if (!shouldRedact) {
+      for (SubDeviceDecoratorStack stack : stacks) {
+        if (GoogleAccountDecoratorUtil.hasRedactedSensitiveProperties(stack.testInfo())) {
+          shouldRedact = true;
+          break;
+        }
+      }
+    }
+    if (shouldRedact) {
+      GoogleAccountDecoratorUtil.redactSensitiveProperties(rootTestInfo);
+      for (SubDeviceDecoratorStack stack : stacks) {
+        if (stack.testInfo().isRootTest()) {
+          GoogleAccountDecoratorUtil.redactSensitiveProperties(stack.testInfo());
+        }
+      }
+    }
   }
 
   /**

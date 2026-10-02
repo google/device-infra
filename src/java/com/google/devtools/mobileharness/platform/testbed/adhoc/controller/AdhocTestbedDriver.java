@@ -49,6 +49,7 @@ import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.driver.DriverFactory;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.util.GoogleAccountDecoratorUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -216,7 +217,23 @@ public class AdhocTestbedDriver extends BaseDriver {
           threadPool,
           /* resultMerger= */ results -> null);
     } finally {
+      syncRedactedSensitiveProperties(testInfo, /* forceRedact= */ true);
       updateRootTestResultIfNeeded(testInfo, mainDriverSkipped);
+    }
+  }
+
+  private static void syncRedactedSensitiveProperties(TestInfo rootTestInfo, boolean forceRedact) {
+    boolean shouldRedact = forceRedact;
+    if (!shouldRedact) {
+      for (TestInfo subTestInfo : rootTestInfo.subTests().getAll().values()) {
+        if (GoogleAccountDecoratorUtil.hasRedactedSensitiveProperties(subTestInfo)) {
+          shouldRedact = true;
+          break;
+        }
+      }
+    }
+    if (shouldRedact) {
+      GoogleAccountDecoratorUtil.redactSensitiveProperties(rootTestInfo);
     }
   }
 
@@ -455,6 +472,7 @@ public class AdhocTestbedDriver extends BaseDriver {
 
     @Override
     public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+      syncRedactedSensitiveProperties(testInfo, /* forceRedact= */ false);
       testInfo.log().atInfo().alsoTo(logger).log("Running main driver");
       getDecorated().run(testInfo);
     }

@@ -136,6 +136,26 @@ public class AndroidAccountDecorator extends LifecycleDecorator
   protected SetupResult setUp(SetupContext context)
       throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
+    try {
+      return doSetUp(testInfo);
+    } finally {
+      GoogleAccountDecoratorUtil.redactSensitiveProperties(
+          testInfo, shouldRedactRootTest(testInfo));
+    }
+  }
+
+  private static boolean shouldRedactRootTest(TestInfo testInfo) {
+    return testInfo.isRootTest()
+        || (!testInfo
+                .properties()
+                .getBoolean(PropertyName.Test.AdhocTestbedDriver.IS_ADHOC_TESTBED_SUB_DEVICE)
+                .orElse(false)
+            && testInfo.jobInfo().subDeviceSpecs().getSubDeviceCount() <= 1
+            && testInfo.getRootTest().subTests().getAll().size() <= 1);
+  }
+
+  private SetupResult doSetUp(TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
     Device device = getDevice();
     String deviceId = device.getDeviceId();
     spec = testInfo.jobInfo().combinedSpec(this, deviceId);
@@ -204,10 +224,11 @@ public class AndroidAccountDecorator extends LifecycleDecorator
   @Override
   protected void tearDown(TeardownContext context)
       throws MobileHarnessException, InterruptedException {
+    TestInfo testInfo = context.testInfo();
+    GoogleAccountDecoratorUtil.redactSensitiveProperties(testInfo, shouldRedactRootTest(testInfo));
     if (context.setupError().isPresent() || spec == null) {
       return;
     }
-    TestInfo testInfo = context.testInfo();
     Device device = getDevice();
     String deviceId = device.getDeviceId();
     try {
@@ -354,27 +375,15 @@ public class AndroidAccountDecorator extends LifecycleDecorator
             testInfo, ImmutableList.of(AccountCredentialType.LOGIN_SCOPED_TOKEN));
     for (String email : emails) {
       if (accountToAuthCodeFromTaS.containsKey(email)) {
-        testInfo
-            .log()
-            .atInfo()
-            .alsoTo(logger)
-            .log("account %s has authcode %s", email, accountToAuthCodeFromTaS.get(email));
+        testInfo.log().atInfo().alsoTo(logger).log("account %s has authcode from TaS", email);
         credentials.add(accountToAuthCodeFromTaS.get(email));
         credentialTypes.add(AccountCredentialType.AUTHORIZATION_CODE);
       } else if (lstSupported && accountToLstFromTaS.containsKey(email)) {
-        testInfo
-            .log()
-            .atInfo()
-            .alsoTo(logger)
-            .log("account %s has lst %s", email, accountToLstFromTaS.get(email));
+        testInfo.log().atInfo().alsoTo(logger).log("account %s has lst from TaS", email);
         credentials.add(accountToLstFromTaS.get(email));
         credentialTypes.add(AccountCredentialType.LOGIN_SCOPED_TOKEN);
       } else if (accountToPasswordFromTaS.containsKey(email)) {
-        testInfo
-            .log()
-            .atInfo()
-            .alsoTo(logger)
-            .log("account %s has password %s", email, accountToPasswordFromTaS.get(email));
+        testInfo.log().atInfo().alsoTo(logger).log("account %s has password from TaS", email);
         credentials.add(accountToPasswordFromTaS.get(email));
         credentialTypes.add(AccountCredentialType.PASSWORD);
       } else {
