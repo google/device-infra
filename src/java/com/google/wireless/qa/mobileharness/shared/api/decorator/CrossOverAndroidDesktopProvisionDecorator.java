@@ -20,8 +20,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.androiddesktop.device.CrosCipdUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -46,8 +49,15 @@ import javax.inject.Inject;
 /**
  * Decorator for CrossOver provisioning on Android Desktop devices.
  *
- * <p>Resolves DUT stable OS and firmware image targets (via dt-converter and labservice) and
- * provisions the device using foil-provision.
+ * <p>This decorator strictly handles the OS transition from ChromeOS to Android OS. It checks if
+ * the DUT is already accessible over ADB (running Android OS); if so, provisioning is skipped
+ * regardless of the Android build currently installed, and aligning the device to a specific build
+ * is deferred to downstream flashing decorators. Otherwise, it resolves DUT stable OS and firmware
+ * image targets (via dt-converter and labservice), provisions the device from ChromeOS to Android
+ * OS using foil-provision, and reconnects ADB for subsequent test drivers.
+ *
+ * <p>Note: This decorator is not supported for Maui cables, as devices using Maui cables are
+ * expected to be directly plugged in.
  */
 @DecoratorAnnotation(help = "CrossOver provisioning decorator for Android Desktop.")
 public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator {
@@ -65,8 +75,31 @@ public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator
   public static final String USE_SIGNED_IMAGE = CrosDecoratorSpec.USE_SIGNED_IMAGE;
   public static final String USE_TEST_RAMDISK = CrosDecoratorSpec.USE_TEST_RAMDISK;
   public static final String SKIP_STABLE_VERSION = CrosDecoratorSpec.SKIP_STABLE_VERSION;
+  public static final String TEST_ARG_NEEDS_PROVISION_REPAIR = "needs_provision_repair";
   public static final Duration DEFAULT_FOIL_PROVISION_TIMEOUT =
       CrosDecoratorSpec.DEFAULT_FOIL_PROVISION_TIMEOUT;
+
+  /**
+   * Test property recording the Android build ID ({@code ro.build.version.incremental}) detected on
+   * the DUT when CrossOver provisioning is skipped because the device is already ADB accessible.
+   */
+  public static final String TEST_PROPERTY_CURRENT_BUILD_ID = "crossover_current_build_id";
+
+  /**
+   * Default TCP/IP ADB port suffix for network-connected DUTs.
+   *
+   * <p>Note: This decorator is not supported for Maui cables, as devices using Maui cables are
+   * expected to be directly plugged in.
+   */
+  private static final String DEFAULT_ADB_PORT = ":5555";
+
+  /**
+   * Timeout for the pre-provision {@code adb connect} check. A DUT booted into ChromeOS may drop
+   * SYN packets on port 5555 instead of replying with RST, so a short timeout lets the check fail
+   * fast and proceed to provisioning.
+   */
+  @VisibleForTesting static final Duration ADB_CONNECT_CHECK_TIMEOUT = Duration.ofSeconds(15);
+
   private static final Duration DT_CONVERTER_TIMEOUT = Duration.ofMinutes(2);
 
   /** Data holder for resolved build ID and build target. */
@@ -101,6 +134,7 @@ public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator
 
   private final CommandExecutor commandExecutor;
   private final LocalFileUtil fileUtil;
+  private final AndroidAdbUtil androidAdbUtil;
 
   private String resolvedFoilProvisionPath = FOIL_PROVISION_CIPD_PATH;
   private String resolvedDtConverterPath = DT_CONVERTER_CIPD_PATH;
@@ -117,9 +151,7 @@ public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator
   @Inject
   CrossOverAndroidDesktopProvisionDecorator(
       Driver driver, TestInfo testInfo, CommandExecutor commandExecutor) {
-    super(driver, testInfo);
-    this.commandExecutor = commandExecutor;
-    this.fileUtil = new LocalFileUtil();
+    this(driver, testInfo, commandExecutor, new LocalFileUtil(), new AndroidAdbUtil());
   }
 
   /**
@@ -133,7 +165,7 @@ public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator
   }
 
   /**
-   * Testing constructor with injected dependencies.
+   * Testing constructor with injected command executor and local file utility.
    *
    * @param driver the decorated driver
    * @param testInfo the current test context
@@ -143,9 +175,29 @@ public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator
   @VisibleForTesting
   CrossOverAndroidDesktopProvisionDecorator(
       Driver driver, TestInfo testInfo, CommandExecutor commandExecutor, LocalFileUtil fileUtil) {
+    this(driver, testInfo, commandExecutor, fileUtil, new AndroidAdbUtil());
+  }
+
+  /**
+   * Testing constructor with all injected dependencies including {@link AndroidAdbUtil}.
+   *
+   * @param driver the decorated driver
+   * @param testInfo the current test context
+   * @param commandExecutor executor used to run shell commands
+   * @param fileUtil local file utility
+   * @param androidAdbUtil ADB utility for device connection and property checks
+   */
+  @VisibleForTesting
+  CrossOverAndroidDesktopProvisionDecorator(
+      Driver driver,
+      TestInfo testInfo,
+      CommandExecutor commandExecutor,
+      LocalFileUtil fileUtil,
+      AndroidAdbUtil androidAdbUtil) {
     super(driver, testInfo);
     this.commandExecutor = commandExecutor;
     this.fileUtil = fileUtil;
+    this.androidAdbUtil = androidAdbUtil;
   }
 
   @Override
@@ -158,6 +210,10 @@ public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator
         .atInfo()
         .alsoTo(logger)
         .log("CrossOverAndroidDesktopProvisionDecorator is running on device: %s", dutName);
+
+    if (isDeviceAdbAccessible(testInfo, dutName)) {
+      return SetupResult.continueDecorated();
+    }
 
     BuildInfo buildInfo = resolveBuildParameters(testInfo, dutName);
     String buildId = buildInfo.buildId();
@@ -181,22 +237,164 @@ public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator
         .alsoTo(logger)
         .log("Executing CrossOver provisioning command: %s", provisionCommand);
 
-    CommandResult result;
     try {
-      result = commandExecutor.exec(provisionCommand);
+      CommandResult result;
+      try {
+        result = commandExecutor.exec(provisionCommand);
+      } catch (MobileHarnessException e) {
+        throw new MobileHarnessException(
+            e.getErrorId(),
+            String.format("foil-provision failed for device %s: %s", dutName, e.getMessage()),
+            e);
+      }
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "CrossOver provisioning finished successfully for %s:\n%s", dutName, result.stdout());
+
+      connectAdbAfterProvision(testInfo, dutName);
+    } catch (MobileHarnessException | InterruptedException e) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "CrossOver provisioning or post-provision ADB connection failed for %s (%s); setting"
+                  + " %s to true",
+              dutName, e.getMessage(), TEST_ARG_NEEDS_PROVISION_REPAIR);
+      testInfo.properties().add(TEST_ARG_NEEDS_PROVISION_REPAIR, "true");
+      throw e;
+    }
+
+    return SetupResult.continueDecorated();
+  }
+
+  /**
+   * Checks whether the device is already accessible over ADB (indicating it is booted into Android
+   * OS and does not require CrossOver provisioning from ChromeOS).
+   *
+   * <p>This check only verifies the OS transition state. If the device is responsive over ADB, its
+   * current Android build ID is recorded in {@link #TEST_PROPERTY_CURRENT_BUILD_ID} and
+   * provisioning is skipped regardless of any requested {@code build_id}; aligning the build is
+   * deferred to downstream flashing decorators. If the check fails, any stale or offline ADB
+   * transport left in the host ADB server is disconnected on a best-effort basis.
+   *
+   * <p>Note: Connects to {@code dutName + ":5555"} over TCP/IP ADB with a short timeout ({@link
+   * #ADB_CONNECT_CHECK_TIMEOUT}) to fail fast when the DUT is booted into ChromeOS. This decorator
+   * is not supported for Maui cables, as devices using Maui cables are expected to be directly
+   * plugged in.
+   *
+   * @param testInfo the current test context
+   * @param dutName the DUT hostname
+   * @return {@code true} if the device is responsive over ADB, {@code false} otherwise
+   */
+  @VisibleForTesting
+  boolean isDeviceAdbAccessible(TestInfo testInfo, String dutName) throws InterruptedException {
+    String connectionTarget = dutName + DEFAULT_ADB_PORT;
+    try {
+      androidAdbUtil.connect(connectionTarget, ADB_CONNECT_CHECK_TIMEOUT);
+      String currentBuildId =
+          androidAdbUtil.getProperty(connectionTarget, AndroidProperty.INCREMENTAL_BUILD);
+      if (!Strings.isNullOrEmpty(currentBuildId)) {
+        testInfo.properties().add(TEST_PROPERTY_CURRENT_BUILD_ID, currentBuildId);
+        testInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log(
+                "Device %s is already ADB accessible (running Android build %s); skipping CrossOver"
+                    + " provisioning.",
+                dutName, currentBuildId);
+        return true;
+      }
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "ADB connected to %s but device did not return a valid Android build ID; proceeding"
+                  + " with CrossOver provisioning.",
+              connectionTarget);
+    } catch (MobileHarnessException e) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "ADB check on %s failed (%s); device is not running Android.",
+              connectionTarget, e.getMessage());
+    }
+    disconnectAdbQuietly(testInfo, connectionTarget);
+    return false;
+  }
+
+  /**
+   * Reconnects to the device over ADB after {@code foil-provision ate} completes, since {@code
+   * foil-provision} disconnects its local ADB session during teardown.
+   *
+   * <p>Any existing transport for the target is disconnected first so that {@code adb connect}
+   * re-establishes a fresh TCP session instead of reporting "already connected" for an offline or
+   * half-open entry. The session is then verified by reading {@code ro.build.version.incremental}.
+   *
+   * <p>Note: Connects to {@code dutName + ":5555"} over TCP/IP ADB. This decorator is not supported
+   * for Maui cables, as devices using Maui cables are expected to be directly plugged in.
+   */
+  private void connectAdbAfterProvision(TestInfo testInfo, String dutName)
+      throws MobileHarnessException, InterruptedException {
+    String connectionTarget = dutName + DEFAULT_ADB_PORT;
+    testInfo
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log("Connecting to device %s via ADB after CrossOver provisioning.", connectionTarget);
+    disconnectAdbQuietly(testInfo, connectionTarget);
+    String currentBuildId;
+    try {
+      androidAdbUtil.connect(connectionTarget);
+      currentBuildId =
+          androidAdbUtil.getProperty(connectionTarget, AndroidProperty.INCREMENTAL_BUILD);
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           e.getErrorId(),
-          String.format("foil-provision failed for device %s: %s", dutName, e.getMessage()),
+          String.format(
+              "Failed to connect to %s via ADB after CrossOver provisioning: %s",
+              connectionTarget, e.getMessage()),
           e);
+    }
+    if (Strings.isNullOrEmpty(currentBuildId)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_ADB_INTERNAL_UTIL_CONNECT_ERROR,
+          String.format(
+              "Failed to connect to %s via ADB after CrossOver provisioning: device did not return"
+                  + " a valid Android build ID",
+              connectionTarget));
     }
     testInfo
         .log()
         .atInfo()
         .alsoTo(logger)
-        .log("CrossOver provisioning finished successfully for %s:\n%s", dutName, result.stdout());
+        .log(
+            "Successfully connected to device %s via ADB (running Android build %s).",
+            connectionTarget, currentBuildId);
+  }
 
-    return SetupResult.continueDecorated();
+  /**
+   * Disconnects {@code connectionTarget} from the host ADB server on a best-effort basis, ignoring
+   * failures. Used to clear stale or offline transports before reconnecting.
+   */
+  private void disconnectAdbQuietly(TestInfo testInfo, String connectionTarget)
+      throws InterruptedException {
+    try {
+      androidAdbUtil.disconnect(connectionTarget);
+    } catch (MobileHarnessException e) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Ignoring ADB disconnect failure for %s: %s", connectionTarget, e.getMessage());
+    }
   }
 
   /**
