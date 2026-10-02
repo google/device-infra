@@ -172,6 +172,26 @@ func isBlobEligible(modTime time.Time, now time.Time, minBlobAge time.Duration) 
 	return now.Sub(modTime) >= minBlobAge
 }
 
+// isLinkedElsewhere reports whether a blob's inode has names outside the cache.
+//
+// Every name of an inode pins its bytes, so unlinking the cache's name for a
+// blob that a workspace also links reclaims nothing: the space comes back only
+// when the last name goes. Such names are routine, not exotic. casdownloader
+// ingests a download by linking it into the cache and serves a hit by linking
+// the blob out, so every blob of an artifact still in use has at least two.
+//
+// Evicting such a blob is pure loss. It frees no bytes, yet the next consumer
+// misses and downloads it again, and under pressure the evictor would keep
+// unlinking in-use blobs without ever reaching its target. The evictor
+// therefore leaves these blobs alone until their other names are gone.
+//
+// A blob whose link count cannot be determined is treated as unshared, which
+// is how the evictor behaved before it considered link counts.
+func isLinkedElsewhere(info os.FileInfo) bool {
+	st, ok := info.Sys().(*syscall.Stat_t)
+	return ok && st.Nlink > 1
+}
+
 // EvictionStats holds runtime metrics and history of storage eviction passes.
 type EvictionStats struct {
 	IsEvicting          bool
@@ -182,6 +202,13 @@ type EvictionStats struct {
 	TotalEvictionRuns   int64
 	TotalReclaimedBytes int64
 	TotalEvictedFiles   int64
+	// LastSkippedLinkedFiles and LastSkippedLinkedBytes count blobs the last
+	// flight would have evicted but left in place because other names still
+	// pin their bytes (see isLinkedElsewhere). Bytes held this way cannot be
+	// reclaimed by eviction at all, so a large value explains a flight that
+	// fell short of its target.
+	LastSkippedLinkedFiles int64
+	LastSkippedLinkedBytes int64
 }
 
 // Evictor manages disk space monitoring and probabilistic LRU cache eviction.
@@ -209,6 +236,9 @@ type Evictor struct {
 	totalEvictionRuns   int64
 	totalReclaimedBytes int64
 	totalEvictedFiles   int64
+
+	lastSkippedLinkedFiles int64
+	lastSkippedLinkedBytes int64
 
 	randMu sync.Mutex
 	rand   *rand.Rand
@@ -368,6 +398,11 @@ func (e *Evictor) snapshot(stats ...DiskStats) snapshotConfig {
 type evictionFlight struct {
 	e   *Evictor
 	cfg snapshotConfig
+
+	// skippedLinkedFiles and skippedLinkedBytes count the blobs evictStream
+	// selected but left in place because isLinkedElsewhere reported them.
+	skippedLinkedFiles int64
+	skippedLinkedBytes int64
 }
 
 func (e *Evictor) newFlight(cfg snapshotConfig) *evictionFlight {
@@ -443,6 +478,8 @@ func (f *evictionFlight) run(ctx context.Context) (reclaimedBytes int64, filesDe
 	e.totalEvictionRuns++
 	e.totalReclaimedBytes += reclaimedBytes
 	e.totalEvictedFiles += int64(filesDeleted)
+	e.lastSkippedLinkedFiles = f.skippedLinkedFiles
+	e.lastSkippedLinkedBytes = f.skippedLinkedBytes
 	e.statsMu.Unlock()
 
 	return reclaimedBytes, filesDeleted, err
@@ -461,6 +498,9 @@ func (e *Evictor) Stats() EvictionStats {
 		TotalEvictionRuns:   e.totalEvictionRuns,
 		TotalReclaimedBytes: e.totalReclaimedBytes,
 		TotalEvictedFiles:   e.totalEvictedFiles,
+
+		LastSkippedLinkedFiles: e.lastSkippedLinkedFiles,
+		LastSkippedLinkedBytes: e.lastSkippedLinkedBytes,
 	}
 }
 
@@ -620,6 +660,12 @@ func (f *evictionFlight) buildAgeHistogram(now time.Time) sampleStats {
 
 			// Exclude blobs currently in their grace period from the histogram
 			if !f.isEligible(info.ModTime(), now) {
+				continue
+			}
+			// Exclude blobs that eviction cannot reclaim. Counting them would
+			// size the cutoff against bytes that unlinking does not free, and
+			// so pick a cutoff too recent to reach the target.
+			if isLinkedElsewhere(info) {
 				continue
 			}
 
@@ -799,6 +845,15 @@ func (f *evictionFlight) evictStream(ctx context.Context, cutoff time.Time, targ
 				shouldEvict = true
 			}
 
+			if shouldEvict && isLinkedElsewhere(info) {
+				// This applies in emergency mode too: the large blobs that
+				// mode targets first are exactly the images an active job
+				// has linked, and unlinking them frees nothing.
+				f.skippedLinkedFiles++
+				f.skippedLinkedBytes += info.Size()
+				shouldEvict = false
+			}
+
 			if shouldEvict {
 				filePath := filepath.Join(bucketPath, entry.Name())
 				if err := os.Remove(filePath); err == nil {
@@ -818,8 +873,8 @@ func (f *evictionFlight) evictStream(ctx context.Context, cutoff time.Time, targ
 						if err == nil {
 							_, effectiveFree, _ := ComputeEffectiveSpace(stats, reservedBytes)
 							if effectiveFree >= targetFreeBytes {
-								log.InfoContextf(ctx, "Storage eviction flight complete: reclaimed %.2f GB across %d files. Target free space achieved.",
-									float64(totalReclaimed)/gib, totalDeleted)
+								log.InfoContextf(ctx, "Storage eviction flight complete: reclaimed %.2f GB across %d files. Target free space achieved. Skipped %d linked files (%.2f GB).",
+									float64(totalReclaimed)/gib, totalDeleted, f.skippedLinkedFiles, float64(f.skippedLinkedBytes)/gib)
 								return totalReclaimed, totalDeleted, nil
 							}
 						}
@@ -829,7 +884,8 @@ func (f *evictionFlight) evictStream(ctx context.Context, cutoff time.Time, targ
 		}
 	}
 
-	log.InfoContextf(ctx, "Storage eviction flight finished pass: reclaimed %.2f GB across %d files.", float64(totalReclaimed)/gib, totalDeleted)
+	log.InfoContextf(ctx, "Storage eviction flight finished pass: reclaimed %.2f GB across %d files. Skipped %d linked files (%.2f GB) whose space other names still hold.",
+		float64(totalReclaimed)/gib, totalDeleted, f.skippedLinkedFiles, float64(f.skippedLinkedBytes)/gib)
 	return totalReclaimed, totalDeleted, nil
 }
 

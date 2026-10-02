@@ -1720,3 +1720,251 @@ func TestEvictor_Snapshot_Fields(t *testing.T) {
 		t.Errorf("snap.minBlobAge = %v, want 10m", snap.minBlobAge)
 	}
 }
+
+// linkOutside gives the file at path a second name outside the cache, the way
+// casdownloader links a blob into a workspace, and returns that name.
+func linkOutside(t *testing.T, path string) string {
+	t.Helper()
+	name := filepath.Join(t.TempDir(), "linked")
+	if err := os.Link(path, name); err != nil {
+		t.Fatalf("os.Link(%q, %q) failed: %v", path, name, err)
+	}
+	return name
+}
+
+func TestEvictStream_SkipsLinkedBlobs(t *testing.T) {
+	tempDir := t.TempDir()
+	store, err := New(tempDir)
+	if err != nil {
+		t.Fatalf("New failed: %v", err)
+	}
+
+	now := time.Now()
+	mTime := now.Add(-5 * time.Hour)
+	linkedHash := fmt.Sprintf("11%02x%060x", 1, 1)
+	linkedData := []byte("linked-content-that-a-workspace-still-uses")
+	unlinkedHash := fmt.Sprintf("11%02x%060x", 2, 2)
+	unlinkedData := []byte("unlinked-content")
+	for hash, data := range map[string][]byte{linkedHash: linkedData, unlinkedHash: unlinkedData} {
+		if err := store.Write(hash, data); err != nil {
+			t.Fatalf("Write failed: %v", err)
+		}
+		_ = os.Chtimes(store.blobPath(hash), mTime, mTime)
+	}
+	outside := linkOutside(t, store.blobPath(linkedHash))
+
+	// Free space never reaches the target, so the flight walks every bucket.
+	cfg := DefaultEvictorConfig()
+	cfg.ReservedSpaceGB = 0
+	ev, err := NewEvictor(tempDir, cfg, func(string) (DiskStats, error) {
+		return DiskStats{TotalBytes: 1000, FreeBytes: 0}, nil
+	})
+	if err != nil {
+		t.Fatalf("NewEvictor failed: %v", err)
+	}
+	snap := ev.snapshot()
+	snap.reservedBytes = 0
+	cutoff := now.Add(-1 * time.Hour)
+
+	flight := ev.newFlight(snap)
+	reclaimed, deleted, err := flight.evictStream(context.Background(), cutoff, 800, false)
+	if err != nil {
+		t.Fatalf("evictStream failed: %v", err)
+	}
+	if deleted != 1 || reclaimed != int64(len(unlinkedData)) {
+		t.Errorf("evictStream() = (reclaimed %d, deleted %d), want (%d, 1)", reclaimed, deleted, len(unlinkedData))
+	}
+	if !store.Has(linkedHash) {
+		t.Errorf("linked blob %s was evicted, want it kept while linked elsewhere", linkedHash)
+	}
+	if store.Has(unlinkedHash) {
+		t.Errorf("unlinked blob %s was kept, want it evicted", unlinkedHash)
+	}
+	if flight.skippedLinkedFiles != 1 || flight.skippedLinkedBytes != int64(len(linkedData)) {
+		t.Errorf("skipped linked = (%d files, %d bytes), want (1, %d)", flight.skippedLinkedFiles, flight.skippedLinkedBytes, len(linkedData))
+	}
+
+	// Once the outside name is gone, the cache holds the last name and
+	// eviction reclaims the bytes.
+	if err := os.Remove(outside); err != nil {
+		t.Fatalf("os.Remove(%q) failed: %v", outside, err)
+	}
+	flight = ev.newFlight(snap)
+	reclaimed, deleted, err = flight.evictStream(context.Background(), cutoff, 800, false)
+	if err != nil {
+		t.Fatalf("evictStream failed: %v", err)
+	}
+	if deleted != 1 || reclaimed != int64(len(linkedData)) {
+		t.Errorf("evictStream() after unlink = (reclaimed %d, deleted %d), want (%d, 1)", reclaimed, deleted, len(linkedData))
+	}
+	if store.Has(linkedHash) {
+		t.Errorf("blob %s was kept after its outside link was removed, want it evicted", linkedHash)
+	}
+	if flight.skippedLinkedFiles != 0 || flight.skippedLinkedBytes != 0 {
+		t.Errorf("skipped linked after unlink = (%d files, %d bytes), want (0, 0)", flight.skippedLinkedFiles, flight.skippedLinkedBytes)
+	}
+}
+
+func TestEvictStream_EmergencyModeSkipsLinkedBlobs(t *testing.T) {
+	tempDir := t.TempDir()
+	store, err := New(tempDir)
+	if err != nil {
+		t.Fatalf("New failed: %v", err)
+	}
+
+	now := time.Now()
+	// A large blob newer than the cutoff, which emergency mode would
+	// otherwise evict regardless of age.
+	hash := "3300" + strings.Repeat("0", 60)
+	largeData := make([]byte, emergencyBlobSizeThreshold+1024)
+	if err := store.Write(hash, largeData); err != nil {
+		t.Fatalf("Write failed: %v", err)
+	}
+	p := store.blobPath(hash)
+	modTime := now.Add(-30 * time.Minute)
+	_ = os.Chtimes(p, modTime, modTime)
+	linkOutside(t, p)
+
+	ev, err := NewEvictor(tempDir, DefaultEvictorConfig(), func(string) (DiskStats, error) {
+		return DiskStats{TotalBytes: 1000 * 1024 * 1024, FreeBytes: 10 * 1024 * 1024}, nil
+	})
+	if err != nil {
+		t.Fatalf("NewEvictor failed: %v", err)
+	}
+
+	flight := ev.newFlight(ev.snapshot())
+	reclaimed, deleted, err := flight.evictStream(context.Background(), now.Add(-1*time.Hour), 500*1024*1024, true)
+	if err != nil {
+		t.Fatalf("evictStream failed: %v", err)
+	}
+	if deleted != 0 || reclaimed != 0 {
+		t.Errorf("emergency mode evictStream() = (reclaimed %d, deleted %d), want (0, 0)", reclaimed, deleted)
+	}
+	if !store.Has(hash) {
+		t.Errorf("linked large blob %s was evicted in emergency mode, want it kept", hash)
+	}
+	if flight.skippedLinkedFiles != 1 || flight.skippedLinkedBytes != int64(len(largeData)) {
+		t.Errorf("skipped linked = (%d files, %d bytes), want (1, %d)", flight.skippedLinkedFiles, flight.skippedLinkedBytes, len(largeData))
+	}
+}
+
+func TestBuildAgeHistogram_ExcludesLinkedBlobs(t *testing.T) {
+	tempDir := t.TempDir()
+	now := time.Now()
+
+	cfg := EvictorConfig{
+		MinFreeSpace:    "15%",
+		TargetFreeSpace: "25%",
+		SampleBuckets:   1,
+		MinBlobAge:      10 * time.Minute,
+	}
+	ev, err := NewEvictor(tempDir, cfg, nil)
+	if err != nil {
+		t.Fatalf("NewEvictor failed: %v", err)
+	}
+
+	ev.rand = rand.New(rand.NewSource(42))
+	bucketDir := ev.pickRandomBuckets(1)[0]
+	if err := os.MkdirAll(bucketDir, 0755); err != nil {
+		t.Fatalf("MkdirAll failed: %v", err)
+	}
+
+	mTime := now.Add(-2 * time.Hour)
+	unlinked := filepath.Join(bucketDir, "0000000000000000000000000000000000000000000000000000000000000001")
+	if err := os.WriteFile(unlinked, make([]byte, 1024), 0644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+	_ = os.Chtimes(unlinked, mTime, mTime)
+
+	linked := filepath.Join(bucketDir, "0000000000000000000000000000000000000000000000000000000000000002")
+	if err := os.WriteFile(linked, make([]byte, 10*1024), 0644); err != nil {
+		t.Fatalf("WriteFile failed: %v", err)
+	}
+	_ = os.Chtimes(linked, mTime, mTime)
+	linkOutside(t, linked)
+
+	// Reset RNG so buildAgeHistogram samples the exact same bucketDir.
+	ev.rand = rand.New(rand.NewSource(42))
+	stats := ev.newFlight(ev.snapshot()).buildAgeHistogram(now)
+
+	if stats.totalCount != 1 {
+		t.Errorf("stats.totalCount = %d, want 1 (linked blob excluded)", stats.totalCount)
+	}
+	if stats.totalBytes != 1024 {
+		t.Errorf("stats.totalBytes = %d, want 1024 (linked blob excluded)", stats.totalBytes)
+	}
+}
+
+func TestEvictor_EvictOnce_RecordsSkippedLinkedStats(t *testing.T) {
+	tempDir := t.TempDir()
+	now := time.Now()
+
+	cfg := EvictorConfig{
+		MinFreeSpace:    "15%",
+		TargetFreeSpace: "35%",
+		ReservedSpaceGB: 0,
+		CheckInterval:   10 * time.Second,
+		SampleBuckets:   1,
+		BatchSize:       100,
+		MinBlobAge:      1 * time.Hour,
+	}
+
+	// TotalBytes = 2000, FreeBytes = 200, so targetReclaimBytes = 700 - 200 =
+	// 500 against an occupancy of 1800.
+	ev, err := NewEvictor(tempDir, cfg, func(string) (DiskStats, error) {
+		return DiskStats{TotalBytes: 2000, FreeBytes: 200}, nil
+	})
+	if err != nil {
+		t.Fatalf("NewEvictor failed: %v", err)
+	}
+
+	ev.rand = rand.New(rand.NewSource(42))
+	bucketDir := ev.pickRandomBuckets(1)[0]
+	if err := os.MkdirAll(bucketDir, 0755); err != nil {
+		t.Fatalf("MkdirAll failed: %v", err)
+	}
+
+	writeBlob := func(name string, size int, age time.Duration) string {
+		t.Helper()
+		p := filepath.Join(bucketDir, name)
+		if err := os.WriteFile(p, make([]byte, size), 0644); err != nil {
+			t.Fatalf("WriteFile failed: %v", err)
+		}
+		mTime := now.Add(-age)
+		_ = os.Chtimes(p, mTime, mTime)
+		return p
+	}
+	// The oldest blob is linked elsewhere. The histogram excludes it, so the
+	// remaining 1800 bytes give reclaimTargetVal = 500, reached at the 10h bin.
+	// The linked blob is older than that cutoff, so only the evictStream check
+	// keeps it from being unlinked and miscounted as 600 reclaimed bytes.
+	linked := writeBlob("0000000000000000000000000000000000000000000000000000000000000001", 600, 12*time.Hour)
+	older := writeBlob("0000000000000000000000000000000000000000000000000000000000000002", 500, 10*time.Hour)
+	newer := writeBlob("0000000000000000000000000000000000000000000000000000000000000003", 1300, 5*time.Hour)
+	linkOutside(t, linked)
+
+	// Reset RNG so estimateCutoffAge samples the exact same bucketDir.
+	ev.rand = rand.New(rand.NewSource(42))
+	reclaimed, deleted, err := ev.EvictOnce(context.Background())
+	if err != nil {
+		t.Fatalf("EvictOnce failed: %v", err)
+	}
+
+	if deleted != 1 || reclaimed != 500 {
+		t.Errorf("EvictOnce() = (reclaimed %d, deleted %d), want (500, 1)", reclaimed, deleted)
+	}
+	if _, err := os.Stat(linked); err != nil {
+		t.Errorf("expected linked blob to exist, err: %v", err)
+	}
+	if _, err := os.Stat(older); !os.IsNotExist(err) {
+		t.Errorf("expected older blob to be deleted, err: %v", err)
+	}
+	if _, err := os.Stat(newer); err != nil {
+		t.Errorf("expected newer blob to exist, err: %v", err)
+	}
+
+	got := ev.Stats()
+	if got.LastSkippedLinkedFiles != 1 || got.LastSkippedLinkedBytes != 600 {
+		t.Errorf("Stats() skipped linked = (%d files, %d bytes), want (1, 600)", got.LastSkippedLinkedFiles, got.LastSkippedLinkedBytes)
+	}
+}
