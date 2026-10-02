@@ -9,6 +9,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
@@ -579,5 +580,77 @@ func TestLockFreeCache_CloseReportsAndSucceeds(t *testing.T) {
 
 	if err := c.Close(); err != nil {
 		t.Errorf("Close failed: %v", err)
+	}
+}
+
+// TestLockFreeCache_PullRefreshesStaleBlobs pins the LRU half of the cache.
+//
+// The evictor orders blobs by mtime, so a hit has to move the blob's mtime
+// forward or a blob reused by every run is evicted as if it had not been used
+// since it was first downloaded. -cache-lazy-touch-interval exists to throttle
+// that refresh, which this test also checks, because the flag was once plumbed
+// all the way into the evictor config without Pull ever consulting it.
+func TestLockFreeCache_PullRefreshesStaleBlobs(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		interval      time.Duration // 0 leaves the shared default (4h).
+		age           time.Duration
+		useHardlink   bool
+		wantRefreshed bool
+	}{
+		{name: "older_than_default_interval", age: 5 * time.Hour, useHardlink: true, wantRefreshed: true},
+		{name: "within_default_interval", age: 1 * time.Hour, useHardlink: true, wantRefreshed: false},
+		{name: "older_than_configured_interval", interval: 30 * time.Minute, age: 1 * time.Hour, useHardlink: true, wantRefreshed: true},
+		{name: "without_hardlinks", age: 5 * time.Hour, useHardlink: false, wantRefreshed: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			cacheDir := filepath.Join(dir, "cache")
+			ctx := context.Background()
+
+			cfg := storage.DefaultEvictorConfig()
+			if tc.interval > 0 {
+				cfg.LazyTouchInterval = tc.interval
+			}
+			c, err := NewLockFreeCache(cacheDir, cfg, tc.useHardlink)
+			if err != nil {
+				t.Fatalf("NewLockFreeCache failed: %v", err)
+			}
+
+			_, out := stage(t, dir, "work/file", "reused-"+tc.name, false)
+			if err := c.Push(ctx, map[digest.Digest]*client.TreeOutput{out.Digest: out}); err != nil {
+				t.Fatalf("Push failed: %v", err)
+			}
+			blob := blobPath(cacheDir, out.Digest.Hash)
+			old := time.Now().Add(-tc.age).Truncate(time.Second)
+			if err := os.Chtimes(blob, old, old); err != nil {
+				t.Fatalf("Chtimes(%s) failed: %v", blob, err)
+			}
+
+			before := time.Now()
+			dest := filepath.Join(dir, "work2", "file")
+			cached, _, err := c.Pull(ctx, []*client.TreeOutput{{Digest: out.Digest, Path: dest}})
+			if err != nil {
+				t.Fatalf("Pull failed: %v", err)
+			}
+			if len(cached) != 1 {
+				t.Fatalf("Pull = %d cached, want 1", len(cached))
+			}
+
+			info, err := os.Stat(blob)
+			if err != nil {
+				t.Fatalf("Failed to stat %s: %v", blob, err)
+			}
+			got := info.ModTime()
+			if tc.wantRefreshed {
+				// Allow for filesystems that store coarser timestamps than
+				// time.Now reports.
+				if got.Before(before.Add(-time.Second)) {
+					t.Errorf("Cached blob mtime = %v after a hit, want at or after %v: the hit was not credited", got, before)
+				}
+			} else if !got.Equal(old) {
+				t.Errorf("Cached blob mtime = %v after a hit, want it left at %v: a hit within the interval must not write the inode", got, old)
+			}
+		})
 	}
 }

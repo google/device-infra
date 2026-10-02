@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	log "github.com/golang/glog"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
@@ -55,6 +56,11 @@ type LockFreeCache struct {
 	// WithoutHardlinks, which always copies, and that is what lets
 	// applyFileMode fix a mode in place instead of re-materializing the file.
 	sharesInodes bool
+	// touchInterval is how stale a blob's mtime must be before a hit
+	// refreshes it. It is the evictor's LazyTouchInterval after the evictor
+	// has applied its default, read once because casdownloader never changes
+	// its configuration mid-run.
+	touchInterval time.Duration
 }
 
 // NewLockFreeCache creates a LockFreeCache rooted under cacheDir.
@@ -84,8 +90,12 @@ func NewLockFreeCache(cacheDir string, cfg storage.EvictorConfig, useHardlink bo
 	if err := store.ConfigureEvictor(cfg); err != nil {
 		return nil, fmt.Errorf("failed to configure evictor for %s: %w", root, err)
 	}
+	active, err := store.EvictorConfig()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read evictor config for %s: %w", root, err)
+	}
 
-	return &LockFreeCache{store: store, sharesInodes: useHardlink}, nil
+	return &LockFreeCache{store: store, sharesInodes: useHardlink, touchInterval: active.LazyTouchInterval}, nil
 }
 
 // EnsureHeadroom evicts, if needed, so that an upcoming write of requiredBytes
@@ -119,6 +129,19 @@ func (c *LockFreeCache) Pull(ctx context.Context, all []*client.TreeOutput) (cac
 			missed = append(missed, item)
 			continue
 		}
+		// Give the blob credit for this use, as LocalCache does by touching
+		// its LRU index. This cache has no index: the evictor orders blobs by
+		// mtime, and without this a blob ages from the moment it was first
+		// downloaded however often it is reused, so eviction removes the
+		// oldest ingest rather than the least recently used. The interval
+		// keeps a hot blob from costing an inode write on every hit.
+		//
+		// Where the destination is a hard link, it shares the blob's inode
+		// and so its mtime moves too. That mtime was never meaningful: a
+		// linked destination already carries whatever mtime the blob had,
+		// which is when some earlier run happened to ingest it.
+		c.store.TouchIfOlderThan(item.Digest.Hash, c.touchInterval)
+
 		// Record the item before adjusting its mode, not after. The file
 		// exists on disk as of HardlinkTo above, so from here on it is
 		// something the cleanup path has to remove; applyFileMode only
