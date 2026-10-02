@@ -123,8 +123,7 @@ public class AndroidPhoneTest {
     }
   }
 
-  @TestParameter({"DEFAULT", "STAGE", "REBOOT", "TESTHARNESS"})
-  private AndroidPhoneSpecTestCase specTestCase;
+  @TestParameter private AndroidPhoneSpecTestCase specTestCase;
 
   private AndroidPhoneSpec spec;
 
