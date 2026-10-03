@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/fakes"
 	repb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"github.com/google/device-infra/src/devtools/rbe/casdownloader/cache"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
@@ -842,3 +844,205 @@ func TestDoDownload_CacheWriteFailureStillFailsOnContextCancellation(t *testing.
 		t.Errorf("artifact.bin was left behind after a cancelled download (stat err %v)", err)
 	}
 }
+
+func nlinkOf(t *testing.T, path string) uint64 {
+	t.Helper()
+	info, err := os.Lstat(path)
+	if err != nil {
+		t.Fatalf("Lstat(%q) failed: %v", path, err)
+	}
+	return uint64(info.Sys().(*syscall.Stat_t).Nlink)
+}
+
+func TestDoDownload_CopyFilters_ProtectsCacheFromInPlaceMutation(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		lockFree bool
+	}{
+		{name: "LocalCache", lockFree: false},
+		{name: "LockFreeCache", lockFree: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			fakeServer, err := fakes.NewServer(t)
+			if err != nil {
+				t.Fatalf("Failed to create fake RBE server: %v", err)
+			}
+			defer fakeServer.Stop()
+
+			vbmetaData := bytes.Repeat([]byte("VBM0"), 1024)       // 4 KiB
+			vbmetaSysData := bytes.Repeat([]byte("VBMS"), 1024)    // 4 KiB
+			systemImgData := bytes.Repeat([]byte("SYSIMG00"), 512) // 4 KiB
+
+			dVbmeta := fakeServer.CAS.Put(vbmetaData)
+			dVbmetaSys := fakeServer.CAS.Put(vbmetaSysData)
+			dSystemImg := fakeServer.CAS.Put(systemImgData)
+
+			imagesDir := &repb.Directory{
+				Files: []*repb.FileNode{
+					{Name: "vbmeta_system.img", Digest: &repb.Digest{Hash: dVbmetaSys.Hash, SizeBytes: dVbmetaSys.Size}},
+				},
+			}
+			imagesBytes, err := proto.Marshal(imagesDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			dImagesDir := fakeServer.CAS.Put(imagesBytes)
+
+			rootDir := &repb.Directory{
+				Files: []*repb.FileNode{
+					{Name: "system.img", Digest: &repb.Digest{Hash: dSystemImg.Hash, SizeBytes: dSystemImg.Size}},
+					{Name: "vbmeta.img", Digest: &repb.Digest{Hash: dVbmeta.Hash, SizeBytes: dVbmeta.Size}},
+				},
+				Directories: []*repb.DirectoryNode{
+					{Name: "IMAGES", Digest: &repb.Digest{Hash: dImagesDir.Hash, SizeBytes: dImagesDir.Size}},
+				},
+			}
+			rootBytes, err := proto.Marshal(rootDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			dRootDir := fakeServer.CAS.Put(rootBytes)
+			rootDigestStr := fmt.Sprintf("%s/%d", dRootDir.Hash, dRootDir.Size)
+
+			testClient, err := fakeServer.NewTestClient(ctx)
+			if err != nil {
+				t.Fatalf("Failed to create test client: %v", err)
+			}
+			defer testClient.Close()
+
+			cacheDir := t.TempDir()
+			openCache := func() cache.Cache {
+				c, note := cache.OpenOrDegrade(ctx, cache.Options{
+					LockFree:    tc.lockFree,
+					Dir:         cacheDir,
+					UseHardlink: true,
+				}, "test")
+				if note != "" || c == nil {
+					t.Fatalf("OpenOrDegrade failed: %s", note)
+				}
+				return c
+			}
+
+			copyFilters := []string{
+				`^vbmeta.*\.img$`,
+				`^IMAGES/vbmeta.*\.img$`,
+			}
+
+			// 1. Cold cache download (Push): vbmeta*.img must be private copies (nlink == 1),
+			// while system.img remains hard-linked to the local cache (nlink == 2).
+			dir1 := t.TempDir()
+			job1 := DownloadJob{
+				Client:      testClient,
+				Digest:      rootDigestStr,
+				Dir:         dir1,
+				Cache:       openCache(),
+				CopyFilters: copyFilters,
+			}
+			if err := job1.DoDownload(ctx); err != nil {
+				t.Fatalf("Cold DoDownload failed: %v", err)
+			}
+
+			vbmeta1 := filepath.Join(dir1, "vbmeta.img")
+			vbmetaSys1 := filepath.Join(dir1, "IMAGES", "vbmeta_system.img")
+			system1 := filepath.Join(dir1, "system.img")
+
+			if got := nlinkOf(t, vbmeta1); got != 1 {
+				t.Errorf("cold vbmeta.img nlink = %d, want 1 (private copy)", got)
+			}
+			if got := nlinkOf(t, vbmetaSys1); got != 1 {
+				t.Errorf("cold IMAGES/vbmeta_system.img nlink = %d, want 1 (private copy)", got)
+			}
+			if got := nlinkOf(t, system1); got < 2 {
+				t.Errorf("cold system.img nlink = %d, want >= 2 (hard-linked to cache)", got)
+			}
+
+			// Simulate Cuttlefish EnforceVbMetaSize mutating vbmeta*.img in place via ftruncate(65536).
+			for _, p := range []string{vbmeta1, vbmetaSys1} {
+				if err := os.Truncate(p, 65536); err != nil {
+					t.Fatalf("Truncate(%q) failed: %v", p, err)
+				}
+			}
+
+			// 2. Warm cache download (Pull): must hit the cache for all 3 files, deliver
+			// uncorrupted 4 KiB vbmeta*.img blobs, and again materialize private copies.
+			dir2 := t.TempDir()
+			job2 := DownloadJob{
+				Client:      testClient,
+				Digest:      rootDigestStr,
+				Dir:         dir2,
+				Cache:       openCache(),
+				CopyFilters: copyFilters,
+			}
+			if err := job2.DoDownload(ctx); err != nil {
+				t.Fatalf("Warm DoDownload failed: %v", err)
+			}
+			if job2.Stats().CountHot != 3 {
+				t.Errorf("Warm CountHot = %d, want 3", job2.Stats().CountHot)
+			}
+
+			vbmeta2 := filepath.Join(dir2, "vbmeta.img")
+			vbmetaSys2 := filepath.Join(dir2, "IMAGES", "vbmeta_system.img")
+			system2 := filepath.Join(dir2, "system.img")
+
+			if got, err := os.ReadFile(vbmeta2); err != nil || !bytes.Equal(got, vbmetaData) {
+				t.Errorf("warm vbmeta.img len=%d err=%v, want original %d-byte blob untouched by prior ftruncate", len(got), err, len(vbmetaData))
+			}
+			if got, err := os.ReadFile(vbmetaSys2); err != nil || !bytes.Equal(got, vbmetaSysData) {
+				t.Errorf("warm IMAGES/vbmeta_system.img len=%d err=%v, want original %d-byte blob untouched by prior ftruncate", len(got), err, len(vbmetaSysData))
+			}
+			if got := nlinkOf(t, vbmeta2); got != 1 {
+				t.Errorf("warm vbmeta.img nlink = %d, want 1 (private copy)", got)
+			}
+			if got := nlinkOf(t, vbmetaSys2); got != 1 {
+				t.Errorf("warm IMAGES/vbmeta_system.img nlink = %d, want 1 (private copy)", got)
+			}
+			if got := nlinkOf(t, system2); got < 2 {
+				t.Errorf("warm system.img nlink = %d, want >= 2 (hard-linked to cache)", got)
+			}
+		})
+	}
+}
+
+func TestDoDownload_CopyFilters_BreaksIntraTreeDuplicateHardlinks(t *testing.T) {
+	destDir := t.TempDir()
+	job, sharedData := newDuplicateDigestsJob(t, destDir)
+	job.CopyFilters = []string{`^first\.txt$`}
+
+	if err := job.DoDownload(context.Background()); err != nil {
+		t.Fatalf("DoDownload failed: %v", err)
+	}
+
+	firstPath := filepath.Join(destDir, "first.txt")
+	secondPath := filepath.Join(destDir, "second.txt")
+
+	if got := nlinkOf(t, firstPath); got != 1 {
+		t.Errorf("first.txt nlink = %d, want 1", got)
+	}
+	if err := os.Truncate(firstPath, 65536); err != nil {
+		t.Fatalf("Truncate(first.txt) failed: %v", err)
+	}
+
+	gotSecond, err := os.ReadFile(secondPath)
+	if err != nil {
+		t.Fatalf("ReadFile(second.txt) failed: %v", err)
+	}
+	if !bytes.Equal(gotSecond, sharedData) {
+		t.Errorf("second.txt was mutated when first.txt was truncated in place: got len=%d, want %d", len(gotSecond), len(sharedData))
+	}
+}
+
+func TestDoDownload_CopyFilters_InvalidRegexFailsFastWithoutRemoteFailed(t *testing.T) {
+	destDir := t.TempDir()
+	job, _ := newDuplicateDigestsJob(t, destDir)
+	job.CopyFilters = []string{"[invalid-regex"}
+
+	err := job.DoDownload(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "copy-filters") {
+		t.Fatalf("DoDownload err = %v, want copy-filters compilation error", err)
+	}
+	if job.RemoteFailed() {
+		t.Error("RemoteFailed() = true on invalid -copy-filters regex, want false")
+	}
+}
+

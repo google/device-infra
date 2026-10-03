@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	log "github.com/golang/glog"
@@ -40,8 +41,12 @@ type DownloadJob struct {
 	DumpJSON string
 	Cache    cache.Cache
 	// Filters applied to files to download
-	IncludeFilters  []string
-	ExcludeFilters  []string
+	IncludeFilters []string
+	ExcludeFilters []string
+	// CopyFilters lists regular expressions matching relative paths that must
+	// end up with a private inode rather than a hard link to the local cache
+	// or to another path in the tree.
+	CopyFilters     []string
 	DownloadStats   *Stats
 	KeepChunks      bool
 	ChunksOnly      bool
@@ -425,23 +430,35 @@ func dumpStats(path string, stats *Stats) error {
 	return nil
 }
 
-func (d *DownloadJob) filterFiles(fullSet map[string]*client.TreeOutput) (map[string]*client.TreeOutput, error) {
-	var includePatterns []*regexp.Regexp
-	var excludePatterns []*regexp.Regexp
-
-	for _, filter := range d.IncludeFilters {
+func compileFilters(filters []string) ([]*regexp.Regexp, error) {
+	patterns := make([]*regexp.Regexp, 0, len(filters))
+	for _, filter := range filters {
 		p, err := regexp.Compile(filter)
 		if err != nil {
 			return nil, fmt.Errorf("fail to compile filter %s: %w", filter, err)
 		}
-		includePatterns = append(includePatterns, p)
+		patterns = append(patterns, p)
 	}
-	for _, filter := range d.ExcludeFilters {
-		p, err := regexp.Compile(filter)
-		if err != nil {
-			return nil, fmt.Errorf("fail to compile filter %s: %w", filter, err)
+	return patterns, nil
+}
+
+func matchesAny(path string, patterns []*regexp.Regexp) bool {
+	for _, p := range patterns {
+		if p.MatchString(path) {
+			return true
 		}
-		excludePatterns = append(excludePatterns, p)
+	}
+	return false
+}
+
+func (d *DownloadJob) filterFiles(fullSet map[string]*client.TreeOutput) (map[string]*client.TreeOutput, error) {
+	includePatterns, err := compileFilters(d.IncludeFilters)
+	if err != nil {
+		return nil, err
+	}
+	excludePatterns, err := compileFilters(d.ExcludeFilters)
+	if err != nil {
+		return nil, err
 	}
 
 	matchedSet := make(map[string]*client.TreeOutput)
@@ -454,29 +471,130 @@ func (d *DownloadJob) filterFiles(fullSet map[string]*client.TreeOutput) (map[st
 
 		// If no includeFilters is specified, the element is considered as MATCHED by default,
 		// and will check excludeFilters only.
-		matched := len(includePatterns) == 0
-		for _, ip := range includePatterns {
-			if ip.MatchString(relativePath) {
-				matched = true
-				break
-			}
-		}
+		matched := len(includePatterns) == 0 || matchesAny(relativePath, includePatterns)
 		if !matched {
 			continue
 		}
-		for _, ep := range excludePatterns {
-			if ep.MatchString(relativePath) {
-				matched = false
-				break
-			}
+		if matchesAny(relativePath, excludePatterns) {
+			continue
 		}
-		if matched {
-			matchedSet[path] = output
-		}
+		matchedSet[path] = output
 	}
 	log.Infof("applied include/exclude-filters on %d files, will partially download %d files",
 		len(fullSet), len(matchedSet))
 	return matchedSet, nil
+}
+
+// isSharedInode reports whether info's inode has more than one hard link (or if
+// the link count cannot be determined).
+func isSharedInode(info os.FileInfo) bool {
+	st, ok := info.Sys().(*syscall.Stat_t)
+	return !ok || st.Nlink > 1
+}
+
+// replaceWithPrivateCopy swaps path for an independent copy of itself carrying
+// perm, leaving any other links to the original inode untouched.
+func replaceWithPrivateCopy(path string, perm os.FileMode) error {
+	src, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	dir, base := filepath.Dir(path), filepath.Base(path)
+	tmp, err := os.CreateTemp(dir, "."+base+".copy.*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer func() {
+		tmp.Close()
+		os.Remove(tmpName)
+	}()
+
+	if err := tmp.Chmod(perm); err != nil {
+		return err
+	}
+	if _, err := io.Copy(tmp, src); err != nil {
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
+}
+
+func ensurePrivateCopy(path string) (bool, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return false, fmt.Errorf("failed to stat %s for copy-filters: %w", path, err)
+	}
+	if !isSharedInode(info) {
+		return false, nil
+	}
+	if err := replaceWithPrivateCopy(path, info.Mode().Perm()); err != nil {
+		return false, fmt.Errorf("failed to materialize private copy of %s: %w", path, err)
+	}
+	return true, nil
+}
+
+// materializeCopyFilteredFiles ensures that every regular file under d.Dir whose
+// relative path matches copyPatterns has its own private inode.
+//
+// By default, casdownloader shares inodes via hard links in three places:
+//   - LocalCache.Pull / LockFreeCache.Pull hard-link cached blobs into d.Dir;
+//   - LocalCache.Push / LockFreeCache.Push hard-link downloaded files from d.Dir
+//     into the cache;
+//   - copyFiles and chunker.RestoreFile (for single-chunk files) hard-link
+//     intra-tree duplicate blobs.
+//
+// Sharing inodes is only sound when the caller treats downloaded files as
+// read-only. Some callers (e.g., Cuttlefish assemble_cvd calling ftruncate(2) on
+// vbmeta*.img) mutate specific member files in place. Re-materializing matched
+// files that still share an inode (st_nlink > 1) after caching and chunk
+// restoration gives the caller an independent copy to mutate while leaving the
+// cached blob and any other paths in the tree intact.
+func (d *DownloadJob) materializeCopyFilteredFiles(copyPatterns []*regexp.Regexp) error {
+	chunksDir := filepath.Join(d.Dir, chunkerutil.ChunksDirName)
+	matchedCount, copiedCount := 0, 0
+	err := filepath.WalkDir(d.Dir, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() {
+			if path == chunksDir {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !entry.Type().IsRegular() {
+			return nil
+		}
+		relPath, err := filepath.Rel(d.Dir, path)
+		if err != nil {
+			return fmt.Errorf("failed to get relative path of %s: %w", path, err)
+		}
+		if relPath == chunkerutil.ChunksIndexFileName {
+			return nil
+		}
+		if !matchesAny(relPath, copyPatterns) {
+			return nil
+		}
+		matchedCount++
+		copied, err := ensurePrivateCopy(path)
+		if err != nil {
+			return err
+		}
+		if copied {
+			copiedCount++
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	log.Infof("applied copy-filters: matched %d files, materialized %d private copies", matchedCount, copiedCount)
+	return nil
 }
 
 // convertTreeOutputListToMap converts a list of client.TreeOutput instances to a map from the
@@ -803,6 +921,11 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		return fmt.Errorf("failed to parse root digest %s: %v", rootDigest, err)
 	}
 
+	copyPatterns, err := compileFilters(d.CopyFilters)
+	if err != nil {
+		return fmt.Errorf("failed to compile copy-filters: %w", err)
+	}
+
 	rootDir := &repb.Directory{}
 	if _, err := c.ReadProto(ctx, rootDigest, rootDir); err != nil {
 		d.remoteFailed = true
@@ -891,6 +1014,12 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		chunkRestoreTime := time.Since(start)
 		log.InfoContextf(ctx, "finished restoring chunked files, took %s", chunkRestoreTime)
 		d.DownloadStats.ChunkRestoreTimeMS = chunkRestoreTime.Milliseconds()
+	}
+
+	if len(copyPatterns) > 0 {
+		if err := d.materializeCopyFilteredFiles(copyPatterns); err != nil {
+			return err
+		}
 	}
 
 	return nil

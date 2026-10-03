@@ -137,6 +137,7 @@ var (
 
 	excludeFilters common.MultiStringFlag
 	includeFilters common.MultiStringFlag
+	copyFilters    common.MultiStringFlag
 )
 
 func fileInfo(path string) (os.FileInfo, error) {
@@ -355,6 +356,7 @@ func main() {
 func runMain() int {
 	flag.Var(&excludeFilters, "exclude-filters", "Regular expression of paths to be excluded from uploading.")
 	flag.Var(&includeFilters, "include-filters", "Regular expression of paths to be excluded from uploading.")
+	flag.Var(&copyFilters, "copy-filters", "Regular expression of paths to always materialize as private copies rather than hardlinks.")
 
 	flag.Set("silent_init", "true")
 	flag.Set("logtostderr", "true")
@@ -513,6 +515,7 @@ func run(ctx context.Context) error {
 		CASProxyStatus:  proxyStatus,
 		IncludeFilters:  includeFilters,
 		ExcludeFilters:  excludeFilters,
+		CopyFilters:     copyFilters,
 		KeepChunks:      *keepChunks,
 		ChunksOnly:      *chunksOnly,
 		MinDownloadMbps: *minDownloadMbps,
