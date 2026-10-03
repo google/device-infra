@@ -137,6 +137,7 @@ var (
 
 	excludeFilters common.MultiStringFlag
 	includeFilters common.MultiStringFlag
+	copyFilters    common.MultiStringFlag
 )
 
 func fileInfo(path string) (os.FileInfo, error) {
@@ -202,6 +203,10 @@ func checkFlags() error {
 	if *chunksOnly == true && *keepChunks == false {
 		log.Warningf("-chunks-only implies -keep-chunks.")
 		*keepChunks = true
+	}
+	if *chunksOnly && len(copyFilters) > 0 {
+		log.Warningf("-copy-filters is ignored with -chunks-only, which restores no files.")
+		copyFilters = nil
 	}
 	if !*disableCache {
 		warnAboutIgnoredCacheFlags(explicitFlags(), *enableLockFreeCache)
@@ -355,6 +360,7 @@ func main() {
 func runMain() int {
 	flag.Var(&excludeFilters, "exclude-filters", "Regular expression of paths to be excluded from uploading.")
 	flag.Var(&includeFilters, "include-filters", "Regular expression of paths to be excluded from uploading.")
+	flag.Var(&copyFilters, "copy-filters", "Regular expression of paths, relative to -dir, that must be materialized as private copies instead of hardlinks to the local cache or to other files, so they can safely be modified in place. Repeatable.")
 
 	flag.Set("silent_init", "true")
 	flag.Set("logtostderr", "true")
@@ -513,6 +519,7 @@ func run(ctx context.Context) error {
 		CASProxyStatus:  proxyStatus,
 		IncludeFilters:  includeFilters,
 		ExcludeFilters:  excludeFilters,
+		CopyFilters:     copyFilters,
 		KeepChunks:      *keepChunks,
 		ChunksOnly:      *chunksOnly,
 		MinDownloadMbps: *minDownloadMbps,
