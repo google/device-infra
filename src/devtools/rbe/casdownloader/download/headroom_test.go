@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
@@ -194,3 +195,82 @@ func TestAddNote_Accumulates(t *testing.T) {
 func TestAddNote_ToleratesMissingStats(t *testing.T) {
 	(&DownloadJob{}).addNote(NoteCacheWriteFailed, "nowhere to record this")
 }
+
+func TestMaterializeCopyFilteredFiles_ReplacesOnlySharedMatchedFiles(t *testing.T) {
+	cacheSimDir := t.TempDir()
+	destDir := t.TempDir()
+
+	// 1. Shared file matching copy-filters: must be replaced with a private inode, preserving mode.
+	cachedBlob := filepath.Join(cacheSimDir, "vbmeta_blob")
+	if err := os.WriteFile(cachedBlob, []byte("vbmeta-4k"), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(cachedBlob, 0o750); err != nil {
+		t.Fatal(err)
+	}
+	sharedMatched := filepath.Join(destDir, "vbmeta.img")
+	if err := os.Link(cachedBlob, sharedMatched); err != nil {
+		t.Fatal(err)
+	}
+
+	// 2. Already-private file matching copy-filters: must keep its existing inode without re-copying.
+	privateMatched := filepath.Join(destDir, "vbmeta_system.img")
+	if err := os.WriteFile(privateMatched, []byte("vbmeta-sys"), 0o640); err != nil {
+		t.Fatal(err)
+	}
+	beforeInfo, err := os.Lstat(privateMatched)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beforeIno := beforeInfo.Sys().(*syscall.Stat_t).Ino
+
+	// 3. Shared file NOT matching copy-filters: must remain hard-linked.
+	cachedSysBlob := filepath.Join(cacheSimDir, "sys_blob")
+	if err := os.WriteFile(cachedSysBlob, []byte("system-img"), 0o640); err != nil {
+		t.Fatal(err)
+	}
+	sharedUnmatched := filepath.Join(destDir, "system.img")
+	if err := os.Link(cachedSysBlob, sharedUnmatched); err != nil {
+		t.Fatal(err)
+	}
+
+	patterns, err := compileFilters([]string{`^vbmeta.*\.img$`})
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := &DownloadJob{Dir: destDir}
+	if err := job.materializeCopyFilteredFiles(patterns); err != nil {
+		t.Fatalf("materializeCopyFilteredFiles failed: %v", err)
+	}
+
+	// Verify sharedMatched now has nlink == 1 and mode 0750, and cachedBlob is unshared.
+	sharedInfo, err := os.Lstat(sharedMatched)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := sharedInfo.Sys().(*syscall.Stat_t).Nlink; got != 1 {
+		t.Errorf("sharedMatched nlink = %d, want 1", got)
+	}
+	if got := sharedInfo.Mode().Perm(); got != 0o750 {
+		t.Errorf("sharedMatched perm = %#o, want 0750", got)
+	}
+
+	// Verify privateMatched kept the exact same inode.
+	afterInfo, err := os.Lstat(privateMatched)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotIno := afterInfo.Sys().(*syscall.Stat_t).Ino; gotIno != beforeIno {
+		t.Errorf("privateMatched inode changed from %d to %d; already-private files should not be copied again", beforeIno, gotIno)
+	}
+
+	// Verify sharedUnmatched remained hard-linked (nlink == 2).
+	unmatchedInfo, err := os.Lstat(sharedUnmatched)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := unmatchedInfo.Sys().(*syscall.Stat_t).Nlink; got != 2 {
+		t.Errorf("sharedUnmatched nlink = %d, want 2", got)
+	}
+}
+
