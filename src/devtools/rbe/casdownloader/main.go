@@ -115,7 +115,6 @@ var (
 	invocationID = flag.String("invocation-id", "", "comma-separated list of key-value pairs, like 'bid=<build-id>,branch=<branch>,flavor=<flavor>'.")
 
 	// Flags for chunked version of artifacts.
-	keepChunks = flag.Bool("keep-chunks", false, "Keep chunk files and the index file around for chunked version of artifacts.")
 	chunksOnly = flag.Bool("chunks-only", false, "Only download chunk files and the index file (skip file restoration) for chunked version of artifacts.")
 
 	// Flags for concurrency (affects peak memory), specify 0 for default.
@@ -198,10 +197,6 @@ func checkFlags() error {
 			log.Warningf("Hardlink will not be used as cache dir %s and download dir %s are not in the same filesystem.", *cacheDir, *dir)
 			*useHardlink = false
 		}
-	}
-	if *chunksOnly == true && *keepChunks == false {
-		log.Warningf("-chunks-only implies -keep-chunks.")
-		*keepChunks = true
 	}
 	if !*disableCache {
 		warnAboutIgnoredCacheFlags(explicitFlags(), *enableLockFreeCache)
@@ -513,7 +508,6 @@ func run(ctx context.Context) error {
 		CASProxyStatus:  proxyStatus,
 		IncludeFilters:  includeFilters,
 		ExcludeFilters:  excludeFilters,
-		KeepChunks:      *keepChunks,
 		ChunksOnly:      *chunksOnly,
 		MinDownloadMbps: *minDownloadMbps,
 		DownloadTimeout: *downloadTimeout,

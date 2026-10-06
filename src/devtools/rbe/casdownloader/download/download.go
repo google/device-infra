@@ -43,7 +43,6 @@ type DownloadJob struct {
 	IncludeFilters  []string
 	ExcludeFilters  []string
 	DownloadStats   *Stats
-	KeepChunks      bool
 	ChunksOnly      bool
 	MinDownloadMbps int64
 	DownloadTimeout time.Duration
@@ -885,7 +884,7 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		d.DownloadStats.ChunkRestoreTimeMS = 0
 	} else {
 		start = time.Now()
-		if err := chunkerutil.RestoreFiles(d.Dir, d.Dir, d.KeepChunks); err != nil {
+		if err := chunkerutil.RestoreFiles(d.Dir, d.Dir, false /* keepChunks */); err != nil {
 			return err
 		}
 		chunkRestoreTime := time.Since(start)
