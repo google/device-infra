@@ -15,20 +15,12 @@
 
 load("@rules_java//java:defs.bzl", "java_library")
 
-package(
-    default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
-)
+package(default_applicable_licenses = ["//:license"])
 
 java_library(
     name = "remote_session_device_cache",
     srcs = ["RemoteSessionDeviceCache.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/api/mode/ats:__subpackages__",
-    ],
+    visibility = ["//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:__pkg__"],
     deps = [
         "//src/devtools/mobileharness/infra/client/api/proto:resource_federation_java_proto",
         "//src/devtools/mobileharness/infra/lab/proto:prepare_test_service_java_proto",
