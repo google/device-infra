@@ -77,8 +77,6 @@ java_library(
     name = "xts_device_cache",
     srcs = ["XtsDeviceCache.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
     ],
     deps = [
@@ -130,7 +128,6 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],
     deps = [
         ":device_cache_manager",
