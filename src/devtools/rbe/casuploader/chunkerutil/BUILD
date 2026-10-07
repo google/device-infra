@@ -36,4 +36,5 @@ go_test(
     name = "chunkerutil_test",
     srcs = ["chunkerutil_test.go"],
     embed = [":chunkerutil"],
+    deps = ["//src/devtools/rbe/casuploader/chunker"],
 )

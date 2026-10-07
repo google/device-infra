@@ -87,6 +87,14 @@ func logFileSnippets(filepath string, content []byte) {
 	log.Infof("File content snippet (last %d bytes):\n%s", snippetSize, string(content[len(content)-snippetSize:]))
 }
 
+// chtimes and chmod are indirections over os.Chtimes and os.Chmod so that
+// tests can make them fail, which they never do on a file the restore has
+// just created.
+var (
+	chtimes = os.Chtimes
+	chmod   = os.Chmod
+)
+
 // RestoreFiles restores files to dstDir with chunks index file and chunks file in srcDir.
 func RestoreFiles(srcDir string, dstDir string, keepChunks bool) error {
 	indexPath, err := FindChunksIndex(srcDir)
@@ -112,12 +120,29 @@ func RestoreFiles(srcDir string, dstDir string, keepChunks bool) error {
 	chunksDir := filepath.Join(srcDir, ChunksDirName)
 	for _, chunksIndex := range chunksIndexEntries {
 		dstPath := filepath.Join(dstDir, chunksIndex.Path)
-		if err := chunker.RestoreFile(dstPath, chunksDir, chunksIndex.Chunks); err != nil {
+		if chunksIndex.ModTime.IsZero() { // for backward compatibility
+			// Nothing is applied to the restored file afterwards, so it may
+			// share an inode with its chunk.
+			if err := chunker.RestoreFile(dstPath, chunksDir, chunksIndex.Chunks); err != nil {
+				return err
+			}
+			continue
+		}
+		// The mode and times below must land on a private inode. A hard link
+		// to the chunk would share it with the chunk, which casdownloader
+		// links into its shared cache, so the chmod and chtimes would rewrite
+		// the cached blob's mode for every user and backdate its mtime so the
+		// evictor drops it early.
+		if err := chunker.RestoreFileCopy(dstPath, chunksDir, chunksIndex.Chunks); err != nil {
 			return err
 		}
-		if !chunksIndex.ModTime.IsZero() { // for backward compatibility
-			os.Chtimes(dstPath, chunksIndex.ModTime, chunksIndex.ModTime)
-			os.Chmod(dstPath, chunksIndex.Mode)
+		// Set the times while the file is still writable: once a read-only
+		// mode is applied, utimensat can fail on some filesystems, e.g. NFS.
+		if err := chtimes(dstPath, chunksIndex.ModTime, chunksIndex.ModTime); err != nil {
+			return fmt.Errorf("failed to set times of restored file %s: %w", dstPath, err)
+		}
+		if err := chmod(dstPath, chunksIndex.Mode); err != nil {
+			return fmt.Errorf("failed to set mode of restored file %s: %w", dstPath, err)
 		}
 	}
 
