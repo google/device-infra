@@ -368,6 +368,12 @@ public interface PropertyName {
     /** Whether the test-level ResultDB work unit has been finalized. */
     RESULTDB_TEST_WORK_UNIT_FINALIZED,
 
+    /** Whether the test-level ResultDB artifacts have been uploaded. */
+    RESULTDB_TEST_ARTIFACTS_UPLOADED,
+
+    /** Whether the test-level ResultDB test results have been uploaded. */
+    RESULTDB_TEST_RESULTS_UPLOADED,
+
     /** Whether the test is started because a forgoing container-mode test fails. */
     RETRY_AFTER_CONTAINER_FAILS,
 
