@@ -2591,7 +2591,16 @@ public abstract class AndroidRealDeviceDelegate {
   boolean isAndroidDesktopDevice(String serial)
       throws MobileHarnessException, InterruptedException {
     return Ascii.equalsIgnoreCase(
-        "android-desktop", androidAdbUtil.getProperty(serial, AndroidProperty.PRODUCT_BOARD));
+            "android-desktop", androidAdbUtil.getProperty(serial, AndroidProperty.PRODUCT_BOARD))
+        || Ascii.equalsIgnoreCase(
+            "android-desktop", androidAdbUtil.getProperty(serial, AndroidProperty.HARDWARE))
+        || Splitter.on(',')
+            .trimResults()
+            .omitEmptyStrings()
+            .splitToList(
+                Ascii.toLowerCase(
+                    androidAdbUtil.getProperty(serial, AndroidProperty.CHARACTERISTICS)))
+            .contains("desktop");
   }
 
   @VisibleForTesting
