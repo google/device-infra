@@ -46,6 +46,7 @@ go_library(
 go_test(
     name = "download_test",
     srcs = [
+        "copy_filters_test.go",
         "download_test.go",
         "notes_test.go",
         "remote_failed_test.go",

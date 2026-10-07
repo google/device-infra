@@ -11,8 +11,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	log "github.com/golang/glog"
@@ -40,8 +42,12 @@ type DownloadJob struct {
 	DumpJSON string
 	Cache    cache.Cache
 	// Filters applied to files to download
-	IncludeFilters  []string
-	ExcludeFilters  []string
+	IncludeFilters []string
+	ExcludeFilters []string
+	// CopyFilters are regular expressions on paths relative to Dir. Downloaded
+	// files that match are left as private copies rather than hardlinks, so
+	// callers can modify them in place without corrupting the cache.
+	CopyFilters     []string
 	DownloadStats   *Stats
 	ChunksOnly      bool
 	MinDownloadMbps int64
@@ -478,6 +484,114 @@ func (d *DownloadJob) filterFiles(fullSet map[string]*client.TreeOutput) (map[st
 	return matchedSet, nil
 }
 
+func compileCopyFilters(filters []string) ([]*regexp.Regexp, error) {
+	var patterns []*regexp.Regexp
+	for _, f := range filters {
+		p, err := regexp.Compile(f)
+		if err != nil {
+			return nil, fmt.Errorf("invalid -copy-filters pattern %q: %w", f, err)
+		}
+		patterns = append(patterns, p)
+	}
+	return patterns, nil
+}
+
+// copyFilterCandidates returns the files -copy-filters applies to: for a
+// chunked artifact (one whose tree carries a chunks index), the files
+// chunkerutil.RestoreFiles will restore from it; otherwise, the files of the
+// tree. Call it before RestoreFiles, which deletes the chunks index.
+func (d *DownloadJob) copyFilterCandidates(patterns []*regexp.Regexp, outputs []*client.TreeOutput) ([]string, error) {
+	if len(patterns) == 0 {
+		return nil, nil
+	}
+	// Decided from this download's tree rather than from Dir, which may hold
+	// a chunks index left behind by an earlier -chunks-only run.
+	primaryIndex := filepath.Join(d.Dir, chunkerutil.ChunksDirName, chunkerutil.ChunksIndexFileName)
+	legacyIndex := filepath.Join(d.Dir, chunkerutil.ChunksIndexFileName)
+	chunked := slices.ContainsFunc(outputs, func(o *client.TreeOutput) bool {
+		return o.Path == primaryIndex || o.Path == legacyIndex
+	})
+	var paths []string
+	if !chunked {
+		for _, o := range outputs {
+			paths = append(paths, o.Path)
+		}
+		return paths, nil
+	}
+	indexPath, err := chunkerutil.FindChunksIndex(d.Dir)
+	if err != nil {
+		return nil, err
+	}
+	content, err := os.ReadFile(indexPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read chunks index: %w", err)
+	}
+	var entries []chunkerutil.ChunksIndex
+	if err := json.Unmarshal(content, &entries); err != nil {
+		return nil, fmt.Errorf("failed to parse chunks index: %w", err)
+	}
+	for _, e := range entries {
+		if filepath.IsLocal(e.Path) { // Never touch files outside d.Dir.
+			paths = append(paths, filepath.Join(d.Dir, e.Path))
+		}
+	}
+	return paths, nil
+}
+
+// applyCopyFilters replaces each hardlinked file in paths whose path relative
+// to d.Dir matches patterns with a private copy, so modifying it in place
+// cannot alter the cache or other files.
+func (d *DownloadJob) applyCopyFilters(ctx context.Context, patterns []*regexp.Regexp, paths []string) error {
+	for _, path := range paths {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(d.Dir, path)
+		if err != nil || !slices.ContainsFunc(patterns, func(p *regexp.Regexp) bool { return p.MatchString(filepath.ToSlash(rel)) }) {
+			continue
+		}
+		info, err := os.Lstat(path)
+		if os.IsNotExist(err) || (err == nil && !info.Mode().IsRegular()) {
+			continue // e.g. _chunks files removed after restoration.
+		}
+		if err != nil {
+			return err
+		}
+		if info.Sys().(*syscall.Stat_t).Nlink <= 1 {
+			continue
+		}
+		if err := replaceWithCopy(path, info.Mode()); err != nil {
+			return fmt.Errorf("failed to replace hardlink %s with a copy: %w", path, err)
+		}
+	}
+	return nil
+}
+
+// replaceWithCopy atomically replaces path with a copy of itself on a new inode.
+func replaceWithCopy(path string, mode os.FileMode) error {
+	src, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW, 0)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+	tmp, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".copy.*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name()) // No-op after a successful rename.
+	defer tmp.Close()
+	if _, err := io.Copy(tmp, src); err != nil {
+		return err
+	}
+	if err := tmp.Chmod(mode); err != nil {
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), path)
+}
+
 // convertTreeOutputListToMap converts a list of client.TreeOutput instances to a map from the
 // digest to the client.TreeOutput instance. Meanwhile, it will also returns a list of instances
 // whose digest is duplicate with a instance already in the map.
@@ -796,6 +910,11 @@ func (d *DownloadJob) DoDownload(ctx context.Context) error {
 func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 	c := d.Client
 
+	copyPatterns, err := compileCopyFilters(d.CopyFilters)
+	if err != nil {
+		return err
+	}
+
 	start := time.Now()
 	rootDigest, err := digest.NewFromString(d.Digest)
 	if err != nil {
@@ -883,6 +1002,11 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		log.InfoContextf(ctx, "Skipping restoring chunked files since chunks-only is true.")
 		d.DownloadStats.ChunkRestoreTimeMS = 0
 	} else {
+		// Read before RestoreFiles, which deletes the chunks index.
+		copyCandidates, err := d.copyFilterCandidates(copyPatterns, outputs)
+		if err != nil {
+			return err
+		}
 		start = time.Now()
 		if err := chunkerutil.RestoreFiles(d.Dir, d.Dir, false /* keepChunks */); err != nil {
 			return err
@@ -890,6 +1014,10 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		chunkRestoreTime := time.Since(start)
 		log.InfoContextf(ctx, "finished restoring chunked files, took %s", chunkRestoreTime)
 		d.DownloadStats.ChunkRestoreTimeMS = chunkRestoreTime.Milliseconds()
+
+		if err := d.applyCopyFilters(ctx, copyPatterns, copyCandidates); err != nil {
+			return err
+		}
 	}
 
 	return nil
