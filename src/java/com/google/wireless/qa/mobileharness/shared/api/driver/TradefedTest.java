@@ -220,7 +220,7 @@ public class TradefedTest extends BaseDriver
     String xtsType = Strings.emptyToNull(spec.getXtsType());
     tradefedRunStrategy =
         spec.getXtsType().isEmpty()
-            ? new NonXtsRunStrategy(localFileUtil, systemUtil)
+            ? new NonXtsRunStrategy(localFileUtil, systemUtil, xtsTradefedRuntimeInfoFileUtil)
             : new XtsRunStrategy(
                 localFileUtil,
                 resUtil,
@@ -260,7 +260,7 @@ public class TradefedTest extends BaseDriver
           .log(
               "Finished running %s test. TF run command exit code: %s",
               spec.getXtsType(), tfExitCode);
-      setTestResult(testInfo, tfExitCode.orElse(null));
+      tradefedRunStrategy.setTestResult(testInfo, tfExitCode);
       addTestResultPropertiesToJob(workDir, xtsType, testInfo);
     } finally {
       handleDeviceErrorForProvisioning(testInfo);
@@ -342,32 +342,6 @@ public class TradefedTest extends BaseDriver
         }
       }
     }
-  }
-
-  private void setTestResult(TestInfo testInfo, @Nullable Integer tfExitCode) {
-    if (tfExitCode == null) {
-      testInfo
-          .resultWithCause()
-          .setNonPassing(
-              TestResult.ERROR,
-              MobileHarnessExceptionFactory.createUserFacingException(
-                  AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR,
-                  "Tradefed command didn't start",
-                  /* cause= */ null));
-      return;
-    }
-    if (tfExitCode != 0) {
-      testInfo
-          .resultWithCause()
-          .setNonPassing(
-              TestResult.ERROR,
-              MobileHarnessExceptionFactory.createUserFacingException(
-                  AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR,
-                  "Non-zero Tradefed command exit code: " + tfExitCode,
-                  /* cause= */ null));
-      return;
-    }
-    testInfo.resultWithCause().setPass();
   }
 
   private void postTest(Path workDir, TestInfo testInfo) {

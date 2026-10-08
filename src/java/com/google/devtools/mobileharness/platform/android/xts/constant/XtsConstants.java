@@ -49,6 +49,12 @@ public class XtsConstants {
   public static final String TRADEFED_JOBS_PASSED = "tradefed_jobs_passed";
   public static final String TRADEFED_JOBS_HAS_RESULT_FILE = "tradefed_jobs_has_result_file";
 
+  /**
+   * A MH test property key of the (first line of the) Tradefed invocation error message, set by
+   * non-xTS {@code TradefedTest} runs when the Tradefed invocation failed. Empty if none.
+   */
+  public static final String TRADEFED_INVOCATION_ERROR = "tradefed_invocation_error";
+
   /** Test message constants used for the monitoring of Tradefed test module results. */
   public static final String MODULE_RESULTS_TEST_MESSAGE_NAMESPACE = "mh:ats:test_module_results";
 
