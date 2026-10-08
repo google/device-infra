@@ -94,6 +94,9 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
   private static final String ORCHESTRATOR_CONNECTION_FAILURE_MESSAGE =
       "Cannot connect to androidx.test.orchestrator.OrchestratorService";
 
+  private static final String FINDING_METADATA_KEY_PROCESS_NAME = "process_name";
+  private static final String FINDING_METADATA_KEY_CRASH_PACKAGE = "crash_package";
+
   private final Adb adb;
   private final LogcatLineProxy logcatLineProxy;
   private final LocalFileUtil localFileUtil;
@@ -190,6 +193,7 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
       process.killAndThenKillForcibly(Duration.ofSeconds(5));
     }
     writeMonitoringReport(testInfo);
+    addCrashFindings(testInfo);
     writeUnparsedLogcatLines(testInfo);
     extractDropboxEntries(testInfo);
     if (spec != null) {
@@ -263,6 +267,43 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
     }
     crashDialogPackage.ifPresent(reportBuilder::setCrashDialogPackage);
     return reportBuilder.build();
+  }
+
+  private void addCrashFindings(TestInfo testInfo) {
+    for (LogcatEvent event : logcatLineProxy.getLogcatEventsFromProcessors()) {
+      if (event instanceof CrashEvent crashEvent
+          && crashEvent.process().category().equals(ProcessCategory.ERROR)) {
+        addErrorCrashEventFinding(testInfo, crashEvent);
+      }
+    }
+    crashDialogDetector
+        .crashDialogPackageName()
+        .ifPresent(packageName -> addCrashDialogFinding(testInfo, packageName));
+  }
+
+  private static void addErrorCrashEventFinding(TestInfo testInfo, CrashEvent crashEvent) {
+    AndroidErrorId errorId =
+        switch (crashEvent.process().type()) {
+          case ANDROID_RUNTIME -> AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_FATAL_CRASH;
+          case NATIVE -> AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_NATIVE_CRASH;
+          case ANR -> AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_ANR_CRASH;
+          case UNKNOWN -> AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_UNKNOWN_CRASH;
+        };
+    String processName = crashEvent.process().name();
+    testInfo
+        .findings()
+        .add(Severity.SEVERE, errorId, "Crash event detected in system process: " + processName)
+        .addMetadata(FINDING_METADATA_KEY_PROCESS_NAME, processName);
+  }
+
+  private static void addCrashDialogFinding(TestInfo testInfo, String packageName) {
+    testInfo
+        .findings()
+        .add(
+            Severity.SEVERE,
+            AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_TEST_ISSUE_CRASH_DIALOG,
+            "Crash dialog detected during test.")
+        .addMetadata(FINDING_METADATA_KEY_CRASH_PACKAGE, packageName);
   }
 
   private void extractDropboxEntries(TestInfo testInfo)
