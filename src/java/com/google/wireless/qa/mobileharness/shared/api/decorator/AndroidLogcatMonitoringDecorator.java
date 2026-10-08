@@ -48,12 +48,15 @@ import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.DeviceEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.ProcessCategory;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.TestEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatLineProxy;
 import com.google.devtools.mobileharness.platform.android.logcat.MonitoringConfig;
 import com.google.devtools.mobileharness.platform.android.logcat.NativeCrashDetector;
+import com.google.devtools.mobileharness.platform.android.logcat.TestEventDetector;
 import com.google.devtools.mobileharness.platform.android.logcat.proto.LogcatMonitoringReport;
 import com.google.devtools.mobileharness.platform.android.logcat.proto.LogcatMonitoringReport.Category;
 import com.google.devtools.mobileharness.platform.android.logcat.proto.LogcatMonitoringReport.CrashType;
+import com.google.devtools.mobileharness.platform.android.logcat.proto.LogcatMonitoringReport.TestEventType;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -166,11 +169,13 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
         new NativeCrashDetector(
             testInfo, getDevice(), monitoringConfig, crashDialogDetector, executorService);
     var deviceEventDetector = new DeviceEventDetector(makeDeviceEventDetectorConfig(spec));
+    var testEventDetector = new TestEventDetector(monitoringConfig);
 
     logcatLineProxy.addLineProcessor(artProcessor);
     logcatLineProxy.addLineProcessor(anrProcessor);
     logcatLineProxy.addLineProcessor(nativeCrashProcessor);
     logcatLineProxy.addLineProcessor(deviceEventDetector);
+    logcatLineProxy.addLineProcessor(testEventDetector);
 
     String timeOnDevice = adb.runShell(deviceId, DATE_COMMAND);
     deviceTimeOnStart = LocalDateTime.parse(timeOnDevice, DATE_TIME_FORMATTER);
@@ -192,23 +197,33 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
     if (process != null) {
       process.killAndThenKillForcibly(Duration.ofSeconds(5));
     }
-    writeMonitoringReport(testInfo);
-    addCrashFindings(testInfo);
+    ImmutableList<LogcatEvent> logcatEvents = getLogcatEvents();
+    writeMonitoringReport(testInfo, logcatEvents);
+    addCrashFindings(testInfo, logcatEvents);
     writeUnparsedLogcatLines(testInfo);
-    extractDropboxEntries(testInfo);
+    extractDropboxEntries(testInfo, logcatEvents);
     if (spec != null) {
       checkForCrashDialog(testInfo, spec.getThrowExceptionOnCrashDialogDetection());
     }
     if (executorService != null) {
       executorService.shutdown();
     }
-    checkForOrchestratorConnectionErrors();
-    checkForInfraError();
-    checkForTestFailureEvents(testInfo);
+    checkForOrchestratorConnectionErrors(logcatEvents);
+    checkForInfraError(logcatEvents);
+    checkForTestFailureEvents(testInfo, logcatEvents);
+    addTestEventFindings(testInfo, logcatEvents);
   }
 
-  private void writeMonitoringReport(TestInfo testInfo) throws MobileHarnessException {
+  private ImmutableList<LogcatEvent> getLogcatEvents() {
     ImmutableList<LogcatEvent> logcatEvents = logcatLineProxy.getLogcatEventsFromProcessors();
+    return ImmutableList.<LogcatEvent>builder()
+        .addAll(logcatEvents)
+        .addAll(getTestEventsFromCrashes(logcatEvents))
+        .build();
+  }
+
+  private void writeMonitoringReport(TestInfo testInfo, ImmutableList<LogcatEvent> logcatEvents)
+      throws MobileHarnessException {
     var allEvents =
         ImmutableList.<LogcatEvent>builder().addAll(initialWifiChecks).addAll(logcatEvents).build();
     if (allEvents.isEmpty()) {
@@ -218,6 +233,15 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
     testInfo.log().atInfo().alsoTo(logger).log("\n#### Logcat Monitoring Report ####\n%s", report);
     Path reportPath = getDecoratorOutputsDir(testInfo).resolve(LOGCAT_MONITORING_REPORT_PROTO);
     localFileUtil.writeToFile(reportPath.toString(), report.toByteArray());
+  }
+
+  private static ImmutableList<TestEvent> getTestEventsFromCrashes(
+      ImmutableList<LogcatEvent> logcatEvents) {
+    return logcatEvents.stream()
+        .filter(event -> event instanceof CrashEvent)
+        .map(event -> TestEventDetector.processCrashEvent((CrashEvent) event))
+        .flatMap(Optional::stream)
+        .collect(toImmutableList());
   }
 
   private void writeUnparsedLogcatLines(TestInfo testInfo) throws MobileHarnessException {
@@ -263,14 +287,31 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
                 .setTag(deviceEvent.tag())
                 .setLogLines(deviceEvent.logLines());
         reportBuilder.addDeviceEvents(deviceEventBuilder.build());
+      } else if (event instanceof TestEvent testEvent) {
+        var testEventType =
+            switch (testEvent.type()) {
+              case STARTUP_TIME_DEFAULT -> TestEventType.STARTUP_TIME_DEFAULT;
+              case STARTUP_TIME_FULLY_DRAWN -> TestEventType.STARTUP_TIME_FULLY_DRAWN;
+              case LICENSING_PROTECTION_TERMINATION ->
+                  TestEventType.LICENSING_PROTECTION_TERMINATION;
+              case ANTI_TAMPERING_TERMINATION -> TestEventType.ANTI_TAMPERING_TERMINATION;
+              case UNITY_EXCEPTION -> TestEventType.UNITY_EXCEPTION;
+            };
+        var testEventBuilder =
+            LogcatMonitoringReport.TestEvent.newBuilder()
+                .setType(testEventType)
+                .setPid(testEvent.pid())
+                .setTag(testEvent.tag())
+                .setLogLines(testEvent.logLines());
+        reportBuilder.addTestEvents(testEventBuilder.build());
       }
     }
     crashDialogPackage.ifPresent(reportBuilder::setCrashDialogPackage);
     return reportBuilder.build();
   }
 
-  private void addCrashFindings(TestInfo testInfo) {
-    for (LogcatEvent event : logcatLineProxy.getLogcatEventsFromProcessors()) {
+  private void addCrashFindings(TestInfo testInfo, ImmutableList<LogcatEvent> logcatEvents) {
+    for (LogcatEvent event : logcatEvents) {
       if (event instanceof CrashEvent crashEvent
           && crashEvent.process().category().equals(ProcessCategory.ERROR)) {
         addErrorCrashEventFinding(testInfo, crashEvent);
@@ -306,9 +347,8 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
         .addMetadata(FINDING_METADATA_KEY_CRASH_PACKAGE, packageName);
   }
 
-  private void extractDropboxEntries(TestInfo testInfo)
+  private void extractDropboxEntries(TestInfo testInfo, ImmutableList<LogcatEvent> logcatEvents)
       throws InterruptedException, MobileHarnessException {
-    ImmutableList<LogcatEvent> logcatEvents = logcatLineProxy.getLogcatEventsFromProcessors();
     if (logcatEvents.isEmpty()) {
       return;
     }
@@ -364,8 +404,8 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
     }
   }
 
-  private void checkForInfraError() throws MobileHarnessException {
-    ImmutableList<LogcatEvent> logcatEvents = logcatLineProxy.getLogcatEventsFromProcessors();
+  private void checkForInfraError(ImmutableList<LogcatEvent> logcatEvents)
+      throws MobileHarnessException {
     if (logcatEvents.isEmpty()) {
       return;
     }
@@ -381,8 +421,8 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
     }
   }
 
-  private void checkForOrchestratorConnectionErrors() throws MobileHarnessException {
-    ImmutableList<LogcatEvent> logcatEvents = logcatLineProxy.getLogcatEventsFromProcessors();
+  private void checkForOrchestratorConnectionErrors(ImmutableList<LogcatEvent> logcatEvents)
+      throws MobileHarnessException {
     if (logcatEvents.isEmpty()) {
       return;
     }
@@ -402,8 +442,8 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
     }
   }
 
-  private void checkForTestFailureEvents(TestInfo testInfo) {
-    ImmutableList<LogcatEvent> logcatEvents = logcatLineProxy.getLogcatEventsFromProcessors();
+  private void checkForTestFailureEvents(
+      TestInfo testInfo, ImmutableList<LogcatEvent> logcatEvents) {
     if (logcatEvents.isEmpty()) {
       return;
     }
@@ -437,6 +477,41 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
               AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_APP_UNDER_TEST_PROCESS_CRASHED,
               "App under test crashed.")
           .addMetadata("package_names", Joiner.on(",").join(appsUnderTestThatCrashed));
+    }
+  }
+
+  private void addTestEventFindings(TestInfo testInfo, ImmutableList<LogcatEvent> logcatEvents) {
+    if (logcatEvents.isEmpty()) {
+      return;
+    }
+    for (var event : logcatEvents) {
+      if (event instanceof TestEvent testEvent) {
+        switch (testEvent.type()) {
+          case LICENSING_PROTECTION_TERMINATION ->
+              testInfo
+                  .findings()
+                  .add(
+                      Severity.SEVERE,
+                      AndroidErrorId
+                          .ANDROID_LOGCAT_MONITORING_DECORATOR_LICENSING_PROTECTION_TERMINATION,
+                      "Licensing protection termination detected.");
+          case ANTI_TAMPERING_TERMINATION ->
+              testInfo
+                  .findings()
+                  .add(
+                      Severity.SEVERE,
+                      AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_ANTI_TAMPERING_TERMINATION,
+                      "Anti-tampering termination detected.");
+          case UNITY_EXCEPTION ->
+              testInfo
+                  .findings()
+                  .add(
+                      Severity.SEVERE,
+                      AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_UNITY_EXCEPTION,
+                      "Unity exception detected.");
+          default -> {}
+        }
+      }
     }
   }
 

@@ -18,18 +18,25 @@ package com.google.devtools.mobileharness.platform.android.logcat;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.ProcessCategory;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.TestEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.TestEventType;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatParser.LogcatLine;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * A {@link LineProcessor} that detects {@link TestEvent}s in logcat such as app startup times,
- * process starts, Unity exceptions, and licensing/anti-tampering terminations.
+ * Unity exceptions, and licensing/anti-tampering terminations.
+ *
+ * <p>The {@link TestEventDetector#getEvents()} method returns the first 10 detected events total.
+ *
+ * <p>TODO: Extract all the log lines for each event.
  */
 public class TestEventDetector implements LineProcessor {
 
@@ -47,12 +54,12 @@ public class TestEventDetector implements LineProcessor {
 
   private static final Pattern START_TIME_DEFAULT_PATTERN =
       Pattern.compile(
-          "Displayed (\\S+)/(\\S+): \\+(?<defaultTime>[\\dms]*\\d+ms)( \\(total \\+"
+          "Displayed (?<package>\\S+)/(\\S+): \\+(?<defaultTime>[\\dms]*\\d+ms)( \\(total \\+"
               + "(?<totalTime>[\\dms]*\\d+ms)\\))?");
 
   private static final Pattern START_TIME_FULLY_DRAWN_PATTERN =
       Pattern.compile(
-          "Fully drawn (\\S+)/(\\S+): \\+(?<defaultTime>[\\dms]*\\d+ms)( \\(total \\+"
+          "Fully drawn (?<package>\\S+)/(\\S+): \\+(?<defaultTime>[\\dms]*\\d+ms)( \\(total \\+"
               + "(?<totalTime>[\\dms]*\\d+ms)\\))?");
 
   private static final Pattern START_PROC_PATTERN =
@@ -61,11 +68,17 @@ public class TestEventDetector implements LineProcessor {
   private static final Pattern UNITY_EXCEPTION_PATTERN =
       Pattern.compile("(?<exception>\\w+Exception): (?<message>.*)");
 
+  private final MonitoringConfig monitoringConfig;
   private final List<TestEvent> detectedEvents = new ArrayList<>();
+  private final Set<Integer> monitoredPids = new HashSet<>();
 
   private LogcatLine licenseActivityLine = null;
+  private boolean defaultStartupTimeRecorded = false;
+  private boolean fullyDrawnStartupTimeRecorded = false;
 
-  public TestEventDetector() {}
+  public TestEventDetector(MonitoringConfig monitoringConfig) {
+    this.monitoringConfig = monitoringConfig;
+  }
 
   @Override
   public void process(LogcatLine line) {
@@ -79,7 +92,10 @@ public class TestEventDetector implements LineProcessor {
    * Processes a {@link CrashEvent} and returns a {@link TestEvent} if the crash corresponds to an
    * anti-tampering termination.
    */
-  public Optional<TestEvent> processCrashEvent(CrashEvent crashEvent) {
+  public static Optional<TestEvent> processCrashEvent(CrashEvent crashEvent) {
+    if (!crashEvent.process().category().equals(ProcessCategory.FAILURE)) {
+      return Optional.empty();
+    }
     return switch (crashEvent.process().type()) {
       case ANDROID_RUNTIME ->
           crashEvent.crashLogs().contains(VMRUNNER_EXCEPTION_SIGNATURE)
@@ -108,7 +124,9 @@ public class TestEventDetector implements LineProcessor {
     if (line.message().contains(LICENSE_ACTIVITY_SIGNATURE)) {
       licenseActivityLine = line;
     }
-    if (licenseActivityLine != null && line.message().contains(BIND_DEKU_SERVICE_SIGNATURE)) {
+    if (licenseActivityLine != null
+        && line.message().contains(BIND_DEKU_SERVICE_SIGNATURE)
+        && monitoredPids.contains(line.pid())) {
       String logLines =
           licenseActivityLine.equals(line)
               ? line.message()
@@ -121,16 +139,36 @@ public class TestEventDetector implements LineProcessor {
   }
 
   private void processStartupTime(LogcatLine line) {
-    if (START_TIME_DEFAULT_PATTERN.matcher(line.message()).matches()) {
-      detectedEvents.add(
-          new TestEvent(
-              TestEventType.STARTUP_TIME_DEFAULT, line.pid(), line.tag(), line.message()));
+    if ((defaultStartupTimeRecorded && fullyDrawnStartupTimeRecorded)
+        || !line.tag().equals(ACTIVITY_MANAGER_TAG)) {
       return;
     }
-    if (START_TIME_FULLY_DRAWN_PATTERN.matcher(line.message()).matches()) {
-      detectedEvents.add(
-          new TestEvent(
-              TestEventType.STARTUP_TIME_FULLY_DRAWN, line.pid(), line.tag(), line.message()));
+    if (!defaultStartupTimeRecorded) {
+      Matcher defaultMatcher = START_TIME_DEFAULT_PATTERN.matcher(line.message());
+      if (defaultMatcher.matches()) {
+        if (monitoringConfig
+            .categorizeProcess(defaultMatcher.group("package"))
+            .equals(ProcessCategory.FAILURE)) {
+          detectedEvents.add(
+              new TestEvent(
+                  TestEventType.STARTUP_TIME_DEFAULT, line.pid(), line.tag(), line.message()));
+          defaultStartupTimeRecorded = true;
+        }
+        return;
+      }
+    }
+    if (!fullyDrawnStartupTimeRecorded) {
+      Matcher fullyDrawnMatcher = START_TIME_FULLY_DRAWN_PATTERN.matcher(line.message());
+      if (fullyDrawnMatcher.matches()) {
+        if (monitoringConfig
+            .categorizeProcess(fullyDrawnMatcher.group("package"))
+            .equals(ProcessCategory.FAILURE)) {
+          detectedEvents.add(
+              new TestEvent(
+                  TestEventType.STARTUP_TIME_FULLY_DRAWN, line.pid(), line.tag(), line.message()));
+          fullyDrawnStartupTimeRecorded = true;
+        }
+      }
     }
   }
 
@@ -139,15 +177,16 @@ public class TestEventDetector implements LineProcessor {
       return;
     }
     Matcher matcher = START_PROC_PATTERN.matcher(line.message());
-    if (matcher.matches()) {
-      int targetPid = Integer.parseInt(matcher.group("pid"));
-      detectedEvents.add(
-          new TestEvent(TestEventType.START_PROC, targetPid, line.tag(), line.message()));
+    if (matcher.matches()
+        && monitoringConfig
+            .categorizeProcess(matcher.group("package"))
+            .equals(ProcessCategory.FAILURE)) {
+      monitoredPids.add(Integer.parseInt(matcher.group("pid")));
     }
   }
 
   private void processUnityException(LogcatLine line) {
-    if (!line.tag().equals(UNITY_TAG)) {
+    if (!line.tag().equals(UNITY_TAG) || !monitoredPids.contains(line.pid())) {
       return;
     }
     if (UNITY_EXCEPTION_PATTERN.matcher(line.message()).matches()) {
@@ -158,6 +197,9 @@ public class TestEventDetector implements LineProcessor {
 
   @Override
   public ImmutableList<LogcatEvent> getEvents() {
+    if (detectedEvents.size() > 10) {
+      return ImmutableList.copyOf(detectedEvents.subList(0, 10));
+    }
     return ImmutableList.copyOf(detectedEvents);
   }
 }

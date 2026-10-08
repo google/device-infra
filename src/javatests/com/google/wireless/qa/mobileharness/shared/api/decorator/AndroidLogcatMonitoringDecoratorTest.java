@@ -46,7 +46,10 @@ import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.Cra
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashedProcess;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.DeviceEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.ProcessCategory;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.TestEvent;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.TestEventType;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatLineProxy;
+import com.google.devtools.mobileharness.platform.android.logcat.TestEventDetector;
 import com.google.devtools.mobileharness.platform.android.logcat.proto.LogcatMonitoringReport;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.base.ProtoExtensionRegistry;
@@ -156,7 +159,9 @@ public class AndroidLogcatMonitoringDecoratorTest {
             "logcat -v threadtime -T \"2025-01-30 10:15:20.000\"",
             Duration.ofSeconds(5),
             logcatLineProxy);
+    verify(logcatLineProxy).addLineProcessor(any(TestEventDetector.class));
     verify(decoratedDriver).run(testInfo);
+    verify(logcatLineProxy).getLogcatEventsFromProcessors();
     verify(logcatLineProxy).getUnparsedLines();
     verify(commandProcess).killAndThenKillForcibly(Duration.ofSeconds(5));
   }
@@ -279,7 +284,12 @@ public class AndroidLogcatMonitoringDecoratorTest {
                     new CrashedProcess(
                         "com.test.me", 123, ProcessCategory.FAILURE, LogcatEvent.CrashType.ANR),
                     "crash_log"),
-                new DeviceEvent("DEVICE_EVENT", "tag", "message")));
+                new DeviceEvent("DEVICE_EVENT", "tag", "message"),
+                new TestEvent(
+                    TestEventType.STARTUP_TIME_DEFAULT,
+                    456,
+                    "ActivityManager",
+                    "Displayed com.test.me/.MainActivity: +100ms")));
 
     AndroidLogcatMonitoringDecorator decorator =
         new AndroidLogcatMonitoringDecorator(
@@ -306,6 +316,13 @@ public class AndroidLogcatMonitoringDecoratorTest {
         .isEqualTo(LogcatMonitoringReport.Category.FAILURE);
     assertThat(report.getDeviceEventsList()).hasSize(1);
     assertThat(report.getDeviceEvents(0).getEventName()).isEqualTo("DEVICE_EVENT");
+    assertThat(report.getTestEventsList()).hasSize(1);
+    assertThat(report.getTestEvents(0).getType())
+        .isEqualTo(LogcatMonitoringReport.TestEventType.STARTUP_TIME_DEFAULT);
+    assertThat(report.getTestEvents(0).getPid()).isEqualTo(456);
+    assertThat(report.getTestEvents(0).getTag()).isEqualTo("ActivityManager");
+    assertThat(report.getTestEvents(0).getLogLines())
+        .isEqualTo("Displayed com.test.me/.MainActivity: +100ms");
     assertThat(report.hasCrashDialogPackage()).isFalse();
     assertTestIssueFinding(
         getOnlyElement(findings.getAll()),
@@ -313,6 +330,138 @@ public class AndroidLogcatMonitoringDecoratorTest {
         "App under test crashed.",
         "package_names",
         "com.test.me");
+  }
+
+  @Test
+  public void run_antiTamperingCrash_addsTestEventToReport() throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addReportAsFailurePackages("com.test.me")
+            .build();
+    when(jobInfo.combinedSpec(any())).thenReturn(spec);
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    String crashLogs = "com.pairip.VMRunnerException: Security Check Exception";
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.me",
+                        789,
+                        ProcessCategory.FAILURE,
+                        LogcatEvent.CrashType.ANDROID_RUNTIME),
+                    crashLogs),
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.other",
+                        999,
+                        ProcessCategory.OTHER,
+                        LogcatEvent.CrashType.ANDROID_RUNTIME),
+                    crashLogs)));
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil);
+
+    decorator.run(testInfo);
+
+    Path reportPath = decoratorOutputDir.resolve("logcat_monitoring_report.proto");
+    assertThat(Files.exists(reportPath)).isTrue();
+    LogcatMonitoringReport report =
+        LogcatMonitoringReport.parseFrom(
+            Files.readAllBytes(reportPath), ProtoExtensionRegistry.getGeneratedRegistry());
+    assertThat(report.getCrashEventsList()).hasSize(2);
+    assertThat(report.getTestEventsList()).hasSize(1);
+    assertThat(report.getTestEvents(0).getType())
+        .isEqualTo(LogcatMonitoringReport.TestEventType.ANTI_TAMPERING_TERMINATION);
+    assertThat(report.getTestEvents(0).getPid()).isEqualTo(789);
+    assertThat(report.getTestEvents(0).getTag()).isEqualTo("AndroidRuntime");
+    assertThat(report.getTestEvents(0).getLogLines()).isEqualTo(crashLogs);
+    assertThat(
+            findings.get(
+                AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_ANTI_TAMPERING_TERMINATION))
+        .hasSize(1);
+    assertThat(
+            findings
+                .get(AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_ANTI_TAMPERING_TERMINATION)
+                .get(0)
+                .getSeverity())
+        .isEqualTo(Severity.SEVERE);
+  }
+
+  @Test
+  public void run_testEvents_addsFindingsForLicensingTerminationAndUnityException()
+      throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addReportAsFailurePackages("com.test.me")
+            .build();
+    when(jobInfo.combinedSpec(any())).thenReturn(spec);
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                new TestEvent(
+                    TestEventType.STARTUP_TIME_DEFAULT,
+                    3491,
+                    "ActivityManager",
+                    "Displayed com.test.me/.MainActivity: +100ms"),
+                new TestEvent(
+                    TestEventType.LICENSING_PROTECTION_TERMINATION,
+                    1000,
+                    "SomeTag",
+                    "BIND_DEKU_BROKER_SERVICE failed."),
+                new TestEvent(
+                    TestEventType.UNITY_EXCEPTION,
+                    1000,
+                    "Unity",
+                    "NullReferenceException: Object reference not set to an instance of an"
+                        + " object")));
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil);
+
+    decorator.run(testInfo);
+
+    assertThat(findings.getAll()).hasSize(2);
+    assertThat(
+            findings.get(
+                AndroidErrorId
+                    .ANDROID_LOGCAT_MONITORING_DECORATOR_LICENSING_PROTECTION_TERMINATION))
+        .hasSize(1);
+    assertThat(
+            findings
+                .get(
+                    AndroidErrorId
+                        .ANDROID_LOGCAT_MONITORING_DECORATOR_LICENSING_PROTECTION_TERMINATION)
+                .get(0)
+                .getSeverity())
+        .isEqualTo(Severity.SEVERE);
+    assertThat(findings.get(AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_UNITY_EXCEPTION))
+        .hasSize(1);
+    assertThat(
+            findings
+                .get(AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_UNITY_EXCEPTION)
+                .get(0)
+                .getSeverity())
+        .isEqualTo(Severity.SEVERE);
   }
 
   @Test

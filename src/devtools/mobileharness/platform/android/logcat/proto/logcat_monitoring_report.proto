@@ -42,6 +42,16 @@ message LogcatMonitoringReport {
     IGNORED = 3;
   }
 
+  // Type of test event detected in logcat.
+  enum TestEventType {
+    UNKNOWN_TEST_EVENT_TYPE = 0;
+    STARTUP_TIME_DEFAULT = 1;
+    STARTUP_TIME_FULLY_DRAWN = 2;
+    LICENSING_PROTECTION_TERMINATION = 3;
+    ANTI_TAMPERING_TERMINATION = 4;
+    UNITY_EXCEPTION = 5;
+  }
+
   // Crash event detected by the decorator.
   message CrashEvent {
     optional string process_name = 1;
@@ -60,7 +70,16 @@ message LogcatMonitoringReport {
     optional string log_lines = 4;
   }
 
+  // Test event detected by the decorator.
+  message TestEvent {
+    optional TestEventType type = 1;
+    optional int32 pid = 2;
+    optional string tag = 3;
+    optional string log_lines = 4;
+  }
+
   repeated CrashEvent crash_events = 1;
   repeated DeviceEvent device_events = 2;
   optional string crash_dialog_package = 3;
+  repeated TestEvent test_events = 4;
 }
