@@ -47,12 +47,16 @@ type DownloadJob struct {
 	// CopyFilters are regular expressions on paths relative to Dir. Downloaded
 	// files that match are left as private copies rather than hardlinks, so
 	// callers can modify them in place without corrupting the cache.
-	CopyFilters     []string
-	DownloadStats   *Stats
-	ChunksOnly      bool
-	MinDownloadMbps int64
-	DownloadTimeout time.Duration
-	CASProxyStatus  string
+	CopyFilters   []string
+	DownloadStats *Stats
+	ChunksOnly    bool
+	// DisableOverwrite fails the download if a file it would write, other
+	// than chunk data, is already in Dir, rather than replace it. Either way,
+	// what is in Dir is left alone if the download fails before it commits.
+	DisableOverwrite bool
+	MinDownloadMbps  int64
+	DownloadTimeout  time.Duration
+	CASProxyStatus   string
 	// UseProxy reports whether Client is pointed at a casproxy rather than at
 	// CAS remote. It decides which side of the WAN the bytes this job had to
 	// fetch are attributed to, so it must agree with the address Client dialed.
@@ -184,6 +188,10 @@ const (
 	// NoteProxyOverreportClamped means casproxy reported serving more than was
 	// downloaded, and the proxy tiers were clamped.
 	NoteProxyOverreportClamped NoteReason = "proxy_overreport_clamped"
+	// NoteExistingFilesReplaced means the download replaced files that were
+	// already in Dir. Not a degradation; counted to show how often
+	// DisableOverwrite would have failed a run.
+	NoteExistingFilesReplaced NoteReason = "existing_files_replaced"
 )
 
 // Note is a remark about a run, with the reason that classifies it.
@@ -841,6 +849,10 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache,
 // their paths in the tree once everything else has succeeded. If the
 // download fails or is cancelled, what it wrote is removed, and files that
 // were in Dir before are left untouched. See staging.
+//
+// A file already at a path the download writes is replaced, and a note
+// records that it was, unless DisableOverwrite is set, in which case the
+// download fails instead.
 func (d *DownloadJob) DoDownload(ctx context.Context) error {
 	d.DownloadStats = &Stats{CASProxy: d.CASProxyStatus}
 	// Notes seeded from the caller were logged where they were written, so
@@ -949,6 +961,7 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	s.disableOverwrite = d.DisableOverwrite
 	committed := false
 	defer func() {
 		if !committed {
@@ -956,6 +969,13 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		}
 	}()
 	hasChunkData := s.stage(outputs)
+	if d.DisableOverwrite {
+		// Fail before fetching anything. Files restored from chunk data are
+		// not known yet; commit checks those.
+		if err := s.checkNoneExist(); err != nil {
+			return err
+		}
+	}
 	if hasChunkData {
 		if err := s.claimChunkData(); err != nil {
 			return err
@@ -1042,11 +1062,33 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		}
 	}
 
-	if err := s.commit(); err != nil {
+	err = s.commit()
+	// Noted even if commit failed part way: what it replaced is gone.
+	d.noteReplaced(s.replaced)
+	if err != nil {
 		return err
 	}
 	committed = true
 	return nil
+}
+
+// maxReplacedExamples is how many replaced paths noteReplaced names.
+const maxReplacedExamples = 3
+
+// noteReplaced records a note, if any files were replaced, with how many and
+// a few of their paths relative to Dir.
+func (d *DownloadJob) noteReplaced(replaced []string) {
+	if len(replaced) == 0 {
+		return
+	}
+	examples := make([]string, 0, maxReplacedExamples)
+	for _, p := range replaced[:min(len(replaced), maxReplacedExamples)] {
+		if rel, err := filepath.Rel(d.Dir, p); err == nil {
+			p = rel
+		}
+		examples = append(examples, p)
+	}
+	d.addNote(NoteExistingFilesReplaced, "Replaced %d existing files in %s, such as %s; -disable-overwrite would have failed this run", len(replaced), d.Dir, strings.Join(examples, ", "))
 }
 
 // Moves the index file to its primary location if not already there. Needed for very old builds.

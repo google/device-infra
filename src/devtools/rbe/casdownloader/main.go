@@ -64,11 +64,12 @@ var (
 	printVersion = flag.Bool("version", false, "Print version information")
 
 	// Flags for download jobs
-	rootDigest    = flag.String("digest", "", `Digest of root directory proto "<digest hash>/<size bytes>".`)
-	dir           = flag.String("dir", "", "Directory to download the tree. Files in this directory will be overwritten and will not be restored on errors.")
-	dumpJSON      = flag.String("dump-json", "", "Dump download stats to json file.")
-	enableStreamz = flag.Bool("enable-streamz", false, "Enable direct Streamz metrics collection via murdockd.")
-	murdockAddr   = flag.String("murdock-addr", "", "Address (host:port) of murdockd daemon. If empty, defaults to localhost:2444, or the MURDOCK_ADDR environment variable if set.")
+	rootDigest       = flag.String("digest", "", `Digest of root directory proto "<digest hash>/<size bytes>".`)
+	dir              = flag.String("dir", "", "Directory to download the tree. Files already in it at paths the tree writes are replaced, unless -disable-overwrite is set; if the download fails, they are left untouched.")
+	disableOverwrite = flag.Bool("disable-overwrite", false, "Fail the download if a file it would write is already in -dir, rather than replace it.")
+	dumpJSON         = flag.String("dump-json", "", "Dump download stats to json file.")
+	enableStreamz    = flag.Bool("enable-streamz", false, "Enable direct Streamz metrics collection via murdockd.")
+	murdockAddr      = flag.String("murdock-addr", "", "Address (host:port) of murdockd daemon. If empty, defaults to localhost:2444, or the MURDOCK_ADDR environment variable if set.")
 
 	// Flags for local cache
 	disableCache    = flag.Bool("disable-cache", false, "Disable local cache.")
@@ -506,21 +507,22 @@ func run(ctx context.Context) error {
 	}
 
 	d := download.DownloadJob{
-		Client:          rbeClient,
-		Digest:          *rootDigest,
-		Dir:             *dir,
-		DumpJSON:        *dumpJSON,
-		Cache:           localCache,
-		CASProxyStatus:  proxyStatus,
-		IncludeFilters:  includeFilters,
-		ExcludeFilters:  excludeFilters,
-		CopyFilters:     copyFilters,
-		ChunksOnly:      *chunksOnly,
-		MinDownloadMbps: *minDownloadMbps,
-		DownloadTimeout: *downloadTimeout,
-		UseProxy:        useProxy,
-		Tracker:         tracker,
-		Notes:           jobNotes,
+		Client:           rbeClient,
+		Digest:           *rootDigest,
+		Dir:              *dir,
+		DumpJSON:         *dumpJSON,
+		Cache:            localCache,
+		CASProxyStatus:   proxyStatus,
+		IncludeFilters:   includeFilters,
+		ExcludeFilters:   excludeFilters,
+		CopyFilters:      copyFilters,
+		ChunksOnly:       *chunksOnly,
+		DisableOverwrite: *disableOverwrite,
+		MinDownloadMbps:  *minDownloadMbps,
+		DownloadTimeout:  *downloadTimeout,
+		UseProxy:         useProxy,
+		Tracker:          tracker,
+		Notes:            jobNotes,
 	}
 	reportMemoryStats()
 

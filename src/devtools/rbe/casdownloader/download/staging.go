@@ -54,6 +54,11 @@ type staging struct {
 	createdDirs []string
 	// chunksClaimed is set once this attempt has created Dir/_chunks.
 	chunksClaimed bool
+	// disableOverwrite makes commit fail on a final path that is taken,
+	// rather than replace what is there.
+	disableOverwrite bool
+	// replaced lists the final paths at which commit replaced something.
+	replaced []string
 }
 
 func newStaging(dir string) (*staging, error) {
@@ -169,23 +174,83 @@ func (s *staging) deleteChunkData() error {
 	return chunkerutil.DeleteChunkFilesAndIndex(s.dir)
 }
 
-// commit renames every staged file to its final path, replacing whatever is
-// there. Each file is replaced atomically, but the files are not replaced
-// together: if a rename fails, the files already renamed stay in place.
+// existsError is the error for a final path that is already taken when
+// overwriting is disabled.
+func existsError(final string) error {
+	return fmt.Errorf("%s already exists, and overwriting it is disabled by -disable-overwrite", final)
+}
+
+// checkNoneExist fails if anything is at the final path of a staged file, so
+// that with overwriting disabled a conflict fails the attempt before it
+// fetches anything. It is advisory: something can appear at a final path
+// later, which commit detects.
+func (s *staging) checkNoneExist() error {
+	for _, f := range s.files {
+		if _, err := os.Lstat(f.final); err == nil {
+			return existsError(f.final)
+		}
+	}
+	return nil
+}
+
+// linkNoReplace is os.Link, replaceable by tests.
+var linkNoReplace = os.Link
+
+// moveIntoPlace moves tmp to final. If something is already at final, it
+// replaces it, and reports that it did, unless s.disableOverwrite is set, in
+// which case it fails and leaves both in place.
+//
+// Whether final exists is decided atomically by hard linking tmp to it, which
+// fails if final exists; renameat2(RENAME_NOREPLACE) would do the same in one
+// step, but it is specific to Linux and not in package syscall. Where linking
+// fails for another reason, such as a filesystem without hard links, or a tmp
+// that is a cache blob with as many links as the filesystem allows, it falls
+// back to checking final first, which a concurrent writer can race.
+func (s *staging) moveIntoPlace(tmp, final string) (replaced bool, err error) {
+	err = linkNoReplace(tmp, final)
+	switch {
+	case err == nil:
+		// final is now another name for tmp.
+		return false, os.Remove(tmp)
+	case errors.Is(err, os.ErrExist):
+		replaced = true
+	default:
+		if _, statErr := os.Lstat(final); statErr == nil {
+			replaced = true
+		}
+	}
+	if replaced && s.disableOverwrite {
+		return false, existsError(final)
+	}
+	if err := os.Rename(tmp, final); err != nil {
+		return false, err
+	}
+	// rename(2) does nothing, successfully, when both names are links to the
+	// same inode, as when a re-download links the same cache blob that is
+	// already at the final path. The temporary name is then still there;
+	// after an effective rename it is not.
+	os.Remove(tmp)
+	return replaced, nil
+}
+
+// commit moves every staged file to its final path. What is already at a
+// final path is replaced, and recorded in s.replaced, unless
+// s.disableOverwrite is set, in which case commit fails on it. Each file is
+// moved atomically, but the files are not moved together: if one fails, the
+// files already moved stay in place.
 func (s *staging) commit() error {
 	for i := s.committed; i < len(s.files); i++ {
 		f := s.files[i]
-		if err := os.Rename(f.tmp, f.final); err != nil {
+		replaced, err := s.moveIntoPlace(f.tmp, f.final)
+		if err != nil {
 			return fmt.Errorf("failed to move %s into place, after moving %d of %d files: %w", f.final, s.committed, len(s.files), err)
 		}
-		// rename(2) does nothing, successfully, when both names are links to
-		// the same inode, as when a re-download links the same cache blob
-		// that is already at the final path. The temporary name is then
-		// still there; after an effective rename it is not.
-		os.Remove(f.tmp)
+		if replaced {
+			s.replaced = append(s.replaced, f.final)
+		}
 		s.committed++
 	}
-	log.Infof("moved %d downloaded files into place", len(s.files))
+	log.Infof("moved %d downloaded files into place, replacing %d existing files", len(s.files), len(s.replaced))
 	return nil
 }
 

@@ -50,6 +50,7 @@ go_test(
         "copy_filters_test.go",
         "download_test.go",
         "notes_test.go",
+        "overwrite_test.go",
         "remote_failed_test.go",
         "staging_test.go",
         "tracker_test.go",
