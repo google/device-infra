@@ -536,3 +536,305 @@ func TestDeleteChunkFilesAndIndex(t *testing.T) {
 		}
 	})
 }
+
+// tmpNameFor returns a tmpName function for RestoreFilesTo that names a
+// file's temporary sibling the way casdownloader is meant to.
+func tmpNameFor(runID string) func(string) string {
+	return func(path string) string {
+		return filepath.Join(filepath.Dir(path), ".tmp."+runID+"."+filepath.Base(path))
+	}
+}
+
+// TestRestoreFilesTo_RestoresToTmpNames checks that RestoreFilesTo restores
+// each file, with its mode and mtime, under its temporary name, leaves the
+// existing file at the final path and the chunk data alone, and returns the
+// pairs to commit.
+func TestRestoreFilesTo_RestoresToTmpNames(t *testing.T) {
+	srcDir := t.TempDir()
+	dstDir := t.TempDir()
+	chunksDir := filepath.Join(srcDir, ChunksDirName)
+	single := writeChunk(t, chunksDir, "single chunk")
+	first := writeChunk(t, chunksDir, "first ")
+	second := writeChunk(t, chunksDir, "second")
+	legacy := writeChunk(t, chunksDir, "legacy")
+	modTime := time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)
+	index := []ChunksIndex{
+		{Path: "single", ModTime: modTime, Mode: 0755, Chunks: []chunker.ChunkInfo{{SHA256: single, Offset: 0}}},
+		{Path: filepath.Join("sub", "multi"), ModTime: modTime, Mode: 0444, Chunks: []chunker.ChunkInfo{{SHA256: first, Offset: 0}, {SHA256: second, Offset: 6}}},
+		{Path: "legacy", Chunks: []chunker.ChunkInfo{{SHA256: legacy, Offset: 0}}},
+	}
+	if err := CreateIndexFile(srcDir, index); err != nil {
+		t.Fatalf("CreateIndexFile failed: %v", err)
+	}
+	const oldContent = "existing content"
+	existing := filepath.Join(dstDir, "single")
+	if err := os.WriteFile(existing, []byte(oldContent), 0644); err != nil {
+		t.Fatalf("Failed to write existing file: %v", err)
+	}
+
+	tmpName := tmpNameFor("run1")
+	restored, err := RestoreFilesTo(srcDir, dstDir, tmpName)
+	if err != nil {
+		t.Fatalf("RestoreFilesTo failed: %v", err)
+	}
+
+	want := []struct {
+		path    string
+		content string
+		mode    os.FileMode
+		modTime time.Time
+	}{
+		{"single", "single chunk", 0755, modTime},
+		{filepath.Join("sub", "multi"), "first second", 0444, modTime},
+		{"legacy", "legacy", 0, time.Time{}},
+	}
+	if len(restored) != len(want) {
+		t.Fatalf("RestoreFilesTo returned %d files, want %d", len(restored), len(want))
+	}
+	for i, w := range want {
+		finalPath := filepath.Join(dstDir, w.path)
+		if got := restored[i]; got.Path != finalPath || got.TmpPath != tmpName(finalPath) {
+			t.Errorf("RestoreFilesTo()[%d] = %+v, want {TmpPath: %s, Path: %s}", i, got, tmpName(finalPath), finalPath)
+		}
+		got, err := os.ReadFile(tmpName(finalPath))
+		if err != nil {
+			t.Fatalf("Failed to read restored file: %v", err)
+		}
+		if string(got) != w.content {
+			t.Errorf("Restored %s = %q, want %q", w.path, got, w.content)
+		}
+		if w.modTime.IsZero() {
+			continue
+		}
+		info, err := os.Stat(tmpName(finalPath))
+		if err != nil {
+			t.Fatalf("Failed to stat restored file: %v", err)
+		}
+		if info.Mode().Perm() != w.mode {
+			t.Errorf("Restored %s mode = %#o, want %#o", w.path, info.Mode().Perm(), w.mode)
+		}
+		if !info.ModTime().Equal(w.modTime) {
+			t.Errorf("Restored %s mtime = %v, want %v", w.path, info.ModTime(), w.modTime)
+		}
+	}
+
+	if got, err := os.ReadFile(existing); err != nil || string(got) != oldContent {
+		t.Errorf("Existing file = %q, %v after RestoreFilesTo, want it unchanged as %q", got, err, oldContent)
+	}
+	for _, path := range []string{filepath.Join("sub", "multi"), "legacy"} {
+		if exists(t, filepath.Join(dstDir, path)) {
+			t.Errorf("RestoreFilesTo created %s at its final path, want only its temporary name", path)
+		}
+	}
+	if !exists(t, chunksDir) || !exists(t, filepath.Join(srcDir, ChunksIndexFileName)) {
+		t.Error("RestoreFilesTo deleted the chunks or index, want them left for the caller")
+	}
+}
+
+func TestRestoreFilesTo_NoIndex(t *testing.T) {
+	restored, err := RestoreFilesTo(t.TempDir(), t.TempDir(), tmpNameFor("run1"))
+	if err != nil || restored != nil {
+		t.Errorf("RestoreFilesTo without an index = %v, %v, want nil, nil", restored, err)
+	}
+}
+
+func TestRestoreFilesTo_MalformedIndex(t *testing.T) {
+	srcDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(srcDir, ChunksIndexFileName), []byte("{not json"), 0644); err != nil {
+		t.Fatalf("Failed to write index: %v", err)
+	}
+	if _, err := RestoreFilesTo(srcDir, t.TempDir(), tmpNameFor("run1")); err == nil {
+		t.Error("RestoreFilesTo with a malformed index succeeded, want an error")
+	}
+}
+
+// listFiles returns the paths of the files under dir, relative to dir.
+func listFiles(t *testing.T, dir string) []string {
+	t.Helper()
+	var files []string
+	err := filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() {
+			rel, err := filepath.Rel(dir, path)
+			if err != nil {
+				return err
+			}
+			files = append(files, rel)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Failed to walk %s: %v", dir, err)
+	}
+	return files
+}
+
+// TestRestoreFilesTo_FailureRemovesRestoredFiles fails a restore part way
+// and checks that the files already restored under temporary names are
+// removed, and that the existing file at a final path is untouched.
+func TestRestoreFilesTo_FailureRemovesRestoredFiles(t *testing.T) {
+	errInjected := errors.New("injected")
+	tests := []struct {
+		name string
+		// missingChunk makes the last entry name a chunk that doesn't exist.
+		missingChunk bool
+		inject       func()
+	}{
+		{name: "missing chunk", missingChunk: true},
+		{name: "chtimes", inject: func() {
+			chtimes = func(path string, atime, mtime time.Time) error {
+				if filepath.Base(path) == ".tmp.run1.last" {
+					return errInjected
+				}
+				return os.Chtimes(path, atime, mtime)
+			}
+		}},
+		{name: "chmod", inject: func() {
+			chmod = func(path string, mode os.FileMode) error {
+				if filepath.Base(path) == ".tmp.run1.last" {
+					return errInjected
+				}
+				return os.Chmod(path, mode)
+			}
+		}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			origChtimes, origChmod := chtimes, chmod
+			t.Cleanup(func() { chtimes, chmod = origChtimes, origChmod })
+			if tc.inject != nil {
+				tc.inject()
+			}
+
+			srcDir := t.TempDir()
+			dstDir := t.TempDir()
+			chunksDir := filepath.Join(srcDir, ChunksDirName)
+			a := writeChunk(t, chunksDir, "a")
+			b := writeChunk(t, chunksDir, "b")
+			last := writeChunk(t, chunksDir, "last")
+			if tc.missingChunk {
+				last = strings.Repeat("0", 64)
+			}
+			modTime := time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)
+			index := []ChunksIndex{
+				{Path: "legacy", Chunks: []chunker.ChunkInfo{{SHA256: a, Offset: 0}}},
+				{Path: filepath.Join("sub", "b"), ModTime: modTime, Mode: 0644, Chunks: []chunker.ChunkInfo{{SHA256: b, Offset: 0}}},
+				{Path: "last", ModTime: modTime, Mode: 0644, Chunks: []chunker.ChunkInfo{{SHA256: last, Offset: 0}}},
+			}
+			if err := CreateIndexFile(srcDir, index); err != nil {
+				t.Fatalf("CreateIndexFile failed: %v", err)
+			}
+			const oldContent = "existing content"
+			if err := os.WriteFile(filepath.Join(dstDir, "last"), []byte(oldContent), 0644); err != nil {
+				t.Fatalf("Failed to write existing file: %v", err)
+			}
+
+			restored, err := RestoreFilesTo(srcDir, dstDir, tmpNameFor("run1"))
+			if err == nil {
+				t.Fatal("RestoreFilesTo succeeded, want an error")
+			}
+			if tc.inject != nil && !errors.Is(err, errInjected) {
+				t.Errorf("RestoreFilesTo = %v, want an error wrapping %v", err, errInjected)
+			}
+			if restored != nil {
+				t.Errorf("RestoreFilesTo returned %v with an error, want nil", restored)
+			}
+			if got := listFiles(t, dstDir); len(got) != 1 || got[0] != "last" {
+				t.Errorf("Files in dstDir after failed restore = %v, want only the existing file", got)
+			}
+			if got, err := os.ReadFile(filepath.Join(dstDir, "last")); err != nil || string(got) != oldContent {
+				t.Errorf("Existing file = %q, %v after failed restore, want it unchanged as %q", got, err, oldContent)
+			}
+		})
+	}
+}
+
+// TestRestoreFilesTo_CleanupFailure checks that a temporary file that can't
+// be removed after a failed restore doesn't mask the restore's error.
+func TestRestoreFilesTo_CleanupFailure(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("Directory permissions are not enforced for root")
+	}
+	errInjected := errors.New("injected")
+	// Create the dirs first: cleanups run last-in first-out, so the
+	// permissions are restored before TempDir removes the dirs.
+	srcDir := t.TempDir()
+	dstDir := t.TempDir()
+	writeOneFileIndex(t, srcDir)
+	t.Cleanup(func() { os.Chmod(dstDir, 0755) })
+	origChmod := chmod
+	t.Cleanup(func() { chmod = origChmod })
+	chmod = func(path string, mode os.FileMode) error {
+		// Make the directory read-only so the cleanup can't remove the file.
+		if err := os.Chmod(filepath.Dir(path), 0555); err != nil {
+			t.Errorf("Failed to make %s read-only: %v", filepath.Dir(path), err)
+		}
+		return errInjected
+	}
+
+	if _, err := RestoreFilesTo(srcDir, dstDir, tmpNameFor("run1")); !errors.Is(err, errInjected) {
+		t.Errorf("RestoreFilesTo = %v, want an error wrapping %v", err, errInjected)
+	}
+}
+
+// TestRestore_RejectsNonLocalPaths checks that an index with a path that
+// would land outside dstDir restores nothing, through either entry point.
+func TestRestore_RejectsNonLocalPaths(t *testing.T) {
+	outsideDir := t.TempDir()
+	badPaths := map[string]string{
+		"parent":          filepath.Join("..", "escape"),
+		"nested parent":   filepath.Join("a", "..", "..", "escape"),
+		"absolute":        filepath.Join(outsideDir, "escape"),
+		"empty":           "",
+		"parent directly": "..",
+	}
+	restores := map[string]func(srcDir, dstDir string) error{
+		"RestoreFiles": func(srcDir, dstDir string) error {
+			return RestoreFiles(srcDir, dstDir, false)
+		},
+		"RestoreFilesTo": func(srcDir, dstDir string) error {
+			_, err := RestoreFilesTo(srcDir, dstDir, tmpNameFor("run1"))
+			return err
+		},
+	}
+	for restoreName, restore := range restores {
+		for pathName, badPath := range badPaths {
+			t.Run(restoreName+"/"+pathName, func(t *testing.T) {
+				// dstDir is nested so that ".." from it stays in a dir the
+				// test owns and can check.
+				root := t.TempDir()
+				srcDir := filepath.Join(root, "src")
+				dstDir := filepath.Join(root, "dst", "out")
+				if err := os.MkdirAll(dstDir, 0755); err != nil {
+					t.Fatalf("Failed to create dst dir: %v", err)
+				}
+				sha := writeChunk(t, filepath.Join(srcDir, ChunksDirName), "content")
+				modTime := time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)
+				chunks := []chunker.ChunkInfo{{SHA256: sha, Offset: 0}}
+				index := []ChunksIndex{
+					{Path: "good", ModTime: modTime, Mode: 0644, Chunks: chunks},
+					{Path: badPath, ModTime: modTime, Mode: 0644, Chunks: chunks},
+				}
+				if err := CreateIndexFile(srcDir, index); err != nil {
+					t.Fatalf("CreateIndexFile failed: %v", err)
+				}
+
+				if err := restore(srcDir, dstDir); err == nil {
+					t.Fatalf("Restore with index path %q succeeded, want an error", badPath)
+				}
+
+				if got := listFiles(t, filepath.Join(root, "dst")); len(got) != 0 {
+					t.Errorf("Restore with a bad index path wrote %v, want nothing", got)
+				}
+				if got := listFiles(t, outsideDir); len(got) != 0 {
+					t.Errorf("Restore with a bad index path wrote %v outside dstDir, want nothing", got)
+				}
+				if !exists(t, filepath.Join(srcDir, ChunksIndexFileName)) {
+					t.Error("Restore deleted the index after rejecting it")
+				}
+			})
+		}
+	}
+}
