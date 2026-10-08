@@ -185,6 +185,25 @@ public class CrossOverAndroidDesktopProvisionDecorator extends CrosBaseDecorator
     try {
       result = commandExecutor.exec(provisionCommand);
     } catch (MobileHarnessException e) {
+      String msg = Strings.nullToEmpty(e.getMessage());
+      if (msg.contains("OS_BOOT_FAILURE")
+          || msg.contains("STATUS_OS_BOOT_FAILURE")
+          || msg.contains("target OS failed to boot")) {
+        throw new MobileHarnessException(
+            e.getErrorId(),
+            String.format("Target OS failed to boot on device %s: %s", dutName, msg),
+            e);
+      }
+      if (msg.contains("OS_UNREACHABLE")
+          || msg.contains("STATUS_OS_UNREACHABLE")
+          || msg.contains("target OS unreachable")
+          || msg.contains("STATUS_POST_PROVISION_SETUP_FAILED")
+          || msg.contains("STATUS_DUT_UNREACHABLE_POST_PROVISION")) {
+        throw new MobileHarnessException(
+            e.getErrorId(),
+            String.format("Target OS unreachable on device %s: %s", dutName, msg),
+            e);
+      }
       throw new MobileHarnessException(
           e.getErrorId(),
           String.format("foil-provision failed for device %s: %s", dutName, e.getMessage()),

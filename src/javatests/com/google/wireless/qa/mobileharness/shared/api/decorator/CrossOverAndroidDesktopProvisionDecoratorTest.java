@@ -28,13 +28,16 @@ import static com.google.wireless.qa.mobileharness.shared.api.spec.CrosDecorator
 import static com.google.wireless.qa.mobileharness.shared.api.spec.CrosDecoratorSpec.DT_CONVERTER_CIPD_TAG;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.command.Command;
+import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -376,6 +379,54 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
             MobileHarnessException.class, () -> decorator.setUp(SetupContext.create(testInfo)));
     assertThat(thrown).hasMessageThat().contains("foil-provision failed for device test_dut");
     assertThat(thrown).hasMessageThat().contains("Fastboot timeout");
+  }
+
+  @Test
+  public void setUp_osBootFailure_throwsTargetOsMobileHarnessException() throws Exception {
+    when(params.has(BUILD_ID)).thenReturn(true);
+    when(params.get(BUILD_ID)).thenReturn("12345678");
+    when(params.has(BUILD_TARGET)).thenReturn(true);
+    when(params.get(BUILD_TARGET)).thenReturn("brya-trunk_staging-userdebug");
+
+    CommandException cmdException = mock(CommandException.class);
+    when(cmdException.getErrorId()).thenReturn(BasicErrorId.COMMAND_EXEC_FAIL);
+    when(cmdException.getMessage())
+        .thenReturn(
+            "target OS failed to boot: OS_BOOT_FAILURE: target OS failed to boot (AP console"
+                + " unresponsive)");
+    when(commandExecutor.exec(any(Command.class)))
+        .thenReturn(versionResult)
+        .thenThrow(cmdException);
+
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class, () -> decorator.setUp(SetupContext.create(testInfo)));
+    assertThat(thrown).hasMessageThat().contains("Target OS failed to boot on device test_dut");
+    assertThat(thrown).hasMessageThat().doesNotContain("foil-provision failed for device");
+  }
+
+  @Test
+  public void setUp_osUnreachable_throwsTargetOsMobileHarnessException() throws Exception {
+    when(params.has(BUILD_ID)).thenReturn(true);
+    when(params.get(BUILD_ID)).thenReturn("12345678");
+    when(params.has(BUILD_TARGET)).thenReturn(true);
+    when(params.get(BUILD_TARGET)).thenReturn("brya-trunk_staging-userdebug");
+
+    CommandException cmdException = mock(CommandException.class);
+    when(cmdException.getErrorId()).thenReturn(BasicErrorId.COMMAND_EXEC_FAIL);
+    when(cmdException.getMessage())
+        .thenReturn(
+            "target OS unreachable: OS_UNREACHABLE: target OS booted on console, but device is"
+                + " unreachable over ADB");
+    when(commandExecutor.exec(any(Command.class)))
+        .thenReturn(versionResult)
+        .thenThrow(cmdException);
+
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class, () -> decorator.setUp(SetupContext.create(testInfo)));
+    assertThat(thrown).hasMessageThat().contains("Target OS unreachable on device test_dut");
+    assertThat(thrown).hasMessageThat().doesNotContain("foil-provision failed for device");
   }
 
   @Test
