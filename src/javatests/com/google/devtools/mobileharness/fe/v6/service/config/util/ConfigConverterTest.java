@@ -215,6 +215,10 @@ public final class ConfigConverterTest {
                         ManekiDetectorSpecs.ManekiGenericDeviceDiscoverySpec.newBuilder()
                             .setMacAddress("m7")
                             .build())
+                    .addManekiXboxDeviceDiscoverySpec(
+                        ManekiDetectorSpecs.ManekiXboxDeviceDiscoverySpec.newBuilder()
+                            .setMacAddress("m8")
+                            .build())
                     .build())
             .build();
 
@@ -222,7 +226,7 @@ public final class ConfigConverterTest {
         ConfigConverter.toFeHostConfig(LabConfig.newBuilder().setDetectorSpecs(specs).build());
     List<ManekiSpec> manekiSpecs = feConfig.getDeviceDiscovery().getManekiSpecsList();
 
-    assertThat(manekiSpecs).hasSize(7);
+    assertThat(manekiSpecs).hasSize(8);
     assertThat(manekiSpecs.get(0).getType()).isEqualTo("android");
     assertThat(manekiSpecs.get(1).getType()).isEqualTo("roku");
     assertThat(manekiSpecs.get(2).getType()).isEqualTo("rdk");
@@ -230,6 +234,8 @@ public final class ConfigConverterTest {
     assertThat(manekiSpecs.get(4).getType()).isEqualTo("ps4");
     assertThat(manekiSpecs.get(5).getType()).isEqualTo("ps5");
     assertThat(manekiSpecs.get(6).getType()).isEqualTo("generic");
+    assertThat(manekiSpecs.get(7).getType()).isEqualTo("xbox");
+    assertThat(manekiSpecs.get(7).getMacAddress()).isEqualTo("m8");
   }
 
   @Test
@@ -243,6 +249,7 @@ public final class ConfigConverterTest {
             ManekiSpec.newBuilder().setType("ps4").setMacAddress("m5").build(),
             ManekiSpec.newBuilder().setType("ps5").setMacAddress("m6").build(),
             ManekiSpec.newBuilder().setType("generic").setMacAddress("m7").build(),
+            ManekiSpec.newBuilder().setType("xbox").setMacAddress("m9").build(),
             ManekiSpec.newBuilder().setType("unknown").setMacAddress("m8").build());
 
     DetectorSpecs specs = ConfigConverter.toInternalDetectorSpecs(feSpecs);
@@ -255,6 +262,11 @@ public final class ConfigConverterTest {
     assertThat(maneki.getManekiPs4DeviceDiscoverySpecCount()).isEqualTo(1);
     assertThat(maneki.getManekiPs5DeviceDiscoverySpecCount()).isEqualTo(1);
     assertThat(maneki.getManekiGenericDeviceDiscoverySpecCount()).isEqualTo(1);
+    assertThat(maneki.getManekiXboxDeviceDiscoverySpecList())
+        .containsExactly(
+            ManekiDetectorSpecs.ManekiXboxDeviceDiscoverySpec.newBuilder()
+                .setMacAddress("m9")
+                .build());
   }
 
   @Test

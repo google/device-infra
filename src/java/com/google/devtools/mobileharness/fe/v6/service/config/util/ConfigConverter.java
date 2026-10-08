@@ -284,6 +284,15 @@ public final class ConfigConverter {
                           .setType("generic")
                           .setMacAddress(s.getMacAddress())
                           .build()));
+      maneki
+          .getManekiXboxDeviceDiscoverySpecList()
+          .forEach(
+              s ->
+                  feSpecs.add(
+                      ManekiSpec.newBuilder()
+                          .setType("xbox")
+                          .setMacAddress(s.getMacAddress())
+                          .build()));
     }
     return feSpecs.build();
   }
@@ -325,6 +334,11 @@ public final class ConfigConverter {
         case "generic" ->
             manekiBuilder.addManekiGenericDeviceDiscoverySpec(
                 DetectorSpecs.ManekiDetectorSpecs.ManekiGenericDeviceDiscoverySpec.newBuilder()
+                    .setMacAddress(spec.getMacAddress())
+                    .build());
+        case "xbox" ->
+            manekiBuilder.addManekiXboxDeviceDiscoverySpec(
+                DetectorSpecs.ManekiDetectorSpecs.ManekiXboxDeviceDiscoverySpec.newBuilder()
                     .setMacAddress(spec.getMacAddress())
                     .build());
         default -> {
