@@ -203,9 +203,11 @@ public class InstallSystemApkStep {
       }
     }
 
-    if (replaceApkPaths != null && !replaceApkPaths.isEmpty()) {
-      rebootDevice(deviceId, deviceClassName, deviceRebootType);
-      systemStateUtil.waitUntilReady(deviceId);
+    // Reboot so PackageManager scans the newly pushed system APKs and permission files.
+    // When forceInstallation is true without replaceApkPaths, only the post-install reboot is
+    // needed.
+    if (!forceInstallation || (replaceApkPaths != null && !replaceApkPaths.isEmpty())) {
+      rebootAndWaitUntilReady(deviceId, deviceClassName, deviceRebootType, sdkVersion);
     }
 
     if (forceInstallation) {
@@ -214,7 +216,13 @@ public class InstallSystemApkStep {
         logger.atInfo().log("Reinstalling %s.", systemApk);
         packageManagerUtil.installApk(deviceId, sdkVersion, systemApk);
       }
+      rebootAndWaitUntilReady(deviceId, deviceClassName, deviceRebootType, sdkVersion);
     }
+  }
+
+  private void rebootAndWaitUntilReady(
+      String deviceId, String deviceClassName, DeviceRebootType deviceRebootType, int sdkVersion)
+      throws MobileHarnessException, InterruptedException {
     rebootDevice(deviceId, deviceClassName, deviceRebootType);
     if (sdkVersion == 23
         && systemSpecUtil.isEmulator(deviceId)
