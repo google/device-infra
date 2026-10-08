@@ -875,7 +875,14 @@ func (d *DownloadJob) DoDownload(ctx context.Context) error {
 
 	// We check the context state before the library error.
 	// If the context is done, it is a timeout (or cancel), regardless of the returned err.
-	if ctx.Err() != nil {
+	if errors.Is(ctx.Err(), context.Canceled) {
+		// Cancelled by the caller, as on a signal, rather than timed out. A
+		// cancellation after the download committed does not undo it.
+		if err != nil {
+			d.DownloadStats.DownloadError = fmt.Sprintf("CANCELLED: %v", context.Cause(ctx))
+			err = fmt.Errorf("download cancelled: %w", context.Cause(ctx))
+		}
+	} else if ctx.Err() != nil {
 		d.DownloadStats.DownloadError = fmt.Sprintf("TIMED_OUT: download-timeout=%v", d.DownloadTimeout)
 		err = context.DeadlineExceeded
 	} else if errors.Is(err, context.DeadlineExceeded) {
@@ -1031,6 +1038,10 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		// checked holds no chunk data of an earlier run.
 		copyCandidates := treeFiles
 		if s.chunksClaimed {
+			// Restoring does not watch ctx, and can take a while.
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			start = time.Now()
 			restored, err := chunkerutil.RestoreFilesTo(d.Dir, d.Dir, func(final string) string {
 				// Create the parent here, so that a failed attempt removes
@@ -1062,6 +1073,12 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		}
 	}
 
+	// The local steps above do not all watch ctx, so a cancelled attempt can
+	// get this far. It must not change Dir. Once commit has started, it runs
+	// to the end, which is quick.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	err = s.commit()
 	// Noted even if commit failed part way: what it replaced is gone.
 	d.noteReplaced(s.replaced)

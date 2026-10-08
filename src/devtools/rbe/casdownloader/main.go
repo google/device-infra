@@ -393,8 +393,11 @@ func runMain() int {
 		defer monitoring.Shutdown()
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// On SIGINT or SIGTERM, cancel rather than die, so that the download
+	// stops and removes what it wrote, leaving -dir as it was. A second
+	// signal kills the process.
+	ctx, stop := common.CancelOnSignal(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	if ctxMd, err := ContextWithMetadata(ctx); err != nil {
 		log.InfoContextf(ctx, "Failed to add metadata to context: %v", err)
@@ -536,7 +539,10 @@ func run(ctx context.Context) error {
 	// remote too, and by then Push may already have put casproxy's bytes into
 	// the local cache, where the retry would book them as local hits. Leaving
 	// it alone reports the real error and keeps the proxy tiers accurate.
-	if err != nil && useProxy && !d.RemoteFailed() {
+	if err != nil && ctx.Err() != nil {
+		// Cancelled, by a signal: a retry would only be cancelled too.
+		log.WarningContextf(ctx, "Download cancelled: %v", context.Cause(ctx))
+	} else if err != nil && useProxy && !d.RemoteFailed() {
 		log.WarningContextf(ctx, "Download failed locally, not in CAS proxy; not falling back to direct RBE CAS: %v", err)
 	} else if err != nil && useProxy {
 		proxyErr := err
@@ -585,6 +591,10 @@ func run(ctx context.Context) error {
 	rbeStatusStr := "OK"
 	if err != nil {
 		rbeStatusStr = status.Code(err).String()
+		if ctx.Err() != nil {
+			// Canceled, rather than the Unknown of a non-gRPC error.
+			rbeStatusStr = status.FromContextError(ctx.Err()).Code().String()
+		}
 	}
 
 	if *enableStreamz {
