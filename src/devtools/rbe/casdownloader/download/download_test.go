@@ -683,17 +683,31 @@ func TestDoDownload_DuplicateDigests_NoLocalCache(t *testing.T) {
 	}
 }
 
+// failDuplicates makes materializing a duplicate fail for the rest of the
+// test.
+func failDuplicates(t *testing.T) {
+	t.Helper()
+	orig := materializeDuplicate
+	t.Cleanup(func() { materializeDuplicate = orig })
+	materializeDuplicate = func(dst, src *client.TreeOutput) error {
+		return fmt.Errorf("simulated: cannot materialize %s", dst.Path)
+	}
+}
+
 // If a duplicate cannot be materialized, the download has not produced the
 // tree it was asked for, and must say so rather than report success with a
 // path missing. It must also not leave the fetched copy behind, which would
-// hand the caller a directory that looks like a partial download.
+// hand the caller a directory that looks like a partial download, and must
+// leave a file that was already at a path alone.
 func TestDoDownload_DuplicateCopyFails_NoLocalCache(t *testing.T) {
 	destDir := t.TempDir()
 	job, _ := newDuplicateDigestsJob(t, destDir)
+	failDuplicates(t)
 
 	// second.txt is the duplicate, materialized from first.txt after the
-	// fetch. Occupying its path makes that step fail.
-	if err := os.WriteFile(filepath.Join(destDir, "second.txt"), []byte("in the way"), 0o600); err != nil {
+	// fetch.
+	const existing = "in the way"
+	if err := os.WriteFile(filepath.Join(destDir, "second.txt"), []byte(existing), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -706,6 +720,9 @@ func TestDoDownload_DuplicateCopyFails_NoLocalCache(t *testing.T) {
 	}
 	if _, statErr := os.Stat(filepath.Join(destDir, "first.txt")); !os.IsNotExist(statErr) {
 		t.Errorf("first.txt was left behind after the failed download (stat err %v)", statErr)
+	}
+	if got, err := os.ReadFile(filepath.Join(destDir, "second.txt")); err != nil || string(got) != existing {
+		t.Errorf("second.txt = %q, %v after the failed download, want it unchanged as %q", got, err, existing)
 	}
 }
 

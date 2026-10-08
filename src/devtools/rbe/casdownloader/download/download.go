@@ -233,7 +233,11 @@ func (d *DownloadJob) Stats() *Stats {
 // with cache or downloading files from remote since the TreeOutput contains information of
 // directories and symbolic links. It returns a new list of *client.TreeOutput excluding created
 // directories and symbolic links.
-func prepareSymLinksAndDirs(root string, outputs []*client.TreeOutput) ([]*client.TreeOutput, error) {
+//
+// Symbolic links are created at the temporary names s.stage gave them, so a
+// name that is taken is an error, not something to replace: the existing
+// path is replaced when s commits.
+func prepareSymLinksAndDirs(s *staging, outputs []*client.TreeOutput) ([]*client.TreeOutput, error) {
 	unresolved := make([]*client.TreeOutput, 0)
 	dirSet := make(map[string]bool)
 
@@ -247,12 +251,12 @@ func prepareSymLinksAndDirs(root string, outputs []*client.TreeOutput) ([]*clien
 		dirSet[dir] = true
 	}
 
-	if err := os.MkdirAll(root, 0o700); err != nil {
+	if err := s.mkdirAll(s.dir); err != nil {
 		return nil, fmt.Errorf("failed to create the root directory: %w", err)
 	}
 
 	for dir := range dirSet {
-		if err := os.MkdirAll(dir, 0o700); err != nil && !os.IsExist(err) {
+		if err := s.mkdirAll(dir); err != nil {
 			return nil, fmt.Errorf("failed to create directory: %w", err)
 		}
 	}
@@ -265,13 +269,6 @@ func prepareSymLinksAndDirs(root string, outputs []*client.TreeOutput) ([]*clien
 		}
 		if output.SymlinkTarget != "" {
 			if err := os.Symlink(output.SymlinkTarget, output.Path); err != nil {
-				if os.IsExist(err) {
-					_ = os.Remove(output.Path)
-					if err := os.Symlink(output.SymlinkTarget, output.Path); err == nil {
-						numSymLink++
-						continue
-					}
-				}
 				return nil, fmt.Errorf("failed to create symlink to %s: %w", output.Path, err)
 			}
 			numSymLink++
@@ -302,6 +299,25 @@ func copyFile(dstPath string, srcPath string, mode os.FileMode) error {
 	return err
 }
 
+// materializeDuplicate writes dst, whose blob was already fetched to src, by
+// hard linking src if the modes match and copying it otherwise. It is a
+// variable so that tests can make it fail.
+var materializeDuplicate = func(dst, src *client.TreeOutput) error {
+	if fileMode(dst) == fileMode(src) {
+		// Create a hard link if file mode matches.
+		err := os.Link(src.Path, dst.Path)
+		if err == nil {
+			return nil
+		}
+		log.Infof("failed to link file from '%s' to '%s': %v", src.Path, dst.Path, err)
+		// Fall back to copy the file.
+	}
+	if err := copyFile(dst.Path, src.Path, fileMode(dst)); err != nil {
+		return fmt.Errorf("failed to copy file from '%s' to '%s': %w", src.Path, dst.Path, err)
+	}
+	return nil
+}
+
 func copyFiles(ctx context.Context, dsts []*client.TreeOutput, srcs map[digest.Digest]*client.TreeOutput) error {
 	eg, _ := errgroup.WithContext(ctx)
 
@@ -314,18 +330,7 @@ func copyFiles(ctx context.Context, dsts []*client.TreeOutput, srcs map[digest.D
 		ch <- struct{}{}
 		eg.Go(func() (err error) {
 			defer func() { <-ch }()
-			if fileMode(dst) == fileMode(src) {
-				// Create a hard link if file mode matches.
-				if err := os.Link(src.Path, dst.Path); err == nil {
-					return nil
-				}
-				log.Infof("failed to link file from '%s' to '%s': %v", src.Path, dst.Path, err)
-				// Fall back to copy the file.
-			}
-			if err := copyFile(dst.Path, src.Path, fileMode(dst)); err != nil {
-				return fmt.Errorf("failed to copy file from '%s' to '%s': %w", src.Path, dst.Path, err)
-			}
-			return nil
+			return materializeDuplicate(dst, src)
 		})
 	}
 	return eg.Wait()
@@ -496,63 +501,25 @@ func compileCopyFilters(filters []string) ([]*regexp.Regexp, error) {
 	return patterns, nil
 }
 
-// copyFilterCandidates returns the files -copy-filters applies to: for a
-// chunked artifact (one whose tree carries a chunks index), the files
-// chunkerutil.RestoreFiles will restore from it; otherwise, the files of the
-// tree. Call it before RestoreFiles, which deletes the chunks index.
-func (d *DownloadJob) copyFilterCandidates(patterns []*regexp.Regexp, outputs []*client.TreeOutput) ([]string, error) {
+// applyCopyFilters replaces each hardlinked file in files whose final path
+// relative to d.Dir matches patterns with a private copy, so modifying it in
+// place cannot alter the cache or other files. It works on the temporary
+// files, before they are committed.
+func (d *DownloadJob) applyCopyFilters(ctx context.Context, patterns []*regexp.Regexp, files []stagedFile) error {
 	if len(patterns) == 0 {
-		return nil, nil
+		return nil
 	}
-	// Decided from this download's tree rather than from Dir, which may hold
-	// a chunks index left behind by an earlier -chunks-only run.
-	primaryIndex := filepath.Join(d.Dir, chunkerutil.ChunksDirName, chunkerutil.ChunksIndexFileName)
-	legacyIndex := filepath.Join(d.Dir, chunkerutil.ChunksIndexFileName)
-	chunked := slices.ContainsFunc(outputs, func(o *client.TreeOutput) bool {
-		return o.Path == primaryIndex || o.Path == legacyIndex
-	})
-	var paths []string
-	if !chunked {
-		for _, o := range outputs {
-			paths = append(paths, o.Path)
-		}
-		return paths, nil
-	}
-	indexPath, err := chunkerutil.FindChunksIndex(d.Dir)
-	if err != nil {
-		return nil, err
-	}
-	content, err := os.ReadFile(indexPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read chunks index: %w", err)
-	}
-	var entries []chunkerutil.ChunksIndex
-	if err := json.Unmarshal(content, &entries); err != nil {
-		return nil, fmt.Errorf("failed to parse chunks index: %w", err)
-	}
-	for _, e := range entries {
-		if filepath.IsLocal(e.Path) { // Never touch files outside d.Dir.
-			paths = append(paths, filepath.Join(d.Dir, e.Path))
-		}
-	}
-	return paths, nil
-}
-
-// applyCopyFilters replaces each hardlinked file in paths whose path relative
-// to d.Dir matches patterns with a private copy, so modifying it in place
-// cannot alter the cache or other files.
-func (d *DownloadJob) applyCopyFilters(ctx context.Context, patterns []*regexp.Regexp, paths []string) error {
-	for _, path := range paths {
+	for _, f := range files {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		rel, err := filepath.Rel(d.Dir, path)
+		rel, err := filepath.Rel(d.Dir, f.final)
 		if err != nil || !slices.ContainsFunc(patterns, func(p *regexp.Regexp) bool { return p.MatchString(filepath.ToSlash(rel)) }) {
 			continue
 		}
-		info, err := os.Lstat(path)
-		if os.IsNotExist(err) || (err == nil && !info.Mode().IsRegular()) {
-			continue // e.g. _chunks files removed after restoration.
+		info, err := os.Lstat(f.tmp)
+		if err == nil && !info.Mode().IsRegular() {
+			continue // e.g. a symlink.
 		}
 		if err != nil {
 			return err
@@ -560,8 +527,8 @@ func (d *DownloadJob) applyCopyFilters(ctx context.Context, patterns []*regexp.R
 		if info.Sys().(*syscall.Stat_t).Nlink <= 1 {
 			continue
 		}
-		if err := replaceWithCopy(path, info.Mode()); err != nil {
-			return fmt.Errorf("failed to replace hardlink %s with a copy: %w", path, err)
+		if err := replaceWithCopy(f.tmp, info.Mode()); err != nil {
+			return fmt.Errorf("failed to replace hardlink %s with a copy: %w", f.final, err)
 		}
 	}
 	return nil
@@ -611,6 +578,10 @@ func convertTreeOutputListToMap(inputs []*client.TreeOutput) (digestMap map[dige
 }
 
 // removeLeftOverFiles removes the files if they exist.
+//
+// It is only given outputs that staging has pointed at this attempt's own
+// temporary names or at chunk data the attempt claimed, so it never removes a
+// file that was in Dir before the run. staging.abort cleans up the rest.
 func removeLeftOverFiles(files []*client.TreeOutput) {
 	log.Infof("Cleanup on error: remove %d files.", len(files))
 	for _, item := range files {
@@ -856,12 +827,20 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache,
 // DoDownload downloads a root directory from RBE CAS with the given digest.
 // It follows the workflow:
 //   - Retrieve the directory tree structure through RBE CAS API
+//   - Claim the chunk data paths, if the tree has chunk data
 //   - Create all directories
 //   - Check with local cache and hard-link cached files to target locations
 //   - Download uncached files from remote CAS
 //   - Push the uncached files to local cache
 //   - Copy duplicates files to target locations
+//   - Restore chunked files and apply copy filters
+//   - Move every file into place
 //   - Dump downloadStats
+//
+// Files and symlinks are written under temporary names and only renamed to
+// their paths in the tree once everything else has succeeded. If the
+// download fails or is cancelled, what it wrote is removed, and files that
+// were in Dir before are left untouched. See staging.
 func (d *DownloadJob) DoDownload(ctx context.Context) error {
 	d.DownloadStats = &Stats{CASProxy: d.CASProxyStatus}
 	// Notes seeded from the caller were logged where they were written, so
@@ -963,8 +942,30 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 	log.InfoContextf(ctx, "finished retriving directory tree from RBE, took %s", dirRetrieveTime)
 	d.DownloadStats.DirRetrieveTimeMS = dirRetrieveTime.Milliseconds()
 
+	// Write everything under temporary names, and put it in place only once
+	// all of it has succeeded, so a failed or cancelled attempt leaves Dir as
+	// it found it.
+	s, err := newStaging(d.Dir)
+	if err != nil {
+		return err
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			s.abort()
+		}
+	}()
+	hasChunkData := s.stage(outputs)
+	if hasChunkData {
+		if err := s.claimChunkData(); err != nil {
+			return err
+		}
+	}
+	// The tree's own files, before restored files are added.
+	treeFiles := s.files
+
 	start = time.Now()
-	outputs, err = prepareSymLinksAndDirs(d.Dir, outputs)
+	outputs, err = prepareSymLinksAndDirs(s, outputs)
 	if err != nil {
 		return err
 	}
@@ -988,10 +989,12 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		}
 	}
 
-	if err := d.moveChunksIndexFileIfNeeded(); err != nil {
-		// Optional, so it does not fail the download, but a run that could not
-		// place its chunks index is not quite the run that was asked for.
-		d.addNote(NoteChunksIndexMoveFailed, "Failed to move the chunks index file: %v", err)
+	if s.chunksClaimed {
+		if err := d.moveChunksIndexFileIfNeeded(); err != nil {
+			// Optional, so it does not fail the download, but a run that could not
+			// place its chunks index is not quite the run that was asked for.
+			d.addNote(NoteChunksIndexMoveFailed, "Failed to move the chunks index file: %v", err)
+		}
 	}
 
 	fileDownloadTime := time.Since(start)
@@ -1002,24 +1005,47 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		log.InfoContextf(ctx, "Skipping restoring chunked files since chunks-only is true.")
 		d.DownloadStats.ChunkRestoreTimeMS = 0
 	} else {
-		// Read before RestoreFiles, which deletes the chunks index.
-		copyCandidates, err := d.copyFilterCandidates(copyPatterns, outputs)
-		if err != nil {
-			return err
+		// For a chunked artifact, -copy-filters applies to the files restored
+		// from it; otherwise, to the files of the tree. Restoring is decided
+		// from this download's tree rather than from Dir, which it has
+		// checked holds no chunk data of an earlier run.
+		copyCandidates := treeFiles
+		if s.chunksClaimed {
+			start = time.Now()
+			restored, err := chunkerutil.RestoreFilesTo(d.Dir, d.Dir, func(final string) string {
+				// Create the parent here, so that a failed attempt removes
+				// it; RestoreFilesTo would otherwise create it untracked. If
+				// this fails, so does the restore, with the reason.
+				s.mkdirAll(filepath.Dir(final))
+				return s.tmpName(final)
+			})
+			if err != nil {
+				return err
+			}
+			copyCandidates = make([]stagedFile, 0, len(restored))
+			for _, r := range restored {
+				s.add(r.TmpPath, r.Path)
+				copyCandidates = append(copyCandidates, stagedFile{tmp: r.TmpPath, final: r.Path})
+			}
+			chunkRestoreTime := time.Since(start)
+			log.InfoContextf(ctx, "finished restoring %d chunked files, took %s", len(restored), chunkRestoreTime)
+			d.DownloadStats.ChunkRestoreTimeMS = chunkRestoreTime.Milliseconds()
 		}
-		start = time.Now()
-		if err := chunkerutil.RestoreFiles(d.Dir, d.Dir, false /* keepChunks */); err != nil {
-			return err
-		}
-		chunkRestoreTime := time.Since(start)
-		log.InfoContextf(ctx, "finished restoring chunked files, took %s", chunkRestoreTime)
-		d.DownloadStats.ChunkRestoreTimeMS = chunkRestoreTime.Milliseconds()
 
 		if err := d.applyCopyFilters(ctx, copyPatterns, copyCandidates); err != nil {
 			return err
 		}
+		// The chunk data has served its purpose. Remove it before
+		// committing, so that failing to leaves Dir untouched.
+		if err := s.deleteChunkData(); err != nil {
+			return err
+		}
 	}
 
+	if err := s.commit(); err != nil {
+		return err
+	}
+	committed = true
 	return nil
 }
 

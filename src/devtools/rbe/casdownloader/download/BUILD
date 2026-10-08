@@ -24,6 +24,7 @@ go_library(
     name = "download",
     srcs = [
         "download.go",
+        "staging.go",
         "tracker.go",
     ],
     importpath = "github.com/google/device-infra/src/devtools/rbe/casdownloader/download",
@@ -50,6 +51,7 @@ go_test(
         "download_test.go",
         "notes_test.go",
         "remote_failed_test.go",
+        "staging_test.go",
         "tracker_test.go",
     ],
     embed = [":download"],

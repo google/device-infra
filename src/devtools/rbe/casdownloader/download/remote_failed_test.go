@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
@@ -88,10 +87,16 @@ func (m *missingCache) Push(ctx context.Context, all map[digest.Digest]*client.T
 
 func (m *missingCache) Close() error { return nil }
 
-// fullCache reports every file as already cached, so nothing is fetched.
+// fullCache reports every file as already cached, so nothing is fetched. Like
+// a real cache, it materializes each hit; the contents are not checked.
 type fullCache struct{ missingCache }
 
 func (f *fullCache) Pull(ctx context.Context, all []*client.TreeOutput) ([]*client.TreeOutput, []*client.TreeOutput, error) {
+	for _, o := range all {
+		if err := os.WriteFile(o.Path, nil, 0o600); err != nil {
+			return nil, nil, err
+		}
+	}
 	return all, nil, nil
 }
 
@@ -158,21 +163,16 @@ func TestDoDownload_NotRemoteFailed_WhenDiskIsFull(t *testing.T) {
 // misbook the first attempt's bytes as local hits.
 func TestDoDownload_NotRemoteFailed_WhenLocalCopyFailsAfterFetch(t *testing.T) {
 	f := newRemoteFailedFixture(t)
-	dir := t.TempDir()
-
-	// b.txt is the duplicate, copied from a.txt after the fetch. Occupying its
-	// path makes that copy fail.
-	if err := os.WriteFile(filepath.Join(dir, "b.txt"), []byte("in the way"), 0o600); err != nil {
-		t.Fatal(err)
-	}
+	// b.txt is the duplicate, copied from a.txt after the fetch.
+	failDuplicates(t)
 
 	job := DownloadJob{
 		Client: f.client,
 		Digest: f.rootDigest,
-		Dir:    dir,
+		Dir:    t.TempDir(),
 	}
 	if err := job.DoDownload(context.Background()); err == nil {
-		t.Fatal("DoDownload succeeded despite the duplicate's path being occupied")
+		t.Fatal("DoDownload succeeded despite the duplicate copy failing")
 	}
 	if job.RemoteFailed() {
 		t.Error("RemoteFailed() = true for a failure copying a duplicate after the fetch, want false")
