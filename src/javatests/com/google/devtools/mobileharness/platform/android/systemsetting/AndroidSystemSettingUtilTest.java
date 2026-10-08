@@ -495,6 +495,8 @@ public class AndroidSystemSettingUtilTest {
     assertThat(batteryState.level()).hasValue(98);
     assertThat(batteryState.temperature()).hasValue(36);
     assertThat(batteryState.health()).hasValue(2);
+    verify(adbUtil).dumpSys(DEVICE_ID, DumpSysType.BATTERY, "reset");
+    verify(sleeper).sleep(AndroidSystemSettingUtil.BATTERY_RESET_SETTLE_TIME);
   }
 
   @Test

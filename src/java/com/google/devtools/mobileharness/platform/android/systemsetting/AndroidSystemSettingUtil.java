@@ -205,6 +205,9 @@ public class AndroidSystemSettingUtil {
   @VisibleForTesting
   static final Duration LAB_SERVER_DEVICE_MAX_DIFFERENCE = Duration.ofMinutes(30);
 
+  /** Wait time after "dumpsys battery reset" for Health HAL updates to propagate (b/562142836). */
+  @VisibleForTesting static final Duration BATTERY_RESET_SETTLE_TIME = Duration.ofSeconds(1);
+
   @VisibleForTesting static final String LEGACY_STORAGE_KEY_NAME = "android:legacy_storage";
 
   private static final String LEGACY_STORAGE_OUTPUT_PATTERN = "LEGACY_STORAGE:\\s(?<MODE>\\w+)";
@@ -938,6 +941,17 @@ public class AndroidSystemSettingUtil {
 
   private String getBatteryDumpSysOutput(String serial)
       throws MobileHarnessException, InterruptedException {
+    // Force a battery state refresh and wait briefly for the asynchronous Health HAL update to
+    // propagate to BatteryService so it does not serve a stale boot-time value (see b/562142836).
+    try {
+      var unused = adbUtil.dumpSys(serial, DumpSysType.BATTERY, "reset");
+      sleeper.sleep(BATTERY_RESET_SETTLE_TIME);
+    } catch (MobileHarnessException e) {
+      logger.atInfo().log(
+          "Failed to reset battery state for device %s before reading battery state: %s",
+          serial, e.getMessage());
+    }
+
     // Run dumpSys adb command to get battery state. A sample output:
     // Current Battery Service state:
     //   AC powered: false
