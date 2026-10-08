@@ -165,10 +165,13 @@ public class AndroidConnectivityUtil {
               + "</string>(?<prePsk>[\\s\\S]*?)\\sname=\"PreSharedKey\"(?<afterPsk>[\\s\\S]*?)"
               + "</WifiConfiguration>");
 
-  /** The pattern of WIFI RSSI. */
+  /**
+   * The pattern of WIFI RSSI. Matches the first {@code mWifiInfo} line after the connected client
+   * mode state, so dumps of additional, disconnected client mode managers are ignored.
+   */
   private static final Pattern PATTERN_WIFI_RSSI =
       Pattern.compile(
-          "curState=CompletedState[\\s\\S]*mWifiInfo[\\s\\S]*"
+          "curState=CompletedState[\\s\\S]*?mWifiInfo[^\\n]*?"
               + "RSSI: *(?<result>-?[1-9]\\d*|0)"
               + " *,");
 
@@ -602,15 +605,14 @@ public class AndroidConnectivityUtil {
     //
     // If there is not a wifi connection, the output of dumpSys(serial, DumpSysType.WIFI) will not
     // contain the keyword 'curState=CompletedState'
+    //
+    // Devices with multiple client mode managers dump one such block per manager. Use the RSSI
+    // of the first connected one.
 
     String result = null;
     Matcher matcher = PATTERN_WIFI_RSSI.matcher(output);
     if (matcher.find()) {
       result = matcher.group("result");
-    }
-    // Should find only one.
-    if (matcher.find()) {
-      result = null;
     }
     if (result != null) {
       logger.atInfo().log("Device %s WIFI RSSI is:%s", serial, result);
