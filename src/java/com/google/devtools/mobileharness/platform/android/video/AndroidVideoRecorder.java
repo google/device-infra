@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.android.video;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidVideoDecoratorSpec;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 
 /** Interface for video recorders. */
@@ -37,6 +38,31 @@ public interface AndroidVideoRecorder {
    */
   void start(String deviceId, String testId, Path genFileDir, AndroidVideoDecoratorSpec spec)
       throws MobileHarnessException, InterruptedException;
+
+  /**
+   * Starts video recording on the device for the given test, bounded by {@code maxDuration}.
+   *
+   * <p>Recorders which run a long-lived recording process should override this method to make sure
+   * the process does not outlive the test. The default implementation ignores {@code maxDuration}.
+   *
+   * @param deviceId the ID of the device to record
+   * @param testId the ID of the running test
+   * @param genFileDir the host directory path where generated video/screenshot files should be
+   *     stored
+   * @param spec configuration specifications for the video decorator
+   * @param maxDuration the maximum duration of the recording, usually the remaining test time
+   * @throws MobileHarnessException if failed to start the video recording
+   * @throws InterruptedException if the current thread is interrupted
+   */
+  default void start(
+      String deviceId,
+      String testId,
+      Path genFileDir,
+      AndroidVideoDecoratorSpec spec,
+      Duration maxDuration)
+      throws MobileHarnessException, InterruptedException {
+    start(deviceId, testId, genFileDir, spec);
+  }
 
   /**
    * Stops video recording and returns the path list of generated video files or screenshots.

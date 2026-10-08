@@ -67,11 +67,31 @@ java_library(
 )
 
 java_library(
+    name = "screenrecord",
+    srcs = ["Screenrecord.java"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":android_video_recorder",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/media:android_media_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/media:commands",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_video_decorator_spec_java_proto",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "video",
     visibility = ["//visibility:public"],
     exports = [
         ":android_video_recorder",
         ":emulator_console_recorder",
+        ":screenrecord",
         ":screenshot_recorder",
     ],
 )
