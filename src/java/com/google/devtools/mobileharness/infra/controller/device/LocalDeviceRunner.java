@@ -387,8 +387,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
         needReboot = needReboot && !disableDeviceReboot();
 
         try {
-          // Always reboot the device if force to do so.
-          if (forceDeviceRebootAfterTest() || (needReboot && device.canReboot())) {
+          if ((forceDeviceRebootAfterTest() || needReboot) && device.canReboot()) {
             // Reboots the device, tries to recovery.
             logger.atInfo().log("Rebooting device");
             device.reboot();

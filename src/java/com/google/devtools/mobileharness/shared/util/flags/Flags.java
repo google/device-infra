@@ -1020,10 +1020,9 @@ public class Flags {
       help =
           "Whether to force a device reboot after each test. This option has the highest priority"
               + " to determine whether the device should reboot after each test. When this option"
-              + " is true, other related flags (e.g. --disable_device_reboot) or related"
-              + " implementations (e.g Device#canReboot()) may be ignored in some cases. This is an"
-              + " advanced flag, make sure you understand the effects when using this flag. The"
-              + " default value is false.")
+              + " is true, other related flags (e.g. --disable_device_reboot) may be ignored. This"
+              + " is an advanced flag, make sure you understand the effects when using this flag."
+              + " The default value is false.")
   public static final Flag<Boolean> forceDeviceRebootAfterTest = Flag.value(false);
 
   @FlagSpec(name = "force_to_use_grpc", help = "Force to use GRPC for debugging.")
