@@ -207,7 +207,7 @@ func TestSummaryOmitsZeroCounters(t *testing.T) {
 	clean := Stats{HardlinkHits: 900, HardlinkMisses: 100, Ingested: 100}
 	got := clean.Summary()
 
-	for _, unwanted := range []string{"copy fallback", "headroom", "watermark", "peer"} {
+	for _, unwanted := range []string{"copy fallback", "corrupt", "headroom", "watermark", "peer"} {
 		if strings.Contains(got, unwanted) {
 			t.Errorf("Summary of a clean run mentions %q, want it omitted:\n%s", unwanted, got)
 		}
@@ -222,6 +222,7 @@ func TestSummaryReportsAnomalies(t *testing.T) {
 		HardlinkHits:           10,
 		CopyFallbackEMLINK:     7,
 		CopyFallbackEXDEV:      3,
+		CorruptBlobs:           2,
 		HeadroomChecks:         100,
 		HeadroomEvictions:      2,
 		HeadroomReclaimedBytes: 5 << 30,
@@ -234,6 +235,7 @@ func TestSummaryReportsAnomalies(t *testing.T) {
 		"10 copy fallbacks",
 		"EMLINK 7",
 		"EXDEV 3",
+		"2 corrupt blobs",
 		"2 headroom evictions",
 		"40 of 100 writes",
 		"1 writes timed out",
