@@ -32,11 +32,13 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestFailure;
 import com.google.devtools.mobileharness.infra.ats.console.util.TestRunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import javax.xml.stream.XMLInputFactory;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.Mock;
@@ -50,6 +52,7 @@ public final class CompatibilityReportParserTest {
       TestRunfilesUtil.getRunfilesLocation("result/report/testdata/xml/cts_test_result.xml");
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
+  @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
   @Mock private LocalFileUtil localFileUtil;
 
   private CompatibilityReportParser reportParser;
@@ -349,6 +352,40 @@ public final class CompatibilityReportParserTest {
                                 .setResult("pass")
                                 .setName("testMethod2")))
                 .build());
+  }
+
+  /**
+   * Regression test for b/565606426.
+   *
+   * <p>Since JDK 24 the default JAXP limits (e.g. jdk.xml.maxGeneralEntitySizeLimit,
+   * jdk.xml.totalEntitySizeLimit) are 100,000. Every predefined entity reference (e.g. {@code
+   * &quot;}, {@code &gt;}) in the report counts toward the size of the "[xml]" document entity, so
+   * a long-running xTS invocation whose failure messages / stack traces contain lots of escaped
+   * characters used to fail the whole report parsing.
+   */
+  @Test
+  public void parse_reportXmlWithHugeEscapedContent() throws Exception {
+    int repeat = 200_000;
+    Path reportXml = tmpFolder.newFile("huge_test_result.xml").toPath();
+    Files.writeString(
+        reportXml,
+        "<?xml version='1.0' encoding='UTF-8' standalone='no' ?>"
+            + "<Result start=\"1\" end=\"2\">"
+            + "<Summary pass=\"0\" failed=\"1\" modules_done=\"1\" modules_total=\"1\" />"
+            + "<Module name=\"Module1\" abi=\"arm64-v8a\" runtime=\"1\" done=\"true\" pass=\"0\""
+            + " total_tests=\"1\"><TestCase name=\"android.cts.Dummy1Test\">"
+            + "<Test result=\"fail\" name=\"testMethod1\">"
+            + "<Failure message=\""
+            + "&quot;&gt;".repeat(repeat)
+            + "\"><StackTrace>"
+            + "&lt;&gt;&amp;".repeat(repeat)
+            + "</StackTrace></Failure></Test></TestCase></Module></Result>");
+
+    Result result = reportParser.parse(reportXml, /* shallow= */ false).get();
+
+    TestFailure failure = result.getModuleInfo(0).getTestCase(0).getTest(0).getFailure();
+    assertThat(failure.getMsg()).isEqualTo("\">".repeat(repeat));
+    assertThat(failure.getStackTrace().getContent()).isEqualTo("<>&".repeat(repeat));
   }
 
   @Test

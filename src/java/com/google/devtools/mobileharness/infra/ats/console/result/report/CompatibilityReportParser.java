@@ -82,6 +82,11 @@ public class CompatibilityReportParser {
   CompatibilityReportParser(XMLInputFactory xmlInputFactory, LocalFileUtil localFileUtil) {
     // So that stack traces that aren't enclosed in CDATA are properly parsed
     xmlInputFactory.setProperty(XMLInputFactory.IS_COALESCING, true);
+    // Report XMLs of long-running xTS invocations can exceed the default JAXP limits of JDK 24+
+    // (b/565606426). "0" means no limit.
+    xmlInputFactory.setProperty("jdk.xml.totalEntitySizeLimit", "0");
+    xmlInputFactory.setProperty("jdk.xml.maxGeneralEntitySizeLimit", "0");
+    xmlInputFactory.setProperty("jdk.xml.elementAttributeLimit", "0");
     this.xmlInputFactory = xmlInputFactory;
     this.localFileUtil = localFileUtil;
   }
