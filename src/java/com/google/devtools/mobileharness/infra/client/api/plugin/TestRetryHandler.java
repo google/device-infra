@@ -53,6 +53,8 @@ public class TestRetryHandler {
       ImmutableSet.of(
           Ascii.toLowerCase(Test.SHARD_COUNT.name()),
           Ascii.toLowerCase(Test.SHARD_INDEX.name()),
+          Ascii.toLowerCase(
+              Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES.name()),
           Ascii.toLowerCase(Test._DRAIN_TIMEOUT_RETRY_ATTEMPTS.name()),
           PROPERTY_REPEAT_INDEX);
 
