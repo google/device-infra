@@ -779,4 +779,5 @@ func recordDownloadMetrics(success bool, rbeStatus string, duration time.Duratio
 	// hit rate for the cache itself, which is the number this metric exists to
 	// measure.
 	monitoring.RecordDownloadStats(mStats, *casInstance, d.Cache != nil, *chunksOnly)
+	monitoring.RecordLocalCacheStats(cache.MonitoringStats(d.Cache), *casInstance)
 }
