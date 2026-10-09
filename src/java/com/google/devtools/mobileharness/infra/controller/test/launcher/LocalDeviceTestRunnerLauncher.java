@@ -83,7 +83,10 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
         TestExecutionResult result = LocalDeviceTestRunnerLauncher.this.executeTest();
         resultFuture.set(result);
         return result;
-      } catch (InterruptedException | RuntimeException e) {
+      } catch (InterruptedException | RuntimeException | Error e) {
+        // Always completes the result future, otherwise secondary device runners, which keep
+        // waiting
+        // for the result even if they are interrupted, will be blocked forever.
         resultFuture.setException(e);
         throw e;
       }
@@ -115,7 +118,24 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
           "Secondary device runner [%s] of test [%s] is waiting test execution result",
           getTestExecutor().getDevice().getDeviceId(),
           getTestRunner().getTestExecutionUnit().locator().id());
-      return getUnchecked(resultFuture);
+      boolean interrupted = false;
+      try {
+        while (true) {
+          try {
+            return getUnchecked(resultFuture);
+          } catch (InterruptedException e) {
+            if (resultFuture.isDone()) {
+              throw e;
+            }
+            interrupted = true;
+            killTest();
+          }
+        }
+      } finally {
+        if (interrupted) {
+          Thread.currentThread().interrupt();
+        }
+      }
     }
   }
 
