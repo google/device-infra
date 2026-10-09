@@ -18,6 +18,7 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/fakes"
 	repb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"github.com/google/device-infra/src/devtools/rbe/casdownloader/cache"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -257,5 +258,41 @@ func TestDoDownload_CopyFilters_IgnoresStaleChunksIndex(t *testing.T) {
 	}
 	if got := nlink(t, filepath.Join(job.Dir, "vbmeta.img")); got != 1 {
 		t.Errorf("vbmeta.img has %d links, want 1", got)
+	}
+}
+
+// A matched file is copied with the canonical mode for its executable bit,
+// which the owner can write, whatever mode a consumer left on the shared blob:
+// the lock-free cache links a blob as is when only bits other than the
+// executable bit have drifted, so the blob here is read-only.
+func TestDoDownload_CopyFilters_CopyIsWritable(t *testing.T) {
+	vbmeta := bytes.Repeat([]byte("w"), 4096)
+	c := &hardlinkCache{dir: t.TempDir()}
+	if err := os.WriteFile(c.blob(vbmeta), vbmeta, 0o444); err != nil {
+		t.Fatal(err)
+	}
+	job := newCopyFiltersJob(t, c, map[string][]byte{"vbmeta.img": vbmeta})
+	job.CopyFilters = []string{`^vbmeta\.img$`}
+
+	if err := job.DoDownload(context.Background()); err != nil {
+		t.Fatalf("DoDownload failed: %v", err)
+	}
+	path := filepath.Join(job.Dir, "vbmeta.img")
+	if got := nlink(t, path); got != 1 {
+		t.Errorf("vbmeta.img has %d links, want 1", got)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := info.Mode().Perm(), cache.RegularMode; got != want {
+		t.Errorf("vbmeta.img mode = %#o, want %#o", got, want)
+	}
+	if os.Geteuid() != 0 {
+		f, err := os.OpenFile(path, os.O_WRONLY, 0)
+		if err != nil {
+			t.Fatalf("vbmeta.img is not writable: %v", err)
+		}
+		f.Close()
 	}
 }

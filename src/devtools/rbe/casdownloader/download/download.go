@@ -47,6 +47,12 @@ type DownloadJob struct {
 	// CopyFilters are regular expressions on paths relative to Dir. Downloaded
 	// files that match are left as private copies rather than hardlinks, so
 	// callers can modify them in place without corrupting the cache.
+	//
+	// That covers links to other files in Dir as well as to the cache: a blob
+	// that appears at several paths with the same mode is fetched once and
+	// hardlinked to the rest (see materializeDuplicate), whether or not there
+	// is a cache and whatever the cache's hardlink setting. A matched file
+	// gets its own inode in either case.
 	CopyFilters   []string
 	DownloadStats *Stats
 	ChunksOnly    bool
@@ -134,6 +140,23 @@ type Stats struct {
 	DownloadError       string `json:"download_error,omitempty"`
 	Notes               string `json:"notes,omitempty"`
 	CASProxy            string `json:"casproxy,omitempty"`
+	// CorruptBlobsQuarantined is how many local cache hits were found to be
+	// the wrong size, removed from the cache, and downloaded again, so they
+	// are not counted in Hot. Zero for a cache that does not check, such as
+	// LocalCache.
+	CorruptBlobsQuarantined int64 `json:"corrupt_blobs_quarantined"`
+	// ExecMismatchCopies counts local cache hits whose blob had the other
+	// executable bit and were copied instead of linked; ExecMismatchBytes is
+	// what those copies wrote. They are counted in Hot: the bytes still came
+	// from the cache. PermDriftHits counts hits whose blob had the right
+	// executable bit but other permission bits a consumer had changed, linked
+	// as is, and UnreadableRepairs hits whose blob its owner could not read,
+	// fixed in place. See cache.ModeCopyStats. Zero for a cache that does not
+	// check, such as LocalCache.
+	ExecMismatchCopies int64 `json:"exec_mismatch_copies"`
+	ExecMismatchBytes  int64 `json:"exec_mismatch_bytes"`
+	PermDriftHits      int64 `json:"perm_drift_hits"`
+	UnreadableRepairs  int64 `json:"unreadable_repairs"`
 	// NoteReasons classifies Notes, one entry per note in the same order. It
 	// is exported as a metric rather than written to the JSON: the note text
 	// already reaches AnTS, and CF, which does not read the JSON, needs the
@@ -303,6 +326,12 @@ func copyFile(dstPath string, srcPath string, mode os.FileMode) error {
 	}
 	defer dst.Close()
 
+	// The mode passed to OpenFile is filtered through the umask. Set it
+	// explicitly so a copied duplicate carries exactly the canonical mode,
+	// as a linked one does.
+	if err := dst.Chmod(mode); err != nil {
+		return err
+	}
 	_, err = io.Copy(dst, src)
 	return err
 }
@@ -344,11 +373,11 @@ func copyFiles(ctx context.Context, dsts []*client.TreeOutput, srcs map[digest.D
 	return eg.Wait()
 }
 
+// fileMode is the mode a downloaded file gets: the cache package's canonical
+// mode for its tree node, so that a file comes out the same whether it was
+// downloaded, pulled from the cache or copied from a duplicate.
 func fileMode(output *client.TreeOutput) os.FileMode {
-	if output.IsExecutable {
-		return os.FileMode(0o700)
-	}
-	return os.FileMode(0o600)
+	return cache.FileMode(output.IsExecutable)
 }
 
 // updateDownloadStats attributes every byte of the tree to exactly one tier.
@@ -535,7 +564,12 @@ func (d *DownloadJob) applyCopyFilters(ctx context.Context, patterns []*regexp.R
 		if info.Sys().(*syscall.Stat_t).Nlink <= 1 {
 			continue
 		}
-		if err := replaceWithCopy(f.tmp, info.Mode()); err != nil {
+		// The copy exists to be modified in place, so it gets the canonical
+		// mode for its executable bit, which the owner can always write,
+		// rather than whatever a consumer may have chmod'ed the shared inode
+		// to (the lock-free cache links a blob as is when only bits other
+		// than the executable bit have drifted).
+		if err := replaceWithCopy(f.tmp, cache.FileMode(cache.IsExecutableMode(info.Mode().Perm()))); err != nil {
 			return fmt.Errorf("failed to replace hardlink %s with a copy: %w", f.final, err)
 		}
 	}
@@ -618,8 +652,30 @@ func (d *DownloadJob) downloadFilesWithAbsolutePath(ctx context.Context, toDownl
 
 	// Call d.Client.DownloadFiles with d.Dir as destDir and relative paths.
 	// We ignore the returned map as it's not used by the callers.
-	_, err := d.Client.DownloadFiles(ctx, d.Dir, toDownloadRelative)
-	return err
+	if _, err := d.Client.DownloadFiles(ctx, d.Dir, toDownloadRelative); err != nil {
+		return err
+	}
+	return normalizeModes(toDownload)
+}
+
+// normalizeModes gives each downloaded file the canonical mode of its tree
+// node.
+//
+// The SDK's own modes depend on how it fetched a blob: it creates batched
+// files with ExecutableMode or RegularMode filtered through the umask, but
+// chmods streamed executables to ExecutableMode exactly, so a large
+// executable comes out 0777 and a small one 0755. Normalizing here makes the
+// result the same on every path -- with or without a cache, and whether or
+// not Push succeeds -- and independent of the umask. On the cache path Push
+// sets the same mode again before sharing the file, which costs nothing
+// further.
+func normalizeModes(outputs map[digest.Digest]*client.TreeOutput) error {
+	for _, output := range outputs {
+		if err := os.Chmod(output.Path, fileMode(output)); err != nil {
+			return fmt.Errorf("failed to set mode of downloaded file %s: %w", output.Path, err)
+		}
+	}
+	return nil
 }
 
 // CalculateTimeout calculates the effective download timeout based on minDownloadMbps and size.
@@ -1009,6 +1065,16 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		err = d.downloadWithLocalCache(ctx, d.Cache, outputs)
 		if lc, ok := d.Cache.(interface{ LockWaitTimeMS() int64 }); ok {
 			d.DownloadStats.CacheLockWaitTimeMS = lc.LockWaitTimeMS()
+		}
+		if r, ok := d.Cache.(cache.CorruptBlobReporter); ok {
+			d.DownloadStats.CorruptBlobsQuarantined = r.CorruptBlobsQuarantined()
+		}
+		if r, ok := d.Cache.(cache.ModeCopyReporter); ok {
+			m := r.ModeCopies()
+			d.DownloadStats.ExecMismatchCopies = m.ExecMismatchCopies
+			d.DownloadStats.ExecMismatchBytes = m.ExecMismatchBytes
+			d.DownloadStats.PermDriftHits = m.PermDriftHits
+			d.DownloadStats.UnreadableRepairs = m.UnreadableRepairs
 		}
 		d.Cache.Close()
 		if err != nil {

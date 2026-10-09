@@ -3,6 +3,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -241,6 +242,60 @@ func (s *Storage) TouchIfOlderThan(hash string, interval time.Duration) bool {
 	_ = os.Chtimes(p, now, now)
 	return true
 }
+
+// RemoveCorruptBlob unlinks the cached blob for hash if it is still the
+// corrupt file a caller found, and counts the finding in Stats.CorruptBlobs.
+//
+// A caller calls this after materializing hash and seeing that the file it got
+// is not wantSize bytes long. bad is the caller's Lstat of that file. The
+// blob is unlinked only if it is still bad (os.SameFile) or its size is still
+// wrong. A blob that some other process has already replaced with one of the
+// right size is left alone. The size is the only check: a blob of the right
+// size with the wrong content is not detected.
+//
+// The caller does not decide what to delete, because only Storage knows the
+// blob's path. A hard-linked file shares its inode with the blob, so on that
+// path the SameFile check is the one that matches. A copied file has its own
+// inode, so on that path the blob is removed because its size is still wrong.
+//
+// The stat and the unlink are two steps, so another process can publish a
+// good blob between them, and it is then removed too. That costs one
+// extra download and nothing else: the blob is content-addressed, so it is
+// re-ingested on its next Push.
+//
+// Every call is counted, including one that finds the blob already gone or
+// already replaced, because each one is a corrupt file a caller was served.
+// HardlinkTo counted it as a hit before the caller looked at its size.
+//
+// removed reports whether this call unlinked the blob. An error means the blob
+// could not be inspected or unlinked and may still be corrupt.
+func (s *Storage) RemoveCorruptBlob(hash string, wantSize int64, bad os.FileInfo) (removed bool, err error) {
+	s.counters.corruptBlobs.Add(1)
+
+	p := s.blobPath(hash)
+	cur, err := os.Lstat(p)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if !os.SameFile(cur, bad) && cur.Size() == wantSize {
+		return false, nil
+	}
+	if err := removeBlob(p); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+// removeBlob is an indirection over os.Remove so that tests can lose the race
+// in RemoveCorruptBlob, where another process unlinks the blob between the
+// Lstat and the unlink. Production code always uses os.Remove.
+var removeBlob = os.Remove
 
 // RootDir returns the root storage directory path.
 func (s *Storage) RootDir() string {

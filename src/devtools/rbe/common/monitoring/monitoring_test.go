@@ -191,6 +191,37 @@ func TestRecordDownloadStats_NilStatsIsNoOp(t *testing.T) {
 	Shutdown()
 }
 
+func TestRecordLocalCacheStats(t *testing.T) {
+	Init("casdownloader")
+	defer Shutdown()
+
+	activity := &LocalCacheActivity{PermDriftHits: 2, HeadroomChecks: 1}
+	RecordLocalCacheStats(&LocalCacheStats{Impl: "lockfree", Activity: activity}, "test-instance")
+	testMu.Lock()
+	gotImpl, gotActivity := lastRecordedCacheImpl, lastRecordedCacheActivity
+	testMu.Unlock()
+	if gotImpl != "lockfree" || gotActivity != activity {
+		t.Errorf("recorded (%q, %+v), want (%q, %+v)", gotImpl, gotActivity, "lockfree", activity)
+	}
+
+	RecordLocalCacheStats(&LocalCacheStats{Impl: "none"}, "test-instance")
+	testMu.Lock()
+	gotImpl, gotActivity = lastRecordedCacheImpl, lastRecordedCacheActivity
+	testMu.Unlock()
+	if gotImpl != "none" || gotActivity != nil {
+		t.Errorf("recorded (%q, %+v), want (%q, nil)", gotImpl, gotActivity, "none")
+	}
+
+	// nil stats neither panic nor overwrite what was recorded before.
+	RecordLocalCacheStats(nil, "test-instance")
+	testMu.Lock()
+	gotImpl = lastRecordedCacheImpl
+	testMu.Unlock()
+	if gotImpl != "none" {
+		t.Errorf("recorded impl after nil stats = %q, want %q", gotImpl, "none")
+	}
+}
+
 func TestMonitoringWithMurdockAddr(t *testing.T) {
 	// Initialize with custom address option
 	Init("casdownloader", WithMurdockAddr("127.0.0.1:2444"))
