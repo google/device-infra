@@ -2,10 +2,13 @@ package cache
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 )
 
 // unopenableOptions describes a cache whose directory cannot be created,
@@ -119,5 +122,48 @@ func TestOpen_ReportsWhyTheCacheCouldNotBeBuilt(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "lock-free") {
 		t.Errorf("Open() = %v; the error does not say which cache failed to build", err)
+	}
+}
+
+// TestOpen_LockFreeHonorsUseHardlink checks that Options.UseHardlink, which
+// carries -use-hardlink and the same-filesystem check in main, reaches the
+// lock-free cache: with it, a pulled file is the cached blob; without it, a
+// pulled file is a copy that nothing done to it can carry into the cache.
+func TestOpen_LockFreeHonorsUseHardlink(t *testing.T) {
+	for _, tc := range []struct {
+		useHardlink bool
+		wantShared  bool
+	}{
+		{useHardlink: true, wantShared: true},
+		{useHardlink: false, wantShared: false},
+	} {
+		t.Run(fmt.Sprintf("UseHardlink=%v", tc.useHardlink), func(t *testing.T) {
+			dir := t.TempDir()
+			opts := Options{LockFree: true, Dir: filepath.Join(dir, "cache"), UseHardlink: tc.useHardlink}
+			c, err := Open(opts)
+			if err != nil {
+				t.Fatalf("Open(%+v) failed: %v", opts, err)
+			}
+			defer c.Close()
+			lf, ok := c.(*LockFreeCache)
+			if !ok {
+				t.Fatalf("Open(%+v) = %T, want *LockFreeCache", opts, c)
+			}
+
+			downloaded, out := stage(t, dir, "work/file", "use-hardlink", false)
+			push(t, lf, out)
+			blob := blobPath(opts.Dir, out.Digest.Hash)
+			if shared := inodeOf(t, downloaded) == inodeOf(t, blob); shared != tc.wantShared {
+				t.Errorf("After Push, downloaded file shares the cached inode = %v, want %v", shared, tc.wantShared)
+			}
+
+			pulled := filepath.Join(dir, "out", "file")
+			if !pullOne(t, lf, &client.TreeOutput{Digest: out.Digest, Path: pulled}) {
+				t.Fatal("Pull missed a blob that was just pushed")
+			}
+			if shared := inodeOf(t, pulled) == inodeOf(t, blob); shared != tc.wantShared {
+				t.Errorf("After Pull, pulled file shares the cached inode = %v, want %v", shared, tc.wantShared)
+			}
+		})
 	}
 }

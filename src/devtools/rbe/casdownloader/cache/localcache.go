@@ -206,7 +206,7 @@ func (c *LocalCache) pullByHardlink(ctx context.Context, all []*client.TreeOutpu
 	// Hard link items from cache to the target location if the item is in cache.
 	for _, item := range all {
 		if c.cacheClient.Touch(lucicache.HexDigest(item.Digest.Hash)) {
-			if err := c.cacheClient.Hardlink(lucicache.HexDigest(item.Digest.Hash), item.Path, fileMode(item)); err != nil {
+			if err := c.cacheClient.Hardlink(lucicache.HexDigest(item.Digest.Hash), item.Path, luciFileMode(item)); err != nil {
 				if !errors.Is(err, syscall.EMLINK) {
 					return nil, nil, fmt.Errorf("failed to hard link from cache to %s: %v", item.Path, err)
 				}

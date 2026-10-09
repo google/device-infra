@@ -59,6 +59,7 @@ type counters struct {
 	copyFallbackLink atomic.Int64 // EMLINK: source inode is out of links.
 	copyFallbackDev  atomic.Int64 // EXDEV: cache and destination differ by mount.
 	copyFallbackElse atomic.Int64 // EPERM, EOPNOTSUPP, ENOSYS.
+	corruptBlobs     atomic.Int64 // RemoveCorruptBlob calls.
 
 	headroomChecks         atomic.Int64
 	headroomEvictions      atomic.Int64
@@ -105,6 +106,13 @@ type Stats struct {
 	// under protected_hardlinks or overlayfs, EOPNOTSUPP, ENOSYS).
 	CopyFallbackOther int64
 
+	// CorruptBlobs counts cached blobs that callers found to be the wrong
+	// size and reported through RemoveCorruptBlob. Content addressing means a
+	// blob never changes, so any nonzero value means something modified a
+	// cached file in place, or a crash left a short file under a valid name.
+	// These were also counted in HardlinkHits.
+	CorruptBlobs int64
+
 	// HeadroomChecks is the number of EnsureHeadroom calls, and
 	// HeadroomEvictions how many of them had to reclaim space first.
 	HeadroomChecks    int64
@@ -148,6 +156,9 @@ func (s Stats) Summary() string {
 		fmt.Fprintf(&b, "; %d copy fallbacks (EMLINK %d, EXDEV %d, other %d)",
 			n, s.CopyFallbackEMLINK, s.CopyFallbackEXDEV, s.CopyFallbackOther)
 	}
+	if s.CorruptBlobs > 0 {
+		fmt.Fprintf(&b, "; %d corrupt blobs quarantined (wrong size on hit)", s.CorruptBlobs)
+	}
 	if s.HeadroomEvictions > 0 {
 		fmt.Fprintf(&b, "; %d headroom evictions reclaiming %s",
 			s.HeadroomEvictions, formatBytes(s.HeadroomReclaimedBytes))
@@ -178,6 +189,7 @@ func (s *Storage) Stats() Stats {
 		CopyFallbackEMLINK:     s.counters.copyFallbackLink.Load(),
 		CopyFallbackEXDEV:      s.counters.copyFallbackDev.Load(),
 		CopyFallbackOther:      s.counters.copyFallbackElse.Load(),
+		CorruptBlobs:           s.counters.corruptBlobs.Load(),
 		HeadroomChecks:         s.counters.headroomChecks.Load(),
 		HeadroomEvictions:      s.counters.headroomEvictions.Load(),
 		HeadroomReclaimedBytes: s.counters.headroomReclaimedBytes.Load(),
