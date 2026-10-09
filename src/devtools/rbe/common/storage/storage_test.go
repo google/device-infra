@@ -353,3 +353,180 @@ func TestEvictor_StatsAndConfig(t *testing.T) {
 		t.Errorf("Expected TotalEvictionRuns = 0 initially")
 	}
 }
+
+// TestStorage_RemoveCorruptBlob covers which blobs RemoveCorruptBlob removes.
+//
+// The caller has found a materialized file of the wrong size and passes its
+// Lstat. The blob must go if it is still that file, whatever size it reads
+// now, or if it is still the wrong size. A blob that another process has
+// already replaced with one of the right size must stay. Every call is counted.
+func TestStorage_RemoveCorruptBlob(t *testing.T) {
+	const good = "good"
+	const bad = "good, then bytes written in place"
+	for _, tc := range []struct {
+		name string
+		// cached is what the blob holds when RemoveCorruptBlob runs; empty
+		// means there is no blob.
+		cached string
+		// linked makes the caller's file a hard link to the blob, as on the
+		// hard link path. Otherwise it is a separate file holding bad, as on
+		// the copy path.
+		linked      bool
+		wantRemoved bool
+	}{
+		{name: "same inode, wrong size", cached: bad, linked: true, wantRemoved: true},
+		{name: "same inode, right size", cached: good, linked: true, wantRemoved: true},
+		{name: "other inode, wrong size", cached: bad, linked: false, wantRemoved: true},
+		{name: "other inode, right size", cached: good, linked: false, wantRemoved: false},
+		{name: "no blob", cached: "", linked: false, wantRemoved: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := setupTestStorage(t)
+			hash := testHash("c0")
+			if tc.cached != "" {
+				if err := s.Write(hash, []byte(tc.cached)); err != nil {
+					t.Fatalf("Write failed: %v", err)
+				}
+			}
+
+			pulled := filepath.Join(t.TempDir(), "pulled")
+			if tc.linked {
+				if hit, err := s.HardlinkTo(hash, pulled); err != nil || !hit {
+					t.Fatalf("HardlinkTo: hit=%v err=%v, want hit=true err=nil", hit, err)
+				}
+			} else if err := os.WriteFile(pulled, []byte(bad), 0644); err != nil {
+				t.Fatalf("Failed to write %s: %v", pulled, err)
+			}
+			info, err := os.Lstat(pulled)
+			if err != nil {
+				t.Fatalf("Failed to stat %s: %v", pulled, err)
+			}
+
+			removed, err := s.RemoveCorruptBlob(hash, int64(len(good)), info)
+			if err != nil {
+				t.Fatalf("RemoveCorruptBlob failed: %v", err)
+			}
+			if removed != tc.wantRemoved {
+				t.Errorf("RemoveCorruptBlob removed = %v, want %v", removed, tc.wantRemoved)
+			}
+			wantCached := tc.cached != "" && !tc.wantRemoved
+			if got := s.Has(hash); got != wantCached {
+				t.Errorf("Has after RemoveCorruptBlob = %v, want %v", got, wantCached)
+			}
+			if got := s.Stats().CorruptBlobs; got != 1 {
+				t.Errorf("Stats().CorruptBlobs = %d, want 1", got)
+			}
+		})
+	}
+}
+
+// TestStorage_RemoveCorruptBlob_ReportsUnremovableBlob checks that a blob that
+// is the wrong size but cannot be unlinked is reported as an error, not as a
+// blob that was already gone. A non-empty directory at the blob path is the
+// portable way to make the unlink fail.
+func TestStorage_RemoveCorruptBlob_ReportsUnremovableBlob(t *testing.T) {
+	s := setupTestStorage(t)
+	hash := testHash("c1")
+	if err := os.MkdirAll(filepath.Join(s.blobPath(hash), "occupant"), 0755); err != nil {
+		t.Fatalf("Failed to seed the blocking directory: %v", err)
+	}
+	pulled := filepath.Join(t.TempDir(), "pulled")
+	if err := os.WriteFile(pulled, []byte("wrong size"), 0644); err != nil {
+		t.Fatalf("Failed to write %s: %v", pulled, err)
+	}
+	info, err := os.Lstat(pulled)
+	if err != nil {
+		t.Fatalf("Failed to stat %s: %v", pulled, err)
+	}
+
+	removed, err := s.RemoveCorruptBlob(hash, 1, info)
+	if err == nil {
+		t.Error("RemoveCorruptBlob returned nil error for a blob it could not unlink")
+	}
+	if removed {
+		t.Error("RemoveCorruptBlob reported removing a blob it could not unlink")
+	}
+	if got := s.Stats().CorruptBlobs; got != 1 {
+		t.Errorf("Stats().CorruptBlobs = %d, want 1: the corrupt file was still found", got)
+	}
+}
+
+// TestStorage_RemoveCorruptBlob_ReportsUninspectableBlob checks that a blob
+// whose path cannot be inspected is reported as an error, not as a blob that
+// was already gone. A regular file where the blob's bucket directory belongs
+// makes the Lstat fail with ENOTDIR rather than ENOENT.
+func TestStorage_RemoveCorruptBlob_ReportsUninspectableBlob(t *testing.T) {
+	s := setupTestStorage(t)
+	hash := testHash("c2")
+	bucket := filepath.Dir(s.blobPath(hash))
+	if err := os.MkdirAll(filepath.Dir(bucket), 0755); err != nil {
+		t.Fatalf("Failed to create the parent of %s: %v", bucket, err)
+	}
+	if err := os.WriteFile(bucket, nil, 0644); err != nil {
+		t.Fatalf("Failed to write the file blocking %s: %v", bucket, err)
+	}
+	pulled := filepath.Join(t.TempDir(), "pulled")
+	if err := os.WriteFile(pulled, []byte("wrong size"), 0644); err != nil {
+		t.Fatalf("Failed to write %s: %v", pulled, err)
+	}
+	info, err := os.Lstat(pulled)
+	if err != nil {
+		t.Fatalf("Failed to stat %s: %v", pulled, err)
+	}
+
+	removed, err := s.RemoveCorruptBlob(hash, 1, info)
+	if err == nil {
+		t.Error("RemoveCorruptBlob returned nil error for a blob it could not inspect")
+	}
+	if removed {
+		t.Error("RemoveCorruptBlob reported removing a blob it could not inspect")
+	}
+	if got := s.Stats().CorruptBlobs; got != 1 {
+		t.Errorf("Stats().CorruptBlobs = %d, want 1: the corrupt file was still found", got)
+	}
+}
+
+// TestStorage_RemoveCorruptBlob_LosesTheRaceQuietly covers another process
+// unlinking the blob between RemoveCorruptBlob's Lstat and its own unlink. The
+// blob is gone either way, so this is neither an error nor a removal by this
+// call, but the corrupt file a caller was served is still counted.
+func TestStorage_RemoveCorruptBlob_LosesTheRaceQuietly(t *testing.T) {
+	s := setupTestStorage(t)
+	hash := testHash("c3")
+	if err := s.Write(hash, []byte("good, then bytes written in place")); err != nil {
+		t.Fatalf("Write failed: %v", err)
+	}
+	pulled := filepath.Join(t.TempDir(), "pulled")
+	if hit, err := s.HardlinkTo(hash, pulled); err != nil || !hit {
+		t.Fatalf("HardlinkTo: hit=%v err=%v, want hit=true err=nil", hit, err)
+	}
+	info, err := os.Lstat(pulled)
+	if err != nil {
+		t.Fatalf("Failed to stat %s: %v", pulled, err)
+	}
+
+	// The other process wins: the blob is unlinked just before this call's
+	// own unlink, which then finds nothing there.
+	orig := removeBlob
+	t.Cleanup(func() { removeBlob = orig })
+	removeBlob = func(path string) error {
+		if err := orig(path); err != nil {
+			t.Fatalf("Failed to remove %s on behalf of the other process: %v", path, err)
+		}
+		return orig(path)
+	}
+
+	removed, err := s.RemoveCorruptBlob(hash, int64(len("good")), info)
+	if err != nil {
+		t.Errorf("RemoveCorruptBlob failed after losing the race: %v", err)
+	}
+	if removed {
+		t.Error("RemoveCorruptBlob reported removing a blob another process removed")
+	}
+	if s.Has(hash) {
+		t.Error("Blob is still cached after the race")
+	}
+	if got := s.Stats().CorruptBlobs; got != 1 {
+		t.Errorf("Stats().CorruptBlobs = %d, want 1: the corrupt file was still found", got)
+	}
+}

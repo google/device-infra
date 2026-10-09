@@ -3,6 +3,7 @@ package download
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -16,6 +17,7 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/fakes"
 	repb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"github.com/google/device-infra/src/devtools/rbe/casdownloader/cache"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
@@ -582,6 +584,131 @@ func TestDoDownload_TierStats_DumpJSON(t *testing.T) {
 		if !strings.Contains(contentStr, expectedKey) {
 			t.Errorf("Dumped JSON does not contain expected key %s: %s", expectedKey, contentStr)
 		}
+	}
+}
+
+// corruptReportingCache is a fullCache that also reports corrupt hits, as
+// LockFreeCache does.
+type corruptReportingCache struct {
+	fullCache
+	corrupt int64
+}
+
+func (c *corruptReportingCache) CorruptBlobsQuarantined() int64 { return c.corrupt }
+
+// TestDoDownload_DumpsCorruptBlobsQuarantined checks that the cache's count of
+// corrupt hits reaches stats.json. The count is how a host whose cache is
+// being written in place shows up, so it has to be in the file even when it is
+// zero, where it says that the cache checked and found nothing.
+func TestDoDownload_DumpsCorruptBlobsQuarantined(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		cache cache.Cache
+		want  int64
+	}{
+		{name: "cache that checks hits", cache: &corruptReportingCache{corrupt: 3}, want: 3},
+		{name: "cache that does not check hits", cache: &fullCache{}, want: 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newRemoteFailedFixture(t)
+			dumpFile := filepath.Join(t.TempDir(), "stats.json")
+			job := DownloadJob{
+				Client:   f.client,
+				Digest:   f.rootDigest,
+				Dir:      t.TempDir(),
+				DumpJSON: dumpFile,
+				Cache:    tc.cache,
+			}
+			if err := job.DoDownload(context.Background()); err != nil {
+				t.Fatalf("DoDownload failed: %v", err)
+			}
+			if got := job.Stats().CorruptBlobsQuarantined; got != tc.want {
+				t.Errorf("Stats.CorruptBlobsQuarantined = %d, want %d", got, tc.want)
+			}
+
+			dumped, err := os.ReadFile(dumpFile)
+			if err != nil {
+				t.Fatalf("Failed to read dumped stats: %v", err)
+			}
+			var fields map[string]any
+			if err := json.Unmarshal(dumped, &fields); err != nil {
+				t.Fatalf("Failed to parse dumped stats %s: %v", dumped, err)
+			}
+			got, ok := fields["corrupt_blobs_quarantined"]
+			if !ok {
+				t.Fatalf("Dumped JSON has no corrupt_blobs_quarantined: %s", dumped)
+			}
+			if got != float64(tc.want) {
+				t.Errorf("Dumped corrupt_blobs_quarantined = %v, want %d", got, tc.want)
+			}
+		})
+	}
+}
+
+// modeCopyReportingCache is a fullCache that also reports mode-mismatch
+// copies, as LockFreeCache does.
+type modeCopyReportingCache struct {
+	fullCache
+	copies cache.ModeCopyStats
+}
+
+func (c *modeCopyReportingCache) ModeCopies() cache.ModeCopyStats { return c.copies }
+
+// TestDoDownload_DumpsModeCopies checks that the cache's mode-mismatch copies
+// reach stats.json, by cause, and are there as zeros for a cache that does not
+// make them.
+func TestDoDownload_DumpsModeCopies(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		cache cache.Cache
+		want  map[string]int64
+	}{
+		{
+			name: "cache that copies on a mismatch",
+			cache: &modeCopyReportingCache{copies: cache.ModeCopyStats{
+				ExecMismatchCopies: 1, ExecMismatchBytes: 10, PermDriftHits: 2, UnreadableRepairs: 3,
+			}},
+			want: map[string]int64{"exec_mismatch_copies": 1, "exec_mismatch_bytes": 10, "perm_drift_hits": 2, "unreadable_repairs": 3},
+		},
+		{
+			name:  "cache that does not",
+			cache: &fullCache{},
+			want:  map[string]int64{"exec_mismatch_copies": 0, "exec_mismatch_bytes": 0, "perm_drift_hits": 0, "unreadable_repairs": 0},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newRemoteFailedFixture(t)
+			dumpFile := filepath.Join(t.TempDir(), "stats.json")
+			job := DownloadJob{
+				Client:   f.client,
+				Digest:   f.rootDigest,
+				Dir:      t.TempDir(),
+				DumpJSON: dumpFile,
+				Cache:    tc.cache,
+			}
+			if err := job.DoDownload(context.Background()); err != nil {
+				t.Fatalf("DoDownload failed: %v", err)
+			}
+
+			dumped, err := os.ReadFile(dumpFile)
+			if err != nil {
+				t.Fatalf("Failed to read dumped stats: %v", err)
+			}
+			var fields map[string]any
+			if err := json.Unmarshal(dumped, &fields); err != nil {
+				t.Fatalf("Failed to parse dumped stats %s: %v", dumped, err)
+			}
+			for key, want := range tc.want {
+				got, ok := fields[key]
+				if !ok {
+					t.Errorf("Dumped JSON has no %s: %s", key, dumped)
+					continue
+				}
+				if got != float64(want) {
+					t.Errorf("Dumped %s = %v, want %d", key, got, want)
+				}
+			}
+		})
 	}
 }
 
