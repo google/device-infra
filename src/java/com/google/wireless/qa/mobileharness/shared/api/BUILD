@@ -173,6 +173,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/lister:android_robo_driver_lister",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_account_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_file_puller_decorator_job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_flashstation_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_hd_video_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_logcat_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_logcat_monitoring_job_validator",

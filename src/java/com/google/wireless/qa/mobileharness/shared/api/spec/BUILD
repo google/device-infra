@@ -63,6 +63,14 @@ java_library(
 )
 
 java_library(
+    name = "android_flashstation_decorator_spec",
+    srcs = ["AndroidFlashstationDecoratorSpec.java"],
+    deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:basic_annotation",
+    ],
+)
+
+java_library(
     name = "android_foreground_service_messenger_spec",
     srcs = ["AndroidForegroundServiceMessengerSpec.java"],
     deps = [

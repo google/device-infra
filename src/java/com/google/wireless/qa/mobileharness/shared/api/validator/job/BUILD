@@ -144,6 +144,23 @@ java_library(
 )
 
 java_library(
+    name = "android_flashstation_decorator_job_validator",
+    srcs = ["AndroidFlashstationDecoratorJobValidator.java"],
+    deps = [
+        ":job_validator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/step/android:device_init_step",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_flashstation_decorator_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/util:android_decorator_validator_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_flash_station_decorator_spec_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "android_hd_video_decorator_job_validator",
     srcs = ["AndroidHdVideoDecoratorJobValidator.java"],
     deps = [

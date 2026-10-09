@@ -1,0 +1,316 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.spec;
+
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.decorator";
+option java_multiple_files = true;
+
+// Specs for {@link AndroidFlashstationDecoratorSpec}
+// Next tag: 38
+message AndroidFlashstationDecoratorSpec {
+  extend DecoratorSpec {
+    optional AndroidFlashstationDecoratorSpec ext = 344373365;
+  }
+
+  optional string branch = 1 [(field_detail) = {
+    help: "Specifies the branch to get the build from. The build used will be "
+          "the latest build from the specified branch. If the 'build_id' param "
+          "is also specified, this param is ignored."
+  }];
+
+  optional string build_id = 2
+      [(field_detail) = { help: "Specifies the ID of the build to flash." }];
+
+  optional string build_target = 3 [(field_detail) = {
+    help: "Specifies the build target of the build to flash. eg "
+          "'sailfish-userdebug'."
+  }];
+
+  optional bool use_userdebug_build = 20 [
+    deprecated = true,
+    (field_detail) = {
+      help: "Deprecated. Directly specify 'build_target' as 'userdebug' for "
+            "the same goal. Specifies whether to use 'xxx-userdebug' build as "
+            "the build target to flash where 'xxx' is the device name, if "
+            "build_target is not specified."
+    }
+  ];
+
+  optional bool factory_reset = 4 [
+    default = true,
+    (field_detail) = {
+      help: "Specifies whether the cl_flashstation tool should do a factory "
+            "reset after flashing (i.e. wipe user data). Default is true. This "
+            "can be used with param 'skip_refresh' to control whether to "
+            "factory reset the device when the flash is skipped due to same "
+            "build."
+    }
+  ];
+
+  optional bool auto_update = 5 [
+    default = false,
+    (field_detail) = {
+      help: "Specifies whether the cl_flashstation tool should update iteslf. "
+            "Default is false."
+    }
+  ];
+
+  optional bool verbose_flashstation = 6 [
+    default = false,
+    (field_detail) = {
+      help: "Specifies whether the cl_flashstation tool should print all its "
+            "logs to standadrd output. Default is false."
+    }
+  ];
+
+  optional bool critical_tests_passed = 7 [
+    default = false,
+    (field_detail) = {
+      help: "Specifies whether the cl_flashstation tool should skip builds "
+            "that failed critical tests when flashing to the latest build on a "
+            "branch. Default is false."
+    }
+  ];
+
+  optional string flashstation_timeout = 8 [(field_detail) = {
+    help: "Overrides the timeout duration on the cl_flashstation command. "
+          "Does not guarantee a total execution time of the decorator, as "
+          "cl_flashstation might be called more than once as part of a retry "
+          "mechanism. Can be given as \"<x>h <y>m <z>s\" format, or just a "
+          "integer number of seconds."
+  }];
+
+  optional bool skip_refresh = 9 [(field_detail) = {
+    help: "If set to 'true' and if the device already has the specified image, "
+          "then the device will not be flashed again, otherwise always refresh "
+          "the device with the image."
+  }];
+
+  repeated string flashstation_tool_tags = 10 [(field_detail) = {
+    help: "List of tool tags to apply to flashstation invocation (used when "
+          "logging). All values must be the name of an enum value in "
+          "logs.proto.wireless.android.busytown.WebFlashstationClientInfo.ToolTag"
+  }];
+
+  optional uint32 flashing_retries = 11 [
+    default = 3,
+    (field_detail) = { help: "Number of times to try flashing. Default 3" }
+  ];
+
+  optional string flashstation_results_dir = 12 [
+    default = "flashstation_decorator_protos",
+    (field_detail) = {
+      help: "Test output subdirectory containing flashing related log or proto "
+            "files."
+    }
+  ];
+
+  optional bool force_debuggable = 13 [
+    default = false,
+    (field_detail) = {
+      help: "Specifies whether to flash the debug boot image (eg. enables "
+            "`adb root` on -user builds). Default is false."
+    }
+  ];
+
+  optional bool citadel_rescue = 14 [
+    default = false,
+    (field_detail) = {
+      help: "Specifies whether to perform Citadel firmware rescue. "
+            "Default is false."
+    }
+  ];
+
+  optional string autoota_group = 15 [(field_detail) = {
+    help: "User specified AutoOTA group to flash to the device. (eg. "
+          "droidfood, droidfood.weekly, etc). Use this flag only when the lab"
+          "is set up on a gLinux with valid credentials."
+  }];
+
+  optional string autoota_build_prefix = 16 [(field_detail) = {
+    help: "User specified build prefix to use as the source build when "
+          "choosing an AutoOTA build. (eg. PPR1). It's REQUIRED when more than "
+          "one OTA found for the given autoota_group, and users need to "
+          "explicitly select one."
+  }];
+
+  optional int64 min_flash_time_sec = 17 [
+    default = 600,
+    (field_detail) = {
+      help: "Minimum flash time to guard that test has enough remaining time "
+            "to flash the device, to prevent test is timeout during flashing. "
+            "Default is 10 minutes."
+    }
+  ];
+
+  optional int64 wait_time_sec_before_device_init = 18 [
+    default = 0,
+    (field_detail) = {
+      help: "Quiet period of time in seconds before checking if the device is "
+            "initialized or not."
+    }
+  ];
+
+  optional bool force_flash_partitions = 19 [
+    default = false,
+    (field_detail) = {
+      help: "Specifies whether the cl_flashstation tool should force flash all "
+            "partitions even if they are up to date. Default is false."
+    }
+  ];
+
+  optional bool flash_disable_verity = 21 [
+    default = false,
+    (field_detail) = {
+      help: "Specifies whether cl_flashstation disables verification of "
+            "modules loaded into kernel."
+    }
+  ];
+
+  optional bool disable_verification = 22 [
+    default = false,
+    (field_detail) = {
+      help: "Specifies whether cl_flashstation disables verification "
+            "of bootloader."
+    }
+  ];
+
+  optional bool filter_device_inspection_to_serial_number = 23 [
+    default = true,
+    (field_detail) = {
+      help: "Prevents flashstation from trying to inspect other devices that "
+            "don't match the serial number passed via the --serial flag. "
+            "Set it to false for devices where the USB serial number does not "
+            "match the Android serial number."
+    }
+  ];
+
+  optional bool disable_flashstation_flash = 24 [
+    default = false,
+    (field_detail) = { help: "Disables this decorator. Default is false." }
+  ];
+
+  optional bool streaming_flash = 25 [
+    default = false,
+    (field_detail) = {
+      help: "Stream build directly to device without downloading it first."
+    }
+  ];
+
+  optional bool download_images_from_cas = 26 [
+    default = false,
+    (field_detail) = {
+      help: "Specifies whether to download images from CAS. Default is false. "
+            "This option should only be used when the lab has the service "
+            "account key to access Android Build API. For example, the "
+            "'dockerized-tradefed-access' key for ATE labs. You can also "
+            "provide the key path via the lab flag "
+            "`--android_tradefed_test_key_file_path`."
+    }
+  ];
+
+  optional bool skip_flash_older_build = 27 [
+    default = false,
+    (field_detail) = {
+      help: "Skip flashing if the target build is older than the build on the "
+            "device."
+    }
+  ];
+
+  optional bool use_mh_flashstation_key_if_exists = 28 [
+    deprecated = true,
+    default = false,
+    (field_detail) = {
+      help: "Deprecated. Set it to true will lead to test failures. "
+            "Whether to use MH's cached flashstation key by default. "
+            "Default is false."
+    }
+  ];
+
+  optional bool enable_v4_build_api = 29 [(field_detail) = {
+    help: "Whether to use the Android Build V4 API in the flashstation tool. "
+          "Default is false."
+  }];
+
+  optional string install_mode = 30 [(field_detail) = {
+    help: "Mode to install the build(eg. 'flash', 'ai_only', 'dsu', 'pvmfw'). "
+          "Supported values are "
+          "InstallModeFlagValue. "
+          "For example, if want to flash the AI partition only, pass "
+          "install_mode with value 'ai_only'."
+  }];
+
+  optional bool flash_ai = 31 [
+    default = false,
+    (field_detail) = {
+      help: "Flash the AI partition in addition to the regular flash."
+    }
+  ];
+
+  optional bool flash_all_bootloader_slots = 32 [
+    default = false,
+    (field_detail) = {
+      help: "Flash all bootloader slots. This will enable A/B bootloader "
+            "fallback as a failover option."
+    }
+  ];
+
+  optional bool skip_setup_wizard = 33 [
+    default = false,
+    (field_detail) = {
+      help: "If set to 'true', it will skip the setup wizard after flashing "
+            "the device. It works on Google Experience Device with userdebug "
+            "build only."
+    }
+  ];
+
+  optional string await_device_timeout_ms = 34 [(field_detail) = {
+    help: "Timeout for waiting for the device to be available after flashing. "
+          "Default is 5000ms, defined by the cl_flashstation tool."
+  }];
+
+  optional int32 device_init_attempts = 35 [
+    default = 5,
+    (field_detail) = {
+      help: "Number of attempts to initialize the device after flashing. "
+            "Default is 5."
+    }
+  ];
+
+  optional int32 device_online_wait_attempts = 36 [
+
+    default = 3,
+    (field_detail) = {
+      help: "Number of attempts to wait for device to booting into adb after "
+            "flashing for each device_init_attempts. Default is 3. This param "
+            "will overwrite the param wait_for_device_init_attempts in "
+            "DeviceInitializationStep."
+    }
+  ];
+
+  optional bool skip_reboot = 37 [
+    default = false,
+    (field_detail) = {
+      help: "If set to 'true', it will skip rebooting the device after "
+            "flashing. Default is false."
+    }
+  ];
+}

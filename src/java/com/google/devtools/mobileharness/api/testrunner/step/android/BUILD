@@ -23,8 +23,8 @@ java_library(
         "DeviceInitializationStep.java",
     ],
     visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness:__subpackages__",
+        "//src/javatests/com/google/wireless/qa/mobileharness:__subpackages__",
     ],
     exports = [":initialization_args"],
     deps = [
