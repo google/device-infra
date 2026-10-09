@@ -366,10 +366,42 @@ public final class ConsoleJobCreatorTest {
         jobCreator.createXtsTradefedTestJob(
             sessionRequestInfo, ImmutableSet.of("mcts_module"), /* skipDynamicMctsJob= */ true);
 
-    // No preloaded Mainline modules -> only the static xTS job is created (dynamic MCTS skipped).
+    // No preloaded Mainline modules -> a single job is created as if dynamic MCTS were disabled.
+    // The job must not be marked as a dynamic download job, otherwise XtsRunStrategy would exclude
+    // the MCTS modules from its testcases dir and they would never run.
     assertThat(jobInfos).hasSize(1);
-    assertThat(jobInfos.get(0).properties().get(XtsConstants.XTS_JOB_NAME))
-        .isEqualTo(XtsConstants.STATIC_XTS_JOB_NAME);
+    assertThat(jobInfos.get(0).properties().get(XtsConstants.XTS_JOB_NAME)).isNull();
+    assertThat(jobInfos.get(0).properties().get(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED))
+        .isNull();
+  }
+
+  @Test
+  public void createXtsTradefedTestJob_noPreloadedMainlineModulesWithMctsModuleFilter_createsJob()
+      throws Exception {
+    // Regression test: requesting an MCTS module on a device with no preloaded Mainline modules
+    // (e.g. AAOS / AOSP) must still create a job that runs it from the bundled testcases.
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts -m CtsHostsideNetworkTests")
+                .setXtsType("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .addModuleNames("CtsHostsideNetworkTests")
+                .setIsXtsDynamicDownloadEnabled(true));
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(eq(sessionRequestInfo), any()))
+        .thenReturn(ImmutableList.of("CtsHostsideNetworkTests"));
+    stubCreateXtsTradefedTestJob(sessionRequestInfo);
+
+    ImmutableList<JobInfo> jobInfos =
+        jobCreator.createXtsTradefedTestJob(
+            sessionRequestInfo,
+            ImmutableSet.of("CtsHostsideNetworkTests"),
+            /* skipDynamicMctsJob= */ true);
+
+    assertThat(jobInfos).hasSize(1);
+    assertThat(jobInfos.get(0).properties().get(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED))
+        .isNull();
   }
 
   @Test
@@ -444,6 +476,11 @@ public final class ConsoleJobCreatorTest {
       throws Exception {
     when(sessionRequestHandlerUtil.getFilteredTradefedModules(eq(sessionRequestInfo), any()))
         .thenReturn(ImmutableList.of("mcts_module"));
+    stubCreateXtsTradefedTestJob(sessionRequestInfo);
+  }
+
+  private void stubCreateXtsTradefedTestJob(SessionRequestInfo sessionRequestInfo)
+      throws Exception {
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.newBuilder().setName("mock_job").build());
     when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
