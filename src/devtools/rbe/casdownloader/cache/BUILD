@@ -27,10 +27,12 @@ go_library(
         "evictorconfig.go",
         "localcache.go",
         "lockfreecache.go",
+        "monitoring.go",
         "setup.go",
     ],
     importpath = "github.com/google/device-infra/src/devtools/rbe/casdownloader/cache",
     deps = [
+        "//src/devtools/rbe/common/monitoring",
         "//src/devtools/rbe/common/storage",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/client",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/digest",
@@ -45,10 +47,12 @@ go_test(
     srcs = [
         "evictorconfig_test.go",
         "lockfreecache_test.go",
+        "monitoring_test.go",
         "setup_test.go",
     ],
     embed = [":cache"],
     deps = [
+        "//src/devtools/rbe/common/monitoring",
         "//src/devtools/rbe/common/storage",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/client",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/digest",

@@ -28,6 +28,8 @@ var (
 	lastRecordedTotal         int64
 	lastRecordedStatus        string
 	lastRecordedUpstreamRPC   string
+	lastRecordedCacheImpl     string
+	lastRecordedCacheActivity *LocalCacheActivity
 )
 
 func isMurdockdPresent(addr string) bool { return false }
@@ -55,6 +57,15 @@ func recordDownloadStats(stats *DownloadStats, casInstance string, localCacheEna
 		testMu.Lock()
 		lastRecordedCaller = stats.Caller
 		lastRecordedNoteReasons = distinctNoteReasons(stats.NoteReasons)
+		testMu.Unlock()
+	}
+}
+
+func recordLocalCacheStats(stats *LocalCacheStats, casInstance string) {
+	if stats != nil {
+		testMu.Lock()
+		lastRecordedCacheImpl = stats.Impl
+		lastRecordedCacheActivity = stats.Activity
 		testMu.Unlock()
 	}
 }
