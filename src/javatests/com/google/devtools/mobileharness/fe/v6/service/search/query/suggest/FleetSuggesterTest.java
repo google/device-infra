@@ -552,6 +552,20 @@ public final class FleetSuggesterTest {
   }
 
   @Test
+  public void emptyQuery_withFilters_returnsSuggestions() {
+    FleetSuggestionResponse response =
+        suggester.suggest(corpus, request("", simple("device_field::status", "idle")));
+    assertThat(response.getItemsList()).isNotEmpty();
+  }
+
+  @Test
+  public void emptyQuery_withGroupBys_returnsSuggestions() {
+    FleetSuggestionResponse response =
+        suggester.suggest(corpus, requestWithGroupBys("", "dimension::model"));
+    assertThat(response.getItemsList()).isNotEmpty();
+  }
+
+  @Test
   public void emptyFilter_zeroCountCondition_isNotSuggested() {
     // Every device in the fleet has a status, so "status is empty" matches 0 devices and must not
     // be suggested.

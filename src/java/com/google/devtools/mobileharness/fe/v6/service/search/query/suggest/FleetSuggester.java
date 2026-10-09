@@ -143,11 +143,17 @@ public final class FleetSuggester {
   public FleetSuggestionResponse suggest(SearchCorpus corpus, FleetSuggestionRequest request) {
     int limit = request.getLimit() > 0 ? request.getLimit() : DEFAULT_LIMIT;
     String query = WHITESPACE.matcher(request.getInput()).replaceAll(" ").trim();
-    if (query.isEmpty()) {
+    if (query.isEmpty()
+        && request.getFiltersList().isEmpty()
+        && request.getGroupByList().isEmpty()) {
       return FleetSuggestionResponse.getDefaultInstance();
     }
     SuggestionContext context =
         SuggestionContext.create(corpus, request.getFiltersList(), filterEngine);
+
+    if (query.isEmpty()) {
+      return suggestSingleToken(context, "", request.getGroupByList(), limit);
+    }
 
     // The group-by prefix owns its input: a term matching no key yields nothing rather than falling
     // through to a value search for the literal word "group".
