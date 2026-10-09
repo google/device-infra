@@ -40,7 +40,7 @@ class DropboxParser implements LineCallback {
   private static final Pattern DROPBOX_ENTRY_SEPARATOR = Pattern.compile("^={40}$");
   private static final Pattern DROPBOX_ENTRY_PROCESS_LINE = Pattern.compile("^Process: (.+)");
   private static final Pattern DROPBOX_ENTRY_TOMBSTONE_PROCESS =
-      Pattern.compile("^pid: \\d+, tid: \\d+, name: .+ {2}>>> (.+) <<<");
+      Pattern.compile("^pid: \\d+, (?:ppid: \\d+, )?tid: \\d+, name: .+ {2}>>> (.+) <<<");
 
   private final List<DropboxEntry> entries = new ArrayList<>();
 

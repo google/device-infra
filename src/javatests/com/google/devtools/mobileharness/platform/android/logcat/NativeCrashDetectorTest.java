@@ -25,6 +25,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashType;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashedProcess;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.ProcessCategory;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -48,6 +49,7 @@ public final class NativeCrashDetectorTest {
   private static final String TEST_DATA_PREFIX =
       "javatests/com/google/devtools/mobileharness/platform/android/logcat/testdata/";
   private static final String CRASH_LOG_FILE = "native_crash.txt";
+  private static final String CRASH_LOG_37_FILE = "native_crash_37.txt";
 
   private static final MonitoringConfig MONITORING_CONFIG =
       new MonitoringConfig(
@@ -84,6 +86,30 @@ public final class NativeCrashDetectorTest {
     assertThat(crashEvent.process().type()).isEqualTo(CrashType.NATIVE);
     assertThat(crashEvent.crashLogs())
         .contains("pid: 12345, tid: 12345, name: com.example.app  >>> com.example.app <<<");
+    verify(crashDialogDetector, atLeastOnce())
+        .scan(testInfo, device, MONITORING_CONFIG.reportAsFailurePackages());
+  }
+
+  @Test
+  public void process_nativeCrashWithPpid_detectsCrashEvent() throws Exception {
+    Path crashLogPath =
+        Path.of(RunfilesUtil.getRunfilesLocation(TEST_DATA_PREFIX + CRASH_LOG_37_FILE));
+    List<String> lines = Files.readAllLines(crashLogPath);
+
+    for (String line : lines) {
+      LogcatParser.parse(line).ifPresent(crashDetector::process);
+    }
+
+    ImmutableList<LogcatEvent> events = crashDetector.getEvents();
+    assertThat(events).hasSize(1);
+    CrashEvent crashEvent = (CrashEvent) events.get(0);
+    assertThat(crashEvent.process())
+        .isEqualTo(
+            new CrashedProcess(
+                "com.example.app", 31139, ProcessCategory.FAILURE, CrashType.NATIVE));
+    assertThat(crashEvent.crashLogs())
+        .contains(
+            "pid: 31139, ppid: 708, tid: 12345, name: com.example.app  >>> com.example.app <<<");
     verify(crashDialogDetector, atLeastOnce())
         .scan(testInfo, device, MONITORING_CONFIG.reportAsFailurePackages());
   }

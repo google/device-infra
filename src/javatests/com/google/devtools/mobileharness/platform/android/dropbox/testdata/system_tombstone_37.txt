@@ -1,0 +1,34 @@
+Drop box contents: 6 entries
+Max entries: 1000
+Low priority rate limit period: 2000 ms
+Low priority tags: {data_app_wtf, keymaster, system_server_wtf, system_app_strictmode, system_app_wtf, system_server_strictmode, data_app_strictmode, netstats}
+Searching for: SYSTEM_TOMBSTONE
+
+========================================
+2026-10-08 04:11:17 SYSTEM_TOMBSTONE (compressed text, 9721 bytes)
+isPrevious: true
+Build: google/cheetah/cheetah:17/ZP1A.260714.001/12345678:user/release-keys
+Hardware: cheetah
+Revision: DVT1.0
+Bootloader: unknown
+Radio: unknown
+Kernel: Linux version 6.12.0-android16-0-g000000000000-ab12345678-4k (kleaf@build-host) #1 SMP PREEMPT Fri Jul 10 21:44:24 UTC 2026
+
+Dropped-Count: 0
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+Build fingerprint: 'google/cheetah/cheetah:17/ZP1A.260714.001/12345678:user/release-keys'
+Kernel Release: '6.12.0-android16-0-g000000000000-ab12345678-4k'
+Revision: 'DVT1.0'
+ABI: 'arm64'
+Timestamp: 2026-10-08 04:11:17.277701625-0700
+Process uptime: 1s
+Executable: /system/bin/app_process64
+Cmdline: com.test.app.nativecrasher
+pid: 29730, ppid: 708, tid: 29730, name: g.nativecrasher  >>> com.test.app.nativecrasher <<<
+uid: 10341
+tagged_addr_ctrl: 0000000000000001 (PR_TAGGED_ADDR_ENABLE)
+pac_enabled_keys: 000000000000000f (PR_PAC_APIAKEY, PR_PAC_APIBKEY, PR_PAC_APDAKEY, PR_PAC_APDBKEY)
+esr: 0000000092000006 (Data Abort Exception 0x24)
+signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0000000000000000 (read)
+Cause: null pointer dereference
+    x0  b4000074ad60ceb0  x1  0000007ffd7d6668  x2  0000000000000000  x3  0000000070bea3a0

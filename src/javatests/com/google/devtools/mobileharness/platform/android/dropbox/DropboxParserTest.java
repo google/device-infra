@@ -34,6 +34,8 @@ public class DropboxParserTest {
 
   private static final String SYSTEM_TOMBSTONE_FILE =
       "javatests/com/google/devtools/mobileharness/platform/android/dropbox/testdata/system_tombstone.txt";
+  private static final String SYSTEM_TOMBSTONE_37_FILE =
+      "javatests/com/google/devtools/mobileharness/platform/android/dropbox/testdata/system_tombstone_37.txt";
   private static final String DATA_APP_ANR_FILE =
       "javatests/com/google/devtools/mobileharness/platform/android/dropbox/testdata/data_app_anr.txt";
   private static final String DATA_APP_CRASH_FILE =
@@ -123,6 +125,23 @@ public class DropboxParserTest {
     assertThat(entries.get(1).tag()).isEqualTo(DropboxTag.SYSTEM_TOMBSTONE);
     assertThat(entries.get(1).timestamp()).isEqualTo(LocalDateTime.of(2025, 10, 24, 15, 9, 8));
     assertThat(entries.get(1).packageName()).isEqualTo("com.test.app.nativecrasher2");
+  }
+
+  @Test
+  public void getDropboxEntries_systemTombstoneWithPpid() throws Exception {
+    var parser = new DropboxParser(DropboxTag.SYSTEM_TOMBSTONE);
+    List<String> lines =
+        Files.readAllLines(Path.of(RunfilesUtil.getRunfilesLocation(SYSTEM_TOMBSTONE_37_FILE)));
+    for (String line : lines) {
+      var unused = parser.onLine(line);
+    }
+
+    ImmutableList<DropboxEntry> entries = parser.getDropboxEntries();
+    assertThat(entries).hasSize(1);
+
+    assertThat(entries.get(0).tag()).isEqualTo(DropboxTag.SYSTEM_TOMBSTONE);
+    assertThat(entries.get(0).timestamp()).isEqualTo(LocalDateTime.of(2026, 10, 8, 4, 11, 17));
+    assertThat(entries.get(0).packageName()).isEqualTo("com.test.app.nativecrasher");
   }
 
   @Test

@@ -55,7 +55,7 @@ public class NativeCrashDetector implements LineProcessor {
   private static final String NATIVE_CRASH_LOG_TAG = "DEBUG";
 
   private static final Pattern NATIVE_CRASH_MATCH_PATTERN =
-      Pattern.compile("pid: (\\d+), tid: \\d+, name: .+  >>> (.+) <<<");
+      Pattern.compile("pid: (\\d+), (?:ppid: \\d+, )?tid: \\d+, name: .+  >>> (.+) <<<");
 
   // The 'DEBUG' tag used for native crashes has a log pid which is different from the crashed
   // process' pid. This multimap is used to store the lines from the 'DEBUG' tag by pid so that we

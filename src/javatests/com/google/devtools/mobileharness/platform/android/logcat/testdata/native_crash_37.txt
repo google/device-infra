@@ -1,0 +1,19 @@
+10-08 04:36:55.555   737   737 I unrelated: Some message before crash
+10-08 04:36:55.641 31166 31166 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+10-08 04:36:55.641 31166 31166 F DEBUG   : Build fingerprint: 'google/cheetah/cheetah:17/ZP1A.260714.001/12345678:user/release-keys'
+10-08 04:36:55.641 31166 31166 F DEBUG   : Kernel Release: '6.12.0-android16-0-g000000000000-ab12345678-4k'
+10-08 04:36:55.641 31166 31166 F DEBUG   : Revision: 'DVT1.0'
+10-08 04:36:55.641 31166 31166 F DEBUG   : ABI: 'arm64'
+10-08 04:36:55.641 31166 31166 F DEBUG   : Timestamp: 2026-10-08 04:36:55.566091833-0700
+10-08 04:36:55.641 31166 31166 F DEBUG   : Process uptime: 1s
+10-08 04:36:55.641 31166 31166 F DEBUG   : Executable: /system/bin/app_process64
+10-08 04:36:55.641 31166 31166 F DEBUG   : Cmdline: com.example.app
+10-08 04:36:55.641 31166 31166 F DEBUG   : pid: 31139, ppid: 708, tid: 12345, name: com.example.app  >>> com.example.app <<<
+10-08 04:36:55.641 31166 31166 F DEBUG   : uid: 10341
+10-08 04:36:55.641 31166 31166 F DEBUG   : tagged_addr_ctrl: 0000000000000001 (PR_TAGGED_ADDR_ENABLE)
+10-08 04:36:55.641 31166 31166 F DEBUG   : pac_enabled_keys: 000000000000000f (PR_PAC_APIAKEY, PR_PAC_APIBKEY, PR_PAC_APDAKEY, PR_PAC_APDBKEY)
+10-08 04:36:55.641 31166 31166 F DEBUG   : esr: 0000000092000006 (Data Abort Exception 0x24)
+10-08 04:36:55.641 31166 31166 F DEBUG   : signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0000000000000000 (read)
+10-08 04:36:55.641 31166 31166 F DEBUG   : Cause: null pointer dereference
+10-08 04:36:55.641 31166 31166 F DEBUG   :     x0  b4000074ad60ceb0  x1  0000007ffd7d6668  x2  0000000000000000  x3  0000000070bea3a0
+10-08 04:36:55.641   737   737 I unrelated: Some message after crash
