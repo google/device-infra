@@ -124,6 +124,7 @@ public final class DriverDecoratorMetadata {
     builder.put("AndroidDeviceSettingsDecorator", "AndroidDeviceSettingsDecoratorSpec");
     builder.put("AndroidEmulatorVideoDecorator", "AndroidEmulatorVideoDecoratorSpec");
     builder.put("AndroidFilePullerDecorator", "AndroidFilePullerDecoratorSpec");
+    builder.put("AndroidFlashGkiDecorator", "AndroidFlashGkiDecoratorSpec");
     builder.put("AndroidInstallAppsDecorator", "InstallApkStepSpec");
     builder.put(
         "AndroidLabTestSupportSettingsDecorator", "AndroidLabTestSupportSettingsDecoratorSpec");
