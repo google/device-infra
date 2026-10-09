@@ -40,6 +40,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:host_corpus",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:search_corpus",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query/suggest:fleet_suggester",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query/suggest:suggestion_intent_parser",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_registry",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",

@@ -46,10 +46,10 @@ import java.util.regex.Pattern;
  * IntentPattern#VALUE_LIST} pattern 2, and {@link IntentPattern#SINGLE_TOKEN} patterns 3 and 4
  * together. Group-by is pattern 0.
  */
-final class SuggestionIntentParser {
+public final class SuggestionIntentParser {
 
   /** The mutually exclusive shapes an input can take, in dispatch order. */
-  enum IntentPattern {
+  public enum IntentPattern {
     /** {@code no <key>}, {@code has <key>}, {@code <key> is empty}, {@code <key> is not empty}. */
     EMPTINESS,
     /**
@@ -74,7 +74,7 @@ final class SuggestionIntentParser {
    * NEGATED_VALUE} and {@code VALUE_LIST} (the whole text); {@code isEmpty} for {@code EMPTINESS};
    * {@code exclude} for {@code KEY_WITH_OPERATOR}; {@code values} for {@code VALUE_LIST}.
    */
-  record Intent(
+  public record Intent(
       IntentPattern pattern,
       String key,
       String value,
@@ -158,7 +158,7 @@ final class SuggestionIntentParser {
    * The text after a group-by prefix, or empty if the input does not start with one. A bare prefix
    * ({@code group by}) yields an empty term, meaning "offer the curated group-by candidates".
    */
-  static Optional<String> groupByTerm(String query) {
+  public static Optional<String> groupByTerm(String query) {
     String lower = Ascii.toLowerCase(query);
     for (String prefix : GROUP_BY_PREFIXES) {
       if (lower.equals(prefix)) {
@@ -172,7 +172,7 @@ final class SuggestionIntentParser {
   }
 
   /** Classifies a whitespace-normalized, non-empty query that is not a group-by. */
-  static Intent parse(String query) {
+  public static Intent parse(String query) {
     String lower = Ascii.toLowerCase(query);
 
     Matcher m = EMPTY_NO.matcher(lower);

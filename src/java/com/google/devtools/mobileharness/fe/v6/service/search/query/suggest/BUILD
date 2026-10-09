@@ -20,6 +20,12 @@ package(
     default_visibility = ["//src/devtools/mobileharness/fe/v6:visibility"],
 )
 
+java_library(
+    name = "suggestion_intent_parser",
+    srcs = ["SuggestionIntentParser.java"],
+    deps = ["@maven//:com_google_guava_guava"],
+)
+
 # The search-bar suggestion pipeline: intent parsing, per-shape candidate generation, wording and
 # actions, and ranking. Entity knowledge enters only through the corpus's KeyVocabulary.
 java_library(
@@ -29,11 +35,11 @@ java_library(
         "SuggestionActions.java",
         "SuggestionCandidate.java",
         "SuggestionContext.java",
-        "SuggestionIntentParser.java",
         "SuggestionRanker.java",
         "SuggestionText.java",
     ],
     deps = [
+        ":suggestion_intent_parser",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
