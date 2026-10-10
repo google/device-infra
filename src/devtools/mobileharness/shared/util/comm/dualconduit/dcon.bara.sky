@@ -89,8 +89,8 @@ dcon_blaze_to_bazel_transforms = [
     dcon_build_file_replace("//third_party/golang/go_opentelemetry_io/otel/exporters/otlp/otlptrace/otlptracegrpc/v/v1:otlptracegrpc", "@io_opentelemetry_go_otel_exporters_otlp_otlptrace_otlptracegrpc//:otlptracegrpc"),
     dcon_build_file_replace("//third_party/golang/go_opentelemetry_io/contrib/bridges/otelslog/v/v0:otelslog", "@io_opentelemetry_go_contrib_bridges_otelslog//:otelslog"),
     dcon_build_file_replace("//third_party/golang/go_opentelemetry_io/otel/exporters/otlp/otlplog/otlploggrpc/v/v0:otlploggrpc", "@io_opentelemetry_go_otel_exporters_otlp_otlplog_otlploggrpc//:otlploggrpc"),
-    dcon_build_file_replace("//third_party/golang/go_opentelemetry_io/otel/log/v/v0/global", "@io_opentelemetry_go_otel_log//global"),
-    dcon_build_file_replace("//third_party/golang/go_opentelemetry_io/otel/sdk/log/v/v0:log", "@io_opentelemetry_go_otel_sdk_log//:log"),
+    dcon_build_file_replace("//third_party/golang/go_opentelemetry_io/otel/log/v/v1/global", "@io_opentelemetry_go_otel_log//global"),
+    dcon_build_file_replace("//third_party/golang/go_opentelemetry_io/otel/sdk/log/v/v1:log", "@io_opentelemetry_go_otel_sdk_log//:log"),
 ]
 
 dcon_go_imports_map = {
@@ -162,6 +162,6 @@ dcon_go_imports_map = {
     "google3/third_party/golang/go_opentelemetry_io/otel/exporters/otlp/otlptrace/otlptracegrpc/v/v1/otlptracegrpc": "go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc",
     "google3/third_party/golang/go_opentelemetry_io/contrib/bridges/otelslog/v/v0/otelslog": "go.opentelemetry.io/contrib/bridges/otelslog",
     "google3/third_party/golang/go_opentelemetry_io/otel/exporters/otlp/otlplog/otlploggrpc/v/v0/otlploggrpc": "go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc",
-    "google3/third_party/golang/go_opentelemetry_io/otel/log/v/v0/global/global": "go.opentelemetry.io/otel/log/global",
-    "google3/third_party/golang/go_opentelemetry_io/otel/sdk/log/v/v0/log": "go.opentelemetry.io/otel/sdk/log",
+    "google3/third_party/golang/go_opentelemetry_io/otel/log/v/v1/global/global": "go.opentelemetry.io/otel/log/global",
+    "google3/third_party/golang/go_opentelemetry_io/otel/sdk/log/v/v1/log": "go.opentelemetry.io/otel/sdk/log",
 }
