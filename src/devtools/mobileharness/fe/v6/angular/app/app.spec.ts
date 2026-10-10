@@ -4,8 +4,9 @@ import {
   ActivatedRoute,
   convertToParamMap,
   provideRouter,
+  Router,
 } from '@angular/router';
-import {Subject, of} from 'rxjs';
+import {of, Subject} from 'rxjs';
 
 import {App} from './app';
 import {APP_DATA, type AppData} from './core/models/app_data';
@@ -148,8 +149,34 @@ describe('App Component', () => {
       routeSpy.and.returnValue('sessions');
       expect(component.isNavActive('sessions')).toBeTrue();
 
+      routeSpy.and.returnValue('assistant/conv-1');
+      expect(component.isNavActive('assistant')).toBeTrue();
+      routeSpy.and.returnValue('home/assistant');
+      expect(component.isNavActive('assistant')).toBeFalse();
+
       routeSpy.and.returnValue('unknown');
       expect(component.isNavActive('home')).toBeFalse();
+      expect(component.isNavActive('assistant')).toBeFalse();
+    });
+
+    it('should set showContent=true when route path is assistant and false when unknown', () => {
+      const router = TestBed.inject(Router);
+      component.isFakeData = false;
+      component.showContent = false;
+      spyOnProperty(router, 'routerState', 'get').and.returnValue({
+        snapshot: {
+          root: {
+            firstChild: {
+              firstChild: null,
+              routeConfig: {path: 'assistant'},
+              params: {},
+            },
+          },
+        },
+      } as unknown as Router['routerState']);
+
+      component.updateShowContent();
+      expect(component.showContent).toBeTrue();
     });
   });
 
@@ -168,6 +195,18 @@ describe('App Component', () => {
       }
       const params = component.getPreservedQueryParams();
       expect(params['universe']).toBe('test-universe');
+    });
+
+    it('should include enable_assistant when assistant feature is enabled', () => {
+      component.isAssistantEnabled = true;
+      const params = component.getPreservedQueryParams();
+      expect(params['enable_assistant']).toBe('true');
+    });
+
+    it('should not include enable_assistant when assistant feature is disabled', () => {
+      component.isAssistantEnabled = false;
+      const params = component.getPreservedQueryParams();
+      expect(params['enable_assistant']).toBeUndefined();
     });
   });
 
