@@ -37,9 +37,17 @@ public final class HostTypesTest {
   }
 
   @Test
-  public void determineLabTypeDisplayNames_fusion() {
+  public void determineDeviceManagerType_fusionFromEnum() {
     assertThat(HostTypes.determineLabTypeDisplayNames(Optional.empty(), Optional.of("FUSION_LAB")))
-        .containsExactly("Fusion Lab");
+        .isEmpty();
+    assertThat(HostTypes.determineDeviceManagerType(Optional.empty(), Optional.of("FUSION_LAB")))
+        .isEqualTo("Fusion");
+  }
+
+  @Test
+  public void determineDeviceManagerType_mhDefault() {
+    assertThat(HostTypes.determineDeviceManagerType(Optional.empty(), Optional.of("SHARED_LAB")))
+        .isEqualTo("MH");
   }
 
   @Test
@@ -61,8 +69,7 @@ public final class HostTypesTest {
     assertThat(
             HostTypes.determineLabTypeDisplayNames(
                 Optional.of(createLabInfoWithProperty("lab_type", "slaas")), Optional.empty()))
-        .containsExactly("Satellite Lab", "SLaaS")
-        .inOrder();
+        .containsExactly("SLaaS");
   }
 
   @Test
@@ -79,8 +86,9 @@ public final class HostTypesTest {
             HostTypes.determineLabTypeDisplayNames(
                 Optional.of(createLabInfoWithProperty("lab_type", "satellite")),
                 Optional.of("MH_ATE_LAB")))
-        .containsExactly("Satellite Lab", "ATE Lab")
-        .inOrder();
+        .containsExactly("Satellite Lab");
+    assertThat(HostTypes.isAteLab(Optional.of("MH_ATE_LAB"))).isTrue();
+    assertThat(HostTypes.isAteLab(Optional.of("MH_SATELLITE_LAB"))).isFalse();
   }
 
   @Test
@@ -89,8 +97,7 @@ public final class HostTypesTest {
             HostTypes.determineLabTypeDisplayNames(
                 Optional.of(createLabInfoWithProperty("lab_type", "satellite")),
                 Optional.of("RIEMANN_FIELD_LAB")))
-        .containsExactly("Satellite Lab", "Riemann Field Lab")
-        .inOrder();
+        .containsExactly("Satellite Lab");
   }
 
   @Test
@@ -107,8 +114,9 @@ public final class HostTypesTest {
                                 HostProperty.newBuilder().setKey("dm_type").setValue("fusion"))))
             .build();
     assertThat(HostTypes.determineLabTypeDisplayNames(Optional.of(labInfo), Optional.empty()))
-        .containsExactly("Satellite Lab", "SLaaS", "Fusion Lab")
-        .inOrder();
+        .containsExactly("SLaaS");
+    assertThat(HostTypes.determineDeviceManagerType(Optional.of(labInfo), Optional.empty()))
+        .isEqualTo("Fusion");
   }
 
   @Test
@@ -125,8 +133,9 @@ public final class HostTypesTest {
                                 HostProperty.newBuilder().setKey("dm_type").setValue("fusion"))))
             .build();
     assertThat(HostTypes.determineLabTypeDisplayNames(Optional.of(labInfo), Optional.empty()))
-        .containsExactly("Core Lab", "Fusion Lab")
-        .inOrder();
+        .containsExactly("Core Lab");
+    assertThat(HostTypes.determineDeviceManagerType(Optional.of(labInfo), Optional.empty()))
+        .isEqualTo("Fusion");
   }
 
   private LabInfo createLabInfoWithProperty(String key, String value) {

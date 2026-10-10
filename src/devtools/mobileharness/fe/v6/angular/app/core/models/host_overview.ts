@@ -261,6 +261,12 @@ export declare interface HostOverview {
    * The semantic types of the lab.
    */
   readonly uiLabTypes?: UiLabType[];
+  /** The single semantic lab type of the host (CORE, SLAAS, or SATELLITE). */
+  readonly uiLabType?: UiLabType;
+  /** The device manager type of the host ("Fusion" or "MH"). */
+  readonly deviceManagerType?: string;
+  /** Whether the host is an ATE lab. */
+  readonly isAte?: boolean;
 }
 
 /**
