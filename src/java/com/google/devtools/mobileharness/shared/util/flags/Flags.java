@@ -831,6 +831,15 @@ public class Flags {
   public static final Flag<Boolean> enableMoblyResultstoreUpload = Flag.value(false);
 
   @FlagSpec(
+      name = "enable_non_xts_tradefed_result_from_invocation",
+      help =
+          "Whether non-xTS TradefedTest runs derive the MH test result from the Tradefed"
+              + " invocation outcome (invocation errors and failed test cases recorded by the"
+              + " Tradefed invocation agent) instead of only the Tradefed process exit code."
+              + " Default is false.")
+  public static final Flag<Boolean> enableNonXtsTradefedResultFromInvocation = Flag.value(false);
+
+  @FlagSpec(
       name = "enable_olc_publisher_extended_device_info",
       help = "Whether to enable extended device info in OLC publisher.")
   public static final Flag<Boolean> enableOlcPublisherExtendedDeviceInfo = Flag.value(false);

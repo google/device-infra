@@ -16,12 +16,23 @@
 
 package com.google.devtools.mobileharness.infra.ats.tradefed;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.stream.Collectors.joining;
+
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.AndroidJitEmulatorUtil;
+import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -32,10 +43,12 @@ import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.TradefedTestDriverSpec;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 /** An implementation of {@link TradefedRunStrategy} for non-XTS runs. */
@@ -52,16 +65,31 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
   private static final String ATE_SHARD_COUNT_PARAM = "ate_shard_count";
   private static final String ATE_SHARD_INDEX_PARAM = "ate_shard_index";
 
+  /** Max length of the Tradefed invocation error message put in the MH result / property. */
+  private static final int MAX_INVOCATION_ERROR_MESSAGE_LENGTH = 1000;
+
+  /** Max number of failed invocations whose error messages are joined in the MH result. */
+  private static final int MAX_INVOCATION_ERRORS_IN_MESSAGE = 5;
+
   private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
+  private final XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil;
 
   public NonXtsRunStrategy(LocalFileUtil localFileUtil) {
     this(localFileUtil, new SystemUtil());
   }
 
   public NonXtsRunStrategy(LocalFileUtil localFileUtil, SystemUtil systemUtil) {
+    this(localFileUtil, systemUtil, new XtsTradefedRuntimeInfoFileUtil());
+  }
+
+  public NonXtsRunStrategy(
+      LocalFileUtil localFileUtil,
+      SystemUtil systemUtil,
+      XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil) {
     this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
+    this.xtsTradefedRuntimeInfoFileUtil = xtsTradefedRuntimeInfoFileUtil;
   }
 
   @Override
@@ -238,6 +266,138 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
     }
 
     return extraArgs.build();
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>For non-xTS runs, when {@code --enable_non_xts_tradefed_result_from_invocation} is set, the
+   * result is derived from the data recorded by the Tradefed invocation agent instead of only the
+   * process exit code (Tradefed {@code Console ... run commandAndExit} exits with 0 even if the
+   * invocation failed):
+   *
+   * <ol>
+   *   <li>A result that is already non-passing (e.g. timeout) is kept as is.
+   *   <li>A missing / non-zero exit code is handled by the default implementation.
+   *   <li>Any Tradefed invocation with an error message recorded in the runtime info file makes the
+   *       test {@code ERROR}.
+   *   <li>Otherwise the test is {@code PASS}.
+   * </ol>
+   */
+  @Override
+  public void setTestResult(TestInfo testInfo, Optional<Integer> tfExitCode)
+      throws MobileHarnessException {
+    if (!Flags.enableNonXtsTradefedResultFromInvocation.getNonNull()
+        || tfExitCode.isEmpty()
+        || tfExitCode.get() != 0) {
+      TradefedRunStrategy.super.setTestResult(testInfo, tfExitCode);
+      return;
+    }
+    TestResult currentResult = testInfo.resultWithCause().get().type();
+    if (currentResult != TestResult.UNKNOWN && currentResult != TestResult.PASS) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "Test result is already %s, skip deriving it from Tradefed invocation.",
+              currentResult);
+      return;
+    }
+
+    ImmutableList<TradefedInvocation> failedInvocations =
+        readFailedInvocations(
+            Path.of(testInfo.getGenFileDir()).resolve(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_NAME),
+            testInfo);
+    if (!failedInvocations.isEmpty()) {
+      String errorSummary = summarizeInvocationErrors(failedInvocations);
+      testInfo.properties().add(XtsConstants.TRADEFED_INVOCATION_ERROR, errorSummary);
+      failedInvocations.forEach(
+          invocation ->
+              testInfo
+                  .log()
+                  .atWarning()
+                  .alsoTo(logger)
+                  .log(
+                      "Tradefed invocation on %s failed:%n%s",
+                      invocation.deviceIds(), invocation.errorMessage()));
+      testInfo
+          .resultWithCause()
+          .setNonPassing(
+              TestResult.ERROR,
+              MobileHarnessExceptionFactory.createUserFacingException(
+                  AndroidErrorId.XTS_TRADEFED_INVOCATION_ERROR,
+                  String.format(
+                      "Tradefed invocation failed: %s (see %s / %s in the test gen files for the"
+                          + " full stack trace)",
+                      errorSummary,
+                      XtsConstants.TRADEFED_OUTPUT_FILE_NAME,
+                      XtsConstants.TRADEFED_RUNTIME_INFO_FILE_NAME),
+                  /* cause= */ null));
+      return;
+    }
+
+    testInfo.resultWithCause().setPass();
+  }
+
+  /** Reads the finished Tradefed invocations that recorded an error message, if any. */
+  private ImmutableList<TradefedInvocation> readFailedInvocations(
+      Path runtimeInfoFilePath, TestInfo testInfo) {
+    if (!localFileUtil.isFileExist(runtimeInfoFilePath)) {
+      return ImmutableList.of();
+    }
+    try {
+      return xtsTradefedRuntimeInfoFileUtil
+          .readInfo(runtimeInfoFilePath, /* lastModifiedTime= */ null)
+          .map(
+              fileDetail ->
+                  fileDetail.runtimeInfo().invocations().stream()
+                      .filter(invocation -> !invocation.isRunning())
+                      .filter(invocation -> !isNullOrEmpty(invocation.errorMessage()))
+                      .collect(toImmutableList()))
+          .orElse(ImmutableList.of());
+    } catch (IOException | RuntimeException | Error e) {
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .withCause(e)
+          .log("Failed to read Tradefed runtime info file %s", runtimeInfoFilePath);
+      return ImmutableList.of();
+    }
+  }
+
+  /**
+   * Summarizes the error messages (which are usually full stack traces) of the given failed
+   * invocations into one short, single-line-per-invocation message.
+   */
+  @VisibleForTesting
+  static String summarizeInvocationErrors(List<TradefedInvocation> failedInvocations) {
+    String summary =
+        failedInvocations.stream()
+            .limit(MAX_INVOCATION_ERRORS_IN_MESSAGE)
+            .map(
+                invocation ->
+                    invocation.deviceIds().isEmpty()
+                        ? firstLine(invocation.errorMessage())
+                        : String.format(
+                            "[%s] %s",
+                            String.join(",", invocation.deviceIds()),
+                            firstLine(invocation.errorMessage())))
+            .collect(joining("; "));
+    if (failedInvocations.size() > MAX_INVOCATION_ERRORS_IN_MESSAGE) {
+      summary +=
+          String.format(
+              "; ... (%d more)", failedInvocations.size() - MAX_INVOCATION_ERRORS_IN_MESSAGE);
+    }
+    return summary.length() > MAX_INVOCATION_ERROR_MESSAGE_LENGTH
+        ? summary.substring(0, MAX_INVOCATION_ERROR_MESSAGE_LENGTH) + "..."
+        : summary;
+  }
+
+  private static String firstLine(String message) {
+    int lineBreak = message.indexOf('\n');
+    return (lineBreak < 0 ? message : message.substring(0, lineBreak)).strip();
   }
 
   private static void addInvocationData(
