@@ -1,0 +1,68 @@
+<div class="conversation-sidebar">
+  <div class="sidebar-header">
+    <button
+      mat-flat-button
+      color="primary"
+      class="new-chat-button"
+      (click)="onNewConversation()"
+      [disabled]="isLoading()"
+      aria-label="Start a new conversation">
+      <mat-icon class="btn-icon">add</mat-icon>
+      <span class="btn-text">New Chat</span>
+    </button>
+  </div>
+
+  <div class="sidebar-body">
+    @if (isLoading() && conversations().length === 0) {
+      <div class="loading-container">
+        <mat-spinner diameter="32" />
+        <span class="loading-label">Loading conversations...</span>
+      </div>
+    } @else if (conversations().length === 0) {
+      <div class="empty-container">
+        <mat-icon class="empty-icon">chat_bubble_outline</mat-icon>
+        <div class="empty-title">No conversations yet</div>
+        <div class="empty-subtitle">
+          Start a new chat to begin querying fleet inventory, jobs, or running diagnostics.
+        </div>
+      </div>
+    } @else {
+      <div class="groups-container">
+        @for (group of groupedConversations(); track group.label) {
+          <div class="group-section">
+            <div class="group-label">{{ group.label }}</div>
+            <div class="group-items">
+              @for (conv of group.conversations; track conv.conversationId) {
+                <div
+                  class="conversation-item"
+                  [class.selected]="conv.conversationId === selectedConversationId()"
+                  (click)="onSelectConversation(conv.conversationId)"
+                  (keydown.enter)="onSelectConversation(conv.conversationId)"
+                  (keydown.space)="onSelectConversation(conv.conversationId)"
+                  role="button"
+                  tabindex="0"
+                  [attr.aria-selected]="conv.conversationId === selectedConversationId()">
+                  <mat-icon
+                    class="item-icon"
+                    [matTooltip]="getModeTooltip(conv.mode)">
+                    {{ getModeIcon(conv.mode) }}
+                  </mat-icon>
+                  <div class="item-content">
+                    <div class="item-title" [title]="conv.title">
+                      {{ conv.title || 'Untitled Conversation' }}
+                    </div>
+                    <div class="item-meta">
+                      <span class="item-time">
+                        {{ formatTime(conv.updateTime || conv.createTime) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>
