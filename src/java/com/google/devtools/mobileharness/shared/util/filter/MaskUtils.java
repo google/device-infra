@@ -16,31 +16,55 @@
 
 package com.google.devtools.mobileharness.shared.util.filter;
 
-import static com.google.common.base.Ascii.toLowerCase;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.protobuf.util.FieldMaskUtil.trim;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroup;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceGroupResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.GroupedDevices;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask.DimensionsMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.LabInfoMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.protobuf.FieldMask;
 import java.util.List;
+import java.util.Optional;
 
-/** Utility class to trim the {@link LabQueryResult} based on the {@link Mask}. */
+/**
+ * Post-build trimming of lab query data, plus the field-mask path predicate that {@link
+ * CompiledLabInfoMask} and {@link CompiledDeviceInfoMask} compile against.
+ *
+ * <p>{@link #trimLabView} applies compiled masks to a {@link LabView} that was built in full; it is
+ * how a data source without push-down still honours the masks it is given. {@link
+ * #trimLabQueryResult} trims a finished result by the client's {@link Mask}; the query layer uses
+ * it once, after ordering and grouping, to remove the fields those steps needed but the client did
+ * not ask for.
+ */
 public final class MaskUtils {
 
   private MaskUtils() {}
+
+  /**
+   * Whether {@code path} is touched by {@code fieldMask}: the path is listed, an ancestor of it is
+   * listed (so it is fully covered), or a descendant of it is listed (so it is partially needed).
+   * An empty field mask touches nothing.
+   */
+  public static boolean isFieldRequested(FieldMask fieldMask, String path) {
+    for (String candidate : fieldMask.getPathsList()) {
+      if (candidate.equals(path)
+          || path.startsWith(candidate + ".")
+          || candidate.startsWith(path + ".")) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   /**
    * Trims the {@link LabQueryResult} based on the {@link Mask}.
@@ -71,11 +95,29 @@ public final class MaskUtils {
       // If DeviceInfoMask is present, trims the DeviceInfo in GroupedDevices. Otherwise, returns
       // all fields of DeviceInfo.
       if (mask.hasDeviceInfoMask()) {
-        trimGroupedDevices(
-            resultBuilder.getDeviceViewBuilder().getGroupedDevicesBuilder(),
-            mask.getDeviceInfoMask());
+        DeviceInfoTrimmer.of(mask.getDeviceInfoMask())
+            .trimGroupedDevices(resultBuilder.getDeviceViewBuilder().getGroupedDevicesBuilder());
       }
     }
+  }
+
+  /**
+   * Applies compiled masks to a fully built {@link LabView}. Lab and device counts are kept as they
+   * are; a {@link LabInfo} or {@link DeviceInfo} the masks drop entirely is removed.
+   */
+  public static LabView trimLabView(
+      LabView labView, CompiledLabInfoMask labInfoMask, CompiledDeviceInfoMask deviceInfoMask) {
+    if (labInfoMask == CompiledLabInfoMask.retainAll()
+        && deviceInfoMask == CompiledDeviceInfoMask.retainAll()) {
+      return labView;
+    }
+    return labView.toBuilder()
+        .clearLabData()
+        .addAllLabData(
+            labView.getLabDataList().stream()
+                .map(labData -> trimLabData(labData, labInfoMask, deviceInfoMask))
+                .collect(toImmutableList()))
+        .build();
   }
 
   private static void trimLabView(LabView.Builder labViewBuilder, Mask mask) {
@@ -89,6 +131,7 @@ public final class MaskUtils {
     // If DeviceInfoMask is present, trims the DeviceInfo in DeviceList. Otherwise, returns all
     // fields of DeviceInfo.
     if (mask.hasDeviceInfoMask()) {
+      DeviceInfoTrimmer trimmer = DeviceInfoTrimmer.of(mask.getDeviceInfoMask());
       labViewBuilder
           .getLabDataBuilderList()
           .forEach(
@@ -97,10 +140,29 @@ public final class MaskUtils {
                 // devices and we don't need to trim it.
                 if (labDataBuilder.hasDeviceList()) {
                   labDataBuilder.setDeviceList(
-                      trimDeviceList(labDataBuilder.getDeviceList(), mask.getDeviceInfoMask()));
+                      trimmer.trimDeviceList(labDataBuilder.getDeviceList()));
                 }
               });
     }
+  }
+
+  private static LabData trimLabData(
+      LabData labData, CompiledLabInfoMask labInfoMask, CompiledDeviceInfoMask deviceInfoMask) {
+    LabData.Builder trimmed = labData.toBuilder().clearLabInfo();
+    if (labData.hasLabInfo()) {
+      labInfoMask.project(labData.getLabInfo()).ifPresent(trimmed::setLabInfo);
+    }
+    if (labData.hasDeviceList()) {
+      trimmed
+          .getDeviceListBuilder()
+          .clearDeviceInfo()
+          .addAllDeviceInfo(
+              labData.getDeviceList().getDeviceInfoList().stream()
+                  .map(deviceInfoMask::project)
+                  .flatMap(Optional::stream)
+                  .collect(toImmutableList()));
+    }
+    return trimmed.build();
   }
 
   private static void trimLabData(LabData.Builder labDataBuilder, LabInfoMask labInfoMask) {
@@ -116,94 +178,115 @@ public final class MaskUtils {
     }
   }
 
-  private static DeviceList trimDeviceList(DeviceList deviceList, DeviceInfoMask deviceInfoMask) {
-    if (!deviceInfoMask.hasFieldMask()) {
-      return deviceList;
+  /**
+   * A {@link DeviceInfoMask} prepared once per request: the dimension name matchers are built here
+   * instead of for every device.
+   */
+  private static final class DeviceInfoTrimmer {
+
+    /** Null when the mask has no field_mask, in which case every field is kept. */
+    private final FieldMask fieldMask;
+
+    /** Empty when the corresponding {@code DimensionsMask} is absent or lists no names. */
+    private final Optional<DimensionNameMatcher> supportedDimensions;
+
+    private final Optional<DimensionNameMatcher> requiredDimensions;
+
+    static DeviceInfoTrimmer of(DeviceInfoMask deviceInfoMask) {
+      return new DeviceInfoTrimmer(
+          deviceInfoMask.hasFieldMask() ? deviceInfoMask.getFieldMask() : null,
+          matcherOf(deviceInfoMask.getSupportedDimensionsMask()),
+          matcherOf(deviceInfoMask.getRequiredDimensionsMask()));
     }
 
-    FieldMask fieldMask = deviceInfoMask.getFieldMask();
-    if (fieldMask.getPathsList().isEmpty()) {
-      return DeviceList.newBuilder().setDeviceTotalCount(deviceList.getDeviceTotalCount()).build();
-    }
-    List<DeviceInfo> deviceInfos = deviceList.getDeviceInfoList();
-    return DeviceList.newBuilder()
-        .setDeviceTotalCount(deviceList.getDeviceTotalCount())
-        .addAllDeviceInfo(
-            deviceInfos.stream()
-                .map(deviceInfo -> trimDeviceInfo(deviceInfo, deviceInfoMask))
-                .collect(toImmutableList()))
-        .build();
-  }
-
-  private static void trimGroupedDevices(
-      GroupedDevices.Builder groupedDevicesBuilder, DeviceInfoMask deviceInfoMask) {
-    if (groupedDevicesBuilder.hasDeviceList()) {
-      groupedDevicesBuilder.setDeviceList(
-          trimDeviceList(groupedDevicesBuilder.getDeviceList(), deviceInfoMask));
-    } else if (groupedDevicesBuilder.hasDeviceGroupResult()) {
-      groupedDevicesBuilder.setDeviceGroupResult(
-          trimDeviceGroupResult(groupedDevicesBuilder.getDeviceGroupResult(), deviceInfoMask));
-    }
-  }
-
-  private static DeviceGroupResult trimDeviceGroupResult(
-      DeviceGroupResult deviceGroupResult, DeviceInfoMask deviceInfoMask) {
-    DeviceGroupResult.Builder builder = deviceGroupResult.toBuilder();
-    builder
-        .getDeviceGroupBuilderList()
-        .forEach(deviceGroupBuilder -> trimDeviceGroup(deviceGroupBuilder, deviceInfoMask));
-    return builder.build();
-  }
-
-  private static void trimDeviceGroup(
-      DeviceGroup.Builder deviceGroupBuilder, DeviceInfoMask deviceInfoMask) {
-    if (deviceGroupBuilder.hasGroupedDevices()) {
-      trimGroupedDevices(deviceGroupBuilder.getGroupedDevicesBuilder(), deviceInfoMask);
-    }
-  }
-
-  private static DeviceInfo trimDeviceInfo(DeviceInfo deviceInfo, DeviceInfoMask deviceInfoMask) {
-    FieldMask fieldMask = deviceInfoMask.getFieldMask();
-    if (fieldMask.getPathsList().isEmpty()) {
-      return deviceInfo;
+    private DeviceInfoTrimmer(
+        FieldMask fieldMask,
+        Optional<DimensionNameMatcher> supportedDimensions,
+        Optional<DimensionNameMatcher> requiredDimensions) {
+      this.fieldMask = fieldMask;
+      this.supportedDimensions = supportedDimensions;
+      this.requiredDimensions = requiredDimensions;
     }
 
-    DeviceInfo.Builder deviceInfoBuilder = deviceInfo.toBuilder();
-    if (deviceInfoMask.hasSupportedDimensionsMask()) {
-      deviceInfoBuilder
-          .getDeviceFeatureBuilder()
-          .getCompositeDimensionBuilder()
-          .clearSupportedDimension()
-          .addAllSupportedDimension(
-              trimDimension(
-                  deviceInfo.getDeviceFeature().getCompositeDimension().getSupportedDimensionList(),
-                  deviceInfoMask.getSupportedDimensionsMask().getDimensionNamesList()));
-    }
-    if (deviceInfoMask.hasRequiredDimensionsMask()) {
-      deviceInfoBuilder
-          .getDeviceFeatureBuilder()
-          .getCompositeDimensionBuilder()
-          .clearRequiredDimension()
-          .addAllRequiredDimension(
-              trimDimension(
-                  deviceInfo.getDeviceFeature().getCompositeDimension().getRequiredDimensionList(),
-                  deviceInfoMask.getRequiredDimensionsMask().getDimensionNamesList()));
+    /** An absent or empty list of names keeps every dimension, so it needs no matcher. */
+    private static Optional<DimensionNameMatcher> matcherOf(DimensionsMask dimensionsMask) {
+      return dimensionsMask.getDimensionNamesCount() == 0
+          ? Optional.empty()
+          : Optional.of(DimensionNameMatcher.of(dimensionsMask.getDimensionNamesList()));
     }
 
-    return trim(fieldMask, deviceInfoBuilder.build());
-  }
-
-  private static List<DeviceDimension> trimDimension(
-      List<DeviceDimension> dimensions, List<String> dimensionNames) {
-    if (dimensionNames.isEmpty()) {
-      return dimensions;
+    DeviceList trimDeviceList(DeviceList deviceList) {
+      if (fieldMask == null && supportedDimensions.isEmpty() && requiredDimensions.isEmpty()) {
+        return deviceList;
+      }
+      if (fieldMask != null && fieldMask.getPathsList().isEmpty()) {
+        return DeviceList.newBuilder()
+            .setDeviceTotalCount(deviceList.getDeviceTotalCount())
+            .build();
+      }
+      List<DeviceInfo> deviceInfos = deviceList.getDeviceInfoList();
+      return DeviceList.newBuilder()
+          .setDeviceTotalCount(deviceList.getDeviceTotalCount())
+          .addAllDeviceInfo(
+              deviceInfos.stream().map(this::trimDeviceInfo).collect(toImmutableList()))
+          .build();
     }
 
-    ImmutableSet<String> dimensionNamesLowerCase =
-        dimensionNames.stream().map(String::toLowerCase).collect(toImmutableSet());
+    void trimGroupedDevices(GroupedDevices.Builder groupedDevicesBuilder) {
+      if (groupedDevicesBuilder.hasDeviceList()) {
+        groupedDevicesBuilder.setDeviceList(trimDeviceList(groupedDevicesBuilder.getDeviceList()));
+      } else if (groupedDevicesBuilder.hasDeviceGroupResult()) {
+        groupedDevicesBuilder.setDeviceGroupResult(
+            trimDeviceGroupResult(groupedDevicesBuilder.getDeviceGroupResult()));
+      }
+    }
 
-    return dimensions.stream()
-        .filter(dimension -> dimensionNamesLowerCase.contains(toLowerCase(dimension.getName())))
-        .collect(toImmutableList());
+    private DeviceGroupResult trimDeviceGroupResult(DeviceGroupResult deviceGroupResult) {
+      DeviceGroupResult.Builder builder = deviceGroupResult.toBuilder();
+      builder.getDeviceGroupBuilderList().forEach(this::trimDeviceGroup);
+      return builder.build();
+    }
+
+    private void trimDeviceGroup(DeviceGroup.Builder deviceGroupBuilder) {
+      if (deviceGroupBuilder.hasGroupedDevices()) {
+        trimGroupedDevices(deviceGroupBuilder.getGroupedDevicesBuilder());
+      }
+    }
+
+    private DeviceInfo trimDeviceInfo(DeviceInfo deviceInfo) {
+      DeviceInfo.Builder deviceInfoBuilder = deviceInfo.toBuilder();
+      if (supportedDimensions.isPresent()) {
+        deviceInfoBuilder
+            .getDeviceFeatureBuilder()
+            .getCompositeDimensionBuilder()
+            .clearSupportedDimension()
+            .addAllSupportedDimension(
+                supportedDimensions
+                    .get()
+                    .filter(
+                        deviceInfo
+                            .getDeviceFeature()
+                            .getCompositeDimension()
+                            .getSupportedDimensionList()));
+      }
+      if (requiredDimensions.isPresent()) {
+        deviceInfoBuilder
+            .getDeviceFeatureBuilder()
+            .getCompositeDimensionBuilder()
+            .clearRequiredDimension()
+            .addAllRequiredDimension(
+                requiredDimensions
+                    .get()
+                    .filter(
+                        deviceInfo
+                            .getDeviceFeature()
+                            .getCompositeDimension()
+                            .getRequiredDimensionList()));
+      }
+      if (fieldMask == null || fieldMask.getPathsList().isEmpty()) {
+        return deviceInfoBuilder.build();
+      }
+      return trim(fieldMask, deviceInfoBuilder.build());
+    }
   }
 }
