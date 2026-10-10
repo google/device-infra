@@ -17,6 +17,16 @@
 package com.google.devtools.mobileharness.fe.v6.service.config;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetConfigurableDimensionKeysRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetConfigurableDimensionKeysResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceDimensionConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceDimensionConfigsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceWifiConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceWifiConfigsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceDimensionConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceDimensionConfigsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceWifiConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceWifiConfigsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionRequest;
@@ -25,14 +35,20 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostCon
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetConfigurableDimensionsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetConfigurableDimensionsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDimensionValueSuggestionsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDimensionValueSuggestionsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetWifiSuggestionsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetWifiSuggestionsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigRequest;
@@ -81,4 +97,28 @@ public interface ConfigServiceLogic {
 
   ListenableFuture<UnlockHostPropertiesResponse> unlockHostProperties(
       UnlockHostPropertiesRequest request);
+
+  ListenableFuture<GetConfigurableDimensionsResponse> getConfigurableDimensions(
+      GetConfigurableDimensionsRequest request);
+
+  ListenableFuture<BatchGetConfigurableDimensionKeysResponse> batchGetConfigurableDimensionKeys(
+      BatchGetConfigurableDimensionKeysRequest request);
+
+  ListenableFuture<GetDimensionValueSuggestionsResponse> getDimensionValueSuggestions(
+      GetDimensionValueSuggestionsRequest request);
+
+  ListenableFuture<BatchGetDeviceDimensionConfigsResponse> batchGetDeviceDimensionConfigs(
+      BatchGetDeviceDimensionConfigsRequest request);
+
+  ListenableFuture<BatchUpdateDeviceDimensionConfigsResponse> batchUpdateDeviceDimensionConfigs(
+      BatchUpdateDeviceDimensionConfigsRequest request);
+
+  ListenableFuture<GetWifiSuggestionsResponse> getWifiSuggestions(
+      GetWifiSuggestionsRequest request);
+
+  ListenableFuture<BatchGetDeviceWifiConfigsResponse> batchGetDeviceWifiConfigs(
+      BatchGetDeviceWifiConfigsRequest request);
+
+  ListenableFuture<BatchUpdateDeviceWifiConfigsResponse> batchUpdateDeviceWifiConfigs(
+      BatchUpdateDeviceWifiConfigsRequest request);
 }

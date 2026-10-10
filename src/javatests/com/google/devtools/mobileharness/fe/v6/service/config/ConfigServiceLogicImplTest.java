@@ -31,11 +31,20 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigPusherHelper;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetConfigurableDimensionKeysRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceDimensionConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceWifiConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceDimensionConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceWifiConfigsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetConfigurableDimensionsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDimensionValueSuggestionsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetWifiSuggestionsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
@@ -50,6 +59,7 @@ import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import io.grpc.Status;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import org.junit.Before;
@@ -169,5 +179,96 @@ public final class ConfigServiceLogicImplTest {
             ExecutionException.class,
             () -> configServiceLogicImpl.unlockHostProperties(request).get());
     assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void batchConfigRpcs_returnUnimplemented() {
+    ExecutionException ex1 =
+        assertThrows(
+            ExecutionException.class,
+            () ->
+                configServiceLogicImpl
+                    .getConfigurableDimensions(
+                        GetConfigurableDimensionsRequest.getDefaultInstance())
+                    .get());
+    assertThat(ex1).hasCauseThat().isInstanceOf(FeServiceException.class);
+    assertThat(((FeServiceException) ex1.getCause()).getCode())
+        .isEqualTo(Status.Code.UNIMPLEMENTED);
+
+    ExecutionException ex2 =
+        assertThrows(
+            ExecutionException.class,
+            () ->
+                configServiceLogicImpl
+                    .batchGetConfigurableDimensionKeys(
+                        BatchGetConfigurableDimensionKeysRequest.getDefaultInstance())
+                    .get());
+    assertThat(((FeServiceException) ex2.getCause()).getCode())
+        .isEqualTo(Status.Code.UNIMPLEMENTED);
+
+    ExecutionException ex3 =
+        assertThrows(
+            ExecutionException.class,
+            () ->
+                configServiceLogicImpl
+                    .getDimensionValueSuggestions(
+                        GetDimensionValueSuggestionsRequest.getDefaultInstance())
+                    .get());
+    assertThat(((FeServiceException) ex3.getCause()).getCode())
+        .isEqualTo(Status.Code.UNIMPLEMENTED);
+
+    ExecutionException ex4 =
+        assertThrows(
+            ExecutionException.class,
+            () ->
+                configServiceLogicImpl
+                    .batchGetDeviceDimensionConfigs(
+                        BatchGetDeviceDimensionConfigsRequest.getDefaultInstance())
+                    .get());
+    assertThat(((FeServiceException) ex4.getCause()).getCode())
+        .isEqualTo(Status.Code.UNIMPLEMENTED);
+
+    ExecutionException ex5 =
+        assertThrows(
+            ExecutionException.class,
+            () ->
+                configServiceLogicImpl
+                    .batchUpdateDeviceDimensionConfigs(
+                        BatchUpdateDeviceDimensionConfigsRequest.getDefaultInstance())
+                    .get());
+    assertThat(((FeServiceException) ex5.getCause()).getCode())
+        .isEqualTo(Status.Code.UNIMPLEMENTED);
+
+    ExecutionException ex6 =
+        assertThrows(
+            ExecutionException.class,
+            () ->
+                configServiceLogicImpl
+                    .getWifiSuggestions(GetWifiSuggestionsRequest.getDefaultInstance())
+                    .get());
+    assertThat(((FeServiceException) ex6.getCause()).getCode())
+        .isEqualTo(Status.Code.UNIMPLEMENTED);
+
+    ExecutionException ex7 =
+        assertThrows(
+            ExecutionException.class,
+            () ->
+                configServiceLogicImpl
+                    .batchGetDeviceWifiConfigs(
+                        BatchGetDeviceWifiConfigsRequest.getDefaultInstance())
+                    .get());
+    assertThat(((FeServiceException) ex7.getCause()).getCode())
+        .isEqualTo(Status.Code.UNIMPLEMENTED);
+
+    ExecutionException ex8 =
+        assertThrows(
+            ExecutionException.class,
+            () ->
+                configServiceLogicImpl
+                    .batchUpdateDeviceWifiConfigs(
+                        BatchUpdateDeviceWifiConfigsRequest.getDefaultInstance())
+                    .get());
+    assertThat(((FeServiceException) ex8.getCause()).getCode())
+        .isEqualTo(Status.Code.UNIMPLEMENTED);
   }
 }

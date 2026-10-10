@@ -20,6 +20,16 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.fe.v6.service.grpc.FeGrpcInvoker;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetConfigurableDimensionKeysRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetConfigurableDimensionKeysResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceDimensionConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceDimensionConfigsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceWifiConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceWifiConfigsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceDimensionConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceDimensionConfigsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceWifiConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceWifiConfigsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionRequest;
@@ -29,14 +39,20 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostCon
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.ConfigServiceGrpc;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetConfigurableDimensionsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetConfigurableDimensionsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDimensionValueSuggestionsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDimensionValueSuggestionsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetWifiSuggestionsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetWifiSuggestionsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigRequest;
@@ -205,5 +221,109 @@ public final class ConfigServiceGrpcImpl extends ConfigServiceGrpc.ConfigService
         executor,
         ConfigServiceGrpc.getServiceDescriptor(),
         ConfigServiceGrpc.getUnlockHostPropertiesMethod());
+  }
+
+  @Override
+  public void getConfigurableDimensions(
+      GetConfigurableDimensionsRequest request,
+      StreamObserver<GetConfigurableDimensionsResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        logic::getConfigurableDimensions,
+        executor,
+        ConfigServiceGrpc.getServiceDescriptor(),
+        ConfigServiceGrpc.getGetConfigurableDimensionsMethod());
+  }
+
+  @Override
+  public void batchGetConfigurableDimensionKeys(
+      BatchGetConfigurableDimensionKeysRequest request,
+      StreamObserver<BatchGetConfigurableDimensionKeysResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        logic::batchGetConfigurableDimensionKeys,
+        executor,
+        ConfigServiceGrpc.getServiceDescriptor(),
+        ConfigServiceGrpc.getBatchGetConfigurableDimensionKeysMethod());
+  }
+
+  @Override
+  public void getDimensionValueSuggestions(
+      GetDimensionValueSuggestionsRequest request,
+      StreamObserver<GetDimensionValueSuggestionsResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        logic::getDimensionValueSuggestions,
+        executor,
+        ConfigServiceGrpc.getServiceDescriptor(),
+        ConfigServiceGrpc.getGetDimensionValueSuggestionsMethod());
+  }
+
+  @Override
+  public void batchGetDeviceDimensionConfigs(
+      BatchGetDeviceDimensionConfigsRequest request,
+      StreamObserver<BatchGetDeviceDimensionConfigsResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        logic::batchGetDeviceDimensionConfigs,
+        executor,
+        ConfigServiceGrpc.getServiceDescriptor(),
+        ConfigServiceGrpc.getBatchGetDeviceDimensionConfigsMethod());
+  }
+
+  @Override
+  public void batchUpdateDeviceDimensionConfigs(
+      BatchUpdateDeviceDimensionConfigsRequest request,
+      StreamObserver<BatchUpdateDeviceDimensionConfigsResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        logic::batchUpdateDeviceDimensionConfigs,
+        executor,
+        ConfigServiceGrpc.getServiceDescriptor(),
+        ConfigServiceGrpc.getBatchUpdateDeviceDimensionConfigsMethod());
+  }
+
+  @Override
+  public void getWifiSuggestions(
+      GetWifiSuggestionsRequest request,
+      StreamObserver<GetWifiSuggestionsResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        logic::getWifiSuggestions,
+        executor,
+        ConfigServiceGrpc.getServiceDescriptor(),
+        ConfigServiceGrpc.getGetWifiSuggestionsMethod());
+  }
+
+  @Override
+  public void batchGetDeviceWifiConfigs(
+      BatchGetDeviceWifiConfigsRequest request,
+      StreamObserver<BatchGetDeviceWifiConfigsResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        logic::batchGetDeviceWifiConfigs,
+        executor,
+        ConfigServiceGrpc.getServiceDescriptor(),
+        ConfigServiceGrpc.getBatchGetDeviceWifiConfigsMethod());
+  }
+
+  @Override
+  public void batchUpdateDeviceWifiConfigs(
+      BatchUpdateDeviceWifiConfigsRequest request,
+      StreamObserver<BatchUpdateDeviceWifiConfigsResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        logic::batchUpdateDeviceWifiConfigs,
+        executor,
+        ConfigServiceGrpc.getServiceDescriptor(),
+        ConfigServiceGrpc.getBatchUpdateDeviceWifiConfigsMethod());
   }
 }

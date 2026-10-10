@@ -30,6 +30,17 @@ import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetRecomm
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.UnlockHostPropertiesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.UpdateDeviceConfigHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.UpdateHostConfigHandler;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetConfigurableDimensionKeysRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetConfigurableDimensionKeysResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceDimensionConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceDimensionConfigsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceWifiConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceWifiConfigsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceDimensionConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceDimensionConfigsResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceWifiConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceWifiConfigsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceWritePermissionRequest;
@@ -38,14 +49,20 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostCon
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostWritePermissionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetConfigurableDimensionsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetConfigurableDimensionsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDimensionValueSuggestionsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDimensionValueSuggestionsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetHostDefaultDeviceConfigResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetWifiSuggestionsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetWifiSuggestionsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateDeviceConfigRequest;
@@ -60,7 +77,11 @@ import javax.inject.Singleton;
 
 /** Common implementation of {@link ConfigServiceLogic}. */
 @Singleton
+@SuppressWarnings("deprecation") // Legacy Check*WritePermission RPCs remain supported.
 public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
+
+  private static final String BATCH_CONFIG_UNIMPLEMENTED_MESSAGE =
+      "Batch device configuration is not implemented yet";
 
   private final GetDeviceConfigHandler getDeviceConfigHandler;
   private final CheckDeviceWritePermissionHandler checkDeviceWritePermissionHandler;
@@ -235,5 +256,61 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
       return immediateFailedFuture(e);
     }
     return unlockHostPropertiesHandler.unlockHostProperties(request, universe);
+  }
+
+  @Override
+  public ListenableFuture<GetConfigurableDimensionsResponse> getConfigurableDimensions(
+      GetConfigurableDimensionsRequest request) {
+    return immediateFailedFuture(
+        FeServiceException.unimplemented(BATCH_CONFIG_UNIMPLEMENTED_MESSAGE));
+  }
+
+  @Override
+  public ListenableFuture<BatchGetConfigurableDimensionKeysResponse>
+      batchGetConfigurableDimensionKeys(BatchGetConfigurableDimensionKeysRequest request) {
+    return immediateFailedFuture(
+        FeServiceException.unimplemented(BATCH_CONFIG_UNIMPLEMENTED_MESSAGE));
+  }
+
+  @Override
+  public ListenableFuture<GetDimensionValueSuggestionsResponse> getDimensionValueSuggestions(
+      GetDimensionValueSuggestionsRequest request) {
+    return immediateFailedFuture(
+        FeServiceException.unimplemented(BATCH_CONFIG_UNIMPLEMENTED_MESSAGE));
+  }
+
+  @Override
+  public ListenableFuture<BatchGetDeviceDimensionConfigsResponse> batchGetDeviceDimensionConfigs(
+      BatchGetDeviceDimensionConfigsRequest request) {
+    return immediateFailedFuture(
+        FeServiceException.unimplemented(BATCH_CONFIG_UNIMPLEMENTED_MESSAGE));
+  }
+
+  @Override
+  public ListenableFuture<BatchUpdateDeviceDimensionConfigsResponse>
+      batchUpdateDeviceDimensionConfigs(BatchUpdateDeviceDimensionConfigsRequest request) {
+    return immediateFailedFuture(
+        FeServiceException.unimplemented(BATCH_CONFIG_UNIMPLEMENTED_MESSAGE));
+  }
+
+  @Override
+  public ListenableFuture<GetWifiSuggestionsResponse> getWifiSuggestions(
+      GetWifiSuggestionsRequest request) {
+    return immediateFailedFuture(
+        FeServiceException.unimplemented(BATCH_CONFIG_UNIMPLEMENTED_MESSAGE));
+  }
+
+  @Override
+  public ListenableFuture<BatchGetDeviceWifiConfigsResponse> batchGetDeviceWifiConfigs(
+      BatchGetDeviceWifiConfigsRequest request) {
+    return immediateFailedFuture(
+        FeServiceException.unimplemented(BATCH_CONFIG_UNIMPLEMENTED_MESSAGE));
+  }
+
+  @Override
+  public ListenableFuture<BatchUpdateDeviceWifiConfigsResponse> batchUpdateDeviceWifiConfigs(
+      BatchUpdateDeviceWifiConfigsRequest request) {
+    return immediateFailedFuture(
+        FeServiceException.unimplemented(BATCH_CONFIG_UNIMPLEMENTED_MESSAGE));
   }
 }
