@@ -201,7 +201,7 @@ export function buildSimpleFleetFilter(
   for (const v of values) {
     if (v === EMPTY_FILTER_VALUE || v === '') {
       if (!hasNoValue) {
-        filterValues.push({noValue: true});
+        filterValues.push({noValue: {}});
         hasNoValue = true;
       }
     } else if (v) {
@@ -281,23 +281,19 @@ export function serializeFilterChip(c: FilterChip): string {
 
   // 2. Simple Match with Values or Empty
   if (c.rawValues && c.rawValues.length > 0) {
-    const hasEmpty = c.rawValues.some(
-      (v) => v === EMPTY_FILTER_VALUE || v === '',
-    );
     const validVals = c.rawValues
       .map((v) => v.trim())
       .filter((v) => v && v !== EMPTY_FILTER_VALUE);
 
-    if (hasEmpty && validVals.length === 0) {
+    if (validVals.length === 0) {
       return `${prefix}${key}~`; // (no value) -> key~
     }
-    const serializedVals: string[] = [];
-    if (hasEmpty) {
-      serializedVals.push(EMPTY_FILTER_VALUE);
-    }
-    for (const val of validVals) {
-      serializedVals.push(encodeURIComponent(val));
-    }
+    const serializedVals = c.rawValues.map((v) => {
+      const trimmed = v.trim();
+      return !trimmed || trimmed === EMPTY_FILTER_VALUE
+        ? EMPTY_FILTER_VALUE
+        : encodeURIComponent(trimmed);
+    });
     return `${prefix}${key}~${serializedVals.join(',')}`;
   }
 
@@ -598,6 +594,8 @@ export function mapToSearchBoxSuggestion(
     countPrefix: fleetItem.countPrefix,
     countUnit: fleetItem.countUnit,
     overMax: fleetItem.overMax,
+    openPicker: item.openPicker,
+    addGroupBy: fleetItem.addGroupBy,
     rawItem: item,
   };
 }
@@ -705,8 +703,8 @@ export function extractRawValuesFromTjsFilter(
   if (filter.timeRange) {
     const fromVal = filter.timeRange.from || '';
     const toVal = filter.timeRange.to || '';
-    const vals = [fromVal, toVal].filter(Boolean);
-    return vals.length > 0 ? vals : undefined;
+    if (!fromVal && !toVal) return undefined;
+    return [fromVal || EMPTY_FILTER_VALUE, toVal || EMPTY_FILTER_VALUE];
   }
   return undefined;
 }

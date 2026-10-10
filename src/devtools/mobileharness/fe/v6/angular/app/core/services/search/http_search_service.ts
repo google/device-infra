@@ -7,6 +7,10 @@ import {
   FleetChipResolverResponse,
   FleetColumnCatalogRequest,
   FleetColumnCatalogResponse,
+  FleetFilterKeyCatalogRequest,
+  FleetFilterKeyCatalogResponse,
+  FleetGroupByKeyCatalogRequest,
+  FleetGroupByKeyCatalogResponse,
   FleetPromotedKeysRequest,
   FleetPromotedKeysResponse,
   FleetSearchConfig,
@@ -95,6 +99,24 @@ export class HttpSearchService extends SearchService {
   ): Observable<FleetColumnCatalogResponse> {
     return this.http.post<FleetColumnCatalogResponse>(
       `${this.fleetApiUrl}/column-catalog`,
+      request,
+    );
+  }
+
+  override getFleetFilterKeyCatalog(
+    request: FleetFilterKeyCatalogRequest,
+  ): Observable<FleetFilterKeyCatalogResponse> {
+    return this.http.post<FleetFilterKeyCatalogResponse>(
+      `${this.fleetApiUrl}/filter-key-catalog`,
+      request,
+    );
+  }
+
+  override getFleetGroupByKeyCatalog(
+    request: FleetGroupByKeyCatalogRequest,
+  ): Observable<FleetGroupByKeyCatalogResponse> {
+    return this.http.post<FleetGroupByKeyCatalogResponse>(
+      `${this.fleetApiUrl}/group-by-key-catalog`,
       request,
     );
   }

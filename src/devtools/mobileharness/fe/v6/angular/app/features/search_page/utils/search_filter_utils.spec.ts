@@ -435,7 +435,7 @@ describe('search_filter_utils', () => {
     it('handles <empty> and blank values properly', () => {
       const res = buildSimpleFleetFilter('driver', [EMPTY_FILTER_VALUE, '']);
       expect(res.simple?.values?.length).toBe(1);
-      expect(res.simple?.values?.[0]?.noValue).toBeTrue();
+      expect(res.simple?.values?.[0]?.noValue).toEqual({});
     });
   });
 
@@ -471,9 +471,9 @@ describe('search_filter_utils', () => {
       expect(serializeComplexCondition(undefined)).toBe('');
       expect(serializeComplexCondition({})).toBe('');
       expect(
-        serializeComplexCondition(
-          {unsupported: {value: 'foo'}} as unknown as ComplexMatch,
-        ),
+        serializeComplexCondition({
+          unsupported: {value: 'foo'},
+        } as unknown as ComplexMatch),
       ).toBe('');
     });
   });
@@ -528,6 +528,30 @@ describe('search_filter_utils', () => {
         negated: true,
       };
       expect(serializeFilterChip(negChip)).toBe('!model~<empty>,Pixel%208');
+    });
+
+    it('serializes range filter with cleared to as <val>,<empty>', () => {
+      const chip: FilterChip = {
+        key: 'create_time',
+        pillKey: 'Create Time',
+        pillCondition: '2026-10-06T23:35 ~ <empty>',
+        rawValues: ['2026-10-06T23:35', EMPTY_FILTER_VALUE],
+      };
+      expect(serializeFilterChip(chip)).toBe(
+        'create_time~2026-10-06T23%3A35,<empty>',
+      );
+    });
+
+    it('serializes range filter with cleared from as <empty>,<val>', () => {
+      const chip: FilterChip = {
+        key: 'create_time',
+        pillKey: 'Create Time',
+        pillCondition: '<empty> ~ 2026-10-06T23:35',
+        rawValues: [EMPTY_FILTER_VALUE, '2026-10-06T23:35'],
+      };
+      expect(serializeFilterChip(chip)).toBe(
+        'create_time~<empty>,2026-10-06T23%3A35',
+      );
     });
 
     it('serializes fallback pillCondition with (no value) or <empty> into trailing tilde format', () => {
@@ -615,13 +639,13 @@ describe('search_filter_utils', () => {
       expect(res).not.toBeNull();
       expect(res?.key).toBe('driver');
       expect(res?.negated).toBeFalse();
-      expect(res?.fleetFilter?.simple?.values?.[0]?.noValue).toBeTrue();
+      expect(res?.fleetFilter?.simple?.values?.[0]?.noValue).toEqual({});
 
       const negRes = parseQueryFilterParam('!driver~');
       expect(negRes).not.toBeNull();
       expect(negRes?.key).toBe('driver');
       expect(negRes?.negated).toBeTrue();
-      expect(negRes?.fleetFilter?.simple?.values?.[0]?.noValue).toBeTrue();
+      expect(negRes?.fleetFilter?.simple?.values?.[0]?.noValue).toEqual({});
     });
 
     it('parses mixed <empty> and valid values into rawValues and Protobuf filterValues', () => {
@@ -630,7 +654,7 @@ describe('search_filter_utils', () => {
       expect(res?.key).toBe('model');
       expect(res?.rawValues).toEqual([EMPTY_FILTER_VALUE, 'Pixel 8']);
       expect(res?.fleetFilter?.simple?.values).toEqual([
-        {noValue: true},
+        {noValue: {}},
         {value: 'Pixel 8'},
       ]);
 
@@ -641,7 +665,7 @@ describe('search_filter_utils', () => {
         'Pixel 8',
       ]);
       expect(resWithNoValue?.fleetFilter?.simple?.values).toEqual([
-        {noValue: true},
+        {noValue: {}},
         {value: 'Pixel 8'},
       ]);
     });
@@ -760,6 +784,7 @@ describe('search_filter_utils', () => {
       };
       expect(extractRawValuesFromTjsFilter(filterFromOnly)).toEqual([
         '2026-01-01T00:00:00Z',
+        EMPTY_FILTER_VALUE,
       ]);
 
       const filterToOnly: TjsFilter = {
@@ -769,6 +794,7 @@ describe('search_filter_utils', () => {
         },
       };
       expect(extractRawValuesFromTjsFilter(filterToOnly)).toEqual([
+        EMPTY_FILTER_VALUE,
         '2026-01-02T00:00:00Z',
       ]);
     });
@@ -873,7 +899,7 @@ describe('search_filter_utils', () => {
       };
       const filter = buildFleetFilterFromChip(chip);
       expect(filter.key).toBe('driver');
-      expect(filter.simple?.values).toEqual([{noValue: true}]);
+      expect(filter.simple?.values).toEqual([{noValue: {}}]);
       expect(filter.simple?.negated).toBeFalse();
     });
   });

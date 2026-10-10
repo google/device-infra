@@ -1,0 +1,65 @@
+<app-dialog
+  class="key-picker-dialog"
+  [dialogTitle]="dialogTitle()"
+  width="min(560px, 94vw)"
+  maxWidth="94vw"
+  maxHeight="90vh"
+  footerType="none"
+  (keydown.escape)="close()"
+>
+
+  <div class="cs-searchbar">
+    <mat-icon class="material-symbols-outlined">search</mat-icon>
+    <input
+      #searchInput
+      type="text"
+      placeholder="Search all keys"
+      [value]="query()"
+      (input)="onSearch(searchInput.value)"
+      autocomplete="off"
+    />
+  </div>
+
+  <div class="cs-pane-body kp-body" id="kp-body">
+    @if (isLoading()) {
+      <div class="cs-empty">Loading keys…</div>
+    } @else if (currentSections().length === 0) {
+      @if (query().trim()) {
+        <section class="cs-section">
+          <div class="cs-empty">No key matches “{{ query() }}”</div>
+        </section>
+      } @else {
+        <div class="cs-empty">No keys available</div>
+      }
+    } @else {
+      @for (section of currentSections(); track section.heading) {
+        @if (section.entries && section.entries.length > 0) {
+          <section class="cs-section">
+            <h3 class="cs-head">
+              <span>{{ section.heading }}</span>
+              @if (section.totalAvailable && section.totalAvailable > section.entries.length) {
+                <span class="cs-hint">showing top {{ section.entries.length }} of {{ section.totalAvailable | number }}</span>
+              }
+            </h3>
+            @for (entry of section.entries; track entry.key) {
+              <div
+                class="cs-row kp-row"
+                [class.kp-applied]="entry.applied"
+                [class.kp-inert]="entry.inert"
+                (click)="onPick(entry)"
+              >
+                <span class="cs-row-name">{{ entry.name }}</span>
+                @if (entry.meta) {
+                  <span class="cs-row-meta">{{ entry.meta }}</span>
+                }
+              </div>
+            }
+            @if (section.totalAvailable && section.totalAvailable > section.entries.length) {
+              <div class="cs-more">Search above to find more</div>
+            }
+          </section>
+        }
+      }
+    }
+  </div>
+</app-dialog>

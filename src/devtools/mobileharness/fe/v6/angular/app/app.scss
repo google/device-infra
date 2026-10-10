@@ -296,7 +296,7 @@ mat-spinner.loading-spinner {
 // If the initial pre-bootstrap loader is present, hide the global overlay
 // to prevent double spinners and overlapping masks.
 #initial-loading-overlay ~ app-root .loading-spinner-overlay {
-  display: none !important;
+  display: none;
 }
 
 .page {
@@ -339,6 +339,7 @@ app-root {
   background-color: $labconsole-bg;
 
   $sidenav-expanded-width: 256px;
+  $sidenav-rail-width: 72px;
   $nav-transition-duration: 250ms;
 
   @mixin sidenav-container-transition($duration) {
@@ -361,34 +362,112 @@ app-root {
     transition-timing-function: ease-in-out;
   }
 
+  @mixin sidenav-icon-only-rail {
+    .app-sidenav-container mat-sidenav.mat-drawer {
+      width: $sidenav-rail-width;
+
+      mat-nav-list > mat-divider {
+        margin: 8px 12px;
+      }
+
+      mat-nav-list > a[mat-list-item] {
+        width: 48px;
+        height: 48px;
+        margin: 4px auto;
+        padding: 0;
+        border-radius: 24px;
+        justify-content: center;
+
+        mat-icon[matListItemIcon],
+        .mdc-list-item__start {
+          margin: 0;
+        }
+
+        .mdc-list-item__content,
+        span:not(.mat-mdc-list-item-interactive) {
+          display: none;
+        }
+      }
+    }
+
+    .app-sidenav-container mat-sidenav.mat-drawer.mat-drawer-opened ~ mat-sidenav-content.mat-drawer-content {
+      margin-left: $sidenav-rail-width;
+    }
+
+    .app-sidenav-container mat-sidenav.mat-drawer:not(.mat-drawer-opened) ~ mat-sidenav-content.mat-drawer-content {
+      margin-left: 0;
+    }
+  }
+
   .app-toolbar {
     background-color: $labconsole-bg;
     // border-bottom: 1px solid $border-menu;
     position: sticky;
     top: 0;
+    z-index: 250;
     display: flex;
     align-items: center;
     height: 64px;
     min-height: 64px;
     box-sizing: border-box;
-    overflow: hidden;
+    overflow: visible;
 
     .title {
       font-size: 20px;
       padding: 0 11px;
+      white-space: nowrap;
+      flex-shrink: 0;
+
+      @media (max-width: 1024px) {
+        display: none;
+      }
+    }
+
+    &:has(.header-search-dock:not(:empty)) {
+      .title {
+        @media (max-width: 1200px) {
+          display: none;
+        }
+      }
+    }
+
+    .header-search-dock {
+      flex: 1 1 auto;
+      width: 100%;
+      max-width: min(1240px, calc(100vw - 260px));
+      margin: 0 clamp(8px, 2vw, 24px);
+      display: none;
+      align-items: center;
+      min-width: 0;
+
+      &:not(:empty),
+      &.active {
+        display: flex;
+      }
+
+      @media (max-width: 1024px) {
+        max-width: 100%;
+        margin: 0 12px;
+      }
+
+      @media (max-width: 600px) {
+        margin: 0 6px;
+      }
     }
 
     .version-info {
       display: flex;
-      flex: 1;
+      margin-left: auto;
       font-size: 12px;
       justify-content: flex-end;
       line-height: 16px;
+      flex-shrink: 0;
     }
     .account-menu {
       display: flex;
-      flex: 1;
+      margin-left: auto;
       justify-content: flex-end;
+      flex-shrink: 0;
 
       button {
         padding: 0;
@@ -419,9 +498,11 @@ app-root {
   .app-sidenav-container {
     background-color: $labconsole-bg;
     height: calc(100% - 64px);
+    container-type: inline-size;
 
     mat-sidenav {
       margin-top: 1rem;
+      @include sidenav-container-transition($nav-transition-duration);
       @include common.shared-scrollbar-style();
 
       .sidenav-container {
@@ -469,6 +550,7 @@ app-root {
       height: 100%;
       background-color: $labconsole-bg;
       overflow-x: hidden;
+      @include sidenav-content-transition($nav-transition-duration);
       @include common.shared-scrollbar-style();
 
       main {
@@ -498,6 +580,14 @@ app-root {
         container-width: $sidenav-expanded-width,
       )
     );
+
+    @container (max-width: 1100px) {
+      @include sidenav-icon-only-rail();
+    }
+
+    @media (max-width: 1100px) {
+      @include sidenav-icon-only-rail();
+    }
   }
 
   .embedded-content {

@@ -354,4 +354,48 @@ describe('ColumnSelectorComponent', () => {
     expect(rows[2]?.textContent).toContain('Device Type');
     expect(rows[3]?.textContent).toContain('Owner');
   }));
+
+  it('renders coverage.shown count when coverage is present, omitting count for notShown', fakeAsync(() => {
+    mockSearchService.getFleetColumnCatalog.and.callFake((req) => {
+      if (req.query === 'custom') {
+        return of({
+          sections: [
+            {
+              heading: 'Custom',
+              entries: [
+                {
+                  key: 'dim::with_coverage',
+                  displayName: 'With Coverage',
+                  coverage: {shown: {count: 25}},
+                },
+                {
+                  key: 'field::no_coverage',
+                  displayName: 'No Coverage',
+                  coverage: {notShown: {}},
+                },
+                {
+                  key: 'field::legacy',
+                  displayName: 'Legacy Count',
+                  deviceCount: 10,
+                },
+              ],
+            },
+          ],
+        });
+      }
+      return of(mockCatalogResponse);
+    });
+
+    component.searchQuery.set('custom');
+    tick(250);
+    fixture.detectChanges();
+
+    const metaSpans = document.querySelectorAll('.cs-section .cs-row-meta');
+    const metaTexts = Array.from(metaSpans, (el) => el.textContent?.trim());
+
+    expect(metaTexts).toContain('25 devices');
+    expect(metaTexts).toContain('10 devices');
+    expect(metaTexts).not.toContain('0 devices');
+    expect(metaTexts.length).toBe(2);
+  }));
 });

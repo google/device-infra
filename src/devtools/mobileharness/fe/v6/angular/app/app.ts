@@ -14,15 +14,20 @@
  * limitations under the License.
  */
 
+import {BreakpointObserver} from '@angular/cdk/layout';
 import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
-  inject,
+  ElementRef,
   OnDestroy,
   ViewEncapsulation,
+  afterNextRender,
+  inject,
+  viewChild,
 } from '@angular/core';
+import {toSignal} from '@angular/core/rxjs-interop';
 import {MatButtonModule, MatIconButton} from '@angular/material/button';
 import {MatDividerModule} from '@angular/material/divider';
 import {MatIconModule} from '@angular/material/icon';
@@ -45,10 +50,11 @@ import {
   getLegacyFeUrl,
   getOmniLabUrl,
 } from '@deviceinfra/app/core/models/app_data';
+import {HeaderSearchDockService} from '@deviceinfra/app/core/services/search/header_search_dock_service';
 import {UrlService} from '@deviceinfra/app/core/services/url_service';
 import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
 import {ReplaySubject} from 'rxjs';
-import {filter, takeUntil} from 'rxjs/operators';
+import {filter, map, takeUntil} from 'rxjs/operators';
 
 /** Homepage */
 @Component({
@@ -79,11 +85,21 @@ export class App implements OnDestroy {
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
   private readonly cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
   private readonly router: Router = inject(Router);
+  private readonly breakpointObserver = inject(BreakpointObserver);
+  readonly isIconOnly = toSignal(
+    this.breakpointObserver
+      .observe('(max-width: 1100px)')
+      .pipe(map((result) => result.matches)),
+    {initialValue: this.breakpointObserver.isMatched('(max-width: 1100px)')},
+  );
   readonly appData: AppData = inject(APP_DATA);
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
   readonly omniLabUrl = getOmniLabUrl(this.appData.applicationId ?? '');
   readonly loadingService = inject(LoadingService);
   private readonly urlService = inject(UrlService);
+  readonly dockService = inject(HeaderSearchDockService);
+  readonly headerSearchDock =
+    viewChild<ElementRef<HTMLElement>>('headerSearchDock');
   showVersionInfo = true;
   isEmbeddedMode = true;
   isFakeData = false;
@@ -162,6 +178,13 @@ export class App implements OnDestroy {
       const newUrl = new URL(url, window.location.origin);
       this.router.navigateByUrl(newUrl.pathname + newUrl.search);
     });
+
+    afterNextRender(() => {
+      const el = this.headerSearchDock()?.nativeElement;
+      if (el) {
+        this.dockService.registerDockContainer(el);
+      }
+    });
   }
 
   updateShowContent() {
@@ -215,6 +238,7 @@ export class App implements OnDestroy {
   }
 
   ngOnDestroy() {
+    this.dockService.unregisterDockContainer();
     this.destroy.next();
     this.destroy.complete();
   }

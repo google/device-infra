@@ -334,6 +334,8 @@ export declare interface FleetPromotedGroupByKey {
   key: string;
   displayName: string;
   groupCount?: number;
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
 // ============GetFleetColumnCatalog - FleetColumnCatalogResponse===============
@@ -348,6 +350,56 @@ export declare interface FleetColumnCatalogSection {
 export declare interface FleetColumnCatalogEntry {
   key: string;
   displayName: string;
+  /** @deprecated Superseded by coverage. Kept while backend and Angular client transition. */
   deviceCount?: number;
   reason?: string;
+  coverage?: CoverageInfo;
+}
+
+// ============GetFleetFilterKeyCatalog - FleetFilterKeyCatalogResponse===============
+/** A section of the filter-key catalog. */
+export declare interface FleetFilterKeySection {
+  heading: string;
+  entries?: FleetFilterKeyEntry[];
+  totalAvailable?: number;
+}
+
+/** One pickable filter key. */
+export declare interface FleetFilterKeyEntry {
+  key: string;
+  metadata?: FleetFilterChipMetadata;
+  coverage?: CoverageInfo;
+  applied?: boolean;
+}
+
+/** Coverage display for a key: either notShown or shown with count. */
+export declare interface CoverageInfo {
+  notShown?: {};
+  shown?: {
+    count: number;
+  };
+}
+
+// ============GetFleetGroupByKeyCatalog - FleetGroupByKeyCatalogResponse===============
+/** A section of the group-by-key catalog. */
+export declare interface FleetGroupByKeySection {
+  heading: string;
+  entries?: FleetGroupByKeyEntry[];
+  totalAvailable?: number;
+}
+
+/** One pickable group-by key. */
+export declare interface FleetGroupByKeyEntry {
+  key: string;
+  displayName: string;
+  groupCount?: GroupCountInfo;
+  applied?: boolean;
+}
+
+/** Group-count display for a group-by key: either notShown or shown with count. */
+export declare interface GroupCountInfo {
+  notShown?: {};
+  shown?: {
+    count: number;
+  };
 }

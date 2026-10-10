@@ -11,6 +11,12 @@ import {
   FleetColumnCatalogRequest,
   FleetColumnCatalogResponse,
   FleetColumnCatalogSection,
+  FleetFilterKeyCatalogRequest,
+  FleetFilterKeyCatalogResponse,
+  FleetFilterKeySection,
+  FleetGroupByKeyCatalogRequest,
+  FleetGroupByKeyCatalogResponse,
+  FleetGroupByKeySection,
   FleetPromotedKeysRequest,
   FleetPromotedKeysResponse,
   FleetSearchConfig,
@@ -471,6 +477,182 @@ export class FakeSearchService extends SearchService {
         ...s,
         entries: (s.entries || []).filter(
           (e: FleetColumnCatalogEntry) =>
+            e.displayName.toLowerCase().includes(q) ||
+            e.key.toLowerCase().includes(q),
+        ),
+      }))
+      .filter((s) => s.entries && s.entries.length > 0);
+    return of({sections: filteredSections});
+  }
+
+  override getFleetFilterKeyCatalog(
+    request: FleetFilterKeyCatalogRequest,
+  ): Observable<FleetFilterKeyCatalogResponse> {
+    const appliedKeys = new Set((request.filters || []).map((f) => f.key));
+    const allSections: FleetFilterKeySection[] = [
+      {
+        heading: 'Built-in fields',
+        entries: [
+          {
+            key: 'field::status',
+            metadata: {keyDisplayName: 'Device Status'},
+            coverage: {notShown: {}},
+            applied: appliedKeys.has('field::status'),
+          },
+          {
+            key: 'field::model',
+            metadata: {keyDisplayName: 'Model'},
+            coverage: {notShown: {}},
+            applied: appliedKeys.has('field::model'),
+          },
+          {
+            key: 'field::owner',
+            metadata: {keyDisplayName: 'Owner'},
+            coverage: {notShown: {}},
+            applied: appliedKeys.has('field::owner'),
+          },
+          {
+            key: 'field::type',
+            metadata: {keyDisplayName: 'Type'},
+            coverage: {notShown: {}},
+            applied: appliedKeys.has('field::type'),
+          },
+        ],
+      },
+      {
+        heading: 'Dimensions',
+        entries: [
+          {
+            key: 'dim::battery_level',
+            metadata: {keyDisplayName: 'Battery Level'},
+            coverage: {shown: {count: 850}},
+            applied: appliedKeys.has('dim::battery_level'),
+          },
+          {
+            key: 'dim::os_version',
+            metadata: {keyDisplayName: 'OS Version'},
+            coverage: {shown: {count: 1200}},
+            applied: appliedKeys.has('dim::os_version'),
+          },
+          {
+            key: 'dim::label',
+            metadata: {keyDisplayName: 'Label'},
+            coverage: {shown: {count: 450}},
+            applied: appliedKeys.has('dim::label'),
+          },
+          {
+            key: 'dim::carrier',
+            metadata: {keyDisplayName: 'Carrier'},
+            coverage: {shown: {count: 320}},
+            applied: appliedKeys.has('dim::carrier'),
+          },
+        ],
+      },
+      {
+        heading: 'Host properties',
+        entries: [
+          {
+            key: 'host::ats_controller',
+            metadata: {keyDisplayName: 'ATS Controller'},
+            coverage: {shown: {count: 140}},
+            applied: appliedKeys.has('host::ats_controller'),
+          },
+          {
+            key: 'host::lab_type',
+            metadata: {keyDisplayName: 'Lab Type'},
+            coverage: {shown: {count: 980}},
+            applied: appliedKeys.has('host::lab_type'),
+          },
+        ],
+      },
+    ];
+
+    if (!request.query) {
+      return of({sections: allSections});
+    }
+
+    const q = request.query.toLowerCase().trim();
+    const filteredSections = allSections
+      .map((s) => ({
+        ...s,
+        entries: (s.entries || []).filter(
+          (e) =>
+            (e.metadata?.keyDisplayName || '').toLowerCase().includes(q) ||
+            e.key.toLowerCase().includes(q),
+        ),
+      }))
+      .filter((s) => s.entries && s.entries.length > 0);
+    return of({sections: filteredSections});
+  }
+
+  override getFleetGroupByKeyCatalog(
+    request: FleetGroupByKeyCatalogRequest,
+  ): Observable<FleetGroupByKeyCatalogResponse> {
+    const appliedKeys = new Set(request.groupBy || []);
+    const allSections: FleetGroupByKeySection[] = [
+      {
+        heading: 'Built-in fields',
+        entries: [
+          {
+            key: 'field::status',
+            displayName: 'Device Status',
+            groupCount: {shown: {count: 4}},
+            applied: appliedKeys.has('field::status'),
+          },
+          {
+            key: 'field::model',
+            displayName: 'Model',
+            groupCount: {shown: {count: 28}},
+            applied: appliedKeys.has('field::model'),
+          },
+        ],
+      },
+      {
+        heading: 'Dimensions',
+        entries: [
+          {
+            key: 'dim::os_version',
+            displayName: 'OS Version',
+            groupCount: {shown: {count: 12}},
+            applied: appliedKeys.has('dim::os_version'),
+          },
+          {
+            key: 'dim::carrier',
+            displayName: 'Carrier',
+            groupCount: {shown: {count: 6}},
+            applied: appliedKeys.has('dim::carrier'),
+          },
+        ],
+      },
+      {
+        heading: 'Host properties',
+        entries: [
+          {
+            key: 'host::ats_controller',
+            displayName: 'ATS Controller',
+            groupCount: {shown: {count: 8}},
+            applied: appliedKeys.has('host::ats_controller'),
+          },
+          {
+            key: 'host::lab_type',
+            displayName: 'Lab Type',
+            groupCount: {shown: {count: 3}},
+            applied: appliedKeys.has('host::lab_type'),
+          },
+        ],
+      },
+    ];
+
+    if (!request.query) {
+      return of({sections: allSections});
+    }
+
+    const q = request.query.toLowerCase().trim();
+    const filteredSections = allSections
+      .map((s) => ({
+        ...s,
+        entries: (s.entries || []).filter(
+          (e) =>
             e.displayName.toLowerCase().includes(q) ||
             e.key.toLowerCase().includes(q),
         ),

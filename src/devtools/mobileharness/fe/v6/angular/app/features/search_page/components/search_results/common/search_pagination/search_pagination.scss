@@ -6,6 +6,8 @@
 }
 
 .rt-pagination {
+  container-type: inline-size;
+  container-name: pagination-bar;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -153,6 +155,27 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+  }
+}
+
+// Container query responsive adaptations for pagination
+@container pagination-bar (max-width: 680px) {
+  .rt-page-label {
+    display: none;
+  }
+
+  .rt-divider {
+    margin: 0 6px;
+  }
+}
+
+@container pagination-bar (max-width: 520px) {
+  .rt-btn-text {
+    padding: 0 6px;
+
+    .rt-btn-label {
+      display: none;
+    }
   }
 }
 

@@ -119,12 +119,21 @@ export class FleetSearchStore extends SearchPageStore {
       const show = this.showSuggestions();
       if (!show) return undefined;
 
+      const rawInput = this.searchQuery().trim();
+      const debouncedInput = this.debouncedSearchQuery().trim();
+      const activeFilters = this.effectiveFilters();
+      const groupBy = this.groupByKeys();
+      const hasCriteria = activeFilters.length > 0 || groupBy.length > 0;
+
+      if (!rawInput && !hasCriteria) return undefined;
+      if (rawInput && !debouncedInput) return undefined;
+
       return {
         entity: this.entity(),
-        input: this.debouncedSearchQuery(),
+        input: rawInput ? debouncedInput : '',
         fleet: this.fleet(),
-        activeFilters: this.effectiveFilters(),
-        groupBy: this.groupByKeys(),
+        activeFilters,
+        groupBy,
       };
     },
     stream: ({params: req}) => {
@@ -144,10 +153,26 @@ export class FleetSearchStore extends SearchPageStore {
     },
   });
 
-  /** Autocomplete suggestions transformed into SearchBoxSuggestion items. */
+  /** Autocomplete suggestions transformed into SearchBoxSuggestion items directly from the BFF response. */
   override readonly suggestions = computed<SearchBoxSuggestion[]>(() => {
-    return (this.suggestionsResource.value() || []).map(
-      mapToSearchBoxSuggestion,
+    const rawInput = this.searchQuery().trim();
+    const hasCriteria =
+      this.effectiveFilters().length > 0 || this.groupByKeys().length > 0;
+    if (!rawInput && !hasCriteria) return [];
+    const items = this.suggestionsResource.value() || [];
+    return items.map(mapToSearchBoxSuggestion);
+  });
+
+  /** Whether autocomplete suggestions are currently being fetched or debounced. */
+  override readonly isSuggestionsLoading = computed<boolean>(() => {
+    if (!this.showSuggestions()) return false;
+    const rawInput = this.searchQuery().trim();
+    const hasCriteria =
+      this.effectiveFilters().length > 0 || this.groupByKeys().length > 0;
+    if (!rawInput && !hasCriteria) return false;
+    return (
+      this.suggestionsResource.isLoading() ||
+      (Boolean(rawInput) && rawInput !== this.debouncedSearchQuery().trim())
     );
   });
 
@@ -903,7 +928,7 @@ export class FleetSearchStore extends SearchPageStore {
   });
 
   /** Total matching count across flat or grouped search. */
-  readonly effectiveTotalCount = computed(() => {
+  override readonly effectiveTotalCount = computed<number>(() => {
     return (
       (this.groupByKeys().length > 0
         ? this.groupedResults()?.totalItems
@@ -1126,6 +1151,7 @@ export class FleetSearchStore extends SearchPageStore {
     const meta = key ? this.getKeyMetadata(key) : undefined;
     const displayTitle = meta?.keyDisplayName || title;
     this.closeValuePicker();
+    this.showSuggestions.set(!this.autoCollapseAfterApply());
 
     if (isValuePickerSelectionEmpty(event)) {
       this.removeChipForKey(key);
@@ -1201,9 +1227,8 @@ export class FleetSearchStore extends SearchPageStore {
     if (raw.openPicker) {
       const op = raw.openPicker;
       const displayTitle = op.metadata?.keyDisplayName || op.key;
-      this.openValuePicker(
+      this.openQuickFilter(
         op.key,
-        anchor || null,
         displayTitle,
         op.metadata,
         op.stagedModify?.values,
