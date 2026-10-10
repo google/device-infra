@@ -1,0 +1,187 @@
+@use 'third_party/deviceinfra/src/devtools/mobileharness/fe/v6/angular/app/shared/styles/common';
+
+.conversation-sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: #fff;
+  border-right: 1px solid #e0e0e0;
+  box-sizing: border-box;
+  overflow: hidden;
+
+  .sidebar-header {
+    padding: 16px;
+    border-bottom: 1px solid #f1f3f4;
+
+    .new-chat-button {
+      width: 100%;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 20px;
+      background-color: #0b57d0;
+      color: #fff;
+      font-family: 'Google Sans', Roboto, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.2px;
+      transition:
+        background-color 0.2s,
+        box-shadow 0.2s;
+
+      &:hover:not(:disabled) {
+        background-color: #0a4cb8;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+      }
+
+      .btn-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
+
+  .sidebar-body {
+    flex: 1;
+    overflow-y: auto;
+    @include common.shared-scrollbar-style();
+
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      gap: 12px;
+      color: #5f6368;
+      font-size: 13px;
+    }
+
+    .empty-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      text-align: center;
+      color: #5f6368;
+
+      .empty-icon {
+        font-size: 40px;
+        width: 40px;
+        height: 40px;
+        color: #9aa0a6;
+        margin-bottom: 12px;
+      }
+
+      .empty-title {
+        font-weight: 500;
+        font-size: 14px;
+        color: #3c4043;
+        margin-bottom: 4px;
+      }
+
+      .empty-subtitle {
+        font-size: 12px;
+        line-height: 1.4;
+        color: #70757a;
+      }
+    }
+
+    .groups-container {
+      padding: 8px 0;
+
+      .group-section {
+        margin-bottom: 8px;
+
+        .group-label {
+          padding: 8px 16px 4px;
+          font-size: 11px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+          color: #70757a;
+        }
+
+        .group-items {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+          padding: 0 8px;
+
+          .conversation-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.15s;
+            outline: none;
+
+            &:hover {
+              background-color: #f1f3f4;
+            }
+
+            &:focus-visible {
+              background-color: #e8f0fe;
+              outline: 2px solid #1a73e8;
+            }
+
+            &.selected {
+              background-color: #e8f0fe;
+
+              .item-icon {
+                color: #0b57d0;
+              }
+
+              .item-title {
+                color: #0b57d0;
+                font-weight: 500;
+              }
+            }
+
+            .item-icon {
+              font-size: 18px;
+              width: 18px;
+              height: 18px;
+              color: #5f6368;
+              flex-shrink: 0;
+            }
+
+            .item-content {
+              flex: 1;
+              min-width: 0;
+              display: flex;
+              flex-direction: column;
+              gap: 2px;
+
+              .item-title {
+                font-size: 13px;
+                color: #202124;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              }
+
+              .item-meta {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 11px;
+                color: #70757a;
+
+                .item-time {
+                  white-space: nowrap;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

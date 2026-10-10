@@ -1,0 +1,127 @@
+@use 'third_party/deviceinfra/src/devtools/mobileharness/fe/v6/angular/app/shared/styles/common';
+
+.tool-dialog-container {
+  display: flex;
+  flex-direction: column;
+  min-width: 520px;
+  max-width: 720px;
+  font-family: 'Google Sans', Roboto, sans-serif;
+
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid #e0e0e0;
+
+    .title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      .tool-icon {
+        color: #1a73e8;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      .dialog-title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #202124;
+      }
+
+      .status-badge {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+
+        &.status-success {
+          background-color: #e6f4ea;
+          color: #137333;
+        }
+
+        &.status-error {
+          background-color: #fce8e6;
+          color: #c5221f;
+        }
+      }
+    }
+  }
+
+  .dialog-body {
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-height: 60vh;
+
+    .section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        .section-label {
+          font-size: 12px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          color: #5f6368;
+        }
+
+        .copy-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 12px;
+          color: #5f6368;
+
+          .copy-icon {
+            font-size: 16px;
+            width: 16px;
+            height: 16px;
+          }
+        }
+      }
+
+      .code-box {
+        margin: 0;
+        padding: 12px;
+        background-color: #1e1e1e;
+        border-radius: 6px;
+        overflow-x: auto;
+        @include common.shared-scrollbar-style();
+
+        .code-content {
+          font-family: 'Google Sans Mono', 'Roboto Mono', Consolas, monospace;
+          font-size: 12px;
+          line-height: 1.5;
+          color: #e8eaed;
+        }
+
+        &.error-box {
+          background-color: #2c1618;
+
+          .code-content {
+            color: #f28b82;
+          }
+        }
+      }
+    }
+  }
+
+  .dialog-actions {
+    padding: 12px 20px;
+    border-top: 1px solid #f1f3f4;
+  }
+}
