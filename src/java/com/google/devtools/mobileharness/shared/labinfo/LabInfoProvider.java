@@ -19,10 +19,27 @@ package com.google.devtools.mobileharness.shared.labinfo;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
+import com.google.devtools.mobileharness.shared.util.filter.CompiledDeviceInfoMask;
+import com.google.devtools.mobileharness.shared.util.filter.CompiledLabInfoMask;
+import com.google.devtools.mobileharness.shared.util.filter.MaskUtils;
 
 /** Provider for providing {@link LabView}. */
 public interface LabInfoProvider {
 
   /** Gets information of lab(s). */
   LabView getLabInfos(Filter filter) throws MobileHarnessException;
+
+  /**
+   * Gets information of lab(s) containing only what {@code labInfoMask} and {@code deviceInfoMask}
+   * keep. {@code lab_total_count} and {@code device_total_count} are unaffected by the masks.
+   *
+   * <p>The default builds the full view with {@link #getLabInfos(Filter)} and trims it. Providers
+   * override this to build only the requested parts in the first place, which avoids the full view
+   * ever existing on the heap; the result must be the same either way.
+   */
+  default LabView getLabInfos(
+      Filter filter, CompiledLabInfoMask labInfoMask, CompiledDeviceInfoMask deviceInfoMask)
+      throws MobileHarnessException {
+    return MaskUtils.trimLabView(getLabInfos(filter), labInfoMask, deviceInfoMask);
+  }
 }
