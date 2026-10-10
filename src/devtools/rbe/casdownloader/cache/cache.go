@@ -31,6 +31,16 @@ type HeadroomReserver interface {
 	EnsureHeadroom(ctx context.Context, requiredBytes int64) error
 }
 
+// CorruptBlobReporter is implemented by caches that check each hit and discard
+// cached blobs that no longer match their digest. Like HeadroomReserver it is
+// separate from Cache, so that a caller finds it by type assertion and
+// LocalCache, which does no such check, does not have to claim it.
+type CorruptBlobReporter interface {
+	// CorruptBlobsQuarantined returns how many hits this cache has found
+	// corrupt and turned into misses since it was created.
+	CorruptBlobsQuarantined() int64
+}
+
 func fileMode(output *client.TreeOutput) os.FileMode {
 	if output.IsExecutable {
 		return os.FileMode(0o750)

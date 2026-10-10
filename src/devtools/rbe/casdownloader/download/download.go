@@ -134,6 +134,11 @@ type Stats struct {
 	DownloadError       string `json:"download_error,omitempty"`
 	Notes               string `json:"notes,omitempty"`
 	CASProxy            string `json:"casproxy,omitempty"`
+	// CorruptBlobsQuarantined is how many local cache hits were found to be
+	// the wrong size, removed from the cache, and downloaded again, so they
+	// are not counted in Hot. Zero for a cache that does not check, such as
+	// LocalCache.
+	CorruptBlobsQuarantined int64 `json:"corrupt_blobs_quarantined"`
 	// NoteReasons classifies Notes, one entry per note in the same order. It
 	// is exported as a metric rather than written to the JSON: the note text
 	// already reaches AnTS, and CF, which does not read the JSON, needs the
@@ -1009,6 +1014,9 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		err = d.downloadWithLocalCache(ctx, d.Cache, outputs)
 		if lc, ok := d.Cache.(interface{ LockWaitTimeMS() int64 }); ok {
 			d.DownloadStats.CacheLockWaitTimeMS = lc.LockWaitTimeMS()
+		}
+		if r, ok := d.Cache.(cache.CorruptBlobReporter); ok {
+			d.DownloadStats.CorruptBlobsQuarantined = r.CorruptBlobsQuarantined()
 		}
 		d.Cache.Close()
 		if err != nil {
