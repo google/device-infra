@@ -68,6 +68,8 @@ public interface ExternalDeviceManager extends DrainHandler {
     IDLE,
     // Reserved by MH lab server.
     RESERVED_BY_MH,
+    // Releasing the reservation from MH lab server.
+    RELEASING_BY_MH,
     // Allocated by the external device manager.
     RESERVED_BY_EXTERNAL_DM,
     UNAVAILABLE,

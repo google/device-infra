@@ -457,8 +457,9 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
    *       perspective, MobileHarness owns and has permission to use this device.
    * </ul>
    *
-   * <p>Only when the external DM reports {@code RESERVED_BY_EXTERNAL_DM} or {@code UNAVAILABLE} is
-   * the device considered unavailable/prepping in external DM.
+   * <p>When the external DM reports {@code RELEASING_BY_MH}, {@code RESERVED_BY_EXTERNAL_DM},
+   * {@code UNAVAILABLE}, or {@code UNKNOWN}, the device is considered unavailable/prepping in
+   * external DM.
    */
   private boolean isAvailableOrReservedByMhInExternalDeviceManager() {
     ExternalDeviceManager.DeviceStatus deviceStatus =
