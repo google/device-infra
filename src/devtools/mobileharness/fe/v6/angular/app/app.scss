@@ -366,12 +366,13 @@ app-root {
     // border-bottom: 1px solid $border-menu;
     position: sticky;
     top: 0;
+    z-index: 250;
     display: flex;
     align-items: center;
     height: 64px;
     min-height: 64px;
     box-sizing: border-box;
-    overflow: hidden;
+    overflow: visible;
 
     .title {
       font-size: 20px;
@@ -380,14 +381,16 @@ app-root {
 
     .version-info {
       display: flex;
-      flex: 1;
+      flex: 0 0 auto;
+      margin-left: auto;
       font-size: 12px;
       justify-content: flex-end;
       line-height: 16px;
     }
     .account-menu {
       display: flex;
-      flex: 1;
+      flex: 0 0 auto;
+      margin-left: auto;
       justify-content: flex-end;
 
       button {

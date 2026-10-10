@@ -15,6 +15,8 @@ import {
   FleetSuggestionResponse,
   FleetValueListRequest,
   FleetValueListResponse,
+  ResolveAllSiteQueryRequest,
+  ResolveAllSiteQueryResponse,
   TjsResolveChipsRequest,
   TjsResolveChipsResponse,
   TjsSearchConfig,
@@ -77,4 +79,12 @@ export abstract class SearchService {
   abstract resolveTjsChips(
     request: TjsResolveChipsRequest,
   ): Observable<TjsResolveChipsResponse>;
+
+  // --- All-Site (Global Jump Bar) Search RPCs ---
+  /**
+   * Resolves an exact identifier string across Devices, Hosts, Tests, Jobs, and Sessions.
+   */
+  abstract resolveAllSiteQuery(
+    request: ResolveAllSiteQueryRequest,
+  ): Observable<ResolveAllSiteQueryResponse>;
 }
