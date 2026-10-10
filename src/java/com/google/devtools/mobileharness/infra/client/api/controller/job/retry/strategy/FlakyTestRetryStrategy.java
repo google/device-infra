@@ -56,6 +56,20 @@ public class FlakyTestRetryStrategy implements RetryStrategy {
 
     JobInfo jobInfo = currentTestInfo.jobInfo();
 
+    // Check if infra_error_attempts is set and valid.
+    int infraErrorAttempts =
+        jobInfo
+            .params()
+            .getInt(
+                FlakyTestRetryConstants.PARAM_INFRA_ERROR_ATTEMPTS,
+                FlakyTestRetryConstants.DEFAULT_INFRA_ERROR_ATTEMPTS);
+    if (infraErrorAttempts <= 0) {
+      logger.atInfo().log(
+          "%s is not positive, disabling infra error retry.",
+          FlakyTestRetryConstants.PARAM_INFRA_ERROR_ATTEMPTS);
+      infraErrorAttempts = 1;
+    }
+
     // Check if flaky_test_attempts is set and valid.
     int flakyTestAttempts =
         jobInfo.params().getInt(FlakyTestRetryConstants.PARAM_FLAKY_TEST_ATTEMPTS, -1);
@@ -180,11 +194,11 @@ public class FlakyTestRetryStrategy implements RetryStrategy {
 
     if (TEST_RESULTS_OF_ERROR_ATTEMPTS.contains(testResult)) {
       // Retry on other test results, including ERROR, TIMEOUT, UNKNOWN.
-      int errorAttempts =
+      int errorAttemptsForCurrentFlakyAttemptIndex =
           getErrorAttemptCountForCurrentFlakyAttemptIndex(
               currentTestInfo, currentFlakyAttemptIndex);
 
-      if (errorAttempts < FlakyTestRetryConstants.MAX_ERROR_ATTEMPTS) {
+      if (errorAttemptsForCurrentFlakyAttemptIndex < infraErrorAttempts) {
         jobInfo
             .log()
             .atInfo()
@@ -196,8 +210,8 @@ public class FlakyTestRetryStrategy implements RetryStrategy {
                 testResult,
                 currentFlakyAttemptIndex,
                 flakyTestAttempts,
-                errorAttempts - 1,
-                FlakyTestRetryConstants.MAX_ERROR_ATTEMPTS,
+                errorAttemptsForCurrentFlakyAttemptIndex - 1,
+                infraErrorAttempts,
                 currentTestInfo.locator().getId());
         return ImmutableList.of(
             new RetryInfo(
@@ -205,7 +219,7 @@ public class FlakyTestRetryStrategy implements RetryStrategy {
                 ImmutableMap.<String, String>builder()
                     .put(
                         FlakyTestRetryConstants.TEST_PROP_ERROR_ATTEMPT_INDEX,
-                        Integer.toString(errorAttempts))
+                        Integer.toString(errorAttemptsForCurrentFlakyAttemptIndex))
                     .put(
                         FlakyTestRetryConstants.TEST_PROP_FLAKY_ATTEMPT_INDEX,
                         Integer.toString(currentFlakyAttemptIndex))
@@ -223,8 +237,8 @@ public class FlakyTestRetryStrategy implements RetryStrategy {
                 testResult,
                 currentFlakyAttemptIndex,
                 flakyTestAttempts,
-                errorAttempts - 1,
-                FlakyTestRetryConstants.MAX_ERROR_ATTEMPTS,
+                errorAttemptsForCurrentFlakyAttemptIndex - 1,
+                infraErrorAttempts,
                 currentTestInfo.locator().getId());
         return ImmutableList.of();
       }
