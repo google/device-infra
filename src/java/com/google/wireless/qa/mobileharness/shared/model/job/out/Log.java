@@ -33,7 +33,6 @@ import java.util.Optional;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
-import javax.annotation.Nullable;
 
 /** Output log of the job/test. */
 public class Log implements LogCollector<Api> {
@@ -147,33 +146,6 @@ public class Log implements LogCollector<Api> {
       @com.google.errorprone.annotations.CompileTimeConstant String message, FluentLogger logger) {
     append(message);
     logger.atInfo().log("%s", message);
-    return this;
-  }
-
-  /**
-   * Appends new log. Will append '\n' at the end of the message.
-   *
-   * @deprecated use {@link #atInfo()}{@linkplain LoggingApi#log(String) .log(String)} instead
-   */
-  @CanIgnoreReturnValue
-  @Deprecated
-  public Log ln(@com.google.errorprone.annotations.CompileTimeConstant String message) {
-    atInfo().log(message);
-    return this;
-  }
-
-  /**
-   * Appends new logs. Will append '\n' at the end of the message. Also log with the given logger.
-   *
-   * @deprecated use {@link #atInfo()}{@linkplain LoggingApi#alsoTo(Logger)
-   *     .alsoTo(Logger)}{@linkplain LoggingApi#log(String) .log(String)} instead
-   */
-  @CanIgnoreReturnValue
-  @Deprecated
-  public Log ln(
-      @com.google.errorprone.annotations.CompileTimeConstant String message,
-      @Nullable FluentLogger logger) {
-    atInfo().alsoTo(logger).log(message);
     return this;
   }
 
