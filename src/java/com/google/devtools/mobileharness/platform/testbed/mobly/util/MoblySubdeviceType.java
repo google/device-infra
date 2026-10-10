@@ -163,7 +163,11 @@ public enum MoblySubdeviceType {
   TINY_HUMAN_DEVICE(
       /* jsonTypeName= */ "TinyHumanDevice",
       /* jsonIdKey= */ "id",
-      /* mhClassName= */ "TinyHumanDevice");
+      /* mhClassName= */ "TinyHumanDevice"),
+  OMNIMOTION_DEVICE(
+      /* jsonTypeName= */ "OmniMotionDevice",
+      /* jsonIdKey= */ "mcu_serial",
+      /* mhClassName= */ "OmniMotionDevice");
 
   private final String jsonTypeName;
   private final String jsonIdKey;

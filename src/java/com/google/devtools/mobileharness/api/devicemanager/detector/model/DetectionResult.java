@@ -66,6 +66,7 @@ public abstract class DetectionResult {
     MONITOR,
     NEST,
     NO_OP,
+    OMNIMOTION,
     OPEN_WRT,
     PIXEL_BUDS,
     PARIS,
