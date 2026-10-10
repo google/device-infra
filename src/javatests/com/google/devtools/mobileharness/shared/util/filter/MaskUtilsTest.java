@@ -534,6 +534,68 @@ public final class MaskUtilsTest {
     assertThat(resultToTrim.build()).isEqualTo(expectedResult);
   }
 
+  @Test
+  public void trimLabView_retainAll_returnsSameReference() {
+    LabView labView = LAB_QUERY_RESULT_WITH_LAB_VIEW.getLabView();
+
+    assertThat(
+            MaskUtils.trimLabView(
+                labView, CompiledLabInfoMask.retainAll(), CompiledDeviceInfoMask.retainAll()))
+        .isSameInstanceAs(labView);
+  }
+
+  @Test
+  public void trimLabView_appliesBothMasksAndKeepsCounts() {
+    LabView labView =
+        LAB_QUERY_RESULT_WITH_LAB_VIEW.getLabView().toBuilder().setLabTotalCount(2).build();
+    CompiledLabInfoMask labInfoMask =
+        CompiledLabInfoMask.of(
+            LabInfoMask.newBuilder()
+                .setFieldMask(FieldMask.newBuilder().addPaths("lab_locator.host_name"))
+                .build());
+    CompiledDeviceInfoMask deviceInfoMask =
+        CompiledDeviceInfoMask.of(
+            DeviceInfoMask.newBuilder()
+                .setFieldMask(FieldMask.newBuilder().addPaths("device_status"))
+                .build());
+
+    LabView trimmed = MaskUtils.trimLabView(labView, labInfoMask, deviceInfoMask);
+
+    assertThat(trimmed.getLabTotalCount()).isEqualTo(2);
+    assertThat(trimmed.getLabDataCount()).isEqualTo(2);
+    LabData lab1 = trimmed.getLabData(0);
+    assertThat(lab1.getLabInfo())
+        .isEqualTo(
+            LabInfo.newBuilder()
+                .setLabLocator(LabLocator.newBuilder().setHostName("lab1"))
+                .build());
+    assertThat(lab1.getDeviceList().getDeviceTotalCount()).isEqualTo(2);
+    assertThat(lab1.getDeviceList().getDeviceInfoList())
+        .containsExactly(
+            DeviceInfo.newBuilder().setDeviceStatus(DeviceStatus.IDLE).build(),
+            DeviceInfo.newBuilder().setDeviceStatus(DeviceStatus.BUSY).build())
+        .inOrder();
+    assertThat(trimmed.getLabData(1).getLabInfo().getLabLocator().getHostName()).isEqualTo("lab2");
+  }
+
+  @Test
+  public void trimLabView_dropAllMasks_removesMessagesButKeepsCounts() {
+    LabView labView = LAB_QUERY_RESULT_WITH_LAB_VIEW.getLabView();
+    CompiledLabInfoMask labInfoMask =
+        CompiledLabInfoMask.of(
+            LabInfoMask.newBuilder().setFieldMask(FieldMask.getDefaultInstance()).build());
+    CompiledDeviceInfoMask deviceInfoMask =
+        CompiledDeviceInfoMask.of(
+            DeviceInfoMask.newBuilder().setFieldMask(FieldMask.getDefaultInstance()).build());
+
+    LabView trimmed = MaskUtils.trimLabView(labView, labInfoMask, deviceInfoMask);
+
+    assertThat(trimmed.getLabDataCount()).isEqualTo(2);
+    assertThat(trimmed.getLabData(0).hasLabInfo()).isFalse();
+    assertThat(trimmed.getLabData(0).getDeviceList().getDeviceTotalCount()).isEqualTo(2);
+    assertThat(trimmed.getLabData(0).getDeviceList().getDeviceInfoList()).isEmpty();
+  }
+
   /**
    * Creates a {@link GroupedDevices} with nested {@link GroupedDevices} and a {@link DeviceList}.
    */
