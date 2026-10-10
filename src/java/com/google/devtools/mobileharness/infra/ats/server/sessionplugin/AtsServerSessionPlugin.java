@@ -16,9 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
+import static com.google.common.base.Strings.nullToEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.util.concurrent.TimeUnit.HOURS;
@@ -31,14 +31,19 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
-import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
+import com.google.devtools.mobileharness.infra.ats.common.sessionorchestrator.AtsSessionOrchestrator;
+import com.google.devtools.mobileharness.infra.ats.common.sessionorchestrator.SessionOrchestratorDelegate;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification.NotificationCase;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.ErrorReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.NewMultiCommandRequest;
@@ -66,7 +71,6 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.ser
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache.CacheRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache.InvalidateCacheRequest;
-import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedTestModuleResultsMessage;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedTestModuleResults;
@@ -84,7 +88,6 @@ import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessag
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -94,16 +97,16 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import javax.inject.Inject;
 
 /** Session Plugin to serve test requests coming from ATS server. */
 @WithProto({SessionRequest.class, RequestDetail.class})
-final class AtsServerSessionPlugin {
+final class AtsServerSessionPlugin implements SessionOrchestratorDelegate {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-  private static final String TRADEFED_DRIVER_NAME = "TradefedTest";
   private static final String SESSION_PLUGIN_CLASS_NAME =
       "com.google.devtools.mobileharness.infra.ats.server.sessionplugin.AtsServerSessionPlugin";
   private static final String SESSION_MODULE_CLASS_NAME =
@@ -122,23 +125,14 @@ final class AtsServerSessionPlugin {
   private final Supplier<RequestDetail.Builder> requestDetailSupplier =
       Suppliers.memoize(this::resumeRequestDetailFromSessionPluginOutput);
 
-  // All non-tradefed jobs which will be initiated when the session starts. They will be added to
-  // the session when all tradefed jobs have ended.
-  @GuardedBy("sessionLock")
-  private ImmutableList<JobInfo> nonTradefedJobs = null;
-
-  @SuppressWarnings("PreferredInterfaceType")
-  @GuardedBy("sessionLock")
-  private List<JobInfo> tradefedJobs = null;
-
   private final SessionInfo sessionInfo;
 
   private final NewMultiCommandRequestHandler newMultiCommandRequestHandler;
   private final LocalSessionStub localSessionStub;
   private final Clock clock;
-  private final TestMessageUtil testMessageUtil;
   private final SessionDeviceCache sessionDeviceCache;
   private final ListeningScheduledExecutorService scheduledThreadPool;
+  private final AtsSessionOrchestrator orchestrator;
 
   @GuardedBy("itself")
   private final Map<LabLocator, Set<String>> cachedDevices = new HashMap<>();
@@ -155,8 +149,8 @@ final class AtsServerSessionPlugin {
     this.newMultiCommandRequestHandler = newMultiCommandRequestHandler;
     this.localSessionStub = localSessionStub;
     this.clock = clock;
-    this.testMessageUtil = testMessageUtil;
     this.sessionDeviceCache = sessionDeviceCache;
+    this.orchestrator = new AtsSessionOrchestrator(sessionInfo, this, testMessageUtil);
     this.scheduledThreadPool =
         ThreadPools.createStandardScheduledThreadPool(
             "ats-server-session-plugin-device-cache-refresher-" + sessionInfo.getSessionId(), 1);
@@ -214,8 +208,12 @@ final class AtsServerSessionPlugin {
           if (newMultiCommandRequest.getCommands(0).getCommandLine().startsWith("slate")) {
             createSlateJobs(requestDetail, newMultiCommandRequest);
           } else {
-            createXtsJobs(requestDetail, newMultiCommandRequest);
+            orchestrator.startSession();
           }
+        } catch (MobileHarnessException e) {
+          logger.atWarning().withCause(e).log(
+              "Failed to start session [%s]", sessionInfo.getSessionId());
+          handleSessionError(requestDetail, e);
         } finally {
           requestDetail.setUpdateTime(Timestamps.fromMillis(clock.instant().toEpochMilli()));
           updateSessionPluginOutput(requestDetail);
@@ -226,19 +224,10 @@ final class AtsServerSessionPlugin {
 
   @Subscribe
   public void onTestStarting(TestStartingEvent event) {
-    // Sends cancellation test message if necessary.
     synchronized (sessionLock) {
       RequestDetail.Builder requestDetail = requestDetailSupplier.get();
       try {
         TestInfo testInfo = event.getTest();
-        boolean shouldSendCancellationMessage = false;
-        if (requestDetail.getState().equals(RequestState.CANCELED)) {
-          shouldSendCancellationMessage = true;
-        }
-
-        if (shouldSendCancellationMessage) {
-          sendCancellationMessageToStartedTest(testInfo);
-        }
         ImmutableList<DeviceLocator> deviceLocators =
             event.getAllocation().getAllDeviceLocators().stream()
                 .map(
@@ -250,6 +239,7 @@ final class AtsServerSessionPlugin {
         }
         requestDetail.setWorkingJobId(testInfo.jobInfo().locator().getId());
         requestDetail.setWorkingTestId(testInfo.locator().getId());
+        orchestrator.onTestStarting(testInfo);
       } finally {
         updateSessionPluginOutput(requestDetail);
       }
@@ -257,15 +247,26 @@ final class AtsServerSessionPlugin {
   }
 
   @Subscribe
-  public void onJobEnded(JobEndEvent jobEndEvent)
-      throws InterruptedException, MobileHarnessException {
+  public void onJobEnded(JobEndEvent jobEndEvent) throws InterruptedException {
     synchronized (sessionLock) {
       RequestDetail.Builder requestDetail = requestDetailSupplier.get();
 
-      JobInfo jobInfo = jobEndEvent.getJob();
-
       try {
-        handleXtsJobEnd(jobInfo, requestDetail);
+        if (requestDetail.getState().equals(RequestState.CANCELED) || isAborted()) {
+          return;
+        }
+        newMultiCommandRequestHandler.handleNonTradefedJobEnd(jobEndEvent.getJob(), requestDetail);
+        if (!requestDetail
+            .getOriginalRequest()
+            .getCommands(0)
+            .getCommandLine()
+            .startsWith("slate")) {
+          orchestrator.onJobEnd(jobEndEvent);
+        }
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to handle job ended event for session [%s]", sessionInfo.getSessionId());
+        handleSessionError(requestDetail, e);
       } finally {
         updateSessionPluginOutput(requestDetail);
       }
@@ -278,6 +279,7 @@ final class AtsServerSessionPlugin {
       RequestDetail.Builder requestDetail = requestDetailSupplier.get();
 
       try {
+        orchestrator.onSessionEnded();
         HandleResultProcessingResult handleResultProcessingResult =
             newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
         if (isAborted()) {
@@ -342,19 +344,11 @@ final class AtsServerSessionPlugin {
 
         // TODO: Support killing jobs here (for non-TF jobs or jobs during allocation).
         if (notification.getNotificationCase() == NotificationCase.CANCEL_SESSION) {
-          // send end signal to all running tests.
-          requestDetail.setState(RequestState.CANCELED);
-          requestDetail.setCancelReason(CancelReason.REQUEST_API);
-          requestDetail.setErrorMessage("Received cancel session notification");
-          ImmutableList<TestInfo> startedTestsBeforeCancellation =
-              event.sessionInfo().getAllJobs().stream()
-                  .map(jobInfo -> jobInfo.tests().getAll().values())
-                  .flatMap(Collection::stream)
-                  .filter(testInfo -> testInfo.status().get().equals(TestStatus.RUNNING))
-                  .collect(toImmutableList());
-          for (TestInfo testInfo : startedTestsBeforeCancellation) {
-            sendCancellationMessageToStartedTest(testInfo);
-          }
+          requestDetail
+              .setState(RequestState.CANCELED)
+              .setCancelReason(CancelReason.REQUEST_API)
+              .setErrorMessage("Received cancel session notification");
+          orchestrator.onSessionCancellation(CANCELLATION_MESSAGE);
         }
       } finally {
         updateSessionPluginOutput(requestDetail);
@@ -410,91 +404,107 @@ final class AtsServerSessionPlugin {
     }
   }
 
-  @GuardedBy("sessionLock")
-  void createXtsJobs(
-      RequestDetail.Builder requestDetail, NewMultiCommandRequest newMultiCommandRequest)
-      throws InterruptedException {
-    if (!createTradefedJobs(requestDetail, newMultiCommandRequest)
-        || !createNonTradefedJobs(requestDetail, newMultiCommandRequest)
-        || hasNoJobsCreated(requestDetail)) {
-      return;
-    }
-
-    addMainJobs();
-  }
-
   /**
    * Creates Tradefed jobs from the request, updates request detail state and error messages, and
-   * saves the generated jobs in {@link #tradefedJobs}.
-   *
-   * @return true if the creation state is {@link RequestState#RUNNING}, false otherwise
+   * returns the generated jobs.
    */
-  @GuardedBy("sessionLock")
-  private boolean createTradefedJobs(
-      RequestDetail.Builder requestDetail, NewMultiCommandRequest newMultiCommandRequest)
-      throws InterruptedException {
-    CreateJobsResult createTradefedJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(newMultiCommandRequest, sessionInfo);
-    tradefedJobs = new ArrayList<>(createTradefedJobsResult.jobInfos());
-    updateRequestDetailWithCreateJobsResult(requestDetail, createTradefedJobsResult);
-    return createTradefedJobsResult.state().equals(RequestState.RUNNING);
+  @Override
+  public ImmutableList<JobInfo> createTradefedJobs(
+      ImmutableSet<String> dynamicMctsModules, boolean skipDynamicMctsJob)
+      throws MobileHarnessException, InterruptedException {
+    synchronized (sessionLock) {
+      RequestDetail.Builder requestDetail = requestDetailSupplier.get();
+      CreateJobsResult result =
+          newMultiCommandRequestHandler.createTradefedJobs(
+              requestDetail.getOriginalRequest(),
+              sessionInfo,
+              dynamicMctsModules,
+              skipDynamicMctsJob);
+      updateRequestDetailWithCreateJobsResult(requestDetail, result);
+      if (result.state().equals(RequestState.ERROR)) {
+        throw new MobileHarnessException(
+            BasicErrorId.USER_PLUGIN_ERROR,
+            result.errorMessage().orElse("Failed to create Tradefed jobs"));
+      }
+      return result.jobInfos();
+    }
   }
 
   /**
    * Creates non-Tradefed jobs from the request, updates request detail state and error messages,
-   * and saves the generated jobs in {@link #nonTradefedJobs}.
-   *
-   * @return true if the creation state is {@link RequestState#RUNNING}, false otherwise
+   * and returns the generated jobs.
    */
-  @GuardedBy("sessionLock")
-  private boolean createNonTradefedJobs(
-      RequestDetail.Builder requestDetail, NewMultiCommandRequest newMultiCommandRequest)
-      throws InterruptedException {
-    CreateJobsResult createNonTradefedJobsResult =
-        newMultiCommandRequestHandler.createNonTradefedJobs(newMultiCommandRequest, sessionInfo);
-    nonTradefedJobs = createNonTradefedJobsResult.jobInfos();
-    updateRequestDetailWithCreateJobsResult(requestDetail, createNonTradefedJobsResult);
-    return createNonTradefedJobsResult.state().equals(RequestState.RUNNING);
-  }
-
-  /**
-   * Verifies that at least one Tradefed or non-Tradefed job was created for the session, updating
-   * the request state and logging an error if none were created.
-   *
-   * @return true if no jobs were created, false otherwise
-   */
-  @GuardedBy("sessionLock")
-  private boolean hasNoJobsCreated(RequestDetail.Builder requestDetail) {
-    if (tradefedJobs.isEmpty() && nonTradefedJobs.isEmpty()) {
-      requestDetail
-          .setState(RequestState.ERROR)
-          .setErrorReason(ErrorReason.INVALID_REQUEST)
-          .setErrorMessage(
-              String.format("No jobs were created for session: %s ", sessionInfo.getSessionId()));
-      logger.atWarning().log(
-          "Session [%s] interrupted: No tradefed or non-tradefed jobs were created.",
-          sessionInfo.getSessionId());
-      return true;
+  @Override
+  public ImmutableList<JobInfo> createNonTradefedJobs()
+      throws MobileHarnessException, InterruptedException {
+    synchronized (sessionLock) {
+      RequestDetail.Builder requestDetail = requestDetailSupplier.get();
+      CreateJobsResult result =
+          newMultiCommandRequestHandler.createNonTradefedJobs(
+              requestDetail.getOriginalRequest(), sessionInfo);
+      updateRequestDetailWithCreateJobsResult(requestDetail, result);
+      if (result.state().equals(RequestState.ERROR)) {
+        throw new MobileHarnessException(
+            BasicErrorId.USER_PLUGIN_ERROR,
+            result.errorMessage().orElse("Failed to create non-Tradefed jobs"));
+      }
+      return result.jobInfos();
     }
-    return false;
   }
 
   /**
-   * Schedules main Tradefed and non-Tradefed jobs into the session.
-   *
-   * <p>If any Tradefed jobs exist, schedules the first Tradefed job (subsequent Tradefed jobs will
-   * execute sequentially when the previous one ends in {@link #handleXtsJobEnd}). If no Tradefed
-   * jobs exist, adds all non-Tradefed jobs directly.
+   * Creates the setup job from the request, updates request detail state and error messages, and
+   * returns the generated job if present.
    */
-  @GuardedBy("sessionLock")
-  private void addMainJobs() {
-    if (tradefedJobs != null && !tradefedJobs.isEmpty()) {
-      // Add one tradefed job to session, if we have multiple TF jobs execute serially. The
-      // following jobs will be added when the previous job hits onJobEnded.
-      sessionInfo.addJob(tradefedJobs.remove(0));
-    } else if (nonTradefedJobs != null && !nonTradefedJobs.isEmpty()) {
-      // If no tradefed job was added, add non tradefed jobs directly.
-      nonTradefedJobs.forEach(sessionInfo::addJob);
+  @Override
+  public Optional<JobInfo> createSetupJob() throws MobileHarnessException, InterruptedException {
+    synchronized (sessionLock) {
+      RequestDetail.Builder requestDetail = requestDetailSupplier.get();
+      CreateJobsResult result =
+          newMultiCommandRequestHandler.createSetupJobs(
+              requestDetail.getOriginalRequest(), sessionInfo);
+      updateRequestDetailWithCreateJobsResult(requestDetail, result);
+      if (result.state().equals(RequestState.ERROR)) {
+        throw new MobileHarnessException(
+            BasicErrorId.USER_PLUGIN_ERROR,
+            result.errorMessage().orElse("Failed to create setup job"));
+      }
+      return result.jobInfos().stream().findFirst();
+    }
+  }
+
+  /**
+   * Creates the teardown job from the request, updates request detail state and error messages, and
+   * returns the generated job if present.
+   */
+  @Override
+  public Optional<JobInfo> createTeardownJob() throws MobileHarnessException, InterruptedException {
+    synchronized (sessionLock) {
+      RequestDetail.Builder requestDetail = requestDetailSupplier.get();
+      CreateJobsResult result =
+          newMultiCommandRequestHandler.createTeardownJobs(
+              requestDetail.getOriginalRequest(), sessionInfo);
+      updateRequestDetailWithCreateJobsResult(requestDetail, result);
+      if (result.state().equals(RequestState.ERROR)) {
+        throw new MobileHarnessException(
+            BasicErrorId.USER_PLUGIN_ERROR,
+            result.errorMessage().orElse("Failed to create teardown job"));
+      }
+      return result.jobInfos().stream().findFirst();
+    }
+  }
+
+  @Override
+  public ShardingMode getEffectiveShardingMode() {
+    synchronized (sessionLock) {
+      RequestDetail.Builder requestDetail = requestDetailSupplier.get();
+      if (requestDetail.getOriginalRequest().getCommandsCount() > 0) {
+        CommandInfo commandInfo = requestDetail.getOriginalRequest().getCommands(0);
+        return commandInfo.getShardingMode().equals(ShardingMode.MODULE)
+            ? ShardingMode.MODULE
+            : ShardingMode.RUNNER;
+      }
+      return ShardingMode.RUNNER;
     }
   }
 
@@ -524,150 +534,6 @@ final class AtsServerSessionPlugin {
   }
 
   @GuardedBy("sessionLock")
-  void handleXtsJobEnd(JobInfo jobInfo, RequestDetail.Builder requestDetail)
-      throws MobileHarnessException, InterruptedException {
-    if (requestDetail.getState().equals(RequestState.CANCELED) || isAborted()) {
-      return;
-    }
-    newMultiCommandRequestHandler.handleNonTradefedJobEnd(jobInfo, requestDetail);
-    ensureTradefedJobsInitialized(requestDetail);
-    scheduleNextTradefedJob(jobInfo);
-    scheduleNonTradefedJobsIfNeeded(jobInfo, requestDetail);
-  }
-
-  /**
-   * Re-initializes Tradefed jobs if they are uninitialized (e.g., when resuming a session).
-   *
-   * <p>Tradefed jobs might be lost in resumed sessions. This method re-creates them to ensure they
-   * are executed, while removing jobs that have already been triggered in the session.
-   */
-  @GuardedBy("sessionLock")
-  private void ensureTradefedJobsInitialized(RequestDetail.Builder requestDetail)
-      throws InterruptedException {
-    if (tradefedJobs == null) {
-      CreateJobsResult createTradefedJobsResult =
-          newMultiCommandRequestHandler.createTradefedJobs(
-              requestDetail.getOriginalRequest(), sessionInfo);
-      tradefedJobs = new ArrayList<>(createTradefedJobsResult.jobInfos());
-      ImmutableSet<String> triggeredJobNames =
-          sessionInfo.getAllJobs().stream()
-              .map(job -> job.locator().getName())
-              .collect(toImmutableSet());
-      tradefedJobs.removeIf(job -> triggeredJobNames.contains(job.locator().getName()));
-    }
-  }
-
-  /** Re-initializes non-Tradefed jobs if they are uninitialized (e.g., when resuming a session). */
-  @GuardedBy("sessionLock")
-  private void ensureNonTradefedJobsInitialized(RequestDetail.Builder requestDetail)
-      throws InterruptedException {
-    if (nonTradefedJobs == null) {
-      CreateJobsResult createNonTradefedJobsResult =
-          newMultiCommandRequestHandler.createNonTradefedJobs(
-              requestDetail.getOriginalRequest(), sessionInfo);
-      nonTradefedJobs = createNonTradefedJobsResult.jobInfos();
-    }
-  }
-
-  /**
-   * Schedules the next Tradefed job when executing multiple Tradefed jobs serially.
-   *
-   * <p>Each subsequent Tradefed job is added to the session only after the previous job has
-   * finished.
-   */
-  @GuardedBy("sessionLock")
-  private void scheduleNextTradefedJob(JobInfo completedJob) {
-    if (tradefedJobs.isEmpty()) {
-      return;
-    }
-    // The static xts job is the first job in the list, if the test result is not complete, we
-    // don't execute any MCTS jobs.
-    if (isStaticXtsJobAndFailed(completedJob)) {
-      logger.atInfo().log(
-          "Session [%s]: Static XTS job [%s] ended but result is not complete, clearing"
-              + " remaining tradefed jobs.",
-          sessionInfo.getSessionId(), completedJob.locator().getId());
-      tradefedJobs.clear();
-      return;
-    }
-    JobInfo nextJob = tradefedJobs.remove(0);
-    logger.atInfo().log(
-        "Session [%s]: Adding next tradefed job [%s] to session.",
-        sessionInfo.getSessionId(), nextJob.locator().getId());
-    sessionInfo.addJob(nextJob);
-  }
-
-  /**
-   * Checks whether the given job is a static xTS dynamic-download job that ended without complete
-   * passing results.
-   */
-  private static boolean isStaticXtsJobAndFailed(JobInfo jobInfo) {
-    return jobInfo
-            .properties()
-            .getBoolean(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED)
-            .orElse(false)
-        && jobInfo
-            .properties()
-            .getOptional(XtsConstants.XTS_JOB_NAME)
-            .orElse("")
-            .contains(XtsConstants.STATIC_XTS_JOB_NAME)
-        && jobInfo.tests().getAll().values().stream()
-            .noneMatch(
-                testInfo ->
-                    testInfo.resultWithCause().get().type() == TestResult.PASS
-                        && testInfo
-                            .properties()
-                            .getBoolean(XtsConstants.TRADEFED_JOBS_HAS_RESULT_FILE)
-                            .orElse(false));
-  }
-
-  /**
-   * Schedules non-Tradefed jobs once all Tradefed jobs in the session have completed.
-   *
-   * <p>If there are non-tradefed jobs, that means all non-tradefed tests had already been added. So
-   * no need to add again. This can happen when two jobs end at the same time.
-   */
-  @GuardedBy("sessionLock")
-  private void scheduleNonTradefedJobsIfNeeded(
-      JobInfo completedJob, RequestDetail.Builder requestDetail) throws InterruptedException {
-    if (requestDetail.getState() == RequestState.CANCELED
-        || !completedJob.type().getDriver().equals(TRADEFED_DRIVER_NAME)
-        || hasUnfinishedTradefedJobs()
-        || hasNonTradefedJobs()) {
-      return;
-    }
-
-    ensureNonTradefedJobsInitialized(requestDetail);
-    if (!nonTradefedJobs.isEmpty()) {
-      nonTradefedJobs.forEach(sessionInfo::addJob);
-    }
-  }
-
-  /**
-   * Checks whether the session has any unfinished Tradefed jobs.
-   *
-   * <p>If there are still running tradefed jobs, wait and not add non-tradefed jobs.
-   */
-  private boolean hasUnfinishedTradefedJobs() {
-    return sessionInfo.getAllJobs().stream()
-        .anyMatch(
-            job ->
-                job.type().getDriver().equals(TRADEFED_DRIVER_NAME)
-                    && !job.status().get().equals(TestStatus.DONE));
-  }
-
-  /**
-   * Checks whether the session already has non-Tradefed jobs added.
-   *
-   * <p>If there are non-tradefed jobs, that means all non-tradefed tests had already been added. So
-   * no need to add again. This can happen when two jobs end at the same time.
-   */
-  private boolean hasNonTradefedJobs() {
-    return sessionInfo.getAllJobs().stream()
-        .anyMatch(job -> !job.type().getDriver().equals(TRADEFED_DRIVER_NAME));
-  }
-
-  @GuardedBy("sessionLock")
   private boolean isAborted() {
     return sessionInfo
         .getSessionProperty(SessionProperties.PROPERTY_KEY_SESSION_ABORTED_WHEN_RUNNING)
@@ -675,13 +541,18 @@ final class AtsServerSessionPlugin {
         .orElse(false);
   }
 
-  private void sendCancellationMessageToStartedTest(TestInfo testInfo) {
-    try {
-      testMessageUtil.sendProtoMessageToTest(testInfo, CANCELLATION_MESSAGE);
-      logger.atInfo().log("Sent cancel test message to test [%s]", testInfo.locator().getId());
-    } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log(
-          "Failed to send cancel test message to test [%s]", testInfo.locator().getId());
+  /** Records session failure state and error details in {@code requestDetail}. */
+  @GuardedBy("sessionLock")
+  private void handleSessionError(RequestDetail.Builder requestDetail, MobileHarnessException e) {
+    if (!requestDetail.getState().equals(RequestState.ERROR)) {
+      String errorMessage =
+          e.getErrorId() == InfraErrorId.XTS_NO_JOB_CREATED_FOR_SESSION
+              ? String.format("No jobs were created for session: %s ", sessionInfo.getSessionId())
+              : nullToEmpty(e.getMessage());
+      requestDetail
+          .setState(RequestState.ERROR)
+          .setErrorReason(ErrorReason.INVALID_REQUEST)
+          .setErrorMessage(errorMessage);
     }
   }
 
@@ -781,12 +652,7 @@ final class AtsServerSessionPlugin {
           .getOriginalRequest()
           .equals(NewMultiCommandRequest.getDefaultInstance())) {
         try {
-          if (sessionInfo.getSessionPluginExecutionConfig() != null
-              && sessionInfo.getSessionPluginExecutionConfig().hasConfig()
-              && sessionInfo
-                  .getSessionPluginExecutionConfig()
-                  .getConfig()
-                  .is(SessionRequest.class)) {
+          if (sessionInfo.getSessionPluginExecutionConfig().getConfig().is(SessionRequest.class)) {
             SessionRequest sessionRequest =
                 sessionInfo
                     .getSessionPluginExecutionConfig()

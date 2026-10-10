@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.sessionpl
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
@@ -27,23 +26,20 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutur
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
-import static java.util.Arrays.stream;
-import static java.util.stream.Collectors.partitioningBy;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
-import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
-import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
+import com.google.devtools.mobileharness.infra.ats.common.sessionorchestrator.AtsSessionOrchestrator;
+import com.google.devtools.mobileharness.infra.ats.common.sessionorchestrator.SessionOrchestratorDelegate;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig.CommandCase;
@@ -79,20 +75,15 @@ import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.util.PhaseSkippableDecoratorUtil;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
-import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
-import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -101,17 +92,12 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.UnaryOperator;
@@ -126,13 +112,12 @@ import javax.inject.Inject;
   AtsSessionPluginOutput.class,
   AtsSessionPluginNotification.class
 })
-public class AtsConsoleSessionPlugin {
+public class AtsConsoleSessionPlugin implements SessionOrchestratorDelegate {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   @VisibleForTesting static final AtomicInteger NEXT_RUN_COMMAND_ID = new AtomicInteger(1);
 
-  private final Object testCancellationLock = new Object();
   private final Object runningTestsLock = new Object();
 
   private final SessionInfo sessionInfo;
@@ -142,50 +127,20 @@ public class AtsConsoleSessionPlugin {
   private final ListDevicesCommandHandler listDevicesCommandHandler;
   private final ListModulesCommandHandler listModulesCommandHandler;
   private final RunCommandHandler runCommandHandler;
-  private final TestMessageUtil testMessageUtil;
   private final XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil;
   private final LocalFileUtil localFileUtil;
   private final SessionDeviceCache sessionDeviceCache;
   private final ListeningScheduledExecutorService scheduledThreadPool;
-
-  @GuardedBy("itself")
-  private final Map<String, Boolean> runningTradefedJobs = new HashMap<>();
-
-  @GuardedBy("itself")
-  private final Map<String, Boolean> runningNonTradefedJobs = new HashMap<>();
+  private final AtsSessionOrchestrator orchestrator;
 
   @GuardedBy("runningTestsLock")
   private final Map<String, RunningTradefedTest> runningTradefedTests = new ConcurrentHashMap<>();
 
-  @GuardedBy("testCancellationLock")
-  private final List<TestInfo> startedTests = new ArrayList<>();
-
-  @GuardedBy("testCancellationLock")
-  private XtsTradefedRunCancellation lastCancellationTestMessage;
-
-  private final Object addingJobLock = new Object();
-
-  @GuardedBy("addingJobLock")
-  private AtsSessionCancellation sessionCancellation;
-
   @GuardedBy("itself")
   private final Set<String> cachedDeviceControlIds = new HashSet<>();
 
-  @GuardedBy("addingJobLock")
-  private boolean sessionEnded;
-
-  private final Queue<JobInfo> additionalTradefedJobs = new ConcurrentLinkedQueue<>();
-
   /** Set in {@link #onSessionStarting}. */
   private volatile AtsSessionPluginConfig config;
-
-  private volatile ImmutableList<JobInfo> tradefedJobs = ImmutableList.of();
-  private volatile ImmutableList<JobInfo> nonTradefedJobs = ImmutableList.of();
-
-  private final AtomicReference<JobInfo> setupJobRef = new AtomicReference<>();
-  private final AtomicReference<JobInfo> teardownJobRef = new AtomicReference<>();
-  private final AtomicReference<String> runningSetupJobId = new AtomicReference<>();
-  private final AtomicReference<String> runningTeardownJobId = new AtomicReference<>();
 
   @Inject
   AtsConsoleSessionPlugin(
@@ -207,10 +162,10 @@ public class AtsConsoleSessionPlugin {
     this.listDevicesCommandHandler = listDevicesCommandHandler;
     this.listModulesCommandHandler = listModulesCommandHandler;
     this.runCommandHandler = runCommandHandler;
-    this.testMessageUtil = testMessageUtil;
     this.xtsTradefedRuntimeInfoFileUtil = xtsTradefedRuntimeInfoFileUtil;
     this.localFileUtil = localFileUtil;
     this.sessionDeviceCache = sessionDeviceCache;
+    this.orchestrator = new AtsSessionOrchestrator(sessionInfo, this, testMessageUtil);
     this.scheduledThreadPool =
         ThreadPools.createStandardScheduledThreadPool(
             "ats-console-session-plugin-scheduled-thread-pool-" + sessionInfo.getSessionId(),
@@ -289,6 +244,37 @@ public class AtsConsoleSessionPlugin {
             .build());
   }
 
+  @Override
+  public Optional<JobInfo> createSetupJob() throws MobileHarnessException, InterruptedException {
+    return runCommandHandler.createSetupJob();
+  }
+
+  @Override
+  public Optional<JobInfo> createTeardownJob() throws MobileHarnessException, InterruptedException {
+    return runCommandHandler.createTeardownJob();
+  }
+
+  @Override
+  public ImmutableList<JobInfo> createTradefedJobs(
+      ImmutableSet<String> dynamicMctsModules, boolean skipDynamicMctsJob)
+      throws MobileHarnessException, InterruptedException {
+    return runCommandHandler.createTradefedJobs(
+        config.getRunCommand(), dynamicMctsModules, skipDynamicMctsJob);
+  }
+
+  @Override
+  public ImmutableList<JobInfo> createNonTradefedJobs()
+      throws MobileHarnessException, InterruptedException {
+    return runCommandHandler.createNonTradefedJobs(config.getRunCommand());
+  }
+
+  @Override
+  public ShardingMode getEffectiveShardingMode() {
+    return runCommandHandler.shouldEnableModuleSharding()
+        ? ShardingMode.MODULE
+        : ShardingMode.RUNNER;
+  }
+
   @Subscribe
   public void onSessionStarted(SessionStartedEvent event)
       throws MobileHarnessException, InterruptedException {
@@ -304,21 +290,7 @@ public class AtsConsoleSessionPlugin {
               runCommandState.getCommandId(), runCommand.getInitialState().getCommandLineArgs());
       runCommandHandler.initialize(runCommand);
 
-      Optional<JobInfo> setupJobOpt = runCommandHandler.createSetupJob();
-      Optional<JobInfo> teardownJobOpt = runCommandHandler.createTeardownJob();
-
-      setupJobOpt.ifPresent(setupJobRef::set);
-      teardownJobOpt.ifPresent(teardownJobRef::set);
-
-      if (setupJobOpt.isPresent()) {
-        addSetupJob(setupJobOpt.get());
-      } else {
-        createMainJobs(
-            runCommand,
-            /* dynamicMctsModules= */ ImmutableSet.of(),
-            /* skipDynamicMctsJob= */ false);
-        addMainJobs();
-      }
+      orchestrator.startSession();
 
       // Starts TF runtime info updater.
       logFailure(
@@ -336,9 +308,7 @@ public class AtsConsoleSessionPlugin {
   @Subscribe
   public void onSessionEnded(SessionEndedEvent event)
       throws MobileHarnessException, InterruptedException {
-    synchronized (addingJobLock) {
-      sessionEnded = true;
-    }
+    orchestrator.onSessionEnded();
 
     // Invalidates xTS device caches.
     synchronized (cachedDeviceControlIds) {
@@ -373,73 +343,8 @@ public class AtsConsoleSessionPlugin {
   @Subscribe
   public void onJobEnd(JobEndEvent jobEndEvent)
       throws MobileHarnessException, InterruptedException {
-    JobInfo currentJob = jobEndEvent.getJob();
-    runCommandHandler.handleNonTradefedJobEnd(currentJob);
-
-    String jobId = currentJob.locator().getId();
-    boolean isSetupJobEnd = runningSetupJobId.compareAndSet(jobId, null);
-    if (isSetupJobEnd) {
-      logger.atInfo().log("Setup job [%s] ended, starting main jobs.", jobId);
-      // Extract dynamic MCTS module names downloaded during the setup job, and create Tradefed jobs
-      // now that the canonical list of dynamic modules is known.
-      ImmutableSet<String> dynamicMctsModules = extractDynamicMctsModules(currentJob);
-      // If the setup job reported the device has no preloaded Mainline modules (e.g. Auto / AOSP
-      // builds), it does not need dynamic MCTS, so skip creating the dynamic MCTS job to avoid
-      // booting Tradefed for 0 tests.
-      boolean skipDynamicMctsJob = !extractHasPreloadedMainlineModules(currentJob);
-      createMainJobs(config.getRunCommand(), dynamicMctsModules, skipDynamicMctsJob);
-      addMainJobs();
-      return;
-    }
-
-    boolean isTeardownJobEnd = runningTeardownJobId.compareAndSet(jobId, null);
-    if (isTeardownJobEnd) {
-      logger.atInfo().log("Teardown job [%s] ended.", jobId);
-      return;
-    }
-
-    synchronized (runningTradefedJobs) {
-      if (runningTradefedJobs.containsKey(jobId)) {
-        runningTradefedJobs.put(jobId, false);
-
-        // Add the additional tradefed jobs if needed.
-        JobInfo nextJobToAdd = additionalTradefedJobs.poll();
-        if (nextJobToAdd != null) {
-          // In MODULE sharding mode, each job has a SubDeviceSpec matching any available device
-          // (via regex), allowing the scheduler to dynamically allocate whichever device is free.
-          // In RUNNER sharding mode, pin the sub-device specs to the exact device IDs used by the
-          // completed static job so that the subsequent dynamic job runs on the same devices.
-          if (!runCommandHandler.shouldEnableModuleSharding()) {
-            ImmutableSet<String> devicesOfCurrentJob = getDeviceSerials(currentJob);
-            // Add the device ids of the current job to the sub device specs of the next tradefed
-            // job.
-            addDeviceIdsToSubDeviceSpecs(
-                nextJobToAdd.subDeviceSpecs().getAllSubDevices(), devicesOfCurrentJob);
-          }
-          addAndTrackTradefedJobs(ImmutableList.of(nextJobToAdd));
-        }
-
-        if (runningTradefedJobs.values().stream().noneMatch(running -> running)) {
-          logger.atInfo().log(
-              "All added tradefed jobs have been done, trying to add non-tradefed jobs if needed.");
-          if (!addMainNonTradefedJobs()) {
-            addTeardownJobIfAny();
-          }
-        }
-        return;
-      }
-    }
-
-    synchronized (runningNonTradefedJobs) {
-      if (runningNonTradefedJobs.containsKey(jobId)) {
-        runningNonTradefedJobs.put(jobId, false);
-        if (runningNonTradefedJobs.values().stream().noneMatch(running -> running)) {
-          logger.atInfo().log("All non-tradefed main jobs have completed.");
-          addTeardownJobIfAny();
-        }
-        return;
-      }
-    }
+    runCommandHandler.handleNonTradefedJobEnd(jobEndEvent.getJob());
+    orchestrator.onJobEnd(jobEndEvent);
   }
 
   @Subscribe
@@ -500,15 +405,7 @@ public class AtsConsoleSessionPlugin {
     sessionInfo.putSessionProperty(
         SessionProperties.PROPERTY_KEY_SESSION_CONTAIN_STARTED_TEST, "true");
 
-    // Sends cancellation test message if necessary.
-    XtsTradefedRunCancellation lastCancellationTestMessage;
-    synchronized (testCancellationLock) {
-      startedTests.add(testInfo);
-      lastCancellationTestMessage = this.lastCancellationTestMessage;
-    }
-    if (lastCancellationTestMessage != null) {
-      sendCancellationMessageToStartedTest(testInfo, lastCancellationTestMessage);
-    }
+    orchestrator.onTestStarting(testInfo);
 
     // Caches devices (as a xTS type) used in the test.
     // The intention is to make sure if any device goes offline between job runs, the next job
@@ -647,40 +544,12 @@ public class AtsConsoleSessionPlugin {
     }
   }
 
-  /**
-   * Add jobs to the session.
-   *
-   * @return a list of job IDs of the added jobs
-   */
-  @CanIgnoreReturnValue
-  private ImmutableList<String> addJobsToSession(ImmutableList<JobInfo> jobInfos) {
-    synchronized (addingJobLock) {
-      if (sessionCancellation != null || sessionEnded) {
-        logger.atInfo().log(
-            "Skip adding jobs to session (cancelled: [%s], ended: [%b])",
-            sessionCancellation != null ? shortDebugString(sessionCancellation) : "null",
-            sessionEnded);
-        return ImmutableList.of();
-      }
-
-      // Adds jobs to session.
-      jobInfos.forEach(sessionInfo::addJob);
-    }
-
-    return jobInfos.stream().map(jobInfo -> jobInfo.locator().getId()).collect(toImmutableList());
-  }
-
   /** TODO: Support killing jobs here (for non-TF jobs or jobs during allocation). */
   private void onSessionCancellation(AtsSessionCancellation sessionCancellation) {
-    // Stops adding new jobs.
     logger
         .atInfo()
         .with(IMPORTANCE, IMPORTANT)
         .log("Stop adding new jobs due to [%s]", shortDebugString(sessionCancellation));
-    synchronized (addingJobLock) {
-      this.sessionCancellation = sessionCancellation;
-    }
-    additionalTradefedJobs.clear();
 
     int killTradefedSignal;
     if (sessionCancellation.hasSignal()) {
@@ -699,33 +568,7 @@ public class AtsConsoleSessionPlugin {
             .setCancelReason(sessionCancellation.getReason())
             .build();
 
-    // Sends test message to started tests.
-    ImmutableList<TestInfo> startedTests;
-    synchronized (testCancellationLock) {
-      this.lastCancellationTestMessage = cancellationTestMessage;
-      startedTests = ImmutableList.copyOf(this.startedTests);
-    }
-    for (TestInfo testInfo : startedTests) {
-      sendCancellationMessageToStartedTest(testInfo, cancellationTestMessage);
-    }
-  }
-
-  /** TODO: Don't send to non-TF tests. */
-  private void sendCancellationMessageToStartedTest(
-      TestInfo testInfo, XtsTradefedRunCancellation cancellationTestMessage) {
-    logger
-        .atInfo()
-        .with(IMPORTANCE, IMPORTANT)
-        .log(
-            "Send cancellation message to test [%s]: [%s]",
-            testInfo.locator().getId(), shortDebugString(cancellationTestMessage));
-    try {
-      testMessageUtil.sendProtoMessageToTest(testInfo, cancellationTestMessage);
-    } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log(
-          "Failed to send cancellation message to test [%s]: [%s]",
-          testInfo.locator().getId(), shortDebugString(cancellationTestMessage));
-    }
+    orchestrator.onSessionCancellation(cancellationTestMessage);
   }
 
   /** Notes that this method will override the whole previous output if any. */
@@ -752,256 +595,6 @@ public class AtsConsoleSessionPlugin {
         .getSessionPluginOutput(AtsSessionPluginOutput.class)
         .orElse(AtsSessionPluginOutput.getDefaultInstance())
         .getRunCommandState();
-  }
-
-  private ImmutableSet<String> getDeviceSerials(JobInfo jobInfo) {
-    return jobInfo.tests().getAll().values().stream()
-        .map(testInfo -> testInfo.properties().getOptional(Test.DEVICE_ID_LIST))
-        .filter(Optional::isPresent)
-        .flatMap(ids -> stream(ids.get().split(",")))
-        .collect(toImmutableSet());
-  }
-
-  private void addDeviceIdsToSubDeviceSpecs(
-      List<SubDeviceSpec> subDeviceSpecs, ImmutableSet<String> deviceIds) {
-
-    if (subDeviceSpecs.isEmpty() || deviceIds.isEmpty()) {
-      return;
-    }
-
-    // Return if the number of device IDs is not equal to the number of sub-device specs.
-    if (subDeviceSpecs.size() != deviceIds.size()) {
-      return;
-    }
-
-    Iterator<String> deviceIdIterator = deviceIds.iterator();
-    for (SubDeviceSpec subDeviceSpec : subDeviceSpecs) {
-      String deviceId = deviceIdIterator.next();
-      subDeviceSpec.dimensions().add(Name.ID.lowerCaseName(), deviceId);
-    }
-  }
-
-  /**
-   * Adds the ATS setup job to the session and records its execution ID in {@code
-   * runningSetupJobId}.
-   */
-  private void addSetupJob(JobInfo setupJob) {
-    logger.atInfo().log("Adding setup job [%s].", setupJob.locator().getId());
-    ImmutableList<String> setupJobIds = addJobsToSession(ImmutableList.of(setupJob));
-    if (!setupJobIds.isEmpty()) {
-      runningSetupJobId.set(setupJobIds.get(0));
-    }
-  }
-
-  /**
-   * Creates the main Tradefed and non-Tradefed jobs based on the given RunCommand.
-   *
-   * @param runCommand the run command representing the session config
-   * @param dynamicMctsModules the canonical set of dynamic MCTS module names downloaded during the
-   *     setup job, or an empty set if dynamic MCTS is disabled, no modules were requested, or the
-   *     setup job is unavailable. If provided, they replace static MCTS modules for Tradefed job
-   *     filtering and creation.
-   * @param skipDynamicMctsJob when {@code true}, the dynamic MCTS job is not created in RUNNER mode
-   */
-  private void createMainJobs(
-      RunCommand runCommand, ImmutableSet<String> dynamicMctsModules, boolean skipDynamicMctsJob)
-      throws MobileHarnessException, InterruptedException {
-    // Create tradefed jobs.
-    try {
-      tradefedJobs =
-          runCommandHandler.createTradefedJobs(runCommand, dynamicMctsModules, skipDynamicMctsJob);
-    } catch (MobileHarnessException e) {
-      if (!XtsJobCreator.isSkippableException(e)) {
-        throw e;
-      }
-      logger
-          .atInfo()
-          .with(IMPORTANCE, IMPORTANT)
-          .log(
-              "Failed to create tradefed jobs for session [%s] due to skippable exception: [%s].",
-              sessionInfo.getSessionId(), MoreThrowables.shortDebugString(e));
-      tradefedJobs = ImmutableList.of();
-    }
-
-    // Create non-tradefed jobs.
-    try {
-      nonTradefedJobs = runCommandHandler.createNonTradefedJobs(runCommand);
-    } catch (MobileHarnessException e) {
-      if (!XtsJobCreator.isSkippableException(e)) {
-        throw e;
-      }
-      logger
-          .atInfo()
-          .with(IMPORTANCE, IMPORTANT)
-          .log(
-              "Failed to create non-tradefed jobs for session [%s] due to skippable exception:"
-                  + " [%s].",
-              sessionInfo.getSessionId(), MoreThrowables.shortDebugString(e));
-      nonTradefedJobs = ImmutableList.of();
-    }
-    if (tradefedJobs.isEmpty() && nonTradefedJobs.isEmpty()) {
-      throw MobileHarnessExceptionFactory.createUserFacingException(
-          InfraErrorId.XTS_NO_JOB_CREATED_FOR_SESSION,
-          "No jobs created for session " + sessionInfo.getSessionId(),
-          /* cause= */ null);
-    }
-  }
-
-  /**
-   * Extracts the set of dynamic MCTS module names relayed via test properties from the completed
-   * setup job.
-   */
-  private static ImmutableSet<String> extractDynamicMctsModules(JobInfo setupJob) {
-    if (setupJob.tests() == null || setupJob.tests().getAll() == null) {
-      return ImmutableSet.of();
-    }
-    return setupJob.tests().getAll().values().stream()
-        .map(
-            testInfo ->
-                testInfo
-                    .properties()
-                    .get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_TEST_MODULES_PROPERTY_KEY))
-        .filter(Objects::nonNull)
-        .flatMap(
-            modulesStr ->
-                Splitter.on(',').omitEmptyStrings().trimResults().splitToStream(modulesStr))
-        .collect(toImmutableSet());
-  }
-
-  /**
-   * Returns whether the dynamic MCTS Tradefed job should be kept, based on the "has preloaded
-   * Mainline modules" signal that the setup job relays via a test property.
-   *
-   * <p>Defaults to keeping the job (returns {@code true}) unless the setup test explicitly reported
-   * that the device has no preloaded Mainline modules. If the signal is missing (e.g. the setup
-   * plugin failed to execute), dynamic MCTS is still run so test coverage is not accidentally
-   * skipped.
-   */
-  private static boolean extractHasPreloadedMainlineModules(JobInfo setupJob) {
-    return setupJob.tests().getAll().values().stream()
-        .anyMatch(
-            testInfo -> {
-              String value =
-                  testInfo
-                      .properties()
-                      .get(
-                          XtsConstants
-                              .XTS_DYNAMIC_DOWNLOAD_HAS_PRELOADED_MAINLINE_MODULES_PROPERTY_KEY);
-              return value == null || Boolean.parseBoolean(value);
-            });
-  }
-
-  /**
-   * Adds main Tradefed jobs to the session based on the sharding mode:
-   *
-   * <ul>
-   *   <li>In <b>MODULE sharding mode</b>, each module-level job requires only one device. All
-   *       module jobs (both static and dynamic) are added directly to the session to run
-   *       concurrently across all available devices.
-   *   <li>In <b>RUNNER sharding mode</b> (default), the static xTS job is started first using all
-   *       allocated devices, and dynamic MCTS jobs in {@code additionalTradefedJobs} execute after
-   *       the static job completes in {@link #onJobEnd}.
-   * </ul>
-   *
-   * <p>If no Tradefed jobs could be started, falls back to adding non-Tradefed jobs.
-   */
-  private void addMainJobs() {
-    List<JobInfo> initialJobsToStart = prepareTradefedJobsToStart();
-    if (!addAndTrackTradefedJobs(initialJobsToStart)) {
-      logger.atInfo().log("No tradefed job was added, trying to add non-tradefed jobs if needed.");
-      if (!addMainNonTradefedJobs()) {
-        addTeardownJobIfAny();
-      }
-    }
-  }
-
-  private List<JobInfo> prepareTradefedJobsToStart() {
-    if (runCommandHandler.shouldEnableModuleSharding()) {
-      // In MODULE sharding mode, each job requires a single device. All jobs can be scheduled
-      // concurrently across all available devices.
-      return tradefedJobs;
-    }
-
-    // In RUNNER (or default) sharding mode:
-    // Partition jobs into static xTS jobs and dynamic MCTS jobs. Start the static job first,
-    // and queue the dynamic job to execute sequentially in onJobEnd using the same devices.
-    Map<Boolean, List<JobInfo>> partitionedJobs =
-        tradefedJobs.stream()
-            .collect(
-                partitioningBy(
-                    job -> job.locator().getName().contains(XtsConstants.STATIC_XTS_JOB_NAME)));
-    List<JobInfo> staticXtsJobs = partitionedJobs.get(true);
-    List<JobInfo> nonStaticXtsJobs = partitionedJobs.get(false);
-
-    if (!staticXtsJobs.isEmpty()) {
-      additionalTradefedJobs.addAll(nonStaticXtsJobs);
-      return staticXtsJobs;
-    } else if (nonStaticXtsJobs.size() <= 1) {
-      return nonStaticXtsJobs;
-    } else {
-      additionalTradefedJobs.addAll(nonStaticXtsJobs.subList(1, nonStaticXtsJobs.size()));
-      return nonStaticXtsJobs.subList(0, 1);
-    }
-  }
-
-  /**
-   * Adds Tradefed jobs to the session and records them in {@code runningTradefedJobs}.
-   *
-   * @return true if at least one Tradefed job was added and tracked; false otherwise
-   */
-  @CanIgnoreReturnValue
-  private boolean addAndTrackTradefedJobs(List<JobInfo> tradefedJobs) {
-    ImmutableList<String> tradefedJobIds = addJobsToSession(ImmutableList.copyOf(tradefedJobs));
-    if (!tradefedJobIds.isEmpty()) {
-      synchronized (runningTradefedJobs) {
-        tradefedJobIds.forEach(id -> runningTradefedJobs.putIfAbsent(id, true));
-      }
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Adds main non-Tradefed jobs to the session and records them in {@code runningNonTradefedJobs}.
-   *
-   * @return true if at least one non-Tradefed job was added and tracked; false otherwise
-   */
-  @CanIgnoreReturnValue
-  private boolean addMainNonTradefedJobs() {
-    ImmutableList<String> nonTfJobIds = addJobsToSession(nonTradefedJobs);
-    if (!nonTfJobIds.isEmpty()) {
-      synchronized (runningNonTradefedJobs) {
-        nonTfJobIds.forEach(id -> runningNonTradefedJobs.putIfAbsent(id, true));
-      }
-      return true;
-    }
-    return false;
-  }
-
-  /** Adds the teardown job to the session if present. */
-  private void addTeardownJobIfAny() {
-    JobInfo teardownJob = teardownJobRef.getAndSet(null);
-    if (teardownJob != null) {
-      JobInfo setupJob = setupJobRef.get();
-      if (setupJob != null && setupJob.tests() != null && teardownJob.tests() != null) {
-        setupJob.tests().getAll().values().stream()
-            .findFirst()
-            .ifPresent(
-                setupTest ->
-                    teardownJob
-                        .tests()
-                        .getAll()
-                        .values()
-                        .forEach(
-                            teardownTest ->
-                                PhaseSkippableDecoratorUtil.relayStates(setupTest, teardownTest)));
-      }
-      logger.atInfo().log("Adding teardown job [%s].", teardownJob.locator().getId());
-      ImmutableList<String> jobIds = addJobsToSession(ImmutableList.of(teardownJob));
-      if (!jobIds.isEmpty()) {
-        runningTeardownJobId.set(jobIds.get(0));
-      }
-    }
   }
 
   private class RunningTradefedTest {
