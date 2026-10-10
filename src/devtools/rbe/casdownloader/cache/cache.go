@@ -7,6 +7,7 @@ import (
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
+	"github.com/google/device-infra/src/devtools/rbe/common/storage"
 )
 
 // Cache supports caching files with underlying various cache solution.
@@ -29,6 +30,75 @@ type HeadroomReserver interface {
 	// requiredBytes can complete without exhausting the filesystem. It returns
 	// an error only when the write cannot possibly succeed.
 	EnsureHeadroom(ctx context.Context, requiredBytes int64) error
+}
+
+// CorruptBlobReporter is implemented by caches that check each hit and discard
+// cached blobs that no longer match their digest. Like HeadroomReserver it is
+// separate from Cache, so that a caller finds it by type assertion and
+// LocalCache, which does no such check, does not have to claim it.
+type CorruptBlobReporter interface {
+	// CorruptBlobsQuarantined returns how many hits this cache has found
+	// corrupt and turned into misses since it was created.
+	CorruptBlobsQuarantined() int64
+}
+
+// ModeCopyStats counts the hits that could not share the cached inode because
+// its permissions did not match what the tree node asked for, and so cost a
+// private copy of the blob. Each such hit is counted under exactly one cause.
+type ModeCopyStats struct {
+	// ExecMismatchCopies are hits on a blob that carried a canonical mode
+	// for the other executability: the same content is used as executable
+	// in one tree and not in another.
+	ExecMismatchCopies int64
+	ExecMismatchBytes  int64
+	// PermDriftCopies are hits on a blob whose mode was not canonical at
+	// all, which only happens when something chmod'ed a materialized file
+	// and, through the shared inode, the cached blob with it.
+	PermDriftCopies int64
+	PermDriftBytes  int64
+}
+
+// ModeCopyReporter is implemented by caches that give a hit its own inode when
+// the cached blob's mode does not match. Like CorruptBlobReporter it is found
+// by type assertion, so LocalCache, which chmods the shared inode instead, does
+// not have to claim it.
+type ModeCopyReporter interface {
+	// ModeCopies returns the mode-mismatch copies made since the cache was
+	// created.
+	ModeCopies() ModeCopyStats
+}
+
+// StorageStatsReporter is implemented by caches built on common/storage. It
+// exposes that package's counters, chiefly copy fallbacks and headroom
+// eviction, which is how a cache shared by many processes on one disk shows
+// whether it is keeping up.
+type StorageStatsReporter interface {
+	// StorageStats returns the storage counters accumulated since the cache
+	// was created.
+	StorageStats() storage.Stats
+}
+
+// Cache implementations as reported by Impl. They are values of a metric
+// field, so an existing value should not be renamed.
+const (
+	ImplNone     = "none"
+	ImplLuci     = "luci"
+	ImplLockFree = "lockfree"
+	ImplOther    = "other"
+)
+
+// Impl names the implementation of c, or ImplNone when there is no cache.
+func Impl(c Cache) string {
+	switch c.(type) {
+	case nil:
+		return ImplNone
+	case *LocalCache:
+		return ImplLuci
+	case *LockFreeCache:
+		return ImplLockFree
+	default:
+		return ImplOther
+	}
 }
 
 func fileMode(output *client.TreeOutput) os.FileMode {

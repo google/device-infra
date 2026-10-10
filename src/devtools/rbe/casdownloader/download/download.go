@@ -134,6 +134,21 @@ type Stats struct {
 	DownloadError       string `json:"download_error,omitempty"`
 	Notes               string `json:"notes,omitempty"`
 	CASProxy            string `json:"casproxy,omitempty"`
+	// CorruptBlobsQuarantined is how many local cache hits were found to be
+	// the wrong size, removed from the cache, and downloaded again, so they
+	// are not counted in Hot. Zero for a cache that does not check, such as
+	// LocalCache.
+	CorruptBlobsQuarantined int64 `json:"corrupt_blobs_quarantined"`
+	// ExecMismatchCopies and PermDriftCopies count local cache hits that
+	// could not share the cached inode because its mode did not match the
+	// tree node, and were copied instead; the Bytes fields are what those
+	// copies wrote. See cache.ModeCopyStats for what separates the two. They
+	// are counted in Hot: the bytes still came from the cache. Zero for a
+	// cache that does not copy on a mismatch, such as LocalCache.
+	ExecMismatchCopies int64 `json:"exec_mismatch_copies"`
+	ExecMismatchBytes  int64 `json:"exec_mismatch_bytes"`
+	PermDriftCopies    int64 `json:"perm_drift_copies"`
+	PermDriftBytes     int64 `json:"perm_drift_bytes"`
 	// NoteReasons classifies Notes, one entry per note in the same order. It
 	// is exported as a metric rather than written to the JSON: the note text
 	// already reaches AnTS, and CF, which does not read the JSON, needs the
@@ -1009,6 +1024,16 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		err = d.downloadWithLocalCache(ctx, d.Cache, outputs)
 		if lc, ok := d.Cache.(interface{ LockWaitTimeMS() int64 }); ok {
 			d.DownloadStats.CacheLockWaitTimeMS = lc.LockWaitTimeMS()
+		}
+		if r, ok := d.Cache.(cache.CorruptBlobReporter); ok {
+			d.DownloadStats.CorruptBlobsQuarantined = r.CorruptBlobsQuarantined()
+		}
+		if r, ok := d.Cache.(cache.ModeCopyReporter); ok {
+			m := r.ModeCopies()
+			d.DownloadStats.ExecMismatchCopies = m.ExecMismatchCopies
+			d.DownloadStats.ExecMismatchBytes = m.ExecMismatchBytes
+			d.DownloadStats.PermDriftCopies = m.PermDriftCopies
+			d.DownloadStats.PermDriftBytes = m.PermDriftBytes
 		}
 		d.Cache.Close()
 		if err != nil {
