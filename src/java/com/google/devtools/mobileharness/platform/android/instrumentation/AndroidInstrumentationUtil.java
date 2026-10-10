@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -41,6 +42,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVer
 import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AppOperationMode;
+import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.testing.proto.TestArgsProto.TestArgumentPb;
 import com.google.devtools.mobileharness.platform.android.testing.proto.TestArgsProto.TestArgumentsPb;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
@@ -65,10 +67,12 @@ import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidInstrumentati
 import com.google.wireless.qa.mobileharness.shared.api.spec.EntryDelimiterSpec;
 import com.google.wireless.qa.mobileharness.shared.api.spec.SplitMethodSpec;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidInstrumentationSpec;
 import java.io.File;
 import java.io.FileInputStream;
@@ -171,6 +175,9 @@ public class AndroidInstrumentationUtil {
   /** ADB shell content command return output for no result. */
   private static final String CONTENT_QUERY_OUTPUT_NO_RESULT = "No result found";
 
+  /** ADB shell content command output prefix when failing to access the provider. */
+  private static final String CONTENT_COMMAND_OUTPUT_ERROR = "Error while accessing provider";
+
   /** Default value of parameter of forcing to install basic service apk. */
   @VisibleForTesting static final boolean DEFAULT_FORCE_REINSTALL_BASIC_SERVICE_APK = true;
 
@@ -221,6 +228,9 @@ public class AndroidInstrumentationUtil {
   /** Android utility class to query device setting. */
   private final AndroidSystemSettingUtil settingUtil;
 
+  /** Android utility class to query device spec. */
+  private final AndroidSystemSpecUtil systemSpecUtil;
+
   private final CommandExecutor commandExecutor;
 
   /** {@code Clock} for getting current system time. */
@@ -252,6 +262,7 @@ public class AndroidInstrumentationUtil {
         new LocalFileUtil(),
         new AndroidFileUtil(),
         new AndroidSystemSettingUtil(),
+        new AndroidSystemSpecUtil(),
         new AndroidUserUtil(),
         new ApkAnalyzer(),
         new SystemStateManager(),
@@ -271,6 +282,7 @@ public class AndroidInstrumentationUtil {
       LocalFileUtil localFileUtil,
       AndroidFileUtil androidFileUtil,
       AndroidSystemSettingUtil settingUtil,
+      AndroidSystemSpecUtil systemSpecUtil,
       AndroidUserUtil androidUserUtil,
       ApkAnalyzer apkAnalyzer,
       SystemStateManager systemStateManager,
@@ -285,6 +297,7 @@ public class AndroidInstrumentationUtil {
     this.localFileUtil = localFileUtil;
     this.androidFileUtil = androidFileUtil;
     this.settingUtil = settingUtil;
+    this.systemSpecUtil = systemSpecUtil;
     this.androidUserUtil = androidUserUtil;
     this.apkAnalyzer = apkAnalyzer;
     this.systemStateManager = systemStateManager;
@@ -867,6 +880,7 @@ public class AndroidInstrumentationUtil {
     boolean forceAdbPush = params.forceAdbPush();
     boolean skipClearMediaProviderForMultiUserCase =
         params.skipClearMediaProviderForMultiUserCase();
+    Optional<Properties> properties = params.properties();
 
     // An empty line to separate the log.
     log.append("\n");
@@ -900,64 +914,73 @@ public class AndroidInstrumentationUtil {
             .log("Push test args file to device (forceAdbPush: %s)", forceAdbPush);
         int sdkVersion = getDeviceSdkVersion(warnings, serial);
 
-        // Multi user special case, try to use "adb push" to push "test_args.dat" file to device
-        // instead of using "content write", see AndroidFileUtil#getExternalStoragePath.
+        // Multi user special case, see AndroidFileUtil#getExternalStoragePath.
         boolean isMultiUserSpecialCase =
             deviceExternalStoragePath.startsWith(
                 AndroidFileUtil.MULTI_USER_EXTERNAL_STORAGE_PATH_PREFIX);
-
         // "adb shell content write" is only available from Android Q.
-        if (sdkVersion > AndroidVersion.PI.getEndSdkVersion()
-            && !isMultiUserSpecialCase
-            && !forceAdbPush) {
-          // ContentProvider for FileHost.TEST_ARGS does not support read/write.
-          // Use TestStorageConstants.INTERNAL_USE_PROVIDER_AUTHORITY + TEST_ARGS_FILE_NAME
-          // which point to the same folder.
-          String testArgsContentUri =
-              String.format(
-                  "content://%s/%s",
-                  TestStorageConstants.INTERNAL_USE_PROVIDER_AUTHORITY,
-                  ANDROID_TEST_TEST_ARGS_FILE_NAME);
-          contentWrite(
-              serial,
-              testArgsContentUri,
-              getCurrentUser(serial, sdkVersion).orElse(null),
-              hostFilePath);
+        boolean supportsContentWrite = sdkVersion > AndroidVersion.PI.getEndSdkVersion();
+
+        if (supportsContentWrite && !isMultiUserSpecialCase && !forceAdbPush) {
+          contentWriteTestArgs(
+              serial, sdkVersion, hostFilePath, /* failOnErrorOutput= */ false, properties);
+        } else if (supportsContentWrite
+            && isMultiUserSpecialCase
+            && !forceAdbPush
+            && isAutomotiveDevice(serial)) {
+          // For multi-user automotive devices, files pushed to
+          // /mnt/pass_through/<user>/emulated/<user> may be stale or missing when the test
+          // process reads /storage/emulated/<user> (b/406931839, b/559855517). "content write"
+          // writes through TestStorage's own ContentProvider as the target user, which is the
+          // same path TestArgsContentProvider reads from, but multi-user devices were switched
+          // from "content write" to "adb push" in b/243197315. So try both, and only fail if both
+          // fail. "content write" goes last so that the final write goes through the FUSE view of
+          // the target user.
+          MobileHarnessException adbPushError = null;
+          try {
+            adbPushTestArgs(
+                serial,
+                sdkVersion,
+                hostFilePath,
+                deviceExternalStoragePath,
+                isMultiUserSpecialCase,
+                skipClearMediaProviderForMultiUserCase,
+                properties);
+          } catch (MobileHarnessException e) {
+            adbPushError = e;
+            logger.atWarning().log(
+                "Failed to adb push test args file for multi-user device %s, will still try"
+                    + " content write: %s",
+                serial, MoreThrowables.shortDebugString(e));
+          }
+          try {
+            contentWriteTestArgs(
+                serial, sdkVersion, hostFilePath, /* failOnErrorOutput= */ true, properties);
+          } catch (MobileHarnessException e) {
+            if (adbPushError != null) {
+              e.addSuppressed(adbPushError);
+              throw e;
+            }
+            logger.atWarning().log(
+                "Failed to content write test args file for multi-user device %s, the file has"
+                    + " been pushed by adb push: %s",
+                serial, MoreThrowables.shortDebugString(e));
+          }
         } else {
-          // Fall back to "adb push" for Android Q- and multi-user special case.
+          // Fall back to "adb push" for Android Q-, forceAdbPush, and non-automotive multi-user
+          // devices.
           if (sdkVersion == 0) {
             // Try to get device SDK version again
             sdkVersion = settingUtil.getDeviceSdkVersion(serial);
           }
-          String deviceFilePath =
-              PathUtil.join(
-                  deviceExternalStoragePath,
-                  ANDROID_TEST_DEVICE_PATH_INTERNAL_USE + ANDROID_TEST_TEST_ARGS_FILE_NAME);
-          androidFileUtil.push(serial, sdkVersion, hostFilePath, deviceFilePath);
-          if (isMultiUserSpecialCase && !skipClearMediaProviderForMultiUserCase) {
-            // Based on b/406931839#comment3, try to force sync. But for case in b/447394794, users
-            // want to skip this step.
-            String forceSyncCommand =
-                "pm clear "
-                    + (sdkVersion <= AndroidVersion.ANDROID_12L.getEndSdkVersion()
-                        ? "com.android.providers.media.module"
-                        : "com.google.android.providers.media.module");
-            try {
-              String output = adb.runShell(serial, forceSyncCommand);
-              logger.atInfo().log(
-                  "Force sync by running '%s' output: %s", forceSyncCommand, output);
-              // Give MediaProvider time to reindex the newly pushed test args file before the
-              // instrumentation test starts.
-              logger.atInfo().log(
-                  "Sleeping for %d seconds for MediaProvider to reindex files...",
-                  MEDIA_PROVIDER_REINDEX_DELAY.toSeconds());
-              sleeper.sleep(MEDIA_PROVIDER_REINDEX_DELAY);
-            } catch (MobileHarnessException e) {
-              logger.atWarning().log(
-                  "Failed to force sync by running '%s':%s",
-                  forceSyncCommand, MoreThrowables.shortDebugString(e));
-            }
-          }
+          adbPushTestArgs(
+              serial,
+              sdkVersion,
+              hostFilePath,
+              deviceExternalStoragePath,
+              isMultiUserSpecialCase,
+              skipClearMediaProviderForMultiUserCase,
+              properties);
         }
       } catch (MobileHarnessException e) {
         throw new MobileHarnessException(
@@ -966,6 +989,127 @@ public class AndroidInstrumentationUtil {
             e);
       }
     }
+  }
+
+  /** Returns whether the device is automotive. Returns false if fails to check. */
+  private boolean isAutomotiveDevice(String serial) throws InterruptedException {
+    try {
+      return systemSpecUtil.isAutomotiveDevice(serial);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().log(
+          "Failed to check whether device %s is automotive: %s",
+          serial, MoreThrowables.shortDebugString(e));
+      return false;
+    }
+  }
+
+  /**
+   * Writes the test args file to device via "adb shell content write" as the current user.
+   *
+   * @param failOnErrorOutput whether to treat error output of "content write" as a failure.
+   *     "content write" may print the error (e.g., "Error while accessing provider") but still exit
+   *     with 0, see b/128948778#comment7.
+   * @param properties if present, the time spent is recorded to it no matter whether it succeeds
+   */
+  private void contentWriteTestArgs(
+      String serial,
+      int sdkVersion,
+      String hostFilePath,
+      boolean failOnErrorOutput,
+      Optional<Properties> properties)
+      throws MobileHarnessException, InterruptedException {
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    try {
+      // ContentProvider for FileHost.TEST_ARGS does not support read/write.
+      // Use TestStorageConstants.INTERNAL_USE_PROVIDER_AUTHORITY + TEST_ARGS_FILE_NAME
+      // which point to the same folder.
+      String testArgsContentUri =
+          String.format(
+              "content://%s/%s",
+              TestStorageConstants.INTERNAL_USE_PROVIDER_AUTHORITY,
+              ANDROID_TEST_TEST_ARGS_FILE_NAME);
+      String output =
+          contentWrite(
+              serial,
+              testArgsContentUri,
+              getCurrentUser(serial, sdkVersion).orElse(null),
+              hostFilePath);
+      if (failOnErrorOutput
+          && output != null
+          && (output.contains(CONTENT_COMMAND_OUTPUT_ERROR) || output.contains("Exception"))) {
+        throw new MobileHarnessException(
+            AndroidErrorId.ANDROID_INSTRUMENTATION_CONTENT_WRITE_ERROR,
+            String.format(
+                "Failed to content write test args file to %s: %s", testArgsContentUri, output));
+      }
+    } finally {
+      recordTestArgsPreparationTime(
+          properties,
+          AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_ARGS_CONTENT_WRITE_TIME_MS,
+          stopwatch);
+    }
+  }
+
+  /**
+   * Pushes the test args file to device via "adb push". For the multi-user special case, also tries
+   * to force sync the MediaProvider unless {@code skipClearMediaProviderForMultiUserCase}.
+   *
+   * <p>The time spent (including the MediaProvider force sync and reindex wait) is recorded to
+   * {@code properties} if present, no matter whether it succeeds or not.
+   */
+  private void adbPushTestArgs(
+      String serial,
+      int sdkVersion,
+      String hostFilePath,
+      String deviceExternalStoragePath,
+      boolean isMultiUserSpecialCase,
+      boolean skipClearMediaProviderForMultiUserCase,
+      Optional<Properties> properties)
+      throws MobileHarnessException, InterruptedException {
+    Stopwatch stopwatch = Stopwatch.createStarted();
+    try {
+      String deviceFilePath =
+          PathUtil.join(
+              deviceExternalStoragePath,
+              ANDROID_TEST_DEVICE_PATH_INTERNAL_USE + ANDROID_TEST_TEST_ARGS_FILE_NAME);
+      androidFileUtil.push(serial, sdkVersion, hostFilePath, deviceFilePath);
+      if (isMultiUserSpecialCase && !skipClearMediaProviderForMultiUserCase) {
+        // Based on b/406931839#comment3, try to force sync. But for case in b/447394794, users
+        // want to skip this step.
+        String forceSyncCommand =
+            "pm clear "
+                + (sdkVersion <= AndroidVersion.ANDROID_12L.getEndSdkVersion()
+                    ? "com.android.providers.media.module"
+                    : "com.google.android.providers.media.module");
+        try {
+          String output = adb.runShell(serial, forceSyncCommand);
+          logger.atInfo().log("Force sync by running '%s' output: %s", forceSyncCommand, output);
+          // Give MediaProvider time to reindex the newly pushed test args file before the
+          // instrumentation test starts.
+          logger.atInfo().log(
+              "Sleeping for %d seconds for MediaProvider to reindex files...",
+              MEDIA_PROVIDER_REINDEX_DELAY.toSeconds());
+          sleeper.sleep(MEDIA_PROVIDER_REINDEX_DELAY);
+        } catch (MobileHarnessException e) {
+          logger.atWarning().log(
+              "Failed to force sync by running '%s':%s",
+              forceSyncCommand, MoreThrowables.shortDebugString(e));
+        }
+      }
+    } finally {
+      recordTestArgsPreparationTime(
+          properties,
+          AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_ARGS_ADB_PUSH_TIME_MS,
+          stopwatch);
+    }
+  }
+
+  /** Records the elapsed time of {@code stopwatch} in milliseconds to {@code properties}. */
+  private static void recordTestArgsPreparationTime(
+      Optional<Properties> properties, PropertyName propertyName, Stopwatch stopwatch) {
+    long elapsedMs = stopwatch.elapsed().toMillis();
+    logger.atInfo().log("%s: %d", propertyName, elapsedMs);
+    properties.ifPresent(p -> p.add(propertyName, String.valueOf(elapsedMs)));
   }
 
   /**
@@ -1524,8 +1668,10 @@ public class AndroidInstrumentationUtil {
    * @param uri uri address for content
    * @param userId which user to read the content
    * @param srcFilePath file path on host machine as input
+   * @return the command output, with stderr merged into stdout
    */
-  private void contentWrite(
+  @CanIgnoreReturnValue
+  private String contentWrite(
       String deviceId, String uri, @Nullable String userId, String srcFilePath)
       throws MobileHarnessException, InterruptedException {
     String adbPath = adb.getAdbPath();
@@ -1534,12 +1680,15 @@ public class AndroidInstrumentationUtil {
             + (userId != null ? String.format("--user %s", userId) : "");
 
     // Redirect the input directly from a file in host machine which is recommended way.
-    // See b/126805032 for detail.
+    // See b/126805032 for detail. Merge stderr into stdout because "content write" prints errors
+    // to stderr but may still exit with 0.
     String shellCommand =
-        String.format("%s -s %s shell %s < %s", adbPath, deviceId, contentCommand, srcFilePath);
+        String.format(
+            "%s -s %s shell %s < %s 2>&1", adbPath, deviceId, contentCommand, srcFilePath);
     try {
       String output = commandExecutor.run(Command.of("bash", "-c", shellCommand));
       logger.atInfo().log("Executed command [%s]: [%s]", shellCommand, output);
+      return output;
     } catch (CommandException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_INSTRUMENTATION_CONTENT_WRITE_ERROR,

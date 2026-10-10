@@ -1057,6 +1057,7 @@ public class AndroidInstrumentation extends BaseDriver
             .setHostTmpFileDir(testInfo.getTmpFileDir())
             .setLog(testInfo.log())
             .setWarnings(testInfo.warnings())
+            .setProperties(testInfo.properties())
             .setSkipClearMediaProviderForMultiUserCase(
                 testInfo
                     .jobInfo()
