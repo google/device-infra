@@ -29,6 +29,7 @@ enum Algorithm {
   GCS_CRC32C = 1;
   GCS_MD5 = 2;
   ATS_FILE_SERVER_SHA256 = 3;
+  ANDROID_BUILD_MD5 = 4;
 }
 
 message Checksum {
