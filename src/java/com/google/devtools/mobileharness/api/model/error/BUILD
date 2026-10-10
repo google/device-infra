@@ -48,6 +48,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/sessionorchestrator:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
