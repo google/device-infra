@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.checksum.proto.ChecksumProto.Checksum;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.InstantSource;
 import java.util.ArrayList;
@@ -224,6 +225,17 @@ public class CacheFileResolver extends AbstractFileResolver {
             String thisPath =
                 PathUtil.join(
                     thisRootPath, PathUtil.makeRelative(cachedRootPath, cachedResolvedFile.path()));
+            if (!Path.of(thisPath)
+                .toAbsolutePath()
+                .normalize()
+                .startsWith(Path.of(thisRootPath).toAbsolutePath().normalize())) {
+              throw new MobileHarnessException(
+                  BasicErrorId.RESOLVE_FILE_INVALID_FILE_ERROR,
+                  String.format(
+                      "Invalid cached resolved file path %s: resolved path escapes target"
+                          + " directory %s",
+                      cachedResolvedFile.path(), thisRootPath));
+            }
             if (!localFileUtil.isFileOrDirExist(thisPath)) {
               try {
                 localFileUtil.prepareDir(PathUtil.dirname(thisPath));

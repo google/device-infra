@@ -44,6 +44,7 @@ import com.google.protobuf.ByteString;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -118,6 +119,16 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
             e);
       }
       String destination = PathUtil.join(resolveSource.targetDir(), sourcePath);
+      if (!Path.of(destination)
+          .toAbsolutePath()
+          .normalize()
+          .startsWith(Path.of(resolveSource.targetDir()).toAbsolutePath().normalize())) {
+        throw new MobileHarnessException(
+            BasicErrorId.HTTP_INVALID_FILE_PATH_ERROR,
+            String.format(
+                "Invalid file path %s in ats file server: resolved path escapes target directory.",
+                path));
+      }
       localFileUtil.prepareParentDir(destination);
       for (int i = 0; i < MAX_DOWNLOAD_ATTEMPTS; i++) {
         try {
