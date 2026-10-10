@@ -44,6 +44,8 @@ import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWith
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
+import com.google.devtools.mobileharness.infra.ats.common.sessionorchestrator.SessionOrchestratorDelegate;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig.CommandCase;
@@ -126,7 +128,7 @@ import javax.inject.Inject;
   AtsSessionPluginOutput.class,
   AtsSessionPluginNotification.class
 })
-public class AtsConsoleSessionPlugin {
+public class AtsConsoleSessionPlugin implements SessionOrchestratorDelegate {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -289,6 +291,37 @@ public class AtsConsoleSessionPlugin {
             .build());
   }
 
+  @Override
+  public Optional<JobInfo> createSetupJob() throws MobileHarnessException, InterruptedException {
+    return runCommandHandler.createSetupJob();
+  }
+
+  @Override
+  public Optional<JobInfo> createTeardownJob() throws MobileHarnessException, InterruptedException {
+    return runCommandHandler.createTeardownJob();
+  }
+
+  @Override
+  public ImmutableList<JobInfo> createTradefedJobs(
+      ImmutableSet<String> dynamicMctsModules, boolean skipDynamicMctsJob)
+      throws MobileHarnessException, InterruptedException {
+    return runCommandHandler.createTradefedJobs(
+        config.getRunCommand(), dynamicMctsModules, skipDynamicMctsJob);
+  }
+
+  @Override
+  public ImmutableList<JobInfo> createNonTradefedJobs()
+      throws MobileHarnessException, InterruptedException {
+    return runCommandHandler.createNonTradefedJobs(config.getRunCommand());
+  }
+
+  @Override
+  public ShardingMode getEffectiveShardingMode() {
+    return runCommandHandler.shouldEnableModuleSharding()
+        ? ShardingMode.MODULE
+        : ShardingMode.RUNNER;
+  }
+
   @Subscribe
   public void onSessionStarted(SessionStartedEvent event)
       throws MobileHarnessException, InterruptedException {
@@ -304,8 +337,8 @@ public class AtsConsoleSessionPlugin {
               runCommandState.getCommandId(), runCommand.getInitialState().getCommandLineArgs());
       runCommandHandler.initialize(runCommand);
 
-      Optional<JobInfo> setupJobOpt = runCommandHandler.createSetupJob();
-      Optional<JobInfo> teardownJobOpt = runCommandHandler.createTeardownJob();
+      Optional<JobInfo> setupJobOpt = createSetupJob();
+      Optional<JobInfo> teardownJobOpt = createTeardownJob();
 
       setupJobOpt.ifPresent(setupJobRef::set);
       teardownJobOpt.ifPresent(teardownJobRef::set);
@@ -314,9 +347,7 @@ public class AtsConsoleSessionPlugin {
         addSetupJob(setupJobOpt.get());
       } else {
         createMainJobs(
-            runCommand,
-            /* dynamicMctsModules= */ ImmutableSet.of(),
-            /* skipDynamicMctsJob= */ false);
+            /* dynamicMctsModules= */ ImmutableSet.of(), /* skipDynamicMctsJob= */ false);
         addMainJobs();
       }
 
@@ -387,7 +418,7 @@ public class AtsConsoleSessionPlugin {
       // builds), it does not need dynamic MCTS, so skip creating the dynamic MCTS job to avoid
       // booting Tradefed for 0 tests.
       boolean skipDynamicMctsJob = !extractHasPreloadedMainlineModules(currentJob);
-      createMainJobs(config.getRunCommand(), dynamicMctsModules, skipDynamicMctsJob);
+      createMainJobs(dynamicMctsModules, skipDynamicMctsJob);
       addMainJobs();
       return;
     }
@@ -409,7 +440,7 @@ public class AtsConsoleSessionPlugin {
           // (via regex), allowing the scheduler to dynamically allocate whichever device is free.
           // In RUNNER sharding mode, pin the sub-device specs to the exact device IDs used by the
           // completed static job so that the subsequent dynamic job runs on the same devices.
-          if (!runCommandHandler.shouldEnableModuleSharding()) {
+          if (getEffectiveShardingMode() != ShardingMode.MODULE) {
             ImmutableSet<String> devicesOfCurrentJob = getDeviceSerials(currentJob);
             // Add the device ids of the current job to the sub device specs of the next tradefed
             // job.
@@ -794,22 +825,19 @@ public class AtsConsoleSessionPlugin {
   }
 
   /**
-   * Creates the main Tradefed and non-Tradefed jobs based on the given RunCommand.
+   * Creates the main Tradefed and non-Tradefed jobs based on the session config.
    *
-   * @param runCommand the run command representing the session config
    * @param dynamicMctsModules the canonical set of dynamic MCTS module names downloaded during the
    *     setup job, or an empty set if dynamic MCTS is disabled, no modules were requested, or the
    *     setup job is unavailable. If provided, they replace static MCTS modules for Tradefed job
    *     filtering and creation.
    * @param skipDynamicMctsJob when {@code true}, the dynamic MCTS job is not created in RUNNER mode
    */
-  private void createMainJobs(
-      RunCommand runCommand, ImmutableSet<String> dynamicMctsModules, boolean skipDynamicMctsJob)
+  private void createMainJobs(ImmutableSet<String> dynamicMctsModules, boolean skipDynamicMctsJob)
       throws MobileHarnessException, InterruptedException {
     // Create tradefed jobs.
     try {
-      tradefedJobs =
-          runCommandHandler.createTradefedJobs(runCommand, dynamicMctsModules, skipDynamicMctsJob);
+      tradefedJobs = createTradefedJobs(dynamicMctsModules, skipDynamicMctsJob);
     } catch (MobileHarnessException e) {
       if (!XtsJobCreator.isSkippableException(e)) {
         throw e;
@@ -825,7 +853,7 @@ public class AtsConsoleSessionPlugin {
 
     // Create non-tradefed jobs.
     try {
-      nonTradefedJobs = runCommandHandler.createNonTradefedJobs(runCommand);
+      nonTradefedJobs = createNonTradefedJobs();
     } catch (MobileHarnessException e) {
       if (!XtsJobCreator.isSkippableException(e)) {
         throw e;
@@ -916,7 +944,7 @@ public class AtsConsoleSessionPlugin {
   }
 
   private List<JobInfo> prepareTradefedJobsToStart() {
-    if (runCommandHandler.shouldEnableModuleSharding()) {
+    if (getEffectiveShardingMode() == ShardingMode.MODULE) {
       // In MODULE sharding mode, each job requires a single device. All jobs can be scheduled
       // concurrently across all available devices.
       return tradefedJobs;
