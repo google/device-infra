@@ -469,6 +469,14 @@ export abstract class SearchPageStore {
         if (!this.isCurrentRouteActive()) return;
         if (this.isInternalUrlSync) return;
         const qp = this.route.snapshot?.queryParams;
+        if (!this.isTjs()) {
+          const fleetParam = (qp?.['fleet'] || 'internal') as
+            | 'internal'
+            | 'ats';
+          if (fleetParam !== this.fleet()) {
+            this.fleet.set(fleetParam);
+          }
+        }
         if (qp?.['f'] || qp?.['gb']) return;
         this.restoreIfSearchActive(false);
       });
@@ -686,8 +694,11 @@ export abstract class SearchPageStore {
     this.applySearchState([], updateUrl);
   }
 
-  /** Restores local search state back to default configuration (including default chips). */
+  /** Restores local search state back to default configuration (including default chips and fleet). */
   restoreDefaultState(updateUrl = false) {
+    if (!this.isTjs() && this.fleet() !== 'internal') {
+      this.fleet.set('internal');
+    }
     this.applySearchState(this.getDefaultChips(), updateUrl);
   }
 
@@ -706,6 +717,9 @@ export abstract class SearchPageStore {
       return false;
     }
     if (this.showValuePicker() || this.showSuggestions()) {
+      return false;
+    }
+    if (!this.isTjs() && this.fleet() !== 'internal') {
       return false;
     }
 

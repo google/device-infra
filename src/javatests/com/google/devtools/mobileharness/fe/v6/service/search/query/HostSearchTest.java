@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
@@ -49,11 +50,14 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueLi
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Indicator;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Row;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.HostEnrichment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import com.google.inject.Guice;
 import java.time.Instant;
+import java.util.Optional;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -134,6 +138,7 @@ public final class HostSearchTest {
     assertThat(row.getCells(0).getLink().getText()).isEqualTo("lab-a");
     assertThat(row.getCells(0).getLink().getTarget().getHost().getHostName()).isEqualTo("lab-a");
     assertThat(row.getCells(0).getLink().getTarget().getHost().getHostIp()).isEqualTo("1.1.1.1");
+    assertThat(row.getCells(0).getLink().getTarget().getHost().getUniverse()).isEmpty();
 
     // connectivity is a StatusCell with a green (OK) indicator.
     assertThat(row.getCells(1).hasStatus()).isTrue();
@@ -227,6 +232,33 @@ public final class HostSearchTest {
             FleetPageRequest.getDefaultInstance());
 
     assertThat(rowIds(results)).containsExactly("lab-c", "lab-b", "lab-a").inOrder();
+  }
+
+  @Test
+  public void flat_hostLinkCarriesUniverseWhenAtsControllerIdPresent() {
+    CoreFleetRawData raw =
+        CoreFleetRawData.builder()
+            .setLabData(fleet())
+            .setHostEnrichments(
+                ImmutableMap.of(
+                    "lab-a",
+                    HostEnrichment.builder().setAtsControllerId(Optional.of("oppo")).build()))
+            .build();
+    FleetSnapshot enriched =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(raw, BUILD_TIME);
+    HostCorpus enrichedCorpus =
+        new HostCorpus(enriched, LazyPostings.forHosts(enriched.hosts()), null);
+
+    FleetFlatResults results =
+        flatSearcher.searchFlat(
+            enrichedCorpus,
+            ImmutableList.of(simple("host_field::host_name", "lab-a")),
+            COLUMNS,
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.getDefaultInstance());
+
+    Row row = results.getRows(0);
+    assertThat(row.getCells(0).getLink().getTarget().getHost().getUniverse()).isEqualTo("oppo");
   }
 
   // --- Group by ---
