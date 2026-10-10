@@ -292,7 +292,8 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).isEmpty();
 
@@ -321,7 +322,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
     assertThat(createJobsResult.commandDetails()).hasSize(1);
@@ -413,7 +415,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
@@ -456,7 +459,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
@@ -492,7 +496,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
@@ -532,7 +537,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
     assertThat(createJobsResult.commandDetails()).hasSize(1);
@@ -604,7 +610,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
     assertThat(createJobsResult.commandDetails()).hasSize(1);
@@ -683,7 +690,8 @@ public final class NewMultiCommandRequestHandlerTest {
             .build();
     // Trigger the handler.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     String zipFile = "/path/to/xts/zip/file.zip";
 
@@ -726,7 +734,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
 
@@ -815,7 +824,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
 
@@ -859,7 +869,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
 
@@ -949,7 +960,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
@@ -991,7 +1003,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
@@ -1045,7 +1058,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
@@ -1101,7 +1115,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
 
@@ -1176,7 +1191,8 @@ public final class NewMultiCommandRequestHandlerTest {
                 BasicErrorId.LOCAL_FILE_UNZIP_ERROR, "Failed to unzip file"));
 
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
     assertThat(createJobsResult.errorReason()).hasValue(ErrorReason.INVALID_RESOURCE);
@@ -1194,7 +1210,8 @@ public final class NewMultiCommandRequestHandlerTest {
                 InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR, "Invalid request"));
 
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
     assertThat(createJobsResult.errorReason()).hasValue(ErrorReason.INVALID_REQUEST);
@@ -1216,7 +1233,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
     assertThat(createJobsResult.state()).isEqualTo(RequestState.RUNNING);
@@ -1244,7 +1262,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
     assertThat(createJobsResult.state()).isEqualTo(RequestState.RUNNING);
@@ -1271,7 +1290,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
 
@@ -1300,7 +1320,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
     assertThat(createJobsResult.state()).isEqualTo(RequestState.RUNNING);
@@ -1322,7 +1343,8 @@ public final class NewMultiCommandRequestHandlerTest {
     doReturn("output").when(localFileUtil).unzipFile(anyString(), anyString(), any(Duration.class));
 
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).isEmpty();
     assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
@@ -1350,7 +1372,8 @@ public final class NewMultiCommandRequestHandlerTest {
             });
 
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).isEmpty();
     assertThat(createJobsResult.state()).isEqualTo(RequestState.ERROR);
@@ -1366,7 +1389,8 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(any())).thenThrow(commandException);
 
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).isEmpty();
 
@@ -1405,7 +1429,8 @@ public final class NewMultiCommandRequestHandlerTest {
             .build();
 
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).isEmpty();
 
@@ -1436,7 +1461,8 @@ public final class NewMultiCommandRequestHandlerTest {
             .build();
 
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     assertThat(createJobsResult.jobInfos()).isEmpty();
 
@@ -1861,7 +1887,8 @@ public final class NewMultiCommandRequestHandlerTest {
                     .build())
             .build();
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
     RequestDetail.Builder requestDetail =
         RequestDetail.newBuilder()
             .setOriginalRequest(request)
@@ -1885,7 +1912,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Add TF job.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     when(sessionInfo.getSessionProperty(SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH))
@@ -1933,7 +1961,8 @@ public final class NewMultiCommandRequestHandlerTest {
                     .build())
             .build();
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
     RequestDetail.Builder requestDetail =
         RequestDetail.newBuilder()
             .setOriginalRequest(request)
@@ -2021,7 +2050,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Add TF job.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
 
     RequestDetail.Builder requestDetail =
@@ -2101,7 +2131,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Add TF job.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
     RequestDetail.Builder requestDetail =
         RequestDetail.newBuilder()
             .setOriginalRequest(request)
@@ -2164,7 +2195,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Add TF job.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
 
     RequestDetail.Builder requestDetail =
@@ -2220,7 +2252,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Add TF job.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
 
     RequestDetail.Builder requestDetail =
@@ -2294,7 +2327,8 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     RequestDetail.Builder requestDetail =
         RequestDetail.newBuilder()
@@ -2351,7 +2385,8 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     RequestDetail.Builder requestDetail =
         RequestDetail.newBuilder()
@@ -2407,7 +2442,8 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     RequestDetail.Builder requestDetail =
         RequestDetail.newBuilder()
@@ -2463,7 +2499,8 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     RequestDetail.Builder requestDetail =
         RequestDetail.newBuilder()
@@ -2518,7 +2555,9 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Trigger the handler.
-    var unused = newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+    var unused =
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     // Verify that handler has mounted the zip file.
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
@@ -2543,7 +2582,9 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Trigger the handler.
-    var unused = newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+    var unused =
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     // Verify that handler has mounted the zip file.
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
@@ -2563,7 +2604,9 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(mountCommand)).thenReturn("COMMAND_OUTPUT");
 
     // Create a tradefed job so that the xts zip file can be mounted.
-    var unused = newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+    var unused =
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     // Mock an exception to be thrown when running the unmount command.
     Command unmountCommand =
@@ -2588,7 +2631,9 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(mountCommand)).thenReturn("COMMAND_OUTPUT");
 
     // Create a tradefed job so that the xts zip file can be mounted.
-    var unused = newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+    var unused =
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
 
     // Throw exception when running unmount command.
     MobileHarnessException mhException = Mockito.mock(CommandException.class);
@@ -2645,7 +2690,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Add TF job.
     CreateJobsResult createJobsResult =
-        newMultiCommandRequestHandler.createTradefedJobs(request, sessionInfo);
+        newMultiCommandRequestHandler.createTradefedJobs(
+            request, sessionInfo, ImmutableSet.of(), false);
     assertThat(createJobsResult.jobInfos()).containsExactly(jobInfo);
 
     RequestDetail.Builder requestDetail =
