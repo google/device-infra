@@ -705,6 +705,13 @@ message FleetPromotedGroupByKey {
   // one group). Includes +1 for "(no value)" bucket if some devices lack the
   // key. Keys with < 2 groups (a no-op grouping) are omitted by the backend.
   int32 group_count = 3;
+
+  // Whether this group-by option is currently disabled (e.g. group-by limit
+  // reached).
+  bool disabled = 4;
+
+  // Human-readable reason or tooltip explaining why this option is disabled.
+  string disabled_reason = 5;
 }
 
 // =============================================================================

@@ -98,19 +98,19 @@ public final class FleetPromotedKeysProviderTest {
   }
 
   @Test
-  public void filterKeys_excludeAppliedKeyAndDeadEnds() {
-    // Filtering status=IDLE leaves devices 0, 1, 3. Within that set:
-    //   status: applied, so excluded from the promoted row.
-    //   type:   all android (one value)   -> dead end, dropped.
-    //   pool:   all shared (one value)    -> dead end, dropped.
-    //   model:  pixel, nexus              -> kept.
-    //   owner:  {alice,bob}, {alice}      -> kept.
-    //   host_name: lab-a, lab-b           -> kept.
+  public void filterKeys_retainsAllKeysWhenFilterApplied() {
+    // Promoted filter keys remain stable and are not omitted when applied as filters.
     FleetPromotedKeysResponse response =
         provider.getPromotedKeys(corpus, request(simple("device_field::status", "IDLE")));
 
     assertThat(filterKeys(response))
-        .containsExactly("dimension::model", "device_field::owner", "host_field::host_name")
+        .containsExactly(
+            "device_field::status",
+            "dimension::model",
+            "device_field::type",
+            "device_field::owner",
+            "dimension::pool",
+            "host_field::host_name")
         .inOrder();
   }
 
@@ -162,7 +162,7 @@ public final class FleetPromotedKeysProviderTest {
   }
 
   @Test
-  public void groupByKeys_excludeAppliedGroupBy() {
+  public void groupByKeys_retainsAppliedGroupBy() {
     FleetPromotedKeysResponse response =
         provider.getPromotedKeys(
             corpus,
@@ -172,12 +172,16 @@ public final class FleetPromotedKeysProviderTest {
                 .build());
 
     assertThat(groupByKeys(response))
-        .containsExactly("dimension::lab_location", "device_field::type", "host_field::host_name")
+        .containsExactly(
+            "dimension::lab_location",
+            "device_field::type",
+            "device_field::status",
+            "host_field::host_name")
         .inOrder();
   }
 
   @Test
-  public void groupByKeys_hiddenWhenThreeApplied() {
+  public void groupByKeys_retainsKeysWhenThreeApplied() {
     FleetPromotedKeysResponse response =
         provider.getPromotedKeys(
             corpus,
@@ -188,7 +192,21 @@ public final class FleetPromotedKeysProviderTest {
                 .addGroupBy("host_field::host_name")
                 .build());
 
-    assertThat(response.getGroupByKeysList()).isEmpty();
+    assertThat(groupByKeys(response))
+        .containsExactly(
+            "dimension::lab_location",
+            "device_field::type",
+            "device_field::status",
+            "host_field::host_name")
+        .inOrder();
+
+    FleetPromotedGroupByKey unapplied = groupByKey(response, "dimension::lab_location");
+    assertThat(unapplied.getDisabled()).isTrue();
+    assertThat(unapplied.getDisabledReason()).isEqualTo("Maximum of 3 group-by keys reached");
+
+    assertThat(groupByKey(response, "device_field::type").getDisabled()).isFalse();
+    assertThat(groupByKey(response, "device_field::status").getDisabled()).isFalse();
+    assertThat(groupByKey(response, "host_field::host_name").getDisabled()).isFalse();
   }
 
   @Test

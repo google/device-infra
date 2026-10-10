@@ -115,18 +115,17 @@ public final class HostPromotedKeysProviderTest {
   }
 
   @Test
-  public void filterKeys_excludeAppliedKeyAndDeadEnds() {
-    // Filtering connectivity=Running leaves lab-a and lab-c. Within that set:
-    //   connectivity: applied, so excluded from the promoted row.
-    //   host_name:    lab-a, lab-c        -> kept.
-    //   device_count: 2, 0                -> kept.
-    //   host_os:      debian, Unknown     -> kept.
+  public void filterKeys_retainsAllKeysWhenFilterApplied() {
+    // Promoted filter keys remain stable and are not omitted when applied as filters.
     FleetPromotedKeysResponse response =
         provider.getPromotedKeys(corpus, request(simple("host_field::connectivity", "Running")));
 
     assertThat(filterKeys(response))
         .containsExactly(
-            "host_field::host_name", "host_field::device_count", "host_property::host_os")
+            "host_field::host_name",
+            "host_field::connectivity",
+            "host_field::device_count",
+            "host_property::host_os")
         .inOrder();
   }
 
