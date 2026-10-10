@@ -26,7 +26,6 @@ import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -40,10 +39,6 @@ import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
-import com.google.devtools.mobileharness.shared.util.command.Command;
-import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
-import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
-import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
@@ -57,9 +52,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import java.io.File;
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -68,7 +60,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
@@ -94,7 +85,6 @@ public class AndroidCdpDecoratorTest {
   @Mock private Log log;
   @Mock private Api loggingApi;
 
-  @Mock private CommandExecutor commandExecutor;
   @Mock private AndroidAdbUtil adbUtil;
   @Mock private AndroidProcessUtil processUtil;
   @Mock private Adb adb;
@@ -126,7 +116,7 @@ public class AndroidCdpDecoratorTest {
     decorator =
         Mockito.spy(
             new AndroidCdpDecorator(
-                decoratedDriver, testInfo, commandExecutor, adbUtil, processUtil, adb, fileUtil));
+                decoratedDriver, testInfo, adbUtil, processUtil, adb, fileUtil));
   }
 
   @Test
@@ -487,73 +477,8 @@ public class AndroidCdpDecoratorTest {
   }
 
   @Test
-  public void setUp_browser_chromedriverStartFailed_throwsException() throws Exception {
-    mockParams(false, null, null, DEBUG_PORT);
-    com.google.wireless.qa.mobileharness.shared.model.job.in.Files files =
-        mock(com.google.wireless.qa.mobileharness.shared.model.job.in.Files.class);
-    when(files.isTagNotEmpty(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn(true);
-    when(files.getSingle(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn("/path/to/chromedriver");
-    when(jobInfo.files()).thenReturn(files);
-
-    when(processUtil.resolveDefaultActivity(DEVICE_ID, "com.android.chrome"))
-        .thenReturn("ChromeActivity");
-    doNothing()
-        .when(processUtil)
-        .startApplication(DEVICE_ID, "com.android.chrome", "ChromeActivity");
-    when(adb.runShell(eq(DEVICE_ID), anyString(), any(Duration.class)))
-        .thenReturn("chrome_devtools_remote");
-
-    // Stub commandExecutor.start to throw CommandStartException (mocked public class)
-    when(commandExecutor.start(any(Command.class))).thenThrow(mock(CommandStartException.class));
-
-    MobileHarnessException exception =
-        assertThrows(MobileHarnessException.class, () -> decorator.setUp(setupContext));
-    assertThat(exception.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_CDP_CHROMEDRIVER_ERROR);
-    assertThat(exception).hasMessageThat().contains("Failed to start ChromeDriver");
-  }
-
-  @Test
-  public void setUp_browser_chromedriverBindFailed_throwsException() throws Exception {
-    mockParams(false, null, null, DEBUG_PORT);
-    com.google.wireless.qa.mobileharness.shared.model.job.in.Files files =
-        mock(com.google.wireless.qa.mobileharness.shared.model.job.in.Files.class);
-    when(files.isTagNotEmpty(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn(true);
-    when(files.getSingle(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn("/path/to/chromedriver");
-    when(jobInfo.files()).thenReturn(files);
-
-    when(processUtil.resolveDefaultActivity(DEVICE_ID, "com.android.chrome"))
-        .thenReturn("ChromeActivity");
-    doNothing()
-        .when(processUtil)
-        .startApplication(DEVICE_ID, "com.android.chrome", "ChromeActivity");
-    when(adb.runShell(eq(DEVICE_ID), anyString(), any(Duration.class)))
-        .thenReturn("chrome_devtools_remote");
-
-    // ChromeDriver process succeeds starting
-    CommandProcess cmdProcess = mock(CommandProcess.class);
-    when(commandExecutor.start(any(Command.class))).thenReturn(cmdProcess);
-
-    // Socket bind check fails (waitForPort retry timeout)
-    doThrow(
-            new MobileHarnessException(
-                AndroidErrorId.ANDROID_CDP_CHROMEDRIVER_ERROR, "Mock bind fail"))
-        .when(decorator)
-        .waitForPort(anyInt(), any(Duration.class));
-
-    MobileHarnessException exception =
-        assertThrows(MobileHarnessException.class, () -> decorator.setUp(setupContext));
-    assertThat(exception.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_CDP_CHROMEDRIVER_ERROR);
-    assertThat(exception).hasMessageThat().contains("ChromeDriver failed to bind to port");
-  }
-
-  @Test
   public void tearDown_chromeCleanup_success() throws Exception {
     mockParams(false, null, null, DEBUG_PORT);
-    com.google.wireless.qa.mobileharness.shared.model.job.in.Files files =
-        mock(com.google.wireless.qa.mobileharness.shared.model.job.in.Files.class);
-    when(files.isTagNotEmpty(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn(true);
-    when(files.getSingle(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn("/path/to/chromedriver");
-    when(jobInfo.files()).thenReturn(files);
 
     when(processUtil.resolveDefaultActivity(DEVICE_ID, "com.android.chrome"))
         .thenReturn("ChromeActivity");
@@ -562,14 +487,9 @@ public class AndroidCdpDecoratorTest {
         .startApplication(DEVICE_ID, "com.android.chrome", "ChromeActivity");
     when(adb.runShell(eq(DEVICE_ID), anyString(), any(Duration.class)))
         .thenReturn("chrome_devtools_remote");
-
-    CommandProcess chromedriverProcess = mock(CommandProcess.class);
-    when(commandExecutor.start(any(Command.class))).thenReturn(chromedriverProcess);
-    doNothing().when(decorator).waitForPort(anyInt(), any(Duration.class));
 
     decorator.run(testInfo);
 
-    verify(chromedriverProcess).kill();
     verify(adbUtil).removeTcpPortForward(DEVICE_ID, DEBUG_PORT);
     verify(processUtil)
         .stopApplication(
@@ -581,11 +501,6 @@ public class AndroidCdpDecoratorTest {
   @Test
   public void tearDown_webViewCleanup_success() throws Exception {
     mockParams(true, PACKAGE_NAME, ACTIVITY_NAME, DEBUG_PORT, "", "8081:8081,8082:8082");
-    com.google.wireless.qa.mobileharness.shared.model.job.in.Files files =
-        mock(com.google.wireless.qa.mobileharness.shared.model.job.in.Files.class);
-    when(files.isTagNotEmpty(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn(true);
-    when(files.getSingle(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn("/path/to/chromedriver");
-    when(jobInfo.files()).thenReturn(files);
 
     when(processUtil.resolveDefaultActivity(DEVICE_ID, PACKAGE_NAME)).thenReturn(ACTIVITY_NAME);
     doNothing().when(processUtil).startApplication(DEVICE_ID, PACKAGE_NAME, ACTIVITY_NAME);
@@ -593,13 +508,8 @@ public class AndroidCdpDecoratorTest {
     when(adb.runShell(eq(DEVICE_ID), anyString(), any(Duration.class)))
         .thenReturn("webview_devtools_remote_12345");
 
-    CommandProcess chromedriverProcess = mock(CommandProcess.class);
-    when(commandExecutor.start(any(Command.class))).thenReturn(chromedriverProcess);
-    doNothing().when(decorator).waitForPort(anyInt(), any(Duration.class));
-
     decorator.run(testInfo);
 
-    verify(chromedriverProcess).kill();
     verify(adbUtil).removeTcpPortForward(DEVICE_ID, DEBUG_PORT);
     verify(adbUtil).removeReverseTcpPort(DEVICE_ID, 8081);
     verify(adbUtil).removeReverseTcpPort(DEVICE_ID, 8082);
@@ -612,21 +522,12 @@ public class AndroidCdpDecoratorTest {
   @Test
   public void tearDown_cleanupStepsThrowExceptions_logsWarnings() throws Exception {
     mockParams(true, PACKAGE_NAME, ACTIVITY_NAME, DEBUG_PORT, "", "8081:8081");
-    com.google.wireless.qa.mobileharness.shared.model.job.in.Files files =
-        mock(com.google.wireless.qa.mobileharness.shared.model.job.in.Files.class);
-    when(files.isTagNotEmpty(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn(true);
-    when(files.getSingle(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn("/path/to/chromedriver");
-    when(jobInfo.files()).thenReturn(files);
 
     when(processUtil.resolveDefaultActivity(DEVICE_ID, PACKAGE_NAME)).thenReturn(ACTIVITY_NAME);
     doNothing().when(processUtil).startApplication(DEVICE_ID, PACKAGE_NAME, ACTIVITY_NAME);
     when(processUtil.getProcessId(any(UtilArgs.class), eq(PACKAGE_NAME))).thenReturn("12345");
     when(adb.runShell(eq(DEVICE_ID), anyString(), any(Duration.class)))
         .thenReturn("webview_devtools_remote_12345");
-
-    CommandProcess chromedriverProcess = mock(CommandProcess.class);
-    when(commandExecutor.start(any(Command.class))).thenReturn(chromedriverProcess);
-    doNothing().when(decorator).waitForPort(anyInt(), any(Duration.class));
 
     doThrow(
             new MobileHarnessException(
@@ -648,7 +549,6 @@ public class AndroidCdpDecoratorTest {
 
     decorator.run(testInfo);
 
-    verify(chromedriverProcess).kill();
     verify(adbUtil).removeTcpPortForward(DEVICE_ID, DEBUG_PORT);
     verify(adbUtil).removeReverseTcpPort(DEVICE_ID, 8081);
     verify(processUtil).stopApplication(any(UtilArgs.class), eq(PACKAGE_NAME));
@@ -708,56 +608,6 @@ public class AndroidCdpDecoratorTest {
     verify(adb).runShell(DEVICE_ID, "rm -f /data/local/tmp/chrome-command-line");
     verify(log).atWarning();
     verify(loggingApi).log(eq("Failed to remove flag files: %s"), startsWith("Mock rm -f failure"));
-  }
-
-  @Test
-  public void waitForPort_portOpen_returnsSuccessfully() throws Exception {
-    ServerSocket serverSocket = new ServerSocket(0); // dynamically binds to a free port
-    int port = serverSocket.getLocalPort();
-
-    Thread serverThread =
-        new Thread(
-            () -> {
-              try (Socket socket = serverSocket.accept()) {
-                // auto-closes
-              } catch (IOException e) {
-                // ignore
-              } finally {
-                try {
-                  serverSocket.close();
-                } catch (IOException e) {
-                  // ignore
-                }
-              }
-            });
-    serverThread.start();
-
-    try {
-      // Call the real waitForPort method
-      decorator.waitForPort(port, Duration.ofSeconds(2));
-    } finally {
-      serverThread.interrupt();
-      if (!serverSocket.isClosed()) {
-        serverSocket.close();
-      }
-    }
-  }
-
-  @Test
-  public void waitForPort_portClosed_throwsException() throws Exception {
-    int port;
-    try (ServerSocket socket = new ServerSocket(0)) {
-      port = socket.getLocalPort();
-    }
-
-    int finalPort = port;
-    MobileHarnessException exception =
-        assertThrows(
-            MobileHarnessException.class,
-            () -> decorator.waitForPort(finalPort, Duration.ofMillis(200)));
-
-    assertThat(exception.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_CDP_CHROMEDRIVER_ERROR);
-    assertThat(exception).hasMessageThat().contains("Timed out waiting for port");
   }
 
   @Test
@@ -1172,76 +1022,6 @@ public class AndroidCdpDecoratorTest {
     assertThat(exception)
         .hasMessageThat()
         .contains("Failed to set up adb reverse port forwarding for mapping: 8081:8081");
-  }
-
-  @Test
-  public void setUp_browser_withChromedriver_stdoutCallback_logsToTestInfo() throws Exception {
-    mockParams(false, null, null, DEBUG_PORT);
-    // Mock Files object to return fake chromedriver path
-    com.google.wireless.qa.mobileharness.shared.model.job.in.Files files =
-        mock(com.google.wireless.qa.mobileharness.shared.model.job.in.Files.class);
-    when(files.isTagNotEmpty(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn(true);
-    when(files.getSingle(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn("/path/to/chromedriver");
-    when(jobInfo.files()).thenReturn(files);
-
-    when(processUtil.resolveDefaultActivity(DEVICE_ID, "com.android.chrome"))
-        .thenReturn("ChromeActivity");
-    doNothing()
-        .when(processUtil)
-        .startApplication(DEVICE_ID, "com.android.chrome", "ChromeActivity");
-    when(adb.runShell(eq(DEVICE_ID), anyString(), any(Duration.class)))
-        .thenReturn("chrome_devtools_remote");
-
-    // Mock commandExecutor to capture the started ChromeDriver process command
-    CommandProcess cmdProcess = mock(CommandProcess.class);
-    ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
-    when(commandExecutor.start(commandCaptor.capture())).thenReturn(cmdProcess);
-
-    // Mock socket bind check to succeed
-    doNothing().when(decorator).waitForPort(anyInt(), any(Duration.class));
-
-    decorator.setUp(setupContext);
-
-    // Trigger ChromeDriver stdout LineCallback
-    Command capturedCommand = commandCaptor.getValue();
-    assertThat(capturedCommand.getStdoutLineCallback()).isPresent();
-    capturedCommand.getStdoutLineCallback().get().onLine("Mock ChromeDriver stdout line");
-
-    // Verify it logged the ChromeDriver line
-    verify(loggingApi, Mockito.atLeastOnce())
-        .log(eq("[ChromeDriver] %s"), eq("Mock ChromeDriver stdout line"));
-  }
-
-  @Test
-  public void setUp_browser_withChromedriver_success() throws Exception {
-    mockParams(false, null, null, DEBUG_PORT);
-    com.google.wireless.qa.mobileharness.shared.model.job.in.Files files =
-        mock(com.google.wireless.qa.mobileharness.shared.model.job.in.Files.class);
-    when(files.isTagNotEmpty(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn(true);
-    when(files.getSingle(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn("/path/to/chromedriver");
-    when(jobInfo.files()).thenReturn(files);
-
-    when(processUtil.resolveDefaultActivity(DEVICE_ID, "com.android.chrome"))
-        .thenReturn("ChromeActivity");
-    doNothing()
-        .when(processUtil)
-        .startApplication(DEVICE_ID, "com.android.chrome", "ChromeActivity");
-    when(adb.runShell(eq(DEVICE_ID), anyString(), any(Duration.class)))
-        .thenReturn("chrome_devtools_remote");
-
-    // Mock ChromeDriver command execution succeeds
-    CommandProcess cmdProcess = mock(CommandProcess.class);
-    when(commandExecutor.start(any(Command.class))).thenReturn(cmdProcess);
-
-    // Mock socket bind check to succeed
-    doNothing().when(decorator).waitForPort(anyInt(), any(Duration.class));
-
-    decorator.setUp(setupContext);
-
-    // Verify context variables injected
-    assertThat(properties.get("SELENIUM_ADDRESS")).startsWith("http://127.0.0.1:");
-    assertThat(properties.get("seleniumAddress")).startsWith("http://127.0.0.1:");
-    assertThat(properties.get("env_var_SELENIUM_ADDRESS")).startsWith("http://127.0.0.1:");
   }
 
   @Test
