@@ -484,6 +484,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDriver("NoOpDriver");
     device.addSupportedDriver("PlaywrightWebDriver");
     device.addSupportedDriver("ProtractorWebDriver");
+    device.addSupportedDriver("PuppeteerWebDriver");
     device.addSupportedDriver("SlateDriver");
     device.addSupportedDriver("TradefedTest");
     // keep-sorted end
