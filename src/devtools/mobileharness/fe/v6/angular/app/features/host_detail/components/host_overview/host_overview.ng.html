@@ -25,19 +25,25 @@
           @if (isGoogle1p) {
             <dt title="LabType">Lab Type</dt>
             <dd class="lab-type-wrapper">
-              @if (displayLabTypes().length > 0) {
-                @for (labType of displayLabTypes(); track labType) {
-                  <div class="lab-type-chip overflow-ellipsis"
-                       [class.lab-type-chip-fusion]="labType === 'Fusion' || labType === 'Fusion Lab'"
-                       title="{{ labType }}">
-                    {{ labType }}
-                  </div>
-                }
+              @if (displayLabType(); as labType) {
+                <div class="lab-type-chip overflow-ellipsis" title="{{ labType }}">
+                  {{ labType }}
+                </div>
               } @else {
                 <div class="lab-type-chip overflow-ellipsis" title="N/A">
                   N/A
                 </div>
               }
+            </dd>
+
+            <dt title="DeviceManagerType">Device Manager Type</dt>
+            <dd class="lab-type-wrapper">
+              @let dmType = displayDeviceManagerType();
+              <div class="lab-type-chip overflow-ellipsis"
+                   [class.lab-type-chip-fusion]="dmType === 'Fusion'"
+                   title="{{ dmType }}">
+                {{ dmType }}
+              </div>
             </dd>
           }
         </dl>

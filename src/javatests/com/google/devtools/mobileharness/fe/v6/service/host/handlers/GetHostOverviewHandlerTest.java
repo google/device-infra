@@ -137,12 +137,15 @@ public final class GetHostOverviewHandlerTest {
   }
 
   @Test
+  // Verifies legacy deprecated fields for backward compatibility.
+  @SuppressWarnings("deprecation")
   public void getHostOverview_missingReleaseInfo_returnsUnknownDefaults() throws Exception {
     // Has minimal LabInfoService entry, but no release info.
     ListenableFuture<HostOverviewPageData> result =
         getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE);
 
     HostOverview overview = Futures.getDone(result).getOverviewContent();
+    assertThat(overview.getLabType()).isEmpty();
     assertThat(overview.getLabTypeDisplayNamesList()).isEmpty();
     assertThat(overview.getUiLabTypesList()).isEmpty();
     assertThat(overview.getHostName()).isEqualTo(HOST_NAME);
@@ -178,6 +181,8 @@ public final class GetHostOverviewHandlerTest {
   }
 
   @Test
+  // Verifies legacy deprecated fields for backward compatibility.
+  @SuppressWarnings("deprecation")
   public void getHostOverview_labType_fusion() throws Exception {
     when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME), any(UniverseScope.class)))
         .thenReturn(
@@ -188,13 +193,18 @@ public final class GetHostOverviewHandlerTest {
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
-    assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Fusion Lab");
-    assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.FUSION);
+    assertThat(overview.getLabType()).isEmpty();
+    assertThat(overview.getLabTypeDisplayNamesList()).isEmpty();
+    assertThat(overview.getUiLabTypesList()).isEmpty();
+    assertThat(overview.getDeviceManagerType()).isEqualTo("Fusion");
+    assertThat(overview.getIsAte()).isFalse();
     assertThat(overview.getLabServer().getActions().getRelease().getEnabled()).isFalse();
     assertThat(overview.getShowPassThroughFlags()).isFalse();
   }
 
   @Test
+  // Verifies legacy deprecated fields for backward compatibility.
+  @SuppressWarnings("deprecation")
   public void getHostOverview_labType_core_fromEnum() throws Exception {
     when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME), any(UniverseScope.class)))
         .thenReturn(
@@ -205,46 +215,57 @@ public final class GetHostOverviewHandlerTest {
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
+    assertThat(overview.getLabType()).isEqualTo("Core");
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Core Lab");
     assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.CORE);
+    assertThat(overview.getDeviceManagerType()).isEqualTo("MH");
+    assertThat(overview.getIsAte()).isFalse();
   }
 
   @Test
+  // Verifies legacy deprecated fields for backward compatibility.
+  @SuppressWarnings("deprecation")
   public void getHostOverview_labType_core_fromProp() throws Exception {
     mockLabInfoWithProperty("lab_type", "core");
 
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
+    assertThat(overview.getLabType()).isEqualTo("Core");
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Core Lab");
     assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.CORE);
+    assertThat(overview.getDeviceManagerType()).isEqualTo("MH");
     assertThat(overview.getShowPassThroughFlags()).isFalse();
   }
 
   @Test
+  // Verifies legacy deprecated fields for backward compatibility.
+  @SuppressWarnings("deprecation")
   public void getHostOverview_labType_slaas() throws Exception {
     mockLabInfoWithProperty("lab_type", "slaas");
 
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
-    assertThat(overview.getLabTypeDisplayNamesList())
-        .containsExactly("Satellite Lab", "SLaaS")
-        .inOrder();
-    assertThat(overview.getUiLabTypesList())
-        .containsExactly(UiLabType.SATELLITE, UiLabType.SLAAS)
-        .inOrder();
+    assertThat(overview.getLabType()).isEqualTo("SLaaS");
+    assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("SLaaS");
+    assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.SLAAS);
+    assertThat(overview.getDeviceManagerType()).isEqualTo("MH");
   }
 
   @Test
+  // Verifies legacy deprecated fields for backward compatibility.
+  @SuppressWarnings("deprecation")
   public void getHostOverview_labType_satellite_fromProp() throws Exception {
     mockLabInfoWithProperty("lab_type", "satellite");
 
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
+    assertThat(overview.getLabType()).isEqualTo("Satellite");
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Satellite Lab");
     assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.SATELLITE);
+    assertThat(overview.getDeviceManagerType()).isEqualTo("MH");
     assertThat(overview.getShowPassThroughFlags()).isTrue();
   }
 
@@ -295,6 +316,8 @@ public final class GetHostOverviewHandlerTest {
   }
 
   @Test
+  // Verifies legacy deprecated fields for backward compatibility.
+  @SuppressWarnings("deprecation")
   public void getHostOverview_labType_ate() throws Exception {
     mockLabInfoWithProperty("lab_type", "satellite");
     when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME), any(UniverseScope.class)))
@@ -306,15 +329,15 @@ public final class GetHostOverviewHandlerTest {
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
-    assertThat(overview.getLabTypeDisplayNamesList())
-        .containsExactly("Satellite Lab", "ATE Lab")
-        .inOrder();
-    assertThat(overview.getUiLabTypesList())
-        .containsExactly(UiLabType.SATELLITE, UiLabType.ATE)
-        .inOrder();
+    assertThat(overview.getLabType()).isEqualTo("Satellite");
+    assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Satellite Lab");
+    assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.SATELLITE);
+    assertThat(overview.getIsAte()).isTrue();
   }
 
   @Test
+  // Verifies legacy deprecated fields for backward compatibility.
+  @SuppressWarnings("deprecation")
   public void getHostOverview_labType_field() throws Exception {
     mockLabInfoWithProperty("lab_type", "satellite");
     when(hostAuxiliaryInfoProvider.getHostReleaseInfo(eq(HOST_NAME), any(UniverseScope.class)))
@@ -328,12 +351,10 @@ public final class GetHostOverviewHandlerTest {
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
-    assertThat(overview.getLabTypeDisplayNamesList())
-        .containsExactly("Satellite Lab", "Riemann Field Lab")
-        .inOrder();
-    assertThat(overview.getUiLabTypesList())
-        .containsExactly(UiLabType.SATELLITE, UiLabType.RIEMANN_FIELD)
-        .inOrder();
+    assertThat(overview.getLabType()).isEqualTo("Satellite");
+    assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Satellite Lab");
+    assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.SATELLITE);
+    assertThat(overview.getIsAte()).isFalse();
   }
 
   @Test

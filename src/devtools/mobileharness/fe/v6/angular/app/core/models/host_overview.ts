@@ -258,9 +258,15 @@ export declare interface HostOverview {
   /** Whether to show the pass-through flags in the host overview. */
   readonly showPassThroughFlags: boolean;
   /**
-   * The semantic types of the lab.
+   * Legacy semantic types of the lab retained for backward compatibility; prefer labType.
    */
   readonly uiLabTypes?: UiLabType[];
+  /** The single lab type of the host ("Core", "SLaaS", or "Satellite"). */
+  readonly labType?: string;
+  /** The device manager type of the host ("Fusion" or "MH"). */
+  readonly deviceManagerType?: string;
+  /** Whether the host is an ATE lab. */
+  readonly isAte?: boolean;
 }
 
 /**

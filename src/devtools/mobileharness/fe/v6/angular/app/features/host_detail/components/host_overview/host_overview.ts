@@ -269,35 +269,53 @@ export class HostOverviewPage {
   }
 
   readonly isAteHost = computed(() => {
-    return this.localHost().uiLabTypes?.includes('ATE') ?? false;
+    const host = this.localHost();
+    return host.isAte ?? host.uiLabTypes?.includes('ATE') ?? false;
+  });
+
+  readonly displayLabType = computed<string | null>(() => {
+    const host = this.localHost();
+    if (host.labType) {
+      return host.labType;
+    }
+    for (const type of host.uiLabTypes ?? []) {
+      const mapped = this.mapUiLabTypeToString(type);
+      if (mapped === 'Core' || mapped === 'SLaaS' || mapped === 'Satellite') {
+        return mapped;
+      }
+    }
+    return null;
   });
 
   readonly displayLabTypes = computed(() => {
-    return (
-      this.localHost().uiLabTypes?.map((type) =>
-        this.mapUiLabTypeToString(type),
-      ) ?? []
-    );
+    const single = this.displayLabType();
+    return single ? [single] : [];
+  });
+
+  readonly displayDeviceManagerType = computed(() => {
+    const host = this.localHost();
+    if (host.deviceManagerType) {
+      return host.deviceManagerType;
+    }
+    return host.uiLabTypes?.includes('FUSION') ? 'Fusion' : 'MH';
   });
 
   readonly isSatelliteLab = computed(() => {
-    return this.localHost().uiLabTypes?.includes('SATELLITE') ?? false;
+    const host = this.localHost();
+    if (host.labType) {
+      return host.labType === 'Satellite';
+    }
+    return host.uiLabTypes?.includes('SATELLITE') ?? false;
   });
 
   private mapUiLabTypeToString(type: UiLabType): string {
     switch (type) {
       case 'CORE':
         return 'Core';
-      case 'FUSION':
-        return 'Fusion';
       case 'SATELLITE':
         return 'Satellite';
       case 'SLAAS':
         return 'SLaaS';
-      case 'ATE':
-        return 'ATE';
-      case 'RIEMANN_FIELD':
-        return 'Riemann Field';
       default:
         return 'Unknown';
     }
