@@ -123,6 +123,11 @@ export declare interface DaemonServerInfo {
    * Optional; absent if release info is unavailable (e.g. Core Labs).
    */
   readonly labServerReleaseStatus?: LabServerReleaseStatus;
+  /**
+   * Whether to show the warning callout instructing the user to re-install the
+   * Daemon Server when it is missing on a Satellite Lab host.
+   */
+  readonly showMissingDaemonWarning?: boolean;
 }
 
 /**
@@ -258,9 +263,16 @@ export declare interface HostOverview {
   /** Whether to show the pass-through flags in the host overview. */
   readonly showPassThroughFlags: boolean;
   /**
-   * The semantic types of the lab.
+   * Legacy semantic types of the lab (retained for backward compatibility with
+   * mock scenarios; prefer labType, deviceManagerType, and isAte).
    */
   readonly uiLabTypes?: UiLabType[];
+  /** The single lab type display name of the host ("Core", "SLaaS", or "Satellite"). */
+  readonly labType?: string;
+  /** The device manager type of the host ("Fusion" or "MH"). */
+  readonly deviceManagerType?: string;
+  /** Whether the host is an ATE lab. */
+  readonly isAte?: boolean;
 }
 
 /**

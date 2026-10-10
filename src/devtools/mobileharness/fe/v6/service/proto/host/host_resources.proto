@@ -27,6 +27,8 @@ option java_multiple_files = true;
 option java_outer_classname = "HostResourcesProto";
 
 enum UiLabType {
+  option deprecated = true;
+
   UI_LAB_TYPE_UNSPECIFIED = 0;
   CORE = 1;
   FUSION = 2;
@@ -59,7 +61,15 @@ message HostOverview {
   // Whether to show the pass-through flags in the host overview.
   bool show_pass_through_flags = 10;
   // The semantic types of the lab.
-  repeated UiLabType ui_lab_types = 11;
+  repeated UiLabType ui_lab_types = 11 [deprecated = true];
+  // The single user-facing lab type of the host ("Core", "SLaaS", or
+  // "Satellite").
+  string lab_type = 12;
+  // The device manager type of the host ("Fusion" or "MH").
+  string device_manager_type = 13;
+  // Whether the host is an ATE lab (from Release Server labType ==
+  // "MH_ATE_LAB").
+  bool is_ate = 14;
 }
 
 // Represents a link to a diagnostic tool or log.
@@ -298,6 +308,9 @@ message DaemonServerInfo {
   // Displayed as "Lab Server Release Status" in the Daemon Server card.
   // Optional; absent if release info is unavailable (e.g. Core Labs).
   LabServerReleaseStatus lab_server_release_status = 3;
+  // Whether to display the missing-daemon warning callout in the Daemon Server
+  // card.
+  bool show_missing_daemon_warning = 4;
 }
 
 // Semantic state of the device health.

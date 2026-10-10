@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.fe.v6.service.host.handlers;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Futures;
@@ -53,7 +52,6 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverview;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.HostOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.LabServerReleaseStatus;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.UiLabType;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
@@ -153,9 +151,8 @@ public final class GetHostOverviewHandler {
               Optional<HostReleaseInfo.ComponentInfo> labReleaseOpt =
                   hostReleaseInfoOpt.flatMap(HostReleaseInfo::labServerReleaseInfo);
               boolean isCoreLab =
-                  HostTypes.determineUiLabTypes(
-                          labInfoOpt, hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType))
-                      .contains(UiLabType.CORE);
+                  HostTypes.isCoreLab(
+                      labInfoOpt, hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType));
               LabServerReleaseStatus releaseStatus = LabActivities.create(labReleaseOpt, isCoreLab);
 
               LabServerInfo labServerInfo =
@@ -261,18 +258,29 @@ public final class GetHostOverviewHandler {
     builder.setOs(properties.getOrDefault("host_os", "Unknown")).setCanUpgrade(canUpgrade);
 
     Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
-    ImmutableList<UiLabType> uiLabTypes = HostTypes.determineUiLabTypes(labInfoOpt, labTypeOpt);
-    ImmutableList<String> labTypes = HostTypes.determineLabTypeDisplayNames(labInfoOpt, labTypeOpt);
-    boolean isCoreOrFusion = HostTypes.isCoreOrFusionUiLabTypes(uiLabTypes);
+    HostTypes.determineLabType(labInfoOpt, labTypeOpt).ifPresent(builder::setLabType);
+    populateLegacyLabTypes(builder, labInfoOpt, labTypeOpt);
+    String deviceManagerType = HostTypes.determineDeviceManagerType(labInfoOpt, labTypeOpt);
+    boolean isAte = HostTypes.isAteLab(labTypeOpt);
+    boolean isCoreOrFusion = HostTypes.isCoreOrFusion(labInfoOpt, labTypeOpt);
 
     return builder
-        .addAllLabTypeDisplayNames(labTypes) // Legacy field for backward compatibility
-        .addAllUiLabTypes(uiLabTypes)
+        .setDeviceManagerType(deviceManagerType)
+        .setIsAte(isAte)
         .setShowPassThroughFlags(!isCoreOrFusion)
         .setLabServer(labServerInfo)
-        .setDaemonServer(buildDaemonServerInfo(hostReleaseInfoOpt, releaseStatus))
+        .setDaemonServer(buildDaemonServerInfo(labInfoOpt, hostReleaseInfoOpt, releaseStatus))
         .addAllDiagnosticLinks(diagnosticLinks)
         .build();
+  }
+
+  // Intentionally populates deprecated fields for backward compatibility with older frontends.
+  @SuppressWarnings("deprecation")
+  private static void populateLegacyLabTypes(
+      HostOverview.Builder builder, Optional<LabInfo> labInfoOpt, Optional<String> labTypeOpt) {
+    builder
+        .addAllLabTypeDisplayNames(HostTypes.determineLabTypeDisplayNames(labInfoOpt, labTypeOpt))
+        .addAllUiLabTypes(HostTypes.determineUiLabTypes(labInfoOpt, labTypeOpt));
   }
 
   private boolean calculateCanUpgrade(
@@ -326,7 +334,9 @@ public final class GetHostOverviewHandler {
   }
 
   private DaemonServerInfo buildDaemonServerInfo(
-      Optional<HostReleaseInfo> hostReleaseInfoOpt, LabServerReleaseStatus releaseStatus) {
+      Optional<LabInfo> labInfoOpt,
+      Optional<HostReleaseInfo> hostReleaseInfoOpt,
+      LabServerReleaseStatus releaseStatus) {
     DaemonServerInfo.Builder builder = DaemonServerInfo.newBuilder();
 
     Optional<HostReleaseInfo.ComponentInfo> daemonReleaseOpt =
@@ -336,9 +346,16 @@ public final class GetHostOverviewHandler {
       daemonReleaseOpt.get().version().ifPresent(builder::setVersion);
     }
 
+    DaemonServerInfo.Status status = DaemonStatuses.create(daemonReleaseOpt);
+    Optional<String> labTypeOpt = hostReleaseInfoOpt.flatMap(HostReleaseInfo::labType);
+    boolean showMissingDaemonWarning =
+        status.getState() == DaemonServerInfo.State.MISSING
+            && HostTypes.isSatelliteLab(labInfoOpt, labTypeOpt);
+
     return builder
-        .setStatus(DaemonStatuses.create(daemonReleaseOpt))
+        .setStatus(status)
         .setLabServerReleaseStatus(releaseStatus)
+        .setShowMissingDaemonWarning(showMissingDaemonWarning)
         .build();
   }
 }

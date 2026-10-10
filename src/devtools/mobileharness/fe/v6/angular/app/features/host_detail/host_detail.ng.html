@@ -32,18 +32,27 @@
             <div class="title-icon-wrapper">
               <mat-icon class="title-icon">dns</mat-icon>
             </div>
-            <h1 class="host-title" title="{{ host.hostName }}">
-              <span class="host-text-bold">Host: </span>
-              <span class="host-text">{{ host.hostName }}</span>
-            </h1>
-            <div class="title-action-container">
-              <button class="title-action-btn" title="Copy host name to clipboard" (click)="copyToClipboard(host.hostName)">
-                <mat-icon class="title-action-icon">content_copy</mat-icon>
-              </button>
-              <button class="title-action-btn" title="Refresh data" (click)="triggerRefresh()" [disabled]="loadingService.isLoading()">
-                <mat-icon class="title-action-icon" [class.spin-animation]="loadingService.isLoading()">refresh</mat-icon>
-              </button>
-              <app-open-in-new-tab-button></app-open-in-new-tab-button>
+            <div class="host-title-group">
+              <div class="host-title-row">
+                <h1 class="host-title" title="{{ host.hostName }}">
+                  <span class="host-text-bold">Host: </span>
+                  <span class="host-text">{{ host.hostName }}</span>
+                </h1>
+                <div class="title-action-container">
+                  <button class="title-action-btn" title="Copy host name to clipboard" (click)="copyToClipboard(host.hostName)">
+                    <mat-icon class="title-action-icon">content_copy</mat-icon>
+                  </button>
+                  <button class="title-action-btn" title="Refresh data" (click)="triggerRefresh()" [disabled]="loadingService.isLoading()">
+                    <mat-icon class="title-action-icon" [class.spin-animation]="loadingService.isLoading()">refresh</mat-icon>
+                  </button>
+                  <app-open-in-new-tab-button></app-open-in-new-tab-button>
+                </div>
+              </div>
+              @if (host.isAte) {
+                <div class="host-header-badges">
+                  <span class="ate-chip" title="ATE">ATE</span>
+                </div>
+              }
             </div>
           </div>
           <div class="host-overview-content">

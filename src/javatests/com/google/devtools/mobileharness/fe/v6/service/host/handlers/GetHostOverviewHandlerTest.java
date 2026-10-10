@@ -76,6 +76,8 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
+// Verifies backward-compatible population of deprecated HostOverview fields alongside new fields.
+@SuppressWarnings("deprecation")
 public final class GetHostOverviewHandlerTest {
 
   private static final String HOST_NAME = "test.host";
@@ -188,6 +190,9 @@ public final class GetHostOverviewHandlerTest {
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
+    assertThat(overview.getLabType()).isEmpty();
+    assertThat(overview.getDeviceManagerType()).isEqualTo("Fusion");
+    assertThat(overview.getIsAte()).isFalse();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Fusion Lab");
     assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.FUSION);
     assertThat(overview.getLabServer().getActions().getRelease().getEnabled()).isFalse();
@@ -205,6 +210,9 @@ public final class GetHostOverviewHandlerTest {
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
+    assertThat(overview.getLabType()).isEqualTo("Core");
+    assertThat(overview.getDeviceManagerType()).isEqualTo("MH");
+    assertThat(overview.getIsAte()).isFalse();
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Core Lab");
     assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.CORE);
   }
@@ -216,9 +224,12 @@ public final class GetHostOverviewHandlerTest {
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
+    assertThat(overview.getLabType()).isEqualTo("Core");
+    assertThat(overview.getDeviceManagerType()).isEqualTo("MH");
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Core Lab");
     assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.CORE);
     assertThat(overview.getShowPassThroughFlags()).isFalse();
+    assertThat(overview.getDaemonServer().getShowMissingDaemonWarning()).isFalse();
   }
 
   @Test
@@ -228,12 +239,15 @@ public final class GetHostOverviewHandlerTest {
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
+    assertThat(overview.getLabType()).isEqualTo("SLaaS");
+    assertThat(overview.getDeviceManagerType()).isEqualTo("MH");
     assertThat(overview.getLabTypeDisplayNamesList())
         .containsExactly("Satellite Lab", "SLaaS")
         .inOrder();
     assertThat(overview.getUiLabTypesList())
         .containsExactly(UiLabType.SATELLITE, UiLabType.SLAAS)
         .inOrder();
+    assertThat(overview.getDaemonServer().getShowMissingDaemonWarning()).isFalse();
   }
 
   @Test
@@ -243,9 +257,12 @@ public final class GetHostOverviewHandlerTest {
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
+    assertThat(overview.getLabType()).isEqualTo("Satellite");
+    assertThat(overview.getDeviceManagerType()).isEqualTo("MH");
     assertThat(overview.getLabTypeDisplayNamesList()).containsExactly("Satellite Lab");
     assertThat(overview.getUiLabTypesList()).containsExactly(UiLabType.SATELLITE);
     assertThat(overview.getShowPassThroughFlags()).isTrue();
+    assertThat(overview.getDaemonServer().getShowMissingDaemonWarning()).isTrue();
   }
 
   @Test
@@ -306,6 +323,8 @@ public final class GetHostOverviewHandlerTest {
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
+    assertThat(overview.getLabType()).isEqualTo("Satellite");
+    assertThat(overview.getIsAte()).isTrue();
     assertThat(overview.getLabTypeDisplayNamesList())
         .containsExactly("Satellite Lab", "ATE Lab")
         .inOrder();
@@ -328,6 +347,8 @@ public final class GetHostOverviewHandlerTest {
     HostOverview overview =
         Futures.getDone(getHostOverviewHandler.getHostOverview(REQUEST, UNIVERSE))
             .getOverviewContent();
+    assertThat(overview.getLabType()).isEqualTo("Satellite");
+    assertThat(overview.getIsAte()).isFalse();
     assertThat(overview.getLabTypeDisplayNamesList())
         .containsExactly("Satellite Lab", "Riemann Field Lab")
         .inOrder();
