@@ -157,4 +157,26 @@ describe('FakeConfigService', () => {
         done();
       });
   });
+
+  it('should retrieve batch wifi context', (done) => {
+    service.getBatchWifiContext(['dev-1', 'dev-2']).subscribe((res) => {
+      expect(res).toBeDefined();
+      expect(res.current.length).toBe(2);
+      expect(res.candidateWifis.length).toBeGreaterThan(0);
+      done();
+    });
+  });
+
+  it('should batch update device config', (done) => {
+    service
+      .batchUpdateDeviceConfig({
+        deviceIds: ['dev-1', 'fail-device-2'],
+        wifi: {ssid: 'new-wifi', psk: 'pass', scanSsid: false},
+      })
+      .subscribe((res) => {
+        expect(res.errors).toBeDefined();
+        expect(res.errors!['fail-device-2']).toBeDefined();
+        done();
+      });
+  });
 });
