@@ -154,7 +154,7 @@ public final class DeviceServiceLogicImpl implements DeviceServiceLogic {
       return immediateFailedFuture(FeServiceException.invalidArgument(e.getMessage()));
     }
     return deviceTestHistoryProvider.getDeviceTestHistory(
-        request.getId(), request.getPageToken(), universe);
+        request.getId(), request.getHostName(), request.getPageToken(), universe);
   }
 
   @Override
