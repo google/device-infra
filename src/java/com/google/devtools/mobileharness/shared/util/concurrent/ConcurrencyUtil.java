@@ -16,9 +16,11 @@
 
 package com.google.devtools.mobileharness.shared.util.concurrent;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -26,11 +28,13 @@ import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
-import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
 /** Concurrency utility for running tasks in parallel. */
 public class ConcurrencyUtil {
@@ -76,11 +80,11 @@ public class ConcurrencyUtil {
    *
    * <p>If all sub tasks succeed, the given result merger will be called to merge all results.
    *
-   * <p>If one sub task fails (throws an exception), this method will return immediately with the
-   * exception thrown by the failed sub task.
+   * <p>If one sub task fails (throws an exception), this method will interrupt all other sub tasks,
+   * wait for all sub tasks to finish, and return with the exception thrown by the failed sub task.
    *
-   * <p>If one sub task fails or the current thread is interrupted, all sub tasks will be cancelled
-   * and interrupted before this method returns.
+   * <p>If one sub task fails or the current thread is interrupted, all sub tasks will be cancelled,
+   * interrupted, and waited until completion before this method returns.
    *
    * <p>The current trace context will be propagated to the threads of all sub tasks. A local trace
    * span will be created for each sub task and {@link SubTask#logTagName()}/{@link
@@ -106,7 +110,8 @@ public class ConcurrencyUtil {
     StackTraceElement caller = new Throwable().getStackTrace()[1];
 
     // Starts all sub tasks.
-    List<ListenableFuture<V>> futures =
+    ListeningExecutorService taskExecutor = executorService;
+    ImmutableList<TaskExecution<V>> executions =
         tasks.stream()
             .map(
                 task ->
@@ -119,17 +124,18 @@ public class ConcurrencyUtil {
                           return task.callable().call();
                         },
                         task::threadName))
-            .map(executorService::submit)
-            .collect(Collectors.toList());
+            .map(callable -> new TaskExecution<>(callable, taskExecutor))
+            .collect(toImmutableList());
 
     // Creates a fail-fast combined future which calls the result merger.
     ListenableFuture<V> combinedFuture =
-        Futures.whenAllSucceed(futures)
+        Futures.whenAllSucceed(
+                executions.stream().map(TaskExecution::future).collect(toImmutableList()))
             .call(
                 () -> {
-                  List<V> results = new ArrayList<>(futures.size());
-                  for (ListenableFuture<V> future : futures) {
-                    results.add(Futures.getDone(future));
+                  List<V> results = new ArrayList<>(executions.size());
+                  for (TaskExecution<V> execution : executions) {
+                    results.add(Futures.getDone(execution.future()));
                   }
                   return resultMerger.apply(results);
                 },
@@ -139,16 +145,111 @@ public class ConcurrencyUtil {
     try {
       return combinedFuture.get();
     } catch (ExecutionException e) {
-      // Interrupts all sub tasks if one fails.
-      futures.forEach(future -> future.cancel(true /* mayInterruptIfRunning */));
+      // Interrupts all sub tasks and waits for them to finish if one fails.
+      cancelAndAwaitAllTasks(executions);
 
       // Casts the error to MH exception.
       return MobileHarnessExceptions.rethrow(
           e.getCause(), BasicErrorId.UNEXPECTED_NON_MH_CHECKED_EXCEPTION_FROM_SUB_TASK);
     } catch (InterruptedException e) {
-      // Interrupts all sub tasks if the current thread is interrupted.
-      combinedFuture.cancel(true /* mayInterruptIfRunning */);
+      // Interrupts all sub tasks and waits for them to finish if the current thread is interrupted.
+      combinedFuture.cancel(/* mayInterruptIfRunning= */ false);
+      cancelAndAwaitAllTasks(executions);
       throw e;
+    }
+  }
+
+  private static void cancelAndAwaitAllTasks(List<? extends TaskExecution<?>> executions) {
+    executions.forEach(TaskExecution::cancelAndInterrupt);
+    boolean interrupted = false;
+    for (TaskExecution<?> execution : executions) {
+      while (true) {
+        try {
+          execution.awaitFinish();
+          break;
+        } catch (InterruptedException e) {
+          interrupted = true;
+          executions.forEach(TaskExecution::cancelAndInterrupt);
+        }
+      }
+    }
+    if (interrupted) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  private static class TaskExecution<V> {
+    private final Object lock = new Object();
+
+    @GuardedBy("lock")
+    private boolean started = false;
+
+    @GuardedBy("lock")
+    private boolean finished = false;
+
+    @GuardedBy("lock")
+    @Nullable
+    private Thread runningThread = null;
+
+    private final ListenableFuture<V> future;
+
+    private TaskExecution(Callable<V> callable, ListeningExecutorService executorService) {
+      this.future =
+          executorService.submit(
+              () -> {
+                if (!onStart()) {
+                  throw new InterruptedException("Sub task cancelled before starting");
+                }
+                try {
+                  return callable.call();
+                } finally {
+                  onFinish();
+                }
+              });
+    }
+
+    private ListenableFuture<V> future() {
+      return future;
+    }
+
+    private boolean onStart() {
+      synchronized (lock) {
+        if (finished) {
+          return false;
+        }
+        started = true;
+        runningThread = Thread.currentThread();
+        return true;
+      }
+    }
+
+    private void onFinish() {
+      synchronized (lock) {
+        finished = true;
+        runningThread = null;
+        lock.notifyAll();
+      }
+    }
+
+    @SuppressWarnings("Interruption")
+    private void cancelAndInterrupt() {
+      synchronized (lock) {
+        if (!started) {
+          finished = true;
+          future.cancel(/* mayInterruptIfRunning= */ false);
+          lock.notifyAll();
+        } else if (!finished && runningThread != null) {
+          runningThread.interrupt();
+        }
+      }
+    }
+
+    private void awaitFinish() throws InterruptedException {
+      synchronized (lock) {
+        while (!finished) {
+          lock.wait();
+        }
+      }
     }
   }
 
