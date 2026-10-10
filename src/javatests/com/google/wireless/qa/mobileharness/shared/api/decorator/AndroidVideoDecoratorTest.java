@@ -19,22 +19,27 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.video.EmulatorConsoleRecorder;
+import com.google.devtools.mobileharness.platform.android.video.Screenrecord;
 import com.google.devtools.mobileharness.platform.android.video.ScreenshotRecorder;
 import com.google.devtools.mobileharness.platform.android.video.proto.VideoOutput;
 import com.google.devtools.mobileharness.shared.util.base.ProtoExtensionRegistry;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.time.CountDownTimer;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -45,6 +50,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidVideoDecoratorSpec;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -64,13 +70,17 @@ public final class AndroidVideoDecoratorTest {
 
   private static final String DEVICE_ID = "localhost:12345";
   private static final String TEST_ID = "fake_test_id";
+  private static final Duration REMAINING_TIME = Duration.ofMinutes(30);
 
   @Mock private Driver decoratedDriver;
   @Mock private TestInfo testInfo;
   @Mock private TestLocator testLocator;
   @Mock private JobInfo jobInfo;
+  @Mock private CountDownTimer testTimer;
   @Mock private ScreenshotRecorder screenshotRecorder;
   @Mock private EmulatorConsoleRecorder emulatorConsoleRecorder;
+  @Mock private Screenrecord screenrecord;
+  @Mock private AndroidSystemSettingUtil systemSettingUtil;
   @Mock private LocalFileUtil localFileUtil;
   @Mock private Device device;
   @Mock private Log log;
@@ -86,32 +96,23 @@ public final class AndroidVideoDecoratorTest {
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(testInfo.locator()).thenReturn(testLocator);
     when(testLocator.getId()).thenReturn(TEST_ID);
+    when(testInfo.timer()).thenReturn(testTimer);
+    when(testTimer.remainingTimeJava()).thenReturn(REMAINING_TIME);
     when(testInfo.log()).thenReturn(log);
     when(log.atInfo()).thenReturn(api);
+    when(log.atWarning()).thenReturn(api);
     when(api.alsoTo(any(FluentLogger.class))).thenReturn(api);
+    when(api.withCause(any())).thenReturn(api);
     when(testInfo.resultWithCause()).thenReturn(result);
     when(result.get()).thenReturn(ResultTypeWithCause.create(TestResult.PASS, null));
     when(testInfo.getGenFileDir()).thenReturn(tempFolder.getRoot().getAbsolutePath());
 
-    decorator =
-        new AndroidVideoDecorator(
-            decoratedDriver, testInfo, screenshotRecorder, emulatorConsoleRecorder, localFileUtil);
+    decorator = createDecorator();
   }
-
-  private abstract static class FakeAndroidRealDevice implements Device {}
-
-  private abstract static class FakeAndroidEmulator implements Device {}
-
-  private abstract static class FakeNoOpDevice implements Device {}
 
   @Test
   public void run_autoMode_emulator_usesEmulatorConsoleRecorder() throws Exception {
-    Device emulatorDevice = Mockito.mock(FakeAndroidEmulator.class);
-    when(emulatorDevice.getDeviceId()).thenReturn(DEVICE_ID);
-    when(decoratedDriver.getDevice()).thenReturn(emulatorDevice);
-    decorator =
-        new AndroidVideoDecorator(
-            decoratedDriver, testInfo, screenshotRecorder, emulatorConsoleRecorder, localFileUtil);
+    useDevice(FakeAndroidEmulator.class);
 
     AndroidVideoDecoratorSpec spec =
         AndroidVideoDecoratorSpec.newBuilder()
@@ -122,44 +123,79 @@ public final class AndroidVideoDecoratorTest {
     decorator.run(testInfo);
 
     Path genDir = tempFolder.getRoot().toPath();
-    verify(emulatorConsoleRecorder).start(DEVICE_ID, TEST_ID, genDir, spec);
+    verify(emulatorConsoleRecorder).start(DEVICE_ID, TEST_ID, genDir, spec, REMAINING_TIME);
     verify(emulatorConsoleRecorder).stop();
-    verify(screenshotRecorder, never()).start(any(), any(), any(), any());
+    verify(screenshotRecorder, never()).start(any(), any(), any(), any(), any());
+    verify(systemSettingUtil, never()).getDeviceSdkVersion(any());
   }
 
   @Test
-  public void run_autoMode_realDevice_usesScreenshotRecorder() throws Exception {
-    Device realDevice = Mockito.mock(FakeAndroidRealDevice.class);
-    when(realDevice.getDeviceId()).thenReturn(DEVICE_ID);
-    when(decoratedDriver.getDevice()).thenReturn(realDevice);
-    decorator =
-        new AndroidVideoDecorator(
-            decoratedDriver, testInfo, screenshotRecorder, emulatorConsoleRecorder, localFileUtil);
+  public void run_autoMode_realDeviceSdk34_usesScreenrecord() throws Exception {
+    useDevice(FakeAndroidRealDevice.class);
+    when(systemSettingUtil.getDeviceSdkVersion(DEVICE_ID)).thenReturn(34);
 
     AndroidVideoDecoratorSpec spec =
         AndroidVideoDecoratorSpec.newBuilder()
             .setAutoDetect(AndroidVideoDecoratorSpec.AutoDetect.getDefaultInstance())
             .build();
     when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenReturn(spec);
+    when(screenrecord.stop()).thenReturn(ImmutableList.of());
 
+    decorator.run(testInfo);
+
+    Path genDir = tempFolder.getRoot().toPath();
+    verify(screenrecord).start(DEVICE_ID, TEST_ID, genDir, spec, REMAINING_TIME);
+    verify(screenrecord).stop();
+    verify(screenshotRecorder, never()).start(any(), any(), any(), any(), any());
+  }
+
+  @Test
+  public void run_autoMode_realDeviceSdkWithoutVideoSupport_usesScreenshotRecorder()
+      throws Exception {
+    useDevice(FakeAndroidRealDevice.class);
+    when(systemSettingUtil.getDeviceSdkVersion(DEVICE_ID)).thenReturn(17);
+
+    AndroidVideoDecoratorSpec spec =
+        AndroidVideoDecoratorSpec.newBuilder()
+            .setAutoDetect(AndroidVideoDecoratorSpec.AutoDetect.getDefaultInstance())
+            .build();
+    when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenReturn(spec);
     when(screenshotRecorder.stop()).thenReturn(ImmutableList.of());
 
     decorator.run(testInfo);
 
     Path genDir = tempFolder.getRoot().toPath();
-    verify(screenshotRecorder).start(DEVICE_ID, TEST_ID, genDir, spec);
+    verify(screenshotRecorder).start(DEVICE_ID, TEST_ID, genDir, spec, REMAINING_TIME);
     verify(screenshotRecorder).stop();
-    verify(emulatorConsoleRecorder, never()).start(any(), any(), any(), any());
+    verify(emulatorConsoleRecorder, never()).start(any(), any(), any(), any(), any());
+    verify(screenrecord, never()).start(any(), any(), any(), any(), any());
+  }
+
+  @Test
+  public void run_autoMode_getSdkVersionFails_usesScreenshotRecorder() throws Exception {
+    useDevice(FakeAndroidRealDevice.class);
+    when(systemSettingUtil.getDeviceSdkVersion(DEVICE_ID))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_DEVICE_SDK_ERROR, "error"));
+
+    AndroidVideoDecoratorSpec spec =
+        AndroidVideoDecoratorSpec.newBuilder()
+            .setAutoDetect(AndroidVideoDecoratorSpec.AutoDetect.getDefaultInstance())
+            .build();
+    when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenReturn(spec);
+    when(screenshotRecorder.stop()).thenReturn(ImmutableList.of());
+
+    decorator.run(testInfo);
+
+    Path genDir = tempFolder.getRoot().toPath();
+    verify(screenshotRecorder).start(DEVICE_ID, TEST_ID, genDir, spec, REMAINING_TIME);
+    verify(screenrecord, never()).start(any(), any(), any(), any(), any());
   }
 
   @Test
   public void run_explicitMode_usesRequestedRecorder() throws Exception {
-    Device realDevice = Mockito.mock(FakeAndroidRealDevice.class);
-    when(realDevice.getDeviceId()).thenReturn(DEVICE_ID);
-    when(decoratedDriver.getDevice()).thenReturn(realDevice);
-    decorator =
-        new AndroidVideoDecorator(
-            decoratedDriver, testInfo, screenshotRecorder, emulatorConsoleRecorder, localFileUtil);
+    useDevice(FakeAndroidRealDevice.class);
 
     AndroidVideoDecoratorSpec spec =
         AndroidVideoDecoratorSpec.newBuilder()
@@ -172,19 +208,71 @@ public final class AndroidVideoDecoratorTest {
     decorator.run(testInfo);
 
     Path genDir = tempFolder.getRoot().toPath();
-    verify(emulatorConsoleRecorder).start(DEVICE_ID, TEST_ID, genDir, spec);
+    verify(emulatorConsoleRecorder).start(DEVICE_ID, TEST_ID, genDir, spec, REMAINING_TIME);
     verify(emulatorConsoleRecorder).stop();
-    verify(screenshotRecorder, never()).start(any(), any(), any(), any());
+    verify(screenshotRecorder, never()).start(any(), any(), any(), any(), any());
+  }
+
+  @Test
+  public void run_explicitHdScreenRecord_usesScreenrecordRegardlessOfSdk() throws Exception {
+    useDevice(FakeAndroidRealDevice.class);
+
+    AndroidVideoDecoratorSpec spec =
+        AndroidVideoDecoratorSpec.newBuilder()
+            .setHdScreenRecord(AndroidVideoDecoratorSpec.HdScreenRecord.getDefaultInstance())
+            .build();
+    when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenReturn(spec);
+    when(screenrecord.stop()).thenReturn(ImmutableList.of());
+
+    decorator.run(testInfo);
+
+    Path genDir = tempFolder.getRoot().toPath();
+    verify(screenrecord).start(DEVICE_ID, TEST_ID, genDir, spec, REMAINING_TIME);
+    verify(systemSettingUtil, never()).getDeviceSdkVersion(any());
+  }
+
+  @Test
+  public void run_screenrecord_writesCorrectVideoOutputProto() throws Exception {
+    useDevice(FakeAndroidRealDevice.class);
+
+    AndroidVideoDecoratorSpec spec =
+        AndroidVideoDecoratorSpec.newBuilder()
+            .setHdScreenRecord(AndroidVideoDecoratorSpec.HdScreenRecord.getDefaultInstance())
+            .build();
+    when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenReturn(spec);
+    Path mockFile = tempFolder.getRoot().toPath().resolve(Screenrecord.VIDEO_FILE_NAME);
+    when(screenrecord.stop()).thenReturn(ImmutableList.of(mockFile));
+
+    decorator.run(testInfo);
+
+    VideoOutput videoOutput = readVideoOutput();
+    assertThat(videoOutput.getVideoType()).isEqualTo(VideoOutput.VideoType.SCREENRECORD);
+    assertThat(videoOutput.getContainerFormat()).isEqualTo(VideoOutput.ContainerFormat.MP4);
+    assertThat(videoOutput.getGeneratedFileNamesList())
+        .containsExactly(Screenrecord.VIDEO_FILE_NAME);
+  }
+
+  @Test
+  public void run_videoOnPass_false_screenrecord_deletesFilesOnPass() throws Exception {
+    useDevice(FakeAndroidRealDevice.class);
+
+    AndroidVideoDecoratorSpec spec =
+        AndroidVideoDecoratorSpec.newBuilder()
+            .setHdScreenRecord(AndroidVideoDecoratorSpec.HdScreenRecord.getDefaultInstance())
+            .setVideoOnPass(false)
+            .build();
+    when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenReturn(spec);
+    Path mockFile = tempFolder.getRoot().toPath().resolve(Screenrecord.VIDEO_FILE_NAME);
+    when(screenrecord.stop()).thenReturn(ImmutableList.of(mockFile));
+
+    decorator.run(testInfo);
+
+    verify(localFileUtil).removeFileOrDir(mockFile.toAbsolutePath().toString());
   }
 
   @Test
   public void run_videoOnPass_false_deletesFilesOnPass() throws Exception {
-    Device realDevice = Mockito.mock(FakeAndroidRealDevice.class);
-    when(realDevice.getDeviceId()).thenReturn(DEVICE_ID);
-    when(decoratedDriver.getDevice()).thenReturn(realDevice);
-    decorator =
-        new AndroidVideoDecorator(
-            decoratedDriver, testInfo, screenshotRecorder, emulatorConsoleRecorder, localFileUtil);
+    useDevice(FakeAndroidRealDevice.class);
 
     AndroidVideoDecoratorSpec spec =
         AndroidVideoDecoratorSpec.newBuilder()
@@ -207,12 +295,7 @@ public final class AndroidVideoDecoratorTest {
 
   @Test
   public void run_videoOnPass_false_emulator_deletesFilesOnPass() throws Exception {
-    Device emulatorDevice = Mockito.mock(FakeAndroidEmulator.class);
-    when(emulatorDevice.getDeviceId()).thenReturn(DEVICE_ID);
-    when(decoratedDriver.getDevice()).thenReturn(emulatorDevice);
-    decorator =
-        new AndroidVideoDecorator(
-            decoratedDriver, testInfo, screenshotRecorder, emulatorConsoleRecorder, localFileUtil);
+    useDevice(FakeAndroidEmulator.class);
 
     AndroidVideoDecoratorSpec spec =
         AndroidVideoDecoratorSpec.newBuilder()
@@ -231,12 +314,7 @@ public final class AndroidVideoDecoratorTest {
 
   @Test
   public void run_videoOnPass_false_keepsFilesOnFail() throws Exception {
-    Device realDevice = Mockito.mock(FakeAndroidRealDevice.class);
-    when(realDevice.getDeviceId()).thenReturn(DEVICE_ID);
-    when(decoratedDriver.getDevice()).thenReturn(realDevice);
-    decorator =
-        new AndroidVideoDecorator(
-            decoratedDriver, testInfo, screenshotRecorder, emulatorConsoleRecorder, localFileUtil);
+    useDevice(FakeAndroidRealDevice.class);
 
     AndroidVideoDecoratorSpec spec =
         AndroidVideoDecoratorSpec.newBuilder()
@@ -260,65 +338,28 @@ public final class AndroidVideoDecoratorTest {
     verify(localFileUtil, never()).removeFileOrDir(any(Path.class));
     verify(localFileUtil, never()).removeFileOrDir(any(String.class));
 
-    // Verify PB file is written
-    Path pbFile =
-        tempFolder.getRoot().toPath().resolve(AndroidVideoDecorator.VIDEO_OUTPUT_PB_FILE_NAME);
-    assertThat(Files.exists(pbFile)).isTrue();
-    // Clean up
-    Files.deleteIfExists(pbFile);
+    VideoOutput videoOutput = readVideoOutput();
+    assertThat(videoOutput.getGeneratedFileNamesList())
+        .containsExactly("screenshots/screenshot_00000001.png");
   }
 
   @Test
   public void run_noOpDevice_skipsRecording() throws Exception {
-    Device noOpDevice = Mockito.mock(FakeNoOpDevice.class);
-    when(noOpDevice.getDeviceId()).thenReturn(DEVICE_ID);
-    when(decoratedDriver.getDevice()).thenReturn(noOpDevice);
-    decorator =
-        new AndroidVideoDecorator(
-            decoratedDriver, testInfo, screenshotRecorder, emulatorConsoleRecorder, localFileUtil);
+    useDevice(FakeNoOpDevice.class);
 
     AndroidVideoDecoratorSpec spec = AndroidVideoDecoratorSpec.getDefaultInstance();
     when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenReturn(spec);
 
     decorator.run(testInfo);
 
-    verify(screenshotRecorder, never()).start(any(), any(), any(), any());
-    verify(emulatorConsoleRecorder, never()).start(any(), any(), any(), any());
-  }
-
-  @Test
-  public void run_unsupportedVideoType_fallsBackToScreenshots() throws Exception {
-    Device realDevice = Mockito.mock(FakeAndroidRealDevice.class);
-    when(realDevice.getDeviceId()).thenReturn(DEVICE_ID);
-    when(decoratedDriver.getDevice()).thenReturn(realDevice);
-    decorator =
-        new AndroidVideoDecorator(
-            decoratedDriver, testInfo, screenshotRecorder, emulatorConsoleRecorder, localFileUtil);
-
-    AndroidVideoDecoratorSpec spec =
-        AndroidVideoDecoratorSpec.newBuilder()
-            .setVideocat(
-                AndroidVideoDecoratorSpec.Videocat.getDefaultInstance()) // Unsupported for now
-            .build();
-    when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenReturn(spec);
-
-    when(screenshotRecorder.stop()).thenReturn(ImmutableList.of());
-
-    decorator.run(testInfo);
-
-    Path genDir = tempFolder.getRoot().toPath();
-    verify(screenshotRecorder).start(DEVICE_ID, TEST_ID, genDir, spec);
-    verify(emulatorConsoleRecorder, never()).start(any(), any(), any(), any());
+    verify(screenshotRecorder, never()).start(any(), any(), any(), any(), any());
+    verify(emulatorConsoleRecorder, never()).start(any(), any(), any(), any(), any());
+    verify(screenrecord, never()).start(any(), any(), any(), any(), any());
   }
 
   @Test
   public void run_emulator_writesCorrectVideoOutputProto() throws Exception {
-    Device emulatorDevice = Mockito.mock(FakeAndroidEmulator.class);
-    when(emulatorDevice.getDeviceId()).thenReturn(DEVICE_ID);
-    when(decoratedDriver.getDevice()).thenReturn(emulatorDevice);
-    decorator =
-        new AndroidVideoDecorator(
-            decoratedDriver, testInfo, screenshotRecorder, emulatorConsoleRecorder, localFileUtil);
+    useDevice(FakeAndroidEmulator.class);
 
     AndroidVideoDecoratorSpec spec =
         AndroidVideoDecoratorSpec.newBuilder()
@@ -331,13 +372,7 @@ public final class AndroidVideoDecoratorTest {
 
     decorator.run(testInfo);
 
-    Path pbFile =
-        tempFolder.getRoot().toPath().resolve(AndroidVideoDecorator.VIDEO_OUTPUT_PB_FILE_NAME);
-    assertThat(Files.exists(pbFile)).isTrue();
-
-    VideoOutput videoOutput =
-        VideoOutput.parseFrom(
-            Files.readAllBytes(pbFile), ProtoExtensionRegistry.getGeneratedRegistry());
+    VideoOutput videoOutput = readVideoOutput();
     assertThat(videoOutput.getVideoType()).isEqualTo(VideoOutput.VideoType.EMULATOR_CONSOLE);
     assertThat(videoOutput.getContainerFormat()).isEqualTo(VideoOutput.ContainerFormat.WEBM);
     assertThat(videoOutput.getGeneratedFileNamesList()).containsExactly("emulator_video_1.webm");
@@ -345,12 +380,7 @@ public final class AndroidVideoDecoratorTest {
 
   @Test
   public void run_realDevice_writesCorrectVideoOutputProto() throws Exception {
-    Device realDevice = Mockito.mock(FakeAndroidRealDevice.class);
-    when(realDevice.getDeviceId()).thenReturn(DEVICE_ID);
-    when(decoratedDriver.getDevice()).thenReturn(realDevice);
-    decorator =
-        new AndroidVideoDecorator(
-            decoratedDriver, testInfo, screenshotRecorder, emulatorConsoleRecorder, localFileUtil);
+    useDevice(FakeAndroidRealDevice.class);
 
     AndroidVideoDecoratorSpec spec =
         AndroidVideoDecoratorSpec.newBuilder()
@@ -364,13 +394,7 @@ public final class AndroidVideoDecoratorTest {
 
     decorator.run(testInfo);
 
-    Path pbFile =
-        tempFolder.getRoot().toPath().resolve(AndroidVideoDecorator.VIDEO_OUTPUT_PB_FILE_NAME);
-    assertThat(Files.exists(pbFile)).isTrue();
-
-    VideoOutput videoOutput =
-        VideoOutput.parseFrom(
-            Files.readAllBytes(pbFile), ProtoExtensionRegistry.getGeneratedRegistry());
+    VideoOutput videoOutput = readVideoOutput();
     assertThat(videoOutput.getVideoType()).isEqualTo(VideoOutput.VideoType.STITCHED_SCREENSHOTS);
     assertThat(videoOutput.getContainerFormat()).isEqualTo(VideoOutput.ContainerFormat.PNG);
     assertThat(videoOutput.getGeneratedFileNamesList())
@@ -379,12 +403,7 @@ public final class AndroidVideoDecoratorTest {
 
   @Test
   public void run_writeOutputError_throwsMobileHarnessException() throws Exception {
-    Device realDevice = Mockito.mock(FakeAndroidRealDevice.class);
-    when(realDevice.getDeviceId()).thenReturn(DEVICE_ID);
-    when(decoratedDriver.getDevice()).thenReturn(realDevice);
-    decorator =
-        new AndroidVideoDecorator(
-            decoratedDriver, testInfo, screenshotRecorder, emulatorConsoleRecorder, localFileUtil);
+    useDevice(FakeAndroidRealDevice.class);
 
     AndroidVideoDecoratorSpec spec =
         AndroidVideoDecoratorSpec.newBuilder()
@@ -403,12 +422,7 @@ public final class AndroidVideoDecoratorTest {
 
   @Test
   public void run_videoTypeUnspecified_emulator_usesEmulatorConsoleRecorder() throws Exception {
-    Device emulatorDevice = Mockito.mock(FakeAndroidEmulator.class);
-    when(emulatorDevice.getDeviceId()).thenReturn(DEVICE_ID);
-    when(decoratedDriver.getDevice()).thenReturn(emulatorDevice);
-    decorator =
-        new AndroidVideoDecorator(
-            decoratedDriver, testInfo, screenshotRecorder, emulatorConsoleRecorder, localFileUtil);
+    useDevice(FakeAndroidEmulator.class);
 
     AndroidVideoDecoratorSpec spec = AndroidVideoDecoratorSpec.getDefaultInstance();
     when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenReturn(spec);
@@ -416,30 +430,148 @@ public final class AndroidVideoDecoratorTest {
     decorator.run(testInfo);
 
     Path genDir = tempFolder.getRoot().toPath();
-    verify(emulatorConsoleRecorder).start(DEVICE_ID, TEST_ID, genDir, spec);
+    verify(emulatorConsoleRecorder).start(DEVICE_ID, TEST_ID, genDir, spec, REMAINING_TIME);
     verify(emulatorConsoleRecorder).stop();
-    verify(screenshotRecorder, never()).start(any(), any(), any(), any());
+    verify(screenshotRecorder, never()).start(any(), any(), any(), any(), any());
   }
 
   @Test
-  public void run_videoTypeUnspecified_realDevice_usesScreenshotRecorder() throws Exception {
-    Device realDevice = Mockito.mock(FakeAndroidRealDevice.class);
-    when(realDevice.getDeviceId()).thenReturn(DEVICE_ID);
-    when(decoratedDriver.getDevice()).thenReturn(realDevice);
-    decorator =
-        new AndroidVideoDecorator(
-            decoratedDriver, testInfo, screenshotRecorder, emulatorConsoleRecorder, localFileUtil);
+  public void run_videoTypeUnspecified_realDeviceSdk34_usesScreenrecord() throws Exception {
+    useDevice(FakeAndroidRealDevice.class);
+    when(systemSettingUtil.getDeviceSdkVersion(DEVICE_ID)).thenReturn(35);
 
     AndroidVideoDecoratorSpec spec = AndroidVideoDecoratorSpec.getDefaultInstance();
     when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenReturn(spec);
-
-    when(screenshotRecorder.stop()).thenReturn(ImmutableList.of());
+    when(screenrecord.stop()).thenReturn(ImmutableList.of());
 
     decorator.run(testInfo);
 
     Path genDir = tempFolder.getRoot().toPath();
-    verify(screenshotRecorder).start(DEVICE_ID, TEST_ID, genDir, spec);
-    verify(screenshotRecorder).stop();
-    verify(emulatorConsoleRecorder, never()).start(any(), any(), any(), any());
+    verify(screenrecord).start(DEVICE_ID, TEST_ID, genDir, spec, REMAINING_TIME);
+    verify(screenrecord).stop();
+    verify(screenshotRecorder, never()).start(any(), any(), any(), any(), any());
+    verify(emulatorConsoleRecorder, never()).start(any(), any(), any(), any(), any());
   }
+
+  @Test
+  public void run_recorderStartFails_fallsBackToScreenshotRecorder() throws Exception {
+    useDevice(FakeAndroidRealDevice.class);
+
+    AndroidVideoDecoratorSpec spec =
+        AndroidVideoDecoratorSpec.newBuilder()
+            .setHdScreenRecord(AndroidVideoDecoratorSpec.HdScreenRecord.getDefaultInstance())
+            .build();
+    when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenReturn(spec);
+    Path genDir = tempFolder.getRoot().toPath();
+    doThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_DEVICE_SDK_ERROR, "start error"))
+        .when(screenrecord)
+        .start(DEVICE_ID, TEST_ID, genDir, spec, REMAINING_TIME);
+    Path mockFile = genDir.resolve("screenshots/screenshot_00000001.png");
+    when(screenshotRecorder.stop()).thenReturn(ImmutableList.of(mockFile));
+
+    decorator.run(testInfo);
+
+    verify(screenshotRecorder).start(DEVICE_ID, TEST_ID, genDir, spec, REMAINING_TIME);
+    verify(screenshotRecorder).stop();
+    verify(screenrecord, never()).stop();
+    VideoOutput videoOutput = readVideoOutput();
+    assertThat(videoOutput.getVideoType()).isEqualTo(VideoOutput.VideoType.STITCHED_SCREENSHOTS);
+    assertThat(videoOutput.getContainerFormat()).isEqualTo(VideoOutput.ContainerFormat.PNG);
+  }
+
+  @Test
+  public void run_screenshotRecorderStartFails_skipsRecording() throws Exception {
+    useDevice(FakeAndroidRealDevice.class);
+
+    AndroidVideoDecoratorSpec spec =
+        AndroidVideoDecoratorSpec.newBuilder()
+            .setStitchedScreenshots(
+                AndroidVideoDecoratorSpec.StitchedScreenshots.getDefaultInstance())
+            .build();
+    when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenReturn(spec);
+    doThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_DEVICE_SDK_ERROR, "start error"))
+        .when(screenshotRecorder)
+        .start(any(), any(), any(), any(), any());
+
+    decorator.run(testInfo);
+
+    verify(decoratedDriver).run(testInfo);
+    verify(screenshotRecorder, never()).stop();
+    assertThat(
+            Files.exists(
+                tempFolder
+                    .getRoot()
+                    .toPath()
+                    .resolve(AndroidVideoDecorator.VIDEO_OUTPUT_PB_FILE_NAME)))
+        .isFalse();
+  }
+
+  @Test
+  public void run_recorderStopFails_doesNotFailTestAndSkipsVideoOutput() throws Exception {
+    useDevice(FakeAndroidRealDevice.class);
+
+    AndroidVideoDecoratorSpec spec =
+        AndroidVideoDecoratorSpec.newBuilder()
+            .setHdScreenRecord(AndroidVideoDecoratorSpec.HdScreenRecord.getDefaultInstance())
+            .build();
+    when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenReturn(spec);
+    when(screenrecord.stop())
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_VIDEO_DECORATOR_SCREENRECORD_FILE_EMPTY, "empty"));
+
+    decorator.run(testInfo);
+
+    assertThat(
+            Files.exists(
+                tempFolder
+                    .getRoot()
+                    .toPath()
+                    .resolve(AndroidVideoDecorator.VIDEO_OUTPUT_PB_FILE_NAME)))
+        .isFalse();
+  }
+
+  private AndroidVideoDecorator createDecorator() {
+    return new AndroidVideoDecorator(
+        decoratedDriver,
+        testInfo,
+        screenshotRecorder,
+        emulatorConsoleRecorder,
+        screenrecord,
+        systemSettingUtil,
+        localFileUtil);
+  }
+
+  private void useDevice(Class<? extends Device> deviceClass) {
+    useDevice(mockDevice(deviceClass));
+  }
+
+  private void useDevice(Device mockDevice) {
+    when(decoratedDriver.getDevice()).thenReturn(mockDevice);
+    decorator = createDecorator();
+  }
+
+  private static Device mockDevice(Class<? extends Device> deviceClass) {
+    Device mockDevice = Mockito.mock(deviceClass);
+    when(mockDevice.getDeviceId()).thenReturn(DEVICE_ID);
+    return mockDevice;
+  }
+
+  private VideoOutput readVideoOutput() throws Exception {
+    Path pbFile =
+        tempFolder.getRoot().toPath().resolve(AndroidVideoDecorator.VIDEO_OUTPUT_PB_FILE_NAME);
+    assertThat(Files.exists(pbFile)).isTrue();
+    return VideoOutput.parseFrom(
+        Files.readAllBytes(pbFile), ProtoExtensionRegistry.getGeneratedRegistry());
+  }
+
+  private abstract static class FakeAndroidRealDevice implements Device {}
+
+  private abstract static class FakeAndroidEmulator implements Device {}
+
+  private abstract static class FakeNoOpDevice implements Device {}
 }

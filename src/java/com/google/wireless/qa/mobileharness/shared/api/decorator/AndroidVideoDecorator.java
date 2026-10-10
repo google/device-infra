@@ -20,8 +20,10 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.video.AndroidVideoRecorder;
 import com.google.devtools.mobileharness.platform.android.video.EmulatorConsoleRecorder;
+import com.google.devtools.mobileharness.platform.android.video.Screenrecord;
 import com.google.devtools.mobileharness.platform.android.video.ScreenshotRecorder;
 import com.google.devtools.mobileharness.platform.android.video.proto.VideoOutput;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -61,6 +63,8 @@ public class AndroidVideoDecorator extends LifecycleDecorator
   private AndroidVideoRecorder recorder;
   private final ScreenshotRecorder screenshotRecorder;
   private final EmulatorConsoleRecorder emulatorConsoleRecorder;
+  private final Screenrecord screenrecord;
+  private final AndroidSystemSettingUtil systemSettingUtil;
   private final LocalFileUtil localFileUtil;
 
   private VideoOutput.VideoType usedVideoType;
@@ -72,10 +76,14 @@ public class AndroidVideoDecorator extends LifecycleDecorator
       TestInfo testInfo,
       ScreenshotRecorder screenshotRecorder,
       EmulatorConsoleRecorder emulatorConsoleRecorder,
+      Screenrecord screenrecord,
+      AndroidSystemSettingUtil systemSettingUtil,
       LocalFileUtil localFileUtil) {
     super(decoratedDriver, testInfo);
     this.screenshotRecorder = screenshotRecorder;
     this.emulatorConsoleRecorder = emulatorConsoleRecorder;
+    this.screenrecord = screenrecord;
+    this.systemSettingUtil = systemSettingUtil;
     this.localFileUtil = localFileUtil;
   }
 
@@ -96,11 +104,7 @@ public class AndroidVideoDecorator extends LifecycleDecorator
 
     if (requestedType == AndroidVideoDecoratorSpec.VideoTypeSpecCase.AUTO_DETECT
         || requestedType == AndroidVideoDecoratorSpec.VideoTypeSpecCase.VIDEOTYPESPEC_NOT_SET) {
-      if (deviceType.contains("Emulator")) {
-        requestedType = AndroidVideoDecoratorSpec.VideoTypeSpecCase.EMULATOR_CONSOLE;
-      } else {
-        requestedType = AndroidVideoDecoratorSpec.VideoTypeSpecCase.STITCHED_SCREENSHOTS;
-      }
+      requestedType = autoDetectVideoType(testInfo, device.getDeviceId(), deviceType);
     }
 
     switch (requestedType) {
@@ -112,7 +116,10 @@ public class AndroidVideoDecorator extends LifecycleDecorator
         recorder = screenshotRecorder;
         usedVideoType = VideoOutput.VideoType.STITCHED_SCREENSHOTS;
       }
-      // TODO: Implement VIDEOCAT and HD_SCREEN_RECORD.
+      case HD_SCREEN_RECORD -> {
+        recorder = screenrecord;
+        usedVideoType = VideoOutput.VideoType.SCREENRECORD;
+      }
       default -> {
         logger.atWarning().log(
             "Unsupported video type: %s, using STITCHED_SCREENSHOTS instead.", requestedType);
@@ -120,12 +127,17 @@ public class AndroidVideoDecorator extends LifecycleDecorator
         usedVideoType = VideoOutput.VideoType.STITCHED_SCREENSHOTS;
       }
     }
-
     startTime = Instant.now();
-    Path genFileDir = Path.of(testInfo.getGenFileDir());
-    String deviceId = device.getDeviceId();
-    String testId = testInfo.locator().getId();
-    recorder.start(deviceId, testId, genFileDir, spec);
+    startRecorder(testInfo, device.getDeviceId());
+    if (recorder != null) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "AndroidVideoDecorator uses video type %s for device %s (%s)",
+              usedVideoType, device.getDeviceId(), deviceType);
+    }
     return SetupResult.continueDecorated();
   }
 
@@ -135,7 +147,17 @@ public class AndroidVideoDecorator extends LifecycleDecorator
     TestInfo testInfo = context.testInfo();
     List<Path> generatedFiles = new ArrayList<>();
     if (recorder != null) {
-      generatedFiles = recorder.stop();
+      try {
+        generatedFiles = recorder.stop();
+      } catch (MobileHarnessException e) {
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .withCause(e)
+            .log("Failed to stop %s recorder, the video may be missing.", usedVideoType);
+        return;
+      }
       if (!spec.getVideoOnPass() && testInfo.resultWithCause().get().type() == TestResult.PASS) {
         cleanupVideoFiles(testInfo, generatedFiles);
         return;
@@ -147,18 +169,20 @@ public class AndroidVideoDecorator extends LifecycleDecorator
           VideoOutput.newBuilder()
               .setVideoType(usedVideoType)
               .setStartTime(TimeUtils.toProtoTimestamp(startTime))
-              .setEndTime(TimeUtils.toProtoTimestamp(endTime));
-
-      if (usedVideoType == VideoOutput.VideoType.EMULATOR_CONSOLE) {
-        outputBuilder.setContainerFormat(VideoOutput.ContainerFormat.WEBM);
-      } else if (usedVideoType == VideoOutput.VideoType.STITCHED_SCREENSHOTS) {
-        outputBuilder.setContainerFormat(VideoOutput.ContainerFormat.PNG);
-      }
+              .setEndTime(TimeUtils.toProtoTimestamp(endTime))
+              .setContainerFormat(getContainerFormat(usedVideoType));
 
       Path genFileDir = Path.of(testInfo.getGenFileDir());
       for (Path p : generatedFiles) {
         outputBuilder.addGeneratedFileNames(genFileDir.relativize(p).toString());
       }
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "AndroidVideoDecorator generated %s video files: %s",
+              usedVideoType, outputBuilder.getGeneratedFileNamesList());
 
       try {
         Path pbFile = Path.of(testInfo.getGenFileDir(), VIDEO_OUTPUT_PB_FILE_NAME);
@@ -170,6 +194,92 @@ public class AndroidVideoDecorator extends LifecycleDecorator
             e);
       }
     }
+  }
+
+  /**
+   * Starts {@link #recorder}. Falls back to {@link #screenshotRecorder} if it fails to start, and
+   * disables recording if the screenshot recorder fails too, so recording problems never fail the
+   * test.
+   */
+  private void startRecorder(TestInfo testInfo, String deviceId)
+      throws MobileHarnessException, InterruptedException {
+    Path genFileDir = Path.of(testInfo.getGenFileDir());
+    String testId = testInfo.locator().getId();
+    try {
+      recorder.start(deviceId, testId, genFileDir, spec, testInfo.timer().remainingTimeJava());
+      return;
+    } catch (MobileHarnessException e) {
+      if (usedVideoType == VideoOutput.VideoType.STITCHED_SCREENSHOTS) {
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .withCause(e)
+            .log("Failed to start %s recorder, skip recording.", usedVideoType);
+        recorder = null;
+        return;
+      }
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .withCause(e)
+          .log(
+              "Failed to start %s recorder, falling back to %s.",
+              usedVideoType, VideoOutput.VideoType.STITCHED_SCREENSHOTS);
+    }
+
+    recorder = screenshotRecorder;
+    usedVideoType = VideoOutput.VideoType.STITCHED_SCREENSHOTS;
+    try {
+      recorder.start(deviceId, testId, genFileDir, spec, testInfo.timer().remainingTimeJava());
+    } catch (MobileHarnessException e) {
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .withCause(e)
+          .log("Failed to start %s recorder, skip recording.", usedVideoType);
+      recorder = null;
+    }
+  }
+
+  /**
+   * Selects the best supported video type for the device.
+   *
+   * <ul>
+   *   <li>Emulator: EMULATOR_CONSOLE.
+   *   <li>Physical device with SDK >= 34: HD_SCREEN_RECORD (native screenrecord without time
+   *       limit).
+   *   <li>Physical device with a supported 32-bit ARM SDK in [{@code
+   *       Videocat.MIN_SUPPORTED_SDK_VERSION}, {@code Videocat.MAX_SUPPORTED_SDK_VERSION}]:
+   *       VIDEOCAT.
+   *   <li>Otherwise: STITCHED_SCREENSHOTS.
+   * </ul>
+   */
+  private AndroidVideoDecoratorSpec.VideoTypeSpecCase autoDetectVideoType(
+      TestInfo testInfo, String deviceId, String deviceType) throws InterruptedException {
+    if (deviceType.contains("Emulator")) {
+      return AndroidVideoDecoratorSpec.VideoTypeSpecCase.EMULATOR_CONSOLE;
+    }
+    // TODO: Fall back to STITCHED_SCREENSHOTS if the device reports (via device
+    // property) that screen recording is not supported.
+    int sdkVersion;
+    try {
+      sdkVersion = systemSettingUtil.getDeviceSdkVersion(deviceId);
+    } catch (MobileHarnessException e) {
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .withCause(e)
+          .log("Failed to get SDK version of device %s, using STITCHED_SCREENSHOTS.", deviceId);
+      return AndroidVideoDecoratorSpec.VideoTypeSpecCase.STITCHED_SCREENSHOTS;
+    }
+    if (sdkVersion >= Screenrecord.MIN_SDK_VERSION_FOR_UNLIMITED_RECORDING) {
+      return AndroidVideoDecoratorSpec.VideoTypeSpecCase.HD_SCREEN_RECORD;
+    }
+    return AndroidVideoDecoratorSpec.VideoTypeSpecCase.STITCHED_SCREENSHOTS;
   }
 
   private void cleanupVideoFiles(TestInfo testInfo, List<Path> generatedFiles)
@@ -201,7 +311,7 @@ public class AndroidVideoDecorator extends LifecycleDecorator
             .log()
             .atInfo()
             .alsoTo(logger)
-            .log("Removed emulator video files on host for device %s", deviceId);
+            .log("Removed %s video files on host for device %s", usedVideoType, deviceId);
       }
     } catch (MobileHarnessException e) {
       testInfo
@@ -212,5 +322,15 @@ public class AndroidVideoDecorator extends LifecycleDecorator
               "Failed to remove video file on host for device %s when test pass:%n%s",
               deviceId, e.getMessage());
     }
+  }
+
+  private static VideoOutput.ContainerFormat getContainerFormat(VideoOutput.VideoType videoType) {
+    return switch (videoType) {
+      case EMULATOR_CONSOLE -> VideoOutput.ContainerFormat.WEBM;
+      case STITCHED_SCREENSHOTS -> VideoOutput.ContainerFormat.PNG;
+      case VIDEOCAT -> VideoOutput.ContainerFormat.MPEGTS;
+      case SCREENRECORD -> VideoOutput.ContainerFormat.MP4;
+      default -> VideoOutput.ContainerFormat.CONTAINER_FORMAT_UNSPECIFIED;
+    };
   }
 }
