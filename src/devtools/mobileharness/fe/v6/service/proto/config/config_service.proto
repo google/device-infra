@@ -36,18 +36,6 @@ service ConfigService {
   }
 
   // Checks if the current user has permission to modify device configuration.
-  //
-  // Deprecated: use CheckDeviceConfigPermission instead.
-  rpc CheckDeviceWritePermission(CheckDeviceWritePermissionRequest)
-      returns (CheckDeviceWritePermissionResponse) {
-    option (google.api.http) = {
-      post: "/v6/devices/{id}/config:checkWritePermission",
-      body: "*"
-    };
-    option deprecated = true;
-  }
-
-  // Checks if the current user has permission to modify device configuration.
   rpc CheckDeviceConfigPermission(CheckDeviceConfigPermissionRequest)
       returns (CheckDeviceConfigPermissionResponse) {
     option (google.api.http) = {
@@ -87,18 +75,6 @@ service ConfigService {
     option (google.api.http) = {
       get: "/v6/hosts/{host_name}/config"
     };
-  }
-
-  // Checks if the current user has permission to modify host configuration.
-  //
-  // Deprecated: use CheckHostConfigPermission instead.
-  rpc CheckHostWritePermission(CheckHostWritePermissionRequest)
-      returns (CheckHostWritePermissionResponse) {
-    option (google.api.http) = {
-      post: "/v6/hosts/{host_name}/config:checkWritePermission",
-      body: "*"
-    };
-    option deprecated = true;
   }
 
   // Checks if the current user has permission to modify host configuration.
@@ -146,20 +122,6 @@ message GetDeviceConfigResponse {
   bool is_host_managed = 2;
   string host_name = 3;
   DeviceConfigUiStatus ui_status = 4;
-}
-
-// Request for CheckDeviceWritePermission.
-message CheckDeviceWritePermissionRequest {
-  string id = 1;
-
-  // The universe the device belongs to.
-  string universe = 2;
-}
-
-// Response for CheckDeviceWritePermission.
-message CheckDeviceWritePermissionResponse {
-  bool has_permission = 1;
-  string user_name = 2;
 }
 
 // Request for CheckDeviceConfigPermission.
@@ -242,20 +204,6 @@ message GetHostConfigRequest {
 message GetHostConfigResponse {
   HostConfig host_config = 1;
   HostConfigUiStatus ui_status = 2;
-}
-
-// Request for CheckHostWritePermission.
-message CheckHostWritePermissionRequest {
-  string host_name = 1;
-
-  // The universe the host belongs to.
-  string universe = 2;
-}
-
-// Response for CheckHostWritePermission.
-message CheckHostWritePermissionResponse {
-  bool has_permission = 1;
-  string user_name = 2;
 }
 
 // Request for CheckHostConfigPermission.
