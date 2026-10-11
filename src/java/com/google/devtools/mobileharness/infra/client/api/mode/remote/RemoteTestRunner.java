@@ -724,7 +724,10 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
   private static boolean cachePersistentFileInLab(String filePath, Params jobParams) {
     return Flags.enablePersistentCache.getNonNull()
         && jobParams
-            .getList(JobInfo.PARAM_PERISTENT_CACHE_FILE_LIST, ImmutableList.of())
+            .getList(
+                JobInfo.PARAM_PERSISTENT_CACHE_FILE_LIST,
+                JobInfo.PERSISTENT_CACHE_FILE_LIST_SEPARATOR,
+                ImmutableList.of())
             .contains(filePath);
   }
 

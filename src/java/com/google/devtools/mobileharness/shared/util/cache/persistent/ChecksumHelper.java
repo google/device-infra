@@ -52,7 +52,7 @@ final class ChecksumHelper {
 
   private static Optional<ByteString> computeChecksum(Path dataPath, Algorithm checksumAlgorithm) {
     return switch (checksumAlgorithm) {
-      case GCS_CRC32C, GCS_MD5, ATS_FILE_SERVER_SHA256 ->
+      case GCS_CRC32C, GCS_MD5, ATS_FILE_SERVER_SHA256, ANDROID_BUILD_MD5 ->
           getHashFunction(checksumAlgorithm)
               .map(hashFunction -> compute(dataPath, hashFunction, checksumAlgorithm));
       case ALGORITHM_UNSPECIFIED, UNRECOGNIZED -> {
@@ -73,7 +73,11 @@ final class ChecksumHelper {
           // See https://cloud.google.com/storage/docs/metadata#crc32c
           reverse(bytes);
         }
-        case GCS_MD5, ATS_FILE_SERVER_SHA256, ALGORITHM_UNSPECIFIED, UNRECOGNIZED -> {
+        case GCS_MD5,
+            ATS_FILE_SERVER_SHA256,
+            ANDROID_BUILD_MD5,
+            ALGORITHM_UNSPECIFIED,
+            UNRECOGNIZED -> {
           // Do nothing.
         }
       }
@@ -84,11 +88,11 @@ final class ChecksumHelper {
     }
   }
 
-  @SuppressWarnings("deprecation") // MD5 is still used in GCS.
+  @SuppressWarnings("deprecation") // MD5 is still used in GCS and Android Build.
   private static Optional<HashFunction> getHashFunction(Algorithm checksumAlgorithm) {
     return switch (checksumAlgorithm) {
       case GCS_CRC32C -> Optional.of(Hashing.crc32c());
-      case GCS_MD5 -> Optional.of(Hashing.md5());
+      case GCS_MD5, ANDROID_BUILD_MD5 -> Optional.of(Hashing.md5());
       case ATS_FILE_SERVER_SHA256 -> Optional.of(Hashing.sha256());
       case ALGORITHM_UNSPECIFIED, UNRECOGNIZED -> {
         logger.atWarning().log("Unknown checksum algorithm %s.", checksumAlgorithm);

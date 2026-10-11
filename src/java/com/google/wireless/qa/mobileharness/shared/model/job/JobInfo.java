@@ -213,8 +213,16 @@ public class JobInfo extends JobScheduleUnit {
       required = false,
       help =
           "The file list that should be cached with persistent cache. The value should be of format"
-              + " \"a,b,c\".")
-  public static final String PARAM_PERISTENT_CACHE_FILE_LIST = "persistent_cache_file_list";
+              + " \"a|b|c\".")
+  public static final String PARAM_PERSISTENT_CACHE_FILE_LIST = "persistent_cache_file_list";
+
+  /**
+   * Separator of the entries in {@link #PARAM_PERSISTENT_CACHE_FILE_LIST}.
+   *
+   * <p>It is not "," because some file specs (e.g., android-build specs) contain ",". This param is
+   * only parsed on the client side, so the separator can be changed without affecting lab servers.
+   */
+  public static final String PERSISTENT_CACHE_FILE_LIST_SEPARATOR = "|";
 
   @ParamAnnotation(
       required = false,

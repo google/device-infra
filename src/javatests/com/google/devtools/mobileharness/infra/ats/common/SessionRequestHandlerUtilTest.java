@@ -218,6 +218,52 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
+  public void createXtsTradefedTestJob_persistentCache_preservesCommaContainingEntries()
+      throws Exception {
+    flags.setAll(
+        ImmutableMap.of(
+            "enable_persistent_cache", "true", "transfer_resources_from_controller", "true"));
+    String existingFileList =
+        "ab://git_main/cf_x86_64_phone-userdebug/123/a.zip,b.zip|gs://bucket/c,d.zip";
+    JobConfig jobConfig =
+        JobConfig.newBuilder()
+            .setName("xts-tradefed-job")
+            .setExecMode("local")
+            .setDevice(
+                JobConfig.DeviceList.newBuilder()
+                    .addSubDeviceSpec(SubDeviceSpec.newBuilder().setType("AndroidDevice")))
+            .setDriver(JobConfig.Driver.newBuilder().setName(TRADEFED_TEST_DRIVER_NAME))
+            .setGenFileDir(folder.newFolder("job_gen_dir").toString())
+            .setParams(
+                StringMap.newBuilder()
+                    .putContent(JobInfo.PARAM_PERSISTENT_CACHE_FILE_LIST, existingFileList))
+            .build();
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder().setAndroidXtsZip("/path/to/android-cts.zip"));
+
+    JobInfo jobInfo =
+        sessionRequestHandlerUtil.createXtsTradefedTestJob(
+            sessionRequestInfo,
+            SessionRequestHandlerUtil.TradefedJobInfo.of(jobConfig, ImmutableMap.of()));
+
+    assertThat(jobInfo.params().get(JobInfo.PARAM_PERSISTENT_CACHE_FILE_LIST))
+        .isEqualTo(existingFileList + "|/path/to/android-cts.zip");
+    assertThat(
+            jobInfo
+                .params()
+                .getList(
+                    JobInfo.PARAM_PERSISTENT_CACHE_FILE_LIST,
+                    JobInfo.PERSISTENT_CACHE_FILE_LIST_SEPARATOR,
+                    ImmutableList.of()))
+        .containsExactly(
+            "ab://git_main/cf_x86_64_phone-userdebug/123/a.zip,b.zip",
+            "gs://bucket/c,d.zip",
+            "/path/to/android-cts.zip")
+        .inOrder();
+  }
+
+  @Test
   public void initializeJobConfig_calculateTimeout() throws Exception {
     SessionRequestInfo sessionRequestInfo =
         SessionRequestInfoUtil.buildAndValidate(

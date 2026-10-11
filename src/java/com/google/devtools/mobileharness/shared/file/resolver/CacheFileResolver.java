@@ -106,7 +106,13 @@ public class CacheFileResolver extends AbstractFileResolver {
   private Optional<ResolveResult> internalResolve(ResolveSource resolveSource)
       throws MobileHarnessException, InterruptedException {
     if (persistentResolvedFileCache != null && usePersistentCache(resolveSource)) {
-      Optional<Checksum> checksum = getChecksum(resolveSource);
+      Optional<Checksum> checksum = Optional.empty();
+      try {
+        checksum = getChecksum(resolveSource);
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to get checksum for %s. Fall back to non-persistent cache.", resolveSource);
+      }
       if (checksum.isPresent()) {
         return persistentResolvedFileCache.getCachedResolveResult(resolveSource, checksum.get());
       }
