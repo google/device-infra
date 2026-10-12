@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"time"
 
 	log "github.com/golang/glog"
@@ -40,6 +41,7 @@ var (
 	_ Cache               = (*LockFreeCache)(nil)
 	_ HeadroomReserver    = (*LockFreeCache)(nil)
 	_ CorruptBlobReporter = (*LockFreeCache)(nil)
+	_ ModeCopyReporter    = (*LockFreeCache)(nil)
 )
 
 // LockFreeCache caches downloaded blobs using common/storage.
@@ -63,6 +65,15 @@ type LockFreeCache struct {
 	// has applied its default, read once because casdownloader never changes
 	// its configuration mid-run.
 	touchInterval time.Duration
+
+	// Mode-mismatch copies made by applyFileMode, by cause. See
+	// ModeCopyStats.
+	execMismatchCopies, execMismatchBytes atomic.Int64
+	permDriftCopies, permDriftBytes       atomic.Int64
+	// The first copy of each cause is logged with its path, so that a host
+	// reporting copies also says which file to look at. Later ones are only
+	// counted: a drifted cache can produce one per hit.
+	execMismatchLogged, permDriftLogged atomic.Bool
 }
 
 // NewLockFreeCache creates a LockFreeCache rooted under cacheDir.
@@ -289,7 +300,47 @@ func (c *LockFreeCache) applyFileMode(item *client.TreeOutput, info os.FileInfo)
 	if err := replaceWithPrivateCopy(item.Path, want); err != nil {
 		return fmt.Errorf("failed to re-materialize %s with mode %#o: %w", item.Path, want.Perm(), err)
 	}
+	c.recordModeCopy(item, info.Mode().Perm(), want.Perm())
 	return nil
+}
+
+// recordModeCopy counts a copy applyFileMode made because the cached blob had
+// mode have and the tree node wanted mode want.
+//
+// The two causes call for different fixes, which is why they are kept apart. A
+// blob carrying the canonical mode for the other executability is content the
+// trees disagree about, and only a cache keyed on executability would avoid the
+// copy. A blob carrying any other mode has been chmod'ed since Push normalized
+// it, which is a client modifying an artifact it should treat as read-only,
+// and every later hit on it pays for that until it is evicted. Drift is checked
+// first, so a blob chmod'ed to, say, 0777 counts as drift even when its
+// executable bit also disagrees: the chmod, not the content, is what has to be
+// fixed.
+//
+// Only copies are counted. A store that cannot hard link fixes a mismatch with
+// a chmod of a file it already owns, which costs nothing worth measuring.
+func (c *LockFreeCache) recordModeCopy(item *client.TreeOutput, have, want os.FileMode) {
+	copies, bytes, logged, cause := &c.execMismatchCopies, &c.execMismatchBytes, &c.execMismatchLogged, "the other executability"
+	if have != fileMode(&client.TreeOutput{IsExecutable: true}).Perm() && have != fileMode(&client.TreeOutput{}).Perm() {
+		copies, bytes, logged, cause = &c.permDriftCopies, &c.permDriftBytes, &c.permDriftLogged, "a mode that was changed after it was cached"
+	}
+	copies.Add(1)
+	bytes.Add(item.Digest.Size)
+	if !logged.Swap(true) {
+		log.Infof("Copied cached blob %s to %s because it has mode %#o, %s; want %#o. Further copies for this reason are counted, not logged.",
+			item.Digest.Hash, item.Path, have, cause, want)
+	}
+}
+
+// ModeCopies returns the copies applyFileMode has made since the cache was
+// created, by cause.
+func (c *LockFreeCache) ModeCopies() ModeCopyStats {
+	return ModeCopyStats{
+		ExecMismatchCopies: c.execMismatchCopies.Load(),
+		ExecMismatchBytes:  c.execMismatchBytes.Load(),
+		PermDriftCopies:    c.permDriftCopies.Load(),
+		PermDriftBytes:     c.permDriftBytes.Load(),
+	}
 }
 
 // replaceWithPrivateCopy swaps path for an independent copy of itself carrying
@@ -372,6 +423,8 @@ func (c *LockFreeCache) Push(ctx context.Context, all map[digest.Digest]*client.
 
 // Close reports what the cache did. There is no index to flush.
 func (c *LockFreeCache) Close() error {
-	log.Infof("lock-free cache: %s", c.store.Stats().Summary())
+	m := c.ModeCopies()
+	log.Infof("lock-free cache: %s; mode copies: %d exec mismatch (%d bytes), %d perm drift (%d bytes)",
+		c.store.Stats().Summary(), m.ExecMismatchCopies, m.ExecMismatchBytes, m.PermDriftCopies, m.PermDriftBytes)
 	return nil
 }

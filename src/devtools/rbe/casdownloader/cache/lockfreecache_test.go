@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -1031,5 +1032,96 @@ func TestLockFreeCache_PullCleansUpWhenItCannotStatAPulledFile(t *testing.T) {
 	}
 	if got := c.CorruptBlobsQuarantined(); got != 0 {
 		t.Errorf("CorruptBlobsQuarantined() = %d, want 0: nothing was found to be the wrong size", got)
+	}
+}
+
+// TestLockFreeCache_ModeCopiesAreCountedByCause checks that every copy
+// applyFileMode makes is counted once, under the cause that calls for its fix,
+// and that a hit that shares the inode is not counted at all.
+//
+// The blob is ingested as a regular file. Drift is simulated the way it
+// happens in the field: by chmod'ing a pulled file, which on the hard link path
+// is the cached blob.
+func TestLockFreeCache_ModeCopiesAreCountedByCause(t *testing.T) {
+	const content = "mode copies"
+	size := int64(len(content))
+	for _, tc := range []struct {
+		name string
+		// drift, if not zero, is the mode a client sets on a pulled file
+		// before the pull under test.
+		drift      os.FileMode
+		executable bool
+		want       ModeCopyStats
+	}{
+		{name: "modes agree", executable: false, want: ModeCopyStats{}},
+		{name: "other executability", executable: true,
+			want: ModeCopyStats{ExecMismatchCopies: 1, ExecMismatchBytes: size}},
+		{name: "drifted, same executability", drift: 0o644, executable: false,
+			want: ModeCopyStats{PermDriftCopies: 1, PermDriftBytes: size}},
+		// 0777 also flips the executable bit, but the chmod is what has to
+		// be fixed, so it counts as drift.
+		{name: "drifted to 0777", drift: 0o777, executable: false,
+			want: ModeCopyStats{PermDriftCopies: 1, PermDriftBytes: size}},
+		{name: "drifted to 0777, wanted executable", drift: 0o777, executable: true,
+			want: ModeCopyStats{PermDriftCopies: 1, PermDriftBytes: size}},
+		// A drifted mode that happens to be the canonical mode of the other
+		// executability cannot be told apart from content the trees disagree
+		// about, and is counted as such.
+		{name: "drifted to the other canonical mode", drift: execMode, executable: false,
+			want: ModeCopyStats{ExecMismatchCopies: 1, ExecMismatchBytes: size}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			c := newTestCache(t, filepath.Join(dir, "cache"), true)
+			_, out := stage(t, dir, "work/file", content, false)
+			push(t, c, out)
+
+			if tc.drift != 0 {
+				if err := os.Chmod(out.Path, tc.drift); err != nil {
+					t.Fatalf("Failed to chmod %s: %v", out.Path, err)
+				}
+			}
+
+			item := &client.TreeOutput{Digest: out.Digest, Path: filepath.Join(dir, "out", "file"), IsExecutable: tc.executable}
+			if !pullOne(t, c, item) {
+				t.Fatal("Pull missed a blob that was just pushed")
+			}
+			if got := c.ModeCopies(); got != tc.want {
+				t.Errorf("ModeCopies() = %+v, want %+v", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestLockFreeCache_ModeCopiesAccumulate checks that the counters add up
+// across hits rather than recording only the latest, since a drifted blob costs
+// a copy on every hit until it is evicted.
+func TestLockFreeCache_ModeCopiesAccumulate(t *testing.T) {
+	dir := t.TempDir()
+	c := newTestCache(t, filepath.Join(dir, "cache"), true)
+	_, out := stage(t, dir, "work/file", "accumulate", false)
+	push(t, c, out)
+
+	for i := range 3 {
+		pullOne(t, c, &client.TreeOutput{Digest: out.Digest, Path: filepath.Join(dir, "out", strconv.Itoa(i)), IsExecutable: true})
+	}
+	want := ModeCopyStats{ExecMismatchCopies: 3, ExecMismatchBytes: 3 * out.Digest.Size}
+	if got := c.ModeCopies(); got != want {
+		t.Errorf("ModeCopies() = %+v, want %+v", got, want)
+	}
+}
+
+// TestLockFreeCache_WithoutHardlinksCountsNoModeCopies checks that a store
+// that cannot hard link reports no copies: it fixes a mismatch with a chmod of
+// a file it already owns, so there is no extra copy to count.
+func TestLockFreeCache_WithoutHardlinksCountsNoModeCopies(t *testing.T) {
+	dir := t.TempDir()
+	c := newTestCache(t, filepath.Join(dir, "cache"), false)
+	_, out := stage(t, dir, "work/file", "no copies", false)
+	push(t, c, out)
+
+	pullOne(t, c, &client.TreeOutput{Digest: out.Digest, Path: filepath.Join(dir, "out", "file"), IsExecutable: true})
+	if got := c.ModeCopies(); got != (ModeCopyStats{}) {
+		t.Errorf("ModeCopies() = %+v, want none", got)
 	}
 }

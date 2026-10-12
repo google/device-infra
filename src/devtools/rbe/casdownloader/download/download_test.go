@@ -645,6 +645,73 @@ func TestDoDownload_DumpsCorruptBlobsQuarantined(t *testing.T) {
 	}
 }
 
+// modeCopyReportingCache is a fullCache that also reports mode-mismatch
+// copies, as LockFreeCache does.
+type modeCopyReportingCache struct {
+	fullCache
+	copies cache.ModeCopyStats
+}
+
+func (c *modeCopyReportingCache) ModeCopies() cache.ModeCopyStats { return c.copies }
+
+// TestDoDownload_DumpsModeCopies checks that the cache's mode-mismatch copies
+// reach stats.json, by cause, and are there as zeros for a cache that does not
+// make them.
+func TestDoDownload_DumpsModeCopies(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		cache cache.Cache
+		want  map[string]int64
+	}{
+		{
+			name: "cache that copies on a mismatch",
+			cache: &modeCopyReportingCache{copies: cache.ModeCopyStats{
+				ExecMismatchCopies: 1, ExecMismatchBytes: 10, PermDriftCopies: 2, PermDriftBytes: 20,
+			}},
+			want: map[string]int64{"exec_mismatch_copies": 1, "exec_mismatch_bytes": 10, "perm_drift_copies": 2, "perm_drift_bytes": 20},
+		},
+		{
+			name:  "cache that does not",
+			cache: &fullCache{},
+			want:  map[string]int64{"exec_mismatch_copies": 0, "exec_mismatch_bytes": 0, "perm_drift_copies": 0, "perm_drift_bytes": 0},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newRemoteFailedFixture(t)
+			dumpFile := filepath.Join(t.TempDir(), "stats.json")
+			job := DownloadJob{
+				Client:   f.client,
+				Digest:   f.rootDigest,
+				Dir:      t.TempDir(),
+				DumpJSON: dumpFile,
+				Cache:    tc.cache,
+			}
+			if err := job.DoDownload(context.Background()); err != nil {
+				t.Fatalf("DoDownload failed: %v", err)
+			}
+
+			dumped, err := os.ReadFile(dumpFile)
+			if err != nil {
+				t.Fatalf("Failed to read dumped stats: %v", err)
+			}
+			var fields map[string]any
+			if err := json.Unmarshal(dumped, &fields); err != nil {
+				t.Fatalf("Failed to parse dumped stats %s: %v", dumped, err)
+			}
+			for key, want := range tc.want {
+				got, ok := fields[key]
+				if !ok {
+					t.Errorf("Dumped JSON has no %s: %s", key, dumped)
+					continue
+				}
+				if got != float64(want) {
+					t.Errorf("Dumped %s = %v, want %d", key, got, want)
+				}
+			}
+		})
+	}
+}
+
 type mockEOFClientStream struct {
 	grpc.ClientStream
 }
