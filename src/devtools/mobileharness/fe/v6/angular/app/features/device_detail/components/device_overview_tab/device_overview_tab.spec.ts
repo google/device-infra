@@ -398,26 +398,28 @@ describe('DeviceOverviewTab Component', () => {
   });
 
   it('should hide battery if device is a testbed', () => {
-    // Clear subDevices to simulate a standard physical device.
     const originalSubDevices = component.device.subDevices;
     expect(originalSubDevices?.length).toBe(2);
-
-    component.device.subDevices = undefined;
-    fixture.detectChanges();
-
-    let batteryEl = fixture.debugElement.query(By.css('dt[title="Battery"]'));
-    expect(batteryEl).toBeTruthy();
-
-    // Make it a testbed (has subDevices)
-    component.device.subDevices = [];
-
-    // Explicitly mark for check since component is OnPush
     const cdr = fixture.debugElement
       .query(By.directive(DeviceOverviewTab))
       .injector.get(ChangeDetectorRef);
+
+    // A standard device: sub_devices omitted (ESF) or printed empty (Envoy).
+    component.device.subDevices = undefined;
+    fixture.detectChanges();
+    let batteryEl = fixture.debugElement.query(By.css('dt[title="Battery"]'));
+    expect(batteryEl).toBeTruthy();
+
+    component.device.subDevices = [];
     cdr.markForCheck();
     fixture.detectChanges();
+    batteryEl = fixture.debugElement.query(By.css('dt[title="Battery"]'));
+    expect(batteryEl).toBeTruthy();
 
+    // A testbed: has sub-devices.
+    component.device.subDevices = originalSubDevices;
+    cdr.markForCheck();
+    fixture.detectChanges();
     batteryEl = fixture.debugElement.query(By.css('dt[title="Battery"]'));
     expect(batteryEl).toBeFalsy();
   });

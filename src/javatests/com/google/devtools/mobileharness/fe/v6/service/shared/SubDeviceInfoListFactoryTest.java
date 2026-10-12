@@ -180,8 +180,8 @@ public final class SubDeviceInfoListFactoryTest {
     ImmutableList<SubDeviceInfo> result = subDeviceInfoListFactory.create(dimensions);
 
     assertThat(result).hasSize(1);
-    assertThat(result.get(0).getBatteryLevel()).isEqualTo(-1);
-    assertThat(result.get(0).getNetwork().getWifiRssi()).isEqualTo(0);
+    assertThat(result.get(0).hasBatteryLevel()).isFalse();
+    assertThat(result.get(0).hasNetwork()).isFalse();
   }
 
   @Test
@@ -281,7 +281,7 @@ public final class SubDeviceInfoListFactoryTest {
 
     assertThat(result.get(0).hasNetwork()).isTrue();
     assertThat(result.get(0).getNetwork().getWifiRssi()).isEqualTo(-60);
-    assertThat(result.get(0).getNetwork().getHasInternet()).isFalse();
+    assertThat(result.get(0).getNetwork().hasHasInternet()).isFalse();
   }
 
   @Test
@@ -302,6 +302,6 @@ public final class SubDeviceInfoListFactoryTest {
 
     assertThat(result.get(0).hasNetwork()).isTrue();
     assertThat(result.get(0).getNetwork().getHasInternet()).isTrue();
-    assertThat(result.get(0).getNetwork().getWifiRssi()).isEqualTo(0);
+    assertThat(result.get(0).getNetwork().hasWifiRssi()).isFalse();
   }
 }

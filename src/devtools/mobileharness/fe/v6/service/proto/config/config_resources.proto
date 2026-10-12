@@ -49,13 +49,17 @@ message RecommendedWifi {
 }
 
 // Settings related to device stability and reboot behavior during testing.
+//
+// Both fields have explicit presence: unset means the device config does not
+// configure the limit, and the frontend falls back to its default rather than
+// showing 0.
 message StabilitySettings {
   // The maximum number of consecutive test failures on this device
   // before the device is rebooted.
-  int32 max_consecutive_fail = 1;
+  optional int32 max_consecutive_fail = 1;
   // The maximum number of tests (passed or failed) that can run on this device
   // between reboots.
-  int32 max_consecutive_test = 2;
+  optional int32 max_consecutive_test = 2;
 }
 
 // The core interface representing the complete device configuration displayed

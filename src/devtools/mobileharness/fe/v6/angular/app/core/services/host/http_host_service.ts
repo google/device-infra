@@ -137,6 +137,7 @@ export class HttpHostService extends HostService {
       )
       .pipe(
         map((response) => {
+          response.results = response.results ?? [];
           for (const res of response.results) {
             res.supportedProxyTypes =
               res.supportedProxyTypes?.map(toDeviceProxyType) ?? [];
