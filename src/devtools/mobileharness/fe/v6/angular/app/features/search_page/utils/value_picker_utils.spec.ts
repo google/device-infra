@@ -1,4 +1,5 @@
 import {FilterChip, PickerValueItem} from '../models';
+import {EMPTY_FILTER_VALUE} from './search_filter_utils';
 import {
   buildComplexMatchFromEvent,
   buildDisplayValues,
@@ -6,6 +7,7 @@ import {
   computeFilteredAndSortedValues,
   computePinnedValues,
   extractAdvancedStateFromChip,
+  getDefault24hRange,
   getPacificTimezoneName,
   isValuePickerSelectionEmpty,
   pacificToUtc,
@@ -309,16 +311,65 @@ describe('value_picker_utils', () => {
       expect(utcToPacific('1784151000000')).toBe('2026-07-15T14:30');
     });
 
-    it('should calculate 24h fallback range correctly when only single bound is provided', () => {
+    it('should populate with empty when only single bound is provided', () => {
       const singleFrom = new Set(['From: 2026-01-02T12:00']);
       const parsedFrom = parseDateRange(singleFrom);
       expect(parsedFrom.from).toBe('2026-01-02T12:00');
-      expect(parsedFrom.to).toBe('2026-01-03T12:00');
+      expect(parsedFrom.to).toBe('');
 
       const singleTo = new Set(['To: 2026-01-03T12:00']);
       const parsedTo = parseDateRange(singleTo);
-      expect(parsedTo.from).toBe('2026-01-02T12:00');
+      expect(parsedTo.from).toBe('');
       expect(parsedTo.to).toBe('2026-01-03T12:00');
+
+      const setWithEmptyTo = new Set(['2026-10-06T23:35', EMPTY_FILTER_VALUE]);
+      const parsedEmptyTo = parseDateRange(setWithEmptyTo);
+      expect(parsedEmptyTo.from).toBe('2026-10-06T23:35');
+      expect(parsedEmptyTo.to).toBe('');
+
+      const setWithEmptyFrom = new Set([
+        EMPTY_FILTER_VALUE,
+        '2026-10-06T23:35',
+      ]);
+      const parsedEmptyFrom = parseDateRange(setWithEmptyFrom);
+      expect(parsedEmptyFrom.from).toBe('');
+      expect(parsedEmptyFrom.to).toBe('2026-10-06T23:35');
+
+      const geSet = new Set(['≥ 2026-01-01T00:00:00Z']);
+      const parsedGe = parseDateRange(geSet);
+      expect(parsedGe.from).toBe('2025-12-31T16:00');
+      expect(parsedGe.to).toBe('');
+
+      const leSet = new Set(['≤ 2026-01-02T00:00:00Z']);
+      const parsedLe = parseDateRange(leSet);
+      expect(parsedLe.from).toBe('');
+      expect(parsedLe.to).toBe('2026-01-01T16:00');
+    });
+
+    it('should defensively handle null, undefined, and Array inputs', () => {
+      const defaultRange = getDefault24hRange(1767225600000); // 2026-01-01T00:00:00Z
+      expect(defaultRange.from).toBe('2025-12-30T16:00');
+      expect(defaultRange.to).toBe('2025-12-31T16:00');
+
+      const parsedNull = parseDateRange(null);
+      expect(parsedNull.from).toBeTruthy();
+      expect(parsedNull.to).toBeTruthy();
+
+      const parsedUndefined = parseDateRange(undefined);
+      expect(parsedUndefined.from).toBeTruthy();
+      expect(parsedUndefined.to).toBeTruthy();
+
+      const parsedArray = parseDateRange(['From: 2026-01-02T12:00']);
+      expect(parsedArray.from).toBe('2026-01-02T12:00');
+      expect(parsedArray.to).toBe('');
+
+      const parsedEmptySet = parseDateRange(new Set());
+      expect(parsedEmptySet.from).toBeTruthy();
+      expect(parsedEmptySet.to).toBeTruthy();
+
+      const parsedInvalidBound = parseDateRange(new Set(['invalid_date']));
+      expect(parsedInvalidBound.from).toBeTruthy();
+      expect(parsedInvalidBound.to).toBeTruthy();
     });
   });
 
@@ -329,7 +380,6 @@ describe('value_picker_utils', () => {
         isAdvanced: false,
         negated: false,
         selectedSet: new Set(),
-        searchQuery: '',
         rangeFrom: '2026-01-01T00:00',
         rangeTo: '2026-01-02T00:00',
       });
@@ -348,7 +398,6 @@ describe('value_picker_utils', () => {
         isAdvanced: false,
         negated: false,
         selectedSet: new Set(),
-        searchQuery: '',
         propName: 'device_type',
         propVal: 'pixel',
       });
@@ -361,12 +410,27 @@ describe('value_picker_utils', () => {
       });
     });
 
+    it('should construct text event', () => {
+      const event = buildValuePickerApplyEvent({
+        type: 'text',
+        isAdvanced: false,
+        negated: false,
+        selectedSet: new Set(),
+        textVal: '  my_query  ',
+      });
+      expect(event).toEqual({
+        selected: ['my_query'],
+        negate: false,
+        isAdvanced: false,
+        textVal: 'my_query',
+      });
+    });
+
     it('should construct advanced event', () => {
       const event = buildValuePickerApplyEvent({
         isAdvanced: true,
         negated: false,
         selectedSet: new Set(),
-        searchQuery: '',
         advMode: 'prefix',
         advText: 'test_prefix',
       });
@@ -380,12 +444,11 @@ describe('value_picker_utils', () => {
       });
     });
 
-    it('should not include search query in selected list when applying', () => {
+    it('should construct standard list event with negation', () => {
       const event = buildValuePickerApplyEvent({
         isAdvanced: false,
         negated: true,
         selectedSet: new Set(['item1']),
-        searchQuery: 'item2',
       });
       expect(event.selected).toEqual(['item1']);
       expect(event.negate).toBeTrue();

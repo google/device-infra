@@ -1,42 +1,60 @@
 <div class="config-modal-container">
-  <div class="config-modal-card" [style.max-width]="width" [style.height]="height" [style.max-height]="maxHeight">
-    <header class="config-header">
-      <ng-content select="[header-prefix]"></ng-content>
-      <div class="header-title-container">
-        <h2 class="config-title">{{ dialogTitle }}</h2>
-        @if (subtitle) {
-          <p class="config-subtitle" [innerHTML]="subtitle | safeHtmlPipe"></p>
-        }
-        <ng-content select="[subtitle]"></ng-content>
-      </div>
-      <div class="header-menu-container">
-        <div class="header-menu">
-          <ng-content select="[header-button]"></ng-content>
-        </div>
-        <button mat-icon-button [mat-dialog-close] class="close-button">
-          <mat-icon>close</mat-icon>
-        </button>
-      </div>
-    </header>
+  <div
+    class="config-modal-card"
+    [style.width]="width()"
+    [style.max-width]="effectiveMaxWidth()"
+    [style.height]="height()"
+    [style.max-height]="maxHeight()"
+  >
+    @if (showHeader()) {
+      <ng-content select="[dialog-header]"></ng-content>
+      @if (hasHeaderContent()) {
+        <header class="config-header">
+          <ng-content select="[header-prefix]"></ng-content>
+          <div class="header-title-container">
+            @if (dialogTitle()) {
+              <h2 class="config-title">{{ dialogTitle() }}</h2>
+            }
+            <ng-content select="[header-title]"></ng-content>
+            @if (subtitle()) {
+              <p class="config-subtitle" [innerHTML]="subtitle() | safeHtmlPipe"></p>
+            }
+            <ng-content select="[subtitle]"></ng-content>
+          </div>
+          <div class="header-menu-container">
+            <div class="header-menu">
+              <ng-content select="[header-button]"></ng-content>
+            </div>
+            <button mat-icon-button [mat-dialog-close] class="close-button" aria-label="Close dialog">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+        </header>
+      }
+    }
 
     <ng-content></ng-content>
 
-    @if (footerType === 'permission-check') {
+    @if (footerType() === 'permission-check') {
       <app-footer
-        [type]="type"
-        [param]="param"
-        [grantedMessage]="grantedMessage"
-        [deniedMessage]="deniedMessage"
+        [type]="type()"
+        [param]="param()"
+        [grantedMessage]="grantedMessage()"
+        [deniedMessage]="deniedMessage()"
         (onPermissionChange)="onPermissionChange.emit($event)"
       >
-        <ng-container *ngTemplateOutlet="actionsTemplate" footer-buttons></ng-container>
+        @if (actionsTemplate(); as tpl) {
+          <ng-container *ngTemplateOutlet="tpl" footer-buttons></ng-container>
+        }
       </app-footer>
     }
 
-    @if (footerType === 'normal') {
+    @if (footerType() === 'normal') {
       <footer class="config-footer">
         <mat-dialog-actions align="end">
-          <ng-container *ngTemplateOutlet="actionsTemplate"></ng-container>
+          @if (actionsTemplate(); as tpl) {
+            <ng-container *ngTemplateOutlet="tpl"></ng-container>
+          }
         </mat-dialog-actions>
       </footer>
     }

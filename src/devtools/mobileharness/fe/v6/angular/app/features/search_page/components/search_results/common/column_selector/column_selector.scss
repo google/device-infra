@@ -26,67 +26,36 @@
     )
   );
 
-  ::ng-deep {
-    .mat-mdc-checkbox {
-      --mdc-checkbox-selected-icon-color: #0b57d0;
-      --mdc-checkbox-selected-checkmark-color: #fff;
-      --mdc-checkbox-selected-hover-icon-color: #0b57d0;
-      --mdc-checkbox-selected-focus-icon-color: #0b57d0;
-      --mdc-checkbox-selected-hover-state-layer-color: #0b57d0;
-      --mdc-checkbox-selected-focus-state-layer-color: #0b57d0;
-      --mdc-checkbox-selected-pressed-state-layer-color: #0b57d0;
-      --mdc-checkbox-unselected-icon-color: #747775;
-      --mdc-checkbox-unselected-hover-icon-color: #1f1f1f;
-      --mdc-checkbox-unselected-focus-icon-color: #1f1f1f;
-      --mdc-checkbox-disabled-selected-icon-color: #9aa0a6;
-      --mdc-checkbox-disabled-selected-checkmark-color: #fff;
-      --mdc-checkbox-disabled-unselected-icon-color: #c4c7c5;
-      --mdc-checkbox-state-layer-size: 36px;
-    }
+  ::ng-deep .config-header {
+    .header-menu-container {
+      height: 28px;
 
-    .config-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-
-      .header-title-container {
-        display: flex;
-        align-items: center;
+      .header-menu:empty {
+        display: none;
       }
 
-      .header-menu-container {
+      .close-button {
+        width: 28px;
         height: 28px;
-        display: flex;
+        min-width: 28px;
+        min-height: 28px;
+        padding: 0;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
+        border-radius: 50%;
+        line-height: 1;
+        box-sizing: border-box;
 
-        .header-menu:empty {
-          display: none;
-        }
-
-        .close-button {
-          width: 28px;
-          height: 28px;
-          min-width: 28px;
-          min-height: 28px;
-          padding: 0;
-          display: inline-flex;
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+          line-height: 20px;
+          display: flex;
           align-items: center;
           justify-content: center;
-          border-radius: 50%;
-          line-height: 1;
-          box-sizing: border-box;
-
-          mat-icon {
-            font-size: 20px;
-            width: 20px;
-            height: 20px;
-            line-height: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0;
-          }
+          margin: 0;
         }
       }
     }

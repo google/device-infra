@@ -1,4 +1,4 @@
-import {CommonModule} from '@angular/common';
+import {DecimalPipe} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -10,23 +10,9 @@ import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatIconModule} from '@angular/material/icon';
 
 import {Column, FleetGroup, Row} from '../../../../../core/models/search';
+import {GroupPageState} from '../../../models';
 import {SearchCellComponent} from '../common/search_cell/search_cell';
 import {SearchPaginationComponent} from '../common/search_pagination/search_pagination';
-
-/** Data state structure for an expanded group card page. */
-export interface GroupPageState {
-  readonly loading?: boolean;
-  readonly error?: string;
-  readonly data?: {
-    readonly rows?: Row[];
-    readonly columns?: Column[];
-    readonly rangeStart?: number;
-    readonly rangeEnd?: number;
-    readonly total?: number;
-    readonly prevPageToken?: string;
-    readonly nextPageToken?: string;
-  };
-}
 
 /** Standalone component representing a single expandable group card in grouped results view. */
 @Component({
@@ -36,7 +22,7 @@ export interface GroupPageState {
   styleUrl: './fleet_group_card.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
+    DecimalPipe,
     MatCheckboxModule,
     MatIconModule,
     SearchCellComponent,
@@ -117,9 +103,7 @@ export class FleetGroupCardComponent {
   );
 
   /** Whether the expanded group has rows to display. */
-  readonly hasGroupRows = computed<boolean>(
-    () => this.groupRows().length > 0,
-  );
+  readonly hasGroupRows = computed<boolean>(() => this.groupRows().length > 0);
 
   /** Effective columns for the inner table (from state or default fallback). */
   readonly innerColumns = computed<Column[]>(() => {

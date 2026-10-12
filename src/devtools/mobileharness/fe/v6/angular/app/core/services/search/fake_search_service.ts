@@ -11,6 +11,12 @@ import {
   FleetColumnCatalogRequest,
   FleetColumnCatalogResponse,
   FleetColumnCatalogSection,
+  FleetFilterKeyCatalogRequest,
+  FleetFilterKeyCatalogResponse,
+  FleetFilterKeySection,
+  FleetGroupByKeyCatalogRequest,
+  FleetGroupByKeyCatalogResponse,
+  FleetGroupByKeySection,
   FleetPromotedKeysRequest,
   FleetPromotedKeysResponse,
   FleetSearchConfig,
@@ -38,10 +44,15 @@ import {
 } from '../../models/search';
 import {
   MOCK_FLEET_COLUMN_CATALOG,
+  MOCK_FLEET_FILTER_KEY_SECTIONS,
+  MOCK_FLEET_GROUP_BY_KEY_SECTIONS,
+  MOCK_FLEET_HOST_COLUMN_DEFAULTS,
   MOCK_FLEET_PROMOTED_KEYS,
   MOCK_FLEET_SEARCH_CONFIG,
   MOCK_FLEET_SEARCH_RESULTS_DEVICE,
   MOCK_FLEET_SEARCH_RESULTS_HOST,
+  MOCK_FLEET_SUGGESTION_DEFAULT_KEYS,
+  MOCK_FLEET_SUGGESTION_KNOWN_VALUES,
   MOCK_FLEET_VALUE_LIST_DEFAULT,
   MOCK_FLEET_VALUE_LIST_MODEL,
   MOCK_FLEET_VALUE_LIST_OWNER,
@@ -82,14 +93,7 @@ export class FakeSearchService extends SearchService {
   ): Observable<FleetSearchConfig> {
     const isHost = request.entity === SearchEntity.SEARCH_ENTITY_HOST;
     const defaults = isHost
-      ? [
-          {key: 'id', displayName: 'Host Name', locked: true},
-          {key: 'hostName', displayName: 'Host Name'},
-          {key: 'status', displayName: 'Status'},
-          {key: 'type', displayName: 'OS / Type'},
-          {key: 'owner', displayName: 'Owner'},
-          {key: 'model', displayName: 'Lab Type'},
-        ]
+      ? MOCK_FLEET_HOST_COLUMN_DEFAULTS
       : MOCK_FLEET_SEARCH_CONFIG.columns?.defaults;
 
     const count = isHost
@@ -179,48 +183,29 @@ export class FakeSearchService extends SearchService {
     const activeKeys = new Set(activeFilters.map((f) => f.key.toLowerCase()));
 
     if (!input) {
-      const keys = [
-        {key: 'field::status', name: 'Status', isPlural: false},
-        {key: 'dim::model', name: 'Model', isPlural: false},
-        {key: 'field::type', name: 'Type', isPlural: true},
-        {key: 'field::owners', name: 'Owner', isPlural: true},
-        {key: 'dim::pool', name: 'Pool', isPlural: false},
-        {key: 'host::host_name', name: 'Host Name', isPlural: false},
-        {key: 'field::quarantined', name: 'Quarantine', isPlural: false},
-        {key: 'dim::os', name: 'OS', isPlural: false},
-      ];
-
-      const items: FleetSuggestion[] = keys.map((k) => {
-        const isActive = activeKeys.has(k.key.toLowerCase());
-        return {
-          label: isActive ? `Modify ${k.name}` : 'Add filter',
-          mainText: [{text: k.name, emphasized: false}],
-          openPicker: {
-            key: k.key,
-            metadata: {
-              keyDisplayName: k.name,
-              canUseAdvanced: true,
-              isPlural: k.isPlural,
+      const items: FleetSuggestion[] = MOCK_FLEET_SUGGESTION_DEFAULT_KEYS.map(
+        (k) => {
+          const isActive = activeKeys.has(k.key.toLowerCase());
+          return {
+            label: isActive ? `Modify ${k.name}` : 'Add filter',
+            mainText: [{text: k.name, emphasized: false}],
+            openPicker: {
+              key: k.key,
+              metadata: {
+                keyDisplayName: k.name,
+                canUseAdvanced: true,
+                isPlural: k.isPlural,
+              },
             },
-          },
-        };
-      });
+          };
+        },
+      );
 
       return of({items});
     }
 
     const items: FleetSuggestion[] = [];
-    const knownValues = [
-      {key: 'dim::model', name: 'Model', val: 'Pixel 8', isPlural: false},
-      {key: 'dim::model', name: 'Model', val: 'Pixel 7', isPlural: false},
-      {key: 'field::status', name: 'Status', val: 'IDLE', isPlural: false},
-      {key: 'field::status', name: 'Status', val: 'BUSY', isPlural: false},
-      {key: 'field::status', name: 'Status', val: 'OFFLINE', isPlural: false},
-      {key: 'field::type', name: 'Type', val: 'ANDROID', isPlural: true},
-      {key: 'field::type', name: 'Type', val: 'IOS', isPlural: true},
-    ];
-
-    for (const kv of knownValues) {
+    for (const kv of MOCK_FLEET_SUGGESTION_KNOWN_VALUES) {
       if (
         kv.val.toLowerCase().includes(input) ||
         kv.name.toLowerCase().includes(input)
@@ -302,7 +287,6 @@ export class FakeSearchService extends SearchService {
             pillKey,
             pillCondition: this.formatFleetFilterCondition(f),
             metadata: {
-              key: f.key,
               keyDisplayName: displayTitle,
               canUseAdvanced: true,
               isPlural: false,
@@ -471,6 +455,68 @@ export class FakeSearchService extends SearchService {
         ...s,
         entries: (s.entries || []).filter(
           (e: FleetColumnCatalogEntry) =>
+            e.displayName.toLowerCase().includes(q) ||
+            e.key.toLowerCase().includes(q),
+        ),
+      }))
+      .filter((s) => s.entries && s.entries.length > 0);
+    return of({sections: filteredSections});
+  }
+
+  override getFleetFilterKeyCatalog(
+    request: FleetFilterKeyCatalogRequest,
+  ): Observable<FleetFilterKeyCatalogResponse> {
+    const appliedKeys = new Set((request.filters || []).map((f) => f.key));
+    const allSections: FleetFilterKeySection[] =
+      MOCK_FLEET_FILTER_KEY_SECTIONS.map((s) => ({
+        ...s,
+        entries: (s.entries || []).map((e) => ({
+          ...e,
+          applied: appliedKeys.has(e.key),
+        })),
+      }));
+
+    if (!request.query) {
+      return of({sections: allSections});
+    }
+
+    const q = request.query.toLowerCase().trim();
+    const filteredSections = allSections
+      .map((s) => ({
+        ...s,
+        entries: (s.entries || []).filter(
+          (e) =>
+            (e.metadata?.keyDisplayName || '').toLowerCase().includes(q) ||
+            e.key.toLowerCase().includes(q),
+        ),
+      }))
+      .filter((s) => s.entries && s.entries.length > 0);
+    return of({sections: filteredSections});
+  }
+
+  override getFleetGroupByKeyCatalog(
+    request: FleetGroupByKeyCatalogRequest,
+  ): Observable<FleetGroupByKeyCatalogResponse> {
+    const appliedKeys = new Set(request.groupBy || []);
+    const allSections: FleetGroupByKeySection[] =
+      MOCK_FLEET_GROUP_BY_KEY_SECTIONS.map((s) => ({
+        ...s,
+        entries: (s.entries || []).map((e) => ({
+          ...e,
+          applied: appliedKeys.has(e.key),
+        })),
+      }));
+
+    if (!request.query) {
+      return of({sections: allSections});
+    }
+
+    const q = request.query.toLowerCase().trim();
+    const filteredSections = allSections
+      .map((s) => ({
+        ...s,
+        entries: (s.entries || []).filter(
+          (e) =>
             e.displayName.toLowerCase().includes(q) ||
             e.key.toLowerCase().includes(q),
         ),

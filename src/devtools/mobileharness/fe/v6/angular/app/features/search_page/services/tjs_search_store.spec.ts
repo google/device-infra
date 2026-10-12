@@ -47,6 +47,11 @@ describe('TjsSearchStore', () => {
     promotedKeys: [
       {key: 'user', displayName: 'User'},
       {key: 'name', displayName: 'Name'},
+      {
+        key: 'create_time',
+        displayName: 'Create Time',
+        timeRange: {},
+      },
     ],
   };
 
@@ -108,7 +113,9 @@ describe('TjsSearchStore', () => {
 
   async function flushAsync(): Promise<void> {
     TestBed.tick();
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise((resolve) => {
+      setTimeout(resolve, 10);
+    });
     TestBed.tick();
   }
 
@@ -251,5 +258,56 @@ describe('TjsSearchStore', () => {
     expect(store.activeChips()).toEqual([]);
     expect(store.searchQuery()).toBe('');
     expect(store.effectiveFilters()).toEqual([]);
+  });
+
+  it('should serialize create_time with cleared to as <val>,<empty>', () => {
+    store.openValuePicker('create_time', null, 'Create Time', {
+      key: 'create_time',
+      keyDisplayName: 'Create Time',
+      timeRange: {},
+    });
+    TestBed.tick();
+
+    store.applyValuePicker({
+      selected: ['From: 2026-10-06T23:35 To: '],
+      negate: false,
+      isAdvanced: false,
+      rangeFrom: '2026-10-06T23:35',
+      rangeTo: '',
+    });
+    TestBed.tick();
+
+    const timeChip = store.activeChips().find((c) => c.key === 'create_time');
+    expect(timeChip).toBeDefined();
+    expect(timeChip?.rawValues).toEqual(['2026-10-06T23:35', '<empty>']);
+
+    const serialized = store.serializedActiveFilters();
+    expect(serialized).toContain('create_time~2026-10-06T23%3A35,<empty>');
+    expect(serialized).not.toContain('create_time~<empty>,2026-10-06T23%3A35');
+  });
+
+  it('should serialize create_time with cleared from as <empty>,<val>', () => {
+    store.openValuePicker('create_time', null, 'Create Time', {
+      key: 'create_time',
+      keyDisplayName: 'Create Time',
+      timeRange: {},
+    });
+    TestBed.tick();
+
+    store.applyValuePicker({
+      selected: ['From:  To: 2026-10-06T23:35'],
+      negate: false,
+      isAdvanced: false,
+      rangeFrom: '',
+      rangeTo: '2026-10-06T23:35',
+    });
+    TestBed.tick();
+
+    const timeChip = store.activeChips().find((c) => c.key === 'create_time');
+    expect(timeChip).toBeDefined();
+    expect(timeChip?.rawValues).toEqual(['<empty>', '2026-10-06T23:35']);
+
+    const serialized = store.serializedActiveFilters();
+    expect(serialized).toContain('create_time~<empty>,2026-10-06T23%3A35');
   });
 });

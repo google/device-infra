@@ -1,0 +1,87 @@
+<app-dialog
+  class="key-picker-dialog"
+  [dialogTitle]="dialogTitle()"
+  width="min(560px, 94vw)"
+  maxWidth="94vw"
+  maxHeight="90vh"
+  footerType="none"
+  (keydown.escape)="close()"
+>
+
+  <div class="kp-searchbar">
+    <mat-icon class="material-symbols-outlined">search</mat-icon>
+    <input
+      #searchInput
+      type="text"
+      placeholder="Search all keys"
+      [value]="query()"
+      (input)="onSearch(searchInput.value)"
+      autocomplete="off"
+    />
+  </div>
+
+  <div class="kp-body">
+    @if (isLoading()) {
+      <div class="kp-empty">Loading keys…</div>
+    } @else if (errorMessage()) {
+      <div class="error-banner" role="alert">
+        <mat-icon aria-hidden="true">error_outline</mat-icon>
+        <span class="error-message">{{ errorMessage() }}</span>
+        <button
+          mat-button
+          type="button"
+          class="retry-btn"
+          [disabled]="isLoading()"
+          [attr.aria-busy]="isLoading()"
+          aria-label="Retry loading keys"
+          (click)="retry()"
+        >
+          <mat-icon class="material-symbols-outlined" [class.spin-animation]="isLoading()" aria-hidden="true">refresh</mat-icon>
+          <span>Retry</span>
+        </button>
+      </div>
+    } @else if (currentSections().length === 0) {
+      <div class="kp-empty">
+        @if (query().trim()) {
+          No key matches “{{ query() }}”
+        } @else {
+          No keys available
+        }
+      </div>
+    } @else {
+      @for (section of currentSections(); track section.heading) {
+        @if (section.entries.length > 0) {
+          <section class="kp-section">
+            <h3 class="kp-head">
+              <span>{{ section.heading }}</span>
+              @if (section.hasMore) {
+                <span class="kp-hint">showing top {{ section.entries.length }} of {{ section.totalAvailable | number }}</span>
+              }
+            </h3>
+            @for (entry of section.entries; track entry.key) {
+              <div
+                class="kp-row"
+                [class.kp-applied]="entry.applied"
+                [class.kp-inert]="entry.inert"
+                role="button"
+                [attr.tabindex]="entry.inert ? -1 : 0"
+                [attr.aria-disabled]="entry.inert"
+                (click)="onPick(entry)"
+                (keydown.enter)="onPick(entry)"
+                (keydown.space)="$event.preventDefault(); onPick(entry)"
+              >
+                <span class="kp-row-name">{{ entry.name }}</span>
+                @if (entry.meta) {
+                  <span class="kp-row-meta">{{ entry.meta }}</span>
+                }
+              </div>
+            }
+            @if (section.hasMore) {
+              <div class="kp-more">Search above to find more</div>
+            }
+          </section>
+        }
+      }
+    }
+  </div>
+</app-dialog>

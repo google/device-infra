@@ -121,8 +121,8 @@
                   <span class="cs-row-name" [title]="entry.displayName">{{ entry.displayName }}</span>
                   @if (entry.reason) {
                     <span class="cs-row-meta cs-row-reason">{{ entry.reason }}</span>
-                  } @else if (entry.deviceCount) {
-                    <span class="cs-row-meta">{{ entry.deviceCount | number }} {{ entityUnit() }}</span>
+                  } @else if (entry.coverage?.shown; as shown) {
+                    <span class="cs-row-meta">{{ shown.count | number }} {{ entityUnit() }}</span>
                   }
                 </label>
               }

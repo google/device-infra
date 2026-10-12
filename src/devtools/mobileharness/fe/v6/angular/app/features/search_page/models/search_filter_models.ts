@@ -3,6 +3,7 @@ import {
   EnumPicker,
   Filter,
   FleetFilterChipMetadata,
+  FleetPromotedGroupByKey,
   NamedPairPicker,
   TextInputPicker,
   TimeRangePicker,
@@ -49,15 +50,12 @@ export interface FilterChip extends ChipMetadata {
 /** Promoted preset filter key item. */
 export interface PromotedFilterKeyItem {
   key: string;
+  displayName: string;
   metadata?: FilterKeyMetadata;
 }
 
 /** Promoted preset group-by key item. */
-export interface PromotedGroupByKeyItem {
-  key: string;
-  displayName: string;
-  groupCount?: number;
-}
+export type PromotedGroupByKeyItem = FleetPromotedGroupByKey;
 
 /** Pair binding a FilterChip with its converted backend Protobuf filter contract. */
 export interface FilterPair<TFilter> {
@@ -71,3 +69,6 @@ export interface ParsedUrlQueryChips {
   groupByKeys: string[];
   initialChips: FilterChip[];
 }
+
+/** Maximum number of group-by keys allowed concurrently in the search table. */
+export const MAX_GROUP_BY_KEYS = 3;

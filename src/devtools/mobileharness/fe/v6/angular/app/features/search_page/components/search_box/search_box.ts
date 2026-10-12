@@ -1,4 +1,3 @@
-import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -6,10 +5,11 @@ import {
   viewChild,
 } from '@angular/core';
 
+import {HeaderSearchDockDirective} from '../../../../shared/directives/header_search_dock/header_search_dock';
 import {SearchPageStore} from '../../services/search_page_store';
+import {FilterValuePicker} from '../filter_value_picker/filter_value_picker';
 import {FilterPresets} from './filter_presets/filter_presets';
 import {SearchInput} from './search_input/search_input';
-import {FilterValuePicker} from '../filter_value_picker/filter_value_picker';
 
 /** Compound component assembling search input, filter presets, and filter value picker. */
 @Component({
@@ -19,7 +19,7 @@ import {FilterValuePicker} from '../filter_value_picker/filter_value_picker';
   styleUrl: './search_box.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
+    HeaderSearchDockDirective,
     FilterPresets,
     SearchInput,
     FilterValuePicker,
@@ -27,7 +27,6 @@ import {FilterValuePicker} from '../filter_value_picker/filter_value_picker';
 })
 export class SearchBox {
   readonly store = inject(SearchPageStore);
-
   readonly searchInputComponent = viewChild(SearchInput);
 
   /** Delegates focus to the underlying SearchInput component. */

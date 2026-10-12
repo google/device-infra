@@ -1,5 +1,8 @@
 import {
+  Column,
   FleetColumnCatalogResponse,
+  FleetFilterKeySection,
+  FleetGroupByKeySection,
   FleetPromotedKeysResponse,
   FleetSearchConfig,
   FleetSearchResults,
@@ -230,10 +233,10 @@ export const MOCK_FLEET_PROMOTED_KEYS: FleetPromotedKeysResponse = {
     },
   ],
   groupByKeys: [
-    {key: 'status', displayName: 'Status', groupCount: 4},
-    {key: 'model', displayName: 'Model', groupCount: 15},
-    {key: 'type', displayName: 'Type', groupCount: 3},
-    {key: 'pool', displayName: 'Pool', groupCount: 8},
+    {key: 'status', displayName: 'Status'},
+    {key: 'model', displayName: 'Model'},
+    {key: 'type', displayName: 'Type'},
+    {key: 'pool', displayName: 'Pool'},
   ],
 };
 
@@ -256,40 +259,92 @@ export const MOCK_FLEET_COLUMN_CATALOG: FleetColumnCatalogResponse = {
       heading: 'Built-in fields',
       totalAvailable: 6,
       entries: [
-        {key: 'field::uuid', displayName: 'Device ID', deviceCount: 14},
-        {key: 'field::status', displayName: 'Status', deviceCount: 14},
-        {key: 'field::type', displayName: 'Device Type', deviceCount: 14},
-        {key: 'field::owner', displayName: 'Owner', deviceCount: 14},
-        {key: 'host::host_name', displayName: 'Host Name', deviceCount: 14},
-        {key: 'host::ip', displayName: 'IP Address', deviceCount: 12},
+        {
+          key: 'field::uuid',
+          displayName: 'Device ID',
+          coverage: {notShown: {}},
+        },
+        {
+          key: 'field::status',
+          displayName: 'Status',
+          coverage: {notShown: {}},
+        },
+        {
+          key: 'field::type',
+          displayName: 'Device Type',
+          coverage: {notShown: {}},
+        },
+        {
+          key: 'field::owner',
+          displayName: 'Owner',
+          coverage: {notShown: {}},
+        },
+        {
+          key: 'host::host_name',
+          displayName: 'Host Name',
+          coverage: {notShown: {}},
+        },
+        {
+          key: 'host::ip',
+          displayName: 'IP Address',
+          coverage: {notShown: {}},
+        },
       ],
     },
     {
       heading: 'Dimensions',
       totalAvailable: 24,
       entries: [
-        {key: 'dim::model', displayName: 'Model', deviceCount: 14},
-        {key: 'dim::sdk_version', displayName: 'SDK Version', deviceCount: 13},
-        {key: 'dim::hardware', displayName: 'Hardware', deviceCount: 14},
-        {key: 'dim::pool', displayName: 'Pool', deviceCount: 10},
+        {
+          key: 'dim::model',
+          displayName: 'Model',
+          coverage: {shown: {count: 14}},
+        },
+        {
+          key: 'dim::sdk_version',
+          displayName: 'SDK Version',
+          coverage: {shown: {count: 13}},
+        },
+        {
+          key: 'dim::hardware',
+          displayName: 'Hardware',
+          coverage: {shown: {count: 14}},
+        },
+        {
+          key: 'dim::pool',
+          displayName: 'Pool',
+          coverage: {shown: {count: 10}},
+        },
         {
           key: 'dim::product_board',
           displayName: 'Product Board',
-          deviceCount: 14,
+          coverage: {shown: {count: 14}},
         },
-        {key: 'dim::sim_state', displayName: 'SIM State', deviceCount: 9},
+        {
+          key: 'dim::sim_state',
+          displayName: 'SIM State',
+          coverage: {shown: {count: 9}},
+        },
       ],
     },
     {
       heading: 'Host properties',
       totalAvailable: 8,
       entries: [
-        {key: 'host::location', displayName: 'Lab Location', deviceCount: 14},
-        {key: 'host::ip', displayName: 'Host IP', deviceCount: 14},
+        {
+          key: 'host::location',
+          displayName: 'Lab Location',
+          coverage: {notShown: {}},
+        },
+        {
+          key: 'host::ip',
+          displayName: 'Host IP',
+          coverage: {notShown: {}},
+        },
         {
           key: 'host::version',
           displayName: 'Lab Server Version',
-          deviceCount: 14,
+          coverage: {notShown: {}},
         },
       ],
     },
@@ -389,3 +444,163 @@ export const MOCK_FLEET_VALUE_LIST_PLAIN: FleetValueListResponse = {
     ],
   },
 };
+
+/** Default column configurations for host search. */
+export const MOCK_FLEET_HOST_COLUMN_DEFAULTS: Column[] = [
+  {key: 'id', displayName: 'Host Name'},
+  {key: 'hostName', displayName: 'Host Name'},
+  {key: 'status', displayName: 'Status'},
+  {key: 'type', displayName: 'OS / Type'},
+  {key: 'owner', displayName: 'Owner'},
+  {key: 'model', displayName: 'Lab Type'},
+];
+
+/** Default keys for empty input fleet suggestions. */
+export const MOCK_FLEET_SUGGESTION_DEFAULT_KEYS: Array<{
+  key: string;
+  name: string;
+  isPlural: boolean;
+}> = [
+  {key: 'field::status', name: 'Status', isPlural: false},
+  {key: 'dim::model', name: 'Model', isPlural: false},
+  {key: 'field::type', name: 'Type', isPlural: true},
+  {key: 'field::owners', name: 'Owner', isPlural: true},
+  {key: 'dim::pool', name: 'Pool', isPlural: false},
+  {key: 'host::host_name', name: 'Host Name', isPlural: false},
+  {key: 'field::quarantined', name: 'Quarantine', isPlural: false},
+  {key: 'dim::os', name: 'OS', isPlural: false},
+];
+
+/** Predefined known key-values for autocomplete matching in fleet suggestions. */
+export const MOCK_FLEET_SUGGESTION_KNOWN_VALUES: Array<{
+  key: string;
+  name: string;
+  val: string;
+  isPlural: boolean;
+}> = [
+  {key: 'dim::model', name: 'Model', val: 'Pixel 8', isPlural: false},
+  {key: 'dim::model', name: 'Model', val: 'Pixel 7', isPlural: false},
+  {key: 'field::status', name: 'Status', val: 'IDLE', isPlural: false},
+  {key: 'field::status', name: 'Status', val: 'BUSY', isPlural: false},
+  {key: 'field::status', name: 'Status', val: 'OFFLINE', isPlural: false},
+  {key: 'field::type', name: 'Type', val: 'ANDROID', isPlural: true},
+  {key: 'field::type', name: 'Type', val: 'IOS', isPlural: true},
+];
+
+/** Mock sections for filter key catalog. */
+export const MOCK_FLEET_FILTER_KEY_SECTIONS: FleetFilterKeySection[] = [
+  {
+    heading: 'Built-in fields',
+    entries: [
+      {
+        key: 'field::status',
+        metadata: {keyDisplayName: 'Device Status'},
+        coverage: {notShown: {}},
+      },
+      {
+        key: 'field::model',
+        metadata: {keyDisplayName: 'Model'},
+        coverage: {notShown: {}},
+      },
+      {
+        key: 'field::owner',
+        metadata: {keyDisplayName: 'Owner'},
+        coverage: {notShown: {}},
+      },
+      {
+        key: 'field::type',
+        metadata: {keyDisplayName: 'Type'},
+        coverage: {notShown: {}},
+      },
+    ],
+  },
+  {
+    heading: 'Dimensions',
+    entries: [
+      {
+        key: 'dim::battery_level',
+        metadata: {keyDisplayName: 'Battery Level'},
+        coverage: {shown: {count: 850}},
+      },
+      {
+        key: 'dim::os_version',
+        metadata: {keyDisplayName: 'OS Version'},
+        coverage: {shown: {count: 1200}},
+      },
+      {
+        key: 'dim::label',
+        metadata: {keyDisplayName: 'Label'},
+        coverage: {shown: {count: 450}},
+      },
+      {
+        key: 'dim::carrier',
+        metadata: {keyDisplayName: 'Carrier'},
+        coverage: {shown: {count: 320}},
+      },
+    ],
+  },
+  {
+    heading: 'Host properties',
+    entries: [
+      {
+        key: 'host::ats_controller',
+        metadata: {keyDisplayName: 'ATS Controller'},
+        coverage: {shown: {count: 140}},
+      },
+      {
+        key: 'host::lab_type',
+        metadata: {keyDisplayName: 'Lab Type'},
+        coverage: {shown: {count: 980}},
+      },
+    ],
+  },
+];
+
+/** Mock sections for group-by key catalog. */
+export const MOCK_FLEET_GROUP_BY_KEY_SECTIONS: FleetGroupByKeySection[] = [
+  {
+    heading: 'Built-in fields',
+    entries: [
+      {
+        key: 'field::status',
+        displayName: 'Device Status',
+        groupCount: {shown: {count: 4}},
+      },
+      {
+        key: 'field::model',
+        displayName: 'Model',
+        groupCount: {shown: {count: 28}},
+      },
+    ],
+  },
+  {
+    heading: 'Dimensions',
+    entries: [
+      {
+        key: 'dim::os_version',
+        displayName: 'OS Version',
+        groupCount: {shown: {count: 12}},
+      },
+      {
+        key: 'dim::carrier',
+        displayName: 'Carrier',
+        groupCount: {shown: {count: 6}},
+      },
+    ],
+  },
+  {
+    heading: 'Host properties',
+    entries: [
+      {
+        key: 'host::ats_controller',
+        displayName: 'ATS Controller',
+        groupCount: {shown: {count: 8}},
+      },
+      {
+        key: 'host::lab_type',
+        displayName: 'Lab Type',
+        groupCount: {shown: {count: 3}},
+      },
+    ],
+  },
+];

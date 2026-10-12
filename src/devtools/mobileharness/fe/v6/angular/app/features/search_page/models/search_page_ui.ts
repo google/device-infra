@@ -1,13 +1,23 @@
 import {
-  FleetColumnConfig,
-  FleetLandingConfig,
+  FleetAddGroupBy,
+  FleetFlatResults,
+  FleetOpenPicker,
+  FleetSearchConfig,
+  FleetSuggestion,
+  OpenTjsPicker,
   TextSegment,
-  TjsDefaultChip,
-  TjsPromotedKey,
+  TjsSearchConfig,
+  TjsSuggestion,
 } from '../../../core/models/search';
 
 /** Supported entity category names for search views. */
 export type EntityType = 'devices' | 'hosts' | 'tests' | 'jobs' | 'sessions';
+
+/** Supported fleet operational scope partitions. */
+export type FleetScope = 'internal' | 'ats';
+
+/** Density option type for search results table rows. */
+export type TableDensity = 'compact' | 'default' | 'comfortable';
 
 /** Suggestion item entry rendered in the search box suggestion popover. */
 export interface SearchBoxSuggestion {
@@ -17,14 +27,18 @@ export interface SearchBoxSuggestion {
   countPrefix?: string;
   countUnit?: string;
   overMax?: boolean;
-  rawItem?: unknown;
+  openPicker?: FleetOpenPicker | OpenTjsPicker;
+  addGroupBy?: FleetAddGroupBy;
+  rawItem?: FleetSuggestion | TjsSuggestion;
 }
 
 /** Unified configuration options for initializing the search page. */
-export interface SearchPageConfig {
-  columns?: FleetColumnConfig;
-  landing?: FleetLandingConfig;
-  entityLabel?: string;
-  defaultChips?: TjsDefaultChip[];
-  promotedKeys?: TjsPromotedKey[];
+export type SearchPageConfig = Partial<FleetSearchConfig> &
+  Partial<TjsSearchConfig>;
+
+/** Data state structure for an expanded group card page. */
+export interface GroupPageState {
+  readonly loading?: boolean;
+  readonly error?: string;
+  readonly data?: FleetFlatResults;
 }

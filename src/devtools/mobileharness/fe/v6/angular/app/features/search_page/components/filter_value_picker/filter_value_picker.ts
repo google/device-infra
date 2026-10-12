@@ -3,7 +3,7 @@ import {
   CdkVirtualScrollViewport,
   ScrollingModule,
 } from '@angular/cdk/scrolling';
-import {CommonModule} from '@angular/common';
+import {DecimalPipe, NgTemplateOutlet} from '@angular/common';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -20,7 +20,7 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
 
 import {TooltipIfTruncatedDirective} from '../../../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
-import {AdvancedMatchMode, PickerValueItem} from '../../models';
+import {AdvancedMatchMode, DateRangeState, PickerValueItem} from '../../models';
 import {SearchPageStore} from '../../services/search_page_store';
 import {
   buildDisplayValues,
@@ -43,7 +43,8 @@ import {AdvancedMatchView} from './advanced_match_view/advanced_match_view';
   styleUrl: './filter_value_picker.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
+    DecimalPipe,
+    NgTemplateOutlet,
     FormsModule,
     OverlayModule,
     MatButtonModule,
@@ -132,7 +133,7 @@ export class FilterValuePicker {
   readonly advValues = linkedSignal(() => this.state().advanced?.values || []);
 
   /** Parsed date range state object for date-range picker type. */
-  readonly rangeState = linkedSignal(() =>
+  readonly rangeState = linkedSignal<DateRangeState>(() =>
     parseDateRange(this.state().selectedValues),
   );
   /** 'From' timestamp string for date-range picker type. */
@@ -171,7 +172,6 @@ export class FilterValuePicker {
   });
   /** Whether the candidate items are plain values without count columns. */
   readonly isPlain = computed(() => {
-    if (this.config()?.valuesType === 'plain') return true;
     const list = this.state().values || [];
     return (
       list.length > 0 &&
@@ -259,14 +259,23 @@ export class FilterValuePicker {
     CdkVirtualScrollViewport,
   );
 
+  /** Memoized base display values combining candidate items with selected custom inputs. */
+  private readonly baseDisplayValues = computed(() =>
+    buildDisplayValues(
+      this.state().values || [],
+      this.selectedSet(),
+      this.isPlain(),
+      !!this.state().loading,
+    ),
+  );
+
   /** Filtered and sorted candidate value items for list view. */
   readonly displayList = computed(() =>
     computeFilteredAndSortedValues({
-      items: this.state().values || [],
+      items: this.baseDisplayValues(),
       query: this.searchQuery(),
       sortBy: this.sortBy(),
       sortAsc: this.sortAsc(),
-      selectedValues: this.selectedSet(),
       isPlain: this.isPlain(),
       isLoading: !!this.state().loading,
     }),
@@ -280,20 +289,14 @@ export class FilterValuePicker {
   });
 
   /** Pinned selected items pinned to top when list exceeds threshold. */
-  readonly pinnedValues = computed(() => {
-    const allItems = buildDisplayValues(
-      this.state().values || [],
-      this.selectedSet(),
-      this.isPlain(),
-      !!this.state().loading,
-    );
-    return computePinnedValues(
-      allItems,
+  readonly pinnedValues = computed(() =>
+    computePinnedValues(
+      this.baseDisplayValues(),
       this.selectedSet(),
       this.searchQuery(),
       !!this.state().loading,
-    );
-  });
+    ),
+  );
 
   /** Whether "Add custom input" row should be displayed while loading. */
   readonly showAddRow = computed(() => {
@@ -416,7 +419,6 @@ export class FilterValuePicker {
       isAdvanced: isAdv,
       negated: isAdv ? false : this.isNegated(),
       selectedSet: this.selectedSet(),
-      searchQuery: this.searchQuery(),
       advMode: this.advMode(),
       advText: this.advText(),
       advValues: this.advValues(),

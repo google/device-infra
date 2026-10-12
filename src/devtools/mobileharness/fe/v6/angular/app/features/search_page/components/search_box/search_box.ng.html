@@ -1,5 +1,9 @@
 <div class="comp-area">
-  <app-search-input></app-search-input>
+  <div class="body-search-dock">
+    <app-search-input
+      [headerSearchDock]="!store.isLandingState()"
+    ></app-search-input>
+  </div>
   <app-filter-presets></app-filter-presets>
   <app-filter-value-picker></app-filter-value-picker>
 </div>

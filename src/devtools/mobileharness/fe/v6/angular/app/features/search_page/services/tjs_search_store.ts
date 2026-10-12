@@ -8,6 +8,7 @@ import {Observable, of} from 'rxjs';
 import {catchError, filter, map, switchMap, take} from 'rxjs/operators';
 import {
   Column,
+  FleetSuggestion,
   Row,
   TjsFilter,
   TjsPromotedKey,
@@ -32,11 +33,12 @@ import {
   ValuePickerState,
 } from '../models';
 import {
+  areFilterArraysEqual,
   buildResolvedFilterChips,
+  EMPTY_FILTER_VALUE,
   extractFilterChipFromTjsSuggestion,
   extractRawValuesFromTjsFilter,
   getChipKey,
-  mapToSearchBoxSuggestion,
   pacificToUtc,
   resolveInitialChips,
   toTjsEntityProto,
@@ -96,13 +98,12 @@ export class TjsSearchStore extends SearchPageStore {
     | undefined
   >({
     params: () => {
-      if (!this.isCurrentRouteActive()) return undefined;
-      const show = this.showSuggestions();
-      if (!show) return undefined;
+      const input = this.getActiveSuggestionInput();
+      if (input === null) return undefined;
 
       return {
         entity: this.entity(),
-        input: this.debouncedSearchQuery(),
+        input,
         filters: this.effectiveFilters(),
       };
     },
@@ -121,12 +122,15 @@ export class TjsSearchStore extends SearchPageStore {
     },
   });
 
-  /** Mapped search suggestions for SearchBox popover consumption. */
-  override readonly suggestions = computed<SearchBoxSuggestion[]>(() => {
-    return (this.suggestionsResource.value() || []).map(
-      mapToSearchBoxSuggestion,
-    );
-  });
+  /** Mapped search suggestions for SearchBox popover consumption directly from the BFF response. */
+  override readonly suggestions = computed<SearchBoxSuggestion[]>(() =>
+    this.mapSuggestions(this.suggestionsResource.value()),
+  );
+
+  /** Whether autocomplete suggestions are currently being fetched or debounced. */
+  override readonly isSuggestionsLoading = computed<boolean>(() =>
+    this.computeSuggestionsLoading(this.suggestionsResource.isLoading()),
+  );
 
   // ===========================================================================
   // 2. Page Configuration & Metadata Resources
@@ -247,33 +251,23 @@ export class TjsSearchStore extends SearchPageStore {
     () => {
       const cfg = this.searchConfig();
       if (!cfg?.promotedKeys) return [];
-      return cfg.promotedKeys.map((pk: TjsPromotedKey) => ({
-        key: pk.key,
-        metadata: {
-          ...pk,
+      return cfg.promotedKeys.map((pk: TjsPromotedKey) => {
+        const displayName = pk.displayName || pk.key;
+        return {
           key: pk.key,
-          keyDisplayName: pk.displayName || pk.key,
-        },
-      }));
+          displayName,
+          metadata: {
+            ...pk,
+            keyDisplayName: displayName,
+          },
+        };
+      });
     },
   );
 
   /** Dynamic dictionary map containing metadata for all known filter keys. */
   override readonly keyMetadataMap = computed<Map<string, FilterKeyMetadata>>(
-    () => {
-      const nextMap = new Map<string, FilterKeyMetadata>();
-      const cfg = this.searchConfig();
-      if (cfg?.promotedKeys) {
-        for (const pk of cfg.promotedKeys) {
-          nextMap.set(pk.key, {
-            ...pk,
-            key: pk.key,
-            keyDisplayName: pk.displayName || pk.key,
-          });
-        }
-      }
-      return nextMap;
-    },
+    () => new Map(this.promotedFilterKeys().map((k) => [k.key, k.metadata!])),
   );
 
   // ===========================================================================
@@ -365,13 +359,7 @@ export class TjsSearchStore extends SearchPageStore {
       this.activeChips()
         .map((chip) => this.buildTjsFilterFromChip(chip))
         .filter(Boolean) as TjsFilter[],
-    {
-      equal: (a, b) => {
-        if (a === b) return true;
-        if (a.length !== b.length) return false;
-        return JSON.stringify(a) === JSON.stringify(b);
-      },
-    },
+    {equal: areFilterArraysEqual},
   );
 
   /** Maps FilterChip to TjsFilter Protobuf payload. */
@@ -382,80 +370,35 @@ export class TjsSearchStore extends SearchPageStore {
     const rawKey = chip.key || chip.pillKey;
     if (!rawKey) return null;
 
-    if (this.searchConfig() && !this.getKeyMetadata(rawKey)) {
+    const meta = chip.metadata || this.getKeyMetadata(rawKey);
+    if (this.searchConfig() && !meta) {
       return null;
     }
 
-    const meta =
-      chip.metadata ||
-      this.getKeyMetadata(chip.key) ||
-      this.getKeyMetadata(chip.pillKey);
-
     if (meta?.timeRange) {
-      const fromStr = chip.rawValues?.[0] || '';
-      const toStr = chip.rawValues?.[1] || '';
-      const isoFrom = pacificToUtc(fromStr) || undefined;
-      const isoTo = pacificToUtc(toStr) || undefined;
-
-      if (!isoFrom && !isoTo) {
-        return null;
-      }
-
-      return {
-        key: rawKey,
-        timeRange: {
-          from: isoFrom,
-          to: isoTo,
-        },
-      };
+      const parseTime = (v?: string) =>
+        v && v !== EMPTY_FILTER_VALUE
+          ? pacificToUtc(v) || undefined
+          : undefined;
+      const from = parseTime(chip.rawValues?.[0]);
+      const to = parseTime(chip.rawValues?.[1]);
+      return from || to ? {key: rawKey, timeRange: {from, to}} : null;
     }
 
     if (meta?.namedPair) {
-      const name = (chip.rawValues?.[0] || '').trim();
-      const value = (chip.rawValues?.[1] || '').trim();
-      if (!name || !value) return null;
-      return {
-        key: rawKey,
-        namedValue: {
-          name,
-          value,
-        },
-      };
+      const name = chip.rawValues?.[0]?.trim();
+      const value = chip.rawValues?.[1]?.trim();
+      return name && value ? {key: rawKey, namedValue: {name, value}} : null;
     }
 
     if (meta?.enumPicker) {
-      const vals =
-        chip.rawValues && chip.rawValues.length > 0 ? chip.rawValues : [];
-      if (vals.length === 0) return null;
-      return {
-        key: rawKey,
-        enumValues: {
-          values: vals,
-        },
-      };
+      const values = chip.rawValues?.filter(Boolean) ?? [];
+      return values.length > 0 ? {key: rawKey, enumValues: {values}} : null;
     }
 
-    if (chip.rawValues && chip.rawValues.length > 0) {
-      const validVals = chip.rawValues.filter(Boolean);
-      if (validVals.length === 0) return null;
-      return {
-        key: rawKey,
-        stringValue: {
-          value: validVals.join(','),
-        },
-      };
-    }
-
-    if (chip.pillCondition) {
-      return {
-        key: rawKey,
-        stringValue: {
-          value: chip.pillCondition,
-        },
-      };
-    }
-
-    return null;
+    const rawValStr =
+      chip.rawValues?.filter(Boolean).join(',') || chip.pillCondition?.trim();
+    return rawValStr ? {key: rawKey, stringValue: {value: rawValStr}} : null;
   }
 
   // ===========================================================================
@@ -577,9 +520,9 @@ export class TjsSearchStore extends SearchPageStore {
   protected override buildPickerConfig(
     key: string,
     title?: string,
-    metadata?: unknown,
+    metadata?: FilterKeyMetadata,
   ): ValuePickerConfig {
-    const meta = (metadata as FilterKeyMetadata) || this.getKeyMetadata(key);
+    const meta = metadata || this.getKeyMetadata(key);
     const displayTitle = meta?.keyDisplayName || title || key;
 
     const namedPair =
@@ -624,10 +567,10 @@ export class TjsSearchStore extends SearchPageStore {
   protected override buildInitialPickerState(
     key: string,
     activeChip?: FilterChip,
-    metadata?: unknown,
+    metadata?: FilterKeyMetadata,
     stagedValues?: string[],
   ): ValuePickerState {
-    const meta = (metadata as FilterKeyMetadata) || this.getKeyMetadata(key);
+    const meta = metadata || this.getKeyMetadata(key);
 
     let enumOptions: PickerValueItem[] = [];
     const enumPicker =
@@ -682,6 +625,7 @@ export class TjsSearchStore extends SearchPageStore {
     const meta = key ? this.getKeyMetadata(key) : undefined;
     const displayTitle = meta?.keyDisplayName || title;
     this.closeValuePicker();
+    this.showSuggestions.set(!this.autoCollapseAfterApply());
 
     const rawValues = this.extractRawValues(event, meta);
     const draftChip: Partial<FilterChip> = {
@@ -728,7 +672,10 @@ export class TjsSearchStore extends SearchPageStore {
     meta?: FilterKeyMetadata,
   ): string[] | undefined {
     if (event.rangeFrom || event.rangeTo) {
-      return [event.rangeFrom || '', event.rangeTo || ''];
+      return [
+        event.rangeFrom || EMPTY_FILTER_VALUE,
+        event.rangeTo || EMPTY_FILTER_VALUE,
+      ];
     }
     if (meta?.namedPair || event.propName) {
       return [event.propName || '', event.textVal || ''];
@@ -747,10 +694,7 @@ export class TjsSearchStore extends SearchPageStore {
   // ===========================================================================
 
   /** Unpacks TjsSuggestion payload to open value picker or apply filter chips. */
-  protected override applySuggestion(
-    rawItem: unknown,
-    anchor?: HTMLElement | null,
-  ) {
+  protected override applySuggestion(rawItem: FleetSuggestion | TjsSuggestion) {
     const raw = rawItem as TjsSuggestion;
     if (!raw) return;
 
@@ -758,7 +702,7 @@ export class TjsSearchStore extends SearchPageStore {
       const op = raw.openPicker;
       const meta = this.getKeyMetadata(op.key);
       const displayTitle = op.keyDisplayName || meta?.keyDisplayName || op.key;
-      this.openValuePicker(op.key, anchor || null, displayTitle, meta);
+      this.openQuickFilter(op.key, displayTitle, meta);
       return;
     }
 

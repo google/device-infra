@@ -1,49 +1,50 @@
 @use '../../../shared/styles/configuration';
 
 .config-modal-container {
-  padding: 1rem;
+  padding: var(--dialog-container-padding, 1rem);
   justify-content: center;
   align-items: center;
   display: flex;
   inset: 0px;
-  position: fixed;
+  position: var(--dialog-container-position, fixed);
   animation-duration: 0.3s;
   animation-timing-function: ease-out;
 }
 
 .config-modal-card {
-  background-color: #fff;
+  background-color: var(--dialog-card-bg, #fff);
   display: flex;
   flex-direction: column;
-  border-radius: 0.5rem;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  border-radius: var(--dialog-card-radius, 0.5rem);
+  box-shadow: var(--dialog-card-shadow, 0 8px 24px rgba(0, 0, 0, 0.15));
   width: 100%;
   overflow: hidden;
-  border: 1px solid #e2e8f0;
+  border: var(--dialog-card-border, 1px solid #e2e8f0);
 
   .config-header {
-    padding: 1.5rem;
-    border-bottom: 1px solid #e2e8f0;
+    padding: var(--dialog-header-padding, 1.5rem);
+    border-bottom: var(--dialog-header-border-bottom, 1px solid #e2e8f0);
     position: relative;
 
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: var(--dialog-header-gap, 0.5rem);
 
     .header-title-container {
       flex-grow: 1;
     }
 
     .config-title {
-      font-size: 1.25rem;
-      font-weight: 600;
-      line-height: 1.75rem;
-      color: #1e293b;
+      font-size: var(--dialog-title-size, 1.25rem);
+      font-weight: var(--dialog-title-weight, 600);
+      line-height: var(--dialog-title-line-height, 1.75rem);
+      color: var(--dialog-title-color, #1e293b);
     }
 
     .config-subtitle {
-      font-size: 0.875rem;
-      color: #64748b;
+      font-size: var(--dialog-subtitle-size, 0.875rem);
+      color: var(--dialog-subtitle-color, #64748b);
       margin: 4px 0 0;
     }
 
@@ -57,14 +58,25 @@
       }
 
       .close-button {
-        display: flex;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
+        padding: 0;
+        box-sizing: border-box;
         color: #64748b;
-        transition: background-color 0.2s, color 0.2s;
+        transition:
+          background-color 0.2s,
+          color 0.2s;
         cursor: pointer;
         border: none;
         background: transparent;
+
+        mat-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0;
+        }
       }
       .close-button:hover {
         background-color: #f1f5f9;

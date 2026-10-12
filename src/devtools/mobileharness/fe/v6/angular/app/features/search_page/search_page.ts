@@ -1,4 +1,4 @@
-import {CommonModule} from '@angular/common';
+import {DecimalPipe} from '@angular/common';
 import {
   afterNextRender,
   ChangeDetectionStrategy,
@@ -29,7 +29,7 @@ import {SearchPageStore} from './services/search_page_store';
   styleUrl: './search_page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
+    DecimalPipe,
     MatButtonModule,
     MatProgressSpinnerModule,
     FleetSearchResultsComponent,
@@ -68,12 +68,6 @@ export class SearchPage implements OnInit {
         () => {
           const filters = this.store.serializedActiveFilters();
           const groupBys = this.store.groupByKeys();
-
-          // const q = this.store.searchQuery();
-          // const fleet = this.store.fleet();
-          // if (q) params['q'] = q;  // no parent window support q yet.
-          // no parent window support fleet yet.
-          // if (fleet !== 'internal') params['fleet'] = fleet;
 
           const params: Record<string, string | string[]> = {};
           if (filters.length > 0) params['f'] = filters;

@@ -1,30 +1,7 @@
 import {FleetColumnDescriptor} from '../../../core/models/search';
+import {readStorage, removeStorage, writeStorage} from './search_storage_utils';
 
 const STORAGE_VISIBLE_PREFIX = 'mh_fe_v6_visible_columns_';
-
-function readStorage(key: string): unknown {
-  if (typeof window === 'undefined' || !window.localStorage) return null;
-  try {
-    const raw = window.localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeStorage(key: string, value: unknown): void {
-  if (typeof window === 'undefined' || !window.localStorage) return;
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch {}
-}
-
-function removeStorage(key: string): void {
-  if (typeof window === 'undefined' || !window.localStorage) return;
-  try {
-    window.localStorage.removeItem(key);
-  } catch {}
-}
 
 /**
  * Retrieves custom visible table columns saved by the user from localStorage.
@@ -34,9 +11,7 @@ export function getStoredVisibleColumns(
   entity: string,
   fleet: string,
 ): FleetColumnDescriptor[] | null {
-  const parsed = readStorage(
-    `${STORAGE_VISIBLE_PREFIX}${entity}_${fleet}`,
-  );
+  const parsed = readStorage(`${STORAGE_VISIBLE_PREFIX}${entity}_${fleet}`);
   return Array.isArray(parsed) && parsed.length > 0
     ? (parsed as FleetColumnDescriptor[])
     : null;

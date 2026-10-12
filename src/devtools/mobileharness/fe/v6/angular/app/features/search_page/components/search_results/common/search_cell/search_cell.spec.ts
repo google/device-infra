@@ -5,7 +5,7 @@ import {provideRouter} from '@angular/router';
 
 import {Cell, Column, Indicator} from '../../../../../../core/models/search';
 import {UrlService} from '../../../../../../core/services/url_service';
-import {SearchCellComponent} from './search_cell';
+import {getNavLinkConfig, SearchCellComponent} from './search_cell';
 
 @Component({
   standalone: true,
@@ -35,6 +35,36 @@ describe('SearchCellComponent', () => {
 
     fixture = TestBed.createComponent(TestHostComponent);
     host = fixture.componentInstance;
+  });
+
+  it('builds NavLinkConfig for device, host, job, session, test, and undefined targets', () => {
+    expect(getNavLinkConfig({device: {id: 'd1', hostName: 'h1'}})).toEqual({
+      type: 'device',
+      deviceId: 'd1',
+      hostName: 'h1',
+      hostIp: '',
+    });
+    expect(
+      getNavLinkConfig({host: {hostName: 'h1', hostIp: '1.2.3.4'}}),
+    ).toEqual({
+      type: 'host',
+      hostName: 'h1',
+      hostIp: '1.2.3.4',
+    });
+    expect(getNavLinkConfig({job: {jobId: 'j1'}})).toEqual({
+      type: 'job',
+      jobId: 'j1',
+    });
+    expect(getNavLinkConfig({session: {sessionId: 's1'}})).toEqual({
+      type: 'session',
+      sessionId: 's1',
+    });
+    expect(getNavLinkConfig({test: {jobId: 'j1', testId: 't1'}})).toEqual({
+      type: 'test',
+      jobId: 'j1',
+      testId: 't1',
+    });
+    expect(getNavLinkConfig(undefined)).toBeNull();
   });
 
   it('should render empty dash when cell is null or empty', () => {

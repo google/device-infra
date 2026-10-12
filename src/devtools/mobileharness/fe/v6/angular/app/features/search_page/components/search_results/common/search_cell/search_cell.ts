@@ -38,7 +38,6 @@ export class SearchCellComponent {
   readonly cell = input<Cell | null | undefined>();
   readonly column = input<Column | undefined>();
 
-  readonly getStatusClass = getStatusClass;
   /** Identifies the cell variant conforming to protobuf Cell oneof kind. */
   readonly cellKind = computed<
     'text' | 'link' | 'status' | 'chips' | 'multiLink' | 'empty'

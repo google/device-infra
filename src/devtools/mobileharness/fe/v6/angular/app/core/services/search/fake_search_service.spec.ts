@@ -4,6 +4,8 @@ import {
   Filter,
   FleetChipResolverResponse,
   FleetColumnCatalogResponse,
+  FleetFilterKeyCatalogResponse,
+  FleetGroupByKeyCatalogResponse,
   FleetPromotedKeysResponse,
   FleetSearchConfig,
   FleetSearchResults,
@@ -485,6 +487,88 @@ describe('FakeSearchService', () => {
         .subscribe((res: FleetColumnCatalogResponse) => {
           expect(res.sections).toBeDefined();
           expect(res.sections!.length).toBeGreaterThan(0);
+          done();
+        });
+    });
+  });
+
+  describe('getFleetFilterKeyCatalog', () => {
+    it('should return filter key catalog sections with applied flags', (done) => {
+      service
+        .getFleetFilterKeyCatalog({
+          entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+          filters: [{key: 'field::status'}],
+        })
+        .subscribe((res: FleetFilterKeyCatalogResponse) => {
+          expect(res.sections).toBeDefined();
+          expect(res.sections!.length).toBeGreaterThan(0);
+          const builtin = res.sections!.find(
+            (s) => s.heading === 'Built-in fields',
+          );
+          expect(builtin).toBeDefined();
+          const statusEntry = builtin!.entries!.find(
+            (e) => e.key === 'field::status',
+          );
+          expect(statusEntry?.applied).toBeTrue();
+          const modelEntry = builtin!.entries!.find(
+            (e) => e.key === 'field::model',
+          );
+          expect(modelEntry?.applied).toBeFalse();
+          done();
+        });
+    });
+
+    it('should filter entries when search query is provided', (done) => {
+      service
+        .getFleetFilterKeyCatalog({
+          entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+          query: 'battery',
+        })
+        .subscribe((res: FleetFilterKeyCatalogResponse) => {
+          expect(res.sections).toBeDefined();
+          expect(res.sections!.length).toBe(1);
+          expect(res.sections![0].entries![0].key).toBe('dim::battery_level');
+          done();
+        });
+    });
+  });
+
+  describe('getFleetGroupByKeyCatalog', () => {
+    it('should return group-by key catalog sections with applied flags', (done) => {
+      service
+        .getFleetGroupByKeyCatalog({
+          entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+          groupBy: ['field::status'],
+        })
+        .subscribe((res: FleetGroupByKeyCatalogResponse) => {
+          expect(res.sections).toBeDefined();
+          expect(res.sections!.length).toBeGreaterThan(0);
+          const builtin = res.sections!.find(
+            (s) => s.heading === 'Built-in fields',
+          );
+          expect(builtin).toBeDefined();
+          const statusEntry = builtin!.entries!.find(
+            (e) => e.key === 'field::status',
+          );
+          expect(statusEntry?.applied).toBeTrue();
+          const modelEntry = builtin!.entries!.find(
+            (e) => e.key === 'field::model',
+          );
+          expect(modelEntry?.applied).toBeFalse();
+          done();
+        });
+    });
+
+    it('should filter entries when search query is provided', (done) => {
+      service
+        .getFleetGroupByKeyCatalog({
+          entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+          query: 'carrier',
+        })
+        .subscribe((res: FleetGroupByKeyCatalogResponse) => {
+          expect(res.sections).toBeDefined();
+          expect(res.sections!.length).toBe(1);
+          expect(res.sections![0].entries![0].key).toBe('dim::carrier');
           done();
         });
     });

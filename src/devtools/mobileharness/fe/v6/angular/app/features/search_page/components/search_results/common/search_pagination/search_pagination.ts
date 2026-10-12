@@ -1,4 +1,3 @@
-import {CommonModule} from '@angular/common';
 import {ChangeDetectionStrategy, Component, input, output} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {MatSelectModule} from '@angular/material/select';
@@ -10,7 +9,7 @@ import {MatSelectModule} from '@angular/material/select';
   templateUrl: './search_pagination.ng.html',
   styleUrl: './search_pagination.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, MatIconModule, MatSelectModule],
+  imports: [MatIconModule, MatSelectModule],
 })
 export class SearchPaginationComponent {
   /** Pre-formatted semantic range text provided directly by BFF/Store (e.g. "1 – 25 of 1,250", "showing 1–25", "1–25 of 142 groups"). */

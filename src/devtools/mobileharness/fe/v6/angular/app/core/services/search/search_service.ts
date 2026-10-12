@@ -5,6 +5,10 @@ import {
   FleetChipResolverResponse,
   FleetColumnCatalogRequest,
   FleetColumnCatalogResponse,
+  FleetFilterKeyCatalogRequest,
+  FleetFilterKeyCatalogResponse,
+  FleetGroupByKeyCatalogRequest,
+  FleetGroupByKeyCatalogResponse,
   FleetPromotedKeysRequest,
   FleetPromotedKeysResponse,
   FleetSearchConfig,
@@ -62,6 +66,14 @@ export abstract class SearchService {
   abstract getFleetColumnCatalog(
     request: FleetColumnCatalogRequest,
   ): Observable<FleetColumnCatalogResponse>;
+
+  abstract getFleetFilterKeyCatalog(
+    request: FleetFilterKeyCatalogRequest,
+  ): Observable<FleetFilterKeyCatalogResponse>;
+
+  abstract getFleetGroupByKeyCatalog(
+    request: FleetGroupByKeyCatalogRequest,
+  ): Observable<FleetGroupByKeyCatalogResponse>;
 
   // --- TJS (test/job/session) Search RPCs ---
   abstract getTjsSearchConfig(

@@ -44,20 +44,28 @@ describe('ColumnSelectorComponent', () => {
         heading: 'Built-in fields',
         totalAvailable: 6,
         entries: [
-          {key: 'id', displayName: 'Device ID', deviceCount: 14},
-          {key: 'status', displayName: 'Status', deviceCount: 14},
-          {key: 'type', displayName: 'Device Type', deviceCount: 14},
-          {key: 'owner', displayName: 'Owner', deviceCount: 14},
-          {key: 'hostName', displayName: 'Host Name', deviceCount: 14},
-          {key: 'ip', displayName: 'IP Address', deviceCount: 12},
+          {key: 'id', displayName: 'Device ID', coverage: {notShown: {}}},
+          {key: 'status', displayName: 'Status', coverage: {notShown: {}}},
+          {key: 'type', displayName: 'Device Type', coverage: {notShown: {}}},
+          {key: 'owner', displayName: 'Owner', coverage: {notShown: {}}},
+          {key: 'hostName', displayName: 'Host Name', coverage: {notShown: {}}},
+          {key: 'ip', displayName: 'IP Address', coverage: {notShown: {}}},
         ],
       },
       {
         heading: 'Dimensions',
         totalAvailable: 20,
         entries: [
-          {key: 'dim::model', displayName: 'Model', deviceCount: 14},
-          {key: 'dim::sdk', displayName: 'SDK Version', deviceCount: 13},
+          {
+            key: 'dim::model',
+            displayName: 'Model',
+            coverage: {shown: {count: 14}},
+          },
+          {
+            key: 'dim::sdk',
+            displayName: 'SDK Version',
+            coverage: {shown: {count: 13}},
+          },
         ],
       },
     ],
@@ -65,7 +73,7 @@ describe('ColumnSelectorComponent', () => {
 
   const dialogData: ColumnSelectorDialogData = {
     entity: 'devices',
-    fleet: 'self',
+    fleet: 'internal',
     columns: [
       {key: 'id', displayName: 'Device ID', locked: true},
       {key: 'status', displayName: 'Status'},
@@ -289,7 +297,7 @@ describe('ColumnSelectorComponent', () => {
     expect(builtInHead?.textContent).toContain('Built-in fields');
   });
 
-  it('pre-formats catalog sections into ViewModels with device count and reasons', () => {
+  it('pre-formats catalog sections into ViewModels with coverage and reasons', () => {
     fixture.detectChanges();
     const sections = component.viewCatalogSections();
     expect(sections.length).toBe(3);
@@ -314,7 +322,7 @@ describe('ColumnSelectorComponent', () => {
     expect(builtIn.entries?.[0]).toEqual({
       key: 'id',
       displayName: 'Device ID',
-      deviceCount: 14,
+      coverage: {notShown: {}},
     });
 
     expect(component.matchedColumnsCount()).toBe(10);
@@ -332,7 +340,7 @@ describe('ColumnSelectorComponent', () => {
                 {
                   key: 'dim::battery',
                   displayName: 'Battery Level',
-                  deviceCount: 5,
+                  coverage: {shown: {count: 5}},
                 },
               ],
             },
@@ -353,5 +361,43 @@ describe('ColumnSelectorComponent', () => {
     expect(rows[1]?.textContent).toContain('Status');
     expect(rows[2]?.textContent).toContain('Device Type');
     expect(rows[3]?.textContent).toContain('Owner');
+  }));
+
+  it('renders coverage.shown count when coverage is present, omitting count for notShown', fakeAsync(() => {
+    mockSearchService.getFleetColumnCatalog.and.callFake((req) => {
+      if (req.query === 'custom') {
+        return of({
+          sections: [
+            {
+              heading: 'Custom',
+              entries: [
+                {
+                  key: 'dim::with_coverage',
+                  displayName: 'With Coverage',
+                  coverage: {shown: {count: 25}},
+                },
+                {
+                  key: 'field::no_coverage',
+                  displayName: 'No Coverage',
+                  coverage: {notShown: {}},
+                },
+              ],
+            },
+          ],
+        });
+      }
+      return of(mockCatalogResponse);
+    });
+
+    component.searchQuery.set('custom');
+    tick(250);
+    fixture.detectChanges();
+
+    const metaSpans = document.querySelectorAll('.cs-section .cs-row-meta');
+    const metaTexts = Array.from(metaSpans, (el) => el.textContent?.trim());
+
+    expect(metaTexts).toContain('25 devices');
+    expect(metaTexts).not.toContain('0 devices');
+    expect(metaTexts.length).toBe(1);
   }));
 });

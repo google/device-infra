@@ -13,6 +13,8 @@ import {
 import {EntityType, FilterChip} from '../models';
 import {
   EMPTY_FILTER_VALUE,
+  adaptCatalogSections,
+  areFilterArraysEqual,
   buildFleetFilterFromChip,
   buildFleetGroupSort,
   buildResolvedFilterChips,
@@ -33,6 +35,7 @@ import {
   isChipNegated,
   isSameFilterChip,
   isSearchRouteActive,
+  mapToSearchBoxSuggestion,
   normalizeKey,
   parseComplexCondition,
   parseQueryFilterParam,
@@ -45,6 +48,7 @@ import {
   toFleetProto,
   toSearchEntityProto,
   toTjsEntityProto,
+  trackChip,
 } from './search_filter_utils';
 
 describe('search_filter_utils', () => {
@@ -435,7 +439,7 @@ describe('search_filter_utils', () => {
     it('handles <empty> and blank values properly', () => {
       const res = buildSimpleFleetFilter('driver', [EMPTY_FILTER_VALUE, '']);
       expect(res.simple?.values?.length).toBe(1);
-      expect(res.simple?.values?.[0]?.noValue).toBeTrue();
+      expect(res.simple?.values?.[0]?.noValue).toEqual({});
     });
   });
 
@@ -471,9 +475,9 @@ describe('search_filter_utils', () => {
       expect(serializeComplexCondition(undefined)).toBe('');
       expect(serializeComplexCondition({})).toBe('');
       expect(
-        serializeComplexCondition(
-          {unsupported: {value: 'foo'}} as unknown as ComplexMatch,
-        ),
+        serializeComplexCondition({
+          unsupported: {value: 'foo'},
+        } as unknown as ComplexMatch),
       ).toBe('');
     });
   });
@@ -528,6 +532,30 @@ describe('search_filter_utils', () => {
         negated: true,
       };
       expect(serializeFilterChip(negChip)).toBe('!model~<empty>,Pixel%208');
+    });
+
+    it('serializes range filter with cleared to as <val>,<empty>', () => {
+      const chip: FilterChip = {
+        key: 'create_time',
+        pillKey: 'Create Time',
+        pillCondition: '2026-10-06T23:35 ~ <empty>',
+        rawValues: ['2026-10-06T23:35', EMPTY_FILTER_VALUE],
+      };
+      expect(serializeFilterChip(chip)).toBe(
+        'create_time~2026-10-06T23%3A35,<empty>',
+      );
+    });
+
+    it('serializes range filter with cleared from as <empty>,<val>', () => {
+      const chip: FilterChip = {
+        key: 'create_time',
+        pillKey: 'Create Time',
+        pillCondition: '<empty> ~ 2026-10-06T23:35',
+        rawValues: [EMPTY_FILTER_VALUE, '2026-10-06T23:35'],
+      };
+      expect(serializeFilterChip(chip)).toBe(
+        'create_time~<empty>,2026-10-06T23%3A35',
+      );
     });
 
     it('serializes fallback pillCondition with (no value) or <empty> into trailing tilde format', () => {
@@ -615,13 +643,13 @@ describe('search_filter_utils', () => {
       expect(res).not.toBeNull();
       expect(res?.key).toBe('driver');
       expect(res?.negated).toBeFalse();
-      expect(res?.fleetFilter?.simple?.values?.[0]?.noValue).toBeTrue();
+      expect(res?.fleetFilter?.simple?.values?.[0]?.noValue).toEqual({});
 
       const negRes = parseQueryFilterParam('!driver~');
       expect(negRes).not.toBeNull();
       expect(negRes?.key).toBe('driver');
       expect(negRes?.negated).toBeTrue();
-      expect(negRes?.fleetFilter?.simple?.values?.[0]?.noValue).toBeTrue();
+      expect(negRes?.fleetFilter?.simple?.values?.[0]?.noValue).toEqual({});
     });
 
     it('parses mixed <empty> and valid values into rawValues and Protobuf filterValues', () => {
@@ -630,7 +658,7 @@ describe('search_filter_utils', () => {
       expect(res?.key).toBe('model');
       expect(res?.rawValues).toEqual([EMPTY_FILTER_VALUE, 'Pixel 8']);
       expect(res?.fleetFilter?.simple?.values).toEqual([
-        {noValue: true},
+        {noValue: {}},
         {value: 'Pixel 8'},
       ]);
 
@@ -641,7 +669,7 @@ describe('search_filter_utils', () => {
         'Pixel 8',
       ]);
       expect(resWithNoValue?.fleetFilter?.simple?.values).toEqual([
-        {noValue: true},
+        {noValue: {}},
         {value: 'Pixel 8'},
       ]);
     });
@@ -760,6 +788,7 @@ describe('search_filter_utils', () => {
       };
       expect(extractRawValuesFromTjsFilter(filterFromOnly)).toEqual([
         '2026-01-01T00:00:00Z',
+        EMPTY_FILTER_VALUE,
       ]);
 
       const filterToOnly: TjsFilter = {
@@ -769,6 +798,7 @@ describe('search_filter_utils', () => {
         },
       };
       expect(extractRawValuesFromTjsFilter(filterToOnly)).toEqual([
+        EMPTY_FILTER_VALUE,
         '2026-01-02T00:00:00Z',
       ]);
     });
@@ -873,7 +903,7 @@ describe('search_filter_utils', () => {
       };
       const filter = buildFleetFilterFromChip(chip);
       expect(filter.key).toBe('driver');
-      expect(filter.simple?.values).toEqual([{noValue: true}]);
+      expect(filter.simple?.values).toEqual([{noValue: {}}]);
       expect(filter.simple?.negated).toBeFalse();
     });
   });
@@ -1417,6 +1447,226 @@ describe('search_filter_utils', () => {
         },
       ];
       expect(getSerializedChipsKey(chipsA)).toBe(getSerializedChipsKey(chipsB));
+    });
+  });
+
+  describe('adaptCatalogSections', () => {
+    it('returns empty array when sections is undefined or empty', () => {
+      expect(adaptCatalogSections(undefined, 'filter')).toEqual([]);
+      expect(adaptCatalogSections([], 'groupby')).toEqual([]);
+    });
+
+    it('adapts filter-key sections with device and host noun formatting', () => {
+      const sections = [
+        {
+          heading: 'Fields',
+          totalAvailable: 10,
+          entries: [
+            {
+              key: 'status',
+              metadata: {keyDisplayName: 'Device Status'},
+              coverage: {shown: {count: 1200}},
+              applied: false,
+            },
+            {
+              key: 'model',
+              metadata: {keyDisplayName: 'Model'},
+              applied: true,
+            },
+            {
+              key: 'pool',
+              applied: false,
+            },
+          ],
+        },
+      ];
+
+      const deviceResult = adaptCatalogSections(
+        sections,
+        'filter',
+        SearchEntity.SEARCH_ENTITY_DEVICE,
+      );
+      expect(deviceResult.length).toBe(1);
+      expect(deviceResult[0].heading).toBe('Fields');
+      expect(deviceResult[0].hasMore).toBeTrue();
+      expect(deviceResult[0].entries[0]).toEqual({
+        key: 'status',
+        name: 'Device Status',
+        meta: 'Used by 1,200 devices',
+        applied: false,
+        inert: false,
+        filterMetadata: {keyDisplayName: 'Device Status'},
+      });
+      expect(deviceResult[0].entries[1]).toEqual({
+        key: 'model',
+        name: 'Model',
+        meta: 'applied',
+        applied: true,
+        inert: false,
+        filterMetadata: {keyDisplayName: 'Model'},
+      });
+      expect(deviceResult[0].entries[2]).toEqual({
+        key: 'pool',
+        name: 'pool',
+        meta: '',
+        applied: false,
+        inert: false,
+        filterMetadata: undefined,
+      });
+
+      const hostResult = adaptCatalogSections(
+        sections,
+        'filter',
+        SearchEntity.SEARCH_ENTITY_HOST,
+      );
+      expect(hostResult[0].entries[0].meta).toBe('Used by 1,200 hosts');
+    });
+
+    it('adapts group-by-key sections marking applied items as inert with group counts', () => {
+      const sections = [
+        {
+          heading: 'Dimensions',
+          totalAvailable: 2,
+          entries: [
+            {
+              key: 'driver',
+              displayName: 'Driver',
+              groupCount: {shown: {count: 15}},
+              applied: false,
+            },
+            {
+              key: 'host_name',
+              displayName: 'Host Name',
+              groupCount: {shown: {count: 42}},
+              applied: true,
+            },
+          ],
+        },
+      ];
+
+      const result = adaptCatalogSections(sections, 'groupby');
+      expect(result.length).toBe(1);
+      expect(result[0].hasMore).toBeFalse();
+      expect(result[0].entries[0]).toEqual({
+        key: 'driver',
+        name: 'Driver',
+        meta: '15 groups',
+        applied: false,
+        inert: false,
+        filterMetadata: undefined,
+      });
+      expect(result[0].entries[1]).toEqual({
+        key: 'host_name',
+        name: 'Host Name',
+        meta: 'applied',
+        applied: true,
+        inert: true,
+        filterMetadata: undefined,
+      });
+    });
+  });
+
+  describe('trackChip', () => {
+    it('returns composite key combining chip key and pillCondition', () => {
+      const filterChip: FilterChip = {
+        key: 'Status',
+        pillKey: 'Status',
+        pillCondition: 'IDLE',
+      };
+      const fallbackKeyChip: FilterChip = {
+        pillKey: 'Model',
+        pillCondition: 'Pixel 8',
+      };
+      expect(trackChip(filterChip)).toBe('Status:IDLE');
+      expect(trackChip(fallbackKeyChip)).toBe('Model:Pixel 8');
+    });
+  });
+
+  describe('areFilterArraysEqual', () => {
+    it('returns true for identical array references', () => {
+      const arr = [{key: 'status'}];
+      expect(areFilterArraysEqual(arr, arr)).toBeTrue();
+    });
+
+    it('returns false for arrays of different lengths', () => {
+      expect(
+        areFilterArraysEqual(
+          [{key: 'status'}],
+          [{key: 'status'}, {key: 'model'}],
+        ),
+      ).toBeFalse();
+    });
+
+    it('compares serialized elements when arrays have same length', () => {
+      expect(
+        areFilterArraysEqual(
+          [{key: 'status', val: 'IDLE'}],
+          [{key: 'status', val: 'IDLE'}],
+        ),
+      ).toBeTrue();
+      expect(
+        areFilterArraysEqual(
+          [{key: 'status', val: 'IDLE'}],
+          [{key: 'status', val: 'BUSY'}],
+        ),
+      ).toBeFalse();
+    });
+  });
+
+  describe('additional branch coverage', () => {
+    it('covers extractComplexMatchInfo with empty ComplexMatch and serializeFilterChip fallback', () => {
+      expect(extractComplexMatchInfo({})).toBeUndefined();
+      expect(
+        serializeFilterChip({
+          key: 'status',
+          pillKey: 'status',
+          pillCondition: 'IDLE',
+        }),
+      ).toBe('status~IDLE');
+      expect(
+        serializeFilterChip({
+          key: 'status',
+          pillKey: 'status',
+          pillCondition: '',
+        }),
+      ).toBe('status~');
+    });
+
+    it('covers mapToSearchBoxSuggestion, toTjsEntityProto default, and extractRawValuesFromTjsFilter branches', () => {
+      const suggestion: FleetSuggestion = {
+        label: 'Status',
+        mainText: [{text: 'IDLE'}],
+        count: 5,
+      };
+      expect(mapToSearchBoxSuggestion(suggestion)).toEqual({
+        label: 'Status',
+        mainText: [{text: 'IDLE'}],
+        count: 5,
+        countPrefix: undefined,
+        countUnit: undefined,
+        overMax: undefined,
+        openPicker: undefined,
+        addGroupBy: undefined,
+        rawItem: suggestion,
+      });
+
+      expect(toTjsEntityProto('devices')).toBe(TjsEntity.TJS_ENTITY_TEST);
+
+      expect(
+        extractRawValuesFromTjsFilter({
+          key: 'status',
+          enumValues: {values: ['PASSED', 'FAILED']},
+        }),
+      ).toEqual(['PASSED', 'FAILED']);
+
+      expect(
+        extractRawValuesFromTjsFilter({
+          key: 'prop',
+          namedValue: {name: 'env', value: 'prod'},
+        }),
+      ).toEqual(['env', 'prod']);
+
+      expect(extractRawValuesFromTjsFilter({key: 'empty'})).toBeUndefined();
     });
   });
 });

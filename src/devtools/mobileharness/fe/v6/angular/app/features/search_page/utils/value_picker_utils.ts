@@ -2,33 +2,19 @@ import {ComplexMatch} from '../../../core/models/search';
 import {dateUtils} from '../../../shared/utils/date_utils';
 import {
   AdvancedMatchMode,
+  ApplyEventPayload,
+  DateRangeState,
   FilterChip,
+  FilterSortOptions,
   PickerValueItem,
   ValuePickerApplyEvent,
 } from '../models';
 import {
   createComplexMatch,
+  EMPTY_FILTER_VALUE,
   extractComplexMatchInfo,
   normalizeKey,
 } from './search_filter_utils';
-
-/** Configuration options passed to computeFilteredAndSortedValues pure engine function. */
-export interface FilterSortOptions {
-  /** Candidate value items available for selection. */
-  readonly items: readonly PickerValueItem[];
-  /** User-entered text query for filtering candidate items. */
-  readonly query: string;
-  /** Primary column to sort items by ('value' | 'filtered' | 'total'). */
-  readonly sortBy: 'value' | 'filtered' | 'total';
-  /** Sort direction flag (true = ascending, false = descending). */
-  readonly sortAsc: boolean;
-  /** Set of currently selected value strings. */
-  readonly selectedValues?: ReadonlySet<string>;
-  /** Whether the candidate items are plain values without count columns. */
-  readonly isPlain?: boolean;
-  /** Loading flag indicating whether backend values are currently fetching. */
-  readonly isLoading?: boolean;
-}
 
 /**
  * Pure function: Combines base candidate items with selected custom free-text inputs.
@@ -167,7 +153,6 @@ export function computePinnedValues(
  */
 export const getPacificTimezoneName = dateUtils.getPacificTimezoneName;
 
-
 /**
  * Converts a datetime-local string in Pacific Time (America/Los_Angeles) to UTC ISO-8601 string.
  */
@@ -178,83 +163,89 @@ export const pacificToUtc = dateUtils.pacificToUtc;
  */
 export const utcToPacific = dateUtils.utcToPacific;
 
+/** One day duration in milliseconds for default range computation. */
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Regular expression matching lower-bound range markers ('From:', '>=', '≥'). */
+const FROM_BOUND_REGEX = /(?:From:|≥|>=)\s*(.*?)(?=\s*(?:To:|≤|<=|&)|$)/i;
+
+/** Regular expression matching upper-bound range markers ('To:', '<=', '≤'). */
+const TO_BOUND_REGEX = /(?:To:|≤|<=)\s*(.*)/i;
+
+/** Regular expression splitting range strings by standard separators ('~', ',', ' - '). */
+const RANGE_DELIMITER_REGEX = /[~,]|(?:\s+-\s+)/;
+
+/** Regular expression stripping optional trailing timezone labels, e.g. '(PDT)', '(PST)'. */
+const TIMEZONE_SUFFIX_REGEX = /\s*\([A-Za-z]+\)$/;
+
 /**
- * Pure function: Extracts From and To date strings from selected values set or returns default 24h range in Pacific Time.
- *
- * @param selectedValues Set of selected value strings.
- * @return Object containing 'from' and 'to' datetime-local strings in Pacific Time.
+ * Cleans and converts a raw bound string to a Pacific Time datetime-local representation.
  */
-export function parseDateRange(selectedValues: ReadonlySet<string>): {
-  from: string;
-  to: string;
-} {
-  const selected = Array.from(selectedValues, (s) => s.trim()).filter(Boolean);
-  let rawFrom = selected[0] || '';
-  let rawTo = selected[1] || '';
-
-  if (selected.length === 1) {
-    const str = selected[0];
-    const fromMatch = str.match(/From:\s*(.*?)(?=\s+To:|$)/i);
-    const toMatch = str.match(/To:\s*(.*)/i);
-    if (fromMatch || toMatch) {
-      rawFrom = fromMatch?.[1]?.trim() || '';
-      rawTo = toMatch?.[1]?.trim() || '';
-    } else {
-      const parts = str
-        .split(/[~,]|(?:\s+-\s+)/)
-        .map((s) => s.trim())
-        .filter(Boolean);
-      rawFrom = parts[0] || '';
-      rawTo = parts[1] || '';
-    }
+function cleanRawDateBound(raw?: string): string {
+  if (!raw) return '';
+  const cleaned = raw.replace(TIMEZONE_SUFFIX_REGEX, '').trim();
+  if (!cleaned || cleaned === EMPTY_FILTER_VALUE) {
+    return '';
   }
+  return utcToPacific(cleaned);
+}
 
-  const from = utcToPacific(rawFrom);
-  const to = utcToPacific(rawTo);
+/**
+ * Extracts from and to raw bounds from a single formatted range string.
+ */
+function extractBoundsFromSingleString(str: string): [string, string] {
+  const fromMatch = str.match(FROM_BOUND_REGEX);
+  const toMatch = str.match(TO_BOUND_REGEX);
+  if (fromMatch || toMatch) {
+    return [fromMatch?.[1]?.trim() || '', toMatch?.[1]?.trim() || ''];
+  }
+  const parts = str.split(RANGE_DELIMITER_REGEX).map((s) => s.trim());
+  return [parts[0] || '', parts[1] || ''];
+}
 
-  const calcOffset = (dateTimeStr: string, offsetMs: number): string => {
-    const ms = new Date(pacificToUtc(dateTimeStr)).getTime();
-    return utcToPacific(isNaN(ms) ? Date.now() + offsetMs : ms + offsetMs);
-  };
-
+/**
+ * Constructs default 24-hour range spanning the previous 24 hours to now in Pacific Time.
+ */
+export function getDefault24hRange(nowMs = Date.now()): DateRangeState {
   return {
-    from:
-      from ||
-      (to ? calcOffset(to, -86400000) : utcToPacific(Date.now() - 86400000)),
-    to:
-      to ||
-      (from ? calcOffset(from, 86400000) : utcToPacific(Date.now())),
+    from: utcToPacific(nowMs - ONE_DAY_MS),
+    to: utcToPacific(nowMs),
   };
 }
 
-/** Input payload interface for buildValuePickerApplyEvent. */
-export interface ApplyEventPayload {
-  /** Specific picker mode type ('range', 'namedPair', 'text', etc.). */
-  readonly type?: string;
-  /** Whether advanced regex/match mode is active. */
-  readonly isAdvanced: boolean;
-  /** Whether negate/polarity toggle is active. */
-  readonly negated: boolean;
-  /** Set of selected value strings. */
-  readonly selectedSet: ReadonlySet<string>;
-  /** Pending search query in input box. */
-  readonly searchQuery: string;
-  /** Advanced match mode string ('prefix', 'suffix', 'contains', 'regex', etc.). */
-  readonly advMode?: AdvancedMatchMode;
-  /** Advanced mode text query. */
-  readonly advText?: string;
-  /** Advanced mode values array. */
-  readonly advValues?: readonly string[];
-  /** From date string for range mode. */
-  readonly rangeFrom?: string;
-  /** To date string for range mode. */
-  readonly rangeTo?: string;
-  /** Property name for namedPair mode. */
-  readonly propName?: string;
-  /** Property value for namedPair mode. */
-  readonly propVal?: string;
-  /** Text value for plain text mode. */
-  readonly textVal?: string;
+/**
+ * Pure function: Extracts From and To date strings from selected values or returns default 24h range in Pacific Time.
+ * Follows Angular 20+ best practices: pure, strongly typed, defensive against null/undefined/arrays/sets.
+ *
+ * @param selectedValues Iterable of selected value strings (e.g. Set or Array).
+ * @return DateRangeState containing 'from' and 'to' datetime-local strings in Pacific Time.
+ */
+export function parseDateRange(
+  selectedValues?: Iterable<string> | null,
+): DateRangeState {
+  if (!selectedValues) {
+    return getDefault24hRange();
+  }
+
+  const selected = Array.from(selectedValues, (s) => s.trim());
+  let rawFrom = '';
+  let rawTo = '';
+
+  if (selected.length >= 2) {
+    rawFrom = selected[0] || '';
+    rawTo = selected[1] || '';
+  } else if (selected.length === 1 && selected[0]) {
+    [rawFrom, rawTo] = extractBoundsFromSingleString(selected[0]);
+  }
+
+  const from = cleanRawDateBound(rawFrom);
+  const to = cleanRawDateBound(rawTo);
+
+  if (from || to) {
+    return {from, to};
+  }
+
+  return getDefault24hRange();
 }
 
 /**

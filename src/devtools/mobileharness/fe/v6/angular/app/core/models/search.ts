@@ -9,8 +9,10 @@ import {
   FleetColumnCatalogSection,
   FleetColumnConfig,
   FleetCountedValueList,
+  FleetFilterKeySection,
   FleetFlatResults,
   FleetFlatView,
+  FleetGroupByKeySection,
   FleetGroupExpandView,
   FleetGroupHeaderView,
   FleetGroupedResults,
@@ -138,6 +140,33 @@ export declare interface FleetColumnCatalogRequest {
 /** Fleet column catalog response. */
 export declare interface FleetColumnCatalogResponse {
   sections?: FleetColumnCatalogSection[];
+}
+
+/** Fleet filter key catalog request. */
+export declare interface FleetFilterKeyCatalogRequest {
+  entity: SearchEntity;
+  fleet?: Fleet;
+  query?: string;
+  filters?: Filter[];
+}
+
+/** Fleet filter key catalog response. */
+export declare interface FleetFilterKeyCatalogResponse {
+  sections?: FleetFilterKeySection[];
+}
+
+/** Fleet group-by key catalog request. */
+export declare interface FleetGroupByKeyCatalogRequest {
+  entity: SearchEntity;
+  fleet?: Fleet;
+  query?: string;
+  filters?: Filter[];
+  groupBy?: string[];
+}
+
+/** Fleet group-by key catalog response. */
+export declare interface FleetGroupByKeyCatalogResponse {
+  sections?: FleetGroupByKeySection[];
 }
 
 /** TJS search config request. */

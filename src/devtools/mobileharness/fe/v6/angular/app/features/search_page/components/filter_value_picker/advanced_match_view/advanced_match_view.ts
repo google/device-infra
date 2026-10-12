@@ -1,4 +1,3 @@
-import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -19,7 +18,7 @@ import {ADV_MODES_LIST, AdvancedMatchMode} from '../../../models';
   templateUrl: './advanced_match_view.ng.html',
   styleUrl: './advanced_match_view.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, FormsModule, MatIconModule],
+  imports: [FormsModule, MatIconModule],
 })
 export class AdvancedMatchView {
   readonly mode = model.required<AdvancedMatchMode>();

@@ -4,7 +4,7 @@ import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 
 import {
-  INITIAL_VALUE_PICKER_STATE,
+  createInitialValuePickerState,
   PickerValueItem,
   ValuePickerConfig,
   ValuePickerState,
@@ -25,11 +25,13 @@ class FakeSearchPageStore {
     type: 'list',
     canUseAdvanced: true,
   });
-  readonly pickerState = signal<ValuePickerState>(INITIAL_VALUE_PICKER_STATE);
+  readonly pickerState = signal<ValuePickerState>(
+    createInitialValuePickerState(),
+  );
   readonly pickerKey = computed(() => this.pickerConfig()?.key || '');
   readonly pickerTitle = computed(() => this.pickerConfig()?.title || '');
   readonly effectivePickerState = signal<ValuePickerState>({
-    ...INITIAL_VALUE_PICKER_STATE,
+    ...createInitialValuePickerState(),
     values: [
       {value: 'IDLE', displayLabel: 'Idle', filtered: 10, total: 100},
       {value: 'BUSY', displayLabel: 'Busy', filtered: 20, total: 200},
@@ -149,7 +151,7 @@ describe('FilterValuePicker', () => {
       total: 50,
     }));
     mockStore.effectivePickerState.set({
-      ...INITIAL_VALUE_PICKER_STATE,
+      ...createInitialValuePickerState(),
       values: largeList,
       selectedValues: new Set(['val_1', 'val_5', 'val_10', 'val_15']),
     });
@@ -161,7 +163,7 @@ describe('FilterValuePicker', () => {
 
   it('should adapt viewportHeight when no pinned values exist', () => {
     mockStore.effectivePickerState.set({
-      ...INITIAL_VALUE_PICKER_STATE,
+      ...createInitialValuePickerState(),
       values: [
         {value: 'A', displayLabel: 'A'},
         {value: 'B', displayLabel: 'B'},
@@ -191,7 +193,7 @@ describe('FilterValuePicker', () => {
       type: 'range',
     });
     mockStore.effectivePickerState.set({
-      ...INITIAL_VALUE_PICKER_STATE,
+      ...createInitialValuePickerState(),
       values: [],
       selectedValues: new Set(['2026-01-01T00:00', '2026-01-02T00:00']),
     });
@@ -209,7 +211,7 @@ describe('FilterValuePicker', () => {
       needsName: true,
     });
     mockStore.effectivePickerState.set({
-      ...INITIAL_VALUE_PICKER_STATE,
+      ...createInitialValuePickerState(),
       values: [],
       selectedValues: new Set(['custom_key', 'custom_value']),
     });
@@ -228,7 +230,7 @@ describe('FilterValuePicker', () => {
       needsName: true,
     });
     mockStore.effectivePickerState.set({
-      ...INITIAL_VALUE_PICKER_STATE,
+      ...createInitialValuePickerState(),
       values: [],
       selectedValues: new Set(),
     });
@@ -291,7 +293,7 @@ describe('FilterValuePicker', () => {
       type: 'text',
     });
     mockStore.effectivePickerState.set({
-      ...INITIAL_VALUE_PICKER_STATE,
+      ...createInitialValuePickerState(),
       values: [],
       selectedValues: new Set(['hello world']),
     });
@@ -344,7 +346,7 @@ describe('FilterValuePicker', () => {
 
   it('should fold custom selected items not in backend values with count 0 and dimmed style, and allow deselecting', () => {
     mockStore.effectivePickerState.set({
-      ...INITIAL_VALUE_PICKER_STATE,
+      ...createInitialValuePickerState(),
       values: [
         {value: 'IDLE', displayLabel: 'Idle', filtered: 10, total: 100},
         {value: 'BUSY', displayLabel: 'Busy', filtered: 20, total: 200},
@@ -374,7 +376,7 @@ describe('FilterValuePicker', () => {
       total: 50,
     }));
     mockStore.effectivePickerState.set({
-      ...INITIAL_VALUE_PICKER_STATE,
+      ...createInitialValuePickerState(),
       values: largeList,
       selectedValues: new Set(['val_1', 'CUSTOM_STATUS']),
     });
@@ -392,7 +394,7 @@ describe('FilterValuePicker', () => {
 
   it('should stage custom input on search enter only when loading is true', () => {
     mockStore.effectivePickerState.set({
-      ...INITIAL_VALUE_PICKER_STATE,
+      ...createInitialValuePickerState(),
       loading: true,
       values: [],
       selectedValues: new Set(),
@@ -408,7 +410,7 @@ describe('FilterValuePicker', () => {
 
   it('should not stage custom input on search enter when loading is false, but apply current search state', () => {
     mockStore.effectivePickerState.set({
-      ...INITIAL_VALUE_PICKER_STATE,
+      ...createInitialValuePickerState(),
       loading: false,
       values: [
         {value: 'IDLE', displayLabel: 'Idle', filtered: 10, total: 100},
@@ -427,7 +429,7 @@ describe('FilterValuePicker', () => {
 
   it('should emit empty selected array on apply if no items are checked even if searchQuery has text', () => {
     mockStore.effectivePickerState.set({
-      ...INITIAL_VALUE_PICKER_STATE,
+      ...createInitialValuePickerState(),
       loading: false,
       values: [{value: 'IDLE', displayLabel: 'Idle', filtered: 10, total: 100}],
       selectedValues: new Set(),

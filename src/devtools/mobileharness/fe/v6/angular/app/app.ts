@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
+import {PortalModule} from '@angular/cdk/portal';
 import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
-  inject,
   OnDestroy,
   ViewEncapsulation,
+  inject,
 } from '@angular/core';
 import {MatButtonModule, MatIconButton} from '@angular/material/button';
 import {MatDividerModule} from '@angular/material/divider';
@@ -46,6 +47,7 @@ import {
   getOmniLabUrl,
 } from '@deviceinfra/app/core/models/app_data';
 import {UrlService} from '@deviceinfra/app/core/services/url_service';
+import {HeaderSearchDockService} from '@deviceinfra/app/shared/services/header_search_dock_service';
 import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
 import {ReplaySubject} from 'rxjs';
 import {filter, takeUntil} from 'rxjs/operators';
@@ -71,6 +73,7 @@ import {filter, takeUntil} from 'rxjs/operators';
     MatTooltipModule,
     RouterModule,
     MatProgressSpinnerModule,
+    PortalModule,
   ],
 })
 export class App implements OnDestroy {
@@ -84,6 +87,7 @@ export class App implements OnDestroy {
   readonly omniLabUrl = getOmniLabUrl(this.appData.applicationId ?? '');
   readonly loadingService = inject(LoadingService);
   private readonly urlService = inject(UrlService);
+  readonly dockService = inject(HeaderSearchDockService);
   showVersionInfo = true;
   isEmbeddedMode = true;
   isFakeData = false;

@@ -35,18 +35,17 @@
     padding: 0.75rem 0.5rem;
     gap: 12px;
   }
+
+  &.results-mode {
+    padding-top: 0.5rem;
+    gap: 8px;
+  }
 }
 
 app-search-box {
   position: relative;
   z-index: 100;
   display: block;
-}
-
-.comp-area {
-  position: relative;
-  z-index: 10;
-  flex-shrink: 0;
 }
 
 app-fleet-search-results,
@@ -66,7 +65,7 @@ app-tjs-search-results {
   overflow: auto;
   @include common.shared-scrollbar-style();
   width: 100%;
-  max-width: 960px;
+  max-width: min(1240px, 100%);
   padding: 8px 0 24px;
   animation: fadeIn 0.2s cubic-bezier(0, 0, 0.2, 1);
 

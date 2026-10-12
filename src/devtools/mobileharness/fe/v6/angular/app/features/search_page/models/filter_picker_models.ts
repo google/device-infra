@@ -39,7 +39,6 @@ export interface ValuePickerConfig {
   title?: string;
   canUseAdvanced?: boolean;
   isPlural?: boolean;
-  valuesType?: 'counted' | 'plain';
   needsName?: boolean;
   namePlaceholder?: string;
   valPlaceholder?: string;
@@ -59,19 +58,73 @@ export interface ValuePickerState {
   };
 }
 
-/** Default initial state for ValuePicker overlay. */
-export const INITIAL_VALUE_PICKER_STATE: ValuePickerState = Object.freeze({
-  loading: false,
-  values: [],
-  selectedValues: new Set<string>(),
-  negated: false,
-  advanced: {
-    active: false,
-    mode: 'prefix' as AdvancedMatchMode,
-    text: '',
+/** Creates a fresh default initial state for ValuePicker overlay. */
+export function createInitialValuePickerState(): ValuePickerState {
+  return {
+    loading: false,
     values: [],
-  },
-});
+    selectedValues: new Set<string>(),
+    negated: false,
+    advanced: {
+      active: false,
+      mode: 'prefix',
+      text: '',
+      values: [],
+    },
+  };
+}
+
+/** Configuration options passed to computeFilteredAndSortedValues pure engine function. */
+export interface FilterSortOptions {
+  /** Candidate value items available for selection. */
+  readonly items: readonly PickerValueItem[];
+  /** User-entered text query for filtering candidate items. */
+  readonly query: string;
+  /** Primary column to sort items by ('value' | 'filtered' | 'total'). */
+  readonly sortBy: 'value' | 'filtered' | 'total';
+  /** Sort direction flag (true = ascending, false = descending). */
+  readonly sortAsc: boolean;
+  /** Set of currently selected value strings. */
+  readonly selectedValues?: ReadonlySet<string>;
+  /** Whether the candidate items are plain values without count columns. */
+  readonly isPlain?: boolean;
+  /** Loading flag indicating whether backend values are currently fetching. */
+  readonly isLoading?: boolean;
+}
+
+/** Date range bounds representation for value picker range layout. */
+export interface DateRangeState {
+  readonly from: string;
+  readonly to: string;
+}
+
+/** Input payload interface for buildValuePickerApplyEvent. */
+export interface ApplyEventPayload {
+  /** Specific picker mode type ('range', 'namedPair', 'text', etc.). */
+  readonly type?: string;
+  /** Whether advanced regex/match mode is active. */
+  readonly isAdvanced: boolean;
+  /** Whether negate/polarity toggle is active. */
+  readonly negated: boolean;
+  /** Set of selected value strings. */
+  readonly selectedSet: ReadonlySet<string>;
+  /** Advanced match mode string ('prefix', 'suffix', 'contains', 'regex', etc.). */
+  readonly advMode?: AdvancedMatchMode;
+  /** Advanced mode text query. */
+  readonly advText?: string;
+  /** Advanced mode values array. */
+  readonly advValues?: readonly string[];
+  /** From date string for range mode. */
+  readonly rangeFrom?: string;
+  /** To date string for range mode. */
+  readonly rangeTo?: string;
+  /** Property name for namedPair mode. */
+  readonly propName?: string;
+  /** Property value for namedPair mode. */
+  readonly propVal?: string;
+  /** Text value for plain text mode. */
+  readonly textVal?: string;
+}
 
 /** List of configurations for advanced matching options. */
 export const ADV_MODES_LIST: Array<{

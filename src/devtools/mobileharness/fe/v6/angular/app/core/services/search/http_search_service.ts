@@ -7,6 +7,10 @@ import {
   FleetChipResolverResponse,
   FleetColumnCatalogRequest,
   FleetColumnCatalogResponse,
+  FleetFilterKeyCatalogRequest,
+  FleetFilterKeyCatalogResponse,
+  FleetGroupByKeyCatalogRequest,
+  FleetGroupByKeyCatalogResponse,
   FleetPromotedKeysRequest,
   FleetPromotedKeysResponse,
   FleetSearchConfig,
@@ -43,8 +47,12 @@ export class HttpSearchService extends SearchService {
   override getFleetSearchConfig(
     request: FleetSearchConfigRequest,
   ): Observable<FleetSearchConfig> {
+    const params: Record<string, string> = {'entity': request.entity};
+    if (request.fleet) {
+      params['fleet'] = request.fleet;
+    }
     return this.http.get<FleetSearchConfig>(`${this.fleetApiUrl}/config`, {
-      params: request as unknown as Record<string, string>,
+      params,
     });
   }
 
@@ -99,11 +107,29 @@ export class HttpSearchService extends SearchService {
     );
   }
 
+  override getFleetFilterKeyCatalog(
+    request: FleetFilterKeyCatalogRequest,
+  ): Observable<FleetFilterKeyCatalogResponse> {
+    return this.http.post<FleetFilterKeyCatalogResponse>(
+      `${this.fleetApiUrl}/filter-key-catalog`,
+      request,
+    );
+  }
+
+  override getFleetGroupByKeyCatalog(
+    request: FleetGroupByKeyCatalogRequest,
+  ): Observable<FleetGroupByKeyCatalogResponse> {
+    return this.http.post<FleetGroupByKeyCatalogResponse>(
+      `${this.fleetApiUrl}/group-by-key-catalog`,
+      request,
+    );
+  }
+
   override getTjsSearchConfig(
     request: TjsSearchConfigRequest,
   ): Observable<TjsSearchConfig> {
     return this.http.get<TjsSearchConfig>(`${this.tjsApiUrl}/config`, {
-      params: request as unknown as Record<string, string>,
+      params: {entity: request.entity},
     });
   }
 

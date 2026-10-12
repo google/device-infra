@@ -5,6 +5,11 @@ import {
   Filter,
   FilterValue,
   Fleet,
+  FleetFilterChipMetadata,
+  FleetFilterKeyEntry,
+  FleetFilterKeySection,
+  FleetGroupByKeyEntry,
+  FleetGroupByKeySection,
   FleetGroupSort,
   FleetSuggestion,
   SearchEntity,
@@ -19,6 +24,9 @@ import {
   EntityType,
   FilterChip,
   FilterPair,
+  FleetScope,
+  KeyPickerMode,
+  KeyPickerSectionView,
   ParsedUrlQueryChips,
   SearchBoxSuggestion,
 } from '../models';
@@ -91,6 +99,15 @@ export function createComplexMatch(
   }
 }
 
+/** Safe URI component decoder that gracefully falls back to raw string on malformed URI. */
+function safeDecodeURIComponent(val: string): string {
+  try {
+    return decodeURIComponent(val);
+  } catch {
+    return val;
+  }
+}
+
 /**
  * Parses raw condition string into structured Protobuf ComplexMatch AST.
  * Supports Scheme B DSL: "starts~Pixel", "contains~Pixel", "regex~^lab.*", "exactly~A,B", "atleast~X,Y".
@@ -116,12 +133,12 @@ export function parseComplexCondition(
     operator === 'at_least'
       ? rawValue
           .split(',')
-          .map((v) => decodeURIComponent(v.trim()))
+          .map((v) => safeDecodeURIComponent(v.trim()))
           .filter(Boolean)
       : [
           operator === 'regex' || operator === 'not_regex'
             ? rawValue
-            : decodeURIComponent(rawValue),
+            : safeDecodeURIComponent(rawValue),
         ];
 
   return createComplexMatch(operator, values, negated);
@@ -201,7 +218,7 @@ export function buildSimpleFleetFilter(
   for (const v of values) {
     if (v === EMPTY_FILTER_VALUE || v === '') {
       if (!hasNoValue) {
-        filterValues.push({noValue: true});
+        filterValues.push({noValue: {}});
         hasNoValue = true;
       }
     } else if (v) {
@@ -248,15 +265,6 @@ export function serializeComplexCondition(complex?: ComplexMatch): string {
   return '';
 }
 
-/** Safe URI component decoder that gracefully falls back to raw string on malformed URI. */
-function safeDecodeURIComponent(val: string): string {
-  try {
-    return decodeURIComponent(val);
-  } catch {
-    return val;
-  }
-}
-
 /**
  * Serializes a FilterChip object into official Scheme B URL format:
  *   - Simple with values: [!]<key>~<val1>,<val2>
@@ -281,23 +289,19 @@ export function serializeFilterChip(c: FilterChip): string {
 
   // 2. Simple Match with Values or Empty
   if (c.rawValues && c.rawValues.length > 0) {
-    const hasEmpty = c.rawValues.some(
-      (v) => v === EMPTY_FILTER_VALUE || v === '',
-    );
     const validVals = c.rawValues
       .map((v) => v.trim())
       .filter((v) => v && v !== EMPTY_FILTER_VALUE);
 
-    if (hasEmpty && validVals.length === 0) {
+    if (validVals.length === 0) {
       return `${prefix}${key}~`; // (no value) -> key~
     }
-    const serializedVals: string[] = [];
-    if (hasEmpty) {
-      serializedVals.push(EMPTY_FILTER_VALUE);
-    }
-    for (const val of validVals) {
-      serializedVals.push(encodeURIComponent(val));
-    }
+    const serializedVals = c.rawValues.map((v) => {
+      const trimmed = v.trim();
+      return !trimmed || trimmed === EMPTY_FILTER_VALUE
+        ? EMPTY_FILTER_VALUE
+        : encodeURIComponent(trimmed);
+    });
     return `${prefix}${key}~${serializedVals.join(',')}`;
   }
 
@@ -341,40 +345,24 @@ export function parseQueryFilterParam(rawParam: string): FilterChip | null {
 
   // Case A: 3-Part Complex Match (key~mode~pattern)
   if (parts.length >= 3) {
-    const operator = parts[1].trim().toLowerCase();
-    const rawValue = parts.slice(2).join('~').trim();
-    if (rawValue) {
-      const values =
-        operator === 'exact' ||
-        operator === 'exactly' ||
-        operator === 'atleast' ||
-        operator === 'at_least'
-          ? rawValue
-              .split(',')
-              .map((v) => safeDecodeURIComponent(v.trim()))
-              .filter(Boolean)
-          : [
-              operator === 'regex' || operator === 'not_regex'
-                ? rawValue
-                : safeDecodeURIComponent(rawValue),
-            ];
-
-      const complex = createComplexMatch(operator, values, negated);
-      if (complex) {
-        const info = extractComplexMatchInfo(complex);
-        const extractedValues = info?.values || [];
-        const condition = `${operator}~${rawValue}`;
-        const filter = {key, complex};
-        return {
-          key,
-          pillKey: key,
-          pillCondition: condition,
-          rawValues: extractedValues.length > 0 ? extractedValues : undefined,
-          negated,
-          complex,
-          fleetFilter: filter,
-        };
-      }
+    const rawCondition = parts.slice(1).join('~');
+    const complex = parseComplexCondition(rawCondition, negated);
+    if (complex) {
+      const operator = parts[1].trim().toLowerCase();
+      const rawValue = parts.slice(2).join('~').trim();
+      const info = extractComplexMatchInfo(complex);
+      const extractedValues = info?.values || [];
+      const condition = `${operator}~${rawValue}`;
+      const filter = {key, complex};
+      return {
+        key,
+        pillKey: key,
+        pillCondition: condition,
+        rawValues: extractedValues.length > 0 ? extractedValues : undefined,
+        negated,
+        complex,
+        fleetFilter: filter,
+      };
     }
   }
 
@@ -501,6 +489,21 @@ export function isSameFilterChip(
   return !!(keyA && keyB && keyA === keyB);
 }
 
+/** Tracking function for active filter and group-by chips in Angular templates. */
+export function trackChip(chip: FilterChip): string {
+  return `${getChipKey(chip)}:${chip.pillCondition}`;
+}
+
+/** Structural equality comparator for filter arrays in Angular computed signals. */
+export function areFilterArraysEqual<T>(
+  a: readonly T[],
+  b: readonly T[],
+): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 /** Resolves the active EntityType from path or URL string based on supported domain entities. */
 export function resolveEntityFromPathOrUrl(
   pathOrUrl: string,
@@ -598,6 +601,8 @@ export function mapToSearchBoxSuggestion(
     countPrefix: fleetItem.countPrefix,
     countUnit: fleetItem.countUnit,
     overMax: fleetItem.overMax,
+    openPicker: item.openPicker,
+    addGroupBy: fleetItem.addGroupBy,
     rawItem: item,
   };
 }
@@ -705,8 +710,8 @@ export function extractRawValuesFromTjsFilter(
   if (filter.timeRange) {
     const fromVal = filter.timeRange.from || '';
     const toVal = filter.timeRange.to || '';
-    const vals = [fromVal, toVal].filter(Boolean);
-    return vals.length > 0 ? vals : undefined;
+    if (!fromVal && !toVal) return undefined;
+    return [fromVal || EMPTY_FILTER_VALUE, toVal || EMPTY_FILTER_VALUE];
   }
   return undefined;
 }
@@ -819,10 +824,11 @@ export function getInitialRouterUrl(router: Router): string {
   if (router.url && router.url !== '/') {
     return router.url;
   }
-  if (typeof window !== 'undefined' && window.location?.pathname) {
-    return window.location.pathname;
-  }
-  return router.url || '';
+  return (
+    (typeof window !== 'undefined' && window.location?.pathname) ||
+    router.url ||
+    ''
+  );
 }
 
 /** Parses route query params ('f' and 'gb') into structured filter and group-by chips. */
@@ -864,7 +870,69 @@ export function resolveInitialChips(route: ActivatedRoute): FilterChip[] {
 }
 
 /** Resolves initial fleet operational scope from ActivatedRoute snapshot query params. */
-export function resolveInitialFleet(route: ActivatedRoute): 'internal' | 'ats' {
+export function resolveInitialFleet(route: ActivatedRoute): FleetScope {
   const fleetParam = route.snapshot?.queryParams?.['fleet'];
   return fleetParam === 'ats' ? 'ats' : 'internal';
+}
+
+// ============================================================================
+// Catalog Response Adapters (BFF Anti-Corruption Layer)
+// ============================================================================
+
+/**
+ * Adapts backend FleetFilterKeySection[] or FleetGroupByKeySection[] into
+ * strongly-typed KeyPickerSectionView[] for UI presentation.
+ * Decouples UI components from raw protobuf structures and downcasting logic.
+ */
+export function adaptCatalogSections(
+  sections: Array<FleetFilterKeySection | FleetGroupByKeySection> | undefined,
+  mode: KeyPickerMode,
+  entity: SearchEntity = SearchEntity.SEARCH_ENTITY_DEVICE,
+): KeyPickerSectionView[] {
+  if (!sections) return [];
+  const isGroupBy = mode === 'groupby';
+  const noun = entity === SearchEntity.SEARCH_ENTITY_HOST ? 'hosts' : 'devices';
+
+  return sections.map((s) => ({
+    heading: s.heading,
+    totalAvailable: s.totalAvailable,
+    hasMore: Boolean(
+      s.totalAvailable && s.totalAvailable > (s.entries?.length ?? 0),
+    ),
+    entries: (s.entries || []).map((e) => {
+      const isApplied = Boolean(e.applied);
+      const inert = isApplied && isGroupBy;
+      let name = e.key;
+      let count: number | undefined;
+      let filterMetadata: FleetFilterChipMetadata | undefined;
+
+      if (isGroupBy) {
+        const groupEntry = e as FleetGroupByKeyEntry;
+        name = groupEntry.displayName || e.key;
+        count = groupEntry.groupCount?.shown?.count;
+      } else {
+        const filterEntry = e as FleetFilterKeyEntry;
+        filterMetadata = filterEntry.metadata;
+        name = filterMetadata?.keyDisplayName || e.key;
+        count = filterEntry.coverage?.shown?.count;
+      }
+
+      const meta = isApplied
+        ? 'applied'
+        : count != null
+          ? isGroupBy
+            ? `${count.toLocaleString()} groups`
+            : `Used by ${count.toLocaleString()} ${noun}`
+          : '';
+
+      return {
+        key: e.key,
+        name,
+        meta,
+        applied: isApplied,
+        inert,
+        filterMetadata,
+      };
+    }),
+  }));
 }

@@ -3,7 +3,8 @@ import {By} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 
 import {FleetGroup, Row} from '../../../../../core/models/search';
-import {FleetGroupCardComponent, GroupPageState} from './fleet_group_card';
+import {GroupPageState} from '../../../models';
+import {FleetGroupCardComponent} from './fleet_group_card';
 
 describe('FleetGroupCardComponent', () => {
   let component: FleetGroupCardComponent;
@@ -197,7 +198,9 @@ describe('FleetGroupCardComponent', () => {
     expect(component.errorMessage()).toBe('Network connection failed');
     const errorEl = fixture.debugElement.query(By.css('.rt-group-error-msg'));
     expect(errorEl).not.toBeNull();
-    expect(errorEl.nativeElement.textContent).toContain('Network connection failed');
+    expect(errorEl.nativeElement.textContent).toContain(
+      'Network connection failed',
+    );
   });
 
   it('renders empty message when group has no rows', () => {
@@ -215,6 +218,8 @@ describe('FleetGroupCardComponent', () => {
     expect(component.hasGroupRows()).toBeFalse();
     const emptyEl = fixture.debugElement.query(By.css('.rt-group-empty'));
     expect(emptyEl).not.toBeNull();
-    expect(emptyEl.nativeElement.textContent).toContain('No devices in this group.');
+    expect(emptyEl.nativeElement.textContent).toContain(
+      'No devices in this group.',
+    );
   });
 });

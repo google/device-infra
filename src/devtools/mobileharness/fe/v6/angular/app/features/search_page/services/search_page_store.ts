@@ -26,17 +26,27 @@ import {
   switchMap,
 } from 'rxjs/operators';
 
-import {Column, Row} from '../../../core/models/search';
+import {
+  Column,
+  Filter,
+  FleetSuggestion,
+  Row,
+  TjsFilter,
+  TjsSuggestion,
+} from '../../../core/models/search';
 import {SEARCH_SERVICE} from '../../../core/services/search/search_service';
 import {
+  createInitialValuePickerState,
   EntityType,
   FilterChip,
   FilterKeyMetadata,
-  INITIAL_VALUE_PICKER_STATE,
+  FleetScope,
+  MAX_GROUP_BY_KEYS,
   PromotedFilterKeyItem,
   PromotedGroupByKeyItem,
   SearchBoxSuggestion,
   SearchPageConfig,
+  TableDensity,
   ValuePickerApplyEvent,
   ValuePickerConfig,
   ValuePickerState,
@@ -48,14 +58,17 @@ import {
   getInitialRouterUrl,
   getQueryParamAsArray,
   getSerializedChipsKey,
+  getStoredAutoCollapseAfterApply,
   isChipNegated,
   isSameFilterChip,
   isSearchRouteActive,
+  mapToSearchBoxSuggestion,
   normalizeKey,
   parseUrlChips,
   resolveEntityFromPathOrUrl,
   resolveInitialChips,
   resolveInitialFleet,
+  saveStoredAutoCollapseAfterApply,
   serializeFilterChip,
 } from '../utils';
 
@@ -135,7 +148,7 @@ export abstract class SearchPageStore {
   });
 
   /** Fleet operational scope ('internal' vs 'ats'). */
-  readonly fleet = signal<'internal' | 'ats'>(resolveInitialFleet(this.route));
+  readonly fleet = signal<FleetScope>(resolveInitialFleet(this.route));
 
   /** Raw text input query string entered by the user in the search box. */
   readonly searchQuery = signal<string>('');
@@ -160,6 +173,28 @@ export abstract class SearchPageStore {
   /** Controls visibility of the search box suggestions popover dropdown. */
   readonly showSuggestions = signal<boolean>(false);
 
+  /** Per-user preference controlling whether the suggestions popover auto-collapses after applying a filter or group-by (defaults to true when absent in localStorage). */
+  readonly autoCollapseAfterApply = linkedSignal<
+    {entity: string; fleet: string; open: boolean},
+    boolean
+  >({
+    source: () => ({
+      entity: this.entity(),
+      fleet: this.fleet(),
+      open: this.showSuggestions(),
+    }),
+    computation: ({entity, fleet}) => {
+      const stored = getStoredAutoCollapseAfterApply(entity, fleet);
+      return stored !== null ? stored : true;
+    },
+  });
+
+  /** Updates and persists the auto-collapse preference to localStorage. */
+  setAutoCollapseAfterApply(enabled: boolean) {
+    this.autoCollapseAfterApply.set(enabled);
+    saveStoredAutoCollapseAfterApply(this.entity(), this.fleet(), enabled);
+  }
+
   // ===========================================================================
   // 3. ValuePicker Overlay State Signals
   // ===========================================================================
@@ -174,13 +209,28 @@ export abstract class SearchPageStore {
   readonly pickerConfig = signal<ValuePickerConfig | null>(null);
 
   /** User interaction state within the ValuePicker (selected values, negation, advanced mode). */
-  readonly pickerState = signal<ValuePickerState>(INITIAL_VALUE_PICKER_STATE);
+  readonly pickerState = signal<ValuePickerState>(
+    createInitialValuePickerState(),
+  );
 
   /** Target filter key currently being edited in the ValuePicker. */
   readonly pickerKey = computed(() => this.pickerConfig()?.key || '');
 
   /** Display title for the currently open ValuePicker. */
   readonly pickerTitle = computed(() => this.pickerConfig()?.title || '');
+
+  /** Temporary filter key definition staged from a quick filter link before values are applied. */
+  readonly pendingFilter = signal<{
+    key: string;
+    displayName: string;
+    metadata?: FilterKeyMetadata;
+  } | null>(null);
+
+  /** Specific chip key currently focused or pulsed inside the suggestions popover. */
+  readonly focusChipKey = signal<string | null>(null);
+
+  /** Type of chip focused ('filter' | 'groupby' | null). */
+  readonly focusChipType = signal<'filter' | 'groupby' | null>(null);
 
   /**
    * Effective ValuePicker state presented to the popover overlay.
@@ -216,7 +266,7 @@ export abstract class SearchPageStore {
   });
 
   /** Table row display density ('compact', 'default', or 'comfortable'). */
-  readonly density = signal<'compact' | 'default' | 'comfortable'>('default');
+  readonly density = signal<TableDensity>('default');
 
   // ===========================================================================
   // 5. Derived Computed Signals
@@ -239,8 +289,15 @@ export abstract class SearchPageStore {
     () => this.activeChips().length > 0 || this.searchQuery().trim().length > 0,
   );
 
-  /** Whether the clear button ('X') in the search bar should be displayed. */
-  readonly showSearchClear = computed(() => this.hasActiveFilters());
+  /** Whether the clear button ('X') in the search bar should be displayed (only when text input is non-empty). */
+  readonly showSearchClear = computed<boolean>(
+    () => this.searchQuery().length > 0,
+  );
+
+  /** Clears only the text input in the search box without removing active filter or group-by chips. */
+  clearSearchQuery() {
+    this.searchQuery.set('');
+  }
 
   /** Whether the search view is currently in its initial landing / empty guide state. */
   readonly isLandingState = computed<boolean>(() => {
@@ -248,13 +305,51 @@ export abstract class SearchPageStore {
     return this.activeChips().length === 0 && !this.browseAll();
   });
 
-  /** List of active group-by field keys extracted from `activeChips`. */
-  readonly groupByKeys = computed<string[]>(
+  /** Active filter chips (excluding group-by chips). */
+  readonly filterChips = computed<FilterChip[]>(() =>
+    this.activeChips().filter((c) => !c.isGroupBy),
+  );
+
+  /** Active group-by chips. */
+  readonly groupByChips = computed<FilterChip[]>(() =>
+    this.activeChips().filter((c) => c.isGroupBy),
+  );
+
+  /** Key of a filter currently being edited in ValuePicker or pending via Quick Filter, not yet applied as an active chip. */
+  readonly pendingFilterKey = computed<string | null>(() => {
+    const pf = this.pendingFilter();
+    const pk = pf?.key || (this.showValuePicker() ? this.pickerKey() : null);
+    if (!pk) return null;
+    const hasApplied = this.filterChips().some(
+      (c) => getChipKey(c).toLowerCase() === pk.toLowerCase(),
+    );
+    return hasApplied ? null : pk;
+  });
+
+  /** Display title for the pending filter key being edited. */
+  readonly pendingFilterTitle = computed<string>(() => {
+    return (
+      this.pendingFilter()?.displayName ||
+      this.pickerTitle() ||
+      this.pendingFilterKey() ||
+      ''
+    );
+  });
+
+  /** Whether the suggestions popover panel should be open and visible below the search box. */
+  readonly isSuggestionsPanelOpen = computed<boolean>(
     () =>
-      this.activeChips()
-        .filter((c) => c.isGroupBy)
-        .map(getChipKey)
-        .filter(Boolean),
+      this.showSuggestions() &&
+      (this.activeChips().length > 0 ||
+        !!this.pendingFilterKey() ||
+        this.isSuggestionsLoading() ||
+        this.suggestions().length > 0 ||
+        Boolean(this.searchQuery().trim())),
+  );
+
+  /** List of active group-by field keys extracted from `groupByChips`. */
+  readonly groupByKeys = computed<string[]>(
+    () => this.groupByChips().map(getChipKey).filter(Boolean),
     {
       equal: (a, b) => a.length === b.length && a.every((k, i) => k === b[i]),
     },
@@ -262,10 +357,7 @@ export abstract class SearchPageStore {
 
   /** Serialized active filter parameter strings formatted for URL query. */
   readonly serializedActiveFilters = computed<string[]>(() =>
-    this.activeChips()
-      .filter((c) => !c.isGroupBy)
-      .map(serializeFilterChip)
-      .filter(Boolean),
+    this.filterChips().map(serializeFilterChip).filter(Boolean),
   );
 
   /** Canonical URL query parameter key computed from current active state. */
@@ -284,8 +376,51 @@ export abstract class SearchPageStore {
   /** Domain-specific autocomplete and recommendation suggestions for the search box. */
   abstract readonly suggestions: Signal<SearchBoxSuggestion[]>;
 
+  /** Whether search box autocomplete suggestions are currently loading. */
+  readonly isSuggestionsLoading: Signal<boolean> = signal(false);
+
+  /** Whether there are active filter or group-by criteria sufficient to fetch suggestions on empty input. */
+  protected readonly hasSuggestionCriteria = computed<boolean>(
+    () => this.effectiveFilters().length > 0 || this.groupByKeys().length > 0,
+  );
+
+  /**
+   * Resolves the active input string for suggestion resource queries, or null if suggestions
+   * should not be fetched (e.g. route inactive, popover closed, empty input & criteria, or still debouncing).
+   */
+  protected getActiveSuggestionInput(): string | null {
+    if (!this.isCurrentRouteActive() || !this.showSuggestions()) return null;
+    const rawInput = this.searchQuery().trim();
+    const debouncedInput = this.debouncedSearchQuery().trim();
+    if (!rawInput && !this.hasSuggestionCriteria()) return null;
+    if (rawInput && !debouncedInput) return null;
+    return rawInput ? debouncedInput : '';
+  }
+
+  /** Maps raw suggestion items to SearchBoxSuggestion items when criteria or input are active. */
+  protected mapSuggestions(
+    items: ReadonlyArray<FleetSuggestion | TjsSuggestion> | undefined,
+  ): SearchBoxSuggestion[] {
+    if (!this.searchQuery().trim() && !this.hasSuggestionCriteria()) return [];
+    return (items || []).map(mapToSearchBoxSuggestion);
+  }
+
+  /** Computes whether suggestions are currently loading or debouncing user input. */
+  protected computeSuggestionsLoading(resourceIsLoading: boolean): boolean {
+    if (!this.showSuggestions()) return false;
+    const rawInput = this.searchQuery().trim();
+    if (!rawInput && !this.hasSuggestionCriteria()) return false;
+    return (
+      resourceIsLoading ||
+      (Boolean(rawInput) && rawInput !== this.debouncedSearchQuery().trim())
+    );
+  }
+
   /** Loading state for primary search result data fetching. */
   abstract readonly isLoading: Signal<boolean>;
+
+  /** Effective filter list guarding downstream search resources. */
+  abstract readonly effectiveFilters: Signal<Filter[] | TjsFilter[]>;
 
   /** Initial page configuration including metadata, default chips, and column definitions. */
   abstract readonly searchConfig: Signal<SearchPageConfig | null>;
@@ -331,6 +466,11 @@ export abstract class SearchPageStore {
   /** Pre-formatted semantic range text for pagination footer display (e.g. "1 – 25 of 1,250", "showing 1–25"). */
   abstract readonly rangeText: Signal<string>;
 
+  /** Total matching count across search modes, or null if not available (e.g. in TJS cursor pagination). */
+  readonly effectiveTotalCount: Signal<number | null> = signal<number | null>(
+    null,
+  );
+
   /** Triggers execution of the primary domain search query. */
   abstract executeSearch(): void;
 
@@ -344,17 +484,20 @@ export abstract class SearchPageStore {
   abstract nextPage(): void;
 
   /** Handles user selection of an autocomplete suggestion from the search box popover. */
-  selectSuggestion(item: SearchBoxSuggestion, anchor?: HTMLElement | null) {
+  selectSuggestion(item: SearchBoxSuggestion) {
     if (!item.rawItem) return;
-    this.showSuggestions.set(false);
     this.searchQuery.set('');
-    this.applySuggestion(item.rawItem, anchor);
+    if (item.openPicker) {
+      this.showSuggestions.set(true);
+    } else {
+      this.showSuggestions.set(!this.autoCollapseAfterApply());
+    }
+    this.applySuggestion(item.rawItem);
   }
 
   /** Subclass hook to unpack domain-specific suggestion payload and apply to store. */
   protected abstract applySuggestion(
-    rawItem: unknown,
-    anchor?: HTMLElement | null,
+    rawItem: FleetSuggestion | TjsSuggestion,
   ): void;
 
   /** Subclass hook to resolve chips from domain-specific backend RPC. */
@@ -367,14 +510,14 @@ export abstract class SearchPageStore {
   protected abstract buildPickerConfig(
     key: string,
     title?: string,
-    metadata?: unknown,
+    metadata?: FilterKeyMetadata,
   ): ValuePickerConfig;
 
   /** Subclass hook to construct initial ValuePicker state for a filter key. */
   protected abstract buildInitialPickerState(
     key: string,
     activeChip?: FilterChip,
-    metadata?: unknown,
+    metadata?: FilterKeyMetadata,
     stagedValues?: string[],
   ): ValuePickerState;
 
@@ -493,7 +636,7 @@ export abstract class SearchPageStore {
       .map(getChipKey)
       .filter(Boolean);
 
-    this.lastSyncedUrlKey = getSerializedChipsKey(chips, fleet);
+    this.lastSyncedUrlKey = buildUrlParamKey(filters, groupBys, fleet);
 
     const queryParams: Record<string, string | string[] | null> = {
       'f': filters.length > 0 ? filters : null,
@@ -545,16 +688,23 @@ export abstract class SearchPageStore {
     this.syncUrl(nextChips);
   }
 
+  /** Updates active chips, resets transient state if needed, and syncs the URL after chip removal. */
+  private commitChipsRemoval(nextChips: FilterChip[]) {
+    this.activeChips.set(nextChips);
+    if (nextChips.length === 0 && !this.searchQuery().trim()) {
+      this.browseAll.set(false);
+    }
+    if (this.autoCollapseAfterApply()) {
+      this.showSuggestions.set(false);
+    }
+    this.syncUrl(nextChips);
+  }
+
   /** Removes a specific filter chip and closes the ValuePicker if the active chip is removed. */
   removeFilterChip(chip: FilterChip) {
     const nextChips = this.activeChips().filter(
       (c) => !isSameFilterChip(c, chip),
     );
-    this.activeChips.set(nextChips);
-    if (nextChips.length === 0 && !this.searchQuery().trim()) {
-      this.browseAll.set(false);
-    }
-
     // Automatically close the ValuePicker if all chips are removed or the chip being edited was removed.
     if (this.showValuePicker()) {
       const currentPickerKey = this.pickerConfig()?.key;
@@ -566,8 +716,24 @@ export abstract class SearchPageStore {
         this.closeValuePicker();
       }
     }
-    this.syncUrl(nextChips);
+    this.commitChipsRemoval(nextChips);
   }
+
+  /** Removes all active filter chips while preserving any active group-by chips. */
+  clearFilterChips() {
+    if (this.showValuePicker()) {
+      this.closeValuePicker();
+    }
+    this.commitChipsRemoval(this.groupByChips());
+  }
+
+  /** Removes all active group-by chips while preserving any active filter chips. */
+  clearGroupByChips() {
+    this.commitChipsRemoval(this.filterChips());
+  }
+
+  /** Maximum number of group-by keys allowed concurrently in the search table. */
+  readonly maxGroupByKeys = MAX_GROUP_BY_KEYS;
 
   /** Toggles a group-by key (adds it if not present, removes it if currently active). */
   toggleGroupBy(gbKey: string, displayName?: string) {
@@ -580,6 +746,9 @@ export abstract class SearchPageStore {
         this.removeFilterChip(existing);
       }
     } else {
+      if (currentGbKeys.length >= this.maxGroupByKeys) {
+        return;
+      }
       this.addFilterChip(createGroupByChip(gbKey, displayName));
     }
   }
@@ -631,14 +800,89 @@ export abstract class SearchPageStore {
     return true;
   }
 
+  /** Pending request to open ValuePicker for a quick-filter chip inside the suggestions popover. */
+  readonly pendingFilterOpenRequest = signal<{
+    key: string;
+    title?: string;
+    metadata?: FilterKeyMetadata;
+    stagedValues?: string[];
+  } | null>(null);
+
+  /**
+   * Opens the Quick Filter flow matching prototype UI design:
+   * Opens the suggestions popover, creates a temporary/pending chip if the filter is not yet applied,
+   * focuses the chip in the popover, and signals the suggestions component to open the ValuePicker anchored to that chip.
+   */
+  openQuickFilter(
+    key: string,
+    title?: string,
+    metadata?: FilterKeyMetadata,
+    stagedValues?: string[],
+  ) {
+    this.closeValuePicker();
+    const activeChip = this.activeChips().find(
+      (c) => !c.isGroupBy && isSameFilterChip(c, {key, isGroupBy: false}),
+    );
+    if (!activeChip) {
+      this.pendingFilter.set({
+        key,
+        displayName: title || key,
+        metadata,
+      });
+    } else {
+      this.pendingFilter.set(null);
+    }
+    this.focusChipKey.set(key);
+    this.focusChipType.set('filter');
+    this.showSuggestions.set(true);
+    this.pendingFilterOpenRequest.set({
+      key,
+      title,
+      metadata,
+      stagedValues,
+    });
+  }
+
+  /**
+   * Opens the Quick Group-by flow matching prototype UI design:
+   * Adds the group-by key if not yet applied.
+   * Clicking an already-selected groupby always opens the suggestions popover to view/locate it;
+   * applying a new groupby respects autoCollapseAfterApply preference.
+   */
+  openQuickGroupBy(key: string, displayName?: string) {
+    const isAlreadyActive = this.groupByKeys().includes(key);
+    if (!isAlreadyActive) {
+      if (this.groupByKeys().length >= this.maxGroupByKeys) {
+        return;
+      }
+      this.toggleGroupBy(key, displayName);
+    }
+    this.closeValuePicker();
+    this.focusChipKey.set(key);
+    this.focusChipType.set('groupby');
+
+    if (isAlreadyActive) {
+      this.showSuggestions.set(true);
+    } else if (this.autoCollapseAfterApply()) {
+      this.showSuggestions.set(false);
+    } else {
+      this.showSuggestions.set(true);
+    }
+  }
+
   /** Opens the ValuePicker popover for the specified key, configuring layout and initial state. */
   openValuePicker(
     key: string,
     anchor?: CdkOverlayOrigin | HTMLElement | null,
     title?: string,
-    metadata?: unknown,
+    metadata?: FilterKeyMetadata,
     stagedValues?: string[],
+    keepSuggestionsOpen = false,
   ) {
+    if (!keepSuggestionsOpen) {
+      this.showSuggestions.set(false);
+    }
+
     if (this.isKeyPickerActive(key, title)) {
       this.closeValuePicker();
       return;
@@ -669,8 +913,12 @@ export abstract class SearchPageStore {
   closeValuePicker() {
     this.showValuePicker.set(false);
     this.pickerConfig.set(null);
-    this.pickerState.set(INITIAL_VALUE_PICKER_STATE);
+    this.pickerState.set(createInitialValuePickerState());
     this.pickerAnchor.set(null);
+    this.pendingFilter.set(null);
+    this.pendingFilterOpenRequest.set(null);
+    this.focusChipKey.set(null);
+    this.focusChipType.set(null);
   }
 
   /** Resets transient UI state (query, overlays, suggestions). Override in subclasses to clear custom state. */

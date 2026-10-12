@@ -1,0 +1,228 @@
+@use '@angular/material' as mat;
+@use '../../../../../shared/styles/common';
+
+:host {
+  display: block;
+}
+
+::ng-deep .key-picker-dialog-panel {
+  width: min(560px, 94vw);
+  max-width: 94vw;
+  --dialog-container-position: static;
+  --dialog-container-padding: 0;
+  --dialog-card-radius: 16px;
+  --dialog-card-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  --dialog-card-border: none;
+  --dialog-header-padding: 16px 24px 8px;
+  --dialog-header-border-bottom: none;
+  --dialog-header-gap: 12px;
+  --dialog-title-size: 1.5rem;
+  --dialog-title-weight: 400;
+  --dialog-title-line-height: 32px;
+  --dialog-title-color: #1d1b20;
+
+  @include mat.dialog-overrides(
+    (
+      container-shape: 16px,
+    )
+  );
+
+  .close-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    color: #49454f;
+
+    &:hover {
+      background-color: rgba(29, 27, 32, 0.08);
+    }
+
+    mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+  }
+}
+
+.kp-searchbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  margin: 12px 20px;
+  padding: 0 16px;
+  height: 48px;
+  border-radius: 24px;
+  background: #f3f4f9;
+  color: #49454f;
+
+  input {
+    flex: 1;
+    border: none;
+    background: none;
+    outline: none;
+    font-family: inherit;
+    font-size: 0.875rem;
+    color: #1d1b20;
+
+    &::placeholder {
+      color: #49454f;
+    }
+  }
+}
+
+.kp-body {
+  flex: 1;
+  min-height: 320px;
+  max-height: calc(90vh - 160px);
+  overflow-y: auto;
+  padding: 0 20px 16px;
+  border-top: 1px solid #e0e3e7;
+  @include common.shared-scrollbar-style();
+}
+
+.kp-section {
+  padding: 12px 0;
+
+  & + .kp-section {
+    border-top: 1px solid #e0e3e7;
+  }
+}
+
+.kp-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0.1px;
+  color: #1d1b20;
+}
+
+.kp-hint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #444746;
+}
+
+.kp-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #1d1b20;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover:not(.kp-inert),
+  &:focus-visible:not(.kp-inert) {
+    background-color: rgba(29, 27, 32, 0.08);
+    outline: none;
+  }
+
+  &.kp-applied .kp-row-name {
+    color: #49454f;
+  }
+
+  &.kp-applied .kp-row-meta {
+    color: #0b57d0;
+    font-weight: 500;
+  }
+
+  &.kp-inert {
+    cursor: default;
+
+    &:hover {
+      background-color: transparent;
+    }
+  }
+}
+
+.kp-row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kp-row-meta {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: #444746;
+}
+
+.kp-more,
+.kp-empty {
+  padding: 8px;
+  font-size: 0.8125rem;
+  color: #444746;
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: #fce8e6;
+  color: #c5221f;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  font-size: 0.875rem;
+
+  > mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    flex-shrink: 0;
+  }
+
+  .error-message {
+    flex: 1;
+    line-height: 20px;
+  }
+
+  .retry-btn {
+    margin-left: auto;
+    flex-shrink: 0;
+
+    @include mat.button-overrides(
+      (
+        text-label-text-color: #b3261e,
+        text-state-layer-color: #b3261e,
+        text-label-text-font: inherit,
+        text-label-text-size: 0.875rem,
+        text-label-text-weight: 500,
+        text-container-height: 36px,
+        text-container-shape: 18px,
+      )
+    );
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      line-height: 18px;
+      margin-right: 6px;
+    }
+  }
+}
+
+.spin-animation {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  100% {
+    transform: rotate(360deg);
+  }
+}

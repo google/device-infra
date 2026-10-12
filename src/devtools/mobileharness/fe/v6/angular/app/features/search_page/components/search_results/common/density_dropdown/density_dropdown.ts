@@ -1,15 +1,8 @@
-import {CommonModule} from '@angular/common';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  input,
-  output,
-} from '@angular/core';
+import {ChangeDetectionStrategy, Component, input, output} from '@angular/core';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
 
-/** Density option type for search results table rows. */
-export type TableDensity = 'compact' | 'default' | 'comfortable';
+import {TableDensity} from '../../../../models';
 
 /** Reusable standalone density selector dropdown component for search results. */
 @Component({
@@ -18,7 +11,7 @@ export type TableDensity = 'compact' | 'default' | 'comfortable';
   templateUrl: './density_dropdown.ng.html',
   styleUrl: './density_dropdown.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, MatIconModule, MatMenuModule],
+  imports: [MatIconModule, MatMenuModule],
 })
 export class DensityDropdownComponent {
   /** Active table row height density mode. */

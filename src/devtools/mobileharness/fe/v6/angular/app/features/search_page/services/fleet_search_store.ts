@@ -15,8 +15,6 @@ import {
   Filter,
   FleetChipResolverRequest,
   FleetColumnDescriptor,
-  FleetFilterChipMetadata,
-  FleetFlatResults,
   FleetGroup,
   FleetPromotedKeysRequest,
   FleetSearchConfig,
@@ -35,6 +33,7 @@ import {
   FilterChip,
   FilterKeyMetadata,
   FilterPair,
+  GroupPageState,
   PickerValueItem,
   PromotedFilterKeyItem,
   PromotedGroupByKeyItem,
@@ -44,6 +43,7 @@ import {
   ValuePickerState,
 } from '../models';
 import {
+  areFilterArraysEqual,
   buildComplexMatchFromEvent,
   buildFleetFilterFromChip,
   buildFleetGroupSort,
@@ -59,7 +59,6 @@ import {
   getStoredVisibleColumns,
   isChipNegated,
   isValuePickerSelectionEmpty,
-  mapToSearchBoxSuggestion,
   saveStoredVisibleColumns,
   toFleetProto,
   toSearchEntityProto,
@@ -115,13 +114,12 @@ export class FleetSearchStore extends SearchPageStore {
     | undefined
   >({
     params: () => {
-      if (!this.isCurrentRouteActive()) return undefined;
-      const show = this.showSuggestions();
-      if (!show) return undefined;
+      const input = this.getActiveSuggestionInput();
+      if (input === null) return undefined;
 
       return {
         entity: this.entity(),
-        input: this.debouncedSearchQuery(),
+        input,
         fleet: this.fleet(),
         activeFilters: this.effectiveFilters(),
         groupBy: this.groupByKeys(),
@@ -144,12 +142,15 @@ export class FleetSearchStore extends SearchPageStore {
     },
   });
 
-  /** Autocomplete suggestions transformed into SearchBoxSuggestion items. */
-  override readonly suggestions = computed<SearchBoxSuggestion[]>(() => {
-    return (this.suggestionsResource.value() || []).map(
-      mapToSearchBoxSuggestion,
-    );
-  });
+  /** Autocomplete suggestions transformed into SearchBoxSuggestion items directly from the BFF response. */
+  override readonly suggestions = computed<SearchBoxSuggestion[]>(() =>
+    this.mapSuggestions(this.suggestionsResource.value()),
+  );
+
+  /** Whether autocomplete suggestions are currently being fetched or debounced. */
+  override readonly isSuggestionsLoading = computed<boolean>(() =>
+    this.computeSuggestionsLoading(this.suggestionsResource.isLoading()),
+  );
 
   // ===========================================================================
   // 2. Page Configuration & Metadata Resources
@@ -187,7 +188,7 @@ export class FleetSearchStore extends SearchPageStore {
     this.searchConfigResource.isLoading(),
   );
 
-  /** Reactive resource fetching promoted filter keys and promoted group-by keys. */
+  /** Reactive resource fetching promoted filter keys and promoted group-by keys once on page entry. */
   private readonly promotedKeysResource = rxResource<
     {
       filterKeys: PromotedFilterKeyItem[];
@@ -221,7 +222,10 @@ export class FleetSearchStore extends SearchPageStore {
       };
       return this.searchService.getFleetPromotedKeys(fleetReq).pipe(
         map((res) => ({
-          filterKeys: res.filterKeys || [],
+          filterKeys: (res.filterKeys || []).map((pk) => ({
+            ...pk,
+            displayName: pk.metadata?.keyDisplayName || pk.key,
+          })),
           groupByKeys: res.groupByKeys || [],
         })),
         catchError(() => of({filterKeys: [], groupByKeys: []})),
@@ -414,22 +418,8 @@ export class FleetSearchStore extends SearchPageStore {
   });
 
   /** Sets the visible table columns, persists them to localStorage, and re-executes search query. */
-  setVisibleColumns(columns: Array<FleetColumnDescriptor | string>) {
-    const defaultMap = new Map(
-      (this.searchConfig()?.columns?.defaults ?? []).map((d) => [
-        d.key,
-        d.displayName,
-      ]),
-    );
-    const descriptors: FleetColumnDescriptor[] = columns.map((c) => {
-      if (typeof c === 'string') {
-        const meta = this.getKeyMetadata(c);
-        const displayName = meta?.keyDisplayName || defaultMap.get(c) || c;
-        return {key: c, displayName};
-      }
-      return c;
-    });
-
+  setVisibleColumns(columns: readonly FleetColumnDescriptor[]) {
+    const descriptors = [...columns];
     const defs = this.defaultColumns();
     const matchesDefaults =
       defs.length > 0 &&
@@ -520,7 +510,7 @@ export class FleetSearchStore extends SearchPageStore {
   /** Map holding pagination data and loading states for expanded group headers, automatically reset when query scope changes. */
   readonly expandedGroupPages = linkedSignal<
     string,
-    Map<string, {loading?: boolean; data?: FleetFlatResults; error?: string}>
+    Map<string, GroupPageState>
   >({
     source: () => this.searchScopeKey(),
     computation: () => new Map(),
@@ -643,10 +633,7 @@ export class FleetSearchStore extends SearchPageStore {
   }
 
   /** Helper to update state for an expanded group in expandedGroupPages map. */
-  private updateGroupExpandState(
-    groupId: string,
-    patch: {loading?: boolean; data?: FleetFlatResults; error?: string},
-  ) {
+  private updateGroupExpandState(groupId: string, patch: GroupPageState) {
     this.expandedGroupPages.update((map) => {
       const next = new Map(map);
       const existing = next.get(groupId);
@@ -903,7 +890,7 @@ export class FleetSearchStore extends SearchPageStore {
   });
 
   /** Total matching count across flat or grouped search. */
-  readonly effectiveTotalCount = computed(() => {
+  override readonly effectiveTotalCount = computed<number>(() => {
     return (
       (this.groupByKeys().length > 0
         ? this.groupedResults()?.totalItems
@@ -917,13 +904,7 @@ export class FleetSearchStore extends SearchPageStore {
       this.activeChips()
         .filter((c) => !c.isGroupBy)
         .map((c) => buildFleetFilterFromChip(c)),
-    {
-      equal: (a, b) => {
-        if (a === b) return true;
-        if (a.length !== b.length) return false;
-        return JSON.stringify(a) === JSON.stringify(b);
-      },
-    },
+    {equal: areFilterArraysEqual},
   );
 
   /** Reloads the primary search resource and resets page token and group expansions. */
@@ -1046,21 +1027,17 @@ export class FleetSearchStore extends SearchPageStore {
   protected override buildPickerConfig(
     key: string,
     title?: string,
-    metadata?: unknown,
+    metadata?: FilterKeyMetadata,
   ): ValuePickerConfig {
-    const meta =
-      (metadata as FleetFilterChipMetadata) || this.getKeyMetadata(key);
+    const meta = metadata || this.getKeyMetadata(key);
     const displayTitle = meta?.keyDisplayName || title || key;
 
     return {
       key,
       type: 'list',
       title: displayTitle,
-      needsName: false,
       canUseAdvanced: !!meta?.canUseAdvanced,
       isPlural: !!meta?.isPlural,
-      namePlaceholder: 'Name',
-      valPlaceholder: 'Value',
     };
   }
 
@@ -1068,7 +1045,7 @@ export class FleetSearchStore extends SearchPageStore {
   protected override buildInitialPickerState(
     key: string,
     activeChip?: FilterChip,
-    metadata?: unknown,
+    metadata?: FilterKeyMetadata,
     stagedValues?: string[],
   ): ValuePickerState {
     let isAdv = false;
@@ -1126,6 +1103,7 @@ export class FleetSearchStore extends SearchPageStore {
     const meta = key ? this.getKeyMetadata(key) : undefined;
     const displayTitle = meta?.keyDisplayName || title;
     this.closeValuePicker();
+    this.showSuggestions.set(!this.autoCollapseAfterApply());
 
     if (isValuePickerSelectionEmpty(event)) {
       this.removeChipForKey(key);
@@ -1191,19 +1169,14 @@ export class FleetSearchStore extends SearchPageStore {
   // ===========================================================================
 
   /** Unpacks FleetSuggestion payload to open value picker or apply filter/group-by chips. */
-  protected override applySuggestion(
-    rawItem: unknown,
-    anchor?: HTMLElement | null,
-  ) {
-    const raw = rawItem as FleetSuggestion;
-    if (!raw) return;
+  protected override applySuggestion(rawItem: FleetSuggestion) {
+    if (!rawItem) return;
 
-    if (raw.openPicker) {
-      const op = raw.openPicker;
+    if (rawItem.openPicker) {
+      const op = rawItem.openPicker;
       const displayTitle = op.metadata?.keyDisplayName || op.key;
-      this.openValuePicker(
+      this.openQuickFilter(
         op.key,
-        anchor || null,
         displayTitle,
         op.metadata,
         op.stagedModify?.values,
@@ -1211,7 +1184,7 @@ export class FleetSearchStore extends SearchPageStore {
       return;
     }
 
-    this.applyFleetSuggestionDirectly(raw);
+    this.applyFleetSuggestionDirectly(rawItem);
   }
 
   /** Helper to directly apply a FleetSuggestion locally without redundant backend resolution. */

@@ -1,4 +1,4 @@
-import {CommonModule} from '@angular/common';
+import {DecimalPipe} from '@angular/common';
 import {Component, signal} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {MatButtonModule} from '@angular/material/button';
@@ -76,7 +76,7 @@ describe('SearchPage', () => {
       .overrideComponent(SearchPage, {
         set: {
           imports: [
-            CommonModule,
+            DecimalPipe,
             MatButtonModule,
             MatProgressSpinnerModule,
             StubSearchBox,

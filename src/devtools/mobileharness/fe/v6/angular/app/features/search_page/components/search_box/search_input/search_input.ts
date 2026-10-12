@@ -1,13 +1,10 @@
-import {CommonModule} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   ElementRef,
-  afterNextRender,
   computed,
   inject,
-  linkedSignal,
+  input,
   signal,
   viewChild,
 } from '@angular/core';
@@ -16,9 +13,10 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
 
 import {TooltipIfTruncatedDirective} from '../../../../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
+import {HeaderSearchDockService} from '../../../../../shared/services/header_search_dock_service';
 import {FilterChip, SearchBoxSuggestion} from '../../../models';
 import {SearchPageStore} from '../../../services/search_page_store';
-import {getChipKey} from '../../../utils';
+import {getChipKey, trackChip} from '../../../utils';
 import {SearchSuggestions} from '../search_suggestions/search_suggestions';
 
 /**
@@ -31,8 +29,11 @@ import {SearchSuggestions} from '../search_suggestions/search_suggestions';
   templateUrl: './search_input.ng.html',
   styleUrl: './search_input.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '[class.docked]': 'isDocked()',
+    '(document:mousedown)': 'onDocumentMouseDown($event)',
+  },
   imports: [
-    CommonModule,
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
@@ -41,132 +42,172 @@ import {SearchSuggestions} from '../search_suggestions/search_suggestions';
   ],
 })
 export class SearchInput {
+  private readonly hostRef = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly dockService = inject(HeaderSearchDockService, {
+    optional: true,
+  });
+
   /** Shared search page state store injected via Angular Dependency Injection. */
   readonly store = inject(SearchPageStore);
-  private readonly destroyRef = inject(DestroyRef);
 
   /** Helper to safely extract chip keys. */
   readonly getChipKey = getChipKey;
 
+  /** Tracking function for active filter and group-by chips in Angular templates. */
+  trackChip(chip: FilterChip): string {
+    return trackChip(chip);
+  }
+
+  /** Whether the search input is currently docked in the global header toolbar. */
+  readonly isDockedInput = input<boolean | undefined>(undefined, {
+    alias: 'isDocked',
+  });
+  readonly isDocked = computed<boolean>(
+    () => this.isDockedInput() ?? this.dockService?.isDocked() ?? false,
+  );
+
   /** Signal reference targeting the native HTML `<input>` element inside the search bar. */
   readonly searchInput = viewChild<ElementRef<HTMLInputElement>>('searchInput');
-
-  /** Signal reference targeting the search box outer container DOM element for CDK overlay positioning. */
-  readonly searchBoxOrigin = viewChild<ElementRef<HTMLElement>>('searchBox');
-
-  /** Signal reference targeting the active chips container for multi-row overflow calculation. */
-  readonly chipsContainer =
-    viewChild<ElementRef<HTMLElement>>('chipsContainer');
 
   /** Active highlighted index during keyboard navigation over auto-complete suggestions (-1 when unselected). */
   readonly activeSuggestionIndex = signal<number>(-1);
 
-  /** Whether the active chips span across multiple rows in the search box. */
-  readonly isMultiRow = signal<boolean>(false);
+  /** Group of chips to highlight in the suggestions popover when a summary chip is clicked. */
+  readonly highlightedGroup = signal<'filters' | 'groupby' | null>(null);
 
-  /**
-   * Whether the user has collapsed active filters into composite chips.
-   * Uses linkedSignal: automatically resets to false when active chips are completely cleared.
-   */
-  readonly isCollapsed = linkedSignal<boolean, boolean>({
-    source: () => this.store.activeChips().length === 0,
-    computation: (isEmpty, previous) =>
-      isEmpty ? false : (previous?.value ?? false),
+  /** Active filter chips (excluding group-by). */
+  readonly filterChips = this.store.filterChips;
+
+  /** Active group-by chips. */
+  readonly groupByChips = this.store.groupByChips;
+
+  /** Whether active filter chips are collapsed into a composite `N filters` chip (only when > 1). */
+  readonly showCompositeFilterChip = computed<boolean>(
+    () => this.filterChips().length > 1,
+  );
+
+  /** Whether active group-by chips are collapsed into a composite `M group-by` chip (only when > 1). */
+  readonly showCompositeGroupByChip = computed<boolean>(
+    () => this.groupByChips().length > 1,
+  );
+
+  /** Whether either filter or group-by chips are currently collapsed into a composite chip. */
+  readonly isCollapsed = computed<boolean>(
+    () => this.showCompositeFilterChip() || this.showCompositeGroupByChip(),
+  );
+
+  /** Whether the M3 search suggestions panel is currently visible below the search box. */
+  readonly isPanelOpen = this.store.isSuggestionsPanelOpen;
+
+  /** Summary tooltip for the composite `N filters` chip. */
+  readonly filterSummaryTooltip = computed<string>(() => {
+    const lines = this.filterChips().map(
+      (c) => `${c.pillKey} (${c.pillCondition})`,
+    );
+    return `${lines.join('\n')}\n\nClick to view or edit.`;
   });
 
-  /** Whether the collapse button should be shown (when multi-row and not collapsed). */
-  readonly canCollapse = computed<boolean>(
-    () => !this.isCollapsed() && this.isMultiRow(),
+  /** Summary tooltip for the composite `M group-by` chip. */
+  readonly groupBySummaryTooltip = computed<string>(() => {
+    const keys = this.groupByChips().map((c) => c.pillKey);
+    return `Group by: ${keys.join(', ')}\n\nClick to view or edit.`;
+  });
+
+  /** Whether the FilterValuePicker is currently open for one of the collapsed filter chips. */
+  readonly isCompositeFilterPickerActive = computed<boolean>(() =>
+    this.filterChips().some((chip) => this.store.isChipPickerActive(chip)),
   );
 
-  /** Total count of active filter chips (excluding group-by). */
-  readonly filterChipsCount = computed<number>(
-    () => this.store.activeChips().filter((c) => !c.isGroupBy).length,
-  );
-
-  /** Total count of active group-by chips. */
-  readonly groupByChipsCount = computed<number>(
-    () => this.store.activeChips().filter((c) => c.isGroupBy).length,
-  );
-
-  /** Whether the composite filter count chip is visible in collapsed mode. */
-  readonly showCompositeFilterChip = computed<boolean>(
-    () => this.isCollapsed() && this.filterChipsCount() > 0,
-  );
-
-  /** Whether the composite group-by count chip is visible in collapsed mode. */
-  readonly showCompositeGroupByChip = computed<boolean>(
-    () => this.isCollapsed() && this.groupByChipsCount() > 0,
-  );
-
-  /** Whether individual active chips are visible (expanded mode). */
-  readonly showActiveChipList = computed<boolean>(() => !this.isCollapsed());
-
-  constructor() {
-    afterNextRender(() => {
-      this.setupResizeObserver();
-    });
-  }
-
-  /** Sets up native ResizeObserver with RAF throttling to monitor responsive layout wrapping. */
-  private setupResizeObserver() {
-    const container = this.chipsContainer()?.nativeElement;
-    if (!container || typeof ResizeObserver === 'undefined') return;
-
-    let rafId: number | null = null;
-    const observer = new ResizeObserver(() => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        this.checkMultiRow();
-        rafId = null;
-      });
-    });
-
-    observer.observe(container);
-
-    const box = this.searchBoxOrigin()?.nativeElement;
-    if (box) {
-      observer.observe(box);
+  /** Effective input placeholder (cleared when active chips are present in single-line docked mode). */
+  readonly effectivePlaceholder = computed<string>(() => {
+    if (this.isDocked() && this.store.activeChips().length > 0) {
+      return '';
     }
+    return this.store.searchPlaceholder();
+  });
 
-    this.destroyRef.onDestroy(() => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      observer.disconnect();
-    });
-  }
-
-  /** Checks whether chips span across multiple vertical rows in the search box. */
-  checkMultiRow() {
-    if (this.isCollapsed()) return;
-    const container = this.chipsContainer()?.nativeElement;
-    if (!container) {
-      this.isMultiRow.set(false);
-      return;
-    }
-    const chips = container.querySelectorAll('.search-chip');
-    if (chips.length <= 1) {
-      this.isMultiRow.set(false);
-      return;
-    }
-    const firstTop = (chips[0] as HTMLElement).offsetTop;
-    const lastTop = (chips[chips.length - 1] as HTMLElement).offsetTop;
-    const isMulti = lastTop > firstTop + 4;
-    this.isMultiRow.set(isMulti);
-  }
-
-  /** Collapses chips into composite chips. */
-  collapseChips(event?: MouseEvent) {
+  /** Opens the suggestions popover and highlights the corresponding chip row when a summary chip is clicked. */
+  onCompositeChipClick(
+    group: 'filters' | 'groupby' = 'filters',
+    event?: Event,
+  ) {
     event?.stopPropagation();
-    this.isCollapsed.set(true);
+    this.store.focusChipKey.set(null);
+    this.store.focusChipType.set(null);
+    this.highlightedGroup.set(group);
+    this.focusInput();
   }
 
-  /** Expands composite chips back to show all individual chips. */
-  expandChips(event?: MouseEvent) {
-    event?.stopPropagation();
-    this.isCollapsed.set(false);
-    requestAnimationFrame(() => {
-      this.checkMultiRow();
-    });
+  /** Consolidates chip removal teardown across single and composite removals. */
+  private handleChipRemoval(action: () => void, event: MouseEvent) {
+    event.stopPropagation();
+    this.highlightedGroup.set(null);
+    action();
+    if (this.store.autoCollapseAfterApply()) {
+      this.onCollapsePanel();
+    }
+  }
+
+  /** Resolves the display title for a filter chip with fallback to pillKey. */
+  private getChipTitle(chip: FilterChip): string {
+    return chip.metadata?.keyDisplayName || chip.pillKey;
+  }
+
+  /** Removes a single filter or group-by chip from the search bar and collapses suggestions if auto-collapse is enabled. */
+  onRemoveChip(chip: FilterChip, event: MouseEvent) {
+    this.handleChipRemoval(() => {
+      this.store.removeFilterChip(chip);
+    }, event);
+  }
+
+  /** Removes all active filter chips when the composite filter chip's remove button is clicked. */
+  onRemoveCompositeFilters(event: MouseEvent) {
+    this.handleChipRemoval(() => {
+      this.store.clearFilterChips();
+    }, event);
+  }
+
+  /** Removes all active group-by chips when the composite group-by chip's remove button is clicked. */
+  onRemoveCompositeGroupBy(event: MouseEvent) {
+    this.handleChipRemoval(() => {
+      this.store.clearGroupByChips();
+    }, event);
+  }
+
+  /** Handles Add filter button click from the suggestions popover. */
+  onAddFilter() {
+    this.highlightedGroup.set('filters');
+  }
+
+  /** Handles Add group-by button click from the suggestions popover. */
+  onAddGroupBy() {
+    this.highlightedGroup.set('groupby');
+  }
+
+  /** Closes the suggestions panel and blurs the search input when Collapse is clicked. */
+  onCollapsePanel() {
+    this.highlightedGroup.set(null);
+    this.activeSuggestionIndex.set(-1);
+    this.searchInput()?.nativeElement.blur();
+    this.store.showSuggestions.set(false);
+  }
+
+  /** Opens the FilterValuePicker for an active filter chip clicked inside the suggestions popover, keeping the panel open. */
+  onEditChipFromSuggestions(event: {
+    chip: FilterChip;
+    anchor: HTMLElement;
+    event: MouseEvent;
+  }) {
+    const {chip, anchor} = event;
+    this.highlightedGroup.set(null);
+    this.store.openValuePicker(
+      getChipKey(chip),
+      anchor,
+      this.getChipTitle(chip),
+      chip.metadata,
+      undefined,
+      /* keepSuggestionsOpen= */ true,
+    );
   }
 
   /**
@@ -178,14 +219,16 @@ export class SearchInput {
    */
   onSelectSuggestion(event: {item: SearchBoxSuggestion}) {
     const {item} = event;
-    this.searchInput()?.nativeElement.blur();
-    this.store.showSuggestions.set(false);
+    this.highlightedGroup.set(null);
     this.activeSuggestionIndex.set(-1);
 
-    this.store.selectSuggestion(
-      item,
-      this.searchBoxOrigin()?.nativeElement || null,
-    );
+    this.store.selectSuggestion(item);
+
+    if (!this.store.showSuggestions()) {
+      this.searchInput()?.nativeElement.blur();
+    } else if (!this.store.showValuePicker()) {
+      this.searchInput()?.nativeElement.focus();
+    }
   }
 
   /**
@@ -195,10 +238,23 @@ export class SearchInput {
    * @param val Current text value in the search input box.
    */
   onSearchInput(val: string) {
+    this.highlightedGroup.set(null);
     this.store.closeValuePicker();
     this.store.searchQuery.set(val);
     this.store.showSuggestions.set(true);
     this.activeSuggestionIndex.set(-1);
+  }
+
+  /**
+   * Clears only the user's typed text in the search input while preserving active filter and group-by chips.
+   *
+   * @param event Mouse event from clicking the clear button.
+   */
+  onClearInput(event?: MouseEvent) {
+    event?.stopPropagation();
+    this.store.clearSearchQuery();
+    this.activeSuggestionIndex.set(-1);
+    this.searchInput()?.nativeElement.focus();
   }
 
   /** Focuses the native search input element and displays the suggestions popover. */
@@ -210,7 +266,9 @@ export class SearchInput {
 
   /** Handles focus event on the input element by opening the suggestions popover. */
   onInputFocus() {
-    this.store.closeValuePicker();
+    if (!this.store.pendingFilter()) {
+      this.store.closeValuePicker();
+    }
     this.store.showSuggestions.set(true);
   }
 
@@ -221,8 +279,7 @@ export class SearchInput {
    */
   onInputClick(event?: MouseEvent) {
     event?.stopPropagation();
-    this.store.closeValuePicker();
-    this.store.showSuggestions.set(true);
+    this.onInputFocus();
   }
 
   /**
@@ -236,16 +293,47 @@ export class SearchInput {
     if (
       target === this.searchInput()?.nativeElement ||
       target?.closest('.search-chip') ||
-      target?.closest('.search-clear-btn') ||
-      target?.closest('.search-collapse-btn')
+      target?.closest('.search-clear-btn')
     ) {
       return;
     }
     this.focusInput();
   }
 
-  /** Handles blur event on the input element by hiding suggestions popover. */
-  onInputBlur() {
+  /** Checks whether a DOM element is inside this component or an active overlay/picker. */
+  private isInternalOrOverlayTarget(element: HTMLElement | null): boolean {
+    if (!element) return false;
+    return (
+      this.hostRef.nativeElement.contains(element) ||
+      Boolean(
+        element.closest('.value-picker, .preset-link, .cdk-overlay-container'),
+      )
+    );
+  }
+
+  /** Handles blur event on the input element by hiding suggestions popover unless ValuePicker is open or auto-collapse is disabled. */
+  onInputBlur(event?: FocusEvent) {
+    const related = event?.relatedTarget as HTMLElement | null;
+    if (
+      this.isInternalOrOverlayTarget(related) ||
+      this.store.showValuePicker() ||
+      this.store.pendingFilter() ||
+      !this.store.autoCollapseAfterApply()
+    ) {
+      return;
+    }
+    this.highlightedGroup.set(null);
+    this.store.showSuggestions.set(false);
+  }
+
+  /** Closes suggestions popover when clicking outside the search box, value picker, preset links, or overlays. */
+  onDocumentMouseDown(event: MouseEvent) {
+    if (!this.store.showSuggestions()) return;
+    const target = event.target as HTMLElement | null;
+    if (this.isInternalOrOverlayTarget(target)) {
+      return;
+    }
+    this.highlightedGroup.set(null);
     this.store.showSuggestions.set(false);
   }
 
@@ -259,7 +347,9 @@ export class SearchInput {
     const key = event.key;
     if (!['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(key)) return;
 
-    const suggestions = this.store.suggestions();
+    const suggestions = this.store.isSuggestionsLoading()
+      ? []
+      : this.store.suggestions();
     const isShowing = this.store.showSuggestions() && suggestions.length > 0;
 
     switch (key) {
@@ -312,6 +402,7 @@ export class SearchInput {
     }
 
     if (this.store.searchQuery().trim()) {
+      event.preventDefault();
       this.store.showSuggestions.set(false);
       this.store.executeSearch();
     }
@@ -331,17 +422,22 @@ export class SearchInput {
   }
 
   /**
-   * Opens the FilterValuePicker CDK Overlay popover to edit an active filter chip.
+   * Handles clicking an active filter or group-by chip in the search bar:
+   * Consistent with composite chips and quick filter/group-by presets, opens the suggestions
+   * popover first, locates/highlights the corresponding chip in the popover, and (for filters)
+   * opens the FilterValuePicker anchored to that popover chip.
    *
-   * @param chip The FilterChip to edit.
-   * @param anchor DOM element anchor where the ValuePicker overlay positions itself.
+   * @param chip The FilterChip to locate/edit.
    * @param event Optional MouseEvent to prevent event bubbling.
    */
-  openPickerForChip(chip: FilterChip, anchor: HTMLElement, event?: MouseEvent) {
+  openPickerForChip(chip: FilterChip, event?: Event) {
     event?.stopPropagation();
-    if (chip.isGroupBy) return;
+    this.highlightedGroup.set(null);
     const key = getChipKey(chip);
-    const title = chip.metadata?.keyDisplayName || chip.pillKey;
-    this.store.openValuePicker(key, anchor, title, chip.metadata);
+    if (chip.isGroupBy) {
+      this.store.openQuickGroupBy(key, chip.pillKey);
+      return;
+    }
+    this.store.openQuickFilter(key, this.getChipTitle(chip), chip.metadata);
   }
 }

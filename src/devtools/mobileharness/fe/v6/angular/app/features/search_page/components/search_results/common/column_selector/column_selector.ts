@@ -5,7 +5,7 @@ import {
   CdkDropList,
   moveItemInArray,
 } from '@angular/cdk/drag-drop';
-import {CommonModule} from '@angular/common';
+import {DecimalPipe} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -40,11 +40,9 @@ import {
   ColumnSelectorDialogData,
   ColumnSelectorResult,
   EntityType,
+  FleetScope,
 } from '../../../../models';
-import {
-  toFleetProto,
-  toSearchEntityProto,
-} from '../../../../utils';
+import {toFleetProto, toSearchEntityProto} from '../../../../utils';
 
 /**
  * Material 3 two-pane Column Selector Dialog for customizing visible table columns.
@@ -59,7 +57,7 @@ import {
   styleUrl: './column_selector.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
+    DecimalPipe,
     CdkDrag,
     CdkDragHandle,
     CdkDropList,
@@ -85,7 +83,7 @@ export class ColumnSelectorComponent {
   readonly entity = computed<EntityType>(() => this.data?.entity ?? 'devices');
 
   /** Effective fleet partition (internal or ats). */
-  readonly fleet = computed<string>(() => this.data?.fleet ?? 'internal');
+  readonly fleet = computed<FleetScope>(() => this.data?.fleet ?? 'internal');
 
   /** Active search filters passed from query context. */
   readonly activeFilters = computed<Filter[]>(
