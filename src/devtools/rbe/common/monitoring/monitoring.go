@@ -97,6 +97,46 @@ func RecordDownloadStats(stats *DownloadStats, casInstance string, localCacheEna
 	recordDownloadStats(stats, casInstance, localCacheEnabled, chunksOnly)
 }
 
+// LocalCacheStats describes what casdownloader's local cache did in one run.
+//
+// It is recorded separately from DownloadStats so that the existing download
+// metrics keep their schema: adding a field to a metric splits its streams and
+// breaks queries that do not aggregate the new field away.
+type LocalCacheStats struct {
+	// Impl names the cache implementation the run actually used, which is
+	// "none" when it had no cache, including when setup failed.
+	Impl string
+	// Activity is set only for caches that report it, so that runs without
+	// such a cache do not emit zeros that read as a healthy one.
+	Activity *LocalCacheActivity
+}
+
+// LocalCacheActivity holds the counters a lock-free cache accumulates in a run.
+// See the casdownloader cache and common/storage packages for their meaning.
+type LocalCacheActivity struct {
+	ExecMismatchCopies int64
+	ExecMismatchBytes  int64
+	PermDriftCopies    int64
+	PermDriftBytes     int64
+	CorruptBlobs       int64
+
+	CopyFallbackEMLINK int64
+	CopyFallbackEXDEV  int64
+	CopyFallbackOther  int64
+
+	HeadroomChecks         int64
+	HeadroomEvictions      int64
+	HeadroomReclaimedBytes int64
+	HeadroomPeerWaits      int64
+	HeadroomBelowWatermark int64
+}
+
+// RecordLocalCacheStats records what the local cache did in one casdownloader
+// run.
+func RecordLocalCacheStats(stats *LocalCacheStats, casInstance string) {
+	recordLocalCacheStats(stats, casInstance)
+}
+
 // RecordCacheRequest records a cache read request and whether it was a hit or miss.
 func RecordCacheRequest(method string, hit bool) {
 	recordCacheRequest(method, hit)

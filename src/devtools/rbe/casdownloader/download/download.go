@@ -47,6 +47,12 @@ type DownloadJob struct {
 	// CopyFilters are regular expressions on paths relative to Dir. Downloaded
 	// files that match are left as private copies rather than hardlinks, so
 	// callers can modify them in place without corrupting the cache.
+	//
+	// That covers links to other files in Dir as well as to the cache: a blob
+	// that appears at several paths with the same mode is fetched once and
+	// hardlinked to the rest (see materializeDuplicate), whether or not there
+	// is a cache and whatever the cache's hardlink setting. A matched file
+	// gets its own inode in either case.
 	CopyFilters   []string
 	DownloadStats *Stats
 	ChunksOnly    bool

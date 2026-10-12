@@ -77,7 +77,7 @@ var (
 	cacheMaxSize    = flag.Int64("cache-max-size", 0, "Cache is trimmed if the cache gets larger than this value. If 0, the cache is effectively a leak.")
 	enableCacheLock = flag.Bool("cache-lock", false,
 		"Enable cache lock. When using local cache (-cache-dir is set) and enable cache lock, the downloader will add lock when it changes cache, so you can safely run multiple downloader instances simultaneously.")
-	useHardlink = flag.Bool("use-hardlink", true, "By default local cache will use hardlink when push and pull files.")
+	useHardlink = flag.Bool("use-hardlink", true, "By default local cache will use hardlink when push and pull files. This only concerns links between the local cache and -dir: files of one download with the same content and mode are hardlinked to each other either way. Use -copy-filters for files that must not share an inode with anything.")
 	// This defaults to a non-zero value because -cache-max-size defaults to 0 (unbounded), and even
 	// when it is set it only bounds the logical size of the cache, so neither bound on its own
 	// prevents the volume from filling up.
@@ -356,7 +356,7 @@ func main() {
 func runMain() int {
 	flag.Var(&excludeFilters, "exclude-filters", "Regular expression of paths to be excluded from uploading.")
 	flag.Var(&includeFilters, "include-filters", "Regular expression of paths to be excluded from uploading.")
-	flag.Var(&copyFilters, "copy-filters", "Regular expression of paths, relative to -dir, that must be materialized as private copies instead of hardlinks to the local cache or to other files, so they can safely be modified in place. Repeatable.")
+	flag.Var(&copyFilters, "copy-filters", "Regular expression of paths, relative to -dir, that must be materialized as private copies instead of hardlinks to the local cache or to other files, so they can safely be modified in place. Repeatable. Needed even with -use-hardlink=false or no cache: files of one download with the same content and mode are hardlinked to each other regardless.")
 
 	flag.Set("silent_init", "true")
 	flag.Set("logtostderr", "true")
@@ -779,4 +779,5 @@ func recordDownloadMetrics(success bool, rbeStatus string, duration time.Duratio
 	// hit rate for the cache itself, which is the number this metric exists to
 	// measure.
 	monitoring.RecordDownloadStats(mStats, *casInstance, d.Cache != nil, *chunksOnly)
+	monitoring.RecordLocalCacheStats(cache.MonitoringStats(d.Cache), *casInstance)
 }

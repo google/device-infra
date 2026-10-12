@@ -7,6 +7,7 @@ import (
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
+	"github.com/google/device-infra/src/devtools/rbe/common/storage"
 )
 
 // Cache supports caching files with underlying various cache solution.
@@ -65,6 +66,39 @@ type ModeCopyReporter interface {
 	// ModeCopies returns the mode-mismatch copies made since the cache was
 	// created.
 	ModeCopies() ModeCopyStats
+}
+
+// StorageStatsReporter is implemented by caches built on common/storage. It
+// exposes that package's counters, chiefly copy fallbacks and headroom
+// eviction, which is how a cache shared by many processes on one disk shows
+// whether it is keeping up.
+type StorageStatsReporter interface {
+	// StorageStats returns the storage counters accumulated since the cache
+	// was created.
+	StorageStats() storage.Stats
+}
+
+// Cache implementations as reported by Impl. They are values of a metric
+// field, so an existing value should not be renamed.
+const (
+	ImplNone     = "none"
+	ImplLuci     = "luci"
+	ImplLockFree = "lockfree"
+	ImplOther    = "other"
+)
+
+// Impl names the implementation of c, or ImplNone when there is no cache.
+func Impl(c Cache) string {
+	switch c.(type) {
+	case nil:
+		return ImplNone
+	case *LocalCache:
+		return ImplLuci
+	case *LockFreeCache:
+		return ImplLockFree
+	default:
+		return ImplOther
+	}
 }
 
 func fileMode(output *client.TreeOutput) os.FileMode {

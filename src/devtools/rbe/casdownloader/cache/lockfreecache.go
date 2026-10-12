@@ -38,10 +38,11 @@ const LayoutVersionDir = "v2"
 // quietly stop reserving space and leave the ENOSPC this cache exists to
 // prevent, or stop reporting corrupt blobs.
 var (
-	_ Cache               = (*LockFreeCache)(nil)
-	_ HeadroomReserver    = (*LockFreeCache)(nil)
-	_ CorruptBlobReporter = (*LockFreeCache)(nil)
-	_ ModeCopyReporter    = (*LockFreeCache)(nil)
+	_ Cache                = (*LockFreeCache)(nil)
+	_ HeadroomReserver     = (*LockFreeCache)(nil)
+	_ CorruptBlobReporter  = (*LockFreeCache)(nil)
+	_ ModeCopyReporter     = (*LockFreeCache)(nil)
+	_ StorageStatsReporter = (*LockFreeCache)(nil)
 )
 
 // LockFreeCache caches downloaded blobs using common/storage.
@@ -253,6 +254,11 @@ var statPulled = os.Lstat
 // size and turned into misses since the cache was created.
 func (c *LockFreeCache) CorruptBlobsQuarantined() int64 {
 	return c.store.Stats().CorruptBlobs
+}
+
+// StorageStats returns the counters of the underlying store.
+func (c *LockFreeCache) StorageStats() storage.Stats {
+	return c.store.Stats()
 }
 
 // applyFileMode gives a materialized file the permissions its tree node calls
