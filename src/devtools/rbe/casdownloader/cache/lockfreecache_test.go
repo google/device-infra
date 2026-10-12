@@ -60,7 +60,7 @@ func stage(t *testing.T, dir, name, content string, executable bool) (string, *c
 	}
 	// Deliberately not the canonical mode: the downloader's output permissions
 	// are not something the cache should have to assume.
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
 		t.Fatalf("Failed to write %s: %v", path, err)
 	}
 	return path, &client.TreeOutput{
@@ -498,7 +498,7 @@ func TestLockFreeCache_WithoutHardlinksChmodsInPlace(t *testing.T) {
 	dir := t.TempDir()
 	c := newTestCache(t, filepath.Join(dir, "cache"), false)
 
-	// stage writes 0644 and an executable tree node wants 0750, so this is a
+	// stage writes 0600 and an executable tree node wants 0750, so this is a
 	// mismatch that has to be resolved one way or the other.
 	path, item := stage(t, dir, "work/tool", "already an inode of its own", true)
 	before := inodeOf(t, path)
@@ -1056,7 +1056,7 @@ func TestLockFreeCache_ModeCopiesAreCountedByCause(t *testing.T) {
 		{name: "modes agree", executable: false, want: ModeCopyStats{}},
 		{name: "other executability", executable: true,
 			want: ModeCopyStats{ExecMismatchCopies: 1, ExecMismatchBytes: size}},
-		{name: "drifted, same executability", drift: 0o644, executable: false,
+		{name: "drifted, same executability", drift: 0o600, executable: false,
 			want: ModeCopyStats{PermDriftCopies: 1, PermDriftBytes: size}},
 		// 0777 also flips the executable bit, but the chmod is what has to
 		// be fixed, so it counts as drift.

@@ -324,6 +324,12 @@ func copyFile(dstPath string, srcPath string, mode os.FileMode) error {
 	}
 	defer dst.Close()
 
+	// The mode passed to OpenFile is filtered through the umask. Set it
+	// explicitly so a copied duplicate carries exactly the canonical mode,
+	// as a linked one does.
+	if err := dst.Chmod(mode); err != nil {
+		return err
+	}
 	_, err = io.Copy(dst, src)
 	return err
 }
@@ -365,11 +371,11 @@ func copyFiles(ctx context.Context, dsts []*client.TreeOutput, srcs map[digest.D
 	return eg.Wait()
 }
 
+// fileMode is the mode a downloaded file gets: the cache package's canonical
+// mode for its tree node, so that a file comes out the same whether it was
+// downloaded, pulled from the cache or copied from a duplicate.
 func fileMode(output *client.TreeOutput) os.FileMode {
-	if output.IsExecutable {
-		return os.FileMode(0o700)
-	}
-	return os.FileMode(0o600)
+	return cache.FileMode(output.IsExecutable)
 }
 
 // updateDownloadStats attributes every byte of the tree to exactly one tier.
@@ -639,8 +645,30 @@ func (d *DownloadJob) downloadFilesWithAbsolutePath(ctx context.Context, toDownl
 
 	// Call d.Client.DownloadFiles with d.Dir as destDir and relative paths.
 	// We ignore the returned map as it's not used by the callers.
-	_, err := d.Client.DownloadFiles(ctx, d.Dir, toDownloadRelative)
-	return err
+	if _, err := d.Client.DownloadFiles(ctx, d.Dir, toDownloadRelative); err != nil {
+		return err
+	}
+	return normalizeModes(toDownload)
+}
+
+// normalizeModes gives each downloaded file the canonical mode of its tree
+// node.
+//
+// The SDK's own modes depend on how it fetched a blob: it creates batched
+// files with ExecutableMode or RegularMode filtered through the umask, but
+// chmods streamed executables to ExecutableMode exactly, so a large
+// executable comes out 0777 and a small one 0755. Normalizing here makes the
+// result the same on every path -- with or without a cache, and whether or
+// not Push succeeds -- and independent of the umask. On the cache path Push
+// sets the same mode again before sharing the file, which costs nothing
+// further.
+func normalizeModes(outputs map[digest.Digest]*client.TreeOutput) error {
+	for _, output := range outputs {
+		if err := os.Chmod(output.Path, fileMode(output)); err != nil {
+			return fmt.Errorf("failed to set mode of downloaded file %s: %w", output.Path, err)
+		}
+	}
+	return nil
 }
 
 // CalculateTimeout calculates the effective download timeout based on minDownloadMbps and size.

@@ -50,6 +50,7 @@ go_test(
         "cancel_test.go",
         "copy_filters_test.go",
         "download_test.go",
+        "modes_test.go",
         "notes_test.go",
         "overwrite_test.go",
         "remote_failed_test.go",

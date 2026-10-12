@@ -327,7 +327,7 @@ func (c *LockFreeCache) applyFileMode(item *client.TreeOutput, info os.FileInfo)
 // a chmod of a file it already owns, which costs nothing worth measuring.
 func (c *LockFreeCache) recordModeCopy(item *client.TreeOutput, have, want os.FileMode) {
 	copies, bytes, logged, cause := &c.execMismatchCopies, &c.execMismatchBytes, &c.execMismatchLogged, "the other executability"
-	if have != fileMode(&client.TreeOutput{IsExecutable: true}).Perm() && have != fileMode(&client.TreeOutput{}).Perm() {
+	if have != ExecutableMode.Perm() && have != RegularMode.Perm() {
 		copies, bytes, logged, cause = &c.permDriftCopies, &c.permDriftBytes, &c.permDriftLogged, "a mode that was changed after it was cached"
 	}
 	copies.Add(1)

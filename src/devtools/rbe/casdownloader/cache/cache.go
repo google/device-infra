@@ -101,9 +101,26 @@ func Impl(c Cache) string {
 	}
 }
 
-func fileMode(output *client.TreeOutput) os.FileMode {
-	if output.IsExecutable {
-		return os.FileMode(0o750)
+// The canonical modes of casdownloader's files, by the executable bit of their
+// tree node. REAPI specifies only that bit, so these fix the rest: every file
+// casdownloader materializes or caches gets exactly one of them, on every path,
+// independent of the umask. They are the modes LocalCache has always given
+// files, so switching between the two caches does not change what a
+// destination looks like, and both share this one definition.
+const (
+	ExecutableMode = os.FileMode(0o750)
+	RegularMode    = os.FileMode(0o640)
+)
+
+// FileMode returns the canonical mode of a file whose tree node has the given
+// executable bit.
+func FileMode(executable bool) os.FileMode {
+	if executable {
+		return ExecutableMode
 	}
-	return os.FileMode(0o640)
+	return RegularMode
+}
+
+func fileMode(output *client.TreeOutput) os.FileMode {
+	return FileMode(output.IsExecutable)
 }
