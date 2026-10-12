@@ -968,7 +968,8 @@ public final class GetDeviceOverviewHandlerTest {
             .getOverview();
 
     assertThat(response.getBasicInfo().getBatteryLevel()).isEqualTo(-1);
-    assertThat(response.getBasicInfo().getNetwork().getWifiRssi()).isEqualTo(0);
+    assertThat(response.getBasicInfo().getNetwork().hasWifiRssi()).isFalse();
+    assertThat(response.getBasicInfo().getNetwork().hasHasInternet()).isFalse();
   }
 
   @Test
