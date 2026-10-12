@@ -666,14 +666,14 @@ func TestDoDownload_DumpsModeCopies(t *testing.T) {
 		{
 			name: "cache that copies on a mismatch",
 			cache: &modeCopyReportingCache{copies: cache.ModeCopyStats{
-				ExecMismatchCopies: 1, ExecMismatchBytes: 10, PermDriftCopies: 2, PermDriftBytes: 20,
+				ExecMismatchCopies: 1, ExecMismatchBytes: 10, PermDriftHits: 2, UnreadableRepairs: 3,
 			}},
-			want: map[string]int64{"exec_mismatch_copies": 1, "exec_mismatch_bytes": 10, "perm_drift_copies": 2, "perm_drift_bytes": 20},
+			want: map[string]int64{"exec_mismatch_copies": 1, "exec_mismatch_bytes": 10, "perm_drift_hits": 2, "unreadable_repairs": 3},
 		},
 		{
 			name:  "cache that does not",
 			cache: &fullCache{},
-			want:  map[string]int64{"exec_mismatch_copies": 0, "exec_mismatch_bytes": 0, "perm_drift_copies": 0, "perm_drift_bytes": 0},
+			want:  map[string]int64{"exec_mismatch_copies": 0, "exec_mismatch_bytes": 0, "perm_drift_hits": 0, "unreadable_repairs": 0},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

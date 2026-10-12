@@ -67,14 +67,14 @@ type LockFreeCache struct {
 	// its configuration mid-run.
 	touchInterval time.Duration
 
-	// Mode-mismatch copies made by applyFileMode, by cause. See
+	// What applyFileMode did about hits whose blob was not canonical. See
 	// ModeCopyStats.
 	execMismatchCopies, execMismatchBytes atomic.Int64
-	permDriftCopies, permDriftBytes       atomic.Int64
-	// The first copy of each cause is logged with its path, so that a host
-	// reporting copies also says which file to look at. Later ones are only
-	// counted: a drifted cache can produce one per hit.
-	execMismatchLogged, permDriftLogged atomic.Bool
+	permDriftHits, unreadableRepairs      atomic.Int64
+	// The first of each is logged with its path, so that a host reporting
+	// them also says which file to look at. Later ones are only counted: a
+	// drifted blob can produce one per hit.
+	execMismatchLogged, permDriftLogged, unreadableLogged atomic.Bool
 }
 
 // NewLockFreeCache creates a LockFreeCache rooted under cacheDir.
@@ -159,7 +159,7 @@ func (c *LockFreeCache) Pull(ctx context.Context, all []*client.TreeOutput) (cac
 			return nil, nil, fmt.Errorf("failed to stat %s after pulling it from cache: %w", item.Path, err)
 		}
 		if info.Size() != item.Digest.Size {
-			if err := c.discardCorruptHit(item, info); err != nil {
+			if err := c.discardCorruptHit(item, info, fmt.Sprintf("is %d bytes, want %d", info.Size(), item.Digest.Size)); err != nil {
 				c.removePulledFiles(cached)
 				return nil, nil, err
 			}
@@ -181,16 +181,29 @@ func (c *LockFreeCache) Pull(ctx context.Context, all []*client.TreeOutput) (cac
 		// which is when some earlier run happened to ingest it.
 		c.store.TouchIfOlderThan(item.Digest.Hash, c.touchInterval)
 
-		if err := c.applyFileMode(item, info); err != nil {
+		discard, err := c.applyFileMode(item, info)
+		if err != nil {
 			c.removePulledFiles(cached)
 			return nil, nil, err
+		}
+		if discard {
+			if err := c.discardCorruptHit(item, info, fmt.Sprintf("has mode %#o, which its owner cannot read", info.Mode().Perm())); err != nil {
+				c.removePulledFiles(cached)
+				return nil, nil, err
+			}
+			cached = cached[:len(cached)-1]
+			missed = append(missed, item)
 		}
 	}
 	return cached, missed, nil
 }
 
-// discardCorruptHit turns a hit whose size does not match its digest into a
-// miss. info is the Lstat of the materialized file.
+// discardCorruptHit turns a hit on an unusable blob into a miss. info is the
+// Lstat of the materialized file, and why says what is wrong with the blob,
+// for the log.
+//
+// The blobs it is used for are the wrong size, or unreadable to their owner
+// and impossible to fix; see applyFileMode for the second.
 //
 // Blobs are content-addressed, so a blob of the wrong size is not the blob it
 // is named after. This happens when something writes a materialized output in
@@ -220,18 +233,18 @@ func (c *LockFreeCache) Pull(ctx context.Context, all []*client.TreeOutput) (cac
 // counting rather than logging per-blob conditions, and it is affordable
 // because the condition does not repeat: the blob is gone once it has been
 // found, so the next Pull of it is an ordinary miss.
-func (c *LockFreeCache) discardCorruptHit(item *client.TreeOutput, info os.FileInfo) error {
+func (c *LockFreeCache) discardCorruptHit(item *client.TreeOutput, info os.FileInfo, why string) error {
 	removed, err := c.store.RemoveCorruptBlob(item.Digest.Hash, item.Digest.Size, info)
 	switch {
 	case err != nil:
-		log.Warningf("Cached blob %s pulled to %s is %d bytes, want %d; could not remove the blob from the cache: %v",
-			item.Digest.Hash, item.Path, info.Size(), item.Digest.Size, err)
+		log.Warningf("Cached blob %s pulled to %s %s; could not remove the blob from the cache: %v",
+			item.Digest.Hash, item.Path, why, err)
 	case removed:
-		log.Warningf("Cached blob %s pulled to %s is %d bytes, want %d; removed it from the cache",
-			item.Digest.Hash, item.Path, info.Size(), item.Digest.Size)
+		log.Warningf("Cached blob %s pulled to %s %s; removed it from the cache",
+			item.Digest.Hash, item.Path, why)
 	default:
-		log.Warningf("Cached blob %s pulled to %s is %d bytes, want %d; another process already removed or replaced the blob",
-			item.Digest.Hash, item.Path, info.Size(), item.Digest.Size)
+		log.Warningf("Cached blob %s pulled to %s %s; another process already removed or replaced the blob",
+			item.Digest.Hash, item.Path, why)
 	}
 
 	if err := removeFile(item.Path); err != nil && !os.IsNotExist(err) {
@@ -261,27 +274,46 @@ func (c *LockFreeCache) StorageStats() storage.Stats {
 	return c.store.Stats()
 }
 
-// applyFileMode gives a materialized file the permissions its tree node calls
-// for, without ever chmod'ing a blob that other paths may share. info is the
-// Lstat of the file.
+// applyFileMode makes a materialized file usable with the permission bits
+// (mode & 0777) its tree node calls for. info is the Lstat of the file. It
+// reports discard when the blob is unusable and could not be fixed, in which
+// case the caller turns the hit into a miss.
 //
 // Permissions are a property of the inode, but executability in REAPI is a
 // property of the tree node: the same blob can legitimately appear as
 // executable in one directory and not in another, which is not a rare corner
 // once you consider how many trees contain an empty file. A hard link cannot
-// represent both at once.
+// represent both at once. Push gives every blob the canonical permission bits
+// for the executable bit it was ingested with, so the common case is an exact
+// match and costs nothing beyond the stat Pull already made.
 //
-// LocalCache resolved this by calling os.Chmod on the link it had just created,
-// which silently rewrote the mode of the cached blob and of every other path
-// already linked to it. Last writer won, and earlier destinations changed under
-// their owners' feet. That is not an option here, both because the cache is
-// shared across processes and because Android artifacts are to be treated as
-// read-only.
+// Otherwise, on the hard link path, in this order:
 //
-// So the mismatch is resolved by giving this destination an inode of its own.
-// The common case costs nothing beyond the stat Pull already made: Push
-// normalizes permissions before ingesting, so a blob used consistently one way
-// always already carries the right mode.
+//   - A blob its owner cannot read is broken for every path linked to it and
+//     every future hit, so it is fixed in place first: chmod'ed to the
+//     canonical permission bits for its current executable bit. This is the
+//     one case where a shared inode is chmod'ed. It is safe because it can
+//     only add owner access, never remove access anyone relies on, and it is
+//     the only repair available: replacing the blob would mean reading it.
+//     If the chmod fails, the blob is discarded.
+//   - A blob whose executable bit matches the tree node's is linked as is,
+//     even if its other bits are not canonical. Those bits only differ when
+//     a consumer chmod'ed a materialized file, and through the shared inode
+//     the blob, typically to add permissions; they do not change what the
+//     file is for. The drift is counted, not copied or repaired.
+//   - A blob whose executable bit differs gets this destination a private
+//     copy with the canonical permission bits, and is itself left alone.
+//     LocalCache instead chmod'ed the link it had just made, which flipped
+//     the executable bit under every path already linked to the blob: last
+//     writer won. That is how CAS clients packaged without the bit lost it
+//     under running invocations (b/435764868).
+//
+// A known gap: a consumer that flips only the executable bit of a
+// hard-linked blob, as chmod -x does, leaves the other canonical mode, which
+// is indistinguishable from content ingested that way. Later hits wanting the
+// original bit copy, and are counted as exec mismatches, until the blob is
+// evicted. Paths already sharing the inode see the consumer's chmod; nothing on
+// the cache side can prevent that.
 //
 // A store that cannot hard link is exempt from all of this. There HardlinkTo
 // materialized the destination by copying, so it is already an inode nobody
@@ -289,63 +321,71 @@ func (c *LockFreeCache) StorageStats() storage.Stats {
 // route anyway would copy the file a second time to arrive at a file it already
 // had, which on the cross-device deployment is the whole reason the first copy
 // was expensive.
-func (c *LockFreeCache) applyFileMode(item *client.TreeOutput, info os.FileInfo) error {
-	want := fileMode(item)
-
-	if info.Mode().Perm() == want.Perm() {
-		return nil
+func (c *LockFreeCache) applyFileMode(item *client.TreeOutput, info os.FileInfo) (discard bool, err error) {
+	want := fileMode(item).Perm()
+	have := info.Mode().Perm()
+	if have == want {
+		return false, nil
 	}
 
 	if !c.sharesInodes {
 		if err := os.Chmod(item.Path, want); err != nil {
-			return fmt.Errorf("failed to set mode %#o on %s: %w", want.Perm(), item.Path, err)
+			return false, fmt.Errorf("failed to set mode %#o on %s: %w", want, item.Path, err)
 		}
-		return nil
+		return false, nil
+	}
+
+	if have&0o400 == 0 {
+		fixed := FileMode(IsExecutableMode(have)).Perm()
+		if err := chmodBlob(item.Path, fixed); err != nil {
+			log.Warningf("Cached blob %s pulled to %s has mode %#o, which its owner cannot read, and could not be fixed: %v",
+				item.Digest.Hash, item.Path, have, err)
+			return true, nil
+		}
+		c.unreadableRepairs.Add(1)
+		if !c.unreadableLogged.Swap(true) {
+			log.Warningf("Cached blob %s pulled to %s had mode %#o, which its owner cannot read; set it to %#o. Further repairs are counted, not logged.",
+				item.Digest.Hash, item.Path, have, fixed)
+		}
+		if have = fixed; have == want {
+			return false, nil
+		}
+	}
+
+	if IsExecutableMode(have) == item.IsExecutable {
+		c.permDriftHits.Add(1)
+		if !c.permDriftLogged.Swap(true) {
+			log.Infof("Linked cached blob %s to %s with mode %#o, changed after it was cached; canonical is %#o. Further drifted hits are counted, not logged.",
+				item.Digest.Hash, item.Path, have, want)
+		}
+		return false, nil
 	}
 
 	if err := replaceWithPrivateCopy(item.Path, want); err != nil {
-		return fmt.Errorf("failed to re-materialize %s with mode %#o: %w", item.Path, want.Perm(), err)
+		return false, fmt.Errorf("failed to re-materialize %s with mode %#o: %w", item.Path, want, err)
 	}
-	c.recordModeCopy(item, info.Mode().Perm(), want.Perm())
-	return nil
+	c.execMismatchCopies.Add(1)
+	c.execMismatchBytes.Add(item.Digest.Size)
+	if !c.execMismatchLogged.Swap(true) {
+		log.Infof("Copied cached blob %s to %s because it has mode %#o, the other executability; want %#o. Further copies for this reason are counted, not logged.",
+			item.Digest.Hash, item.Path, have, want)
+	}
+	return false, nil
 }
 
-// recordModeCopy counts a copy applyFileMode made because the cached blob had
-// mode have and the tree node wanted mode want.
-//
-// The two causes call for different fixes, which is why they are kept apart. A
-// blob carrying the canonical mode for the other executability is content the
-// trees disagree about, and only a cache keyed on executability would avoid the
-// copy. A blob carrying any other mode has been chmod'ed since Push normalized
-// it, which is a client modifying an artifact it should treat as read-only,
-// and every later hit on it pays for that until it is evicted. Drift is checked
-// first, so a blob chmod'ed to, say, 0777 counts as drift even when its
-// executable bit also disagrees: the chmod, not the content, is what has to be
-// fixed.
-//
-// Only copies are counted. A store that cannot hard link fixes a mismatch with
-// a chmod of a file it already owns, which costs nothing worth measuring.
-func (c *LockFreeCache) recordModeCopy(item *client.TreeOutput, have, want os.FileMode) {
-	copies, bytes, logged, cause := &c.execMismatchCopies, &c.execMismatchBytes, &c.execMismatchLogged, "the other executability"
-	if have != ExecutableMode.Perm() && have != RegularMode.Perm() {
-		copies, bytes, logged, cause = &c.permDriftCopies, &c.permDriftBytes, &c.permDriftLogged, "a mode that was changed after it was cached"
-	}
-	copies.Add(1)
-	bytes.Add(item.Digest.Size)
-	if !logged.Swap(true) {
-		log.Infof("Copied cached blob %s to %s because it has mode %#o, %s; want %#o. Further copies for this reason are counted, not logged.",
-			item.Digest.Hash, item.Path, have, cause, want)
-	}
-}
+// chmodBlob chmods a file that is a hard link to a cached blob, and so the
+// blob itself. It is a variable so that tests can make it fail, which nothing
+// on disk can arrange for a file its owner has just linked.
+var chmodBlob = os.Chmod
 
-// ModeCopies returns the copies applyFileMode has made since the cache was
-// created, by cause.
+// ModeCopies returns what applyFileMode has done about non-canonical blobs
+// since the cache was created.
 func (c *LockFreeCache) ModeCopies() ModeCopyStats {
 	return ModeCopyStats{
 		ExecMismatchCopies: c.execMismatchCopies.Load(),
 		ExecMismatchBytes:  c.execMismatchBytes.Load(),
-		PermDriftCopies:    c.permDriftCopies.Load(),
-		PermDriftBytes:     c.permDriftBytes.Load(),
+		PermDriftHits:      c.permDriftHits.Load(),
+		UnreadableRepairs:  c.unreadableRepairs.Load(),
 	}
 }
 
@@ -430,7 +470,7 @@ func (c *LockFreeCache) Push(ctx context.Context, all map[digest.Digest]*client.
 // Close reports what the cache did. There is no index to flush.
 func (c *LockFreeCache) Close() error {
 	m := c.ModeCopies()
-	log.Infof("lock-free cache: %s; mode copies: %d exec mismatch (%d bytes), %d perm drift (%d bytes)",
-		c.store.Stats().Summary(), m.ExecMismatchCopies, m.ExecMismatchBytes, m.PermDriftCopies, m.PermDriftBytes)
+	log.Infof("lock-free cache: %s; non-canonical hits: %d exec mismatch copies (%d bytes), %d perm drift linked as is, %d unreadable blobs repaired",
+		c.store.Stats().Summary(), m.ExecMismatchCopies, m.ExecMismatchBytes, m.PermDriftHits, m.UnreadableRepairs)
 	return nil
 }

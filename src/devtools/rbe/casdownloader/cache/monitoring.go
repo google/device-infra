@@ -23,8 +23,8 @@ func MonitoringStats(c Cache) *monitoring.LocalCacheStats {
 		m := modes.ModeCopies()
 		a.ExecMismatchCopies = m.ExecMismatchCopies
 		a.ExecMismatchBytes = m.ExecMismatchBytes
-		a.PermDriftCopies = m.PermDriftCopies
-		a.PermDriftBytes = m.PermDriftBytes
+		a.PermDriftHits = m.PermDriftHits
+		a.UnreadableRepairs = m.UnreadableRepairs
 	}
 	if hasStore {
 		s := store.StorageStats()

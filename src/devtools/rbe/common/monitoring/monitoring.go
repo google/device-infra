@@ -116,8 +116,8 @@ type LocalCacheStats struct {
 type LocalCacheActivity struct {
 	ExecMismatchCopies int64
 	ExecMismatchBytes  int64
-	PermDriftCopies    int64
-	PermDriftBytes     int64
+	PermDriftHits      int64
+	UnreadableRepairs  int64
 	CorruptBlobs       int64
 
 	CopyFallbackEMLINK int64

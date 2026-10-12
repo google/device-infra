@@ -145,16 +145,18 @@ type Stats struct {
 	// are not counted in Hot. Zero for a cache that does not check, such as
 	// LocalCache.
 	CorruptBlobsQuarantined int64 `json:"corrupt_blobs_quarantined"`
-	// ExecMismatchCopies and PermDriftCopies count local cache hits that
-	// could not share the cached inode because its mode did not match the
-	// tree node, and were copied instead; the Bytes fields are what those
-	// copies wrote. See cache.ModeCopyStats for what separates the two. They
-	// are counted in Hot: the bytes still came from the cache. Zero for a
-	// cache that does not copy on a mismatch, such as LocalCache.
+	// ExecMismatchCopies counts local cache hits whose blob had the other
+	// executable bit and were copied instead of linked; ExecMismatchBytes is
+	// what those copies wrote. They are counted in Hot: the bytes still came
+	// from the cache. PermDriftHits counts hits whose blob had the right
+	// executable bit but other permission bits a consumer had changed, linked
+	// as is, and UnreadableRepairs hits whose blob its owner could not read,
+	// fixed in place. See cache.ModeCopyStats. Zero for a cache that does not
+	// check, such as LocalCache.
 	ExecMismatchCopies int64 `json:"exec_mismatch_copies"`
 	ExecMismatchBytes  int64 `json:"exec_mismatch_bytes"`
-	PermDriftCopies    int64 `json:"perm_drift_copies"`
-	PermDriftBytes     int64 `json:"perm_drift_bytes"`
+	PermDriftHits      int64 `json:"perm_drift_hits"`
+	UnreadableRepairs  int64 `json:"unreadable_repairs"`
 	// NoteReasons classifies Notes, one entry per note in the same order. It
 	// is exported as a metric rather than written to the JSON: the note text
 	// already reaches AnTS, and CF, which does not read the JSON, needs the
@@ -562,7 +564,12 @@ func (d *DownloadJob) applyCopyFilters(ctx context.Context, patterns []*regexp.R
 		if info.Sys().(*syscall.Stat_t).Nlink <= 1 {
 			continue
 		}
-		if err := replaceWithCopy(f.tmp, info.Mode()); err != nil {
+		// The copy exists to be modified in place, so it gets the canonical
+		// mode for its executable bit, which the owner can always write,
+		// rather than whatever a consumer may have chmod'ed the shared inode
+		// to (the lock-free cache links a blob as is when only bits other
+		// than the executable bit have drifted).
+		if err := replaceWithCopy(f.tmp, cache.FileMode(cache.IsExecutableMode(info.Mode().Perm()))); err != nil {
 			return fmt.Errorf("failed to replace hardlink %s with a copy: %w", f.final, err)
 		}
 	}
@@ -1066,8 +1073,8 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 			m := r.ModeCopies()
 			d.DownloadStats.ExecMismatchCopies = m.ExecMismatchCopies
 			d.DownloadStats.ExecMismatchBytes = m.ExecMismatchBytes
-			d.DownloadStats.PermDriftCopies = m.PermDriftCopies
-			d.DownloadStats.PermDriftBytes = m.PermDriftBytes
+			d.DownloadStats.PermDriftHits = m.PermDriftHits
+			d.DownloadStats.UnreadableRepairs = m.UnreadableRepairs
 		}
 		d.Cache.Close()
 		if err != nil {

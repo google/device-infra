@@ -507,8 +507,8 @@ func TestLockFreeCache_WithoutHardlinksChmodsInPlace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to stat %s: %v", path, err)
 	}
-	if err := c.applyFileMode(item, info); err != nil {
-		t.Fatalf("applyFileMode failed: %v", err)
+	if discard, err := c.applyFileMode(item, info); err != nil || discard {
+		t.Fatalf("applyFileMode = (discard %v, %v), want (false, nil)", discard, err)
 	}
 
 	if got := permOf(t, path); got != execMode {
@@ -982,7 +982,7 @@ func TestLockFreeCache_DiscardCorruptHitWhateverBecameOfTheBlob(t *testing.T) {
 				t.Fatalf("Failed to stat %s: %v", item.Path, err)
 			}
 
-			if err := c.discardCorruptHit(item, info); err != nil {
+			if err := c.discardCorruptHit(item, info, "is the wrong size"); err != nil {
 				t.Errorf("discardCorruptHit failed: %v", err)
 			}
 			assertAbsent(t, item.Path, "The wrong-size file pulled from cache")
@@ -1035,56 +1035,71 @@ func TestLockFreeCache_PullCleansUpWhenItCannotStatAPulledFile(t *testing.T) {
 	}
 }
 
-// TestLockFreeCache_ModeCopiesAreCountedByCause checks that every copy
-// applyFileMode makes is counted once, under the cause that calls for its fix,
-// and that a hit that shares the inode is not counted at all.
+// TestLockFreeCache_NonCanonicalHits covers what a hit does with a blob whose
+// permission bits are not canonical for the tree node: link it when the
+// executable bit agrees, copy when it does not, and count each once.
 //
 // The blob is ingested as a regular file. Drift is simulated the way it
 // happens in the field: by chmod'ing a pulled file, which on the hard link path
 // is the cached blob.
-func TestLockFreeCache_ModeCopiesAreCountedByCause(t *testing.T) {
-	const content = "mode copies"
+func TestLockFreeCache_NonCanonicalHits(t *testing.T) {
+	const content = "non-canonical"
 	size := int64(len(content))
 	for _, tc := range []struct {
 		name string
-		// drift, if not zero, is the mode a client sets on a pulled file
+		// drift, if not zero, is the mode a consumer sets on a pulled file
 		// before the pull under test.
 		drift      os.FileMode
 		executable bool
+		wantLinked bool
+		wantMode   os.FileMode
 		want       ModeCopyStats
 	}{
-		{name: "modes agree", executable: false, want: ModeCopyStats{}},
-		{name: "other executability", executable: true,
-			want: ModeCopyStats{ExecMismatchCopies: 1, ExecMismatchBytes: size}},
-		{name: "drifted, same executability", drift: 0o600, executable: false,
-			want: ModeCopyStats{PermDriftCopies: 1, PermDriftBytes: size}},
-		// 0777 also flips the executable bit, but the chmod is what has to
-		// be fixed, so it counts as drift.
-		{name: "drifted to 0777", drift: 0o777, executable: false,
-			want: ModeCopyStats{PermDriftCopies: 1, PermDriftBytes: size}},
+		{name: "canonical, same executable bit", executable: false,
+			wantLinked: true, wantMode: nonExecMode, want: ModeCopyStats{}},
+		{name: "canonical, other executable bit", executable: true,
+			wantLinked: false, wantMode: execMode, want: ModeCopyStats{ExecMismatchCopies: 1, ExecMismatchBytes: size}},
+		{name: "drifted, same executable bit", drift: 0o600, executable: false,
+			wantLinked: true, wantMode: 0o600, want: ModeCopyStats{PermDriftHits: 1}},
 		{name: "drifted to 0777, wanted executable", drift: 0o777, executable: true,
-			want: ModeCopyStats{PermDriftCopies: 1, PermDriftBytes: size}},
-		// A drifted mode that happens to be the canonical mode of the other
-		// executability cannot be told apart from content the trees disagree
-		// about, and is counted as such.
-		{name: "drifted to the other canonical mode", drift: execMode, executable: false,
-			want: ModeCopyStats{ExecMismatchCopies: 1, ExecMismatchBytes: size}},
+			wantLinked: true, wantMode: 0o777, want: ModeCopyStats{PermDriftHits: 1}},
+		{name: "drifted to 0777, wanted regular", drift: 0o777, executable: false,
+			wantLinked: false, wantMode: nonExecMode, want: ModeCopyStats{ExecMismatchCopies: 1, ExecMismatchBytes: size}},
+		// Only the owner execute bit counts, as it does for tree nodes: the
+		// owner, who runs everything in the lab, cannot execute 0610.
+		{name: "group-executable only, wanted executable", drift: 0o610, executable: true,
+			wantLinked: false, wantMode: execMode, want: ModeCopyStats{ExecMismatchCopies: 1, ExecMismatchBytes: size}},
+		// chmod -x/+x by a consumer leaves the other canonical mode, which
+		// cannot be told from content ingested that way.
+		{name: "executable bit flipped by a consumer", drift: execMode, executable: false,
+			wantLinked: false, wantMode: nonExecMode, want: ModeCopyStats{ExecMismatchCopies: 1, ExecMismatchBytes: size}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := t.TempDir()
-			c := newTestCache(t, filepath.Join(dir, "cache"), true)
+			cacheDir := filepath.Join(dir, "cache")
+			c := newTestCache(t, cacheDir, true)
 			_, out := stage(t, dir, "work/file", content, false)
 			push(t, c, out)
-
 			if tc.drift != 0 {
 				if err := os.Chmod(out.Path, tc.drift); err != nil {
 					t.Fatalf("Failed to chmod %s: %v", out.Path, err)
 				}
 			}
+			blob := blobPath(cacheDir, out.Digest.Hash)
+			blobMode := permOf(t, blob)
 
-			item := &client.TreeOutput{Digest: out.Digest, Path: filepath.Join(dir, "out", "file"), IsExecutable: tc.executable}
-			if !pullOne(t, c, item) {
+			dest := filepath.Join(dir, "out", "file")
+			if !pullOne(t, c, &client.TreeOutput{Digest: out.Digest, Path: dest, IsExecutable: tc.executable}) {
 				t.Fatal("Pull missed a blob that was just pushed")
+			}
+			if linked := inodeOf(t, dest) == inodeOf(t, blob); linked != tc.wantLinked {
+				t.Errorf("Pulled file shares the cached inode = %v, want %v", linked, tc.wantLinked)
+			}
+			if got := permOf(t, dest); got != tc.wantMode {
+				t.Errorf("Pulled file mode = %#o, want %#o", got, tc.wantMode)
+			}
+			if got := permOf(t, blob); got != blobMode {
+				t.Errorf("Cached blob mode = %#o after the pull, want it unchanged at %#o", got, blobMode)
 			}
 			if got := c.ModeCopies(); got != tc.want {
 				t.Errorf("ModeCopies() = %+v, want %+v", got, tc.want)
@@ -1094,8 +1109,8 @@ func TestLockFreeCache_ModeCopiesAreCountedByCause(t *testing.T) {
 }
 
 // TestLockFreeCache_ModeCopiesAccumulate checks that the counters add up
-// across hits rather than recording only the latest, since a drifted blob costs
-// a copy on every hit until it is evicted.
+// across hits rather than recording only the latest, since a blob used with the
+// other executable bit costs a copy on every hit.
 func TestLockFreeCache_ModeCopiesAccumulate(t *testing.T) {
 	dir := t.TempDir()
 	c := newTestCache(t, filepath.Join(dir, "cache"), true)
@@ -1112,8 +1127,8 @@ func TestLockFreeCache_ModeCopiesAccumulate(t *testing.T) {
 }
 
 // TestLockFreeCache_WithoutHardlinksCountsNoModeCopies checks that a store
-// that cannot hard link reports no copies: it fixes a mismatch with a chmod of
-// a file it already owns, so there is no extra copy to count.
+// that cannot hard link reports nothing: it fixes a mismatch with a chmod of a
+// file it already owns, so there is no copy or shared blob to count.
 func TestLockFreeCache_WithoutHardlinksCountsNoModeCopies(t *testing.T) {
 	dir := t.TempDir()
 	c := newTestCache(t, filepath.Join(dir, "cache"), false)
@@ -1121,6 +1136,101 @@ func TestLockFreeCache_WithoutHardlinksCountsNoModeCopies(t *testing.T) {
 	push(t, c, out)
 
 	pullOne(t, c, &client.TreeOutput{Digest: out.Digest, Path: filepath.Join(dir, "out", "file"), IsExecutable: true})
+	if got := c.ModeCopies(); got != (ModeCopyStats{}) {
+		t.Errorf("ModeCopies() = %+v, want none", got)
+	}
+}
+
+// TestLockFreeCache_UnreadableBlobIsRepairedInPlace checks that a blob its
+// owner cannot read is chmod'ed back to the canonical mode for its executable
+// bit before use. That repairs it for every path already linked to it, not
+// just this one, and only adds owner access. What happens next follows the
+// ordinary rules: a link when the executable bit agrees, a copy when not.
+func TestLockFreeCache_UnreadableBlobIsRepairedInPlace(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		ingestExec bool
+		drift      os.FileMode
+		wantExec   bool
+		wantBlob   os.FileMode
+		wantLinked bool
+		want       ModeCopyStats
+	}{
+		{name: "executable, wanted executable", ingestExec: true, drift: 0o111, wantExec: true,
+			wantBlob: execMode, wantLinked: true, want: ModeCopyStats{UnreadableRepairs: 1}},
+		{name: "regular, wanted regular", ingestExec: false, drift: 0o000, wantExec: false,
+			wantBlob: nonExecMode, wantLinked: true, want: ModeCopyStats{UnreadableRepairs: 1}},
+		{name: "executable, wanted regular", ingestExec: true, drift: 0o100, wantExec: false,
+			wantBlob: execMode, wantLinked: false, want: ModeCopyStats{UnreadableRepairs: 1, ExecMismatchCopies: 1, ExecMismatchBytes: int64(len("unreadable"))}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if os.Geteuid() == 0 {
+				t.Skip("root reads files whatever their mode")
+			}
+			dir := t.TempDir()
+			cacheDir := filepath.Join(dir, "cache")
+			c := newTestCache(t, cacheDir, true)
+			holder, out := stage(t, dir, "work/file", "unreadable", tc.ingestExec)
+			push(t, c, out)
+			if err := os.Chmod(holder, tc.drift); err != nil {
+				t.Fatal(err)
+			}
+			blob := blobPath(cacheDir, out.Digest.Hash)
+			before := inodeOf(t, blob)
+
+			dest := filepath.Join(dir, "out", "file")
+			if !pullOne(t, c, &client.TreeOutput{Digest: out.Digest, Path: dest, IsExecutable: tc.wantExec}) {
+				t.Fatal("Pull missed a blob that was just pushed")
+			}
+			if inodeOf(t, blob) != before {
+				t.Error("Cached blob was replaced, want it repaired in place")
+			}
+			if got := permOf(t, blob); got != tc.wantBlob {
+				t.Errorf("Cached blob mode = %#o, want %#o", got, tc.wantBlob)
+			}
+			if got, err := os.ReadFile(holder); err != nil || string(got) != "unreadable" {
+				t.Errorf("Path already linked to the blob reads %q (err %v), want it readable again", got, err)
+			}
+			if linked := inodeOf(t, dest) == before; linked != tc.wantLinked {
+				t.Errorf("Pulled file shares the cached inode = %v, want %v", linked, tc.wantLinked)
+			}
+			if got := permOf(t, dest); got != FileMode(tc.wantExec) {
+				t.Errorf("Pulled file mode = %#o, want %#o", got, FileMode(tc.wantExec))
+			}
+			if got := c.ModeCopies(); got != tc.want {
+				t.Errorf("ModeCopies() = %+v, want %+v", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestLockFreeCache_UnfixableUnreadableBlobIsDiscarded checks that a blob its
+// owner cannot read, and that cannot be chmod'ed, is removed and reported as a
+// miss, like a blob of the wrong size: it is useless to every consumer.
+func TestLockFreeCache_UnfixableUnreadableBlobIsDiscarded(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root reads files whatever their mode")
+	}
+	dir := t.TempDir()
+	cacheDir := filepath.Join(dir, "cache")
+	c := newTestCache(t, cacheDir, true)
+	holder, out := stage(t, dir, "work/file", "unfixable", false)
+	push(t, c, out)
+	if err := os.Chmod(holder, 0o200); err != nil {
+		t.Fatal(err)
+	}
+	orig := chmodBlob
+	t.Cleanup(func() { chmodBlob = orig })
+	chmodBlob = func(path string, mode os.FileMode) error {
+		return &os.PathError{Op: "chmod", Path: path, Err: syscall.EPERM}
+	}
+
+	dest := filepath.Join(dir, "out", "file")
+	if pullOne(t, c, &client.TreeOutput{Digest: out.Digest, Path: dest}) {
+		t.Error("Pull reported a hit on a blob it could neither read nor fix, want a miss")
+	}
+	assertAbsent(t, dest, "The file pulled from the unusable blob")
+	assertAbsent(t, blobPath(cacheDir, out.Digest.Hash), "The unusable blob")
 	if got := c.ModeCopies(); got != (ModeCopyStats{}) {
 		t.Errorf("ModeCopies() = %+v, want none", got)
 	}

@@ -42,20 +42,23 @@ type CorruptBlobReporter interface {
 	CorruptBlobsQuarantined() int64
 }
 
-// ModeCopyStats counts the hits that could not share the cached inode because
-// its permissions did not match what the tree node asked for, and so cost a
-// private copy of the blob. Each such hit is counted under exactly one cause.
+// ModeCopyStats counts the hits whose cached blob did not carry the canonical
+// permission bits the tree node calls for, by what the cache did about it.
 type ModeCopyStats struct {
-	// ExecMismatchCopies are hits on a blob that carried a canonical mode
-	// for the other executability: the same content is used as executable
-	// in one tree and not in another.
+	// ExecMismatchCopies are hits on a blob whose executable bit differs from
+	// the tree node's, which cost a private copy of the blob: the same
+	// content is used as executable in one tree and not in another, or a
+	// consumer flipped the bit through a hard link.
 	ExecMismatchCopies int64
 	ExecMismatchBytes  int64
-	// PermDriftCopies are hits on a blob whose mode was not canonical at
-	// all, which only happens when something chmod'ed a materialized file
-	// and, through the shared inode, the cached blob with it.
-	PermDriftCopies int64
-	PermDriftBytes  int64
+	// PermDriftHits are hits on a blob whose executable bit matches but whose
+	// other permission bits are not canonical, which only happens when
+	// something chmod'ed a materialized file and, through the shared inode,
+	// the cached blob with it. They are linked as is, without a copy.
+	PermDriftHits int64
+	// UnreadableRepairs are hits on a blob its owner could not read, chmod'ed
+	// back to the canonical mode in place before use.
+	UnreadableRepairs int64
 }
 
 // ModeCopyReporter is implemented by caches that give a hit its own inode when
@@ -119,6 +122,15 @@ func FileMode(executable bool) os.FileMode {
 		return ExecutableMode
 	}
 	return RegularMode
+}
+
+// IsExecutableMode reports whether perm marks a file executable in the sense
+// CAS trees use: the REAPI SDK sets a FileNode's is_executable from the owner
+// execute bit when it builds a tree (filemetadata.Compute), so that is the bit
+// that has to agree. It is also the bit that matters when, as in the lab,
+// every process runs as the owner.
+func IsExecutableMode(perm os.FileMode) bool {
+	return perm&0o100 != 0
 }
 
 func fileMode(output *client.TreeOutput) os.FileMode {
