@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.JdkFutureAdapters;
@@ -284,12 +285,12 @@ public final class GetDeviceOverviewHandler {
     }
 
     NetworkInfo.Builder network = NetworkInfo.newBuilder();
-    try {
-      network.setWifiRssi(Integer.parseInt(allDimensions.getOrDefault("wifi_rssi", "0")));
-    } catch (NumberFormatException e) {
-      network.setWifiRssi(0);
-    }
-    network.setHasInternet(Boolean.parseBoolean(allDimensions.getOrDefault("internet", "false")));
+    Optional.ofNullable(allDimensions.get("wifi_rssi"))
+        .map(Ints::tryParse)
+        .ifPresent(network::setWifiRssi);
+    Optional.ofNullable(allDimensions.get("internet"))
+        .map(Boolean::parseBoolean)
+        .ifPresent(network::setHasInternet);
 
     // Reference from V5: java/com/google/devtools/mobileharness/fe/v5/ui/table/basic_info_table.soy
 
@@ -303,8 +304,8 @@ public final class GetDeviceOverviewHandler {
     ImmutableMap.Builder<String, DimensionSourceGroup> supportedMap = ImmutableMap.builder();
     ImmutableMap.Builder<String, DimensionSourceGroup> requiredMap = ImmutableMap.builder();
 
-    List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> configSupported =
-        ImmutableList.of();
+    ImmutableList<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension>
+        configSupported = ImmutableList.of();
     List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> configRequired =
         ImmutableList.of();
     String configSourceKey =
@@ -341,10 +342,15 @@ public final class GetDeviceOverviewHandler {
             Stream.concat(configSupported.stream(), configRequired.stream())
                 .collect(toImmutableSet());
 
-    List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> allSupported =
-        deviceInfo.getDeviceFeature().getCompositeDimension().getSupportedDimensionList().stream()
-            .filter(d -> !d.getName().equals(SUBDEVICE_DIMENSIONS))
-            .collect(toImmutableList());
+    ImmutableList<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension>
+        allSupported =
+            deviceInfo
+                .getDeviceFeature()
+                .getCompositeDimension()
+                .getSupportedDimensionList()
+                .stream()
+                .filter(d -> !d.getName().equals(SUBDEVICE_DIMENSIONS))
+                .collect(toImmutableList());
     List<com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension> allRequired =
         deviceInfo.getDeviceFeature().getCompositeDimension().getRequiredDimensionList();
 
