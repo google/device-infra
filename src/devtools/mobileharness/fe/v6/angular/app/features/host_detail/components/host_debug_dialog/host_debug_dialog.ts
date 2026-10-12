@@ -276,7 +276,7 @@ export function normalizeHostDebugInfoResponse(
   response: GetHostDebugInfoResponse,
 ): GetHostDebugInfoResponse {
   let unknownCount = 1;
-  const normalizedResults = response.results.map((res) => ({
+  const normalizedResults = (response.results ?? []).map((res) => ({
     ...res,
     command:
       res.command && res.command.trim() !== ''
