@@ -219,15 +219,10 @@ func TestSummaryOmitsZeroCounters(t *testing.T) {
 
 func TestSummaryReportsAnomalies(t *testing.T) {
 	s := Stats{
-		HardlinkHits:           10,
-		CopyFallbackEMLINK:     7,
-		CopyFallbackEXDEV:      3,
-		CorruptBlobs:           2,
-		HeadroomChecks:         100,
-		HeadroomEvictions:      2,
-		HeadroomReclaimedBytes: 5 << 30,
-		HeadroomBelowWatermark: 40,
-		HeadroomPeerWaits:      1,
+		HardlinkHits:       10,
+		CopyFallbackEMLINK: 7,
+		CopyFallbackEXDEV:  3,
+		CorruptBlobs:       2,
 	}
 	got := s.Summary()
 
@@ -236,9 +231,6 @@ func TestSummaryReportsAnomalies(t *testing.T) {
 		"EMLINK 7",
 		"EXDEV 3",
 		"2 corrupt blobs",
-		"2 headroom evictions",
-		"40 of 100 writes",
-		"1 writes timed out",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("Summary is missing %q:\n%s", want, got)

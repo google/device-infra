@@ -32,11 +32,6 @@ func MonitoringStats(c Cache) *monitoring.LocalCacheStats {
 		a.CopyFallbackEMLINK = s.CopyFallbackEMLINK
 		a.CopyFallbackEXDEV = s.CopyFallbackEXDEV
 		a.CopyFallbackOther = s.CopyFallbackOther
-		a.HeadroomChecks = s.HeadroomChecks
-		a.HeadroomEvictions = s.HeadroomEvictions
-		a.HeadroomReclaimedBytes = s.HeadroomReclaimedBytes
-		a.HeadroomPeerWaits = s.HeadroomPeerWaits
-		a.HeadroomBelowWatermark = s.HeadroomBelowWatermark
 	}
 	stats.Activity = a
 	return stats

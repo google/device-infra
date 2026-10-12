@@ -159,9 +159,23 @@ func TestNewEvictorConfig_EmptyOverridesChangeNothing(t *testing.T) {
 	want.MinFreeSpace = "4294967296b"
 	want.TargetFreeSpace = "8589934592b"
 	want.ReservedSpaceGB = 0
+	want.EmergencyLargeBlobFirst = false
 
 	if got != want {
 		t.Errorf("NewEvictorConfig(%d, EvictorOverrides{}) = %+v, want %+v", minFree, got, want)
+	}
+}
+
+// TestNewEvictorConfig_TurnsOffEmergencyLargeBlobFirst pins another deliberate
+// departure from the shared defaults, which keep emergency mode on for
+// casproxy. On a cache as small as casdownloader's, unlinking the large blobs
+// first throws away the hottest ones.
+func TestNewEvictorConfig_TurnsOffEmergencyLargeBlobFirst(t *testing.T) {
+	if !storage.DefaultEvictorConfig().EmergencyLargeBlobFirst {
+		t.Fatal("DefaultEvictorConfig().EmergencyLargeBlobFirst = false; casproxy relies on it being on, and this test would prove nothing")
+	}
+	if NewEvictorConfig(1<<30, EvictorOverrides{}).EmergencyLargeBlobFirst {
+		t.Error("NewEvictorConfig().EmergencyLargeBlobFirst = true, want false")
 	}
 }
 

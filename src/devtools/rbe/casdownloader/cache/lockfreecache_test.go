@@ -539,33 +539,6 @@ func TestLockFreeCache_PushIsIdempotent(t *testing.T) {
 	}
 }
 
-// TestLockFreeCache_EnsureHeadroomOnHealthyDisk checks the wiring, not the
-// eviction policy: a modest request against a temp directory should be
-// satisfied by the initial statfs without any eviction at all.
-func TestLockFreeCache_EnsureHeadroomOnHealthyDisk(t *testing.T) {
-	dir := t.TempDir()
-	c := newTestCache(t, filepath.Join(dir, "cache"), true)
-
-	if err := c.EnsureHeadroom(context.Background(), 1024); err != nil {
-		t.Errorf("EnsureHeadroom(1KiB) failed: %v", err)
-	}
-}
-
-// TestLockFreeCache_IsDiscoverableAsHeadroomReserver pins the mechanism the
-// downloader uses to find pre-flight eviction.
-//
-// The conformance itself is asserted at compile time in lockfreecache.go. What
-// that cannot catch is the call site going looking for the wrong thing: a type
-// assertion that does not match is not an error, it is a skipped branch, so a
-// mismatch here would disable eviction silently rather than failing the build.
-func TestLockFreeCache_IsDiscoverableAsHeadroomReserver(t *testing.T) {
-	var c Cache = &LockFreeCache{}
-
-	if _, ok := c.(HeadroomReserver); !ok {
-		t.Error("A LockFreeCache held as a Cache is not discoverable as a HeadroomReserver; the downloader would skip pre-flight eviction without any error")
-	}
-}
-
 // TestLockFreeCache_CloseReportsAndSucceeds covers the one method that runs on
 // every single invocation.
 //
@@ -906,9 +879,9 @@ func TestLockFreeCache_PullRemovesTheBlobEvenIfItCannotRemoveTheFile(t *testing.
 }
 
 // TestLockFreeCache_IsDiscoverableAsCorruptBlobReporter pins how the
-// downloader finds the corrupt-blob count for stats.json. As with
-// HeadroomReserver, a type assertion that does not match skips the code
-// instead of failing, so a mismatch would silently report zero.
+// downloader finds the corrupt-blob count for stats.json. A type assertion
+// that does not match skips the code instead of failing, so a mismatch would
+// silently report zero.
 func TestLockFreeCache_IsDiscoverableAsCorruptBlobReporter(t *testing.T) {
 	var c Cache = &LockFreeCache{}
 

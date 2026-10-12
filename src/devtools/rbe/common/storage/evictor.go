@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -37,20 +38,30 @@ type EvictorConfig struct {
 	LazyTouchInterval time.Duration
 	// MinBlobAge is the grace period protecting newly written/renamed blobs from eviction.
 	MinBlobAge time.Duration
+	// EmergencyLargeBlobFirst makes a flight that starts below 5% effective
+	// free space unlink every eligible blob larger than 50 MB, regardless of
+	// age, in addition to the blobs older than the sampled cutoff.
+	//
+	// That frees space fastest on a large dedicated cache such as casproxy's.
+	// On a small cache it throws away the hottest large blobs, such as device
+	// images, so it is opt-in: DefaultEvictorConfig enables it, and the zero
+	// value leaves it off.
+	EmergencyLargeBlobFirst bool
 }
 
 // DefaultEvictorConfig returns the default configuration for the storage evictor per the design doc.
 func DefaultEvictorConfig() EvictorConfig {
 	return EvictorConfig{
-		MinFreeSpace:      "15%",
-		TargetFreeSpace:   "25%",
-		ReservedSpaceGB:   100,
-		CheckInterval:     1 * time.Minute,
-		SampleBuckets:     16,
-		BatchSize:         500,
-		BatchDelay:        1 * time.Millisecond,
-		LazyTouchInterval: 4 * time.Hour,
-		MinBlobAge:        10 * time.Minute,
+		MinFreeSpace:            "15%",
+		TargetFreeSpace:         "25%",
+		ReservedSpaceGB:         100,
+		CheckInterval:           1 * time.Minute,
+		SampleBuckets:           16,
+		BatchSize:               500,
+		BatchDelay:              1 * time.Millisecond,
+		LazyTouchInterval:       4 * time.Hour,
+		MinBlobAge:              10 * time.Minute,
+		EmergencyLargeBlobFirst: true,
 	}
 }
 
@@ -220,6 +231,10 @@ type Evictor struct {
 	reservedBytes   int64
 	statfs          StatfsFunc
 
+	// layout lists the buckets the evictor samples and walks. It is nil
+	// until a Storage adopts the evictor; see bucketLayout.
+	layout Layout
+
 	configMu sync.RWMutex
 
 	isEvicting atomic.Bool
@@ -356,13 +371,14 @@ func (e *Evictor) run(ctx context.Context) {
 // snapshotConfig captures an immutable point-in-time snapshot of the evictor's
 // configuration for an eviction flight, with thresholds pre-calculated into concrete byte scalars.
 type snapshotConfig struct {
-	minFreeBytes    int64
-	targetFreeBytes int64
-	minBlobAge      time.Duration
-	sampleBuckets   int
-	batchSize       int
-	batchDelay      time.Duration
-	reservedBytes   int64
+	minFreeBytes            int64
+	targetFreeBytes         int64
+	minBlobAge              time.Duration
+	sampleBuckets           int
+	batchSize               int
+	batchDelay              time.Duration
+	reservedBytes           int64
+	emergencyLargeBlobFirst bool
 }
 
 func (e *Evictor) snapshot(stats ...DiskStats) snapshotConfig {
@@ -382,13 +398,14 @@ func (e *Evictor) snapshot(stats ...DiskStats) snapshotConfig {
 
 	effectiveTotal, _, _ := ComputeEffectiveSpace(st, e.reservedBytes)
 	return snapshotConfig{
-		minFreeBytes:    e.minThreshold.Evaluate(effectiveTotal),
-		targetFreeBytes: e.targetThreshold.Evaluate(effectiveTotal),
-		minBlobAge:      e.config.MinBlobAge,
-		sampleBuckets:   e.config.SampleBuckets,
-		batchSize:       e.config.BatchSize,
-		batchDelay:      e.config.BatchDelay,
-		reservedBytes:   e.reservedBytes,
+		minFreeBytes:            e.minThreshold.Evaluate(effectiveTotal),
+		targetFreeBytes:         e.targetThreshold.Evaluate(effectiveTotal),
+		minBlobAge:              e.config.MinBlobAge,
+		sampleBuckets:           e.config.SampleBuckets,
+		batchSize:               e.config.BatchSize,
+		batchDelay:              e.config.BatchDelay,
+		reservedBytes:           e.reservedBytes,
+		emergencyLargeBlobFirst: e.config.EmergencyLargeBlobFirst,
 	}
 }
 
@@ -398,6 +415,15 @@ func (e *Evictor) snapshot(stats ...DiskStats) snapshotConfig {
 type evictionFlight struct {
 	e   *Evictor
 	cfg snapshotConfig
+
+	// exitIfUnreachable makes the flight stop after sampling, without
+	// walking the buckets, when the sample shows that nothing can be
+	// reclaimed. Only the one-shot path sets it, so casproxy's background
+	// flights behave exactly as before.
+	exitIfUnreachable bool
+
+	// sample is the histogram estimateCutoffAge built for this flight.
+	sample sampleStats
 
 	// skippedLinkedFiles and skippedLinkedBytes count the blobs evictStream
 	// selected but left in place because isLinkedElsewhere reported them.
@@ -431,11 +457,28 @@ func (e *Evictor) EvictOnce(ctx context.Context) (reclaimedBytes int64, filesDel
 	return flight.run(ctx)
 }
 
+// flightResult is what one flight did. outcome is one of the TrimOutcome
+// constants.
+type flightResult struct {
+	outcome            string
+	reclaimed          int64
+	deleted            int
+	skippedLinkedBytes int64
+	err                error
+}
+
+// run executes the flight and reports it as the tuple the background loop
+// and EvictOnce have always returned.
 func (f *evictionFlight) run(ctx context.Context) (reclaimedBytes int64, filesDeleted int, err error) {
+	r := f.execute(ctx)
+	return r.reclaimed, r.deleted, r.err
+}
+
+func (f *evictionFlight) execute(ctx context.Context) flightResult {
 	e := f.e
 	// Single-Flight Gate: ensure only one eviction flight runs at any given time.
 	if !e.isEvicting.CompareAndSwap(false, true) {
-		return 0, 0, nil // Another eviction flight is already active
+		return flightResult{outcome: TrimOutcomeBusy} // Another eviction flight is already active
 	}
 	defer e.isEvicting.Store(false)
 
@@ -443,7 +486,7 @@ func (f *evictionFlight) run(ctx context.Context) (reclaimedBytes int64, filesDe
 	stats, err := e.statfs(e.rootDir)
 	if err != nil {
 		monitoring.RecordEvictionRun("error", 0, 0, time.Since(startTime))
-		return 0, 0, fmt.Errorf("statfs failed: %w", err)
+		return flightResult{outcome: TrimOutcomeError, err: fmt.Errorf("statfs failed: %w", err)}
 	}
 
 	effectiveTotal, effectiveFree, freePct := ComputeEffectiveSpace(stats, f.cfg.reservedBytes)
@@ -451,17 +494,24 @@ func (f *evictionFlight) run(ctx context.Context) (reclaimedBytes int64, filesDe
 
 	if effectiveFree >= f.cfg.targetFreeBytes {
 		monitoring.RecordEvictionRun("noop", 0, 0, time.Since(startTime))
-		return 0, 0, nil // Already sufficient space
+		return flightResult{outcome: TrimOutcomeNoop} // Already sufficient space
 	}
 
 	targetReclaimBytes := f.cfg.targetFreeBytes - effectiveFree
-	emergencyMode := freePct < 5.0
+	emergencyMode := f.cfg.emergencyLargeBlobFirst && freePct < 5.0
 
 	// 1. Estimate cutoff age from random bucket sampling
 	cutoff := f.estimateCutoffAge(ctx, effectiveTotal, effectiveFree, targetReclaimBytes)
 
+	if f.exitIfUnreachable && f.sample.unreachable() {
+		log.InfoContextf(ctx, "Storage eviction flight exiting early: all %d candidate blobs in %d sampled buckets are pinned by other links (%d, %.2f GB) or within the %v grace period (%d), so eviction cannot reach the target.",
+			f.sample.pinnedCount+f.sample.youngCount, f.sample.bucketCount, f.sample.pinnedCount, float64(f.sample.pinnedBytes)/gib, f.cfg.minBlobAge, f.sample.youngCount)
+		monitoring.RecordEvictionRun("noop", 0, 0, time.Since(startTime))
+		return flightResult{outcome: TrimOutcomeNoop, skippedLinkedBytes: f.sample.pinnedBytes}
+	}
+
 	// 2. Perform lock-free paced streaming unlinks across sharded leaf buckets
-	reclaimedBytes, filesDeleted, err = f.evictStream(ctx, cutoff, f.cfg.targetFreeBytes, emergencyMode)
+	reclaimedBytes, filesDeleted, err := f.evictStream(ctx, cutoff, f.cfg.targetFreeBytes, emergencyMode)
 	duration := time.Since(startTime)
 
 	evictionStatus := "evicted"
@@ -482,7 +532,20 @@ func (f *evictionFlight) run(ctx context.Context) (reclaimedBytes int64, filesDe
 	e.lastSkippedLinkedBytes = f.skippedLinkedBytes
 	e.statsMu.Unlock()
 
-	return reclaimedBytes, filesDeleted, err
+	outcome := TrimOutcomeEvicted
+	switch {
+	case errors.Is(err, context.DeadlineExceeded):
+		outcome = TrimOutcomeTimedOut
+	case err != nil:
+		outcome = TrimOutcomeError
+	}
+	return flightResult{
+		outcome:            outcome,
+		reclaimed:          reclaimedBytes,
+		deleted:            filesDeleted,
+		skippedLinkedBytes: f.skippedLinkedBytes,
+		err:                err,
+	}
 }
 
 // Stats returns a copy of eviction runtime metrics.
@@ -605,6 +668,22 @@ type sampleStats struct {
 	maxDays     int
 	bucketCount int
 	duration    time.Duration
+
+	// youngCount counts the candidate blobs left out of the histogram
+	// because they are still inside the MinBlobAge grace period, and
+	// pinnedCount and pinnedBytes those left out because other names pin
+	// them (see isLinkedElsewhere).
+	youngCount  int
+	pinnedCount int
+	pinnedBytes int64
+}
+
+// unreachable reports whether the sample shows that eviction cannot make
+// progress: the sampled buckets held candidate blobs, but every one of them
+// was pinned or still in its grace period. An empty sample proves nothing,
+// so it is not unreachable.
+func (s sampleStats) unreachable() bool {
+	return s.totalCount == 0 && s.youngCount+s.pinnedCount > 0
 }
 
 // estimateCutoffAge samples K random leaf buckets to construct an age histogram and derive T_cutoff.
@@ -613,6 +692,7 @@ func (f *evictionFlight) estimateCutoffAge(ctx context.Context, effectiveTotal, 
 	minBlobAge := f.cfg.minBlobAge
 
 	stats := f.buildAgeHistogram(now)
+	f.sample = stats
 
 	// Fallback to MinBlobAge grace period if no candidate samples were found in sampled buckets.
 	if stats.totalBytes == 0 || stats.totalCount == 0 {
@@ -638,6 +718,8 @@ func (f *evictionFlight) buildAgeHistogram(now time.Time) sampleStats {
 
 	var totalBytes int64
 	var totalCount int
+	var youngCount, pinnedCount int
+	var pinnedBytes int64
 
 	sampleBuckets := f.cfg.sampleBuckets
 
@@ -660,12 +742,15 @@ func (f *evictionFlight) buildAgeHistogram(now time.Time) sampleStats {
 
 			// Exclude blobs currently in their grace period from the histogram
 			if !f.isEligible(info.ModTime(), now) {
+				youngCount++
 				continue
 			}
 			// Exclude blobs that eviction cannot reclaim. Counting them would
 			// size the cutoff against bytes that unlinking does not free, and
 			// so pick a cutoff too recent to reach the target.
 			if isLinkedElsewhere(info) {
+				pinnedCount++
+				pinnedBytes += info.Size()
 				continue
 			}
 
@@ -690,6 +775,9 @@ func (f *evictionFlight) buildAgeHistogram(now time.Time) sampleStats {
 		maxDays:     maxDays,
 		bucketCount: len(bucketPaths),
 		duration:    time.Since(start),
+		youngCount:  youngCount,
+		pinnedCount: pinnedCount,
+		pinnedBytes: pinnedBytes,
 	}
 }
 
@@ -793,6 +881,10 @@ func (e *Evictor) SetMaxAgeDays(days int) {
 }
 
 // evictStream streams through leaf buckets, unlinking files matching eviction criteria.
+//
+// emergencyMode additionally unlinks every eligible blob larger than
+// emergencyBlobSizeThreshold, whatever its age. The flight passes it only when
+// EmergencyLargeBlobFirst is set and free space is critically low.
 func (f *evictionFlight) evictStream(ctx context.Context, cutoff time.Time, targetFreeBytes int64, emergencyMode bool) (int64, int, error) {
 	now := time.Now()
 	batchSize := f.cfg.batchSize
@@ -803,8 +895,8 @@ func (f *evictionFlight) evictStream(ctx context.Context, cutoff time.Time, targ
 	var totalDeleted int
 	var unlinksInBatch int
 
-	// Random permutation of all 65,536 bucket paths
-	bucketPerm := f.e.getAllShardedBucketPermutation()
+	// Random permutation of every leaf bucket in the layout
+	bucketPerm := f.e.bucketPermutation()
 
 	for _, relDir := range bucketPerm {
 		select {
@@ -889,39 +981,48 @@ func (f *evictionFlight) evictStream(ctx context.Context, cutoff time.Time, targ
 	return totalReclaimed, totalDeleted, nil
 }
 
-// pickRandomBuckets returns K random leaf bucket directory paths.
+// bucketLayout returns the layout whose buckets the evictor samples and walks.
+// An evictor no Storage has adopted, such as one built directly in a test,
+// walks the default layout.
+func (e *Evictor) bucketLayout() Layout {
+	if e.layout == nil {
+		return ShardedLayout65536
+	}
+	return e.layout
+}
+
+// pickRandomBuckets returns k distinct leaf bucket directories, as absolute
+// paths, chosen uniformly at random from the layout's buckets. It returns
+// every bucket if the layout has no more than k.
 func (e *Evictor) pickRandomBuckets(k int) []string {
+	buckets := e.bucketLayout().Buckets()
+	k = max(0, min(k, len(buckets)))
+
 	e.randMu.Lock()
-	defer e.randMu.Unlock()
+	// A partial Fisher-Yates shuffle: the first k entries end up a uniform
+	// random sample without replacement.
+	for i := 0; i < k; i++ {
+		j := i + e.rand.Intn(len(buckets)-i)
+		buckets[i], buckets[j] = buckets[j], buckets[i]
+	}
+	e.randMu.Unlock()
 
-	paths := make([]string, 0, k)
-	seen := make(map[string]bool, k)
-
-	for len(paths) < k {
-		b1 := e.rand.Intn(256)
-		b2 := e.rand.Intn(256)
-		rel := fmt.Sprintf("%02x/%02x", b1, b2)
-		if !seen[rel] {
-			seen[rel] = true
-			paths = append(paths, filepath.Join(e.rootDir, rel))
-		}
+	paths := make([]string, k)
+	for i, rel := range buckets[:k] {
+		paths[i] = filepath.Join(e.rootDir, rel)
 	}
 	return paths
 }
 
-// getAllShardedBucketPermutation returns a pseudo-random permutation of all 65,536 leaf bucket relative paths.
-func (e *Evictor) getAllShardedBucketPermutation() []string {
+// bucketPermutation returns every leaf bucket of the layout, relative to the
+// root, in pseudo-random order.
+func (e *Evictor) bucketPermutation() []string {
+	buckets := e.bucketLayout().Buckets()
+
 	e.randMu.Lock()
 	defer e.randMu.Unlock()
-
-	total := 256 * 256
-	perm := e.rand.Perm(total)
-	result := make([]string, total)
-
-	for i, p := range perm {
-		b1 := p / 256
-		b2 := p % 256
-		result[i] = fmt.Sprintf("%02x/%02x", b1, b2)
-	}
-	return result
+	e.rand.Shuffle(len(buckets), func(i, j int) {
+		buckets[i], buckets[j] = buckets[j], buckets[i]
+	})
+	return buckets
 }

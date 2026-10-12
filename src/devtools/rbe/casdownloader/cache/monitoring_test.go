@@ -65,7 +65,7 @@ func TestMonitoringStats_OnlyReportingCachesHaveActivity(t *testing.T) {
 
 // TestMonitoringStats_LockFreeCache checks that the lock-free cache's
 // counters reach the monitoring stats, by driving the cache through one
-// mode-mismatch copy, one corrupt hit and one headroom check.
+// mode-mismatch copy and one corrupt hit.
 func TestMonitoringStats_LockFreeCache(t *testing.T) {
 	dir := t.TempDir()
 	c := newTestCache(t, filepath.Join(dir, "cache"), true)
@@ -79,9 +79,6 @@ func TestMonitoringStats_LockFreeCache(t *testing.T) {
 	// blob, and the next pull of it finds the wrong size.
 	appendTo(t, corrupt.Path, "more")
 	pullOne(t, c, &client.TreeOutput{Digest: corrupt.Digest, Path: filepath.Join(dir, "out", "corrupt")})
-	if err := c.EnsureHeadroom(t.Context(), 1); err != nil {
-		t.Fatalf("EnsureHeadroom failed: %v", err)
-	}
 
 	got := MonitoringStats(c)
 	if got.Impl != ImplLockFree {
@@ -94,7 +91,6 @@ func TestMonitoringStats_LockFreeCache(t *testing.T) {
 		ExecMismatchCopies: 1,
 		ExecMismatchBytes:  mismatched.Digest.Size,
 		CorruptBlobs:       1,
-		HeadroomChecks:     1,
 	}
 	if *got.Activity != want {
 		t.Errorf("Activity = %+v, want %+v", *got.Activity, want)

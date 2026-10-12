@@ -17,25 +17,10 @@ type Cache interface {
 	Close() error
 }
 
-// HeadroomReserver is implemented by caches that can make room on the
-// filesystem before a download, rather than reacting once it has landed.
-//
-// It is deliberately separate from Cache. The two are not the same concern:
-// Cache is about storing and retrieving blobs, while this is about the disk
-// they share with the download directory, and only some implementations have
-// any control over it. Keeping it out of Cache lets a caller opt in by type
-// assertion and lets implementations that cannot honor it simply not claim to.
-type HeadroomReserver interface {
-	// EnsureHeadroom evicts if needed so that an upcoming write of
-	// requiredBytes can complete without exhausting the filesystem. It returns
-	// an error only when the write cannot possibly succeed.
-	EnsureHeadroom(ctx context.Context, requiredBytes int64) error
-}
-
 // CorruptBlobReporter is implemented by caches that check each hit and discard
-// cached blobs that no longer match their digest. Like HeadroomReserver it is
-// separate from Cache, so that a caller finds it by type assertion and
-// LocalCache, which does no such check, does not have to claim it.
+// cached blobs that no longer match their digest. It is separate from Cache,
+// so that a caller finds it by type assertion and LocalCache, which does no
+// such check, does not have to claim it.
 type CorruptBlobReporter interface {
 	// CorruptBlobsQuarantined returns how many hits this cache has found
 	// corrupt and turned into misses since it was created.
@@ -72,9 +57,9 @@ type ModeCopyReporter interface {
 }
 
 // StorageStatsReporter is implemented by caches built on common/storage. It
-// exposes that package's counters, chiefly copy fallbacks and headroom
-// eviction, which is how a cache shared by many processes on one disk shows
-// whether it is keeping up.
+// exposes that package's counters, chiefly copy fallbacks and corrupt blobs,
+// which is how a cache shared by many processes on one disk shows whether it
+// is healthy.
 type StorageStatsReporter interface {
 	// StorageStats returns the storage counters accumulated since the cache
 	// was created.

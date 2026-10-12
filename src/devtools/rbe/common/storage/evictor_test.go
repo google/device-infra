@@ -413,13 +413,14 @@ func TestEvictor_EmergencyMode(t *testing.T) {
 	_ = os.Chtimes(p, modTime, modTime)
 
 	cfg := EvictorConfig{
-		MinFreeSpace:    "15%",
-		TargetFreeSpace: "25%",
-		ReservedSpaceGB: 0,
-		CheckInterval:   10 * time.Second,
-		SampleBuckets:   16,
-		BatchSize:       200,
-		MinBlobAge:      10 * time.Minute,
+		MinFreeSpace:            "15%",
+		TargetFreeSpace:         "25%",
+		ReservedSpaceGB:         0,
+		CheckInterval:           10 * time.Second,
+		SampleBuckets:           16,
+		BatchSize:               200,
+		MinBlobAge:              10 * time.Minute,
+		EmergencyLargeBlobFirst: true,
 	}
 
 	// 1. Critical free space (2% free < 5% emergency threshold) -> triggers emergency large-blob eviction
@@ -442,6 +443,84 @@ func TestEvictor_EmergencyMode(t *testing.T) {
 
 	if deleted != 1 || reclaimed != 60*1024*1024 {
 		t.Errorf("EvictOnce emergency mode got deleted=%d, reclaimed=%d; want (1, %d)", deleted, reclaimed, 60*1024*1024)
+	}
+}
+
+// TestEvictor_EmergencyLargeBlobFirst runs the same critically full cache with
+// emergency mode on and off. Every bucket holds an 8 MiB two-day-old blob,
+// enough to outweigh the large blob below in any sample, so the sampled cutoff
+// lands two days back; a 60 MiB blob written 15 minutes ago is newer than
+// that, and only emergency mode evicts it.
+func TestEvictor_EmergencyLargeBlobFirst(t *testing.T) {
+	sparseBlob := func(t *testing.T, path string, size int64, mtime time.Time) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			t.Fatalf("MkdirAll failed: %v", err)
+		}
+		f, err := os.Create(path)
+		if err != nil {
+			t.Fatalf("Create failed: %v", err)
+		}
+		if err := f.Truncate(size); err != nil {
+			f.Close()
+			t.Fatalf("Truncate failed: %v", err)
+		}
+		f.Close()
+		if err := os.Chtimes(path, mtime, mtime); err != nil {
+			t.Fatalf("Chtimes failed: %v", err)
+		}
+	}
+
+	for _, tc := range []struct {
+		name      string
+		enabled   bool
+		wantLarge bool
+	}{
+		{name: "on", enabled: true, wantLarge: false},
+		{name: "off", enabled: false, wantLarge: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store, err := New(t.TempDir(), WithLayout(Layout256))
+			if err != nil {
+				t.Fatalf("New storage failed: %v", err)
+			}
+
+			old := time.Now().Add(-48 * time.Hour)
+			for i := 0; i < 256; i++ {
+				sparseBlob(t, store.blobPath(fmt.Sprintf("%02x%062x", i, 1)), 8*1024*1024, old)
+			}
+			largeHash := "33" + strings.Repeat("0", 62)
+			sparseBlob(t, store.blobPath(largeHash), 60*1024*1024, time.Now().Add(-15*time.Minute))
+
+			cfg := EvictorConfig{
+				MinFreeSpace:            "15%",
+				TargetFreeSpace:         "25%",
+				SampleBuckets:           16,
+				BatchSize:               200,
+				MinBlobAge:              10 * time.Minute,
+				EmergencyLargeBlobFirst: tc.enabled,
+			}
+			ev, err := NewEvictor(store.RootDir(), cfg, func(path string) (DiskStats, error) {
+				return DiskStats{TotalBytes: 1000 * 1024 * 1024, FreeBytes: 20 * 1024 * 1024}, nil // 2% free
+			})
+			if err != nil {
+				t.Fatalf("NewEvictor failed: %v", err)
+			}
+			store.SetEvictor(ev)
+
+			if _, _, err := ev.EvictOnce(context.Background()); err != nil {
+				t.Fatalf("EvictOnce failed: %v", err)
+			}
+			if got := store.Has(largeHash); got != tc.wantLarge {
+				t.Errorf("Large recent blob present = %v, want %v", got, tc.wantLarge)
+			}
+		})
+	}
+}
+
+func TestDefaultEvictorConfig_EnablesEmergencyLargeBlobFirst(t *testing.T) {
+	if !DefaultEvictorConfig().EmergencyLargeBlobFirst {
+		t.Error("DefaultEvictorConfig().EmergencyLargeBlobFirst = false, want true: casproxy relies on the default")
 	}
 }
 

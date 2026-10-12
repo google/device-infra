@@ -195,7 +195,7 @@ func TestRecordLocalCacheStats(t *testing.T) {
 	Init("casdownloader")
 	defer Shutdown()
 
-	activity := &LocalCacheActivity{PermDriftHits: 2, HeadroomChecks: 1}
+	activity := &LocalCacheActivity{PermDriftHits: 2, CorruptBlobs: 1}
 	RecordLocalCacheStats(&LocalCacheStats{Impl: "lockfree", Activity: activity}, "test-instance")
 	testMu.Lock()
 	gotImpl, gotActivity := lastRecordedCacheImpl, lastRecordedCacheActivity

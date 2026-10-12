@@ -15,10 +15,10 @@ import (
 // Storage operations run once per blob. A casdownloader invocation materializes
 // thousands of blobs in a few seconds, so any log statement on a per-blob path
 // is a log statement multiplied by several thousand. The conditions worth
-// reporting here are also precisely the conditions that repeat: a cache sitting
-// just under its low watermark trips the same headroom warning on every
-// subsequent write, and a popular blob that has exhausted its inode link count
-// trips the same EMLINK fallback for every consumer that wants it.
+// reporting here are also precisely the conditions that repeat: a popular blob
+// that has exhausted its inode link count trips the same EMLINK fallback for
+// every consumer that wants it, and a cross-device setup trips EXDEV for every
+// blob.
 //
 // The predecessor implementation solved this by saying nothing at all. See
 // casdownloader/cache/localcache.go, where pushByHardlink discards the link
@@ -61,15 +61,7 @@ type counters struct {
 	copyFallbackElse atomic.Int64 // EPERM, EOPNOTSUPP, ENOSYS.
 	corruptBlobs     atomic.Int64 // RemoveCorruptBlob calls.
 
-	headroomChecks         atomic.Int64
-	headroomEvictions      atomic.Int64
-	headroomReclaimedBytes atomic.Int64
-	headroomPeerWaits      atomic.Int64
-	headroomBelowWatermark atomic.Int64
-
 	firstStructuralFallback onceFlag
-	firstPeerWait           onceFlag
-	firstBelowWatermark     onceFlag
 }
 
 // Stats is a point-in-time snapshot of one Storage instance's activity.
@@ -112,27 +104,6 @@ type Stats struct {
 	// cached file in place, or a crash left a short file under a valid name.
 	// These were also counted in HardlinkHits.
 	CorruptBlobs int64
-
-	// HeadroomChecks is the number of EnsureHeadroom calls, and
-	// HeadroomEvictions how many of them had to reclaim space first.
-	HeadroomChecks    int64
-	HeadroomEvictions int64
-
-	// HeadroomReclaimedBytes is the total reclaimed by headroom-triggered
-	// eviction. It excludes the background evictor, which reports separately
-	// through Evictor.Stats.
-	HeadroomReclaimedBytes int64
-
-	// HeadroomPeerWaits counts writes that gave up waiting for another process
-	// to finish evicting and proceeded anyway.
-	HeadroomPeerWaits int64
-
-	// HeadroomBelowWatermark counts writes that fit on disk but left free
-	// space under the low watermark. A large value relative to HeadroomChecks
-	// means the cache is parked under its watermark rather than dipping below
-	// it occasionally, which is the signature of a volume that is too small
-	// for its workload.
-	HeadroomBelowWatermark int64
 }
 
 // CopyFallbacks is the total number of writes that could not be hard linked
@@ -159,17 +130,6 @@ func (s Stats) Summary() string {
 	if s.CorruptBlobs > 0 {
 		fmt.Fprintf(&b, "; %d corrupt blobs quarantined (wrong size on hit)", s.CorruptBlobs)
 	}
-	if s.HeadroomEvictions > 0 {
-		fmt.Fprintf(&b, "; %d headroom evictions reclaiming %s",
-			s.HeadroomEvictions, formatBytes(s.HeadroomReclaimedBytes))
-	}
-	if s.HeadroomBelowWatermark > 0 {
-		fmt.Fprintf(&b, "; %d of %d writes left free space below the low watermark",
-			s.HeadroomBelowWatermark, s.HeadroomChecks)
-	}
-	if s.HeadroomPeerWaits > 0 {
-		fmt.Fprintf(&b, "; %d writes timed out waiting on a peer evictor", s.HeadroomPeerWaits)
-	}
 	return b.String()
 }
 
@@ -182,19 +142,14 @@ func (s Stats) Summary() string {
 // every blob operation to serve a reader that runs once.
 func (s *Storage) Stats() Stats {
 	return Stats{
-		HardlinkHits:           s.counters.hardlinkHits.Load(),
-		HardlinkMisses:         s.counters.hardlinkMisses.Load(),
-		Ingested:               s.counters.ingested.Load(),
-		IngestDeduped:          s.counters.ingestDeduped.Load(),
-		CopyFallbackEMLINK:     s.counters.copyFallbackLink.Load(),
-		CopyFallbackEXDEV:      s.counters.copyFallbackDev.Load(),
-		CopyFallbackOther:      s.counters.copyFallbackElse.Load(),
-		CorruptBlobs:           s.counters.corruptBlobs.Load(),
-		HeadroomChecks:         s.counters.headroomChecks.Load(),
-		HeadroomEvictions:      s.counters.headroomEvictions.Load(),
-		HeadroomReclaimedBytes: s.counters.headroomReclaimedBytes.Load(),
-		HeadroomPeerWaits:      s.counters.headroomPeerWaits.Load(),
-		HeadroomBelowWatermark: s.counters.headroomBelowWatermark.Load(),
+		HardlinkHits:       s.counters.hardlinkHits.Load(),
+		HardlinkMisses:     s.counters.hardlinkMisses.Load(),
+		Ingested:           s.counters.ingested.Load(),
+		IngestDeduped:      s.counters.ingestDeduped.Load(),
+		CopyFallbackEMLINK: s.counters.copyFallbackLink.Load(),
+		CopyFallbackEXDEV:  s.counters.copyFallbackDev.Load(),
+		CopyFallbackOther:  s.counters.copyFallbackElse.Load(),
+		CorruptBlobs:       s.counters.corruptBlobs.Load(),
 	}
 }
 

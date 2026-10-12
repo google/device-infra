@@ -123,12 +123,6 @@ type LocalCacheActivity struct {
 	CopyFallbackEMLINK int64
 	CopyFallbackEXDEV  int64
 	CopyFallbackOther  int64
-
-	HeadroomChecks         int64
-	HeadroomEvictions      int64
-	HeadroomReclaimedBytes int64
-	HeadroomPeerWaits      int64
-	HeadroomBelowWatermark int64
 }
 
 // RecordLocalCacheStats records what the local cache did in one casdownloader

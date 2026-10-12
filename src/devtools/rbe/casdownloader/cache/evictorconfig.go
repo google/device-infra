@@ -92,9 +92,11 @@ type EvictorOverrides struct {
 //
 // A zero or negative minFreeSpaceBytes is honored as "do not evict on a
 // threshold", which is what the flag has always meant: the trigger sits at
-// zero bytes and is therefore never reached. Pre-flight eviction still works,
-// because EnsureHeadroom reclaims against the size of the pending write rather
-// than against the trigger.
+// zero bytes and is therefore never reached.
+//
+// EmergencyLargeBlobFirst is turned off. On a cache this small, unlinking
+// every large blob first throws away the hottest ones, such as device images,
+// which the next test then downloads again.
 func NewEvictorConfig(minFreeSpaceBytes int64, overrides EvictorOverrides) storage.EvictorConfig {
 	cfg := storage.DefaultEvictorConfig()
 
@@ -109,6 +111,7 @@ func NewEvictorConfig(minFreeSpaceBytes int64, overrides EvictorOverrides) stora
 	cfg.MinFreeSpace = fmt.Sprintf("%db", minFreeSpaceBytes)
 	cfg.TargetFreeSpace = fmt.Sprintf("%db", minFreeSpaceBytes+band)
 	cfg.ReservedSpaceGB = 0
+	cfg.EmergencyLargeBlobFirst = false
 
 	if overrides.TargetFreeSpaceBytes != nil {
 		target := *overrides.TargetFreeSpaceBytes

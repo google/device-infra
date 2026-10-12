@@ -33,13 +33,11 @@ import (
 const LayoutVersionDir = "v2"
 
 // These are compile-time assertions rather than documentation. The caller finds
-// EnsureHeadroom and CorruptBlobsQuarantined by type assertion, which fails
-// silently: a signature that drifted would not break the build, it would just
-// quietly stop reserving space and leave the ENOSPC this cache exists to
-// prevent, or stop reporting corrupt blobs.
+// CorruptBlobsQuarantined and the other reporters by type assertion, which
+// fails silently: a signature that drifted would not break the build, it would
+// just quietly stop reporting corrupt blobs.
 var (
 	_ Cache                = (*LockFreeCache)(nil)
-	_ HeadroomReserver     = (*LockFreeCache)(nil)
 	_ CorruptBlobReporter  = (*LockFreeCache)(nil)
 	_ ModeCopyReporter     = (*LockFreeCache)(nil)
 	_ StorageStatsReporter = (*LockFreeCache)(nil)
@@ -88,7 +86,9 @@ type LockFreeCache struct {
 //
 // cfg tunes eviction. The evictor is configured but not started: casdownloader
 // is a one-shot process, so a background polling loop would outlive the process
-// by microseconds. Eviction happens on demand through EnsureHeadroom.
+// by microseconds. Downloads never wait on, or fail because of, eviction or
+// space accounting. Nothing evicts this cache yet; a detached evictor process
+// will (b/572891754).
 func NewLockFreeCache(cacheDir string, cfg storage.EvictorConfig, useHardlink bool) (*LockFreeCache, error) {
 	root := filepath.Join(cacheDir, LayoutVersionDir)
 
@@ -110,21 +110,6 @@ func NewLockFreeCache(cacheDir string, cfg storage.EvictorConfig, useHardlink bo
 	}
 
 	return &LockFreeCache{store: store, sharesInodes: useHardlink, touchInterval: active.LazyTouchInterval}, nil
-}
-
-// EnsureHeadroom evicts, if needed, so that an upcoming write of requiredBytes
-// can land without driving the filesystem below its low watermark.
-//
-// This is deliberately not part of the Cache interface. The bytes that exhaust
-// the disk are written by the downloader into its output directory, before Push
-// is ever reached, so a cache that only made room during Push would be
-// repeating the mistake this cache was built to fix: luci trims from Add, which
-// is to say after the files are already on disk. The caller therefore has to
-// invoke this itself, ahead of the download, and discovers it via an optional
-// interface assertion. LocalCache does not implement it and keeps its old
-// behavior.
-func (c *LockFreeCache) EnsureHeadroom(ctx context.Context, requiredBytes int64) error {
-	return c.store.EnsureHeadroom(ctx, requiredBytes)
 }
 
 // Pull materializes the requested blobs from the cache into their target paths.

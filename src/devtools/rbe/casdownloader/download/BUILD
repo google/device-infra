@@ -73,14 +73,9 @@ go_test(
 
 # Kept separate from download_test, which is disabled in Kokoro because it
 # stands up a fake RBE server. These tests need no backend, so they are free to
-# run everywhere, and pre-flight eviction is worth having covered by the OSS CI.
+# run everywhere.
 go_test(
-    name = "headroom_test",
-    srcs = ["headroom_test.go"],
+    name = "addnote_test",
+    srcs = ["addnote_test.go"],
     embed = [":download"],
-    deps = [
-        "//src/devtools/rbe/casdownloader/cache",
-        "@com_github_bazelbuild_remote_apis_sdks//go/pkg/client",
-        "@com_github_bazelbuild_remote_apis_sdks//go/pkg/digest",
-    ],
 )

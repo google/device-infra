@@ -24,6 +24,9 @@ type Storage struct {
 	rootDir string
 	evictor *Evictor
 
+	// layout maps hashes to blob paths under rootDir. See WithLayout.
+	layout Layout
+
 	// hardlinkDisabled makes HardlinkTo and HardlinkFrom copy without first
 	// attempting link(2). See WithoutHardlinks.
 	hardlinkDisabled bool
@@ -68,51 +71,36 @@ func WithoutHardlinks() Option {
 	return func(s *Storage) { s.hardlinkDisabled = true }
 }
 
+// WithLayout sets how blobs are laid out under the root. The default is
+// ShardedLayout65536. A nil layout keeps the default.
+//
+// The layout is part of the cache directory's on-disk contract, so every
+// process sharing a root must pass the same one. An evictor attached through
+// ConfigureEvictor, StartEvictor or SetEvictor walks this layout's buckets.
+func WithLayout(l Layout) Option {
+	return func(s *Storage) {
+		if l != nil {
+			s.layout = l
+		}
+	}
+}
+
 // New creates a new Storage instance rooted at rootDir.
 func New(rootDir string, opts ...Option) (*Storage, error) {
 	if err := os.MkdirAll(rootDir, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create storage root directory %s: %w", rootDir, err)
 	}
-	s := &Storage{rootDir: rootDir}
+	s := &Storage{rootDir: rootDir, layout: ShardedLayout65536}
 	for _, opt := range opts {
 		opt(s)
 	}
 	return s, nil
 }
 
-// blobPath returns the sharded filepath for a given hash.
-//
-// Sharding Theory & Filesystem Rationale:
-// Linux filesystems (e.g. ext4, XFS) store directory entries using index trees (HTrees/B-Trees).
-// Storing hundreds of thousands or millions of CAS blobs in a single flat directory causes:
-//  1. Increased directory inode block size and lock contention during concurrent lookups/creates.
-//  2. Slower directory traversals and higher cache-miss rates in the VFS dentry cache.
-//
-// To prevent flat directory bloat, blobPath shards paths using a 2-level directory hierarchy
-// based on the first 4 hexadecimal characters of the hash:
-//   - Level 1: 256 subdirectories (hash[:2], "00" through "ff")
-//   - Level 2: 256 subdirectories (hash[2:4], "00" through "ff")
-//
-// This creates 65,536 (256 x 256) leaf buckets. For example, a cache storing 1,000,000 blobs
-// distributes them across the buckets with an average of only ~15 files per leaf directory,
-// fitting neatly within a single filesystem cache page for optimal O(1) open/stat performance.
-//
-// Examples:
-//   - Standard SHA-256 (64 hex characters, len >= 4):
-//     "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-//     -> "/rootDir/e3/b0/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-//   - Defensive fallback for short/synthetic inputs (len < 4):
-//     "abc"
-//     -> "/rootDir/abc"
-//
-// Note: Production CAS digests always use 64-character hex strings for SHA-256 (and are validated
-// at the API boundary). The len < 4 condition is purely a defensive bounds check to prevent
-// slice bounds out-of-range panics on malformed inputs or synthetic unit test strings.
+// blobPath returns the absolute path of the blob for a given hash, as placed
+// by the storage's Layout. See ShardedLayout65536 for why blobs are sharded.
 func (s *Storage) blobPath(hash string) string {
-	if len(hash) < 4 {
-		return filepath.Join(s.rootDir, hash)
-	}
-	return filepath.Join(s.rootDir, hash[:2], hash[2:4], hash)
+	return filepath.Join(s.rootDir, s.layout.BlobPath(hash))
 }
 
 // Has checks if a blob with the given hash exists in local storage.
@@ -303,7 +291,14 @@ func (s *Storage) RootDir() string {
 }
 
 // SetEvictor sets or injects the Evictor instance on Storage for testing or custom configurations.
+//
+// An evictor from NewEvictor has no layout yet and adopts the storage's, so
+// that it walks the buckets this storage writes to. Call it before starting
+// the evictor.
 func (s *Storage) SetEvictor(ev *Evictor) {
+	if ev != nil && ev.layout == nil {
+		ev.layout = s.layout
+	}
 	s.evictor = ev
 }
 
@@ -316,7 +311,7 @@ func (s *Storage) StartEvictor(ctx context.Context, cfg EvictorConfig) error {
 		if err != nil {
 			return err
 		}
-		s.evictor = ev
+		s.SetEvictor(ev)
 	}
 	s.evictor.Start(ctx)
 	return nil

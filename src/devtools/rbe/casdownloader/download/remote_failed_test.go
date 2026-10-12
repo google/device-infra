@@ -2,9 +2,9 @@ package download
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
+	"syscall"
 	"testing"
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
@@ -100,12 +100,12 @@ func (f *fullCache) Pull(ctx context.Context, all []*client.TreeOutput) ([]*clie
 	return all, nil, nil
 }
 
-// noSpaceCache misses on everything and then refuses to reserve room for the
-// fetch, which is how the cache reports a full disk.
+// noSpaceCache fails to materialize its hits because the disk is full, before
+// anything is fetched.
 type noSpaceCache struct{}
 
 func (noSpaceCache) Pull(ctx context.Context, all []*client.TreeOutput) ([]*client.TreeOutput, []*client.TreeOutput, error) {
-	return nil, all, nil
+	return nil, nil, fmt.Errorf("simulated: link into output directory: %w", syscall.ENOSPC)
 }
 
 func (noSpaceCache) Push(ctx context.Context, all map[digest.Digest]*client.TreeOutput) error {
@@ -113,10 +113,6 @@ func (noSpaceCache) Push(ctx context.Context, all map[digest.Digest]*client.Tree
 }
 
 func (noSpaceCache) Close() error { return nil }
-
-func (noSpaceCache) EnsureHeadroom(ctx context.Context, requiredBytes int64) error {
-	return errors.New("simulated: free space below the requested size")
-}
 
 // TestDoDownload_RemoteFailed_WhenRootIsMissing covers the case the fallback in
 // main exists for: the remote could not serve the tree. That is the only kind
@@ -150,7 +146,7 @@ func TestDoDownload_NotRemoteFailed_WhenDiskIsFull(t *testing.T) {
 		Cache:  noSpaceCache{},
 	}
 	if err := job.DoDownload(context.Background()); err == nil {
-		t.Fatal("DoDownload succeeded despite the cache refusing to reserve space")
+		t.Fatal("DoDownload succeeded despite the cache failing with ENOSPC")
 	}
 	if job.RemoteFailed() {
 		t.Error("RemoteFailed() = true for a disk-space failure, want false: main would retry against CAS remote onto the same full disk")
