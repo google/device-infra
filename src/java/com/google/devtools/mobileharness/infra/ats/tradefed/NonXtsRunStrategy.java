@@ -16,12 +16,21 @@
 
 package com.google.devtools.mobileharness.infra.ats.tradefed;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.shared.emulator.AndroidJitEmulatorUtil;
+import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -32,10 +41,12 @@ import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.TradefedTestDriverSpec;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 /** An implementation of {@link TradefedRunStrategy} for non-XTS runs. */
@@ -54,14 +65,15 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
 
   private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
+  private final XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil;
 
-  public NonXtsRunStrategy(LocalFileUtil localFileUtil) {
-    this(localFileUtil, new SystemUtil());
-  }
-
-  public NonXtsRunStrategy(LocalFileUtil localFileUtil, SystemUtil systemUtil) {
+  public NonXtsRunStrategy(
+      LocalFileUtil localFileUtil,
+      SystemUtil systemUtil,
+      XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil) {
     this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
+    this.xtsTradefedRuntimeInfoFileUtil = xtsTradefedRuntimeInfoFileUtil;
   }
 
   @Override
@@ -238,6 +250,81 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
     }
 
     return extraArgs.build();
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Tradefed {@code Console ... run commandAndExit} exits with 0 even if the invocation failed,
+   * so for a zero exit code the result is {@code ERROR} if the runtime info file written by the
+   * Tradefed invocation agent records a finished invocation with an error, and {@code PASS}
+   * otherwise.
+   */
+  @Override
+  public void setTestResult(TestInfo testInfo, Optional<Integer> tfExitCode)
+      throws MobileHarnessException {
+    if (tfExitCode.isEmpty() || tfExitCode.get() != 0) {
+      TradefedRunStrategy.super.setTestResult(testInfo, tfExitCode);
+      return;
+    }
+    TestResult currentResult = testInfo.resultWithCause().get().type();
+    if (currentResult != TestResult.UNKNOWN && currentResult != TestResult.PASS) {
+      return;
+    }
+
+    ImmutableList<TradefedInvocation> failedInvocations =
+        readFailedInvocations(
+            Path.of(testInfo.getGenFileDir()).resolve(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_NAME),
+            testInfo);
+    if (!failedInvocations.isEmpty()) {
+      failedInvocations.forEach(
+          invocation ->
+              testInfo
+                  .log()
+                  .atWarning()
+                  .alsoTo(logger)
+                  .log(
+                      "Tradefed invocation on %s failed:%n%s",
+                      invocation.deviceIds(), invocation.errorMessage()));
+      testInfo
+          .resultWithCause()
+          .setNonPassing(
+              TestResult.ERROR,
+              MobileHarnessExceptionFactory.createUserFacingException(
+                  AndroidErrorId.XTS_TRADEFED_INVOCATION_ERROR,
+                  "Tradefed invocation failed: " + failedInvocations.get(0).errorMessage(),
+                  /* cause= */ null));
+      return;
+    }
+
+    testInfo.resultWithCause().setPass();
+  }
+
+  /** Reads the finished Tradefed invocations that recorded an error message, if any. */
+  private ImmutableList<TradefedInvocation> readFailedInvocations(
+      Path runtimeInfoFilePath, TestInfo testInfo) {
+    if (!localFileUtil.isFileExist(runtimeInfoFilePath)) {
+      return ImmutableList.of();
+    }
+    try {
+      return xtsTradefedRuntimeInfoFileUtil
+          .readInfo(runtimeInfoFilePath, /* lastModifiedTime= */ null)
+          .map(
+              fileDetail ->
+                  fileDetail.runtimeInfo().invocations().stream()
+                      .filter(invocation -> !invocation.isRunning())
+                      .filter(invocation -> !isNullOrEmpty(invocation.errorMessage()))
+                      .collect(toImmutableList()))
+          .orElse(ImmutableList.of());
+    } catch (IOException | RuntimeException e) {
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .withCause(e)
+          .log("Failed to read Tradefed runtime info file %s", runtimeInfoFilePath);
+      return ImmutableList.of();
+    }
   }
 
   private static void addInvocationData(

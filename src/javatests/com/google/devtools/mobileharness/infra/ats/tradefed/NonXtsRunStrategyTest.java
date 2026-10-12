@@ -25,6 +25,15 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
+import com.google.devtools.mobileharness.api.model.error.ErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil.XtsTradefedRuntimeInfoFileDetail;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -35,8 +44,11 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.TradefedTestDriverSpec;
+import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.util.Optional;
 import java.util.function.Predicate;
 import org.junit.Before;
 import org.junit.Rule;
@@ -56,6 +68,7 @@ public final class NonXtsRunStrategyTest {
 
   @Mock private LocalFileUtil localFileUtil;
   @Mock private SystemUtil systemUtil;
+  @Mock private XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil;
   private TestInfo testInfo;
   private JobInfo jobInfo;
   @Mock private Device device;
@@ -77,7 +90,8 @@ public final class NonXtsRunStrategyTest {
                     .build())
             .build();
     testInfo = jobInfo.tests().add("test_id", "test_name");
-    nonXtsRunStrategy = new NonXtsRunStrategy(localFileUtil, systemUtil);
+    nonXtsRunStrategy =
+        new NonXtsRunStrategy(localFileUtil, systemUtil, xtsTradefedRuntimeInfoFileUtil);
   }
 
   @Test
@@ -366,5 +380,121 @@ public final class NonXtsRunStrategyTest {
     ImmutableList<String> extraArgs = nonXtsRunStrategy.getExtraRunCommandArgs(testInfo);
 
     assertThat(extraArgs).isEmpty();
+  }
+
+  @Test
+  public void setTestResult_exitCodeEmpty_error() throws Exception {
+
+    nonXtsRunStrategy.setTestResult(testInfo, Optional.empty());
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.ERROR);
+    assertThat(getResultErrorId()).isEqualTo(AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR);
+    assertThat(getResultErrorMessage()).contains("Tradefed command didn't start");
+  }
+
+  @Test
+  public void setTestResult_exitCodeNonZero_error() throws Exception {
+
+    nonXtsRunStrategy.setTestResult(testInfo, Optional.of(1));
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.ERROR);
+    assertThat(getResultErrorId()).isEqualTo(AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR);
+    assertThat(getResultErrorMessage()).contains("Non-zero Tradefed command exit code: 1");
+  }
+
+  @Test
+  public void setTestResult_noRuntimeFiles_pass() throws Exception {
+    when(localFileUtil.isFileExist(any(Path.class))).thenReturn(false);
+
+    nonXtsRunStrategy.setTestResult(testInfo, Optional.of(0));
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+  }
+
+  @Test
+  public void setTestResult_resultAlreadySet_keepsExistingResult() throws Exception {
+    mockFailedInvocation("com.android.tradefed.build.BuildRetrievalError: no build");
+    testInfo
+        .resultWithCause()
+        .setNonPassing(
+            TestResult.TIMEOUT,
+            new MobileHarnessException(AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR, "timeout"));
+
+    nonXtsRunStrategy.setTestResult(testInfo, Optional.of(0));
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.TIMEOUT);
+  }
+
+  @Test
+  public void setTestResult_invocationError_errorWithRawTradefedMessage() throws Exception {
+    mockFailedInvocation(
+        "com.android.tradefed.build.BuildRetrievalError: Failed to download build\n"
+            + "\tat com.android.tradefed.build.FileDownloadCache.fetch(FileDownloadCache.java:1)");
+
+    nonXtsRunStrategy.setTestResult(testInfo, Optional.of(0));
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.ERROR);
+    assertThat(getResultErrorId()).isEqualTo(AndroidErrorId.XTS_TRADEFED_INVOCATION_ERROR);
+    assertThat(getResultErrorMessage())
+        .contains(
+            "Tradefed invocation failed: com.android.tradefed.build.BuildRetrievalError: Failed to"
+                + " download build\n\tat"
+                + " com.android.tradefed.build.FileDownloadCache.fetch(FileDownloadCache.java:1)");
+  }
+
+  @Test
+  public void setTestResult_runningInvocationWithoutError_ignored() throws Exception {
+    mockRuntimeInfo(
+        new XtsTradefedRuntimeInfo(
+            ImmutableList.of(
+                new TradefedInvocation(
+                    /* isRunning= */ true, ImmutableList.of("device1"), "running", ""),
+                new TradefedInvocation(
+                    /* isRunning= */ false, ImmutableList.of("device1"), "done", "")),
+            Instant.now()));
+
+    nonXtsRunStrategy.setTestResult(testInfo, Optional.of(0));
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+  }
+
+  @Test
+  public void setTestResult_runtimeInfoReadFails_pass() throws Exception {
+    Path runtimeInfoPath = genFile(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_NAME);
+    when(localFileUtil.isFileExist(runtimeInfoPath)).thenReturn(true);
+    when(xtsTradefedRuntimeInfoFileUtil.readInfo(runtimeInfoPath, null))
+        .thenThrow(new IOException("read error"));
+
+    nonXtsRunStrategy.setTestResult(testInfo, Optional.of(0));
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+  }
+
+  private Path genFile(String fileName) throws Exception {
+    return Path.of(testInfo.getGenFileDir()).resolve(fileName);
+  }
+
+  private void mockRuntimeInfo(XtsTradefedRuntimeInfo runtimeInfo) throws Exception {
+    Path runtimeInfoPath = genFile(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_NAME);
+    when(localFileUtil.isFileExist(runtimeInfoPath)).thenReturn(true);
+    when(xtsTradefedRuntimeInfoFileUtil.readInfo(runtimeInfoPath, null))
+        .thenReturn(Optional.of(new XtsTradefedRuntimeInfoFileDetail(runtimeInfo, Instant.now())));
+  }
+
+  private void mockFailedInvocation(String errorMessage) throws Exception {
+    mockRuntimeInfo(
+        new XtsTradefedRuntimeInfo(
+            ImmutableList.of(
+                new TradefedInvocation(
+                    /* isRunning= */ false, ImmutableList.of("device1"), "done", errorMessage)),
+            Instant.now()));
+  }
+
+  private ErrorId getResultErrorId() {
+    return testInfo.resultWithCause().get().causeExceptionNonEmpty().getErrorId();
+  }
+
+  private String getResultErrorMessage() {
+    return testInfo.resultWithCause().get().causeExceptionNonEmpty().getMessage();
   }
 }
