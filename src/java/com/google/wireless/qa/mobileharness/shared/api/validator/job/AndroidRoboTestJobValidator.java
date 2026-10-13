@@ -31,10 +31,13 @@ public class AndroidRoboTestJobValidator
     implements JobValidator, SpecConfigable<AndroidRoboTestSpec> {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final String PARAM_IS_FROM_DDP = "is_from_ddp";
+
   @Override
   public List<String> validate(JobInfo jobInfo) throws InterruptedException {
     ImmutableList.Builder<String> errorsBuilder = ImmutableList.builder();
     jobInfo.log().atInfo().alsoTo(logger).log("--- Running AndroidRoboTestJobValidator ---");
+    boolean isFromDdp = jobInfo.params().getBool(PARAM_IS_FROM_DDP, false);
     AndroidRoboTestSpec spec;
     try {
       spec = jobInfo.combinedSpec(this);
@@ -50,7 +53,9 @@ public class AndroidRoboTestJobValidator
     if (spec.getCrawlerApk().isEmpty()) {
       errorsBuilder.add("Crawler apk cannot be empty.");
     }
-    if (spec.getAppPackageId().isEmpty()) {
+    // If the test is from DDP, don't check for the app package ID. The app package ID is
+    // populated in the spec in the DDP plugin after this validator runs.
+    if (spec.getAppPackageId().isEmpty() && !isFromDdp) {
       errorsBuilder.add("App package Id cannot be empty.");
     }
     if (spec.getControllerEndpoint().equals(CONTROLLER_ENDPOINT_UNSPECIFIED)) {

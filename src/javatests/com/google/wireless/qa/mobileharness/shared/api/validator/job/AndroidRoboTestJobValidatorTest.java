@@ -68,6 +68,21 @@ public class AndroidRoboTestJobValidatorTest {
   }
 
   @Test
+  public void validate_noAppPackageIdAndIsFromDdp_hasNoErrorMessages() throws Exception {
+    JobInfo jobInfo = setUpJobInfo();
+    jobInfo.params().add("is_from_ddp", "true");
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setCrawlerApk("crawlerPath")
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .setCrawlTimeoutSecs(60)
+            .build();
+    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
+
+    assertThat(validator.validate(jobInfo)).isEmpty();
+  }
+
+  @Test
   public void validate_noControllerEndpoint_hasErrorMessages() throws Exception {
     JobInfo jobInfo = setUpJobInfo();
     AndroidRoboTestSpec spec =
