@@ -579,12 +579,16 @@ func (d *DownloadJob) applyCopyFilters(ctx context.Context, patterns []*regexp.R
 		// rather than whatever a consumer may have chmod'ed the shared inode
 		// to (the lock-free cache links a blob as is when only bits other
 		// than the executable bit have drifted).
-		if err := replaceWithCopy(f.tmp, cache.FileMode(cache.IsExecutableMode(info.Mode().Perm()))); err != nil {
+		if err := replaceLinkWithCopy(f.tmp, cache.FileMode(cache.IsExecutableMode(info.Mode().Perm()))); err != nil {
 			return fmt.Errorf("failed to replace hardlink %s with a copy: %w", f.final, err)
 		}
 	}
 	return nil
 }
+
+// replaceLinkWithCopy is how applyCopyFilters unshares a file. It is a
+// variable so that tests can make it fail as a full disk would.
+var replaceLinkWithCopy = replaceWithCopy
 
 // replaceWithCopy atomically replaces path with a copy of itself on a new inode.
 func replaceWithCopy(path string, mode os.FileMode) error {
@@ -763,6 +767,8 @@ func (d *DownloadJob) downloadWithoutLocalCache(ctx context.Context, outputs []*
 	if len(dups) > 0 {
 		start = time.Now()
 		if err := copyFiles(ctx, dups, toDownload); err != nil {
+			// A copy can fill the disk as well as a fetch can.
+			cache.HandleOutOfSpace(d.Cache, err)
 			removeLeftOverFiles(outputs)
 			if ctx.Err() == context.DeadlineExceeded {
 				return context.DeadlineExceeded
@@ -905,6 +911,8 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache,
 		// Copy duplicates files to the target location
 		start = time.Now()
 		if err := copyFiles(ctx, dups, toDownload); err != nil {
+			// A copy can fill the disk as well as a fetch can.
+			cache.HandleOutOfSpace(c, err)
 			removeLeftOverFiles(outputs)
 			if ctx.Err() == context.DeadlineExceeded {
 				return context.DeadlineExceeded
@@ -1163,6 +1171,9 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 		}
 
 		if err := d.applyCopyFilters(ctx, copyPatterns, copyCandidates); err != nil {
+			// Each private copy takes new space. The cache is closed by
+			// now, which does not stop the hook from starting a trim.
+			cache.HandleOutOfSpace(d.Cache, err)
 			return err
 		}
 		// The chunk data has served its purpose. Remove it before

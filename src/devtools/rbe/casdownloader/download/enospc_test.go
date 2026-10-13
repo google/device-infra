@@ -149,3 +149,91 @@ func TestDoDownload_RestoreFailureOtherThanSpace(t *testing.T) {
 		t.Errorf("The cache was told of %v, want nothing for a failure other than space", c.got)
 	}
 }
+
+// failDuplicatesWith makes materializing a duplicate fail with err for the
+// rest of the test.
+func failDuplicatesWith(t *testing.T, err error) {
+	t.Helper()
+	orig := materializeDuplicate
+	t.Cleanup(func() { materializeDuplicate = orig })
+	materializeDuplicate = func(dst, src *client.TreeOutput) error { return err }
+}
+
+// Copying a duplicated blob to its other paths can fill the disk too. That
+// tells the cache once, with or without a local cache in the way, and the
+// download fails with the error.
+func TestDoDownload_DuplicateCopyOutOfSpace(t *testing.T) {
+	for _, withCache := range []bool{false, true} {
+		t.Run(fmt.Sprintf("withCache=%v", withCache), func(t *testing.T) {
+			job, _ := newDuplicateDigestsJob(t, t.TempDir())
+			c := &outOfSpaceCache{}
+			if withCache {
+				job.Cache = c
+			}
+			failDuplicatesWith(t, diskFullErr())
+
+			before := cache.OutOfSpace().Errors
+			if err := job.DoDownload(context.Background()); !errors.Is(err, syscall.ENOSPC) {
+				t.Fatalf("DoDownload = %v, want the copy's ENOSPC", err)
+			}
+			if got := cache.OutOfSpace().Errors - before; got != 1 {
+				t.Errorf("Out-of-space errors counted = %d, want 1", got)
+			}
+			if withCache && (len(c.got) != 1 || !errors.Is(c.got[0], syscall.ENOSPC)) {
+				t.Errorf("The cache was told of %v, want the copy's ENOSPC once", c.got)
+			}
+		})
+	}
+}
+
+// A duplicate that fails to copy for another reason starts nothing.
+func TestDoDownload_DuplicateCopyFailureOtherThanSpace(t *testing.T) {
+	job, _ := newDuplicateDigestsJob(t, t.TempDir())
+	c := &outOfSpaceCache{}
+	job.Cache = c
+	failDuplicatesWith(t, &os.PathError{Op: "link", Path: "/tmp/dir/second.txt", Err: syscall.EACCES})
+
+	if err := job.DoDownload(context.Background()); !errors.Is(err, syscall.EACCES) {
+		t.Fatalf("DoDownload = %v, want the copy's EACCES", err)
+	}
+	if len(c.got) != 0 {
+		t.Errorf("The cache was told of %v, want nothing for a failure other than space", c.got)
+	}
+}
+
+// outOfSpaceHardlinkCache links blobs like hardlinkCache, so that a file has
+// another link for -copy-filters to break, and records what the ENOSPC hook
+// hands it.
+type outOfSpaceHardlinkCache struct {
+	hardlinkCache
+	got []error
+}
+
+func (c *outOfSpaceHardlinkCache) OnOutOfSpace(err error) { c.got = append(c.got, err) }
+
+// Replacing a matched file's hardlink with a private copy takes new space,
+// and on a full disk that tells the cache once and fails the download.
+func TestDoDownload_CopyFilterOutOfSpace(t *testing.T) {
+	c := &outOfSpaceHardlinkCache{hardlinkCache: hardlinkCache{dir: t.TempDir()}}
+	job := newCopyFiltersJob(t, &c.hardlinkCache, map[string][]byte{"vbmeta.img": []byte("vbmeta")})
+	job.Cache = c
+	job.CopyFilters = []string{`^vbmeta\.img$`}
+	orig := replaceLinkWithCopy
+	t.Cleanup(func() { replaceLinkWithCopy = orig })
+	calls := 0
+	replaceLinkWithCopy = func(string, os.FileMode) error {
+		calls++
+		return diskFullErr()
+	}
+
+	err := job.DoDownload(context.Background())
+	if !errors.Is(err, syscall.ENOSPC) {
+		t.Fatalf("DoDownload = %v, want the copy's ENOSPC", err)
+	}
+	if calls == 0 {
+		t.Fatal("No file was replaced with a copy, so this test proves nothing")
+	}
+	if len(c.got) != 1 || !errors.Is(c.got[0], syscall.ENOSPC) {
+		t.Errorf("The cache was told of %v, want the copy's ENOSPC once", c.got)
+	}
+}
