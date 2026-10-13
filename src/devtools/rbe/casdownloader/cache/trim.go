@@ -32,6 +32,9 @@ type TrimOptions struct {
 	MaxDuration time.Duration
 	// Overrides are the eviction tuning flags the caller set explicitly.
 	Overrides EvictorOverrides
+	// MaxSize is -cache-max-size, the advisory cap on the cache's size in
+	// bytes. Zero or less means no cap.
+	MaxSize int64
 
 	// statfs replaces the real statfs, for tests.
 	statfs storage.StatfsFunc
@@ -46,14 +49,16 @@ type TrimOptions struct {
 // with TrimOutcomeBusy if another process holds it: that process is already
 // doing the work. Otherwise it computes need = target - free, where target is
 // the trim's target free space; does nothing if need is not positive; and
-// otherwise samples buckets for a cutoff age and unlinks the blobs older than
-// it until about need bytes are reclaimed or free space reaches the target.
-// See storage.Storage.Trim. The pass stops where it is after
-// opts.MaxDuration, which is safe because the cache is content-addressed: a
-// blob deleted mid-run is just a miss for the next download.
+// otherwise finds a cutoff age and unlinks the blobs older than it until about
+// need bytes are reclaimed or free space reaches the target. The pass stops
+// where it is after opts.MaxDuration, which is safe because the cache is
+// content-addressed: a blob deleted mid-run is just a miss for the next
+// download.
 //
-// The cap on the cache's size, and the full size scan it needs, are not part
-// of this pass yet (b/572891754).
+// With opts.MaxSize set, every pass first checks the cache against the cap by
+// reading buckets progressively, records in v2/.cap_check that it started, and
+// raises need to the cache's excess over 90% of the cap if that is more. See
+// storage.Storage.TrimWith.
 //
 // The error is non-nil only for TrimOutcomeError, which includes flags that do
 // not parse. A busy lock, a pass with nothing to do and a pass stopped by
@@ -85,9 +90,10 @@ func Trim(ctx context.Context, opts TrimOptions) (storage.TrimResult, error) {
 		defer cancel()
 	}
 
-	log.InfoContextf(ctx, "Trimming the lock-free cache in %s toward %s free (trim starts below %s), %s.",
-		root, cfg.TargetFreeSpace, cfg.MinFreeSpace, maxDurationString(opts.MaxDuration))
-	res, err := store.Trim(ctx)
+	trimOpts := storage.TrimOptions{MaxSize: max(opts.MaxSize, 0)}
+	log.InfoContextf(ctx, "Trimming the lock-free cache in %s toward %s free (trim starts below %s), %s, %s.",
+		root, cfg.TargetFreeSpace, cfg.MinFreeSpace, capString(trimOpts), maxDurationString(opts.MaxDuration))
+	res, err := store.TrimWith(ctx, trimOpts)
 	switch res.Outcome {
 	case storage.TrimOutcomeBusy:
 		log.InfoContextf(ctx, "Another process is already trimming %s; leaving it to that one.", root)
@@ -106,4 +112,11 @@ func maxDurationString(d time.Duration) string {
 		return "with no time limit"
 	}
 	return "for at most " + d.String()
+}
+
+func capString(o storage.TrimOptions) string {
+	if o.MaxSize <= 0 {
+		return "with no cap on its size"
+	}
+	return fmt.Sprintf("with a cap of %d bytes", o.MaxSize)
 }

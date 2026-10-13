@@ -3,8 +3,10 @@ package cache
 import (
 	"context"
 	"fmt"
+	"time"
 
 	log "github.com/golang/glog"
+	"github.com/google/device-infra/src/devtools/rbe/common/storage"
 )
 
 // Options is the set of settings that decide which cache gets built.
@@ -20,9 +22,9 @@ type Options struct {
 	LockFree bool
 	Dir      string
 	// MaxSize bounds the logical size of the lock-based cache. For the
-	// lock-free cache it is the advisory cap, which is accepted but not yet
-	// enforced (b/572891754). Lock applies only to the lock-based cache; the
-	// lock-free cache takes no lock.
+	// lock-free cache it is the advisory cap, which a trim checks and
+	// enforces; see storage.Storage.TrimWith. Lock applies only to the
+	// lock-based cache; the lock-free cache takes no lock.
 	MaxSize int64
 	Lock    bool
 	// MinFreeSpace is -cache-min-free-space and TargetFreeSpace is
@@ -36,6 +38,21 @@ type Options struct {
 	// Overrides are the eviction settings the caller set explicitly. Only the
 	// lock-free cache reads them.
 	Overrides EvictorOverrides
+	// CapCheckInterval is -cache-cap-check-interval; zero or less means
+	// DefaultCapCheckInterval. Only the lock-free cache's open-time check
+	// reads it.
+	CapCheckInterval time.Duration
+	// StartTrims enables the lock-free cache's open-time check: when the
+	// cache is opened and needs a trim, a casdownloader -trim-only process
+	// is started in the background for it. See maybeStartTrim. Downloads
+	// set it; it is off otherwise, so that opening a cache for any other
+	// reason, such as in a test, never starts a process.
+	StartTrims bool
+
+	// statfs and spawn replace the real statfs and the real process start
+	// in the open-time check, for tests.
+	statfs storage.StatfsFunc
+	spawn  trimSpawner
 }
 
 // OpenOrDegrade builds the cache described by opts, falling back to no cache
@@ -92,7 +109,7 @@ func openLocal(opts Options) (*LocalCache, error) {
 }
 
 func openLockFree(opts Options) (Cache, error) {
-	cfg, err := lockFreeEvictorConfig(opts.Dir, opts.MinFreeSpace, opts.TargetFreeSpace, "-cache-target-free-space", opts.Overrides, nil)
+	cfg, err := lockFreeEvictorConfig(opts.Dir, opts.MinFreeSpace, opts.TargetFreeSpace, "-cache-target-free-space", opts.Overrides, opts.statfs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create lock-free cache: %v", err)
 	}
@@ -100,6 +117,9 @@ func openLockFree(opts Options) (Cache, error) {
 	lockFreeCache, err := NewLockFreeCache(opts.Dir, cfg, opts.UseHardlink)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create lock-free cache: %v", err)
+	}
+	if opts.StartTrims {
+		maybeStartTrim(opts, cfg, lockFreeCache.store.RootDir())
 	}
 	return lockFreeCache, nil
 }

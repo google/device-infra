@@ -30,6 +30,7 @@ go_library(
         "monitoring.go",
         "setup.go",
         "trim.go",
+        "trimspawn.go",
     ],
     importpath = "github.com/google/device-infra/src/devtools/rbe/casdownloader/cache",
     deps = [
@@ -51,6 +52,7 @@ go_test(
         "monitoring_test.go",
         "setup_test.go",
         "trim_test.go",
+        "trimspawn_test.go",
     ],
     embed = [":cache"],
     deps = [

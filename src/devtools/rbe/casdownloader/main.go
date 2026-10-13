@@ -74,7 +74,7 @@ var (
 	// Flags for local cache
 	disableCache    = flag.Bool("disable-cache", false, "Disable local cache.")
 	cacheDir        = flag.String("cache-dir", "", "Cache directory to store downloaded files.")
-	cacheMaxSize    = flag.Int64("cache-max-size", 0, "Cache is trimmed if the cache gets larger than this value. If 0, the cache is effectively a leak. With -enable-lock-free-cache it is an advisory cap in bytes, where 0 means no cap; it is accepted but not yet enforced.")
+	cacheMaxSize    = flag.Int64("cache-max-size", 0, "Cache is trimmed if the cache gets larger than this value. If 0, the cache is effectively a leak. With -enable-lock-free-cache it is an advisory cap in bytes, where 0 means no cap: a trim that finds the cache above it removes the oldest blobs down to 90% of it. A download starts such a trim when the last check against the cap is at least -cache-cap-check-interval old.")
 	enableCacheLock = flag.Bool("cache-lock", false,
 		"Enable cache lock. When using local cache (-cache-dir is set) and enable cache lock, the downloader will add lock when it changes cache, so you can safely run multiple downloader instances simultaneously.")
 	useHardlink = flag.Bool("use-hardlink", true, "By default local cache will use hardlink when push and pull files. This only concerns links between the local cache and -dir: files of one download with the same content and mode are hardlinked to each other either way. Use -copy-filters for files that must not share an inode with anything.")
@@ -89,7 +89,7 @@ var (
 	cacheMaxBlobSize = flag.Int64("cache-max-blob-size", DefaultCacheMaxBlobSize,
 		"Blobs larger than this are downloaded directly and never stored in or served from the local cache; the rest of the artifact still uses the cache. 0 means no limit. This flag is ignored if -disable-cache is specified.")
 	enableLockFreeCache = flag.Bool("enable-lock-free-cache", false,
-		"Use the lock-free local cache instead of the default one. The default cache serializes every downloader on the host behind a single file lock and only trims after files are written; the lock-free cache needs no lock, and is trimmed by a separate casdownloader -trim-only pass. Blobs are kept in a separate subdirectory of -cache-dir, so switching starts from a cold cache. -cache-lock has no effect when this is set.")
+		"Use the lock-free local cache instead of the default one. The default cache serializes every downloader on the host behind a single file lock and only trims after files are written; the lock-free cache needs no lock, and is trimmed by a separate casdownloader -trim-only pass, which a download starts in the background when free space is below -cache-min-free-space or a check against -cache-max-size is due. Blobs are kept in a separate subdirectory of -cache-dir, so switching starts from a cold cache. -cache-lock has no effect when this is set.")
 	// Eviction tuning for the lock-free cache. Each defaults to casdownloader's
 	// own value or to the shared evictor's default, and each is ignored unless
 	// -enable-lock-free-cache or -trim-only is set.
@@ -101,7 +101,7 @@ var (
 		fmt.Sprintf("Free space at which a trim stops: a byte count or a percentage of the volume, like -cache-min-free-space. Defaults to %s. If it is not above -cache-min-free-space, the minimum plus 5 percentage points of the volume is used instead, with a warning.",
 			cache.DefaultLockFreeTargetFreeSpace))
 	cacheSampleBuckets = flag.Int("cache-eviction-sample-buckets", 0,
-		"Number of random leaf directories sampled to estimate the eviction cutoff age (safe range: 16-64). If 0, 64 is used. Leave unset unless optimizing.")
+		"Least number of random leaf directories read to estimate the eviction cutoff age before anything is evicted (safe range: 16-64). If 0, 64 is used. Leave unset unless optimizing.")
 	cacheBatchSize = flag.Int("cache-eviction-batch-size", 0,
 		"Number of file unlinks per batch before yielding and re-checking free space (safe range: 200-2000). If 0, 200 is used. Leave unset unless optimizing.")
 	cacheBatchDelay = flag.Duration("cache-eviction-batch-delay", 0,
@@ -110,10 +110,12 @@ var (
 		"Minimum age before a cache hit refreshes a blob's mtime. If 0, the shared default is used. Larger values mean fewer writes and coarser recency.")
 	cacheMinBlobAge = flag.Duration("cache-min-blob-age", 0,
 		"Grace period during which a newly written blob is exempt from eviction. If 0, the shared default is used.")
+	cacheCapCheckInterval = flag.Duration("cache-cap-check-interval", cache.DefaultCapCheckInterval,
+		"With -cache-max-size, how often the lock-free cache is checked against it: a download starts a trim when the last check is at least this old. Every trim checks the cap, whatever started it. If 0 or less, the default is used.")
 
 	// Flags for trimming the lock-free cache in a process of its own.
 	trimOnly = flag.Bool("trim-only", false,
-		"Instead of downloading, run one eviction pass over the lock-free cache in -cache-dir and exit. The pass exits at once if another process is already trimming; otherwise it removes the oldest blobs until free space reaches -cache-target-free-space (or -trim-target-free), within -trim-max-duration. Implies -enable-lock-free-cache; only -cache-dir, the free-space flags and the eviction tuning flags are read.")
+		"Instead of downloading, run one eviction pass over the lock-free cache in -cache-dir and exit. The pass exits at once if another process is already trimming; otherwise it removes the oldest blobs until free space reaches -cache-target-free-space (or -trim-target-free) and, with -cache-max-size, until the cache is within 90% of that cap if it was over it, all within -trim-max-duration. Implies -enable-lock-free-cache; only -cache-dir, -cache-max-size, the free-space flags and the eviction tuning flags are read.")
 	trimTargetFree = flag.String("trim-target-free", "",
 		"With -trim-only, the free space at which this pass stops, overriding -cache-target-free-space: a byte count or a percentage of the volume.")
 	trimMaxDuration = flag.Duration("trim-max-duration", cache.DefaultTrimMaxDuration,
@@ -251,6 +253,7 @@ var lockFreeOnlyFlags = []string{
 	"cache-eviction-batch-delay",
 	"cache-lazy-touch-interval",
 	"cache-min-blob-age",
+	"cache-cap-check-interval",
 }
 
 // standardOnlyFlags are honored by the default cache and by nothing else.
@@ -671,15 +674,18 @@ func logAdcCredentials() {
 // cacheFlagValues snapshots the flags that configure the cache.
 func cacheFlagValues() cache.Options {
 	return cache.Options{
-		Disabled:        *disableCache,
-		LockFree:        *enableLockFreeCache,
-		Dir:             *cacheDir,
-		MaxSize:         *cacheMaxSize,
-		MinFreeSpace:    *cacheMinFreeSpace,
-		TargetFreeSpace: *cacheTargetFreeSpace,
-		Lock:            *enableCacheLock,
-		UseHardlink:     *useHardlink,
-		Overrides:       evictorOverrides(explicitFlags()),
+		Disabled:         *disableCache,
+		LockFree:         *enableLockFreeCache,
+		Dir:              *cacheDir,
+		MaxSize:          *cacheMaxSize,
+		MinFreeSpace:     *cacheMinFreeSpace,
+		TargetFreeSpace:  *cacheTargetFreeSpace,
+		Lock:             *enableCacheLock,
+		UseHardlink:      *useHardlink,
+		Overrides:        evictorOverrides(explicitFlags()),
+		CapCheckInterval: *cacheCapCheckInterval,
+		// A download starts a -trim-only process if the cache needs one.
+		StartTrims: true,
 	}
 }
 
@@ -698,6 +704,7 @@ func runTrim(ctx context.Context) error {
 		TrimTargetFree:  *trimTargetFree,
 		MaxDuration:     *trimMaxDuration,
 		Overrides:       evictorOverrides(explicitFlags()),
+		MaxSize:         *cacheMaxSize,
 	})
 	return err
 }

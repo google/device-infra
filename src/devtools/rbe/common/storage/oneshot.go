@@ -153,7 +153,7 @@ type TrimResult struct {
 // non-nil only for TrimOutcomeError.
 func (s *Storage) CheckAndEvict(ctx context.Context) (TrimResult, error) {
 	start := time.Now()
-	result, err := s.lockedPass(ctx, false)
+	result, err := s.lockedPass(ctx, false, TrimOptions{})
 	result.Duration = time.Since(start)
 	return result, err
 }
@@ -179,16 +179,46 @@ func (s *Storage) CheckAndEvict(ctx context.Context) (TrimResult, error) {
 // error, and reports a context deadline as TrimOutcomeTimedOut with a nil
 // error. Stopping partway is safe because the cache is content-addressed.
 func (s *Storage) Trim(ctx context.Context) (TrimResult, error) {
+	return s.TrimWith(ctx, TrimOptions{})
+}
+
+// TrimOptions refines the pass TrimWith runs. The zero value is Trim's pass.
+type TrimOptions struct {
+	// MaxSize is an advisory cap on the cache's total size, in bytes. Zero
+	// or less means no cap.
+	MaxSize int64
+}
+
+// TrimWith is Trim with an advisory cap on the cache's size.
+//
+// The pass reads the layout's buckets in a random order, in steps, keeping
+// what it has read: the cap check (see progressiveSample.checkCap) reads 32,
+// 64, 128 and then all 256 buckets of Layout256, and stops early only once
+// the cache is clearly under opts.MaxSize. Only a full read, whose size is
+// exact, can find the cache over the cap, and then
+//
+//	need = max(TargetFreeSpace - free, size - 0.9 * MaxSize)
+//
+// rather than TargetFreeSpace - free. Keeping the cache at 90% of the cap
+// rather than at the cap leaves room for the downloads between passes. Each
+// cap check touches CapCheckName as it starts, early stop, timeout or not,
+// which tells downloads when the last one ran.
+//
+// If need is positive, the pass reads at least SampleBuckets buckets, takes
+// its cutoff age from the histogram of every bucket read so far, and unlinks
+// blobs older than the cutoff until about need bytes are reclaimed or free
+// space has grown by need.
+func (s *Storage) TrimWith(ctx context.Context, opts TrimOptions) (TrimResult, error) {
 	start := time.Now()
-	result, err := s.lockedPass(ctx, true)
+	result, err := s.lockedPass(ctx, true, opts)
 	result.Duration = time.Since(start)
 	return result, err
 }
 
 // lockedPass takes the cross-process eviction lock without blocking and runs
 // one one-shot pass under it. toTarget selects Trim's semantics over
-// CheckAndEvict's; see oneShotPass.
-func (s *Storage) lockedPass(ctx context.Context, toTarget bool) (TrimResult, error) {
+// CheckAndEvict's, and opts refines them; see oneShotPass.
+func (s *Storage) lockedPass(ctx context.Context, toTarget bool, opts TrimOptions) (TrimResult, error) {
 	if s.evictor == nil {
 		return TrimResult{Outcome: TrimOutcomeError}, errors.New("storage: evictor is not configured; call ConfigureEvictor or StartEvictor first")
 	}
@@ -202,7 +232,25 @@ func (s *Storage) lockedPass(ctx context.Context, toTarget bool) (TrimResult, er
 	}
 	defer lock.release()
 
-	return s.evictor.oneShotPass(ctx, toTarget)
+	return s.evictor.oneShotPass(ctx, toTarget, opts)
+}
+
+// EvictionInProgress reports whether another process holds the cross-process
+// eviction lock of the cache rooted at rootDir, without waiting for it.
+//
+// It takes the lock and drops it at once, so it is a probe, not a
+// reservation: a process that starts an evictor because of a false answer may
+// find that a peer started one first, which the evictor handles by exiting.
+func EvictionInProgress(rootDir string) (bool, error) {
+	lock, err := tryLockEviction(rootDir)
+	if errors.Is(err, ErrEvictionBusy) {
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	lock.release()
+	return false, nil
 }
 
 // oneShotPass is the one-shot counterpart of EvictIfNeeded. It runs a single
@@ -211,10 +259,12 @@ func (s *Storage) lockedPass(ctx context.Context, toTarget bool) (TrimResult, er
 //
 // With toTarget false, as for CheckAndEvict, the flight runs only if
 // effective free space has fallen below MinFreeSpace, and it stops when free
-// space reaches TargetFreeSpace. With toTarget true, as for Trim, it runs
-// whenever free space is below TargetFreeSpace, and it also stops once it has
-// reclaimed the shortfall it measured at the start.
-func (e *Evictor) oneShotPass(ctx context.Context, toTarget bool) (TrimResult, error) {
+// space reaches TargetFreeSpace. With toTarget true, as for TrimWith, the
+// pass first reads buckets as sampleForTrim describes; the flight runs
+// whenever free space is below TargetFreeSpace or opts' cap is exceeded, and
+// it also stops once it has reclaimed the shortfall it measured at the start.
+// opts is read only with toTarget.
+func (e *Evictor) oneShotPass(ctx context.Context, toTarget bool, opts TrimOptions) (TrimResult, error) {
 	stats, err := e.statfs(e.rootDir)
 	if err != nil {
 		return TrimResult{Outcome: TrimOutcomeError}, fmt.Errorf("failed to query disk capacity for %s: %w", e.rootDir, err)
@@ -224,17 +274,25 @@ func (e *Evictor) oneShotPass(ctx context.Context, toTarget bool) (TrimResult, e
 	effectiveTotal, effectiveFree, _ := ComputeEffectiveSpace(stats, snap.reservedBytes)
 	monitoring.RecordStorageUsage(effectiveTotal, effectiveFree)
 
-	trigger := snap.minFreeBytes
-	if toTarget {
-		trigger = snap.targetFreeBytes
-	}
-	if effectiveFree >= trigger {
-		return TrimResult{Outcome: TrimOutcomeNoop}, nil
-	}
-
 	f := e.newFlight(snap)
 	f.exitIfUnreachable = true
 	f.stopAtReclaimTarget = toTarget
+	if toTarget {
+		f.progressive, f.minReclaim, err = e.sampleForTrim(ctx, snap, effectiveFree, opts.MaxSize)
+		if errors.Is(err, context.DeadlineExceeded) {
+			log.InfoContextf(ctx, "Storage eviction pass stopped at its deadline while reading buckets.")
+			return TrimResult{Outcome: TrimOutcomeTimedOut}, nil
+		}
+		if err != nil {
+			return TrimResult{Outcome: TrimOutcomeError}, err
+		}
+		if f.progressive == nil {
+			return TrimResult{Outcome: TrimOutcomeNoop}, nil
+		}
+	} else if effectiveFree >= snap.minFreeBytes {
+		return TrimResult{Outcome: TrimOutcomeNoop}, nil
+	}
+
 	r := f.execute(ctx)
 	if r.outcome == TrimOutcomeTimedOut {
 		log.InfoContextf(ctx, "Storage eviction pass stopped at its deadline after reclaiming %.2f GB across %d files.",

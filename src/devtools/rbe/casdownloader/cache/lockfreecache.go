@@ -114,8 +114,8 @@ type LockFreeCache struct {
 // is a one-shot process, so a background polling loop would outlive the process
 // by microseconds. Downloads never wait on, or fail because of, eviction or
 // space accounting. The cache is trimmed by a separate pass, Trim, which
-// casdownloader -trim-only runs; starting that pass from a download is not
-// wired up yet (b/572891754).
+// casdownloader -trim-only runs, and which Open starts in the background when
+// the cache needs it; see maybeStartTrim.
 func NewLockFreeCache(cacheDir string, cfg storage.EvictorConfig, useHardlink bool) (*LockFreeCache, error) {
 	var opts []storage.Option
 	if !useHardlink {

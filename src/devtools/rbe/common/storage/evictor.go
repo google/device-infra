@@ -29,6 +29,7 @@ type EvictorConfig struct {
 	// CheckInterval is the polling interval for disk capacity checks.
 	CheckInterval time.Duration
 	// SampleBuckets is the number of random leaf directories sampled to estimate cutoff age.
+	// For TrimWith it is the least number read before anything is evicted.
 	SampleBuckets int
 	// BatchSize is the number of unlinks per batch before yielding execution.
 	BatchSize int
@@ -431,7 +432,18 @@ type evictionFlight struct {
 	// is set. Zero means no byte goal.
 	reclaimGoal int64
 
-	// sample is the histogram estimateCutoffAge built for this flight.
+	// minReclaim raises the bytes the flight sets out to reclaim to at least
+	// this much, even when free space is already at TargetFreeSpace: the
+	// excess of the cache over its cap. The flight then also stops on free
+	// space only once free space has grown by that much. Only TrimWith sets
+	// it, so casproxy's flights behave exactly as before.
+	minReclaim int64
+	// progressive, if set, holds the buckets TrimWith's pass has already
+	// read, and the flight takes its cutoff age from them instead of
+	// sampling again. Only TrimWith sets it.
+	progressive *progressiveSample
+
+	// sample is the histogram the flight's cutoff age came from.
 	sample sampleStats
 
 	// skippedLinkedFiles and skippedLinkedBytes count the blobs evictStream
@@ -501,19 +513,31 @@ func (f *evictionFlight) execute(ctx context.Context) flightResult {
 	effectiveTotal, effectiveFree, freePct := ComputeEffectiveSpace(stats, f.cfg.reservedBytes)
 	monitoring.RecordStorageUsage(effectiveTotal, effectiveFree)
 
-	if effectiveFree >= f.cfg.targetFreeBytes {
+	// With minReclaim zero, as on every path but TrimWith's, need is
+	// TargetFreeSpace - free, and the flight is a noop exactly when free
+	// space has reached the target.
+	targetReclaimBytes := max(f.cfg.targetFreeBytes-effectiveFree, f.minReclaim)
+	if targetReclaimBytes <= 0 {
 		monitoring.RecordEvictionRun("noop", 0, 0, time.Since(startTime))
 		return flightResult{outcome: TrimOutcomeNoop} // Already sufficient space
 	}
+	// The free space at which the flight stops: TargetFreeSpace, unless
+	// minReclaim asks for more.
+	stopFreeBytes := effectiveFree + targetReclaimBytes
 
-	targetReclaimBytes := f.cfg.targetFreeBytes - effectiveFree
 	if f.stopAtReclaimTarget {
 		f.reclaimGoal = targetReclaimBytes
 	}
 	emergencyMode := f.cfg.emergencyLargeBlobFirst && freePct < 5.0
 
 	// 1. Estimate cutoff age from random bucket sampling
-	cutoff := f.estimateCutoffAge(ctx, effectiveTotal, effectiveFree, targetReclaimBytes)
+	var cutoff time.Time
+	if f.progressive != nil {
+		f.sample = f.progressive.stats
+		cutoff = f.progressive.cutoff(ctx, targetReclaimBytes)
+	} else {
+		cutoff = f.estimateCutoffAge(ctx, effectiveTotal, effectiveFree, targetReclaimBytes)
+	}
 
 	if f.exitIfUnreachable && f.sample.unreachable() {
 		log.InfoContextf(ctx, "Storage eviction flight exiting early: all %d candidate blobs in %d sampled buckets are pinned by other links (%d, %.2f GB) or within the %v grace period (%d), so eviction cannot reach the target.",
@@ -523,7 +547,7 @@ func (f *evictionFlight) execute(ctx context.Context) flightResult {
 	}
 
 	// 2. Perform lock-free paced streaming unlinks across sharded leaf buckets
-	reclaimedBytes, filesDeleted, err := f.evictStream(ctx, cutoff, f.cfg.targetFreeBytes, emergencyMode)
+	reclaimedBytes, filesDeleted, err := f.evictStream(ctx, cutoff, stopFreeBytes, emergencyMode)
 	duration := time.Since(startTime)
 
 	evictionStatus := "evicted"
@@ -688,6 +712,19 @@ type sampleStats struct {
 	youngCount  int
 	pinnedCount int
 	pinnedBytes int64
+
+	// blobBytes is the size of every candidate blob read, including the
+	// young and pinned ones: what the sampled buckets hold of the cache.
+	blobBytes int64
+}
+
+// newSampleStats returns an empty sample whose histogram spans maxDays, or
+// defaultMaxAgeDays if maxDays is not positive.
+func newSampleStats(maxDays int) sampleStats {
+	if maxDays <= 0 {
+		maxDays = defaultMaxAgeDays
+	}
+	return sampleStats{histogram: make([]int64, maxDays*24+1), maxDays: maxDays}
 }
 
 // unreachable reports whether the sample shows that eviction cannot make
@@ -721,75 +758,61 @@ func (f *evictionFlight) estimateCutoffAge(ctx context.Context, effectiveTotal, 
 // buildAgeHistogram walks sampled leaf buckets and bins candidate blob sizes by age.
 func (f *evictionFlight) buildAgeHistogram(now time.Time) sampleStats {
 	start := time.Now()
-	maxDays := f.e.maxAgeDays
-	if maxDays <= 0 {
-		maxDays = defaultMaxAgeDays
+	stats := newSampleStats(f.e.maxAgeDays)
+	for _, bPath := range f.e.pickRandomBuckets(f.cfg.sampleBuckets) {
+		stats.addBucket(bPath, now, f.cfg.minBlobAge)
 	}
-	maxHours := maxDays * 24
-	histogram := make([]int64, maxHours+1)
+	stats.duration = time.Since(start)
+	return stats
+}
 
-	var totalBytes int64
-	var totalCount int
-	var youngCount, pinnedCount int
-	var pinnedBytes int64
+// addBucket reads the leaf bucket at path into the sample, binning the size
+// of each candidate blob by its age at now. A bucket that cannot be read
+// still counts as sampled, and adds nothing.
+func (s *sampleStats) addBucket(path string, now time.Time, minBlobAge time.Duration) {
+	s.bucketCount++
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return
+	}
 
-	sampleBuckets := f.cfg.sampleBuckets
-
-	bucketPaths := f.e.pickRandomBuckets(sampleBuckets)
-	for _, bPath := range bucketPaths {
-		entries, err := os.ReadDir(bPath)
-		if err != nil {
+	maxHours := s.maxDays * 24
+	for _, entry := range entries {
+		if !isCandidateBlob(entry.Name(), entry.IsDir()) {
 			continue
 		}
 
-		for _, entry := range entries {
-			if !isCandidateBlob(entry.Name(), entry.IsDir()) {
-				continue
-			}
-
-			info, err := entry.Info()
-			if err != nil {
-				continue
-			}
-
-			// Exclude blobs currently in their grace period from the histogram
-			if !f.isEligible(info.ModTime(), now) {
-				youngCount++
-				continue
-			}
-			// Exclude blobs that eviction cannot reclaim. Counting them would
-			// size the cutoff against bytes that unlinking does not free, and
-			// so pick a cutoff too recent to reach the target.
-			if isLinkedElsewhere(info) {
-				pinnedCount++
-				pinnedBytes += info.Size()
-				continue
-			}
-
-			age := now.Sub(info.ModTime())
-			hour := int(age.Hours())
-			if hour < 0 {
-				hour = 0
-			} else if hour > maxHours {
-				hour = maxHours
-			}
-
-			histogram[hour] += info.Size()
-			totalBytes += info.Size()
-			totalCount++
+		info, err := entry.Info()
+		if err != nil {
+			continue
 		}
-	}
+		s.blobBytes += info.Size()
 
-	return sampleStats{
-		histogram:   histogram,
-		totalBytes:  totalBytes,
-		totalCount:  totalCount,
-		maxDays:     maxDays,
-		bucketCount: len(bucketPaths),
-		duration:    time.Since(start),
-		youngCount:  youngCount,
-		pinnedCount: pinnedCount,
-		pinnedBytes: pinnedBytes,
+		// Exclude blobs currently in their grace period from the histogram
+		if !isBlobEligible(info.ModTime(), now, minBlobAge) {
+			s.youngCount++
+			continue
+		}
+		// Exclude blobs that eviction cannot reclaim. Counting them would
+		// size the cutoff against bytes that unlinking does not free, and
+		// so pick a cutoff too recent to reach the target.
+		if isLinkedElsewhere(info) {
+			s.pinnedCount++
+			s.pinnedBytes += info.Size()
+			continue
+		}
+
+		age := now.Sub(info.ModTime())
+		hour := int(age.Hours())
+		if hour < 0 {
+			hour = 0
+		} else if hour > maxHours {
+			hour = maxHours
+		}
+
+		s.histogram[hour] += info.Size()
+		s.totalBytes += info.Size()
+		s.totalCount++
 	}
 }
 
