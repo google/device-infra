@@ -153,12 +153,42 @@ type TrimResult struct {
 // non-nil only for TrimOutcomeError.
 func (s *Storage) CheckAndEvict(ctx context.Context) (TrimResult, error) {
 	start := time.Now()
-	result, err := s.checkAndEvict(ctx)
+	result, err := s.lockedPass(ctx, false)
 	result.Duration = time.Since(start)
 	return result, err
 }
 
-func (s *Storage) checkAndEvict(ctx context.Context) (TrimResult, error) {
+// Trim runs a single eviction pass toward TargetFreeSpace, serialized across
+// processes sharing the cache root, and reports what it did. It is the pass a
+// detached evictor process runs, such as casdownloader -trim-only.
+//
+// Unlike CheckAndEvict, it does not wait for free space to fall below
+// MinFreeSpace. It computes need = TargetFreeSpace - free, and does nothing
+// when that is not positive. Otherwise it samples buckets for a cutoff age and
+// unlinks blobs older than the cutoff until about need bytes are reclaimed or
+// free space reaches TargetFreeSpace, whichever comes first. The byte stop
+// overshoots by at most one blob; the free-space stop is coarser, because
+// free space is only re-checked every BatchSize unlinks.
+//
+// The trigger is left to the caller, which has already decided that a trim
+// is worth starting; gating on MinFreeSpace again here would make a run that
+// asks for a higher target than the current free space a silent no-op.
+//
+// Like CheckAndEvict, it exits early when the sample shows the target is out
+// of reach, reports a peer holding the lock as TrimOutcomeBusy with a nil
+// error, and reports a context deadline as TrimOutcomeTimedOut with a nil
+// error. Stopping partway is safe because the cache is content-addressed.
+func (s *Storage) Trim(ctx context.Context) (TrimResult, error) {
+	start := time.Now()
+	result, err := s.lockedPass(ctx, true)
+	result.Duration = time.Since(start)
+	return result, err
+}
+
+// lockedPass takes the cross-process eviction lock without blocking and runs
+// one one-shot pass under it. toTarget selects Trim's semantics over
+// CheckAndEvict's; see oneShotPass.
+func (s *Storage) lockedPass(ctx context.Context, toTarget bool) (TrimResult, error) {
 	if s.evictor == nil {
 		return TrimResult{Outcome: TrimOutcomeError}, errors.New("storage: evictor is not configured; call ConfigureEvictor or StartEvictor first")
 	}
@@ -172,14 +202,19 @@ func (s *Storage) checkAndEvict(ctx context.Context) (TrimResult, error) {
 	}
 	defer lock.release()
 
-	return s.evictor.trimIfNeeded(ctx)
+	return s.evictor.oneShotPass(ctx, toTarget)
 }
 
-// trimIfNeeded is the one-shot counterpart of EvictIfNeeded. It runs a
-// single eviction flight if effective free space has fallen below
-// MinFreeSpace, letting the flight exit early when the target is out of
+// oneShotPass is the one-shot counterpart of EvictIfNeeded. It runs a single
+// eviction flight, letting the flight exit early when the target is out of
 // reach, and reports the result as a TrimResult.
-func (e *Evictor) trimIfNeeded(ctx context.Context) (TrimResult, error) {
+//
+// With toTarget false, as for CheckAndEvict, the flight runs only if
+// effective free space has fallen below MinFreeSpace, and it stops when free
+// space reaches TargetFreeSpace. With toTarget true, as for Trim, it runs
+// whenever free space is below TargetFreeSpace, and it also stops once it has
+// reclaimed the shortfall it measured at the start.
+func (e *Evictor) oneShotPass(ctx context.Context, toTarget bool) (TrimResult, error) {
 	stats, err := e.statfs(e.rootDir)
 	if err != nil {
 		return TrimResult{Outcome: TrimOutcomeError}, fmt.Errorf("failed to query disk capacity for %s: %w", e.rootDir, err)
@@ -189,12 +224,17 @@ func (e *Evictor) trimIfNeeded(ctx context.Context) (TrimResult, error) {
 	effectiveTotal, effectiveFree, _ := ComputeEffectiveSpace(stats, snap.reservedBytes)
 	monitoring.RecordStorageUsage(effectiveTotal, effectiveFree)
 
-	if effectiveFree >= snap.minFreeBytes {
+	trigger := snap.minFreeBytes
+	if toTarget {
+		trigger = snap.targetFreeBytes
+	}
+	if effectiveFree >= trigger {
 		return TrimResult{Outcome: TrimOutcomeNoop}, nil
 	}
 
 	f := e.newFlight(snap)
 	f.exitIfUnreachable = true
+	f.stopAtReclaimTarget = toTarget
 	r := f.execute(ctx)
 	if r.outcome == TrimOutcomeTimedOut {
 		log.InfoContextf(ctx, "Storage eviction pass stopped at its deadline after reclaiming %.2f GB across %d files.",

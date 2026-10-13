@@ -577,3 +577,173 @@ func TestConfigureEvictor_RejectsInvalidConfig(t *testing.T) {
 		t.Errorf("Expected an error for an unparseable threshold, got nil")
 	}
 }
+
+// fixedDisk is a statfs whose answer never changes, standing in for a volume
+// where deletions do not show up in free space right away. Against it, the
+// only thing that can stop a pass short of walking every bucket is the bytes
+// the pass counts itself.
+func fixedDisk(total, free int64) StatfsFunc {
+	return func(string) (DiskStats, error) {
+		return DiskStats{TotalBytes: total, FreeBytes: free}, nil
+	}
+}
+
+// newTrimStorage builds a 256-bucket Storage holding blobCount old blobs of
+// blobSize bytes, with an evictor that sees statfs.
+func newTrimStorage(t *testing.T, blobCount, blobSize int, statfs func(s *Storage) StatfsFunc) *Storage {
+	t.Helper()
+	s, err := New(t.TempDir(), WithLayout(Layout256))
+	if err != nil {
+		t.Fatalf("New failed: %v", err)
+	}
+	seedBlobs(t, s, blobCount, blobSize)
+	ev, err := NewEvictor(s.RootDir(), oneshotTestConfig(), statfs(s))
+	if err != nil {
+		t.Fatalf("Failed to create the evictor: %v", err)
+	}
+	s.SetEvictor(ev)
+	return s
+}
+
+// TestTrim_RunsBetweenTheWatermarks covers the difference between Trim and
+// CheckAndEvict. A detached evictor has already been told a trim is needed,
+// so it works toward TargetFreeSpace even when free space is above
+// MinFreeSpace, where CheckAndEvict does nothing.
+func TestTrim_RunsBetweenTheWatermarks(t *testing.T) {
+	const blobCount, blobSize = 1200, 8192
+	// 1200 blobs of 8 KiB use about 78% of a 12 MiB volume: free space is
+	// above the 15% minimum and below the 25% target.
+	const total = 12 * 1024 * 1024
+	var model *diskModel
+	s := newTrimStorage(t, blobCount, blobSize, func(s *Storage) StatfsFunc {
+		model = &diskModel{root: s.RootDir(), totalBytes: total}
+		return model.statfs
+	})
+
+	before, err := model.statfs("")
+	if err != nil {
+		t.Fatalf("statfs failed: %v", err)
+	}
+	snap := s.Evictor().snapshot(before)
+	if before.FreeBytes < snap.minFreeBytes || before.FreeBytes >= snap.targetFreeBytes {
+		t.Fatalf("Test setup is wrong: free space %d is not between the minimum %d and the target %d", before.FreeBytes, snap.minFreeBytes, snap.targetFreeBytes)
+	}
+
+	if res, err := s.CheckAndEvict(context.Background()); err != nil || res.Outcome != TrimOutcomeNoop {
+		t.Fatalf("CheckAndEvict = %+v, %v; want a noop above the minimum, or this test proves nothing", res, err)
+	}
+
+	res, err := s.Trim(context.Background())
+	if err != nil {
+		t.Fatalf("Trim failed: %v", err)
+	}
+	if res.Outcome != TrimOutcomeEvicted {
+		t.Errorf("Outcome = %q, want %q", res.Outcome, TrimOutcomeEvicted)
+	}
+	if got := blobCount - countBlobs(t, s); got != res.FilesDeleted {
+		t.Errorf("FilesDeleted = %d, but %d blobs disappeared", res.FilesDeleted, got)
+	}
+	after, err := model.statfs("")
+	if err != nil {
+		t.Fatalf("statfs failed: %v", err)
+	}
+	if after.FreeBytes < snap.targetFreeBytes {
+		t.Errorf("Free space after Trim = %d, want at least the target %d", after.FreeBytes, snap.targetFreeBytes)
+	}
+	// need was under 400 KiB, so a pass that reclaims much more than that
+	// threw away cache it did not have to.
+	if need := snap.targetFreeBytes - before.FreeBytes; res.BytesReclaimed >= need+blobSize {
+		t.Errorf("BytesReclaimed = %d, want less than one blob over the %d bytes needed", res.BytesReclaimed, need)
+	}
+}
+
+// TestTrim_StopsAfterReclaimingTheShortfall pins the byte goal: with free
+// space that never moves, the pass still stops once it has unlinked the
+// bytes it set out to reclaim, instead of deleting every eligible blob.
+func TestTrim_StopsAfterReclaimingTheShortfall(t *testing.T) {
+	const blobCount, blobSize = 1200, 8192
+	const total, free = 100 * 1024 * 1024, 20 * 1024 * 1024
+	s := newTrimStorage(t, blobCount, blobSize, func(*Storage) StatfsFunc { return fixedDisk(total, free) })
+
+	res, err := s.Trim(context.Background())
+	if err != nil {
+		t.Fatalf("Trim failed: %v", err)
+	}
+	// The target is 25%, so need is 5 MiB: 640 blobs of 8 KiB.
+	const need = total/4 - free
+	if res.Outcome != TrimOutcomeEvicted || res.BytesReclaimed != need || res.FilesDeleted != need/blobSize {
+		t.Errorf("Trim = %+v, want %q with %d bytes across %d files", res, TrimOutcomeEvicted, need, need/blobSize)
+	}
+	if got := countBlobs(t, s); got != blobCount-need/blobSize {
+		t.Errorf("%d blobs remain, want %d", got, blobCount-need/blobSize)
+	}
+}
+
+// TestEvictOnce_HasNoByteGoal is the casproxy side of the test above: its
+// flights keep stopping only on free space, so against a disk that never
+// shows progress they unlink every eligible blob, exactly as before Trim.
+func TestEvictOnce_HasNoByteGoal(t *testing.T) {
+	const blobCount = 1200
+	s := newTrimStorage(t, blobCount, 8192, func(*Storage) StatfsFunc { return fixedDisk(100*1024*1024, 20*1024*1024) })
+
+	if _, deleted, err := s.Evictor().EvictOnce(context.Background()); err != nil || deleted != blobCount {
+		t.Errorf("EvictOnce deleted %d files (err %v), want all %d", deleted, err, blobCount)
+	}
+}
+
+func TestTrim_NoOpAtTheTarget(t *testing.T) {
+	const blobCount = 200
+	s := newTrimStorage(t, blobCount, 8192, func(*Storage) StatfsFunc { return fixedDisk(100*1024*1024, 25*1024*1024) })
+
+	res, err := s.Trim(context.Background())
+	if err != nil {
+		t.Fatalf("Trim failed: %v", err)
+	}
+	if res.Outcome != TrimOutcomeNoop || res.FilesDeleted != 0 {
+		t.Errorf("Trim = %+v, want a noop that deleted nothing", res)
+	}
+	if got := countBlobs(t, s); got != blobCount {
+		t.Errorf("%d blobs remain, want all %d", got, blobCount)
+	}
+}
+
+func TestTrim_ReportsBusy(t *testing.T) {
+	const blobCount = 1200
+	s := newTrimStorage(t, blobCount, 8192, func(*Storage) StatfsFunc { return fixedDisk(100*1024*1024, 20*1024*1024) })
+
+	lock, err := tryLockEviction(s.RootDir())
+	if err != nil {
+		t.Fatalf("Failed to acquire the eviction lock: %v", err)
+	}
+	defer lock.release()
+
+	res, err := s.Trim(context.Background())
+	if err != nil {
+		t.Errorf("Trim returned an error for a busy peer: %v", err)
+	}
+	if res.Outcome != TrimOutcomeBusy {
+		t.Errorf("Outcome = %q, want %q", res.Outcome, TrimOutcomeBusy)
+	}
+	if got := countBlobs(t, s); got != blobCount {
+		t.Errorf("%d blobs remain while a peer holds the lock, want all %d", got, blobCount)
+	}
+}
+
+func TestTrim_ReportsTimedOut(t *testing.T) {
+	const blobCount = 1200
+	s := newTrimStorage(t, blobCount, 8192, func(*Storage) StatfsFunc { return fixedDisk(100*1024*1024, 20*1024*1024) })
+
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+
+	res, err := s.Trim(ctx)
+	if err != nil {
+		t.Errorf("Trim returned an error for a pass cut short by its deadline: %v", err)
+	}
+	if res.Outcome != TrimOutcomeTimedOut {
+		t.Errorf("Outcome = %q, want %q", res.Outcome, TrimOutcomeTimedOut)
+	}
+	if got := blobCount - countBlobs(t, s); got != res.FilesDeleted {
+		t.Errorf("FilesDeleted = %d, but %d blobs disappeared", res.FilesDeleted, got)
+	}
+}

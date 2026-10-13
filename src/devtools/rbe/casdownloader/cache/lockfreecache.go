@@ -20,10 +20,11 @@ import (
 //
 // The two cache implementations disagree about on-disk layout: LocalCache
 // stores blobs flat as <cache-dir>/<hash> alongside a state.json index, while
-// common/storage sharded them as <cache-dir>/ab/cd/<hash> and keeps no index.
-// Sharing one root would not corrupt anything, but it would be worse than that
-// in a quiet way: the sharded evictor only ever walks the two-level ??/?? bucket
-// permutation, so flat blobs left by LocalCache are never enumerated and can
+// common/storage shards them into bucket directories (here
+// <cache-dir>/v2/ab/<hash>; see lockFreeLayout) and keeps no index. Sharing
+// one root would not corrupt anything, but it would be worse than that in a
+// quiet way: the sharded evictor only ever walks the layout's bucket
+// directories, so flat blobs left by LocalCache are never enumerated and can
 // never be reclaimed. A host that switched implementations would carry its old
 // cache as dead weight forever, on exactly the disks this change exists to keep
 // from filling up.
@@ -31,6 +32,31 @@ import (
 // Keeping each layout in its own directory also makes the flag a real toggle:
 // flipping it back and forth picks up a cold cache, not a corrupted one.
 const LayoutVersionDir = "v2"
+
+// lockFreeLayout is the bucket layout of the lock-free cache under
+// LayoutVersionDir: 256 buckets, as <cache-dir>/v2/ab/<hash>.
+//
+// casdownloader's caches are small, 8k to 174k blobs per host. Over the
+// 65,536 buckets casproxy uses that leaves 0-3 files per bucket, so a trim
+// that samples a few dozen buckets to choose its cutoff age sees almost
+// nothing; over 256 buckets it sees 30-680 files in each.
+//
+// The layout is part of the directory's on-disk contract: every process
+// sharing a cache, downloads and trims alike, must use the same one, and a
+// future change of layout needs a new LayoutVersionDir rather than a flag.
+var lockFreeLayout = storage.Layout256
+
+// newLockFreeStorage opens the lock-free cache's store under cacheDir,
+// creating the directory if needed. Every opener goes through here so that
+// all of them agree on lockFreeLayout.
+func newLockFreeStorage(cacheDir string, opts ...storage.Option) (*storage.Storage, error) {
+	root := filepath.Join(cacheDir, LayoutVersionDir)
+	store, err := storage.New(root, append([]storage.Option{storage.WithLayout(lockFreeLayout)}, opts...)...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create lock-free cache at %s: %w", root, err)
+	}
+	return store, nil
+}
 
 // These are compile-time assertions rather than documentation. The caller finds
 // CorruptBlobsQuarantined and the other reporters by type assertion, which
@@ -87,20 +113,20 @@ type LockFreeCache struct {
 // cfg tunes eviction. The evictor is configured but not started: casdownloader
 // is a one-shot process, so a background polling loop would outlive the process
 // by microseconds. Downloads never wait on, or fail because of, eviction or
-// space accounting. Nothing evicts this cache yet; a detached evictor process
-// will (b/572891754).
+// space accounting. The cache is trimmed by a separate pass, Trim, which
+// casdownloader -trim-only runs; starting that pass from a download is not
+// wired up yet (b/572891754).
 func NewLockFreeCache(cacheDir string, cfg storage.EvictorConfig, useHardlink bool) (*LockFreeCache, error) {
-	root := filepath.Join(cacheDir, LayoutVersionDir)
-
 	var opts []storage.Option
 	if !useHardlink {
 		opts = append(opts, storage.WithoutHardlinks())
 	}
 
-	store, err := storage.New(root, opts...)
+	store, err := newLockFreeStorage(cacheDir, opts...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create lock-free cache at %s: %w", root, err)
+		return nil, err
 	}
+	root := store.RootDir()
 	if err := store.ConfigureEvictor(cfg); err != nil {
 		return nil, fmt.Errorf("failed to configure evictor for %s: %w", root, err)
 	}

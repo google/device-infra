@@ -19,12 +19,20 @@ type Options struct {
 	// LockFree selects the lock-free cache over the lock-based one.
 	LockFree bool
 	Dir      string
-	// MaxSize and Lock apply only to the lock-based cache; the lock-free cache
-	// is bounded by free space rather than by a byte cap, and takes no lock.
-	MaxSize      int64
-	Lock         bool
-	MinFreeSpace int64
-	UseHardlink  bool
+	// MaxSize bounds the logical size of the lock-based cache. For the
+	// lock-free cache it is the advisory cap, which is accepted but not yet
+	// enforced (b/572891754). Lock applies only to the lock-based cache; the
+	// lock-free cache takes no lock.
+	MaxSize int64
+	Lock    bool
+	// MinFreeSpace is -cache-min-free-space and TargetFreeSpace is
+	// -cache-target-free-space, as given; empty selects the mode's default.
+	// The lock-based cache takes a byte count and reads only MinFreeSpace.
+	// The lock-free cache also takes a percentage of the volume; see
+	// lockFreeWatermarks.
+	MinFreeSpace    string
+	TargetFreeSpace string
+	UseHardlink     bool
 	// Overrides are the eviction settings the caller set explicitly. Only the
 	// lock-free cache reads them.
 	Overrides EvictorOverrides
@@ -68,15 +76,26 @@ func Open(opts Options) (Cache, error) {
 		return openLockFree(opts)
 	}
 
-	localCache, err := NewLocalCache(opts.Dir, opts.MaxSize, opts.MinFreeSpace, opts.Lock, opts.UseHardlink)
+	localCache, err := openLocal(opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create local cache: %v", err)
 	}
 	return localCache, nil
 }
 
+func openLocal(opts Options) (*LocalCache, error) {
+	minFreeSpace, err := parseLegacyMinFreeSpace(opts.MinFreeSpace)
+	if err != nil {
+		return nil, err
+	}
+	return NewLocalCache(opts.Dir, opts.MaxSize, minFreeSpace, opts.Lock, opts.UseHardlink)
+}
+
 func openLockFree(opts Options) (Cache, error) {
-	cfg := NewEvictorConfig(opts.MinFreeSpace, opts.Overrides)
+	cfg, err := lockFreeEvictorConfig(opts.Dir, opts.MinFreeSpace, opts.TargetFreeSpace, "-cache-target-free-space", opts.Overrides, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create lock-free cache: %v", err)
+	}
 
 	lockFreeCache, err := NewLockFreeCache(opts.Dir, cfg, opts.UseHardlink)
 	if err != nil {

@@ -422,6 +422,15 @@ type evictionFlight struct {
 	// flights behave exactly as before.
 	exitIfUnreachable bool
 
+	// stopAtReclaimTarget makes the flight also stop once it has unlinked
+	// the bytes it was short of TargetFreeSpace when it started, rather than
+	// only when a periodic statfs shows the target reached. Only Trim sets
+	// it, so casproxy's flights behave exactly as before.
+	stopAtReclaimTarget bool
+	// reclaimGoal is that shortfall, set by execute when stopAtReclaimTarget
+	// is set. Zero means no byte goal.
+	reclaimGoal int64
+
 	// sample is the histogram estimateCutoffAge built for this flight.
 	sample sampleStats
 
@@ -498,6 +507,9 @@ func (f *evictionFlight) execute(ctx context.Context) flightResult {
 	}
 
 	targetReclaimBytes := f.cfg.targetFreeBytes - effectiveFree
+	if f.stopAtReclaimTarget {
+		f.reclaimGoal = targetReclaimBytes
+	}
 	emergencyMode := f.cfg.emergencyLargeBlobFirst && freePct < 5.0
 
 	// 1. Estimate cutoff age from random bucket sampling
@@ -952,6 +964,12 @@ func (f *evictionFlight) evictStream(ctx context.Context, cutoff time.Time, targ
 					totalReclaimed += info.Size()
 					totalDeleted++
 					unlinksInBatch++
+
+					if f.reclaimGoal > 0 && totalReclaimed >= f.reclaimGoal {
+						log.InfoContextf(ctx, "Storage eviction flight complete: reclaimed %.2f GB across %d files, the %.2f GB it set out to reclaim. Skipped %d linked files (%.2f GB).",
+							float64(totalReclaimed)/gib, totalDeleted, float64(f.reclaimGoal)/gib, f.skippedLinkedFiles, float64(f.skippedLinkedBytes)/gib)
+						return totalReclaimed, totalDeleted, nil
+					}
 
 					// Cooperative Pacing: yield execution every BatchSize unlinks
 					if unlinksInBatch >= batchSize {

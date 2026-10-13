@@ -167,3 +167,48 @@ func TestOpen_LockFreeHonorsUseHardlink(t *testing.T) {
 		})
 	}
 }
+
+// The lock-based cache cannot honor a percentage or self-adaptive. A cache set
+// up with one degrades to no cache, with a note naming the flag, like any
+// other setup failure, rather than failing the download.
+func TestOpenOrDegrade_LockBasedCacheRejectsLockFreeOnlyMinFreeSpace(t *testing.T) {
+	for _, value := range []string{"20%", SelfAdaptive} {
+		t.Run(value, func(t *testing.T) {
+			opts := usableOptions(t)
+			opts.LockFree = false
+			opts.MinFreeSpace = value
+
+			c, note := OpenOrDegrade(context.Background(), opts, "the download")
+			if c != nil {
+				c.Close()
+				t.Errorf("Got a lock-based cache with -cache-min-free-space=%s, which it cannot honor", value)
+			}
+			if !strings.Contains(note, "-cache-min-free-space") {
+				t.Errorf("Note %q does not name the flag that was rejected", note)
+			}
+		})
+	}
+}
+
+// The lock-free cache takes bytes, percentages and the reserved
+// self-adaptive, and a target below the minimum is reset rather than fatal.
+func TestOpen_LockFreeAcceptsByteOrPercentageWatermarks(t *testing.T) {
+	for _, tc := range []struct{ min, target string }{
+		{min: "", target: ""},
+		{min: "20%", target: "25%"},
+		{min: "1073741824", target: "30%"},
+		{min: SelfAdaptive, target: ""},
+		{min: "30%", target: "10%"},
+	} {
+		t.Run(tc.min+","+tc.target, func(t *testing.T) {
+			opts := usableOptions(t)
+			opts.MinFreeSpace, opts.TargetFreeSpace = tc.min, tc.target
+
+			c, err := Open(opts)
+			if err != nil {
+				t.Fatalf("Open(-cache-min-free-space=%q, -cache-target-free-space=%q) = %v", tc.min, tc.target, err)
+			}
+			c.Close()
+		})
+	}
+}

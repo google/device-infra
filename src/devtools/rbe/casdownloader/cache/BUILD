@@ -29,6 +29,7 @@ go_library(
         "lockfreecache.go",
         "monitoring.go",
         "setup.go",
+        "trim.go",
     ],
     importpath = "github.com/google/device-infra/src/devtools/rbe/casdownloader/cache",
     deps = [
@@ -49,6 +50,7 @@ go_test(
         "lockfreecache_test.go",
         "monitoring_test.go",
         "setup_test.go",
+        "trim_test.go",
     ],
     embed = [":cache"],
     deps = [

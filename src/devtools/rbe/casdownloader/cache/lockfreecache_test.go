@@ -34,11 +34,13 @@ func hashOf(content string) string {
 // into the flat one it exists to stay clear of.
 const wantLayoutDir = "v2"
 
-// blobPath mirrors the sharded layout common/storage writes, so tests can make
-// assertions about the cached inode itself rather than only about what comes
-// back out of the cache.
+// blobPath mirrors the 256-bucket layout the lock-free cache writes,
+// <cache-dir>/v2/ab/<hash>, so tests can make assertions about the cached
+// inode itself rather than only about what comes back out of the cache. Like
+// wantLayoutDir, it is spelled out rather than taken from lockFreeLayout: the
+// layout is part of the same on-disk contract.
 func blobPath(cacheDir, hash string) string {
-	return filepath.Join(cacheDir, wantLayoutDir, hash[:2], hash[2:4], hash)
+	return filepath.Join(cacheDir, wantLayoutDir, hash[:2], hash)
 }
 
 func newTestCache(t *testing.T, cacheDir string, useHardlink bool) *LockFreeCache {
@@ -301,6 +303,31 @@ func TestLockFreeCache_StoresUnderVersionedSubdir(t *testing.T) {
 		if _, err := os.Stat(path); err != nil {
 			t.Errorf("Legacy cache file %s was disturbed: %v", filepath.Base(path), err)
 		}
+	}
+}
+
+// TestLockFreeCache_Uses256Buckets pins the bucket layout under v2/: one level
+// of 256 directories named for the hash's first byte, not casproxy's two
+// levels of 65,536. A trim samples buckets to choose what to evict, and on a
+// cache as small as casdownloader's the two-level layout leaves almost every
+// sampled bucket empty.
+func TestLockFreeCache_Uses256Buckets(t *testing.T) {
+	dir := t.TempDir()
+	cacheDir := filepath.Join(dir, "cache")
+	c := newTestCache(t, cacheDir, true)
+
+	_, out := stage(t, dir, "work/file", "two hundred fifty-six", false)
+	push(t, c, out)
+
+	hash := out.Digest.Hash
+	if info, err := os.Stat(filepath.Join(cacheDir, wantLayoutDir, hash[:2], hash)); err != nil || !info.Mode().IsRegular() {
+		t.Errorf("Blob is not at %s/%s/<hash>: %v", wantLayoutDir, hash[:2], err)
+	}
+	if _, err := os.Stat(filepath.Join(cacheDir, wantLayoutDir, hash[:2], hash[2:4])); !os.IsNotExist(err) {
+		t.Errorf("Found a second-level bucket %s/%s/%s (err %v); want the one-level layout", wantLayoutDir, hash[:2], hash[2:4], err)
+	}
+	if got, want := len(lockFreeLayout.Buckets()), 256; got != want {
+		t.Errorf("lockFreeLayout has %d buckets, want %d", got, want)
 	}
 }
 
