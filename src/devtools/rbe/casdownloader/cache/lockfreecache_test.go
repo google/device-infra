@@ -326,7 +326,7 @@ func TestLockFreeCache_Uses256Buckets(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(cacheDir, wantLayoutDir, hash[:2], hash[2:4])); !os.IsNotExist(err) {
 		t.Errorf("Found a second-level bucket %s/%s/%s (err %v); want the one-level layout", wantLayoutDir, hash[:2], hash[2:4], err)
 	}
-	if got, want := len(lockFreeLayout.Buckets()), 256; got != want {
+	if got, want := lockFreeLayout.NumBuckets(), 256; got != want {
 		t.Errorf("lockFreeLayout has %d buckets, want %d", got, want)
 	}
 }

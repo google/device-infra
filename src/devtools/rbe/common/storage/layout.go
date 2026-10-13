@@ -3,8 +3,6 @@ package storage
 import (
 	"fmt"
 	"path/filepath"
-	"slices"
-	"sync"
 )
 
 // Layout maps blob hashes to paths under a Storage root and enumerates the
@@ -14,13 +12,18 @@ import (
 // process sharing a root must agree on it, and the evictor only ever looks
 // inside the buckets it lists. It is therefore chosen in code, not by flag.
 // Changing the layout of an existing cache means moving to a new directory.
+//
+// Buckets are addressed by index rather than listed, so that an evictor can
+// sample or walk them without holding every bucket name in memory.
 type Layout interface {
 	// BlobPath returns the path of the blob with the given hash, relative to
 	// the storage root.
 	BlobPath(hash string) string
-	// Buckets returns every leaf bucket, relative to the storage root. The
-	// caller owns the returned slice and may reorder it.
-	Buckets() []string
+	// NumBuckets returns the number of leaf buckets.
+	NumBuckets() int
+	// Bucket returns the path of leaf bucket i, relative to the storage root,
+	// for 0 <= i < NumBuckets().
+	Bucket(i int) string
 }
 
 var (
@@ -59,16 +62,11 @@ var (
 // shardedLayout places a blob in a directory per leading byte of its hash,
 // levels bytes deep.
 type shardedLayout struct {
-	levels  int
-	buckets func() []string
+	levels int
 }
 
 func newShardedLayout(levels int) *shardedLayout {
-	l := &shardedLayout{levels: levels}
-	// Enumerating 65,536 buckets is not free, and only an evictor ever asks,
-	// so build the list once, on first use.
-	l.buckets = sync.OnceValue(l.enumerate)
-	return l
+	return &shardedLayout{levels: levels}
 }
 
 // BlobPath returns the sharded path of hash relative to the root.
@@ -96,23 +94,25 @@ func (l *shardedLayout) BlobPath(hash string) string {
 	return filepath.Join(append(parts, hash)...)
 }
 
-// Buckets returns a fresh copy of every leaf bucket, in lexical order.
-func (l *shardedLayout) Buckets() []string {
-	return slices.Clone(l.buckets())
+// NumBuckets returns 256^levels.
+func (l *shardedLayout) NumBuckets() int {
+	return 1 << (8 * l.levels)
 }
 
-func (l *shardedLayout) enumerate() []string {
-	buckets := []string{""}
-	for i := 0; i < l.levels; i++ {
-		next := make([]string, 0, len(buckets)*256)
-		for _, parent := range buckets {
-			for b := 0; b < 256; b++ {
-				next = append(next, filepath.Join(parent, fmt.Sprintf("%02x", b)))
-			}
-		}
-		buckets = next
+// Bucket returns leaf bucket i: the bytes of i, most significant first, as
+// two-digit hex path components. For example, bucket 0xe3b0 of the two-level
+// layout is "e3/b0". Buckets in index order are therefore in lexical order.
+// Bucket panics if i is out of range, as indexing a slice would.
+func (l *shardedLayout) Bucket(i int) string {
+	if i < 0 || i >= l.NumBuckets() {
+		panic(fmt.Sprintf("storage: bucket %d out of range [0, %d) of %v", i, l.NumBuckets(), l))
 	}
-	return buckets
+	parts := make([]string, l.levels)
+	for level := l.levels - 1; level >= 0; level-- {
+		parts[level] = fmt.Sprintf("%02x", i&0xff)
+		i >>= 8
+	}
+	return filepath.Join(parts...)
 }
 
 // String names the layout in logs and test failures.

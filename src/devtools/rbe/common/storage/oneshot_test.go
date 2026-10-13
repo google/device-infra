@@ -145,17 +145,17 @@ func attachDiskModel(t *testing.T, s *Storage, totalBytes int64) *diskModel {
 	return model
 }
 
-// countingLayout counts the calls to Buckets, so a test can tell how many
-// times the evictor enumerated the buckets: once to sample them, and once
+// countingLayout counts the calls to Bucket, so a test can tell how many
+// buckets the evictor visited: SampleBuckets to sample them, and every bucket
 // more to walk them all.
 type countingLayout struct {
 	Layout
 	bucketCalls atomic.Int32
 }
 
-func (l *countingLayout) Buckets() []string {
+func (l *countingLayout) Bucket(i int) string {
 	l.bucketCalls.Add(1)
-	return l.Layout.Buckets()
+	return l.Layout.Bucket(i)
 }
 
 func TestTryLockEviction_ExcludesASecondHolder(t *testing.T) {
@@ -491,8 +491,8 @@ func TestCheckAndEvict_ExitsEarlyWhenEverythingIsPinned(t *testing.T) {
 	if res.SkippedLinked <= 0 || res.SkippedLinked%blobSize != 0 {
 		t.Errorf("SkippedLinked = %d, want a positive multiple of %d", res.SkippedLinked, blobSize)
 	}
-	if got := layout.bucketCalls.Load(); got != 1 {
-		t.Errorf("Buckets() called %d times, want 1: the pass should sample and stop, not walk every bucket", got)
+	if got, want := int(layout.bucketCalls.Load()), s.Evictor().config.SampleBuckets; got != want {
+		t.Errorf("Visited %d buckets, want the %d sampled: the pass should sample and stop, not walk every bucket", got, want)
 	}
 	if got := countBlobs(t, s); got != blobCount {
 		t.Errorf("%d blobs remain, want all %d", got, blobCount)
@@ -521,8 +521,8 @@ func TestCheckAndEvict_ExitsEarlyWhenOnlyYoungBlobsRemain(t *testing.T) {
 	if res.SkippedLinked != 0 {
 		t.Errorf("SkippedLinked = %d, want 0 with no blob linked elsewhere", res.SkippedLinked)
 	}
-	if got := layout.bucketCalls.Load(); got != 1 {
-		t.Errorf("Buckets() called %d times, want 1: the pass should sample and stop, not walk every bucket", got)
+	if got, want := int(layout.bucketCalls.Load()), s.Evictor().config.SampleBuckets; got != want {
+		t.Errorf("Visited %d buckets, want the %d sampled: the pass should sample and stop, not walk every bucket", got, want)
 	}
 }
 
@@ -542,8 +542,8 @@ func TestEvictOnce_DoesNotExitEarly(t *testing.T) {
 	if _, _, err := s.Evictor().EvictOnce(context.Background()); err != nil {
 		t.Fatalf("EvictOnce failed: %v", err)
 	}
-	if got := layout.bucketCalls.Load(); got != 2 {
-		t.Errorf("Buckets() called %d times, want 2: one to sample, one to walk every bucket", got)
+	if got, want := int(layout.bucketCalls.Load()), s.Evictor().config.SampleBuckets+Layout256.NumBuckets(); got != want {
+		t.Errorf("Visited %d buckets, want %d: the sample, then every bucket in the walk", got, want)
 	}
 }
 

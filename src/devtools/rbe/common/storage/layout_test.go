@@ -8,8 +8,10 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"sort"
+	"sync"
 	"testing"
 	"time"
 )
@@ -45,6 +47,15 @@ func TestLayout256_BlobPath(t *testing.T) {
 	}
 }
 
+// allBuckets returns every bucket of l, in index order.
+func allBuckets(l Layout) []string {
+	buckets := make([]string, l.NumBuckets())
+	for i := range buckets {
+		buckets[i] = l.Bucket(i)
+	}
+	return buckets
+}
+
 // TestLayouts_Buckets checks that each layout enumerates exactly the leaf
 // directories its BlobPath writes into: every bucket once, nothing else. A
 // bucket missing from the list is a directory the evictor never visits, so its
@@ -61,10 +72,10 @@ func TestLayouts_Buckets(t *testing.T) {
 		{"Layout256", Layout256, 256, regexp.MustCompile(`^[0-9a-f]{2}$`)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			buckets := tc.layout.Buckets()
-			if len(buckets) != tc.count {
-				t.Fatalf("len(Buckets()) = %d, want %d", len(buckets), tc.count)
+			if got := tc.layout.NumBuckets(); got != tc.count {
+				t.Fatalf("NumBuckets() = %d, want %d", got, tc.count)
 			}
+			buckets := allBuckets(tc.layout)
 			seen := make(map[string]bool, len(buckets))
 			for _, b := range buckets {
 				if !tc.format.MatchString(filepath.ToSlash(b)) {
@@ -78,23 +89,65 @@ func TestLayouts_Buckets(t *testing.T) {
 			for i := 0; i < 1000; i++ {
 				hash := fmt.Sprintf("%016x%016x%016x%016x", rng.Uint64(), rng.Uint64(), rng.Uint64(), rng.Uint64())
 				if dir := filepath.Dir(tc.layout.BlobPath(hash)); !seen[dir] {
-					t.Fatalf("BlobPath(%q) is in %q, which Buckets() does not list", hash, dir)
+					t.Fatalf("BlobPath(%q) is in %q, which no Bucket(i) names", hash, dir)
 				}
 			}
 		})
 	}
 }
 
-// TestLayouts_BucketsReturnsACopy pins the ownership contract the evictor
-// relies on when it shuffles the list in place.
-func TestLayouts_BucketsReturnsACopy(t *testing.T) {
-	for _, l := range []Layout{ShardedLayout65536, Layout256} {
-		first := l.Buckets()
-		want := slices.Clone(first)
-		slices.Reverse(first)
-		if got := l.Buckets(); !slices.Equal(got, want) {
-			t.Errorf("%v: Buckets() changed after a caller reordered an earlier result", l)
+// TestLayouts_BucketIsTheLexicalEnumeration pins the name and order of every
+// bucket to the list the layouts used to build: each level's 256 bytes as
+// two hex digits, the first level outermost, in lexical order.
+func TestLayouts_BucketIsTheLexicalEnumeration(t *testing.T) {
+	hexBytes := make([]string, 256)
+	for b := range hexBytes {
+		hexBytes[b] = fmt.Sprintf("%02x", b)
+	}
+	var twoLevels []string
+	for _, a := range hexBytes {
+		for _, b := range hexBytes {
+			twoLevels = append(twoLevels, filepath.Join(a, b))
 		}
+	}
+	for _, tc := range []struct {
+		layout Layout
+		want   []string
+	}{
+		{Layout256, hexBytes},
+		{ShardedLayout65536, twoLevels},
+	} {
+		got := allBuckets(tc.layout)
+		if len(got) != len(tc.want) {
+			t.Errorf("%v has %d buckets, want %d", tc.layout, len(got), len(tc.want))
+			continue
+		}
+		for i := range got {
+			if got[i] != tc.want[i] {
+				t.Errorf("%v.Bucket(%d) = %q, want %q", tc.layout, i, got[i], tc.want[i])
+				break
+			}
+		}
+	}
+}
+
+func TestShardedLayout_BucketPanicsOutOfRange(t *testing.T) {
+	for _, tc := range []struct {
+		layout Layout
+		i      int
+	}{
+		{Layout256, -1},
+		{Layout256, 256},
+		{ShardedLayout65536, 65536},
+	} {
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Errorf("%v.Bucket(%d) did not panic", tc.layout, tc.i)
+				}
+			}()
+			tc.layout.Bucket(tc.i)
+		}()
 	}
 }
 
@@ -196,7 +249,9 @@ func (l fakeLayout) BlobPath(hash string) string {
 	return filepath.Join(l.buckets[int(hash[0])%len(l.buckets)], hash)
 }
 
-func (l fakeLayout) Buckets() []string { return slices.Clone(l.buckets) }
+func (l fakeLayout) NumBuckets() int { return len(l.buckets) }
+
+func (l fakeLayout) Bucket(i int) string { return l.buckets[i] }
 
 func TestEvictor_PickRandomBuckets_ThroughTheLayout(t *testing.T) {
 	root := t.TempDir()
@@ -208,12 +263,14 @@ func TestEvictor_PickRandomBuckets_ThroughTheLayout(t *testing.T) {
 	}{
 		{"Layout256", Layout256, 16, 16},
 		{"Layout256 asked for more than it has", Layout256, 1000, 256},
+		{"ShardedLayout65536", ShardedLayout65536, 64, 64},
 		{"fake", fakeLayout{[]string{"x/1", "x/2", "y"}}, 16, 3},
+		{"none asked for", Layout256, 0, 0},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ev := &Evictor{rootDir: root, layout: tc.layout, rand: rand.New(rand.NewSource(7))}
 			valid := make(map[string]bool)
-			for _, b := range tc.layout.Buckets() {
+			for _, b := range allBuckets(tc.layout) {
 				valid[filepath.Join(root, b)] = true
 			}
 
@@ -235,6 +292,37 @@ func TestEvictor_PickRandomBuckets_ThroughTheLayout(t *testing.T) {
 	}
 }
 
+// TestEvictor_PickRandomBuckets_MatchesAFullShuffle pins the sampling
+// distribution: from the same random source, the sample is exactly the one a
+// partial Fisher-Yates shuffle of the whole bucket list draws.
+func TestEvictor_PickRandomBuckets_MatchesAFullShuffle(t *testing.T) {
+	for _, tc := range []struct {
+		layout Layout
+		k      int
+	}{
+		{Layout256, 16},
+		{Layout256, 256},
+		{ShardedLayout65536, 64},
+	} {
+		const seed = 11
+		buckets := allBuckets(tc.layout)
+		rng := rand.New(rand.NewSource(seed))
+		for i := 0; i < tc.k; i++ {
+			j := i + rng.Intn(len(buckets)-i)
+			buckets[i], buckets[j] = buckets[j], buckets[i]
+		}
+		var want []string
+		for _, b := range buckets[:tc.k] {
+			want = append(want, filepath.Join("/cache", b))
+		}
+
+		ev := &Evictor{rootDir: "/cache", layout: tc.layout, rand: rand.New(rand.NewSource(seed))}
+		if got := ev.pickRandomBuckets(tc.k); !slices.Equal(got, want) {
+			t.Errorf("%v: pickRandomBuckets(%d) = %q, want %q", tc.layout, tc.k, got, want)
+		}
+	}
+}
+
 func TestEvictor_PickRandomBuckets_IsUniform(t *testing.T) {
 	ev := &Evictor{layout: Layout256, rand: rand.New(rand.NewSource(3))}
 	hits := make(map[string]int)
@@ -246,23 +334,99 @@ func TestEvictor_PickRandomBuckets_IsUniform(t *testing.T) {
 	}
 	// Each bucket is expected rounds*16/256 = 250 times. A biased sampler,
 	// such as one that favors low indexes, lands far outside this band.
-	for _, b := range Layout256.Buckets() {
+	for _, b := range allBuckets(Layout256) {
 		if n := hits[b]; n < 175 || n > 325 {
 			t.Errorf("Bucket %q sampled %d times, want about 250", b, n)
 		}
 	}
 }
 
+// TestEvictor_PickRandomBuckets_AllocatesForTheSampleOnly checks that sampling
+// a few of 65,536 buckets costs memory in proportion to the sample, not the
+// layout. Merely listing every bucket name takes a 16-byte string header per
+// bucket, 1 MiB in all.
+func TestEvictor_PickRandomBuckets_AllocatesForTheSampleOnly(t *testing.T) {
+	ev := &Evictor{rootDir: "/cache", layout: ShardedLayout65536, rand: rand.New(rand.NewSource(1))}
+	defer runtime.GOMAXPROCS(runtime.GOMAXPROCS(1))
+	const runs = 20
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	for range runs {
+		ev.pickRandomBuckets(16)
+	}
+	runtime.ReadMemStats(&after)
+	if perRun := (after.TotalAlloc - before.TotalAlloc) / runs; perRun > 64<<10 {
+		t.Errorf("pickRandomBuckets(16) allocated %d bytes per call, want a small fraction of the 1 MiB that listing every bucket takes", perRun)
+	}
+}
+
 func TestEvictor_BucketPermutation_VisitsEveryBucketOnce(t *testing.T) {
-	for _, l := range []Layout{Layout256, ShardedLayout65536, fakeLayout{[]string{"x/1", "x/2", "y"}}} {
-		ev := &Evictor{layout: l, rand: rand.New(rand.NewSource(5))}
-		got := ev.bucketPermutation()
-		want := l.Buckets()
-		sort.Strings(got)
-		sort.Strings(want)
-		if !slices.Equal(got, want) {
-			t.Errorf("%v: bucketPermutation() does not list every bucket exactly once", l)
+	for _, n := range []int{0, 1, 3, 256, 65536} {
+		ev := &Evictor{rand: rand.New(rand.NewSource(5))}
+		perm := ev.bucketPermutation(n)
+		if n >= 256 && slices.IsSorted(perm) {
+			t.Errorf("bucketPermutation(%d) is in index order, want it shuffled", n)
 		}
+		sorted := slices.Clone(perm)
+		slices.Sort(sorted)
+		if len(sorted) != n {
+			t.Errorf("bucketPermutation(%d) has %d entries, want %d", n, len(sorted), n)
+			continue
+		}
+		for i, b := range sorted {
+			if b != uint32(i) {
+				t.Errorf("bucketPermutation(%d) does not list every index in [0, %d) exactly once", n, n)
+				break
+			}
+		}
+	}
+}
+
+// recordingLayout records the index of every bucket the evictor names.
+type recordingLayout struct {
+	Layout
+	mu    sync.Mutex
+	named []int
+}
+
+func (l *recordingLayout) Bucket(i int) string {
+	l.mu.Lock()
+	l.named = append(l.named, i)
+	l.mu.Unlock()
+	return l.Layout.Bucket(i)
+}
+
+// TestEvictStream_VisitsEveryBucketOnce checks the full eviction walk: with a
+// target it never reaches, it visits every bucket of the layout exactly once,
+// in shuffled order.
+func TestEvictStream_VisitsEveryBucketOnce(t *testing.T) {
+	for _, base := range []Layout{Layout256, ShardedLayout65536} {
+		t.Run(fmt.Sprint(base), func(t *testing.T) {
+			layout := &recordingLayout{Layout: base}
+			ev, err := NewEvictor(t.TempDir(), oneshotTestConfig(), fixedDisk(1000, 0))
+			if err != nil {
+				t.Fatalf("NewEvictor failed: %v", err)
+			}
+			ev.layout = layout
+
+			f := ev.newFlight(ev.snapshot())
+			if _, _, err := f.evictStream(context.Background(), time.Now(), math.MaxInt64, false); err != nil {
+				t.Fatalf("evictStream failed: %v", err)
+			}
+			if slices.IsSorted(layout.named) {
+				t.Errorf("The walk visited buckets in index order, want a shuffled order")
+			}
+			visited := slices.Clone(layout.named)
+			slices.Sort(visited)
+			if len(visited) != base.NumBuckets() {
+				t.Fatalf("The walk visited %d buckets, want %d", len(visited), base.NumBuckets())
+			}
+			for i, b := range visited {
+				if b != i {
+					t.Fatalf("The walk did not visit every bucket exactly once: bucket %d is missing or repeated", i)
+				}
+			}
+		})
 	}
 }
 
@@ -374,7 +538,7 @@ func TestCheckAndEvict_SampledCutoffAt256BucketsIsRoughlyOldestFirst(t *testing.
 	if err != nil {
 		t.Fatalf("New failed: %v", err)
 	}
-	for _, b := range Layout256.Buckets() {
+	for _, b := range allBuckets(Layout256) {
 		if err := os.MkdirAll(filepath.Join(s.RootDir(), b), 0755); err != nil {
 			t.Fatalf("MkdirAll failed: %v", err)
 		}

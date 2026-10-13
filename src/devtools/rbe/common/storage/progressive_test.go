@@ -291,7 +291,7 @@ func TestSampleForTrim_ReadsAtLeastSampleBucketsBeforeEvicting(t *testing.T) {
 func TestProgressiveCutoff_TakesTheShareOfTheBucketsRead(t *testing.T) {
 	now := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
 	p := &progressiveSample{
-		buckets:    make([]string, 256),
+		order:      make([]uint32, 256),
 		now:        now,
 		minBlobAge: 10 * time.Minute,
 		stats:      newSampleStats(1),
@@ -325,7 +325,7 @@ func TestTrimFlight_TakesTheCutoffFromTheBucketsAlreadyRead(t *testing.T) {
 	blobs := seedGroup(t, s, 0, 256, progressiveTestBlobSize, 50*time.Hour)
 	e := s.Evictor()
 	p := e.newProgressiveSample(10 * time.Minute)
-	p.stats.bucketCount = len(p.buckets)
+	p.stats.bucketCount = len(p.order)
 	p.stats.histogram[300] = 1 << 30
 	p.stats.totalCount = 1
 
@@ -442,10 +442,13 @@ func TestEvictionInProgress(t *testing.T) {
 // the check reads every bucket, and its size is exact. An unset age horizon
 // gets the default one, as the sampler's does.
 func TestCheckCap_ReadsASmallLayoutWhole(t *testing.T) {
-	p := &progressiveSample{rootDir: t.TempDir(), stats: newSampleStats(0)}
+	var layout fakeLayout
+	var order []uint32
 	for i := range 16 {
-		p.buckets = append(p.buckets, fmt.Sprintf("%02x", i))
+		layout.buckets = append(layout.buckets, fmt.Sprintf("%02x", i))
+		order = append(order, uint32(i))
 	}
+	p := &progressiveSample{rootDir: t.TempDir(), layout: layout, order: order, stats: newSampleStats(0)}
 	if got, want := len(p.stats.histogram), defaultMaxAgeDays*24+1; got != want {
 		t.Errorf("len(histogram) = %d, want %d", got, want)
 	}

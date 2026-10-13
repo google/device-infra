@@ -931,9 +931,10 @@ func (f *evictionFlight) evictStream(ctx context.Context, cutoff time.Time, targ
 	var unlinksInBatch int
 
 	// Random permutation of every leaf bucket in the layout
-	bucketPerm := f.e.bucketPermutation()
+	layout := f.e.bucketLayout()
+	bucketPerm := f.e.bucketPermutation(layout.NumBuckets())
 
-	for _, relDir := range bucketPerm {
+	for _, bucket := range bucketPerm {
 		select {
 		case <-ctx.Done():
 			return totalReclaimed, totalDeleted, ctx.Err()
@@ -942,7 +943,7 @@ func (f *evictionFlight) evictStream(ctx context.Context, cutoff time.Time, targ
 		default:
 		}
 
-		bucketPath := filepath.Join(f.e.rootDir, relDir)
+		bucketPath := filepath.Join(f.e.rootDir, layout.Bucket(int(bucket)))
 		entries, err := os.ReadDir(bucketPath)
 		if err != nil {
 			continue
@@ -1036,34 +1037,50 @@ func (e *Evictor) bucketLayout() Layout {
 // paths, chosen uniformly at random from the layout's buckets. It returns
 // every bucket if the layout has no more than k.
 func (e *Evictor) pickRandomBuckets(k int) []string {
-	buckets := e.bucketLayout().Buckets()
-	k = max(0, min(k, len(buckets)))
+	layout := e.bucketLayout()
+	n := layout.NumBuckets()
+	k = max(0, min(k, n))
 
+	// A partial Fisher-Yates shuffle of the indices 0..n-1: the first k
+	// positions end up a uniform random sample without replacement. Only the
+	// positions a swap has changed are stored, in moved, so that the shuffle
+	// costs O(k) rather than O(n).
+	moved := make(map[int]int, k)
+	at := func(pos int) int {
+		if i, ok := moved[pos]; ok {
+			return i
+		}
+		return pos
+	}
+	picked := make([]int, k)
 	e.randMu.Lock()
-	// A partial Fisher-Yates shuffle: the first k entries end up a uniform
-	// random sample without replacement.
-	for i := 0; i < k; i++ {
-		j := i + e.rand.Intn(len(buckets)-i)
-		buckets[i], buckets[j] = buckets[j], buckets[i]
+	for i := range picked {
+		j := i + e.rand.Intn(n-i)
+		picked[i] = at(j)
+		moved[j] = at(i)
 	}
 	e.randMu.Unlock()
 
 	paths := make([]string, k)
-	for i, rel := range buckets[:k] {
-		paths[i] = filepath.Join(e.rootDir, rel)
+	for i, b := range picked {
+		paths[i] = filepath.Join(e.rootDir, layout.Bucket(b))
 	}
 	return paths
 }
 
-// bucketPermutation returns every leaf bucket of the layout, relative to the
-// root, in pseudo-random order.
-func (e *Evictor) bucketPermutation() []string {
-	buckets := e.bucketLayout().Buckets()
+// bucketPermutation returns the bucket indices 0..n-1 in pseudo-random order.
+// Callers name each bucket with Layout.Bucket as they visit it, so that a walk
+// holds 4 bytes per bucket rather than every bucket's name.
+func (e *Evictor) bucketPermutation(n int) []uint32 {
+	perm := make([]uint32, n)
+	for i := range perm {
+		perm[i] = uint32(i)
+	}
 
 	e.randMu.Lock()
 	defer e.randMu.Unlock()
-	e.rand.Shuffle(len(buckets), func(i, j int) {
-		buckets[i], buckets[j] = buckets[j], buckets[i]
+	e.rand.Shuffle(len(perm), func(i, j int) {
+		perm[i], perm[j] = perm[j], perm[i]
 	})
-	return buckets
+	return perm
 }

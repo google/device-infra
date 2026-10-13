@@ -36,19 +36,23 @@ var capCheckSteps = []struct {
 // already read rather than drawing a new sample, and both the cap check and
 // the cutoff age use every bucket read.
 type progressiveSample struct {
-	rootDir    string
-	buckets    []string // Every bucket of the layout, relative to rootDir, in random order.
+	rootDir string
+	layout  Layout
+	// order is the index of every bucket of layout, in random order.
+	order      []uint32
 	now        time.Time
 	minBlobAge time.Duration
 	// stats is what the buckets read hold; stats.bucketCount is how many of
-	// buckets, from the start, have been read.
+	// order, from the start, have been read.
 	stats sampleStats
 }
 
 func (e *Evictor) newProgressiveSample(minBlobAge time.Duration) *progressiveSample {
+	layout := e.bucketLayout()
 	return &progressiveSample{
 		rootDir:    e.rootDir,
-		buckets:    e.bucketPermutation(),
+		layout:     layout,
+		order:      e.bucketPermutation(layout.NumBuckets()),
 		now:        time.Now(),
 		minBlobAge: minBlobAge,
 		stats:      newSampleStats(e.maxAgeDays),
@@ -93,11 +97,12 @@ func (e *Evictor) sampleForTrim(ctx context.Context, snap snapshotConfig, free, 
 func (p *progressiveSample) readTo(ctx context.Context, n int) error {
 	start := time.Now()
 	defer func() { p.stats.duration += time.Since(start) }()
-	for p.stats.bucketCount < min(n, len(p.buckets)) {
+	for p.stats.bucketCount < min(n, len(p.order)) {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		p.stats.addBucket(filepath.Join(p.rootDir, p.buckets[p.stats.bucketCount]), p.now, p.minBlobAge)
+		bucket := p.layout.Bucket(int(p.order[p.stats.bucketCount]))
+		p.stats.addBucket(filepath.Join(p.rootDir, bucket), p.now, p.minBlobAge)
 	}
 	return nil
 }
@@ -106,10 +111,10 @@ func (p *progressiveSample) readTo(ctx context.Context, n int) error {
 // bytes_read * N / k for k of its N buckets read. Once every bucket has been
 // read it is exact.
 func (p *progressiveSample) size() int64 {
-	if p.stats.bucketCount == len(p.buckets) {
+	if p.stats.bucketCount == len(p.order) {
 		return p.stats.blobBytes
 	}
-	return int64(float64(p.stats.blobBytes) * float64(len(p.buckets)) / float64(p.stats.bucketCount))
+	return int64(float64(p.stats.blobBytes) * float64(len(p.order)) / float64(p.stats.bucketCount))
 }
 
 // checkCap reads buckets in steps until it can tell whether the cache is over
@@ -123,7 +128,7 @@ func (p *progressiveSample) size() int64 {
 // postpones that eviction to the next check, which draws a fresh order.
 func (p *progressiveSample) checkCap(ctx context.Context, maxSize int64) (int64, error) {
 	for _, step := range capCheckSteps {
-		if step.buckets >= len(p.buckets) {
+		if step.buckets >= len(p.order) {
 			break
 		}
 		if err := p.readTo(ctx, step.buckets); err != nil {
@@ -131,18 +136,18 @@ func (p *progressiveSample) checkCap(ctx context.Context, maxSize int64) (int64,
 		}
 		if estimate := p.size(); float64(estimate) <= float64(maxSize)*(1-step.allowance) {
 			log.InfoContextf(ctx, "Cap check of %s stopped after %d of %d buckets: an estimated %.2f GB, at most %.0f%% of the %.2f GB cap.",
-				p.rootDir, p.stats.bucketCount, len(p.buckets), float64(estimate)/gib, 100*(1-step.allowance), float64(maxSize)/gib)
+				p.rootDir, p.stats.bucketCount, len(p.order), float64(estimate)/gib, 100*(1-step.allowance), float64(maxSize)/gib)
 			return 0, nil
 		}
 	}
-	if err := p.readTo(ctx, len(p.buckets)); err != nil {
+	if err := p.readTo(ctx, len(p.order)); err != nil {
 		return 0, err
 	}
 	size := p.size()
 	// 0.9 * maxSize, in integers so that it neither overflows nor rounds.
 	excess := max(size-(maxSize-maxSize/10), 0)
 	log.InfoContextf(ctx, "Cap check of %s read all %d buckets: %.2f GB (%.2f GB pinned by other links) against the %.2f GB cap, %.2f GB over 90%% of it.",
-		p.rootDir, len(p.buckets), float64(size)/gib, float64(p.stats.pinnedBytes)/gib, float64(maxSize)/gib, float64(excess)/gib)
+		p.rootDir, len(p.order), float64(size)/gib, float64(p.stats.pinnedBytes)/gib, float64(maxSize)/gib, float64(excess)/gib)
 	return excess, nil
 }
 
@@ -156,7 +161,7 @@ func (p *progressiveSample) checkCap(ctx context.Context, maxSize int64) (int64,
 // If the histogram holds less than that share, the cutoff is now minus
 // MinBlobAge, which leaves only the grace period standing.
 func (p *progressiveSample) cutoff(ctx context.Context, need int64) time.Time {
-	share := float64(need) * float64(p.stats.bucketCount) / float64(len(p.buckets))
+	share := float64(need) * float64(p.stats.bucketCount) / float64(len(p.order))
 	cutoff := p.now.Add(-p.minBlobAge)
 	var accumulated int64
 	for h := len(p.stats.histogram) - 1; h >= 0; h-- {
@@ -167,6 +172,6 @@ func (p *progressiveSample) cutoff(ctx context.Context, need int64) time.Time {
 		}
 	}
 	log.InfoContextf(ctx, "Storage eviction cutoff from %d of %d buckets (read in %v): %d candidate blobs, %.2f GB; T_cutoff = %v, to reclaim %.2f GB.",
-		p.stats.bucketCount, len(p.buckets), p.stats.duration, p.stats.totalCount, float64(p.stats.totalBytes)/gib, cutoff, float64(need)/gib)
+		p.stats.bucketCount, len(p.order), p.stats.duration, p.stats.totalCount, float64(p.stats.totalBytes)/gib, cutoff, float64(need)/gib)
 	return cutoff
 }
