@@ -239,7 +239,6 @@ public class StubManager {
                     relayLocator.getGrpcServerLocator(), labServerLocator, testEngineLocator)));
   }
 
-  @SuppressWarnings("unused") // deviceinfra:internal-only
   private FileTransferClientFactory getFileTransferClientFactoryWithDirectTarget(
       LabServerLocator labServerLocator, @Nullable TestEngineLocator testEngineLocator) {
     StubConfiguration stubConfiguration =
