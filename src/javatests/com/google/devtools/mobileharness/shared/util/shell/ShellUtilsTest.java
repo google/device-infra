@@ -75,6 +75,15 @@ public class ShellUtilsTest extends TestCase {
     assertThat(prettyPrintArgv(Arrays.asList("echo", "$US", "100"))).isEqualTo("echo '$US' 100");
   }
 
+  public void testJoinTokens() throws Exception {
+    ImmutableList<String> tokens = ImmutableList.of("cts", "-m", "a b", "", "a\"b\\c");
+
+    String commandLine = ShellUtils.joinTokens(tokens);
+
+    assertThat(commandLine).isEqualTo("cts -m \"a b\" \"\" \"a\\\"b\\\\c\"");
+    assertThat(tokenize(commandLine)).containsExactlyElementsIn(tokens).inOrder();
+  }
+
   private void assertTokenize(String copts, String... expectedTokens) throws Exception {
     ImmutableList<String> actualTokens = tokenize(copts);
     assertThat(actualTokens).isEqualTo(Arrays.asList(expectedTokens));

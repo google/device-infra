@@ -48,6 +48,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_report_properties_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_args",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_command_line_args_preserver",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_generator",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",

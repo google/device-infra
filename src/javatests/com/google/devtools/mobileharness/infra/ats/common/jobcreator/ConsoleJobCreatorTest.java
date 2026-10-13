@@ -705,6 +705,56 @@ public final class ConsoleJobCreatorTest {
   }
 
   @Test
+  public void createTfAndNonTfJobs_retry_generatesRetrySubPlanOnce() throws Exception {
+    SubPlan subPlan = new SubPlan();
+    subPlan.setPreviousSessionCommandLineArgs("cts --module-arg ModuleA:arg:value --shard-count 2");
+    subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
+    subPlan.addNonTfIncludeFilter("armeabi-v7a ModuleB");
+    File xtsRootDir = folder.newFolder("xts_root_dir_retry_once");
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("retry")
+                .setCommandLineArgs("retry --retry 0")
+                .setXtsType("cts")
+                .setXtsRootDir(xtsRootDir.getAbsolutePath())
+                .setRetrySessionIndex(0));
+    when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
+    when(previousResultLoader.getPrevSessionTestReportProperties(any(Path.class), anyInt(), any()))
+        .thenReturn(Optional.empty());
+    when(sessionRequestHandlerUtil.initializeJobConfig(any(), any(), any(), any()))
+        .thenReturn(JobConfig.getDefaultInstance());
+    when(localFileUtil.isDirExist(xtsRootDir.toPath())).thenReturn(true);
+    doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
+    doCallRealMethod()
+        .when(sessionRequestHandlerUtil)
+        .canCreateNonTradefedJobs(any(SessionRequestInfo.class));
+    when(sessionRequestHandlerUtil.createXtsNonTradefedJobs(any(), any(), any()))
+        .thenReturn(ImmutableList.of());
+
+    ImmutableList<TradefedJobInfo> unusedTfJobs =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
+    ImmutableList<JobInfo> unusedNonTfJobs =
+        jobCreator.createXtsNonTradefedJobs(sessionRequestInfo);
+
+    verify(retryGenerator).generateRetrySubPlan(any());
+    ArgumentCaptor<SessionRequestInfo> tfRequest =
+        ArgumentCaptor.forClass(SessionRequestInfo.class);
+    ArgumentCaptor<SessionRequestInfo> nonTfRequest =
+        ArgumentCaptor.forClass(SessionRequestInfo.class);
+    verify(sessionRequestHandlerUtil).initializeJobConfig(tfRequest.capture(), any(), any(), any());
+    verify(sessionRequestHandlerUtil)
+        .createXtsNonTradefedJobs(nonTfRequest.capture(), eq(subPlan), any());
+    // The previous session's args are preserved for both TF and non-TF jobs.
+    for (SessionRequestInfo request :
+        ImmutableList.of(tfRequest.getValue(), nonTfRequest.getValue())) {
+      assertThat(request.getModuleArgsList()).containsExactly("ModuleA:arg:value");
+      assertThat(request.hasShardCount()).isFalse();
+    }
+  }
+
+  @Test
   public void createXtsTradefedTestJob_addSubPlanXmlPathForRetry() throws Exception {
     SubPlan subPlan = new SubPlan();
     subPlan.setPreviousSessionXtsTestPlan("cts");
