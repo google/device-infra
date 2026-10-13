@@ -52,6 +52,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
 import com.google.devtools.mobileharness.api.model.job.out.ResultInternalUtil;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.api.model.proto.Job.AllocationExitStrategy;
 import com.google.devtools.mobileharness.api.model.proto.Test;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
@@ -1222,10 +1223,10 @@ public class JobRunner implements Runnable {
       if (jobInfo.tests().getAll().values().stream()
           .allMatch(
               testInfo ->
-                  testInfo.warnings().getAll().stream()
+                  testInfo.findings().getAll().stream()
                       .anyMatch(
-                          exceptionDetail ->
-                              exceptionDetail.getSummary().getErrorId().getCode()
+                          finding ->
+                              finding.getDetail().getSummary().getErrorId().getCode()
                                   == InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR.code()))) {
         errorId = InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR;
         errorMsg += " due to Mobile Harness infra issues";
@@ -1236,7 +1237,7 @@ public class JobRunner implements Runnable {
           " due to your job config or device capacity issues. Please make sure there "
               + "are available devices that can meet all your job requirements";
     }
-    errorMsg += ". Check test warnings for more detail.";
+    errorMsg += ". Check the SEVERE findings for more detail.";
     jobInfo
         .properties()
         .add(
@@ -1342,8 +1343,9 @@ public class JobRunner implements Runnable {
                 cause = diagnosticReport.get().getResult().cause();
               }
               testInfo
-                  .warnings()
+                  .findings()
                   .addAndLog(
+                      Severity.SEVERE,
                       createExceptionWithoutStackTrace(
                           errorId, jobInfo.locator().getId() + ": " + errMsg),
                       logger);
@@ -1385,8 +1387,9 @@ public class JobRunner implements Runnable {
           ErrorId errorId = InfraErrorId.CLIENT_JR_MNM_ALLOC_DEVICE_EXCEEDS_CEILING;
           String errMsg = "Test is suspended for quota issues. ";
           testInfo
-              .warnings()
+              .findings()
               .addAndLog(
+                  Severity.SEVERE,
                   createExceptionWithoutStackTrace(
                       errorId, jobInfo.locator().getId() + ": " + errMsg),
                   logger);
