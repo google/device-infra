@@ -41,6 +41,15 @@ type DownloadJob struct {
 	Dir      string
 	DumpJSON string
 	Cache    cache.Cache
+	// CacheMaxBlobSize is the largest blob, in bytes, that goes through Cache.
+	// A larger blob is fetched straight into Dir: it is not looked up in the
+	// cache, even if the cache holds it, and it is not added to the cache
+	// afterwards. The rest of the tree still uses the cache. Zero or less means
+	// no limit. Without a Cache it has no effect.
+	//
+	// Blobs that large are rare, and each one can displace thousands of the
+	// small blobs that make up most of the cache's hits.
+	CacheMaxBlobSize int64
 	// Filters applied to files to download
 	IncludeFilters []string
 	ExcludeFilters []string
@@ -762,16 +771,47 @@ func (d *DownloadJob) downloadWithoutLocalCache(ctx context.Context, outputs []*
 	return nil
 }
 
+// bypassesCache reports whether a blob is too large for the local cache. See
+// DownloadJob.CacheMaxBlobSize.
+func (d *DownloadJob) bypassesCache(dg digest.Digest) bool {
+	return d.CacheMaxBlobSize > 0 && dg.Size > d.CacheMaxBlobSize
+}
+
 func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache, outputs []*client.TreeOutput) error {
-	start := time.Now()
-	cached, missed, err := c.Pull(ctx, outputs)
-	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			return context.DeadlineExceeded
+	// Files whose blob is over the size limit are neither looked up in the
+	// cache nor added to it; they join the cache misses in the download.
+	cacheable := make([]*client.TreeOutput, 0, len(outputs))
+	var bypassed []*client.TreeOutput
+	var bypassedSize int64
+	for _, output := range outputs {
+		if d.bypassesCache(output.Digest) {
+			bypassed = append(bypassed, output)
+			bypassedSize += output.Digest.Size
+		} else {
+			cacheable = append(cacheable, output)
 		}
-		return fmt.Errorf("failed to pull files from cache: %w", err)
 	}
-	log.InfoContextf(ctx, "finished pulling %d files from cache, took %s", len(cached), time.Since(start))
+	if len(bypassed) > 0 {
+		log.InfoContextf(ctx, "%d files (%v) are larger than the cache blob size limit of %v; downloading them without the local cache", len(bypassed), units.Size(bypassedSize), units.Size(d.CacheMaxBlobSize))
+	}
+
+	var missed []*client.TreeOutput
+	// Pull is skipped when there is nothing to look up, because the default
+	// cache with -cache-lock holds a host-wide lock for it.
+	if len(cacheable) > 0 {
+		start := time.Now()
+		var cached []*client.TreeOutput
+		var err error
+		cached, missed, err = c.Pull(ctx, cacheable)
+		if err != nil {
+			if ctx.Err() == context.DeadlineExceeded {
+				return context.DeadlineExceeded
+			}
+			return fmt.Errorf("failed to pull files from cache: %w", err)
+		}
+		log.InfoContextf(ctx, "finished pulling %d files from cache, took %s", len(cached), time.Since(start))
+	}
+	missed = append(missed, bypassed...)
 
 	if len(missed) <= 0 {
 		log.InfoContextf(ctx, "All files in cache. Skip downloading files.")
@@ -797,7 +837,7 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache,
 	}
 	defer cancel()
 
-	start = time.Now()
+	start := time.Now()
 	if err := d.downloadFilesWithAbsolutePath(ctx, toDownload); err != nil {
 		d.remoteFailed = true
 		removeLeftOverFiles(outputs)
@@ -810,9 +850,21 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache,
 
 	d.updateDownloadStats(outputs, toDownload, dups)
 
-	// Push downloaded files to local cache
+	// Push downloaded files to local cache, except those over the size limit.
+	toPush := toDownload
+	if len(bypassed) > 0 {
+		toPush = make(map[digest.Digest]*client.TreeOutput, len(toDownload))
+		for dg, output := range toDownload {
+			if !d.bypassesCache(dg) {
+				toPush[dg] = output
+			}
+		}
+	}
 	start = time.Now()
-	if err := c.Push(ctx, toDownload); err != nil {
+	if len(toPush) == 0 {
+		// As with Pull, this spares the default cache's host-wide lock.
+		log.InfoContextf(ctx, "No downloaded files to push to local cache: all of them bypass it.")
+	} else if err := c.Push(ctx, toPush); err != nil {
 		// A cache write failure is not a download failure. Every file the
 		// caller asked for is already on disk, complete, and carrying the
 		// mode the SDK gave it; all that has been lost is the copy that
@@ -836,9 +888,9 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache,
 			}
 			return fmt.Errorf("failed to push files to cache: %w", err)
 		}
-		d.addNote(NoteCacheWriteFailed, "Failed to cache %d downloaded files, so they will be fetched again next time: %v", len(toDownload), err)
+		d.addNote(NoteCacheWriteFailed, "Failed to cache %d downloaded files, so they will be fetched again next time: %v", len(toPush), err)
 	} else {
-		log.InfoContextf(ctx, "finished pushing %d files to local cache, took %s", len(toDownload), time.Since(start))
+		log.InfoContextf(ctx, "finished pushing %d files to local cache, took %s", len(toPush), time.Since(start))
 	}
 
 	if len(dups) > 0 {
@@ -865,6 +917,7 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache,
 //   - Check with local cache and hard-link cached files to target locations
 //   - Download uncached files from remote CAS
 //   - Push the uncached files to local cache
+//     (blobs larger than CacheMaxBlobSize skip both cache steps)
 //   - Copy duplicates files to target locations
 //   - Restore chunked files and apply copy filters
 //   - Move every file into place

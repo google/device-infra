@@ -58,6 +58,9 @@ const (
 	// DefaultCacheMinFreeSpace is the default amount of free space, in bytes, kept available on the
 	// filesystem holding the local cache.
 	DefaultCacheMinFreeSpace = 1024 * 1024 * 1024 // 1GB
+	// DefaultCacheMaxBlobSize is the default size, in bytes, above which a blob bypasses the local
+	// cache. The largest blob seen on any surveyed host was 1.485 GiB (b/572891754).
+	DefaultCacheMaxBlobSize = 2 * 1024 * 1024 * 1024 // 2GiB
 )
 
 var (
@@ -83,6 +86,9 @@ var (
 	// prevents the volume from filling up.
 	cacheMinFreeSpace = flag.Int64("cache-min-free-space", DefaultCacheMinFreeSpace,
 		"Cache is trimmed if free space on the filesystem holding the cache drops below this value, in bytes. If 0, free space is not enforced.")
+	// Read by the download rather than by the cache, so it applies to both cache implementations.
+	cacheMaxBlobSize = flag.Int64("cache-max-blob-size", DefaultCacheMaxBlobSize,
+		"Blobs larger than this are downloaded directly and never stored in or served from the local cache; the rest of the artifact still uses the cache. 0 means no limit. This flag is ignored if -disable-cache is specified.")
 	enableLockFreeCache = flag.Bool("enable-lock-free-cache", false,
 		"Use the lock-free local cache instead of the default one. The default cache serializes every downloader on the host behind a single file lock and only trims after files are written; the lock-free cache needs no lock and makes room before the download. Blobs are kept in a separate subdirectory of -cache-dir, so switching starts from a cold cache. -cache-max-size and -cache-lock have no effect when this is set.")
 	// Eviction tuning for the lock-free cache. Each defaults to a value derived
@@ -515,6 +521,7 @@ func run(ctx context.Context) error {
 		Dir:              *dir,
 		DumpJSON:         *dumpJSON,
 		Cache:            localCache,
+		CacheMaxBlobSize: *cacheMaxBlobSize,
 		CASProxyStatus:   proxyStatus,
 		IncludeFilters:   includeFilters,
 		ExcludeFilters:   excludeFilters,

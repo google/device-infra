@@ -986,3 +986,368 @@ func TestDoDownload_CacheWriteFailureStillFailsOnContextCancellation(t *testing.
 		t.Errorf("artifact.bin was left behind after a cancelled download (stat err %v)", err)
 	}
 }
+
+// blobSizeFixture is a fake CAS holding a tree of three blobs of increasing
+// size: small.txt, medium.txt, and big.bin, whose blob big_copy.bin shares.
+// Tests set CacheMaxBlobSize to the medium blob's size, so that only the big
+// blob is over the limit and a blob exactly at the limit still uses the cache.
+type blobSizeFixture struct {
+	client                *client.Client
+	rootDigest            string
+	small, medium, big    []byte
+	dSmall, dMedium, dBig digest.Digest
+}
+
+func newBlobSizeFixture(t *testing.T) *blobSizeFixture {
+	t.Helper()
+	fakeServer, err := fakes.NewServer(t)
+	if err != nil {
+		t.Fatalf("Failed to create fake RBE server: %v", err)
+	}
+	t.Cleanup(fakeServer.Stop)
+
+	f := &blobSizeFixture{
+		small:  []byte("small"),
+		medium: []byte("a medium-sized blob"),
+		big:    []byte("a blob larger than the cache blob size limit"),
+	}
+	f.dSmall = fakeServer.CAS.Put(f.small)
+	f.dMedium = fakeServer.CAS.Put(f.medium)
+	f.dBig = fakeServer.CAS.Put(f.big)
+
+	rootBytes, err := proto.Marshal(&repb.Directory{
+		Files: []*repb.FileNode{
+			{Name: "big.bin", Digest: f.dBig.ToProto()},
+			{Name: "big_copy.bin", Digest: f.dBig.ToProto()},
+			{Name: "medium.txt", Digest: f.dMedium.ToProto()},
+			{Name: "small.txt", Digest: f.dSmall.ToProto()},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dRoot := fakeServer.CAS.Put(rootBytes)
+	f.rootDigest = fmt.Sprintf("%s/%d", dRoot.Hash, dRoot.Size)
+
+	f.client, err = fakeServer.NewTestClient(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to create test client: %v", err)
+	}
+	t.Cleanup(func() { f.client.Close() })
+	return f
+}
+
+// checkTree fails t unless dir holds every file of the fixture's tree with the
+// contents CAS has for it.
+func (f *blobSizeFixture) checkTree(t *testing.T, dir string) {
+	t.Helper()
+	for name, want := range map[string][]byte{
+		"small.txt":    f.small,
+		"medium.txt":   f.medium,
+		"big.bin":      f.big,
+		"big_copy.bin": f.big,
+	} {
+		got, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			t.Errorf("Failed to read %s: %v", name, err)
+			continue
+		}
+		if !bytes.Equal(got, want) {
+			t.Errorf("%s content = %q, want %q", name, got, want)
+		}
+	}
+}
+
+// recordingCache serves the blobs in has as hits, writing the given contents
+// to the target path as a real cache would materialize them, and misses on
+// everything else. It records which blobs it was asked to look up and which it
+// was given to store.
+type recordingCache struct {
+	has       map[digest.Digest][]byte
+	pullCalls int
+	pushCalls int
+	pulled    map[digest.Digest]bool
+	pushed    map[digest.Digest]bool
+}
+
+func newRecordingCache(has map[digest.Digest][]byte) *recordingCache {
+	return &recordingCache{
+		has:    has,
+		pulled: make(map[digest.Digest]bool),
+		pushed: make(map[digest.Digest]bool),
+	}
+}
+
+func (r *recordingCache) Pull(ctx context.Context, all []*client.TreeOutput) (cached, missed []*client.TreeOutput, err error) {
+	r.pullCalls++
+	for _, o := range all {
+		r.pulled[o.Digest] = true
+		data, ok := r.has[o.Digest]
+		if !ok {
+			missed = append(missed, o)
+			continue
+		}
+		if err := os.WriteFile(o.Path, data, 0o644); err != nil {
+			return nil, nil, err
+		}
+		cached = append(cached, o)
+	}
+	return cached, missed, nil
+}
+
+func (r *recordingCache) Push(ctx context.Context, all map[digest.Digest]*client.TreeOutput) error {
+	r.pushCalls++
+	for dg := range all {
+		r.pushed[dg] = true
+	}
+	return nil
+}
+
+func (r *recordingCache) Close() error { return nil }
+
+// TestDoDownload_OversizedBlobsSkipPullAndPush checks that a blob over
+// CacheMaxBlobSize is neither served from the local cache, even though the
+// cache holds it, nor offered to the cache once it has been fetched, and that
+// every path it appears at is still written.
+func TestDoDownload_OversizedBlobsSkipPullAndPush(t *testing.T) {
+	f := newBlobSizeFixture(t)
+	// A stale copy, so that serving it from the cache would show in the file.
+	c := newRecordingCache(map[digest.Digest][]byte{f.dBig: []byte("stale cached copy")})
+	job := DownloadJob{
+		Client:           f.client,
+		Digest:           f.rootDigest,
+		Dir:              t.TempDir(),
+		Cache:            c,
+		CacheMaxBlobSize: f.dMedium.Size,
+	}
+	if err := job.DoDownload(context.Background()); err != nil {
+		t.Fatalf("DoDownload failed: %v", err)
+	}
+
+	if c.pulled[f.dBig] {
+		t.Error("Pull was asked for the blob over the size limit, want it fetched from CAS without a lookup")
+	}
+	if c.pushed[f.dBig] {
+		t.Error("Push was given the blob over the size limit, want it kept out of the cache")
+	}
+	f.checkTree(t, job.Dir)
+
+	// big.bin was fetched once and big_copy.bin made from it, along with the
+	// two smaller blobs the cache did not have.
+	stats := job.Stats()
+	if want := f.dSmall.Size + f.dMedium.Size + f.dBig.Size; stats.SizeCold != want || stats.CountCold != 3 {
+		t.Errorf("Cold stats: got size=%d count=%d, want size=%d count=3", stats.SizeCold, stats.CountCold, want)
+	}
+	if stats.SizeDedup != f.dBig.Size || stats.CountDedup != 1 {
+		t.Errorf("Dedup stats: got size=%d count=%d, want size=%d count=1", stats.SizeDedup, stats.CountDedup, f.dBig.Size)
+	}
+	if stats.SizeHot != 0 || stats.CountHot != 0 {
+		t.Errorf("Hot stats: got size=%d count=%d, want 0: nothing should have been served from the cache", stats.SizeHot, stats.CountHot)
+	}
+}
+
+// TestDoDownload_AllBlobsOversizedSkipCache checks that a tree whose every blob
+// is over CacheMaxBlobSize does not call the cache at all. The default cache
+// with -cache-lock takes a host-wide lock for each call, which a download that
+// has nothing to look up or store should not wait for.
+func TestDoDownload_AllBlobsOversizedSkipCache(t *testing.T) {
+	f := newBlobSizeFixture(t)
+	c := newRecordingCache(nil)
+	job := DownloadJob{
+		Client:           f.client,
+		Digest:           f.rootDigest,
+		Dir:              t.TempDir(),
+		Cache:            c,
+		CacheMaxBlobSize: 1,
+	}
+	if err := job.DoDownload(context.Background()); err != nil {
+		t.Fatalf("DoDownload failed: %v", err)
+	}
+	if c.pullCalls != 0 || c.pushCalls != 0 {
+		t.Errorf("Cache got %d Pull and %d Push calls, want none when every blob is over the size limit", c.pullCalls, c.pushCalls)
+	}
+	f.checkTree(t, job.Dir)
+}
+
+// TestDoDownload_BlobsWithinCacheMaxBlobSizeUseCache checks that the limit
+// only takes the oversized blob out of the cache path: the rest of the tree is
+// still looked up, served from the cache when it is there, and stored when it
+// is not, including a blob exactly at the limit.
+func TestDoDownload_BlobsWithinCacheMaxBlobSizeUseCache(t *testing.T) {
+	f := newBlobSizeFixture(t)
+	c := newRecordingCache(map[digest.Digest][]byte{f.dSmall: f.small})
+	job := DownloadJob{
+		Client:           f.client,
+		Digest:           f.rootDigest,
+		Dir:              t.TempDir(),
+		Cache:            c,
+		CacheMaxBlobSize: f.dMedium.Size,
+	}
+	if err := job.DoDownload(context.Background()); err != nil {
+		t.Fatalf("DoDownload failed: %v", err)
+	}
+
+	for _, tc := range []struct {
+		name string
+		dg   digest.Digest
+	}{
+		{name: "small.txt", dg: f.dSmall},
+		{name: "medium.txt", dg: f.dMedium},
+	} {
+		if !c.pulled[tc.dg] {
+			t.Errorf("Pull was not asked for %s, which is within the size limit", tc.name)
+		}
+	}
+	if !c.pushed[f.dMedium] {
+		t.Error("Push was not given medium.txt, a miss exactly at the size limit")
+	}
+	if c.pushed[f.dSmall] {
+		t.Error("Push was given small.txt, which was a cache hit")
+	}
+	f.checkTree(t, job.Dir)
+
+	stats := job.Stats()
+	if stats.SizeHot != f.dSmall.Size || stats.CountHot != 1 {
+		t.Errorf("Hot stats: got size=%d count=%d, want size=%d count=1", stats.SizeHot, stats.CountHot, f.dSmall.Size)
+	}
+	if want := f.dMedium.Size + f.dBig.Size; stats.SizeCold != want || stats.CountCold != 2 {
+		t.Errorf("Cold stats: got size=%d count=%d, want size=%d count=2", stats.SizeCold, stats.CountCold, want)
+	}
+}
+
+// TestDoDownload_CacheMaxBlobSizeIgnoredWithDisableCache checks that the limit
+// has no effect without a cache, which is what -disable-cache produces: every
+// blob is fetched and every path written, as without the limit.
+func TestDoDownload_CacheMaxBlobSizeIgnoredWithDisableCache(t *testing.T) {
+	f := newBlobSizeFixture(t)
+	c, err := cache.Open(cache.Options{Disabled: true, Dir: t.TempDir()})
+	if err != nil || c != nil {
+		t.Fatalf("cache.Open with Disabled = (%v, %v), want (nil, nil)", c, err)
+	}
+	job := DownloadJob{
+		Client:           f.client,
+		Digest:           f.rootDigest,
+		Dir:              t.TempDir(),
+		Cache:            c,
+		CacheMaxBlobSize: 1,
+	}
+	if err := job.DoDownload(context.Background()); err != nil {
+		t.Fatalf("DoDownload failed: %v", err)
+	}
+	f.checkTree(t, job.Dir)
+
+	stats := job.Stats()
+	if want := f.dSmall.Size + f.dMedium.Size + f.dBig.Size; stats.SizeCold != want || stats.CountCold != 3 {
+		t.Errorf("Cold stats: got size=%d count=%d, want size=%d count=3", stats.SizeCold, stats.CountCold, want)
+	}
+	if stats.SizeDedup != f.dBig.Size || stats.CountDedup != 1 {
+		t.Errorf("Dedup stats: got size=%d count=%d, want size=%d count=1", stats.SizeDedup, stats.CountDedup, f.dBig.Size)
+	}
+}
+
+// TestDoDownload_ZeroCacheMaxBlobSizeMeansNoLimit checks that a limit of zero,
+// or a negative one, sends every blob through the cache, however large.
+func TestDoDownload_ZeroCacheMaxBlobSizeMeansNoLimit(t *testing.T) {
+	for _, limit := range []int64{0, -1} {
+		t.Run(fmt.Sprintf("limit=%d", limit), func(t *testing.T) {
+			f := newBlobSizeFixture(t)
+			c := newRecordingCache(nil)
+			job := DownloadJob{
+				Client:           f.client,
+				Digest:           f.rootDigest,
+				Dir:              t.TempDir(),
+				Cache:            c,
+				CacheMaxBlobSize: limit,
+			}
+			if err := job.DoDownload(context.Background()); err != nil {
+				t.Fatalf("DoDownload failed: %v", err)
+			}
+			for _, tc := range []struct {
+				name string
+				dg   digest.Digest
+			}{
+				{name: "small.txt", dg: f.dSmall},
+				{name: "medium.txt", dg: f.dMedium},
+				{name: "big.bin", dg: f.dBig},
+			} {
+				if !c.pulled[tc.dg] {
+					t.Errorf("Pull was not asked for %s", tc.name)
+				}
+				if !c.pushed[tc.dg] {
+					t.Errorf("Push was not given %s", tc.name)
+				}
+			}
+			f.checkTree(t, job.Dir)
+		})
+	}
+}
+
+// TestDoDownload_CacheMaxBlobSizeInBothCacheModes runs the limit against the
+// real caches, the default (luci) one and the lock-free one. After a first
+// download, the oversized blob must not be anywhere in the cache directory;
+// a second download into a fresh directory must then serve the rest of the
+// tree from the cache and fetch the oversized blob again.
+func TestDoDownload_CacheMaxBlobSizeInBothCacheModes(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		lockFree bool
+	}{
+		{name: "luci cache", lockFree: false},
+		{name: "lock-free cache", lockFree: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newBlobSizeFixture(t)
+			opts := cache.Options{LockFree: tc.lockFree, Dir: t.TempDir(), UseHardlink: true}
+			download := func() *Stats {
+				t.Helper()
+				// DoDownload closes the cache, so each run opens its own.
+				c, err := cache.Open(opts)
+				if err != nil {
+					t.Fatalf("cache.Open failed: %v", err)
+				}
+				job := DownloadJob{
+					Client:           f.client,
+					Digest:           f.rootDigest,
+					Dir:              t.TempDir(),
+					Cache:            c,
+					CacheMaxBlobSize: f.dMedium.Size,
+				}
+				if err := job.DoDownload(context.Background()); err != nil {
+					t.Fatalf("DoDownload failed: %v", err)
+				}
+				f.checkTree(t, job.Dir)
+				return job.Stats()
+			}
+
+			download()
+			// Both caches name a blob file after its hash, whatever directory
+			// they put it in.
+			cachedNames := make(map[string]bool)
+			if err := filepath.Walk(opts.Dir, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				if !info.IsDir() {
+					cachedNames[info.Name()] = true
+				}
+				return nil
+			}); err != nil {
+				t.Fatalf("Failed to walk the cache directory: %v", err)
+			}
+			if !cachedNames[f.dMedium.Hash] {
+				t.Fatalf("medium.txt's blob %s is not in the cache directory (files: %v), so its absence says nothing about big.bin's", f.dMedium.Hash, cachedNames)
+			}
+			if cachedNames[f.dBig.Hash] {
+				t.Errorf("The blob over the size limit, %s, was stored in the cache", f.dBig.Hash)
+			}
+
+			stats := download()
+			if want := f.dSmall.Size + f.dMedium.Size; stats.SizeHot != want || stats.CountHot != 2 {
+				t.Errorf("Second run hot stats: got size=%d count=%d, want size=%d count=2", stats.SizeHot, stats.CountHot, want)
+			}
+			if stats.SizeCold != f.dBig.Size || stats.CountCold != 1 {
+				t.Errorf("Second run cold stats: got size=%d count=%d, want size=%d count=1", stats.SizeCold, stats.CountCold, f.dBig.Size)
+			}
+		})
+	}
+}
