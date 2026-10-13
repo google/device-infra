@@ -92,7 +92,8 @@ type DownloadJob struct {
 }
 
 // RemoteFailed reports whether the last DoDownload failed while talking to
-// Client: reading the root directory, walking the tree, or fetching blobs.
+// Client: reading the root directory, walking the tree, or fetching blobs. A
+// fetch that failed because the local disk is full does not count.
 //
 // Only such a failure can be blamed on casproxy, so only such a failure
 // justifies retrying against CAS remote. Everything else DoDownload does --
@@ -661,11 +662,15 @@ func (d *DownloadJob) downloadFilesWithAbsolutePath(ctx context.Context, toDownl
 
 	// Call d.Client.DownloadFiles with d.Dir as destDir and relative paths.
 	// We ignore the returned map as it's not used by the callers.
-	if _, err := d.Client.DownloadFiles(ctx, d.Dir, toDownloadRelative); err != nil {
+	if _, err := downloadFiles(d.Client, ctx, d.Dir, toDownloadRelative); err != nil {
 		return err
 	}
 	return normalizeModes(toDownload)
 }
+
+// downloadFiles is client.Client.DownloadFiles. It is a variable so that tests
+// can make the fetch fail as a full disk would, which the fake CAS cannot.
+var downloadFiles = (*client.Client).DownloadFiles
 
 // normalizeModes gives each downloaded file the canonical mode of its tree
 // node.
@@ -745,7 +750,8 @@ func (d *DownloadJob) downloadWithoutLocalCache(ctx context.Context, outputs []*
 
 	start := time.Now()
 	if err := d.downloadFilesWithAbsolutePath(ctx, toDownload); err != nil {
-		d.remoteFailed = true
+		// A full disk is local, and would be just as full for CAS remote.
+		d.remoteFailed = !cache.HandleOutOfSpace(d.Cache, err)
 		removeLeftOverFiles(outputs)
 		if ctx.Err() == context.DeadlineExceeded {
 			return context.DeadlineExceeded
@@ -839,7 +845,9 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache,
 
 	start := time.Now()
 	if err := d.downloadFilesWithAbsolutePath(ctx, toDownload); err != nil {
-		d.remoteFailed = true
+		// On a full disk this starts a trim. The failure is local, and the
+		// disk would be just as full for CAS remote.
+		d.remoteFailed = !cache.HandleOutOfSpace(c, err)
 		removeLeftOverFiles(outputs)
 		if ctx.Err() == context.DeadlineExceeded {
 			return context.DeadlineExceeded
@@ -1131,7 +1139,7 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 				return err
 			}
 			start = time.Now()
-			restored, err := chunkerutil.RestoreFilesTo(d.Dir, d.Dir, func(final string) string {
+			restored, err := restoreFilesTo(d.Dir, d.Dir, func(final string) string {
 				// Create the parent here, so that a failed attempt removes
 				// it; RestoreFilesTo would otherwise create it untracked. If
 				// this fails, so does the restore, with the reason.
@@ -1139,6 +1147,9 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 				return s.tmpName(final)
 			})
 			if err != nil {
+				// On a full disk this starts a trim. The cache is closed by
+				// now, which does not stop it from doing that.
+				cache.HandleOutOfSpace(d.Cache, err)
 				return err
 			}
 			copyCandidates = make([]stagedFile, 0, len(restored))
@@ -1176,6 +1187,10 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 	committed = true
 	return nil
 }
+
+// restoreFilesTo is chunkerutil.RestoreFilesTo. It is a variable so that tests
+// can make the restore fail as a full disk would.
+var restoreFilesTo = chunkerutil.RestoreFilesTo
 
 // maxReplacedExamples is how many replaced paths noteReplaced names.
 const maxReplacedExamples = 3

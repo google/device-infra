@@ -24,6 +24,7 @@ go_library(
     name = "cache",
     srcs = [
         "cache.go",
+        "enospc.go",
         "evictorconfig.go",
         "localcache.go",
         "lockfreecache.go",
@@ -36,6 +37,7 @@ go_library(
     deps = [
         "//src/devtools/rbe/common/monitoring",
         "//src/devtools/rbe/common/storage",
+        "@org_golang_google_grpc//status",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/client",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/digest",
         "@com_github_golang_glog//:glog",
@@ -47,6 +49,7 @@ go_library(
 go_test(
     name = "cache_test",
     srcs = [
+        "enospc_test.go",
         "evictorconfig_test.go",
         "lockfreecache_test.go",
         "monitoring_test.go",
@@ -58,6 +61,8 @@ go_test(
     deps = [
         "//src/devtools/rbe/common/monitoring",
         "//src/devtools/rbe/common/storage",
+        "@org_golang_google_grpc//codes",
+        "@org_golang_google_grpc//status",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/client",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/digest",
     ],

@@ -44,9 +44,11 @@ type Options struct {
 	CapCheckInterval time.Duration
 	// StartTrims enables the lock-free cache's open-time check: when the
 	// cache is opened and needs a trim, a casdownloader -trim-only process
-	// is started in the background for it. See maybeStartTrim. Downloads
-	// set it; it is off otherwise, so that opening a cache for any other
-	// reason, such as in a test, never starts a process.
+	// is started in the background for it. See maybeStartTrim. It also
+	// enables the ENOSPC hook, which starts the same process when the
+	// download runs out of space; see HandleOutOfSpace. Downloads set it;
+	// it is off otherwise, so that opening a cache for any other reason,
+	// such as in a test, never starts a process.
 	StartTrims bool
 
 	// statfs and spawn replace the real statfs and the real process start
@@ -119,7 +121,13 @@ func openLockFree(opts Options) (Cache, error) {
 		return nil, fmt.Errorf("failed to create lock-free cache: %v", err)
 	}
 	if opts.StartTrims {
-		maybeStartTrim(opts, cfg, lockFreeCache.store.RootDir())
+		root := lockFreeCache.store.RootDir()
+		maybeStartTrim(opts, cfg, root)
+		// The ENOSPC hook starts the same trim, without the open-time
+		// check; see HandleOutOfSpace.
+		lockFreeCache.startEvictor = func(why string) trimStart {
+			return startTrim(opts, root, why)
+		}
 	}
 	return lockFreeCache, nil
 }

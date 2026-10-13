@@ -50,6 +50,7 @@ go_test(
         "cancel_test.go",
         "copy_filters_test.go",
         "download_test.go",
+        "enospc_test.go",
         "modes_test.go",
         "notes_test.go",
         "overwrite_test.go",
@@ -61,6 +62,7 @@ go_test(
     tags = ["deviceinfra_disable_in_kokoro"],
     deps = [
         "//src/devtools/rbe/casdownloader/cache",
+        "//src/devtools/rbe/casuploader/chunkerutil",
         "@org_golang_google_grpc//:grpc",
         "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:remote_execution_go_proto",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/client",

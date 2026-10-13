@@ -187,9 +187,8 @@ func capCheckDue(root string, interval time.Duration, now time.Time) (bool, erro
 }
 
 // maybeStartTrim runs the open-time check on the lock-free cache rooted at
-// root, and if it needs a trim and no process is trimming it yet, starts
-// casdownloader -trim-only for it in the background. It reports whether it
-// started one.
+// root, and if it needs a trim, starts one through startTrim. It reports
+// whether it started one.
 //
 // It is best effort: a download never waits for, or fails because of, a
 // trim. Any error is logged, and the download goes on with the cache as it
@@ -210,16 +209,53 @@ func maybeStartTrim(opts Options, cfg storage.EvictorConfig, root string) bool {
 	if len(reasons) == 0 {
 		return false
 	}
+	return startTrim(opts, root, strings.Join(reasons, "; ")) == trimStarted
+}
 
+// trimStart is what startTrim did.
+type trimStart int
+
+const (
+	// trimNotStarted means that the eviction lock could not be probed or
+	// the process could not be started. startTrim has logged why.
+	trimNotStarted trimStart = iota
+	// trimBusy means that another process holds the eviction lock: it is
+	// trimming the cache already, so nothing was started.
+	trimBusy
+	// trimStarted means that a casdownloader -trim-only process was
+	// started.
+	trimStarted
+)
+
+// startTrim is how a download starts the detached evictor for the lock-free
+// cache rooted at root. The open-time check (maybeStartTrim) calls it once it
+// has found that the cache needs a trim, and the ENOSPC hook
+// (LockFreeCache.OnOutOfSpace) calls it directly. why says what called for
+// the trim, for the log.
+//
+// It probes the eviction lock, v2/.evict.lock, without blocking. If another
+// process holds it, that process is trimming already, and startTrim returns
+// trimBusy. Otherwise it starts `casdownloader trimArgs(opts)...` (see
+// startDetached) and returns trimStarted without waiting for it. The child
+// measures the cache for itself and decides how much to evict.
+//
+// The child takes the lock without blocking, and exits at once if it is
+// held, so at most one trim runs at a time whatever this probe sees. The
+// probe saves starting a process that would exit at once, and keeps that
+// process from wiping the running trim's v2/.trim.log, which is truncated
+// for each start.
+//
+// It is best effort: any error is logged, and the caller goes on.
+func startTrim(opts Options, root, why string) trimStart {
 	busy, err := storage.EvictionInProgress(root)
 	if err != nil {
 		log.Warningf("The lock-free cache in %s needs a trim (%s), but its eviction lock could not be checked: %v. Not starting one.",
-			root, strings.Join(reasons, "; "), err)
-		return false
+			root, why, err)
+		return trimNotStarted
 	}
 	if busy {
-		log.Infof("The lock-free cache in %s needs a trim (%s); another process is already trimming it.", root, strings.Join(reasons, "; "))
-		return false
+		log.Infof("The lock-free cache in %s needs a trim (%s); another process is already trimming it.", root, why)
+		return trimBusy
 	}
 
 	spawn := opts.spawn
@@ -230,10 +266,10 @@ func maybeStartTrim(opts Options, cfg storage.EvictorConfig, root string) bool {
 	logPath := filepath.Join(root, trimLogName)
 	if err := spawn(args, logPath); err != nil {
 		log.Warningf("The lock-free cache in %s needs a trim (%s), but it could not be started: %v. Continuing without it.",
-			root, strings.Join(reasons, "; "), err)
-		return false
+			root, why, err)
+		return trimNotStarted
 	}
 	log.Infof("Started a trim of the lock-free cache in %s in the background (%s), logging to %s: %s",
-		root, strings.Join(reasons, "; "), logPath, strings.Join(args, " "))
-	return true
+		root, why, logPath, strings.Join(args, " "))
+	return trimStarted
 }

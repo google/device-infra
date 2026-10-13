@@ -67,6 +67,7 @@ var (
 	_ CorruptBlobReporter  = (*LockFreeCache)(nil)
 	_ ModeCopyReporter     = (*LockFreeCache)(nil)
 	_ StorageStatsReporter = (*LockFreeCache)(nil)
+	_ OutOfSpaceHandler    = (*LockFreeCache)(nil)
 )
 
 // LockFreeCache caches downloaded blobs using common/storage.
@@ -99,6 +100,12 @@ type LockFreeCache struct {
 	// them also says which file to look at. Later ones are only counted: a
 	// drifted blob can produce one per hit.
 	execMismatchLogged, permDriftLogged, unreadableLogged atomic.Bool
+
+	// startEvictor starts casdownloader -trim-only in the background for
+	// this cache through startTrim, and says what it did; why is for the
+	// log. It is set only for a cache opened with Options.StartTrims, and
+	// OnOutOfSpace calls it.
+	startEvictor func(why string) trimStart
 }
 
 // NewLockFreeCache creates a LockFreeCache rooted under cacheDir.
@@ -462,6 +469,9 @@ func (c *LockFreeCache) removePulledFiles(cached []*client.TreeOutput) {
 // inode, which is sound here because casdownloader's outputs are read-only
 // artifacts, but it is also why permissions are normalized first: once the link
 // exists the mode is shared, and it is too late to set it for this file alone.
+//
+// If ingesting a file fails because the disk is full, Push starts a trim (see
+// HandleOutOfSpace) and returns the error at once, without trying the rest.
 func (c *LockFreeCache) Push(ctx context.Context, all map[digest.Digest]*client.TreeOutput) error {
 	for _, item := range all {
 		// Normalize before sharing. The downloaded file is still private at
@@ -471,12 +481,19 @@ func (c *LockFreeCache) Push(ctx context.Context, all map[digest.Digest]*client.
 		if err := os.Chmod(item.Path, want); err != nil {
 			return fmt.Errorf("failed to set mode %#o on %s before caching it: %w", want.Perm(), item.Path, err)
 		}
-		if err := c.store.HardlinkFrom(item.Digest.Hash, item.Path); err != nil {
-			return fmt.Errorf("failed to cache %s: %w", item.Path, err)
+		if err := ingestBlob(c.store, item.Digest.Hash, item.Path); err != nil {
+			err = fmt.Errorf("failed to cache %s: %w", item.Path, err)
+			HandleOutOfSpace(c, err)
+			return err
 		}
 	}
 	return nil
 }
+
+// ingestBlob is how Push ingests a file. It is a variable so that tests can
+// make it fail as a full disk would, which nothing on a test's disk can
+// arrange.
+var ingestBlob = (*storage.Storage).HardlinkFrom
 
 // Close reports what the cache did. There is no index to flush.
 func (c *LockFreeCache) Close() error {
