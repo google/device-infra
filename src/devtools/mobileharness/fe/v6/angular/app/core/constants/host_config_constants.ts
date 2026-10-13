@@ -12,6 +12,7 @@ export const MANEKI_DEVICE_TYPE_OPTIONS: SelectOption[] = [
   {label: 'Ps4', value: 'ps4'},
   {label: 'Ps5', value: 'ps5'},
   {label: 'Generic', value: 'generic'},
+  {label: 'Xbox', value: 'xbox'},
 ];
 
 /**
