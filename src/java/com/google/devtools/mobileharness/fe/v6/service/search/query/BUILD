@@ -265,7 +265,6 @@ java_library(
     name = "fleet_promoted_keys_provider",
     srcs = ["FleetPromotedKeysProvider.java"],
     deps = [
-        ":fleet_filter_engine",
         ":scenario_curation",
         ":search_corpus",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",

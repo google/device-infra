@@ -59,8 +59,8 @@ import org.junit.runners.JUnit4;
 /**
  * Host-entity promoted-keys tests over a {@link HostCorpus}: the provider must read the host
  * candidate rows ({@link ScenarioCuration#hostFilterByRow} and {@link
- * ScenarioCuration#hostGroupByRow}) rather than the device rows, and apply the same dead-end,
- * applied, and count trimming. Device promoted-keys behavior is covered by {@link
+ * ScenarioCuration#hostGroupByRow}) rather than the device rows, and keep the curated order for
+ * keys present in the fleet. Device promoted-keys behavior is covered by {@link
  * FleetPromotedKeysProviderTest} and is not touched here.
  *
  * <p>Synthetic fleet, one host per lab:
@@ -80,8 +80,7 @@ public final class HostPromotedKeysProviderTest {
       Guice.createInjector().getInstance(FleetIndexBuilder.class).build(fleet(), BUILD_TIME);
   private final HostCorpus corpus =
       new HostCorpus(snapshot, LazyPostings.forHosts(snapshot.hosts()), new FakeCuration());
-  private final FleetPromotedKeysProvider provider =
-      new FleetPromotedKeysProvider(Guice.createInjector().getInstance(FleetFilterEngine.class));
+  private final FleetPromotedKeysProvider provider = new FleetPromotedKeysProvider();
 
   @Test
   public void filterKeys_noFilters_followsHostCuratedOrder() {
@@ -102,31 +101,38 @@ public final class HostPromotedKeysProviderTest {
   }
 
   @Test
-  public void groupByKeys_followsHostCuratedOrderWithCounts() {
+  public void groupByKeys_followsHostCuratedOrder() {
     FleetPromotedKeysResponse response = provider.getPromotedKeys(corpus, request());
 
     assertThat(groupByKeys(response))
         .containsExactly("host_property::host_os", "host_field::lab_type")
         .inOrder();
-    // host_os has two values (debian, Unknown) and no missing hosts: two groups.
-    assertThat(groupByKey(response, "host_property::host_os").getGroupCount()).isEqualTo(2);
-    // lab_type is present on lab-a only, so lab-b and lab-c form a "(no value)" bucket: two groups.
-    assertThat(groupByKey(response, "host_field::lab_type").getGroupCount()).isEqualTo(2);
+    assertThat(groupByKey(response, "host_field::lab_type").getDisplayName()).isEqualTo("Lab Type");
   }
 
   @Test
-  public void filterKeys_excludeAppliedKeyAndDeadEnds() {
-    // Filtering connectivity=Running leaves lab-a and lab-c. Within that set:
-    //   connectivity: applied, so excluded from the promoted row.
-    //   host_name:    lab-a, lab-c        -> kept.
-    //   device_count: 2, 0                -> kept.
-    //   host_os:      debian, Unknown     -> kept.
+  public void filterKeys_retainsAllKeysWhenFilterApplied() {
+    // Promoted filter keys remain stable and are not omitted when applied as filters.
     FleetPromotedKeysResponse response =
         provider.getPromotedKeys(corpus, request(simple("host_field::connectivity", "Running")));
 
     assertThat(filterKeys(response))
         .containsExactly(
-            "host_field::host_name", "host_field::device_count", "host_property::host_os")
+            "host_field::host_name",
+            "host_field::connectivity",
+            "host_field::device_count",
+            "host_property::host_os")
+        .inOrder();
+  }
+
+  @Test
+  public void groupByKeys_retainsAllKeysWhenFilterApplied() {
+    // Promoted group-by keys remain stable and are not omitted when filters narrow the result set.
+    FleetPromotedKeysResponse response =
+        provider.getPromotedKeys(corpus, request(simple("host_field::connectivity", "Running")));
+
+    assertThat(groupByKeys(response))
+        .containsExactly("host_property::host_os", "host_field::lab_type")
         .inOrder();
   }
 

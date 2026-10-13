@@ -662,9 +662,7 @@ message FleetPlainNoValueEntry {}
 // Promoted keys ("Filter by:" / "Group by:" rows)
 // =============================================================================
 
-// Request for dynamically promoted key rows. Called after every chip change
-// (not just page load), because the content excludes already-applied filters
-// and group-by keys.
+// Request for promoted key rows ("Filter by:" and "Group by:").
 message FleetPromotedKeysRequest {
   SearchEntity entity = 1;
   repeated Filter filters = 2;
@@ -674,14 +672,14 @@ message FleetPromotedKeysRequest {
 
 // Response with promoted filter and group-by keys.
 message FleetPromotedKeysResponse {
-  // "Filter by:" row entries, minus already-applied filter keys.
-  // Backend omits dead-end keys (keys with ≤1 distinct value under the current
-  // filters) — frontend renders whatever the backend returns.
+  // "Filter by:" row entries: a fixed, curated shortcut list of filter keys
+  // present in the fleet, independent of currently applied filters or
+  // group-bys.
   repeated FleetPromotedFilterKey filter_keys = 1;
 
-  // "Group by:" row entries, minus already-applied group-by keys.
-  // Each carries the number of groups it would produce (decision aid).
-  // Empty = hide the row entirely (e.g. ats-one host search).
+  // "Group by:" row entries: a fixed, curated shortcut list of group-by keys
+  // present in the fleet, independent of currently applied filters or
+  // group-bys. Empty = hide the row entirely (e.g. ats-one host search).
   repeated FleetPromotedGroupByKey group_by_keys = 2;
 }
 
@@ -694,17 +692,18 @@ message FleetPromotedFilterKey {
 }
 
 // A promoted group-by key in the "Group by:" row.
-// Carries group_count so the user can see how many groups a key would produce
-// before committing (e.g. "Host Name (847)" vs "Pool (5)").
 message FleetPromotedGroupByKey {
+  reserved 3;
+
   string key = 1;
   string display_name = 2;
 
-  // Number of groups this key would produce under the current filters.
-  // Counts distinct value COMBINATIONS (multi-valued key's whole value-set =
-  // one group). Includes +1 for "(no value)" bucket if some devices lack the
-  // key. Keys with < 2 groups (a no-op grouping) are omitted by the backend.
-  int32 group_count = 3;
+  // Whether this group-by option is currently disabled (e.g. group-by limit
+  // reached).
+  bool disabled = 4;
+
+  // Human-readable reason or tooltip explaining why this option is disabled.
+  string disabled_reason = 5;
 }
 
 // =============================================================================
@@ -939,9 +938,8 @@ message GroupCountInfo {
 
   // A group count is shown for this key.
   message GroupCountShown {
-    // Number of groups under the current filters. Same semantics as
-    // FleetPromotedGroupByKey.group_count: distinct value combinations, plus
-    // one for "(no value)" when some entities lack the key.
+    // Number of groups under the current filters: distinct value combinations,
+    // plus one for "(no value)" when some entities lack the key.
     int32 count = 1;
   }
 

@@ -68,18 +68,15 @@ public final class FleetPromotedKeysProviderTest {
   //   device-1: IDLE, android, owner alice,     model pixel,  pool shared,    lab_location mtv.
   //   device-2: BUSY, ios,     owner carol,     model iphone, pool dedicated, lab_location nyc.
   //   device-3: IDLE, android, owner alice,     model nexus,  pool shared,    (no lab_location).
-  // device-3 lacks lab_location so grouping by it produces a "(no value)" bucket.
-  // FleetIndexBuilder and FleetFilterEngine have package-private @Inject constructors, so obtain
-  // them through Guice rather than constructing directly. The provider takes a per-fleet
-  // Map<Fleet, ScenarioCuration>; inject a fake curation under FLEET_SELF that returns the device
-  // 1p candidate rows, so these tests exercise the dead-end, applied, and limit trimming over a
-  // known candidate order without depending on a real deployment curation.
+  // FleetIndexBuilder has a package-private @Inject constructor, so obtain it through Guice rather
+  // than constructing directly. Inject a fake curation under FLEET_SELF that returns the device 1p
+  // candidate rows, so these tests exercise the presence, applied, and limit behavior over a known
+  // candidate order without depending on a real deployment curation.
   private final FleetSnapshot snapshot =
       Guice.createInjector().getInstance(FleetIndexBuilder.class).build(fleet(), BUILD_TIME);
   private final LazyPostings postings = new LazyPostings(snapshot.devices());
   private final DeviceCorpus corpus = new DeviceCorpus(snapshot, postings, new FakeCuration());
-  private final FleetPromotedKeysProvider provider =
-      new FleetPromotedKeysProvider(Guice.createInjector().getInstance(FleetFilterEngine.class));
+  private final FleetPromotedKeysProvider provider = new FleetPromotedKeysProvider();
 
   @Test
   public void filterKeys_noFilters_followsCuratedOrder() {
@@ -98,19 +95,19 @@ public final class FleetPromotedKeysProviderTest {
   }
 
   @Test
-  public void filterKeys_excludeAppliedKeyAndDeadEnds() {
-    // Filtering status=IDLE leaves devices 0, 1, 3. Within that set:
-    //   status: applied, so excluded from the promoted row.
-    //   type:   all android (one value)   -> dead end, dropped.
-    //   pool:   all shared (one value)    -> dead end, dropped.
-    //   model:  pixel, nexus              -> kept.
-    //   owner:  {alice,bob}, {alice}      -> kept.
-    //   host_name: lab-a, lab-b           -> kept.
+  public void filterKeys_retainsAllKeysWhenFilterApplied() {
+    // Promoted filter keys remain stable and are not omitted when applied as filters.
     FleetPromotedKeysResponse response =
         provider.getPromotedKeys(corpus, request(simple("device_field::status", "IDLE")));
 
     assertThat(filterKeys(response))
-        .containsExactly("dimension::model", "device_field::owner", "host_field::host_name")
+        .containsExactly(
+            "device_field::status",
+            "dimension::model",
+            "device_field::type",
+            "device_field::owner",
+            "dimension::pool",
+            "host_field::host_name")
         .inOrder();
   }
 
@@ -132,7 +129,7 @@ public final class FleetPromotedKeysProviderTest {
   }
 
   @Test
-  public void groupByKeys_curatedOrderCountsAndDisplayNames() {
+  public void groupByKeys_curatedOrderAndDisplayNames() {
     FleetPromotedKeysResponse response = provider.getPromotedKeys(corpus, request());
 
     // host_field::lab_type is absent from this fleet and is skipped; the rest keep the curated
@@ -147,22 +144,16 @@ public final class FleetPromotedKeysProviderTest {
         .inOrder();
     assertThat(groupByKeys(response)).doesNotContain("device_field::uuid");
 
-    // lab_location has two values (mtv, nyc) plus the "(no value)" bucket for device-3: 3 groups.
     FleetPromotedGroupByKey labLocation = groupByKey(response, "dimension::lab_location");
-    assertThat(labLocation.getGroupCount()).isEqualTo(3);
     assertThat(labLocation.getDisplayName()).isEqualTo("Dimension lab_location");
-
-    // The other keys have two values each and no missing devices.
-    assertThat(groupByKey(response, "device_field::type").getGroupCount()).isEqualTo(2);
     assertThat(groupByKey(response, "device_field::type").getDisplayName()).isEqualTo("Type");
-    assertThat(groupByKey(response, "device_field::status").getGroupCount()).isEqualTo(2);
-    assertThat(groupByKey(response, "host_field::host_name").getGroupCount()).isEqualTo(2);
+    assertThat(groupByKey(response, "device_field::status").getDisplayName()).isEqualTo("Status");
     assertThat(groupByKey(response, "host_field::host_name").getDisplayName())
         .isEqualTo("Host Name");
   }
 
   @Test
-  public void groupByKeys_excludeAppliedGroupBy() {
+  public void groupByKeys_retainsAppliedGroupBy() {
     FleetPromotedKeysResponse response =
         provider.getPromotedKeys(
             corpus,
@@ -172,12 +163,16 @@ public final class FleetPromotedKeysProviderTest {
                 .build());
 
     assertThat(groupByKeys(response))
-        .containsExactly("dimension::lab_location", "device_field::type", "host_field::host_name")
+        .containsExactly(
+            "dimension::lab_location",
+            "device_field::type",
+            "device_field::status",
+            "host_field::host_name")
         .inOrder();
   }
 
   @Test
-  public void groupByKeys_hiddenWhenThreeApplied() {
+  public void groupByKeys_retainsKeysWhenThreeApplied() {
     FleetPromotedKeysResponse response =
         provider.getPromotedKeys(
             corpus,
@@ -188,24 +183,36 @@ public final class FleetPromotedKeysProviderTest {
                 .addGroupBy("host_field::host_name")
                 .build());
 
-    assertThat(response.getGroupByKeysList()).isEmpty();
+    assertThat(groupByKeys(response))
+        .containsExactly(
+            "dimension::lab_location",
+            "device_field::type",
+            "device_field::status",
+            "host_field::host_name")
+        .inOrder();
+
+    FleetPromotedGroupByKey unapplied = groupByKey(response, "dimension::lab_location");
+    assertThat(unapplied.getDisabled()).isTrue();
+    assertThat(unapplied.getDisabledReason()).isEqualTo("Maximum of 3 group-by keys reached");
+
+    assertThat(groupByKey(response, "device_field::type").getDisabled()).isFalse();
+    assertThat(groupByKey(response, "device_field::status").getDisabled()).isFalse();
+    assertThat(groupByKey(response, "host_field::host_name").getDisabled()).isFalse();
   }
 
   @Test
-  public void groupByKeys_countsOverFilteredSetAndDropsSingleBucketKeys() {
-    // Filtering owner=alice leaves devices 0, 1, 3. Within that set:
-    //   type:   all android           -> one bucket, dropped.
-    //   status: all IDLE              -> one bucket, dropped.
-    //   lab_location: mtv plus device-3's "(no value)" bucket -> two buckets, kept.
-    //   host_name: lab-a, lab-b       -> two buckets, kept.
+  public void groupByKeys_retainsAllKeysWhenFilterApplied() {
+    // Promoted group-by keys remain stable and are not omitted when filters narrow the result set.
     FleetPromotedKeysResponse response =
         provider.getPromotedKeys(corpus, request(simple("device_field::owner", "alice")));
 
     assertThat(groupByKeys(response))
-        .containsExactly("dimension::lab_location", "host_field::host_name")
+        .containsExactly(
+            "dimension::lab_location",
+            "device_field::type",
+            "device_field::status",
+            "host_field::host_name")
         .inOrder();
-    assertThat(groupByKey(response, "dimension::lab_location").getGroupCount()).isEqualTo(2);
-    assertThat(groupByKey(response, "host_field::host_name").getGroupCount()).isEqualTo(2);
   }
 
   // --- Helpers ---
