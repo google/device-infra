@@ -70,6 +70,24 @@ java_library(
 )
 
 java_library(
+    name = "retry_command_line_args_preserver",
+    srcs = ["RetryCommandLineArgsPreserver.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/infra/ats/common/proto:session_request_info_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/parser:command_line_parser",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:module_arg",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "retry_args",
     srcs = ["RetryArgs.java"],
     visibility = [
