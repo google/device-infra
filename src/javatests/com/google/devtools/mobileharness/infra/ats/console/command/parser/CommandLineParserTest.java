@@ -225,4 +225,49 @@ public final class CommandLineParserTest {
         .contains("The command line contains syntax error: " + tfCommand1);
     assertThat(exception.getErrorId()).isEqualTo(InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR);
   }
+
+  @Test
+  public void parseCommandLine_moduleArgsAndRunOptions_success() throws Exception {
+    String tfCommand =
+        "gts-interactive -m GtsBetocqAqtTests --module-arg"
+            + " GtsBetocqAqtTests:wifi_chipset_model:WCN7861 --report-system-checkers"
+            + " --business-logic-url https://bl.example.com --ignore-business-logic-failure"
+            + " --test-arg foo:bar:baz";
+
+    SessionRequestInfo requestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            commandLineParser
+                .parseCommandLine(tfCommand)
+                .setCommandLineArgs(tfCommand)
+                .setXtsRootDir("xts_root_dir")
+                .setXtsType("gts"));
+
+    assertThat(requestInfo.getTestPlan()).isEqualTo("gts-interactive");
+    assertThat(requestInfo.getModuleNamesList()).containsExactly("GtsBetocqAqtTests");
+    assertThat(requestInfo.getModuleArgsList())
+        .containsExactly("GtsBetocqAqtTests:wifi_chipset_model:WCN7861");
+    assertThat(requestInfo.getExtraArgsList())
+        .containsExactly("--test-arg", "foo:bar:baz")
+        .inOrder();
+    assertThat(requestInfo.getReportSystemCheckers()).isTrue();
+    assertThat(requestInfo.getBusinessLogicUrl()).isEqualTo("https://bl.example.com");
+    assertThat(requestInfo.getIgnoreBusinessLogicFailure()).isTrue();
+  }
+
+  @Test
+  public void parseCommandLine_runOptionsNotGiven_defaults() throws Exception {
+    String tfCommand = "cts -m module1";
+
+    SessionRequestInfo requestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            commandLineParser
+                .parseCommandLine(tfCommand)
+                .setCommandLineArgs(tfCommand)
+                .setXtsRootDir("xts_root_dir")
+                .setXtsType("cts"));
+
+    assertThat(requestInfo.getReportSystemCheckers()).isFalse();
+    assertThat(requestInfo.hasBusinessLogicUrl()).isFalse();
+    assertThat(requestInfo.getIgnoreBusinessLogicFailure()).isFalse();
+  }
 }

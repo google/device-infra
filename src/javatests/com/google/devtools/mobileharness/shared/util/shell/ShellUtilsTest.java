@@ -75,6 +75,31 @@ public class ShellUtilsTest extends TestCase {
     assertThat(prettyPrintArgv(Arrays.asList("echo", "$US", "100"))).isEqualTo("echo '$US' 100");
   }
 
+  public void testJoinTokens() throws Exception {
+    ImmutableList<String> tokens =
+        ImmutableList.of(
+            "cts",
+            "--include-filter",
+            "CtsFoo android.Foo#bar",
+            "--module-arg",
+            "Module:arg:value",
+            "--property",
+            "key=value",
+            "",
+            "it's",
+            "a\"b\\c",
+            "tab\there");
+
+    String commandLine = ShellUtils.joinTokens(tokens);
+
+    assertThat(commandLine)
+        .isEqualTo(
+            "cts --include-filter \"CtsFoo android.Foo#bar\" --module-arg Module:arg:value"
+                + " --property key=value \"\" \"it's\" \"a\\\"b\\\\c\" \"tab\there\"");
+    assertThat(tokenize(commandLine)).containsExactlyElementsIn(tokens).inOrder();
+    assertThat(ShellUtils.joinTokens(ImmutableList.of())).isEmpty();
+  }
+
   private void assertTokenize(String copts, String... expectedTokens) throws Exception {
     ImmutableList<String> actualTokens = tokenize(copts);
     assertThat(actualTokens).isEqualTo(Arrays.asList(expectedTokens));

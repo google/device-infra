@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
@@ -109,7 +110,12 @@ public class RunCommandParser implements Callable<Integer> {
                     toImmutableMap(
                         Entry::getKey,
                         e -> FilterValues.newBuilder().addAllValues(e.getValue()).build())))
-        .setHtmlInZip(options.htmlInZip);
+        .setHtmlInZip(options.htmlInZip)
+        .setReportSystemCheckers(options.reportSystemCheckers)
+        .setIgnoreBusinessLogicFailure(options.ignoreBusinessLogicFailure);
+    if (!isNullOrEmpty(options.businessLogicUrl)) {
+      sessionRequestBuilder.setBusinessLogicUrl(options.businessLogicUrl);
+    }
     if (this.options.shardCount > 0) {
       sessionRequestBuilder.setShardCount(this.options.shardCount);
     }
