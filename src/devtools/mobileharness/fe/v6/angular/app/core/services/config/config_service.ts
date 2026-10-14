@@ -1,9 +1,15 @@
 import {InjectionToken} from '@angular/core';
 import {Observable} from 'rxjs';
 import {
+  BatchGetDeviceWifiConfigsRequest,
+  BatchGetDeviceWifiConfigsResponse,
+  BatchUpdateDeviceWifiConfigsRequest,
+  BatchUpdateDeviceWifiConfigsResponse,
   CheckDeviceConfigPermissionResult,
   DeviceConfig,
   GetDeviceConfigResult,
+  GetWifiSuggestionsRequest,
+  GetWifiSuggestionsResponse,
   RecommendedWifi,
   UpdateDeviceConfigRequest,
   UpdateDeviceConfigResult,
@@ -68,6 +74,33 @@ export abstract class ConfigService {
    * @return An Observable emitting the list of recommended Wi-Fi configurations.
    */
   abstract getRecommendedWifi(): Observable<RecommendedWifi[]>;
+
+  /**
+   * Retrieves candidate Wi-Fi networks (curated presets and fleet-in-use networks).
+   * @param request Optional request parameters (such as fleet scope).
+   * @return An Observable emitting candidate Wi-Fi networks.
+   */
+  abstract getWifiSuggestions(
+    request?: GetWifiSuggestionsRequest,
+  ): Observable<GetWifiSuggestionsResponse>;
+
+  /**
+   * Retrieves current Wi-Fi configurations and writability for the selected devices.
+   * @param request The batch request containing device IDs.
+   * @return An Observable emitting device Wi-Fi configs and writability.
+   */
+  abstract batchGetDeviceWifiConfigs(
+    request: BatchGetDeviceWifiConfigsRequest,
+  ): Observable<BatchGetDeviceWifiConfigsResponse>;
+
+  /**
+   * Updates the default Wi-Fi configuration across the selected devices.
+   * @param request The batch update request with target device IDs and Wi-Fi configuration.
+   * @return An Observable emitting per-device update errors.
+   */
+  abstract batchUpdateDeviceWifiConfigs(
+    request: BatchUpdateDeviceWifiConfigsRequest,
+  ): Observable<BatchUpdateDeviceWifiConfigsResponse>;
 
   // ===== Host Config Methods =====
 

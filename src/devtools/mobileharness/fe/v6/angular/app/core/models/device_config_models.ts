@@ -5,6 +5,7 @@
  */
 
 import {WritePermissionResult} from './action_common';
+import {Fleet} from './search_fleet';
 
 
 /**
@@ -157,6 +158,24 @@ export declare interface CheckDeviceConfigPermissionResult
   extends WritePermissionResult {}
 
 /**
+ * Error code for update operations matching config_service.proto UpdateError.Code.
+ */
+export type UpdateErrorCode =
+  | 'CODE_UNSPECIFIED'
+  | 'SELF_LOCKOUT_DETECTED'
+  | 'PERMISSION_DENIED'
+  | 'VALIDATION_ERROR'
+  | 'UNKNOWN';
+
+/**
+ * Error details for update operations matching config_service.proto UpdateError.
+ */
+export declare interface UpdateError {
+  code: UpdateErrorCode;
+  message?: string;
+}
+
+/**
  * The result object returned after attempting to update a device's
  * configuration.
  */
@@ -164,15 +183,7 @@ export declare interface UpdateDeviceConfigResult {
   /** True if the update operation was successful. */
   success: boolean;
   /** Details about the error if the update failed. */
-  error?: {
-    code:
-      | 'CODE_UNSPECIFIED'
-      | 'SELF_LOCKOUT_DETECTED'
-      | 'PERMISSION_DENIED'
-      | 'VALIDATION_ERROR'
-      | 'UNKNOWN';
-    message?: string;
-  };
+  error?: UpdateError;
 }
 
 /**
@@ -196,5 +207,70 @@ export declare interface UpdateDeviceConfigRequest {
   section: ConfigSection;
   options?: {overrideSelfLockout?: boolean};
   universe?: string;
+}
+
+/**
+ * Current Wi-Fi configuration and authorization for a target device in batch Wi-Fi operations.
+ */
+export declare interface DeviceWifiCurrent {
+  deviceId: string;
+  wifi?: WifiConfig;
+  writable: boolean;
+  unwritableReason?: string;
+}
+
+/**
+ * A candidate Wi-Fi network available to pick from in batch Wi-Fi operations.
+ */
+export declare interface CandidateWifi {
+  ssid: string;
+  psk?: string;
+  scanSsid?: boolean;
+  fleetInUse?: {deviceCount?: number};
+}
+
+/**
+ * Request for GetWifiSuggestions.
+ */
+export declare interface GetWifiSuggestionsRequest {
+  fleet?: Fleet;
+}
+
+/**
+ * Response for GetWifiSuggestions.
+ */
+export declare interface GetWifiSuggestionsResponse {
+  candidateWifis?: CandidateWifi[];
+}
+
+/**
+ * Request for BatchGetDeviceWifiConfigs.
+ */
+export declare interface BatchGetDeviceWifiConfigsRequest {
+  deviceIds: string[];
+}
+
+/**
+ * Response for BatchGetDeviceWifiConfigs.
+ */
+export declare interface BatchGetDeviceWifiConfigsResponse {
+  devices?: DeviceWifiCurrent[];
+}
+
+/**
+ * Request for BatchUpdateDeviceWifiConfigs.
+ */
+export declare interface BatchUpdateDeviceWifiConfigsRequest {
+  deviceIds: string[];
+  wifi?: Partial<WifiConfig>;
+}
+
+/**
+ * Response for BatchUpdateDeviceWifiConfigs.
+ * Maps failed device_id to its corresponding UpdateError.
+ * An empty map indicates all target devices succeeded.
+ */
+export declare interface BatchUpdateDeviceWifiConfigsResponse {
+  errors?: Record<string, UpdateError>;
 }
 

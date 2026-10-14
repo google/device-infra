@@ -2,14 +2,24 @@ import {Injectable} from '@angular/core';
 import {Observable, of, throwError} from 'rxjs';
 import {delay} from 'rxjs/operators';
 import {
+  BatchGetDeviceWifiConfigsRequest,
+  BatchGetDeviceWifiConfigsResponse,
+  BatchUpdateDeviceWifiConfigsRequest,
+  BatchUpdateDeviceWifiConfigsResponse,
+  CandidateWifi,
   CheckDeviceConfigPermissionResult,
   ConfigSection,
   DeviceConfig,
   DeviceConfigUiStatus,
+  DeviceWifiCurrent,
   GetDeviceConfigResult,
+  GetWifiSuggestionsRequest,
+  GetWifiSuggestionsResponse,
   RecommendedWifi,
   UpdateDeviceConfigRequest,
   UpdateDeviceConfigResult,
+  UpdateError,
+  WifiConfig,
 } from '../../models/device_config_models';
 import {
   CheckHostConfigPermissionResult,
@@ -18,12 +28,24 @@ import {
   UpdateHostConfigRequest,
   UpdateHostConfigResult,
 } from '../../models/host_config_models';
+import {Fleet} from '../../models/search';
 import {normalizeHostConfig} from '../../utils/host_config_utils';
-import {MOCK_DEVICE_SCENARIOS, MOCK_HOST_SCENARIOS} from '../mock_data';
+import {
+  MOCK_DEVICE_SCENARIOS,
+  MOCK_HOST_SCENARIOS,
+  MOCK_RECOMMENDED_WIFIS,
+} from '../mock_data';
 import {MockDeviceScenario, MockHostScenario} from '../mock_data/models';
 import {ConfigService} from './config_service';
 
 const CURRENT_USER = 'derekchen';
+
+const DEFAULT_DEVICE_CONFIG_UI_STATUS: DeviceConfigUiStatus = {
+  permissions: {visible: true, editability: {editable: true}},
+  wifi: {visible: true, editability: {editable: true}},
+  dimensions: {visible: true, editability: {editable: true}},
+  settings: {visible: true, editability: {editable: true}},
+};
 
 // Helper function to deep copy an object
 function deepCopy<T>(obj: T): T {
@@ -125,30 +147,13 @@ export class FakeConfigService extends ConfigService {
       ).pipe(delay(1000));
     }
 
-    // Simulate host-managed scenario
-    const isHostManaged = scenario.overview.host.name === 'host-x.example.com';
-    const scenarioHostName = scenario.overview.host.name;
-
-    let uiStatus: Partial<DeviceConfigUiStatus> | undefined = {
-      permissions: {visible: true, editability: {editable: true}},
-      wifi: {visible: true, editability: {editable: true}},
-      dimensions: {visible: true, editability: {editable: true}},
-      settings: {visible: true, editability: {editable: true}},
-    };
-    if (deviceId === 'WIFI_DIMENSIONS_ONLY_DEVICE') {
-      uiStatus = {
-        permissions: {visible: false},
-        wifi: {visible: true, editability: {editable: true}},
-        dimensions: {visible: true, editability: {editable: true}},
-        settings: {visible: false},
-      };
-    }
-
     return of({
-      deviceConfig: scenario.config,
-      isHostManaged,
-      hostName: scenarioHostName,
-      uiStatus,
+      deviceConfig: deepCopy(scenario.config),
+      isHostManaged: Boolean(scenario.isHostManaged),
+      hostName: scenario.overview.host.name,
+      uiStatus: deepCopy(
+        scenario.configUiStatus ?? DEFAULT_DEVICE_CONFIG_UI_STATUS,
+      ),
     }).pipe(delay(1000));
   }
 
@@ -184,7 +189,15 @@ export class FakeConfigService extends ConfigService {
       }).pipe(delay(1000));
     }
 
-    let currentConfig = this.mockDeviceScenarios[scenarioIndex].config;
+    const scenario = this.mockDeviceScenarios[scenarioIndex];
+    if (scenario.configUpdateError) {
+      return of<UpdateDeviceConfigResult>({
+        success: false,
+        error: deepCopy(scenario.configUpdateError),
+      }).pipe(delay(1000));
+    }
+
+    let currentConfig = scenario.config;
     if (!currentConfig) {
       // If config is null, create a new one
       currentConfig = deepCopy(request.config);
@@ -192,20 +205,9 @@ export class FakeConfigService extends ConfigService {
       currentConfig = deepCopy(currentConfig);
     }
 
-    let uiStatus: Partial<DeviceConfigUiStatus> | undefined = {
-      permissions: {visible: true, editability: {editable: true}},
-      wifi: {visible: true, editability: {editable: true}},
-      dimensions: {visible: true, editability: {editable: true}},
-      settings: {visible: true, editability: {editable: true}},
-    };
-    if (request.id === 'WIFI_DIMENSIONS_ONLY_DEVICE') {
-      uiStatus = {
-        permissions: {visible: false},
-        wifi: {visible: true, editability: {editable: true}},
-        dimensions: {visible: true, editability: {editable: true}},
-        settings: {visible: false},
-      };
-    }
+    const uiStatus = deepCopy(
+      scenario.configUiStatus ?? DEFAULT_DEVICE_CONFIG_UI_STATUS,
+    );
 
     if (request.section === ConfigSection.ALL) {
       // Magic string 'iam-error' to simulate invalid user ID backend error during full update.
@@ -278,21 +280,174 @@ export class FakeConfigService extends ConfigService {
   }
 
   override getRecommendedWifi(): Observable<RecommendedWifi[]> {
-    return of([
-      {ssid: 'GoogleGuest', psk: ''},
-      {ssid: 'GoogleGuestPSK', psk: 'google_guest_password_123'},
-      {ssid: 'WL-MobileHarness', psk: 'mh_lab_secret_key'},
-      {ssid: 'Android-Lab-Secure', psk: 'secure_android_99'},
-      {ssid: 'Guest-Open', psk: ''},
-      {ssid: 'Lab-Testing-A', psk: 'test_pass_alpha'},
-      {ssid: 'Lab-Testing-B', psk: 'test_pass_beta'},
-      {ssid: 'Lab-Testing-C', psk: 'test_pass_gamma'},
-      {ssid: 'Pixel-Factory', psk: 'factory_reset_key'},
-      {ssid: 'WearOS-Lab', psk: 'wear_os_dedicated_key'},
-      {ssid: 'Nest-Devices', psk: 'nest_devices_iot_secret'},
-      {ssid: 'Auto-Testing-Network', psk: 'automation_bot_pass'},
-      {ssid: 'Voice-Isolation-Lab', psk: 'audio_lab_key_456'},
-    ]).pipe(delay(1000));
+    return of(deepCopy(MOCK_RECOMMENDED_WIFIS)).pipe(delay(1000));
+  }
+
+  override getWifiSuggestions(
+    request?: GetWifiSuggestionsRequest,
+  ): Observable<GetWifiSuggestionsResponse> {
+    if (request?.fleet === Fleet.FLEET_SELF) {
+      const candidateWifis: CandidateWifi[] = MOCK_RECOMMENDED_WIFIS.map(
+        (w) => ({
+          ssid: w.ssid,
+          psk: w.psk,
+          scanSsid: false,
+        }),
+      );
+      return of({candidateWifis}).pipe(delay(500));
+    }
+
+    const aggregated = new Map<
+      string,
+      {ssid: string; psk: string; scanSsid: boolean; count: number}
+    >();
+    for (const scenario of this.mockDeviceScenarios) {
+      const wifi = scenario.config?.wifi;
+      const ssid = wifi?.ssid?.trim();
+      if (!ssid) continue;
+      const scanSsid = Boolean(wifi?.scanSsid);
+      const key = `${ssid}:${scanSsid}`;
+      const existing = aggregated.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        aggregated.set(key, {
+          ssid,
+          psk: wifi?.psk || '',
+          scanSsid,
+          count: 1,
+        });
+      }
+    }
+
+    const candidateWifis: CandidateWifi[] = Array.from(aggregated.values())
+      .sort((a, b) => b.count - a.count)
+      .map((item) => ({
+        ssid: item.ssid,
+        psk: item.psk,
+        scanSsid: item.scanSsid,
+        fleetInUse: {deviceCount: item.count},
+      }));
+
+    return of({candidateWifis}).pipe(delay(500));
+  }
+
+  override batchGetDeviceWifiConfigs(
+    request: BatchGetDeviceWifiConfigsRequest,
+  ): Observable<BatchGetDeviceWifiConfigsResponse> {
+    const devices: DeviceWifiCurrent[] = request.deviceIds.map((deviceId) => {
+      const scenario = this.mockDeviceScenarios.find((s) => s.id === deviceId);
+      const {writable, unwritableReason} =
+        this.getDeviceWifiWritability(scenario);
+      const wifi = scenario?.config?.wifi?.ssid
+        ? deepCopy(scenario.config.wifi)
+        : undefined;
+      return {
+        deviceId,
+        ...(wifi ? {wifi} : {}),
+        writable,
+        ...(unwritableReason ? {unwritableReason} : {}),
+      };
+    });
+
+    return of({devices}).pipe(delay(500));
+  }
+
+  override batchUpdateDeviceWifiConfigs(
+    request: BatchUpdateDeviceWifiConfigsRequest,
+  ): Observable<BatchUpdateDeviceWifiConfigsResponse> {
+    const errors: Record<string, UpdateError> = {};
+    for (const deviceId of request.deviceIds) {
+      const scenario = this.mockDeviceScenarios.find((s) => s.id === deviceId);
+      if (!scenario) {
+        errors[deviceId] = {
+          code: 'UNKNOWN',
+          message: 'Device not found',
+        };
+        continue;
+      }
+      if (scenario.configUpdateError) {
+        errors[deviceId] = deepCopy(scenario.configUpdateError);
+        continue;
+      }
+      const {writable, unwritableReason} =
+        this.getDeviceWifiWritability(scenario);
+      if (!writable) {
+        errors[deviceId] = {
+          code: 'PERMISSION_DENIED',
+          message: unwritableReason || 'Device Wi-Fi config is not writable',
+        };
+        continue;
+      }
+      if (request.wifi) {
+        const nextWifi: WifiConfig = {
+          type: request.wifi.type ?? 'custom',
+          ssid: request.wifi.ssid ?? '',
+          psk: request.wifi.psk ?? '',
+          scanSsid: Boolean(request.wifi.scanSsid),
+        };
+        if (scenario.config) {
+          scenario.config = {
+            ...scenario.config,
+            wifi: nextWifi,
+          };
+        } else {
+          scenario.config = {
+            permissions: {owners: [CURRENT_USER], executors: []},
+            wifi: nextWifi,
+            dimensions: {supported: [], required: []},
+            settings: {maxConsecutiveFail: 5, maxConsecutiveTest: 10000},
+          };
+        }
+      }
+    }
+    return of({errors}).pipe(delay(800));
+  }
+
+  private getDeviceWifiWritability(scenario?: MockDeviceScenario): {
+    writable: boolean;
+    unwritableReason?: string;
+  } {
+    if (!scenario) {
+      return {
+        writable: false,
+        unwritableReason: 'Device not found',
+      };
+    }
+    if (scenario.isHostManaged) {
+      return {
+        writable: false,
+        unwritableReason:
+          'Managed by host shared config (update host config instead)',
+      };
+    }
+    const wifiStatus = scenario.configUiStatus?.wifi;
+    if (wifiStatus) {
+      if (wifiStatus.visible === false) {
+        return {
+          writable: false,
+          unwritableReason:
+            'Wi-Fi configuration is not supported on this device',
+        };
+      }
+      if (wifiStatus.editability && !wifiStatus.editability.editable) {
+        return {
+          writable: false,
+          unwritableReason:
+            wifiStatus.editability.reason || 'Wi-Fi configuration is read-only',
+        };
+      }
+    }
+    if (scenario.config) {
+      const owners = scenario.config.permissions?.owners || [];
+      if (!owners.includes(CURRENT_USER)) {
+        return {
+          writable: false,
+          unwritableReason: 'No permission (not an authorized owner)',
+        };
+      }
+    }
+    return {writable: true};
   }
 
   // ===== Host Config Methods =====

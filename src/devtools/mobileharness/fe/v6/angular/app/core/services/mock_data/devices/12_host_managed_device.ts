@@ -74,6 +74,7 @@ const SCENARIO_HOST_MANAGED_DEVICE_DATA: MockDeviceScenario = {
   scenarioName: 'Host Managed Device',
   overview: OVERVIEW,
   config: CONFIG,
+  isHostManaged: true,
   isQuarantined: false,
   actionVisibility: {
     screenshot: true,
