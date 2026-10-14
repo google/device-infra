@@ -148,6 +148,10 @@ message AllocationWorkflowContext {
 
     // The target cluster for the test execution environment allocation.
     string cluster = 3;
+
+    // The number of devices requested for the test execution environment
+    // allocation.
+    int32 device_count = 4 [default = 1];
   }
 
   OmnilabContext omnilab_context = 1;
