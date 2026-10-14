@@ -152,6 +152,14 @@ message AllocationWorkflowContext {
     // The number of devices requested for the test execution environment
     // allocation.
     int32 device_count = 4 [default = 1];
+
+    // Failed attempts to allocate from Otter that may succeed when retried.
+    // Each retry sends the same request ID, so Otter returns the job of an
+    // earlier attempt that reached it instead of starting another one.
+    int32 retryable_allocate_failures = 5;
+
+    // Consecutive failed polls of otter_job_id that may succeed when retried.
+    int32 retryable_poll_failures = 6;
   }
 
   OmnilabContext omnilab_context = 1;
