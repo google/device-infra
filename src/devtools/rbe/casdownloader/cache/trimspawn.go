@@ -98,7 +98,8 @@ func startDetached(path string, args []string, logPath string) (pid int, reaped 
 // trimArgs is the command line of the -trim-only process a download starts
 // for the cache opts describes: -cache-dir, and every eviction flag the
 // download was given, so that the trim works toward the same watermarks and
-// cap with the same tuning. A flag the download did not set is left out, and
+// cap with the same tuning, and the download's streamz flags, so that the trim
+// reports its metrics as the download does. A flag the download did not set is left out, and
 // the trim applies the same default. -cache-cap-check-interval is left out
 // too: it only decides whether a download starts a trim, and a trim with a
 // cap always checks it.
@@ -131,6 +132,14 @@ func trimArgs(opts Options) []string {
 	}
 	if o.MinBlobAge != nil {
 		args = append(args, "-cache-min-blob-age="+o.MinBlobAge.String())
+	}
+	// The trim's metrics follow the download's: on only with
+	// -enable-streamz, and sent where the download sends its own.
+	if opts.Streamz {
+		args = append(args, "-enable-streamz")
+		if opts.MurdockAddr != "" {
+			args = append(args, "-murdock-addr="+opts.MurdockAddr)
+		}
 	}
 	return args
 }

@@ -1,12 +1,14 @@
 package cache
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/google/device-infra/src/devtools/rbe/common/monitoring"
+	"github.com/google/device-infra/src/devtools/rbe/common/storage"
 )
 
 func TestImpl(t *testing.T) {
@@ -97,6 +99,63 @@ func TestMonitoringStats_LockFreeCache(t *testing.T) {
 	}
 }
 
+// TestTrimMonitoringStats_FromATrim checks what a trim over its cap exports:
+// the cap check reads every bucket to find the cache over it, and the trim
+// evicts down to 90% of it.
+func TestTrimMonitoringStats_FromATrim(t *testing.T) {
+	cacheDir := filepath.Join(t.TempDir(), "cache")
+	seedOldBlobs(t, cacheDir, trimBlobCount, trimBlobSize)
+	res, err := Trim(context.Background(), TrimOptions{
+		Dir:     cacheDir,
+		MaxSize: 1000 * trimBlobSize * 10 / 9,
+		statfs:  fixedVolume(100*mib, 50*mib),
+	})
+	if err != nil {
+		t.Fatalf("Trim failed: %v", err)
+	}
+
+	got := TrimMonitoringStats(res)
+	if got.Duration <= 0 || got.Sample == nil {
+		t.Fatalf("TrimMonitoringStats = %+v, want a duration and a sample", got)
+	}
+	got.Duration, got.Sample.Duration = 0, 0
+	want := monitoring.TrimStats{
+		Outcome:           storage.TrimOutcomeEvicted,
+		BytesReclaimed:    200 * trimBlobSize,
+		FilesDeleted:      200,
+		StartFreeFraction: 0.5,
+	}
+	wantSample := monitoring.TrimSampleStats{
+		Files:           trimBlobCount,
+		SizeBytes:       trimBlobCount * trimBlobSize,
+		Exact:           true,
+		CapCheckBuckets: 256,
+	}
+	gotSample := *got.Sample
+	got.Sample = nil
+	if *got != want || gotSample != wantSample {
+		t.Errorf("TrimMonitoringStats = %+v with sample %+v, want %+v with %+v", *got, gotSample, want, wantSample)
+	}
+}
+
+// A cap check that stops early is exported as such, with an estimated size,
+// and a pass that measured nothing exports neither a free fraction nor a
+// sample.
+func TestTrimMonitoringStats_EarlyStopAndBusy(t *testing.T) {
+	got := TrimMonitoringStats(storage.TrimResult{
+		Outcome: storage.TrimOutcomeNoop, StartFreeBytes: 30, VolumeBytes: 120,
+		Sample: &storage.TrimSample{Buckets: 32, TotalBuckets: 256, CapCheckBuckets: 32, SizeBytes: 1 << 30},
+	})
+	if got.StartFreeFraction != 0.25 || got.Sample == nil || got.Sample.Exact || !got.Sample.CapCheckStoppedEarly || got.Sample.CapCheckBuckets != 32 {
+		t.Errorf("TrimMonitoringStats of an early stop = %+v with sample %+v, want a free fraction of 0.25 and an estimated size from a check stopped at 32", got, got.Sample)
+	}
+
+	got = TrimMonitoringStats(storage.TrimResult{Outcome: storage.TrimOutcomeBusy})
+	if got.Outcome != storage.TrimOutcomeBusy || got.StartFreeFraction >= 0 || got.Sample != nil {
+		t.Errorf("TrimMonitoringStats of a busy pass = %+v, want %q with a negative free fraction and no sample", got, storage.TrimOutcomeBusy)
+	}
+}
+
 // appendTo appends s to the file at path.
 func appendTo(t *testing.T, path, s string) {
 	t.Helper()
@@ -107,5 +166,14 @@ func appendTo(t *testing.T, path, s string) {
 	defer f.Close()
 	if _, err := f.WriteString(s); err != nil {
 		t.Fatalf("Failed to append to %s: %v", path, err)
+	}
+}
+
+// A -trim-only run that fails before its pass is still counted, as an error,
+// with no volume or sample figures.
+func TestFailedTrimMonitoringStats(t *testing.T) {
+	got := FailedTrimMonitoringStats()
+	if got.Outcome != storage.TrimOutcomeError || got.Sample != nil || got.StartFreeFraction >= 0 || got.BytesReclaimed != 0 {
+		t.Errorf("FailedTrimMonitoringStats() = %+v, want outcome %q and nothing else", got, storage.TrimOutcomeError)
 	}
 }

@@ -402,13 +402,12 @@ func runMain() int {
 
 	// Initialize unified metrics collection.
 	if *enableStreamz {
-		mAddr := *murdockAddr
-		if mAddr == "" {
-			mAddr = os.Getenv("MURDOCK_ADDR")
-		}
 		var opts []monitoring.Option
-		if mAddr != "" {
+		if mAddr := murdockAddress(); mAddr != "" {
 			opts = append(opts, monitoring.WithMurdockAddr(mAddr))
+		}
+		if *trimOnly {
+			opts = append(opts, monitoring.WithTrimOnly())
 		}
 		monitoring.Init("casdownloader", opts...)
 		defer monitoring.Shutdown()
@@ -429,7 +428,11 @@ func runMain() int {
 	var success bool
 	var exitCode int
 	defer func() {
-		if *enableStreamz {
+		// A -trim-only process is not a run of casdownloader: downloads
+		// start it in the background, and counting it would inflate the
+		// run count by every trim. runTrim records it as a trim instead.
+		// RecordUsage itself also ignores a process Init'ed WithTrimOnly.
+		if *enableStreamz && !*trimOnly {
 			monitoring.RecordUsage(success, exitCode)
 		}
 	}()
@@ -442,6 +445,15 @@ func runMain() int {
 
 	success = true
 	return 0
+}
+
+// murdockAddress is the murdockd address from -murdock-addr, or else from
+// MURDOCK_ADDR. Empty means monitoring's default.
+func murdockAddress() string {
+	if *murdockAddr != "" {
+		return *murdockAddr
+	}
+	return os.Getenv("MURDOCK_ADDR")
 }
 
 func run(ctx context.Context) error {
@@ -667,19 +679,27 @@ func cacheFlagValues() cache.Options {
 		Overrides:        evictorOverrides(explicitFlags()),
 		CapCheckInterval: *cacheCapCheckInterval,
 		// A download starts a -trim-only process if the cache needs one.
-		StartTrims: true,
+		StartTrims:  true,
+		Streamz:     *enableStreamz,
+		MurdockAddr: murdockAddress(),
 	}
 }
 
 // runTrim is -trim-only: one eviction pass over the lock-free cache, then
 // exit. See cache.Trim. A peer already trimming, a pass with nothing to do and
 // a pass stopped by -trim-max-duration all succeed; only a pass that failed
-// returns an error.
+// returns an error. With -enable-streamz, the pass is recorded once, whatever
+// its outcome.
 func runTrim(ctx context.Context) error {
 	if *cacheDir == "" {
+		if *enableStreamz {
+			// Counted as a failed trim, so that a misconfigured evictor shows
+			// up rather than reporting nothing.
+			monitoring.RecordTrim(cache.FailedTrimMonitoringStats())
+		}
 		return errors.New("-cache-dir must be specified with -trim-only")
 	}
-	_, err := cache.Trim(ctx, cache.TrimOptions{
+	res, err := cache.Trim(ctx, cache.TrimOptions{
 		Dir:             *cacheDir,
 		MinFreeSpace:    *cacheMinFreeSpace,
 		TargetFreeSpace: *cacheTargetFreeSpace,
@@ -688,6 +708,9 @@ func runTrim(ctx context.Context) error {
 		Overrides:       evictorOverrides(explicitFlags()),
 		MaxSize:         *cacheMaxSize,
 	})
+	if *enableStreamz {
+		monitoring.RecordTrim(cache.TrimMonitoringStats(res))
+	}
 	return err
 }
 

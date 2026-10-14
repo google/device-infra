@@ -50,6 +50,12 @@ type Options struct {
 	// it is off otherwise, so that opening a cache for any other reason,
 	// such as in a test, never starts a process.
 	StartTrims bool
+	// Streamz is -enable-streamz and MurdockAddr the murdockd address the
+	// download resolved, from -murdock-addr or MURDOCK_ADDR; empty means the
+	// default. A trim the download starts reports to the same place, so that
+	// the evictor's metrics are on whenever the download's are.
+	Streamz     bool
+	MurdockAddr string
 
 	// statfs and spawn replace the real statfs and the real process start
 	// in the open-time check, for tests.

@@ -271,6 +271,32 @@ func TestTrimArgs_ForwardsEveryOverride(t *testing.T) {
 	}
 }
 
+// The trim reports metrics only if the download does, and to the murdockd
+// the download resolved, from -murdock-addr or MURDOCK_ADDR.
+func TestTrimArgs_ForwardsStreamzOnlyWhenEnabled(t *testing.T) {
+	base := []string{"-trim-only", "-cache-dir=/tmp/cas_cache"}
+	for _, tc := range []struct {
+		name string
+		opts Options
+		want []string
+	}{
+		{name: "off", opts: Options{MurdockAddr: "10.0.0.1:2444"}, want: base},
+		{name: "on with the default address", opts: Options{Streamz: true}, want: append(slices.Clone(base), "-enable-streamz")},
+		{
+			name: "on with an address",
+			opts: Options{Streamz: true, MurdockAddr: "10.0.0.1:2444"},
+			want: append(slices.Clone(base), "-enable-streamz", "-murdock-addr=10.0.0.1:2444"),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.opts.Dir = "/tmp/cas_cache"
+			if got := trimArgs(tc.opts); !slices.Equal(got, tc.want) {
+				t.Errorf("trimArgs = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 // The open-time check is best effort: whatever it cannot check, it logs, and
 // starts no trim.
 func TestMaybeStartTrim_StartsNothingOnErrors(t *testing.T) {

@@ -137,6 +137,44 @@ type TrimResult struct {
 	SkippedLinked int64
 	// Duration is the wall time of the pass, including taking the lock.
 	Duration time.Duration
+	// StartFreeBytes and VolumeBytes are the effective free and total space
+	// of the cache's volume when the pass started, before it evicted
+	// anything. Both are zero if the pass stopped before measuring them, as
+	// when another process held the lock.
+	StartFreeBytes int64
+	VolumeBytes    int64
+	// Sample describes the buckets a TrimWith pass read before evicting, or
+	// is nil if it read none.
+	Sample *TrimSample
+}
+
+// TrimSample describes the buckets one TrimWith pass read, for the cap check
+// and the cutoff age together (see progressiveSample).
+type TrimSample struct {
+	// Buckets is how many of the layout's TotalBuckets the pass read.
+	Buckets      int
+	TotalBuckets int
+	// Files is how many blobs those buckets held, and Duration how long
+	// reading them took.
+	Files    int
+	Duration time.Duration
+	// SizeBytes is the size of the cache, estimated from the buckets read,
+	// or exact once every bucket has been read. PinnedBytes is what those
+	// buckets hold of blobs that other names pin: the whole cache's once
+	// every bucket has been read.
+	SizeBytes   int64
+	PinnedBytes int64
+	// CapCheckBuckets is how many buckets the cap check had read when it
+	// reached its answer, or zero if the pass ran no cap check or stopped
+	// before it finished. Fewer than TotalBuckets means that it stopped
+	// early, finding the cache clearly under the cap.
+	CapCheckBuckets int
+}
+
+// Exact reports whether the pass read every bucket, so that SizeBytes and
+// PinnedBytes are the whole cache's.
+func (s *TrimSample) Exact() bool {
+	return s.Buckets == s.TotalBuckets
 }
 
 // CheckAndEvict runs a single eviction pass if free space has fallen below
@@ -273,24 +311,33 @@ func (e *Evictor) oneShotPass(ctx context.Context, toTarget bool, opts TrimOptio
 	snap := e.snapshot(stats)
 	effectiveTotal, effectiveFree, _ := ComputeEffectiveSpace(stats, snap.reservedBytes)
 	monitoring.RecordStorageUsage(effectiveTotal, effectiveFree)
+	result := TrimResult{StartFreeBytes: effectiveFree, VolumeBytes: effectiveTotal}
 
 	f := e.newFlight(snap)
 	f.exitIfUnreachable = true
 	f.stopAtReclaimTarget = toTarget
 	if toTarget {
-		f.progressive, f.minReclaim, err = e.sampleForTrim(ctx, snap, effectiveFree, opts.MaxSize)
+		p := e.newProgressiveSample(snap.minBlobAge)
+		var evict bool
+		evict, f.minReclaim, err = e.sampleForTrim(ctx, p, snap, effectiveFree, opts.MaxSize)
+		result.Sample = p.report()
 		if errors.Is(err, context.DeadlineExceeded) {
 			log.InfoContextf(ctx, "Storage eviction pass stopped at its deadline while reading buckets.")
-			return TrimResult{Outcome: TrimOutcomeTimedOut}, nil
+			result.Outcome = TrimOutcomeTimedOut
+			return result, nil
 		}
 		if err != nil {
-			return TrimResult{Outcome: TrimOutcomeError}, err
+			result.Outcome = TrimOutcomeError
+			return result, err
 		}
-		if f.progressive == nil {
-			return TrimResult{Outcome: TrimOutcomeNoop}, nil
+		if !evict {
+			result.Outcome = TrimOutcomeNoop
+			return result, nil
 		}
+		f.progressive = p
 	} else if effectiveFree >= snap.minFreeBytes {
-		return TrimResult{Outcome: TrimOutcomeNoop}, nil
+		result.Outcome = TrimOutcomeNoop
+		return result, nil
 	}
 
 	r := f.execute(ctx)
@@ -299,12 +346,10 @@ func (e *Evictor) oneShotPass(ctx context.Context, toTarget bool, opts TrimOptio
 			float64(r.reclaimed)/gib, r.deleted)
 	}
 
-	result := TrimResult{
-		Outcome:        r.outcome,
-		BytesReclaimed: r.reclaimed,
-		FilesDeleted:   r.deleted,
-		SkippedLinked:  r.skippedLinkedBytes,
-	}
+	result.Outcome = r.outcome
+	result.BytesReclaimed = r.reclaimed
+	result.FilesDeleted = r.deleted
+	result.SkippedLinked = r.skippedLinkedBytes
 	if r.outcome != TrimOutcomeError {
 		return result, nil
 	}

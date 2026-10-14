@@ -45,6 +45,9 @@ type progressiveSample struct {
 	// stats is what the buckets read hold; stats.bucketCount is how many of
 	// order, from the start, have been read.
 	stats sampleStats
+	// capCheckBuckets is how many buckets had been read when checkCap
+	// returned its answer, or zero if it has not.
+	capCheckBuckets int
 }
 
 func (e *Evictor) newProgressiveSample(minBlobAge time.Duration) *progressiveSample {
@@ -59,9 +62,10 @@ func (e *Evictor) newProgressiveSample(minBlobAge time.Duration) *progressiveSam
 	}
 }
 
-// sampleForTrim reads the buckets a TrimWith pass needs before it can evict,
-// on a volume with free bytes free, and returns them with the bytes the cap
-// asks it to reclaim. It returns a nil sample if the pass has nothing to do.
+// sampleForTrim reads into p the buckets a TrimWith pass needs before it can
+// evict, on a volume with free bytes free. It reports whether the pass has
+// anything to evict, and the bytes the cap asks it to reclaim. p holds what
+// was read either way, for TrimResult.Sample.
 //
 // With maxSize set, it first records in CapCheckName that a cap check is
 // starting, then runs it. The marker is written before the check rather than
@@ -70,26 +74,23 @@ func (e *Evictor) newProgressiveSample(minBlobAge time.Duration) *progressiveSam
 // of leaving the marker stale and every download starting another evictor. Then, if free space is short of
 // TargetFreeSpace or the cache is over its cap, it reads at least
 // SampleBuckets buckets for the cutoff age.
-func (e *Evictor) sampleForTrim(ctx context.Context, snap snapshotConfig, free, maxSize int64) (*progressiveSample, int64, error) {
-	p := e.newProgressiveSample(snap.minBlobAge)
-	var capExcess int64
+func (e *Evictor) sampleForTrim(ctx context.Context, p *progressiveSample, snap snapshotConfig, free, maxSize int64) (evict bool, capExcess int64, err error) {
 	if maxSize > 0 {
 		// The mtime is all that matters, and O_TRUNC updates it.
 		if err := os.WriteFile(filepath.Join(e.rootDir, CapCheckName), nil, 0644); err != nil {
 			log.WarningContextf(ctx, "Failed to record the cap check of %s: %v. Downloads will start another.", e.rootDir, err)
 		}
-		var err error
 		if capExcess, err = p.checkCap(ctx, maxSize); err != nil {
-			return nil, 0, err
+			return false, 0, err
 		}
 	}
 	if free >= snap.targetFreeBytes && capExcess <= 0 {
-		return nil, 0, nil
+		return false, 0, nil
 	}
 	if err := p.readTo(ctx, snap.sampleBuckets); err != nil {
-		return nil, 0, err
+		return false, 0, err
 	}
-	return p, capExcess, nil
+	return true, capExcess, nil
 }
 
 // readTo reads further buckets until n of them, or all, have been read. It
@@ -137,6 +138,7 @@ func (p *progressiveSample) checkCap(ctx context.Context, maxSize int64) (int64,
 		if estimate := p.size(); float64(estimate) <= float64(maxSize)*(1-step.allowance) {
 			log.InfoContextf(ctx, "Cap check of %s stopped after %d of %d buckets: an estimated %.2f GB, at most %.0f%% of the %.2f GB cap.",
 				p.rootDir, p.stats.bucketCount, len(p.order), float64(estimate)/gib, 100*(1-step.allowance), float64(maxSize)/gib)
+			p.capCheckBuckets = p.stats.bucketCount
 			return 0, nil
 		}
 	}
@@ -148,7 +150,24 @@ func (p *progressiveSample) checkCap(ctx context.Context, maxSize int64) (int64,
 	excess := max(size-(maxSize-maxSize/10), 0)
 	log.InfoContextf(ctx, "Cap check of %s read all %d buckets: %.2f GB (%.2f GB pinned by other links) against the %.2f GB cap, %.2f GB over 90%% of it.",
 		p.rootDir, len(p.order), float64(size)/gib, float64(p.stats.pinnedBytes)/gib, float64(maxSize)/gib, float64(excess)/gib)
+	p.capCheckBuckets = p.stats.bucketCount
 	return excess, nil
+}
+
+// report describes the buckets read so far, or is nil if none were.
+func (p *progressiveSample) report() *TrimSample {
+	if p.stats.bucketCount == 0 {
+		return nil
+	}
+	return &TrimSample{
+		Buckets:         p.stats.bucketCount,
+		TotalBuckets:    len(p.order),
+		Files:           p.stats.totalCount + p.stats.youngCount + p.stats.pinnedCount,
+		Duration:        p.stats.duration,
+		SizeBytes:       p.size(),
+		PinnedBytes:     p.stats.pinnedBytes,
+		CapCheckBuckets: p.capCheckBuckets,
+	}
 }
 
 // cutoff returns the mtime before which blobs should be unlinked to reclaim

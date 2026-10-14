@@ -2,6 +2,7 @@
 package monitoring
 
 import (
+	"sync/atomic"
 	"time"
 )
 
@@ -59,6 +60,7 @@ type Option func(*config)
 
 type config struct {
 	murdockAddr string
+	trimOnly    bool
 }
 
 // WithMurdockAddr sets the address (host:port) for the murdockd daemon.
@@ -68,14 +70,29 @@ func WithMurdockAddr(addr string) Option {
 	}
 }
 
+// WithTrimOnly marks the process as a casdownloader -trim-only evictor. It
+// registers the trim metrics (see RecordTrim) instead of the per-run ones, so
+// that the evictor, which downloads start in the background, neither counts
+// as a run nor exports the initial values of the download metrics that have no
+// fields, such as an empty caller and version.
+func WithTrimOnly() Option {
+	return func(c *config) {
+		c.trimOnly = true
+	}
+}
+
 // Init initializes monitoring. Inside Google3 it configures Streamz/Murdock.
 func Init(clientName string, opts ...Option) {
 	var cfg config
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	initMetrics(clientName, cfg.murdockAddr)
+	trimOnlyProcess.Store(cfg.trimOnly)
+	initMetrics(clientName, cfg.murdockAddr, cfg.trimOnly)
 }
+
+// trimOnlyProcess is set by an Init with WithTrimOnly.
+var trimOnlyProcess atomic.Bool
 
 // RecordLatency records download duration.
 func RecordLatency(success bool, rbeStatus string, duration time.Duration) {
@@ -87,8 +104,12 @@ func RecordBytes(success bool, bytes int64) {
 	recordBytes(success, bytes)
 }
 
-// RecordUsage records client invocation usage.
+// RecordUsage records client invocation usage. It records nothing in a
+// process initialized WithTrimOnly, which is not an invocation of its own.
 func RecordUsage(success bool, exitCode int) {
+	if trimOnlyProcess.Load() {
+		return
+	}
 	recordUsage(success, exitCode)
 }
 
@@ -129,6 +150,47 @@ type LocalCacheActivity struct {
 // run.
 func RecordLocalCacheStats(stats *LocalCacheStats, casInstance string) {
 	recordLocalCacheStats(stats, casInstance)
+}
+
+// TrimStats describes one casdownloader -trim-only pass over the lock-free
+// cache. It mirrors storage.TrimResult, which this package cannot import.
+type TrimStats struct {
+	// Outcome is noop, evicted, busy, timed_out or error.
+	Outcome            string
+	Duration           time.Duration
+	BytesReclaimed     int64
+	FilesDeleted       int64
+	SkippedLinkedBytes int64
+	// StartFreeFraction is the free fraction of the cache's volume, from 0
+	// to 1, when the pass started. It is negative if the pass did not
+	// measure it, as when another process was already trimming.
+	StartFreeFraction float64
+	// Sample describes the buckets the pass read, or is nil if it read none.
+	Sample *TrimSampleStats
+}
+
+// TrimSampleStats describes the buckets one trim read to check the cache
+// against its cap and to find the cutoff age.
+type TrimSampleStats struct {
+	Duration time.Duration
+	Files    int64
+	// SizeBytes is the cache's size, estimated from the buckets read, or
+	// exact if Exact: every bucket was read. PinnedBytes, what other names
+	// pin of it, is recorded only then, since only then is it the cache's.
+	SizeBytes   int64
+	Exact       bool
+	PinnedBytes int64
+	// CapCheckBuckets is how many buckets the cap check had read when it
+	// reached its answer, or zero if the pass ran none or it did not finish,
+	// and CapCheckStoppedEarly whether that was before reading every bucket.
+	CapCheckBuckets      int64
+	CapCheckStoppedEarly bool
+}
+
+// RecordTrim records one casdownloader -trim-only pass. Its metrics are
+// registered only by an Init with WithTrimOnly.
+func RecordTrim(stats *TrimStats) {
+	recordTrim(stats)
 }
 
 // RecordCacheRequest records a cache read request and whether it was a hit or miss.

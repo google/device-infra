@@ -270,12 +270,13 @@ func TestSampleForTrim_ReadsAtLeastSampleBucketsBeforeEvicting(t *testing.T) {
 			seedGroup(t, s, 0, 512, progressiveTestBlobSize, 200*time.Hour)
 			e := s.Evictor()
 
-			p, excess, err := e.sampleForTrim(context.Background(), e.snapshot(DiskStats{TotalBytes: total, FreeBytes: tc.free}), tc.free, tc.maxSize)
+			p := e.newProgressiveSample(10 * time.Minute)
+			evict, excess, err := e.sampleForTrim(context.Background(), p, e.snapshot(DiskStats{TotalBytes: total, FreeBytes: tc.free}), tc.free, tc.maxSize)
 			if err != nil {
 				t.Fatalf("sampleForTrim failed: %v", err)
 			}
 			gotBuckets := 0
-			if p != nil {
+			if evict {
 				gotBuckets = p.stats.bucketCount
 			}
 			if gotBuckets != tc.wantBuckets || excess != tc.wantExcess {
@@ -356,6 +357,76 @@ func TestTrimWith_ExitsEarlyWhenEverythingIsPinned(t *testing.T) {
 	}
 	if got := countPresent(s, blobs); got != len(blobs) {
 		t.Errorf("%d blobs remain, want all %d", got, len(blobs))
+	}
+}
+
+// TestTrimWith_ReportsWhatItRead covers the free space and the buckets a pass
+// reports, which the evictor's metrics export. With every bucket holding the
+// same bytes, a partial read's size estimate is exact.
+func TestTrimWith_ReportsWhatItRead(t *testing.T) {
+	const blobs, size = 512, 512 * progressiveTestBlobSize
+	for _, tc := range []struct {
+		name    string
+		maxSize int64
+		pin     bool
+		want    *TrimSample // Duration is not compared.
+	}{
+		{
+			name:    "stops early well under the cap",
+			maxSize: 2 * size,
+			want:    &TrimSample{Buckets: 32, TotalBuckets: 256, Files: 64, SizeBytes: size, CapCheckBuckets: 32},
+		},
+		{
+			name:    "reads every bucket over the cap",
+			maxSize: size / 2,
+			pin:     true,
+			want:    &TrimSample{Buckets: 256, TotalBuckets: 256, Files: blobs, SizeBytes: size, PinnedBytes: size, CapCheckBuckets: 256},
+		},
+		{name: "reads nothing without a cap or a shortfall"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newProgressiveStorage(t, fixedDisk(100<<20, 50<<20))
+			seedGroup(t, s, 0, blobs, progressiveTestBlobSize, 200*time.Hour)
+			if tc.pin {
+				pinAllBlobs(t, s)
+			}
+
+			res, err := s.TrimWith(context.Background(), TrimOptions{MaxSize: tc.maxSize})
+			if err != nil {
+				t.Fatalf("TrimWith failed: %v", err)
+			}
+			if res.StartFreeBytes != 50<<20 || res.VolumeBytes != 100<<20 {
+				t.Errorf("TrimWith reported %d of %d bytes free at the start, want %d of %d", res.StartFreeBytes, res.VolumeBytes, 50<<20, 100<<20)
+			}
+			if tc.want == nil {
+				if res.Sample != nil {
+					t.Errorf("TrimWith reported a sample %+v, want none", *res.Sample)
+				}
+				return
+			}
+			if res.Sample == nil {
+				t.Fatalf("TrimWith reported no sample, want %+v", *tc.want)
+			}
+			got := *res.Sample
+			got.Duration = 0
+			if got != *tc.want {
+				t.Errorf("TrimWith reported sample %+v, want %+v", got, *tc.want)
+			}
+			if got.Exact() != (tc.want.Buckets == 256) {
+				t.Errorf("Exact() = %v after %d of 256 buckets", got.Exact(), got.Buckets)
+			}
+		})
+	}
+
+	// A pass that finds the lock held measures nothing.
+	s := newProgressiveStorage(t, fixedDisk(100<<20, 50<<20))
+	lock, err := tryLockEviction(s.RootDir())
+	if err != nil {
+		t.Fatalf("Failed to take the lock: %v", err)
+	}
+	defer lock.release()
+	if res, _ := s.TrimWith(context.Background(), TrimOptions{MaxSize: 1}); res.Sample != nil || res.VolumeBytes != 0 {
+		t.Errorf("A busy pass reported %+v, want no measurements", res)
 	}
 }
 

@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func initMetrics(clientName string, murdockAddr string) {}
+func initMetrics(clientName string, murdockAddr string, trimOnly bool) {}
 
 var (
 	isBorg     bool
@@ -30,6 +30,7 @@ var (
 	lastRecordedUpstreamRPC   string
 	lastRecordedCacheImpl     string
 	lastRecordedCacheActivity *LocalCacheActivity
+	lastRecordedTrim          *TrimStats
 )
 
 func isMurdockdPresent(addr string) bool { return false }
@@ -66,6 +67,14 @@ func recordLocalCacheStats(stats *LocalCacheStats, casInstance string) {
 		testMu.Lock()
 		lastRecordedCacheImpl = stats.Impl
 		lastRecordedCacheActivity = stats.Activity
+		testMu.Unlock()
+	}
+}
+
+func recordTrim(stats *TrimStats) {
+	if stats != nil {
+		testMu.Lock()
+		lastRecordedTrim = stats
 		testMu.Unlock()
 	}
 }

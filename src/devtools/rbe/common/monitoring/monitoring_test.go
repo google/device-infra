@@ -228,3 +228,65 @@ func TestMonitoringWithMurdockAddr(t *testing.T) {
 	RecordUsage(true, 0)
 	Shutdown()
 }
+
+func TestRecordTrim(t *testing.T) {
+	Init("casdownloader", WithTrimOnly())
+	defer Shutdown()
+
+	stats := &TrimStats{
+		Outcome:           "evicted",
+		Duration:          2 * time.Second,
+		BytesReclaimed:    1 << 20,
+		FilesDeleted:      3,
+		StartFreeFraction: 0.15,
+		Sample: &TrimSampleStats{
+			SizeBytes: 80 << 30, Exact: true, PinnedBytes: 1 << 30,
+			CapCheckBuckets: 256,
+		},
+	}
+	RecordTrim(stats)
+	testMu.Lock()
+	got := lastRecordedTrim
+	testMu.Unlock()
+	if got != stats {
+		t.Errorf("recorded trim %+v, want %+v", got, stats)
+	}
+
+	// A busy pass measured nothing, and nil stats neither panic nor
+	// overwrite what was recorded before.
+	busy := &TrimStats{Outcome: "busy", StartFreeFraction: -1}
+	RecordTrim(busy)
+	RecordTrim(nil)
+	testMu.Lock()
+	got = lastRecordedTrim
+	testMu.Unlock()
+	if got != busy {
+		t.Errorf("recorded trim after nil stats = %+v, want %+v", got, busy)
+	}
+}
+
+// A -trim-only evictor is not a casdownloader run: whatever its caller does,
+// it leaves usage_count alone. A process initialized as a download counts.
+func TestRecordUsage_NotInATrimOnlyProcess(t *testing.T) {
+	lastUsage := func() int {
+		testMu.Lock()
+		defer testMu.Unlock()
+		return lastRecordedUsageExitCode
+	}
+	Init("casdownloader", WithTrimOnly())
+	testMu.Lock()
+	lastRecordedUsageExitCode = -1
+	testMu.Unlock()
+	RecordUsage(false, 1)
+	if got := lastUsage(); got != -1 {
+		t.Errorf("A trim-only process recorded a run with exit code %d, want none", got)
+	}
+	Shutdown()
+
+	Init("casdownloader")
+	defer Shutdown()
+	RecordUsage(false, 3)
+	if got := lastUsage(); got != 3 {
+		t.Errorf("A download recorded exit code %d, want 3", got)
+	}
+}
