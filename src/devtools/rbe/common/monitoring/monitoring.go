@@ -130,6 +130,42 @@ type LocalCacheStats struct {
 	// Activity is set only for caches that report it, so that runs without
 	// such a cache do not emit zeros that read as a healthy one.
 	Activity *LocalCacheActivity
+
+	// BypassedFiles and BypassedBytes count the distinct blobs of the tree,
+	// and their bytes, that skipped the cache because they were larger than
+	// -cache-max-blob-size; a blob at several paths counts once. They are
+	// also in the tiers of DownloadStats, as cold or proxy_cold.
+	BypassedFiles int64
+	BypassedBytes int64
+	// OutOfSpaceErrors counts the out-of-space errors the run hit, with or
+	// without a cache.
+	OutOfSpaceErrors int64
+	// TrimStarts lists each attempt the run made to start the lock-free
+	// cache's detached evictor.
+	TrimStarts []TrimStart
+	// Volume describes the volume that holds the cache, or is nil if the run
+	// had no cache or could not measure it.
+	Volume *VolumeStats
+}
+
+// TrimStart is one attempt by a download to start the detached evictor.
+type TrimStart struct {
+	// Reason is free_space or cap_check, from the open-time check, or
+	// enospc, from the ENOSPC hook.
+	Reason string
+	// Result is started, busy (another process held the eviction lock) or
+	// failed (the lock could not be probed or the process not started).
+	Result string
+}
+
+// VolumeStats is the size of a volume, as statfs reports it: TotalBytes is
+// its size, FreeBytes what an unprivileged process can still write, and
+// UsedBytes what is in use. As with df, UsedBytes + FreeBytes can be less
+// than TotalBytes, by the blocks reserved for root.
+type VolumeStats struct {
+	TotalBytes int64
+	FreeBytes  int64
+	UsedBytes  int64
 }
 
 // LocalCacheActivity holds the counters a lock-free cache accumulates in a run.

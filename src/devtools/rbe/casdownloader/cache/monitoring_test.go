@@ -177,3 +177,19 @@ func TestFailedTrimMonitoringStats(t *testing.T) {
 		t.Errorf("FailedTrimMonitoringStats() = %+v, want outcome %q and nothing else", got, storage.TrimOutcomeError)
 	}
 }
+
+// VolumeMonitoringStats measures the cache's volume as df does, and reports
+// nothing, rather than zeros, for a directory it cannot measure.
+func TestVolumeMonitoringStats(t *testing.T) {
+	got := VolumeMonitoringStats(t.TempDir())
+	if got == nil {
+		t.Fatal("VolumeMonitoringStats of a temporary directory = nil, want its volume")
+	}
+	// Free is what is left after used and root's reserve.
+	if got.TotalBytes <= 0 || got.FreeBytes < 0 || got.UsedBytes < 0 || got.UsedBytes+got.FreeBytes > got.TotalBytes {
+		t.Errorf("VolumeMonitoringStats = %+v, want 0 <= used + free <= total, with total > 0", *got)
+	}
+	if got := VolumeMonitoringStats(filepath.Join(t.TempDir(), "missing")); got != nil {
+		t.Errorf("VolumeMonitoringStats of a missing directory = %+v, want nil", *got)
+	}
+}

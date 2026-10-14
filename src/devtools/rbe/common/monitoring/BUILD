@@ -34,8 +34,12 @@ go_library(
 
 go_test(
     name = "monitoring_test",
-    srcs = ["monitoring_test.go"],
+    srcs = [
+        "monitoring_test.go",
+    ],
     embed = [":monitoring"],
+    deps = [
+    ],
 )
 
 # @unused

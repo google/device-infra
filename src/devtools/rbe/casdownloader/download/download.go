@@ -167,6 +167,14 @@ type Stats struct {
 	ExecMismatchBytes  int64 `json:"exec_mismatch_bytes"`
 	PermDriftHits      int64 `json:"perm_drift_hits"`
 	UnreadableRepairs  int64 `json:"unreadable_repairs"`
+	// CacheBypassedFiles and CacheBypassedBytes count the distinct blobs of
+	// the tree, and their bytes, that were larger than CacheMaxBlobSize and
+	// so skipped the local cache: a blob at several paths counts once, as it
+	// is fetched once. They overlap the cold and proxy-cold tiers rather than
+	// forming a tier of their own. They are exported as metrics only, not
+	// written to the JSON: they describe the fleet, not one download.
+	CacheBypassedFiles int   `json:"-"`
+	CacheBypassedBytes int64 `json:"-"`
 	// NoteReasons classifies Notes, one entry per note in the same order. It
 	// is exported as a metric rather than written to the JSON: the note text
 	// already reaches AnTS, and CF, which does not read the JSON, needs the
@@ -795,17 +803,23 @@ func (d *DownloadJob) downloadWithLocalCache(ctx context.Context, c cache.Cache,
 	cacheable := make([]*client.TreeOutput, 0, len(outputs))
 	var bypassed []*client.TreeOutput
 	var bypassedSize int64
+	bypassedBlobs := make(map[digest.Digest]bool)
 	for _, output := range outputs {
 		if d.bypassesCache(output.Digest) {
 			bypassed = append(bypassed, output)
-			bypassedSize += output.Digest.Size
+			if !bypassedBlobs[output.Digest] {
+				bypassedBlobs[output.Digest] = true
+				bypassedSize += output.Digest.Size
+			}
 		} else {
 			cacheable = append(cacheable, output)
 		}
 	}
 	if len(bypassed) > 0 {
-		log.InfoContextf(ctx, "%d files (%v) are larger than the cache blob size limit of %v; downloading them without the local cache", len(bypassed), units.Size(bypassedSize), units.Size(d.CacheMaxBlobSize))
+		log.InfoContextf(ctx, "%d files (%d blobs, %v) are larger than the cache blob size limit of %v; downloading them without the local cache", len(bypassed), len(bypassedBlobs), units.Size(bypassedSize), units.Size(d.CacheMaxBlobSize))
 	}
+	d.DownloadStats.CacheBypassedFiles = len(bypassedBlobs)
+	d.DownloadStats.CacheBypassedBytes = bypassedSize
 
 	var missed []*client.TreeOutput
 	// Pull is skipped when there is nothing to look up, because the default

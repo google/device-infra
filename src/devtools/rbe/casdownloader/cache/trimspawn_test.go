@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/device-infra/src/devtools/rbe/common/monitoring"
 	"github.com/google/device-infra/src/devtools/rbe/common/storage"
 )
 
@@ -572,5 +573,79 @@ func TestMaybeStartTrim_DefaultsToTheRealVolumeAndThisBinary(t *testing.T) {
 	logPath := filepath.Join(root, trimLogName)
 	if got, ok := waitForLog(t, logPath, "trim-only"); !ok {
 		t.Errorf("The trim's log does not mention -trim-only within a minute:\n%s", got)
+	}
+}
+
+// resetTrimStarts gives the test a process that has not tried to start the
+// evictor yet, and leaves one behind.
+func resetTrimStarts(t *testing.T) {
+	t.Helper()
+	reset := func() {
+		trimStartLog.mu.Lock()
+		trimStartLog.attempts = nil
+		trimStartLog.mu.Unlock()
+	}
+	reset()
+	t.Cleanup(reset)
+}
+
+// Each attempt of the open-time check to start the evictor is recorded once,
+// with why it was needed and what came of it. When free space is short and a
+// cap check is due as well, it counts as free_space.
+func TestOpen_RecordsTrimStartsByReasonAndResult(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		free      int64
+		maxSize   int64
+		lockHeld  bool
+		spawnErr  error
+		wantStart []monitoring.TrimStart
+	}{
+		{name: "no trim needed", free: 50 * mib},
+		{name: "free space short", free: 1 * mib, wantStart: []monitoring.TrimStart{{Reason: "free_space", Result: "started"}}},
+		{name: "cap check due", free: 50 * mib, maxSize: 1 << 30, wantStart: []monitoring.TrimStart{{Reason: "cap_check", Result: "started"}}},
+		{name: "both", free: 1 * mib, maxSize: 1 << 30, wantStart: []monitoring.TrimStart{{Reason: "free_space", Result: "started"}}},
+		{name: "lock held", free: 1 * mib, lockHeld: true, wantStart: []monitoring.TrimStart{{Reason: "free_space", Result: "busy"}}},
+		{name: "spawn fails", free: 1 * mib, spawnErr: errors.New("fork failed"), wantStart: []monitoring.TrimStart{{Reason: "free_space", Result: "failed"}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			resetTrimStarts(t)
+			spawner := &fakeSpawner{err: tc.spawnErr}
+			opts := trimCheckOptions(t, tc.free, spawner)
+			opts.MaxSize = tc.maxSize
+			if tc.lockHeld {
+				holdEvictionLock(t, opts.Dir)
+			}
+
+			openAndClose(t, opts)
+
+			if got := TrimStarts(); !slices.Equal(got, tc.wantStart) {
+				t.Errorf("TrimStarts() = %+v, want %+v", got, tc.wantStart)
+			}
+		})
+	}
+}
+
+// The ENOSPC hook's one attempt is recorded as enospc, after the open-time
+// check's, and MonitoringStats exports both with the out-of-space count.
+func TestHandleOutOfSpace_RecordsATrimStartAsENOSPC(t *testing.T) {
+	resetOutOfSpace(t)
+	resetTrimStarts(t)
+	spawner := &fakeSpawner{}
+	opts := trimCheckOptions(t, 1*mib, spawner)
+	c, err := Open(opts)
+	if err != nil {
+		t.Fatalf("Open failed: %v", err)
+	}
+	defer c.Close()
+	holdEvictionLock(t, opts.Dir)
+
+	HandleOutOfSpace(c, diskFull("/tmp/dir/a"))
+	HandleOutOfSpace(c, diskFull("/tmp/dir/b"))
+
+	got := MonitoringStats(c)
+	want := []monitoring.TrimStart{{Reason: "free_space", Result: "started"}, {Reason: "enospc", Result: "busy"}}
+	if !slices.Equal(got.TrimStarts, want) || got.OutOfSpaceErrors != 2 {
+		t.Errorf("MonitoringStats = trim starts %+v, %d out-of-space errors; want %+v, 2", got.TrimStarts, got.OutOfSpaceErrors, want)
 	}
 }

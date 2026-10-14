@@ -290,3 +290,36 @@ func TestRecordUsage_NotInATrimOnlyProcess(t *testing.T) {
 		t.Errorf("A download recorded exit code %d, want 3", got)
 	}
 }
+
+// A download records its evictor starts, out-of-space errors, bypassed blobs
+// and cache volume with its local-cache stats, whatever its Activity, and a
+// run without a cache can still report out-of-space errors.
+func TestRecordLocalCacheStats_DownloadSide(t *testing.T) {
+	Init("casdownloader")
+	defer Shutdown()
+
+	stats := &LocalCacheStats{
+		Impl:             "luci",
+		BypassedFiles:    2,
+		BypassedBytes:    3 << 30,
+		OutOfSpaceErrors: 1,
+		TrimStarts:       []TrimStart{{Reason: "free_space", Result: "started"}, {Reason: "enospc", Result: "busy"}},
+		Volume:           &VolumeStats{TotalBytes: 100 << 30, FreeBytes: 20 << 30, UsedBytes: 75 << 30},
+	}
+	RecordLocalCacheStats(stats, "test-instance")
+	testMu.Lock()
+	got := lastRecordedLocalCache
+	testMu.Unlock()
+	if got != stats {
+		t.Errorf("recorded %+v, want %+v", got, stats)
+	}
+
+	none := &LocalCacheStats{Impl: "none", OutOfSpaceErrors: 1}
+	RecordLocalCacheStats(none, "test-instance")
+	testMu.Lock()
+	got = lastRecordedLocalCache
+	testMu.Unlock()
+	if got != none {
+		t.Errorf("recorded %+v for a run without a cache, want %+v", got, none)
+	}
+}

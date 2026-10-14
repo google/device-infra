@@ -1,19 +1,28 @@
 package cache
 
 import (
+	"syscall"
+
+	log "github.com/golang/glog"
 	"github.com/google/device-infra/src/devtools/rbe/common/monitoring"
 	"github.com/google/device-infra/src/devtools/rbe/common/storage"
 )
 
 // MonitoringStats describes what c did since it was created, for export as
-// metrics. c may be nil, for a run without a cache.
+// metrics. c may be nil, for a run without a cache. The out-of-space errors
+// and the attempts to start the detached evictor are this process's, whatever
+// cache it had.
 //
 // Activity is filled in only from caches that report it. Leaving it nil for
 // the others, rather than zero, keeps runs on LocalCache or without a cache
 // from emitting counters that would read as a lock-free cache with nothing to
 // report.
 func MonitoringStats(c Cache) *monitoring.LocalCacheStats {
-	stats := &monitoring.LocalCacheStats{Impl: Impl(c)}
+	stats := &monitoring.LocalCacheStats{
+		Impl:             Impl(c),
+		OutOfSpaceErrors: OutOfSpace().Errors,
+		TrimStarts:       TrimStarts(),
+	}
 	modes, hasModes := c.(ModeCopyReporter)
 	store, hasStore := c.(StorageStatsReporter)
 	if !hasModes && !hasStore {
@@ -36,6 +45,24 @@ func MonitoringStats(c Cache) *monitoring.LocalCacheStats {
 	}
 	stats.Activity = a
 	return stats
+}
+
+// VolumeMonitoringStats measures the volume that holds dir, for export as
+// metrics, as df does: used is what the volume has allocated, free what an
+// unprivileged process can still allocate. It returns nil, and logs why, if
+// dir cannot be measured.
+func VolumeMonitoringStats(dir string) *monitoring.VolumeStats {
+	var st syscall.Statfs_t
+	if err := syscall.Statfs(dir, &st); err != nil {
+		log.Warningf("Could not measure the volume of the local cache in %s: %v.", dir, err)
+		return nil
+	}
+	bsize := int64(st.Bsize)
+	return &monitoring.VolumeStats{
+		TotalBytes: int64(st.Blocks) * bsize,
+		FreeBytes:  int64(st.Bavail) * bsize,
+		UsedBytes:  int64(st.Blocks-st.Bfree) * bsize,
+	}
 }
 
 // TrimMonitoringStats describes the -trim-only pass res reports, for export

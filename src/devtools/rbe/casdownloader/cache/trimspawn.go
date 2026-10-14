@@ -7,12 +7,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	log "github.com/golang/glog"
+	"github.com/google/device-infra/src/devtools/rbe/common/monitoring"
 	"github.com/google/device-infra/src/devtools/rbe/common/storage"
 )
 
@@ -146,18 +149,21 @@ func trimArgs(opts Options) []string {
 
 // trimReasons is the open-time check: it reports why the lock-free cache
 // rooted at root needs a trim, if it does, at the cost of a statfs and, with
-// a cap, a stat.
+// a cap, a stat. reason is the first of them as a trim_starts reason:
+// TrimReasonFreeSpace if free space is short, whether or not a cap check is
+// also due, since that is the one that protects the disk, and otherwise
+// TrimReasonCapCheck. It is empty if no trim is needed.
 //
 // A trim is needed if free space on the volume is below minFree, or if
 // maxSize is set and the last cap check is at least checkInterval old: the
 // cap is enforced only by a trim, which checks it. Failures are logged and
 // count as no reason, since a trim could not run where these syscalls fail
 // either.
-func trimReasons(root string, minFree storage.SpaceThreshold, maxSize int64, checkInterval time.Duration, statfs storage.StatfsFunc, now time.Time) []string {
-	var reasons []string
+func trimReasons(root string, minFree storage.SpaceThreshold, maxSize int64, checkInterval time.Duration, statfs storage.StatfsFunc, now time.Time) (reason string, reasons []string) {
 	if st, err := statfs(root); err != nil {
 		log.Warningf("Could not check free space for the lock-free cache in %s: %v.", root, err)
 	} else if floor := minFree.Evaluate(st.TotalBytes); st.FreeBytes < floor {
+		reason = TrimReasonFreeSpace
 		reasons = append(reasons, fmt.Sprintf("%d bytes free, below -cache-min-free-space=%s (%d bytes)",
 			st.FreeBytes, thresholdString(minFree), floor))
 	}
@@ -167,10 +173,13 @@ func trimReasons(root string, minFree storage.SpaceThreshold, maxSize int64, che
 		case err != nil:
 			log.Warningf("Could not check when the lock-free cache in %s was last checked against its cap: %v.", root, err)
 		case due:
+			if reason == "" {
+				reason = TrimReasonCapCheck
+			}
 			reasons = append(reasons, fmt.Sprintf("a check against -cache-max-size=%d is due (none in the last %v)", maxSize, checkInterval))
 		}
 	}
-	return reasons
+	return reason, reasons
 }
 
 // capCheckDue reports whether the cap check recorded under root
@@ -210,11 +219,11 @@ func maybeStartTrim(opts Options, cfg storage.EvictorConfig, root string) bool {
 		statfs = storage.RealStatfs
 	}
 	interval := capCheckInterval(opts.CapCheckInterval)
-	reasons := trimReasons(root, minFree, opts.MaxSize, interval, statfs, time.Now())
+	reason, reasons := trimReasons(root, minFree, opts.MaxSize, interval, statfs, time.Now())
 	if len(reasons) == 0 {
 		return false
 	}
-	return startTrim(opts, root, strings.Join(reasons, "; ")) == trimStarted
+	return startTrim(opts, root, reason, strings.Join(reasons, "; ")) == trimStarted
 }
 
 // trimStart is what startTrim did.
@@ -232,14 +241,58 @@ const (
 	trimStarted
 )
 
-// startTrim is how a download starts the detached evictor for the lock-free
+// The reasons and results of the trim_starts metric. See TrimStarts.
+const (
+	TrimReasonFreeSpace = "free_space"
+	TrimReasonCapCheck  = "cap_check"
+	TrimReasonENOSPC    = "enospc"
+
+	TrimResultStarted = "started"
+	TrimResultBusy    = "busy"
+	TrimResultFailed  = "failed"
+)
+
+// trimStartLog is every attempt this process made to start the detached
+// evictor. Like the ENOSPC hook's state, it is per process: a download that
+// reopens its cache for the direct retry reports both opens.
+var trimStartLog struct {
+	mu       sync.Mutex
+	attempts []monitoring.TrimStart
+}
+
+// TrimStarts returns every attempt this process has made to start the
+// detached evictor, through the open-time check or the ENOSPC hook, with
+// what came of it, in order.
+func TrimStarts() []monitoring.TrimStart {
+	trimStartLog.mu.Lock()
+	defer trimStartLog.mu.Unlock()
+	return slices.Clone(trimStartLog.attempts)
+}
+
+// startTrim is tryStartTrim, recorded in TrimStarts under reason.
+func startTrim(opts Options, root, reason, why string) trimStart {
+	res := tryStartTrim(opts, root, why)
+	result := TrimResultFailed
+	switch res {
+	case trimStarted:
+		result = TrimResultStarted
+	case trimBusy:
+		result = TrimResultBusy
+	}
+	trimStartLog.mu.Lock()
+	trimStartLog.attempts = append(trimStartLog.attempts, monitoring.TrimStart{Reason: reason, Result: result})
+	trimStartLog.mu.Unlock()
+	return res
+}
+
+// tryStartTrim is how a download starts the detached evictor for the lock-free
 // cache rooted at root. The open-time check (maybeStartTrim) calls it once it
 // has found that the cache needs a trim, and the ENOSPC hook
-// (LockFreeCache.OnOutOfSpace) calls it directly. why says what called for
-// the trim, for the log.
+// (LockFreeCache.OnOutOfSpace) calls it directly, both through startTrim. why
+// says what called for the trim, for the log.
 //
 // It probes the eviction lock, v2/.evict.lock, without blocking. If another
-// process holds it, that process is trimming already, and startTrim returns
+// process holds it, that process is trimming already, and tryStartTrim returns
 // trimBusy. Otherwise it starts `casdownloader trimArgs(opts)...` (see
 // startDetached) and returns trimStarted without waiting for it. The child
 // measures the cache for itself and decides how much to evict.
@@ -251,7 +304,7 @@ const (
 // for each start.
 //
 // It is best effort: any error is logged, and the caller goes on.
-func startTrim(opts Options, root, why string) trimStart {
+func tryStartTrim(opts Options, root, why string) trimStart {
 	busy, err := storage.EvictionInProgress(root)
 	if err != nil {
 		log.Warningf("The lock-free cache in %s needs a trim (%s), but its eviction lock could not be checked: %v. Not starting one.",

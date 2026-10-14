@@ -30,6 +30,7 @@ var (
 	lastRecordedUpstreamRPC   string
 	lastRecordedCacheImpl     string
 	lastRecordedCacheActivity *LocalCacheActivity
+	lastRecordedLocalCache    *LocalCacheStats
 	lastRecordedTrim          *TrimStats
 )
 
@@ -67,6 +68,7 @@ func recordLocalCacheStats(stats *LocalCacheStats, casInstance string) {
 		testMu.Lock()
 		lastRecordedCacheImpl = stats.Impl
 		lastRecordedCacheActivity = stats.Activity
+		lastRecordedLocalCache = stats
 		testMu.Unlock()
 	}
 }

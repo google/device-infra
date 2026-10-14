@@ -1146,6 +1146,56 @@ func TestDoDownload_OversizedBlobsSkipPullAndPush(t *testing.T) {
 	}
 }
 
+// TestDoDownload_CountsCacheBypassPerBlob checks that the stats count the
+// blobs over CacheMaxBlobSize once each, however many paths they appear at,
+// that stats.json leaves those counts and the evictor's out (they are
+// metrics only), and that the tiers those files are counted in are unchanged.
+func TestDoDownload_CountsCacheBypassPerBlob(t *testing.T) {
+	f := newBlobSizeFixture(t)
+	dumpFile := filepath.Join(t.TempDir(), "stats.json")
+	job := DownloadJob{
+		Client:           f.client,
+		Digest:           f.rootDigest,
+		Dir:              t.TempDir(),
+		DumpJSON:         dumpFile,
+		Cache:            newRecordingCache(map[digest.Digest][]byte{f.dSmall: f.small}),
+		CacheMaxBlobSize: f.dMedium.Size,
+	}
+	if err := job.DoDownload(context.Background()); err != nil {
+		t.Fatalf("DoDownload failed: %v", err)
+	}
+
+	dumped, err := os.ReadFile(dumpFile)
+	if err != nil {
+		t.Fatalf("Failed to read dumped stats: %v", err)
+	}
+	var fields map[string]any
+	if err := json.Unmarshal(dumped, &fields); err != nil {
+		t.Fatalf("Failed to parse dumped stats %s: %v", dumped, err)
+	}
+	// big.bin and big_copy.bin: one blob, fetched once, at two paths.
+	if got := job.Stats(); got.CacheBypassedFiles != 1 || got.CacheBypassedBytes != f.dBig.Size {
+		t.Errorf("Bypass stats = %d files, %d bytes; want 1 blob of %d bytes", got.CacheBypassedFiles, got.CacheBypassedBytes, f.dBig.Size)
+	}
+	for _, key := range []string{"cache_bypassed_files", "cache_bypassed_bytes", "enospc_errors", "trim_started"} {
+		if got, ok := fields[key]; ok {
+			t.Errorf("Dumped %s = %v, want it left out of stats.json", key, got)
+		}
+	}
+	for key, want := range map[string]any{
+		// The tiers are as without the bypass: small.txt was a hit,
+		// medium.txt and big.bin were fetched, big_copy.bin deduplicated.
+		"size_hot":   float64(f.dSmall.Size),
+		"size_cold":  float64(f.dMedium.Size + f.dBig.Size),
+		"size_dedup": float64(f.dBig.Size),
+		"count_cold": float64(2),
+	} {
+		if got, ok := fields[key]; !ok || got != want {
+			t.Errorf("Dumped %s = %v (present: %v), want %v", key, got, ok, want)
+		}
+	}
+}
+
 // TestDoDownload_AllBlobsOversizedSkipCache checks that a tree whose every blob
 // is over CacheMaxBlobSize does not call the cache at all. The default cache
 // with -cache-lock takes a host-wide lock for each call, which a download that

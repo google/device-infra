@@ -132,7 +132,7 @@ func openLockFree(opts Options) (Cache, error) {
 		// The ENOSPC hook starts the same trim, without the open-time
 		// check; see HandleOutOfSpace.
 		lockFreeCache.startEvictor = func(why string) trimStart {
-			return startTrim(opts, root, why)
+			return startTrim(opts, root, TrimReasonENOSPC, why)
 		}
 	}
 	return lockFreeCache, nil
