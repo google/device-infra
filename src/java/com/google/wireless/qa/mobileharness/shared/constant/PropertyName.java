@@ -121,6 +121,13 @@ public interface PropertyName {
     /** The root path of the uploaded genfiles. */
     UPLOAD_GENFILES_ROOT_PATH,
 
+    /**
+     * Whether the job encountered an uncaught job-level error before shutting down running tests.
+     *
+     * <p>Value type is boolean.
+     */
+    _HAS_JOB_LEVEL_ERROR,
+
     /** Whether it is a resumed job from a previous interrupted one */
     _IS_RESUMED_JOB,
 
