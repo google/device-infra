@@ -55,6 +55,7 @@ import com.google.devtools.mobileharness.platform.android.xts.constant.XtsProper
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteResultReporter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportLogMerger;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger.MergedResult;
 import com.google.devtools.mobileharness.platform.android.xts.suite.screenshots.ScreenshotsMetadataUtil;
@@ -96,10 +97,12 @@ public class SessionResultHandlerUtil {
 
   private static final String DEVICE_INFO_DIR_NAME = "device-info-files";
   private static final String DEVICE_INFO_FILE_SUFFIX = ".deviceinfo.json";
+  private static final String REPORT_LOG_DIR_NAME = "report-log-files";
+  private static final String REPORT_LOG_FILE_SUFFIX = ".reportlog.json";
 
   // Mobly result directories that are copied to the root result dir.
   private static final ImmutableSet<String> MOBLY_ROOT_TEST_RESULT_DIR_NAMES =
-      ImmutableSet.of("report-log-files", DEVICE_INFO_DIR_NAME, "vintf-files");
+      ImmutableSet.of(REPORT_LOG_DIR_NAME, DEVICE_INFO_DIR_NAME, "vintf-files");
 
   private static final ImmutableSet<String> EXCLUDED_TF_GEN_RESULT_FILES =
       ImmutableSet.of(
@@ -136,6 +139,7 @@ public class SessionResultHandlerUtil {
   private final CompatibilityReportMerger compatibilityReportMerger;
   private final CompatibilityReportCreator reportCreator;
   private final RetryReportMerger retryReportMerger;
+  private final RetryReportLogMerger retryReportLogMerger;
   private final PreviousResultLoader previousResultLoader;
   private final SessionInfo sessionInfo;
   private final ScreenshotsMetadataUtil screenshotsMetadataUtil;
@@ -147,6 +151,7 @@ public class SessionResultHandlerUtil {
       CompatibilityReportMerger compatibilityReportMerger,
       CompatibilityReportCreator reportCreator,
       RetryReportMerger retryReportMerger,
+      RetryReportLogMerger retryReportLogMerger,
       PreviousResultLoader previousResultLoader,
       SessionInfo sessionInfo,
       ScreenshotsMetadataUtil screenshotsMetadataUtil,
@@ -155,6 +160,7 @@ public class SessionResultHandlerUtil {
     this.compatibilityReportMerger = compatibilityReportMerger;
     this.reportCreator = reportCreator;
     this.retryReportMerger = retryReportMerger;
+    this.retryReportLogMerger = retryReportLogMerger;
     this.previousResultLoader = previousResultLoader;
     this.sessionInfo = sessionInfo;
     this.screenshotsMetadataUtil = screenshotsMetadataUtil;
@@ -1346,8 +1352,17 @@ public class SessionResultHandlerUtil {
         localFileUtil.copyFileOrDir(oldChild.getAbsolutePath(), newChild.getAbsolutePath());
       } else if (newChild.isDirectory() && oldChild.isDirectory()) {
         copyRetryFiles(oldChild.getAbsolutePath(), newChild.getAbsolutePath());
+      } else if (isReportLogFileInReportLogDir(oldChild, newChild)) {
+        retryReportLogMerger.mergeReportLogFiles(oldChild.toPath(), newChild.toPath());
       }
     }
+  }
+
+  private static boolean isReportLogFileInReportLogDir(File oldChild, File newChild) {
+    return oldChild.isFile()
+        && newChild.isFile()
+        && newChild.getParentFile().getName().equals(REPORT_LOG_DIR_NAME)
+        && newChild.getName().endsWith(REPORT_LOG_FILE_SUFFIX);
   }
 
   private void copyRetryFilesForConsole(SessionRequestInfo sessionRequestInfo, Path resultDir)

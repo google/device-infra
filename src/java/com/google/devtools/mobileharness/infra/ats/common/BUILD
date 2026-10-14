@@ -250,6 +250,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_result_reporter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:previous_result_loader",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_report_log_merger",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_report_merger",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/screenshots:screenshots_metadata_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",

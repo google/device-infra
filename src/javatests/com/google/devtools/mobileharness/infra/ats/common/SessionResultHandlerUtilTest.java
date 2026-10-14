@@ -156,6 +156,54 @@ public final class SessionResultHandlerUtilTest {
   }
 
   @Test
+  public void copyRetryFiles_mergesExistingReportLogFiles() throws Exception {
+    Path oldDir = folder.newFolder("old_dir_report_log").toPath();
+    Path newDir = folder.newFolder("new_dir_report_log").toPath();
+    Path oldReportLogDir = oldDir.resolve("report-log-files");
+    Path newReportLogDir = newDir.resolve("report-log-files");
+    oldReportLogDir.toFile().mkdirs();
+    newReportLogDir.toFile().mkdirs();
+    String unretriedModuleContent = "{\"stream\": [{\"v\": 1}]}";
+    localFileUtil.writeToFile(
+        oldReportLogDir.resolve("UnretriedModule.reportlog.json").toString(),
+        unretriedModuleContent);
+    localFileUtil.writeToFile(
+        oldReportLogDir.resolve("RetriedModule.reportlog.json").toString(),
+        "{\"test_classes\": [{\"key\": \"OldClass\", \"value\": {\"v\": 1}}, {\"key\":"
+            + " \"RetriedClass\", \"value\": {\"v\": 1}}], \"wifi_chipset\": \"WCN7861\"}");
+    localFileUtil.writeToFile(
+        newReportLogDir.resolve("RetriedModule.reportlog.json").toString(),
+        "{\"test_classes\": [{\"key\": \"RetriedClass\", \"value\": {\"v\": 2}}],"
+            + " \"wifi_chipset\": \"NA\"}");
+
+    sessionResultHandlerUtil.copyRetryFiles(oldDir.toString(), newDir.toString());
+
+    assertThat(localFileUtil.readFile(newReportLogDir.resolve("UnretriedModule.reportlog.json")))
+        .isEqualTo(unretriedModuleContent);
+    assertThat(localFileUtil.readFile(newReportLogDir.resolve("RetriedModule.reportlog.json")))
+        .isEqualTo(
+            """
+            {
+              "test_classes": [
+                {
+                  "key": "OldClass",
+                  "value": {
+                    "v": 1
+                  }
+                },
+                {
+                  "key": "RetriedClass",
+                  "value": {
+                    "v": 2
+                  }
+                }
+              ],
+              "wifi_chipset": "NA"
+            }\
+            """);
+  }
+
+  @Test
   public void cleanUpLabGenFileDir_success() throws Exception {
     flags.set("ats_storage_path", "/tmp/ats_storage_path");
     doReturn(true).when(localFileUtil).isDirExist(eq("/tmp/ats_storage_path/genfiles/test_id"));

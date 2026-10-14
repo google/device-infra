@@ -100,6 +100,22 @@ java_library(
 )
 
 java_library(
+    name = "retry_report_log_merger",
+    srcs = ["RetryReportLogMerger.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_gson_gson",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "retry_report_merger",
     srcs = ["RetryReportMerger.java"],
     visibility = [
