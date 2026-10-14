@@ -222,9 +222,6 @@ func checkFlags() error {
 	}
 	if !*disableCache {
 		warnAboutIgnoredCacheFlags(explicitFlags(), *enableLockFreeCache)
-		if *enableLockFreeCache {
-			warnAboutLeftoverStandardCache()
-		}
 	}
 	warnAboutIgnoredTrimFlags(explicitFlags())
 	return nil
@@ -319,21 +316,6 @@ func warnAboutIgnoredTrimFlags(explicit map[string]bool) {
 		return
 	}
 	log.Warningf("%s %s ignored without -trim-only.", strings.Join(ignored, ", "), pluralVerb(len(ignored)))
-}
-
-// warnAboutLeftoverStandardCache points at the standard cache's files, if any
-// remain, once the lock-free cache has taken over.
-//
-// They are left in place rather than deleted so that turning
-// -enable-lock-free-cache back off resumes from a warm cache. That costs disk
-// on hosts already short of it, which is the whole reason the lock-free cache
-// exists, so the operator is told where the space went and that it is theirs
-// to reclaim.
-func warnAboutLeftoverStandardCache() {
-	if _, err := os.Stat(filepath.Join(*cacheDir, "state.json")); err != nil {
-		return
-	}
-	log.Warningf("A cache from the default implementation remains in %s and is no longer read or trimmed. It is kept so that turning -enable-lock-free-cache back off resumes from a warm cache; delete its contents (not the directory) once the rollout has settled.", *cacheDir)
 }
 
 func pluralVerb(n int) string {

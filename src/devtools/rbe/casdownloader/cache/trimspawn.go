@@ -161,10 +161,6 @@ func trimReasons(root string, minFree storage.SpaceThreshold, maxSize int64, che
 			reasons = append(reasons, fmt.Sprintf("a check against -cache-max-size=%d is due (none in the last %v)", maxSize, checkInterval))
 		}
 	}
-	// TODO: Change 4 adds a third reason, legacy cleanup
-	// pending: if the legacy luci layout is present, stat
-	// <cache-dir>/state.json, and start a trim to clean it up once it has
-	// not been modified for 24 hours.
 	return reasons
 }
 
