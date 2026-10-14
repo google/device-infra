@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
@@ -193,3 +194,56 @@ func TestVolumeMonitoringStats(t *testing.T) {
 		t.Errorf("VolumeMonitoringStats of a missing directory = %+v, want nil", *got)
 	}
 }
+
+// HostName prefers the host's name a container launcher mounted, and falls
+// back to this process's hostname when there is none, or it is empty.
+func TestHostName(t *testing.T) {
+	self, err := os.Hostname()
+	if err != nil {
+		t.Fatalf("os.Hostname failed: %v", err)
+	}
+	dir := t.TempDir()
+	for _, tc := range []struct {
+		name    string
+		content *string // nil means no file
+		want    string
+	}{
+		{name: "mounted", content: ptr("host1.example.com\n"), want: "host1.example.com"},
+		{name: "first line only, trimmed", content: ptr("  host2  \nignored\n"), want: "host2"},
+		{name: "empty", content: ptr("\n"), want: self},
+		{name: "absent", want: self},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(dir, strings.ReplaceAll(tc.name, " ", "_"))
+			if tc.content != nil {
+				if err := os.WriteFile(path, []byte(*tc.content), 0644); err != nil {
+					t.Fatalf("Failed to write %s: %v", path, err)
+				}
+			}
+			orig := hostNameFile
+			t.Cleanup(func() { hostNameFile = orig })
+			hostNameFile = path
+
+			if got := HostName(); got != tc.want {
+				t.Errorf("HostName() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// The cache's volume carries the host's name, for the host_disk_* metrics.
+func TestVolumeMonitoringStats_CarriesTheHostName(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "casdownloader_hostname")
+	if err := os.WriteFile(path, []byte("host1\n"), 0644); err != nil {
+		t.Fatalf("Failed to write %s: %v", path, err)
+	}
+	orig := hostNameFile
+	t.Cleanup(func() { hostNameFile = orig })
+	hostNameFile = path
+
+	if got := VolumeMonitoringStats(t.TempDir()); got == nil || got.Host != "host1" {
+		t.Errorf("VolumeMonitoringStats = %+v, want Host %q", got, "host1")
+	}
+}
+
+func ptr(s string) *string { return &s }

@@ -166,6 +166,10 @@ type VolumeStats struct {
 	TotalBytes int64
 	FreeBytes  int64
 	UsedBytes  int64
+	// Host names the physical host the volume is on. Inside a container,
+	// whose own hostname is its ID, it comes from the host (see the
+	// casdownloader cache package's HostName).
+	Host string
 }
 
 // LocalCacheActivity holds the counters a lock-free cache accumulates in a run.
