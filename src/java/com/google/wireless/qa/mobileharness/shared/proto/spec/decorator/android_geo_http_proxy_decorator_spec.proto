@@ -25,7 +25,7 @@ option java_multiple_files = true;
 option java_outer_classname = "AndroidGeoHttpProxyDecoratorSpecProto";
 
 // Specs for {@link AndroidGeoHttpProxyDecorator}.
-// Next tag: 9
+// Next tag: 10
 message AndroidGeoHttpProxyDecoratorSpec {
   extend DecoratorSpec {
     optional AndroidGeoHttpProxyDecoratorSpec ext = 1019;
@@ -69,5 +69,12 @@ message AndroidGeoHttpProxyDecoratorSpec {
   optional bool is_mobile = 8 [(field_detail) = {
     is_required: false,
     help: "Whether to filter for mobile egress points."
+  }];
+
+  optional bool early_connect_response = 9 [(field_detail) = {
+    is_required: false,
+    help: "Whether the proxy answers CONNECT requests before the remote "
+          "connection is open. Avoids client-side tunnel timeouts (e.g. 10s in "
+          "Chromium on Android) when egress points are slow to connect."
   }];
 }
