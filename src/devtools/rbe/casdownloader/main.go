@@ -83,7 +83,7 @@ var (
 	// prevents the volume from filling up. The default depends on the cache, so it is applied by
 	// the cache package; an empty value selects it.
 	cacheMinFreeSpace = flag.String("cache-min-free-space", "",
-		fmt.Sprintf("Cache is trimmed if free space on the filesystem holding the cache drops below this value: a byte count such as 1073741824 or \"1gb\", or with -enable-lock-free-cache also a percentage of the volume such as \"20%%\". If 0, free space is not enforced. Defaults to %d bytes, or %s with -enable-lock-free-cache. %q is reserved: with -enable-lock-free-cache it falls back to the default with a warning, and without it it is rejected.",
+		fmt.Sprintf("Cache is trimmed if free space on the filesystem holding the cache drops below this value: a byte count, bare or with a unit, such as 1073741824 or \"1gb\", or with -enable-lock-free-cache also a percentage of the volume such as \"20%%\". The units are b, k, kb, kib, m, mb, mib, g, gb, gib, t, tb and tib, in any case, and all are binary: \"1gb\" is 1073741824 bytes. Defaults to %d bytes, or %s with -enable-lock-free-cache. A value that does not parse, such as a negative number, falls back to the default with a warning, and the cache stays on; so does %q, which is reserved, and, without -enable-lock-free-cache, a percentage. Without -enable-lock-free-cache, 0 means free space is not enforced. With it, the value must be 5-45%% of the volume, a byte count being compared as a share of the volume, and is clamped to the nearest bound with a warning.",
 			cache.DefaultLegacyMinFreeSpace, cache.DefaultLockFreeMinFreeSpace, cache.SelfAdaptive))
 	// Read by the download rather than by the cache, so it applies to both cache implementations.
 	cacheMaxBlobSize = flag.Int64("cache-max-blob-size", DefaultCacheMaxBlobSize,
@@ -98,7 +98,7 @@ var (
 	// tuned per cluster. They are individual scalars rather than a config file
 	// precisely so that each maps onto one @Option.
 	cacheTargetFreeSpace = flag.String("cache-target-free-space", "",
-		fmt.Sprintf("Free space at which a trim stops: a byte count or a percentage of the volume, like -cache-min-free-space. Defaults to %s. If it is not above -cache-min-free-space, the minimum plus 5 percentage points of the volume is used instead, with a warning.",
+		fmt.Sprintf("Free space at which a trim stops: a byte count or a percentage of the volume, like -cache-min-free-space. Defaults to %s, as does a value that does not parse, with a warning. The value must be 10-50%% of the volume and is clamped to the nearest bound with a warning. If it is less than 5 percentage points above -cache-min-free-space, the minimum plus 5 points is used instead, with a warning.",
 			cache.DefaultLockFreeTargetFreeSpace))
 	cacheSampleBuckets = flag.Int("cache-eviction-sample-buckets", 0,
 		"Least number of random leaf directories read to estimate the eviction cutoff age before anything is evicted (safe range: 16-64). If 0, 64 is used. Leave unset unless optimizing.")
@@ -117,7 +117,7 @@ var (
 	trimOnly = flag.Bool("trim-only", false,
 		"Instead of downloading, run one eviction pass over the lock-free cache in -cache-dir and exit. The pass exits at once if another process is already trimming; otherwise it removes the oldest blobs until free space reaches -cache-target-free-space (or -trim-target-free) and, with -cache-max-size, until the cache is within 90% of that cap if it was over it, all within -trim-max-duration. Implies -enable-lock-free-cache; only -cache-dir, -cache-max-size, the free-space flags and the eviction tuning flags are read.")
 	trimTargetFree = flag.String("trim-target-free", "",
-		"With -trim-only, the free space at which this pass stops, overriding -cache-target-free-space: a byte count or a percentage of the volume.")
+		"With -trim-only, the free space at which this pass stops, overriding -cache-target-free-space: a byte count or a percentage of the volume, held to the same range and gap as -cache-target-free-space. A value that does not parse is ignored with a warning, and the pass uses -cache-target-free-space.")
 	trimMaxDuration = flag.Duration("trim-max-duration", cache.DefaultTrimMaxDuration,
 		"With -trim-only, the longest the pass may run. It stops where it is when the time is up, which is safe. 0 means no limit.")
 
@@ -540,9 +540,12 @@ func run(ctx context.Context) error {
 	}()
 
 	var jobNotes []download.Note
-	localCache, cacheNote := cache.OpenOrDegrade(ctx, cacheFlagValues(), "the download")
+	localCache, cacheNote, watermarksNote := cache.OpenOrDegrade(ctx, cacheFlagValues(), "the download")
 	if cacheNote != "" {
 		jobNotes = append(jobNotes, download.Note{Reason: download.NoteCacheSetupFailed, Message: cacheNote})
+	}
+	if watermarksNote != "" {
+		jobNotes = append(jobNotes, download.Note{Reason: download.NoteCacheWatermarksAdjusted, Message: watermarksNote})
 	}
 
 	d := download.DownloadJob{
@@ -605,8 +608,10 @@ func run(ctx context.Context) error {
 			_ = d.Cache.Close()
 		}
 
-		// Re-initialize cache since the previous attempt closed it.
-		localCache, cacheNote := cache.OpenOrDegrade(ctx, cacheFlagValues(), "the direct RBE retry")
+		// Re-initialize cache since the previous attempt closed it. Its flags
+		// are the first attempt's, which already noted any adjustment to the
+		// watermarks.
+		localCache, cacheNote, _ := cache.OpenOrDegrade(ctx, cacheFlagValues(), "the direct RBE retry")
 		if cacheNote != "" {
 			d.Notes = append(d.Notes, download.Note{Reason: download.NoteCacheSetupFailed, Message: cacheNote})
 		}

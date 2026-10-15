@@ -3,7 +3,6 @@ package cache
 import (
 	"fmt"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -34,14 +33,9 @@ const (
 	DefaultLockFreeTargetFreeSpace = "25%"
 
 	// SelfAdaptive is the value of -cache-min-free-space reserved for
-	// watermarks that adapt to each host. Until that exists the lock-free
-	// cache uses its default instead, with a warning, and the lock-based
-	// cache rejects it.
+	// watermarks that adapt to each host. Until that exists both caches use
+	// their default instead, with a warning.
 	SelfAdaptive = "self-adaptive"
-
-	// targetGapPoints is how many percentage points of the volume a target
-	// that is not above the minimum is reset to above it.
-	targetGapPoints = 5
 
 	// lockFreeSampleBuckets is how many buckets a trim samples to choose its
 	// cutoff age. The shared default of 16 was sized for casproxy's 65,536
@@ -74,23 +68,31 @@ type EvictorOverrides struct {
 	MinBlobAge        *time.Duration
 }
 
-// watermarks are the lock-free cache's two free-space thresholds: a trim
-// starts when free space falls below min and stops when it reaches target.
-type watermarks struct {
-	min, target storage.SpaceThreshold
+// The lock-free cache's default watermarks, parsed.
+var (
+	defaultLockFreeMin    = mustParseSpace(DefaultLockFreeMinFreeSpace)
+	defaultLockFreeTarget = mustParseSpace(DefaultLockFreeTargetFreeSpace)
+)
+
+// mustParseSpace parses one of the default watermarks, which are constants,
+// so an error is a bug.
+func mustParseSpace(value string) storage.SpaceThreshold {
+	t, err := storage.ParseSpaceThreshold(value)
+	if err != nil {
+		panic(fmt.Sprintf("bad default watermark: %v", err))
+	}
+	return t
 }
 
-// parseSpace parses a free-space flag value: a bare byte count, as
-// -cache-min-free-space has always taken, or anything
-// storage.ParseSpaceThreshold accepts, such as "20%" or "10gb".
-//
-// The bare byte count is handled here because ParseSpaceThreshold documents
-// it but rejects it as ambiguous.
-func parseSpace(value string) (storage.SpaceThreshold, error) {
-	if n, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64); err == nil {
-		return storage.SpaceThreshold{Bytes: n}, nil
-	}
-	return storage.ParseSpaceThreshold(value)
+// warningLog collects the warnings that resolving the free-space flags
+// produces. Each is logged as it is added; the list is kept so that a
+// download can also report it as a note.
+type warningLog []string
+
+func (w *warningLog) addf(format string, args ...any) {
+	msg := fmt.Sprintf(format, args...)
+	log.Warningf("%s", msg)
+	*w = append(*w, msg)
 }
 
 // isSelfAdaptive reports whether value is the reserved SelfAdaptive value.
@@ -98,163 +100,113 @@ func isSelfAdaptive(value string) bool {
 	return strings.EqualFold(strings.TrimSpace(value), SelfAdaptive)
 }
 
-// parseLegacyMinFreeSpace parses -cache-min-free-space for the lock-based
-// cache, which takes a byte count, as it always has. Empty means
-// DefaultLegacyMinFreeSpace.
+// parseLegacyMinFreeSpace resolves -cache-min-free-space for the lock-based
+// cache, which takes a byte count, bare or with a unit, as it always has.
+// Empty means DefaultLegacyMinFreeSpace.
 //
-// A percentage and SelfAdaptive are rejected: LocalCache has no notion of the
-// volume's size, and both only mean something to the lock-free cache.
-func parseLegacyMinFreeSpace(value string) (int64, error) {
+// Any other value that is not a byte count also means the default, with a
+// warning: one that does not parse, which includes a negative number, and a
+// percentage or SelfAdaptive, which LocalCache cannot honor because it has
+// no notion of the volume's size. Failing instead would cost the host its
+// cache, which is far worse than the default threshold. A negative value in
+// particular must never reach LocalCache: luci reads it as a huge unsigned
+// number and evicts every entry on every run.
+func parseLegacyMinFreeSpace(value string) (int64, []string) {
 	if strings.TrimSpace(value) == "" {
 		return DefaultLegacyMinFreeSpace, nil
 	}
+	var warns warningLog
 	if isSelfAdaptive(value) {
-		return 0, fmt.Errorf("-cache-min-free-space=%s requires -enable-lock-free-cache", value)
+		warns.addf("-cache-min-free-space=%s requires -enable-lock-free-cache. Using the default of %d bytes instead.",
+			value, DefaultLegacyMinFreeSpace)
+		return DefaultLegacyMinFreeSpace, warns
 	}
-	t, err := parseSpace(value)
-	if err != nil {
-		return 0, fmt.Errorf("invalid -cache-min-free-space: %w", err)
-	}
-	if t.IsPercent {
-		return 0, fmt.Errorf("-cache-min-free-space=%s is a percentage, which requires -enable-lock-free-cache; give a byte count instead", value)
-	}
-	return t.Bytes, nil
-}
-
-// parseLockFreeMinFreeSpace parses -cache-min-free-space for the lock-free
-// cache. Empty and SelfAdaptive both mean DefaultLockFreeMinFreeSpace; the
-// latter is reserved for future work, so it is accepted with a warning rather
-// than rejected, and a launcher that already passes it keeps working.
-func parseLockFreeMinFreeSpace(value string) (storage.SpaceThreshold, error) {
+	t, err := storage.ParseSpaceThreshold(value)
 	switch {
-	case strings.TrimSpace(value) == "":
-		value = DefaultLockFreeMinFreeSpace
-	case isSelfAdaptive(value):
-		log.Warningf("-cache-min-free-space=%s is reserved for watermarks that adapt to each host, which are not implemented yet. Using the default of %s instead.",
-			value, DefaultLockFreeMinFreeSpace)
-		value = DefaultLockFreeMinFreeSpace
+	case err != nil:
+		warns.addf("Ignoring -cache-min-free-space: %v. Using the default of %d bytes instead.", err, DefaultLegacyMinFreeSpace)
+	case t.IsPercent:
+		warns.addf("-cache-min-free-space=%s is a percentage, which requires -enable-lock-free-cache; give a byte count instead. Using the default of %d bytes.",
+			value, DefaultLegacyMinFreeSpace)
+	default:
+		return t.Bytes, nil
 	}
-	t, err := parseSpace(value)
-	if err != nil {
-		return storage.SpaceThreshold{}, fmt.Errorf("invalid -cache-min-free-space: %w", err)
-	}
-	return clampNegative(t), nil
+	return DefaultLegacyMinFreeSpace, warns
 }
 
-// clampNegative turns a negative byte count into zero, which means "no
-// threshold". A negative threshold would otherwise fail to parse when the
-// evictor reads it back, taking the cache down over a nonsensical flag.
-func clampNegative(t storage.SpaceThreshold) storage.SpaceThreshold {
-	if !t.IsPercent && t.Bytes < 0 {
-		t.Bytes = 0
+// parseWatermark parses the lock-free cache's free-space flag named flag.
+// Empty means def, and so does a value that does not parse, with a warning:
+// the cache stays on, since a cache with the default watermark is far better
+// than none.
+func parseWatermark(warns *warningLog, flag, value string, def storage.SpaceThreshold) storage.SpaceThreshold {
+	if strings.TrimSpace(value) == "" {
+		return def
+	}
+	t, err := storage.ParseSpaceThreshold(value)
+	if err != nil {
+		warns.addf("Ignoring %s: %v. Using the default of %s instead.", flag, err, def)
+		return def
 	}
 	return t
 }
 
-// lockFreeWatermarks parses the lock-free cache's free-space flags and makes
-// sure the target is above the minimum.
+// lockFreeWatermarks resolves the lock-free cache's free-space flags into the
+// watermarks to use, and returns a warning for each value it could not use
+// as given. It never fails: a bad watermark costs the host its tuning, not
+// its cache.
 //
 // minValue is -cache-min-free-space and targetValue is the target, which
 // targetFlag names for messages: -cache-target-free-space, or -trim-target-free
-// when a -trim-only run overrides it. Empty values select the defaults.
+// when a -trim-only run overrides it. Empty values select the defaults, and
+// so do values that do not parse, with a warning. So does SelfAdaptive for
+// the minimum: it is reserved for future work, so it is accepted with a
+// warning rather than rejected, and a launcher that already passes it keeps
+// working.
 //
-// A target that is not above the minimum is reset to the minimum plus
-// targetGapPoints percentage points of the volume, with a warning. The
-// minimum is where a trim starts and the target where it stops, so a target
-// at or below the minimum would stop every trim before it reclaimed
-// anything, and -cache-min-free-space would silently do nothing. It is reset
-// rather than rejected because failing here would cost the host its whole
-// cache over a mistyped tuning flag.
+// The pair is then held to storage.StrictWatermarkBounds: the minimum to
+// 5-45% of the volume, and the target to 10-50% and at least 5 points above
+// the minimum. A value out of range is clamped to the nearest bound, and a
+// target too close to the minimum is raised, each with a warning. The minimum
+// is where a trim starts and the target where it stops, so a minimum of 0
+// never trims, one near 100% trims all the time, and a target at or below
+// the minimum stops every trim before it reclaims anything.
 //
-// Comparing a percentage with a byte count, or resetting a byte count, needs
-// the size of the volume, which volumeTotal reports. It is called only then,
-// so the common all-percentage case costs no syscall. If it fails, the target
-// is kept as given, with a warning: the evictor cannot run on a volume it
-// cannot statfs anyway.
-func lockFreeWatermarks(minValue, targetValue, targetFlag string, volumeTotal func() (int64, error)) (watermarks, error) {
-	minFree, err := parseLockFreeMinFreeSpace(minValue)
-	if err != nil {
-		return watermarks{}, err
+// A byte count is checked as a percentage of the volume, whose size
+// volumeTotal reports. It is called only then, so the common all-percentage
+// case costs no syscall. If it fails, byte counts are used as given, with a
+// warning, and percentages are still clamped: the evictor cannot run on a
+// volume it cannot statfs anyway.
+func lockFreeWatermarks(minValue, targetValue, targetFlag string, volumeTotal func() (int64, error)) (storage.Watermarks, []string) {
+	var warns warningLog
+	if isSelfAdaptive(minValue) {
+		warns.addf("-cache-min-free-space=%s is reserved for watermarks that adapt to each host, which are not implemented yet. Using the default of %s instead.",
+			minValue, defaultLockFreeMin)
+		minValue = ""
+	}
+	w := storage.Watermarks{
+		Min:    parseWatermark(&warns, "-cache-min-free-space", minValue, defaultLockFreeMin),
+		Target: parseWatermark(&warns, targetFlag, targetValue, defaultLockFreeTarget),
 	}
 
-	targetIsDefault := strings.TrimSpace(targetValue) == ""
-	if targetIsDefault {
-		targetValue = DefaultLockFreeTargetFreeSpace
-	}
-	target, err := parseSpace(targetValue)
-	if err != nil {
-		return watermarks{}, fmt.Errorf("invalid %s: %w", targetFlag, err)
-	}
-	target = clampNegative(target)
-
-	described := fmt.Sprintf("%s=%s", targetFlag, targetValue)
-	if targetIsDefault {
-		described = fmt.Sprintf("The default %s of %s", targetFlag, targetValue)
-	}
-	reset, err := targetAboveMin(minFree, target, volumeTotal)
-	switch {
-	case err != nil:
-		log.Warningf("Could not check that %s is above -cache-min-free-space=%s: %v. Using it as given.",
-			described, thresholdString(minFree), err)
-	case reset != target:
-		log.Warningf("%s is not above -cache-min-free-space=%s. A trim starts below the minimum and stops at the target, so a target at or below the minimum would stop every trim before it reclaimed anything. Using %s, the minimum plus %d points of the volume, instead.",
-			described, thresholdString(minFree), thresholdString(reset), targetGapPoints)
-	}
-	return watermarks{min: minFree, target: reset}, nil
-}
-
-// targetAboveMin returns target if it is above minFree, and otherwise the
-// target to use instead: minFree plus targetGapPoints percentage points of the
-// volume. If the two cannot be compared because the volume's size is
-// unknown, it returns target and the error.
-func targetAboveMin(minFree, target storage.SpaceThreshold, volumeTotal func() (int64, error)) (storage.SpaceThreshold, error) {
-	// The cases that need no volume size.
-	switch {
-	case minFree.IsPercent && target.IsPercent:
-		if target.Percent > minFree.Percent {
-			return target, nil
+	var total int64 // 0 tells NormalizeWatermarks that the size is unknown.
+	if !w.Min.IsPercent || !w.Target.IsPercent {
+		t, err := volumeTotal()
+		if err != nil {
+			warns.addf("Could not measure the volume to check -cache-min-free-space and %s against it: %v.", targetFlag, err)
+		} else {
+			total = t
 		}
-		return storage.SpaceThreshold{IsPercent: true, Percent: capPercent(minFree.Percent + targetGapPoints)}, nil
-	case !minFree.IsPercent && !target.IsPercent && target.Bytes > minFree.Bytes:
-		return target, nil
-	case isZero(minFree) && !isZero(target):
-		return target, nil
 	}
-
-	total, err := volumeTotal()
+	normalized, adjustments, err := storage.NormalizeWatermarks(w, total, storage.StrictWatermarkBounds)
 	if err != nil {
-		return target, fmt.Errorf("the size of the volume is unknown: %w", err)
+		// Not expected: with Clamp set, NormalizeWatermarks never fails.
+		warns.addf("Could not check -cache-min-free-space and %s: %v. Using the defaults instead.", targetFlag, err)
+		return storage.Watermarks{Min: defaultLockFreeMin, Target: defaultLockFreeTarget}, warns
 	}
-	minBytes, targetBytes := minFree.Evaluate(total), target.Evaluate(total)
-	if targetBytes > minBytes {
-		return target, nil
+	for _, a := range adjustments {
+		warns.addf("Free-space watermarks -cache-min-free-space and %s: %s.", targetFlag, a)
 	}
-	return storage.SpaceThreshold{Bytes: minBytes + total*targetGapPoints/100}, nil
-}
-
-func isZero(t storage.SpaceThreshold) bool {
-	if t.IsPercent {
-		return t.Percent == 0
-	}
-	return t.Bytes == 0
-}
-
-// capPercent caps a percentage at 100.
-func capPercent(p float64) float64 {
-	if p > 100 {
-		return 100
-	}
-	return p
-}
-
-// thresholdString formats t the way storage.ParseSpaceThreshold reads it
-// back. A byte count carries the "b" suffix because ParseSpaceThreshold
-// rejects a bare integer.
-func thresholdString(t storage.SpaceThreshold) string {
-	if t.IsPercent {
-		return strconv.FormatFloat(t.Percent, 'f', -1, 64) + "%"
-	}
-	return fmt.Sprintf("%db", t.Bytes)
+	return normalized, warns
 }
 
 // volumeTotalOf returns a function reporting the size of the volume that
@@ -299,10 +251,10 @@ func volumeTotalOf(dir string, statfs storage.StatfsFunc) func() (int64, error) 
 // lockFreeSampleBuckets and lockFreeBatchSize. An override of zero or less
 // keeps them, as the flags document, rather than falling through to the
 // shared defaults.
-func newEvictorConfig(w watermarks, overrides EvictorOverrides) storage.EvictorConfig {
+func newEvictorConfig(w storage.Watermarks, overrides EvictorOverrides) storage.EvictorConfig {
 	cfg := storage.DefaultEvictorConfig()
-	cfg.MinFreeSpace = thresholdString(w.min)
-	cfg.TargetFreeSpace = thresholdString(w.target)
+	cfg.MinFreeSpace = w.Min.String()
+	cfg.TargetFreeSpace = w.Target.String()
 	cfg.ReservedSpaceGB = 0
 	cfg.EmergencyLargeBlobFirst = false
 	cfg.SampleBuckets = lockFreeSampleBuckets
@@ -327,15 +279,13 @@ func newEvictorConfig(w watermarks, overrides EvictorOverrides) storage.EvictorC
 }
 
 // lockFreeEvictorConfig resolves the lock-free cache's flags into an evictor
-// configuration for the cache rooted at dir. See lockFreeWatermarks for the
+// configuration for the cache rooted at dir, along with a warning for each
+// free-space flag it could not use as given. See lockFreeWatermarks for the
 // arguments.
-func lockFreeEvictorConfig(dir, minValue, targetValue, targetFlag string, overrides EvictorOverrides, statfs storage.StatfsFunc) (storage.EvictorConfig, error) {
+func lockFreeEvictorConfig(dir, minValue, targetValue, targetFlag string, overrides EvictorOverrides, statfs storage.StatfsFunc) (storage.EvictorConfig, []string) {
 	if statfs == nil {
 		statfs = storage.RealStatfs
 	}
-	w, err := lockFreeWatermarks(minValue, targetValue, targetFlag, volumeTotalOf(dir, statfs))
-	if err != nil {
-		return storage.EvictorConfig{}, err
-	}
-	return newEvictorConfig(w, overrides), nil
+	w, warnings := lockFreeWatermarks(minValue, targetValue, targetFlag, volumeTotalOf(dir, statfs))
+	return newEvictorConfig(w, overrides), warnings
 }

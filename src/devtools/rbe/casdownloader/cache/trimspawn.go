@@ -109,6 +109,12 @@ func startDetached(path string, args []string, logPath string) (pid int, reaped 
 //
 // The flag names are main's; they are spelled out here because this is the
 // only place that turns Options back into flags.
+//
+// The free-space flags are forwarded as given, not as the watermarks the
+// download resolved them to. The child is this binary, so it resolves them
+// the same way, against the same volume (see lockFreeWatermarks): the same
+// fallbacks, the same clamps. Forwarding them as given also keeps the user's
+// values, and the warnings about them, in the trim's log.
 func trimArgs(opts Options) []string {
 	args := []string{"-trim-only", "-cache-dir=" + opts.Dir}
 	if opts.MinFreeSpace != "" {
@@ -165,7 +171,7 @@ func trimReasons(root string, minFree storage.SpaceThreshold, maxSize int64, che
 	} else if floor := minFree.Evaluate(st.TotalBytes); st.FreeBytes < floor {
 		reason = TrimReasonFreeSpace
 		reasons = append(reasons, fmt.Sprintf("%d bytes free, below -cache-min-free-space=%s (%d bytes)",
-			st.FreeBytes, thresholdString(minFree), floor))
+			st.FreeBytes, minFree, floor))
 	}
 	if maxSize > 0 {
 		due, err := capCheckDue(root, checkInterval, now)

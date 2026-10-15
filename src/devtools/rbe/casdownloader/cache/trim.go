@@ -60,13 +60,20 @@ type TrimOptions struct {
 // raises need to the cache's excess over 90% of the cap if that is more. See
 // storage.Storage.TrimWith.
 //
-// The error is non-nil only for TrimOutcomeError, which includes flags that do
-// not parse. A busy lock, a pass with nothing to do and a pass stopped by
-// MaxDuration are all successes.
+// The error is non-nil only for TrimOutcomeError. A busy lock, a pass with
+// nothing to do and a pass stopped by MaxDuration are all successes, and so is
+// a pass whose free-space flags could not be used as given: it works toward
+// the defaults or the nearest legal values instead, as lockFreeWatermarks
+// logs. A -trim-target-free that does not parse is ignored, with a warning,
+// so the pass works toward -cache-target-free-space, as without it.
 func Trim(ctx context.Context, opts TrimOptions) (storage.TrimResult, error) {
 	targetValue, targetFlag := opts.TargetFreeSpace, "-cache-target-free-space"
 	if opts.TrimTargetFree != "" {
-		targetValue, targetFlag = opts.TrimTargetFree, "-trim-target-free"
+		if _, err := storage.ParseSpaceThreshold(opts.TrimTargetFree); err != nil {
+			log.WarningContextf(ctx, "Ignoring -trim-target-free: %v. Using -cache-target-free-space instead.", err)
+		} else {
+			targetValue, targetFlag = opts.TrimTargetFree, "-trim-target-free"
+		}
 	}
 
 	store, err := newLockFreeStorage(opts.Dir)
@@ -74,10 +81,8 @@ func Trim(ctx context.Context, opts TrimOptions) (storage.TrimResult, error) {
 		return storage.TrimResult{Outcome: storage.TrimOutcomeError}, err
 	}
 	root := store.RootDir()
-	cfg, err := lockFreeEvictorConfig(root, opts.MinFreeSpace, targetValue, targetFlag, opts.Overrides, opts.statfs)
-	if err != nil {
-		return storage.TrimResult{Outcome: storage.TrimOutcomeError}, err
-	}
+	// The warnings are logged, and a trim has no notes to report them in.
+	cfg, _ := lockFreeEvictorConfig(root, opts.MinFreeSpace, targetValue, targetFlag, opts.Overrides, opts.statfs)
 	ev, err := storage.NewEvictor(root, cfg, opts.statfs)
 	if err != nil {
 		return storage.TrimResult{Outcome: storage.TrimOutcomeError}, fmt.Errorf("failed to configure evictor for %s: %w", root, err)

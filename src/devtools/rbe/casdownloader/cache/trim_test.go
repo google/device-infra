@@ -217,17 +217,78 @@ func TestTrim_EvictsWhatTheCacheStored(t *testing.T) {
 	assertAbsent(t, blob, "The cached blob")
 }
 
-func TestTrim_FailsOnAnUnparsableFlag(t *testing.T) {
-	cacheDir := filepath.Join(t.TempDir(), "cache")
-	for _, opts := range []TrimOptions{
-		{Dir: cacheDir, MinFreeSpace: "lots"},
-		{Dir: cacheDir, TrimTargetFree: "lots"},
+// A free-space flag that does not parse no longer fails the trim: the pass
+// works toward the default watermarks of 20% and 25%, so a volume 20% free is
+// short 5% of its size, as in TestTrim_ReclaimsTheShortfall.
+func TestTrim_RunsWithTheDefaultForAnUnparsableFlag(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		opts TrimOptions
+	}{
+		{name: "minimum", opts: TrimOptions{MinFreeSpace: "lots"}},
+		{name: "negative minimum", opts: TrimOptions{MinFreeSpace: "-5"}},
+		{name: "target", opts: TrimOptions{TargetFreeSpace: "lots"}},
 	} {
-		opts.statfs = fixedVolume(100*mib, 20*mib)
-		res, err := Trim(context.Background(), opts)
-		if err == nil || res.Outcome != storage.TrimOutcomeError {
-			t.Errorf("Trim(%+v) = %+v, %v; want %q and an error", opts, res, err, storage.TrimOutcomeError)
-		}
+		t.Run(tc.name, func(t *testing.T) {
+			cacheDir := filepath.Join(t.TempDir(), "cache")
+			seedOldBlobs(t, cacheDir, trimBlobCount, trimBlobSize)
+			opts := tc.opts
+			opts.Dir = cacheDir
+			opts.statfs = fixedVolume(100*mib, 20*mib)
+
+			res, err := Trim(context.Background(), opts)
+			if err != nil {
+				t.Fatalf("Trim(%+v) failed: %v; want it to run with the default", opts, err)
+			}
+			const need = 5 * mib
+			if res.Outcome != storage.TrimOutcomeEvicted || res.BytesReclaimed != need {
+				t.Errorf("Trim = %+v, want %q with %d bytes", res, storage.TrimOutcomeEvicted, need)
+			}
+		})
+	}
+}
+
+// A -trim-target-free that does not parse is ignored, so the pass works toward
+// -cache-target-free-space, as if it had not been given: 35% of a volume 30%
+// free is 5% short.
+func TestTrim_IgnoresAnUnparsableTrimTargetFree(t *testing.T) {
+	cacheDir := filepath.Join(t.TempDir(), "cache")
+	seedOldBlobs(t, cacheDir, trimBlobCount, trimBlobSize)
+
+	res, err := Trim(context.Background(), TrimOptions{
+		Dir:             cacheDir,
+		TargetFreeSpace: "35%",
+		TrimTargetFree:  "lots",
+		statfs:          fixedVolume(100*mib, 30*mib),
+	})
+	if err != nil {
+		t.Fatalf("Trim failed: %v", err)
+	}
+	const need = 5 * mib
+	if res.Outcome != storage.TrimOutcomeEvicted || res.BytesReclaimed != need {
+		t.Errorf("Trim = %+v, want %q with %d bytes", res, storage.TrimOutcomeEvicted, need)
+	}
+}
+
+// -trim-target-free is held to the target's range and gap. 1% is below the
+// target's 10% and less than 5 points above the default minimum of 20%, so the
+// pass works toward 25% instead, which a volume 20% free is 5% short of.
+// Taken as given, 1% would have made the pass a no-op.
+func TestTrim_HoldsTrimTargetFreeToTheTargetsRules(t *testing.T) {
+	cacheDir := filepath.Join(t.TempDir(), "cache")
+	seedOldBlobs(t, cacheDir, trimBlobCount, trimBlobSize)
+
+	res, err := Trim(context.Background(), TrimOptions{
+		Dir:            cacheDir,
+		TrimTargetFree: "1%",
+		statfs:         fixedVolume(100*mib, 20*mib),
+	})
+	if err != nil {
+		t.Fatalf("Trim failed: %v", err)
+	}
+	const need = 5 * mib
+	if res.Outcome != storage.TrimOutcomeEvicted || res.BytesReclaimed != need {
+		t.Errorf("Trim = %+v, want %q with %d bytes", res, storage.TrimOutcomeEvicted, need)
 	}
 }
 

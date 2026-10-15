@@ -37,7 +37,7 @@ func usableOptions(t *testing.T) Options {
 // The whole point of OpenOrDegrade: a cache we cannot build must cost the run
 // its speed, not its output.
 func TestOpenOrDegrade_UnbuildableCacheDoesNotStopTheCaller(t *testing.T) {
-	c, note := OpenOrDegrade(context.Background(), unopenableOptions(t), "the download")
+	c, note, _ := OpenOrDegrade(context.Background(), unopenableOptions(t), "the download")
 
 	if c != nil {
 		t.Errorf("Got a cache back from options that cannot produce one; want nil so the caller takes the no-cache path")
@@ -51,21 +51,21 @@ func TestOpenOrDegrade_UnbuildableCacheDoesNotStopTheCaller(t *testing.T) {
 }
 
 func TestOpenOrDegrade_WorkingCacheIsSilent(t *testing.T) {
-	c, note := OpenOrDegrade(context.Background(), usableOptions(t), "the download")
+	c, note, watermarks := OpenOrDegrade(context.Background(), usableOptions(t), "the download")
 
 	if c == nil {
 		t.Fatal("Got no cache for a usable directory")
 	}
 	defer c.Close()
-	if note != "" {
-		t.Errorf("Got note %q for a cache that was built; want none, or every successful run carries a warning", note)
+	if note != "" || watermarks != "" {
+		t.Errorf("Got notes %q, %q for a cache that was built with the default watermarks; want none, or every successful run carries a warning", note, watermarks)
 	}
 }
 
 // A disabled cache is a nil cache too, and it must not look like a broken one:
 // switching the cache off is a deliberate configuration, not a degradation.
 func TestOpenOrDegrade_DisabledCacheIsNotReportedAsAFailure(t *testing.T) {
-	c, note := OpenOrDegrade(context.Background(), Options{Disabled: true}, "the download")
+	c, note, _ := OpenOrDegrade(context.Background(), Options{Disabled: true}, "the download")
 
 	if c != nil {
 		t.Errorf("Got a cache back with Disabled set")
@@ -168,30 +168,70 @@ func TestOpen_LockFreeHonorsUseHardlink(t *testing.T) {
 	}
 }
 
-// The lock-based cache cannot honor a percentage or self-adaptive. A cache set
-// up with one degrades to no cache, with a note naming the flag, like any
-// other setup failure, rather than failing the download.
-func TestOpenOrDegrade_LockBasedCacheRejectsLockFreeOnlyMinFreeSpace(t *testing.T) {
-	for _, value := range []string{"20%", SelfAdaptive} {
+// The lock-based cache cannot honor a percentage or self-adaptive, and a value
+// that does not parse, such as a negative one, means nothing. A cache set up
+// with one is built anyway, with the 1 GiB default, and the run gets a
+// watermarks note naming the flag rather than losing its cache.
+func TestOpenOrDegrade_LockBasedCacheUsesTheDefaultForAnUnusableMinFreeSpace(t *testing.T) {
+	for _, value := range []string{"20%", SelfAdaptive, "-5", "lots"} {
 		t.Run(value, func(t *testing.T) {
 			opts := usableOptions(t)
 			opts.LockFree = false
 			opts.MinFreeSpace = value
 
-			c, note := OpenOrDegrade(context.Background(), opts, "the download")
-			if c != nil {
-				c.Close()
-				t.Errorf("Got a lock-based cache with -cache-min-free-space=%s, which it cannot honor", value)
+			c, note, watermarks := OpenOrDegrade(context.Background(), opts, "the download")
+			if c == nil {
+				t.Fatalf("Got no cache with -cache-min-free-space=%s (note %q); want the lock-based cache with the default", value, note)
 			}
-			if !strings.Contains(note, "-cache-min-free-space") {
-				t.Errorf("Note %q does not name the flag that was rejected", note)
+			defer c.Close()
+			lc, ok := c.(*LocalCache)
+			if !ok {
+				t.Fatalf("OpenOrDegrade = %T, want *LocalCache", c)
+			}
+			if got := int64(lc.cachePolicies.MinFreeSpace); got != DefaultLegacyMinFreeSpace {
+				t.Errorf("MinFreeSpace = %d, want the default of %d", got, int64(DefaultLegacyMinFreeSpace))
+			}
+			if note != "" {
+				t.Errorf("Got failure note %q; the cache was built", note)
+			}
+			if !strings.Contains(watermarks, "-cache-min-free-space") || !strings.Contains(watermarks, value) {
+				t.Errorf("Watermarks note %q does not name the flag and the value that was ignored", watermarks)
 			}
 		})
 	}
 }
 
+// Unparsable watermarks no longer cost a download its lock-free cache: the
+// cache is built with the defaults, and the run gets a note naming both flags.
+func TestOpenOrDegrade_LockFreeCacheStaysOnWithUnparsableWatermarks(t *testing.T) {
+	opts := usableOptions(t)
+	opts.MinFreeSpace, opts.TargetFreeSpace = "lots", "-5%"
+
+	c, note, watermarks := OpenOrDegrade(context.Background(), opts, "the download")
+	if c == nil {
+		t.Fatalf("Got no cache (note %q); want the lock-free cache with the default watermarks", note)
+	}
+	defer c.Close()
+	cfg, err := c.(*LockFreeCache).store.EvictorConfig()
+	if err != nil {
+		t.Fatalf("EvictorConfig failed: %v", err)
+	}
+	if cfg.MinFreeSpace != DefaultLockFreeMinFreeSpace || cfg.TargetFreeSpace != DefaultLockFreeTargetFreeSpace {
+		t.Errorf("Watermarks = %q, %q; want the defaults %q, %q", cfg.MinFreeSpace, cfg.TargetFreeSpace, DefaultLockFreeMinFreeSpace, DefaultLockFreeTargetFreeSpace)
+	}
+	if note != "" {
+		t.Errorf("Got failure note %q; the cache was built", note)
+	}
+	for _, want := range []string{"the download", "-cache-min-free-space", "lots", "-cache-target-free-space", "-5%"} {
+		if !strings.Contains(watermarks, want) {
+			t.Errorf("Watermarks note %q does not mention %q", watermarks, want)
+		}
+	}
+}
+
 // The lock-free cache takes bytes, percentages and the reserved
-// self-adaptive, and a target below the minimum is reset rather than fatal.
+// self-adaptive, and a bad or out-of-range value is replaced rather than
+// fatal.
 func TestOpen_LockFreeAcceptsByteOrPercentageWatermarks(t *testing.T) {
 	for _, tc := range []struct{ min, target string }{
 		{min: "", target: ""},
@@ -199,6 +239,8 @@ func TestOpen_LockFreeAcceptsByteOrPercentageWatermarks(t *testing.T) {
 		{min: "1073741824", target: "30%"},
 		{min: SelfAdaptive, target: ""},
 		{min: "30%", target: "10%"},
+		{min: "lots", target: "-5%"},
+		{min: "90%", target: "100%"},
 	} {
 		t.Run(tc.min+","+tc.target, func(t *testing.T) {
 			opts := usableOptions(t)

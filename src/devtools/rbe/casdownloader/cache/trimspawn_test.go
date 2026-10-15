@@ -193,7 +193,7 @@ func TestOpen_ATrimThatFailsToStartDoesNotFailTheCache(t *testing.T) {
 	spawner := &fakeSpawner{err: errors.New("fork failed")}
 	opts := trimCheckOptions(t, 1*mib, spawner)
 
-	c, note := OpenOrDegrade(context.Background(), opts, "the download")
+	c, note, _ := OpenOrDegrade(context.Background(), opts, "the download")
 	if c == nil || note != "" {
 		t.Fatalf("OpenOrDegrade = %v, %q; want a cache and no note", c, note)
 	}
@@ -295,6 +295,43 @@ func TestTrimArgs_ForwardsStreamzOnlyWhenEnabled(t *testing.T) {
 				t.Errorf("trimArgs = %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+// trimArgs forwards the free-space flags as given rather than as resolved, so
+// this checks that the trim resolves them to the same watermarks as the
+// download did, whether they are legal, out of range or unparsable.
+func TestTrimArgs_TheTrimResolvesTheDownloadsWatermarks(t *testing.T) {
+	statfs := fixedVolume(100*gib, 50*gib)
+	for _, tc := range []struct{ min, target string }{
+		{min: "", target: ""},
+		{min: "30%", target: "40%"},
+		{min: "10gb", target: "20 %"},
+		{min: "1gb", target: ""},
+		{min: "80%", target: "90%"},
+		{min: "lots", target: "-5%"},
+		{min: SelfAdaptive, target: "1tb"},
+	} {
+		dir := filepath.Join(t.TempDir(), "cache")
+		opts := Options{Dir: dir, MinFreeSpace: tc.min, TargetFreeSpace: tc.target}
+		download, _ := lockFreeEvictorConfig(dir, opts.MinFreeSpace, opts.TargetFreeSpace, "-cache-target-free-space", opts.Overrides, statfs)
+
+		// What main's flags would hold in the trim.
+		var trimMin, trimTarget string
+		for _, arg := range trimArgs(opts) {
+			if v, ok := strings.CutPrefix(arg, "-cache-min-free-space="); ok {
+				trimMin = v
+			}
+			if v, ok := strings.CutPrefix(arg, "-cache-target-free-space="); ok {
+				trimTarget = v
+			}
+		}
+		trim, _ := lockFreeEvictorConfig(filepath.Join(dir, wantLayoutDir), trimMin, trimTarget, "-cache-target-free-space", EvictorOverrides{}, statfs)
+
+		if trim.MinFreeSpace != download.MinFreeSpace || trim.TargetFreeSpace != download.TargetFreeSpace {
+			t.Errorf("With %q, %q: the trim resolves %q, %q, want the download's %q, %q",
+				tc.min, tc.target, trim.MinFreeSpace, trim.TargetFreeSpace, download.MinFreeSpace, download.TargetFreeSpace)
+		}
 	}
 }
 

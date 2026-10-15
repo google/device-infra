@@ -233,6 +233,12 @@ const (
 	// already in Dir. Not a degradation; counted to show how often
 	// DisableOverwrite would have failed a run.
 	NoteExistingFilesReplaced NoteReason = "existing_files_replaced"
+	// NoteCacheWatermarksAdjusted means a free-space flag of the local cache
+	// could not be used as given -- it did not parse, was out of range, or
+	// left too little room between the watermarks -- so the cache used a
+	// default or the nearest legal value instead. Not a failure; counted so
+	// that misconfigured hosts can be found.
+	NoteCacheWatermarksAdjusted NoteReason = "cache_watermarks_adjusted"
 )
 
 // Note is a remark about a run, with the reason that classifies it.

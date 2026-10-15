@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	log "github.com/golang/glog"
@@ -77,54 +78,63 @@ type Options struct {
 // the binary already takes rather than into a new one.
 //
 // attempt names the download this cache was for, and appears in both the log
-// line and the note. The returned note is empty when the cache was built;
-// otherwise the returned Cache is nil and the note is what the run should
-// report about it, so that a degraded run is not silently indistinguishable
-// from a healthy one.
-func OpenOrDegrade(ctx context.Context, opts Options, attempt string) (Cache, string) {
-	c, err := Open(opts)
+// line and the notes. The returned failure note is empty when the cache was
+// built; otherwise the returned Cache is nil and the note is what the run
+// should report about it, so that a degraded run is not silently
+// indistinguishable from a healthy one.
+//
+// The returned watermarks note is empty unless a free-space flag could not be
+// used as given: it did not parse, was out of range, or left too little room
+// between the watermarks. The cache then uses a default or the nearest legal
+// value, as the note says, rather than failing, and the run should report the
+// note so that misconfigured hosts can be found.
+func OpenOrDegrade(ctx context.Context, opts Options, attempt string) (c Cache, failure, watermarks string) {
+	c, warnings, err := open(opts)
+	if len(warnings) > 0 {
+		watermarks = fmt.Sprintf("Free-space watermarks adjusted for %s: %s", attempt, strings.Join(warnings, " "))
+	}
 	if err == nil {
-		return c, ""
+		return c, "", watermarks
 	}
 	log.WarningContextf(ctx, "Failed to set up the local cache for %s: %v. Continuing without it.", attempt, err)
-	return nil, fmt.Sprintf("Local cache unavailable for %s, downloading without it: %v", attempt, err)
+	return nil, fmt.Sprintf("Local cache unavailable for %s, downloading without it: %v", attempt, err), watermarks
 }
 
 // Open builds the cache described by opts. It returns a nil Cache and a nil
 // error when opts.Disabled is set, since "no cache" is a valid configuration
 // rather than a failure to produce one.
+//
+// A free-space flag that cannot be used as given is not an error: the cache
+// uses a default or the nearest legal value instead, and logs a warning. See
+// parseLegacyMinFreeSpace and lockFreeWatermarks.
 func Open(opts Options) (Cache, error) {
+	c, _, err := open(opts)
+	return c, err
+}
+
+// open is Open, and also returns the warnings about free-space flags it
+// logged.
+func open(opts Options) (Cache, []string, error) {
 	if opts.Disabled {
-		return nil, nil
+		return nil, nil, nil
 	}
 	if opts.LockFree {
 		return openLockFree(opts)
 	}
 
-	localCache, err := openLocal(opts)
+	minFreeSpace, warnings := parseLegacyMinFreeSpace(opts.MinFreeSpace)
+	localCache, err := NewLocalCache(opts.Dir, opts.MaxSize, minFreeSpace, opts.Lock, opts.UseHardlink)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create local cache: %v", err)
+		return nil, warnings, fmt.Errorf("failed to create local cache: %v", err)
 	}
-	return localCache, nil
+	return localCache, warnings, nil
 }
 
-func openLocal(opts Options) (*LocalCache, error) {
-	minFreeSpace, err := parseLegacyMinFreeSpace(opts.MinFreeSpace)
-	if err != nil {
-		return nil, err
-	}
-	return NewLocalCache(opts.Dir, opts.MaxSize, minFreeSpace, opts.Lock, opts.UseHardlink)
-}
-
-func openLockFree(opts Options) (Cache, error) {
-	cfg, err := lockFreeEvictorConfig(opts.Dir, opts.MinFreeSpace, opts.TargetFreeSpace, "-cache-target-free-space", opts.Overrides, opts.statfs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create lock-free cache: %v", err)
-	}
-
+func openLockFree(opts Options) (Cache, []string, error) {
+	cfg, warnings := lockFreeEvictorConfig(opts.Dir, opts.MinFreeSpace, opts.TargetFreeSpace, "-cache-target-free-space", opts.Overrides, opts.statfs)
 	lockFreeCache, err := NewLockFreeCache(opts.Dir, cfg, opts.UseHardlink)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create lock-free cache: %v", err)
+		return nil, warnings, fmt.Errorf("failed to create lock-free cache: %v", err)
 	}
 	if opts.StartTrims {
 		root := lockFreeCache.store.RootDir()
@@ -135,5 +145,5 @@ func openLockFree(opts Options) (Cache, error) {
 			return startTrim(opts, root, TrimReasonENOSPC, why)
 		}
 	}
-	return lockFreeCache, nil
+	return lockFreeCache, warnings, nil
 }
