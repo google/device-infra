@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -29,6 +30,10 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetChipRes
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetChipResolverResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterKeyCatalogRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterKeyCatalogResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupByKeyCatalogRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupByKeyCatalogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSearchConfig;
@@ -45,6 +50,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetChipResolver;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetColumnCataloger;
+import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetFilterKeyCataloger;
+import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetGroupByKeyCataloger;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetPromotedKeysProvider;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetSearchConfigProvider;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetSearcher;
@@ -81,6 +88,8 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
   private final FleetValueLister valueLister;
   private final FleetPromotedKeysProvider promotedKeysProvider;
   private final FleetColumnCataloger columnCataloger;
+  private final FleetFilterKeyCataloger filterKeyCataloger;
+  private final FleetGroupByKeyCataloger groupByKeyCataloger;
   private final GlobalSummaryProvider globalSummaryProvider;
 
   @Inject
@@ -95,6 +104,8 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
       FleetValueLister valueLister,
       FleetPromotedKeysProvider promotedKeysProvider,
       FleetColumnCataloger columnCataloger,
+      FleetFilterKeyCataloger filterKeyCataloger,
+      FleetGroupByKeyCataloger groupByKeyCataloger,
       GlobalSummaryProvider globalSummaryProvider) {
     this.executor = executor;
     this.overlayStore = overlayStore;
@@ -106,6 +117,8 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
     this.valueLister = valueLister;
     this.promotedKeysProvider = promotedKeysProvider;
     this.columnCataloger = columnCataloger;
+    this.filterKeyCataloger = filterKeyCataloger;
+    this.groupByKeyCataloger = groupByKeyCataloger;
     this.globalSummaryProvider = globalSummaryProvider;
   }
 
@@ -214,8 +227,46 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
   }
 
   @Override
+  public ListenableFuture<FleetFilterKeyCatalogResponse> getFleetFilterKeyCatalog(
+      FleetFilterKeyCatalogRequest request) {
+    return Futures.submit(
+        () -> {
+          Fleet fleet = normalize(request.getFleet());
+          return filterKeyCataloger.getFilterKeyCatalog(
+              corpusFactory.getCorpus(fleet, request.getEntity()), request);
+        },
+        executor);
+  }
+
+  @Override
+  public ListenableFuture<FleetGroupByKeyCatalogResponse> getFleetGroupByKeyCatalog(
+      FleetGroupByKeyCatalogRequest request) {
+    Fleet fleet = normalize(request.getFleet());
+    DeviceKeyRegistry registry = corpusFactory.getDeviceKeyRegistry(fleet);
+    // Only the filter keys need their overlays: they decide the result set the group counts are
+    // taken over. An applied group-by key is only echoed back as applied, which needs its id alone.
+    ImmutableSet<DeviceKeyDescriptor> overlayKeys =
+        extractFilterOverlayKeys(registry, request.getEntity(), request.getFiltersList());
+    return Futures.transformAsync(
+        overlayStore.loadOverlaysAsync(fleet, overlayKeys, executor),
+        overlays ->
+            Futures.submit(
+                () ->
+                    groupByKeyCataloger.getGroupByKeyCatalog(
+                        corpusFactory.getCorpus(fleet, request.getEntity(), overlays), request),
+                executor),
+        executor);
+  }
+
+  @Override
   public ListenableFuture<GlobalSummary> getGlobalSummary(GetGlobalSummaryRequest request) {
     return globalSummaryProvider.getGlobalSummary(request);
+  }
+
+  /** The long-tail dimension overlays the active filters need to compute the result set. */
+  private static ImmutableSet<DeviceKeyDescriptor> extractFilterOverlayKeys(
+      DeviceKeyRegistry registry, SearchEntity entity, List<Filter> filters) {
+    return extractFilterAndGroupOverlayKeys(registry, entity, filters, ImmutableList.of());
   }
 
   private static ImmutableSet<DeviceKeyDescriptor> extractFilterAndGroupOverlayKeys(

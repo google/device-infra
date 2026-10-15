@@ -101,9 +101,18 @@ java_library(
 )
 
 java_library(
+    name = "key_stats",
+    srcs = ["KeyStats.java"],
+    deps = ["@maven//:com_google_guava_guava"],
+)
+
+java_library(
     name = "postings",
     srcs = ["Postings.java"],
-    deps = ["@maven//:com_google_guava_guava"],
+    deps = [
+        ":key_stats",
+        "@maven//:com_google_guava_guava",
+    ],
 )
 
 java_library(
@@ -112,6 +121,7 @@ java_library(
     deps = [
         ":device_record",
         ":host_record",
+        ":key_stats",
         ":postings",
         "@maven//:com_google_guava_guava",
     ],
@@ -191,6 +201,7 @@ java_library(
     name = "composite_postings",
     srcs = ["CompositePostings.java"],
     deps = [
+        ":key_stats",
         ":overlay_view",
         ":postings",
         "@maven//:com_google_guava_guava",

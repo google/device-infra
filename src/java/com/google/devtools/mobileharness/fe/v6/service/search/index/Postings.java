@@ -32,4 +32,12 @@ public interface Postings {
 
   /** Builds or returns cached posting lists for all values of a key. */
   ImmutableMap<String, int[]> forKey(String keyId);
+
+  /**
+   * Whole-corpus statistics of a key (coverage and distinct value combinations), derived from its
+   * posting lists. {@link LazyPostings} caches the result alongside the posting lists for the
+   * snapshot's lifetime; {@link CompositePostings} delegates core keys to the cached core postings
+   * and summarizes overlay keys from the overlay.
+   */
+  KeyStats stats(String keyId);
 }

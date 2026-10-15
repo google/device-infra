@@ -22,6 +22,7 @@ import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorS
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
@@ -40,7 +41,13 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FilterValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterKeyCatalogRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterKeyCatalogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFlatView;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupByKeyCatalogRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupByKeyCatalogResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupByKeyEntry;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupByKeySection;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupExpandView;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupHeaderView;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysRequest;
@@ -61,6 +68,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapsho
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.FleetDataSource;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.ScenarioCurationModule;
+import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionCatalogStore;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.FleetSnapshotStore;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.summary.GlobalSummaryProvider;
@@ -70,6 +78,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.multibindings.MapBinder;
 import java.time.Instant;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -89,6 +98,8 @@ public final class SearchServiceLogicImplTest {
   private static final Instant BUILD_TIME = Instant.ofEpochSecond(1_700_000_000L);
 
   private SearchServiceLogicImpl logic;
+  private DimensionCatalogStore catalogStore;
+  private final AtomicInteger overlayPulls = new AtomicInteger();
 
   @Before
   public void setUp() {
@@ -122,6 +133,7 @@ public final class SearchServiceLogicImplTest {
                           @Override
                           public ListenableFuture<DimensionOverlayRaw> pullDimension(
                               DeviceKeyDescriptor dimensionKey) {
+                            overlayPulls.incrementAndGet();
                             return immediateFuture(
                                 DimensionOverlayRaw.create(
                                     dimensionKey.id(),
@@ -137,6 +149,7 @@ public final class SearchServiceLogicImplTest {
     FleetSnapshot snapshot =
         injector.getInstance(FleetIndexBuilder.class).build(fleet(), BUILD_TIME);
     store.publish(Fleet.FLEET_SELF, snapshot);
+    catalogStore = injector.getInstance(DimensionCatalogStore.class);
     logic = injector.getInstance(SearchServiceLogicImpl.class);
   }
 
@@ -199,6 +212,88 @@ public final class SearchServiceLogicImplTest {
     // The ats-one curation promotes filter keys, and the synthetic fleet carries several of them
     // with more than one distinct value, so the "Filter by:" row is not empty.
     assertThat(response.getFilterKeysList()).isNotEmpty();
+  }
+
+  @Test
+  public void getFleetFilterKeyCatalog_returnsSections() throws Exception {
+    FleetFilterKeyCatalogResponse response =
+        logic
+            .getFleetFilterKeyCatalog(
+                FleetFilterKeyCatalogRequest.newBuilder()
+                    .setEntity(SearchEntity.SEARCH_ENTITY_DEVICE)
+                    .setFleet(Fleet.FLEET_SELF)
+                    .build())
+            .get();
+
+    assertThat(response.getSectionsList()).isNotEmpty();
+  }
+
+  @Test
+  public void getFleetGroupByKeyCatalog_longTailFilter_bindsOverlayAndCountsOverFilteredSet()
+      throws Exception {
+    Filter overlayFilter =
+        Filter.newBuilder()
+            .setKey("dimension::provisioned_by")
+            .setSimple(SimpleMatch.newBuilder().addValues(FilterValue.newBuilder().setValue("mh")))
+            .build();
+
+    FleetGroupByKeyCatalogResponse response =
+        logic
+            .getFleetGroupByKeyCatalog(
+                FleetGroupByKeyCatalogRequest.newBuilder()
+                    .setEntity(SearchEntity.SEARCH_ENTITY_DEVICE)
+                    .setFleet(Fleet.FLEET_SELF)
+                    .addFilters(overlayFilter)
+                    .build())
+            .get();
+
+    // The overlay puts provisioned_by=mh on all three devices, so the filtered set is the whole
+    // fleet and the identifier splits it into three groups. Had the overlay not been bound, the
+    // filter would have matched nothing and the key would have been dropped as a single group.
+    assertThat(overlayPulls.get()).isEqualTo(1);
+    FleetGroupByKeySection builtin =
+        response.getSectionsList().stream()
+            .filter(s -> s.getHeading().equals("Built-in fields"))
+            .findFirst()
+            .orElseThrow();
+    FleetGroupByKeyEntry uuid =
+        builtin.getEntriesList().stream()
+            .filter(e -> e.getKey().equals("device_field::uuid"))
+            .findFirst()
+            .orElseThrow();
+    assertThat(uuid.getGroupCount().getShown().getCount()).isEqualTo(3);
+  }
+
+  @Test
+  public void getFleetGroupByKeyCatalog_appliedLongTailGroupBy_doesNotPullOverlay()
+      throws Exception {
+    catalogStore.setDimensionNames(Fleet.FLEET_SELF, ImmutableSet.of("provisioned_by"));
+
+    FleetGroupByKeyCatalogResponse response =
+        logic
+            .getFleetGroupByKeyCatalog(
+                FleetGroupByKeyCatalogRequest.newBuilder()
+                    .setEntity(SearchEntity.SEARCH_ENTITY_DEVICE)
+                    .setFleet(Fleet.FLEET_SELF)
+                    .setQuery("provisioned_by")
+                    .addGroupBy("dimension::provisioned_by")
+                    .build())
+            .get();
+
+    // An applied group-by key is only echoed back as applied; its values are not needed, so no
+    // overlay is fetched for it.
+    assertThat(overlayPulls.get()).isEqualTo(0);
+    FleetGroupByKeySection dimensions =
+        response.getSectionsList().stream()
+            .filter(s -> s.getHeading().equals("Dimensions"))
+            .findFirst()
+            .orElseThrow();
+    FleetGroupByKeyEntry provisionedBy =
+        dimensions.getEntriesList().stream()
+            .filter(e -> e.getKey().equals("dimension::provisioned_by"))
+            .findFirst()
+            .orElseThrow();
+    assertThat(provisionedBy.getApplied()).isTrue();
   }
 
   @Test

@@ -32,6 +32,10 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetChipRes
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetChipResolverResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterKeyCatalogRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterKeyCatalogResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupByKeyCatalogRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupByKeyCatalogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSearchConfig;
@@ -161,6 +165,28 @@ public final class SearchServiceGrpcImplTest {
     service.getFleetColumnCatalog(request, noOpObserver());
 
     verify(fleetLogic).getFleetColumnCatalog(eq(request));
+  }
+
+  @Test
+  public void getFleetFilterKeyCatalog_callsFleetLogic() {
+    FleetFilterKeyCatalogRequest request = FleetFilterKeyCatalogRequest.getDefaultInstance();
+    when(fleetLogic.getFleetFilterKeyCatalog(any()))
+        .thenReturn(immediateFuture(FleetFilterKeyCatalogResponse.getDefaultInstance()));
+
+    service.getFleetFilterKeyCatalog(request, noOpObserver());
+
+    verify(fleetLogic).getFleetFilterKeyCatalog(eq(request));
+  }
+
+  @Test
+  public void getFleetGroupByKeyCatalog_callsFleetLogic() {
+    FleetGroupByKeyCatalogRequest request = FleetGroupByKeyCatalogRequest.getDefaultInstance();
+    when(fleetLogic.getFleetGroupByKeyCatalog(any()))
+        .thenReturn(immediateFuture(FleetGroupByKeyCatalogResponse.getDefaultInstance()));
+
+    service.getFleetGroupByKeyCatalog(request, noOpObserver());
+
+    verify(fleetLogic).getFleetGroupByKeyCatalog(eq(request));
   }
 
   // ===========================================================================

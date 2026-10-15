@@ -364,6 +364,72 @@ java_library(
 )
 
 java_library(
+    name = "key_counts",
+    srcs = ["KeyCounts.java"],
+    deps = [
+        ":search_corpus",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:postings",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "key_catalogs",
+    srcs = ["KeyCatalogs.java"],
+    deps = [
+        ":device_corpus",
+        ":device_key_displays",
+        ":host_corpus",
+        ":host_key_displays",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:dimension_catalog_store",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "fleet_filter_key_cataloger",
+    srcs = ["FleetFilterKeyCataloger.java"],
+    deps = [
+        ":device_corpus",
+        ":device_key_displays",
+        ":host_corpus",
+        ":host_key_displays",
+        ":key_catalogs",
+        ":key_counts",
+        ":search_corpus",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:dimension_catalog_store",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "fleet_group_by_key_cataloger",
+    srcs = ["FleetGroupByKeyCataloger.java"],
+    deps = [
+        ":device_corpus",
+        ":device_key_displays",
+        ":fleet_filter_engine",
+        ":host_corpus",
+        ":host_key_displays",
+        ":key_catalogs",
+        ":key_counts",
+        ":scenario_curation",
+        ":search_corpus",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:dimension_catalog_store",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "fleet_search_config_provider",
     srcs = ["FleetSearchConfigProvider.java"],
     deps = [

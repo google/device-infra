@@ -38,6 +38,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_snapshot",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:host_enrichment",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:key_count",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:key_stats",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:lazy_postings",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:overlay_view",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:postings",

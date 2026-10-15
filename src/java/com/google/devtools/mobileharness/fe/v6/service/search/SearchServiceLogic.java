@@ -21,6 +21,10 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetChipRes
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetChipResolverResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterKeyCatalogRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterKeyCatalogResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupByKeyCatalogRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupByKeyCatalogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSearchConfig;
@@ -37,8 +41,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.GlobalSummar
 /**
  * Core logic of the fleet (device and host) search service.
  *
- * <p>Covers the seven Fleet RPCs of {@code SearchService} plus the Home page global summary RPC.
- * The four TJS (test, job, session) RPCs are served by {@link
+ * <p>Covers the Fleet RPCs of {@code SearchService} plus the Home page global summary RPC. The four
+ * TJS (test, job, session) RPCs are served by {@link
  * com.google.devtools.mobileharness.fe.v6.service.search.tjs.TjsSearchLogic}.
  *
  * <p>// TODO: rename to FleetSearchLogic once the TJS backend lands. This interface covers only the
@@ -72,6 +76,14 @@ public interface SearchServiceLogic {
   /** Returns the browsable column catalog for the column selector dialog. */
   ListenableFuture<FleetColumnCatalogResponse> getFleetColumnCatalog(
       FleetColumnCatalogRequest request);
+
+  /** Returns the browsable filter-key catalog for the "Add a filter" dialog. */
+  ListenableFuture<FleetFilterKeyCatalogResponse> getFleetFilterKeyCatalog(
+      FleetFilterKeyCatalogRequest request);
+
+  /** Returns the browsable group-by-key catalog for the "Add a group-by" dialog. */
+  ListenableFuture<FleetGroupByKeyCatalogResponse> getFleetGroupByKeyCatalog(
+      FleetGroupByKeyCatalogRequest request);
 
   /** Returns the Home page global summary ("OmniLab Summary" card). */
   ListenableFuture<GlobalSummary> getGlobalSummary(GetGlobalSummaryRequest request);

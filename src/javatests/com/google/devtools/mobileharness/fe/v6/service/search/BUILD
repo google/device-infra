@@ -42,6 +42,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:dimension_overlay_raw",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:fleet_data_source",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:scenario_curation_module",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:dimension_catalog_store",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:fleet_snapshot_store",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/summary:global_summary_provider",

@@ -22,6 +22,10 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetChipRes
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetChipResolverResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterKeyCatalogRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterKeyCatalogResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupByKeyCatalogRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetGroupByKeyCatalogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSearchConfig;
@@ -54,9 +58,9 @@ import javax.inject.Inject;
 /**
  * gRPC binding for {@code SearchService}.
  *
- * <p>The seven Fleet RPCs delegate to {@link SearchServiceLogic}, the four TJS RPCs delegate to
- * {@link TjsSearchLogic}, and the All-Site ID resolution RPC delegates to {@link
- * AllSiteQueryResolver} through {@link FeGrpcInvoker}, mirroring the DeviceService gRPC binding.
+ * <p>The Fleet RPCs delegate to {@link SearchServiceLogic}, the four TJS RPCs delegate to {@link
+ * TjsSearchLogic}, and the All-Site ID resolution RPC delegates to {@link AllSiteQueryResolver}
+ * through {@link FeGrpcInvoker}, mirroring the DeviceService gRPC binding.
  */
 public final class SearchServiceGrpcImpl extends SearchServiceGrpc.SearchServiceImplBase {
 
@@ -166,6 +170,32 @@ public final class SearchServiceGrpcImpl extends SearchServiceGrpc.SearchService
         executor,
         SearchServiceGrpc.getServiceDescriptor(),
         SearchServiceGrpc.getGetFleetColumnCatalogMethod());
+  }
+
+  @Override
+  public void getFleetFilterKeyCatalog(
+      FleetFilterKeyCatalogRequest request,
+      StreamObserver<FleetFilterKeyCatalogResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        fleetLogic::getFleetFilterKeyCatalog,
+        executor,
+        SearchServiceGrpc.getServiceDescriptor(),
+        SearchServiceGrpc.getGetFleetFilterKeyCatalogMethod());
+  }
+
+  @Override
+  public void getFleetGroupByKeyCatalog(
+      FleetGroupByKeyCatalogRequest request,
+      StreamObserver<FleetGroupByKeyCatalogResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        fleetLogic::getFleetGroupByKeyCatalog,
+        executor,
+        SearchServiceGrpc.getServiceDescriptor(),
+        SearchServiceGrpc.getGetFleetGroupByKeyCatalogMethod());
   }
 
   // ===========================================================================

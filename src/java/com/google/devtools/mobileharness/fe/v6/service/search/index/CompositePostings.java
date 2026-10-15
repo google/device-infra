@@ -51,4 +51,17 @@ public final class CompositePostings implements Postings {
     }
     return core.forKey(keyId);
   }
+
+  /**
+   * Overlay keys are summarized from the overlay's posting lists on each call; an overlay is loaded
+   * per query for a handful of keys, so there is no snapshot-lifetime cache to share.
+   */
+  @Override
+  public KeyStats stats(String keyId) {
+    if (overlay.containsKey(keyId)) {
+      return KeyStats.compute(
+          overlay.postingsForKey(keyId), index -> overlay.valuesForKey(index, keyId));
+    }
+    return core.stats(keyId);
+  }
 }
