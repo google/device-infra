@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.index;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import java.util.Optional;
 
 /**
@@ -52,6 +54,13 @@ public abstract class HostEnrichment {
   /** The raw controller endpoint identifier (e.g. "ats-ctrl-us-central1-b-04"). */
   public abstract Optional<String> atsControllerId();
 
+  /**
+   * Host field values keyed by canonical key id (for example {@code host_field::ate}), for keys
+   * that only the data source's own deployment defines. The data source derives these values, and
+   * the shared {@link FleetIndexBuilder} indexes them as given without interpreting them.
+   */
+  public abstract ImmutableMap<String, ImmutableList<String>> hostFields();
+
   /** Creates a new builder. */
   public static Builder builder() {
     return new AutoValue_HostEnrichment.Builder()
@@ -61,8 +70,12 @@ public abstract class HostEnrichment {
         .setDaemonServerVersion(Optional.empty())
         .setLabServerVersion(Optional.empty())
         .setAtsLabDisplayName(Optional.empty())
-        .setAtsControllerId(Optional.empty());
+        .setAtsControllerId(Optional.empty())
+        .setHostFields(ImmutableMap.of());
   }
+
+  /** Returns a builder initialized with this enrichment's values. */
+  public abstract Builder toBuilder();
 
   /** Builder for {@link HostEnrichment}. */
   @AutoValue.Builder
@@ -80,6 +93,8 @@ public abstract class HostEnrichment {
     public abstract Builder setAtsLabDisplayName(Optional<String> atsLabDisplayName);
 
     public abstract Builder setAtsControllerId(Optional<String> atsControllerId);
+
+    public abstract Builder setHostFields(ImmutableMap<String, ImmutableList<String>> hostFields);
 
     public abstract HostEnrichment build();
   }

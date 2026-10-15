@@ -58,7 +58,10 @@ java_library(
 java_library(
     name = "host_enrichment",
     srcs = ["HostEnrichment.java"],
-    deps = ["//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_guava_guava",
+    ],
 )
 
 java_library(
@@ -142,9 +145,7 @@ java_library(
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
-        "//src/devtools/mobileharness/fe/v6/service/proto/host:host_resources_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:host_connectivity_statuses",
-        "//src/java/com/google/devtools/mobileharness/fe/v6/service/host/util:host_types",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:ats_device_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",

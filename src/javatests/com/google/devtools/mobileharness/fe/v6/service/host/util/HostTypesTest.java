@@ -28,73 +28,107 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
+// Tests deprecated HostTypes methods retained for backward compatibility.
+@SuppressWarnings("deprecation")
 public final class HostTypesTest {
 
   @Test
-  public void determineLabTypeDisplayNames_noData_returnsEmpty() {
+  public void determineLabType_noData_returnsEmpty() {
+    assertThat(HostTypes.determineLabType(Optional.empty(), Optional.empty())).isEmpty();
+    assertThat(HostTypes.determineSearchLabType(Optional.empty(), Optional.empty())).isEmpty();
     assertThat(HostTypes.determineLabTypeDisplayNames(Optional.empty(), Optional.empty()))
         .isEmpty();
   }
 
   @Test
-  public void determineLabTypeDisplayNames_fusion() {
+  public void determineDeviceManagerType_fusionFromEnum() {
+    assertThat(HostTypes.determineLabType(Optional.empty(), Optional.of("FUSION_LAB"))).isEmpty();
+    assertThat(HostTypes.determineDeviceManagerType(Optional.empty(), Optional.of("FUSION_LAB")))
+        .isEqualTo("Fusion");
     assertThat(HostTypes.determineLabTypeDisplayNames(Optional.empty(), Optional.of("FUSION_LAB")))
         .containsExactly("Fusion Lab");
   }
 
   @Test
-  public void determineLabTypeDisplayNames_core_fromEnum() {
+  public void determineDeviceManagerType_mhDefault() {
+    assertThat(HostTypes.determineDeviceManagerType(Optional.empty(), Optional.of("SHARED_LAB")))
+        .isEqualTo("MH");
+  }
+
+  @Test
+  public void determineLabType_core_fromEnum() {
+    assertThat(HostTypes.determineLabType(Optional.empty(), Optional.of("SHARED_LAB")))
+        .hasValue("Core");
+    assertThat(HostTypes.determineSearchLabType(Optional.empty(), Optional.of("SHARED_LAB")))
+        .hasValue("Core Lab");
+    assertThat(HostTypes.isCoreLab(Optional.empty(), Optional.of("SHARED_LAB"))).isTrue();
+    assertThat(HostTypes.isSatelliteLab(Optional.empty(), Optional.of("SHARED_LAB"))).isFalse();
+    assertThat(HostTypes.isCoreOrFusion(Optional.empty(), Optional.of("SHARED_LAB"))).isTrue();
     assertThat(HostTypes.determineLabTypeDisplayNames(Optional.empty(), Optional.of("SHARED_LAB")))
         .containsExactly("Core Lab");
   }
 
   @Test
-  public void determineLabTypeDisplayNames_core_fromProp() {
-    assertThat(
-            HostTypes.determineLabTypeDisplayNames(
-                Optional.of(createLabInfoWithProperty("lab_type", "core")), Optional.empty()))
+  public void determineLabType_core_fromProp() {
+    Optional<LabInfo> labInfo = Optional.of(createLabInfoWithProperty("lab_type", "core"));
+    assertThat(HostTypes.determineLabType(labInfo, Optional.empty())).hasValue("Core");
+    assertThat(HostTypes.determineSearchLabType(labInfo, Optional.empty())).hasValue("Core Lab");
+    assertThat(HostTypes.determineLabTypeDisplayNames(labInfo, Optional.empty()))
         .containsExactly("Core Lab");
   }
 
   @Test
-  public void determineLabTypeDisplayNames_slaas() {
-    assertThat(
-            HostTypes.determineLabTypeDisplayNames(
-                Optional.of(createLabInfoWithProperty("lab_type", "slaas")), Optional.empty()))
+  public void determineLabType_slaas() {
+    Optional<LabInfo> labInfo = Optional.of(createLabInfoWithProperty("lab_type", "slaas"));
+    assertThat(HostTypes.determineLabType(labInfo, Optional.empty())).hasValue("SLaaS");
+    assertThat(HostTypes.determineSearchLabType(labInfo, Optional.empty())).hasValue("SLaaS");
+    assertThat(HostTypes.determineLabTypeDisplayNames(labInfo, Optional.empty()))
         .containsExactly("Satellite Lab", "SLaaS")
         .inOrder();
   }
 
   @Test
-  public void determineLabTypeDisplayNames_satellite_fromProp() {
-    assertThat(
-            HostTypes.determineLabTypeDisplayNames(
-                Optional.of(createLabInfoWithProperty("lab_type", "satellite")), Optional.empty()))
+  public void determineLabType_satellite_fromProp() {
+    Optional<LabInfo> labInfo = Optional.of(createLabInfoWithProperty("lab_type", "satellite"));
+    assertThat(HostTypes.determineLabType(labInfo, Optional.empty())).hasValue("Satellite");
+    assertThat(HostTypes.determineLabType(labInfo, Optional.of("SHARED_LAB")))
+        .hasValue("Satellite");
+    assertThat(HostTypes.determineLabType(Optional.empty(), Optional.of("MH_SATELLITE_LAB")))
+        .hasValue("Satellite");
+    assertThat(HostTypes.determineLabType(Optional.empty(), Optional.of("MH_ATE_LAB"))).isEmpty();
+    assertThat(HostTypes.isSatelliteLab(labInfo, Optional.empty())).isTrue();
+    assertThat(HostTypes.isCoreLab(labInfo, Optional.empty())).isFalse();
+    assertThat(HostTypes.isCoreOrFusion(labInfo, Optional.empty())).isFalse();
+    assertThat(HostTypes.determineSearchLabType(labInfo, Optional.empty()))
+        .hasValue("Satellite Lab");
+    assertThat(HostTypes.determineLabTypeDisplayNames(labInfo, Optional.empty()))
         .containsExactly("Satellite Lab");
   }
 
   @Test
-  public void determineLabTypeDisplayNames_ate() {
-    assertThat(
-            HostTypes.determineLabTypeDisplayNames(
-                Optional.of(createLabInfoWithProperty("lab_type", "satellite")),
-                Optional.of("MH_ATE_LAB")))
+  public void determineLabType_ate() {
+    Optional<LabInfo> labInfo = Optional.of(createLabInfoWithProperty("lab_type", "satellite"));
+    assertThat(HostTypes.determineLabType(labInfo, Optional.of("MH_ATE_LAB")))
+        .hasValue("Satellite");
+    assertThat(HostTypes.isAteLab(Optional.of("MH_ATE_LAB"))).isTrue();
+    assertThat(HostTypes.isAteLab(Optional.of("MH_SATELLITE_LAB"))).isFalse();
+    assertThat(HostTypes.determineLabTypeDisplayNames(labInfo, Optional.of("MH_ATE_LAB")))
         .containsExactly("Satellite Lab", "ATE Lab")
         .inOrder();
   }
 
   @Test
-  public void determineLabTypeDisplayNames_field() {
-    assertThat(
-            HostTypes.determineLabTypeDisplayNames(
-                Optional.of(createLabInfoWithProperty("lab_type", "satellite")),
-                Optional.of("RIEMANN_FIELD_LAB")))
+  public void determineLabType_field() {
+    Optional<LabInfo> labInfo = Optional.of(createLabInfoWithProperty("lab_type", "satellite"));
+    assertThat(HostTypes.determineLabType(labInfo, Optional.of("RIEMANN_FIELD_LAB")))
+        .hasValue("Satellite");
+    assertThat(HostTypes.determineLabTypeDisplayNames(labInfo, Optional.of("RIEMANN_FIELD_LAB")))
         .containsExactly("Satellite Lab", "Riemann Field Lab")
         .inOrder();
   }
 
   @Test
-  public void determineLabTypeDisplayNames_slaasAndFusion() {
+  public void determineLabType_slaasAndFusion() {
     LabInfo labInfo =
         LabInfo.newBuilder()
             .setLabServerFeature(
@@ -106,13 +140,19 @@ public final class HostTypesTest {
                             .addHostProperty(
                                 HostProperty.newBuilder().setKey("dm_type").setValue("fusion"))))
             .build();
+    assertThat(HostTypes.determineLabType(Optional.of(labInfo), Optional.empty()))
+        .hasValue("SLaaS");
+    assertThat(HostTypes.determineSearchLabType(Optional.of(labInfo), Optional.empty()))
+        .hasValue("SLaaS");
+    assertThat(HostTypes.determineDeviceManagerType(Optional.of(labInfo), Optional.empty()))
+        .isEqualTo("Fusion");
     assertThat(HostTypes.determineLabTypeDisplayNames(Optional.of(labInfo), Optional.empty()))
         .containsExactly("Satellite Lab", "SLaaS", "Fusion Lab")
         .inOrder();
   }
 
   @Test
-  public void determineLabTypeDisplayNames_coreAndFusion() {
+  public void determineLabType_coreAndFusion() {
     LabInfo labInfo =
         LabInfo.newBuilder()
             .setLabServerFeature(
@@ -124,6 +164,11 @@ public final class HostTypesTest {
                             .addHostProperty(
                                 HostProperty.newBuilder().setKey("dm_type").setValue("fusion"))))
             .build();
+    assertThat(HostTypes.determineLabType(Optional.of(labInfo), Optional.empty())).hasValue("Core");
+    assertThat(HostTypes.determineSearchLabType(Optional.of(labInfo), Optional.empty()))
+        .hasValue("Core Lab");
+    assertThat(HostTypes.determineDeviceManagerType(Optional.of(labInfo), Optional.empty()))
+        .isEqualTo("Fusion");
     assertThat(HostTypes.determineLabTypeDisplayNames(Optional.of(labInfo), Optional.empty()))
         .containsExactly("Core Lab", "Fusion Lab")
         .inOrder();

@@ -76,8 +76,8 @@ public final class HostColumnCatalogerTest {
     cataloger = new HostColumnCataloger();
 
     // Build synthetic fleet across two hosts with 1P enrichments:
-    //   lab-a: RUNNING, SHARED_LAB, daemon RUNNING, daemon version 1.2.3, prop location=mtv, prop
-    // rack=r1
+    //   lab-a: RUNNING, SHARED_LAB (lab type Core Lab), daemon RUNNING, daemon version 1.2.3, prop
+    // location=mtv, prop rack=r1
     //   lab-b: RUNNING, prop location=sjc, prop rack=r2, prop env=test
     LabQueryResult labData =
         LabQueryResult.newBuilder()
@@ -115,6 +115,8 @@ public final class HostColumnCatalogerTest {
                 .setDaemonStatus(Optional.of("RUNNING"))
                 .setDaemonServerVersion(Optional.of("1.2.3"))
                 .setLabServerVersion(Optional.of("v42"))
+                .setHostFields(
+                    ImmutableMap.of("host_field::lab_type", ImmutableList.of("Core Lab")))
                 .build());
 
     CoreFleetRawData rawData =
@@ -260,6 +262,8 @@ public final class HostColumnCatalogerTest {
   }
 
   @Test
+  // HostColumnCataloger still populates the deprecated device_count field until coverage migration.
+  @SuppressWarnings("deprecation")
   public void hostProperties_rankedByHostCoverageWithTotalReported() {
     FleetColumnCatalogResponse response =
         cataloger.getColumnCatalog(

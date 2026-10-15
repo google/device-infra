@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
@@ -39,8 +40,10 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromote
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPromotedKeysResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.HostEnrichment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeyRegistry;
@@ -66,7 +69,7 @@ import org.junit.runners.JUnit4;
  * <p>Synthetic fleet, one host per lab:
  *
  * <ul>
- *   <li>lab-a: running, host_os debian, lab_type slaas, two devices.
+ *   <li>lab-a: running, host_os debian, lab type SLaaS (from its host enrichment), two devices.
  *   <li>lab-b: missing, host_os debian, one device.
  *   <li>lab-c: running, no host_os property, no devices.
  * </ul>
@@ -265,32 +268,44 @@ public final class HostPromotedKeysProviderTest {
 
   // --- Synthetic fleet (mirrors HostSearchTest) ---
 
-  private static LabQueryResult fleet() {
-    return LabQueryResult.newBuilder()
-        .setLabView(
-            LabQueryResult.LabView.newBuilder()
-                .setLabTotalCount(3)
-                .addLabData(
-                    hostLab(
-                        "lab-a",
-                        "1.1.1.1",
-                        LabStatus.LAB_RUNNING,
-                        hostProperties("host_os", "debian", "lab_type", "slaas"),
-                        2))
-                .addLabData(
-                    hostLab(
-                        "lab-b",
-                        "2.2.2.2",
-                        LabStatus.LAB_MISSING,
-                        hostProperties("host_os", "debian"),
-                        1))
-                .addLabData(
-                    hostLab(
-                        "lab-c",
-                        "3.3.3.3",
-                        LabStatus.LAB_RUNNING,
-                        HostProperties.getDefaultInstance(),
-                        0)))
+  private static CoreFleetRawData fleet() {
+    LabQueryResult labData =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(3)
+                    .addLabData(
+                        hostLab(
+                            "lab-a",
+                            "1.1.1.1",
+                            LabStatus.LAB_RUNNING,
+                            hostProperties("host_os", "debian"),
+                            2))
+                    .addLabData(
+                        hostLab(
+                            "lab-b",
+                            "2.2.2.2",
+                            LabStatus.LAB_MISSING,
+                            hostProperties("host_os", "debian"),
+                            1))
+                    .addLabData(
+                        hostLab(
+                            "lab-c",
+                            "3.3.3.3",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            0)))
+            .build();
+    return CoreFleetRawData.builder()
+        .setLabData(labData)
+        .setHostEnrichments(
+            ImmutableMap.of(
+                "lab-a",
+                HostEnrichment.builder()
+                    .setHostFields(
+                        ImmutableMap.of(
+                            HostKeys.PREFIX_HOST_FIELD + "lab_type", ImmutableList.of("SLaaS")))
+                    .build()))
         .build();
   }
 

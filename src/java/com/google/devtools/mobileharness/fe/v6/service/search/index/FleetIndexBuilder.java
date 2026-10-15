@@ -36,8 +36,6 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostConnectivityStatuses;
-import com.google.devtools.mobileharness.fe.v6.service.host.util.HostTypes;
-import com.google.devtools.mobileharness.fe.v6.service.proto.host.UiLabType;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
@@ -75,7 +73,6 @@ public final class FleetIndexBuilder {
   public static final String DEVICE_FIELD_EXECUTOR = DeviceKeys.PREFIX_DEVICE_FIELD + "executor";
   public static final String DEVICE_FIELD_QUARANTINED =
       DeviceKeys.PREFIX_DEVICE_FIELD + "quarantined";
-  public static final String HOST_FIELD_LAB_TYPE = HostKeys.PREFIX_HOST_FIELD + "lab_type";
   public static final String HOST_FIELD_DAEMON_STATUS =
       HostKeys.PREFIX_HOST_FIELD + "daemon_status";
   public static final String HOST_FIELD_DAEMON_SERVER_VERSION =
@@ -136,13 +133,6 @@ public final class FleetIndexBuilder {
                   Optional<HostEnrichment> hostEnrichment =
                       Optional.ofNullable(raw.hostEnrichments().get(hostName));
 
-                  Optional<String> releaseTypeOpt =
-                      hostEnrichment.flatMap(HostEnrichment::releaseType);
-                  ImmutableList<String> labTypes =
-                      HostTypes.determineUiLabTypes(Optional.of(labInfo), releaseTypeOpt).stream()
-                          .filter(labType -> labType != UiLabType.UNKNOWN)
-                          .map(HostTypes::labTypeDisplayName)
-                          .collect(toImmutableList());
                   String hostOs = hostProperties.getOrDefault("host_os", "Unknown");
                   String hostConnectivity =
                       HostConnectivityStatuses.create(Optional.of(labInfo)).getTitle();
@@ -154,7 +144,6 @@ public final class FleetIndexBuilder {
                           hostIp,
                           hostProperties,
                           deviceList,
-                          labTypes,
                           hostOs,
                           hostConnectivity,
                           hostEnrichment);
@@ -220,11 +209,12 @@ public final class FleetIndexBuilder {
       String hostIp,
       ImmutableMap<String, String> hostProperties,
       DeviceList deviceList,
-      ImmutableList<String> labTypes,
       String hostOs,
       String hostConnectivity,
       Optional<HostEnrichment> enrichment) {
     ImmutableMap.Builder<String, ImmutableList<String>> values = ImmutableMap.builder();
+    // Added before core host keys so core keys take precedence under buildKeepingLast().
+    enrichment.map(HostEnrichment::hostFields).ifPresent(values::putAll);
 
     if (!hostName.isEmpty()) {
       values.put(HostKeys.HOST_NAME.id(), ImmutableList.of(hostName));
@@ -235,9 +225,6 @@ public final class FleetIndexBuilder {
     values
         .put(HostKeys.HOST_OS.id(), ImmutableList.of(hostOs))
         .put(HostKeys.CONNECTIVITY.id(), ImmutableList.of(hostConnectivity));
-    if (!labTypes.isEmpty()) {
-      values.put(HOST_FIELD_LAB_TYPE, labTypes);
-    }
     enrichment
         .flatMap(HostEnrichment::daemonStatus)
         .filter(s -> !s.isEmpty())
@@ -279,7 +266,7 @@ public final class FleetIndexBuilder {
           HostKeys.PREFIX_HOST_PROPERTY + entry.getKey(), ImmutableList.of(entry.getValue()));
     }
 
-    return HostRecord.create(hostName, values.buildOrThrow(), deviceList.getDeviceInfoCount());
+    return HostRecord.create(hostName, values.buildKeepingLast(), deviceList.getDeviceInfoCount());
   }
 
   private static DeviceRecord buildDeviceRecord(

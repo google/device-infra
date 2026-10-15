@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.index;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
@@ -169,9 +170,9 @@ public final class FleetIndexBuilderTest {
     assertThat(index.valueDisplays("device_config::wifi_ssid"))
         .containsEntry("googleguest", "GoogleGuest");
 
-    // Host enrichment: the lab type is computed from the release enum (SHARED_LAB maps to Core) and
-    // stamped, as a display name, on every device of the enriched host (device-0 and device-1 on
-    // lab1), and absent for devices on an unenriched host (device-2).
+    // Host enrichment: the lab type host field supplied by the data source is stamped, as given, on
+    // every device of the enriched host (device-0 and device-1 on lab1), and absent for devices on
+    // an unenriched host (device-2).
     assertThat(index.valueCount("host_field::lab_type", "core lab")).isEqualTo(2);
     assertThat(index.sortedValues("host_field::lab_type")).containsExactly("core lab");
     assertThat(index.valueDisplays("host_field::lab_type")).containsEntry("core lab", "Core Lab");
@@ -294,7 +295,7 @@ public final class FleetIndexBuilderTest {
   }
 
   @Test
-  public void build_hostLabType_combinesHostPropertyAndReleaseEnum() {
+  public void build_hostFields_indexedAsGivenAndProjectedOntoDevices() {
     LabQueryResult labResult =
         LabQueryResult.newBuilder()
             .setLabView(
@@ -306,17 +307,18 @@ public final class FleetIndexBuilderTest {
                             "1.1.1.1",
                             LabStatus.LAB_RUNNING,
                             HostProperties.newBuilder()
-                                .addHostProperty(prop("lab_type", "slaas"))
-                                .addHostProperty(prop("dm_type", "fusion"))
                                 .addHostProperty(prop("host_os", "debian"))
                                 .build(),
                             device0()))
                     .addLabData(
                         labData(
-                            "lab-ats",
+                            "lab-plain",
                             "2.2.2.2",
                             LabStatus.LAB_RUNNING,
-                            HostProperties.getDefaultInstance(),
+                            HostProperties.newBuilder()
+                                .addHostProperty(prop("lab_type", "core"))
+                                .addHostProperty(prop("dm_type", "fusion"))
+                                .build(),
                             device1())))
             .build();
 
@@ -326,28 +328,42 @@ public final class FleetIndexBuilderTest {
             .setHostEnrichments(
                 ImmutableMap.of(
                     "lab-core",
-                    HostEnrichment.builder().setReleaseType(Optional.of("SHARED_LAB")).build()))
+                    HostEnrichment.builder()
+                        .setHostFields(
+                            ImmutableMap.of(
+                                "host_field::host_name", ImmutableList.of("colliding-host"),
+                                "host_field::lab_type", ImmutableList.of("SLaaS"),
+                                "host_field::device_manager_type", ImmutableList.of("Fusion"),
+                                "host_field::ate", ImmutableList.of("No")))
+                        .build()))
             .build();
 
     FleetSnapshot snapshot = builder.build(raw, BUILD_TIME);
     FleetIndex index = snapshot.index();
 
-    assertThat(snapshot.hosts().get(0).values("host_field::lab_type"))
-        .containsExactly("Satellite Lab", "SLaaS", "Core Lab", "Fusion Lab")
-        .inOrder();
+    assertThat(snapshot.hosts().get(0).values("host_field::host_name")).containsExactly("lab-core");
+    assertThat(snapshot.hosts().get(0).values("host_field::lab_type")).containsExactly("SLaaS");
+    assertThat(snapshot.hosts().get(0).values("host_field::device_manager_type"))
+        .containsExactly("Fusion");
+    assertThat(snapshot.hosts().get(0).values("host_field::ate")).containsExactly("No");
 
-    assertThat(index.sortedValues("host_field::lab_type"))
-        .containsExactly("core lab", "fusion lab", "satellite lab", "slaas")
-        .inOrder();
+    assertThat(index.sortedValues("host_field::lab_type")).containsExactly("slaas");
     assertThat(index.valueDisplays("host_field::lab_type")).containsEntry("slaas", "SLaaS");
-    assertThat(index.valueDisplays("host_field::lab_type"))
-        .containsEntry("fusion lab", "Fusion Lab");
-    assertThat(index.valueCount("host_field::lab_type", "core lab")).isEqualTo(1);
+    assertThat(index.valueDisplays("host_field::device_manager_type"))
+        .containsEntry("fusion", "Fusion");
+    assertThat(index.valueDisplays("host_field::ate")).containsEntry("no", "No");
+    assertThat(index.valueCount("host_field::lab_type", "slaas")).isEqualTo(1);
+    assertThat(index.valueCount("host_field::device_manager_type", "fusion")).isEqualTo(1);
+    assertThat(index.valueCount("host_field::ate", "no")).isEqualTo(1);
 
+    // The builder derives no host fields itself: lab-plain has lab_type and dm_type host
+    // properties but no enrichment, so it carries only the raw host properties.
     LazyPostings postings = new LazyPostings(snapshot.devices());
-    assertThat(posting(postings, "host_field::lab_type", "core lab")).containsExactly(0);
+    assertThat(posting(postings, "host_field::lab_type", "slaas")).containsExactly(0);
     assertThat(snapshot.hosts().get(1).values("host_field::lab_type")).isEmpty();
-    assertThat(posting(postings, "host_field::lab_type", "slaas")).doesNotContain(1);
+    assertThat(snapshot.hosts().get(1).values("host_field::device_manager_type")).isEmpty();
+    assertThat(snapshot.hosts().get(1).values("host_field::ate")).isEmpty();
+    assertThat(snapshot.hosts().get(1).values("host_property::lab_type")).containsExactly("core");
 
     assertThat(index.valueCount("host_field::daemon_status", "running")).isEqualTo(0);
   }
@@ -551,6 +567,7 @@ public final class FleetIndexBuilderTest {
         .setReleaseType(Optional.of("SHARED_LAB"))
         .setDaemonStatus(Optional.of("RUNNING"))
         .setDaemonServerVersion(Optional.of("1.0.0"))
+        .setHostFields(ImmutableMap.of("host_field::lab_type", ImmutableList.of("Core Lab")))
         .build();
   }
 
