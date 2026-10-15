@@ -67,6 +67,270 @@ export const MOCK_GLOBAL_SUMMARY: GlobalSummary = {
         },
       },
     },
+    labTypes: [
+      {
+        id: 'core',
+        displayName: 'Core Lab',
+        description: 'Shared pool, operated by OmniLab team',
+        hosts: {
+          count: 1420,
+          search: {
+            entity: SearchEntity.SEARCH_ENTITY_HOST,
+            fleet: Fleet.FLEET_SELF,
+            filters: [
+              {
+                key: 'host_field::lab_type',
+                simple: {values: [{value: 'Core Lab'}]},
+              },
+            ],
+          },
+        },
+        devices: {
+          count: 48390,
+          search: {
+            entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+            fleet: Fleet.FLEET_SELF,
+            filters: [
+              {
+                key: 'host_field::lab_type',
+                simple: {values: [{value: 'Core Lab'}]},
+              },
+            ],
+          },
+        },
+        utilization: {
+          busy: {
+            count: 11614,
+            search: {
+              entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+              fleet: Fleet.FLEET_SELF,
+              filters: [
+                {
+                  key: 'host_field::lab_type',
+                  simple: {values: [{value: 'Core Lab'}]},
+                },
+                {
+                  key: 'field::status',
+                  simple: {values: [{value: 'BUSY'}]},
+                },
+              ],
+            },
+          },
+          idle: {
+            count: 30002,
+            search: {
+              entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+              fleet: Fleet.FLEET_SELF,
+              filters: [
+                {
+                  key: 'host_field::lab_type',
+                  simple: {values: [{value: 'Core Lab'}]},
+                },
+                {
+                  key: 'field::status',
+                  simple: {values: [{value: 'IDLE'}]},
+                },
+              ],
+            },
+          },
+          others: {
+            count: 6774,
+            search: {
+              entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+              fleet: Fleet.FLEET_SELF,
+              filters: [
+                {
+                  key: 'host_field::lab_type',
+                  simple: {values: [{value: 'Core Lab'}]},
+                },
+                {
+                  key: 'field::status',
+                  simple: {
+                    values: [{value: 'BUSY'}, {value: 'IDLE'}],
+                    negated: true,
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+      {
+        id: 'satellite',
+        displayName: 'Satellite Lab',
+        description: 'Dedicated pools, operated by OmniLab customers',
+        hosts: {
+          count: 2894,
+          search: {
+            entity: SearchEntity.SEARCH_ENTITY_HOST,
+            fleet: Fleet.FLEET_SELF,
+            filters: [
+              {
+                key: 'host_field::lab_type',
+                simple: {values: [{value: 'Satellite Lab'}]},
+              },
+            ],
+          },
+        },
+        devices: {
+          count: 78632,
+          search: {
+            entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+            fleet: Fleet.FLEET_SELF,
+            filters: [
+              {
+                key: 'host_field::lab_type',
+                simple: {values: [{value: 'Satellite Lab'}]},
+              },
+            ],
+          },
+        },
+        utilization: {
+          busy: {
+            count: 14940,
+            search: {
+              entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+              fleet: Fleet.FLEET_SELF,
+              filters: [
+                {
+                  key: 'host_field::lab_type',
+                  simple: {values: [{value: 'Satellite Lab'}]},
+                },
+                {
+                  key: 'field::status',
+                  simple: {values: [{value: 'BUSY'}]},
+                },
+              ],
+            },
+          },
+          idle: {
+            count: 45607,
+            search: {
+              entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+              fleet: Fleet.FLEET_SELF,
+              filters: [
+                {
+                  key: 'host_field::lab_type',
+                  simple: {values: [{value: 'Satellite Lab'}]},
+                },
+                {
+                  key: 'field::status',
+                  simple: {values: [{value: 'IDLE'}]},
+                },
+              ],
+            },
+          },
+          others: {
+            count: 18085,
+            search: {
+              entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+              fleet: Fleet.FLEET_SELF,
+              filters: [
+                {
+                  key: 'host_field::lab_type',
+                  simple: {values: [{value: 'Satellite Lab'}]},
+                },
+                {
+                  key: 'field::status',
+                  simple: {
+                    values: [{value: 'BUSY'}, {value: 'IDLE'}],
+                    negated: true,
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+      {
+        id: 'slaas',
+        displayName: 'SLaaS (Satellite-Lab-as-a-Service) Lab',
+        description:
+          'Dedicated pools, funded by OmniLab customers, operated by OmniLab team',
+        hosts: {
+          count: 810,
+          search: {
+            entity: SearchEntity.SEARCH_ENTITY_HOST,
+            fleet: Fleet.FLEET_SELF,
+            filters: [
+              {
+                key: 'host_field::lab_type',
+                simple: {values: [{value: 'SLaaS'}]},
+              },
+            ],
+          },
+        },
+        devices: {
+          count: 24194,
+          search: {
+            entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+            fleet: Fleet.FLEET_SELF,
+            filters: [
+              {
+                key: 'host_field::lab_type',
+                simple: {values: [{value: 'SLaaS'}]},
+              },
+            ],
+          },
+        },
+        utilization: {
+          busy: {
+            count: 5280,
+            search: {
+              entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+              fleet: Fleet.FLEET_SELF,
+              filters: [
+                {
+                  key: 'host_field::lab_type',
+                  simple: {values: [{value: 'SLaaS'}]},
+                },
+                {
+                  key: 'field::status',
+                  simple: {values: [{value: 'BUSY'}]},
+                },
+              ],
+            },
+          },
+          idle: {
+            count: 15148,
+            search: {
+              entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+              fleet: Fleet.FLEET_SELF,
+              filters: [
+                {
+                  key: 'host_field::lab_type',
+                  simple: {values: [{value: 'SLaaS'}]},
+                },
+                {
+                  key: 'field::status',
+                  simple: {values: [{value: 'IDLE'}]},
+                },
+              ],
+            },
+          },
+          others: {
+            count: 3766,
+            search: {
+              entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+              fleet: Fleet.FLEET_SELF,
+              filters: [
+                {
+                  key: 'host_field::lab_type',
+                  simple: {values: [{value: 'SLaaS'}]},
+                },
+                {
+                  key: 'field::status',
+                  simple: {
+                    values: [{value: 'BUSY'}, {value: 'IDLE'}],
+                    negated: true,
+                  },
+                },
+              ],
+            },
+          },
+        },
+      },
+    ],
   },
   partnerAtsLabs: {
     labCount: 12,

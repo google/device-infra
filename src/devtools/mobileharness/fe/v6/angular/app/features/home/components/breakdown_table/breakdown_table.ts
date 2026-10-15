@@ -1,23 +1,29 @@
 import {DecimalPipe} from '@angular/common';
-import {ChangeDetectionStrategy, Component, input, model} from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  model,
+} from '@angular/core';
 import {MatButtonModule} from '@angular/material/button';
 import {MatIconModule} from '@angular/material/icon';
 import {MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {RouterLink} from '@angular/router';
-import {PartnerAtsLab} from '@deviceinfra/app/core/models/home';
 import {UtilizationBar} from '@deviceinfra/app/features/home/components/utilization_bar';
+import {BreakdownTableRow} from '@deviceinfra/app/features/home/models';
 import {DrilldownRoutePipe} from '@deviceinfra/app/features/home/utils';
 
 /**
- * Component rendering the expandable breakdown table of ATS partner labs
- * using Angular Material Table.
+ * Reusable component rendering an expandable breakdown table of fleet subsets
+ * (Internal lab types or Partner ATS labs) using Angular Material Table.
  */
 @Component({
-  selector: 'app-ats-breakdown-table',
+  selector: 'app-breakdown-table',
   standalone: true,
-  templateUrl: './ats_breakdown_table.ng.html',
-  styleUrl: './ats_breakdown_table.scss',
+  templateUrl: './breakdown_table.ng.html',
+  styleUrl: './breakdown_table.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DecimalPipe,
@@ -30,14 +36,22 @@ import {DrilldownRoutePipe} from '@deviceinfra/app/features/home/utils';
     DrilldownRoutePipe,
   ],
 })
-export class AtsBreakdownTable {
-  readonly labs = input<
-    readonly PartnerAtsLab[],
-    readonly PartnerAtsLab[] | undefined
+export class BreakdownTable {
+  readonly rows = input<
+    readonly BreakdownTableRow[],
+    readonly BreakdownTableRow[] | undefined
   >([], {
-    transform: (value: readonly PartnerAtsLab[] | undefined) => value ?? [],
+    transform: (value: readonly BreakdownTableRow[] | undefined) => value ?? [],
   });
+
+  readonly toggleLabel = input<string>('Breakdown');
+  readonly nameColumnHeader = input<string>('Name');
+
   readonly expanded = model<boolean>(false);
+
+  readonly toggleButtonText = computed(
+    () => (this.expanded() ? 'Hide ' : 'View ') + this.toggleLabel(),
+  );
 
   readonly displayedColumns: readonly string[] = [
     'name',

@@ -9,8 +9,9 @@
         [class.active]="store.fleet() === 'internal'"
         [attr.aria-checked]="store.fleet() === 'internal'"
         (click)="store.setFleet('internal')"
+        matTooltip="Internal labs operated by Google (Core, Satellite, SLaaS)"
       >
-        <span>Internal</span>
+        <span>Google</span>
       </button>
       <button
         type="button"
@@ -19,8 +20,9 @@
         [class.active]="store.fleet() === 'ats'"
         [attr.aria-checked]="store.fleet() === 'ats'"
         (click)="store.setFleet('ats')"
+        matTooltip="Partner labs operated by OEM partners"
       >
-        <span>ATS</span>
+        <span>Partner</span>
       </button>
     </div>
   }

@@ -23,7 +23,7 @@
     (
       text-label-text-color: #444746,
       text-label-text-font: inherit,
-      text-label-text-size: 0.875rem,
+      text-label-text-size: 16px,
       text-label-text-weight: 500,
     )
   );
@@ -33,6 +33,7 @@
 .m3-button-toggle {
   margin-top: 24px;
   padding: 0 12px;
+  font-size: 16px;
   letter-spacing: normal;
 
   .chevron-icon {
@@ -45,15 +46,15 @@
   }
 }
 
-// ATS Breakdown Table
-.ats-table-container {
+// Breakdown Table
+.breakdown-table-container {
   margin-top: 16px;
   overflow-x: auto;
 }
 
-.ats-breakdown-table {
+.breakdown-table {
   width: 100%;
-  min-width: 560px;
+  min-width: 520px;
   border-collapse: collapse;
   font-size: 0.875rem;
 
@@ -61,23 +62,45 @@
     border-bottom: 1px solid #c4c7c5;
   }
 
-  th[mat-header-cell] {
+  th[mat-header-cell],
+  td[mat-cell] {
     padding: 12px 8px;
+    box-sizing: border-box;
+
+    &.th-name,
+    &.td-name {
+      width: 32%;
+      min-width: 180px;
+    }
+
+    &.th-hosts,
+    &.td-hosts {
+      width: 90px;
+      white-space: nowrap;
+    }
+
+    &.th-devices,
+    &.td-devices {
+      width: 100px;
+      white-space: nowrap;
+    }
+
+    &.th-util,
+    &.td-util {
+      // Utilization column is adaptive (自适应), expanding to fill the remaining table width
+      width: auto;
+      min-width: 240px;
+
+      app-utilization-bar {
+        display: block;
+        width: 100%;
+      }
+    }
+  }
+
+  th[mat-header-cell] {
     background: transparent;
     text-align: left;
-
-    &.th-name {
-      width: 25%;
-    }
-    &.th-hosts {
-      width: 15%;
-    }
-    &.th-devices {
-      width: 15%;
-    }
-    &.th-util {
-      width: 45%;
-    }
   }
 
   tr[mat-row].drill-row {
@@ -99,6 +122,24 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
+      }
+
+      .name-text-group {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .name-title {
+        font-weight: 500;
+        color: #1f1f1f;
+      }
+
+      .name-subtitle {
+        font-size: 0.75rem;
+        font-weight: 400;
+        color: #444746;
+        line-height: 1.25;
       }
     }
 
@@ -130,6 +171,19 @@
   display: inline-block;
   flex-shrink: 0;
 
+  &.dot-core {
+    background-color: #0b57d0;
+  }
+
+  &.dot-satellite {
+    background-color: #00639b;
+  }
+
+  &.dot-slaas {
+    background-color: #65558f;
+  }
+
+  &.dot-partner,
   &.dot-orange {
     background-color: #e8710a;
   }

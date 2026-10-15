@@ -6,7 +6,7 @@
   display: block;
   font-family: config.$labconsole-font;
 
-  // Material 3 Checkbox Tokens & Overrides matching prototype GM3 spec
+  // Checkbox overrides matching prototype visual spec
   @include mat.checkbox-overrides(
     (
       selected-icon-color: #0b57d0,

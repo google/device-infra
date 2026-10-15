@@ -2,6 +2,11 @@
  * @fileoverview UI view models for the Home feature.
  */
 
+import {
+  DeviceUtilization,
+  FleetSubset,
+} from '@deviceinfra/app/core/models/home';
+
 /** Precomputed percentage distribution and tooltip strings for device utilization. */
 export interface UtilizationMetrics {
   busyPct: number;
@@ -23,3 +28,16 @@ export const EMPTY_UTILIZATION_METRICS: UtilizationMetrics = {
   idleTooltip: '0 (0%) devices are available.',
   othersTooltip: '0 (0%) devices are out of service (e.g., in maintenance).',
 };
+
+/**
+ * Generic row view model for breakdown tables (Internal Lab Types or Partner Labs).
+ */
+export interface BreakdownTableRow {
+  id: string;
+  name: string;
+  subtitle?: string;
+  dotClass?: string;
+  hosts?: FleetSubset;
+  devices?: FleetSubset;
+  utilization?: DeviceUtilization;
+}
