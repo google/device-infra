@@ -71,6 +71,7 @@ import com.google.devtools.mobileharness.shared.trace.proto.SpanProto.ParentSpan
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.time.TimeoutUtil;
@@ -105,6 +106,10 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelp
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -128,6 +133,17 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
    * false).
    */
   static final String PARAM_THROW_ON_GEN_DIR_DOWNLOAD_ERROR = "throw_on_gen_dir_download_error";
+
+  /**
+   * Resolving parameter which identifies the version of an ATS file server file.
+   *
+   * <p>Files in the ATS file server can be overwritten in place, while the lab server caches the
+   * resolved files by their paths and resolving parameters. Adding the file version makes a
+   * replaced file use a different cache key, so the lab server resolves it again instead of reusing
+   * the stale copy.
+   */
+  @VisibleForTesting
+  static final String PARAM_ATS_FILE_SERVER_FILE_VERSION = "ats_file_server_file_version";
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -718,7 +734,39 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     if (cachePersistentFileInLab(filePath, jobInfo.params())) {
       builder.putResolvingParameter("persistent", "true");
     }
+    if (filePath.startsWith(RemoteFileType.ATS_FILE_SERVER.prefix())) {
+      getAtsFileServerFileVersion(filePath)
+          .ifPresent(
+              version ->
+                  builder.putResolvingParameter(PARAM_ATS_FILE_SERVER_FILE_VERSION, version));
+    }
     return builder.build();
+  }
+
+  /**
+   * Gets the version of an ATS file server file from its last modified time, size and file key
+   * (e.g., inode) in the local ATS storage.
+   *
+   * <p>Returns empty if the file can't be accessed locally.
+   */
+  private static Optional<String> getAtsFileServerFileVersion(String filePath) {
+    Path localPath =
+        Path.of(
+            PathUtil.join(
+                Flags.atsStoragePath.getNonNull(),
+                filePath.substring(RemoteFileType.ATS_FILE_SERVER.prefix().length())));
+    try {
+      BasicFileAttributes attributes = Files.readAttributes(localPath, BasicFileAttributes.class);
+      return Optional.of(
+          String.format(
+              "%s_%s_%s",
+              attributes.lastModifiedTime().toInstant(), attributes.size(), attributes.fileKey()));
+    } catch (IOException e) {
+      logger.atInfo().log(
+          "Failed to get the version of ATS file server file %s from local path %s: %s",
+          filePath, localPath, e.getMessage());
+      return Optional.empty();
+    }
   }
 
   private static boolean cachePersistentFileInLab(String filePath, Params jobParams) {
