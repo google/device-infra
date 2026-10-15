@@ -10,6 +10,7 @@ import {of, Subject} from 'rxjs';
 
 import {App} from './app';
 import {APP_DATA, type AppData} from './core/models/app_data';
+import {CommonParamsService} from './core/services/common_params_service';
 import {UrlService} from './core/services/url_service';
 
 describe('App Component', () => {
@@ -17,6 +18,7 @@ describe('App Component', () => {
   let fixture: ComponentFixture<App>;
   let mockUrlService: jasmine.SpyObj<UrlService>;
   let mockActivatedRoute: Partial<ActivatedRoute>;
+  let commonParamsService: CommonParamsService;
 
   const appData: AppData = {
     adbVersion: '1.0',
@@ -57,6 +59,7 @@ describe('App Component', () => {
 
     fixture = TestBed.createComponent(App);
     component = fixture.componentInstance;
+    commonParamsService = TestBed.inject(CommonParamsService);
     fixture.detectChanges();
   });
 
@@ -181,20 +184,25 @@ describe('App Component', () => {
   });
 
   describe('getPreservedQueryParams', () => {
-    it('should return preserved query params including fake_data and is_embedded_mode', () => {
-      component.isFakeData = true;
-      component.isEmbeddedMode = true;
+    it('should return preserved query params from commonParamsService', () => {
+      spyOn(commonParamsService, 'getCommonParams').and.returnValue({
+        'is_embedded_mode': 'true',
+        'debug': 'true',
+        'fake_data': 'true',
+      });
       const params = component.getPreservedQueryParams();
       expect(params['fake_data']).toBe('true');
       expect(params['is_embedded_mode']).toBe('true');
+      expect(params['debug']).toBe('true');
     });
 
-    it('should include universe when present in route queryParams', () => {
+    it('should not include universe even if present in route queryParams', () => {
       if (mockActivatedRoute.snapshot) {
         mockActivatedRoute.snapshot.queryParams['universe'] = 'test-universe';
       }
+      spyOn(commonParamsService, 'getCommonParams').and.returnValue({});
       const params = component.getPreservedQueryParams();
-      expect(params['universe']).toBe('test-universe');
+      expect(params['universe']).toBeUndefined();
     });
 
     it('should include enable_assistant when assistant feature is enabled', () => {

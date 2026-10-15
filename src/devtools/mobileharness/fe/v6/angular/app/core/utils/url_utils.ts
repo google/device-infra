@@ -44,3 +44,20 @@ export function navigateWithPreservedParams(
   // Perform client-side navigation with the merged URL.
   router.navigateByUrl(newUrl.pathname + newUrl.search);
 }
+
+/**
+ * Serializes query parameters into a query string for full page URLs (SSN),
+ * excluding any null, undefined, or empty string values.
+ */
+export function buildQueryString(
+  params: Record<string, string | null | undefined>,
+): string {
+  const searchParams = new URLSearchParams();
+  for (const [key, val] of Object.entries(params)) {
+    if (val !== null && val !== undefined && val !== '') {
+      searchParams.set(key, val);
+    }
+  }
+  const str = searchParams.toString();
+  return str ? `?${str}` : '';
+}

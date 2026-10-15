@@ -46,6 +46,7 @@ import {
   getLegacyFeUrl,
   getOmniLabUrl,
 } from '@deviceinfra/app/core/models/app_data';
+import {CommonParamsService} from '@deviceinfra/app/core/services/common_params_service';
 import {UrlService} from '@deviceinfra/app/core/services/url_service';
 import {HeaderSearchDockService} from '@deviceinfra/app/shared/services/header_search_dock_service';
 import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
@@ -94,6 +95,7 @@ export class App implements OnDestroy {
   readonly loadingService = inject(LoadingService);
   private readonly urlService = inject(UrlService);
   readonly dockService = inject(HeaderSearchDockService);
+  private readonly commonParamsService = inject(CommonParamsService);
   showVersionInfo = true;
   isEmbeddedMode = true;
   isFakeData = false;
@@ -140,18 +142,15 @@ export class App implements OnDestroy {
     }
   }
 
-  getPreservedQueryParams() {
-    const qParams: Record<string, string> = {};
-    if (this.isFakeData) {
-      qParams['fake_data'] = 'true';
-    }
-    if (this.isEmbeddedMode) {
-      qParams['is_embedded_mode'] = 'true';
-    }
-    const universe = this.route.snapshot?.queryParams?.['universe'];
-    if (universe) {
-      qParams['universe'] = universe;
-    }
+  /**
+   * Returns the preserved query parameters from the common params service.
+   */
+  getPreservedQueryParams(): Record<string, string> {
+    const qParams: Record<string, string> = {
+      // for thsoe left side nav menus, when clicked on it, we should
+      // reset all query parameters except the common ones.
+      ...this.commonParamsService.getCommonParams(),
+    };
     if (this.isAssistantFeatureEnabled()) {
       qParams['enable_assistant'] = 'true';
     }

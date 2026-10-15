@@ -89,6 +89,9 @@ export function getNavLinkConfig(
       deviceId: target.device.id,
       hostName: target.device.hostName || '',
       hostIp: target.device.hostIp || '',
+      // Only carry `universe` when the backend set it (ATS fleet), so the
+      // config shape (and the generated URL) stays unchanged for 1P entities.
+      ...(target.device.universe ? {universe: target.device.universe} : {}),
     };
   }
   if (target.host?.hostName) {
@@ -96,6 +99,7 @@ export function getNavLinkConfig(
       type: 'host',
       hostName: target.host.hostName,
       hostIp: target.host.hostIp || '',
+      ...(target.host.universe ? {universe: target.host.universe} : {}),
     };
   }
   if (target.job?.jobId) {

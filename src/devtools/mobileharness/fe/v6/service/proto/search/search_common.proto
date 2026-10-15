@@ -195,12 +195,14 @@ message DeviceRef {
   string id = 1;         // device UUID
   string host_name = 2;  // lab host running this device
   string host_ip = 3;
+  string universe = 4;
 }
 
 // Navigation identity for a host.
 message HostRef {
   string host_name = 1;
   string host_ip = 2;
+  string universe = 3;
 }
 
 // Navigation identity for a test.
