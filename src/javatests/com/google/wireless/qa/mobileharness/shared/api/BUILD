@@ -30,6 +30,8 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:lite_device_info_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:constraints_for_testing",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator",

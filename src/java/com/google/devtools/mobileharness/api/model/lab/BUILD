@@ -127,6 +127,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/device:__pkg__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
     ],
     deps = [
         ":device_id_descriptor",

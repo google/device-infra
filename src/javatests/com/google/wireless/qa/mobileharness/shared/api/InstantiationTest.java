@@ -33,6 +33,8 @@ import com.google.common.reflect.ClassPath;
 import com.google.common.reflect.ClassPath.ClassInfo;
 import com.google.common.reflect.TypeToken;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
+import com.google.devtools.mobileharness.api.model.lab.LiteDeviceInfoFactory;
 import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ConstraintsForTesting;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.Decorator;
@@ -265,7 +267,10 @@ public class InstantiationTest {
             .orElse(
                 Dummy.class.getDeclaredConstructor().getAnnotation(ConstraintsForTesting.class));
 
+    DeviceInfo deviceInfo = LiteDeviceInfoFactory.create("fake_device_id");
+    deviceInfo.deviceTypes().addAll(constraints.deviceTypes());
     device = mock(constraints.deviceClass());
+    when(device.info()).thenReturn(deviceInfo);
     when(device.getDeviceId()).thenReturn("fake_device_id");
     when(device.getDeviceTypes()).thenReturn(ImmutableSet.copyOf(constraints.deviceTypes()));
     when(decoratedDriver.getDevice()).thenReturn(device);
