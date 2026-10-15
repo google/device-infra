@@ -17,9 +17,11 @@
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -28,11 +30,17 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
+import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginNotification;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionNotificationEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartedEvent;
@@ -50,6 +58,7 @@ import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.Any;
 import com.google.protobuf.TextFormat;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
+import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
@@ -84,6 +93,7 @@ public final class AtsConsoleSessionPluginTest {
   @Bind @Mock private ListDevicesCommandHandler listDevicesCommandHandler;
   @Bind @Mock private ListModulesCommandHandler listModulesCommandHandler;
   @Bind @Mock private RunCommandHandler runCommandHandler;
+  @Bind @Mock private XtsJobCreator xtsJobCreator;
   @Bind @Mock private TestMessageUtil testMessageUtil;
   @Bind @Mock private XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil;
   @Bind @Mock private LocalFileUtil localFileUtil;
@@ -92,8 +102,15 @@ public final class AtsConsoleSessionPluginTest {
   @Inject private AtsConsoleSessionPlugin atsConsoleSessionPlugin;
 
   @Before
-  public void setUp() {
+  public void setUp() throws Exception {
     AtsConsoleSessionPlugin.NEXT_RUN_COMMAND_ID.set(1);
+    when(runCommandHandler.getSessionRequestInfo())
+        .thenReturn(SessionRequestInfo.getDefaultInstance());
+    when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.empty());
+    when(xtsJobCreator.createXtsTearDownJob(any())).thenReturn(Optional.empty());
+    when(xtsJobCreator.createXtsTradefedTestJob(any(), any(), anyBoolean()))
+        .thenReturn(ImmutableList.of());
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
   }
 
@@ -139,9 +156,9 @@ public final class AtsConsoleSessionPluginTest {
 
     JobInfo tfJob = mock(JobInfo.class);
     when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job_name"));
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
+    when(xtsJobCreator.createXtsTradefedTestJob(any(), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJob));
-    when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
 
     atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
@@ -164,10 +181,9 @@ public final class AtsConsoleSessionPluginTest {
     when(nonTfJob.locator()).thenReturn(new JobLocator("non_tf_job_id", "non_tf_job_name"));
     Properties properties = new Properties(new Timing());
     when(nonTfJob.properties()).thenReturn(properties);
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
+    when(xtsJobCreator.createXtsTradefedTestJob(any(), any(), anyBoolean()))
         .thenReturn(ImmutableList.of());
-    when(runCommandHandler.createNonTradefedJobs(runCommand))
-        .thenReturn(ImmutableList.of(nonTfJob));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of(nonTfJob));
 
     atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
@@ -178,6 +194,7 @@ public final class AtsConsoleSessionPluginTest {
   public void onJobEnd_callsRunCommandHandler() throws Exception {
     JobInfo jobInfo = mock(JobInfo.class);
     when(jobInfo.locator()).thenReturn(new JobLocator("job_id", "job_name"));
+    when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
 
     JobEndEvent event = new JobEndEvent(jobInfo, /* jobError= */ null);
 
@@ -408,10 +425,10 @@ public final class AtsConsoleSessionPluginTest {
     when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job"));
     when(tfJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
+    when(xtsJobCreator.createXtsTradefedTestJob(any(), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJob));
-    when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
-    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+    when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.of(setupJob));
 
     atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
@@ -442,10 +459,10 @@ public final class AtsConsoleSessionPluginTest {
     when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job"));
     when(tfJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
+    when(xtsJobCreator.createXtsTradefedTestJob(any(), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJob));
-    when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
-    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+    when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.of(setupJob));
 
     atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
@@ -481,11 +498,10 @@ public final class AtsConsoleSessionPluginTest {
     when(nonTfJob.locator()).thenReturn(new JobLocator("nontf_job_id", "nontf_job"));
     when(nonTfJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
+    when(xtsJobCreator.createXtsTradefedTestJob(any(), any(), anyBoolean()))
         .thenReturn(ImmutableList.of());
-    when(runCommandHandler.createNonTradefedJobs(runCommand))
-        .thenReturn(ImmutableList.of(nonTfJob));
-    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of(nonTfJob));
+    when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.of(setupJob));
 
     atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
@@ -515,11 +531,10 @@ public final class AtsConsoleSessionPluginTest {
     when(nonTfJob.locator()).thenReturn(new JobLocator("nontf_job_id", "nontf_job"));
     when(nonTfJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
+    when(xtsJobCreator.createXtsTradefedTestJob(any(), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJob));
-    when(runCommandHandler.createNonTradefedJobs(runCommand))
-        .thenReturn(ImmutableList.of(nonTfJob));
-    when(runCommandHandler.createSetupJob()).thenReturn(Optional.empty());
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of(nonTfJob));
+    when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.empty());
 
     atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
@@ -569,12 +584,11 @@ public final class AtsConsoleSessionPluginTest {
     when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
     when(teardownJob.tests()).thenReturn(teardownTests);
 
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
+    when(xtsJobCreator.createXtsTradefedTestJob(any(), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJob));
-    when(runCommandHandler.createNonTradefedJobs(runCommand))
-        .thenReturn(ImmutableList.of(nonTfJob));
-    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
-    when(runCommandHandler.createTeardownJob()).thenReturn(Optional.of(teardownJob));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of(nonTfJob));
+    when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsTearDownJob(any())).thenReturn(Optional.of(teardownJob));
 
     atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
@@ -635,12 +649,17 @@ public final class AtsConsoleSessionPluginTest {
     when(teardownJob.locator())
         .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
     when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
+    TestInfos teardownTests = mock(TestInfos.class);
+    when(teardownTests.getAll()).thenReturn(ImmutableListMultimap.of());
+    when(teardownJob.tests()).thenReturn(teardownTests);
 
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
+    when(xtsJobCreator.createXtsTradefedTestJob(any(), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJob1, tfJob2));
-    when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
-    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
-    when(runCommandHandler.createTeardownJob()).thenReturn(Optional.of(teardownJob));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+    when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsTearDownJob(any())).thenReturn(Optional.of(teardownJob));
+    when(runCommandHandler.getSessionRequestInfo())
+        .thenReturn(SessionRequestInfo.newBuilder().setShardingMode(ShardingMode.MODULE).build());
 
     atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
@@ -669,7 +688,8 @@ public final class AtsConsoleSessionPluginTest {
                 .setConfig(
                     Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
                 .build());
-    when(runCommandHandler.shouldEnableModuleSharding()).thenReturn(true);
+    when(runCommandHandler.getSessionRequestInfo())
+        .thenReturn(SessionRequestInfo.newBuilder().setShardingMode(ShardingMode.MODULE).build());
     atsConsoleSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
 
     JobInfo setupJob = mock(JobInfo.class);
@@ -703,12 +723,13 @@ public final class AtsConsoleSessionPluginTest {
     when(teardownJob.locator())
         .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
     when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
+    when(teardownJob.tests()).thenReturn(testInfos);
 
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
+    when(xtsJobCreator.createXtsTradefedTestJob(any(), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJob1Static, tfJob2Mcts));
-    when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
-    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
-    when(runCommandHandler.createTeardownJob()).thenReturn(Optional.of(teardownJob));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+    when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsTearDownJob(any())).thenReturn(Optional.of(teardownJob));
 
     atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
@@ -772,19 +793,19 @@ public final class AtsConsoleSessionPluginTest {
         .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
     when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
+    when(xtsJobCreator.createXtsTradefedTestJob(any(), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJobStatic, tfJobMcts));
-    when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
-    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
-    when(runCommandHandler.createTeardownJob()).thenReturn(Optional.of(teardownJob));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+    when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsTearDownJob(any())).thenReturn(Optional.of(teardownJob));
 
     atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
     // Setup job ends -> XtsJobCreator is told the device has no preloaded modules, so it skips the
     // dynamic MCTS job.
     atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
-    verify(runCommandHandler)
-        .createTradefedJobs(eq(runCommand), any(), /* skipDynamicMctsJob= */ eq(true));
+    verify(xtsJobCreator)
+        .createXtsTradefedTestJob(any(), any(), /* skipDynamicMctsJob= */ eq(true));
   }
 
   @Test
@@ -830,19 +851,19 @@ public final class AtsConsoleSessionPluginTest {
         .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
     when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
+    when(xtsJobCreator.createXtsTradefedTestJob(any(), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJobStatic, tfJobMcts));
-    when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
-    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
-    when(runCommandHandler.createTeardownJob()).thenReturn(Optional.of(teardownJob));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+    when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsTearDownJob(any())).thenReturn(Optional.of(teardownJob));
 
     atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
     // Setup job ends -> XtsJobCreator is told the device has preloaded modules, so it creates the
     // dynamic MCTS job.
     atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
-    verify(runCommandHandler)
-        .createTradefedJobs(eq(runCommand), any(), /* skipDynamicMctsJob= */ eq(false));
+    verify(xtsJobCreator)
+        .createXtsTradefedTestJob(any(), any(), /* skipDynamicMctsJob= */ eq(false));
   }
 
   @Test
@@ -884,19 +905,19 @@ public final class AtsConsoleSessionPluginTest {
         .thenReturn(new JobLocator("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME));
     when(teardownJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(eq(runCommand), any(), anyBoolean()))
+    when(xtsJobCreator.createXtsTradefedTestJob(any(), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJobStatic, tfJobMcts));
-    when(runCommandHandler.createNonTradefedJobs(runCommand)).thenReturn(ImmutableList.of());
-    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
-    when(runCommandHandler.createTeardownJob()).thenReturn(Optional.of(teardownJob));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+    when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsTearDownJob(any())).thenReturn(Optional.of(teardownJob));
 
     atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
     // Setup job ends -> no setup test means no signal, so XtsJobCreator is told to skip dynamic
     // MCTS.
     atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
-    verify(runCommandHandler)
-        .createTradefedJobs(eq(runCommand), any(), /* skipDynamicMctsJob= */ eq(true));
+    verify(xtsJobCreator)
+        .createXtsTradefedTestJob(any(), any(), /* skipDynamicMctsJob= */ eq(true));
   }
 
   @Test
@@ -923,16 +944,57 @@ public final class AtsConsoleSessionPluginTest {
     when(tfJob.locator()).thenReturn(new JobLocator("tf_job_id", "tf_job"));
     when(tfJob.properties()).thenReturn(new Properties(new Timing()));
 
-    when(runCommandHandler.createTradefedJobs(any(), any(), anyBoolean()))
+    when(xtsJobCreator.createXtsTradefedTestJob(any(), any(), anyBoolean()))
         .thenReturn(ImmutableList.of(tfJob));
-    when(runCommandHandler.createNonTradefedJobs(any())).thenReturn(ImmutableList.of());
-    when(runCommandHandler.createSetupJob()).thenReturn(Optional.of(setupJob));
-    when(runCommandHandler.createTeardownJob()).thenReturn(Optional.empty());
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+    when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsTearDownJob(any())).thenReturn(Optional.empty());
 
     atsConsoleSessionPlugin.onSessionStarted(new SessionStartedEvent(sessionInfo));
 
     atsConsoleSessionPlugin.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null));
 
     verify(sessionInfo).addJob(tfJob);
+  }
+
+  @Test
+  public void onSessionEnded_whenResultProcessingThrows_stillInvalidatesCachedDevices()
+      throws Exception {
+    RunCommand runCommand = RunCommand.getDefaultInstance();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
+                .build());
+    atsConsoleSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    TestInfo testInfo = mock(TestInfo.class);
+    TestLocator locator = mock(TestLocator.class);
+    when(testInfo.locator()).thenReturn(locator);
+    when(locator.getId()).thenReturn("test_id");
+    JobInfo jobInfo = mock(JobInfo.class);
+    when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+    when(testInfo.jobInfo()).thenReturn(jobInfo);
+
+    LocalTestStartingEvent startingEvent = mock(LocalTestStartingEvent.class);
+    Allocation allocation = mock(Allocation.class);
+    when(startingEvent.getTest()).thenReturn(testInfo);
+    when(startingEvent.getAllocation()).thenReturn(allocation);
+    when(allocation.getAllDeviceLocators()).thenReturn(ImmutableList.of());
+    when(startingEvent.getLocalDevices())
+        .thenReturn(ImmutableMap.of("device_control_id_1", mock(Device.class)));
+
+    atsConsoleSessionPlugin.onTestStarting(startingEvent);
+
+    MobileHarnessException expectedException =
+        new MobileHarnessException(BasicErrorId.USER_PLUGIN_ERROR, "Result processing failed");
+    doThrow(expectedException).when(runCommandHandler).handleResultProcessing(any(), any());
+
+    assertThrows(
+        MobileHarnessException.class,
+        () -> atsConsoleSessionPlugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null)));
+
+    verify(sessionDeviceCache).invalidateCache(any());
   }
 }

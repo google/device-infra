@@ -24,8 +24,10 @@ java_library(
     name = "xts_job_creator",
     srcs = ["XtsJobCreator.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/sessionorchestrator:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common/sessionorchestrator:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
     ],

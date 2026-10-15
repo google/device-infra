@@ -29,7 +29,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.LocalDeviceUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
@@ -159,7 +158,6 @@ public final class RunCommandHandlerTest {
             sessionRequestHandlerUtil,
             sessionResultHandlerUtil,
             sessionInfo,
-            xtsJobCreator,
             verifierResultHelper);
   }
 
@@ -474,7 +472,7 @@ public final class RunCommandHandlerTest {
   }
 
   @Test
-  public void createTradefedJobs_success() throws Exception {
+  public void initialize_setsXtsLogRootPathInSessionRequestInfo() throws Exception {
     File xtsRootDir = folder.newFolder("create_jobs_" + XTS_ROOT_DIR_NAME);
     RunCommand command =
         RunCommand.newBuilder()
@@ -482,16 +480,9 @@ public final class RunCommandHandlerTest {
             .setXtsType("cts")
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
             .build();
-    JobInfo jobInfo = createJobInfos().get(0);
-    when(xtsJobCreator.createXtsTradefedTestJob(any(), any(), anyBoolean()))
-        .thenReturn(ImmutableList.of(jobInfo));
 
     runCommandHandler.initialize(command);
-    ImmutableList<JobInfo> jobs =
-        runCommandHandler.createTradefedJobs(
-            command, ImmutableSet.of(), /* skipDynamicMctsJob= */ false);
 
-    assertThat(jobs).containsExactly(jobInfo);
     Path xtsLogsDir = xtsRootDir.toPath().resolve("android-cts/logs");
     SessionRequestInfo sessionRequestInfo = runCommandHandler.getSessionRequestInfo();
     assertThat(Path.of(sessionRequestInfo.getXtsLogRootPath()).getParent()).isEqualTo(xtsLogsDir);

@@ -78,6 +78,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/inject:common_module",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/event:job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:lab_test_events",

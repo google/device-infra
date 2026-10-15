@@ -21,12 +21,10 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
-import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static java.util.Arrays.stream;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
@@ -35,7 +33,6 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfoUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
-import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.common.proto.FilterValues;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
@@ -74,7 +71,6 @@ class RunCommandHandler {
   private final SessionResultHandlerUtil sessionResultHandlerUtil;
   private final LocalFileUtil localFileUtil;
   private final SessionInfo sessionInfo;
-  private final XtsJobCreator xtsJobCreator;
   private final VerifierResultHelper verifierResultHelper;
 
   /** Set in {@link #initialize}. */
@@ -92,13 +88,11 @@ class RunCommandHandler {
       SessionRequestHandlerUtil sessionRequestHandlerUtil,
       SessionResultHandlerUtil sessionResultHandlerUtil,
       SessionInfo sessionInfo,
-      XtsJobCreator xtsJobCreator,
       VerifierResultHelper verifierResultHelper) {
     this.localFileUtil = localFileUtil;
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
     this.sessionResultHandlerUtil = sessionResultHandlerUtil;
     this.sessionInfo = sessionInfo;
-    this.xtsJobCreator = xtsJobCreator;
     this.verifierResultHelper = verifierResultHelper;
   }
 
@@ -111,63 +105,6 @@ class RunCommandHandler {
   /** Returns the prepared {@link SessionRequestInfo} for the current run command. */
   SessionRequestInfo getSessionRequestInfo() {
     return sessionRequestInfo;
-  }
-
-  /**
-   * Creates tradefed jobs based on the {@code command} and {@code dynamicMctsModules}, and adds the
-   * jobs to the {@code sessionInfo}.
-   *
-   * <p>Jobs added to the session by the plugin will be started by the session job runner later.
-   *
-   * @param skipDynamicMctsJob when {@code true}, the dynamic MCTS job is not created in RUNNER mode
-   * @return a list of {@code JobInfo} to be started
-   */
-  ImmutableList<JobInfo> createTradefedJobs(
-      RunCommand command, ImmutableSet<String> dynamicMctsModules, boolean skipDynamicMctsJob)
-      throws MobileHarnessException, InterruptedException {
-    ImmutableList<JobInfo> jobInfoList =
-        xtsJobCreator.createXtsTradefedTestJob(
-            sessionRequestInfo, dynamicMctsModules, skipDynamicMctsJob);
-    if (jobInfoList.isEmpty()) {
-      logger.atInfo().log(
-          "No tradefed jobs created, double check device availability. The run command -> %s",
-          shortDebugString(command));
-      return ImmutableList.of();
-    }
-
-    return jobInfoList;
-  }
-
-  /**
-   * Creates non-tradefed jobs based on the {@code runCommand} and adds the jobs to the {@code
-   * sessionInfo}.
-   *
-   * @return a list of {@code JobInfo} to be started
-   */
-  ImmutableList<JobInfo> createNonTradefedJobs(RunCommand runCommand)
-      throws MobileHarnessException, InterruptedException {
-    ImmutableList<JobInfo> jobInfos = xtsJobCreator.createXtsNonTradefedJobs(sessionRequestInfo);
-    if (jobInfos.isEmpty()) {
-      logger.atInfo().log(
-          "No valid module(s) matched, no non-tradefed jobs will run. The run command -> %s",
-          shortDebugString(runCommand));
-
-      return ImmutableList.of();
-    }
-    return jobInfos;
-  }
-
-  Optional<JobInfo> createSetupJob() throws MobileHarnessException, InterruptedException {
-    return xtsJobCreator.createXtsSetupJob(sessionRequestInfo);
-  }
-
-  Optional<JobInfo> createTeardownJob() throws MobileHarnessException, InterruptedException {
-    return xtsJobCreator.createXtsTearDownJob(sessionRequestInfo);
-  }
-
-  /** Returns whether the current session's run command enables MODULE sharding mode. */
-  boolean shouldEnableModuleSharding() {
-    return initialized && SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo);
   }
 
   /**
