@@ -99,7 +99,7 @@ public class ConsoleJobCreator extends XtsJobCreator {
   }
 
   @Override
-  protected SubPlan prepareRunRetrySubPlan(SessionRequestInfo sessionRequestInfo, boolean forTf)
+  protected SubPlan prepareRunRetrySubPlan(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException {
     return prepareRunRetrySubPlan(
         Path.of(sessionRequestInfo.getXtsRootDir()),
@@ -114,7 +114,6 @@ public class ConsoleJobCreator extends XtsJobCreator {
         ImmutableList.copyOf(sessionRequestInfo.getIncludeFiltersList()),
         ImmutableList.copyOf(sessionRequestInfo.getExcludeFiltersList()),
         getNonTfModules(sessionRequestInfo.getV2ConfigsMapMap()),
-        forTf,
         ImmutableList.copyOf(sessionRequestInfo.getModuleNamesList()));
   }
 
@@ -127,7 +126,6 @@ public class ConsoleJobCreator extends XtsJobCreator {
       ImmutableList<String> passedInIncludeFilters,
       ImmutableList<String> passedInExcludeFilters,
       ImmutableSet<String> allNonTradefedModules,
-      boolean forTf,
       ImmutableList<String> passedInModules)
       throws MobileHarnessException {
     RetryArgs.Builder retryArgs =
@@ -154,11 +152,7 @@ public class ConsoleJobCreator extends XtsJobCreator {
     if (!passedInModules.isEmpty()) {
       retryArgs.setPassedInModules(ImmutableSet.copyOf(passedInModules));
     }
-    return generateRetrySubPlan(
-        retryArgs.build(),
-        forTf,
-        previousSessionIndex != null ? String.valueOf(previousSessionIndex) : null,
-        previousSessionResultDirName);
+    return generateRetrySubPlan(retryArgs.build());
   }
 
   @Override

@@ -16,6 +16,9 @@
 
 package com.google.devtools.mobileharness.shared.util.shell;
 
+import static java.util.stream.Collectors.joining;
+
+import com.google.common.base.CharMatcher;
 import com.google.common.collect.ImmutableList;
 import java.util.List;
 
@@ -82,6 +85,21 @@ public abstract class ShellUtils {
       }
     }
     return false;
+  }
+
+  /**
+   * Joins tokens into a command line which {@link #tokenize} splits back into the same tokens. Only
+   * tokens that need it are double-quoted.
+   */
+  public static String joinTokens(List<String> tokens) {
+    return tokens.stream().map(ShellUtils::quoteIfNeeded).collect(joining(" "));
+  }
+
+  private static String quoteIfNeeded(String token) {
+    if (!token.isEmpty() && CharMatcher.anyOf(" \t\"'\\").matchesNoneOf(token)) {
+      return token;
+    }
+    return "\"" + token.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
   }
 
   /**

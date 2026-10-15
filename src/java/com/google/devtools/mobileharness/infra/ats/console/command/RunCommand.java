@@ -60,6 +60,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.Timeout;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import java.io.File;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -396,9 +397,10 @@ public final class RunCommand implements Callable<Integer> {
     runCommand.setEnableDefaultLogs(Objects.equals(options.enableDefaultLogs, true));
 
     ImmutableList<String> commandLineArgs = command.stream().skip(1L).collect(toImmutableList());
+    // Joined in a way that can be tokenized back to the same tokens, e.g. for "run retry".
     runCommand.setInitialState(
         RunCommandState.newBuilder()
-            .setCommandLineArgs(String.join(" ", commandLineArgs))
+            .setCommandLineArgs(ShellUtils.joinTokens(commandLineArgs))
             .addAllSeparatedCommandLineArgs(commandLineArgs));
 
     if (!Flags.enableAtsConsoleOlcServerLog.getNonNull()) {

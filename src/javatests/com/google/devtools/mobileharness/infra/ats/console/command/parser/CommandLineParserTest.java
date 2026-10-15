@@ -225,4 +225,17 @@ public final class CommandLineParserTest {
         .contains("The command line contains syntax error: " + tfCommand1);
     assertThat(exception.getErrorId()).isEqualTo(InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR);
   }
+
+  @Test
+  public void parseCommandLine_businessLogicAndSystemCheckerOptions_success() throws Exception {
+    String tfCommand =
+        "cts --report-system-checkers --business-logic-url https://bl.example.com"
+            + " --ignore-business-logic-failure";
+
+    SessionRequestInfo.Builder requestInfo = commandLineParser.parseCommandLine(tfCommand);
+
+    assertThat(requestInfo.getReportSystemCheckers()).isTrue();
+    assertThat(requestInfo.getBusinessLogicUrl()).isEqualTo("https://bl.example.com");
+    assertThat(requestInfo.getIgnoreBusinessLogicFailure()).isTrue();
+  }
 }

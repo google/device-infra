@@ -164,14 +164,16 @@ public class SubPlanHelper {
             .filter(attribute -> attribute.getKey().equals(XmlConstants.COMMAND_LINE_ARGS))
             .findFirst();
     commandLineArgs.ifPresent(
-        args ->
-            subPlan.setPreviousSessionXtsTestPlan(
-                Splitter.on(' ')
-                    .trimResults()
-                    .omitEmptyStrings()
-                    .splitToStream(args.getValue())
-                    .findFirst()
-                    .orElse("")));
+        args -> {
+          subPlan.setPreviousSessionCommandLineArgs(args.getValue());
+          subPlan.setPreviousSessionXtsTestPlan(
+              Splitter.on(' ')
+                  .trimResults()
+                  .omitEmptyStrings()
+                  .splitToStream(args.getValue())
+                  .findFirst()
+                  .orElse(""));
+        });
     if (previousResult.hasBuild()) {
       subPlan.setPreviousSessionDeviceBuildFingerprint(
           previousResult.getBuild().getBuildFingerprint());

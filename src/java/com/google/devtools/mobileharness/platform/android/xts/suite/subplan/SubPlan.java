@@ -64,6 +64,7 @@ public class SubPlan extends AbstractXmlParser {
   public static final String ALL_TESTS_IN_MODULE = "ALL";
 
   private String prevSessionXtsTestPlan;
+  private String prevSessionCommandLineArgs;
   private String prevSessionDeviceBuildFingerprint;
   private String prevSessionDeviceBuildFingerprintUnaltered;
   private String prevSessionDeviceVendorBuildFingerprint;
@@ -200,6 +201,16 @@ public class SubPlan extends AbstractXmlParser {
   /** Gets the previous session's test plan. */
   public String getPreviousSessionXtsTestPlan() {
     return prevSessionXtsTestPlan;
+  }
+
+  /** Sets the previous session's full command line args (e.g. "cts -m Foo --module-arg ..."). */
+  public void setPreviousSessionCommandLineArgs(String prevSessionCommandLineArgs) {
+    this.prevSessionCommandLineArgs = prevSessionCommandLineArgs;
+  }
+
+  /** Gets the previous session's full command line args. */
+  public Optional<String> getPreviousSessionCommandLineArgs() {
+    return Optional.ofNullable(prevSessionCommandLineArgs);
   }
 
   /** Sets the previous session's device build fingerprint. */
@@ -479,9 +490,7 @@ public class SubPlan extends AbstractXmlParser {
           newFilter.append(abi.trim());
           newFilter.append(' ');
         }
-        if (name != null) {
-          newFilter.append(name.trim());
-        }
+        newFilter.append(name.trim());
         if (filter != null) {
           newFilter.append(' ');
           newFilter.append(filter.trim());

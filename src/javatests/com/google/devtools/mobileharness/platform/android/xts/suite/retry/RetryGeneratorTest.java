@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.RetryType;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
@@ -220,6 +221,30 @@ public final class RetryGeneratorTest {
 
     assertThat(Multimaps.asMap(subPlan.getNonTfIncludeFiltersMultimap()))
         .containsExactly("arm64-v8a Module3", ImmutableSet.of("ALL", "TestClass1#Test2"));
+  }
+
+  @org.junit.Test
+  public void generateRetrySubPlan_setsPreviousSessionCommandLineArgs() throws Exception {
+    Path resultsDir = Path.of("/path/to/results_dir");
+    when(previousResultLoader.loadPreviousResult(resultsDir, "session_id"))
+        .thenReturn(
+            REPORT_1.toBuilder()
+                .addAttribute(
+                    Attribute.newBuilder()
+                        .setKey("command_line_args")
+                        .setValue("cts --module-arg ModuleA:arg:value"))
+                .build());
+
+    SubPlan subPlan =
+        retryGenerator.generateRetrySubPlan(
+            RetryArgs.builder()
+                .setResultsDir(resultsDir)
+                .setPreviousSessionId("session_id")
+                .build());
+
+    assertThat(subPlan.getPreviousSessionXtsTestPlan()).isEqualTo("cts");
+    assertThat(subPlan.getPreviousSessionCommandLineArgs())
+        .hasValue("cts --module-arg ModuleA:arg:value");
   }
 
   @org.junit.Test

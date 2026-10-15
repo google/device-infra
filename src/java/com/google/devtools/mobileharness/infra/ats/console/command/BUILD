@@ -112,6 +112,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/shell",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "@maven//:com_google_guava_guava",
         "@maven//:info_picocli_picocli",
