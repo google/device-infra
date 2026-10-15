@@ -263,6 +263,14 @@ func RecordUpstreamRPC(rpc, grpcCode string, duration time.Duration) {
 	recordUpstreamRPC(rpc, grpcCode, duration)
 }
 
+// RecordConfigWatermarkIgnored counts a watermark in casproxy's saved
+// configuration file that casproxy ignored at startup, because it was
+// invalid, in favour of the flag value. key is its key in the file,
+// min_free_space or target_free_space.
+func RecordConfigWatermarkIgnored(key string) {
+	recordConfigWatermarkIgnored(key)
+}
+
 // Shutdown flushes all pending metrics.
 func Shutdown() {
 	shutdown()

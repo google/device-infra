@@ -323,3 +323,19 @@ func TestRecordLocalCacheStats_DownloadSide(t *testing.T) {
 		t.Errorf("recorded %+v for a run without a cache, want %+v", got, none)
 	}
 }
+
+func TestRecordConfigWatermarkIgnored(t *testing.T) {
+	Init("casproxy")
+	defer Shutdown()
+
+	testMu.Lock()
+	lastRecordedIgnoredWatermark = ""
+	testMu.Unlock()
+	RecordConfigWatermarkIgnored("target_free_space")
+	testMu.Lock()
+	got := lastRecordedIgnoredWatermark
+	testMu.Unlock()
+	if got != "target_free_space" {
+		t.Errorf("RecordConfigWatermarkIgnored recorded %q, want %q", got, "target_free_space")
+	}
+}

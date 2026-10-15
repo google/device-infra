@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -301,5 +302,154 @@ func TestNormalizeWatermarks_FlexibleErrorListsEveryViolation(t *testing.T) {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("NormalizeWatermarks(0%%, 100%%, Flexible) error = %q, want it to mention %q", err, want)
 		}
+	}
+}
+
+// fakeVolume returns a StatfsFunc for a volume of total bytes that counts
+// its calls in *calls.
+func fakeVolume(total int64, calls *int) StatfsFunc {
+	return func(string) (DiskStats, error) {
+		*calls++
+		return DiskStats{TotalBytes: total, FreeBytes: total / 2}, nil
+	}
+}
+
+func TestCheckWatermarks(t *testing.T) {
+	// 1100 GiB less the 100 GiB reserved leaves an effective total of 1000
+	// GiB, so 10 GiB is 1% of it.
+	const volume = 1100 * testGiB
+	const reservedGB = 100
+	for _, tc := range []struct {
+		name        string
+		min, target string
+		wantErr     bool
+		wantStatfs  bool
+	}{
+		{name: "lowest bounds", min: "1%", target: "2%"},
+		{name: "highest bounds", min: "50%", target: "60%"},
+		{name: "gap of exactly 1 point", min: "20%", target: "21%"},
+		{name: "minimum of 0%", min: "0%", target: "25%", wantErr: true},
+		{name: "minimum of 100%", min: "100%", target: "25%", wantErr: true},
+		{name: "minimum of 51%", min: "51%", target: "60%", wantErr: true},
+		{name: "target of 61%", min: "15%", target: "61%", wantErr: true},
+		{name: "target of 100%", min: "15%", target: "100%", wantErr: true},
+		{name: "gap under 1 point", min: "20%", target: "20.5%", wantErr: true},
+		{name: "target below minimum", min: "30%", target: "25%", wantErr: true},
+		{name: "unparsable minimum", min: "lots", target: "25%", wantErr: true},
+		{name: "unparsable target", min: "15%", target: "-5gb", wantErr: true},
+
+		{name: "byte counts at the lowest bounds", min: "10gb", target: "21474836480", wantStatfs: true},
+		{name: "byte counts at the highest bounds", min: "500gb", target: "600gb", wantStatfs: true},
+		{name: "byte minimum below 1%", min: "5gb", target: "25%", wantErr: true, wantStatfs: true},
+		{name: "byte target above 60%", min: "15%", target: "601gb", wantErr: true, wantStatfs: true},
+		{name: "mixed kinds in order", min: "100gb", target: "25%", wantStatfs: true},
+		{name: "mixed kinds out of order", min: "300gb", target: "25%", wantErr: true, wantStatfs: true},
+		{name: "mixed kinds under 1 point apart", min: "20%", target: "205gb", wantErr: true, wantStatfs: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			calls := 0
+			cfg := EvictorConfig{MinFreeSpace: tc.min, TargetFreeSpace: tc.target, ReservedSpaceGB: reservedGB}
+			warnings, err := CheckWatermarks(cfg, t.TempDir(), fakeVolume(volume, &calls), FlexibleWatermarkBounds)
+			if gotErr := err != nil; gotErr != tc.wantErr {
+				t.Errorf("CheckWatermarks(%q, %q) error = %v, want error: %t", tc.min, tc.target, err, tc.wantErr)
+			}
+			if len(warnings) != 0 {
+				t.Errorf("CheckWatermarks(%q, %q) warnings = %q, want none", tc.min, tc.target, warnings)
+			}
+			// Measuring the volume only for a byte count keeps
+			// percentage-only checks free of I/O.
+			if gotStatfs := calls > 0; gotStatfs != tc.wantStatfs {
+				t.Errorf("CheckWatermarks(%q, %q) called statfs %d times, want calls: %t", tc.min, tc.target, calls, tc.wantStatfs)
+			}
+		})
+	}
+}
+
+// TestCheckWatermarks_PercentagesAreOfTheEffectiveTotal pins the base a byte
+// count is compared with: the volume less ReservedSpaceGB, as the evictor
+// evaluates percentages, not the raw size of the volume.
+func TestCheckWatermarks_PercentagesAreOfTheEffectiveTotal(t *testing.T) {
+	calls := 0
+	statfs := fakeVolume(200*testGiB, &calls)
+	// 55 GiB is 27.5% of the raw 200 GiB, but 55% of the 100 GiB left after
+	// the reservation, above the 50% a minimum may be.
+	cfg := EvictorConfig{MinFreeSpace: "55gb", TargetFreeSpace: "60%", ReservedSpaceGB: 100}
+	if _, err := CheckWatermarks(cfg, t.TempDir(), statfs, FlexibleWatermarkBounds); err == nil {
+		t.Errorf("CheckWatermarks(%+v) on a 200 GiB volume succeeded, want an error", cfg)
+	}
+	cfg.ReservedSpaceGB = 0
+	if _, err := CheckWatermarks(cfg, t.TempDir(), statfs, FlexibleWatermarkBounds); err != nil {
+		t.Errorf("CheckWatermarks(%+v) on a 200 GiB volume failed: %v", cfg, err)
+	}
+}
+
+func TestCheckWatermarks_VolumeOfUnknownSize(t *testing.T) {
+	failing := func(string) (DiskStats, error) { return DiskStats{}, errors.New("statfs failed") }
+	for _, tc := range []struct {
+		name        string
+		min, target string
+		wantErr     bool
+	}{
+		// Byte counts cannot be checked against their bounds, only against
+		// each other, with a warning for each that could not be checked.
+		{name: "byte counts in order", min: "10gb", target: "20gb"},
+		{name: "byte counts out of order", min: "20gb", target: "10gb", wantErr: true},
+		// Percentages are still checked in full.
+		{name: "percentage out of range", min: "0%", target: "20gb", wantErr: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := EvictorConfig{MinFreeSpace: tc.min, TargetFreeSpace: tc.target}
+			warnings, err := CheckWatermarks(cfg, t.TempDir(), failing, FlexibleWatermarkBounds)
+			if gotErr := err != nil; gotErr != tc.wantErr {
+				t.Errorf("CheckWatermarks(%q, %q) error = %v, want error: %t", tc.min, tc.target, err, tc.wantErr)
+			}
+			if len(warnings) == 0 || !strings.Contains(warnings[0], "statfs failed") {
+				t.Errorf("CheckWatermarks(%q, %q) warnings = %q, want the statfs failure first", tc.min, tc.target, warnings)
+			}
+		})
+	}
+}
+
+// TestCheckWatermarks_SaysWhichWatermarkIsAtFault pins the fields of the
+// *WatermarkError that ResolveConfig relies on to drop only a bad watermark
+// from a configuration file: a value that is bad by itself is blamed alone,
+// and Pair is set only for two values that are each fine.
+func TestCheckWatermarks_SaysWhichWatermarkIsAtFault(t *testing.T) {
+	// An effective total of 1000 GiB, so 10 GiB is 1% of it.
+	const volume = 1100 * testGiB
+	for _, tc := range []struct {
+		name                          string
+		min, target                   string
+		wantMin, wantTarget, wantPair bool
+	}{
+		{name: "minimum of 0%", min: "0%", target: "25%", wantMin: true},
+		{name: "unparsable minimum", min: "lots", target: "25%", wantMin: true},
+		{name: "byte minimum below 1%", min: "5gb", target: "25%", wantMin: true},
+		{name: "target of 61%", min: "15%", target: "61%", wantTarget: true},
+		{name: "minimum of 51% and unparsable target", min: "51%", target: "lots", wantMin: true, wantTarget: true},
+		{name: "gap under 1 point", min: "20%", target: "20.5%", wantPair: true},
+		{name: "mixed kinds out of order", min: "300gb", target: "25%", wantPair: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			calls := 0
+			cfg := EvictorConfig{MinFreeSpace: tc.min, TargetFreeSpace: tc.target, ReservedSpaceGB: 100}
+			_, err := CheckWatermarks(cfg, t.TempDir(), fakeVolume(volume, &calls), FlexibleWatermarkBounds)
+			var werr *WatermarkError
+			if !errors.As(err, &werr) {
+				t.Fatalf("CheckWatermarks(%q, %q) error = %v, want a *WatermarkError", tc.min, tc.target, err)
+			}
+			if got := werr.Min != nil; got != tc.wantMin {
+				t.Errorf("CheckWatermarks(%q, %q) Min = %v, want set: %t", tc.min, tc.target, werr.Min, tc.wantMin)
+			}
+			if got := werr.Target != nil; got != tc.wantTarget {
+				t.Errorf("CheckWatermarks(%q, %q) Target = %v, want set: %t", tc.min, tc.target, werr.Target, tc.wantTarget)
+			}
+			if got := werr.Pair != nil; got != tc.wantPair {
+				t.Errorf("CheckWatermarks(%q, %q) Pair = %v, want set: %t", tc.min, tc.target, werr.Pair, tc.wantPair)
+			}
+			if !strings.HasPrefix(err.Error(), "invalid free-space watermarks: ") {
+				t.Errorf("CheckWatermarks(%q, %q) error = %q, want it to start with \"invalid free-space watermarks: \"", tc.min, tc.target, err)
+			}
+		})
 	}
 }

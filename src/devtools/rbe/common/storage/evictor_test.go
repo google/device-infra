@@ -1160,6 +1160,54 @@ func TestEvictor_UpdateConfig(t *testing.T) {
 	}
 }
 
+// TestEvictor_UpdateConfig_FlexibleBounds covers the shared check that
+// replaced the old one, which compared the watermarks only when both were
+// percentages or both byte counts and so let a mixed pair through in any
+// order.
+func TestEvictor_UpdateConfig_FlexibleBounds(t *testing.T) {
+	cfg := DefaultEvictorConfig() // 15% and 25%, with 100 GiB reserved.
+	// An effective total of 1000 GiB, so 10 GiB is 1% of it.
+	ev, err := NewEvictor(t.TempDir(), cfg, func(string) (DiskStats, error) {
+		return DiskStats{TotalBytes: 1100 * testGiB, FreeBytes: 600 * testGiB}, nil
+	})
+	if err != nil {
+		t.Fatalf("NewEvictor failed: %v", err)
+	}
+
+	for _, tc := range []struct{ min, target string }{
+		{"0%", "25%"},
+		{"100%", "25%"},
+		{"51%", "60%"},
+		{"15%", "61%"},
+		{"20%", "20.5%"},
+		{"5gb", "25%"},
+		{"300gb", "25%"}, // 30% against 25%: mixed kinds out of order.
+		{"20%", "205gb"}, // 20.5% against 20%: mixed kinds too close.
+	} {
+		bad := cfg
+		bad.MinFreeSpace, bad.TargetFreeSpace = tc.min, tc.target
+		if err := ev.UpdateConfig(bad); err == nil {
+			t.Errorf("UpdateConfig(%q, %q) succeeded, want an error", tc.min, tc.target)
+		}
+		if got := ev.Config(); got.MinFreeSpace != "15%" || got.TargetFreeSpace != "25%" {
+			t.Errorf("after UpdateConfig(%q, %q) failed, watermarks = %q, %q, want the old 15%%, 25%%", tc.min, tc.target, got.MinFreeSpace, got.TargetFreeSpace)
+		}
+	}
+
+	for _, tc := range []struct{ min, target string }{
+		{"1%", "2%"},
+		{"50%", "60%"},
+		{"100gb", "25%"},
+		{"10%", "300gb"},
+	} {
+		good := cfg
+		good.MinFreeSpace, good.TargetFreeSpace = tc.min, tc.target
+		if err := ev.UpdateConfig(good); err != nil {
+			t.Errorf("UpdateConfig(%q, %q) failed: %v", tc.min, tc.target, err)
+		}
+	}
+}
+
 func TestStorage_UpdateEvictorConfig(t *testing.T) {
 	tempDir := t.TempDir()
 	store, err := New(tempDir)

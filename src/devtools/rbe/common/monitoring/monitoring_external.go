@@ -32,6 +32,8 @@ var (
 	lastRecordedCacheActivity *LocalCacheActivity
 	lastRecordedLocalCache    *LocalCacheStats
 	lastRecordedTrim          *TrimStats
+
+	lastRecordedIgnoredWatermark string
 )
 
 func isMurdockdPresent(addr string) bool { return false }
@@ -114,6 +116,12 @@ func recordEvictionRun(status string, reclaimedBytes, evictedFiles int64, durati
 func recordUpstreamRPC(rpc, grpcCode string, duration time.Duration) {
 	testMu.Lock()
 	lastRecordedUpstreamRPC = rpc
+	testMu.Unlock()
+}
+
+func recordConfigWatermarkIgnored(key string) {
+	testMu.Lock()
+	lastRecordedIgnoredWatermark = key
 	testMu.Unlock()
 }
 

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -142,7 +143,28 @@ func LoadConfigFile(path string, cfg *EvictorConfig) error {
 // with nothing from the rejected file applied to it. Refusing to start because
 // a tuning file is malformed would be a poor trade for a cache: callers are
 // expected to log the error and carry on with their flag values.
-func ResolveConfig(base EvictorConfig, explicit ConfigFields, configFilePath string) (EvictorConfig, error) {
+//
+// check, if not nil, vets the watermarks the configuration file sets, after
+// the explicit flags are applied over it. It is meant to return a
+// *WatermarkError, as CheckWatermarks does, so that the two watermarks can
+// be told apart. If check fails, the file's other settings are still
+// applied, but its watermarks are dropped in favour of the flag values, and
+// each one dropped is returned as an IgnoredWatermark:
+//
+//   - a watermark that is invalid by itself (it does not parse or is out of
+//     its bounds) is dropped;
+//   - if the pair is still invalid then, or was invalid only as a pair (too
+//     close or out of order), every watermark left from the file is dropped
+//     too, so that both come from the flags. A pair has no single culprit,
+//     and both flag values are known to be good together.
+//
+// If the flag values fail check as well, nothing is returned as ignored and
+// the flag watermarks are returned, so that the caller, which checks them,
+// reports only the bad flag. A check error that is not a *WatermarkError
+// counts as a pair error. casproxy uses check so that a saved file with bad
+// watermarks makes it fall back to its flags for them instead of failing to
+// start on every restart.
+func ResolveConfig(base EvictorConfig, explicit ConfigFields, configFilePath string, check func(EvictorConfig) error) (EvictorConfig, []IgnoredWatermark, error) {
 	cfg := base
 
 	var loadErr error
@@ -187,7 +209,85 @@ func ResolveConfig(base EvictorConfig, explicit ConfigFields, configFilePath str
 		cfg.MinBlobAge = base.MinBlobAge
 	}
 
-	return cfg, loadErr
+	if configFilePath == "" || loadErr != nil || check == nil {
+		return cfg, nil, loadErr
+	}
+	cfg, ignored := dropInvalidFileWatermarks(cfg, base, check)
+	return cfg, ignored, nil
+}
+
+// IgnoredWatermark is a watermark in the configuration file that
+// ResolveConfig did not apply because it failed the caller's check.
+type IgnoredWatermark struct {
+	// Field is its key in the file, min_free_space or target_free_space.
+	Field string
+	// Value is the value the file gives it.
+	Value string
+	// Used is the flag value used instead.
+	Used string
+	// Reason says why it was ignored.
+	Reason error
+}
+
+// dropInvalidFileWatermarks applies the rule ResolveConfig describes for
+// watermarks that fail check to cfg, the file with the explicit flags over
+// it, given base, the flag values.
+func dropInvalidFileWatermarks(cfg, base EvictorConfig, check func(EvictorConfig) error) (EvictorConfig, []IgnoredWatermark) {
+	// The explicit flags have been applied, so a watermark that differs
+	// from the flag value came from the file. One the file sets to the flag
+	// value counts as the flag's: dropping it would change nothing.
+	fileMin := cfg.MinFreeSpace != base.MinFreeSpace
+	fileTarget := cfg.TargetFreeSpace != base.TargetFreeSpace
+	if !fileMin && !fileTarget {
+		return cfg, nil
+	}
+	err := check(cfg)
+	if err == nil {
+		return cfg, nil
+	}
+	flagsOnly := cfg
+	flagsOnly.MinFreeSpace, flagsOnly.TargetFreeSpace = base.MinFreeSpace, base.TargetFreeSpace
+	if check(flagsOnly) != nil {
+		// The flags are bad too, and dropping the file's watermarks cannot
+		// help. That is the error the caller reports; blaming the file as
+		// well would only mislead.
+		return flagsOnly, nil
+	}
+
+	var ignored []IgnoredWatermark
+	dropMin := func(reason error) {
+		ignored = append(ignored, IgnoredWatermark{Field: "min_free_space", Value: cfg.MinFreeSpace, Used: base.MinFreeSpace, Reason: reason})
+		cfg.MinFreeSpace, fileMin = base.MinFreeSpace, false
+	}
+	dropTarget := func(reason error) {
+		ignored = append(ignored, IgnoredWatermark{Field: "target_free_space", Value: cfg.TargetFreeSpace, Used: base.TargetFreeSpace, Reason: reason})
+		cfg.TargetFreeSpace, fileTarget = base.TargetFreeSpace, false
+	}
+
+	var werr *WatermarkError
+	if errors.As(err, &werr) {
+		if fileMin && werr.Min != nil {
+			dropMin(werr.Min)
+		}
+		if fileTarget && werr.Target != nil {
+			dropTarget(werr.Target)
+		}
+		if len(ignored) > 0 {
+			if err = check(cfg); err == nil {
+				return cfg, ignored
+			}
+		}
+	}
+	// What is left from the file is invalid only paired with the other
+	// watermark, so it goes too, and both come from the flags, which
+	// passed check above.
+	if fileMin {
+		dropMin(err)
+	}
+	if fileTarget {
+		dropTarget(err)
+	}
+	return cfg, ignored
 }
 
 // ConfigFileName is the conventional name of the evictor configuration file

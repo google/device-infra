@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -139,7 +140,7 @@ func TestResolveConfig_NoConfigFileKeepsFlagValues(t *testing.T) {
 	base := DefaultEvictorConfig()
 	base.MinFreeSpace = "17%"
 
-	got, err := ResolveConfig(base, ConfigFields{}, "")
+	got, _, err := ResolveConfig(base, ConfigFields{}, "", nil)
 	if err != nil {
 		t.Fatalf("ResolveConfig failed: %v", err)
 	}
@@ -151,7 +152,7 @@ func TestResolveConfig_NoConfigFileKeepsFlagValues(t *testing.T) {
 func TestResolveConfig_ConfigFileBeatsFlagDefaults(t *testing.T) {
 	path := writeConfigFile(t, t.TempDir(), "config.json", fullConfigJSON)
 
-	got, err := ResolveConfig(DefaultEvictorConfig(), ConfigFields{}, path)
+	got, _, err := ResolveConfig(DefaultEvictorConfig(), ConfigFields{}, path, nil)
 	if err != nil {
 		t.Fatalf("ResolveConfig failed: %v", err)
 	}
@@ -177,7 +178,7 @@ func TestResolveConfig_ExplicitFlagsBeatConfigFile(t *testing.T) {
 	base.MinFreeSpace = "10%"
 	base.LazyTouchInterval = 30 * time.Minute
 
-	got, err := ResolveConfig(base, ConfigFields{MinFreeSpace: true, LazyTouchInterval: true}, path)
+	got, _, err := ResolveConfig(base, ConfigFields{MinFreeSpace: true, LazyTouchInterval: true}, path, nil)
 	if err != nil {
 		t.Fatalf("ResolveConfig failed: %v", err)
 	}
@@ -201,7 +202,7 @@ func TestResolveConfig_ExplicitFlagEqualToItsDefaultStillWins(t *testing.T) {
 	path := writeConfigFile(t, t.TempDir(), "config.json", `{"min_free_space": "20%"}`)
 
 	base := DefaultEvictorConfig() // MinFreeSpace is "15%", the default.
-	got, err := ResolveConfig(base, ConfigFields{MinFreeSpace: true}, path)
+	got, _, err := ResolveConfig(base, ConfigFields{MinFreeSpace: true}, path, nil)
 	if err != nil {
 		t.Fatalf("ResolveConfig failed: %v", err)
 	}
@@ -216,7 +217,7 @@ func TestResolveConfig_ExplicitFlagEqualToItsDefaultStillWins(t *testing.T) {
 func TestResolveConfig_ReturnsAUsableConfigOnFileError(t *testing.T) {
 	base := DefaultEvictorConfig()
 
-	got, err := ResolveConfig(base, ConfigFields{}, filepath.Join(t.TempDir(), "missing.json"))
+	got, _, err := ResolveConfig(base, ConfigFields{}, filepath.Join(t.TempDir(), "missing.json"), nil)
 	if err == nil {
 		t.Errorf("Expected the file error to be reported, got nil")
 	}
@@ -241,7 +242,7 @@ func TestResolveConfig_DiscardsPartiallyAppliedConfigOnError(t *testing.T) {
 
 	base := DefaultEvictorConfig()
 
-	got, err := ResolveConfig(base, ConfigFields{}, path)
+	got, _, err := ResolveConfig(base, ConfigFields{}, path, nil)
 	if err == nil {
 		t.Errorf("Expected the parse error to be reported, got nil")
 	}
@@ -259,7 +260,7 @@ func TestResolveConfig_EveryExplicitFlagBeatsTheConfigFile(t *testing.T) {
 	path := writeConfigFile(t, t.TempDir(), "config.json", fullConfigJSON)
 
 	// What the caller gets when it defers to the file on everything.
-	fileOnly, err := ResolveConfig(DefaultEvictorConfig(), ConfigFields{}, path)
+	fileOnly, _, err := ResolveConfig(DefaultEvictorConfig(), ConfigFields{}, path, nil)
 	if err != nil {
 		t.Fatalf("ResolveConfig failed: %v", err)
 	}
@@ -292,7 +293,7 @@ func TestResolveConfig_EveryExplicitFlagBeatsTheConfigFile(t *testing.T) {
 			want := fileOnly
 			tc.set(&want)
 
-			got, err := ResolveConfig(base, tc.explicit, path)
+			got, _, err := ResolveConfig(base, tc.explicit, path, nil)
 			if err != nil {
 				t.Fatalf("ResolveConfig failed: %v", err)
 			}
@@ -300,6 +301,201 @@ func TestResolveConfig_EveryExplicitFlagBeatsTheConfigFile(t *testing.T) {
 				t.Errorf("ResolveConfig with an explicit -%s = %+v, want %+v", tc.name, got, want)
 			}
 		})
+	}
+}
+
+// flexibleCheck checks watermarks against FlexibleWatermarkBounds, as casproxy
+// does. The test configurations use percentages only, so it measures nothing.
+func flexibleCheck(cfg EvictorConfig) error {
+	_, err := CheckWatermarks(cfg, "", nil, FlexibleWatermarkBounds)
+	return err
+}
+
+// TestResolveConfig_DropsOnlyTheBadWatermarks is what keeps casproxy from
+// crash-looping on a saved file with bad watermarks without losing the rest
+// of the file: each watermark dropped is replaced by its flag value and
+// reported, and the file's other settings still apply.
+func TestResolveConfig_DropsOnlyTheBadWatermarks(t *testing.T) {
+	const minKey, targetKey = "min_free_space", "target_free_space"
+	// The flag values are the defaults, 15% and 25%.
+	for _, tc := range []struct {
+		name                string
+		min, target         string // In the file.
+		wantMin, wantTarget string
+		wantIgnored         []string // Keys, in the order reported.
+	}{
+		{"minimum of 0%", "0%", "30%", "15%", "30%", []string{minKey}},
+		{"unparsable minimum", "twenty", "30%", "15%", "30%", []string{minKey}},
+		{"target of 100%", "20%", "100%", "20%", "25%", []string{targetKey}},
+		{"unparsable target", "20%", "lots", "20%", "25%", []string{targetKey}},
+		{"both out of range", "51%", "61%", "15%", "25%", []string{minKey, targetKey}},
+		// A pair with no bad value has no single culprit: both go.
+		{"gap under 1 point", "20%", "20.5%", "15%", "25%", []string{minKey, targetKey}},
+		{"target below minimum", "40%", "30%", "15%", "25%", []string{minKey, targetKey}},
+		// A file value equal to the flag's is the flag's, and only the
+		// other one is reported.
+		{"gap under 1 point from the flag's minimum", "15%", "15.5%", "15%", "25%", []string{targetKey}},
+		// One bad value, and the other then too close to the flag value
+		// that replaces it: both go, and both flags are used.
+		{"bad minimum, target under 1 point above the flag's", "0%", "15.5%", "15%", "25%", []string{minKey, targetKey}},
+		{"bad minimum, target below the flag's", "0%", "10%", "15%", "25%", []string{minKey, targetKey}},
+		{"bad target, minimum above the flag's", "30%", "100%", "15%", "25%", []string{targetKey, minKey}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := writeConfigFile(t, t.TempDir(), "config.json", fmt.Sprintf(`{
+				"min_free_space": %q,
+				"target_free_space": %q,
+				"reserved_space_gb": 120,
+				"eviction_check_interval": "45s"
+			}`, tc.min, tc.target))
+			base := DefaultEvictorConfig()
+
+			got, ignored, err := ResolveConfig(base, ConfigFields{}, path, flexibleCheck)
+			if err != nil {
+				t.Fatalf("ResolveConfig with watermarks %q, %q failed: %v", tc.min, tc.target, err)
+			}
+			want := base
+			want.MinFreeSpace, want.TargetFreeSpace = tc.wantMin, tc.wantTarget
+			want.ReservedSpaceGB, want.CheckInterval = 120, 45*time.Second
+			if got != want {
+				t.Errorf("ResolveConfig with watermarks %q, %q = %+v, want %+v", tc.min, tc.target, got, want)
+			}
+			if len(ignored) != len(tc.wantIgnored) {
+				t.Fatalf("ResolveConfig with watermarks %q, %q ignored %+v, want %q", tc.min, tc.target, ignored, tc.wantIgnored)
+			}
+			fileValue := map[string]string{minKey: tc.min, targetKey: tc.target}
+			flagValue := map[string]string{minKey: base.MinFreeSpace, targetKey: base.TargetFreeSpace}
+			for i, w := range ignored {
+				key := tc.wantIgnored[i]
+				if w.Field != key || w.Value != fileValue[key] || w.Used != flagValue[key] || w.Reason == nil {
+					t.Errorf("ignored[%d] = %+v, want %s %q replaced by %q, with a reason", i, w, key, fileValue[key], flagValue[key])
+				}
+			}
+		})
+	}
+}
+
+// TestResolveConfig_BadFlagsAreNotBlamedOnTheFile covers watermark flags that
+// are bad themselves: dropping the file's watermarks cannot help, and the
+// caller's check of the flags is what reports the problem. So nothing is
+// reported as ignored, and the flag watermarks are returned for that check
+// to fail on.
+func TestResolveConfig_BadFlagsAreNotBlamedOnTheFile(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		fileTarget string
+		flagMin    string
+	}{
+		{name: "bad explicit flag, good file", fileTarget: "30%", flagMin: "fifteen"},
+		{name: "bad explicit flag, bad file", fileTarget: "100%", flagMin: "fifteen"},
+		{name: "flags out of order, file target too close", fileTarget: "30.5%", flagMin: "30%"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := writeConfigFile(t, t.TempDir(), "config.json", fmt.Sprintf(`{
+				"min_free_space": "20%%",
+				"target_free_space": %q,
+				"reserved_space_gb": 120
+			}`, tc.fileTarget))
+			base := DefaultEvictorConfig()
+			base.MinFreeSpace = tc.flagMin
+
+			got, ignored, err := ResolveConfig(base, ConfigFields{MinFreeSpace: true}, path, flexibleCheck)
+			if err != nil {
+				t.Fatalf("ResolveConfig failed: %v", err)
+			}
+			if len(ignored) != 0 {
+				t.Errorf("ResolveConfig with -min-free-space=%q ignored %+v, want nothing blamed on the file", tc.flagMin, ignored)
+			}
+			want := base
+			want.ReservedSpaceGB = 120
+			if got != want {
+				t.Errorf("ResolveConfig with -min-free-space=%q = %+v, want the flag watermarks %+v", tc.flagMin, got, want)
+			}
+		})
+	}
+}
+
+// TestResolveConfig_CheckSeesTheResolvedConfig pins what is checked: the file
+// with the explicit flags applied over it, which is what the caller would use.
+// A bad value the user overrode on the command line is not reported.
+func TestResolveConfig_CheckSeesTheResolvedConfig(t *testing.T) {
+	path := writeConfigFile(t, t.TempDir(), "config.json", `{
+		"min_free_space": "0%",
+		"target_free_space": "30%",
+		"reserved_space_gb": 120
+	}`)
+	base := DefaultEvictorConfig()
+	base.MinFreeSpace = "10%"
+
+	got, ignored, err := ResolveConfig(base, ConfigFields{MinFreeSpace: true}, path, flexibleCheck)
+	if err != nil {
+		t.Fatalf("ResolveConfig failed: %v", err)
+	}
+	if len(ignored) != 0 {
+		t.Errorf("ResolveConfig ignored %+v, want nothing", ignored)
+	}
+	want := base
+	want.TargetFreeSpace = "30%"
+	want.ReservedSpaceGB = 120
+	if got != want {
+		t.Errorf("ResolveConfig = %+v, want %+v", got, want)
+	}
+}
+
+// TestResolveConfig_CheckErrorOfAnotherKindDropsBothWatermarks covers a check
+// that does not say which watermark is at fault: it counts as a pair error.
+func TestResolveConfig_CheckErrorOfAnotherKindDropsBothWatermarks(t *testing.T) {
+	path := writeConfigFile(t, t.TempDir(), "config.json", `{"min_free_space": "20%", "target_free_space": "30%"}`)
+	base := DefaultEvictorConfig()
+	rejectFile := func(cfg EvictorConfig) error {
+		if cfg.MinFreeSpace != base.MinFreeSpace || cfg.TargetFreeSpace != base.TargetFreeSpace {
+			return errors.New("not the flags")
+		}
+		return nil
+	}
+	got, ignored, err := ResolveConfig(base, ConfigFields{}, path, rejectFile)
+	if err != nil {
+		t.Fatalf("ResolveConfig failed: %v", err)
+	}
+	if got != base || len(ignored) != 2 {
+		t.Errorf("ResolveConfig = %+v, ignoring %+v, want the flag values %+v, ignoring both watermarks", got, ignored, base)
+	}
+}
+
+// TestResolveConfig_CheckIsOnlyForTheFile leaves the flag values to the
+// caller, which decides what a bad flag means.
+func TestResolveConfig_CheckIsOnlyForTheFile(t *testing.T) {
+	failing := func(EvictorConfig) error {
+		t.Error("ResolveConfig called check without watermarks from a configuration file to vet")
+		return fmt.Errorf("check called")
+	}
+	base := DefaultEvictorConfig()
+	if _, _, err := ResolveConfig(base, ConfigFields{}, "", failing); err != nil {
+		t.Errorf("ResolveConfig without a file failed: %v", err)
+	}
+	// A file that does not load is already rejected; check has nothing to vet.
+	if _, _, err := ResolveConfig(base, ConfigFields{}, filepath.Join(t.TempDir(), "missing.json"), failing); err == nil {
+		t.Errorf("ResolveConfig with a missing file succeeded, want an error")
+	}
+	// Nor does a file that sets no watermarks.
+	path := writeConfigFile(t, t.TempDir(), "config.json", `{"reserved_space_gb": 120}`)
+	if _, _, err := ResolveConfig(base, ConfigFields{}, path, failing); err != nil {
+		t.Errorf("ResolveConfig with a file without watermarks failed: %v", err)
+	}
+}
+
+func TestResolveConfig_FileThatPassesCheckIsApplied(t *testing.T) {
+	path := writeConfigFile(t, t.TempDir(), "config.json", fullConfigJSON)
+	withCheck, ignored, err := ResolveConfig(DefaultEvictorConfig(), ConfigFields{}, path, flexibleCheck)
+	if err != nil {
+		t.Fatalf("ResolveConfig failed: %v", err)
+	}
+	withoutCheck, _, err := ResolveConfig(DefaultEvictorConfig(), ConfigFields{}, path, nil)
+	if err != nil {
+		t.Fatalf("ResolveConfig failed: %v", err)
+	}
+	if withCheck != withoutCheck || len(ignored) != 0 {
+		t.Errorf("ResolveConfig with a passing check = %+v, ignoring %+v, want %+v as without one, ignoring nothing", withCheck, ignored, withoutCheck)
 	}
 }
 

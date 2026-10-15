@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -119,6 +120,100 @@ func NormalizeWatermarks(w Watermarks, total int64, b WatermarkBounds) (Watermar
 		return w, n.warnings, fmt.Errorf("invalid free-space watermarks: %s", strings.Join(n.violations, "; "))
 	}
 	return Watermarks{Min: minFree.t, Target: target.t}, n.warnings, nil
+}
+
+// WatermarkError is the error CheckWatermarks returns, with its violations
+// sorted by the watermark at fault, so that a caller can tell a bad value
+// from a bad pair.
+type WatermarkError struct {
+	// Min and Target say why that watermark is invalid by itself: it does
+	// not parse, or it is outside its own bounds. Each is nil if that
+	// watermark is valid by itself.
+	Min, Target error
+	// Pair says why two watermarks, each valid by itself, are invalid
+	// together: the target is not far enough above the minimum. It is set
+	// only if Min and Target are both nil.
+	Pair error
+}
+
+func (e *WatermarkError) Error() string {
+	if e.Min == nil && e.Target == nil && e.Pair != nil {
+		return e.Pair.Error()
+	}
+	var msgs []string
+	for _, err := range []error{e.Min, e.Target} {
+		if err != nil {
+			msgs = append(msgs, err.Error())
+		}
+	}
+	return "invalid free-space watermarks: " + strings.Join(msgs, "; ")
+}
+
+// CheckWatermarks checks the watermarks of cfg against b the way an evictor
+// for dir evaluates them: percentages are of the effective total, the size
+// of the volume holding dir less cfg.ReservedSpaceGB, and a byte count is
+// checked as a percentage of that. It returns a *WatermarkError if either
+// watermark does not parse or, without b.Clamp, if the pair is outside b,
+// and a warning for each value it could not check.
+//
+// The volume is measured with statfs, or RealStatfs if statfs is nil, and
+// only when a watermark is a byte count. If that fails, its size is treated
+// as unknown, as NormalizeWatermarks describes.
+func CheckWatermarks(cfg EvictorConfig, dir string, statfs StatfsFunc, b WatermarkBounds) ([]string, error) {
+	var werr WatermarkError
+	minFree, err := ParseSpaceThreshold(cfg.MinFreeSpace)
+	if err != nil {
+		werr.Min = fmt.Errorf("invalid min-free-space: %w", err)
+	}
+	target, err := ParseSpaceThreshold(cfg.TargetFreeSpace)
+	if err != nil {
+		werr.Target = fmt.Errorf("invalid target-free-space: %w", err)
+	}
+
+	var warnings []string
+	var total int64 // 0 tells NormalizeWatermarks that the size is unknown.
+	if (werr.Min == nil && !minFree.IsPercent) || (werr.Target == nil && !target.IsPercent) {
+		if statfs == nil {
+			statfs = RealStatfs
+		}
+		if st, err := statfs(dir); err != nil {
+			warnings = append(warnings, fmt.Sprintf("cannot measure the volume of %s: %v", dir, err))
+		} else {
+			total, _, _ = ComputeEffectiveSpace(st, cfg.ReservedSpaceGB*1024*1024*1024)
+		}
+	}
+
+	// Each watermark that parses is checked by itself first, so that one
+	// that is fine is not blamed for the other.
+	if werr.Min == nil {
+		werr.Min = outOfBounds("minimum", minFree, total, b, b.MinLow, b.MinHigh)
+	}
+	if werr.Target == nil {
+		werr.Target = outOfBounds("target", target, total, b, b.TargetLow, b.TargetHigh)
+	}
+	if werr.Min != nil || werr.Target != nil {
+		return warnings, &werr
+	}
+	_, normWarnings, err := NormalizeWatermarks(Watermarks{Min: minFree, Target: target}, total, b)
+	warnings = append(warnings, normWarnings...)
+	if err != nil {
+		// Both are within their bounds, so what is left is the pair.
+		werr.Pair = err
+		return warnings, &werr
+	}
+	return warnings, nil
+}
+
+// outOfBounds returns the violation, worded as NormalizeWatermarks words it,
+// if the watermark t, named name, is outside [low, high] percent of total,
+// and nil otherwise, including if total is unknown and t is a byte count.
+func outOfBounds(name string, t SpaceThreshold, total int64, b WatermarkBounds, low, high float64) error {
+	n := normalizer{total: total, bounds: b}
+	n.check(name, t, low, high)
+	if len(n.violations) == 0 {
+		return nil
+	}
+	return errors.New(n.violations[0])
 }
 
 // normalizer collects the warnings and violations NormalizeWatermarks

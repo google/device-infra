@@ -677,6 +677,13 @@ func (e *Evictor) Config() EvictorConfig {
 }
 
 // UpdateConfig dynamically updates the evictor configuration at runtime.
+//
+// The watermarks must be within FlexibleWatermarkBounds, checked as
+// CheckWatermarks does against this evictor's volume and the new
+// ReservedSpaceGB, so a byte count and a percentage are compared too.
+// Otherwise UpdateConfig returns an error and keeps the old configuration.
+// Only casproxy updates a running evictor, from its admin endpoint, and these
+// are its bounds.
 func (e *Evictor) UpdateConfig(newCfg EvictorConfig) error {
 	minThresh, err := ParseSpaceThreshold(newCfg.MinFreeSpace)
 	if err != nil {
@@ -688,11 +695,12 @@ func (e *Evictor) UpdateConfig(newCfg EvictorConfig) error {
 		return fmt.Errorf("invalid target-free-space: %w", err)
 	}
 
-	if minThresh.IsPercent && targetThresh.IsPercent && minThresh.Percent >= targetThresh.Percent {
-		return fmt.Errorf("min-free-space (%.1f%%) must be strictly less than target-free-space (%.1f%%)", minThresh.Percent, targetThresh.Percent)
+	warnings, err := CheckWatermarks(newCfg, e.rootDir, e.statfs, FlexibleWatermarkBounds)
+	for _, w := range warnings {
+		log.Warningf("Evictor config update: %s", w)
 	}
-	if !minThresh.IsPercent && !targetThresh.IsPercent && minThresh.Bytes >= targetThresh.Bytes {
-		return fmt.Errorf("min-free-space (%d bytes) must be strictly less than target-free-space (%d bytes)", minThresh.Bytes, targetThresh.Bytes)
+	if err != nil {
+		return err
 	}
 
 	if newCfg.CheckInterval <= 0 {
