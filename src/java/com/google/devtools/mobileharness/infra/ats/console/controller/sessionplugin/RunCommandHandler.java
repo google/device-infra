@@ -55,7 +55,6 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDir
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfoProvider;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -109,6 +108,11 @@ class RunCommandHandler {
     initialized = true;
   }
 
+  /** Returns the prepared {@link SessionRequestInfo} for the current run command. */
+  SessionRequestInfo getSessionRequestInfo() {
+    return sessionRequestInfo;
+  }
+
   /**
    * Creates tradefed jobs based on the {@code command} and {@code dynamicMctsModules}, and adds the
    * jobs to the {@code sessionInfo}.
@@ -130,16 +134,6 @@ class RunCommandHandler {
           shortDebugString(command));
       return ImmutableList.of();
     }
-
-    Path xtsLogsDir =
-        XtsDirUtil.getXtsLogsDir(Path.of(command.getXtsRootDir()), command.getXtsType())
-            .resolve(timestampDirName);
-    boolean disableTfResultLog = Flags.xtsDisableTfResultLog.getNonNull();
-    jobInfoList.forEach(
-        jobInfo -> {
-          jobInfo.params().add("xts_log_root_path", xtsLogsDir.toString());
-          jobInfo.params().add("disable_tf_result_log", Boolean.toString(disableTfResultLog));
-        });
 
     return jobInfoList;
   }
@@ -418,6 +412,12 @@ class RunCommandHandler {
                     && runCommand.getShardingMode() != ShardingMode.SHARDING_MODE_UNSPECIFIED
                 ? runCommand.getShardingMode()
                 : ShardingMode.RUNNER);
+    if (timestampDirName != null) {
+      builder.setXtsLogRootPath(
+          XtsDirUtil.getXtsLogsDir(Path.of(runCommand.getXtsRootDir()), runCommand.getXtsType())
+              .resolve(timestampDirName)
+              .toString());
+    }
 
     sessionInfo
         .getSessionProperty(SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID)

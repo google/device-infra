@@ -40,7 +40,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
-import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -177,6 +176,9 @@ public final class NewMultiCommandRequestHandlerTest {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     when(sessionInfo.getSessionId()).thenReturn("session_id");
     properties.add(Job.IS_XTS_TF_JOB, "true");
+    properties.add(
+        Job.XTS_COMMAND_ID,
+        UUID.nameUUIDFromBytes(DEFAULT_COMMAND_LINE.getBytes(UTF_8)).toString());
     when(jobInfo.locator()).thenReturn(new JobLocator("job_id", "job_name"));
     when(jobInfo.properties()).thenReturn(properties);
     when(jobInfo.files()).thenReturn(files);
@@ -340,12 +342,12 @@ public final class NewMultiCommandRequestHandlerTest {
     CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId()).isEqualTo(commandId);
-    assertThat(properties.get("xts_command_id")).isEqualTo(commandId);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
     assertThat(sessionRequestInfo.getSessionId()).isEqualTo("session_id");
+    assertThat(sessionRequestInfo.getXtsCommandId()).isEqualTo(commandId);
     assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("cts-plan");
     assertThat(sessionRequestInfo.getModuleNamesList()).containsExactly("module1");
     assertThat(
@@ -383,8 +385,6 @@ public final class NewMultiCommandRequestHandlerTest {
     Command mountCommand =
         Command.of("fuse-zip", "-r", zipFile, xtsRootDir).timeout(Duration.ofMinutes(10));
     verify(commandExecutor).run(mountCommand);
-    verify(files).add(eq("test-name-1"), eq("ats-file-server::/path/to/file1"));
-    verify(files).add(eq("test-name-2"), eq("ats-file-server::/path/to/file2"));
   }
 
   @Test
@@ -516,7 +516,12 @@ public final class NewMultiCommandRequestHandlerTest {
                 ? Optional.of(sessionRequestInfo.getAndroidXtsZip())
                 : Optional.empty())
         .hasValue("ats-file-server::/path/to/xts/zip/file.zip");
-    verify(files).add(eq("android-cts-media-1.5.zip"), anyString());
+    assertThat(sessionRequestInfo.getAtsServerTestResourcesList())
+        .contains(
+            TestResource.newBuilder()
+                .setUrl("file:///data/path/to/android-cts-media-1.5.zip")
+                .setName("android-cts-media-1.5.zip")
+                .build());
   }
 
   @Test
@@ -535,8 +540,6 @@ public final class NewMultiCommandRequestHandlerTest {
                     .setName("acloud_prebuilt")
                     .build())
             .build();
-    when(atsServerSessionUtil.replacePathForRemoteRunner("/bin/acloud_prebuilt"))
-        .thenReturn("ats-file-server::/mh_resources/acloud_prebuilt");
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
@@ -550,11 +553,11 @@ public final class NewMultiCommandRequestHandlerTest {
     CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId()).isEqualTo(commandId);
-    assertThat(properties.get("xts_command_id")).isEqualTo(commandId);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.getXtsCommandId()).isEqualTo(commandId);
     assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("cts-plan");
     assertThat(sessionRequestInfo.getModuleNamesList()).containsExactly("module1");
     assertThat(
@@ -592,10 +595,12 @@ public final class NewMultiCommandRequestHandlerTest {
     Command mountCommand =
         Command.of("fuse-zip", "-r", zipFile, xtsRootDir).timeout(Duration.ofMinutes(10));
     verify(commandExecutor).run(mountCommand);
-    verify(files).add(eq("test-name-1"), eq("ats-file-server::/path/to/file1"));
-    verify(files).add(eq("test-name-2"), eq("ats-file-server::/path/to/file2"));
-    verify(atsServerSessionUtil).replacePathForRemoteRunner("/bin/acloud_prebuilt");
-    verify(files).add(eq("acloud_prebuilt"), eq("ats-file-server::/mh_resources/acloud_prebuilt"));
+    assertThat(sessionRequestInfo.getAtsServerTestResourcesList())
+        .contains(
+            TestResource.newBuilder()
+                .setUrl("file:///bin/acloud_prebuilt")
+                .setName("acloud_prebuilt")
+                .build());
   }
 
   @Test
@@ -622,11 +627,11 @@ public final class NewMultiCommandRequestHandlerTest {
     CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId()).isEqualTo(commandId);
-    assertThat(properties.get("xts_command_id")).isEqualTo(commandId);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.getXtsCommandId()).isEqualTo(commandId);
     assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("cts-plan");
     assertThat(sessionRequestInfo.getModuleNamesList()).containsExactly("module1");
     assertThat(
@@ -662,9 +667,6 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify that handler has unzipped the zip file.
     verify(localFileUtil).unzipFile(zipFile, xtsRootDir, Duration.ofHours(1), "");
-
-    verify(files).add(eq("test-name-1"), eq("ats-file-server::/path/to/file1"));
-    verify(files).add(eq("test-name-2"), eq("ats-file-server::/path/to/file2"));
   }
 
   @Test
@@ -744,11 +746,11 @@ public final class NewMultiCommandRequestHandlerTest {
     CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(retryCommandLine);
     assertThat(commandDetail.getId()).isEqualTo(expectedCommandId);
-    assertThat(properties.get("xts_command_id")).isEqualTo(expectedCommandId);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.getXtsCommandId()).isEqualTo(expectedCommandId);
     assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("retry");
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     String zipFile = "/path/to/xts/zip/file.zip";
@@ -782,8 +784,6 @@ public final class NewMultiCommandRequestHandlerTest {
     Command mountCommand =
         Command.of("fuse-zip", "-r", zipFile, xtsRootDir).timeout(Duration.ofMinutes(10));
     verify(commandExecutor).run(mountCommand);
-    verify(files).add(eq("test-name-1"), eq("ats-file-server::/path/to/file1"));
-    verify(files).add(eq("test-name-2"), eq("ats-file-server::/path/to/file2"));
   }
 
   @Test
@@ -878,11 +878,11 @@ public final class NewMultiCommandRequestHandlerTest {
     CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId()).isEqualTo(commandId);
-    assertThat(properties.get("xts_command_id")).isEqualTo(commandId);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.getXtsCommandId()).isEqualTo(commandId);
     assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("cts-plan");
     assertThat(sessionRequestInfo.getModuleNamesList()).containsExactly("module1");
     assertThat(
@@ -924,8 +924,6 @@ public final class NewMultiCommandRequestHandlerTest {
     Command mountCommand =
         Command.of("fuse-zip", "-r", zipFile, xtsRootDir).timeout(Duration.ofMinutes(10));
     verify(commandExecutor).run(mountCommand);
-    verify(files).add(eq("test-name-1"), eq("ats-file-server::/path/to/file1"));
-    verify(files).add(eq("test-name-2"), eq("ats-file-server::/path/to/file2"));
   }
 
   @Test
@@ -1119,11 +1117,11 @@ public final class NewMultiCommandRequestHandlerTest {
     CommandDetail commandDetail = createJobsResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId()).isEqualTo(commandId);
-    assertThat(properties.get("xts_command_id")).isEqualTo(commandId);
     verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.getXtsCommandId()).isEqualTo(commandId);
     assertThat(sessionRequestInfo.getTestPlan()).isEqualTo("retry");
     assertThat(sessionRequestInfo.getModuleNamesList()).containsExactly("module1");
     assertThat(
@@ -1168,8 +1166,6 @@ public final class NewMultiCommandRequestHandlerTest {
     Command mountCommand =
         Command.of("fuse-zip", "-r", zipFile, xtsRootDir).timeout(Duration.ofMinutes(10));
     verify(commandExecutor).run(mountCommand);
-    verify(files).add(eq("test-name-1"), eq("ats-file-server::/path/to/file1"));
-    verify(files).add(eq("test-name-2"), eq("ats-file-server::/path/to/file2"));
   }
 
   @Test
@@ -1458,15 +1454,7 @@ public final class NewMultiCommandRequestHandlerTest {
   public void createNonTradefedJobs_success() throws Exception {
     when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-    when(files.getAll())
-        .thenReturn(
-            ImmutableMultimap.of(
-                "tag1",
-                "/data/tmp/test.json",
-                "tag1",
-                "/data/tmp/mobly.json",
-                "tag2",
-                "/data/tmp/mock.json"));
+
     // Trigger the handler.
     CreateJobsResult createJobsResult =
         newMultiCommandRequestHandler.createNonTradefedJobs(request, sessionInfo);
@@ -1483,6 +1471,9 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(commandDetail.getRequestId()).isEqualTo("session_id");
     assertThat(commandDetail.getState()).isEqualTo(CommandState.RUNNING);
     assertThat(commandDetail.getOriginalCommandInfo()).isEqualTo(commandInfo);
+    verify(xtsJobCreator).createXtsNonTradefedJobs(sessionRequestInfoCaptor.capture());
+    assertThat(sessionRequestInfoCaptor.getValue().getXtsCommandId())
+        .isEqualTo(commandDetail.getId());
 
     // Verify that handler has mounted the zip file.
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
@@ -1490,20 +1481,12 @@ public final class NewMultiCommandRequestHandlerTest {
         Command.of("fuse-zip", "-r", "/path/to/xts/zip/file.zip", xtsRootDir)
             .timeout(Duration.ofMinutes(10));
     verify(commandExecutor).run(mountCommand);
-    verify(files)
-        .replaceAll(
-            eq("tag1"),
-            eq(
-                ImmutableSet.of(
-                    "ats-file-server::/tmp/test.json", "ats-file-server::/tmp/mobly.json")));
-    verify(files).replaceAll(eq("tag2"), eq(ImmutableSet.of("ats-file-server::/tmp/mock.json")));
   }
 
   @Test
   public void createSetupJobs_success() throws Exception {
     when(xtsJobCreator.createXtsSetupJob(any())).thenReturn(Optional.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-    when(files.getAll()).thenReturn(ImmutableMultimap.of());
 
     CreateJobsResult createJobsResult =
         newMultiCommandRequestHandler.createSetupJobs(request, sessionInfo);
@@ -1523,7 +1506,6 @@ public final class NewMultiCommandRequestHandlerTest {
   public void createTeardownJobs_success() throws Exception {
     when(xtsJobCreator.createXtsTearDownJob(any())).thenReturn(Optional.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-    when(files.getAll()).thenReturn(ImmutableMultimap.of());
 
     CreateJobsResult createJobsResult =
         newMultiCommandRequestHandler.createTeardownJobs(request, sessionInfo);
@@ -1830,6 +1812,9 @@ public final class NewMultiCommandRequestHandlerTest {
   @Test
   public void handleResultProcessing_noopCommandWithZeroResult_treatAsCompleted() throws Exception {
     commandInfo = commandInfo.toBuilder().setCommandLine("util/timewaster").build();
+    properties.add(
+        Job.XTS_COMMAND_ID,
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString());
     request = request.toBuilder().clearCommands().addCommands(commandInfo).build();
     setUpPassingJobAndTestResults();
     ReportProto.Result result =
@@ -2091,6 +2076,9 @@ public final class NewMultiCommandRequestHandlerTest {
     TestInfo testInfo2 = Mockito.mock(TestInfo.class);
     Properties properties2 = new Properties(new Timing());
     properties2.add(Job.IS_XTS_TF_JOB, "true");
+    properties2.add(
+        Job.XTS_COMMAND_ID,
+        UUID.nameUUIDFromBytes(DEFAULT_COMMAND_LINE.getBytes(UTF_8)).toString());
     when(jobInfo2.locator()).thenReturn(new JobLocator("job_id_2", "job_name_2"));
     when(jobInfo2.properties()).thenReturn(properties2);
     when(jobInfo2.files()).thenReturn(files);

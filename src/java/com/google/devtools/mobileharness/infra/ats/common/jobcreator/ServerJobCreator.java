@@ -20,7 +20,9 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.urlForWorkerResolve;
 
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
 import com.google.common.flogger.FluentLogger;
@@ -35,6 +37,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Dev
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.TradefedConfigGenerator;
 import com.google.devtools.mobileharness.infra.ats.server.util.AtsServerSessionUtil;
+import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader.TradefedResultFilesBundle;
@@ -46,12 +49,15 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.xmlpull.v1.XmlPullParserException;
@@ -329,5 +335,41 @@ public class ServerJobCreator extends XtsJobCreator {
       return SessionRequestInfoUtil.buildAndValidate(builder);
     }
     return sessionRequestInfo;
+  }
+
+  @Override
+  protected void configureTradefedJobInfo(SessionRequestInfo sessionRequestInfo, JobInfo jobInfo)
+      throws MobileHarnessException, InterruptedException {
+    atsServerSessionUtil.insertAdditionalTestResource(
+        jobInfo, sessionRequestInfo.getAtsServerTestResourcesList());
+    if (sessionRequestInfo.hasXtsCommandId()) {
+      jobInfo.properties().add(Job.XTS_COMMAND_ID, sessionRequestInfo.getXtsCommandId());
+    }
+  }
+
+  @Override
+  protected void configureNonTradefedJobInfo(SessionRequestInfo sessionRequestInfo, JobInfo jobInfo)
+      throws MobileHarnessException, InterruptedException {
+    reformatResourcePathForNonTradefedJob(jobInfo);
+    if (sessionRequestInfo.hasXtsCommandId()) {
+      jobInfo.properties().add(Job.XTS_COMMAND_ID, sessionRequestInfo.getXtsCommandId());
+    }
+  }
+
+  /**
+   * Rewrites all file resource paths attached to a non-Tradefed or precondition {@link JobInfo} so
+   * they can be resolved by remote lab runners.
+   */
+  private void reformatResourcePathForNonTradefedJob(JobInfo jobInfo)
+      throws MobileHarnessException, InterruptedException {
+    ImmutableMultimap<String, String> resources = jobInfo.files().getAll();
+    for (String tag : resources.keySet()) {
+      ImmutableCollection<String> files = resources.get(tag);
+      Set<String> newFiles = new HashSet<>();
+      for (String file : files) {
+        newFiles.add(atsServerSessionUtil.replacePathForRemoteRunner(file));
+      }
+      jobInfo.files().replaceAll(tag, newFiles);
+    }
   }
 }

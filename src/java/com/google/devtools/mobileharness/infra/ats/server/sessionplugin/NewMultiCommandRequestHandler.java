@@ -31,11 +31,9 @@ import static java.util.function.Predicate.not;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.io.Files;
@@ -114,11 +112,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
@@ -342,20 +338,6 @@ final class NewMultiCommandRequestHandler {
       commandDetail = Optional.empty();
     }
 
-    for (JobInfo jobInfo : jobInfos) {
-      try {
-        reformatResourcePathForNonTradefedJob(jobInfo);
-      } catch (MobileHarnessException e) {
-        commandDetail.ifPresent(
-            builder -> {
-              ErrorReason errorReason = getErrorReason(e);
-              setCommandError(builder, errorReason, e);
-              commandDetailsBuilder.put(commandId, builder.build());
-            });
-        throw e;
-      }
-      jobInfo.properties().add(XtsPropertyName.Job.XTS_COMMAND_ID, commandId);
-    }
     commandDetail.ifPresent(builder -> commandDetailsBuilder.put(commandId, builder.build()));
     return jobInfos;
   }
@@ -452,18 +434,6 @@ final class NewMultiCommandRequestHandler {
     }
 
     JobInfo jobInfo = jobInfoOpt.get();
-    try {
-      reformatResourcePathForNonTradefedJob(jobInfo);
-    } catch (MobileHarnessException e) {
-      commandDetail.ifPresent(
-          builder -> {
-            ErrorReason errorReason = getErrorReason(e);
-            setCommandError(builder, errorReason, e);
-            commandDetailsBuilder.put(commandId, builder.build());
-          });
-      throw e;
-    }
-    jobInfo.properties().add(XtsPropertyName.Job.XTS_COMMAND_ID, commandId);
     commandDetail.ifPresent(builder -> commandDetailsBuilder.put(commandId, builder.build()));
     return ImmutableList.of(jobInfo);
   }
@@ -476,19 +446,6 @@ final class NewMultiCommandRequestHandler {
             toImmutableListMultimap(
                 jobInfo -> jobInfo.properties().get(XtsPropertyName.Job.XTS_COMMAND_ID),
                 identity()));
-  }
-
-  private void reformatResourcePathForNonTradefedJob(JobInfo jobInfo)
-      throws MobileHarnessException, InterruptedException {
-    ImmutableMultimap<String, String> resources = jobInfo.files().getAll();
-    for (String tag : resources.keySet()) {
-      ImmutableCollection<String> files = resources.get(tag);
-      Set<String> newFiles = new HashSet<>();
-      for (String file : files) {
-        newFiles.add(atsServerSessionUtil.replacePathForRemoteRunner(file));
-      }
-      jobInfo.files().replaceAll(tag, newFiles);
-    }
   }
 
   private ImmutableList<JobInfo> createXtsTradefedTestJob(
@@ -544,16 +501,7 @@ final class NewMultiCommandRequestHandler {
       throw e;
     }
     for (JobInfo jobInfo : jobInfoList) {
-      try {
-        atsServerSessionUtil.insertAdditionalTestResource(jobInfo, request.getTestResourcesList());
-      } catch (MobileHarnessException e) {
-        ErrorReason errorReason = getErrorReason(e);
-        setCommandError(commandDetailBuilder, errorReason, e);
-        commandDetailsBuilder.put(commandId, commandDetailBuilder.build());
-        throw e;
-      }
       commandDetailBuilder.setState(CommandState.RUNNING);
-      jobInfo.properties().add(XtsPropertyName.Job.XTS_COMMAND_ID, commandId);
       logger.atInfo().log(
           "Added job [%s] to the session %s",
           jobInfo.locator().getId(), sessionInfo.getSessionId());
@@ -860,7 +808,8 @@ final class NewMultiCommandRequestHandler {
     deviceInfo.ifPresent(sessionRequestInfoBuilder::setDeviceInfo);
     sessionRequestInfoBuilder
         .addAllAtsServerTestResources(fileTestResources.build())
-        .setAtsServerTestEnvironment(request.getTestEnvironment());
+        .setAtsServerTestEnvironment(request.getTestEnvironment())
+        .setXtsCommandId(getCommandId(commandInfo, request));
     return sessionRequestHandlerUtil.addXtsModuleInfo(
         SessionRequestInfoUtil.buildAndValidate(sessionRequestInfoBuilder));
   }

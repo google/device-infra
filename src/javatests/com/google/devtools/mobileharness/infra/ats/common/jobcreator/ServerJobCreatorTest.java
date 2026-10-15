@@ -31,6 +31,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -44,6 +45,7 @@ import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.D
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.infra.ats.server.util.AtsServerSessionUtil;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
@@ -61,6 +63,7 @@ import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
@@ -147,6 +150,8 @@ public final class ServerJobCreatorTest {
     realLocalFileUtil = new LocalFileUtil();
     when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any(), anyBoolean()))
         .thenReturn(MOCK_SUB_DEVICE_SPEC_LIST);
+    when(sessionRequestHandlerUtil.createXtsNonTradefedJobs(any(), any(), any()))
+        .thenReturn(ImmutableList.of());
     xtsRootDir = publicDir + "/session_session_id/file";
     realLocalFileUtil.prepareParentDir(xtsRootDir);
   }
@@ -1118,6 +1123,96 @@ public final class ServerJobCreatorTest {
                 .getAtsServerTestEnvironment()
                 .getDeviceActionConfigObjectsList())
         .containsExactly(resultReporter);
+  }
+
+  @Test
+  public void createXtsTradefedTestJob_insertsAdditionalTestResourcesAndSetsCommandId()
+      throws Exception {
+    String storageRoot = tmpFolder.getRoot().getAbsolutePath();
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts")
+                .setXtsType("cts")
+                .setAtsServerTestEnvironment(TestEnvironment.getDefaultInstance())
+                .setXtsRootDir(xtsRootDir)
+                .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
+                .setIsXtsDynamicDownloadEnabled(false)
+                .setXtsCommandId("command_id_1")
+                .addAtsServerTestResources(
+                    TestResource.newBuilder()
+                        .setUrl("file://" + storageRoot + "/path/to/file1")
+                        .setName("test-name-1")
+                        .build())
+                .addAtsServerTestResources(
+                    TestResource.newBuilder()
+                        .setUrl("file:///bin/acloud_prebuilt")
+                        .setName("acloud_prebuilt")
+                        .build()));
+    Properties jobProperties = new Properties(new Timing());
+    when(sessionRequestHandlerUtil.initializeJobConfig(any(), any(), any(), any()))
+        .thenReturn(JobConfig.newBuilder().setName("job_name").build());
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any(), any()))
+        .thenAnswer(
+            invocation -> {
+              JobInfo jobInfo = mock(JobInfo.class);
+              when(jobInfo.properties()).thenReturn(jobProperties);
+              return jobInfo;
+            });
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(any(), any()))
+        .thenReturn(ImmutableList.of());
+
+    ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);
+
+    assertThat(jobInfos).hasSize(1);
+    assertThat(jobProperties.get(Job.XTS_COMMAND_ID)).isEqualTo("command_id_1");
+    verify(atsServerSessionUtil)
+        .insertAdditionalTestResource(
+            jobInfos.get(0), sessionRequestInfo.getAtsServerTestResourcesList());
+  }
+
+  @Test
+  public void configureNonTradefedJobInfo_reformatsResourcePathsAndSetsCommandId()
+      throws Exception {
+    String storageRoot = tmpFolder.getRoot().getAbsolutePath();
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts")
+                .setXtsType("cts")
+                .setXtsRootDir(xtsRootDir)
+                .setXtsCommandId("command_id_1"));
+    JobInfo jobInfo = mock(JobInfo.class);
+    Files jobFiles = mock(Files.class);
+    Properties jobProperties = new Properties(new Timing());
+    when(jobInfo.files()).thenReturn(jobFiles);
+    when(jobInfo.properties()).thenReturn(jobProperties);
+    when(jobFiles.getAll())
+        .thenReturn(
+            ImmutableMultimap.of(
+                "tag1",
+                storageRoot + "/tmp/test.json",
+                "tag1",
+                storageRoot + "/tmp/mobly.json",
+                "tag2",
+                storageRoot + "/tmp/mock.json"));
+    when(atsServerSessionUtil.replacePathForRemoteRunner(storageRoot + "/tmp/test.json"))
+        .thenReturn("ats-file-server::/tmp/test.json");
+    when(atsServerSessionUtil.replacePathForRemoteRunner(storageRoot + "/tmp/mobly.json"))
+        .thenReturn("ats-file-server::/tmp/mobly.json");
+    when(atsServerSessionUtil.replacePathForRemoteRunner(storageRoot + "/tmp/mock.json"))
+        .thenReturn("ats-file-server::/tmp/mock.json");
+
+    jobCreator.configureNonTradefedJobInfo(sessionRequestInfo, jobInfo);
+
+    assertThat(jobProperties.get(Job.XTS_COMMAND_ID)).isEqualTo("command_id_1");
+    verify(jobFiles)
+        .replaceAll(
+            "tag1",
+            ImmutableSet.of("ats-file-server::/tmp/test.json", "ats-file-server::/tmp/mobly.json"));
+    verify(jobFiles).replaceAll("tag2", ImmutableSet.of("ats-file-server::/tmp/mock.json"));
   }
 
   private int countOccurrences(String text, String pattern) {

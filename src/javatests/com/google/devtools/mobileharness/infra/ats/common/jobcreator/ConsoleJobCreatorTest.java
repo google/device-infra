@@ -63,6 +63,7 @@ import com.google.wireless.qa.mobileharness.shared.api.decorator.constant.PhaseS
 import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
@@ -130,6 +131,8 @@ public final class ConsoleJobCreatorTest {
     when(systemUtil.isBlazeTest()).thenReturn(false);
     when(sessionRequestHandlerUtil.getSessionSubDeviceSpecList(any(), anyBoolean()))
         .thenReturn(MOCK_SUB_DEVICE_SPEC_LIST);
+    when(sessionRequestHandlerUtil.createXtsNonTradefedJobs(any(), any(), any()))
+        .thenReturn(ImmutableList.of());
   }
 
   @Test
@@ -342,6 +345,7 @@ public final class ConsoleJobCreatorTest {
                       new JobLocator(
                           tradefedJobInfo.jobConfig().getName(),
                           tradefedJobInfo.jobConfig().getName()));
+              when(jobInfo.params()).thenReturn(new Params(new Timing()));
               when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
               return jobInfo;
             });
@@ -449,6 +453,7 @@ public final class ConsoleJobCreatorTest {
                       new JobLocator(
                           tradefedJobInfo.jobConfig().getName(),
                           tradefedJobInfo.jobConfig().getName()));
+              when(jobInfo.params()).thenReturn(new Params(new Timing()));
               when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
               return jobInfo;
             });
@@ -494,6 +499,7 @@ public final class ConsoleJobCreatorTest {
                       new JobLocator(
                           tradefedJobInfo.jobConfig().getName(),
                           tradefedJobInfo.jobConfig().getName()));
+              when(jobInfo.params()).thenReturn(new Params(new Timing()));
               when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
               return jobInfo;
             });
@@ -1624,6 +1630,37 @@ public final class ConsoleJobCreatorTest {
         () ->
             jobCreator.createXtsTradefedTestJobInfo(
                 sessionRequestInfo, ImmutableList.of("mock_module")));
+  }
+
+  @Test
+  public void createXtsTradefedTestJob_setsConsoleTradefedJobParams() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            SessionRequestInfo.newBuilder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts")
+                .setXtsType("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setXtsLogRootPath("/path/to/xts_logs/2026.10.09_12.00.00"));
+    when(sessionRequestHandlerUtil.getFilteredTradefedModules(eq(sessionRequestInfo), any()))
+        .thenReturn(ImmutableList.of("mock_module"));
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
+        .thenReturn(JobConfig.newBuilder().setName("mock_job").build());
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(eq(sessionRequestInfo), any()))
+        .thenAnswer(
+            invocation -> {
+              JobInfo jobInfo = mock(JobInfo.class);
+              when(jobInfo.params()).thenReturn(new Params(new Timing()));
+              when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+              return jobInfo;
+            });
+
+    ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);
+
+    assertThat(jobInfos).hasSize(1);
+    assertThat(jobInfos.get(0).params().get("xts_log_root_path"))
+        .isEqualTo("/path/to/xts_logs/2026.10.09_12.00.00");
+    assertThat(jobInfos.get(0).params().get("disable_tf_result_log")).isEqualTo("true");
   }
 
   private static Duration min(Duration d1, Duration d2) {

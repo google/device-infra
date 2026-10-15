@@ -35,8 +35,10 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryA
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
@@ -64,6 +66,16 @@ public class ConsoleJobCreator extends XtsJobCreator {
         systemUtil);
 
     this.previousResultLoader = previousResultLoader;
+  }
+
+  @Override
+  protected void configureTradefedJobInfo(SessionRequestInfo sessionRequestInfo, JobInfo jobInfo) {
+    if (sessionRequestInfo.hasXtsLogRootPath()) {
+      jobInfo.params().add("xts_log_root_path", sessionRequestInfo.getXtsLogRootPath());
+    }
+    jobInfo
+        .params()
+        .add("disable_tf_result_log", Boolean.toString(Flags.xtsDisableTfResultLog.getNonNull()));
   }
 
   @Override

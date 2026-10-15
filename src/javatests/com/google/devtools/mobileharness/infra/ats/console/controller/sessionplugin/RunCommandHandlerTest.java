@@ -493,9 +493,9 @@ public final class RunCommandHandlerTest {
 
     assertThat(jobs).containsExactly(jobInfo);
     Path xtsLogsDir = xtsRootDir.toPath().resolve("android-cts/logs");
-    assertThat(Path.of(jobInfo.params().get("xts_log_root_path")).getParent())
-        .isEqualTo(xtsLogsDir);
-    assertThat(Path.of(jobInfo.params().get("xts_log_root_path")).getFileName().toString())
+    SessionRequestInfo sessionRequestInfo = runCommandHandler.getSessionRequestInfo();
+    assertThat(Path.of(sessionRequestInfo.getXtsLogRootPath()).getParent()).isEqualTo(xtsLogsDir);
+    assertThat(Path.of(sessionRequestInfo.getXtsLogRootPath()).getFileName().toString())
         .isNotEmpty();
   }
 

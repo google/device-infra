@@ -192,9 +192,10 @@ public abstract class XtsJobCreator {
           createXtsTradefedTestJobInfo(sessionRequestInfo, tfModules);
       ImmutableList.Builder<JobInfo> jobInfos = ImmutableList.builder();
       for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
-        jobInfos.add(
-            sessionRequestHandlerUtil.createXtsTradefedTestJob(
-                sessionRequestInfo, tradefedJobInfo));
+        JobInfo jobInfo =
+            sessionRequestHandlerUtil.createXtsTradefedTestJob(sessionRequestInfo, tradefedJobInfo);
+        configureTradefedJobInfo(sessionRequestInfo, jobInfo);
+        jobInfos.add(jobInfo);
       }
       return jobInfos.build();
     }
@@ -563,8 +564,13 @@ public abstract class XtsJobCreator {
       }
     }
 
-    return sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-        sessionRequestInfo, subPlan, extraJobProperties.buildOrThrow());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfo, subPlan, extraJobProperties.buildOrThrow());
+    for (JobInfo jobInfo : jobInfos) {
+      configureNonTradefedJobInfo(sessionRequestInfo, jobInfo);
+    }
+    return jobInfos;
   }
 
   /**
@@ -819,6 +825,7 @@ public abstract class XtsJobCreator {
     if (sessionRequestInfo.hasSessionId()) {
       jobInfo.properties().add(Job.SESSION_ID, sessionRequestInfo.getSessionId());
     }
+    configureNonTradefedJobInfo(sessionRequestInfo, jobInfo);
 
     return jobInfo;
   }
@@ -991,6 +998,20 @@ public abstract class XtsJobCreator {
     return sessionRequestInfo;
   }
 
+  /**
+   * Configures environment-specific properties, parameters, or files on a newly created Tradefed
+   * {@link JobInfo}.
+   */
+  protected void configureTradefedJobInfo(SessionRequestInfo sessionRequestInfo, JobInfo jobInfo)
+      throws MobileHarnessException, InterruptedException {}
+
+  /**
+   * Configures environment-specific properties, parameters, or files on a newly created
+   * non-Tradefed or precondition {@link JobInfo}.
+   */
+  protected void configureNonTradefedJobInfo(SessionRequestInfo sessionRequestInfo, JobInfo jobInfo)
+      throws MobileHarnessException, InterruptedException {}
+
   private JobInfo createDynamicJobInfo(
       SessionRequestInfo sessionRequestInfo, TradefedJobInfo tradefedJobInfo, String jobName)
       throws MobileHarnessException, InterruptedException {
@@ -1012,6 +1033,7 @@ public abstract class XtsJobCreator {
 
     dynamicDownloadJobInfo.properties().add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
     dynamicDownloadJobInfo.properties().add(XtsConstants.XTS_JOB_NAME, jobName);
+    configureTradefedJobInfo(sessionRequestInfo, dynamicDownloadJobInfo);
     return dynamicDownloadJobInfo;
   }
 

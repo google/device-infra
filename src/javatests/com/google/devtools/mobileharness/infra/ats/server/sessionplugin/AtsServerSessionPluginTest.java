@@ -257,6 +257,9 @@ public final class AtsServerSessionPluginTest {
                     .setValue("device_id_2")
                     .build())
             .build();
+    properties.add(
+        Job.XTS_COMMAND_ID,
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString());
     request =
         NewMultiCommandRequest.newBuilder()
             .setUserId("user_id")
@@ -1276,6 +1279,8 @@ public final class AtsServerSessionPluginTest {
   @Test
   public void onSessionEnded_retryNeededAndHasPrevContext_createRetrySession() throws Exception {
     String originalCommandLine = "run cts -m OriginalModule";
+    properties.add(
+        Job.XTS_COMMAND_ID, UUID.nameUUIDFromBytes(originalCommandLine.getBytes(UTF_8)).toString());
     request =
         request.toBuilder()
             .setPrevTestContext(
