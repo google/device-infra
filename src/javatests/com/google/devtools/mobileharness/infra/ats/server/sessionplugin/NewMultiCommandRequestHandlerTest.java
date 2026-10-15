@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.endsWith;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -264,6 +265,14 @@ public final class NewMultiCommandRequestHandlerTest {
             ImmutableList.of(
                 SubDeviceSpec.getDefaultInstance(), SubDeviceSpec.getDefaultInstance()));
     when(sessionRequestHandlerUtil.getHostIp(any())).thenReturn("127.0.0.1");
+    when(atsServerSessionUtil.replacePathForRemoteRunner(anyString()))
+        .thenAnswer(
+            invocation -> {
+              String path = invocation.getArgument(0, String.class);
+              return "ats-file-server::"
+                  + (path.startsWith("/data/") ? path.substring("/data".length()) : path);
+            });
+    doCallRealMethod().when(atsServerSessionUtil).insertAdditionalTestResource(any(), any());
   }
 
   @Test
@@ -526,9 +535,8 @@ public final class NewMultiCommandRequestHandlerTest {
                     .setName("acloud_prebuilt")
                     .build())
             .build();
-    doReturn(false).when(localFileUtil).isFileOrDirExist(eq("/data/mh_resources/acloud_prebuilt"));
-    Mockito.doNothing().when(localFileUtil).prepareDir(eq("/data/mh_resources"));
-    Mockito.doNothing().when(localFileUtil).copyFileOrDir(eq("/bin/acloud_prebuilt"), anyString());
+    when(atsServerSessionUtil.replacePathForRemoteRunner("/bin/acloud_prebuilt"))
+        .thenReturn("ats-file-server::/mh_resources/acloud_prebuilt");
 
     // Trigger the handler.
     CreateJobsResult createJobsResult =
@@ -586,7 +594,7 @@ public final class NewMultiCommandRequestHandlerTest {
     verify(commandExecutor).run(mountCommand);
     verify(files).add(eq("test-name-1"), eq("ats-file-server::/path/to/file1"));
     verify(files).add(eq("test-name-2"), eq("ats-file-server::/path/to/file2"));
-    verify(localFileUtil).copyFileOrDir(eq("/bin/acloud_prebuilt"), anyString());
+    verify(atsServerSessionUtil).replacePathForRemoteRunner("/bin/acloud_prebuilt");
     verify(files).add(eq("acloud_prebuilt"), eq("ats-file-server::/mh_resources/acloud_prebuilt"));
   }
 

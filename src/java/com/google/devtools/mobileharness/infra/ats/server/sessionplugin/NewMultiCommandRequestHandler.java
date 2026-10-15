@@ -85,7 +85,6 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
@@ -122,7 +121,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
@@ -151,14 +149,6 @@ final class NewMultiCommandRequestHandler {
   private static final Duration UNZIP_TIMEOUT = Duration.ofHours(1);
 
   @VisibleForTesting static final String OUTPUT_MANIFEST_FILE_NAME = "FILES";
-  // Matches xTS zip names like "android-cts.zip", "android-sts.zip_" and
-  // "android-chunked-cts.zip". Names containing digits or dots before ".zip" (e.g.
-  // "android-cts-media-1.5.zip") are intentionally excluded since they are not xTS packages.
-  private static final Pattern ANDROID_XTS_ZIP_FILENAME_REGEX =
-      Pattern.compile("android-[a-z-]+\\.zip_?");
-  private static final String ACLOUD_FILENAME = "acloud_prebuilt";
-
-  private static final String ATS_GOOGLE_CLOUD_STORAGE_PREFIX = "mtt:///google_cloud_storage/";
 
   private static final String NOOP_TEST_COMMAND_LINE = "util/timewaster";
 
@@ -495,7 +485,7 @@ final class NewMultiCommandRequestHandler {
       ImmutableCollection<String> files = resources.get(tag);
       Set<String> newFiles = new HashSet<>();
       for (String file : files) {
-        newFiles.add(replacePathForRemoteRunner(file));
+        newFiles.add(atsServerSessionUtil.replacePathForRemoteRunner(file));
       }
       jobInfo.files().replaceAll(tag, newFiles);
     }
@@ -555,7 +545,7 @@ final class NewMultiCommandRequestHandler {
     }
     for (JobInfo jobInfo : jobInfoList) {
       try {
-        insertAdditionalTestResource(jobInfo, request);
+        atsServerSessionUtil.insertAdditionalTestResource(jobInfo, request.getTestResourcesList());
       } catch (MobileHarnessException e) {
         ErrorReason errorReason = getErrorReason(e);
         setCommandError(commandDetailBuilder, errorReason, e);
@@ -722,26 +712,8 @@ final class NewMultiCommandRequestHandler {
         JobInfoCreator.createJobInfo(
             jobConfig, ImmutableList.of(), jobGenDir.toString(), jobTmpDir.toString());
 
-    insertAdditionalTestResource(jobInfo, request);
+    atsServerSessionUtil.insertAdditionalTestResource(jobInfo, request.getTestResourcesList());
     return jobInfo;
-  }
-
-  private void insertAdditionalTestResource(JobInfo jobInfo, NewMultiCommandRequest request)
-      throws MobileHarnessException, InterruptedException {
-    for (TestResource testResource : request.getTestResourcesList()) {
-      URL testResourceUrl = getTestResourceUrl(testResource);
-
-      if (testResourceUrl.getProtocol().equals("file")) {
-        if (!ANDROID_XTS_ZIP_FILENAME_REGEX.matcher(testResource.getName()).matches()) {
-          logger.atInfo().log(
-              "Adding additional test resource: %s %s",
-              testResource.getPath(), testResourceUrl.getPath());
-          jobInfo
-              .files()
-              .add(testResource.getName(), replacePathForRemoteRunner(testResourceUrl.getPath()));
-        }
-      }
-    }
   }
 
   // Hash commandId from command line.
@@ -757,29 +729,6 @@ final class NewMultiCommandRequestHandler {
   private String getCommandAttemptId(String commandId, String sessionId) {
     String mergedId = sessionId + "_" + commandId;
     return UUID.nameUUIDFromBytes(mergedId.getBytes(UTF_8)).toString();
-  }
-
-  private String replacePathForRemoteRunner(String path)
-      throws MobileHarnessException, InterruptedException {
-    if (path.startsWith(RemoteFileType.ATS_FILE_SERVER.prefix())) {
-      return path;
-    }
-    if (path.startsWith(ATS_GOOGLE_CLOUD_STORAGE_PREFIX)) {
-      return path.replace(ATS_GOOGLE_CLOUD_STORAGE_PREFIX, RemoteFileType.GCS.prefix());
-    }
-    if (PathUtil.basename(path).equals(ACLOUD_FILENAME)
-        && !path.startsWith(Flags.atsStoragePath.getNonNull())) {
-      String acloudPath =
-          PathUtil.join(Flags.atsStoragePath.getNonNull(), "mh_resources", ACLOUD_FILENAME);
-      if (!localFileUtil.isFileOrDirExist(acloudPath)) {
-        localFileUtil.prepareDir(Path.of(acloudPath).getParent().toString());
-        localFileUtil.copyFileOrDir(path, acloudPath);
-      }
-      path = acloudPath;
-    }
-    return PathUtil.join(
-        RemoteFileType.ATS_FILE_SERVER.prefix(),
-        PathUtil.makeRelative(Flags.atsStoragePath.getNonNull(), path));
   }
 
   @SuppressWarnings("ThrowSpecificExceptions")
@@ -822,10 +771,12 @@ final class NewMultiCommandRequestHandler {
     String androidXtsZipPassword = "";
     ImmutableList.Builder<TestResource> fileTestResources = ImmutableList.builder();
     for (TestResource testResource : request.getTestResourcesList()) {
-      URL testResourceUrl = getTestResourceUrl(testResource);
+      URL testResourceUrl = AtsServerSessionUtil.getTestResourceUrl(testResource);
 
       if (testResourceUrl.getProtocol().equals("file")) {
-        if (ANDROID_XTS_ZIP_FILENAME_REGEX.matcher(testResource.getName()).matches()) {
+        if (AtsServerSessionUtil.ANDROID_XTS_ZIP_FILENAME_REGEX
+            .matcher(testResource.getName())
+            .matches()) {
           androidXtsZipPath = testResourceUrl.getPath();
           androidXtsZipDownloadUrl = testResource.getOriginalDownloadUrl();
           androidXtsZipPassword = testResource.getPassword();
@@ -871,11 +822,11 @@ final class NewMultiCommandRequestHandler {
             .setCommandLineArgs(commandLine)
             .setXtsType(xtsType)
             .setXtsRootDir(xtsRootDir)
-            .setAndroidXtsZip(replacePathForRemoteRunner(androidXtsZipPath))
+            .setAndroidXtsZip(atsServerSessionUtil.replacePathForRemoteRunner(androidXtsZipPath))
             .setTestSuiteInfo(TestSuiteInfoProvider.getTestSuiteInfo(xtsRootDir, xtsType));
     if (!isNullOrEmpty(androidXtsZipDownloadUrl)) {
       sessionRequestInfoBuilder.setAndroidXtsZipDownloadUrl(
-          replacePathForRemoteRunner(androidXtsZipDownloadUrl));
+          atsServerSessionUtil.replacePathForRemoteRunner(androidXtsZipDownloadUrl));
     }
     if (!androidXtsZipPassword.isEmpty()) {
       sessionRequestInfoBuilder.setAndroidXtsZipPassword(androidXtsZipPassword);
@@ -929,7 +880,7 @@ final class NewMultiCommandRequestHandler {
       SessionRequestInfo.Builder sessionRequestInfoBuilder)
       throws MobileHarnessException, InterruptedException {
     for (TestResource testResource : request.getPrevTestContext().getTestResourceList()) {
-      URL testResourceUrl = getTestResourceUrl(testResource);
+      URL testResourceUrl = AtsServerSessionUtil.getTestResourceUrl(testResource);
       logger.atInfo().log("testResourceUrl: %s", testResourceUrl);
       Path fileName = Path.of(testResourceUrl.getPath()).getFileName();
       if (testResourceUrl.getProtocol().equals("file")
@@ -986,7 +937,7 @@ final class NewMultiCommandRequestHandler {
   private boolean hasResultZip(NewMultiCommandRequest request) {
     for (TestResource testResource : request.getPrevTestContext().getTestResourceList()) {
       try {
-        URL testResourceUrl = getTestResourceUrl(testResource);
+        URL testResourceUrl = AtsServerSessionUtil.getTestResourceUrl(testResource);
         Path fileName = Path.of(testResourceUrl.getPath()).getFileName();
         if (testResourceUrl.getProtocol().equals("file")
             && fileName != null
@@ -1563,17 +1514,6 @@ final class NewMultiCommandRequestHandler {
     return INVALID_RESOURCE_ERROR_IDS.contains(e.getErrorId())
         ? ErrorReason.INVALID_RESOURCE
         : ErrorReason.INVALID_REQUEST;
-  }
-
-  private URL getTestResourceUrl(TestResource testResource) throws MobileHarnessException {
-    try {
-      return URI.create(testResource.getUrl()).toURL();
-    } catch (IllegalArgumentException | MalformedURLException e) {
-      throw MobileHarnessExceptionFactory.createUserFacingException(
-          InfraErrorId.ATS_SERVER_INVALID_TEST_RESOURCE,
-          String.format("Failed to parse url from : %s", testResource.getUrl()),
-          e);
-    }
   }
 
   @CanIgnoreReturnValue
