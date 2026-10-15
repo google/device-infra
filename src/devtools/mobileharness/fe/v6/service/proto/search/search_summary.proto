@@ -73,6 +73,30 @@ message DeviceUtilization {
   FleetSubset others = 3;
 }
 
+// Summary for one internal lab type in the Home page breakdown table
+// (Core Lab, Satellite Lab, or SLaaS Lab).
+message FirstPartyLabType {
+  // Stable identifier for this lab type ("core", "satellite", or "slaas").
+  string id = 1;
+
+  // User-facing lab type title rendered on the first line ("Core Lab",
+  // "Satellite Lab", or "SLaaS (Satellite-Lab-as-a-Service) Lab").
+  string display_name = 2;
+
+  // Explanatory subtitle rendered on the second line beneath the display name
+  // (for example, "Shared pool, operated by OmniLab team").
+  string description = 3;
+
+  // Hosts belonging to this lab type.
+  FleetSubset hosts = 4;
+
+  // Devices belonging to this lab type.
+  FleetSubset devices = 5;
+
+  // Device utilization within this lab type.
+  DeviceUtilization utilization = 6;
+}
+
 // First-Party (Google-internal) OmniLab summary.
 message FirstPartySummary {
   // All First-Party hosts.
@@ -83,6 +107,10 @@ message FirstPartySummary {
 
   // Device utilization across all First-Party devices.
   DeviceUtilization utilization = 3;
+
+  // Per-lab-type breakdown in canonical display order (Core Lab, Satellite Lab,
+  // SLaaS Lab).
+  repeated FirstPartyLabType lab_types = 4;
 }
 
 // Summary for one partner ATS lab (a single ATS controller).
