@@ -111,4 +111,37 @@ export const routes: Routes = [
     redirectTo: 'home',
     pathMatch: 'full',
   },
+  // Aliases for common typos of the search pages.
+  {
+    path: 'device',
+    redirectTo: 'devices',
+    pathMatch: 'full',
+  },
+  {
+    path: 'host',
+    redirectTo: 'hosts',
+    pathMatch: 'full',
+  },
+  {
+    path: 'test',
+    redirectTo: 'tests',
+    pathMatch: 'full',
+  },
+  {
+    path: 'job',
+    redirectTo: 'jobs',
+    pathMatch: 'full',
+  },
+  {
+    path: 'session',
+    redirectTo: 'sessions',
+    pathMatch: 'full',
+  },
+  // Fallback: any unknown URL is redirected to the home page. Without it, the
+  // initial navigation fails and the initial loading overlay is never removed.
+  // This must be the last route.
+  {
+    path: '**',
+    redirectTo: 'home',
+  },
 ];
