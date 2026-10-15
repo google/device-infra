@@ -42,6 +42,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggest
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.ResolveAllSiteQueryRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.ResolveAllSiteQueryResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsResolveChipsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsResolveChipsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSearchConfig;
@@ -50,6 +52,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSearchReq
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSearchResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSuggestionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSuggestionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.search.allsite.AllSiteQueryResolver;
 import com.google.devtools.mobileharness.fe.v6.service.search.tjs.TjsSearchLogic;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -66,6 +69,7 @@ public final class SearchServiceGrpcImplTest {
 
   private SearchServiceLogic fleetLogic;
   private TjsSearchLogic tjsLogic;
+  private AllSiteQueryResolver allSiteResolver;
   private ListeningExecutorService executor;
   private SearchServiceGrpcImpl service;
 
@@ -73,8 +77,9 @@ public final class SearchServiceGrpcImplTest {
   public void setUp() {
     fleetLogic = mock(SearchServiceLogic.class);
     tjsLogic = mock(TjsSearchLogic.class);
+    allSiteResolver = mock(AllSiteQueryResolver.class);
     executor = newDirectExecutorService();
-    service = new SearchServiceGrpcImpl(fleetLogic, tjsLogic, executor);
+    service = new SearchServiceGrpcImpl(fleetLogic, tjsLogic, allSiteResolver, executor);
   }
 
   // ===========================================================================
@@ -235,6 +240,22 @@ public final class SearchServiceGrpcImplTest {
     StatusRuntimeException sre = (StatusRuntimeException) errorRef.get();
     assertThat(sre.getStatus().getCode()).isEqualTo(Status.Code.UNIMPLEMENTED);
     assertThat(sre).hasMessageThat().contains("TJS search is not implemented");
+  }
+
+  // ===========================================================================
+  // All-site ID resolution delegation
+  // ===========================================================================
+
+  @Test
+  public void resolveAllSiteQuery_callsAllSiteResolver() {
+    ResolveAllSiteQueryRequest request =
+        ResolveAllSiteQueryRequest.newBuilder().setQuery("28161FDH20039P").build();
+    when(allSiteResolver.resolveAllSiteQuery(any()))
+        .thenReturn(immediateFuture(ResolveAllSiteQueryResponse.getDefaultInstance()));
+
+    service.resolveAllSiteQuery(request, noOpObserver());
+
+    verify(allSiteResolver).resolveAllSiteQuery(eq(request));
   }
 
   private static <T> StreamObserver<T> noOpObserver() {

@@ -61,11 +61,13 @@ java_library(
     srcs = ["SearchServiceGrpcImpl.java"],
     deps = [
         ":search_service_logic",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_all_site_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_service_java_grpc",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_summary_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_tjs_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/grpc:fe_grpc_invoker",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/allsite:all_site_query_resolver",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/tjs:tjs_search_logic",
         "@grpc-java//stub",
         "@maven//:com_google_guava_guava",
@@ -79,6 +81,8 @@ java_library(
     deps = [
         ":search_service_logic",
         ":search_service_logic_impl",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/allsite:all_site_query_resolver",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/allsite:noop_all_site_query_resolver",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:lab_info_fleet_puller",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:scenario_curation_module",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:fleet_search_data_module",

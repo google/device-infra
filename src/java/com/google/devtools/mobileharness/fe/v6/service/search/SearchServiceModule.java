@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search;
 
+import com.google.devtools.mobileharness.fe.v6.service.search.allsite.AllSiteQueryResolver;
+import com.google.devtools.mobileharness.fe.v6.service.search.allsite.NoOpAllSiteQueryResolver;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.LabInfoFleetPuller;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.ScenarioCurationModule;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.FleetSearchDataModule;
@@ -30,9 +32,9 @@ import com.google.inject.Singleton;
  * Guice bindings for the OSS fleet search service.
  *
  * <p>Binds {@link SearchServiceLogic} to its in-memory implementation, binds {@link TjsSearchLogic}
- * to its no-op implementation, and installs the OSS fleet data pipeline ({@link
- * FleetSearchDataModule}, the {@code FLEET_SELF} to ats-one data source) and the OSS curation
- * ({@link ScenarioCurationModule}, the {@code FLEET_SELF} to ats-one curation).
+ * and {@link AllSiteQueryResolver} to their no-op implementations, and installs the OSS fleet data
+ * pipeline ({@link FleetSearchDataModule}, the {@code FLEET_SELF} to ats-one data source) and the
+ * OSS curation ({@link ScenarioCurationModule}, the {@code FLEET_SELF} to ats-one curation).
  *
  * <p>The refresh pipeline is correct only if a single {@code FleetSnapshotStore} instance is shared
  * between the refresher that writes snapshots and the query classes that read them. {@code
@@ -50,6 +52,7 @@ public final class SearchServiceModule extends AbstractModule {
     bind(SearchServiceLogic.class).to(SearchServiceLogicImpl.class);
     bind(TjsSearchLogic.class).to(NoOpTjsSearchLogic.class);
     bind(GlobalSummaryProvider.class).to(NoOpGlobalSummaryProvider.class);
+    bind(AllSiteQueryResolver.class).to(NoOpAllSiteQueryResolver.class);
     bind(LabInfoFleetPuller.class).in(Singleton.class);
     install(new FleetSearchDataModule());
     install(new ScenarioCurationModule());

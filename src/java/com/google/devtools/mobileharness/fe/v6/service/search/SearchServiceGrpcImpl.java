@@ -34,6 +34,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueLi
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueListResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.GetGlobalSummaryRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.GlobalSummary;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.ResolveAllSiteQueryRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.ResolveAllSiteQueryResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchServiceGrpc;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsResolveChipsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsResolveChipsResponse;
@@ -43,6 +45,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSearchReq
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSearchResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSuggestionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TjsSuggestionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.search.allsite.AllSiteQueryResolver;
 import com.google.devtools.mobileharness.fe.v6.service.search.tjs.TjsSearchLogic;
 import io.grpc.stub.StreamObserver;
 import java.util.Optional;
@@ -51,20 +54,26 @@ import javax.inject.Inject;
 /**
  * gRPC binding for {@code SearchService}.
  *
- * <p>The seven Fleet RPCs delegate to {@link SearchServiceLogic} and the four TJS RPCs delegate to
- * {@link TjsSearchLogic} through {@link FeGrpcInvoker}, mirroring the DeviceService gRPC binding.
+ * <p>The seven Fleet RPCs delegate to {@link SearchServiceLogic}, the four TJS RPCs delegate to
+ * {@link TjsSearchLogic}, and the All-Site ID resolution RPC delegates to {@link
+ * AllSiteQueryResolver} through {@link FeGrpcInvoker}, mirroring the DeviceService gRPC binding.
  */
 public final class SearchServiceGrpcImpl extends SearchServiceGrpc.SearchServiceImplBase {
 
   private final SearchServiceLogic fleetLogic;
   private final TjsSearchLogic tjsLogic;
+  private final AllSiteQueryResolver allSiteResolver;
   private final ListeningExecutorService executor;
 
   @Inject
   SearchServiceGrpcImpl(
-      SearchServiceLogic fleetLogic, TjsSearchLogic tjsLogic, ListeningExecutorService executor) {
+      SearchServiceLogic fleetLogic,
+      TjsSearchLogic tjsLogic,
+      AllSiteQueryResolver allSiteResolver,
+      ListeningExecutorService executor) {
     this.fleetLogic = fleetLogic;
     this.tjsLogic = tjsLogic;
+    this.allSiteResolver = allSiteResolver;
     this.executor = executor;
   }
 
@@ -225,5 +234,22 @@ public final class SearchServiceGrpcImpl extends SearchServiceGrpc.SearchService
         executor,
         SearchServiceGrpc.getServiceDescriptor(),
         SearchServiceGrpc.getResolveTjsChipsMethod());
+  }
+
+  // ===========================================================================
+  // All-site ID resolution
+  // ===========================================================================
+
+  @Override
+  public void resolveAllSiteQuery(
+      ResolveAllSiteQueryRequest request,
+      StreamObserver<ResolveAllSiteQueryResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        allSiteResolver::resolveAllSiteQuery,
+        executor,
+        SearchServiceGrpc.getServiceDescriptor(),
+        SearchServiceGrpc.getResolveAllSiteQueryMethod());
   }
 }
