@@ -15,66 +15,6 @@ import (
 	"github.com/google/device-infra/src/devtools/rbe/common/monitoring"
 )
 
-func TestParseSpaceThreshold(t *testing.T) {
-	tests := []struct {
-		input       string
-		wantPercent bool
-		wantVal     float64
-		wantBytes   int64
-		wantErr     bool
-	}{
-		{input: "15%", wantPercent: true, wantVal: 15.0},
-		{input: "15.5%", wantPercent: true, wantVal: 15.5},
-		{input: "0%", wantPercent: true, wantVal: 0.0},
-		{input: "100%", wantPercent: true, wantVal: 100.0},
-		{input: "25", wantErr: true},   // ambiguous without % or unit
-		{input: "15.5", wantErr: true}, // ambiguous without % or unit
-		{input: "400gb", wantPercent: false, wantBytes: 400 * 1024 * 1024 * 1024},
-		{input: "500GB", wantPercent: false, wantBytes: 500 * 1024 * 1024 * 1024},
-		{input: "1gib", wantPercent: false, wantBytes: 1024 * 1024 * 1024},
-		{input: "1g", wantPercent: false, wantBytes: 1024 * 1024 * 1024},
-		{input: "2tb", wantPercent: false, wantBytes: 2 * 1024 * 1024 * 1024 * 1024},
-		{input: "1tib", wantPercent: false, wantBytes: 1024 * 1024 * 1024 * 1024},
-		{input: "1t", wantPercent: false, wantBytes: 1024 * 1024 * 1024 * 1024},
-		{input: "100mb", wantPercent: false, wantBytes: 100 * 1024 * 1024},
-		{input: "1mib", wantPercent: false, wantBytes: 1024 * 1024},
-		{input: "1m", wantPercent: false, wantBytes: 1024 * 1024},
-		{input: "1kb", wantPercent: false, wantBytes: 1024},
-		{input: "1kib", wantPercent: false, wantBytes: 1024},
-		{input: "1k", wantPercent: false, wantBytes: 1024},
-		{input: "1b", wantPercent: false, wantBytes: 1},
-		{input: "1024b", wantPercent: false, wantBytes: 1024},
-		{input: "1073741824b", wantPercent: false, wantBytes: 1073741824},
-		{input: "1.5gb", wantPercent: false, wantBytes: int64(1.5 * 1024 * 1024 * 1024)},
-		{input: "-500gb", wantErr: true},
-		{input: "1073741824", wantErr: true}, // naked integer without unit suffix rejected
-		{input: "150%", wantErr: true},
-		{input: "-5%", wantErr: true},
-		{input: "invalid", wantErr: true},
-		{input: "", wantErr: true},
-	}
-
-	for _, tc := range tests {
-		thresh, err := ParseSpaceThreshold(tc.input)
-		if (err != nil) != tc.wantErr {
-			t.Errorf("ParseSpaceThreshold(%q) error = %v, wantErr = %v", tc.input, err, tc.wantErr)
-			continue
-		}
-		if tc.wantErr {
-			continue
-		}
-		if thresh.IsPercent != tc.wantPercent {
-			t.Errorf("ParseSpaceThreshold(%q).IsPercent = %v, want %v", tc.input, thresh.IsPercent, tc.wantPercent)
-		}
-		if tc.wantPercent && thresh.Percent != tc.wantVal {
-			t.Errorf("ParseSpaceThreshold(%q).Percent = %v, want %v", tc.input, thresh.Percent, tc.wantVal)
-		}
-		if !tc.wantPercent && thresh.Bytes != tc.wantBytes {
-			t.Errorf("ParseSpaceThreshold(%q).Bytes = %v, want %v", tc.input, thresh.Bytes, tc.wantBytes)
-		}
-	}
-}
-
 func TestSpaceThreshold_Evaluate(t *testing.T) {
 	effectiveTotal := int64(1000 * 1024 * 1024 * 1024) // 1000 GB
 

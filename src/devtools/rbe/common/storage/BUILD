@@ -31,6 +31,7 @@ go_library(
         "progressive.go",
         "stats.go",
         "storage.go",
+        "watermarks.go",
     ],
     importpath = "github.com/google/device-infra/src/devtools/rbe/common/storage",
     deps = [
@@ -48,8 +49,10 @@ go_test(
         "layout_test.go",
         "oneshot_test.go",
         "progressive_test.go",
+        "spacethreshold_test.go",
         "stats_test.go",
         "storage_test.go",
+        "watermarks_test.go",
     ],
     embed = [":storage"],
     deps = ["//src/devtools/rbe/common/monitoring"],

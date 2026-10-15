@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -73,62 +75,126 @@ type SpaceThreshold struct {
 	Bytes     int64
 }
 
-// ParseSpaceThreshold parses a space threshold string like "15%", "15.0%", "400gb", "500GB", "2tb", "1048576b".
+// spaceUnits maps each size unit ParseSpaceThreshold accepts, in lower case,
+// to its size in bytes. Every unit is binary: "gb" means GiB, as it always
+// has here.
+var spaceUnits = map[string]int64{
+	"b": 1,
+	"k": 1 << 10, "kb": 1 << 10, "kib": 1 << 10,
+	"m": 1 << 20, "mb": 1 << 20, "mib": 1 << 20,
+	"g": 1 << 30, "gb": 1 << 30, "gib": 1 << 30,
+	"t": 1 << 40, "tb": 1 << 40, "tib": 1 << 40,
+}
+
+// The three shapes of a space threshold. Only ASCII digits and letters
+// match, so signs, exponents, hex, NaN and Inf are all rejected by shape
+// before any number is converted.
+var (
+	bareBytesPattern = regexp.MustCompile(`^[0-9]+$`)
+	percentPattern   = regexp.MustCompile(`^([0-9]+(?:\.[0-9]+)?)\s*%$`)
+	sizePattern      = regexp.MustCompile(`^([0-9]+(?:\.[0-9]+)?)\s*([A-Za-z]+)$`)
+)
+
+// spaceThresholdFormat describes the accepted format in error messages.
+const spaceThresholdFormat = `want a byte count such as "1073741824", a size such as "10gb" or "1.5tib", or a percentage such as "20%"`
+
+// ParseSpaceThreshold parses a free-space threshold. It is the one format
+// for the free-space watermarks of casproxy, casdownloader and Tradefed,
+// whose SpaceThreshold mirrors it; the table in spacethreshold_test.go is
+// shared with Tradefed's tests. Leading and trailing whitespace is ignored.
 //
-// Formats supported:
-//  1. Explicit percentages: e.g. "15%", "15.5%", "25.0%" (must include the '%' character).
-//  2. Explicit size units: e.g. "400gb", "500gib", "2tb", "100mb", "1024kb", "1048576b".
-//  3. Raw integer byte values: e.g. "1073741824".
+// A threshold is one of:
+//   - A byte count: a non-negative integer, such as "1073741824".
+//   - A size: a number and a unit, such as "400gb", "1.5 TiB" or "1048576b".
+//     The units are b, k, kb, kib, m, mb, mib, g, gb, gib, t, tb and tib,
+//     in any case, and all are binary: "1gb" is 1073741824 bytes. The
+//     number may have a fractional part, except with b; the size is
+//     truncated to whole bytes.
+//   - A percentage of the volume from 0 to 100: a number and "%", such as
+//     "20%", "12.5%" or "20 %".
 //
-// Unadorned floats or ambiguous numbers without '%' or unit suffixes (e.g. "15.5") are rejected.
+// Anything else is rejected, including negative numbers, a leading "+", a
+// number with a fractional part but no unit or the unit b (such as "1.5" or
+// "1.5b"), exponents, NaN, Inf, hex, unknown units, and sizes too large for
+// an int64.
+//
+// String formats a threshold back in canonical form.
 func ParseSpaceThreshold(s string) (SpaceThreshold, error) {
-	trimmed := strings.TrimSpace(strings.ToLower(s))
+	trimmed := strings.TrimSpace(s)
 	if trimmed == "" {
-		return SpaceThreshold{}, fmt.Errorf("empty space threshold string")
+		return SpaceThreshold{}, fmt.Errorf("empty space threshold: %s", spaceThresholdFormat)
 	}
 
-	// 1. Explicit percentage format: must end in '%'
-	if strings.HasSuffix(trimmed, "%") {
-		numStr := strings.TrimSpace(strings.TrimSuffix(trimmed, "%"))
-		val, err := strconv.ParseFloat(numStr, 64)
-		if err != nil || val < 0 || val > 100 {
-			return SpaceThreshold{}, fmt.Errorf("invalid percentage threshold %q: must be between 0%% and 100%%", s)
+	if bareBytesPattern.MatchString(trimmed) {
+		n, err := strconv.ParseInt(trimmed, 10, 64)
+		if err != nil {
+			return SpaceThreshold{}, fmt.Errorf("invalid space threshold %q: too many bytes", s)
 		}
-		return SpaceThreshold{IsPercent: true, Percent: val}, nil
+		return SpaceThreshold{Bytes: n}, nil
 	}
 
-	// 2. Explicit unit suffix formats: tb, gb, mb, kb, b
-	multipliers := []struct {
-		suffix string
-		mult   int64
-	}{
-		{"tb", 1024 * 1024 * 1024 * 1024},
-		{"tib", 1024 * 1024 * 1024 * 1024},
-		{"t", 1024 * 1024 * 1024 * 1024},
-		{"gb", 1024 * 1024 * 1024},
-		{"gib", 1024 * 1024 * 1024},
-		{"g", 1024 * 1024 * 1024},
-		{"mb", 1024 * 1024},
-		{"mib", 1024 * 1024},
-		{"m", 1024 * 1024},
-		{"kb", 1024},
-		{"kib", 1024},
-		{"k", 1024},
-		{"b", 1},
-	}
-
-	for _, m := range multipliers {
-		if strings.HasSuffix(trimmed, m.suffix) {
-			numStr := strings.TrimSpace(strings.TrimSuffix(trimmed, m.suffix))
-			val, err := strconv.ParseFloat(numStr, 64)
-			if err != nil || val < 0 {
-				return SpaceThreshold{}, fmt.Errorf("invalid size threshold %q: %w", s, err)
-			}
-			return SpaceThreshold{IsPercent: false, Bytes: int64(val * float64(m.mult))}, nil
+	if m := percentPattern.FindStringSubmatch(trimmed); m != nil {
+		p, err := strconv.ParseFloat(m[1], 64)
+		if err != nil || p > 100 {
+			return SpaceThreshold{}, fmt.Errorf("invalid space threshold %q: a percentage must be between 0%% and 100%%", s)
 		}
+		return SpaceThreshold{IsPercent: true, Percent: p}, nil
 	}
 
-	return SpaceThreshold{}, fmt.Errorf("ambiguous space threshold %q: specify '%%' for percentage (e.g. '15%%') or a size unit (e.g. '400gb', '100mb', '1048576b')", s)
+	if m := sizePattern.FindStringSubmatch(trimmed); m != nil {
+		unit, ok := spaceUnits[strings.ToLower(m[2])]
+		if !ok {
+			return SpaceThreshold{}, fmt.Errorf("invalid space threshold %q: unknown unit %q; want b, k, kb, kib, m, mb, mib, g, gb, gib, t, tb or tib", s, m[2])
+		}
+		if unit == 1 && strings.Contains(m[1], ".") {
+			return SpaceThreshold{}, fmt.Errorf("invalid space threshold %q: a number of bytes must be whole", s)
+		}
+		n, ok := scaleToBytes(m[1], unit)
+		if !ok {
+			return SpaceThreshold{}, fmt.Errorf("invalid space threshold %q: too many bytes", s)
+		}
+		return SpaceThreshold{Bytes: n}, nil
+	}
+
+	return SpaceThreshold{}, fmt.Errorf("invalid space threshold %q: %s", s, spaceThresholdFormat)
+}
+
+// scaleToBytes returns the non-negative decimal number num times unit,
+// truncated to an integer, and false if that does not fit in an int64. It
+// computes exactly, so neither a long fraction nor a large size loses
+// precision the way a float64 would.
+func scaleToBytes(num string, unit int64) (int64, bool) {
+	r, ok := new(big.Rat).SetString(num)
+	if !ok {
+		return 0, false
+	}
+	r.Mul(r, new(big.Rat).SetInt64(unit))
+	n := new(big.Int).Quo(r.Num(), r.Denom())
+	if !n.IsInt64() {
+		return 0, false
+	}
+	return n.Int64(), true
+}
+
+// String returns t in canonical form: a bare byte count such as
+// "10737418240", or a percentage such as "20%" or "12.5%". This is the form
+// to pass from one component to another: ParseSpaceThreshold reads it back
+// as t for any t it returned.
+func (t SpaceThreshold) String() string {
+	if t.IsPercent {
+		return strconv.FormatFloat(t.Percent, 'f', -1, 64) + "%"
+	}
+	return strconv.FormatInt(t.Bytes, 10)
+}
+
+// StringWithUnit is like String, but gives a byte count the unit "b", such
+// as "10737418240b". Releases before b/572891754 reject a bare byte count,
+// so this is the form to save in a file that one of them may read.
+func (t SpaceThreshold) StringWithUnit() string {
+	if t.IsPercent {
+		return t.String()
+	}
+	return t.String() + "b"
 }
 
 // Evaluate computes the concrete byte threshold given the effective total volume capacity.
