@@ -54,6 +54,10 @@ public final class CompositeFleetIndexTest {
                     "field::status", ImmutableMap.of("idle", "IDLE", "busy", "BUSY"),
                     "dimension::model",
                         ImmutableMap.of("pixel 8", "Pixel 8", "pixel 7", "Pixel 7")))
+            .setKeyStatsMap(
+                ImmutableMap.of(
+                    "field::status", new KeyStats(15, 2),
+                    "dimension::model", new KeyStats(15, 2)))
             .setSemanticGlobalSorted(
                 ImmutableList.of(
                     new ValueKeyPair("pixel 7", "dimension::model"),
@@ -69,6 +73,7 @@ public final class CompositeFleetIndexTest {
     overlay.valueCountsMap.put("dimension::carrier", ImmutableMap.of("verizon", 1200, "att", 500));
     overlay.valueDisplaysMap.put(
         "dimension::carrier", ImmutableMap.of("verizon", "Verizon", "att", "AT&T"));
+    overlay.keyStatsMap.put("dimension::carrier", new KeyStats(1700, 3));
 
     composite = new CompositeFleetIndex(core, overlay);
   }
@@ -79,6 +84,7 @@ public final class CompositeFleetIndexTest {
     assertThat(composite.valueCounts("field::status")).containsEntry("idle", 10);
     assertThat(composite.valueDisplays("field::status")).containsEntry("idle", "IDLE");
     assertThat(composite.valueCount("field::status", "idle")).isEqualTo(10);
+    assertThat(composite.keyStats("field::status")).isEqualTo(new KeyStats(15, 2));
   }
 
   @Test
@@ -89,6 +95,7 @@ public final class CompositeFleetIndexTest {
     assertThat(composite.valueCounts("dimension::carrier")).containsEntry("verizon", 1200);
     assertThat(composite.valueDisplays("dimension::carrier")).containsEntry("verizon", "Verizon");
     assertThat(composite.valueCount("dimension::carrier", "verizon")).isEqualTo(1200);
+    assertThat(composite.keyStats("dimension::carrier")).isEqualTo(new KeyStats(1700, 3));
   }
 
   @Test
@@ -97,6 +104,7 @@ public final class CompositeFleetIndexTest {
     assertThat(composite.valueCounts("dimension::unknown")).isEmpty();
     assertThat(composite.valueDisplays("dimension::unknown")).isEmpty();
     assertThat(composite.valueCount("dimension::unknown", "val")).isEqualTo(0);
+    assertThat(composite.keyStats("dimension::unknown")).isEqualTo(KeyStats.EMPTY);
   }
 
   @Test
@@ -104,6 +112,13 @@ public final class CompositeFleetIndexTest {
     assertThat(composite.keyIds())
         .containsExactly(
             "field::status", "dimension::model", "dimension::carrier", "dimension::battery_level");
+    assertThat(composite.keyIds()).isSameInstanceAs(composite.keyIds());
+  }
+
+  @Test
+  public void keyIds_emptyOverlay_returnsSameInstanceAsCore() {
+    CompositeFleetIndex emptyOverlayComposite = new CompositeFleetIndex(core, OverlayView.empty());
+    assertThat(emptyOverlayComposite.keyIds()).isSameInstanceAs(core.keyIds());
   }
 
   @Test
@@ -123,6 +138,7 @@ public final class CompositeFleetIndexTest {
     final Map<String, ImmutableList<String>> sortedValuesMap = new HashMap<>();
     final Map<String, ImmutableMap<String, Integer>> valueCountsMap = new HashMap<>();
     final Map<String, ImmutableMap<String, String>> valueDisplaysMap = new HashMap<>();
+    final Map<String, KeyStats> keyStatsMap = new HashMap<>();
 
     @Override
     public boolean containsKey(String keyId) {
@@ -152,6 +168,11 @@ public final class CompositeFleetIndexTest {
     @Override
     public int valueCount(String keyId, String value) {
       return valueCounts(keyId).getOrDefault(value, 0);
+    }
+
+    @Override
+    public KeyStats keyStats(String keyId) {
+      return keyStatsMap.getOrDefault(keyId, KeyStats.EMPTY);
     }
 
     @Override

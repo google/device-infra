@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.CoverageInfo.DisplayCase;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogEntry;
@@ -105,8 +106,11 @@ public final class FleetColumnCatalogerTest {
             corpus, FleetColumnCatalogRequest.newBuilder().setQuery("custom_catalog_dim").build());
     FleetColumnCatalogSection dimensionsSection = section(queryResponse, "Dimensions");
     assertThat(keys(dimensionsSection)).contains("dimension::custom_catalog_dim");
-    assertThat(entryFor(dimensionsSection, "dimension::custom_catalog_dim").getDeviceCount())
-        .isEqualTo(0);
+    assertThat(
+            entryFor(dimensionsSection, "dimension::custom_catalog_dim")
+                .getCoverage()
+                .getDisplayCase())
+        .isEqualTo(DisplayCase.NOT_SHOWN);
     assertThat(headings(queryResponse)).doesNotContain("Search results");
   }
 
@@ -196,22 +200,27 @@ public final class FleetColumnCatalogerTest {
   }
 
   @Test
-  public void deviceCount_countsDistinctDevicesCarryingTheKey() {
+  public void coverage_shownForIndexedDimensionsOnly() {
     FleetColumnCatalogResponse response =
         cataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
 
-    // Status is carried by all three devices.
+    // Built-in fields exist on every device, so coverage is not shown.
     assertThat(
-            entryFor(section(response, "Built-in fields"), "device_field::status").getDeviceCount())
-        .isEqualTo(3);
+            entryFor(section(response, "Built-in fields"), "device_field::status")
+                .getCoverage()
+                .getDisplayCase())
+        .isEqualTo(DisplayCase.NOT_SHOWN);
     // model is carried by all three devices (pixel on two, iphone on one).
-    assertThat(entryFor(section(response, "Dimensions"), "dimension::model").getDeviceCount())
-        .isEqualTo(3);
-    // The location host property is carried by both hosts, so all three devices.
+    FleetColumnCatalogEntry modelEntry =
+        entryFor(section(response, "Dimensions"), "dimension::model");
+    assertThat(modelEntry.getCoverage().getDisplayCase()).isEqualTo(DisplayCase.SHOWN);
+    assertThat(modelEntry.getCoverage().getShown().getCount()).isEqualTo(3);
+    // Host properties measure host coverage rather than device coverage, so coverage is not shown.
     assertThat(
             entryFor(section(response, "Host properties"), "host_property::location")
-                .getDeviceCount())
-        .isEqualTo(3);
+                .getCoverage()
+                .getDisplayCase())
+        .isEqualTo(DisplayCase.NOT_SHOWN);
   }
 
   @Test
@@ -232,7 +241,11 @@ public final class FleetColumnCatalogerTest {
         .inOrder();
     assertThat(entryFor(suggested, "dimension::model").getReason())
         .isEqualTo("in your active filters");
+    assertThat(entryFor(suggested, "dimension::model").getCoverage().getDisplayCase())
+        .isEqualTo(DisplayCase.NOT_SHOWN);
     assertThat(entryFor(suggested, "device_field::status").getReason()).isEqualTo("recently used");
+    assertThat(entryFor(suggested, "device_field::status").getCoverage().getDisplayCase())
+        .isEqualTo(DisplayCase.NOT_SHOWN);
     // The suggested section reports no total.
     assertThat(suggested.getTotalAvailable()).isEqualTo(0);
   }
@@ -264,6 +277,136 @@ public final class FleetColumnCatalogerTest {
     FleetColumnCatalogResponse noQuery =
         cataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
     assertThat(headings(noQuery)).doesNotContain("Search results");
+  }
+
+  @Test
+  public void dimensionsSection_keepsDimensionSharingBuiltinBareNameWhenValuesDisagree() {
+    // Two hosts ("lab-a" and "lab-b") whose devices swap the "host_name" dimension ("lab-b" on
+    // lab-a, "lab-a" on lab-b). The aggregate index counts match host_field::host_name (1 each),
+    // so canMatchInIndex passes and the per-record comparison loop detects the disagreement.
+    // Meanwhile dimension::uuid ("other-uuid") is rejected up front by canMatchInIndex.
+    LabQueryResult disagreeingFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(2)
+                    .addLabData(
+                        labData(
+                            "lab-a",
+                            "1.1.1.1",
+                            "mtv",
+                            device(
+                                "device-0",
+                                DeviceStatus.IDLE,
+                                "android_real_device",
+                                "alice",
+                                dims("host_name", "lab-b", "uuid", "other-uuid"))))
+                    .addLabData(
+                        labData(
+                            "lab-b",
+                            "2.2.2.2",
+                            "sjc",
+                            device(
+                                "device-1",
+                                DeviceStatus.IDLE,
+                                "android_real_device",
+                                "bob",
+                                dims("host_name", "lab-a")))))
+            .build();
+    FleetSnapshot disagreeingSnapshot =
+        Guice.createInjector()
+            .getInstance(FleetIndexBuilder.class)
+            .build(disagreeingFleet, BUILD_TIME);
+    DeviceCorpus disagreeingCorpus =
+        new DeviceCorpus(
+            disagreeingSnapshot, new LazyPostings(disagreeingSnapshot.devices()), null);
+
+    FleetColumnCatalogResponse response =
+        cataloger.getColumnCatalog(
+            disagreeingCorpus, FleetColumnCatalogRequest.getDefaultInstance());
+
+    assertThat(keys(section(response, "Dimensions")))
+        .containsAtLeast("dimension::host_name", "dimension::uuid");
+  }
+
+  @Test
+  public void redundantCache_reusedAcrossCallsAndInvalidatedWhenSnapshotRefreshes() {
+    FleetColumnCataloger cachingCataloger = new FleetColumnCataloger();
+
+    // First call populates redundantCache for FLEET_SELF (dimension::host_name is redundant).
+    FleetColumnCatalogResponse first =
+        cachingCataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
+    assertThat(keys(section(first, "Dimensions"))).doesNotContain("dimension::host_name");
+
+    // Build a refreshed snapshot with the exact same 3 devices (recordCount = 3) and the exact
+    // same set of 19 key strings, except device-0's host_name dimension is "lab-b" (disagreeing
+    // with host_field::host_name = "lab-a").
+    FleetSnapshot refreshedSnapshot =
+        Guice.createInjector()
+            .getInstance(FleetIndexBuilder.class)
+            .build(fleet("lab-b"), BUILD_TIME.plusSeconds(60));
+    assertThat(refreshedSnapshot.deviceCount()).isEqualTo(snapshot.deviceCount());
+    assertThat(refreshedSnapshot.index().keyIds()).isEqualTo(snapshot.index().keyIds());
+    assertThat(refreshedSnapshot.index().keyIds()).isNotSameInstanceAs(snapshot.index().keyIds());
+
+    // Prove that the second call hits redundantCache without re-scanning records: pair
+    // refreshedSnapshot.devices() (where device-0 disagrees) with snapshot.index() (which shares
+    // the exact same keyIds ImmutableSet reference). A fresh cataloger scans the records and keeps
+    // dimension::host_name, whereas cachingCataloger returns the cached redundant set and omits it.
+    FleetSnapshot sameIndexDisagreeingRecordsSnapshot =
+        FleetSnapshot.builder()
+            .setBuildTime(BUILD_TIME.plusSeconds(30))
+            .setDevices(refreshedSnapshot.devices())
+            .setHosts(refreshedSnapshot.hosts())
+            .setIndex(snapshot.index())
+            .setHostIndex(snapshot.hostIndex())
+            .setUuidToIndex(refreshedSnapshot.uuidToIndex())
+            .build();
+    DeviceCorpus sameIndexDisagreeingRecordsCorpus =
+        new DeviceCorpus(
+            sameIndexDisagreeingRecordsSnapshot,
+            new LazyPostings(sameIndexDisagreeingRecordsSnapshot.devices()),
+            null);
+    assertThat(
+            keys(
+                section(
+                    new FleetColumnCataloger()
+                        .getColumnCatalog(
+                            sameIndexDisagreeingRecordsCorpus,
+                            FleetColumnCatalogRequest.getDefaultInstance()),
+                    "Dimensions")))
+        .contains("dimension::host_name");
+    FleetColumnCatalogResponse cachedResponse =
+        cachingCataloger.getColumnCatalog(
+            sameIndexDisagreeingRecordsCorpus, FleetColumnCatalogRequest.getDefaultInstance());
+    assertThat(keys(section(cachedResponse, "Dimensions"))).doesNotContain("dimension::host_name");
+
+    // Now pass refreshedCorpus (same recordCount = 3 and equal keyIds contents, but a distinct
+    // keyIds ImmutableSet instance): cached.keyIds() == keyIds is false, invalidating the cache.
+    DeviceCorpus refreshedCorpus =
+        new DeviceCorpus(refreshedSnapshot, new LazyPostings(refreshedSnapshot.devices()), null);
+    FleetColumnCatalogResponse afterRefresh =
+        cachingCataloger.getColumnCatalog(
+            refreshedCorpus, FleetColumnCatalogRequest.getDefaultInstance());
+    assertThat(keys(section(afterRefresh, "Dimensions"))).contains("dimension::host_name");
+  }
+
+  @Test
+  public void search_ranksExactMatchAheadOfPrefixAndSubstring() {
+    DimensionCatalogStore store = new DimensionCatalogStore();
+    store.setDimensionNames(Fleet.FLEET_SELF, ImmutableSet.of("f0", "f0_prefix", "a_f0_sub"));
+    FleetColumnCataloger customCataloger = new FleetColumnCataloger(store);
+
+    FleetColumnCatalogResponse response =
+        customCataloger.getColumnCatalog(
+            corpus, FleetColumnCatalogRequest.newBuilder().setQuery("f0").build());
+
+    ImmutableList<String> dimensionKeys = keys(section(response, "Dimensions"));
+    assertThat(dimensionKeys.get(0)).isEqualTo("dimension::f0");
+    assertThat(dimensionKeys)
+        .containsAtLeast(
+            "dimension::f0", "dimension::f01", "dimension::f0_prefix", "dimension::a_f0_sub")
+        .inOrder();
   }
 
   // --- Helpers ---
@@ -306,10 +449,14 @@ public final class FleetColumnCatalogerTest {
   // --- Synthetic fleet ---
 
   private static LabQueryResult fleet() {
+    return fleet("lab-a");
+  }
+
+  private static LabQueryResult fleet(String device0HostNameDim) {
     Map<String, String> device0Dims = new LinkedHashMap<>();
     device0Dims.put("model", "pixel");
     device0Dims.put("pool", "shared");
-    device0Dims.put("host_name", "lab-a");
+    device0Dims.put("host_name", device0HostNameDim);
     for (int i = 1; i <= 10; i++) {
       device0Dims.put(String.format("f%02d", i), "x");
     }

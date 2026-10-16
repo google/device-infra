@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.CoverageInfo.DisplayCase;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogEntry;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogRequest;
@@ -262,8 +263,6 @@ public final class HostColumnCatalogerTest {
   }
 
   @Test
-  // HostColumnCataloger still populates the deprecated device_count field until coverage migration.
-  @SuppressWarnings("deprecation")
   public void hostProperties_rankedByHostCoverageWithTotalReported() {
     FleetColumnCatalogResponse response =
         cataloger.getColumnCatalog(
@@ -282,11 +281,13 @@ public final class HostColumnCatalogerTest {
             "host_property::env")
         .inOrder();
 
-    // Verify Host Property prefix on title
+    // Verify Host Property prefix on title and that host entries never show coverage.
     assertThat(entryFor(properties, "host_property::location").getDisplayName())
         .isEqualTo("Host Property location");
-    assertThat(entryFor(properties, "host_property::location").getDeviceCount()).isEqualTo(2);
-    assertThat(entryFor(properties, "host_property::env").getDeviceCount()).isEqualTo(1);
+    assertThat(entryFor(properties, "host_property::location").getCoverage().getDisplayCase())
+        .isEqualTo(DisplayCase.NOT_SHOWN);
+    assertThat(entryFor(properties, "host_property::env").getCoverage().getDisplayCase())
+        .isEqualTo(DisplayCase.NOT_SHOWN);
 
     assertThat(properties.getTotalAvailable()).isEqualTo(4);
   }

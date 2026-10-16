@@ -384,23 +384,18 @@ public final class FleetIndexBuilder {
 
   /** Adds all index terms for one device to the accumulator. */
   private static void indexDevice(Accumulator accumulator, DeviceRecord record) {
-    Set<String> seen = new HashSet<>();
-    for (Map.Entry<String, ImmutableList<String>> entry : record.values().entrySet()) {
-      String keyId = entry.getKey();
-      for (String value : entry.getValue()) {
-        accumulator.add(seen, keyId, value);
-      }
-    }
+    indexRecord(accumulator, record.values());
   }
 
   /** Adds all index terms for one host to the host accumulator. */
   private static void indexHost(Accumulator accumulator, HostRecord host) {
-    Set<String> seen = new HashSet<>();
-    for (Map.Entry<String, ImmutableList<String>> entry : host.values().entrySet()) {
-      String keyId = entry.getKey();
-      for (String value : entry.getValue()) {
-        accumulator.add(seen, keyId, value);
-      }
+    indexRecord(accumulator, host.values());
+  }
+
+  private static void indexRecord(
+      Accumulator accumulator, ImmutableMap<String, ImmutableList<String>> values) {
+    for (Map.Entry<String, ImmutableList<String>> entry : values.entrySet()) {
+      accumulator.addKeyValues(entry.getKey(), entry.getValue());
     }
   }
 
@@ -412,47 +407,103 @@ public final class FleetIndexBuilder {
    * replacing the previous TreeMultimap (O(log V) per insert). Posting lists are not built here;
    * they are constructed lazily by {@link LazyPostings} on first access.
    */
-  private static final class Accumulator {
+  static final class Accumulator {
     // Distinct normalized values per key id, collected into HashSets for O(1) insertion.
     private final Map<String, Set<String>> distinctValues = new HashMap<>();
     // Nested display map: key -> (value -> first-seen display).
     private final Map<String, Map<String, String>> valueDisplays = new HashMap<>();
     // Nested count map: key -> (value -> distinct-device count).
     private final Map<String, Map<String, Integer>> valueCounts = new HashMap<>();
+    // Number of records carrying at least one non-empty value for each key.
+    private final Map<String, Integer> entityCounts = new HashMap<>();
+    // Distinct single-value combinations per key, populated only for keys that have at least one
+    // multi-value combination (for purely single-valued keys, distinctValues is the exact set of
+    // single-value combinations).
+    private final Map<String, Set<String>> singleCombinations = new HashMap<>();
+    // Distinct multi-value combinations per key (allocated only for multi-valued keys).
+    private final Map<String, Set<ImmutableSet<String>>> multiCombinations = new HashMap<>();
     private final Set<String> keyIds = new LinkedHashSet<>();
 
-    /** Records one (key, value) for a device, using the term itself as its display. */
-    void add(Set<String> seen, String keyId, String original) {
-      add(seen, keyId, original, original);
+    /** Records all values of one key carried by a single record. */
+    void addKeyValues(String keyId, ImmutableList<String> rawValues) {
+      if (rawValues.isEmpty()) {
+        return;
+      }
+      if (rawValues.size() == 1) {
+        String raw = rawValues.get(0);
+        if (raw.isEmpty()) {
+          return;
+        }
+        String value = Ascii.toLowerCase(raw);
+        recordTerm(keyId, value, raw);
+        distinctValues.computeIfAbsent(keyId, k -> new HashSet<>()).add(value);
+        entityCounts.merge(keyId, 1, Integer::sum);
+        if (multiCombinations.containsKey(keyId)) {
+          singleCombinations.get(keyId).add(value);
+        }
+        return;
+      }
+      ImmutableSet.Builder<String> comboBuilder = ImmutableSet.builder();
+      Set<String> seen = new HashSet<>();
+      for (String raw : rawValues) {
+        if (raw.isEmpty()) {
+          continue;
+        }
+        String value = Ascii.toLowerCase(raw);
+        if (seen.add(value)) {
+          recordTerm(keyId, value, raw);
+          comboBuilder.add(value);
+        }
+      }
+      if (seen.isEmpty()) {
+        return;
+      }
+      entityCounts.merge(keyId, 1, Integer::sum);
+      ImmutableSet<String> combo = comboBuilder.build();
+      if (combo.size() == 1) {
+        if (multiCombinations.containsKey(keyId)) {
+          singleCombinations.get(keyId).add(combo.iterator().next());
+        }
+      } else {
+        if (!multiCombinations.containsKey(keyId)) {
+          singleCombinations.put(
+              keyId, new HashSet<>(distinctValues.getOrDefault(keyId, ImmutableSet.of())));
+        }
+        multiCombinations.computeIfAbsent(keyId, k -> new HashSet<>()).add(combo);
+      }
+      distinctValues.computeIfAbsent(keyId, k -> new HashSet<>()).addAll(combo);
     }
 
-    /**
-     * Records one (key, term) for a device with a distinct {@code display}, so the stored/filter
-     * term and the presented value can differ (as they do for {@code host::ats_controller}).
-     *
-     * <p>Deduped per device via {@code seen} so {@code valueCounts} reflects distinct devices, not
-     * raw occurrences. The {@code seen} set is per-device (created fresh in {@link #indexDevice},
-     * ~175 entries), so it stays resident in L1 cache and the composite key is cheap here. This
-     * guards against intra-device duplicates that collapse on lowercase (case variants such as
-     * {@code Android}/{@code android}, or repeated entries in the {@code types}/{@code owners}/...
-     * repeated fields) which would otherwise inflate the facet count for that value.
-     */
-    void add(Set<String> seen, String keyId, String term, String display) {
-      String value = Ascii.toLowerCase(term);
-      if (value.isEmpty()) {
-        return;
-      }
-      if (!seen.add(keyId + '\u0000' + value)) {
-        return;
-      }
+    private void recordTerm(String keyId, String value, String display) {
       keyIds.add(keyId);
       valueCounts.computeIfAbsent(keyId, k -> new HashMap<>()).merge(value, 1, Integer::sum);
-      distinctValues.computeIfAbsent(keyId, k -> new HashSet<>()).add(value);
       valueDisplays.computeIfAbsent(keyId, k -> new HashMap<>()).putIfAbsent(value, display);
     }
 
     /** Merges another accumulator into this one. Counts are summed, distinct values unioned. */
     void mergeFrom(Accumulator other) {
+      for (String keyId : other.keyIds) {
+        boolean thisMulti = multiCombinations.containsKey(keyId);
+        boolean otherMulti = other.multiCombinations.containsKey(keyId);
+        if (thisMulti || otherMulti) {
+          Set<String> targetSingles =
+              thisMulti
+                  ? singleCombinations.computeIfAbsent(keyId, k -> new HashSet<>())
+                  : new HashSet<>(distinctValues.getOrDefault(keyId, ImmutableSet.of()));
+          singleCombinations.put(keyId, targetSingles);
+          Set<String> otherSingles =
+              otherMulti ? other.singleCombinations.get(keyId) : other.distinctValues.get(keyId);
+          if (otherSingles != null) {
+            targetSingles.addAll(otherSingles);
+          }
+        }
+      }
+      for (Map.Entry<String, Set<ImmutableSet<String>>> entry :
+          other.multiCombinations.entrySet()) {
+        multiCombinations
+            .computeIfAbsent(entry.getKey(), k -> new HashSet<>())
+            .addAll(entry.getValue());
+      }
       keyIds.addAll(other.keyIds);
       for (Map.Entry<String, Map<String, Integer>> entry : other.valueCounts.entrySet()) {
         Map<String, Integer> target =
@@ -473,18 +524,22 @@ public final class FleetIndexBuilder {
           target.putIfAbsent(vd.getKey(), vd.getValue());
         }
       }
+      for (Map.Entry<String, Integer> entry : other.entityCounts.entrySet()) {
+        entityCounts.merge(entry.getKey(), entry.getValue(), Integer::sum);
+      }
     }
 
     FleetIndex toIndex() {
       List<String> keyList = new ArrayList<>(keyIds);
 
-      // Parallel per-key: sort values + freeze counts + freeze displays.
+      // Parallel per-key: sort values + freeze counts + freeze displays + freeze key stats.
       // Uses ConcurrentHashMap to collect results from parallel stream.
       ConcurrentHashMap<String, ImmutableList<String>> sortedMap = new ConcurrentHashMap<>();
       ConcurrentHashMap<String, ImmutableMap<String, Integer>> countsMap =
           new ConcurrentHashMap<>();
       ConcurrentHashMap<String, ImmutableMap<String, String>> displaysMap =
           new ConcurrentHashMap<>();
+      ConcurrentHashMap<String, KeyStats> statsMap = new ConcurrentHashMap<>();
 
       // TODO: Consider switching to a sequential loop over keyList if the number
       // of indexed keys remains small.
@@ -504,6 +559,16 @@ public final class FleetIndexBuilder {
                 Map<String, String> keyDisplays = valueDisplays.get(keyId);
                 if (keyDisplays != null) {
                   displaysMap.put(keyId, ImmutableMap.copyOf(keyDisplays));
+                }
+                int entities = entityCounts.getOrDefault(keyId, 0);
+                if (entities > 0) {
+                  Set<ImmutableSet<String>> multis = multiCombinations.get(keyId);
+                  int combinations =
+                      multis == null
+                          ? (values != null ? values.size() : 0)
+                          : singleCombinations.getOrDefault(keyId, ImmutableSet.of()).size()
+                              + multis.size();
+                  statsMap.put(keyId, new KeyStats(entities, combinations));
                 }
               });
 
@@ -544,6 +609,7 @@ public final class FleetIndexBuilder {
           .setValueCountsMap(ImmutableMap.copyOf(countsMap))
           .setSortedValuesMap(ImmutableMap.copyOf(sortedMap))
           .setValueDisplaysMap(ImmutableMap.copyOf(displaysMap))
+          .setKeyStatsMap(ImmutableMap.copyOf(statsMap))
           .setKeyIds(ImmutableSet.copyOf(keyIds))
           .setSemanticGlobalSorted(ImmutableList.copyOf(semanticPairs))
           .setGlobalExact(frozenGlobalExact.buildOrThrow())

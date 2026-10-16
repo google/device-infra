@@ -22,7 +22,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -31,19 +30,19 @@ import java.util.Set;
  * The per-key numbers the key catalogs need: how many records carry a key, and how many groups a
  * group-by on it would produce.
  *
- * <p>Over the whole corpus both come from {@link Postings#stats} (cached per key per snapshot for
- * core-indexed keys), so opening a dialog or typing in it costs no corpus scan. Over a filtered
- * result set the group count is one pass over that set, which is the price of answering for the
- * data the user is looking at.
+ * <p>Over the whole corpus both come directly from {@link FleetIndex#keyStats}, so opening a dialog
+ * or typing in it costs no corpus scan and never touches {@code Postings}. Over a filtered result
+ * set the group count is one pass over that set, which is the price of answering for the data the
+ * user is looking at.
  */
 final class KeyCounts {
 
   private KeyCounts() {}
 
   /** Number of records carrying each indexed key, from the per-snapshot key statistics. */
-  static ImmutableMap<String, Integer> entityCounts(FleetIndex index, Postings postings) {
+  static ImmutableMap<String, Integer> entityCounts(FleetIndex index) {
     return index.keyIds().stream()
-        .collect(toImmutableMap(keyId -> keyId, keyId -> postings.stats(keyId).entityCount()));
+        .collect(toImmutableMap(keyId -> keyId, keyId -> index.keyStats(keyId).entityCount()));
   }
 
   /**
@@ -59,7 +58,7 @@ final class KeyCounts {
 
   /** Group count of a key over the whole corpus, from the per-snapshot key statistics. */
   static int globalGroupCount(SearchCorpus corpus, String keyId) {
-    return corpus.postings().stats(keyId).groupCount(corpus.recordCount());
+    return corpus.index().keyStats(keyId).groupCount(corpus.recordCount());
   }
 
   /**

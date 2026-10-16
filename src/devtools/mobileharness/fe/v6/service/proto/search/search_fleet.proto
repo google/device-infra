@@ -761,16 +761,18 @@ message FleetColumnCatalogEntry {
   string display_name = 2;
 
   // Superseded by `coverage`, which carries the backend's decision on whether
-  // a count is shown at all. Kept while the backend catalogers and the
-  // Angular client still use it; new code reads `coverage`.
+  // a count is shown at all. Retained as a deprecated field for wire
+  // compatibility; new code reads `coverage`.
   int32 device_count = 3 [deprecated = true];
 
   // Optional context for why this column is suggested (e.g. "in your active
   // filters", "recently used"). Empty for non-suggested sections.
   string reason = 4;
 
-  // What the row shows for this key's coverage. Always set. Same rule as the
-  // filter-key catalog: a count for dimensions, nothing elsewhere.
+  // What the row shows for this key's coverage. Always set. Browse and search
+  // sections follow the same rule as the filter-key catalog (a count for
+  // dimensions, nothing elsewhere); entries in the "Suggested for you" section
+  // set `not_shown` because their right-hand label displays `reason` instead.
   CoverageInfo coverage = 5;
 }
 

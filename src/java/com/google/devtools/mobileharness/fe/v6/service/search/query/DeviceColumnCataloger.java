@@ -17,8 +17,15 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.DIM_TOP;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.PROP_TOP;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SEARCH_LIMIT;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_BUILTIN;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_DIMENSIONS;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_PROPERTIES;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.norm;
 
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -29,20 +36,17 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnC
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogSection;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
-import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
+import com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.DeviceKeyLists;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionCatalogStore;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
-import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
-import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.Comparator;
-import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
-import java.util.Set;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.function.ToIntFunction;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -57,25 +61,21 @@ import javax.inject.Singleton;
  *   <li><b>Dimensions</b>: Custom device dimensions ranked by device coverage, incorporating
  *       discovered dimension names from {@link DimensionCatalogStore}.
  *   <li><b>Host properties</b>: Projected host properties ranked by device coverage.
- *   <li><b>Search results</b>: Matching keys when a search query is provided.
  * </ul>
  */
 @Singleton
 public final class DeviceColumnCataloger {
 
   private static final String SECTION_SUGGESTED = "Suggested for you";
-  private static final String SECTION_BUILTIN = "Built-in fields";
-  private static final String SECTION_DIMENSIONS = "Dimensions";
-  private static final String SECTION_PROPERTIES = "Host properties";
 
   private static final String REASON_ACTIVE_FILTER = "in your active filters";
   private static final String REASON_RECENTLY_USED = "recently used";
 
-  private static final int DIM_TOP = 10;
-  private static final int PROP_TOP = 5;
-  private static final int SEARCH_LIMIT = 50;
+  private record CachedRedundant(
+      ImmutableSet<String> keyIds, int recordCount, ImmutableSet<String> redundant) {}
 
   private final DimensionCatalogStore dimensionCatalogStore;
+  private final ConcurrentMap<Fleet, CachedRedundant> redundantCache = new ConcurrentHashMap<>();
 
   @Inject
   DeviceColumnCataloger(DimensionCatalogStore dimensionCatalogStore) {
@@ -89,116 +89,55 @@ public final class DeviceColumnCataloger {
   /**
    * Builds the complete column catalog for the device entity.
    *
-   * @param corpus the device projection providing the index, postings, and catalog dimensions
+   * @param corpus the device projection providing the index and catalog dimensions
    * @param request the dialog state: an optional query, current filters, and recently used keys
    */
   public FleetColumnCatalogResponse getColumnCatalog(
       DeviceCorpus corpus, FleetColumnCatalogRequest request) {
     FleetIndex index = corpus.index();
-    ImmutableMap<String, Integer> deviceCounts = keyDeviceCounts(index, corpus.postings());
-    ImmutableSet<String> redundant = redundantDims(corpus, index);
-
     Fleet fleet =
         request.getFleet() == Fleet.FLEET_UNSPECIFIED ? Fleet.FLEET_SELF : request.getFleet();
-    ImmutableSet<String> catalogDimensions = dimensionCatalogStore.getDimensionNames(fleet);
-
-    Comparator<String> byCoverage =
-        Comparator.<String>comparingInt(keyId -> -deviceCounts.getOrDefault(keyId, 0))
-            .thenComparing(keyId -> Ascii.toLowerCase(displayName(corpus, keyId)));
-
-    List<String> builtin = new ArrayList<>();
-    List<String> dimensions = new ArrayList<>();
-    List<String> properties = new ArrayList<>();
-    for (String keyId : index.keyIds()) {
-      Optional<DeviceKeyDescriptor> key = corpus.getKey(keyId);
-      if (key.isEmpty()) {
-        continue;
-      }
-      DeviceKeyDescriptor descriptor = key.get();
-      if (descriptor.isDimension()) {
-        if (!redundant.contains(keyId)) {
-          dimensions.add(keyId);
-        }
-      } else if (descriptor.isHostProperty()) {
-        properties.add(keyId);
-      } else {
-        builtin.add(keyId);
-      }
-    }
-
-    // Merge discovered dimension names from catalog store.
-    Set<String> seenDimensions = new HashSet<>(dimensions);
-    for (String dimName : catalogDimensions) {
-      String keyId = DeviceKeys.dimensionKeyId(dimName);
-      if (!redundant.contains(keyId) && seenDimensions.add(keyId)) {
-        dimensions.add(keyId);
-      }
-    }
-
-    builtin.sort(Comparator.comparing(keyId -> Ascii.toLowerCase(displayName(corpus, keyId))));
-    dimensions.sort(byCoverage);
-    properties.sort(byCoverage);
+    ImmutableMap<String, Integer> deviceCounts = KeyCounts.entityCounts(index);
+    DeviceKeyLists keys =
+        KeyCatalogs.deviceKeys(corpus, fleet, dimensionCatalogStore, deviceCounts);
+    ImmutableSet<String> redundant =
+        redundantDims(fleet, corpus, index, keys.builtin(), keys.dimensions());
+    ImmutableList<DeviceKeyDescriptor> dimensions =
+        keys.dimensions().stream()
+            .filter(desc -> !redundant.contains(desc.id()))
+            .collect(toImmutableList());
 
     FleetColumnCatalogResponse.Builder response = FleetColumnCatalogResponse.newBuilder();
-
-    if (!request.getQuery().isEmpty()) {
-      String q = norm(request.getQuery());
-      ImmutableList<String> matchingBuiltin =
-          builtin.stream()
-              .filter(
-                  keyId -> {
-                    String disp = norm(displayName(corpus, keyId));
-                    String bare = norm(bareName(corpus, keyId));
-                    return disp.contains(q) || bare.contains(q);
-                  })
-              .collect(toImmutableList());
-      if (!matchingBuiltin.isEmpty()) {
-        addFullSection(response, corpus, SECTION_BUILTIN, matchingBuiltin, deviceCounts);
-      }
-
-      ImmutableList<String> matchingDims =
-          dimensions.stream()
-              .filter(
-                  keyId -> {
-                    String disp = norm(displayName(corpus, keyId));
-                    String bare = norm(bareName(corpus, keyId));
-                    return disp.contains(q) || bare.contains(q);
-                  })
-              .collect(toImmutableList());
-      if (!matchingDims.isEmpty()) {
-        addTopNSection(
-            response, corpus, SECTION_DIMENSIONS, matchingDims, SEARCH_LIMIT, deviceCounts);
-      }
-
-      ImmutableList<String> matchingProps =
-          properties.stream()
-              .filter(
-                  keyId -> {
-                    String disp = norm(displayName(corpus, keyId));
-                    String bare = norm(bareName(corpus, keyId));
-                    return disp.contains(q) || bare.contains(q);
-                  })
-              .collect(toImmutableList());
-      if (!matchingProps.isEmpty()) {
-        addTopNSection(
-            response, corpus, SECTION_PROPERTIES, matchingProps, SEARCH_LIMIT, deviceCounts);
-      }
-
+    String query = request.getQuery().trim();
+    if (!query.isEmpty()) {
+      String q = norm(query);
+      ToIntFunction<DeviceKeyDescriptor> rank =
+          desc -> KeyCatalogs.matchRank(desc, DeviceKeyDisplays.titleDisplayName(desc), q);
+      addSection(
+          response,
+          SECTION_BUILTIN,
+          KeyCatalogs.searchMatches(keys.builtin(), rank),
+          0,
+          deviceCounts);
+      addSection(
+          response,
+          SECTION_DIMENSIONS,
+          KeyCatalogs.searchMatches(dimensions, rank),
+          SEARCH_LIMIT,
+          deviceCounts);
+      addSection(
+          response,
+          SECTION_PROPERTIES,
+          KeyCatalogs.searchMatches(keys.properties(), rank),
+          SEARCH_LIMIT,
+          deviceCounts);
       return response.build();
     }
 
-    addSuggestedSection(response, corpus, index, deviceCounts, request);
-
-    if (!builtin.isEmpty()) {
-      addFullSection(response, corpus, SECTION_BUILTIN, builtin, deviceCounts);
-    }
-    if (!dimensions.isEmpty()) {
-      addTopNSection(response, corpus, SECTION_DIMENSIONS, dimensions, DIM_TOP, deviceCounts);
-    }
-    if (!properties.isEmpty()) {
-      addTopNSection(response, corpus, SECTION_PROPERTIES, properties, PROP_TOP, deviceCounts);
-    }
-
+    addSuggestedSection(response, corpus, index, request);
+    addSection(response, SECTION_BUILTIN, keys.builtin(), 0, deviceCounts);
+    addSection(response, SECTION_DIMENSIONS, dimensions, DIM_TOP, deviceCounts);
+    addSection(response, SECTION_PROPERTIES, keys.properties(), PROP_TOP, deviceCounts);
     return response.build();
   }
 
@@ -206,7 +145,6 @@ public final class DeviceColumnCataloger {
       FleetColumnCatalogResponse.Builder response,
       DeviceCorpus corpus,
       FleetIndex index,
-      ImmutableMap<String, Integer> deviceCounts,
       FleetColumnCatalogRequest request) {
     ImmutableSet<String> presentKeys = index.keyIds();
     LinkedHashSet<String> added = new LinkedHashSet<>();
@@ -215,15 +153,13 @@ public final class DeviceColumnCataloger {
     for (Filter filter : request.getFiltersList()) {
       String keyId = filter.getKey();
       if (presentKeys.contains(keyId) && added.add(keyId)) {
-        entries.add(
-            entry(corpus, keyId, deviceCounts.getOrDefault(keyId, 0), REASON_ACTIVE_FILTER));
+        entries.add(suggestedEntry(corpus, keyId, REASON_ACTIVE_FILTER));
       }
     }
 
     for (String keyId : request.getRecentKeysList()) {
       if (presentKeys.contains(keyId) && added.add(keyId)) {
-        entries.add(
-            entry(corpus, keyId, deviceCounts.getOrDefault(keyId, 0), REASON_RECENTLY_USED));
+        entries.add(suggestedEntry(corpus, keyId, REASON_RECENTLY_USED));
       }
     }
 
@@ -236,113 +172,98 @@ public final class DeviceColumnCataloger {
     }
   }
 
-  private static void addFullSection(
+  private static void addSection(
       FleetColumnCatalogResponse.Builder response,
-      DeviceCorpus corpus,
       String heading,
-      List<String> keyIds,
-      ImmutableMap<String, Integer> deviceCounts) {
-    FleetColumnCatalogSection.Builder section =
-        FleetColumnCatalogSection.newBuilder().setHeading(heading);
-    for (String keyId : keyIds) {
-      section.addEntries(entry(corpus, keyId, deviceCounts.getOrDefault(keyId, 0), ""));
-    }
-    response.addSections(section);
-  }
-
-  private static void addTopNSection(
-      FleetColumnCatalogResponse.Builder response,
-      DeviceCorpus corpus,
-      String heading,
-      List<String> keyIds,
+      List<DeviceKeyDescriptor> descriptors,
       int limit,
       ImmutableMap<String, Integer> deviceCounts) {
-    int total = keyIds.size();
-    List<String> top = keyIds.subList(0, Math.min(total, limit));
-    FleetColumnCatalogSection.Builder section =
-        FleetColumnCatalogSection.newBuilder().setHeading(heading).setTotalAvailable(total);
-    for (String keyId : top) {
-      section.addEntries(entry(corpus, keyId, deviceCounts.getOrDefault(keyId, 0), ""));
+    if (descriptors.isEmpty()) {
+      return;
     }
+    FleetColumnCatalogSection.Builder section =
+        FleetColumnCatalogSection.newBuilder().setHeading(heading);
+    if (limit > 0) {
+      section.setTotalAvailable(descriptors.size());
+    }
+    descriptors.stream()
+        .limit(limit > 0 ? limit : Long.MAX_VALUE)
+        .map(desc -> entry(desc, deviceCounts.getOrDefault(desc.id(), 0)))
+        .forEach(section::addEntries);
     response.addSections(section);
   }
 
-  private static FleetColumnCatalogEntry entry(
-      DeviceCorpus corpus, String keyId, int deviceCount, String reason) {
-    FleetColumnCatalogEntry.Builder b =
-        FleetColumnCatalogEntry.newBuilder()
-            .setKey(keyId)
-            .setDisplayName(displayName(corpus, keyId))
-            .setDeviceCount(deviceCount);
-    if (!reason.isEmpty()) {
-      b.setReason(reason);
-    }
-    return b.build();
+  private static FleetColumnCatalogEntry entry(DeviceKeyDescriptor desc, int deviceCount) {
+    return FleetColumnCatalogEntry.newBuilder()
+        .setKey(desc.id())
+        .setDisplayName(DeviceKeyDisplays.titleDisplayName(desc))
+        .setCoverage(KeyCatalogs.coverage(desc.isDimension(), deviceCount))
+        .build();
   }
 
-  private static ImmutableSet<String> redundantDims(DeviceCorpus corpus, FleetIndex index) {
-    ImmutableSet.Builder<String> out = ImmutableSet.builder();
-    for (String dimKey : index.keyIds()) {
-      Optional<DeviceKeyDescriptor> key = corpus.getKey(dimKey);
-      if (key.isEmpty() || !key.get().isDimension()) {
+  private static FleetColumnCatalogEntry suggestedEntry(
+      DeviceCorpus corpus, String keyId, String reason) {
+    String displayName =
+        corpus.getKey(keyId).map(DeviceKeyDisplays::titleDisplayName).orElse(keyId);
+    return FleetColumnCatalogEntry.newBuilder()
+        .setKey(keyId)
+        .setDisplayName(displayName)
+        .setCoverage(KeyCatalogs.coverage(false, 0))
+        .setReason(reason)
+        .build();
+  }
+
+  @SuppressWarnings("ReferenceEquality")
+  private ImmutableSet<String> redundantDims(
+      Fleet fleet,
+      DeviceCorpus corpus,
+      FleetIndex index,
+      List<DeviceKeyDescriptor> builtin,
+      List<DeviceKeyDescriptor> dimensions) {
+    ImmutableSet<String> keyIds = index.keyIds();
+    int recordCount = corpus.recordCount();
+    CachedRedundant cached = redundantCache.get(fleet);
+    if (cached != null && cached.keyIds() == keyIds && cached.recordCount() == recordCount) {
+      return cached.redundant();
+    }
+
+    ImmutableMap<String, String> bareToTwin =
+        builtin.stream()
+            .collect(
+                toImmutableMap(
+                    DeviceKeyDescriptor::bareName,
+                    DeviceKeyDescriptor::id,
+                    (first, second) -> first));
+
+    Map<String, String> liveCandidates = new LinkedHashMap<>();
+    for (DeviceKeyDescriptor dim : dimensions) {
+      if (!keyIds.contains(dim.id())) {
         continue;
       }
-      String bare = key.get().bareName();
-      String hostKey = HostKeys.PREFIX_HOST_FIELD + bare;
-      String deviceKey = DeviceKeys.PREFIX_DEVICE_FIELD + bare;
-
-      String twin =
-          index.keyIds().contains(hostKey)
-              ? hostKey
-              : (index.keyIds().contains(deviceKey) ? deviceKey : null);
-      if (twin == null) {
-        continue;
-      }
-
-      int total = corpus.recordCount();
-      boolean allMatch = true;
-      for (int i = 0; i < total; i++) {
-        ImmutableSet<String> dimVals = corpus.valuesForKey(i, dimKey);
-        ImmutableSet<String> twinVals = corpus.valuesForKey(i, twin);
-        if (dimVals.isEmpty()) {
-          continue;
-        }
-        if (!dimVals.equals(twinVals)) {
-          allMatch = false;
-          break;
-        }
-      }
-      if (allMatch) {
-        out.add(dimKey);
+      String twin = bareToTwin.get(dim.bareName());
+      if (twin != null && canMatchInIndex(index, dim.id(), twin)) {
+        liveCandidates.put(dim.id(), twin);
       }
     }
-    return out.build();
-  }
 
-  private static ImmutableMap<String, Integer> keyDeviceCounts(
-      FleetIndex index, Postings postings) {
-    ImmutableMap.Builder<String, Integer> counts = ImmutableMap.builder();
-    for (String keyId : index.keyIds()) {
-      BitSet devices = new BitSet();
-      for (int[] posting : postings.forKey(keyId).values()) {
-        for (int deviceIndex : posting) {
-          devices.set(deviceIndex);
+    for (int i = 0; i < recordCount && !liveCandidates.isEmpty(); i++) {
+      Iterator<Map.Entry<String, String>> it = liveCandidates.entrySet().iterator();
+      while (it.hasNext()) {
+        Map.Entry<String, String> candidate = it.next();
+        ImmutableSet<String> dimVals = corpus.valuesForKey(i, candidate.getKey());
+        if (!dimVals.isEmpty() && !dimVals.equals(corpus.valuesForKey(i, candidate.getValue()))) {
+          it.remove();
         }
       }
-      counts.put(keyId, devices.cardinality());
     }
-    return counts.buildOrThrow();
+
+    ImmutableSet<String> redundant = ImmutableSet.copyOf(liveCandidates.keySet());
+    redundantCache.put(fleet, new CachedRedundant(keyIds, recordCount, redundant));
+    return redundant;
   }
 
-  private static String displayName(DeviceCorpus corpus, String keyId) {
-    return corpus.getKey(keyId).map(DeviceKeyDisplays::titleDisplayName).orElse(keyId);
-  }
-
-  private static String bareName(DeviceCorpus corpus, String keyId) {
-    return corpus.getKey(keyId).map(DeviceKeyDescriptor::bareName).orElse(keyId);
-  }
-
-  private static String norm(String s) {
-    return s.toLowerCase(Locale.ROOT).replace('_', ' ').trim();
+  private static boolean canMatchInIndex(FleetIndex index, String dimKey, String twin) {
+    return index.valueCounts(dimKey).entrySet().stream()
+        .allMatch(entry -> index.valueCount(twin, entry.getKey()) >= entry.getValue());
   }
 }

@@ -28,8 +28,6 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCa
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.CoverageInfo;
-import com.google.devtools.mobileharness.fe.v6.service.proto.search.CoverageInfo.CoverageNotShown;
-import com.google.devtools.mobileharness.fe.v6.service.proto.search.CoverageInfo.CoverageShown;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterChipMetadata;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterKeyCatalogRequest;
@@ -99,8 +97,7 @@ public final class FleetFilterKeyCataloger {
    */
   private FleetFilterKeyCatalogResponse getDeviceCatalog(
       DeviceCorpus corpus, FleetFilterKeyCatalogRequest request) {
-    ImmutableMap<String, Integer> deviceCounts =
-        KeyCounts.entityCounts(corpus.index(), corpus.postings());
+    ImmutableMap<String, Integer> deviceCounts = KeyCounts.entityCounts(corpus.index());
     ImmutableSet<String> appliedKeys =
         request.getFiltersList().stream().map(Filter::getKey).collect(toImmutableSet());
     DeviceKeyLists keys =
@@ -154,8 +151,7 @@ public final class FleetFilterKeyCataloger {
    */
   private FleetFilterKeyCatalogResponse getHostCatalog(
       HostCorpus corpus, FleetFilterKeyCatalogRequest request) {
-    ImmutableMap<String, Integer> hostCounts =
-        KeyCounts.entityCounts(corpus.index(), corpus.postings());
+    ImmutableMap<String, Integer> hostCounts = KeyCounts.entityCounts(corpus.index());
     ImmutableSet<String> appliedKeys =
         request.getFiltersList().stream().map(Filter::getKey).collect(toImmutableSet());
     HostKeyLists keys = KeyCatalogs.hostKeys(corpus, hostCounts);
@@ -266,12 +262,12 @@ public final class FleetFilterKeyCataloger {
                 .setKeyDisplayName(DeviceKeyDisplays.titleDisplayName(desc))
                 .setCanUseAdvanced(true)
                 .setIsPlural(desc.display().isPlural()))
-        .setCoverage(coverage(desc.isDimension(), deviceCount))
+        .setCoverage(KeyCatalogs.coverage(desc.isDimension(), deviceCount))
         .setApplied(applied)
         .build();
   }
 
-  /** One host row. Host search shows no coverage for any key; see {@link #coverage}. */
+  /** One host row. Host search shows no coverage for any key. */
   private static FleetFilterKeyEntry hostEntry(HostKeyDescriptor desc, boolean applied) {
     return FleetFilterKeyEntry.newBuilder()
         .setKey(desc.id())
@@ -280,20 +276,8 @@ public final class FleetFilterKeyCataloger {
                 .setKeyDisplayName(HostKeyDisplays.titleDisplayName(desc))
                 .setCanUseAdvanced(true)
                 .setIsPlural(desc.display().isPlural()))
-        .setCoverage(coverage(false, 0))
+        .setCoverage(KeyCatalogs.coverage(false, 0))
         .setApplied(applied)
         .build();
-  }
-
-  /**
-   * A count is shown for an indexed dimension only. Built-in fields are on every entity, host
-   * properties measure their hosts rather than themselves, and a catalog-only dimension has no
-   * values in the snapshot to count.
-   */
-  private static CoverageInfo coverage(boolean isDimension, int count) {
-    if (isDimension && count > 0) {
-      return CoverageInfo.newBuilder().setShown(CoverageShown.newBuilder().setCount(count)).build();
-    }
-    return CoverageInfo.newBuilder().setNotShown(CoverageNotShown.getDefaultInstance()).build();
   }
 }

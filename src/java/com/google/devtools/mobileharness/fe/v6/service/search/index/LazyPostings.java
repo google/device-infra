@@ -38,9 +38,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * machinery serves both:
  *
  * <ul>
- *   <li>Device search (via {@link #LazyPostings(ImmutableList)}, backed by {@link
- *       DeviceValueExtractor})
- *   <li>Host search (via {@link #forHosts(ImmutableList)}, backed by {@link HostValueExtractor})
+ *   <li>Device search (via {@link #LazyPostings(ImmutableList)}, backed by {@link DeviceRecord})
+ *   <li>Host search (via {@link #forHosts(ImmutableList)}, backed by {@link HostRecord})
  * </ul>
  *
  * The scan visits records in ascending index order, so a posting list is always sorted, and the
@@ -68,7 +67,6 @@ public final class LazyPostings implements Postings {
   private final RecordValues source;
   private final ConcurrentHashMap<String, ImmutableMap<String, int[]>> cache =
       new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<String, KeyStats> statsCache = new ConcurrentHashMap<>();
 
   public LazyPostings(RecordValues source) {
     this.source = source;
@@ -118,16 +116,6 @@ public final class LazyPostings implements Postings {
   @Override
   public ImmutableMap<String, int[]> forKey(String keyId) {
     return cache.computeIfAbsent(keyId, this::buildKeyPostings);
-  }
-
-  /**
-   * Computes or returns the cached statistics of a key. A single-valued key is summarized from its
-   * posting lists alone; a multi-valued key additionally visits the records that carry it, once.
-   */
-  @Override
-  public KeyStats stats(String keyId) {
-    return statsCache.computeIfAbsent(
-        keyId, id -> KeyStats.compute(forKey(id), index -> source.valuesForKey(index, id)));
   }
 
   private ImmutableMap<String, int[]> buildKeyPostings(String keyId) {

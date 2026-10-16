@@ -525,6 +525,144 @@ public final class FleetIndexBuilderTest {
     assertThat(index.valueCount("dimension::os", "")).isEqualTo(0);
   }
 
+  @Test
+  public void build_computesKeyStatsOnDeviceAndHostIndices() {
+    DeviceInfo d0 =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("d0"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .addOwner("Alice")
+                    .addOwner("Bob")
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(dimension("tag", "X"))
+                            .addSupportedDimension(dimension("tag", "x"))
+                            .addSupportedDimension(dimension("roles", "primary"))
+                            .addSupportedDimension(dimension("roles", "secondary"))
+                            .addSupportedDimension(dimension("h1_multi", "solo"))))
+            .build();
+    DeviceInfo d1 =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("d1"))
+            .setDeviceStatus(DeviceStatus.BUSY)
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .addOwner("carol")
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(dimension("tag", "x"))
+                            .addSupportedDimension(dimension("tag", "y"))
+                            .addSupportedDimension(dimension("roles", "Solo"))
+                            .addSupportedDimension(dimension("roles", "solo"))))
+            .build();
+    DeviceInfo d2 =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("d2"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .addOwner("bob")
+                    .addOwner("alice")
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(dimension("tag", "z"))
+                            .addSupportedDimension(dimension("h1_multi", "m1"))
+                            .addSupportedDimension(dimension("h1_multi", "m2"))))
+            .build();
+
+    LabQueryResult labResult =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(2)
+                    .addLabData(
+                        labData(
+                            "h0",
+                            "1.1.1.1",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.newBuilder()
+                                .addHostProperty(prop("location", "mtv"))
+                                .addHostProperty(prop("empty_only", ""))
+                                .build(),
+                            d0,
+                            d1))
+                    .addLabData(
+                        labData(
+                            "h1",
+                            "2.2.2.2",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.newBuilder()
+                                .addHostProperty(prop("location", "sjc"))
+                                .build(),
+                            d2)))
+            .build();
+
+    CoreFleetRawData raw =
+        CoreFleetRawData.builder()
+            .setLabData(labResult)
+            .setHostEnrichments(
+                ImmutableMap.of(
+                    "h0",
+                    HostEnrichment.builder()
+                        .setHostFields(
+                            ImmutableMap.of(
+                                "host_field::empty_list", ImmutableList.of(),
+                                "host_field::empty_multi", ImmutableList.of("", "")))
+                        .build()))
+            .build();
+
+    FleetSnapshot snapshot = builder.build(raw, BUILD_TIME);
+    FleetIndex deviceIndex = snapshot.index();
+    assertThat(deviceIndex.keyStats("device_field::status")).isEqualTo(new KeyStats(3, 2));
+    assertThat(deviceIndex.keyStats("device_field::owner")).isEqualTo(new KeyStats(3, 2));
+    assertThat(deviceIndex.keyStats("dimension::tag")).isEqualTo(new KeyStats(3, 3));
+    assertThat(deviceIndex.keyStats("dimension::roles")).isEqualTo(new KeyStats(2, 2));
+    assertThat(deviceIndex.keyStats("dimension::h1_multi")).isEqualTo(new KeyStats(2, 2));
+    assertThat(deviceIndex.keyStats("host_property::empty_only")).isEqualTo(KeyStats.EMPTY);
+    assertThat(deviceIndex.keyStats("host_field::empty_list")).isEqualTo(KeyStats.EMPTY);
+    assertThat(deviceIndex.keyStats("host_field::empty_multi")).isEqualTo(KeyStats.EMPTY);
+    assertThat(deviceIndex.keyStats("dimension::absent")).isEqualTo(KeyStats.EMPTY);
+
+    FleetIndex hostIndex = snapshot.hostIndex();
+    assertThat(hostIndex.keyStats("host_property::location")).isEqualTo(new KeyStats(2, 2));
+    assertThat(hostIndex.keyStats("host_property::empty_only")).isEqualTo(KeyStats.EMPTY);
+    assertThat(hostIndex.keyStats("host_field::empty_list")).isEqualTo(KeyStats.EMPTY);
+    assertThat(hostIndex.keyStats("host_field::empty_multi")).isEqualTo(KeyStats.EMPTY);
+    assertThat(hostIndex.keyStats("host_property::absent")).isEqualTo(KeyStats.EMPTY);
+  }
+
+  @Test
+  public void
+      accumulatorMergeFrom_reconcilesSingleAndMultiValueCombinationsAcrossNonEmptyAccumulators() {
+    FleetIndexBuilder.Accumulator first = new FleetIndexBuilder.Accumulator();
+    // "dimension::multi_in_first" is multi-valued in `first` and single-valued in `second`.
+    first.addKeyValues("dimension::multi_in_first", ImmutableList.of("a", "b"));
+    first.addKeyValues("dimension::multi_in_first", ImmutableList.of("c"));
+    // "dimension::multi_in_second" is single-valued in `first` and multi-valued in `second`.
+    first.addKeyValues("dimension::multi_in_second", ImmutableList.of("x"));
+    // "dimension::single_only" is single-valued in both accumulators.
+    first.addKeyValues("dimension::single_only", ImmutableList.of("s1"));
+
+    FleetIndexBuilder.Accumulator second = new FleetIndexBuilder.Accumulator();
+    second.addKeyValues("dimension::multi_in_first", ImmutableList.of("a"));
+    second.addKeyValues("dimension::multi_in_second", ImmutableList.of("y", "z"));
+    second.addKeyValues("dimension::multi_in_second", ImmutableList.of("y"));
+    second.addKeyValues("dimension::single_only", ImmutableList.of("s2"));
+
+    first.mergeFrom(second);
+    FleetIndex mergedIndex = first.toIndex();
+
+    // combinations for multi_in_first: {"a", "b"}, {"c"}, {"a"} -> 3 combinations across 3 records.
+    assertThat(mergedIndex.keyStats("dimension::multi_in_first")).isEqualTo(new KeyStats(3, 3));
+    // combinations for multi_in_second: {"x"}, {"y", "z"}, {"y"} -> 3 combinations across 3
+    // records.
+    assertThat(mergedIndex.keyStats("dimension::multi_in_second")).isEqualTo(new KeyStats(3, 3));
+    // combinations for single_only: {"s1"}, {"s2"} -> 2 combinations across 2 records.
+    assertThat(mergedIndex.keyStats("dimension::single_only")).isEqualTo(new KeyStats(2, 2));
+  }
+
   private static LabData labData(
       String hostName,
       String ip,

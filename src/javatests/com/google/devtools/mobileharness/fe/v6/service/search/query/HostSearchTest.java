@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Cell;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Column;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.CoverageInfo.DisplayCase;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FilterValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogEntry;
@@ -343,10 +344,10 @@ public final class HostSearchTest {
             "host_field::connectivity",
             "host_field::device_count",
             "host_field::lab_server_version");
-    // The device count column is offered, named, and carries the per-key host count.
+    // The device count column is offered and named; host catalog entries do not show coverage.
     FleetColumnCatalogEntry deviceCount = entryByKey(builtin, "host_field::device_count");
     assertThat(deviceCount.getDisplayName()).isEqualTo("Device Count");
-    assertThat(deviceCount.getDeviceCount()).isEqualTo(3);
+    assertThat(deviceCount.getCoverage().getDisplayCase()).isEqualTo(DisplayCase.NOT_SHOWN);
   }
 
   // --- Helpers ---

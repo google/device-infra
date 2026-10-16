@@ -43,6 +43,9 @@ public interface OverlayView {
   /** Value count for a specific (key, value), or 0 if absent. */
   int valueCount(String keyId, String value);
 
+  /** Whole-corpus statistics for an overlay key aligned to the bound snapshot. */
+  KeyStats keyStats(String keyId);
+
   /** Posting list for a specific (key, value), or empty array if absent. */
   int[] getPostings(String keyId, String value);
 
@@ -110,6 +113,12 @@ public interface OverlayView {
     public int valueCount(String keyId, String value) {
       DimensionOverlay overlay = overlays.get(keyId);
       return overlay != null ? overlay.valueCount(value) : 0;
+    }
+
+    @Override
+    public KeyStats keyStats(String keyId) {
+      DimensionOverlay overlay = overlays.get(keyId);
+      return overlay != null ? overlay.bind(snapshot).stats() : KeyStats.EMPTY;
     }
 
     @Override
@@ -183,6 +192,11 @@ public interface OverlayView {
     @Override
     public int valueCount(String keyId, String value) {
       return 0;
+    }
+
+    @Override
+    public KeyStats keyStats(String keyId) {
+      return KeyStats.EMPTY;
     }
 
     @Override

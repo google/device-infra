@@ -79,4 +79,50 @@ public final class DimensionOverlayTest {
     assertThat(boundB.get("verizon")).asList().containsExactly(1, 5).inOrder();
     assertThat(boundB.get("t-mobile")).isEmpty(); // uuid-2 was dropped safely
   }
+
+  @Test
+  public void bind_and_overlayView_computesKeyStatsAndExcludesAbsentUuids() {
+    DimensionOverlayRaw raw =
+        DimensionOverlayRaw.create(
+            "dimension::tag",
+            ImmutableMap.of(
+                "uuid-1", ImmutableList.of("Alpha", "alpha"),
+                "uuid-2", ImmutableList.of("Alpha", "Beta"),
+                "uuid-3", ImmutableList.of("beta", "alpha"),
+                "uuid-empty", ImmutableList.of(""),
+                "uuid-absent", ImmutableList.of("Gamma")));
+
+    FleetSnapshot snapshotA =
+        FleetSnapshot.builder()
+            .setBuildTime(Instant.ofEpochSecond(1000))
+            .setDevices(ImmutableList.of())
+            .setHosts(ImmutableList.of())
+            .setIndex(CoreFleetIndex.empty())
+            .setHostIndex(CoreFleetIndex.empty())
+            .setUuidToIndex(ImmutableMap.of("uuid-1", 0, "uuid-2", 1, "uuid-3", 2, "uuid-empty", 3))
+            .build();
+
+    DimensionOverlay overlay = DimensionOverlay.create(raw, snapshotA);
+    // 3 carrying devices in snapshotA (uuid-1, uuid-2, uuid-3); 2 distinct combinations:
+    // {"alpha"} and {"alpha", "beta"}. uuid-empty and uuid-absent are excluded.
+    assertThat(overlay.bind(snapshotA).stats()).isEqualTo(new KeyStats(3, 2));
+
+    OverlayView viewA = OverlayView.bind(snapshotA, ImmutableMap.of("dimension::tag", overlay));
+    assertThat(viewA.keyStats("dimension::tag")).isEqualTo(new KeyStats(3, 2));
+    assertThat(viewA.keyStats("dimension::unknown")).isEqualTo(KeyStats.EMPTY);
+
+    FleetSnapshot snapshotB =
+        FleetSnapshot.builder()
+            .setBuildTime(Instant.ofEpochSecond(2000))
+            .setDevices(ImmutableList.of())
+            .setHosts(ImmutableList.of())
+            .setIndex(CoreFleetIndex.empty())
+            .setHostIndex(CoreFleetIndex.empty())
+            .setUuidToIndex(ImmutableMap.of("uuid-1", 0))
+            .build();
+
+    assertThat(overlay.bind(snapshotB).stats()).isEqualTo(new KeyStats(1, 1));
+    OverlayView viewB = OverlayView.bind(snapshotB, ImmutableMap.of("dimension::tag", overlay));
+    assertThat(viewB.keyStats("dimension::tag")).isEqualTo(new KeyStats(1, 1));
+  }
 }

@@ -126,8 +126,7 @@ public final class FleetGroupByKeyCataloger {
   private FleetGroupByKeyCatalogResponse getDeviceCatalog(
       DeviceCorpus corpus, FleetGroupByKeyCatalogRequest request) {
     ImmutableSet<String> indexedKeys = corpus.index().keyIds();
-    ImmutableMap<String, Integer> deviceCounts =
-        KeyCounts.entityCounts(corpus.index(), corpus.postings());
+    ImmutableMap<String, Integer> deviceCounts = KeyCounts.entityCounts(corpus.index());
 
     ImmutableList<DeviceKeyDescriptor> suggested =
         Optional.ofNullable(corpus.curation())
@@ -160,8 +159,7 @@ public final class FleetGroupByKeyCataloger {
   private FleetGroupByKeyCatalogResponse getHostCatalog(
       HostCorpus corpus, FleetGroupByKeyCatalogRequest request) {
     ImmutableSet<String> indexedKeys = corpus.index().keyIds();
-    ImmutableMap<String, Integer> hostCounts =
-        KeyCounts.entityCounts(corpus.index(), corpus.postings());
+    ImmutableMap<String, Integer> hostCounts = KeyCounts.entityCounts(corpus.index());
 
     ImmutableList<HostKeyDescriptor> suggested =
         Optional.ofNullable(corpus.curation())

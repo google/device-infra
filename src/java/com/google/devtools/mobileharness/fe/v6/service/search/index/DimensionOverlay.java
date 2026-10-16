@@ -125,6 +125,9 @@ public final class DimensionOverlay {
   private SnapshotBoundPostings reindex(FleetSnapshot snapshot) {
     ImmutableMap<String, Integer> uuidToIndex = snapshot.uuidToIndex();
     Map<String, List<Integer>> postingsMap = new HashMap<>();
+    int entityCount = 0;
+    Set<String> singleCombinations = new HashSet<>();
+    Set<ImmutableSet<String>> multiCombinations = new HashSet<>();
 
     for (Map.Entry<String, ImmutableList<String>> entry : uuidToValues.entrySet()) {
       String uuid = entry.getKey();
@@ -139,6 +142,14 @@ public final class DimensionOverlay {
           postingsMap.computeIfAbsent(valLower, k -> new ArrayList<>()).add(deviceIndex);
         }
       }
+      if (!seenValues.isEmpty()) {
+        entityCount++;
+        if (seenValues.size() == 1) {
+          singleCombinations.add(seenValues.iterator().next());
+        } else {
+          multiCombinations.add(ImmutableSet.copyOf(seenValues));
+        }
+      }
     }
 
     ImmutableMap.Builder<String, int[]> frozen = ImmutableMap.builder();
@@ -147,7 +158,9 @@ public final class DimensionOverlay {
       Collections.sort(list);
       frozen.put(entry.getKey(), Ints.toArray(list));
     }
-    return new SnapshotBoundPostings(snapshot.buildTime(), frozen.buildOrThrow());
+    KeyStats stats =
+        new KeyStats(entityCount, singleCombinations.size() + multiCombinations.size());
+    return new SnapshotBoundPostings(snapshot.buildTime(), frozen.buildOrThrow(), stats);
   }
 
   /** Builds a {@link DimensionOverlay} from raw pulled data and initial snapshot. */
@@ -181,7 +194,7 @@ public final class DimensionOverlay {
             ImmutableMap.copyOf(valueCounts),
             ImmutableList.copyOf(sortedList),
             ImmutableMap.copyOf(valueDisplays),
-            new SnapshotBoundPostings(Instant.EPOCH, ImmutableMap.of()));
+            new SnapshotBoundPostings(Instant.EPOCH, ImmutableMap.of(), KeyStats.EMPTY));
 
     // Bind to the given snapshot immediately.
     overlay.bind(snapshot);
@@ -192,10 +205,12 @@ public final class DimensionOverlay {
   public static final class SnapshotBoundPostings {
     private final Instant buildTime;
     private final ImmutableMap<String, int[]> postings;
+    private final KeyStats stats;
 
-    SnapshotBoundPostings(Instant buildTime, ImmutableMap<String, int[]> postings) {
+    SnapshotBoundPostings(Instant buildTime, ImmutableMap<String, int[]> postings, KeyStats stats) {
       this.buildTime = buildTime;
       this.postings = postings;
+      this.stats = stats;
     }
 
     public Instant buildTime() {
@@ -209,6 +224,10 @@ public final class DimensionOverlay {
 
     public ImmutableMap<String, int[]> postings() {
       return postings;
+    }
+
+    public KeyStats stats() {
+      return stats;
     }
 
     private static final int[] EMPTY_POSTING = new int[0];

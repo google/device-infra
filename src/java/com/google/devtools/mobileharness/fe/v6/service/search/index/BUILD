@@ -94,6 +94,7 @@ java_library(
     ],
     deps = [
         ":key_count",
+        ":key_stats",
         ":value_key_pair",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_guava_guava",
@@ -103,14 +104,12 @@ java_library(
 java_library(
     name = "key_stats",
     srcs = ["KeyStats.java"],
-    deps = ["@maven//:com_google_guava_guava"],
 )
 
 java_library(
     name = "postings",
     srcs = ["Postings.java"],
     deps = [
-        ":key_stats",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -121,7 +120,6 @@ java_library(
     deps = [
         ":device_record",
         ":host_record",
-        ":key_stats",
         ":postings",
         "@maven//:com_google_guava_guava",
     ],
@@ -151,6 +149,7 @@ java_library(
         ":host_enrichment",
         ":host_record",
         ":key_count",
+        ":key_stats",
         ":value_key_pair",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
@@ -169,6 +168,7 @@ java_library(
     srcs = ["DimensionOverlay.java"],
     deps = [
         ":fleet_snapshot",
+        ":key_stats",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:dimension_overlay_raw",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
@@ -181,6 +181,7 @@ java_library(
     deps = [
         ":dimension_overlay",
         ":fleet_snapshot",
+        ":key_stats",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -191,6 +192,7 @@ java_library(
     deps = [
         ":fleet_index",
         ":key_count",
+        ":key_stats",
         ":overlay_view",
         ":value_key_pair",
         "@maven//:com_google_guava_guava",
@@ -201,7 +203,6 @@ java_library(
     name = "composite_postings",
     srcs = ["CompositePostings.java"],
     deps = [
-        ":key_stats",
         ":overlay_view",
         ":postings",
         "@maven//:com_google_guava_guava",

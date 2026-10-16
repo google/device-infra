@@ -37,10 +37,18 @@ public final class CompositeFleetIndex implements FleetIndex {
 
   private final FleetIndex core;
   private final OverlayView overlay;
+  private final ImmutableSet<String> keyIds;
 
   public CompositeFleetIndex(FleetIndex core, OverlayView overlay) {
     this.core = checkNotNull(core);
     this.overlay = checkNotNull(overlay);
+    this.keyIds =
+        overlay.loadedKeys().isEmpty()
+            ? core.keyIds()
+            : ImmutableSet.<String>builder()
+                .addAll(core.keyIds())
+                .addAll(overlay.loadedKeys())
+                .build();
   }
 
   @Override
@@ -76,11 +84,16 @@ public final class CompositeFleetIndex implements FleetIndex {
   }
 
   @Override
+  public KeyStats keyStats(String keyId) {
+    if (overlay.containsKey(keyId)) {
+      return overlay.keyStats(keyId);
+    }
+    return core.keyStats(keyId);
+  }
+
+  @Override
   public ImmutableSet<String> keyIds() {
-    return ImmutableSet.<String>builder()
-        .addAll(core.keyIds())
-        .addAll(overlay.loadedKeys())
-        .build();
+    return keyIds;
   }
 
   @Override

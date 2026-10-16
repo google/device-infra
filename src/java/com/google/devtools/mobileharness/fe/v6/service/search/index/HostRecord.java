@@ -51,7 +51,15 @@ public abstract class HostRecord {
 
   /** Returns the lowercased normalized value set for indexing and search matching. */
   public ImmutableSet<String> normalizedValues(String keyId) {
-    return values(keyId).stream()
+    ImmutableList<String> raw = values(keyId);
+    if (raw.isEmpty()) {
+      return ImmutableSet.of();
+    }
+    if (raw.size() == 1) {
+      String single = raw.get(0);
+      return single.isEmpty() ? ImmutableSet.of() : ImmutableSet.of(Ascii.toLowerCase(single));
+    }
+    return raw.stream()
         .filter(value -> !value.isEmpty())
         .map(Ascii::toLowerCase)
         .collect(toImmutableSet());

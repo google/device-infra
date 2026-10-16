@@ -39,6 +39,9 @@ public abstract class CoreFleetIndex implements FleetIndex {
   /** Internal map: key id to (normalized value to first-seen original display value). */
   public abstract ImmutableMap<String, ImmutableMap<String, String>> valueDisplaysMap();
 
+  /** Internal map: key id to whole-corpus key statistics. */
+  public abstract ImmutableMap<String, KeyStats> keyStatsMap();
+
   @Override
   public ImmutableList<String> sortedValues(String keyId) {
     ImmutableList<String> values = sortedValuesMap().get(keyId);
@@ -64,6 +67,11 @@ public abstract class CoreFleetIndex implements FleetIndex {
   }
 
   @Override
+  public KeyStats keyStats(String keyId) {
+    return keyStatsMap().getOrDefault(keyId, KeyStats.EMPTY);
+  }
+
+  @Override
   public abstract ImmutableSet<String> keyIds();
 
   @Override
@@ -83,6 +91,7 @@ public abstract class CoreFleetIndex implements FleetIndex {
         .setValueCountsMap(ImmutableMap.of())
         .setSortedValuesMap(ImmutableMap.of())
         .setValueDisplaysMap(ImmutableMap.of())
+        .setKeyStatsMap(ImmutableMap.of())
         .setKeyIds(ImmutableSet.of())
         .setSemanticGlobalSorted(ImmutableList.of())
         .setGlobalExact(ImmutableMap.of())
@@ -100,6 +109,8 @@ public abstract class CoreFleetIndex implements FleetIndex {
 
     public abstract Builder setValueDisplaysMap(
         ImmutableMap<String, ImmutableMap<String, String>> valueDisplays);
+
+    public abstract Builder setKeyStatsMap(ImmutableMap<String, KeyStats> keyStats);
 
     public abstract Builder setKeyIds(ImmutableSet<String> keyIds);
 

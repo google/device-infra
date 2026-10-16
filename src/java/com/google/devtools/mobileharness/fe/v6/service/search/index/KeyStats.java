@@ -16,21 +16,14 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.index;
 
-import com.google.common.collect.ImmutableMap;
-import java.util.BitSet;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.function.IntFunction;
-
 /**
- * Whole-corpus statistics for one key, derived from its posting lists.
+ * Whole-corpus statistics for one key, exposed by {@link FleetIndex#keyStats(String)}.
  *
  * <p>These are the numbers the key catalogs ask for an unfiltered corpus: how many records carry
  * the key at all (coverage), and how many distinct value combinations it takes (the groups a
- * group-by on the key would produce, before the no-value bucket). For a single-valued key each
- * distinct value is its own combination, and the whole record is derived from the posting lists
- * alone. Only a multi-valued key (one where some record carries several values, such as owner or
- * driver) needs a pass over the records that carry it to count combinations.
+ * group-by on the key would produce, before the no-value bucket). {@link FleetIndexBuilder}
+ * computes them during the index build pass for core keys, and {@link DimensionOverlay} computes
+ * them when binding an on-demand dimension overlay to a snapshot.
  *
  * @param entityCount number of records carrying at least one value for the key
  * @param distinctCombinations number of distinct value sets across the records carrying the key
@@ -51,34 +44,5 @@ public record KeyStats(int entityCount, int distinctCombinations) {
    */
   public int groupCount(int recordCount) {
     return distinctCombinations + (hasMissing(recordCount) ? 1 : 0);
-  }
-
-  /**
-   * Computes the statistics of a key from its posting lists.
-   *
-   * @param postings the key's posting lists, value to ascending record indices
-   * @param valuesForKey the lowercased value set a record carries for the key, consulted only for a
-   *     multi-valued key and only for the records that carry it
-   */
-  public static KeyStats compute(
-      ImmutableMap<String, int[]> postings, IntFunction<Set<String>> valuesForKey) {
-    BitSet carriers = new BitSet();
-    long totalPostings = 0;
-    for (int[] posting : postings.values()) {
-      for (int recordIndex : posting) {
-        carriers.set(recordIndex);
-      }
-      totalPostings += posting.length;
-    }
-    int entityCount = carriers.cardinality();
-    if (totalPostings == entityCount) {
-      // Every carrying record holds at most one value, so each value is its own combination.
-      return new KeyStats(entityCount, postings.size());
-    }
-    Set<Set<String>> combinations = new HashSet<>();
-    for (int i = carriers.nextSetBit(0); i >= 0; i = carriers.nextSetBit(i + 1)) {
-      combinations.add(valuesForKey.apply(i));
-    }
-    return new KeyStats(entityCount, combinations.size());
   }
 }

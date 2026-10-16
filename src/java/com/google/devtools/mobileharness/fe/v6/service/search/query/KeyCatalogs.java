@@ -23,6 +23,9 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Streams;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.CoverageInfo;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.CoverageInfo.CoverageNotShown;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.CoverageInfo.CoverageShown;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionCatalogStore;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
@@ -35,9 +38,9 @@ import java.util.Optional;
 import java.util.function.ToIntFunction;
 
 /**
- * What the Add filter and Add group-by dialogs have in common: section headings, candidate key
- * partitioning and sorting, how many entries a long-tail section shows in browse and search mode,
- * and how a typed query matches a key.
+ * Shared key catalog logic across the Configure columns, Add filter, and Add group-by dialogs:
+ * section headings, candidate key partitioning and sorting, coverage display decisions, how many
+ * entries a long-tail section shows in browse and search mode, and how a typed query matches a key.
  */
 final class KeyCatalogs {
 
@@ -47,6 +50,9 @@ final class KeyCatalogs {
   static final String SECTION_BUILTIN = "Built-in fields";
   static final String SECTION_DIMENSIONS = "Dimensions";
   static final String SECTION_PROPERTIES = "Host properties";
+
+  private static final CoverageInfo COVERAGE_NOT_SHOWN =
+      CoverageInfo.newBuilder().setNotShown(CoverageNotShown.getDefaultInstance()).build();
 
   /**
    * Dimensions shown in browse mode: the most common ones, by device coverage. Deliberately short:
@@ -178,6 +184,17 @@ final class KeyCatalogs {
             .collect(toImmutableList());
 
     return new HostKeyLists(builtin, properties);
+  }
+
+  /**
+   * Builds the {@link CoverageInfo} display decision: shown when {@code showCount} is true and
+   * {@code count} is positive, not shown otherwise.
+   */
+  static CoverageInfo coverage(boolean showCount, int count) {
+    if (showCount && count > 0) {
+      return CoverageInfo.newBuilder().setShown(CoverageShown.newBuilder().setCount(count)).build();
+    }
+    return COVERAGE_NOT_SHOWN;
   }
 
   /** Lowercased, underscores read as spaces, so "lab_location" and "Lab Location" compare equal. */

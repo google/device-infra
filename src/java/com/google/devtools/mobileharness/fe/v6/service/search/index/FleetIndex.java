@@ -50,6 +50,12 @@ public interface FleetIndex {
   /** Returns the device/record count for a value, or 0 if the key or value is absent. */
   int valueCount(String keyId, String value);
 
+  /**
+   * Returns whole-corpus statistics (entity coverage and distinct value combinations) for a key, or
+   * {@link KeyStats#EMPTY} if the key is absent.
+   */
+  KeyStats keyStats(String keyId);
+
   /** Returns all key ids available in this index. */
   ImmutableSet<String> keyIds();
 
