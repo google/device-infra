@@ -150,4 +150,8 @@ message DeviceCondition {
 
   // Optional. The timestamp of the last time when the device was healthy.
   google.protobuf.Timestamp last_healthy_time = 3;
+
+  // Optional. The timestamp of the last time when the device status was
+  // modified.
+  google.protobuf.Timestamp status_modify_time = 4;
 }
