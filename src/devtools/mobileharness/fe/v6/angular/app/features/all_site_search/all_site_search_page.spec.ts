@@ -205,6 +205,9 @@ describe('AllSiteSearchPage', () => {
       By.css('[data-action="try-any-id"]'),
     );
     expect(tryAnyBtn).toBeTruthy();
+    expect(tryAnyBtn.nativeElement.getAttribute('href')).toContain(
+      '/search?fake_data=true&q=host-name-for-ambiguous-1',
+    );
     tryAnyBtn.nativeElement.click();
 
     expect(navSpy).toHaveBeenCalledWith(['/search'], {
@@ -213,6 +216,14 @@ describe('AllSiteSearchPage', () => {
         'q': 'host-name-for-ambiguous-1',
       },
     });
+  });
+
+  it('throws an error when scopedFallbackNavConfig is evaluated under any scope', () => {
+    fixture.detectChanges();
+    expect(component.scope()).toBe('any');
+    expect(() => component.scopedFallbackNavConfig()).toThrowError(
+      /Missing searchPageType for scope: any/,
+    );
   });
 
   it('shows an error snackbar, renders the error card, and supports Retry when resolveAllSiteQuery fails', () => {

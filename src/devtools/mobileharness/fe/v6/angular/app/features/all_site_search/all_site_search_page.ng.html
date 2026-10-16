@@ -58,11 +58,12 @@
                     >arrow_forward</span
                   >
                 </a>
-                <button
-                  type="button"
+                <a
+                  app-nav-link
                   class="m3-entity-assist-chip"
                   data-action="try-any-id"
-                  (click)="tryAcrossAnyId()"
+                  [config]="{type: 'all_site_search'}"
+                  [customQueryParams]="fallbackQueryParams()"
                 >
                   <span class="material-symbols-outlined chip-lead-icon"
                     >travel_explore</span
@@ -71,7 +72,7 @@
                   <span class="material-symbols-outlined chip-trail-icon"
                     >arrow_forward</span
                   >
-                </button>
+                </a>
               } @else {
                 @for (chip of fallbackChips; track chip.key) {
                   <a
@@ -183,11 +184,12 @@
                   >arrow_forward</span
                 >
               </a>
-              <button
-                type="button"
+              <a
+                app-nav-link
                 class="m3-entity-assist-chip"
                 data-action="try-any-id"
-                (click)="tryAcrossAnyId()"
+                [config]="{type: 'all_site_search'}"
+                [customQueryParams]="fallbackQueryParams()"
               >
                 <span class="material-symbols-outlined chip-lead-icon"
                   >travel_explore</span
@@ -196,7 +198,7 @@
                 <span class="material-symbols-outlined chip-trail-icon"
                   >arrow_forward</span
                 >
-              </button>
+              </a>
             } @else {
               @for (chip of fallbackChips; track chip.key) {
                 <a

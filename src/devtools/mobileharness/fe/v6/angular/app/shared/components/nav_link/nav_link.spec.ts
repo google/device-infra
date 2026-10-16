@@ -4,7 +4,7 @@ import {provideRouter, Router} from '@angular/router';
 import {CommonParamsService} from '@deviceinfra/app/core/services/common_params_service';
 import {UrlService} from '@deviceinfra/app/core/services/url_service';
 import {NEVER, Observable, of} from 'rxjs';
-import {NavLink} from './nav_link';
+import {NavLink, NavLinkService} from './nav_link';
 
 
 describe('NavLink', () => {
@@ -468,5 +468,53 @@ describe('NavLink', () => {
     } finally {
       history.pushState(null, '', originalUrl);
     }
+  });
+
+  it('should reactively update fullPageLink when config or customQueryParams inputs change', () => {
+    fixture.componentRef.setInput('config', {
+      type: 'all_site_search',
+    });
+    fixture.componentRef.setInput('customQueryParams', {'q': 'first_query'});
+    fixture.detectChanges();
+
+    expect(component.fullPageLink()).toBe('/search?q=first_query');
+
+    fixture.componentRef.setInput('customQueryParams', {'q': 'second_query'});
+    fixture.detectChanges();
+
+    expect(component.fullPageLink()).toBe('/search?q=second_query');
+  });
+
+  it('should support programmatic navigation with replaceUrl via NavLinkService', () => {
+    const navLinkService = TestBed.inject(NavLinkService);
+    mockCommonParamsService.getCommonParams.and.returnValue({
+      'fake_data': 'true',
+    });
+    mockCommonParamsService.isEmbeddedMode.and.returnValue(true);
+
+    navLinkService.navigate(
+      {
+        type: 'device',
+        deviceId: 'dev_99',
+        hostName: 'host_99',
+      },
+      {replaceUrl: true},
+    );
+
+    expect(mockUrlService.notifyNavigated).toHaveBeenCalledWith(
+      'device_details',
+      jasmine.objectContaining({
+        'host_name': 'host_99',
+        'uuid': 'dev_99',
+        'device_uuid': 'dev_99',
+      }),
+    );
+    expect(router.navigate).toHaveBeenCalledWith(['/devices/dev_99'], {
+      queryParams: {
+        'fake_data': 'true',
+        'host_name': 'host_99',
+      },
+      replaceUrl: true,
+    });
   });
 });
