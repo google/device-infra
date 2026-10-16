@@ -127,12 +127,6 @@ public final class FleetSuggester {
 
   private static final Pattern WHITESPACE = Pattern.compile("\\s+");
 
-  /** Match quality tiers shared by value and key-name matching. */
-  private static final int TIER_FULL = 3;
-
-  private static final int TIER_PREFIX = 2;
-  private static final int TIER_CONTAINS = 1;
-
   private final FleetFilterEngine filterEngine;
   private final SuggestionRanker ranker;
 
@@ -238,16 +232,10 @@ public final class FleetSuggester {
     return keyMatches.stream()
         .flatMap(
             match ->
-                groupByCandidate(
-                    context, match.key(), matchRank(match.tier()), appliedKeys, /* count= */ true)
+                groupByCandidate(context, match.key(), match.tier(), appliedKeys, /* count= */ true)
                     .stream())
         .limit(1)
         .collect(toImmutableList());
-  }
-
-  /** Group-by match rank from a key-name match tier: 0 exact, 1 prefix, 2 contains. */
-  private static int matchRank(double tier) {
-    return TIER_FULL - (int) Math.round(tier);
   }
 
   // ---- <key> is <value> ----
@@ -349,7 +337,7 @@ public final class FleetSuggester {
       // A condition covering the whole filtered set is valid but temporarily uninformative, so it
       // ranks one tier lower and as if it matched a single record.
       boolean coversScope = context.hasFilters() && count == scope;
-      double tier = coversScope ? TIER_PREFIX : TIER_FULL;
+      MatchTier tier = coversScope ? MatchTier.EXACT.demoted() : MatchTier.EXACT;
       int rankCount = coversScope ? 1 : count;
       out.add(SuggestionCandidate.presetCondition(key, tier, proto, count, rankCount));
     }
@@ -366,8 +354,7 @@ public final class FleetSuggester {
             key ->
                 topValues(context, key.id(), KEY_VALUES_PER_KEY).stream()
                     .flatMap(
-                        match ->
-                            condition(context, key, match.value(), TIER_FULL, exclude).stream()))
+                        value -> condition(context, key, value, MatchTier.EXACT, exclude).stream()))
         .collect(toImmutableList());
   }
 
@@ -441,7 +428,7 @@ public final class FleetSuggester {
 
     for (KeyCount keyCount : index.globalExact().getOrDefault(value, ImmutableList.of())) {
       if (seen.add(keyCount.key() + '\u0000' + value)) {
-        conditionFor(context, keyCount.key(), value, TIER_FULL, exclude).ifPresent(out::add);
+        conditionFor(context, keyCount.key(), value, MatchTier.EXACT, exclude).ifPresent(out::add);
       }
     }
 
@@ -453,7 +440,7 @@ public final class FleetSuggester {
       ValueKeyPair pair = sorted.get(i);
       if (!pair.value().equals(value) && seen.add(pair.key() + '\u0000' + pair.value())) {
         Optional<SuggestionCandidate> candidate =
-            conditionFor(context, pair.key(), pair.value(), TIER_PREFIX, exclude);
+            conditionFor(context, pair.key(), pair.value(), MatchTier.PREFIX, exclude);
         if (candidate.isPresent()) {
           out.add(candidate.get());
           scanned++;
@@ -485,7 +472,9 @@ public final class FleetSuggester {
                   segments(vocabulary.titleDisplayName(key.get()) + " starts with ", token))
               .setCount(matchCount)
               .setOpenPicker(openPickerNewChip(vocabulary, key.get()));
-      out.add(SuggestionCandidate.keyOnly(key.get(), TIER_CONTAINS, proto));
+      // The row opens the picker instead of applying a value, so among keys of the same priority
+      // it ranks below every concrete value that starts with the token.
+      out.add(SuggestionCandidate.keyOnly(key.get(), MatchTier.WEAK, proto));
     }
     return out.build();
   }
@@ -494,7 +483,9 @@ public final class FleetSuggester {
 
   /**
    * For each matched key, best first: ready-to-apply conditions on its top values (for the
-   * strongest few keys) and the bare key, which opens the picker and ranks just below a condition.
+   * strongest few keys) and the bare key, which opens the picker. Both share the key's match tier;
+   * the bare key carries no count, so among rows of the same key priority and tier it ranks below
+   * every counted condition.
    */
   private ImmutableList<SuggestionCandidate> suggestKeyNames(
       SuggestionContext context, ImmutableList<KeyMatch> keyMatches) {
@@ -503,10 +494,10 @@ public final class FleetSuggester {
     int rank = 0;
     for (KeyMatch keyMatch : keyMatches) {
       KeyDescriptor key = keyMatch.key();
-      double tier = keyMatch.tier();
+      MatchTier tier = keyMatch.tier();
       if (rank < TOP_VALUE_KEYS) {
-        for (ValueMatch match : topValues(context, key.id(), TOP_VALUES_PER_KEY)) {
-          condition(context, key, match.value(), tier, /* exclude= */ false).ifPresent(out::add);
+        for (String value : topValues(context, key.id(), TOP_VALUES_PER_KEY)) {
+          condition(context, key, value, tier, /* exclude= */ false).ifPresent(out::add);
         }
       }
       boolean inChip = context.isActiveKey(key.id());
@@ -515,17 +506,18 @@ public final class FleetSuggester {
               .setLabel(label(vocabulary, key, inChip))
               .addAllMainText(segments(vocabulary.titleDisplayName(key), null))
               .setOpenPicker(openPicker(vocabulary, key, inChip));
-      out.add(SuggestionCandidate.keyOnly(key, tier - 0.4, proto));
+      out.add(SuggestionCandidate.keyOnly(key, tier, proto));
       rank++;
     }
     return out.build();
   }
 
   /**
-   * Keys whose name matches the token, best first: an exact resolution (full tier), then keys whose
-   * display or bare name starts with the token (prefix tier), then keys whose name contains it
-   * (contains tier). Discoverable keys are those in the index plus those the entity has seen but
-   * not indexed; an exactly resolved key also qualifies if it is cold long-tail capable.
+   * Keys whose name matches the token, best first: an exact resolution ({@link MatchTier#EXACT}),
+   * then keys whose display or bare name starts with the token ({@link MatchTier#PREFIX}), then
+   * keys whose name contains it ({@link MatchTier#WEAK}). Discoverable keys are those in the index
+   * plus those the entity has seen but not indexed; an exactly resolved key also qualifies if it is
+   * cold long-tail capable.
    */
   private static ImmutableList<KeyMatch> matchKeyNames(SuggestionContext context, String token) {
     KeyVocabulary vocabulary = context.vocabulary();
@@ -536,7 +528,7 @@ public final class FleetSuggester {
       if (context.isIndexed(key.id())
           || discoverable.contains(key)
           || vocabulary.isColdCapable(key)) {
-        out.putIfAbsent(key, new KeyMatch(key, TIER_FULL));
+        out.putIfAbsent(key, new KeyMatch(key, MatchTier.EXACT));
       }
     }
     String term = KeyTokens.normalize(token);
@@ -550,13 +542,13 @@ public final class FleetSuggester {
       String normTitle = KeyTokens.normalize(vocabulary.titleDisplayName(key));
       String normBare = KeyTokens.normalize(key.bareName());
       if (normTitle.startsWith(term) || normBare.startsWith(term)) {
-        out.put(key, new KeyMatch(key, TIER_PREFIX));
+        out.put(key, new KeyMatch(key, MatchTier.PREFIX));
       } else if (normTitle.contains(term) || normBare.contains(term)) {
         containsMatches.add(key);
       }
     }
     for (KeyDescriptor key : containsMatches) {
-      out.put(key, new KeyMatch(key, TIER_CONTAINS));
+      out.put(key, new KeyMatch(key, MatchTier.WEAK));
     }
     return ImmutableList.copyOf(out.values());
   }
@@ -587,7 +579,7 @@ public final class FleetSuggester {
     if (term.isEmpty()) {
       matches =
           vocabulary.groupByCandidates().stream()
-              .map(key -> new KeyMatch(key, TIER_FULL))
+              .map(key -> new KeyMatch(key, MatchTier.EXACT))
               .collect(toImmutableList());
     } else {
       matches = matchKeyNames(context, term);
@@ -595,14 +587,14 @@ public final class FleetSuggester {
         matches =
             vocabulary
                 .mintLongTailKey(term)
-                .map(key -> ImmutableList.of(new KeyMatch(key, TIER_FULL)))
+                .map(key -> ImmutableList.of(new KeyMatch(key, MatchTier.EXACT)))
                 .orElse(ImmutableList.of());
       }
     }
 
     ImmutableList<KeyMatch> strongestFirst =
         ImmutableList.sortedCopyOf(
-            Comparator.comparingInt((KeyMatch match) -> matchRank(match.tier()))
+            Comparator.comparing(KeyMatch::tier)
                 .thenComparing(
                     Comparator.comparingInt((KeyMatch match) -> vocabulary.priority(match.key()))
                         .reversed()),
@@ -620,8 +612,7 @@ public final class FleetSuggester {
       if (needsCount && count) {
         counted++;
       }
-      groupByCandidate(context, match.key(), matchRank(match.tier()), appliedKeys, count)
-          .ifPresent(out::add);
+      groupByCandidate(context, match.key(), match.tier(), appliedKeys, count).ifPresent(out::add);
     }
     return out.build();
   }
@@ -633,13 +624,13 @@ public final class FleetSuggester {
    * add or adjust group-by keys freely while editing filters. A row is offered without a group
    * count for a cold long-tail key (from the dimension catalog or minted from the term), which has
    * no overlay loaded during typeahead and is pulled when the grouping is executed, and for an
-   * indexed key when {@code count} is false. {@code matchRank} is the key-name match quality (0
-   * exact, 1 prefix, 2 contains) used for ordering.
+   * indexed key when {@code count} is false. {@code tier} is how well the key name matches the
+   * typed term, used for ordering.
    */
   private static Optional<SuggestionCandidate> groupByCandidate(
       SuggestionContext context,
       KeyDescriptor key,
-      int matchRank,
+      MatchTier tier,
       Set<String> appliedKeys,
       boolean count) {
     String keyId = key.id();
@@ -657,7 +648,7 @@ public final class FleetSuggester {
               .setLabel("Group by")
               .addAllMainText(segments("", vocabulary.titleDisplayName(key)))
               .setAddGroupBy(SuggestionActions.addGroupBy(vocabulary, key));
-      return Optional.of(SuggestionCandidate.uncountedGroupBy(key, proto, matchRank));
+      return Optional.of(SuggestionCandidate.uncountedGroupBy(key, proto, tier));
     }
     int groups = groupCount(context, keyId);
     if (groups == 0) {
@@ -672,7 +663,7 @@ public final class FleetSuggester {
             .setCountUnit(groups == 1 ? "group" : "groups")
             .setOverMax(overMax)
             .setAddGroupBy(SuggestionActions.addGroupBy(vocabulary, key));
-    return Optional.of(SuggestionCandidate.groupBy(key, proto, groups, matchRank, overMax));
+    return Optional.of(SuggestionCandidate.groupBy(key, proto, groups, tier, overMax));
   }
 
   /**
@@ -691,7 +682,7 @@ public final class FleetSuggester {
 
   /** {@link #condition} for a key id taken from the index, which the vocabulary may not know. */
   private static Optional<SuggestionCandidate> conditionFor(
-      SuggestionContext context, String keyId, String valueLower, double tier, boolean exclude) {
+      SuggestionContext context, String keyId, String valueLower, MatchTier tier, boolean exclude) {
     return context
         .vocabulary()
         .describe(keyId)
@@ -707,7 +698,7 @@ public final class FleetSuggester {
       SuggestionContext context,
       KeyDescriptor key,
       String valueLower,
-      double tier,
+      MatchTier tier,
       boolean exclude) {
     FleetIndex index = context.index();
     KeyVocabulary vocabulary = context.vocabulary();
@@ -799,10 +790,13 @@ public final class FleetSuggester {
       proto.setApplyFilter(applyFilter(vocabulary, index, key, valueFilter(keyId, shown, exclude)));
     }
     return Optional.of(
-        SuggestionCandidate.presetCondition(key, TIER_FULL, proto, orCount, orCount));
+        SuggestionCandidate.presetCondition(key, MatchTier.EXACT, proto, orCount, orCount));
   }
 
-  /** A ready-to-apply, uncounted row on a cold long-tail key with the values exactly as typed. */
+  /**
+   * A ready-to-apply, uncounted row on a cold long-tail key with the values exactly as typed. The
+   * index cannot confirm the values exist, so the row ranks in {@link MatchTier#WEAK}.
+   */
   private static SuggestionCandidate coldCondition(
       SuggestionContext context,
       KeyDescriptor key,
@@ -815,7 +809,7 @@ public final class FleetSuggester {
             .setLabel("Add filter")
             .addAllMainText(conditionText(vocabulary, key, exclude, String.join(", ", shownValues)))
             .setApplyFilter(applyFilter(vocabulary, context.index(), key, filter));
-    return SuggestionCandidate.uncountedCondition(key, TIER_CONTAINS, proto);
+    return SuggestionCandidate.uncountedCondition(key, MatchTier.WEAK, proto);
   }
 
   /** A long-tail key with nothing indexed yet and no chip already applied. */
@@ -828,9 +822,10 @@ public final class FleetSuggester {
   // ---- Value matching ----
 
   /**
-   * Values of the key matching the query, full matches first (space and underscore
-   * interchangeable), then prefix matches, then, if allowed and the key is not an identifier,
-   * contains matches until enough are found.
+   * Values of the key matching the query: whole-value matches first (space and underscore
+   * interchangeable) in {@link MatchTier#EXACT}, then prefix matches in {@link MatchTier#PREFIX},
+   * then, if allowed and the key is not an identifier, substring matches in {@link MatchTier#WEAK}
+   * until enough are found.
    */
   private static ImmutableList<ValueMatch> matchValues(
       SuggestionContext context, String keyId, String query, boolean allowContains) {
@@ -844,7 +839,7 @@ public final class FleetSuggester {
     Set<String> fullHits = new HashSet<>();
     for (String variant : new String[] {query, query.replace(' ', '_'), query.replace('_', ' ')}) {
       if (counts.containsKey(variant) && fullHits.add(variant)) {
-        out.add(new ValueMatch(variant, TIER_FULL));
+        out.add(new ValueMatch(variant, MatchTier.EXACT));
       }
     }
     int lo = FleetFilterEngine.lowerBound(sorted, query);
@@ -852,7 +847,7 @@ public final class FleetSuggester {
     for (int i = lo; i < hi; i++) {
       String value = sorted.get(i);
       if (!fullHits.contains(value)) {
-        out.add(new ValueMatch(value, TIER_PREFIX));
+        out.add(new ValueMatch(value, MatchTier.PREFIX));
       }
     }
     if (allowContains
@@ -860,7 +855,7 @@ public final class FleetSuggester {
         && out.size() < KEY_VALUES_PER_KEY) {
       for (String value : sorted) {
         if (value.contains(query) && !value.startsWith(query)) {
-          out.add(new ValueMatch(value, TIER_CONTAINS));
+          out.add(new ValueMatch(value, MatchTier.WEAK));
           if (out.size() >= KEY_VALUES_PER_KEY * 3) {
             break;
           }
@@ -870,15 +865,16 @@ public final class FleetSuggester {
     return ImmutableList.copyOf(out);
   }
 
-  /** The key's most common values, most common first, ties alphabetical. */
-  private static ImmutableList<ValueMatch> topValues(
-      SuggestionContext context, String keyId, int n) {
+  /** The key's {@code n} most common values, most common first, ties alphabetical. */
+  private static ImmutableList<String> topValues(SuggestionContext context, String keyId, int n) {
     return context.index().valueCounts(keyId).entrySet().stream()
         .filter(entry -> entry.getValue() > 0)
-        .map(entry -> new ValueMatch(entry.getKey(), entry.getValue()))
         .sorted(
-            Comparator.comparingInt(ValueMatch::tier).reversed().thenComparing(ValueMatch::value))
+            Map.Entry.<String, Integer>comparingByValue()
+                .reversed()
+                .thenComparing(Map.Entry.comparingByKey()))
         .limit(n)
+        .map(Map.Entry::getKey)
         .collect(toImmutableList());
   }
 
@@ -927,9 +923,9 @@ public final class FleetSuggester {
     return lo;
   }
 
-  /** A matched value with its match-quality tier; for top values the tier carries the count. */
-  private record ValueMatch(String value, int tier) {}
+  /** A value of a key that matches the typed text, with how strongly it matches. */
+  private record ValueMatch(String value, MatchTier tier) {}
 
-  /** A matched key with its match-quality tier. */
-  private record KeyMatch(KeyDescriptor key, double tier) {}
+  /** A key whose name matches the typed text, with how strongly it matches. */
+  private record KeyMatch(KeyDescriptor key, MatchTier tier) {}
 }

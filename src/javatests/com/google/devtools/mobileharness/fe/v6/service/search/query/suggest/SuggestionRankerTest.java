@@ -85,7 +85,7 @@ public final class SuggestionRankerTest {
     SuggestionCandidate addPixel =
         SuggestionCandidate.valueCondition(
             corpus.vocabulary().describe(MODEL).get(),
-            /* tier= */ 3.0,
+            MatchTier.EXACT,
             row("zzz"),
             "pixel",
             /* exclude= */ false,
@@ -94,7 +94,7 @@ public final class SuggestionRankerTest {
     SuggestionCandidate tiedPreset =
         SuggestionCandidate.presetCondition(
             corpus.vocabulary().describe(MODEL).get(),
-            /* tier= */ 3.0,
+            MatchTier.EXACT,
             row("aaa"),
             /* count= */ 1,
             /* rankCount= */ 1);
@@ -106,6 +106,53 @@ public final class SuggestionRankerTest {
     assertThat(response.getItemsCount()).isEqualTo(1);
     assertThat(response.getItems(0).getMainText(0).getText()).isEqualTo("aaa");
     assertThat(response.getItems(0).getCount()).isEqualTo(1);
+  }
+
+  @Test
+  public void rank_samePriority_ordersStrongerMatchTierAheadOfHigherCountInWeakerTier() {
+    FleetSnapshot snapshot =
+        Guice.createInjector()
+            .getInstance(FleetIndexBuilder.class)
+            .build(fleet(), Instant.ofEpochSecond(1_700_000_000L));
+    DeviceCorpus corpus =
+        new DeviceCorpus(snapshot, new LazyPostings(snapshot.devices()), new AtsCuration());
+    SuggestionContext context =
+        SuggestionContext.create(
+            corpus,
+            ImmutableList.of(),
+            Guice.createInjector().getInstance(FleetFilterEngine.class));
+
+    var modelKey = corpus.vocabulary().describe(MODEL).get();
+    SuggestionCandidate exactLowCount =
+        SuggestionCandidate.presetCondition(
+            modelKey, MatchTier.EXACT, row("zzz"), /* count= */ 1, /* rankCount= */ 1);
+    SuggestionCandidate prefixMidCount =
+        SuggestionCandidate.presetCondition(
+            modelKey, MatchTier.PREFIX, row("mmm"), /* count= */ 2, /* rankCount= */ 2);
+    SuggestionCandidate weakHighCount =
+        SuggestionCandidate.presetCondition(
+            modelKey, MatchTier.WEAK, row("aaa"), /* count= */ 3, /* rankCount= */ 3);
+
+    FleetSuggestionResponse response =
+        new SuggestionRanker()
+            .rank(
+                context,
+                ImmutableList.of(weakHighCount, prefixMidCount, exactLowCount),
+                /* limit= */ 3);
+
+    assertThat(response.getItemsList().stream().map(item -> item.getMainText(0).getText()))
+        .containsExactly("zzz", "mmm", "aaa")
+        .inOrder();
+    assertThat(response.getItemsList().stream().map(FleetSuggestion::getCount))
+        .containsExactly(1, 2, 3)
+        .inOrder();
+  }
+
+  @Test
+  public void demoted_returnsNextTierDownOrStaysAtWeak() {
+    assertThat(MatchTier.EXACT.demoted()).isEqualTo(MatchTier.PREFIX);
+    assertThat(MatchTier.PREFIX.demoted()).isEqualTo(MatchTier.WEAK);
+    assertThat(MatchTier.WEAK.demoted()).isEqualTo(MatchTier.WEAK);
   }
 
   private static FleetSuggestion.Builder row(String mainText) {

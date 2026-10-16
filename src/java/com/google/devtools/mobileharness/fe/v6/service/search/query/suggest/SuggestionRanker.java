@@ -141,7 +141,7 @@ final class SuggestionRanker {
     List<SuggestionCandidate> ordered =
         admit(context, raw).stream()
             .sorted(
-                Comparator.comparingInt(SuggestionCandidate::groupRank)
+                Comparator.comparing(SuggestionCandidate::tier)
                     .thenComparing(GroupingUse::of)
                     .thenComparing(
                         Comparator.<SuggestionCandidate>comparingInt(
@@ -202,14 +202,13 @@ final class SuggestionRanker {
 
   /**
    * The fields a filter row is ordered by, best first: curated key priority (higher first), match
-   * tier rounded so a key-only row stays level with its condition (higher first), count (higher
-   * first), and main text as a stable tie-break.
+   * tier (stronger first), count (higher first), and main text as a stable tie-break.
    */
-  private record RankKey(int priority, int tier, int count, String mainText) {
+  private record RankKey(int priority, MatchTier tier, int count, String mainText) {
     static final Comparator<RankKey> BEST_FIRST =
         Comparator.comparingInt(RankKey::priority)
             .reversed()
-            .thenComparing(Comparator.comparingInt(RankKey::tier).reversed())
+            .thenComparing(RankKey::tier)
             .thenComparing(Comparator.comparingInt(RankKey::count).reversed())
             .thenComparing(RankKey::mainText);
   }
@@ -221,11 +220,11 @@ final class SuggestionRanker {
    * and main text.
    */
   private record EvaluationKey(
-      int priority, int tier, int upperBoundCount, int fullCorpusCount, String mainText) {
+      int priority, MatchTier tier, int upperBoundCount, int fullCorpusCount, String mainText) {
     static final Comparator<EvaluationKey> BEST_FIRST =
         Comparator.comparingInt(EvaluationKey::priority)
             .reversed()
-            .thenComparing(Comparator.comparingInt(EvaluationKey::tier).reversed())
+            .thenComparing(EvaluationKey::tier)
             .thenComparing(Comparator.comparingInt(EvaluationKey::upperBoundCount).reversed())
             .thenComparing(Comparator.comparingInt(EvaluationKey::fullCorpusCount).reversed())
             .thenComparing(EvaluationKey::mainText);
@@ -235,7 +234,7 @@ final class SuggestionRanker {
   private static RankKey finalKey(KeyVocabulary vocabulary, SuggestionCandidate candidate) {
     return new RankKey(
         vocabulary.priority(candidate.key()),
-        (int) Math.round(candidate.tier()),
+        candidate.tier(),
         candidate.rankCount(),
         candidate.mainText());
   }
@@ -245,7 +244,7 @@ final class SuggestionRanker {
       SuggestionContext context, SuggestionCandidate candidate) {
     return new EvaluationKey(
         context.vocabulary().priority(candidate.key()),
-        (int) Math.round(candidate.tier()),
+        candidate.tier(),
         upperBoundCount(context, candidate),
         fullCorpusCount(context, candidate),
         candidate.mainText());
@@ -267,7 +266,7 @@ final class SuggestionRanker {
       SuggestionContext context, SuggestionCandidate candidate, SuggestionCandidate worstKept) {
     KeyVocabulary vocabulary = context.vocabulary();
     if (vocabulary.priority(candidate.key()) != vocabulary.priority(worstKept.key())
-        || Math.round(candidate.tier()) != Math.round(worstKept.tier())) {
+        || candidate.tier() != worstKept.tier()) {
       return true;
     }
     return upperBoundCount(context, candidate) < worstKept.rankCount();

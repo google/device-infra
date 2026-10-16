@@ -70,7 +70,7 @@ final class SuggestionCandidate {
 
   private final Kind kind;
   private final KeyDescriptor key;
-  private final double tier;
+  private final MatchTier tier;
   private final FleetSuggestion.Builder proto;
   private final String mainText;
   private final Counting counting;
@@ -78,7 +78,6 @@ final class SuggestionCandidate {
   private final boolean exclude;
   private final boolean inChip;
   private int rankCount;
-  private final int groupRank;
   private final boolean overMax;
 
   @Nullable private Integer count;
@@ -87,7 +86,7 @@ final class SuggestionCandidate {
   private SuggestionCandidate(
       Kind kind,
       KeyDescriptor key,
-      double tier,
+      MatchTier tier,
       FleetSuggestion.Builder proto,
       Counting counting,
       String valueLower,
@@ -95,11 +94,10 @@ final class SuggestionCandidate {
       boolean inChip,
       int rankCount,
       @Nullable Integer count,
-      int groupRank,
       boolean overMax) {
     this.kind = kind;
     this.key = checkNotNull(key);
-    this.tier = tier;
+    this.tier = checkNotNull(tier);
     this.proto = checkNotNull(proto);
     this.mainText = proto.getMainTextList().stream().map(TextSegment::getText).collect(joining());
     this.counting = counting;
@@ -108,7 +106,6 @@ final class SuggestionCandidate {
     this.inChip = inChip;
     this.rankCount = rankCount;
     this.count = count;
-    this.groupRank = groupRank;
     this.overMax = overMax;
   }
 
@@ -118,7 +115,7 @@ final class SuggestionCandidate {
    */
   static SuggestionCandidate valueCondition(
       KeyDescriptor key,
-      double tier,
+      MatchTier tier,
       FleetSuggestion.Builder proto,
       String valueLower,
       boolean exclude,
@@ -135,14 +132,13 @@ final class SuggestionCandidate {
         inChip,
         globalCount,
         /* count= */ null,
-        /* groupRank= */ 0,
         /* overMax= */ false);
   }
 
   /** A condition whose count is already known; a null count means "show no number". */
   static SuggestionCandidate presetCondition(
       KeyDescriptor key,
-      double tier,
+      MatchTier tier,
       FleetSuggestion.Builder proto,
       @Nullable Integer count,
       int rankCount) {
@@ -157,13 +153,12 @@ final class SuggestionCandidate {
         false,
         rankCount,
         count,
-        /* groupRank= */ 0,
         /* overMax= */ false);
   }
 
   /** A ready-to-apply condition on a cold long-tail key, which has no index to count against. */
   static SuggestionCandidate uncountedCondition(
-      KeyDescriptor key, double tier, FleetSuggestion.Builder proto) {
+      KeyDescriptor key, MatchTier tier, FleetSuggestion.Builder proto) {
     return new SuggestionCandidate(
         Kind.CONDITION,
         key,
@@ -175,13 +170,15 @@ final class SuggestionCandidate {
         false,
         /* rankCount= */ 0,
         /* count= */ null,
-        /* groupRank= */ 0,
         /* overMax= */ false);
   }
 
-  /** A picker affordance for a key. */
+  /**
+   * A picker affordance for a key. It carries no count, so among rows of the same key priority and
+   * tier it ranks below every counted condition.
+   */
   static SuggestionCandidate keyOnly(
-      KeyDescriptor key, double tier, FleetSuggestion.Builder proto) {
+      KeyDescriptor key, MatchTier tier, FleetSuggestion.Builder proto) {
     return new SuggestionCandidate(
         Kind.KEY,
         key,
@@ -193,24 +190,23 @@ final class SuggestionCandidate {
         false,
         /* rankCount= */ 0,
         /* count= */ null,
-        /* groupRank= */ 0,
         /* overMax= */ false);
   }
 
   /**
-   * A group-by row. {@code groupRank} is the key-name match quality (0 exact, 1 prefix, 2 contains)
-   * and {@code groups} the number of buckets the grouping would produce.
+   * A group-by row. {@code tier} is how well the key name matches the typed term and {@code groups}
+   * the number of buckets the grouping would produce.
    */
   static SuggestionCandidate groupBy(
       KeyDescriptor key,
       FleetSuggestion.Builder proto,
       int groups,
-      int groupRank,
+      MatchTier tier,
       boolean overMax) {
     return new SuggestionCandidate(
         Kind.GROUP_BY,
         key,
-        /* tier= */ 0,
+        tier,
         proto,
         Counting.PRESET,
         "",
@@ -218,7 +214,6 @@ final class SuggestionCandidate {
         false,
         /* rankCount= */ groups,
         groups,
-        groupRank,
         overMax);
   }
 
@@ -228,11 +223,11 @@ final class SuggestionCandidate {
    * counted group-by rows is decided by {@code SuggestionRanker.GroupingUse}.
    */
   static SuggestionCandidate uncountedGroupBy(
-      KeyDescriptor key, FleetSuggestion.Builder proto, int groupRank) {
+      KeyDescriptor key, FleetSuggestion.Builder proto, MatchTier tier) {
     return new SuggestionCandidate(
         Kind.GROUP_BY,
         key,
-        /* tier= */ 0,
+        tier,
         proto,
         Counting.NONE,
         "",
@@ -240,7 +235,6 @@ final class SuggestionCandidate {
         false,
         /* rankCount= */ Integer.MAX_VALUE,
         /* count= */ null,
-        groupRank,
         /* overMax= */ false);
   }
 
@@ -252,8 +246,8 @@ final class SuggestionCandidate {
     return key;
   }
 
-  /** Match quality: 3 full, 2 prefix, 1 contains; key-only rows sit 0.4 below their condition. */
-  double tier() {
+  /** How strongly the row answers the typed text; for a group-by row, the key-name match. */
+  MatchTier tier() {
     return tier;
   }
 
@@ -286,10 +280,6 @@ final class SuggestionCandidate {
   /** The count used for ordering before scope counts exist (fleet-wide for value rows). */
   int rankCount() {
     return rankCount;
-  }
-
-  int groupRank() {
-    return groupRank;
   }
 
   boolean overMax() {

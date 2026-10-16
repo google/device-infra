@@ -154,7 +154,7 @@ public final class SuggesterEntityPurityTest {
     SuggestionCandidate foreignCandidate =
         SuggestionCandidate.keyOnly(
             new AtsHostKeyRegistry().getKey("host_field::device_count").get(),
-            /* tier= */ 3.0,
+            MatchTier.EXACT,
             FleetSuggestion.newBuilder().setLabel("Add filter"));
 
     assertThat(ranker.rank(context, ImmutableList.of(foreignCandidate), 10).getItemsList())

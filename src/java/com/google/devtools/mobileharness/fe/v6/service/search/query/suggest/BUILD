@@ -32,6 +32,7 @@ java_library(
     name = "fleet_suggester",
     srcs = [
         "FleetSuggester.java",
+        "MatchTier.java",
         "SuggestionActions.java",
         "SuggestionCandidate.java",
         "SuggestionContext.java",
