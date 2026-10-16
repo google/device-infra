@@ -64,6 +64,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Tes
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.NewMultiCommandRequestHandler.CreateJobsResult;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.NewMultiCommandRequestHandler.HandleResultProcessingResult;
+import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.NewMultiCommandRequestHandler.PrepareSessionRequestResult;
 import com.google.devtools.mobileharness.infra.ats.server.util.AtsServerSessionUtil;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
@@ -3008,5 +3009,57 @@ public final class NewMultiCommandRequestHandlerTest {
     File manifestFile = new File(outputDir, OUTPUT_MANIFEST_FILE_NAME);
     assertThat(localFileUtil.isFileExist(manifestFile.getAbsolutePath())).isTrue();
     assertThat(localFileUtil.readFile(manifestFile.getAbsolutePath())).isEmpty();
+  }
+
+  @Test
+  public void prepareSessionRequestInfo_success() throws Exception {
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    PrepareSessionRequestResult result =
+        newMultiCommandRequestHandler.prepareSessionRequestInfo(request, sessionInfo);
+
+    assertThat(result.state()).isEqualTo(RequestState.RUNNING);
+    assertThat(result.sessionRequestInfo()).isPresent();
+    String expectedCommandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    assertThat(result.sessionRequestInfo().get().getXtsCommandId()).isEqualTo(expectedCommandId);
+    assertThat(result.commandDetail()).isPresent();
+    assertThat(result.commandDetail().get().getId()).isEqualTo(expectedCommandId);
+  }
+
+  @Test
+  public void prepareSessionRequestInfo_emptyCommand_returnsError() throws Exception {
+    PrepareSessionRequestResult result =
+        newMultiCommandRequestHandler.prepareSessionRequestInfo(
+            NewMultiCommandRequest.getDefaultInstance(), sessionInfo);
+
+    assertThat(result.state()).isEqualTo(RequestState.ERROR);
+    assertThat(result.errorReason()).hasValue(ErrorReason.INVALID_REQUEST);
+    assertThat(result.errorMessage()).hasValue("COMMAND_NOT_AVAILABLE");
+    assertThat(result.sessionRequestInfo()).isEmpty();
+  }
+
+  @Test
+  public void prepareSessionRequestInfo_invalidCommandLine_returnsError() throws Exception {
+    CommandInfo invalidCommandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine("cts -m module1 --shard-count not_a_number")
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue(DEVICE_ID_1)
+                    .build())
+            .build();
+    NewMultiCommandRequest invalidRequest =
+        request.toBuilder().clearCommands().addCommands(invalidCommandInfo).build();
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    PrepareSessionRequestResult result =
+        newMultiCommandRequestHandler.prepareSessionRequestInfo(invalidRequest, sessionInfo);
+
+    assertThat(result.state()).isEqualTo(RequestState.ERROR);
+    assertThat(result.errorReason()).hasValue(ErrorReason.INVALID_REQUEST);
+    assertThat(result.sessionRequestInfo()).isEmpty();
   }
 }

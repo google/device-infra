@@ -109,6 +109,7 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -206,6 +207,71 @@ final class NewMultiCommandRequestHandler {
     this.sleeper = sleeper;
     this.atsServerSessionUtil = atsServerSessionUtil;
     this.xtsChunkedTestCasesRestorer = xtsChunkedTestCasesRestorer;
+  }
+
+  /**
+   * Validates the request, generates a {@link SessionRequestInfo} for the command, and builds its
+   * initial {@link CommandDetail}.
+   */
+  PrepareSessionRequestResult prepareSessionRequestInfo(
+      NewMultiCommandRequest request, SessionInfo sessionInfo) throws InterruptedException {
+    if (request.getCommandsList().isEmpty()) {
+      return PrepareSessionRequestResult.of(
+          RequestState.ERROR,
+          ErrorReason.INVALID_REQUEST,
+          "COMMAND_NOT_AVAILABLE",
+          /* commandDetail= */ null,
+          /* sessionRequestInfo= */ null);
+    }
+    // ATS server sessions execute a single command per session.
+    CommandInfo commandInfo = request.getCommands(0);
+    String commandId = getCommandId(commandInfo, request);
+    Instant now = clock.instant();
+    // Initialize command detail with basic metadata first so that if request validation or xTS zip
+    // mounting fails in getSessionRequestInfo(), the error state and stack trace can still be
+    // recorded on this command in the session output.
+    CommandDetail.Builder commandDetailBuilder =
+        CommandDetail.newBuilder()
+            .setCommandLine(commandInfo.getCommandLine())
+            .setOriginalCommandInfo(commandInfo)
+            .setCreateTime(toProtoTimestamp(now))
+            .setStartTime(toProtoTimestamp(now))
+            .setUpdateTime(toProtoTimestamp(now))
+            .setRequestId(sessionInfo.getSessionId())
+            .setId(commandId)
+            .setCommandAttemptId(getCommandAttemptId(commandId, sessionInfo.getSessionId()))
+            .setState(CommandState.UNKNOWN_STATE);
+    // Validates the request and generates the SessionRequestInfo needed for job creation.
+    try {
+      SessionRequestInfo sessionRequestInfo =
+          getSessionRequestInfo(request, commandInfo, sessionInfo);
+      commandDetailBuilder.addAllDeviceSerials(sessionRequestInfo.getDeviceSerialsList());
+      if (!sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
+        commandDetailBuilder.setHostIp(
+            sessionRequestHandlerUtil.getHostIp(sessionRequestInfo.getDeviceSerials(0)));
+      }
+      commandDetailBuilder.setState(CommandState.RUNNING);
+      return PrepareSessionRequestResult.of(
+          RequestState.RUNNING,
+          /* errorReason= */ null,
+          /* errorMessage= */ null,
+          commandDetailBuilder.build(),
+          sessionRequestInfo);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to prepare session request info for command [%s]. Interrupt the session [%s].",
+          commandInfo.getCommandLine(), sessionInfo.getSessionId());
+      ErrorReason errorReason = getErrorReason(e);
+      setCommandError(commandDetailBuilder, errorReason, e);
+      return PrepareSessionRequestResult.of(
+          RequestState.ERROR,
+          errorReason,
+          String.format(
+              "INVALID_COMMAND_%s with error: %s",
+              commandInfo.getCommandLine(), shortDebugString(e)),
+          commandDetailBuilder.build(),
+          /* sessionRequestInfo= */ null);
+    }
   }
 
   CreateJobsResult createTradefedJobs(NewMultiCommandRequest request, SessionInfo sessionInfo)
@@ -1459,7 +1525,8 @@ final class NewMultiCommandRequestHandler {
         && XtsConstants.FATAL_TRADEFED_ERROR_KEYWORDS.stream().anyMatch(errorMessage::contains);
   }
 
-  private ErrorReason getErrorReason(MobileHarnessException e) {
+  /** Maps a {@link MobileHarnessException} to its corresponding {@link ErrorReason}. */
+  ErrorReason getErrorReason(MobileHarnessException e) {
     return INVALID_RESOURCE_ERROR_IDS.contains(e.getErrorId())
         ? ErrorReason.INVALID_RESOURCE
         : ErrorReason.INVALID_REQUEST;
@@ -1645,5 +1712,33 @@ final class NewMultiCommandRequestHandler {
     public abstract ImmutableMap<String, CommandDetail> commandDetails();
 
     public abstract ImmutableMap<String, TestContext> testContexts();
+  }
+
+  /** Result of preparing {@link SessionRequestInfo} for a command. */
+  @AutoValue
+  public abstract static class PrepareSessionRequestResult {
+    private static PrepareSessionRequestResult of(
+        RequestState state,
+        @Nullable ErrorReason errorReason,
+        @Nullable String errorMessage,
+        @Nullable CommandDetail commandDetail,
+        @Nullable SessionRequestInfo sessionRequestInfo) {
+      return new AutoValue_NewMultiCommandRequestHandler_PrepareSessionRequestResult(
+          state,
+          Optional.ofNullable(errorReason),
+          Optional.ofNullable(errorMessage),
+          Optional.ofNullable(commandDetail),
+          Optional.ofNullable(sessionRequestInfo));
+    }
+
+    public abstract RequestState state();
+
+    public abstract Optional<ErrorReason> errorReason();
+
+    public abstract Optional<String> errorMessage();
+
+    public abstract Optional<CommandDetail> commandDetail();
+
+    public abstract Optional<SessionRequestInfo> sessionRequestInfo();
   }
 }
