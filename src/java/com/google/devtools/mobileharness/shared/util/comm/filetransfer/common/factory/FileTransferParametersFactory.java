@@ -107,19 +107,28 @@ public class FileTransferParametersFactory {
       fileTransferParams.setTimeout(Duration.ofSeconds(params.getLong(PARAMS_TIMEOUT_SEC, 0)));
     }
 
-    if (params.has(PARAM_FILE_TRANSFER_ZIP_STORE_ONLY)) {
-      fileTransferParams.setZipStoreOnly(params.getBool(PARAM_FILE_TRANSFER_ZIP_STORE_ONLY, false));
-    }
-
     fileTransferParams
-        .setZipTimeout(
-            Duration.ofSeconds(
-                params.getLong(PARAM_ZIP_TIMEOUT_SEC, DEFAULT_ZIP_TIMEOUT.toSeconds())))
+        .setZipStoreOnly(isZipStoreOnly(params))
+        .setZipTimeout(getZipTimeout(params))
         .setHomeDir(Path.of(testInfo.getTmpFileDir()).resolve(DEFAULT_FILE_TRANSFER_HOME_DIR_NAME));
 
     params
         .getOptional(JobInfo.PARAM_CLOUD_FILE_TRANSFER_BUCKET)
         .ifPresent(fileTransferParams::setCloudFileTransferBucket);
     return fileTransferParams.build();
+  }
+
+  /** Returns whether {@code params} ask for directories to be zipped without compression. */
+  public static boolean isZipStoreOnly(Params params) {
+    return params.getBool(PARAM_FILE_TRANSFER_ZIP_STORE_ONLY, false);
+  }
+
+  /**
+   * Returns the timeout {@code params} set for zipping a directory, or {@link
+   * FileTransferParameters#DEFAULT_ZIP_TIMEOUT} if they set none.
+   */
+  public static Duration getZipTimeout(Params params) {
+    return Duration.ofSeconds(
+        params.getLong(PARAM_ZIP_TIMEOUT_SEC, DEFAULT_ZIP_TIMEOUT.toSeconds()));
   }
 }
