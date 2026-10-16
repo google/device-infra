@@ -385,6 +385,12 @@ public final class FleetSuggester {
    * Conditions for a value with the key undetermined, searched across all keys: exact matches via
    * the global reverse index, prefix matches via the sorted global value list, and one collapsed
    * "starts with" row per identifier key so a UUID prefix does not produce thousands of rows.
+   *
+   * <p>Identifier keys are left out of the sorted global value list for that reason, but they are
+   * in the global reverse index, so a complete ID always gets its exact {@code <Key> is <value>}
+   * row. The collapsed row shows the number of matching IDs in {@link FleetSuggestion#getCount},
+   * which the frontend renders right-aligned like every other count, so its main text does not
+   * repeat the number.
    */
   private ImmutableList<SuggestionCandidate> suggestValues(
       SuggestionContext context, String token, boolean exclude) {
@@ -425,21 +431,19 @@ public final class FleetSuggester {
       if (key.isEmpty() || keyValues.isEmpty()) {
         continue;
       }
-      int matchCount =
-          FleetFilterEngine.lowerBound(keyValues, value + '\uffff')
-              - FleetFilterEngine.lowerBound(keyValues, value);
-      if (matchCount == 0) {
+      int loIndex = FleetFilterEngine.lowerBound(keyValues, value);
+      int matchCount = FleetFilterEngine.lowerBound(keyValues, value + '\uffff') - loIndex;
+      // A complete ID that no other ID extends already has its exact row, so a "starts with" row
+      // would only repeat that one record. When other IDs share the prefix (typing "device-1"
+      // with "device-10" present), the row covers records the exact row does not, and it stays.
+      if (matchCount == 0 || (matchCount == 1 && keyValues.get(loIndex).equals(value))) {
         continue;
       }
-      ImmutableList<TextSegment> mainText =
-          ImmutableList.of(
-              text(vocabulary.titleDisplayName(key.get()) + " starts with ", false),
-              text(token, true),
-              text(" (" + matchCount + ")", false));
       FleetSuggestion.Builder proto =
           FleetSuggestion.newBuilder()
               .setLabel("Add filter")
-              .addAllMainText(mainText)
+              .addAllMainText(
+                  segments(vocabulary.titleDisplayName(key.get()) + " starts with ", token))
               .setCount(matchCount)
               .setOpenPicker(openPickerNewChip(vocabulary, key.get()));
       out.add(SuggestionCandidate.keyOnly(key.get(), TIER_CONTAINS, proto));

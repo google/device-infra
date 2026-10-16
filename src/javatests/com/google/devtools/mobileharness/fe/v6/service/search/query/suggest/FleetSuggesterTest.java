@@ -103,21 +103,43 @@ public final class FleetSuggesterTest {
 
     FleetSuggestion collapsed = firstOpenPicker(response, "device_field::uuid");
     assertThat(collapsed.getCount()).isEqualTo(4);
-    assertThat(collapsed.getMainText(0).getText()).isEqualTo("UUID starts with ");
-    assertThat(collapsed.getMainText(1).getText()).isEqualTo("device-");
-    assertThat(collapsed.getMainText(2).getText()).isEqualTo(" (4)");
+    assertThat(collapsed.getMainTextList())
+        .containsExactly(
+            TextSegment.newBuilder().setText("UUID starts with ").setEmphasized(false).build(),
+            TextSegment.newBuilder().setText("device-").setEmphasized(true).build())
+        .inOrder();
   }
 
   @Test
   public void uuidValue_suggestsDeviceIdFilter() {
     // Typing a device UUID resolves through ordinary value search onto the UUID key, no dedicated
-    // identifier detector.
+    // identifier detector. When the exact ID is the only prefix match, no redundant "starts with"
+    // row is emitted.
     FleetSuggestionResponse response = suggester.suggest(corpus, request("device-2"));
 
     FleetSuggestion uuid = firstApplyFilter(response, "device_field::uuid");
     assertThat(uuid.getApplyFilter().getResultingFilter().getSimple().getValues(0).getValue())
         .isEqualTo("device-2");
     assertThat(uuid.getCount()).isEqualTo(1);
+    assertThat(
+            response.getItemsList().stream()
+                .noneMatch(
+                    item ->
+                        item.hasOpenPicker()
+                            && item.getOpenPicker().getKey().equals("device_field::uuid")))
+        .isTrue();
+
+    // When an exact ID also shares a prefix with other IDs ("device-1" and "device-10".."device-19"
+    // in a 60-device fleet), both the exact match and the collapsed "starts with" row are offered.
+    FleetSnapshot manyPools =
+        Guice.createInjector()
+            .getInstance(FleetIndexBuilder.class)
+            .build(manyPoolFleet(60), BUILD_TIME);
+    DeviceCorpus manyCorpus =
+        new DeviceCorpus(manyPools, new LazyPostings(manyPools.devices()), new AtsCuration());
+    FleetSuggestionResponse prefixAndExact = suggester.suggest(manyCorpus, request("device-1"));
+    assertThat(firstApplyFilter(prefixAndExact, "device_field::uuid").getCount()).isEqualTo(1);
+    assertThat(firstOpenPicker(prefixAndExact, "device_field::uuid").getCount()).isEqualTo(11);
   }
 
   @Test
