@@ -1,0 +1,86 @@
+<div class="header-search-dock" role="search" aria-label="Jump to entity by ID">
+  <div
+    class="header-search-bar"
+    [class.has-text]="hasValue()"
+    (click)="onBarClick($event)"
+  >
+    <div class="jump-scope">
+      <!-- Leading Scope Selector Button -->
+      <button
+        type="button"
+        class="jump-scope-chip"
+        [class.menu-open]="isMenuOpen()"
+        aria-haspopup="listbox"
+        [attr.aria-expanded]="isMenuOpen()"
+        title="Which kind of identifier to jump to"
+        (click)="toggleScopeMenu($event)"
+      >
+        <span class="jump-scope-label">{{ currentScope().label }}</span>
+        <span class="material-symbols-outlined">arrow_drop_down</span>
+      </button>
+
+      <!-- Identifier Scope Dropdown Menu -->
+      <div
+        class="jump-scope-menu"
+        [class.open]="isMenuOpen()"
+        role="listbox"
+        aria-label="Identifier type"
+      >
+        @for (opt of scopeOptions; track opt.key) {
+          <button
+            type="button"
+            class="jump-scope-item"
+            [class.selected]="scope() === opt.key"
+            role="option"
+            [attr.aria-selected]="scope() === opt.key"
+            [attr.data-scope]="opt.key"
+            (click)="selectScope(opt.key, $event)"
+          >
+            <span class="material-symbols-outlined">{{ opt.icon }}</span>
+            <span>{{ opt.label }}</span>
+            <span class="material-symbols-outlined jump-scope-check">check</span>
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Primary Identifier Input -->
+    <input
+      #searchInput
+      type="text"
+      class="header-search-input"
+      autocomplete="off"
+      spellcheck="false"
+      [placeholder]="currentScope().placeholder"
+      [value]="queryText()"
+      aria-label="Identifier search query"
+      (input)="onInput($any($event.target).value)"
+      (keydown)="onKeyDown($event)"
+    />
+
+    <!-- Open / Submit Action Button -->
+    <button
+      type="button"
+      class="jump-enter-hint"
+      [class.visible]="hasValue()"
+      title="Open (Enter)"
+      (click)="submitSearch($event)"
+    >
+      <span>Open</span>
+      <span class="material-symbols-outlined">keyboard_return</span>
+    </button>
+
+    <!-- Clear Input Button -->
+    @if (hasValue()) {
+      <button
+        type="button"
+        class="header-search-clear"
+        title="Clear"
+        aria-label="Clear search"
+        (click)="clearSearch($event)"
+      >
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    }
+  </div>
+</div>

@@ -1,0 +1,237 @@
+// Styles for the Global Header Jump Bar (`<app-header-jump-bar>`).
+// Matches the Material 3 prototype styling in `site.html`.
+// Note: Avoids ID selectors and `!important` per CSS lint guidelines.
+
+:host {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-left: 24px;
+}
+
+// Outer dock wrapper for the header jump bar inside the toolbar
+.header-search-dock {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 1200px;
+  min-width: 320px;
+  margin-left: 0;
+}
+
+// Pill-shaped M3 search bar container housing scope selector, input, Open button, and Clear button
+.header-search-bar {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 40px;
+  height: 40px;
+  padding: 0 8px 0 12px;
+  border-radius: 20px;
+  background: var(--md-sys-color-surface-container-high, #e9eef6);
+  border: 1px solid transparent;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow: visible;
+  gap: 8px;
+  position: relative;
+  transition:
+    background-color 0.15s,
+    box-shadow 0.15s;
+
+  &:hover {
+    background: var(--md-sys-color-surface-container-highest, #dde3ea);
+  }
+
+  &:focus-within {
+    background: var(--md-sys-color-surface, #fff);
+    box-shadow:
+      0 1px 3px 1px rgba(0, 0, 0, 0.15),
+      0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+}
+
+// Wrapper around the leading scope chip and its dropdown menu
+.jump-scope {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+// Leading scope chip indicating which kind of identifier the bar will resolve
+.jump-scope-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  padding: 0 4px 0 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: var(--md-sys-color-secondary-container, #d3e3fd);
+  color: var(--md-sys-color-on-secondary-container, #041e49);
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s;
+
+  &:hover,
+  &.menu-open {
+    background: #c2d7f7;
+  }
+
+  .material-symbols-outlined {
+    font-size: 18px;
+  }
+}
+
+// Dropdown menu listing identifier scope options
+.jump-scope-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 200px;
+  padding: 8px 0;
+  border-radius: 4px;
+  background: var(--md-sys-color-surface-container, #f0f4f9);
+  box-shadow:
+    0 2px 6px 2px rgba(0, 0, 0, 0.15),
+    0 1px 2px rgba(0, 0, 0, 0.3);
+  z-index: 400;
+
+  &.open {
+    display: block;
+  }
+}
+
+// Individual scope option button inside the dropdown menu
+.jump-scope-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 48px;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  color: var(--md-sys-color-on-surface, #1f1f1f);
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(31, 31, 31, 0.08);
+  }
+
+  .material-symbols-outlined {
+    font-size: 20px;
+    color: var(--md-sys-color-on-surface-variant, #444746);
+  }
+
+  .jump-scope-check {
+    margin-left: auto;
+    color: var(--md-sys-color-primary, #0b57d0);
+    visibility: hidden;
+  }
+
+  &.selected {
+    background: var(--md-sys-color-secondary-container, #d3e3fd);
+
+    .jump-scope-check {
+      visibility: visible;
+    }
+  }
+}
+
+// Primary text input inside the header search bar
+.header-search-input {
+  flex: 1;
+  min-width: 24px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 0.875rem;
+  color: var(--md-sys-color-on-surface, #1f1f1f);
+
+  &::placeholder {
+    color: var(--md-sys-color-outline, #747775);
+    font-family: 'Google Sans', Roboto, sans-serif;
+  }
+}
+
+// Trailing "Open ↵" action button shown when input has text
+.jump-enter-hint {
+  display: none;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 6px 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--md-sys-color-outline-variant, #c4c7c5);
+  background: transparent;
+  color: var(--md-sys-color-primary, #0b57d0);
+  font-family: 'Google Sans', Roboto, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  user-select: none;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+
+  &.visible {
+    display: inline-flex;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(11, 87, 208, 0.08);
+    border-color: var(--md-sys-color-primary, #0b57d0);
+    outline: none;
+  }
+
+  .material-symbols-outlined {
+    font-size: 16px;
+  }
+}
+
+// Trailing clear ("X") icon button shown when input has text
+.header-search-clear {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  color: var(--md-sys-color-on-surface-variant, #444746);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+
+  &:hover {
+    background-color: rgba(31, 31, 31, 0.08);
+    color: var(--md-sys-color-on-surface, #1f1f1f);
+  }
+
+  .material-symbols-outlined {
+    font-size: 18px;
+  }
+}

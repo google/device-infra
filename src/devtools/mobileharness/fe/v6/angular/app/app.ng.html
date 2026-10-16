@@ -32,6 +32,9 @@
       <div class="header-search-dock" [class.active]="dockService.isDocked()">
         <ng-template [cdkPortalOutlet]="dockService.activePortal()"></ng-template>
       </div>
+      @if (isShowHeaderJumpBar()) {
+        <app-header-jump-bar></app-header-jump-bar>
+      }
       @if (showVersionInfo) {
         <div class="version-info">
           Version: {{ appData.labconsoleVersion }} <br />

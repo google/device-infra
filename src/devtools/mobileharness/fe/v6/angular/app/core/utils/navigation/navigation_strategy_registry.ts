@@ -66,18 +66,31 @@ NavigationStrategyRegistry.register(new SessionDetailNavigationStrategy());
 
 // Register default search and home strategies in the registry.
 NavigationStrategyRegistry.register(
-  new SearchNavigationStrategy('device_search', '/devices', ['f', 'gb', 'fleet']),
+  new SearchNavigationStrategy('device_search', '/devices', [
+    'f',
+    'gb',
+    'fleet',
+    'q',
+  ]),
 );
 NavigationStrategyRegistry.register(
-  new SearchNavigationStrategy('host_search', '/hosts', ['f', 'gb', 'fleet']),
+  new SearchNavigationStrategy('host_search', '/hosts', [
+    'f',
+    'gb',
+    'fleet',
+    'q',
+  ]),
 );
 NavigationStrategyRegistry.register(
-  new SearchNavigationStrategy('session_search', '/sessions', []),
+  new SearchNavigationStrategy('session_search', '/sessions', ['q']),
 );
 NavigationStrategyRegistry.register(
-  new SearchNavigationStrategy('job_search', '/jobs', []),
+  new SearchNavigationStrategy('job_search', '/jobs', ['q']),
 );
 NavigationStrategyRegistry.register(
-  new SearchNavigationStrategy('test_search', '/tests', []),
+  new SearchNavigationStrategy('test_search', '/tests', ['q']),
+);
+NavigationStrategyRegistry.register(
+  new SearchNavigationStrategy('all_site_search', '/search', ['q', 'scope']),
 );
 NavigationStrategyRegistry.register(new HomeNavigationStrategy());

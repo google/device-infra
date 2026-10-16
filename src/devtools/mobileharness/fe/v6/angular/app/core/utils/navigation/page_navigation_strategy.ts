@@ -26,6 +26,7 @@ export type NavPageType =
   | 'session_search'
   | 'job_search'
   | 'test_search'
+  | 'all_site_search'
   | 'home';
 
 /**
@@ -47,7 +48,24 @@ export type NavLinkConfig =
     }
   | {type: 'job'; jobId: string}
   | {type: 'test'; jobId: string; testId: string}
-  | {type: 'session'; sessionId: string};
+  | {type: 'session'; sessionId: string}
+  | {
+      type:
+        | 'device_search'
+        | 'host_search'
+        | 'session_search'
+        | 'job_search'
+        | 'test_search';
+      q?: string;
+      f?: string;
+      gb?: string;
+      fleet?: string;
+    }
+  | {
+      type: 'all_site_search';
+      q: string;
+      scope?: string;
+    };
 
 /** External parent window navigation payload. */
 export interface ExternalNavPayload {

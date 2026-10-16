@@ -8,6 +8,7 @@ import {provideNoopAnimations} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
 
 import {LoadingService} from '../../shared/services/loading_service';
+import {SearchBox} from './components/search_box/search_box';
 import {EntityType, SearchPageConfig} from './models';
 import {SearchPage} from './search_page';
 import {SearchPageStore} from './services/search_page_store';
@@ -16,6 +17,7 @@ import {SearchPageStore} from './services/search_page_store';
   selector: 'app-search-box',
   standalone: true,
   template: '',
+  providers: [{provide: SearchBox, useExisting: StubSearchBox}],
 })
 class StubSearchBox {
   readonly focusInput = jasmine.createSpy('focusInput');
@@ -43,6 +45,7 @@ class MockSearchPageStore {
   readonly entity = signal<EntityType>('devices');
   readonly searchQuery = signal('');
   readonly showSuggestions = signal(false);
+  readonly focusInputTrigger = signal(false);
   readonly browseAll = signal(false);
   readonly serializedActiveFilters = signal<string[]>([]);
   readonly groupByKeys = signal<string[]>([]);
@@ -163,5 +166,34 @@ describe('SearchPage', () => {
     component.onBrowseAll();
     expect(mockStore.browseAll()).toBeTrue();
     expect(mockStore.executeSearch).toHaveBeenCalled();
+  });
+
+  it('focuses searchBox once when arriving with initial searchQuery and showSuggestions', () => {
+    mockStore.searchQuery.set('device-id-for-ambiguous-1');
+    mockStore.showSuggestions.set(true);
+    mockStore.focusInputTrigger.set(true);
+    fixture.detectChanges();
+
+    const searchBoxDebug = fixture.debugElement.query(
+      By.directive(StubSearchBox),
+    );
+    expect(searchBoxDebug).toBeTruthy();
+    const stubSearchBox = searchBoxDebug.componentInstance as StubSearchBox;
+    expect(stubSearchBox.focusInput).toHaveBeenCalledTimes(1);
+  });
+
+  it('focuses searchBox when focusInputTrigger becomes true after initial render (asapScheduler)', () => {
+    fixture.detectChanges();
+    const stubSearchBox = fixture.debugElement.query(
+      By.directive(StubSearchBox),
+    ).componentInstance as StubSearchBox;
+    expect(stubSearchBox.focusInput).not.toHaveBeenCalled();
+
+    mockStore.searchQuery.set('device-id-for-ambiguous-1');
+    mockStore.showSuggestions.set(true);
+    mockStore.focusInputTrigger.set(true);
+    TestBed.tick();
+
+    expect(stubSearchBox.focusInput).toHaveBeenCalledTimes(1);
   });
 });

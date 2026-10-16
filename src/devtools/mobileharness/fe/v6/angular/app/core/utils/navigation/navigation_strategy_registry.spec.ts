@@ -59,12 +59,32 @@ describe('NavigationStrategyRegistry', () => {
       'f': 'status:READY',
       'gb': 'host',
       'fleet': 'ats',
+      'q': 'device-id-for-ambiguous-1',
       'unknown_param': 'ignore_me',
     });
     expect(queryParams).toEqual({
       'f': 'status:READY',
       'gb': 'host',
       'fleet': 'ats',
+      'q': 'device-id-for-ambiguous-1',
+    });
+  });
+
+  it('should configure all_site_search strategy with /search and allowedParams q and scope', () => {
+    const allSiteSearch =
+      NavigationStrategyRegistry.getRequired('all_site_search');
+    expect(allSiteSearch instanceof SearchNavigationStrategy).toBeTrue();
+    expect(allSiteSearch.buildRoutePath({})).toBe('/search');
+    expect(allSiteSearch.supportsExternalNavigation).toBeFalse();
+
+    const queryParams = allSiteSearch.toCsnQueryParams({
+      'q': 'device-id-for-1-hit-1',
+      'scope': 'device',
+      'unknown_param': 'ignore_me',
+    });
+    expect(queryParams).toEqual({
+      'q': 'device-id-for-1-hit-1',
+      'scope': 'device',
     });
   });
 

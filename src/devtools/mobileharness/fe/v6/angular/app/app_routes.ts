@@ -1,5 +1,6 @@
 import {inject} from '@angular/core';
 import {CanActivateFn, Router, Routes} from '@angular/router';
+import {AllSiteSearchPage} from './features/all_site_search/all_site_search_page';
 import {DevHarnessPage} from './features/dev_harness/dev_harness_page';
 import {DeviceDetailPage} from './features/device_detail/device_detail_page';
 import {HomePage} from './features/home/home_page';
@@ -38,6 +39,11 @@ export const routes: Routes = [
     path: 'home',
     component: HomePage,
     title: 'Home',
+  },
+  {
+    path: 'search',
+    component: AllSiteSearchPage,
+    title: 'Search',
   },
   {
     path: 'dev/device-harness',

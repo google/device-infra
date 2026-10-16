@@ -474,6 +474,7 @@ app-root {
 
     .version-info {
       display: flex;
+      flex: 0 0 auto;
       margin-left: auto;
       font-size: 12px;
       justify-content: flex-end;
@@ -482,6 +483,7 @@ app-root {
     }
     .account-menu {
       display: flex;
+      flex: 0 0 auto;
       margin-left: auto;
       justify-content: flex-end;
       flex-shrink: 0;

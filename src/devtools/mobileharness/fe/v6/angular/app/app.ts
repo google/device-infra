@@ -48,6 +48,8 @@ import {
 } from '@deviceinfra/app/core/models/app_data';
 import {CommonParamsService} from '@deviceinfra/app/core/services/common_params_service';
 import {UrlService} from '@deviceinfra/app/core/services/url_service';
+import {isHeaderJumpBarVisibleOnRoute} from '@deviceinfra/app/features/all_site_search/all_site_search_scope';
+import {HeaderJumpBar} from '@deviceinfra/app/features/all_site_search/components/header_jump_bar/header_jump_bar';
 import {HeaderSearchDockService} from '@deviceinfra/app/shared/services/header_search_dock_service';
 import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
 import {ReplaySubject} from 'rxjs';
@@ -69,6 +71,7 @@ function isAssistantEnabled(
   templateUrl: './app.ng.html',
   imports: [
     CommonModule,
+    HeaderJumpBar,
     MatButtonModule,
     MatIconButton,
     MatDividerModule,
@@ -108,6 +111,22 @@ export class App implements OnDestroy {
 
   isAssistantFeatureEnabled(): boolean {
     return this.isAssistantEnabled;
+  }
+
+  /**
+   * Determines whether the global Header Jump Bar (`<app-header-jump-bar>`) should be shown.
+   *
+   * Input: None.
+   * Output: boolean (`true` on Home, `/search`, and Detail pages; `false` on Entity Search pages).
+   * Explanation:
+   *   Shown in standalone mode on all routes except the 5 Entity Search pages
+   *   (`/devices`, `/hosts`, `/tests`, `/jobs`, `/sessions`).
+   */
+  isShowHeaderJumpBar(): boolean {
+    return (
+      this.isStandaloneMode &&
+      isHeaderJumpBarVisibleOnRoute(this.getCurrentRoutePath())
+    );
   }
 
   isNavActive(
@@ -209,6 +228,7 @@ export class App implements OnDestroy {
     if (
       !path ||
       path === 'home' ||
+      path === 'search' ||
       path === 'devices' ||
       path === 'hosts' ||
       path === 'tests' ||

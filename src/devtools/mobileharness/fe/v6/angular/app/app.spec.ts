@@ -157,6 +157,15 @@ describe('App Component', () => {
       routeSpy.and.returnValue('home/assistant');
       expect(component.isNavActive('assistant')).toBeFalse();
 
+      routeSpy.and.returnValue('search');
+      expect(component.isNavActive('home')).toBeFalse();
+      expect(component.isNavActive('devices')).toBeFalse();
+      expect(component.isNavActive('hosts')).toBeFalse();
+      expect(component.isNavActive('tests')).toBeFalse();
+      expect(component.isNavActive('jobs')).toBeFalse();
+      expect(component.isNavActive('sessions')).toBeFalse();
+      expect(component.isNavActive('assistant')).toBeFalse();
+
       routeSpy.and.returnValue('unknown');
       expect(component.isNavActive('home')).toBeFalse();
       expect(component.isNavActive('assistant')).toBeFalse();
@@ -180,6 +189,56 @@ describe('App Component', () => {
 
       component.updateShowContent();
       expect(component.showContent).toBeTrue();
+    });
+  });
+
+  describe('isShowHeaderJumpBar', () => {
+    it('should return false in embedded mode regardless of route', () => {
+      component.isEmbeddedMode = true;
+      spyOn(component, 'getCurrentRoutePath').and.returnValue('home');
+      expect(component.isShowHeaderJumpBar()).toBeFalse();
+    });
+
+    it('should return true on Home, /search, and Detail routes in standalone mode', () => {
+      component.isEmbeddedMode = false;
+      const routeSpy = spyOn(component, 'getCurrentRoutePath');
+
+      routeSpy.and.returnValue('home');
+      expect(component.isShowHeaderJumpBar()).toBeTrue();
+
+      routeSpy.and.returnValue('search');
+      expect(component.isShowHeaderJumpBar()).toBeTrue();
+
+      routeSpy.and.returnValue('devices/:id');
+      expect(component.isShowHeaderJumpBar()).toBeTrue();
+
+      routeSpy.and.returnValue('hosts/:hostName');
+      expect(component.isShowHeaderJumpBar()).toBeTrue();
+
+      routeSpy.and.returnValue('jobs/:jobId/tests/:id');
+      expect(component.isShowHeaderJumpBar()).toBeTrue();
+
+      routeSpy.and.returnValue('jobs/:id');
+      expect(component.isShowHeaderJumpBar()).toBeTrue();
+
+      routeSpy.and.returnValue('sessions/:id');
+      expect(component.isShowHeaderJumpBar()).toBeTrue();
+    });
+
+    it('should return false on the 5 Entity Search routes in standalone mode', () => {
+      component.isEmbeddedMode = false;
+      const routeSpy = spyOn(component, 'getCurrentRoutePath');
+
+      for (const searchPath of [
+        'devices',
+        'hosts',
+        'tests',
+        'jobs',
+        'sessions',
+      ]) {
+        routeSpy.and.returnValue(searchPath);
+        expect(component.isShowHeaderJumpBar()).toBeFalse();
+      }
     });
   });
 
