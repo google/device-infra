@@ -150,8 +150,7 @@ public final class SuggesterEntityPurityTest {
             deviceCorpus,
             ImmutableList.of(),
             Guice.createInjector().getInstance(FleetFilterEngine.class));
-    SuggestionRanker ranker =
-        new SuggestionRanker(Guice.createInjector().getInstance(FleetFilterEngine.class));
+    SuggestionRanker ranker = new SuggestionRanker();
     SuggestionCandidate foreignCandidate =
         SuggestionCandidate.keyOnly(
             new AtsHostKeyRegistry().getKey("host_field::device_count").get(),

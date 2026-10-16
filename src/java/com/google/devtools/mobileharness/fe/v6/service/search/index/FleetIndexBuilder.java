@@ -568,7 +568,7 @@ public final class FleetIndexBuilder {
                           ? (values != null ? values.size() : 0)
                           : singleCombinations.getOrDefault(keyId, ImmutableSet.of()).size()
                               + multis.size();
-                  statsMap.put(keyId, new KeyStats(entities, combinations));
+                  statsMap.put(keyId, new KeyStats(entities, combinations, multis != null));
                 }
               });
 

@@ -56,8 +56,8 @@ public final class CompositeFleetIndexTest {
                         ImmutableMap.of("pixel 8", "Pixel 8", "pixel 7", "Pixel 7")))
             .setKeyStatsMap(
                 ImmutableMap.of(
-                    "field::status", new KeyStats(15, 2),
-                    "dimension::model", new KeyStats(15, 2)))
+                    "field::status", new KeyStats(15, 2, false),
+                    "dimension::model", new KeyStats(15, 2, false)))
             .setSemanticGlobalSorted(
                 ImmutableList.of(
                     new ValueKeyPair("pixel 7", "dimension::model"),
@@ -73,7 +73,7 @@ public final class CompositeFleetIndexTest {
     overlay.valueCountsMap.put("dimension::carrier", ImmutableMap.of("verizon", 1200, "att", 500));
     overlay.valueDisplaysMap.put(
         "dimension::carrier", ImmutableMap.of("verizon", "Verizon", "att", "AT&T"));
-    overlay.keyStatsMap.put("dimension::carrier", new KeyStats(1700, 3));
+    overlay.keyStatsMap.put("dimension::carrier", new KeyStats(1700, 3, false));
 
     composite = new CompositeFleetIndex(core, overlay);
   }
@@ -84,7 +84,7 @@ public final class CompositeFleetIndexTest {
     assertThat(composite.valueCounts("field::status")).containsEntry("idle", 10);
     assertThat(composite.valueDisplays("field::status")).containsEntry("idle", "IDLE");
     assertThat(composite.valueCount("field::status", "idle")).isEqualTo(10);
-    assertThat(composite.keyStats("field::status")).isEqualTo(new KeyStats(15, 2));
+    assertThat(composite.keyStats("field::status")).isEqualTo(new KeyStats(15, 2, false));
   }
 
   @Test
@@ -95,7 +95,7 @@ public final class CompositeFleetIndexTest {
     assertThat(composite.valueCounts("dimension::carrier")).containsEntry("verizon", 1200);
     assertThat(composite.valueDisplays("dimension::carrier")).containsEntry("verizon", "Verizon");
     assertThat(composite.valueCount("dimension::carrier", "verizon")).isEqualTo(1200);
-    assertThat(composite.keyStats("dimension::carrier")).isEqualTo(new KeyStats(1700, 3));
+    assertThat(composite.keyStats("dimension::carrier")).isEqualTo(new KeyStats(1700, 3, false));
   }
 
   @Test

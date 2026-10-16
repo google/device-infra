@@ -19,19 +19,23 @@ package com.google.devtools.mobileharness.fe.v6.service.search.index;
 /**
  * Whole-corpus statistics for one key, exposed by {@link FleetIndex#keyStats(String)}.
  *
- * <p>These are the numbers the key catalogs ask for an unfiltered corpus: how many records carry
- * the key at all (coverage), and how many distinct value combinations it takes (the groups a
- * group-by on the key would produce, before the no-value bucket). {@link FleetIndexBuilder}
- * computes them during the index build pass for core keys, and {@link DimensionOverlay} computes
- * them when binding an on-demand dimension overlay to a snapshot.
+ * <p>These are the numbers the key catalogs and search-bar suggestions ask for an unfiltered
+ * corpus: how many records carry the key at all (coverage), how many distinct value combinations it
+ * takes (the groups a group-by on the key would produce, before the no-value bucket), and whether
+ * any record carries more than one value. {@link FleetIndexBuilder} computes them during the index
+ * build pass for core keys, and {@link DimensionOverlay} computes them when binding an on-demand
+ * dimension overlay to a snapshot.
  *
  * @param entityCount number of records carrying at least one value for the key
  * @param distinctCombinations number of distinct value sets across the records carrying the key
+ * @param multiValued whether some record carries two or more distinct values for the key; when
+ *     false, no two values ever share a record, so the number of records carrying any of several
+ *     values is the sum of their value counts
  */
-public record KeyStats(int entityCount, int distinctCombinations) {
+public record KeyStats(int entityCount, int distinctCombinations, boolean multiValued) {
 
   /** Statistics of a key no record carries. */
-  public static final KeyStats EMPTY = new KeyStats(0, 0);
+  public static final KeyStats EMPTY = new KeyStats(0, 0, /* multiValued= */ false);
 
   /** Whether some record among {@code recordCount} lacks the key entirely. */
   public boolean hasMissing(int recordCount) {

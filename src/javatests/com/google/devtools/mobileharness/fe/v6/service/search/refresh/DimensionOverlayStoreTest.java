@@ -94,7 +94,12 @@ public final class DimensionOverlayStoreTest {
             .get();
 
     assertThat(result.keySet()).containsExactly("dimension::carrier");
-    assertThat(result.get("dimension::carrier").valueCounts()).containsEntry("verizon", 1);
+    assertThat(
+            result
+                .get("dimension::carrier")
+                .bind(snapshotStore.get(Fleet.FLEET_SELF))
+                .valueCounts())
+        .containsEntry("verizon", 1);
     assertThat(dataSource.pullCount.get()).isEqualTo(1);
 
     // Second call hits cache; does not pull again

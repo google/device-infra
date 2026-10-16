@@ -223,9 +223,9 @@ final class SuggestionCandidate {
   }
 
   /**
-   * A group-by row for a cold long-tail key whose overlay is not loaded yet, so no bucket count is
-   * shown. {@code rankCount} is {@link Integer#MAX_VALUE} so counted groupings of the same priority
-   * and match quality rank ahead of uncounted ones.
+   * A group-by row without a bucket count, used for a cold long-tail key whose overlay is not
+   * loaded yet and for an indexed key beyond the filtered group-count budget. Ordering relative to
+   * counted group-by rows is decided by {@code SuggestionRanker.GroupingUse}.
    */
   static SuggestionCandidate uncountedGroupBy(
       KeyDescriptor key, FleetSuggestion.Builder proto, int groupRank) {

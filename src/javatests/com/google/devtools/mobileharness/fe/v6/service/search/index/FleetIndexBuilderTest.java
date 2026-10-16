@@ -615,18 +615,20 @@ public final class FleetIndexBuilderTest {
 
     FleetSnapshot snapshot = builder.build(raw, BUILD_TIME);
     FleetIndex deviceIndex = snapshot.index();
-    assertThat(deviceIndex.keyStats("device_field::status")).isEqualTo(new KeyStats(3, 2));
-    assertThat(deviceIndex.keyStats("device_field::owner")).isEqualTo(new KeyStats(3, 2));
-    assertThat(deviceIndex.keyStats("dimension::tag")).isEqualTo(new KeyStats(3, 3));
-    assertThat(deviceIndex.keyStats("dimension::roles")).isEqualTo(new KeyStats(2, 2));
-    assertThat(deviceIndex.keyStats("dimension::h1_multi")).isEqualTo(new KeyStats(2, 2));
+    assertThat(deviceIndex.keyStats("device_field::status")).isEqualTo(new KeyStats(3, 2, false));
+    // d0 carries {alice, bob}.
+    assertThat(deviceIndex.keyStats("device_field::owner")).isEqualTo(new KeyStats(3, 2, true));
+    // d0's "X" and "x" collapse to one value, but d1 carries {x, y}.
+    assertThat(deviceIndex.keyStats("dimension::tag")).isEqualTo(new KeyStats(3, 3, true));
+    assertThat(deviceIndex.keyStats("dimension::roles")).isEqualTo(new KeyStats(2, 2, true));
+    assertThat(deviceIndex.keyStats("dimension::h1_multi")).isEqualTo(new KeyStats(2, 2, true));
     assertThat(deviceIndex.keyStats("host_property::empty_only")).isEqualTo(KeyStats.EMPTY);
     assertThat(deviceIndex.keyStats("host_field::empty_list")).isEqualTo(KeyStats.EMPTY);
     assertThat(deviceIndex.keyStats("host_field::empty_multi")).isEqualTo(KeyStats.EMPTY);
     assertThat(deviceIndex.keyStats("dimension::absent")).isEqualTo(KeyStats.EMPTY);
 
     FleetIndex hostIndex = snapshot.hostIndex();
-    assertThat(hostIndex.keyStats("host_property::location")).isEqualTo(new KeyStats(2, 2));
+    assertThat(hostIndex.keyStats("host_property::location")).isEqualTo(new KeyStats(2, 2, false));
     assertThat(hostIndex.keyStats("host_property::empty_only")).isEqualTo(KeyStats.EMPTY);
     assertThat(hostIndex.keyStats("host_field::empty_list")).isEqualTo(KeyStats.EMPTY);
     assertThat(hostIndex.keyStats("host_field::empty_multi")).isEqualTo(KeyStats.EMPTY);
@@ -655,12 +657,14 @@ public final class FleetIndexBuilderTest {
     FleetIndex mergedIndex = first.toIndex();
 
     // combinations for multi_in_first: {"a", "b"}, {"c"}, {"a"} -> 3 combinations across 3 records.
-    assertThat(mergedIndex.keyStats("dimension::multi_in_first")).isEqualTo(new KeyStats(3, 3));
+    assertThat(mergedIndex.keyStats("dimension::multi_in_first"))
+        .isEqualTo(new KeyStats(3, 3, true));
     // combinations for multi_in_second: {"x"}, {"y", "z"}, {"y"} -> 3 combinations across 3
     // records.
-    assertThat(mergedIndex.keyStats("dimension::multi_in_second")).isEqualTo(new KeyStats(3, 3));
+    assertThat(mergedIndex.keyStats("dimension::multi_in_second"))
+        .isEqualTo(new KeyStats(3, 3, true));
     // combinations for single_only: {"s1"}, {"s2"} -> 2 combinations across 2 records.
-    assertThat(mergedIndex.keyStats("dimension::single_only")).isEqualTo(new KeyStats(2, 2));
+    assertThat(mergedIndex.keyStats("dimension::single_only")).isEqualTo(new KeyStats(2, 2, false));
   }
 
   private static LabData labData(

@@ -54,11 +54,11 @@ public final class DimensionOverlayTest {
 
     assertThat(overlay.keyId()).isEqualTo("dimension::carrier");
     assertThat(overlay.sortedValues()).containsExactly("at&t", "t-mobile", "verizon").inOrder();
-    assertThat(overlay.valueCounts()).containsEntry("verizon", 2);
     assertThat(overlay.valueDisplays()).containsEntry("verizon", "Verizon");
 
     // Check postings bound to Snapshot A
     DimensionOverlay.SnapshotBoundPostings boundA = overlay.bind(snapshotA);
+    assertThat(boundA.valueCounts()).containsEntry("verizon", 2);
     assertThat(boundA.get("verizon")).asList().containsExactly(0, 2).inOrder();
     assertThat(boundA.get("t-mobile")).asList().containsExactly(1);
     assertThat(boundA.get("at&t")).asList().containsExactly(1);
@@ -104,12 +104,18 @@ public final class DimensionOverlayTest {
 
     DimensionOverlay overlay = DimensionOverlay.create(raw, snapshotA);
     // 3 carrying devices in snapshotA (uuid-1, uuid-2, uuid-3); 2 distinct combinations:
-    // {"alpha"} and {"alpha", "beta"}. uuid-empty and uuid-absent are excluded.
-    assertThat(overlay.bind(snapshotA).stats()).isEqualTo(new KeyStats(3, 2));
+    // {"alpha"} and {"alpha", "beta"}, the second making the key multi-valued. uuid-empty and
+    // uuid-absent are excluded.
+    assertThat(overlay.bind(snapshotA).stats()).isEqualTo(new KeyStats(3, 2, true));
 
     OverlayView viewA = OverlayView.bind(snapshotA, ImmutableMap.of("dimension::tag", overlay));
-    assertThat(viewA.keyStats("dimension::tag")).isEqualTo(new KeyStats(3, 2));
+    assertThat(viewA.keyStats("dimension::tag")).isEqualTo(new KeyStats(3, 2, true));
+    assertThat(viewA.valueCounts("dimension::tag")).containsExactly("alpha", 3, "beta", 2);
+    assertThat(viewA.valueCount("dimension::tag", "alpha")).isEqualTo(3);
+    assertThat(viewA.valueCount("dimension::tag", "gamma")).isEqualTo(0);
     assertThat(viewA.keyStats("dimension::unknown")).isEqualTo(KeyStats.EMPTY);
+    assertThat(viewA.valueCounts("dimension::unknown")).isEmpty();
+    assertThat(viewA.valueCount("dimension::unknown", "alpha")).isEqualTo(0);
 
     FleetSnapshot snapshotB =
         FleetSnapshot.builder()
@@ -121,8 +127,12 @@ public final class DimensionOverlayTest {
             .setUuidToIndex(ImmutableMap.of("uuid-1", 0))
             .build();
 
-    assertThat(overlay.bind(snapshotB).stats()).isEqualTo(new KeyStats(1, 1));
+    // Only uuid-1 ({"alpha"}) remains, so the key is single-valued in snapshotB.
+    assertThat(overlay.bind(snapshotB).stats()).isEqualTo(new KeyStats(1, 1, false));
     OverlayView viewB = OverlayView.bind(snapshotB, ImmutableMap.of("dimension::tag", overlay));
-    assertThat(viewB.keyStats("dimension::tag")).isEqualTo(new KeyStats(1, 1));
+    assertThat(viewB.keyStats("dimension::tag")).isEqualTo(new KeyStats(1, 1, false));
+    assertThat(viewB.valueCounts("dimension::tag")).containsExactly("alpha", 1);
+    assertThat(viewB.valueCount("dimension::tag", "alpha")).isEqualTo(1);
+    assertThat(viewB.valueCount("dimension::tag", "beta")).isEqualTo(0);
   }
 }

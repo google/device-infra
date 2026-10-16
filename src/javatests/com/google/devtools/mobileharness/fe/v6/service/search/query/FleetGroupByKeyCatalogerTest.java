@@ -84,7 +84,7 @@ public final class FleetGroupByKeyCatalogerTest {
   private final FleetGroupByKeyCataloger cataloger = new FleetGroupByKeyCataloger();
 
   @Test
-  public void deviceBrowse_unfiltered_countsAllSectionsAndDropsSingleGroupKeys() {
+  public void deviceBrowse_unfiltered_countsAllSectionsIncludingSingleGroupKeys() {
     FleetGroupByKeyCatalogResponse response =
         cataloger.getGroupByKeyCatalog(
             deviceCorpus,
@@ -118,11 +118,12 @@ public final class FleetGroupByKeyCatalogerTest {
     assertThat(entryFor(builtin, "device_field::uuid").getGroupCount().getShown().getCount())
         .isEqualTo(3);
 
-    // host_field::connectivity is "Running" on all 3 devices (1 group), so it is dropped from
-    // Built-in fields from connected host as a no-op grouping.
+    // host_field::connectivity is "Running" on all 3 devices (1 group) and is kept with count 1.
     FleetGroupByKeySection hostBuiltin = section(response, "Built-in fields from connected host");
     assertThat(hostBuiltin.getTotalAvailable()).isEqualTo(0);
-    assertThat(keys(hostBuiltin)).doesNotContain("host_field::connectivity");
+    assertThat(
+            entryFor(hostBuiltin, "host_field::connectivity").getGroupCount().getShown().getCount())
+        .isEqualTo(1);
     assertThat(entryFor(hostBuiltin, "host_field::host_name").getGroupCount().getShown().getCount())
         .isEqualTo(2);
     assertThat(entryFor(hostBuiltin, "host_field::host_name").getCoverage().getDisplayCase())
@@ -138,28 +139,33 @@ public final class FleetGroupByKeyCatalogerTest {
     assertThat(modelEntry.getCoverage().getDisplayCase()).isEqualTo(CoverageInfo.DisplayCase.SHOWN);
     assertThat(modelEntry.getCoverage().getShown().getCount()).isEqualTo(3);
 
-    // Host properties from connected host has 8 properties in the index: host_os and prop_uniform
-    // (coverage 3, 1 group each) plus location (coverage 3, 2 groups) and p1..p5 (coverage 2, 2
-    // groups each). Dropping host_os and prop_uniform leaves 6 two-group properties; slicing to
-    // PROP_TOP (5) returns the top 5 with total 6.
+    // Host properties from connected host has 8 properties in the index: host_os, location, and
+    // prop_uniform (coverage 3) plus p1..p5 (coverage 2); slicing to PROP_TOP (5) returns the top 5
+    // with total 8.
     FleetGroupByKeySection properties = section(response, "Host properties from connected host");
     assertThat(keys(properties))
         .containsExactly(
+            "host_property::host_os",
             "host_property::location",
+            "host_property::prop_uniform",
             "host_property::p1",
-            "host_property::p2",
-            "host_property::p3",
-            "host_property::p4")
+            "host_property::p2")
         .inOrder();
-    assertThat(properties.getTotalAvailable()).isEqualTo(6);
+    assertThat(properties.getTotalAvailable()).isEqualTo(8);
     FleetGroupByKeyEntry locationEntry = entryFor(properties, "host_property::location");
     assertThat(locationEntry.getGroupCount().getShown().getCount()).isEqualTo(2);
     assertThat(locationEntry.getCoverage().getDisplayCase())
         .isEqualTo(CoverageInfo.DisplayCase.NOT_SHOWN);
+    assertThat(
+            entryFor(properties, "host_property::prop_uniform")
+                .getGroupCount()
+                .getShown()
+                .getCount())
+        .isEqualTo(1);
   }
 
   @Test
-  public void deviceSearch_unfiltered_countsLongTailDimensionsAndDropsSingleGroupKeys() {
+  public void deviceSearch_unfiltered_countsLongTailDimensionsIncludingSingleGroupKeys() {
     // dimension::f01 is "x" on device-0 and missing on device-1/device-2, producing 2 groups
     // ("x" + no-value bucket).
     FleetGroupByKeyCatalogResponse f01 =
@@ -172,12 +178,16 @@ public final class FleetGroupByKeyCatalogerTest {
                 .getCount())
         .isEqualTo(2);
 
-    // dimension::uniform is "same" on all 3 devices (1 group), so it is dropped and the section,
-    // left empty, is omitted.
+    // dimension::uniform is "same" on all 3 devices (1 group) and is kept with count 1.
     FleetGroupByKeyCatalogResponse uniform =
         cataloger.getGroupByKeyCatalog(
             deviceCorpus, FleetGroupByKeyCatalogRequest.newBuilder().setQuery("uniform").build());
-    assertThat(headings(uniform)).doesNotContain("Dimensions");
+    assertThat(
+            entryFor(section(uniform, "Dimensions"), "dimension::uniform")
+                .getGroupCount()
+                .getShown()
+                .getCount())
+        .isEqualTo(1);
 
     // Searching a promoted key ("host_name") counts it in Suggested.
     FleetGroupByKeyCatalogResponse hostName =
@@ -206,23 +216,42 @@ public final class FleetGroupByKeyCatalogerTest {
             deviceCorpus,
             FleetGroupByKeyCatalogRequest.newBuilder().addFilters(statusIdle).build());
 
-    // Under IDLE filter, both devices are on lab-a, so host_field::host_name produces only 1 group
-    // and Suggested and Built-in fields from connected host become empty and are omitted when
-    // unapplied.
+    // Under IDLE filter, both devices are on lab-a, so host_field::host_name and
+    // host_field::connectivity each produce 1 group and stay in Suggested and Built-in fields from
+    // connected host with count 1.
     assertThat(headings(response))
-        .containsExactly("Built-in fields", "Dimensions", "Host properties from connected host")
+        .containsExactly(
+            "Suggested",
+            "Built-in fields",
+            "Built-in fields from connected host",
+            "Dimensions",
+            "Host properties from connected host")
         .inOrder();
+    assertThat(
+            entryFor(section(response, "Suggested"), "host_field::host_name")
+                .getGroupCount()
+                .getShown()
+                .getCount())
+        .isEqualTo(1);
+    assertThat(
+            entryFor(
+                    section(response, "Built-in fields from connected host"),
+                    "host_field::connectivity")
+                .getGroupCount()
+                .getShown()
+                .getCount())
+        .isEqualTo(1);
 
     // Built-in fields are counted over the 2 IDLE devices: device_field::driver ("NoOpDriver" on
     // device-0, missing on device-1) and device_field::uuid both produce 2 groups, while
-    // device_field::owner ({bob, alice} on device-0 and {alice, bob} on device-1) canonicalizes to
-    // 1 multi-valued combination and is dropped.
+    // device_field::status and device_field::type each produce 1 group and are kept with count 1.
     FleetGroupByKeySection builtin = section(response, "Built-in fields");
-    assertThat(keys(builtin)).containsExactly("device_field::driver", "device_field::uuid");
     assertThat(entryFor(builtin, "device_field::driver").getGroupCount().getShown().getCount())
         .isEqualTo(2);
     assertThat(entryFor(builtin, "device_field::uuid").getGroupCount().getShown().getCount())
         .isEqualTo(2);
+    assertThat(entryFor(builtin, "device_field::status").getGroupCount().getShown().getCount())
+        .isEqualTo(1);
 
     // Dimensions and Host properties from connected host are not counted for groups under a filter
     // (groupCount NOT_SHOWN), while Dimensions still shows entity coverage.
@@ -247,19 +276,34 @@ public final class FleetGroupByKeyCatalogerTest {
     assertThat(entryFor(properties, "host_property::location").getCoverage().getDisplayCase())
         .isEqualTo(CoverageInfo.DisplayCase.NOT_SHOWN);
 
-    // When an already-applied group-by key collapses to a single group under an active filter, it
-    // is still returned marked applied rather than dropped.
-    FleetGroupByKeyCatalogResponse withApplied =
+    // When a filter matches 0 devices, unapplied counted keys produce 0 groups and are dropped,
+    // while an already-applied group-by key is still returned marked applied.
+    Filter noMatch =
+        Filter.newBuilder()
+            .setKey("device_field::status")
+            .setSimple(
+                SimpleMatch.newBuilder().addValues(FilterValue.newBuilder().setValue("MISSING")))
+            .build();
+    FleetGroupByKeyCatalogResponse emptyScopeWithApplied =
         cataloger.getGroupByKeyCatalog(
             deviceCorpus,
             FleetGroupByKeyCatalogRequest.newBuilder()
-                .addFilters(statusIdle)
+                .addFilters(noMatch)
                 .addGroupBy("host_field::host_name")
                 .build());
+    assertThat(headings(emptyScopeWithApplied))
+        .containsExactly(
+            "Suggested",
+            "Built-in fields from connected host",
+            "Dimensions",
+            "Host properties from connected host")
+        .inOrder();
+    assertThat(keys(section(emptyScopeWithApplied, "Built-in fields from connected host")))
+        .containsExactly("host_field::host_name");
     FleetGroupByKeyEntry appliedHostName =
-        entryFor(section(withApplied, "Suggested"), "host_field::host_name");
+        entryFor(section(emptyScopeWithApplied, "Suggested"), "host_field::host_name");
     assertThat(appliedHostName.getApplied()).isTrue();
-    assertThat(appliedHostName.getGroupCount().getShown().getCount()).isEqualTo(1);
+    assertThat(appliedHostName.getGroupCount().getShown().getCount()).isEqualTo(0);
   }
 
   @Test
@@ -316,14 +360,21 @@ public final class FleetGroupByKeyCatalogerTest {
     assertThat(headings(response)).containsExactly("Built-in fields", "Host properties").inOrder();
     FleetGroupByKeySection builtin = section(response, "Built-in fields");
     // host_name (lab-a, lab-b), host_ip (1.1.1.1, 2.2.2.2), and device_count (2, 1) all produce 2
-    // groups; connectivity ("Running" on both hosts) produces 1 group and is dropped.
+    // groups; connectivity ("Lab Server Connectivity", "Running" on both hosts) produces 1 group
+    // and is kept with count 1.
     assertThat(keys(builtin))
-        .containsExactly("host_field::device_count", "host_field::host_ip", "host_field::host_name")
+        .containsExactly(
+            "host_field::device_count",
+            "host_field::host_ip",
+            "host_field::host_name",
+            "host_field::connectivity")
         .inOrder();
     FleetGroupByKeyEntry hostName = entryFor(builtin, "host_field::host_name");
     assertThat(hostName.getGroupCount().getShown().getCount()).isEqualTo(2);
     assertThat(hostName.getCoverage().getDisplayCase())
         .isEqualTo(CoverageInfo.DisplayCase.NOT_SHOWN);
+    assertThat(entryFor(builtin, "host_field::connectivity").getGroupCount().getShown().getCount())
+        .isEqualTo(1);
 
     FleetGroupByKeySection properties = section(response, "Host properties");
     FleetGroupByKeyEntry location = entryFor(properties, "host_property::location");
@@ -508,8 +559,8 @@ public final class FleetGroupByKeyCatalogerTest {
    *   <li>lab-b (2.2.2.2, location nyc, prop_uniform=same): device-2 (BUSY, iphone, dedicated).
    * </ul>
    *
-   * <p>Every device has uniform=same, so that dimension makes one group and is dropped. f01 and
-   * driver are set on device-0 only, so each makes two groups: its value and the no-value group.
+   * <p>Every device has uniform=same, so that dimension makes one group. f01 and driver are set on
+   * device-0 only, so each makes two groups: its value and the no-value group.
    */
   private static LabQueryResult fleet() {
     Map<String, String> device0Dims = new LinkedHashMap<>();

@@ -43,6 +43,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.KeyCount;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.ValueKeyPair;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetFilterEngine;
+import com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCounts;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.KeyTokens;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.KeyVocabulary;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.SearchCorpus;
@@ -58,7 +59,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
 
@@ -97,9 +97,6 @@ import javax.inject.Inject;
  */
 public final class FleetSuggester {
 
-  /** A grouping needs at least two buckets to be worth offering. */
-  private static final int GROUP_SUGGEST_MIN = 2;
-
   /** Above this bucket count a suggested grouping is flagged {@code over_max}. */
   private static final int GROUP_SUGGEST_MAX = 50;
 
@@ -107,6 +104,12 @@ public final class FleetSuggester {
   private static final int MAX_APPLIED_GROUP_BYS = 3;
 
   private static final int DEFAULT_LIMIT = 12;
+
+  /**
+   * Largest number of suggestions one request may ask for. The search bar shows about a dozen rows;
+   * the cap keeps a client-supplied limit from sizing ranking buffers or evaluation budgets.
+   */
+  private static final int MAX_LIMIT = 50;
 
   /**
    * Value search over all keys starts at this input length; shorter inputs only match key names.
@@ -136,12 +139,12 @@ public final class FleetSuggester {
   @Inject
   FleetSuggester(FleetFilterEngine filterEngine) {
     this.filterEngine = filterEngine;
-    this.ranker = new SuggestionRanker(filterEngine);
+    this.ranker = new SuggestionRanker();
   }
 
   /** Returns ranked suggestions for the request against the given corpus. */
   public FleetSuggestionResponse suggest(SearchCorpus corpus, FleetSuggestionRequest request) {
-    int limit = request.getLimit() > 0 ? request.getLimit() : DEFAULT_LIMIT;
+    int limit = request.getLimit() > 0 ? Math.min(request.getLimit(), MAX_LIMIT) : DEFAULT_LIMIT;
     String query = WHITESPACE.matcher(request.getInput()).replaceAll(" ").trim();
     if (query.isEmpty()
         && request.getFiltersList().isEmpty()
@@ -160,21 +163,23 @@ public final class FleetSuggester {
     Optional<String> groupByTerm = SuggestionIntentParser.groupByTerm(query);
     if (groupByTerm.isPresent()) {
       return ranker.rankGroupBys(
-          context, groupByCandidates(context, groupByTerm.get(), request.getGroupByList()), limit);
+          context,
+          groupByCandidates(context, groupByTerm.get(), request.getGroupByList(), limit),
+          limit);
     }
 
     Intent intent = SuggestionIntentParser.parse(query);
     if (intent.pattern() == IntentPattern.SINGLE_TOKEN) {
       return suggestSingleToken(context, query, request.getGroupByList(), limit);
     }
-    return ranker.rank(context, conditionCandidates(context, intent), limit);
+    return ranker.rank(context, conditionCandidates(context, intent, limit), limit);
   }
 
   /**
    * Raw candidates for every shape in which the user spelled out a key, a value, or an operator.
    */
   private ImmutableList<SuggestionCandidate> conditionCandidates(
-      SuggestionContext context, Intent intent) {
+      SuggestionContext context, Intent intent, int limit) {
     return switch (intent.pattern()) {
       case KEY_VALUE ->
           suggestKeyValue(context, intent.key(), intent.value(), /* exclude= */ false);
@@ -183,7 +188,7 @@ public final class FleetSuggester {
       case EMPTINESS -> suggestEmptiness(context, intent.key(), intent.isEmpty());
       case KEY_WITH_OPERATOR -> suggestTopValuesOfKey(context, intent.key(), intent.exclude());
       case NEGATED_VALUE -> suggestValues(context, intent.value(), /* exclude= */ true);
-      case VALUE_LIST -> suggestValueList(context, intent.values(), /* exclude= */ false);
+      case VALUE_LIST -> suggestValueList(context, intent.values(), /* exclude= */ false, limit);
       case SINGLE_TOKEN ->
           throw new IllegalArgumentException("a single token is handled by suggestSingleToken");
     };
@@ -225,14 +230,16 @@ public final class FleetSuggester {
    */
   private static ImmutableList<SuggestionCandidate> groupByForMatchedKey(
       SuggestionContext context, ImmutableList<KeyMatch> keyMatches, List<String> appliedGroupBys) {
-    if (appliedGroupBys.size() >= MAX_APPLIED_GROUP_BYS) {
+    if (appliedGroupBys.size() >= MAX_APPLIED_GROUP_BYS
+        || (context.hasFilters() && context.current().isEmpty())) {
       return ImmutableList.of();
     }
     Set<String> appliedKeys = new HashSet<>(appliedGroupBys);
     return keyMatches.stream()
         .flatMap(
             match ->
-                groupByCandidate(context, match.key(), matchRank(match.tier()), appliedKeys)
+                groupByCandidate(
+                    context, match.key(), matchRank(match.tier()), appliedKeys, /* count= */ true)
                     .stream())
         .limit(1)
         .collect(toImmutableList());
@@ -366,17 +373,49 @@ public final class FleetSuggester {
 
   // ---- <value1>, <value2> ----
 
-  /** One OR condition per indexed key that carries every listed value. */
+  /**
+   * One OR condition per indexed key that carries every listed value. Keys that need a record pass
+   * (filtered requests, or multi-valued keys when unfiltered) are evaluated strongest priority
+   * first, then by descending upper-bound OR count and key id, up to {@code limit *
+   * FILTERED_KEY_BUDGET_MULTIPLIER}.
+   */
   private ImmutableList<SuggestionCandidate> suggestValueList(
-      SuggestionContext context, ImmutableList<String> values, boolean exclude) {
+      SuggestionContext context, ImmutableList<String> values, boolean exclude, int limit) {
     ImmutableList<String> lowered =
         values.stream().map(v -> Ascii.toLowerCase(stripQuotes(v))).collect(toImmutableList());
+    ImmutableSet<String> distinctValues = ImmutableSet.copyOf(lowered);
+    FleetIndex index = context.index();
     KeyVocabulary vocabulary = context.vocabulary();
-    return context.index().keyIds().stream()
-        .filter(keyId -> hasAllValues(context.index(), keyId, lowered))
-        .flatMap(keyId -> vocabulary.describe(keyId).stream())
-        .flatMap(key -> multiValueOr(context, key, lowered, exclude).stream())
-        .collect(toImmutableList());
+    ImmutableList<KeyDescriptor> matchingKeys =
+        index.keyIds().stream()
+            .filter(keyId -> hasAllValues(index, keyId, lowered))
+            .flatMap(keyId -> vocabulary.describe(keyId).stream())
+            .sorted(
+                Comparator.comparingInt(vocabulary::priority)
+                    .reversed()
+                    .thenComparing(
+                        Comparator.comparingInt(
+                                (KeyDescriptor key) ->
+                                    distinctValues.stream()
+                                        .mapToInt(v -> index.valueCount(key.id(), v))
+                                        .sum())
+                            .reversed())
+                    .thenComparing(KeyDescriptor::id))
+            .collect(toImmutableList());
+    int scanBudget = limit * SuggestionRanker.FILTERED_KEY_BUDGET_MULTIPLIER;
+    int scanned = 0;
+    ImmutableList.Builder<SuggestionCandidate> out = ImmutableList.builder();
+    for (KeyDescriptor key : matchingKeys) {
+      boolean scansRecords = context.hasFilters() || index.keyStats(key.id()).multiValued();
+      if (scansRecords) {
+        if (scanned >= scanBudget) {
+          continue;
+        }
+        scanned++;
+      }
+      multiValueOr(context, key, lowered, exclude).ifPresent(out::add);
+    }
+    return out.build();
   }
 
   // ---- a bare value ----
@@ -501,15 +540,23 @@ public final class FleetSuggester {
       }
     }
     String term = KeyTokens.normalize(token);
+    // One pass normalizes each key name once. Prefix matches go in as they are found and contains
+    // matches are appended after them, both in discoverable order.
+    List<KeyDescriptor> containsMatches = new ArrayList<>();
     for (KeyDescriptor key : discoverable) {
-      if (!out.containsKey(key) && nameStartsWith(vocabulary, key, term)) {
+      if (out.containsKey(key)) {
+        continue;
+      }
+      String normTitle = KeyTokens.normalize(vocabulary.titleDisplayName(key));
+      String normBare = KeyTokens.normalize(key.bareName());
+      if (normTitle.startsWith(term) || normBare.startsWith(term)) {
         out.put(key, new KeyMatch(key, TIER_PREFIX));
+      } else if (normTitle.contains(term) || normBare.contains(term)) {
+        containsMatches.add(key);
       }
     }
-    for (KeyDescriptor key : discoverable) {
-      if (!out.containsKey(key) && nameContains(vocabulary, key, term)) {
-        out.put(key, new KeyMatch(key, TIER_CONTAINS));
-      }
+    for (KeyDescriptor key : containsMatches) {
+      out.put(key, new KeyMatch(key, TIER_CONTAINS));
     }
     return ImmutableList.copyOf(out.values());
   }
@@ -519,56 +566,92 @@ public final class FleetSuggester {
   /**
    * Group-by rows for the {@code group by} prefix. A bare prefix offers the curated candidates; a
    * term widens to any discoverable key whose name matches (or a minted cold long-tail key when
-   * nothing discoverable matches), ranked by match quality. Requests that already carry the maximum
-   * number of group-bys yield nothing.
+   * nothing discoverable matches). Requests that already carry the maximum number of group-bys, or
+   * whose filters leave no record, yield nothing.
+   *
+   * <p>Without filters every group count comes from the per-snapshot key statistics. With filters
+   * each count is one pass over the filtered records, so only the strongest {@code limit *
+   * FILTERED_KEY_BUDGET_MULTIPLIER} indexed keys, by match quality and then key priority, are
+   * counted; the remaining matches are still offered, without a group count. This bound is best
+   * effort, like the filtered evaluation budget of {@link SuggestionRanker#rank}.
    */
   private static ImmutableList<SuggestionCandidate> groupByCandidates(
-      SuggestionContext context, String term, List<String> applied) {
-    if (applied.size() >= MAX_APPLIED_GROUP_BYS) {
+      SuggestionContext context, String term, List<String> applied, int limit) {
+    if (applied.size() >= MAX_APPLIED_GROUP_BYS
+        || (context.hasFilters() && context.current().isEmpty())) {
       return ImmutableList.of();
     }
     KeyVocabulary vocabulary = context.vocabulary();
     Set<String> appliedKeys = new HashSet<>(applied);
+    ImmutableList<KeyMatch> matches;
     if (term.isEmpty()) {
-      return vocabulary.groupByCandidates().stream()
-          .flatMap(key -> groupByCandidate(context, key, /* matchRank= */ 0, appliedKeys).stream())
-          .collect(toImmutableList());
-    }
-    ImmutableList<KeyMatch> matches = matchKeyNames(context, term);
-    if (matches.isEmpty()) {
       matches =
-          vocabulary
-              .mintLongTailKey(term)
-              .map(key -> ImmutableList.of(new KeyMatch(key, TIER_FULL)))
-              .orElse(ImmutableList.of());
+          vocabulary.groupByCandidates().stream()
+              .map(key -> new KeyMatch(key, TIER_FULL))
+              .collect(toImmutableList());
+    } else {
+      matches = matchKeyNames(context, term);
+      if (matches.isEmpty()) {
+        matches =
+            vocabulary
+                .mintLongTailKey(term)
+                .map(key -> ImmutableList.of(new KeyMatch(key, TIER_FULL)))
+                .orElse(ImmutableList.of());
+      }
     }
-    return matches.stream()
-        .flatMap(
-            match ->
-                groupByCandidate(context, match.key(), matchRank(match.tier()), appliedKeys)
-                    .stream())
-        .collect(toImmutableList());
+
+    ImmutableList<KeyMatch> strongestFirst =
+        ImmutableList.sortedCopyOf(
+            Comparator.comparingInt((KeyMatch match) -> matchRank(match.tier()))
+                .thenComparing(
+                    Comparator.comparingInt((KeyMatch match) -> vocabulary.priority(match.key()))
+                        .reversed()),
+            matches);
+    int countBudget =
+        context.hasFilters()
+            ? limit * SuggestionRanker.FILTERED_KEY_BUDGET_MULTIPLIER
+            : Integer.MAX_VALUE;
+    int counted = 0;
+    ImmutableList.Builder<SuggestionCandidate> out = ImmutableList.builder();
+    for (KeyMatch match : strongestFirst) {
+      String keyId = match.key().id();
+      boolean needsCount = context.isIndexed(keyId) && !appliedKeys.contains(keyId);
+      boolean count = !needsCount || counted < countBudget;
+      if (needsCount && count) {
+        counted++;
+      }
+      groupByCandidate(context, match.key(), matchRank(match.tier()), appliedKeys, count)
+          .ifPresent(out::add);
+    }
+    return out.build();
   }
 
   /**
    * The group-by row for one key, or empty when the key cannot be grouped in this request: it is
-   * already grouped by, it is an unindexed built-in key, or it is indexed and would produce fewer
-   * than two buckets. A cold long-tail key (from the dimension catalog or minted from the term) has
-   * no overlay loaded during typeahead, so it is offered without a group count; its overlay is
-   * pulled when the grouping is executed. {@code matchRank} is the key-name match quality (0 exact,
-   * 1 prefix, 2 contains) used for ordering.
+   * already grouped by, it is an unindexed built-in key, or it is counted and the active filters
+   * leave it no group. Single-group keys are still offered (with {@code 1 group}) so the user can
+   * add or adjust group-by keys freely while editing filters. A row is offered without a group
+   * count for a cold long-tail key (from the dimension catalog or minted from the term), which has
+   * no overlay loaded during typeahead and is pulled when the grouping is executed, and for an
+   * indexed key when {@code count} is false. {@code matchRank} is the key-name match quality (0
+   * exact, 1 prefix, 2 contains) used for ordering.
    */
   private static Optional<SuggestionCandidate> groupByCandidate(
-      SuggestionContext context, KeyDescriptor key, int matchRank, Set<String> appliedKeys) {
+      SuggestionContext context,
+      KeyDescriptor key,
+      int matchRank,
+      Set<String> appliedKeys,
+      boolean count) {
     String keyId = key.id();
     if (appliedKeys.contains(keyId)) {
       return Optional.empty();
     }
     KeyVocabulary vocabulary = context.vocabulary();
-    if (!context.isIndexed(keyId)) {
-      if (!key.isLongTail()) {
-        return Optional.empty();
-      }
+    boolean indexed = context.isIndexed(keyId);
+    if (!indexed && !key.isLongTail()) {
+      return Optional.empty();
+    }
+    if (!indexed || !count) {
       FleetSuggestion.Builder proto =
           FleetSuggestion.newBuilder()
               .setLabel("Group by")
@@ -577,7 +660,7 @@ public final class FleetSuggester {
       return Optional.of(SuggestionCandidate.uncountedGroupBy(key, proto, matchRank));
     }
     int groups = groupCount(context, keyId);
-    if (groups < GROUP_SUGGEST_MIN) {
+    if (groups == 0) {
       return Optional.empty();
     }
     boolean overMax = groups > GROUP_SUGGEST_MAX;
@@ -586,28 +669,22 @@ public final class FleetSuggester {
             .setLabel("Group by")
             .addAllMainText(segments("", vocabulary.titleDisplayName(key)))
             .setCount(groups)
-            .setCountUnit("groups")
+            .setCountUnit(groups == 1 ? "group" : "groups")
             .setOverMax(overMax)
             .setAddGroupBy(SuggestionActions.addGroupBy(vocabulary, key));
     return Optional.of(SuggestionCandidate.groupBy(key, proto, groups, matchRank, overMax));
   }
 
   /**
-   * Number of distinct value combinations of the key across the current scope, plus one if any
-   * record lacks the key.
+   * Number of groups a group-by on the key would produce over the current scope, shared with the
+   * group-by key catalog through {@link KeyCounts#groupCount}: from the per-snapshot key statistics
+   * without filters, or one pass over the filtered records with them.
    */
   private static int groupCount(SuggestionContext context, String keyId) {
-    Set<String> combos = new HashSet<>();
-    boolean hasMissing = false;
-    for (int position : context.current()) {
-      ImmutableSet<String> values = context.corpus().valuesForKey(position, keyId);
-      if (values.isEmpty()) {
-        hasMissing = true;
-      } else {
-        combos.add(String.join("\u0000", new TreeSet<>(values)));
-      }
-    }
-    return combos.size() + (hasMissing ? 1 : 0);
+    return KeyCounts.groupCount(
+        context.corpus(),
+        context.hasFilters() ? Optional.of(context.current()) : Optional.empty(),
+        keyId);
   }
 
   // ---- Candidate builders shared by several shapes ----
@@ -806,20 +883,6 @@ public final class FleetSuggester {
   }
 
   // ---- Small helpers ----
-
-  /** Whether the key's display name or bare name starts with the normalized term. */
-  private static boolean nameStartsWith(
-      KeyVocabulary vocabulary, KeyDescriptor key, String normalizedTerm) {
-    return KeyTokens.normalize(vocabulary.titleDisplayName(key)).startsWith(normalizedTerm)
-        || KeyTokens.normalize(key.bareName()).startsWith(normalizedTerm);
-  }
-
-  /** Whether the key's display name or bare name contains the normalized term. */
-  private static boolean nameContains(
-      KeyVocabulary vocabulary, KeyDescriptor key, String normalizedTerm) {
-    return KeyTokens.normalize(vocabulary.titleDisplayName(key)).contains(normalizedTerm)
-        || KeyTokens.normalize(key.bareName()).contains(normalizedTerm);
-  }
 
   /** A comma outside quotes means several values; quotes make the whole text one literal value. */
   private static boolean isUnquotedList(String rawValue) {

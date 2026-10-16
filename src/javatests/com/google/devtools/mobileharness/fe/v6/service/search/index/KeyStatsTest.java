@@ -28,7 +28,7 @@ public final class KeyStatsTest {
 
   @Test
   public void groupCount_addsNoValueBucketOnlyWhenSomeRecordLacksKey() {
-    KeyStats stats = new KeyStats(3, 2);
+    KeyStats stats = new KeyStats(3, 2, /* multiValued= */ false);
 
     assertThat(stats.entityCount()).isEqualTo(3);
     assertThat(stats.distinctCombinations()).isEqualTo(2);
@@ -42,6 +42,7 @@ public final class KeyStatsTest {
   public void empty_hasZeroEntitiesAndProducesSingleMissingGroupWhenCorpusNonEmpty() {
     assertThat(KeyStats.EMPTY.entityCount()).isEqualTo(0);
     assertThat(KeyStats.EMPTY.distinctCombinations()).isEqualTo(0);
+    assertThat(KeyStats.EMPTY.multiValued()).isFalse();
     assertThat(KeyStats.EMPTY.hasMissing(0)).isFalse();
     assertThat(KeyStats.EMPTY.hasMissing(5)).isTrue();
     assertThat(KeyStats.EMPTY.groupCount(0)).isEqualTo(0);

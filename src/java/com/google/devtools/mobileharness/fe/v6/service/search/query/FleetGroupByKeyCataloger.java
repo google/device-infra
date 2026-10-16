@@ -80,9 +80,10 @@ import javax.inject.Singleton;
  * active filter every indexed section is counted from the per-snapshot key statistics, which costs
  * no scan; under an active filter only Suggested and Built-in sections are counted, one pass over
  * the result set per key, so long-tail sections do not pay for keys the user will scroll past.
- * Unapplied counted keys that would produce fewer than two groups are omitted before slicing to the
- * section limit, while counted keys already in {@code request.getGroupByList()} are kept even when
- * they produce a single group and marked {@code applied}.
+ * Single-group keys are still kept (with count 1) so users can add or adjust group-bys freely while
+ * editing filters; unapplied counted keys are omitted only when the active filters leave zero
+ * records (0 groups), while keys already in {@code request.getGroupByList()} are always kept and
+ * marked {@code applied}.
  *
  * <p>In search mode each section keeps only the keys matching the query, best match first (exact
  * name, then prefix, then substring), and the section's own order within one match rank; see {@link
@@ -90,12 +91,6 @@ import javax.inject.Singleton;
  */
 @Singleton
 public final class FleetGroupByKeyCataloger {
-
-  /**
-   * A grouping needs at least two groups to be worth offering: one group is the ungrouped list
-   * again. Same threshold as the prototype's {@code GROUP_SUGGEST_MIN}.
-   */
-  private static final int MIN_GROUP_COUNT = 2;
 
   private final FleetFilterEngine filterEngine;
   private final DimensionCatalogStore dimensionCatalogStore;
@@ -306,8 +301,7 @@ public final class FleetGroupByKeyCataloger {
 
   /**
    * Builds a candidate section. A {@code limit} of 0 keeps every key and reports no total; a
-   * positive limit caps the shown entries in {@link #build} after single-group keys are dropped and
-   * reports {@code total_available}.
+   * positive limit caps the shown entries in {@link #build} and reports {@code total_available}.
    */
   private static <T extends KeyDescriptor> CandidateSection candidates(
       String heading,
@@ -343,16 +337,13 @@ public final class FleetGroupByKeyCataloger {
 
   /**
    * Turns the candidate sections into the response: decides each entry's group count and entity
-   * coverage, drops unapplied counted keys that would make fewer than {@link #MIN_GROUP_COUNT}
-   * groups before applying the section limit, marks applied keys, and omits sections left with no
-   * entries so the dialog never renders an empty section heading.
+   * coverage, drops unapplied counted keys only when the active filters leave zero groups before
+   * applying the section limit, marks applied keys, and omits sections left with no entries so the
+   * dialog never renders an empty section heading.
    *
    * <p>An entry is counted only when its section is counted and the snapshot indexes the key. A
    * catalog-only dimension has no values in the snapshot, so it is never counted for groups and
-   * never dropped; it is shown with {@link GroupCountNotShown}. In browse mode, the Dimensions
-   * section only iterates declared dimensions while {@code rawTotal} counts every dimension, so
-   * {@code total_available} subtracts only single-group declared dimensions (most undeclared
-   * dimensions are catalog-only names whose group count is unknown anyway).
+   * never dropped; it is shown with {@link GroupCountNotShown}.
    */
   private FleetGroupByKeyCatalogResponse build(
       SearchCorpus corpus,
@@ -371,7 +362,6 @@ public final class FleetGroupByKeyCataloger {
     Map<String, Integer> groupCounts = new HashMap<>();
     FleetGroupByKeyCatalogResponse.Builder response = FleetGroupByKeyCatalogResponse.newBuilder();
     for (CandidateSection section : candidateSections) {
-      int dropped = 0;
       List<FleetGroupByKeyEntry> kept = new ArrayList<>();
       for (CandidateEntry candidate : section.entries()) {
         String keyId = candidate.keyId();
@@ -380,8 +370,7 @@ public final class FleetGroupByKeyCataloger {
         if (section.counted() && indexedKeys.contains(keyId)) {
           int groups =
               groupCounts.computeIfAbsent(keyId, id -> KeyCounts.groupCount(corpus, current, id));
-          if (groups < MIN_GROUP_COUNT && !applied) {
-            dropped++;
+          if (groups == 0 && !applied) {
             continue;
           }
           countInfo =
@@ -414,7 +403,7 @@ public final class FleetGroupByKeyCataloger {
           .limit(section.limit() > 0 ? section.limit() : Long.MAX_VALUE)
           .forEach(sectionBuilder::addEntries);
       if (section.limit() > 0) {
-        sectionBuilder.setTotalAvailable(section.rawTotal() - dropped);
+        sectionBuilder.setTotalAvailable(section.total());
       }
       response.addSections(sectionBuilder);
     }
@@ -429,9 +418,11 @@ public final class FleetGroupByKeyCataloger {
    *
    * @param entries the section's candidate keys in rank order
    * @param limit maximum entries to show (0 for unlimited, in which case no total is reported)
-   * @param rawTotal how many keys the section has before dropping single-group keys
+   * @param total how many keys the section offers, reported as {@code total_available}. Only a
+   *     limited section reports it, and a limited (long-tail) section is counted only without
+   *     filters, where every indexed key makes at least one group, so none of its keys is dropped
    * @param counted whether the section's keys get a group count
    */
   private record CandidateSection(
-      String heading, List<CandidateEntry> entries, int limit, int rawTotal, boolean counted) {}
+      String heading, List<CandidateEntry> entries, int limit, int total, boolean counted) {}
 }

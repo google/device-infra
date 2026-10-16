@@ -22,7 +22,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-/** Read view over loaded on-demand dimension overlays for one query/corpus context. */
+/**
+ * Read view over loaded on-demand dimension overlays for one query/corpus context.
+ *
+ * <p>Value lists ({@link #sortedValues} and {@link #valueDisplays}) reflect all values discovered
+ * when the overlay was pulled, while counts, postings, and statistics ({@link #valueCounts}, {@link
+ * #valueCount}, {@link #keyStats}, {@link #getPostings}, and {@link #postingsForKey}) are aligned
+ * to the bound snapshot.
+ */
 public interface OverlayView {
 
   /** Returns true if the key is present in this overlay view. */
@@ -100,7 +107,7 @@ public interface OverlayView {
     @Override
     public ImmutableMap<String, Integer> valueCounts(String keyId) {
       DimensionOverlay overlay = overlays.get(keyId);
-      return overlay != null ? overlay.valueCounts() : ImmutableMap.of();
+      return overlay != null ? overlay.bind(snapshot).valueCounts() : ImmutableMap.of();
     }
 
     @Override
@@ -112,7 +119,7 @@ public interface OverlayView {
     @Override
     public int valueCount(String keyId, String value) {
       DimensionOverlay overlay = overlays.get(keyId);
-      return overlay != null ? overlay.valueCount(value) : 0;
+      return overlay != null ? overlay.bind(snapshot).get(value).length : 0;
     }
 
     @Override

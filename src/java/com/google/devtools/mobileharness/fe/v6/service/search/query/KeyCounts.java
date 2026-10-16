@@ -27,15 +27,15 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * The per-key numbers the key catalogs need: how many records carry a key, and how many groups a
- * group-by on it would produce.
+ * The per-key numbers the key catalogs and search-bar suggestions need: how many records carry a
+ * key, and how many groups a group-by on it would produce.
  *
  * <p>Over the whole corpus both come directly from {@link FleetIndex#keyStats}, so opening a dialog
  * or typing in it costs no corpus scan and never touches {@code Postings}. Over a filtered result
  * set the group count is one pass over that set, which is the price of answering for the data the
  * user is looking at.
  */
-final class KeyCounts {
+public final class KeyCounts {
 
   private KeyCounts() {}
 
@@ -49,7 +49,7 @@ final class KeyCounts {
    * Group count of a key over the current result set, or over the whole corpus when {@code current}
    * is empty (no filter is active).
    */
-  static int groupCount(
+  public static int groupCount(
       SearchCorpus corpus, Optional<ImmutableList<Integer>> current, String keyId) {
     return current.isPresent()
         ? filteredGroupCount(corpus, current.get(), keyId)
