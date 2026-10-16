@@ -23,6 +23,7 @@ import static com.google.devtools.mobileharness.shared.constant.LogRecordImporta
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.partitioningBy;
+import static java.util.stream.Collectors.toCollection;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
@@ -46,14 +47,17 @@ import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.concurrent.GuardedBy;
@@ -71,6 +75,7 @@ import javax.inject.Inject;
 public class AtsSessionOrchestrator {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  private static final String TRADEFED_DRIVER_NAME = "TradefedTest";
 
   private final Object testCancellationLock = new Object();
 
@@ -155,8 +160,18 @@ public class AtsSessionOrchestrator {
     JobInfo currentJob = jobEndEvent.getJob();
 
     String jobId = currentJob.locator().getId();
-    boolean isSetupJobEnd = runningSetupJobId.compareAndSet(jobId, null);
+    // Also check isSetupJob(currentJob) when runningSetupJobId is null to handle a session resumed
+    // after a server restart while the setup job was in flight.
+    boolean isSetupJobEnd =
+        runningSetupJobId.compareAndSet(jobId, null)
+            || (runningSetupJobId.get() == null && isSetupJob(currentJob));
     if (isSetupJobEnd) {
+      // If the session was resumed after a server restart, setupJobRef and teardownJobRef were not
+      // populated by startSession in this process; initialize them now.
+      if (setupJobRef.get() == null) {
+        setupJobRef.set(currentJob);
+        xtsJobCreator.createXtsTearDownJob(sessionRequestInfo).ifPresent(teardownJobRef::set);
+      }
       logger.atInfo().log("Setup job [%s] ended, starting main jobs.", jobId);
       // Extract dynamic MCTS module names downloaded during the setup job, and create Tradefed jobs
       // now that the canonical list of dynamic modules is known.
@@ -170,9 +185,27 @@ public class AtsSessionOrchestrator {
       return;
     }
 
-    boolean isTeardownJobEnd = runningTeardownJobId.compareAndSet(jobId, null);
+    // Also check isTeardownJob(currentJob) in case the session was resumed after a server restart
+    // while the teardown job was in flight (so runningTeardownJobId is null in this process).
+    boolean isTeardownJobEnd =
+        runningTeardownJobId.compareAndSet(jobId, null) || isTeardownJob(currentJob);
     if (isTeardownJobEnd) {
       logger.atInfo().log("Teardown job [%s] ended.", jobId);
+      return;
+    }
+
+    // If a main job finishes that is not tracked in the in-memory running maps, the session was
+    // resumed after a server restart; reconstruct orchestration state from
+    // sessionInfo.getAllJobs().
+    boolean isResumed;
+    synchronized (runningTradefedJobs) {
+      synchronized (runningNonTradefedJobs) {
+        isResumed =
+            !runningTradefedJobs.containsKey(jobId) && !runningNonTradefedJobs.containsKey(jobId);
+      }
+    }
+    if (isResumed) {
+      restoreResumedSessionState(currentJob, sessionRequestInfo);
       return;
     }
 
@@ -286,12 +319,18 @@ public class AtsSessionOrchestrator {
             .build();
 
     // Sends test message to started tests.
-    ImmutableList<TestInfo> startedTests;
+    Set<TestInfo> testsToCancel = new LinkedHashSet<>();
     synchronized (testCancellationLock) {
       this.lastCancellationTestMessage = cancellationTestMessage;
-      startedTests = ImmutableList.copyOf(this.startedTests);
+      testsToCancel.addAll(this.startedTests);
     }
-    for (TestInfo testInfo : startedTests) {
+    // Also include RUNNING tests from sessionInfo.getAllJobs() so tests that started before a
+    // session resume (whose onTestStarting event was missed in this process) are still cancelled.
+    sessionInfo.getAllJobs().stream()
+        .flatMap(jobInfo -> jobInfo.tests().getAll().values().stream())
+        .filter(testInfo -> testInfo.status().get() == TestStatus.RUNNING)
+        .forEach(testsToCancel::add);
+    for (TestInfo testInfo : testsToCancel) {
       sendCancellationMessageToStartedTest(testInfo, cancellationTestMessage);
     }
   }
@@ -359,7 +398,29 @@ public class AtsSessionOrchestrator {
   }
 
   /**
-   * Creates the main Tradefed and non-Tradefed jobs based on the given {@link SessionRequestInfo}.
+   * Creates the main Tradefed and non-Tradefed jobs based on the given {@link SessionRequestInfo}
+   * and verifies that at least one job was created.
+   */
+  private void createMainJobs(
+      SessionRequestInfo sessionRequestInfo,
+      ImmutableSet<String> dynamicMctsModules,
+      boolean skipDynamicMctsJob)
+      throws MobileHarnessException, InterruptedException {
+    populateMainJobs(sessionRequestInfo, dynamicMctsModules, skipDynamicMctsJob);
+    if (tradefedJobs.isEmpty() && nonTradefedJobs.isEmpty()) {
+      throw new MobileHarnessException(
+          InfraErrorId.XTS_NO_JOB_CREATED_FOR_SESSION,
+          "No jobs created for session " + sessionInfo.getSessionId());
+    }
+  }
+
+  /**
+   * Populates {@link #tradefedJobs} and {@link #nonTradefedJobs} based on the given {@link
+   * SessionRequestInfo}.
+   *
+   * <p>Separated from {@link #createMainJobs} so that {@link #restoreResumedSessionState} can
+   * reconstruct expected job lists after a server restart without enforcing the initial non-empty
+   * check.
    *
    * @param sessionRequestInfo the session request info representing the session config
    * @param dynamicMctsModules the canonical set of dynamic MCTS module names downloaded during the
@@ -368,7 +429,7 @@ public class AtsSessionOrchestrator {
    *     filtering and creation.
    * @param skipDynamicMctsJob when {@code true}, the dynamic MCTS job is not created in RUNNER mode
    */
-  private void createMainJobs(
+  private void populateMainJobs(
       SessionRequestInfo sessionRequestInfo,
       ImmutableSet<String> dynamicMctsModules,
       boolean skipDynamicMctsJob)
@@ -406,11 +467,6 @@ public class AtsSessionOrchestrator {
                   + " [%s].",
               sessionInfo.getSessionId(), MoreThrowables.shortDebugString(e));
       nonTradefedJobs = ImmutableList.of();
-    }
-    if (tradefedJobs.isEmpty() && nonTradefedJobs.isEmpty()) {
-      throw new MobileHarnessException(
-          InfraErrorId.XTS_NO_JOB_CREATED_FOR_SESSION,
-          "No jobs created for session " + sessionInfo.getSessionId());
     }
   }
 
@@ -470,7 +526,7 @@ public class AtsSessionOrchestrator {
    * <p>If no Tradefed jobs could be started, falls back to adding non-Tradefed jobs.
    */
   private void addMainJobs(SessionRequestInfo sessionRequestInfo) {
-    List<JobInfo> initialJobsToStart = prepareTradefedJobsToStart(sessionRequestInfo);
+    ImmutableList<JobInfo> initialJobsToStart = prepareTradefedJobsToStart(sessionRequestInfo);
     if (!addAndTrackTradefedJobs(initialJobsToStart)) {
       logger.atInfo().log("No tradefed job was added, trying to add non-tradefed jobs if needed.");
       if (!addMainNonTradefedJobs()) {
@@ -479,7 +535,7 @@ public class AtsSessionOrchestrator {
     }
   }
 
-  private List<JobInfo> prepareTradefedJobsToStart(SessionRequestInfo sessionRequestInfo) {
+  private ImmutableList<JobInfo> prepareTradefedJobsToStart(SessionRequestInfo sessionRequestInfo) {
     if (SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)) {
       // In MODULE sharding mode, each job requires a single device. All jobs can be scheduled
       // concurrently across all available devices.
@@ -487,25 +543,31 @@ public class AtsSessionOrchestrator {
     }
 
     // In RUNNER (or default) sharding mode:
-    // Partition jobs into static xTS jobs and dynamic MCTS jobs. Start the static job first,
-    // and queue the dynamic job to execute sequentially in onJobEnd using the same devices.
+    // Order static xTS jobs before dynamic MCTS jobs. Start the first job immediately,
+    // and queue the remaining jobs to execute sequentially in onJobEnd using the same devices.
+    ImmutableList<JobInfo> orderedJobs = orderStaticJobsFirst(tradefedJobs);
+    if (orderedJobs.size() <= 1) {
+      return orderedJobs;
+    }
+    additionalTradefedJobs.addAll(orderedJobs.subList(1, orderedJobs.size()));
+    return orderedJobs.subList(0, 1);
+  }
+
+  /**
+   * Orders static xTS jobs before non-static (e.g. dynamic MCTS) Tradefed jobs so that both initial
+   * scheduling and resumed-session recovery execute static jobs before dynamic jobs in RUNNER
+   * sharding mode.
+   */
+  private static ImmutableList<JobInfo> orderStaticJobsFirst(List<JobInfo> jobs) {
     Map<Boolean, List<JobInfo>> partitionedJobs =
-        tradefedJobs.stream()
+        jobs.stream()
             .collect(
                 partitioningBy(
                     job -> job.locator().getName().contains(XtsConstants.STATIC_XTS_JOB_NAME)));
-    List<JobInfo> staticXtsJobs = partitionedJobs.get(true);
-    List<JobInfo> nonStaticXtsJobs = partitionedJobs.get(false);
-
-    if (!staticXtsJobs.isEmpty()) {
-      additionalTradefedJobs.addAll(nonStaticXtsJobs);
-      return staticXtsJobs;
-    } else if (nonStaticXtsJobs.size() <= 1) {
-      return nonStaticXtsJobs;
-    } else {
-      additionalTradefedJobs.addAll(nonStaticXtsJobs.subList(1, nonStaticXtsJobs.size()));
-      return nonStaticXtsJobs.subList(0, 1);
-    }
+    return ImmutableList.<JobInfo>builder()
+        .addAll(partitionedJobs.get(true))
+        .addAll(partitionedJobs.get(false))
+        .build();
   }
 
   /**
@@ -566,5 +628,130 @@ public class AtsSessionOrchestrator {
         runningTeardownJobId.set(jobIds.get(0));
       }
     }
+  }
+
+  /**
+   * Re-initializes session state and schedules remaining jobs when resuming a session after a
+   * restart.
+   *
+   * <p>Jobs might be lost from in-memory state in resumed sessions. This method reconstructs active
+   * running job maps and re-creates remaining expected jobs while filtering out jobs that have
+   * already been triggered in the session.
+   */
+  private void restoreResumedSessionState(JobInfo currentJob, SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException, InterruptedException {
+    if (sessionInfo.getAllJobs().isEmpty()) {
+      return;
+    }
+    String jobId = currentJob.locator().getId();
+    boolean isTf = isTradefedJob(currentJob);
+
+    // 1. Rebuild running job tracking maps from all jobs already added to the session.
+    synchronized (runningTradefedJobs) {
+      synchronized (runningNonTradefedJobs) {
+        for (JobInfo job : sessionInfo.getAllJobs()) {
+          if (isSetupJob(job) || isTeardownJob(job)) {
+            continue;
+          }
+          boolean isJobRunning = job.status().get() != TestStatus.DONE;
+          if (isTradefedJob(job)) {
+            runningTradefedJobs.putIfAbsent(job.locator().getId(), isJobRunning);
+          } else {
+            runningNonTradefedJobs.putIfAbsent(job.locator().getId(), isJobRunning);
+          }
+        }
+      }
+    }
+
+    // Collect names of jobs that have already been added to the session so we don't re-schedule
+    // them.
+    ImmutableSet<String> triggeredJobNames =
+        sessionInfo.getAllJobs().stream()
+            .map(job -> job.locator().getName())
+            .collect(toImmutableSet());
+
+    // 2. Re-create the full set of expected main and teardown jobs if our in-memory lists are
+    // empty, using a completed setup job (if present) to recover dynamic MCTS parameters.
+    if (tradefedJobs.isEmpty() && nonTradefedJobs.isEmpty()) {
+      ImmutableSet<String> dynamicMctsModules = ImmutableSet.of();
+      boolean skipDynamicMctsJob = false;
+      Optional<JobInfo> existingSetupJob =
+          sessionInfo.getAllJobs().stream().filter(AtsSessionOrchestrator::isSetupJob).findFirst();
+      if (existingSetupJob.isPresent()) {
+        setupJobRef.set(existingSetupJob.get());
+        dynamicMctsModules = extractDynamicMctsModules(existingSetupJob.get());
+        skipDynamicMctsJob = !extractHasPreloadedMainlineModules(existingSetupJob.get());
+      }
+      populateMainJobs(sessionRequestInfo, dynamicMctsModules, skipDynamicMctsJob);
+      nonTradefedJobs =
+          nonTradefedJobs.stream()
+              .filter(job -> !triggeredJobNames.contains(job.locator().getName()))
+              .collect(toImmutableList());
+      xtsJobCreator
+          .createXtsTearDownJob(sessionRequestInfo)
+          .filter(job -> !triggeredJobNames.contains(job.locator().getName()))
+          .ifPresent(teardownJobRef::set);
+    }
+
+    // 3. Mark the current job as finished and advance to the next remaining Tradefed, non-Tradefed,
+    // or teardown phase.
+    if (isTf) {
+      synchronized (runningTradefedJobs) {
+        runningTradefedJobs.put(jobId, false);
+
+        List<JobInfo> remainingTfJobs =
+            orderStaticJobsFirst(tradefedJobs).stream()
+                .filter(job -> !triggeredJobNames.contains(job.locator().getName()))
+                .collect(toCollection(ArrayList::new));
+
+        if (SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)) {
+          addAndTrackTradefedJobs(remainingTfJobs);
+        } else if (!remainingTfJobs.isEmpty()) {
+          JobInfo nextJob = remainingTfJobs.remove(0);
+          additionalTradefedJobs.addAll(remainingTfJobs);
+          ImmutableSet<String> devicesOfCurrentJob = getDeviceSerials(currentJob);
+          // Add the device ids of the current job to the sub device specs of the next tradefed job.
+          addDeviceIdsToSubDeviceSpecs(
+              nextJob.subDeviceSpecs().getAllSubDevices(), devicesOfCurrentJob);
+          addAndTrackTradefedJobs(ImmutableList.of(nextJob));
+        }
+
+        if (runningTradefedJobs.values().stream().noneMatch(running -> running)) {
+          logger.atInfo().log(
+              "All added tradefed jobs have been done, trying to add non-tradefed jobs if needed.");
+          if (!addMainNonTradefedJobs()) {
+            addTeardownJobIfAny();
+          }
+        }
+      }
+    } else {
+      synchronized (runningNonTradefedJobs) {
+        runningNonTradefedJobs.put(jobId, false);
+        if (runningNonTradefedJobs.values().stream().noneMatch(running -> running)) {
+          logger.atInfo().log("All non-tradefed main jobs have completed.");
+          // Schedule any remaining untriggered non-Tradefed jobs before advancing to teardown.
+          if (!addMainNonTradefedJobs()) {
+            addTeardownJobIfAny();
+          }
+        }
+      }
+    }
+  }
+
+  /** Returns whether the given {@link JobInfo} uses the Tradefed test driver. */
+  private static boolean isTradefedJob(JobInfo jobInfo) {
+    return jobInfo.type().getDriver().equals(TRADEFED_DRIVER_NAME);
+  }
+
+  /** Returns whether the given {@link JobInfo} is an xTS setup job. */
+  private static boolean isSetupJob(JobInfo jobInfo) {
+    return Objects.equals(
+        jobInfo.properties().get(XtsConstants.XTS_JOB_NAME), XtsConstants.SETUP_JOB_NAME);
+  }
+
+  /** Returns whether the given {@link JobInfo} is an xTS teardown job. */
+  private static boolean isTeardownJob(JobInfo jobInfo) {
+    return Objects.equals(
+        jobInfo.properties().get(XtsConstants.XTS_JOB_NAME), XtsConstants.TEARDOWN_JOB_NAME);
   }
 }
