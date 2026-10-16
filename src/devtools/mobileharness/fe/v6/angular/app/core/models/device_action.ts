@@ -6,7 +6,7 @@ export type IneligibilityReasonCode =
   | 'PERMISSION_DENIED' // User lacks permission for the device
   | 'DEVICE_NOT_IDLE' // Device state is not IDLE (e.g., BUSY, MISSING)
   | 'DEVICE_TYPE_NOT_SUPPORTED' // Device type is not supported (e.g., FailedDevice, AbnormalTestbedDevice, or non-AndroidRealDevice in multi-selection mode)
-  | 'HOST_OS_NOT_SUPPORTED' // Host OS is MacOS
+  | 'HOST_OS_NOT_SUPPORTED' // Host OS is not supported
   | 'ACID_NOT_SUPPORTED' // Device does not support AcidRemoteDriver
   | 'DEVICE_NOT_FOUND'; // Device or sub-device not found in lab info
 
