@@ -18,7 +18,7 @@ import {GetHostConfigResult} from '../../models/host_config_models';
 import {DeviceSummary, HostOverview} from '../../models/host_overview';
 import {JobActions, JobOverviewData} from '../../models/job_overview';
 import {SessionDetail} from '../../models/session_overview';
-import {TestOverviewData} from '../../models/test_overview';
+import {TestActions, TestOverviewData} from '../../models/test_overview';
 
 /**
  * Common base interface for all mock scenarios.
@@ -94,6 +94,7 @@ export interface MockTestScenario extends BaseMockScenario {
   readonly overview: TestOverviewData;
   readonly log?: string;
   readonly cloudLogLink?: string;
+  actions?: TestActions;
 }
 
 /**

@@ -77,6 +77,7 @@ message GetTestRequest {
 
 message GetTestResponse {
   TestDetail test = 1;
+  TestActions actions = 2;
 }
 
 message GetTestLogRequest {

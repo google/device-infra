@@ -3,6 +3,7 @@
  * presentation in the UI, corresponding to test details in mobileharness.
  */
 
+import {ActionButtonState} from './action_common';
 import {
   ErrorInfo,
   ExecutionDetails,
@@ -108,9 +109,14 @@ export declare interface GetTestLogRequest {
   jobId: string;
   contentHash?: string;
 }
+/** Actions available for the test (e.g. killing its parent job). */
+export declare interface TestActions {
+  readonly killJob: ActionButtonState;
+}
 /** Response structure for the getTest API. */
 export declare interface GetTestResponse {
   test: TestOverviewData;
+  actions?: TestActions;
 }
 /** Response structure for the getTestLog API. */
 export declare interface GetTestLogResponse {

@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestRequest
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.TestServiceGrpc;
 import io.grpc.stub.StreamObserver;
+import java.util.Optional;
 import javax.inject.Inject;
 
 /** gRPC implementation of the TestService. */
@@ -45,7 +46,7 @@ public final class TestServiceGrpcImpl extends TestServiceGrpc.TestServiceImplBa
     GrpcServiceUtil.invokeAsync(
         request,
         responseObserver,
-        logic::getTest,
+        req -> logic.getTest(req, Optional.empty()),
         executor,
         TestServiceGrpc.getServiceDescriptor(),
         TestServiceGrpc.getGetTestMethod());

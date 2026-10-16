@@ -115,6 +115,12 @@ message FileExplorer {
   repeated TestFile files = 2;
 }
 
+// Representation of Test operations / actions.
+message TestActions {
+  .devtools.mobileharness.fe.v6.service.proto.common.ActionButtonState
+      kill_job = 1;
+}
+
 // ---------- Top-level ----------
 
 message TestDetail {

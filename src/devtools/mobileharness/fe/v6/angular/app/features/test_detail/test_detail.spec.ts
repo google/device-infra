@@ -20,7 +20,15 @@ import {
   TestResult,
   TestStatus,
 } from '../../core/models/test_overview';
-import {TEST_SERVICE, TestService} from '../../core/services/test/test_service';
+import {
+  JOB_SERVICE,
+  JobService,
+} from '../../core/services/job/job_service';
+import {MOCK_TEST_SCENARIOS} from '../../core/services/mock_data/tests';
+import {
+  TEST_SERVICE,
+  TestService,
+} from '../../core/services/test/test_service';
 import {ClipboardService} from '../../shared/services/clipboard_service';
 import {LoadingService} from '../../shared/services/loading_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
@@ -30,6 +38,7 @@ describe('TestDetail Component', () => {
   let fixture: ComponentFixture<TestDetail>;
   let component: TestDetail;
   let mockTestService: jasmine.SpyObj<TestService>;
+  let mockJobService: jasmine.SpyObj<JobService>;
   let mockClipboardService: jasmine.SpyObj<ClipboardService>;
   let mockSnackBarService: jasmine.SpyObj<SnackBarService>;
   let mockLoadingService: jasmine.SpyObj<LoadingService>;
@@ -76,6 +85,7 @@ describe('TestDetail Component', () => {
       'getTestLog',
       'getTestFile',
     ]);
+    mockJobService = jasmine.createSpyObj('JobService', ['killJob']);
     mockTestService.getTest.and.returnValue(of({test: mockOverviewData}));
     mockTestService.getTestLog.and.returnValue(
       of({
@@ -94,6 +104,7 @@ describe('TestDetail Component', () => {
     mockClipboardService.copyToClipboard.and.returnValue(true);
     mockSnackBarService = jasmine.createSpyObj('SnackBarService', [
       'showSuccess',
+      'showError',
     ]);
     mockLoadingService = jasmine.createSpyObj('LoadingService', [
       'show',
@@ -110,6 +121,7 @@ describe('TestDetail Component', () => {
       providers: [
         provideRouter([]),
         {provide: TEST_SERVICE, useValue: mockTestService},
+        {provide: JOB_SERVICE, useValue: mockJobService},
         {provide: ClipboardService, useValue: mockClipboardService},
         {provide: SnackBarService, useValue: mockSnackBarService},
         {provide: LoadingService, useValue: mockLoadingService},
@@ -215,4 +227,32 @@ describe('TestDetail Component', () => {
     expect(values[0]?.textContent?.trim()).toContain('device_01');
     expect(values[1]?.textContent?.trim()).toBe('N/A');
   }));
+
+  it('should render kill action button when test scenario has running job', fakeAsync(() => {
+    const runningScenario = MOCK_TEST_SCENARIOS.find(
+      (s) => s.overview.job?.status === JobStatus.JOB_STATUS_RUNNING,
+    );
+    expect(runningScenario).toBeDefined();
+    mockTestService.getTest.and.returnValue(
+      of({
+        test: runningScenario!.overview,
+        actions: runningScenario!.actions,
+      }),
+    );
+
+    const runningFixture = TestBed.createComponent(TestDetail);
+    runningFixture.detectChanges();
+    tick();
+    runningFixture.detectChanges();
+
+    const compiled = runningFixture.nativeElement as HTMLElement;
+    const killButton = compiled.querySelector(
+      'button[data-testid="kill-job"]',
+    ) as HTMLButtonElement;
+    expect(killButton).not.toBeNull();
+    expect(killButton.disabled).toBeFalse();
+    expect(runningFixture.componentInstance.killActionState()?.enabled).toBeTrue();
+    expect(runningFixture.componentInstance.killActionState()?.visible).toBeTrue();
+  }));
 });
+
