@@ -70,6 +70,14 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
 
   private static final Duration CLI_EXECUTION_PADDING_TIMEOUT = Duration.ofMinutes(6);
 
+  /**
+   * Native flag for the Robo CLI JVM. Without it, the CLI CHECK-fails at startup on hosts that have
+   * an IPv4 loopback but no IPv6 loopback (::1), such as GKE-based lab servers. It only bypasses
+   * that startup check, so it is safe on hosts that do have IPv6.
+   */
+  private static final String DISABLE_KERNEL_IPV6_ENFORCEMENT_FLAG =
+      "--enforce_kernel_ipv6_support=false";
+
   private static final ImmutableMap<Integer, TestResult> EXIT_CODE_TO_TEST_RESULT_MAP =
       ImmutableMap.of(
           0, TestResult.PASS,
