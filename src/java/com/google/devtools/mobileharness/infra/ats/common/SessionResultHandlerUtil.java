@@ -905,6 +905,8 @@ public class SessionResultHandlerUtil {
                     .setAbi(module.abi())
                     .setName(module.name())
                     .setDone(false)
+                    .setPassed(0)
+                    .setTotalTests(0)
                     .build())
         .collect(toImmutableList());
   }

@@ -625,6 +625,8 @@ public class CompatibilityReportMerger {
                             .setName(module.name())
                             .setAbi(module.abi())
                             .setDone(false)
+                            .setPassed(0)
+                            .setTotalTests(0)
                             .build())
                 .collect(toImmutableList()))
         .build();

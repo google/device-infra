@@ -709,13 +709,23 @@ public final class SessionResultHandlerUtilTest {
     assertThat(reportList).isNotEmpty();
     ImmutableList<Module> unexecutedModules =
         reportList.stream().flatMap(r -> r.getModuleInfoList().stream()).collect(toImmutableList());
-    assertThat(unexecutedModules).hasSize(2);
-    assertThat(unexecutedModules.get(0).getName()).isEqualTo("CtsModule1");
-    assertThat(unexecutedModules.get(0).getAbi()).isEqualTo("arm64-v8a");
-    assertThat(unexecutedModules.get(0).getDone()).isFalse();
-    assertThat(unexecutedModules.get(1).getName()).isEqualTo("CtsModule2");
-    assertThat(unexecutedModules.get(1).getAbi()).isEqualTo("arm64-v8a");
-    assertThat(unexecutedModules.get(1).getDone()).isFalse();
+    assertThat(unexecutedModules)
+        .containsExactly(
+            Module.newBuilder()
+                .setName("CtsModule1")
+                .setAbi("arm64-v8a")
+                .setDone(false)
+                .setPassed(0)
+                .setTotalTests(0)
+                .build(),
+            Module.newBuilder()
+                .setName("CtsModule2")
+                .setAbi("arm64-v8a")
+                .setDone(false)
+                .setPassed(0)
+                .setTotalTests(0)
+                .build())
+        .inOrder();
   }
 
   @Test

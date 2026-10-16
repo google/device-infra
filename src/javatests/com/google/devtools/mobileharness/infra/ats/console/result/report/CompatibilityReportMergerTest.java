@@ -608,13 +608,23 @@ public final class CompatibilityReportMergerTest {
     Result updatedResult =
         CompatibilityReportMerger.insertUnexecutedModulesIntoResult(result, modules);
 
-    assertThat(updatedResult.getModuleInfoList()).hasSize(2);
-    assertThat(updatedResult.getModuleInfo(0).getName()).isEqualTo("module1");
-    assertThat(updatedResult.getModuleInfo(0).getAbi()).isEqualTo("abi1");
-    assertThat(updatedResult.getModuleInfo(0).getDone()).isFalse();
-    assertThat(updatedResult.getModuleInfo(1).getName()).isEqualTo("module2");
-    assertThat(updatedResult.getModuleInfo(1).getAbi()).isEqualTo("abi2");
-    assertThat(updatedResult.getModuleInfo(1).getDone()).isFalse();
+    assertThat(updatedResult.getModuleInfoList())
+        .containsExactly(
+            Module.newBuilder()
+                .setName("module1")
+                .setAbi("abi1")
+                .setDone(false)
+                .setPassed(0)
+                .setTotalTests(0)
+                .build(),
+            Module.newBuilder()
+                .setName("module2")
+                .setAbi("abi2")
+                .setDone(false)
+                .setPassed(0)
+                .setTotalTests(0)
+                .build())
+        .inOrder();
   }
 
   @Test
