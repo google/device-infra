@@ -45,8 +45,141 @@
     </app-info-card>
   }
 
+  <!-- Sub-tests List Card -->
+  @let subTests = subTestsList();
+  @if (subTests.length > 0) {
+    <app-info-card id="test-sub-tests" [cardTitle]="'Sub-tests (' + subTests.length + ')'" [collapsible]="true" [expanded]="true" class="list-card">
+      <div class="info-card-content zero-padding">
+        <div class="table-container">
+          <table mat-table [dataSource]="subTests" class="data-table">
+
+            <!-- Test ID Column -->
+            <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef>Test ID</th>
+              <td mat-cell *matCellDef="let subTest">
+                <div class="test-id-container">
+                  <a app-nav-link
+                    [config]="{type: 'test', jobId: test().job?.id || '', testId: rootTestId()}"
+                    [customQueryParams]="{'sub_test_id': subTest.id}"
+                    queryParamsHandling="merge"
+                    class="test-id-link"
+                    [matTooltip]="'View Sub-test Details: ' + subTest.id"
+                  >
+                    {{ subTest.id }}
+                  </a>
+                  @let isCopied = copiedTestIds()[subTest.id];
+                  <button [disabled]="isCopied" (click)="copyTestId(subTest.id)" class="copy-button" [class.success]="isCopied" [matTooltip]="isCopied ? 'Copied!' : 'Copy Full Test ID'">
+                    <mat-icon class="copy-icon">{{ isCopied ? 'check' : 'content_copy' }}</mat-icon>
+                  </button>
+                </div>
+              </td>
+            </ng-container>
+
+            <!-- Test Name Column -->
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>Test Name</th>
+              <td mat-cell *matCellDef="let subTest">
+                <div class="test-name-text" [matTooltip]="subTest.name">
+                  {{ subTest.name }}
+                </div>
+              </td>
+            </ng-container>
+
+            <!-- Status Column -->
+            <ng-container matColumnDef="status">
+              <th mat-header-cell *matHeaderCellDef>Status</th>
+              <td mat-cell *matCellDef="let subTest">
+                @let badge = getTestStatusBadge(subTest);
+                <span class="status-badge-compact" [class]="badge.bgClass + ' ' + badge.colorClass">
+                  <mat-icon [class.spin-animation]="badge.spin">{{ badge.icon }}</mat-icon>
+                  <span>{{ badge.text }}</span>
+                </span>
+              </td>
+            </ng-container>
+
+            <!-- Result Column -->
+            <ng-container matColumnDef="result">
+              <th mat-header-cell *matHeaderCellDef>Result</th>
+              <td mat-cell *matCellDef="let subTest">
+                @let badge = getTestResultBadge(subTest);
+                @if (badge) {
+                  <span class="status-badge-compact" [class]="badge.bgClass + ' ' + badge.colorClass">
+                    <mat-icon>{{ badge.icon }}</mat-icon>
+                    <span>{{ badge.text }}</span>
+                  </span>
+                } @else {
+                  <span class="empty-fallback-text">N/A</span>
+                }
+              </td>
+            </ng-container>
+
+            <!-- Start Time Column -->
+            <ng-container matColumnDef="startTime">
+              <th mat-header-cell *matHeaderCellDef>Start Time</th>
+              <td mat-cell *matCellDef="let subTest">
+                {{ getTestStartTime(subTest) }}
+              </td>
+            </ng-container>
+
+            <!-- Duration Column -->
+            <ng-container matColumnDef="duration">
+              <th mat-header-cell *matHeaderCellDef>Duration</th>
+              <td mat-cell *matCellDef="let subTest">
+                {{ getTestDuration(subTest) }}
+              </td>
+            </ng-container>
+
+            <!-- Host Column -->
+            <ng-container matColumnDef="host">
+              <th mat-header-cell *matHeaderCellDef>Host</th>
+              <td mat-cell *matCellDef="let subTest">
+                @if (subTest.host?.name) {
+                  <a app-nav-link
+                    [config]="{type: 'host', hostName: subTest.host.name, hostIp: subTest.host.ip || ''}"
+                    queryParamsHandling="merge"
+                    class="text-truncate"
+                    [matTooltip]="'View Host Details: ' + subTest.host.name"
+                  >{{ subTest.host.name }}</a>
+                } @else {
+                  <span class="empty-fallback-text">N/A</span>
+                }
+              </td>
+            </ng-container>
+
+            <!-- Device Column -->
+            <ng-container matColumnDef="device">
+              <th mat-header-cell *matHeaderCellDef>Device(s)</th>
+              <td mat-cell *matCellDef="let subTest">
+                @let devList = getTestDevicesList(subTest);
+                @if (devList && devList.length > 0) {
+                  <div class="value-stack-container">
+                    @for (dev of devList; track dev) {
+                      <a app-nav-link
+                        [config]="{type: 'device', hostName: subTest.host?.name || '', hostIp: subTest.host?.ip || '', deviceId: dev}"
+                        [customQueryParams]="subTest.host?.name ? {'host_name': subTest.host.name} : {}"
+                        queryParamsHandling="merge"
+                        class="text-truncate"
+                        [matTooltip]="'View Device Details: ' + dev"
+                      >{{ dev }}</a>
+                    }
+                  </div>
+                } @else {
+                  <span class="empty-fallback-text">N/A</span>
+                }
+              </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true" class="table-header-row"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="table-body-row"></tr>
+          </table>
+        </div>
+      </div>
+    </app-info-card>
+  }
+
   <!-- Execution Details -->
   @let details = test().executionDetails;
+
   <app-info-card id="overview-execution" class="execution-card" cardTitle="Execution Details" [collapsible]="false">
     <div class="info-card-content">
       <dl class="detail-list-grid">
