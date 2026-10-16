@@ -13,8 +13,8 @@ import {rxResource, toObservable, toSignal} from '@angular/core/rxjs-interop';
 import {MatButtonModule} from '@angular/material/button';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
-import {of} from 'rxjs';
-import {debounceTime, distinctUntilChanged} from 'rxjs/operators';
+import {of, timer} from 'rxjs';
+import {debounce, distinctUntilChanged} from 'rxjs/operators';
 
 import {
   Filter,
@@ -73,10 +73,21 @@ export class KeyPickerComponent {
 
   readonly query = signal<string>('');
 
-  /** Debounced search query passed to catalog RPC. */
+  /**
+   * Debounced search query passed to catalog RPC.
+   * Immediately clears when input is blank; debounces by 300ms when typing.
+   */
   readonly debouncedQuery = toSignal(
-    toObservable(this.query).pipe(debounceTime(150), distinctUntilChanged()),
+    toObservable(this.query).pipe(
+      debounce((val) => timer(val.trim() === '' ? 0 : 300)),
+      distinctUntilChanged(),
+    ),
     {initialValue: ''},
+  );
+
+  /** Whether the user input is currently debouncing before triggering the RPC. */
+  readonly isDebouncing = computed<boolean>(
+    () => this.query().trim() !== this.debouncedQuery().trim(),
   );
 
   readonly entity = computed<SearchEntity>(
@@ -149,6 +160,27 @@ export class KeyPickerComponent {
     ),
   );
 
+  /** Total count of matching entries across all visible catalog sections. */
+  readonly totalMatchedKeysCount = computed<number>(() =>
+    this.currentSections().reduce(
+      (sum, s) => sum + (s.entries?.length || 0),
+      0,
+    ),
+  );
+
+  /** Whether the initial catalog is loading before any sections are present. */
+  readonly isInitialLoading = computed<boolean>(
+    () =>
+      this.catalogResource.isLoading() &&
+      this.currentSections().length === 0 &&
+      !this.errorMessage(),
+  );
+
+  /** Whether a search operation is active (either debouncing user keystrokes or fetching from backend). */
+  readonly isSearching = computed<boolean>(
+    () => this.isDebouncing() || this.catalogResource.isLoading(),
+  );
+
   constructor() {
     afterNextRender(() => {
       this.searchInput()?.nativeElement.focus();
@@ -157,6 +189,11 @@ export class KeyPickerComponent {
 
   onSearch(v: string) {
     this.query.set(v);
+  }
+
+  clearSearch() {
+    this.query.set('');
+    this.searchInput()?.nativeElement.focus();
   }
 
   close() {

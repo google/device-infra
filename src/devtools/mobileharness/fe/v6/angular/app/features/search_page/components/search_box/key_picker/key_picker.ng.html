@@ -9,19 +9,43 @@
 >
 
   <div class="kp-searchbar">
-    <mat-icon class="material-symbols-outlined">search</mat-icon>
+    <mat-icon class="material-symbols-outlined kp-search-icon" aria-hidden="true">search</mat-icon>
     <input
       #searchInput
       type="text"
       placeholder="Search all keys"
+      aria-label="Search all keys"
       [value]="query()"
       (input)="onSearch(searchInput.value)"
       autocomplete="off"
     />
+    @if (isSearching() && !isInitialLoading()) {
+      <div class="kp-search-spinner" aria-hidden="true">
+        <mat-icon class="material-symbols-outlined spin-animation">progress_activity</mat-icon>
+      </div>
+    }
+    @if (query()) {
+      <button
+        type="button"
+        class="kp-search-clear"
+        (click)="clearSearch()"
+        title="Clear search"
+        aria-label="Clear search"
+      >
+        <mat-icon class="material-symbols-outlined">close</mat-icon>
+      </button>
+    }
   </div>
 
-  <div class="kp-body">
-    @if (isLoading()) {
+  <!-- Live status region for screen readers -->
+  <div class="cdk-visually-hidden" aria-live="polite" aria-atomic="true">
+    @if (debouncedQuery().trim()) {
+      Found {{ totalMatchedKeysCount() }} matching keys for “{{ debouncedQuery().trim() }}”.
+    }
+  </div>
+
+  <div class="kp-body" [class.kp-searching]="isSearching() && !isInitialLoading()">
+    @if (isInitialLoading()) {
       <div class="kp-empty">Loading keys…</div>
     } @else if (errorMessage()) {
       <div class="error-banner" role="alert">
@@ -31,19 +55,23 @@
           mat-button
           type="button"
           class="retry-btn"
-          [disabled]="isLoading()"
-          [attr.aria-busy]="isLoading()"
+          [disabled]="catalogResource.isLoading()"
+          [attr.aria-busy]="catalogResource.isLoading()"
           aria-label="Retry loading keys"
           (click)="retry()"
         >
-          <mat-icon class="material-symbols-outlined" [class.spin-animation]="isLoading()" aria-hidden="true">refresh</mat-icon>
+          <mat-icon
+            class="material-symbols-outlined"
+            [class.spin-animation]="catalogResource.isLoading()"
+            aria-hidden="true"
+          >refresh</mat-icon>
           <span>Retry</span>
         </button>
       </div>
     } @else if (currentSections().length === 0) {
       <div class="kp-empty">
-        @if (query().trim()) {
-          No key matches “{{ query() }}”
+        @if (debouncedQuery().trim()) {
+          No key matches “{{ debouncedQuery().trim() }}”
         } @else {
           No keys available
         }

@@ -1,5 +1,10 @@
 import {signal} from '@angular/core';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {
+  ComponentFixture,
+  fakeAsync,
+  TestBed,
+  tick,
+} from '@angular/core/testing';
 import {MatDialogRef} from '@angular/material/dialog';
 import {
   MatTestDialogOpener,
@@ -9,6 +14,7 @@ import {provideNoopAnimations} from '@angular/platform-browser/animations';
 import {of, throwError} from 'rxjs';
 
 import {
+  Fleet,
   FleetFilterKeyCatalogResponse,
   FleetGroupByKeyCatalogResponse,
   SearchEntity,
@@ -193,6 +199,132 @@ describe('KeyPickerComponent', () => {
       expect(component.query()).toBe('label');
     });
 
+    it('debounces search query before triggering RPC and suppresses intermediate typing', fakeAsync(() => {
+      const input = document.querySelector(
+        '.kp-searchbar input',
+      ) as HTMLInputElement;
+
+      // Simulate continuous typing: 'd' -> 'de' -> 'dev' with 150ms intervals (< 300ms)
+      input.value = 'd';
+      input.dispatchEvent(new Event('input'));
+      openerFixture.detectChanges();
+      tick(150);
+
+      input.value = 'de';
+      input.dispatchEvent(new Event('input'));
+      openerFixture.detectChanges();
+      tick(150);
+
+      input.value = 'dev';
+      input.dispatchEvent(new Event('input'));
+      openerFixture.detectChanges();
+
+      expect(component.isDebouncing()).toBeTrue();
+      expect(
+        mockSearchService.getFleetFilterKeyCatalog,
+      ).not.toHaveBeenCalledWith(jasmine.objectContaining({query: 'd'}));
+      expect(
+        mockSearchService.getFleetFilterKeyCatalog,
+      ).not.toHaveBeenCalledWith(jasmine.objectContaining({query: 'de'}));
+
+      // Wait until 300ms debounce expires
+      tick(300);
+      openerFixture.detectChanges();
+
+      expect(component.debouncedQuery()).toBe('dev');
+      expect(component.isDebouncing()).toBeFalse();
+      expect(mockSearchService.getFleetFilterKeyCatalog).toHaveBeenCalledWith(
+        jasmine.objectContaining({query: 'dev'}),
+      );
+    }));
+
+    it('clears query immediately without debounce delay on clearSearch', fakeAsync(() => {
+      component.onSearch('model');
+      tick(300);
+      expect(component.debouncedQuery()).toBe('model');
+
+      component.clearSearch();
+      tick(0);
+      openerFixture.detectChanges();
+
+      expect(component.query()).toBe('');
+      expect(component.debouncedQuery()).toBe('');
+      expect(component.isDebouncing()).toBeFalse();
+    }));
+
+    it('renders clear button when query is present and clicking it clears search', () => {
+      const input = document.querySelector(
+        '.kp-searchbar input',
+      ) as HTMLInputElement;
+      input.value = 'status';
+      input.dispatchEvent(new Event('input'));
+      openerFixture.detectChanges();
+
+      const clearBtn = document.querySelector(
+        '.kp-search-clear',
+      ) as HTMLButtonElement;
+      expect(clearBtn).not.toBeNull();
+
+      clearBtn.click();
+      openerFixture.detectChanges();
+
+      expect(component.query()).toBe('');
+      expect(document.querySelector('.kp-search-clear')).toBeNull();
+    });
+
+    it('picks an entry via Space keypress', () => {
+      const rows = document.querySelectorAll<HTMLElement>('.kp-row');
+      rows[0].dispatchEvent(
+        new KeyboardEvent('keydown', {key: ' ', bubbles: true}),
+      );
+      openerFixture.detectChanges();
+
+      expect(mockDialogRef.close).toHaveBeenCalled();
+      expect(mockStore.openQuickFilter).toHaveBeenCalledWith(
+        'status',
+        'Device Status',
+        {keyDisplayName: 'Device Status'},
+      );
+    });
+
+    it('displays no key matches message when catalog returns empty sections', fakeAsync(() => {
+      mockSearchService.getFleetFilterKeyCatalog.and.returnValue(
+        of({sections: []}),
+      );
+      component.onSearch('xyz');
+      tick(300);
+      openerFixture.detectChanges();
+
+      const emptyEl = document.querySelector('.kp-empty');
+      expect(emptyEl?.textContent).toContain('No key matches “xyz”');
+    }));
+
+    it('displays no keys available message when query is empty and catalog has no sections', async () => {
+      mockSearchService.getFleetFilterKeyCatalog.and.returnValue(
+        of({sections: []}),
+      );
+      component.retry();
+      TestBed.tick();
+      await openerFixture.whenStable();
+      TestBed.tick();
+      openerFixture.detectChanges();
+
+      const emptyEl = document.querySelector('.kp-empty');
+      expect(emptyEl?.textContent).toContain('No keys available');
+    });
+
+    it('falls back to default error message when error has empty message', async () => {
+      mockSearchService.getFleetFilterKeyCatalog.and.returnValue(
+        throwError(() => new Error('')),
+      );
+      component.retry();
+      TestBed.tick();
+      await openerFixture.whenStable();
+      TestBed.tick();
+
+      expect(component.errorMessage()).toBe('Failed to load keys.');
+    });
+
     it('closes on close button click', () => {
       const closeBtn = document.querySelector(
         '.close-button',
@@ -297,6 +429,32 @@ describe('KeyPickerComponent', () => {
       expect(mockStore.openQuickGroupBy).toHaveBeenCalledWith(
         'driver',
         'Driver',
+      );
+    });
+  });
+
+  describe('initialization and options', () => {
+    it('falls back to store entity and fleet when not provided in dialog data', async () => {
+      await setup({mode: 'filter'});
+      expect(component.entity()).toBe(SearchEntity.SEARCH_ENTITY_DEVICE);
+      expect(component.fleet()).toBe(Fleet.FLEET_SELF);
+    });
+
+    it('forwards activeFilters and activeGroupBy when provided', async () => {
+      const activeFilters = [
+        {key: 'status', simple: {values: [{value: 'idle'}]}},
+      ];
+      await setup({
+        mode: 'groupby',
+        entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+        activeFilters,
+        activeGroupBy: ['host_name'],
+      });
+      expect(mockSearchService.getFleetGroupByKeyCatalog).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          filters: activeFilters,
+          groupBy: ['host_name'],
+        }),
       );
     });
   });
