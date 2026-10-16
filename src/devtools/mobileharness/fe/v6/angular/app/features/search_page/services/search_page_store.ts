@@ -988,11 +988,13 @@ export abstract class SearchPageStore {
     this.applySearchState([], updateUrl);
   }
 
-  /** Restores local search state back to default configuration (including default chips and fleet). */
+  /**
+   * Restores local search state back to default configuration (default chips).
+   *
+   * Note: `fleet` is intentionally NOT touched here.
+   * Entity and fleet are scope, not search state;
+   */
   restoreDefaultState(updateUrl = false) {
-    if (!this.isTjs() && this.fleet() !== 'internal') {
-      this.fleet.set('internal');
-    }
     this.applySearchState(this.getDefaultChips(), updateUrl);
   }
 
@@ -1005,15 +1007,17 @@ export abstract class SearchPageStore {
     }
   }
 
-  /** Returns true if the store is currently in its clean default/empty state. */
+  /**
+   * Returns true if the store is currently in its clean default/empty state.
+   *
+   * Note: `fleet` is intentionally NOT touched here.
+   * Entity and fleet are scope, not search state;
+   */
   private isDefaultState(): boolean {
     if (this.browseAll() || this.searchQuery().trim().length > 0) {
       return false;
     }
     if (this.showValuePicker() || this.showSuggestions()) {
-      return false;
-    }
-    if (!this.isTjs() && this.fleet() !== 'internal') {
       return false;
     }
 

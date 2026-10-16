@@ -28,6 +28,7 @@ import {
   MOCK_SESSION_SCENARIOS,
   MOCK_TEST_SCENARIOS,
 } from '../mock_data';
+import {FAKE_FAILURE_RATE_STORAGE_KEY} from '../mock_data/fake_failure_rate';
 import {FakeSearchService} from './fake_search_service';
 import {SEARCH_SERVICE} from './search_service';
 
@@ -1102,10 +1103,13 @@ describe('FakeSearchService', () => {
   });
 
   describe('resolveAllSiteQuery', () => {
-    let randomSpy: jasmine.Spy;
-
     beforeEach(() => {
-      randomSpy = spyOn(Math, 'random').and.returnValue(0.5);
+      // Default: never fail (key absent => 0%).
+      localStorage.removeItem(FAKE_FAILURE_RATE_STORAGE_KEY);
+    });
+
+    afterEach(() => {
+      localStorage.removeItem(FAKE_FAILURE_RATE_STORAGE_KEY);
     });
 
     it('should resolve a unique 1-hit device ID that exists in MOCK_DEVICE_SCENARIOS and MOCK_HOST_SCENARIOS', (done) => {
@@ -1245,8 +1249,23 @@ describe('FakeSearchService', () => {
         });
     });
 
-    it('should fail with a simulated error when Math.random() < 0.2', (done) => {
-      randomSpy.and.returnValue(0.1);
+    it('should never fail by default even when Math.random() would be low', (done) => {
+      spyOn(Math, 'random').and.returnValue(0);
+      service
+        .resolveAllSiteQuery({query: 'device-id-for-1-hit-1', anyId: {}})
+        .subscribe({
+          next: (res: ResolveAllSiteQueryResponse) => {
+            expect(res.matches?.length).toBe(1);
+            done();
+          },
+          error: () => {
+            fail('Expected no simulated error when failure rate is unset');
+          },
+        });
+    });
+
+    it('should fail with a simulated error when the failure rate is 100%', (done) => {
+      localStorage.setItem(FAKE_FAILURE_RATE_STORAGE_KEY, '100');
       service
         .resolveAllSiteQuery({query: 'device-id-for-1-hit-1', anyId: {}})
         .subscribe({
@@ -1258,6 +1277,32 @@ describe('FakeSearchService', () => {
               'Simulated backend error while resolving query',
             );
             done();
+          },
+        });
+    });
+
+    it('should honour a partial failure rate (fails when Math.random()*100 < rate)', (done) => {
+      localStorage.setItem(FAKE_FAILURE_RATE_STORAGE_KEY, '20');
+      const randomSpy = spyOn(Math, 'random').and.returnValue(0.1);
+      service
+        .resolveAllSiteQuery({query: 'device-id-for-1-hit-1', anyId: {}})
+        .subscribe({
+          next: () => {
+            fail('Expected failure at random=0.1 with rate=20');
+          },
+          error: () => {
+            randomSpy.and.returnValue(0.5);
+            service
+              .resolveAllSiteQuery({query: 'device-id-for-1-hit-1', anyId: {}})
+              .subscribe({
+                next: (res: ResolveAllSiteQueryResponse) => {
+                  expect(res.matches?.length).toBe(1);
+                  done();
+                },
+                error: () => {
+                  fail('Expected success at random=0.5 with rate=20');
+                },
+              });
           },
         });
     });

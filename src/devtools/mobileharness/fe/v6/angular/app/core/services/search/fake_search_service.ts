@@ -70,6 +70,7 @@ import {
   MOCK_TJS_SEARCH_RESPONSE_TEST,
   resolveMockAllSiteQuery,
 } from '../mock_data';
+import {shouldSimulateFailure} from '../mock_data/fake_failure_rate';
 import {SearchService} from './search_service';
 
 /** Default user for fake data. */
@@ -903,21 +904,22 @@ export class FakeSearchService extends SearchService {
 
   /**
    * Resolves an All-Site Search query against mock data with simulated network latency
-   * and a 20% simulated error probability.
+   * and an optional simulated error probability.
    *
    * Input:
    *   - request: ResolveAllSiteQueryRequest containing the query string and optional idType scope.
    * Output:
    *   - Observable<ResolveAllSiteQueryResponse> emitting the resolved matches (or error) after 1500ms delay.
    * Explanation:
-   *   Simulates a 20% backend failure rate (`Math.random() < 0.2`); otherwise delegates to
-   *   `resolveMockAllSiteQuery` and pipes through `delay(1500)` so the All-Site Search
-   *   loading and error states are visible and testable.
+   *   Fails with a simulated backend error when `shouldSimulateFailure()` rolls true (failure rate
+   *   configured via `localStorage['mh_fe_v6_fake_failure_rate']`, 0-100 percent, default 0);
+   *   otherwise delegates to `resolveMockAllSiteQuery` and pipes through `delay(1500)` so the
+   *   All-Site Search loading and error states are visible and testable.
    */
   override resolveAllSiteQuery(
     request: ResolveAllSiteQueryRequest,
   ): Observable<ResolveAllSiteQueryResponse> {
-    if (Math.random() < 0.2) {
+    if (shouldSimulateFailure()) {
       return timer(1500).pipe(
         switchMap(() =>
           throwError(
