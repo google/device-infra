@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -30,6 +31,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
+import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
@@ -50,6 +52,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.state.decorator.Android
 import java.io.File;
 import java.io.Writer;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.Before;
@@ -57,6 +60,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
@@ -121,6 +125,49 @@ public final class AndroidAtsDynamicConfigPusherDecoratorTest {
     teardownDecorator =
         new AndroidAtsDynamicConfigPusherTeardownOnlyDecorator(
             decorated, testInfo, androidFileUtil, apkInstaller);
+  }
+
+  @Test
+  public void skippableSetUp_hostTarget_keepsMergedFileInGenFileDir() throws Exception {
+    spec =
+        AndroidAtsDynamicConfigPusherDecoratorSpec.newBuilder()
+            .setXtsSuiteInfo("suite_name=cts")
+            .setTarget(TestTarget.HOST)
+            .setCleanup(true)
+            .setHasServerSideConfig(false)
+            .build();
+    when(jobInfo.combinedSpec(
+            ArgumentMatchers.<SpecConfigable<AndroidAtsDynamicConfigPusherDecoratorSpec>>any(),
+            eq("device_id")))
+        .thenReturn(spec);
+    when(testInfo.getGenFileDir()).thenReturn("/gen/test_id");
+
+    File tempDir = Files.createTempDirectory("test").toFile();
+    File configFile = new File(tempDir, "cts.dynamic");
+    configFile.createNewFile();
+    try (Writer writer = Files.newBufferedWriter(configFile.toPath(), UTF_8)) {
+      writer.write("<dynamicConfig></dynamicConfig>");
+    }
+    configFile.deleteOnExit();
+    tempDir.deleteOnExit();
+    List<File> files = new ArrayList<>();
+    files.add(configFile);
+    when(localFileUtil.listFiles(any(), eq(true))).thenReturn(files);
+
+    setupDecorator.setUp(SetupContext.create(testInfo));
+
+    // The merged file is moved into the test gen file dir and published as a relative path.
+    ArgumentCaptor<Path> mergedFile = ArgumentCaptor.forClass(Path.class);
+    verify(localFileUtil)
+        .moveFileOrDir(
+            mergedFile.capture(), eq(Path.of("/gen/test_id/dynamic_config/cts.dynamic")));
+    assertThat(mergedFile.getValue().toFile().exists()).isTrue();
+    mergedFile.getValue().toFile().deleteOnExit();
+    assertThat(properties.getOptional(XtsConstants.XTS_SUITE_DYNAMIC_CONFIG_HOST_FILE_PROPERTY_KEY))
+        .hasValue("dynamic_config/cts.dynamic");
+    // Nothing is pushed to the device, so the content provider is not needed.
+    verify(apkInstaller, never()).installApkIfNotExist(any(), any(), any());
+    verify(androidFileUtil, never()).push(any(), anyInt(), any(), any());
   }
 
   @Test

@@ -132,6 +132,18 @@ public class XtsConstants {
   public static final String XTS_DYNAMIC_DOWNLOAD_HAS_PRELOADED_MAINLINE_MODULES_PROPERTY_KEY =
       "xts_dynamic_download_has_preloaded_mainline_modules";
 
+  /**
+   * MH test property key set by {@code AndroidAtsDynamicConfigPusherDecorator} (target HOST) with
+   * the path of the merged suite-level dynamic config file, relative to the gen file dir of the
+   * test. The session orchestrator reads it from the setup job to pass the file on to non-Tradefed
+   * jobs.
+   */
+  public static final String XTS_SUITE_DYNAMIC_CONFIG_HOST_FILE_PROPERTY_KEY =
+      "xts_suite_dynamic_config_host_file";
+
+  /** MH job file tag of the suite-level dynamic config file passed to non-Tradefed jobs. */
+  public static final String XTS_SUITE_DYNAMIC_CONFIG_FILE_TAG = "xts_suite_dynamic_config";
+
   public static final Pattern RESULT_ZIP_FILENAME_PATTERN =
       Pattern.compile("^\\d{4}\\.\\d{2}\\.\\d{2}_\\d{2}\\.\\d{2}\\.\\d{2}\\.\\d{3}_\\d{4}\\.zip$");
 
