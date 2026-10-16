@@ -80,6 +80,7 @@ java_library(
     ],
     deps = [
         ":dynamic_config",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_guava_guava",
         "@maven//:xmlpull_xmlpull",
@@ -98,14 +99,12 @@ java_library(
         ":dynamic_config_handler",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_ats_dynamic_config_pusher_decorator_spec_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
-        "@maven//:xmlpull_xmlpull",
     ],
 )
 
