@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
@@ -99,6 +100,7 @@ public final class FleetColumnCatalogerTest {
         customCataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
 
     FleetColumnCatalogSection dimensions = section(response, "Dimensions");
+    assertThat(keys(dimensions)).containsExactly("dimension::model");
     assertThat(dimensions.getTotalAvailable()).isEqualTo(13);
 
     FleetColumnCatalogResponse queryResponse =
@@ -112,6 +114,41 @@ public final class FleetColumnCatalogerTest {
                 .getDisplayCase())
         .isEqualTo(DisplayCase.NOT_SHOWN);
     assertThat(headings(queryResponse)).doesNotContain("Search results");
+  }
+
+  @Test
+  public void dimensionsSection_includesCatalogDimensionsWithCounts() {
+    DimensionCatalogStore store = new DimensionCatalogStore();
+    store.setDimensionCounts(Fleet.FLEET_SELF, ImmutableMap.of("counted_catalog_dim", 42));
+    FleetColumnCataloger customCataloger = new FleetColumnCataloger(store);
+
+    FleetColumnCatalogResponse browseResponse =
+        customCataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
+    assertThat(keys(section(browseResponse, "Dimensions"))).containsExactly("dimension::model");
+    assertThat(section(browseResponse, "Dimensions").getTotalAvailable()).isEqualTo(13);
+
+    FleetColumnCatalogResponse queryResponse =
+        customCataloger.getColumnCatalog(
+            corpus, FleetColumnCatalogRequest.newBuilder().setQuery("counted_catalog_dim").build());
+    FleetColumnCatalogSection dimensionsSection = section(queryResponse, "Dimensions");
+    FleetColumnCatalogEntry entry = entryFor(dimensionsSection, "dimension::counted_catalog_dim");
+    assertThat(entry.getCoverage().getDisplayCase()).isEqualTo(DisplayCase.SHOWN);
+    assertThat(entry.getCoverage().getShown().getCount()).isEqualTo(42);
+  }
+
+  @Test
+  public void dimensionsSection_indexedCountTakesPrecedenceOverCatalogStoreCount() {
+    DimensionCatalogStore store = new DimensionCatalogStore();
+    store.setDimensionCounts(Fleet.FLEET_SELF, ImmutableMap.of("model", 99));
+    FleetColumnCataloger customCataloger = new FleetColumnCataloger(store);
+
+    FleetColumnCatalogResponse response =
+        customCataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
+
+    FleetColumnCatalogEntry modelEntry =
+        entryFor(section(response, "Dimensions"), "dimension::model");
+    assertThat(modelEntry.getCoverage().getDisplayCase()).isEqualTo(DisplayCase.SHOWN);
+    assertThat(modelEntry.getCoverage().getShown().getCount()).isEqualTo(3);
   }
 
   @Test
@@ -151,33 +188,34 @@ public final class FleetColumnCatalogerTest {
     FleetColumnCatalogResponse response =
         cataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
 
-    // No filters, no recents, no query: the suggested and search sections are absent, and the three
+    // No filters, no recents, no query: the suggested and search sections are absent, and the four
     // browse sections appear in their fixed order.
     assertThat(headings(response))
-        .containsExactly("Built-in fields", "Dimensions", "Host properties")
+        .containsExactly(
+            "Built-in fields",
+            "Built-in fields from connected host",
+            "Dimensions",
+            "Host properties from connected host")
         .inOrder();
   }
 
   @Test
-  public void builtinSection_listsBuiltinsSortedByDisplayName() {
+  public void builtinSections_listDeviceAndHostBuiltinsSortedByDisplayName() {
     FleetColumnCatalogResponse response =
         cataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
 
-    // Built-ins are the field::, host::, and config:: keys present in the index, listed in full and
-    // sorted by display name: Host IP, Host Lab Server Connectivity, Host Name, Host OS, Owners,
-    // Status, Type, UUID.
     FleetColumnCatalogSection builtin = section(response, "Built-in fields");
     assertThat(keys(builtin))
-        .containsExactly(
-            "host_field::host_ip",
-            "host_field::connectivity",
-            "host_field::host_name",
-            "device_field::status",
-            "device_field::type",
-            "device_field::uuid")
+        .containsExactly("device_field::status", "device_field::type", "device_field::uuid")
         .inOrder();
-    // A full section reports no total.
     assertThat(builtin.getTotalAvailable()).isEqualTo(0);
+
+    FleetColumnCatalogSection hostBuiltin =
+        section(response, "Built-in fields from connected host");
+    assertThat(keys(hostBuiltin))
+        .containsExactly("host_field::host_ip", "host_field::connectivity", "host_field::host_name")
+        .inOrder();
+    assertThat(hostBuiltin.getTotalAvailable()).isEqualTo(0);
   }
 
   @Test
@@ -187,16 +225,19 @@ public final class FleetColumnCatalogerTest {
 
     FleetColumnCatalogSection dimensions = section(response, "Dimensions");
     // dimension::host_name is present in the fleet but restates host_field::host_name on every
-    // device, so it is
-    // detected as redundant and dropped from the dimensions section.
+    // device, so it is detected as redundant and dropped from the dimensions section.
     assertThat(snapshot.index().keyIds()).contains("dimension::host_name");
-    assertThat(keys(dimensions)).doesNotContain("dimension::host_name");
+    assertThat(
+            headings(
+                cataloger.getColumnCatalog(
+                    corpus, FleetColumnCatalogRequest.newBuilder().setQuery("host_name").build())))
+        .doesNotContain("Dimensions");
 
-    // The non-redundant dimensions are model, pool, quarantined, and the ten fillers: twelve in
-    // all. The section is cut to the browse top-N of ten, and total_available carries the full
-    // count so the frontend can show "showing 10 of 12".
+    // Browse lists declared dimensions only (dimension::model in the ATS registry), while
+    // total_available counts all 12 non-redundant dimensions (model, pool, and the ten fillers).
+    assertThat(keys(dimensions)).containsExactly("dimension::model");
     assertThat(dimensions.getTotalAvailable()).isEqualTo(12);
-    assertThat(dimensions.getEntriesCount()).isEqualTo(10);
+    assertThat(dimensions.getEntriesCount()).isEqualTo(1);
   }
 
   @Test
@@ -210,6 +251,13 @@ public final class FleetColumnCatalogerTest {
                 .getCoverage()
                 .getDisplayCase())
         .isEqualTo(DisplayCase.NOT_SHOWN);
+    assertThat(
+            entryFor(
+                    section(response, "Built-in fields from connected host"),
+                    "host_field::host_name")
+                .getCoverage()
+                .getDisplayCase())
+        .isEqualTo(DisplayCase.NOT_SHOWN);
     // model is carried by all three devices (pixel on two, iphone on one).
     FleetColumnCatalogEntry modelEntry =
         entryFor(section(response, "Dimensions"), "dimension::model");
@@ -217,7 +265,9 @@ public final class FleetColumnCatalogerTest {
     assertThat(modelEntry.getCoverage().getShown().getCount()).isEqualTo(3);
     // Host properties measure host coverage rather than device coverage, so coverage is not shown.
     assertThat(
-            entryFor(section(response, "Host properties"), "host_property::location")
+            entryFor(
+                    section(response, "Host properties from connected host"),
+                    "host_property::location")
                 .getCoverage()
                 .getDisplayCase())
         .isEqualTo(DisplayCase.NOT_SHOWN);
@@ -321,22 +371,30 @@ public final class FleetColumnCatalogerTest {
         new DeviceCorpus(
             disagreeingSnapshot, new LazyPostings(disagreeingSnapshot.devices()), null);
 
-    FleetColumnCatalogResponse response =
+    FleetColumnCatalogResponse hostNameSearch =
         cataloger.getColumnCatalog(
-            disagreeingCorpus, FleetColumnCatalogRequest.getDefaultInstance());
+            disagreeingCorpus,
+            FleetColumnCatalogRequest.newBuilder().setQuery("host_name").build());
+    assertThat(keys(section(hostNameSearch, "Dimensions"))).containsExactly("dimension::host_name");
 
-    assertThat(keys(section(response, "Dimensions")))
-        .containsAtLeast("dimension::host_name", "dimension::uuid");
+    FleetColumnCatalogResponse uuidSearch =
+        cataloger.getColumnCatalog(
+            disagreeingCorpus, FleetColumnCatalogRequest.newBuilder().setQuery("uuid").build());
+    assertThat(keys(section(uuidSearch, "Dimensions"))).containsExactly("dimension::uuid");
   }
 
   @Test
   public void redundantCache_reusedAcrossCallsAndInvalidatedWhenSnapshotRefreshes() {
     FleetColumnCataloger cachingCataloger = new FleetColumnCataloger();
+    FleetColumnCatalogRequest hostNameQuery =
+        FleetColumnCatalogRequest.newBuilder().setQuery("host_name").build();
 
     // First call populates redundantCache for FLEET_SELF (dimension::host_name is redundant).
     FleetColumnCatalogResponse first =
         cachingCataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());
-    assertThat(keys(section(first, "Dimensions"))).doesNotContain("dimension::host_name");
+    assertThat(section(first, "Dimensions").getTotalAvailable()).isEqualTo(12);
+    assertThat(headings(cachingCataloger.getColumnCatalog(corpus, hostNameQuery)))
+        .doesNotContain("Dimensions");
 
     // Build a refreshed snapshot with the exact same 3 devices (recordCount = 3) and the exact
     // same set of 19 key strings, except device-0's host_name dimension is "lab-b" (disagreeing
@@ -371,15 +429,18 @@ public final class FleetColumnCatalogerTest {
             keys(
                 section(
                     new FleetColumnCataloger()
-                        .getColumnCatalog(
-                            sameIndexDisagreeingRecordsCorpus,
-                            FleetColumnCatalogRequest.getDefaultInstance()),
+                        .getColumnCatalog(sameIndexDisagreeingRecordsCorpus, hostNameQuery),
                     "Dimensions")))
-        .contains("dimension::host_name");
+        .containsExactly("dimension::host_name");
     FleetColumnCatalogResponse cachedResponse =
         cachingCataloger.getColumnCatalog(
             sameIndexDisagreeingRecordsCorpus, FleetColumnCatalogRequest.getDefaultInstance());
-    assertThat(keys(section(cachedResponse, "Dimensions"))).doesNotContain("dimension::host_name");
+    assertThat(section(cachedResponse, "Dimensions").getTotalAvailable()).isEqualTo(12);
+    assertThat(
+            headings(
+                cachingCataloger.getColumnCatalog(
+                    sameIndexDisagreeingRecordsCorpus, hostNameQuery)))
+        .doesNotContain("Dimensions");
 
     // Now pass refreshedCorpus (same recordCount = 3 and equal keyIds contents, but a distinct
     // keyIds ImmutableSet instance): cached.keyIds() == keyIds is false, invalidating the cache.
@@ -388,7 +449,13 @@ public final class FleetColumnCatalogerTest {
     FleetColumnCatalogResponse afterRefresh =
         cachingCataloger.getColumnCatalog(
             refreshedCorpus, FleetColumnCatalogRequest.getDefaultInstance());
-    assertThat(keys(section(afterRefresh, "Dimensions"))).contains("dimension::host_name");
+    assertThat(section(afterRefresh, "Dimensions").getTotalAvailable()).isEqualTo(13);
+    assertThat(
+            keys(
+                section(
+                    cachingCataloger.getColumnCatalog(refreshedCorpus, hostNameQuery),
+                    "Dimensions")))
+        .containsExactly("dimension::host_name");
   }
 
   @Test

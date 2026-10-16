@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
@@ -36,6 +37,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.CoverageInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FilterValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
@@ -50,6 +52,14 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBu
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionCatalogStore;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import com.google.inject.Guice;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -83,7 +93,12 @@ public final class FleetGroupByKeyCatalogerTest {
     // AtsCuration promotes host_field::host_name in deviceGroupByRow(), which produces 2 groups
     // (lab-a and lab-b), so Suggested leads.
     assertThat(headings(response))
-        .containsExactly("Suggested", "Built-in fields", "Dimensions", "Host properties")
+        .containsExactly(
+            "Suggested",
+            "Built-in fields",
+            "Built-in fields from connected host",
+            "Dimensions",
+            "Host properties from connected host")
         .inOrder();
 
     FleetGroupByKeySection suggested = section(response, "Suggested");
@@ -91,30 +106,43 @@ public final class FleetGroupByKeyCatalogerTest {
     assertThat(hostNameSuggested.getApplied()).isTrue();
     assertThat(hostNameSuggested.getGroupCount().getDisplayCase()).isEqualTo(DisplayCase.SHOWN);
     assertThat(hostNameSuggested.getGroupCount().getShown().getCount()).isEqualTo(2);
+    assertThat(hostNameSuggested.getCoverage().getDisplayCase())
+        .isEqualTo(CoverageInfo.DisplayCase.NOT_SHOWN);
 
-    // host_field::connectivity is "Running" on all 3 devices (1 group), so it is dropped from
-    // Built-in fields as a no-op grouping.
     FleetGroupByKeySection builtin = section(response, "Built-in fields");
     assertThat(builtin.getTotalAvailable()).isEqualTo(0);
-    assertThat(keys(builtin)).doesNotContain("host_field::connectivity");
     assertThat(entryFor(builtin, "device_field::status").getGroupCount().getShown().getCount())
         .isEqualTo(2);
+    assertThat(entryFor(builtin, "device_field::status").getCoverage().getDisplayCase())
+        .isEqualTo(CoverageInfo.DisplayCase.NOT_SHOWN);
     assertThat(entryFor(builtin, "device_field::uuid").getGroupCount().getShown().getCount())
         .isEqualTo(3);
+
+    // host_field::connectivity is "Running" on all 3 devices (1 group), so it is dropped from
+    // Built-in fields from connected host as a no-op grouping.
+    FleetGroupByKeySection hostBuiltin = section(response, "Built-in fields from connected host");
+    assertThat(hostBuiltin.getTotalAvailable()).isEqualTo(0);
+    assertThat(keys(hostBuiltin)).doesNotContain("host_field::connectivity");
+    assertThat(entryFor(hostBuiltin, "host_field::host_name").getGroupCount().getShown().getCount())
+        .isEqualTo(2);
+    assertThat(entryFor(hostBuiltin, "host_field::host_name").getCoverage().getDisplayCase())
+        .isEqualTo(CoverageInfo.DisplayCase.NOT_SHOWN);
 
     // Browse lists declared dimensions only: the ATS registry declares dimension::model among the
     // fixture's four dimensions (model, pool, uniform, f01), and the total counts all four.
     FleetGroupByKeySection dimensions = section(response, "Dimensions");
     assertThat(keys(dimensions)).containsExactly("dimension::model");
     assertThat(dimensions.getTotalAvailable()).isEqualTo(4);
-    assertThat(entryFor(dimensions, "dimension::model").getGroupCount().getShown().getCount())
-        .isEqualTo(2);
+    FleetGroupByKeyEntry modelEntry = entryFor(dimensions, "dimension::model");
+    assertThat(modelEntry.getGroupCount().getShown().getCount()).isEqualTo(2);
+    assertThat(modelEntry.getCoverage().getDisplayCase()).isEqualTo(CoverageInfo.DisplayCase.SHOWN);
+    assertThat(modelEntry.getCoverage().getShown().getCount()).isEqualTo(3);
 
-    // Host properties has 8 properties in the index: host_os and prop_uniform (coverage 3, 1 group
-    // each) plus location (coverage 3, 2 groups) and p1..p5 (coverage 2, 2 groups each). Dropping
-    // host_os and prop_uniform leaves 6 two-group properties; slicing to PROP_TOP (5) returns the
-    // top 5 with total 6.
-    FleetGroupByKeySection properties = section(response, "Host properties");
+    // Host properties from connected host has 8 properties in the index: host_os and prop_uniform
+    // (coverage 3, 1 group each) plus location (coverage 3, 2 groups) and p1..p5 (coverage 2, 2
+    // groups each). Dropping host_os and prop_uniform leaves 6 two-group properties; slicing to
+    // PROP_TOP (5) returns the top 5 with total 6.
+    FleetGroupByKeySection properties = section(response, "Host properties from connected host");
     assertThat(keys(properties))
         .containsExactly(
             "host_property::location",
@@ -124,9 +152,10 @@ public final class FleetGroupByKeyCatalogerTest {
             "host_property::p4")
         .inOrder();
     assertThat(properties.getTotalAvailable()).isEqualTo(6);
-    assertThat(
-            entryFor(properties, "host_property::location").getGroupCount().getShown().getCount())
-        .isEqualTo(2);
+    FleetGroupByKeyEntry locationEntry = entryFor(properties, "host_property::location");
+    assertThat(locationEntry.getGroupCount().getShown().getCount()).isEqualTo(2);
+    assertThat(locationEntry.getCoverage().getDisplayCase())
+        .isEqualTo(CoverageInfo.DisplayCase.NOT_SHOWN);
   }
 
   @Test
@@ -178,9 +207,10 @@ public final class FleetGroupByKeyCatalogerTest {
             FleetGroupByKeyCatalogRequest.newBuilder().addFilters(statusIdle).build());
 
     // Under IDLE filter, both devices are on lab-a, so host_field::host_name produces only 1 group
-    // and Suggested becomes empty and is omitted when unapplied.
+    // and Suggested and Built-in fields from connected host become empty and are omitted when
+    // unapplied.
     assertThat(headings(response))
-        .containsExactly("Built-in fields", "Dimensions", "Host properties")
+        .containsExactly("Built-in fields", "Dimensions", "Host properties from connected host")
         .inOrder();
 
     // Built-in fields are counted over the 2 IDLE devices: device_field::driver ("NoOpDriver" on
@@ -194,12 +224,15 @@ public final class FleetGroupByKeyCatalogerTest {
     assertThat(entryFor(builtin, "device_field::uuid").getGroupCount().getShown().getCount())
         .isEqualTo(2);
 
-    // Dimensions and Host properties are not counted under a filter: they carry NOT_SHOWN.
+    // Dimensions and Host properties from connected host are not counted for groups under a filter
+    // (groupCount NOT_SHOWN), while Dimensions still shows entity coverage.
     FleetGroupByKeySection dimensions = section(response, "Dimensions");
-    assertThat(entryFor(dimensions, "dimension::model").getGroupCount().getDisplayCase())
-        .isEqualTo(DisplayCase.NOT_SHOWN);
+    FleetGroupByKeyEntry modelEntry = entryFor(dimensions, "dimension::model");
+    assertThat(modelEntry.getGroupCount().getDisplayCase()).isEqualTo(DisplayCase.NOT_SHOWN);
+    assertThat(modelEntry.getCoverage().getDisplayCase()).isEqualTo(CoverageInfo.DisplayCase.SHOWN);
+    assertThat(modelEntry.getCoverage().getShown().getCount()).isEqualTo(3);
 
-    FleetGroupByKeySection properties = section(response, "Host properties");
+    FleetGroupByKeySection properties = section(response, "Host properties from connected host");
     assertThat(keys(properties))
         .containsExactly(
             "host_property::host_os",
@@ -211,6 +244,8 @@ public final class FleetGroupByKeyCatalogerTest {
     assertThat(properties.getTotalAvailable()).isEqualTo(8);
     assertThat(entryFor(properties, "host_property::location").getGroupCount().getDisplayCase())
         .isEqualTo(DisplayCase.NOT_SHOWN);
+    assertThat(entryFor(properties, "host_property::location").getCoverage().getDisplayCase())
+        .isEqualTo(CoverageInfo.DisplayCase.NOT_SHOWN);
 
     // When an already-applied group-by key collapses to a single group under an active filter, it
     // is still returned marked applied rather than dropped.
@@ -228,20 +263,29 @@ public final class FleetGroupByKeyCatalogerTest {
   }
 
   @Test
-  public void deviceSearch_includesCatalogOnlyDimensionsWithNotShownGroupCount() {
+  public void deviceSearch_includesCatalogDimensionsWithCoverageAndNotShownGroupCount() {
     DimensionCatalogStore store = new DimensionCatalogStore();
-    store.setDimensionNames(Fleet.FLEET_SELF, ImmutableSet.of("custom_catalog_dim"));
+    store.setDimensionCounts(
+        Fleet.FLEET_SELF, ImmutableMap.of("custom_catalog_dim", 0, "counted_catalog_dim", 17));
     FleetGroupByKeyCataloger customCataloger = new FleetGroupByKeyCataloger(store);
 
     FleetGroupByKeyCatalogResponse response =
         customCataloger.getGroupByKeyCatalog(
             deviceCorpus,
-            FleetGroupByKeyCatalogRequest.newBuilder().setQuery("custom_catalog_dim").build());
+            FleetGroupByKeyCatalogRequest.newBuilder().setQuery("catalog_dim").build());
 
     assertThat(headings(response)).containsExactly("Dimensions");
-    FleetGroupByKeyEntry entry =
-        entryFor(section(response, "Dimensions"), "dimension::custom_catalog_dim");
-    assertThat(entry.getGroupCount().getDisplayCase()).isEqualTo(DisplayCase.NOT_SHOWN);
+    FleetGroupByKeySection dimensions = section(response, "Dimensions");
+    FleetGroupByKeyEntry countedEntry = entryFor(dimensions, "dimension::counted_catalog_dim");
+    assertThat(countedEntry.getGroupCount().getDisplayCase()).isEqualTo(DisplayCase.NOT_SHOWN);
+    assertThat(countedEntry.getCoverage().getDisplayCase())
+        .isEqualTo(CoverageInfo.DisplayCase.SHOWN);
+    assertThat(countedEntry.getCoverage().getShown().getCount()).isEqualTo(17);
+
+    FleetGroupByKeyEntry uncountedEntry = entryFor(dimensions, "dimension::custom_catalog_dim");
+    assertThat(uncountedEntry.getGroupCount().getDisplayCase()).isEqualTo(DisplayCase.NOT_SHOWN);
+    assertThat(uncountedEntry.getCoverage().getDisplayCase())
+        .isEqualTo(CoverageInfo.DisplayCase.NOT_SHOWN);
   }
 
   @Test
@@ -276,8 +320,156 @@ public final class FleetGroupByKeyCatalogerTest {
     assertThat(keys(builtin))
         .containsExactly("host_field::device_count", "host_field::host_ip", "host_field::host_name")
         .inOrder();
-    assertThat(entryFor(builtin, "host_field::host_name").getGroupCount().getShown().getCount())
-        .isEqualTo(2);
+    FleetGroupByKeyEntry hostName = entryFor(builtin, "host_field::host_name");
+    assertThat(hostName.getGroupCount().getShown().getCount()).isEqualTo(2);
+    assertThat(hostName.getCoverage().getDisplayCase())
+        .isEqualTo(CoverageInfo.DisplayCase.NOT_SHOWN);
+
+    FleetGroupByKeySection properties = section(response, "Host properties");
+    FleetGroupByKeyEntry location = entryFor(properties, "host_property::location");
+    assertThat(location.getGroupCount().getShown().getCount()).isEqualTo(2);
+    assertThat(location.getCoverage().getDisplayCase()).isEqualTo(CoverageInfo.DisplayCase.SHOWN);
+    assertThat(location.getCoverage().getShown().getCount()).isEqualTo(2);
+  }
+
+  @Test
+  public void hostSearch_filtersHostSectionsAndShowsCoverageForProperties() {
+    FleetGroupByKeyCatalogResponse locationResponse =
+        cataloger.getGroupByKeyCatalog(
+            hostCorpus,
+            FleetGroupByKeyCatalogRequest.newBuilder()
+                .setEntity(SearchEntity.SEARCH_ENTITY_HOST)
+                .setQuery("location")
+                .build());
+
+    assertThat(headings(locationResponse)).containsExactly("Host properties");
+    FleetGroupByKeyEntry location =
+        entryFor(section(locationResponse, "Host properties"), "host_property::location");
+    assertThat(location.getGroupCount().getShown().getCount()).isEqualTo(2);
+    assertThat(location.getCoverage().getDisplayCase()).isEqualTo(CoverageInfo.DisplayCase.SHOWN);
+    assertThat(location.getCoverage().getShown().getCount()).isEqualTo(2);
+
+    FleetGroupByKeyCatalogResponse hostNameResponse =
+        cataloger.getGroupByKeyCatalog(
+            hostCorpus,
+            FleetGroupByKeyCatalogRequest.newBuilder()
+                .setEntity(SearchEntity.SEARCH_ENTITY_HOST)
+                .setQuery("host_name")
+                .build());
+
+    assertThat(headings(hostNameResponse)).containsExactly("Built-in fields");
+    FleetGroupByKeyEntry hostName =
+        entryFor(section(hostNameResponse, "Built-in fields"), "host_field::host_name");
+    assertThat(hostName.getGroupCount().getShown().getCount()).isEqualTo(2);
+    assertThat(hostName.getCoverage().getDisplayCase())
+        .isEqualTo(CoverageInfo.DisplayCase.NOT_SHOWN);
+  }
+
+  @Test
+  public void suggested_showsCoverageForCuratedDimensionAndHostProperty() {
+    ScenarioCuration curation = new SuggestedCoverageCuration();
+    DeviceCorpus curatedDeviceCorpus = new DeviceCorpus(snapshot, devicePostings, curation);
+    HostCorpus curatedHostCorpus =
+        new HostCorpus(snapshot, LazyPostings.forHosts(snapshot.hosts()), curation);
+
+    FleetGroupByKeyCatalogResponse deviceResponse =
+        cataloger.getGroupByKeyCatalog(
+            curatedDeviceCorpus, FleetGroupByKeyCatalogRequest.getDefaultInstance());
+    FleetGroupByKeySection deviceSuggested = section(deviceResponse, "Suggested");
+    assertThat(keys(deviceSuggested))
+        .containsExactly("host_field::host_name", "dimension::model")
+        .inOrder();
+    assertThat(entryFor(deviceSuggested, "host_field::host_name").getCoverage().getDisplayCase())
+        .isEqualTo(CoverageInfo.DisplayCase.NOT_SHOWN);
+    FleetGroupByKeyEntry suggestedModel = entryFor(deviceSuggested, "dimension::model");
+    assertThat(suggestedModel.getCoverage().getDisplayCase())
+        .isEqualTo(CoverageInfo.DisplayCase.SHOWN);
+    assertThat(suggestedModel.getCoverage().getShown().getCount()).isEqualTo(3);
+
+    FleetGroupByKeyCatalogResponse hostResponse =
+        cataloger.getGroupByKeyCatalog(
+            curatedHostCorpus,
+            FleetGroupByKeyCatalogRequest.newBuilder()
+                .setEntity(SearchEntity.SEARCH_ENTITY_HOST)
+                .build());
+    FleetGroupByKeySection hostSuggested = section(hostResponse, "Suggested");
+    assertThat(keys(hostSuggested))
+        .containsExactly("host_field::host_name", "host_property::location")
+        .inOrder();
+    assertThat(entryFor(hostSuggested, "host_field::host_name").getCoverage().getDisplayCase())
+        .isEqualTo(CoverageInfo.DisplayCase.NOT_SHOWN);
+    FleetGroupByKeyEntry suggestedLocation = entryFor(hostSuggested, "host_property::location");
+    assertThat(suggestedLocation.getCoverage().getDisplayCase())
+        .isEqualTo(CoverageInfo.DisplayCase.SHOWN);
+    assertThat(suggestedLocation.getCoverage().getShown().getCount()).isEqualTo(2);
+  }
+
+  /**
+   * Curation promoting a built-in field alongside a dimension (device) and host property (host).
+   */
+  private static final class SuggestedCoverageCuration implements ScenarioCuration {
+    private final AtsDeviceKeyRegistry deviceRegistry = new AtsDeviceKeyRegistry();
+    private final AtsHostKeyRegistry hostRegistry = new AtsHostKeyRegistry();
+
+    @Override
+    public ImmutableList<DeviceKeyDescriptor> deviceFilterByRow() {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public ImmutableList<DeviceKeyDescriptor> deviceGroupByRow() {
+      return ImmutableList.of(DeviceKeys.HOST_NAME, DeviceKeys.MODEL);
+    }
+
+    @Override
+    public ImmutableList<DeviceKeyDescriptor> deviceDefaultColumns() {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public ImmutableList<DeviceKeyDescriptor> deviceRecommendedColumns() {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public ImmutableList<HostKeyDescriptor> hostFilterByRow() {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public ImmutableList<HostKeyDescriptor> hostGroupByRow() {
+      return ImmutableList.of(HostKeys.HOST_NAME, hostRegistry.hostPropertyKey("location").get());
+    }
+
+    @Override
+    public ImmutableList<HostKeyDescriptor> hostDefaultColumns() {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public ImmutableList<HostKeyDescriptor> hostRecommendedColumns() {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public KeyPriority keyPriority() {
+      return FleetKeyPriority.INSTANCE;
+    }
+
+    @Override
+    public DeviceKeyRegistry deviceKeyRegistry() {
+      return deviceRegistry;
+    }
+
+    @Override
+    public HostKeyRegistry hostKeyRegistry() {
+      return hostRegistry;
+    }
+
+    @Override
+    public boolean landingEnabled() {
+      return false;
+    }
   }
 
   private static ImmutableList<String> headings(FleetGroupByKeyCatalogResponse response) {

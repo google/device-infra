@@ -16,47 +16,67 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.refresh;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import java.util.Collection;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
 /**
- * Thread-safe cache storing the complete set of device dimension names discovered across fleets.
+ * Thread-safe cache storing the complete set of device dimension names and their device counts
+ * discovered across fleets.
  *
  * <p>Updated periodically (every 1 hour) by {@link DimensionCatalogRefresher}. Provides O(1)
- * membership checks and full name sets to query-layer consumers (such as {@code FleetSuggester} and
- * {@code FleetColumnCataloger}) so long-tail dimensions can be suggested and added as columns
- * without pulling full dimension values fleet-wide upfront.
+ * membership checks, full name sets, and device coverage counts to query-layer consumers (such as
+ * {@code FleetSuggester}, {@code FleetColumnCataloger}, {@code FleetFilterKeyCataloger}, and {@code
+ * FleetGroupByKeyCataloger}) so long-tail dimensions can be suggested and listed with accurate
+ * coverage counts without pulling full dimension values fleet-wide upfront.
  */
 @Singleton
 public final class DimensionCatalogStore {
 
-  private final ConcurrentMap<Fleet, ImmutableSet<String>> dimensionNames =
+  private final ConcurrentMap<Fleet, ImmutableMap<String, Integer>> dimensionCounts =
       new ConcurrentHashMap<>();
 
   @Inject
   @VisibleForTesting
   public DimensionCatalogStore() {}
 
+  /** Returns all discovered dimension names and their device counts for the specified fleet. */
+  public ImmutableMap<String, Integer> getDimensionCounts(Fleet fleet) {
+    return dimensionCounts.getOrDefault(normalize(fleet), ImmutableMap.of());
+  }
+
   /** Returns all discovered dimension names for the specified fleet. */
   public ImmutableSet<String> getDimensionNames(Fleet fleet) {
-    Fleet normalized = fleet == Fleet.FLEET_UNSPECIFIED ? Fleet.FLEET_SELF : fleet;
-    return dimensionNames.getOrDefault(normalized, ImmutableSet.of());
+    return getDimensionCounts(fleet).keySet();
   }
 
   /** Checks whether the given dimension name exists in the specified fleet. */
   public boolean hasDimension(Fleet fleet, String dimensionName) {
-    return getDimensionNames(fleet).contains(dimensionName);
+    return getDimensionCounts(fleet).containsKey(dimensionName);
   }
 
-  /** Updates the discovered dimension names for the specified fleet. */
+  /** Updates the discovered dimension names and their device counts for the specified fleet. */
+  public void setDimensionCounts(Fleet fleet, Map<String, Integer> counts) {
+    dimensionCounts.put(normalize(fleet), ImmutableMap.copyOf(counts));
+  }
+
+  /** Updates the discovered dimension names for the specified fleet with unknown (0) counts. */
+  @VisibleForTesting
   public void setDimensionNames(Fleet fleet, Collection<String> names) {
-    Fleet normalized = fleet == Fleet.FLEET_UNSPECIFIED ? Fleet.FLEET_SELF : fleet;
-    dimensionNames.put(normalized, ImmutableSet.copyOf(names));
+    dimensionCounts.put(
+        normalize(fleet), names.stream().distinct().collect(toImmutableMap(name -> name, n -> 0)));
+  }
+
+  private static Fleet normalize(Fleet fleet) {
+    return fleet == Fleet.FLEET_UNSPECIFIED ? Fleet.FLEET_SELF : fleet;
   }
 }

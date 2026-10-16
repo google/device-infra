@@ -32,8 +32,10 @@ import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDe
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.KeyDescriptor;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.ToIntFunction;
 
@@ -48,7 +50,9 @@ final class KeyCatalogs {
 
   static final String SECTION_SUGGESTED = "Suggested";
   static final String SECTION_BUILTIN = "Built-in fields";
+  static final String SECTION_HOST_BUILTIN = "Built-in fields from connected host";
   static final String SECTION_DIMENSIONS = "Dimensions";
+  static final String SECTION_CONNECTED_HOST_PROPERTIES = "Host properties from connected host";
   static final String SECTION_PROPERTIES = "Host properties";
 
   private static final CoverageInfo COVERAGE_NOT_SHOWN =
@@ -83,19 +87,25 @@ final class KeyCatalogs {
    * Partitioned and sorted candidate keys for device search:
    *
    * <ul>
-   *   <li><b>builtin</b>: every indexed key that is neither a dimension nor a host property, sorted
-   *       alphabetically by display name.
+   *   <li><b>builtin</b>: every indexed native device field or config key, sorted alphabetically by
+   *       display name.
+   *   <li><b>hostBuiltin</b>: every indexed built-in field projected from the connected host,
+   *       sorted alphabetically by display name.
    *   <li><b>dimensions</b>: every indexed dimension (from the core index or loaded filter
    *       overlays) merged with every dimension name {@link DimensionCatalogStore} discovered
    *       fleet-wide, ranked by device coverage descending and then display name.
-   *   <li><b>properties</b>: every indexed host property, ranked by device coverage descending and
-   *       then display name.
+   *   <li><b>properties</b>: every indexed host property projected from the connected host, ranked
+   *       by device coverage descending and then display name.
+   *   <li><b>deviceCounts</b>: per-key device coverage counts combining the snapshot index with
+   *       fleet-wide dimension counts from {@link DimensionCatalogStore}.
    * </ul>
    */
   record DeviceKeyLists(
       ImmutableList<DeviceKeyDescriptor> builtin,
+      ImmutableList<DeviceKeyDescriptor> hostBuiltin,
       ImmutableList<DeviceKeyDescriptor> dimensions,
-      ImmutableList<DeviceKeyDescriptor> properties) {}
+      ImmutableList<DeviceKeyDescriptor> properties,
+      ImmutableMap<String, Integer> deviceCounts) {}
 
   /**
    * Partitioned and sorted candidate keys for host search:
@@ -109,12 +119,34 @@ final class KeyCatalogs {
   record HostKeyLists(
       ImmutableList<HostKeyDescriptor> builtin, ImmutableList<HostKeyDescriptor> properties) {}
 
-  /** Partitions and sorts the device corpus keys for both key catalog dialogs. */
+  /** Partitions and sorts the device corpus keys for all key catalog dialogs. */
   static DeviceKeyLists deviceKeys(
       DeviceCorpus corpus,
       Fleet fleet,
       DimensionCatalogStore dimensionCatalogStore,
-      ImmutableMap<String, Integer> deviceCounts) {
+      ImmutableMap<String, Integer> indexedCounts) {
+    ImmutableMap<String, Integer> catalogCounts = dimensionCatalogStore.getDimensionCounts(fleet);
+    ImmutableList.Builder<DeviceKeyDescriptor> catalogDimensions = ImmutableList.builder();
+    ImmutableMap<String, Integer> deviceCounts;
+    if (catalogCounts.isEmpty()) {
+      deviceCounts = indexedCounts;
+    } else {
+      Map<String, Integer> merged = new HashMap<>(indexedCounts);
+      catalogCounts.forEach(
+          (name, count) ->
+              corpus
+                  .deviceKeyRegistry()
+                  .dimensionKey(name)
+                  .ifPresent(
+                      desc -> {
+                        catalogDimensions.add(desc);
+                        if (count > 0) {
+                          merged.putIfAbsent(desc.id(), count);
+                        }
+                      }));
+      deviceCounts = ImmutableMap.copyOf(merged);
+    }
+
     Comparator<DeviceKeyDescriptor> byName =
         Comparator.comparing(desc -> Ascii.toLowerCase(DeviceKeyDisplays.titleDisplayName(desc)));
     Comparator<DeviceKeyDescriptor> byCoverage =
@@ -131,20 +163,20 @@ final class KeyCatalogs {
 
     ImmutableList<DeviceKeyDescriptor> builtin =
         indexed.stream()
-            .filter(desc -> !desc.isDimension() && !desc.isHostProperty())
+            .filter(desc -> !desc.isDimension() && !desc.isHostProperty() && !desc.isHostField())
             .sorted(byName)
             .collect(toImmutableList());
-    // Dimensions discovered fleet-wide but not indexed join the indexed ones; they carry coverage 0
-    // here because their values are not in the snapshot. The indexed descriptor wins when both
-    // name the same key.
+    ImmutableList<DeviceKeyDescriptor> hostBuiltin =
+        indexed.stream()
+            .filter(DeviceKeyDescriptor::isHostField)
+            .sorted(byName)
+            .collect(toImmutableList());
     ImmutableList<DeviceKeyDescriptor> dimensions =
         ImmutableList.sortedCopyOf(
             byCoverage,
             Streams.concat(
                     indexed.stream().filter(DeviceKeyDescriptor::isDimension),
-                    dimensionCatalogStore.getDimensionNames(fleet).stream()
-                        .map(corpus.deviceKeyRegistry()::dimensionKey)
-                        .flatMap(Optional::stream))
+                    catalogDimensions.build().stream())
                 .collect(
                     toImmutableMap(DeviceKeyDescriptor::id, desc -> desc, (first, second) -> first))
                 .values());
@@ -154,7 +186,7 @@ final class KeyCatalogs {
             .sorted(byCoverage)
             .collect(toImmutableList());
 
-    return new DeviceKeyLists(builtin, dimensions, properties);
+    return new DeviceKeyLists(builtin, hostBuiltin, dimensions, properties, deviceCounts);
   }
 
   /** Partitions and sorts the host corpus keys for both key catalog dialogs. */
@@ -188,7 +220,8 @@ final class KeyCatalogs {
 
   /**
    * Builds the {@link CoverageInfo} display decision: shown when {@code showCount} is true and
-   * {@code count} is positive, not shown otherwise.
+   * {@code count} is positive (device dimensions on device search, host properties on host search),
+   * not shown otherwise.
    */
   static CoverageInfo coverage(boolean showCount, int count) {
     if (showCount && count > 0) {

@@ -23,6 +23,8 @@ import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import java.util.Optional;
@@ -93,5 +95,34 @@ public final class LabInfoProviderImplTest {
             IllegalStateException.class,
             () -> labInfoProvider.getLabInfoAsync(request, routedUniverse));
     assertThat(thrown).hasMessageThat().contains("unknown_ats_id");
+  }
+
+  @Test
+  public void getAllDeviceDimensionsAsync_selfUniverse_success() throws Exception {
+    GetAllDeviceDimensionsRequest request = GetAllDeviceDimensionsRequest.getDefaultInstance();
+    GetAllDeviceDimensionsResponse expectedResponse =
+        GetAllDeviceDimensionsResponse.getDefaultInstance();
+    when(defaultLabInfoStub.getAllDeviceDimensionsAsync(request))
+        .thenReturn(immediateFuture(expectedResponse));
+
+    assertThat(labInfoProvider.getAllDeviceDimensionsAsync(request, SELF_UNIVERSE).get())
+        .isEqualTo(expectedResponse);
+  }
+
+  @Test
+  public void getAllDeviceDimensionsAsync_routedUniverse_success() throws Exception {
+    GetAllDeviceDimensionsRequest request = GetAllDeviceDimensionsRequest.getDefaultInstance();
+    GetAllDeviceDimensionsResponse expectedResponse =
+        GetAllDeviceDimensionsResponse.getDefaultInstance();
+    String atsControllerId = "ats_id";
+    UniverseScope routedUniverse = new UniverseScope.RoutedUniverse(atsControllerId);
+
+    when(routedUniverseLabInfoStubFactory.getLabInfoStub(atsControllerId))
+        .thenReturn(Optional.of(atsLabInfoStub));
+    when(atsLabInfoStub.getAllDeviceDimensionsAsync(request))
+        .thenReturn(immediateFuture(expectedResponse));
+
+    assertThat(labInfoProvider.getAllDeviceDimensionsAsync(request, routedUniverse).get())
+        .isEqualTo(expectedResponse);
   }
 }

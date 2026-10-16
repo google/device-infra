@@ -770,9 +770,11 @@ message FleetColumnCatalogEntry {
   string reason = 4;
 
   // What the row shows for this key's coverage. Always set. Browse and search
-  // sections follow the same rule as the filter-key catalog (a count for
-  // dimensions, nothing elsewhere); entries in the "Suggested for you" section
-  // set `not_shown` because their right-hand label displays `reason` instead.
+  // sections follow the same rule as the filter-key and group-by-key catalogs
+  // (a count for device dimensions on device search and host properties on
+  // host search, nothing elsewhere); entries in the "Suggested for you"
+  // section set `not_shown` because their right-hand label displays `reason`
+  // instead.
   CoverageInfo coverage = 5;
 }
 
@@ -850,12 +852,11 @@ message FleetFilterKeyEntry {
 // The coverage display for a key: either nothing, or a count. The backend
 // decides which; the frontend renders what it is given and never derives
 // "don't show" from a zero or from what kind of key it is. The backend shows
-// a count for dimensions only, where it tells a key on 12 of 150,000 devices
-// apart from a real one. Built-in fields are on every entity, so a count says
-// nothing there. Host properties are not counted either: on device search a
-// host property's device count mostly measures how many devices its hosts
-// carry, not how common the property is, and on host search there is no
-// long tail worth telling apart.
+// a count for device dimensions on device search and for host properties on
+// host search. Built-in fields are on every entity, so a count says nothing
+// there. On device search, projected host properties are not counted either,
+// because their device count mostly measures how many devices their hosts
+// carry rather than how common the property is.
 message CoverageInfo {
   // No coverage is shown for this key.
   message CoverageNotShown {}
@@ -863,7 +864,7 @@ message CoverageInfo {
   // A coverage count is shown for this key.
   message CoverageShown {
     // How many devices (device entity) or hosts (host entity) carry the key.
-    // Rendered as "Used by N devices" / "Used by N hosts".
+    // Rendered as "Used in N devices" / "Used in N hosts".
     int32 count = 1;
   }
 
@@ -925,6 +926,13 @@ message FleetGroupByKeyEntry {
   // true = this key is already a group-by. The frontend marks the row and the
   // row is not pickable again.
   bool applied = 4;
+
+  // What the row shows for this key's entity coverage. Always set. Same rule
+  // as the column and filter-key catalogs: a count for device dimensions on
+  // device search and host properties on host search, nothing elsewhere.
+  // Counted over the unfiltered fleet, whereas `group_count` is computed over
+  // the filtered result set.
+  CoverageInfo coverage = 5;
 }
 
 // The group-count display for a group-by key: either nothing, or a count. The

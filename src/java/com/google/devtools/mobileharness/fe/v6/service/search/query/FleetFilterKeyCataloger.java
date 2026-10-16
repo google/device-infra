@@ -21,7 +21,9 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCa
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.PROP_TOP;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SEARCH_LIMIT;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_BUILTIN;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_CONNECTED_HOST_PROPERTIES;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_DIMENSIONS;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_HOST_BUILTIN;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_PROPERTIES;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.norm;
 
@@ -53,9 +55,12 @@ import javax.inject.Singleton;
  * <ul>
  *   <li><b>Built-in fields</b>: Standard device or host attributes listed in full and sorted
  *       alphabetically by display name.
+ *   <li><b>Built-in fields from connected host</b>: Common host fields projected onto devices
+ *       (device search only), listed in full and sorted alphabetically by display name.
  *   <li><b>Dimensions</b>: Device dimensions ranked by device coverage (device search only). Browse
  *       mode lists declared dimensions only; see {@link KeyCatalogs#declared}.
- *   <li><b>Host properties</b>: Host properties ranked by device or host coverage.
+ *   <li><b>Host properties from connected host</b> / <b>Host properties</b>: Host properties ranked
+ *       by device or host coverage.
  * </ul>
  *
  * <p>In search mode each section keeps only the keys matching the query, best match first (exact
@@ -63,9 +68,9 @@ import javax.inject.Singleton;
  * KeyCatalogs#searchMatches}.
  *
  * <p>Each entry carries the {@link FleetFilterChipMetadata} needed to open the value picker
- * immediately, the {@link CoverageInfo} display decision (shown for indexed dimensions only, not
- * shown for built-in fields and host properties), and whether the key already has an active filter
- * chip. Coverage comes from the per-snapshot key statistics, so building the catalog scans nothing.
+ * immediately, the {@link CoverageInfo} display decision (shown for device dimensions on device
+ * search and for host properties on host search), and whether the key already has an active filter
+ * chip.
  */
 @Singleton
 public final class FleetFilterKeyCataloger {
@@ -92,16 +97,17 @@ public final class FleetFilterKeyCataloger {
   }
 
   /**
-   * Device search: Built-in fields, Dimensions, and Host properties partitioned by {@link
-   * KeyCatalogs#deviceKeys}.
+   * Device search: Built-in fields, Built-in fields from connected host, Dimensions, and Host
+   * properties from connected host partitioned by {@link KeyCatalogs#deviceKeys}.
    */
   private FleetFilterKeyCatalogResponse getDeviceCatalog(
       DeviceCorpus corpus, FleetFilterKeyCatalogRequest request) {
-    ImmutableMap<String, Integer> deviceCounts = KeyCounts.entityCounts(corpus.index());
+    ImmutableMap<String, Integer> indexedCounts = KeyCounts.entityCounts(corpus.index());
     ImmutableSet<String> appliedKeys =
         request.getFiltersList().stream().map(Filter::getKey).collect(toImmutableSet());
     DeviceKeyLists keys =
-        KeyCatalogs.deviceKeys(corpus, request.getFleet(), dimensionCatalogStore, deviceCounts);
+        KeyCatalogs.deviceKeys(corpus, request.getFleet(), dimensionCatalogStore, indexedCounts);
+    ImmutableMap<String, Integer> deviceCounts = keys.deviceCounts();
 
     FleetFilterKeyCatalogResponse.Builder response = FleetFilterKeyCatalogResponse.newBuilder();
     String query = request.getQuery().trim();
@@ -118,6 +124,13 @@ public final class FleetFilterKeyCataloger {
           appliedKeys);
       addDeviceSection(
           response,
+          SECTION_HOST_BUILTIN,
+          KeyCatalogs.searchMatches(keys.hostBuiltin(), rank),
+          0,
+          deviceCounts,
+          appliedKeys);
+      addDeviceSection(
+          response,
           SECTION_DIMENSIONS,
           KeyCatalogs.searchMatches(keys.dimensions(), rank),
           SEARCH_LIMIT,
@@ -125,7 +138,7 @@ public final class FleetFilterKeyCataloger {
           appliedKeys);
       addDeviceSection(
           response,
-          SECTION_PROPERTIES,
+          SECTION_CONNECTED_HOST_PROPERTIES,
           KeyCatalogs.searchMatches(keys.properties(), rank),
           SEARCH_LIMIT,
           deviceCounts,
@@ -133,6 +146,8 @@ public final class FleetFilterKeyCataloger {
       return response.build();
     }
     addDeviceSection(response, SECTION_BUILTIN, keys.builtin(), 0, deviceCounts, appliedKeys);
+    addDeviceSection(
+        response, SECTION_HOST_BUILTIN, keys.hostBuiltin(), 0, deviceCounts, appliedKeys);
     addDeviceSection(
         response,
         SECTION_DIMENSIONS,
@@ -142,7 +157,12 @@ public final class FleetFilterKeyCataloger {
         deviceCounts,
         appliedKeys);
     addDeviceSection(
-        response, SECTION_PROPERTIES, keys.properties(), PROP_TOP, deviceCounts, appliedKeys);
+        response,
+        SECTION_CONNECTED_HOST_PROPERTIES,
+        keys.properties(),
+        PROP_TOP,
+        deviceCounts,
+        appliedKeys);
     return response.build();
   }
 
@@ -167,17 +187,20 @@ public final class FleetFilterKeyCataloger {
           SECTION_BUILTIN,
           KeyCatalogs.searchMatches(keys.builtin(), rank),
           0,
+          hostCounts,
           appliedKeys);
       addHostSection(
           response,
           SECTION_PROPERTIES,
           KeyCatalogs.searchMatches(keys.properties(), rank),
           SEARCH_LIMIT,
+          hostCounts,
           appliedKeys);
       return response.build();
     }
-    addHostSection(response, SECTION_BUILTIN, keys.builtin(), 0, appliedKeys);
-    addHostSection(response, SECTION_PROPERTIES, keys.properties(), PROP_TOP, appliedKeys);
+    addHostSection(response, SECTION_BUILTIN, keys.builtin(), 0, hostCounts, appliedKeys);
+    addHostSection(
+        response, SECTION_PROPERTIES, keys.properties(), PROP_TOP, hostCounts, appliedKeys);
     return response.build();
   }
 
@@ -228,12 +251,13 @@ public final class FleetFilterKeyCataloger {
     response.addSections(section);
   }
 
-  /** Host counterpart of {@link #addDeviceSection}; host entries carry no coverage count. */
+  /** Host counterpart of {@link #addDeviceSection}; shows coverage for host properties only. */
   private static void addHostSection(
       FleetFilterKeyCatalogResponse.Builder response,
       String heading,
       List<HostKeyDescriptor> descriptors,
       int limit,
+      ImmutableMap<String, Integer> hostCounts,
       ImmutableSet<String> appliedKeys) {
     if (descriptors.isEmpty()) {
       return;
@@ -244,7 +268,10 @@ public final class FleetFilterKeyCataloger {
     }
     descriptors.stream()
         .limit(limit > 0 ? limit : Long.MAX_VALUE)
-        .map(desc -> hostEntry(desc, appliedKeys.contains(desc.id())))
+        .map(
+            desc ->
+                hostEntry(
+                    desc, hostCounts.getOrDefault(desc.id(), 0), appliedKeys.contains(desc.id())))
         .forEach(section::addEntries);
     response.addSections(section);
   }
@@ -267,8 +294,9 @@ public final class FleetFilterKeyCataloger {
         .build();
   }
 
-  /** One host row. Host search shows no coverage for any key. */
-  private static FleetFilterKeyEntry hostEntry(HostKeyDescriptor desc, boolean applied) {
+  /** One host row. Host search shows coverage for host properties only. */
+  private static FleetFilterKeyEntry hostEntry(
+      HostKeyDescriptor desc, int hostCount, boolean applied) {
     return FleetFilterKeyEntry.newBuilder()
         .setKey(desc.id())
         .setMetadata(
@@ -276,7 +304,7 @@ public final class FleetFilterKeyCataloger {
                 .setKeyDisplayName(HostKeyDisplays.titleDisplayName(desc))
                 .setCanUseAdvanced(true)
                 .setIsPlural(desc.display().isPlural()))
-        .setCoverage(KeyCatalogs.coverage(false, 0))
+        .setCoverage(KeyCatalogs.coverage(desc.isHostProperty(), hostCount))
         .setApplied(applied)
         .build();
   }

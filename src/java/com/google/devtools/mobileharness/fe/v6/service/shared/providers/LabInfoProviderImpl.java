@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.fe.v6.service.shared.providers;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabInfoStub;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import javax.inject.Inject;
@@ -41,6 +43,12 @@ public class LabInfoProviderImpl implements LabInfoProvider {
   public ListenableFuture<GetLabInfoResponse> getLabInfoAsync(
       GetLabInfoRequest request, UniverseScope universe) {
     return getLabInfoStub(universe).getLabInfoAsync(request);
+  }
+
+  @Override
+  public ListenableFuture<GetAllDeviceDimensionsResponse> getAllDeviceDimensionsAsync(
+      GetAllDeviceDimensionsRequest request, UniverseScope universe) {
+    return getLabInfoStub(universe).getAllDeviceDimensionsAsync(request);
   }
 
   private LabInfoStub getLabInfoStub(UniverseScope universe) {

@@ -21,7 +21,9 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCa
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.PROP_TOP;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SEARCH_LIMIT;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_BUILTIN;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_CONNECTED_HOST_PROPERTIES;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_DIMENSIONS;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_HOST_BUILTIN;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_PROPERTIES;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_SUGGESTED;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.norm;
@@ -49,6 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -61,21 +64,25 @@ import javax.inject.Singleton;
  * <ul>
  *   <li><b>Suggested</b>: The scenario's curated quick group-by keys in display order.
  *   <li><b>Built-in fields</b>: Standard device or host attributes sorted alphabetically.
+ *   <li><b>Built-in fields from connected host</b>: Common host fields projected onto devices
+ *       (device search only), sorted alphabetically.
  *   <li><b>Dimensions</b>: Device dimensions ranked by device coverage (device search only). Browse
  *       mode lists declared dimensions only; see {@link KeyCatalogs#declared}.
- *   <li><b>Host properties</b>: Host properties ranked by device or host coverage.
+ *   <li><b>Host properties from connected host</b> / <b>Host properties</b>: Host properties ranked
+ *       by device or host coverage.
  * </ul>
  *
- * <p>Each entry carries a {@link GroupCountInfo} display decision: the number of groups the key
- * would produce under the active filters (distinct value combinations plus one for the no-value
- * bucket when some entities lack the key), or {@link GroupCountNotShown} when the backend does not
- * count that section. With no active filter every indexed section is counted from the per-snapshot
- * key statistics, which costs no scan; under an active filter only Suggested and Built-in fields
- * are counted, one pass over the result set per key, so long-tail sections do not pay for keys the
- * user will scroll past. Unapplied counted keys that would produce fewer than two groups are
- * omitted before slicing to the section limit, while counted keys already in {@code
- * request.getGroupByList()} are kept even when they produce a single group and marked {@code
- * applied}.
+ * <p>Each entry carries both a {@link GroupCountInfo} display decision (the number of groups the
+ * key would produce under the active filters, or {@link GroupCountNotShown} when the backend does
+ * not count that section) and a {@link
+ * com.google.devtools.mobileharness.fe.v6.service.proto.search.CoverageInfo} display decision
+ * (shown for device dimensions on device search and for host properties on host search). With no
+ * active filter every indexed section is counted from the per-snapshot key statistics, which costs
+ * no scan; under an active filter only Suggested and Built-in sections are counted, one pass over
+ * the result set per key, so long-tail sections do not pay for keys the user will scroll past.
+ * Unapplied counted keys that would produce fewer than two groups are omitted before slicing to the
+ * section limit, while counted keys already in {@code request.getGroupByList()} are kept even when
+ * they produce a single group and marked {@code applied}.
  *
  * <p>In search mode each section keeps only the keys matching the query, best match first (exact
  * name, then prefix, then substring), and the section's own order within one match rank; see {@link
@@ -121,12 +128,13 @@ public final class FleetGroupByKeyCataloger {
 
   /**
    * Device search: Suggested (curated Quick Group-by keys present in the index), plus Built-in
-   * fields, Dimensions, and Host properties partitioned by {@link KeyCatalogs#deviceKeys}.
+   * fields, Built-in fields from connected host, Dimensions, and Host properties from connected
+   * host partitioned by {@link KeyCatalogs#deviceKeys}.
    */
   private FleetGroupByKeyCatalogResponse getDeviceCatalog(
       DeviceCorpus corpus, FleetGroupByKeyCatalogRequest request) {
     ImmutableSet<String> indexedKeys = corpus.index().keyIds();
-    ImmutableMap<String, Integer> deviceCounts = KeyCounts.entityCounts(corpus.index());
+    ImmutableMap<String, Integer> indexedCounts = KeyCounts.entityCounts(corpus.index());
 
     ImmutableList<DeviceKeyDescriptor> suggested =
         Optional.ofNullable(corpus.curation())
@@ -136,17 +144,18 @@ public final class FleetGroupByKeyCataloger {
             .filter(desc -> indexedKeys.contains(desc.id()))
             .collect(toImmutableList());
     DeviceKeyLists keys =
-        KeyCatalogs.deviceKeys(corpus, request.getFleet(), dimensionCatalogStore, deviceCounts);
+        KeyCatalogs.deviceKeys(corpus, request.getFleet(), dimensionCatalogStore, indexedCounts);
 
     return build(
         corpus,
         request,
         indexedKeys,
-        sections(
+        keys.deviceCounts(),
+        deviceSections(
             request,
-            DeviceKeyDisplays::titleDisplayName,
             suggested,
             keys.builtin(),
+            keys.hostBuiltin(),
             keys.dimensions(),
             KeyCatalogs.declared(keys.dimensions()),
             keys.properties()));
@@ -174,69 +183,124 @@ public final class FleetGroupByKeyCataloger {
         corpus,
         request,
         indexedKeys,
-        sections(
-            request,
-            HostKeyDisplays::titleDisplayName,
-            suggested,
-            keys.builtin(),
-            ImmutableList.of(),
-            ImmutableList.of(),
-            keys.properties()));
+        hostCounts,
+        hostSections(request, suggested, keys.builtin(), keys.properties()));
   }
 
-  /**
-   * The four candidate sections in order.
-   *
-   * <p>Browse mode (empty query) lists Suggested and Built-in fields in full, the top {@link
-   * KeyCatalogs#DIM_TOP} declared dimensions ({@code browseDimensions}, see {@link
-   * KeyCatalogs#declared}) with a total that counts every dimension, and the top {@link
-   * KeyCatalogs#PROP_TOP} host properties. Search mode keeps the matching keys of every section,
-   * best match first, and up to {@link KeyCatalogs#SEARCH_LIMIT} per long-tail section.
-   *
-   * <p>Suggested and Built-in fields are always counted. Dimensions and Host properties are counted
-   * only when no filter is active: then every count comes from the per-snapshot key statistics at
-   * no cost, while under a filter each count is a pass over the result set.
-   */
-  private static <T extends KeyDescriptor> ImmutableList<CandidateSection> sections(
+  private static ImmutableList<CandidateSection> deviceSections(
       FleetGroupByKeyCatalogRequest request,
-      Function<T, String> displayName,
-      ImmutableList<T> suggested,
-      ImmutableList<T> builtin,
-      ImmutableList<T> dimensions,
-      ImmutableList<T> browseDimensions,
-      ImmutableList<T> properties) {
+      ImmutableList<DeviceKeyDescriptor> suggested,
+      ImmutableList<DeviceKeyDescriptor> builtin,
+      ImmutableList<DeviceKeyDescriptor> hostBuiltin,
+      ImmutableList<DeviceKeyDescriptor> dimensions,
+      ImmutableList<DeviceKeyDescriptor> browseDimensions,
+      ImmutableList<DeviceKeyDescriptor> properties) {
+    Function<DeviceKeyDescriptor, String> displayName = DeviceKeyDisplays::titleDisplayName;
+    Predicate<DeviceKeyDescriptor> showCoverage = DeviceKeyDescriptor::isDimension;
     boolean countLongTail = request.getFiltersList().isEmpty();
     String query = request.getQuery().trim();
     if (query.isEmpty()) {
       return ImmutableList.of(
-          candidates(SECTION_SUGGESTED, suggested, 0, true, displayName),
-          candidates(SECTION_BUILTIN, builtin, 0, true, displayName),
+          candidates(SECTION_SUGGESTED, suggested, 0, true, showCoverage, displayName),
+          candidates(SECTION_BUILTIN, builtin, 0, true, showCoverage, displayName),
+          candidates(SECTION_HOST_BUILTIN, hostBuiltin, 0, true, showCoverage, displayName),
           candidates(
               SECTION_DIMENSIONS,
               browseDimensions,
               DIM_TOP,
               dimensions.size(),
               countLongTail,
+              showCoverage,
               displayName),
-          candidates(SECTION_PROPERTIES, properties, PROP_TOP, countLongTail, displayName));
+          candidates(
+              SECTION_CONNECTED_HOST_PROPERTIES,
+              properties,
+              PROP_TOP,
+              countLongTail,
+              showCoverage,
+              displayName));
     }
     String q = norm(query);
-    ToIntFunction<T> rank = desc -> KeyCatalogs.matchRank(desc, displayName.apply(desc), q);
+    ToIntFunction<DeviceKeyDescriptor> rank =
+        desc -> KeyCatalogs.matchRank(desc, displayName.apply(desc), q);
     return ImmutableList.of(
         candidates(
-            SECTION_SUGGESTED, KeyCatalogs.searchMatches(suggested, rank), 0, true, displayName),
-        candidates(SECTION_BUILTIN, KeyCatalogs.searchMatches(builtin, rank), 0, true, displayName),
+            SECTION_SUGGESTED,
+            KeyCatalogs.searchMatches(suggested, rank),
+            0,
+            true,
+            showCoverage,
+            displayName),
+        candidates(
+            SECTION_BUILTIN,
+            KeyCatalogs.searchMatches(builtin, rank),
+            0,
+            true,
+            showCoverage,
+            displayName),
+        candidates(
+            SECTION_HOST_BUILTIN,
+            KeyCatalogs.searchMatches(hostBuiltin, rank),
+            0,
+            true,
+            showCoverage,
+            displayName),
         candidates(
             SECTION_DIMENSIONS,
             KeyCatalogs.searchMatches(dimensions, rank),
             SEARCH_LIMIT,
             countLongTail,
+            showCoverage,
+            displayName),
+        candidates(
+            SECTION_CONNECTED_HOST_PROPERTIES,
+            KeyCatalogs.searchMatches(properties, rank),
+            SEARCH_LIMIT,
+            countLongTail,
+            showCoverage,
+            displayName));
+  }
+
+  private static ImmutableList<CandidateSection> hostSections(
+      FleetGroupByKeyCatalogRequest request,
+      ImmutableList<HostKeyDescriptor> suggested,
+      ImmutableList<HostKeyDescriptor> builtin,
+      ImmutableList<HostKeyDescriptor> properties) {
+    Function<HostKeyDescriptor, String> displayName = HostKeyDisplays::titleDisplayName;
+    Predicate<HostKeyDescriptor> showCoverage = HostKeyDescriptor::isHostProperty;
+    boolean countLongTail = request.getFiltersList().isEmpty();
+    String query = request.getQuery().trim();
+    if (query.isEmpty()) {
+      return ImmutableList.of(
+          candidates(SECTION_SUGGESTED, suggested, 0, true, showCoverage, displayName),
+          candidates(SECTION_BUILTIN, builtin, 0, true, showCoverage, displayName),
+          candidates(
+              SECTION_PROPERTIES, properties, PROP_TOP, countLongTail, showCoverage, displayName));
+    }
+    String q = norm(query);
+    ToIntFunction<HostKeyDescriptor> rank =
+        desc -> KeyCatalogs.matchRank(desc, displayName.apply(desc), q);
+    return ImmutableList.of(
+        candidates(
+            SECTION_SUGGESTED,
+            KeyCatalogs.searchMatches(suggested, rank),
+            0,
+            true,
+            showCoverage,
+            displayName),
+        candidates(
+            SECTION_BUILTIN,
+            KeyCatalogs.searchMatches(builtin, rank),
+            0,
+            true,
+            showCoverage,
             displayName),
         candidates(
             SECTION_PROPERTIES,
             KeyCatalogs.searchMatches(properties, rank),
             SEARCH_LIMIT,
             countLongTail,
+            showCoverage,
             displayName));
   }
 
@@ -250,8 +314,10 @@ public final class FleetGroupByKeyCataloger {
       ImmutableList<T> descriptors,
       int limit,
       boolean counted,
+      Predicate<T> showCoverage,
       Function<T, String> displayName) {
-    return candidates(heading, descriptors, limit, descriptors.size(), counted, displayName);
+    return candidates(
+        heading, descriptors, limit, descriptors.size(), counted, showCoverage, displayName);
   }
 
   /**
@@ -264,31 +330,35 @@ public final class FleetGroupByKeyCataloger {
       int limit,
       int total,
       boolean counted,
+      Predicate<T> showCoverage,
       Function<T, String> displayName) {
     ImmutableList<CandidateEntry> entries =
         descriptors.stream()
-            .map(desc -> new CandidateEntry(desc.id(), displayName.apply(desc)))
+            .map(
+                desc ->
+                    new CandidateEntry(desc.id(), displayName.apply(desc), showCoverage.test(desc)))
             .collect(toImmutableList());
     return new CandidateSection(heading, entries, limit, total, counted);
   }
 
   /**
-   * Turns the candidate sections into the response: decides each entry's group count, drops
-   * unapplied counted keys that would make fewer than {@link #MIN_GROUP_COUNT} groups before
-   * applying the section limit, marks applied keys, and omits sections left with no entries so the
-   * dialog never renders an empty section heading.
+   * Turns the candidate sections into the response: decides each entry's group count and entity
+   * coverage, drops unapplied counted keys that would make fewer than {@link #MIN_GROUP_COUNT}
+   * groups before applying the section limit, marks applied keys, and omits sections left with no
+   * entries so the dialog never renders an empty section heading.
    *
    * <p>An entry is counted only when its section is counted and the snapshot indexes the key. A
-   * catalog-only dimension has no values in the snapshot, so it is never counted and never dropped;
-   * it is shown with {@link GroupCountNotShown}. In browse mode, the Dimensions section only
-   * iterates declared dimensions while {@code rawTotal} counts every dimension, so {@code
-   * total_available} subtracts only single-group declared dimensions (most undeclared dimensions
-   * are catalog-only names whose group count is unknown anyway).
+   * catalog-only dimension has no values in the snapshot, so it is never counted for groups and
+   * never dropped; it is shown with {@link GroupCountNotShown}. In browse mode, the Dimensions
+   * section only iterates declared dimensions while {@code rawTotal} counts every dimension, so
+   * {@code total_available} subtracts only single-group declared dimensions (most undeclared
+   * dimensions are catalog-only names whose group count is unknown anyway).
    */
   private FleetGroupByKeyCatalogResponse build(
       SearchCorpus corpus,
       FleetGroupByKeyCatalogRequest request,
       ImmutableSet<String> indexedKeys,
+      ImmutableMap<String, Integer> entityCounts,
       ImmutableList<CandidateSection> candidateSections) {
     ImmutableSet<String> appliedKeys = ImmutableSet.copyOf(request.getGroupByList());
     // The filtered result set is materialized only when a filter is active; with none, the
@@ -329,6 +399,9 @@ public final class FleetGroupByKeyCataloger {
                 .setKey(keyId)
                 .setDisplayName(candidate.displayName())
                 .setGroupCount(countInfo)
+                .setCoverage(
+                    KeyCatalogs.coverage(
+                        candidate.showCoverage(), entityCounts.getOrDefault(keyId, 0)))
                 .setApplied(applied)
                 .build());
       }
@@ -349,7 +422,7 @@ public final class FleetGroupByKeyCataloger {
   }
 
   /** One key offered in a section, before its group count is decided. */
-  private record CandidateEntry(String keyId, String displayName) {}
+  private record CandidateEntry(String keyId, String displayName, boolean showCoverage) {}
 
   /**
    * One section before group counts are decided.

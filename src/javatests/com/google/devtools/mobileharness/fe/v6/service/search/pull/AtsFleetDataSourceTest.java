@@ -39,6 +39,9 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigRe
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DeviceDimensionSummary;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import java.util.List;
@@ -109,6 +112,17 @@ public final class AtsFleetDataSourceTest {
     assertThat(rawData.deviceEnrichments()).isEmpty();
   }
 
+  @Test
+  public void pullDimensionCounts_delegatesToLabInfoFleetPuller() throws Exception {
+    labInfoProvider.setDimensionsResponse(
+        GetAllDeviceDimensionsResponse.newBuilder()
+            .addDimensions(DeviceDimensionSummary.newBuilder().setName("model").setDeviceCount(12))
+            .addDimensions(DeviceDimensionSummary.newBuilder().setName("pool").setDeviceCount(8))
+            .build());
+
+    assertThat(source.pullDimensionCounts().get()).containsExactly("model", 12, "pool", 8);
+  }
+
   private static DeviceConfig deviceConfigWithWifi(String deviceId, String ssid) {
     return DeviceConfig.newBuilder()
         .setUuid(deviceId)
@@ -133,15 +147,27 @@ public final class AtsFleetDataSourceTest {
   /** In-memory {@link LabInfoProvider} that returns a configured result. */
   private static final class FakeLabInfoProvider implements LabInfoProvider {
     private LabQueryResult result = LabQueryResult.getDefaultInstance();
+    private GetAllDeviceDimensionsResponse dimensionsResponse =
+        GetAllDeviceDimensionsResponse.getDefaultInstance();
 
     void setResult(LabQueryResult result) {
       this.result = result;
+    }
+
+    void setDimensionsResponse(GetAllDeviceDimensionsResponse dimensionsResponse) {
+      this.dimensionsResponse = dimensionsResponse;
     }
 
     @Override
     public ListenableFuture<GetLabInfoResponse> getLabInfoAsync(
         GetLabInfoRequest request, UniverseScope universe) {
       return immediateFuture(GetLabInfoResponse.newBuilder().setLabQueryResult(result).build());
+    }
+
+    @Override
+    public ListenableFuture<GetAllDeviceDimensionsResponse> getAllDeviceDimensionsAsync(
+        GetAllDeviceDimensionsRequest request, UniverseScope universe) {
+      return immediateFuture(dimensionsResponse);
     }
   }
 

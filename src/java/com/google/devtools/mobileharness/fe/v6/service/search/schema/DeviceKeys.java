@@ -218,6 +218,7 @@ public final class DeviceKeys {
         .setAliases(deviceAliases)
         .setIsLongTail(host.isLongTail())
         .setIsHostProperty(host.isHostProperty())
+        .setIsHostField(host.isHostField())
         .build();
   }
 

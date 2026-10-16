@@ -31,7 +31,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.LabInfoMask;
@@ -40,6 +39,8 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DeviceDimensionSummary;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.protobuf.FieldMask;
 import java.util.Map;
@@ -61,6 +62,9 @@ import javax.inject.Inject;
 public final class LabInfoFleetPuller {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final ImmutableSet<String> EXCLUDED_DIMENSIONS =
+      ImmutableSet.of("subdevice_dimensions");
 
   private static final FieldMask SINGLE_DIM_FIELD_MASK =
       FieldMask.newBuilder()
@@ -173,58 +177,39 @@ public final class LabInfoFleetPuller {
   }
 
   /**
-   * Discovers all device dimension names present across labs in the specified universe by issuing a
-   * GetLabInfo query with a minimal field mask.
+   * Discovers all device dimension names and their device counts present across labs in the
+   * specified universe by calling {@code LabInfoService.GetAllDeviceDimensions}.
    */
-  public ListenableFuture<ImmutableSet<String>> pullDimensionNames(UniverseScope universeScope) {
-    GetLabInfoRequest request =
-        GetLabInfoRequest.newBuilder()
-            .setLabQuery(
-                LabQuery.newBuilder()
-                    .setLabViewRequest(LabQuery.LabViewRequest.getDefaultInstance())
-                    .setMask(
-                        LabQuery.Mask.newBuilder()
-                            .setDeviceInfoMask(
-                                LabQuery.Mask.DeviceInfoMask.newBuilder()
-                                    .setFieldMask(
-                                        FieldMask.newBuilder()
-                                            .addPaths("device_locator.id")
-                                            .addPaths("device_feature.composite_dimension")))))
-            .setPage(Page.newBuilder().setLimit(0))
-            .setUseRealtimeData(false)
-            .build();
+  public ListenableFuture<ImmutableMap<String, Integer>> pullDimensionCounts(
+      UniverseScope universeScope) {
     Stopwatch stopwatch = Stopwatch.createStarted();
     return Futures.transform(
-        labInfoProvider.getLabInfoAsync(request, universeScope),
+        labInfoProvider.getAllDeviceDimensionsAsync(
+            GetAllDeviceDimensionsRequest.getDefaultInstance(), universeScope),
         response -> {
-          ImmutableSet.Builder<String> names = ImmutableSet.builder();
-          for (LabData labData : response.getLabQueryResult().getLabView().getLabDataList()) {
-            for (DeviceInfo dev : labData.getDeviceList().getDeviceInfoList()) {
-              DeviceCompositeDimension composite = dev.getDeviceFeature().getCompositeDimension();
-              for (DeviceDimension dim : composite.getSupportedDimensionList()) {
-                if (!dim.getName().isEmpty()) {
-                  names.add(dim.getName());
-                }
-              }
-              for (DeviceDimension dim : composite.getRequiredDimensionList()) {
-                if (!dim.getName().isEmpty()) {
-                  names.add(dim.getName());
-                }
-              }
-            }
-          }
-          ImmutableSet<String> result = names.build();
+          ImmutableMap<String, Integer> result =
+              response.getDimensionsList().stream()
+                  .filter(
+                      dim ->
+                          !dim.getName().isEmpty()
+                              && dim.getDeviceCount() > 0
+                              && !EXCLUDED_DIMENSIONS.contains(dim.getName()))
+                  .collect(
+                      toImmutableMap(
+                          DeviceDimensionSummary::getName,
+                          dim -> (int) Math.min(dim.getDeviceCount(), Integer.MAX_VALUE),
+                          Integer::sum));
           logger.atInfo().log(
-              "GetLabInfo pullDimensionNames (%s universe) discovered %d dimension names in %d ms.",
+              "GetAllDeviceDimensions (%s universe) discovered %d dimensions in %d ms.",
               universeScope, result.size(), stopwatch.elapsed().toMillis());
           return result;
         },
         directExecutor());
   }
 
-  /** Discovers all device dimension names present in the self universe. */
-  public ListenableFuture<ImmutableSet<String>> pullDimensionNames() {
-    return pullDimensionNames(UniverseScope.SELF);
+  /** Discovers all device dimension names and their device counts in the self universe. */
+  public ListenableFuture<ImmutableMap<String, Integer>> pullDimensionCounts() {
+    return pullDimensionCounts(UniverseScope.SELF);
   }
 
   /**

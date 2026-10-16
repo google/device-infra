@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.refresh;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -42,11 +42,13 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 /**
- * Drives the periodic refresh of device dimension names across fleets every 1 hour.
+ * Drives the periodic refresh of device dimension names and device counts across fleets every 1
+ * hour.
  *
- * <p>Populates {@link DimensionCatalogStore} with complete dimension names so query-layer
- * components like {@code FleetSuggester} and {@code FleetColumnCataloger} can discover long-tail
- * dimensions without having to pull values fleet-wide.
+ * <p>Populates {@link DimensionCatalogStore} with complete dimension names and device counts so
+ * query-layer components like {@code FleetSuggester}, {@code FleetColumnCataloger}, {@code
+ * FleetFilterKeyCataloger}, and {@code FleetGroupByKeyCataloger} can discover long-tail dimensions
+ * and show accurate coverage counts without pulling full dimension values fleet-wide.
  */
 @Singleton
 public final class DimensionCatalogRefresher {
@@ -111,10 +113,10 @@ public final class DimensionCatalogRefresher {
 
   /**
    * Executes a single refresh cycle over every bound fleet: discovers all dimension names and
-   * updates {@link DimensionCatalogStore}. The fleets refresh in parallel, each bounded by {@link
-   * #PULL_TIMEOUT}. A failure for one fleet is logged and swallowed so that fleet keeps its
-   * previous catalog and the remaining fleets still refresh. The cycle blocks until every fleet has
-   * finished so the fixed-delay cadence spaces out completed cycles.
+   * device counts and updates {@link DimensionCatalogStore}. The fleets refresh in parallel, each
+   * bounded by {@link #PULL_TIMEOUT}. A failure for one fleet is logged and swallowed so that fleet
+   * keeps its previous catalog and the remaining fleets still refresh. The cycle blocks until every
+   * fleet has finished so the fixed-delay cadence spaces out completed cycles.
    */
   public void refreshOnce() {
     List<ListenableFuture<Void>> perFleet = new ArrayList<>();
@@ -122,16 +124,15 @@ public final class DimensionCatalogRefresher {
       Fleet fleet = entry.getKey();
       FleetDataSource source = entry.getValue();
 
-      ListenableFuture<ImmutableSet<String>> namesFuture =
-          Futures.withTimeout(source.pullDimensionNames(), PULL_TIMEOUT, scheduledExecutor);
+      ListenableFuture<ImmutableMap<String, Integer>> countsFuture =
+          Futures.withTimeout(source.pullDimensionCounts(), PULL_TIMEOUT, scheduledExecutor);
       ListenableFuture<Void> updated =
           Futures.transform(
-              namesFuture,
-              names -> {
-                catalogStore.setDimensionNames(fleet, names);
+              countsFuture,
+              counts -> {
+                catalogStore.setDimensionCounts(fleet, counts);
                 logger.atInfo().log(
-                    "Dimension catalog for %s refreshed with %d dimension names.",
-                    fleet, names.size());
+                    "Dimension catalog for %s refreshed with %d dimensions.", fleet, counts.size());
                 return null;
               },
               executor);

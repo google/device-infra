@@ -75,6 +75,9 @@ public abstract class DeviceKeyDescriptor implements KeyDescriptor {
   @Override
   public abstract boolean isHostProperty();
 
+  /** Whether this descriptor represents a projected built-in host field. */
+  public abstract boolean isHostField();
+
   /** Whether this descriptor represents an on-demand long-tail dimension overlay. */
   public boolean isOverlay() {
     return isDimension() && isLongTail();
@@ -95,7 +98,8 @@ public abstract class DeviceKeyDescriptor implements KeyDescriptor {
         .setAliases(ImmutableSet.of())
         .setIsLongTail(false)
         .setIsDimension(false)
-        .setIsHostProperty(false);
+        .setIsHostProperty(false)
+        .setIsHostField(false);
   }
 
   /** Builder for {@link DeviceKeyDescriptor}. */
@@ -131,6 +135,8 @@ public abstract class DeviceKeyDescriptor implements KeyDescriptor {
     public abstract Builder setIsDimension(boolean isDimension);
 
     public abstract Builder setIsHostProperty(boolean isHostProperty);
+
+    public abstract Builder setIsHostField(boolean isHostField);
 
     public abstract DeviceKeyDescriptor build();
   }

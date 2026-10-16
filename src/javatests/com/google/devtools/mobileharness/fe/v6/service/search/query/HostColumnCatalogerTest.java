@@ -281,13 +281,17 @@ public final class HostColumnCatalogerTest {
             "host_property::env")
         .inOrder();
 
-    // Verify Host Property prefix on title and that host entries never show coverage.
+    // Verify Host Property prefix on title and that host properties show host coverage counts.
     assertThat(entryFor(properties, "host_property::location").getDisplayName())
         .isEqualTo("Host Property location");
     assertThat(entryFor(properties, "host_property::location").getCoverage().getDisplayCase())
-        .isEqualTo(DisplayCase.NOT_SHOWN);
+        .isEqualTo(DisplayCase.SHOWN);
+    assertThat(entryFor(properties, "host_property::location").getCoverage().getShown().getCount())
+        .isEqualTo(2);
     assertThat(entryFor(properties, "host_property::env").getCoverage().getDisplayCase())
-        .isEqualTo(DisplayCase.NOT_SHOWN);
+        .isEqualTo(DisplayCase.SHOWN);
+    assertThat(entryFor(properties, "host_property::env").getCoverage().getShown().getCount())
+        .isEqualTo(1);
 
     assertThat(properties.getTotalAvailable()).isEqualTo(4);
   }

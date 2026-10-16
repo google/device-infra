@@ -22,13 +22,15 @@ import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCa
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.PROP_TOP;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SEARCH_LIMIT;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_BUILTIN;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_CONNECTED_HOST_PROPERTIES;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_DIMENSIONS;
-import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_PROPERTIES;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.SECTION_HOST_BUILTIN;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.norm;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Streams;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnCatalogEntry;
@@ -57,10 +59,13 @@ import javax.inject.Singleton;
  *
  * <ul>
  *   <li><b>Suggested for you</b>: Keys currently in active filters or recently used columns.
- *   <li><b>Built-in fields</b>: Standard device attributes and common projected host fields.
+ *   <li><b>Built-in fields</b>: Standard device attributes and config keys.
+ *   <li><b>Built-in fields from connected host</b>: Common host fields projected onto devices.
  *   <li><b>Dimensions</b>: Custom device dimensions ranked by device coverage, incorporating
- *       discovered dimension names from {@link DimensionCatalogStore}.
- *   <li><b>Host properties</b>: Projected host properties ranked by device coverage.
+ *       discovered dimensions and counts from {@link DimensionCatalogStore}. Browse mode lists
+ *       declared dimensions only; see {@link KeyCatalogs#declared}.
+ *   <li><b>Host properties from connected host</b>: Projected host properties ranked by device
+ *       coverage.
  * </ul>
  */
 @Singleton
@@ -97,11 +102,12 @@ public final class DeviceColumnCataloger {
     FleetIndex index = corpus.index();
     Fleet fleet =
         request.getFleet() == Fleet.FLEET_UNSPECIFIED ? Fleet.FLEET_SELF : request.getFleet();
-    ImmutableMap<String, Integer> deviceCounts = KeyCounts.entityCounts(index);
+    ImmutableMap<String, Integer> indexedCounts = KeyCounts.entityCounts(index);
     DeviceKeyLists keys =
-        KeyCatalogs.deviceKeys(corpus, fleet, dimensionCatalogStore, deviceCounts);
+        KeyCatalogs.deviceKeys(corpus, fleet, dimensionCatalogStore, indexedCounts);
+    ImmutableMap<String, Integer> deviceCounts = keys.deviceCounts();
     ImmutableSet<String> redundant =
-        redundantDims(fleet, corpus, index, keys.builtin(), keys.dimensions());
+        redundantDims(fleet, corpus, index, keys.builtin(), keys.hostBuiltin(), keys.dimensions());
     ImmutableList<DeviceKeyDescriptor> dimensions =
         keys.dimensions().stream()
             .filter(desc -> !redundant.contains(desc.id()))
@@ -121,13 +127,19 @@ public final class DeviceColumnCataloger {
           deviceCounts);
       addSection(
           response,
+          SECTION_HOST_BUILTIN,
+          KeyCatalogs.searchMatches(keys.hostBuiltin(), rank),
+          0,
+          deviceCounts);
+      addSection(
+          response,
           SECTION_DIMENSIONS,
           KeyCatalogs.searchMatches(dimensions, rank),
           SEARCH_LIMIT,
           deviceCounts);
       addSection(
           response,
-          SECTION_PROPERTIES,
+          SECTION_CONNECTED_HOST_PROPERTIES,
           KeyCatalogs.searchMatches(keys.properties(), rank),
           SEARCH_LIMIT,
           deviceCounts);
@@ -136,8 +148,16 @@ public final class DeviceColumnCataloger {
 
     addSuggestedSection(response, corpus, index, request);
     addSection(response, SECTION_BUILTIN, keys.builtin(), 0, deviceCounts);
-    addSection(response, SECTION_DIMENSIONS, dimensions, DIM_TOP, deviceCounts);
-    addSection(response, SECTION_PROPERTIES, keys.properties(), PROP_TOP, deviceCounts);
+    addSection(response, SECTION_HOST_BUILTIN, keys.hostBuiltin(), 0, deviceCounts);
+    addSection(
+        response,
+        SECTION_DIMENSIONS,
+        KeyCatalogs.declared(dimensions),
+        DIM_TOP,
+        dimensions.size(),
+        deviceCounts);
+    addSection(
+        response, SECTION_CONNECTED_HOST_PROPERTIES, keys.properties(), PROP_TOP, deviceCounts);
     return response.build();
   }
 
@@ -178,13 +198,23 @@ public final class DeviceColumnCataloger {
       List<DeviceKeyDescriptor> descriptors,
       int limit,
       ImmutableMap<String, Integer> deviceCounts) {
+    addSection(response, heading, descriptors, limit, descriptors.size(), deviceCounts);
+  }
+
+  private static void addSection(
+      FleetColumnCatalogResponse.Builder response,
+      String heading,
+      List<DeviceKeyDescriptor> descriptors,
+      int limit,
+      int total,
+      ImmutableMap<String, Integer> deviceCounts) {
     if (descriptors.isEmpty()) {
       return;
     }
     FleetColumnCatalogSection.Builder section =
         FleetColumnCatalogSection.newBuilder().setHeading(heading);
     if (limit > 0) {
-      section.setTotalAvailable(descriptors.size());
+      section.setTotalAvailable(total);
     }
     descriptors.stream()
         .limit(limit > 0 ? limit : Long.MAX_VALUE)
@@ -219,6 +249,7 @@ public final class DeviceColumnCataloger {
       DeviceCorpus corpus,
       FleetIndex index,
       List<DeviceKeyDescriptor> builtin,
+      List<DeviceKeyDescriptor> hostBuiltin,
       List<DeviceKeyDescriptor> dimensions) {
     ImmutableSet<String> keyIds = index.keyIds();
     int recordCount = corpus.recordCount();
@@ -228,7 +259,7 @@ public final class DeviceColumnCataloger {
     }
 
     ImmutableMap<String, String> bareToTwin =
-        builtin.stream()
+        Streams.concat(builtin.stream(), hostBuiltin.stream())
             .collect(
                 toImmutableMap(
                     DeviceKeyDescriptor::bareName,

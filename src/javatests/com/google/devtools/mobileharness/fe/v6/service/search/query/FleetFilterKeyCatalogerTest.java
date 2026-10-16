@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
@@ -78,11 +79,24 @@ public final class FleetFilterKeyCatalogerTest {
             deviceCorpus, FleetFilterKeyCatalogRequest.getDefaultInstance());
 
     assertThat(headings(response))
-        .containsExactly("Built-in fields", "Dimensions", "Host properties")
+        .containsExactly(
+            "Built-in fields",
+            "Built-in fields from connected host",
+            "Dimensions",
+            "Host properties from connected host")
         .inOrder();
 
     FleetFilterKeySection builtin = section(response, "Built-in fields");
     assertThat(builtin.getTotalAvailable()).isEqualTo(0);
+    assertThat(keys(builtin))
+        .containsExactly("device_field::status", "device_field::type", "device_field::uuid")
+        .inOrder();
+
+    FleetFilterKeySection hostBuiltin = section(response, "Built-in fields from connected host");
+    assertThat(hostBuiltin.getTotalAvailable()).isEqualTo(0);
+    assertThat(keys(hostBuiltin))
+        .containsExactly("host_field::host_ip", "host_field::connectivity", "host_field::host_name")
+        .inOrder();
 
     // The ATS registry declares only dimension::model among the fixture's 13 dimensions. Browse
     // lists that one, and the total still counts all 13, since the rest are one search away.
@@ -90,9 +104,10 @@ public final class FleetFilterKeyCatalogerTest {
     assertThat(keys(dimensions)).containsExactly("dimension::model");
     assertThat(dimensions.getTotalAvailable()).isEqualTo(13);
 
-    // Host properties has 6 properties in the index (host_os from FleetIndexBuilder plus location
-    // on both labs and p1..p4 on lab-a); browse truncates to PROP_TOP (5) and reports total 6.
-    FleetFilterKeySection properties = section(response, "Host properties");
+    // Host properties from connected host has 6 properties in the index (host_os from
+    // FleetIndexBuilder plus location on both labs and p1..p4 on lab-a); browse truncates to
+    // PROP_TOP (5) and reports total 6.
+    FleetFilterKeySection properties = section(response, "Host properties from connected host");
     assertThat(keys(properties))
         .containsExactly(
             "host_property::host_os",
@@ -133,6 +148,11 @@ public final class FleetFilterKeyCatalogerTest {
     assertThat(statusEntry.getMetadata().getCanUseAdvanced()).isTrue();
     assertThat(statusEntry.getMetadata().getIsPlural()).isFalse();
 
+    FleetFilterKeyEntry hostNameEntry =
+        entryFor(section(response, "Built-in fields from connected host"), "host_field::host_name");
+    assertThat(hostNameEntry.getCoverage().getDisplayCase()).isEqualTo(DisplayCase.NOT_SHOWN);
+    assertThat(hostNameEntry.getApplied()).isFalse();
+
     FleetFilterKeyEntry modelEntry = entryFor(section(response, "Dimensions"), "dimension::model");
     assertThat(modelEntry.getCoverage().getDisplayCase()).isEqualTo(DisplayCase.SHOWN);
     assertThat(modelEntry.getCoverage().getShown().getCount()).isEqualTo(3);
@@ -140,29 +160,38 @@ public final class FleetFilterKeyCatalogerTest {
     assertThat(modelEntry.getMetadata().getKeyDisplayName()).isEqualTo("Model");
 
     FleetFilterKeyEntry locationEntry =
-        entryFor(section(response, "Host properties"), "host_property::location");
+        entryFor(
+            section(response, "Host properties from connected host"), "host_property::location");
     assertThat(locationEntry.getCoverage().getDisplayCase()).isEqualTo(DisplayCase.NOT_SHOWN);
     assertThat(locationEntry.getApplied()).isFalse();
     assertThat(locationEntry.getMetadata().getKeyDisplayName()).isEqualTo("Host Property location");
   }
 
   @Test
-  public void deviceSearch_filtersCategoriesAndIncludesCatalogOnlyDimensionsWithNotShownCoverage() {
+  public void deviceSearch_filtersCategoriesAndIncludesCatalogDimensionsWithCoverage() {
     DimensionCatalogStore store = new DimensionCatalogStore();
-    store.setDimensionNames(Fleet.FLEET_SELF, ImmutableSet.of("custom_catalog_dim"));
+    store.setDimensionCounts(
+        Fleet.FLEET_SELF, ImmutableMap.of("custom_catalog_dim", 0, "counted_catalog_dim", 25));
     FleetFilterKeyCataloger customCataloger = new FleetFilterKeyCataloger(store);
 
     FleetFilterKeyCatalogResponse response =
         customCataloger.getFilterKeyCatalog(
             deviceCorpus,
-            FleetFilterKeyCatalogRequest.newBuilder().setQuery("custom_catalog_dim").build());
+            FleetFilterKeyCatalogRequest.newBuilder().setQuery("catalog_dim").build());
 
     assertThat(headings(response)).containsExactly("Dimensions");
     FleetFilterKeySection dimensions = section(response, "Dimensions");
-    assertThat(keys(dimensions)).containsExactly("dimension::custom_catalog_dim");
-    FleetFilterKeyEntry entry = entryFor(dimensions, "dimension::custom_catalog_dim");
-    assertThat(entry.getCoverage().getDisplayCase()).isEqualTo(DisplayCase.NOT_SHOWN);
-    assertThat(entry.getMetadata().getKeyDisplayName()).isEqualTo("Dimension custom_catalog_dim");
+    assertThat(keys(dimensions))
+        .containsExactly("dimension::counted_catalog_dim", "dimension::custom_catalog_dim")
+        .inOrder();
+    FleetFilterKeyEntry countedEntry = entryFor(dimensions, "dimension::counted_catalog_dim");
+    assertThat(countedEntry.getCoverage().getDisplayCase()).isEqualTo(DisplayCase.SHOWN);
+    assertThat(countedEntry.getCoverage().getShown().getCount()).isEqualTo(25);
+
+    FleetFilterKeyEntry uncountedEntry = entryFor(dimensions, "dimension::custom_catalog_dim");
+    assertThat(uncountedEntry.getCoverage().getDisplayCase()).isEqualTo(DisplayCase.NOT_SHOWN);
+    assertThat(uncountedEntry.getMetadata().getKeyDisplayName())
+        .isEqualTo("Dimension custom_catalog_dim");
   }
 
   @Test
@@ -203,7 +232,7 @@ public final class FleetFilterKeyCatalogerTest {
   }
 
   @Test
-  public void hostBrowseAndSearch_omitsDimensionsAndShowsNoCoverage() {
+  public void hostBrowseAndSearch_omitsDimensionsAndShowsHostPropertyCoverage() {
     FleetFilterKeyCatalogRequest browseRequest =
         FleetFilterKeyCatalogRequest.newBuilder()
             .setEntity(SearchEntity.SEARCH_ENTITY_HOST)
@@ -235,7 +264,8 @@ public final class FleetFilterKeyCatalogerTest {
     assertThat(hostProperties.getTotalAvailable()).isEqualTo(6);
     FleetFilterKeyEntry location = entryFor(hostProperties, "host_property::location");
     assertThat(location.getMetadata().getKeyDisplayName()).isEqualTo("Host Property location");
-    assertThat(location.getCoverage().getDisplayCase()).isEqualTo(DisplayCase.NOT_SHOWN);
+    assertThat(location.getCoverage().getDisplayCase()).isEqualTo(DisplayCase.SHOWN);
+    assertThat(location.getCoverage().getShown().getCount()).isEqualTo(2);
     assertThat(location.getApplied()).isTrue();
 
     FleetFilterKeyCatalogResponse searchResponse =

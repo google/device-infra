@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.fe.v6.service.shared.providers;
 
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 
@@ -25,4 +27,8 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProt
 public interface LabInfoProvider {
   ListenableFuture<GetLabInfoResponse> getLabInfoAsync(
       GetLabInfoRequest request, UniverseScope universe);
+
+  /** Fetches all device dimension names and their device counts from the given universe. */
+  ListenableFuture<GetAllDeviceDimensionsResponse> getAllDeviceDimensionsAsync(
+      GetAllDeviceDimensionsRequest request, UniverseScope universe);
 }

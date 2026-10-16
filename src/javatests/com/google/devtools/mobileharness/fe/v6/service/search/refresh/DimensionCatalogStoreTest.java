@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.refresh;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import org.junit.Test;
@@ -32,6 +33,7 @@ public final class DimensionCatalogStoreTest {
   @Test
   public void getDimensionNames_emptyInitially() {
     assertThat(store.getDimensionNames(Fleet.FLEET_SELF)).isEmpty();
+    assertThat(store.getDimensionCounts(Fleet.FLEET_SELF)).isEmpty();
     assertThat(store.hasDimension(Fleet.FLEET_SELF, "build")).isFalse();
   }
 
@@ -47,6 +49,17 @@ public final class DimensionCatalogStoreTest {
     assertThat(store.getDimensionNames(Fleet.FLEET_ATS)).containsExactly("board");
     assertThat(store.hasDimension(Fleet.FLEET_ATS, "board")).isTrue();
     assertThat(store.hasDimension(Fleet.FLEET_ATS, "build")).isFalse();
+  }
+
+  @Test
+  public void setDimensionCounts_storesNamesAndCountsPerFleet() {
+    store.setDimensionCounts(Fleet.FLEET_SELF, ImmutableMap.of("build", 150, "carrier", 42));
+    store.setDimensionCounts(Fleet.FLEET_ATS, ImmutableMap.of("board", 9));
+
+    assertThat(store.getDimensionCounts(Fleet.FLEET_SELF))
+        .containsExactly("build", 150, "carrier", 42);
+    assertThat(store.getDimensionNames(Fleet.FLEET_SELF)).containsExactly("build", "carrier");
+    assertThat(store.getDimensionCounts(Fleet.FLEET_ATS)).containsExactly("board", 9);
   }
 
   @Test

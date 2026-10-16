@@ -72,18 +72,24 @@ public final class HostColumnCataloger {
       String q = norm(query);
       ToIntFunction<HostKeyDescriptor> rank =
           desc -> KeyCatalogs.matchRank(desc, HostKeyDisplays.titleDisplayName(desc), q);
-      addSection(response, SECTION_BUILTIN, KeyCatalogs.searchMatches(keys.builtin(), rank), 0);
+      addSection(
+          response,
+          SECTION_BUILTIN,
+          KeyCatalogs.searchMatches(keys.builtin(), rank),
+          0,
+          hostCounts);
       addSection(
           response,
           SECTION_PROPERTIES,
           KeyCatalogs.searchMatches(keys.properties(), rank),
-          SEARCH_LIMIT);
+          SEARCH_LIMIT,
+          hostCounts);
       return response.build();
     }
 
     addSuggestedSection(response, corpus, index, hostCounts, request);
-    addSection(response, SECTION_BUILTIN, keys.builtin(), 0);
-    addSection(response, SECTION_PROPERTIES, keys.properties(), PROP_TOP);
+    addSection(response, SECTION_BUILTIN, keys.builtin(), 0, hostCounts);
+    addSection(response, SECTION_PROPERTIES, keys.properties(), PROP_TOP, hostCounts);
     return response.build();
   }
 
@@ -127,7 +133,8 @@ public final class HostColumnCataloger {
       FleetColumnCatalogResponse.Builder response,
       String heading,
       List<HostKeyDescriptor> descriptors,
-      int limit) {
+      int limit,
+      ImmutableMap<String, Integer> hostCounts) {
     if (descriptors.isEmpty()) {
       return;
     }
@@ -138,16 +145,16 @@ public final class HostColumnCataloger {
     }
     descriptors.stream()
         .limit(limit > 0 ? limit : Long.MAX_VALUE)
-        .map(HostColumnCataloger::entry)
+        .map(desc -> entry(desc, hostCounts.getOrDefault(desc.id(), 0)))
         .forEach(section::addEntries);
     response.addSections(section);
   }
 
-  private static FleetColumnCatalogEntry entry(HostKeyDescriptor desc) {
+  private static FleetColumnCatalogEntry entry(HostKeyDescriptor desc, int hostCount) {
     return FleetColumnCatalogEntry.newBuilder()
         .setKey(desc.id())
         .setDisplayName(HostKeyDisplays.titleDisplayName(desc))
-        .setCoverage(KeyCatalogs.coverage(false, 0))
+        .setCoverage(KeyCatalogs.coverage(desc.isHostProperty(), hostCount))
         .build();
   }
 

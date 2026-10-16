@@ -60,7 +60,7 @@ public final class DimensionCatalogRefresherTest {
   @Test
   public void constructor_doesNotTriggerBackgroundTasksOrModifyStore() {
     FakeFleetDataSource source =
-        new FakeFleetDataSource(Fleet.FLEET_SELF, ImmutableSet.of("model", "carrier"));
+        new FakeFleetDataSource(Fleet.FLEET_SELF, ImmutableMap.of("model", 10, "carrier", 5));
     DimensionCatalogRefresher refresher =
         new DimensionCatalogRefresher(
             ImmutableMap.of(Fleet.FLEET_SELF, source), store, executor, scheduledExecutor);
@@ -74,9 +74,9 @@ public final class DimensionCatalogRefresherTest {
   @Test
   public void refreshOnce_populatesStorePerFleet() {
     FakeFleetDataSource selfSource =
-        new FakeFleetDataSource(Fleet.FLEET_SELF, ImmutableSet.of("model", "carrier"));
+        new FakeFleetDataSource(Fleet.FLEET_SELF, ImmutableMap.of("model", 10, "carrier", 5));
     FakeFleetDataSource atsSource =
-        new FakeFleetDataSource(Fleet.FLEET_ATS, ImmutableSet.of("wifi_ssid"));
+        new FakeFleetDataSource(Fleet.FLEET_ATS, ImmutableMap.of("wifi_ssid", 3));
     DimensionCatalogRefresher refresher =
         new DimensionCatalogRefresher(
             ImmutableMap.of(Fleet.FLEET_SELF, selfSource, Fleet.FLEET_ATS, atsSource),
@@ -86,8 +86,9 @@ public final class DimensionCatalogRefresherTest {
 
     refresher.refreshOnce();
 
-    assertThat(store.getDimensionNames(Fleet.FLEET_SELF)).containsExactly("model", "carrier");
-    assertThat(store.getDimensionNames(Fleet.FLEET_ATS)).containsExactly("wifi_ssid");
+    assertThat(store.getDimensionCounts(Fleet.FLEET_SELF))
+        .containsExactly("model", 10, "carrier", 5);
+    assertThat(store.getDimensionCounts(Fleet.FLEET_ATS)).containsExactly("wifi_ssid", 3);
     assertThat(selfSource.pullCount).isEqualTo(1);
     assertThat(atsSource.pullCount).isEqualTo(1);
   }
@@ -109,7 +110,7 @@ public final class DimensionCatalogRefresherTest {
   @Test
   public void startAndStop_lifecycle() {
     FakeFleetDataSource source =
-        new FakeFleetDataSource(Fleet.FLEET_SELF, ImmutableSet.of("model"));
+        new FakeFleetDataSource(Fleet.FLEET_SELF, ImmutableMap.of("model", 10));
     DimensionCatalogRefresher refresher =
         new DimensionCatalogRefresher(
             ImmutableMap.of(Fleet.FLEET_SELF, source), store, executor, scheduledExecutor);
@@ -124,10 +125,10 @@ public final class DimensionCatalogRefresherTest {
 
   private static final class FakeFleetDataSource implements FleetDataSource {
     private final Fleet fleet;
-    private final ImmutableSet<String> dimensions;
+    private final ImmutableMap<String, Integer> dimensions;
     private int pullCount = 0;
 
-    FakeFleetDataSource(Fleet fleet, ImmutableSet<String> dimensions) {
+    FakeFleetDataSource(Fleet fleet, ImmutableMap<String, Integer> dimensions) {
       this.fleet = fleet;
       this.dimensions = dimensions;
     }
@@ -148,7 +149,7 @@ public final class DimensionCatalogRefresherTest {
     }
 
     @Override
-    public ListenableFuture<ImmutableSet<String>> pullDimensionNames() {
+    public ListenableFuture<ImmutableMap<String, Integer>> pullDimensionCounts() {
       pullCount++;
       return immediateFuture(dimensions);
     }
@@ -177,7 +178,7 @@ public final class DimensionCatalogRefresherTest {
     }
 
     @Override
-    public ListenableFuture<ImmutableSet<String>> pullDimensionNames() {
+    public ListenableFuture<ImmutableMap<String, Integer>> pullDimensionCounts() {
       return immediateFailedFuture(new RuntimeException("Pull failed"));
     }
   }

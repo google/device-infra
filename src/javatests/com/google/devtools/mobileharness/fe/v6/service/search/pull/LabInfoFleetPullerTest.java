@@ -20,7 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
@@ -36,6 +36,9 @@ import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKe
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DeviceDimensionSummary;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.protobuf.FieldMask;
@@ -134,53 +137,38 @@ public final class LabInfoFleetPullerTest {
   }
 
   @Test
-  public void pullDimensionNames_extractsAllDimensionNames() throws Exception {
-    DeviceInfo device =
-        DeviceInfo.newBuilder()
-            .setDeviceLocator(DeviceLocator.newBuilder().setId("dev-1"))
-            .setDeviceFeature(
-                DeviceFeature.newBuilder()
-                    .setCompositeDimension(
-                        DeviceCompositeDimension.newBuilder()
-                            .addSupportedDimension(
-                                DeviceDimension.newBuilder().setName("model").setValue("Pixel 8"))
-                            .addRequiredDimension(
-                                DeviceDimension.newBuilder().setName("carrier").setValue("Verizon"))
-                            .addSupportedDimension(
-                                DeviceDimension.newBuilder().setName("").setValue("invalid"))))
-            .build();
-    LabQueryResult labResult =
-        LabQueryResult.newBuilder()
-            .setLabView(
-                LabQueryResult.LabView.newBuilder()
-                    .addLabData(
-                        LabData.newBuilder()
-                            .setDeviceList(DeviceList.newBuilder().addDeviceInfo(device))))
-            .build();
-    labInfoProvider.setResult(labResult);
+  public void pullDimensionCounts_extractsDimensionCountsAndFiltersInvalidEntries()
+      throws Exception {
+    labInfoProvider.setDimensionsResponse(
+        GetAllDeviceDimensionsResponse.newBuilder()
+            .addDimensions(DeviceDimensionSummary.newBuilder().setName("model").setDeviceCount(120))
+            .addDimensions(
+                DeviceDimensionSummary.newBuilder().setName("carrier").setDeviceCount(15))
+            .addDimensions(
+                DeviceDimensionSummary.newBuilder()
+                    .setName("subdevice_dimensions")
+                    .setDeviceCount(90))
+            .addDimensions(DeviceDimensionSummary.newBuilder().setName("empty_count"))
+            .addDimensions(DeviceDimensionSummary.newBuilder().setName("").setDeviceCount(5))
+            .build());
 
-    ImmutableSet<String> names = puller.pullDimensionNames(UniverseScope.SELF).get();
+    ImmutableMap<String, Integer> counts = puller.pullDimensionCounts(UniverseScope.SELF).get();
 
-    assertThat(names).containsExactly("model", "carrier");
-    assertThat(
-            labInfoProvider
-                .lastRequest
-                .getLabQuery()
-                .getMask()
-                .getDeviceInfoMask()
-                .getFieldMask()
-                .getPathsList())
-        .containsExactly("device_locator.id", "device_feature.composite_dimension");
-    assertThat(labInfoProvider.lastRequest.getPage().getLimit()).isEqualTo(0);
-    assertThat(labInfoProvider.lastRequest.getUseRealtimeData()).isFalse();
+    assertThat(counts).containsExactly("model", 120, "carrier", 15);
   }
 
   private static final class FakeLabInfoProvider implements LabInfoProvider {
     private LabQueryResult result = LabQueryResult.getDefaultInstance();
+    private GetAllDeviceDimensionsResponse dimensionsResponse =
+        GetAllDeviceDimensionsResponse.getDefaultInstance();
     private GetLabInfoRequest lastRequest;
 
     void setResult(LabQueryResult result) {
       this.result = result;
+    }
+
+    void setDimensionsResponse(GetAllDeviceDimensionsResponse dimensionsResponse) {
+      this.dimensionsResponse = dimensionsResponse;
     }
 
     @Override
@@ -188,6 +176,12 @@ public final class LabInfoFleetPullerTest {
         GetLabInfoRequest request, UniverseScope universe) {
       this.lastRequest = request;
       return immediateFuture(GetLabInfoResponse.newBuilder().setLabQueryResult(result).build());
+    }
+
+    @Override
+    public ListenableFuture<GetAllDeviceDimensionsResponse> getAllDeviceDimensionsAsync(
+        GetAllDeviceDimensionsRequest request, UniverseScope universe) {
+      return immediateFuture(dimensionsResponse);
     }
   }
 }
