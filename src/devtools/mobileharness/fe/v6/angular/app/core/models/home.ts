@@ -38,12 +38,26 @@ export declare interface DeviceUtilization {
 }
 
 /**
+ * Summary for one internal lab type in the Home page breakdown table
+ * (Core Lab, Satellite Lab, or SLaaS Lab), extracted from search_summary.proto.
+ */
+export declare interface FirstPartyLabType {
+  id: string;
+  displayName: string;
+  description: string;
+  hosts?: FleetSubset;
+  devices?: FleetSubset;
+  utilization?: DeviceUtilization;
+}
+
+/**
  * First-Party (Google-internal) OmniLab summary.
  */
 export declare interface FirstPartySummary {
   hosts?: FleetSubset;
   devices?: FleetSubset;
   utilization?: DeviceUtilization;
+  labTypes?: readonly FirstPartyLabType[];
 }
 
 /**

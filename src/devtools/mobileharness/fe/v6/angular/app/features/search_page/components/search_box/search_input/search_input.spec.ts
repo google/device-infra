@@ -176,8 +176,8 @@ describe('SearchInput', () => {
   it('should render scope switcher and handle fleet switching', () => {
     const buttons = fixture.nativeElement.querySelectorAll('.scope-seg');
     expect(buttons.length).toBe(2);
-    expect(buttons[0].textContent.trim()).toBe('Internal');
-    expect(buttons[1].textContent.trim()).toBe('ATS');
+    expect(buttons[0].textContent.trim()).toBe('Google');
+    expect(buttons[1].textContent.trim()).toBe('Partner');
 
     buttons[1].click();
     expect(mockStore.setFleet).toHaveBeenCalledWith('ats');
