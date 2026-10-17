@@ -306,6 +306,7 @@ public final class FleetIndexBuilder {
     }
 
     values.put(DEVICE_FIELD_QUARANTINED, ImmutableList.of(isQuarantined(condition) ? "Yes" : "No"));
+    addSdkOrSoftwareVersion(values, deviceInfo);
 
     // Dimensions: append supported and required directly without deduplicating.
     addDimensions(values, feature.getCompositeDimension());
@@ -326,6 +327,20 @@ public final class FleetIndexBuilder {
         .ifPresent(s -> values.put(AtsDeviceKeys.WIFI_SSID.id(), ImmutableList.of(s)));
 
     return DeviceRecord.create(deviceId, values.buildOrThrow());
+  }
+
+  /** Combines and deduplicates SDK and software version values for the unified version field. */
+  private static void addSdkOrSoftwareVersion(
+      ImmutableMap.Builder<String, ImmutableList<String>> valuesBuilder, DeviceInfo deviceInfo) {
+    ImmutableList<String> versions =
+        DeviceKeys.SDK_OR_SOFTWARE_VERSION.deviceInfoSources().stream()
+            .flatMap(source -> source.extract(deviceInfo).stream())
+            .filter(v -> !v.isEmpty())
+            .distinct()
+            .collect(toImmutableList());
+    if (!versions.isEmpty()) {
+      valuesBuilder.put(DeviceKeys.SDK_OR_SOFTWARE_VERSION.id(), versions);
+    }
   }
 
   /** Appends all supported and required dimensions without deduplication. */

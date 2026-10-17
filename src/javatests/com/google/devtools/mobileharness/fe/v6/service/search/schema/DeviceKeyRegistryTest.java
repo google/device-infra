@@ -48,6 +48,9 @@ public final class DeviceKeyRegistryTest {
     assertThat(registry.getKey("dimension::os")).isPresent();
     assertThat(registry.getKey("dimension::device_class_name")).isPresent();
     assertThat(registry.getKey("dimension::manufacturer")).isPresent();
+    assertThat(registry.getKey("device_field::sdk_or_software_version")).isPresent();
+    assertThat(registry.displayName("device_field::sdk_or_software_version"))
+        .hasValue("SDK or Software Version");
     // Standalone ATS exclusive key.
     assertThat(registry.getKey("device_config::wifi_ssid")).isPresent();
     // Projected common host keys are usable in device search.
