@@ -595,6 +595,26 @@ public final class GetDeviceOverviewHandlerTest {
   }
 
   @Test
+  public void healthAndActivity_deviceStatusModifyTime_populatedWhenPresent() throws Exception {
+    Timestamp statusModifyTime = toProtoTimestamp(Instant.parse("2025-11-21T09:30:00Z"));
+    mockDeviceInfo(
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceCondition(
+                DEFAULT_DEVICE_INFO.getDeviceCondition().toBuilder()
+                    .setStatusModifyTime(statusModifyTime))
+            .build());
+
+    HealthAndActivityInfo info = getHealthAndActivity();
+    assertThat(info.getDeviceStatus().hasModifyTime()).isTrue();
+    assertThat(info.getDeviceStatus().getModifyTime()).isEqualTo(statusModifyTime);
+  }
+
+  @Test
+  public void healthAndActivity_deviceStatusModifyTime_omittedWhenUnset() throws Exception {
+    assertThat(getHealthAndActivity().getDeviceStatus().hasModifyTime()).isFalse();
+  }
+
+  @Test
   public void healthAndActivity_inService_busy() throws Exception {
     mockDeviceInfo(DEFAULT_DEVICE_INFO.toBuilder().setDeviceStatus(DeviceStatus.BUSY).build());
     HealthAndActivityInfo info = getHealthAndActivity();
