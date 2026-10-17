@@ -127,6 +127,85 @@ service ConfigService {
       body: "*"
     };
   }
+
+  // Retrieves curated dimensions available for batch configuration in the
+  // selection toolbar.
+  rpc GetConfigurableDimensions(GetConfigurableDimensionsRequest)
+      returns (GetConfigurableDimensionsResponse) {
+    option (google.api.http) = {
+      get: "/v6/configs/dimensions:configurable"
+    };
+  }
+
+  // Retrieves existing configurable dimension keys from DeviceConfig (for the
+  // selected devices and across the fleet) along with the system-detected
+  // dimension blocklist for Step 1 of custom dimension configuration.
+  rpc BatchGetConfigurableDimensionKeys(
+      BatchGetConfigurableDimensionKeysRequest)
+      returns (BatchGetConfigurableDimensionKeysResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices:batchGetConfigurableDimensionKeys"
+      body: "*"
+    };
+  }
+
+  // Retrieves fleet-wide candidate value-sets for a specific (dimension_name,
+  // dimension_list) target.
+  rpc GetDimensionValueSuggestions(GetDimensionValueSuggestionsRequest)
+      returns (GetDimensionValueSuggestionsResponse) {
+    option (google.api.http) = {
+      get: "/v6/configs/dimensions:valueSuggestions"
+    };
+  }
+
+  // Retrieves current values and change status for the selected devices under a
+  // specific (dimension_name, dimension_list) target.
+  rpc BatchGetDeviceDimensionConfigs(BatchGetDeviceDimensionConfigsRequest)
+      returns (BatchGetDeviceDimensionConfigsResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices:batchGetDimensionConfigs"
+      body: "*"
+    };
+  }
+
+  // Replaces or clears the value-set for a specific (dimension_name,
+  // dimension_list) target across the selected devices.
+  rpc BatchUpdateDeviceDimensionConfigs(
+      BatchUpdateDeviceDimensionConfigsRequest)
+      returns (BatchUpdateDeviceDimensionConfigsResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices:batchUpdateDimensionConfigs"
+      body: "*"
+    };
+  }
+
+  // Retrieves fleet-wide candidate Wi-Fi networks ranked by device_count.
+  rpc GetWifiSuggestions(GetWifiSuggestionsRequest)
+      returns (GetWifiSuggestionsResponse) {
+    option (google.api.http) = {
+      get: "/v6/configs/wifi:suggestions"
+    };
+  }
+
+  // Retrieves current Wi-Fi configurations and change status for the selected
+  // devices.
+  rpc BatchGetDeviceWifiConfigs(BatchGetDeviceWifiConfigsRequest)
+      returns (BatchGetDeviceWifiConfigsResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices:batchGetWifiConfigs"
+      body: "*"
+    };
+  }
+
+  // Updates or clears the default Wi-Fi configuration across the selected
+  // devices.
+  rpc BatchUpdateDeviceWifiConfigs(BatchUpdateDeviceWifiConfigsRequest)
+      returns (BatchUpdateDeviceWifiConfigsResponse) {
+    option (google.api.http) = {
+      post: "/v6/devices:batchUpdateWifiConfigs"
+      body: "*"
+    };
+  }
 }
 
 // Request for GetDeviceConfig.
@@ -300,4 +379,341 @@ message UnlockHostPropertiesRequest {
 message UnlockHostPropertiesResponse {
   bool success = 1;
   UpdateError error = 2;
+}
+
+// Selects which dimension list in composite_dimension is read or updated.
+enum DimensionList {
+  DIMENSION_LIST_UNSPECIFIED = 0;
+  // Targets composite_dimension.supported_dimension.
+  DIMENSION_LIST_SUPPORTED = 1;
+  // Targets composite_dimension.required_dimension.
+  DIMENSION_LIST_REQUIRED = 2;
+}
+
+// Change classification for a selected device in a batch configuration dialog.
+enum DeviceConfigChangeStatus {
+  DEVICE_CONFIG_CHANGE_STATUS_UNSPECIFIED = 0;
+  // The device configuration can be modified by the current user, and no
+  // target value was supplied in the request yet (Step 1 initial load).
+  DEVICE_CONFIG_CHANGE_STATUS_WRITABLE = 1;
+  // The device is writable and its current configuration differs from the
+  // requested target configuration (Step 2 review).
+  DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE = 2;
+  // The device is writable and its current configuration already matches the
+  // requested target configuration (Step 2 review). No write is needed.
+  DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES = 3;
+  // The device configuration cannot be modified by the current user (e.g.
+  // locked by host-level configuration, Config Pusher, insufficient
+  // permission, or per-device config read failure).
+  DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY = 4;
+}
+
+// Metadata for a configurable dimension in the selection toolbar.
+message ConfigurableDimension {
+  // Dimension name in DeviceConfig (e.g. "recovery", "skip_suw_app", "pool",
+  // "persist_test_harness").
+  string dimension_name = 1;
+
+  // Exact label shown in the toolbar menu and dialog header.
+  string display_name = 2;
+
+  // Which dimension list in composite_dimension this entry configures.
+  DimensionList dimension_list = 3;
+}
+
+// Request for GetConfigurableDimensions.
+message GetConfigurableDimensionsRequest {
+  // The universe the devices belong to.
+  string universe = 1;
+}
+
+// Response for GetConfigurableDimensions.
+message GetConfigurableDimensionsResponse {
+  // Whether batch device configuration is supported for the requested
+  // environment and universe. False on internal Partner ATS fleets.
+  bool enabled = 1;
+
+  // Curated dimensions available for batch configuration.
+  repeated ConfigurableDimension dimensions = 2;
+
+  // Whether operators are permitted to configure custom dimensions.
+  // False in ATS and OSS builds; true in 1P internal builds.
+  bool allow_custom_dimensions = 3;
+}
+
+// Request for BatchGetConfigurableDimensionKeys.
+message BatchGetConfigurableDimensionKeysRequest {
+  // Explicit device IDs selected by the operator.
+  repeated string device_ids = 1;
+
+  // Which dimension list in composite_dimension to inspect.
+  DimensionList dimension_list = 2;
+
+  // The universe the devices belong to.
+  string universe = 3;
+}
+
+// Response for BatchGetConfigurableDimensionKeys.
+message BatchGetConfigurableDimensionKeysResponse {
+  // A configurable dimension key present in DeviceConfig (excluding
+  // OmniLab system-detected dimensions).
+  message CandidateDimensionKey {
+    // Dimension key name in DeviceConfig (e.g. "pool", "label", "cluster").
+    string dimension_name = 1;
+
+    // Number of selected devices (from request.device_ids) that currently
+    // have this dimension_name configured in the target dimension_list.
+    int32 selected_device_count = 2;
+
+    // Total number of devices across the fleet that have this
+    // dimension_name configured in DeviceConfig in the target dimension_list.
+    int32 fleet_device_count = 3;
+  }
+
+  // Candidate configurable dimension keys ranked with keys present on the
+  // selected devices first (by selected_device_count descending, then
+  // fleet_device_count descending), followed by fleet-wide keys (by
+  // fleet_device_count descending).
+  repeated CandidateDimensionKey candidate_keys = 1;
+
+  // Dimension key names automatically detected by OmniLab detectors and
+  // system properties (e.g. "model", "sdk_version", "battery_level").
+  // Operators are not permitted to configure these keys manually.
+  repeated string system_dimension_names = 2;
+}
+
+// Request for GetDimensionValueSuggestions.
+message GetDimensionValueSuggestionsRequest {
+  // Dimension name in DeviceConfig (e.g. "recovery", "skip_suw_app", "pool").
+  string dimension_name = 1;
+
+  // Which dimension list in composite_dimension to query candidate value-sets
+  // from.
+  DimensionList dimension_list = 2;
+
+  // The universe the devices belong to.
+  string universe = 3;
+}
+
+// Response for GetDimensionValueSuggestions.
+message GetDimensionValueSuggestionsResponse {
+  // A distinct value-set available as a one-click suggestion.
+  message CandidateDimensionValue {
+    // Complete value-set configured for this (dimension_name, dimension_list)
+    // target.
+    repeated string values = 1;
+    // Total number of devices across the fleet configured with this exact
+    // value-set.
+    int32 device_count = 2;
+  }
+
+  // Candidate value-sets ranked by device_count descending.
+  repeated CandidateDimensionValue candidate_values = 1;
+}
+
+// Clears all entries for the target dimension key from composite_dimension.
+message ClearDimensionValues {}
+
+// A set of dimension values to assign to a dimension key.
+message DimensionValueList {
+  repeated string values = 1;
+}
+
+// Target dimension value state to preview or apply in a batch operation.
+message TargetDimensionValues {
+  oneof target {
+    // Removes all entries with name == dimension_name from the target
+    // dimension_list.
+    ClearDimensionValues clear_values = 1;
+
+    // Replaces entries with name == dimension_name in the target
+    // dimension_list with these values.
+    DimensionValueList value_list = 2;
+  }
+}
+
+// Request for BatchGetDeviceDimensionConfigs.
+message BatchGetDeviceDimensionConfigsRequest {
+  // Explicit device IDs selected by the operator.
+  repeated string device_ids = 1;
+
+  // Dimension name being configured.
+  string dimension_name = 2;
+
+  // Which dimension list in composite_dimension to inspect.
+  DimensionList dimension_list = 3;
+
+  // Optional target values to compare against. When omitted (Step 1 / value
+  // selection step), writable devices return
+  // DEVICE_CONFIG_CHANGE_STATUS_WRITABLE. When set (Step 2 / review step),
+  // writable devices return DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE or
+  // DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES.
+  TargetDimensionValues target = 4;
+
+  // The universe the devices belong to.
+  string universe = 5;
+}
+
+// Response for BatchGetDeviceDimensionConfigs.
+message BatchGetDeviceDimensionConfigsResponse {
+  // Current value-set and change status for a single selected device.
+  message DeviceDimensionConfigEntry {
+    string device_id = 1;
+    // Current value-set configured for (dimension_name, dimension_list) in
+    // DeviceConfig (empty list if not set).
+    repeated string values = 2;
+    // Change status for this device.
+    DeviceConfigChangeStatus status = 3;
+    // Explanation when status is DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY (e.g.
+    // host-managed shared config, Config Pusher, no permission, or config
+    // read error).
+    string read_only_reason = 4;
+  }
+
+  repeated DeviceDimensionConfigEntry entries = 1;
+}
+
+// Request for BatchUpdateDeviceDimensionConfigs.
+message BatchUpdateDeviceDimensionConfigsRequest {
+  // Target device IDs to update (only the devices with WILL_UPDATE status).
+  repeated string device_ids = 1;
+
+  // Dimension name in DeviceConfig (e.g. "recovery", "skip_suw_app", "pool").
+  string dimension_name = 2;
+
+  // Which dimension list in composite_dimension to update. Never modifies the
+  // other list.
+  DimensionList dimension_list = 3;
+
+  // Target dimension value state to apply. Required; an unset target is
+  // rejected with INVALID_ARGUMENT.
+  TargetDimensionValues target = 4;
+
+  // The universe the devices belong to.
+  string universe = 5;
+}
+
+// Response for BatchUpdateDeviceDimensionConfigs.
+message BatchUpdateDeviceDimensionConfigsResponse {
+  // Per-device error details for devices that failed to update.
+  // Key is device_id. An empty map indicates all target devices succeeded.
+  map<string, UpdateError> errors = 1;
+}
+
+// Default Wi-Fi network parameters on a device.
+// Unlike single-device WifiConfig in config_resources.proto, this message
+// carries no legacy UI "type" field.
+message DeviceWifi {
+  // Wi-Fi network name (SSID). Empty when no default Wi-Fi is configured.
+  string ssid = 1;
+
+  // Password (PSK) for the Wi-Fi network. Empty for open networks.
+  string psk = 2;
+
+  // True if the network hides its SSID and requires active scanning.
+  bool scan_ssid = 3;
+}
+
+// Clears the default Wi-Fi network on the target devices.
+message ClearDeviceWifi {}
+
+// Target Wi-Fi state to preview or apply in a batch operation.
+message TargetDeviceWifi {
+  oneof target {
+    // Removes default_wifi from the target devices (sets Wi-Fi to None).
+    ClearDeviceWifi clear_wifi = 1;
+
+    // Sets default_wifi to this network on the target devices.
+    DeviceWifi wifi = 2;
+  }
+}
+
+// Request for GetWifiSuggestions.
+message GetWifiSuggestionsRequest {
+  // The universe the devices belong to.
+  string universe = 1;
+}
+
+// Response for GetWifiSuggestions.
+message GetWifiSuggestionsResponse {
+  // Indicates the network comes from the curated credential store (1P),
+  // where fleet-wide device counts do not apply.
+  message CuratedWifiPreset {}
+
+  // Indicates the network is aggregated from active device configurations
+  // in the fleet (ATS), carrying the fleet usage count.
+  message FleetWifiInUse {
+    int32 device_count = 1;
+  }
+
+  // A candidate Wi-Fi network available to pick from in Step 1.
+  message CandidateWifi {
+    // Network credentials (ssid, psk, scan_ssid).
+    DeviceWifi wifi = 1;
+
+    // Origin of this Wi-Fi suggestion.
+    oneof source {
+      CuratedWifiPreset curated_preset = 2;
+      FleetWifiInUse fleet_in_use = 3;
+    }
+  }
+
+  // Candidate Wi-Fi networks (curated_preset entries in 1P; fleet_in_use
+  // entries ranked by device_count descending in ATS).
+  repeated CandidateWifi candidate_wifis = 1;
+}
+
+// Request for BatchGetDeviceWifiConfigs.
+message BatchGetDeviceWifiConfigsRequest {
+  // Explicit device IDs selected by the operator.
+  repeated string device_ids = 1;
+
+  // Optional target Wi-Fi to compare against. When omitted (Step 1 initial
+  // load), writable devices return DEVICE_CONFIG_CHANGE_STATUS_WRITABLE. When
+  // set (Step 2 review), writable devices return
+  // DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE or
+  // DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES.
+  TargetDeviceWifi target = 2;
+
+  // The universe the devices belong to.
+  string universe = 3;
+}
+
+// Response for BatchGetDeviceWifiConfigs.
+message BatchGetDeviceWifiConfigsResponse {
+  // Current Wi-Fi configuration and change status for a single selected device.
+  message DeviceWifiConfigEntry {
+    string device_id = 1;
+    // Current default Wi-Fi configuration (empty ssid if unconfigured).
+    // Includes ssid, psk, and scan_ssid.
+    DeviceWifi current_wifi = 2;
+    // Change status for this device.
+    DeviceConfigChangeStatus status = 3;
+    // Explanation when status is DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY (e.g.
+    // host-managed shared config, Config Pusher, no permission, or config
+    // read error).
+    string read_only_reason = 4;
+  }
+
+  repeated DeviceWifiConfigEntry entries = 1;
+}
+
+// Request for BatchUpdateDeviceWifiConfigs.
+message BatchUpdateDeviceWifiConfigsRequest {
+  // Target device IDs to update (only the devices with WILL_UPDATE status).
+  repeated string device_ids = 1;
+
+  // Target Wi-Fi state to apply. Required; an unset target is rejected with
+  // INVALID_ARGUMENT.
+  TargetDeviceWifi target = 2;
+
+  // The universe the devices belong to.
+  string universe = 3;
+}
+
+// Response for BatchUpdateDeviceWifiConfigs.
+message BatchUpdateDeviceWifiConfigsResponse {
+  // Per-device error details for devices that failed to update.
+  // Key is device_id. An empty map indicates all target devices succeeded.
+  map<string, UpdateError> errors = 1;
 }

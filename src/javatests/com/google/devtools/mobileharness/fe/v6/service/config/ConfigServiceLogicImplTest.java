@@ -31,11 +31,20 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigPusherHelper;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetConfigurableDimensionKeysRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceDimensionConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceWifiConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceDimensionConfigsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchUpdateDeviceWifiConfigsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckDeviceConfigPermissionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.CheckHostConfigPermissionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetConfigurableDimensionsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDeviceConfigRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDimensionValueSuggestionsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetWifiSuggestionsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UnlockHostPropertiesResponse;
 import com.google.devtools.mobileharness.fe.v6.service.shared.DeviceDataLoader;
@@ -50,11 +59,13 @@ import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import io.grpc.Status;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.function.ThrowingRunnable;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.Mock;
@@ -169,5 +180,61 @@ public final class ConfigServiceLogicImplTest {
             ExecutionException.class,
             () -> configServiceLogicImpl.unlockHostProperties(request).get());
     assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void batchConfigRpcs_returnUnimplemented() {
+    assertUnimplemented(
+        () ->
+            configServiceLogicImpl
+                .getConfigurableDimensions(GetConfigurableDimensionsRequest.getDefaultInstance())
+                .get());
+    assertUnimplemented(
+        () ->
+            configServiceLogicImpl
+                .batchGetConfigurableDimensionKeys(
+                    BatchGetConfigurableDimensionKeysRequest.getDefaultInstance())
+                .get());
+    assertUnimplemented(
+        () ->
+            configServiceLogicImpl
+                .getDimensionValueSuggestions(
+                    GetDimensionValueSuggestionsRequest.getDefaultInstance())
+                .get());
+    assertUnimplemented(
+        () ->
+            configServiceLogicImpl
+                .batchGetDeviceDimensionConfigs(
+                    BatchGetDeviceDimensionConfigsRequest.getDefaultInstance(), Optional.empty())
+                .get());
+    assertUnimplemented(
+        () ->
+            configServiceLogicImpl
+                .batchUpdateDeviceDimensionConfigs(
+                    BatchUpdateDeviceDimensionConfigsRequest.getDefaultInstance(), Optional.empty())
+                .get());
+    assertUnimplemented(
+        () ->
+            configServiceLogicImpl
+                .getWifiSuggestions(GetWifiSuggestionsRequest.getDefaultInstance())
+                .get());
+    assertUnimplemented(
+        () ->
+            configServiceLogicImpl
+                .batchGetDeviceWifiConfigs(
+                    BatchGetDeviceWifiConfigsRequest.getDefaultInstance(), Optional.empty())
+                .get());
+    assertUnimplemented(
+        () ->
+            configServiceLogicImpl
+                .batchUpdateDeviceWifiConfigs(
+                    BatchUpdateDeviceWifiConfigsRequest.getDefaultInstance(), Optional.empty())
+                .get());
+  }
+
+  private static void assertUnimplemented(ThrowingRunnable runnable) {
+    ExecutionException ex = assertThrows(ExecutionException.class, runnable);
+    assertThat(ex).hasCauseThat().isInstanceOf(FeServiceException.class);
+    assertThat(((FeServiceException) ex.getCause()).getCode()).isEqualTo(Status.Code.UNIMPLEMENTED);
   }
 }
