@@ -47,6 +47,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValueLi
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.GetGlobalSummaryRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.GlobalSummary;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.TranslateArsenalSearchRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.TranslateArsenalSearchResponse;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetChipResolver;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetColumnCataloger;
@@ -256,6 +258,12 @@ public final class SearchServiceLogicImpl implements SearchServiceLogic {
                         corpusFactory.getCorpus(fleet, request.getEntity(), overlays), request),
                 executor),
         executor);
+  }
+
+  @Override
+  public ListenableFuture<TranslateArsenalSearchResponse> translateArsenalSearch(
+      TranslateArsenalSearchRequest request) {
+    return immediateFuture(TranslateArsenalSearchResponse.getDefaultInstance());
   }
 
   @Override
