@@ -17,12 +17,14 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetTryCategory;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetTryExample;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyRegistry;
+import java.util.Optional;
 
 /**
  * The per-deployment curation of fleet search keys: which keys to promote in the query bar, which
@@ -103,6 +105,34 @@ public interface ScenarioCuration {
   /** Try-it example categories shown on the host search landing page. */
   default ImmutableList<FleetTryCategory> hostTryCategories() {
     return ImmutableList.of();
+  }
+
+  /**
+   * Deployment-specific Arsenal device key names mapped to their canonical FE v6 key ids.
+   *
+   * <p>Keys are lower-case Arsenal URL parameter keys (for example {@code "owner"} or {@code
+   * "dimension_quarantined"}); values are the target {@link DeviceKeyDescriptor#id()}.
+   */
+  default ImmutableMap<String, String> arsenalDeviceKeyAliases() {
+    return ImmutableMap.of();
+  }
+
+  /**
+   * Deployment-specific Arsenal host key names mapped to their canonical FE v6 key ids.
+   *
+   * <p>Keys are lower-case Arsenal URL parameter keys (for example {@code
+   * "lab_server_release_status"}); values are the target {@link HostKeyDescriptor#id()}.
+   */
+  default ImmutableMap<String, String> arsenalHostKeyAliases() {
+    return ImmutableMap.of();
+  }
+
+  /**
+   * The canonical FE v6 key id for the ATS controller ID filter when this deployment aggregates
+   * multiple ATS controllers, or empty if controller-ID filtering does not apply.
+   */
+  default Optional<String> atsControllerIdKey() {
+    return Optional.empty();
   }
 
   /** Creates a {@link FleetTryCategory} with the given label and example texts. */

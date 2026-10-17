@@ -31,6 +31,8 @@ import {
   TjsSearchResponse,
   TjsSuggestionRequest,
   TjsSuggestionResponse,
+  TranslateArsenalSearchRequest,
+  TranslateArsenalSearchResponse,
 } from '../../models/search';
 import {SearchService} from './search_service';
 
@@ -128,6 +130,14 @@ export class HttpSearchService extends SearchService {
     );
   }
 
+  override translateArsenalSearch(
+    request: TranslateArsenalSearchRequest,
+  ): Observable<TranslateArsenalSearchResponse> {
+    return this.http.post<TranslateArsenalSearchResponse>(
+      `${this.fleetApiUrl}/translate-arsenal`,
+      request,
+    );
+  }
   override getTjsSearchConfig(
     request: TjsSearchConfigRequest,
   ): Observable<TjsSearchConfig> {

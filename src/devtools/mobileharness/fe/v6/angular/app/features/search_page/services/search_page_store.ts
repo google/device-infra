@@ -545,6 +545,11 @@ export abstract class SearchPageStore {
     gbKeys: string[];
   }>();
 
+  /** Subclass hook to intercept and translate legacy query parameters (e.g. ?arsenal_query=...). */
+  protected handleLegacyQueryParams(params: Record<string, unknown>): boolean {
+    return false;
+  }
+
   constructor() {
     // Asynchronously enhance chips with rich backend metadata via race-free switchMap
     this.resolveFiltersSubject
@@ -598,7 +603,7 @@ export abstract class SearchPageStore {
             this.fleet.set(fleetParam);
           }
         }
-        if (qp?.['f'] || qp?.['gb'] || qp?.['q']) {
+        if (qp?.['f'] || qp?.['gb'] || qp?.['q'] || qp?.['arsenal_query']) {
           this.syncFromQueryParams(qp);
           return;
         }
@@ -621,6 +626,21 @@ export abstract class SearchPageStore {
     params: Record<string, unknown> | null | undefined,
   ) {
     if (!params || !this.isCurrentRouteActive()) return;
+
+    const rawArsenalQuery =
+      typeof params['arsenal_query'] === 'string'
+        ? params['arsenal_query'].trim()
+        : '';
+    if (rawArsenalQuery) {
+      const arsenalKey = `arsenal:${rawArsenalQuery}`;
+      if (arsenalKey === this.lastSyncedUrlKey) {
+        return;
+      }
+      if (this.handleLegacyQueryParams(params)) {
+        this.lastSyncedUrlKey = arsenalKey;
+        return;
+      }
+    }
 
     const fleetParam = ((params['fleet'] as string) || 'internal') as
       | 'internal'
@@ -695,6 +715,7 @@ export abstract class SearchPageStore {
       'gb': groupBys.length > 0 ? groupBys.join(',') : null,
       'fleet': fleet !== 'internal' ? fleet : null,
       'q': null,
+      'arsenal_query': null,
     };
 
     this.isInternalUrlSync = true;
