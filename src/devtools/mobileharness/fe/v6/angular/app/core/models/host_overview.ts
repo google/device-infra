@@ -351,7 +351,7 @@ export enum EligibilityStatus {
   READY = 'READY',
 
   /**
-   * One or more devices are ineligible (e.g. status is busy, missing; no acid support, etc).
+   * Some selected devices are not eligible (e.g. status is busy, missing; no acid support; etc).
    * UI Action: Show dialog listing ineligible devices and reasons.
    */
   BLOCK_DEVICES_INELIGIBLE = 'BLOCK_DEVICES_INELIGIBLE',
