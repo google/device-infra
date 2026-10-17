@@ -6,6 +6,7 @@ import {
   Cell,
   Column,
   Filter,
+  Fleet,
   FleetChipResolverRequest,
   FleetChipResolverResponse,
   FleetColumnCatalogEntry,
@@ -44,6 +45,8 @@ import {
   TjsSuggestion,
   TjsSuggestionRequest,
   TjsSuggestionResponse,
+  TranslateArsenalSearchRequest,
+  TranslateArsenalSearchResponse,
 } from '../../models/search';
 import {
   MOCK_FLEET_COLUMN_CATALOG,
@@ -530,6 +533,21 @@ export class FakeSearchService extends SearchService {
     return of({sections: filteredSections});
   }
 
+  override translateArsenalSearch(
+    request: TranslateArsenalSearchRequest,
+  ): Observable<TranslateArsenalSearchResponse> {
+    const groupByKeys = request.groupByKeys || [];
+    return of({
+      fleet: Fleet.FLEET_SELF,
+      filters: [],
+      filterChips: [],
+      groupByKeys,
+      groupByChips: groupByKeys.map((k) => ({
+        valid: {pillKey: k, displayName: k},
+      })),
+      columns: [],
+    });
+  }
   override getTjsSearchConfig(
     request: TjsSearchConfigRequest,
   ): Observable<TjsSearchConfig> {
