@@ -56,6 +56,7 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import javax.annotation.Nullable;
 
 /**
@@ -114,6 +115,8 @@ public abstract class BaseDevice implements Device {
 
   /** Optional API configurations. */
   @Nullable private final ApiConfig apiConfig;
+
+  private volatile ImmutableSet<String> registeredPortNames = ImmutableSet.of();
 
   public BaseDevice(String deviceId) {
     this(deviceId, /* managedDeviceInfo= */ true);
@@ -463,6 +466,16 @@ public abstract class BaseDevice implements Device {
           "Failed to parse device communication: %s", propertyCommunication);
       return Optional.empty();
     }
+  }
+
+  @Override
+  public void setRegisteredPortNames(Set<String> portNames) {
+    this.registeredPortNames = ImmutableSet.copyOf(portNames);
+  }
+
+  @Override
+  public Set<String> getRegisteredPortNames() {
+    return registeredPortNames;
   }
 
   /** Add supported device type. */
