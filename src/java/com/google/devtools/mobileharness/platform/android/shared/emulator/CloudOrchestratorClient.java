@@ -382,11 +382,14 @@ public class CloudOrchestratorClient {
       Throwable cause = e.getCause();
       if (cause instanceof HttpResponseException httpResponseException) {
         throw handleHttpException(
-            String.format("Failed to wait for operation %s", operationName), httpResponseException);
+            String.format(
+                "Failed to wait for operation %s at %s%s", operationName, rootEndpoint, path),
+            httpResponseException);
       }
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_NETWORK_ERROR,
-          String.format("Failed to wait for operation %s", operationName),
+          String.format(
+              "Failed to wait for operation %s at %s%s", operationName, rootEndpoint, path),
           e);
     }
   }
@@ -598,11 +601,12 @@ public class CloudOrchestratorClient {
       Throwable cause = e.getCause();
       if (cause instanceof HttpResponseException httpResponseException) {
         throw handleHttpException(
-            String.format("GET request to %s failed", path), httpResponseException);
+            String.format("GET request to %s%s failed", rootEndpoint, path), httpResponseException);
       }
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_NETWORK_ERROR,
-          String.format("GET request to %s failed or timed out after %d ms", path, elapsedMs),
+          String.format(
+              "GET request to %s%s failed or timed out after %d ms", rootEndpoint, path, elapsedMs),
           e);
     }
   }
@@ -627,10 +631,13 @@ public class CloudOrchestratorClient {
       Throwable cause = e.getCause();
       if (cause instanceof HttpResponseException httpResponseException) {
         throw handleHttpException(
-            "Failed to send POST request after retries", httpResponseException);
+            String.format("Failed to send POST request to %s%s after retries", rootEndpoint, path),
+            httpResponseException);
       }
       throw new MobileHarnessException(
-          BasicErrorId.LOCAL_NETWORK_ERROR, "Failed to send POST request after retries", e);
+          BasicErrorId.LOCAL_NETWORK_ERROR,
+          String.format("Failed to send POST request to %s%s after retries", rootEndpoint, path),
+          e);
     }
   }
 
@@ -649,10 +656,14 @@ public class CloudOrchestratorClient {
       Throwable cause = e.getCause();
       if (cause instanceof HttpResponseException httpResponseException) {
         throw handleHttpException(
-            "Failed to send DELETE request after retries", httpResponseException);
+            String.format(
+                "Failed to send DELETE request to %s%s after retries", rootEndpoint, path),
+            httpResponseException);
       }
       throw new MobileHarnessException(
-          BasicErrorId.LOCAL_NETWORK_ERROR, "Failed to send DELETE request after retries", e);
+          BasicErrorId.LOCAL_NETWORK_ERROR,
+          String.format("Failed to send DELETE request to %s%s after retries", rootEndpoint, path),
+          e);
     }
   }
 
@@ -671,10 +682,13 @@ public class CloudOrchestratorClient {
       Throwable cause = e.getCause();
       if (cause instanceof HttpResponseException httpResponseException) {
         throw handleHttpException(
-            "Failed to send PUT request after retries", httpResponseException);
+            String.format("Failed to send PUT request to %s%s after retries", rootEndpoint, path),
+            httpResponseException);
       }
       throw new MobileHarnessException(
-          BasicErrorId.LOCAL_NETWORK_ERROR, "Failed to send PUT request after retries", e);
+          BasicErrorId.LOCAL_NETWORK_ERROR,
+          String.format("Failed to send PUT request to %s%s after retries", rootEndpoint, path),
+          e);
     }
   }
 
@@ -713,16 +727,17 @@ public class CloudOrchestratorClient {
         Thread.currentThread().interrupt();
         throw new MobileHarnessException(
             BasicErrorId.LOCAL_NETWORK_ERROR,
-            String.format("Interrupted while downloading file from %s", path),
+            String.format("Interrupted while downloading file from %s%s", rootEndpoint, path),
             cause);
       }
       if (cause instanceof HttpResponseException httpResponseException) {
         throw handleHttpException(
-            String.format("Failed to download file from %s", path), httpResponseException);
+            String.format("Failed to download file from %s%s", rootEndpoint, path),
+            httpResponseException);
       }
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_NETWORK_ERROR,
-          String.format("Failed to download file from %s", path),
+          String.format("Failed to download file from %s%s", rootEndpoint, path),
           e);
     }
   }
@@ -765,17 +780,20 @@ public class CloudOrchestratorClient {
         Thread.currentThread().interrupt();
         throw new MobileHarnessException(
             BasicErrorId.LOCAL_NETWORK_ERROR,
-            String.format("Interrupted while fetching logs directory listing from %s", logsPath),
+            String.format(
+                "Interrupted while fetching logs directory listing from %s%s",
+                rootEndpoint, logsPath),
             cause);
       }
       if (cause instanceof HttpResponseException httpResponseException) {
         throw handleHttpException(
-            String.format("Failed to fetch logs directory listing from %s", logsPath),
+            String.format(
+                "Failed to fetch logs directory listing from %s%s", rootEndpoint, logsPath),
             httpResponseException);
       }
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_NETWORK_ERROR,
-          String.format("Failed to fetch logs directory listing from %s", logsPath),
+          String.format("Failed to fetch logs directory listing from %s%s", rootEndpoint, logsPath),
           e);
     }
 
