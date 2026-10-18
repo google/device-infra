@@ -97,6 +97,18 @@ java_library(
     ],
 )
 
+java_library(
+    name = "port_service_device",
+    srcs = ["PortServiceDevice.java"],
+    visibility = [
+        "//:omnilab_fusion",
+    ],
+    deps = [
+        ":device",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
 ################################################################################
 # Device libraries in alphabetical order
 ################################################################################
@@ -257,7 +269,12 @@ java_library(
 java_library(
     name = "misc_testbed_sub_device",
     srcs = ["MiscTestbedSubDevice.java"],
-    deps = [":misc_device"],
+    exports = [":port_service_device"],
+    deps = [
+        ":misc_device",
+        ":port_service_device",
+        "@maven//:com_google_guava_guava",
+    ],
 )
 
 java_library(
