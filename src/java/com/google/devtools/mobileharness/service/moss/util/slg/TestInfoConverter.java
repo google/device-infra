@@ -16,9 +16,15 @@
 
 package com.google.devtools.mobileharness.service.moss.util.slg;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
+import com.google.common.collect.ImmutableList;
+import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
+import com.google.devtools.mobileharness.api.model.job.out.Finding;
 import com.google.devtools.mobileharness.api.model.job.out.Findings;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Warnings;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic;
 import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestStatus;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.FilesProto;
@@ -75,10 +81,13 @@ public final class TestInfoConverter {
     Result result = ResultConverter.fromProto(timing, jobInfo.params(), testInfoProto.getResult());
     Log log = new Log(timing);
     Properties properties = PropertiesConverter.fromProto(timing, testInfoProto.getProperties());
-    // TODO: Add Findings to TestInfoProto. For now the persisted errors are restored as
-    // findings with severity WARNING.
     Findings findings = new Findings(log);
-    findings.addAll(Severity.WARNING, testInfoProto.getErrorList());
+    if (testInfoProto.getFindingCount() > 0) {
+      testInfoProto.getFindingList().forEach(findings::add);
+    } else {
+      // Persisted by an older version, which only stored the WARNING findings as errors.
+      findings.addAll(Severity.WARNING, testInfoProto.getErrorList());
+    }
     Warnings warnings = new Warnings(timing.toNewTiming(), findings);
     TestInfo testInfo =
         JobInternalFactory.createTestInfo(
@@ -108,6 +117,10 @@ public final class TestInfoConverter {
 
   /** Gets a {@link TestInfoProto} by the given {@link TestInfo}. */
   public static TestInfoProto toProto(TestInfo testInfo) {
+    // Takes a single snapshot of the findings and derives the errors from it, so that they are
+    // consistent with each other even if the findings are updated concurrently.
+    ImmutableList<Diagnostic.Finding> findings =
+        testInfo.findings().getAll().stream().map(Finding::toProto).collect(toImmutableList());
     return TestInfoProto.newBuilder()
         .setTestScheduleUnit(
             TestScheduleUnitProto.newBuilder()
@@ -118,7 +131,13 @@ public final class TestInfoConverter {
         .setStatus(StatusConverter.toProto(testInfo.status()))
         .setResult(ResultConverter.toProto(testInfo.resultWithCause()))
         .setProperties(PropertiesConverter.toProto(testInfo.properties()))
-        .addAllError(testInfo.warnings().getAll())
+        // Only contains WARNING findings. Kept for the readers which don't support findings.
+        .addAllError(
+            findings.stream()
+                .filter(finding -> finding.getSeverity() == Severity.WARNING)
+                .map(finding -> ErrorModelConverter.toExceptionDetail(finding.getDetail()))
+                .collect(toImmutableList()))
+        .addAllFinding(findings)
         .addAllSubTestInfo(
             testInfo.subTests().getAll().values().stream()
                 .map(TestInfoConverter::toProto)

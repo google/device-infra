@@ -16,9 +16,15 @@
 
 package com.google.devtools.mobileharness.service.moss.util.slg;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
+import com.google.common.collect.ImmutableList;
+import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
+import com.google.devtools.mobileharness.api.model.job.out.Finding;
 import com.google.devtools.mobileharness.api.model.job.out.Findings;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Warnings;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic;
 import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.FilesProto;
@@ -87,10 +93,13 @@ public final class JobInfoConverter {
     Result result = ResultConverter.fromProto(timing, params, jobInfoProto.getResult());
     Log log = new Log(timing);
     Properties properties = PropertiesConverter.fromProto(timing, jobInfoProto.getProperties());
-    // TODO: Add Findings to JobInfoProto. For now the persisted errors are restored as
-    // findings with severity WARNING.
     Findings findings = new Findings(log);
-    findings.addAll(Severity.WARNING, jobInfoProto.getErrorList());
+    if (jobInfoProto.getFindingCount() > 0) {
+      jobInfoProto.getFindingList().forEach(findings::add);
+    } else {
+      // Persisted by an older version, which only stored the WARNING findings as errors.
+      findings.addAll(Severity.WARNING, jobInfoProto.getErrorList());
+    }
     Warnings warnings = new Warnings(timing.toNewTiming(), findings);
     JobUser jobUser;
     if (jobScheduleUnitProto.hasJobUser()) {
@@ -145,6 +154,10 @@ public final class JobInfoConverter {
             .setScopedSpecsJsonString(jobInfo.scopedSpecs().toJsonString())
             .setSubDeviceSpecs(SubDeviceSpecsConverter.toProto(jobInfo.subDeviceSpecs()))
             .build();
+    // Takes a single snapshot of the findings and derives the errors from it, so that they are
+    // consistent with each other even if the findings are updated concurrently.
+    ImmutableList<Diagnostic.Finding> findings =
+        jobInfo.findings().getAll().stream().map(Finding::toProto).collect(toImmutableList());
     return JobInfoProto.newBuilder()
         .setJobScheduleUnit(jobScheduleUnit)
         .setFiles(FilesConverter.toProto(jobInfo.files()))
@@ -153,7 +166,13 @@ public final class JobInfoConverter {
         .setStatus(StatusConverter.toProto(jobInfo.status()))
         .setResult(ResultConverter.toProto(jobInfo.resultWithCause()))
         .setProperties(PropertiesConverter.toProto(jobInfo.properties()))
-        .addAllError(jobInfo.warnings().getAll())
+        // Only contains WARNING findings. Kept for the readers which don't support findings.
+        .addAllError(
+            findings.stream()
+                .filter(finding -> finding.getSeverity() == Severity.WARNING)
+                .map(finding -> ErrorModelConverter.toExceptionDetail(finding.getDetail()))
+                .collect(toImmutableList()))
+        .addAllFinding(findings)
         .setJobSpec(jobInfo.protoSpec().getProto())
         .addAllTestInfo(
             jobInfo.tests().getAll().values().stream()

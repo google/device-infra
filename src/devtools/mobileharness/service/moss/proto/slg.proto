@@ -20,6 +20,7 @@ package mobileharness.service.moss;
 
 import "src/devtools/common/metrics/stability/model/proto/exception.proto";
 import "src/devtools/mobileharness/api/model/proto/device.proto";
+import "src/devtools/mobileharness/api/model/proto/diagnostic.proto";
 import "src/devtools/mobileharness/api/model/proto/job.proto";
 import "src/devtools/mobileharness/api/model/proto/test.proto";
 import "src/devtools/mobileharness/service/moss/proto/result.proto";
@@ -189,8 +190,12 @@ message JobInfoProto {
   ResultProto result = 5;
   // The proto to construct a Properties.
   PropertiesProto properties = 6;
-  // The proto to construct a Errors.
-  repeated stability.model.ExceptionDetail error = 7;
+  // The WARNING findings of the job. Superseded by finding but still populated
+  // for the readers that don't support it. Only read when finding is empty,
+  // e.g., the proto was persisted by an older version.
+  repeated stability.model.ExceptionDetail error = 7 [deprecated = true];
+  // The findings of the job.
+  repeated mobileharness.api.model.Finding finding = 11;
   // The proto to construct a ProtoJobSpec.
   mobileharness.shared.spec.JobSpec job_spec = 8;
   // All tests belong to the job.
@@ -226,8 +231,12 @@ message TestInfoProto {
   ResultProto result = 4;
   // The proto to construct the Properties of the test.
   PropertiesProto properties = 5;
-  // The proto to construct the Errors of the test.
-  repeated stability.model.ExceptionDetail error = 6;
+  // The WARNING findings of the test. Superseded by finding but still populated
+  // for the readers that don't support it. Only read when finding is empty,
+  // e.g., the proto was persisted by an older version.
+  repeated stability.model.ExceptionDetail error = 6 [deprecated = true];
+  // The findings of the test.
+  repeated mobileharness.api.model.Finding finding = 10;
   // The proto to recover sub-tests.
   repeated TestInfoProto sub_test_info = 7;
   // Extra info of the test.

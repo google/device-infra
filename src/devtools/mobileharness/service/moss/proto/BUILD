@@ -49,6 +49,7 @@ proto_library(
         ":result_proto",
         "//src/devtools/common/metrics/stability/model/proto:error_proto",
         "//src/devtools/mobileharness/api/model/proto:device_proto",
+        "//src/devtools/mobileharness/api/model/proto:diagnostic_proto",
         "//src/devtools/mobileharness/api/model/proto:job_proto",
         "//src/devtools/mobileharness/api/model/proto:test_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_proto",
