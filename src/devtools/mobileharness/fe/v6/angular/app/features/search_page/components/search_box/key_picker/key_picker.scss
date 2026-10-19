@@ -206,8 +206,8 @@
 
 .kp-row-main {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  align-items: baseline;
+  gap: 6px;
   min-width: 0;
   flex: 1;
 }
@@ -243,13 +243,6 @@
   white-space: nowrap;
   flex-shrink: 0;
   user-select: none;
-}
-
-.kp-meta-dot {
-  font-size: 0.75rem;
-  color: #747775;
-  user-select: none;
-  line-height: 1;
 }
 
 .kp-row-coverage {

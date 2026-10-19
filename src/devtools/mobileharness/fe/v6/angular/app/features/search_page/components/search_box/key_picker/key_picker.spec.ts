@@ -405,27 +405,25 @@ describe('KeyPickerComponent', () => {
       const rows = document.querySelectorAll('.kp-row');
       expect(rows.length).toBe(3);
 
-      // Row 1: driver (14 groups, unapplied, coverage notShown)
+      // Row 1: driver (14 groups behind key name, unapplied, coverage notShown -> right side empty)
       expect(rows[0].querySelector('.kp-row-name')?.textContent).toContain(
         'Driver',
       );
-      expect(rows[0].querySelector('.kp-group-count')?.textContent).toBe(
-        '14 groups',
-      );
       expect(
-        rows[0].querySelector('.kp-row-meta-group .kp-group-count'),
-      ).not.toBeNull();
+        rows[0].querySelector('.kp-row-main .kp-group-count')?.textContent,
+      ).toBe('(14 groups)');
       expect(rows[0].querySelector('.kp-group-pill')).toBeNull();
-      expect(rows[0].querySelector('.kp-meta-dot')).toBeNull();
       expect(rows[0].querySelector('.kp-row-meta')).toBeNull();
+      expect(rows[0].querySelector('.kp-row-meta-group')?.children.length).toBe(
+        0,
+      );
       expect(rows[0].classList.contains('kp-inert')).toBeFalse();
 
-      // Row 2: host_name (applied, inert, groups and coverage omitted, text applied without chip)
+      // Row 2: host_name (applied, inert, groups and coverage omitted, text applied without chip on right)
       expect(rows[1].querySelector('.kp-row-name')?.textContent).toContain(
         'Host Name',
       );
       expect(rows[1].querySelector('.kp-group-count')).toBeNull();
-      expect(rows[1].querySelector('.kp-meta-dot')).toBeNull();
       expect(rows[1].querySelector('.kp-applied-meta')?.textContent).toBe(
         'applied',
       );
@@ -435,17 +433,18 @@ describe('KeyPickerComponent', () => {
       );
       expect(rows[1].classList.contains('kp-inert')).toBeTrue();
 
-      // Row 3: dim::os_version (12 groups, coverage shown: 1,200 devices, separated by dot)
+      // Row 3: dim::os_version (12 groups behind key name, coverage on far right)
       expect(rows[2].querySelector('.kp-row-name')?.textContent).toContain(
         'OS Version',
       );
-      expect(rows[2].querySelector('.kp-group-count')?.textContent).toBe(
-        '12 groups',
-      );
-      expect(rows[2].querySelector('.kp-row-meta')?.textContent).toBe(
-        'Used in 1,200 devices',
-      );
-      expect(rows[2].querySelector('.kp-meta-dot')?.textContent).toBe('·');
+      expect(
+        rows[2].querySelector('.kp-row-main .kp-group-count')?.textContent,
+      ).toBe('(12 groups)');
+      expect(
+        rows[2].querySelector('.kp-row-meta-group .kp-row-coverage')
+          ?.textContent,
+      ).toBe('Used in 1,200 devices');
+      expect(rows[2].querySelector('.kp-meta-dot')).toBeNull();
       expect(rows[2].classList.contains('kp-inert')).toBeFalse();
     });
 
