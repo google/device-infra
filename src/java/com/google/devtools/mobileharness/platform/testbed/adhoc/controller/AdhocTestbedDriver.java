@@ -52,6 +52,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -110,14 +111,8 @@ public class AdhocTestbedDriver extends BaseDriver {
    */
   private final Barrier preDriverBarrier;
 
-  /**
-   * Lets all threads wait until the main driver finishes before running decorators' postRun().
-   *
-   * <p>Waiting threads may be woken up before all threads reach the barrier point if the barrier
-   * wakes them up, for example any decorator stacks try to skip the main driver execution, or
-   * awaiting threads are interrupted.
-   */
-  private final Barrier postDriverBarrier;
+  /** Lets all threads wait until the main driver finishes before running decorators' postRun(). */
+  private final CountDownLatch postDriverBarrier = new CountDownLatch(1);
 
   private final ListeningExecutorService threadPool;
   private final DriverFactory driverFactory;
@@ -150,7 +145,6 @@ public class AdhocTestbedDriver extends BaseDriver {
     this.decoratorExtender = null;
     this.subDrivers = ImmutableList.copyOf(createSubDrivers(devices));
     this.preDriverBarrier = new Barrier(devices.size());
-    this.postDriverBarrier = new Barrier(devices.size());
 
     // Sets up TestbedDevice.
     testInfo.log().atInfo().alsoTo(logger).log("Setting up TestbedDevice");
@@ -502,24 +496,42 @@ public class AdhocTestbedDriver extends BaseDriver {
                 "All parties invoked on pre-driver barrier: %s, device=[%s]",
                 allPartiesInvokedOnPreDriverBarrier, getDevice().getDeviceId());
         if (allPartiesInvokedOnPreDriverBarrier) {
-          // The main "run" of AdhocTestbedDriver runs each stack using a sub-TestInfo specific to
-          // each sub-device. We need to make sure the main driver is run against the TestInfo
-          // passed to the AdhocTestbedDriver constructor.
-          getDecorated().run(AdhocTestbedDriver.this.getTest());
-
-          testInfo
-              .log()
-              .atInfo()
-              .alsoTo(logger)
-              .log("Waiting on post-driver barrier, device=[%s]", getDevice().getDeviceId());
-          boolean allPartiesInvokedOnPostDriverBarrier = postDriverBarrier.await();
-          testInfo
-              .log()
-              .atInfo()
-              .alsoTo(logger)
-              .log(
-                  "All parties invoked on post-driver barrier: %s, device=[%s]",
-                  allPartiesInvokedOnPostDriverBarrier, getDevice().getDeviceId());
+          boolean postDriverBarrierInterrupted = false;
+          try {
+            // The main "run" of AdhocTestbedDriver runs each stack using a sub-TestInfo specific to
+            // each sub-device. We need to make sure the main driver is run against the TestInfo
+            // passed to the AdhocTestbedDriver constructor.
+            getDecorated().run(AdhocTestbedDriver.this.getTest());
+          } finally {
+            // Only the main driver stack is not a SecondaryDriver.
+            if (!(getDecorated() instanceof SecondaryDriver)) {
+              postDriverBarrier.countDown();
+            } else {
+              testInfo
+                  .log()
+                  .atInfo()
+                  .alsoTo(logger)
+                  .log("Waiting on post-driver barrier, device=[%s]", getDevice().getDeviceId());
+              while (true) {
+                try {
+                  postDriverBarrier.await();
+                  break;
+                } catch (InterruptedException e) {
+                  postDriverBarrierInterrupted = true;
+                }
+              }
+              testInfo
+                  .log()
+                  .atInfo()
+                  .alsoTo(logger)
+                  .log(
+                      "All parties invoked on post-driver barrier: %s, device=[%s]",
+                      !postDriverBarrierInterrupted, getDevice().getDeviceId());
+            }
+          }
+          if (postDriverBarrierInterrupted) {
+            throw new InterruptedException();
+          }
         } else {
           mainDriverSkipped = true;
           testInfo
@@ -541,6 +553,10 @@ public class AdhocTestbedDriver extends BaseDriver {
                     getDevice().getDeviceId()));
         exception.addSuppressed(e);
         throw exception;
+      } finally {
+        if (!(getDecorated() instanceof SecondaryDriver)) {
+          postDriverBarrier.countDown();
+        }
       }
     }
   }
@@ -567,7 +583,7 @@ public class AdhocTestbedDriver extends BaseDriver {
         // The driver barrier (right before the driver) was not called for the current device's
         // decorators stack, it's possible that a decorator decides to skip the test (b/384636099)
         preDriverBarrier.stopAwaitations();
-        postDriverBarrier.stopAwaitations();
+        postDriverBarrier.countDown();
       }
     }
   }
