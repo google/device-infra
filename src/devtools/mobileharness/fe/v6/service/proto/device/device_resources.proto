@@ -159,6 +159,11 @@ message HealthAndActivityInfo {
     string status = 1;
     // Flag indicating if this raw status is considered critical.
     bool is_critical = 2;
+    // Optional. The timestamp when the device's lab-side status was last
+    // modified in Master (from `DeviceCondition.status_modify_time`). May
+    // differ from when `status` changed if Device Master overrides the lab
+    // status or a dirty device expires to MISSING. Unset if unavailable.
+    google.protobuf.Timestamp modify_time = 3;
   }
   DeviceStatus device_status = 4;
 
