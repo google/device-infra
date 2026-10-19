@@ -110,7 +110,7 @@ public class SingleDeviceReport implements Report {
     return Optional.ofNullable(deviceIdsToAssessments.get(deviceId));
   }
 
-  /** Returns whether there's at least one device that can match all user requirement. */
+  /** Returns whether at least one device matches all user requirements. */
   @Override
   public boolean hasPerfectMatch() {
     return scoresToDeviceIds.containsKey(SingleDeviceAssessment.MAX_SCORE);
