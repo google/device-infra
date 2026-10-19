@@ -1,10 +1,11 @@
 import {DOCUMENT} from '@angular/common';
 import {
   Component,
+  effect,
   inject,
+  Injectable,
   input,
   OnDestroy,
-  OnInit,
   signal,
 } from '@angular/core';
 import {Router} from '@angular/router';
@@ -21,6 +22,124 @@ import {
 import {buildQueryString} from '@deviceinfra/app/core/utils/url_utils';
 
 export type {NavLinkConfig};
+
+/**
+ * Options for programmatic client-side navigation via `NavLinkService`.
+ */
+export interface NavLinkNavigateOptions {
+  /** How to handle current URL query parameters upon navigation. */
+  queryParamsHandling?: 'merge' | 'preserve' | '';
+  /** Custom query parameters to append to the navigation. */
+  customQueryParams?: Record<string, string>;
+  /** Whether to replace the current URL in browser history (`replaceUrl: true`). */
+  replaceUrl?: boolean;
+}
+
+/**
+ * Service that centralizes route path resolution, query parameter merging,
+ * parent-frame (`UrlService`) notification in embedded mode, and Angular Router
+ * navigation for both `<a app-nav-link>` and programmatic callers.
+ */
+@Injectable({providedIn: 'root'})
+export class NavLinkService {
+  private readonly router = inject(Router);
+  private readonly urlService = inject(UrlService);
+  private readonly commonParamsService = inject(CommonParamsService);
+  private readonly document = inject(DOCUMENT);
+
+  /**
+   * Builds the internal Angular router path for the given `NavLinkConfig`.
+   */
+  buildRoutePath(config: NavLinkConfig): string {
+    const strategy = NavigationStrategyRegistry.getRequired(config.type);
+    return strategy.buildRoutePath(config);
+  }
+
+  /**
+   * Gets the authoritative query parameters for the destination page during
+   * client-side navigation (CSN).
+   * Resolves common parameters and destination-allowed parameters via the strategy.
+   */
+  getCsnQueryParams(
+    config: NavLinkConfig,
+    options: NavLinkNavigateOptions = {},
+  ): Record<string, string> {
+    const strategy = NavigationStrategyRegistry.getRequired(config.type);
+    return strategy.toCsnQueryParams(
+      this.toInputParameters(config, options.queryParamsHandling),
+      this.commonParamsService.getCommonParams(),
+      options.customQueryParams ?? {},
+    );
+  }
+
+  /**
+   * Prepares the payload for external parent window integration (`UrlService`).
+   */
+  toExternalPayload(
+    config: NavLinkConfig,
+    options: NavLinkNavigateOptions = {},
+  ): ExternalNavPayload {
+    const strategy = NavigationStrategyRegistry.getRequired(config.type);
+    return strategy.toExternalPayload(
+      this.toInputParameters(config, options.queryParamsHandling),
+      this.commonParamsService.getCommonParams(),
+      options.customQueryParams ?? {},
+    );
+  }
+
+  /**
+   * Executes client-side navigation for the given `NavLinkConfig`, including
+   * notifying the parent window when running in embedded mode.
+   */
+  navigate(
+    config: NavLinkConfig,
+    options: NavLinkNavigateOptions = {},
+  ): Promise<boolean> {
+    const strategy = NavigationStrategyRegistry.getRequired(config.type);
+    const routePath = strategy.buildRoutePath(config);
+
+    // to avoid unnecessary toExternalPayload computation, we only notify the parent window
+    // when running in embedded mode.
+    // So do NOT remove isEmbeddedMode check.
+    if (
+      strategy.supportsExternalNavigation &&
+      this.commonParamsService.isEmbeddedMode()
+    ) {
+      const {page, params} = this.toExternalPayload(config, options);
+      this.urlService.notifyNavigated(
+        page as 'host_details' | 'device_details',
+        params,
+      );
+    }
+
+    const queryParams = this.getCsnQueryParams(config, options);
+
+    return this.router.navigate([routePath], {
+      ...(Object.keys(queryParams).length > 0 ? {queryParams} : {}),
+      ...(options.replaceUrl ? {replaceUrl: true} : {}),
+    });
+  }
+
+  private getCurrentUrlQueryParams(): Record<string, string> {
+    const search = this.document.location?.search || '';
+    const params = new URLSearchParams(search);
+    const result: Record<string, string> = {};
+    params.forEach((value, key) => {
+      result[key] = value;
+    });
+    return result;
+  }
+
+  private toInputParameters(
+    config: NavLinkConfig,
+    queryParamsHandling?: 'merge' | 'preserve' | '',
+  ): Record<string, unknown> {
+    return {
+      ...(queryParamsHandling ? this.getCurrentUrlQueryParams() : {}),
+      ...(config as unknown as Record<string, unknown>),
+    };
+  }
+}
 
 /**
  * A customized link component to centralize navigation behavior.
@@ -42,7 +161,7 @@ export type {NavLinkConfig};
     '(click)': 'handleClick($event)',
   },
 })
-export class NavLink implements OnInit, OnDestroy {
+export class NavLink implements OnDestroy {
   /** Configuration for the target link (host, device, job, test, session). */
   readonly config = input.required<NavLinkConfig>();
 
@@ -55,10 +174,9 @@ export class NavLink implements OnInit, OnDestroy {
   /** Custom query parameters to append to the navigation. */
   readonly customQueryParams = input<Record<string, string>>({});
 
-  private readonly router = inject(Router);
+  private readonly navLinkService = inject(NavLinkService);
   private readonly urlService = inject(UrlService);
   private readonly commonParamsService = inject(CommonParamsService);
-  private readonly document = inject(DOCUMENT);
   private readonly destroyed = new ReplaySubject<void>(1);
 
   /**
@@ -67,9 +185,7 @@ export class NavLink implements OnInit, OnDestroy {
    * Note: routerLink does NOT include query params.
    */
   get routerLink(): string {
-    const cfg = this.config();
-    const strategy = NavigationStrategyRegistry.getRequired(cfg.type);
-    return strategy.buildRoutePath(cfg);
+    return this.navLinkService.buildRoutePath(this.config());
   }
 
   /**
@@ -88,22 +204,32 @@ export class NavLink implements OnInit, OnDestroy {
    */
   readonly fullPageLink = signal<string>('');
 
-  ngOnInit() {
-    const navQueryParams = this.getCsnQueryParams();
-    const newSearch = buildQueryString(navQueryParams);
+  constructor() {
+    effect(() => {
+      const cfg = this.config();
+      const options: NavLinkNavigateOptions = {
+        queryParamsHandling: this.queryParamsHandling(),
+        customQueryParams: this.customQueryParams(),
+      };
+      const navQueryParams = this.navLinkService.getCsnQueryParams(
+        cfg,
+        options,
+      );
+      const newSearch = buildQueryString(navQueryParams);
+      const initialLink = `${this.navLinkService.buildRoutePath(cfg)}${newSearch}`;
 
-    // Default fullPageLink to the internal route path with clean query params.
-    this.fullPageLink.set(`${this.routerLink}${newSearch}`);
-    console.log('init fullPageLink: ', this.fullPageLink());
+      // Default fullPageLink to the internal route path with clean query params.
+      this.fullPageLink.set(initialLink);
+      console.log('init fullPageLink: ', initialLink);
 
-    const cfg = this.config();
-    const strategy = NavigationStrategyRegistry.getRequired(cfg.type);
-    if (
-      strategy.supportsExternalNavigation &&
-      this.commonParamsService.isEmbeddedMode()
-    ) {
-      this.fetchFullPageLink();
-    }
+      const strategy = NavigationStrategyRegistry.getRequired(cfg.type);
+      if (
+        strategy.supportsExternalNavigation &&
+        this.commonParamsService.isEmbeddedMode()
+      ) {
+        this.fetchFullPageLink(cfg, options);
+      }
+    });
   }
 
   ngOnDestroy() {
@@ -111,60 +237,18 @@ export class NavLink implements OnInit, OnDestroy {
     this.destroyed.complete();
   }
 
-  private getCurrentUrlQueryParams(): Record<string, string> {
-    const search = this.document.location?.search || '';
-    const params = new URLSearchParams(search);
-    const result: Record<string, string> = {};
-    params.forEach((value, key) => {
-      result[key] = value;
-    });
-    return result;
-  }
-
-  private getInputParameters(): Record<string, unknown> {
-    return {
-      ...(this.queryParamsHandling() ? this.getCurrentUrlQueryParams() : {}),
-      ...(this.config() as unknown as Record<string, unknown>),
-    };
-  }
-
-  /**
-   * Gets the authoritative query parameters for the destination page during
-   * client-side navigation (CSN).
-   * Resolves common parameters and destination-allowed parameters via the strategy.
-   */
-  private getCsnQueryParams(): Record<string, string> {
-    const cfg = this.config();
-    const strategy = NavigationStrategyRegistry.getRequired(cfg.type);
-    return strategy.toCsnQueryParams(
-      this.getInputParameters(),
-      this.commonParamsService.getCommonParams(),
-      this.customQueryParams(),
-    );
-  }
-
-  /**
-   * Prepares the payload for external parent window integration (UrlService).
-   */
-  private toExternalPayload(): ExternalNavPayload {
-    const cfg = this.config();
-    const strategy = NavigationStrategyRegistry.getRequired(cfg.type);
-    return strategy.toExternalPayload(
-      this.getInputParameters(),
-      this.commonParamsService.getCommonParams(),
-      this.customQueryParams(),
-    );
-  }
-
   /**
    * Fetches the full page link from the parent window when running in embedded mode.
    */
-  private fetchFullPageLink() {
+  private fetchFullPageLink(
+    cfg: NavLinkConfig,
+    options: NavLinkNavigateOptions,
+  ) {
     if (!this.commonParamsService.isEmbeddedMode()) {
       return;
     }
 
-    const {page, params} = this.toExternalPayload();
+    const {page, params} = this.navLinkService.toExternalPayload(cfg, options);
 
     this.urlService
       .getExternalUrl(page, params)
@@ -172,14 +256,14 @@ export class NavLink implements OnInit, OnDestroy {
       .subscribe({
         next: (url: string) => {
           this.fullPageLink.set(url);
-          console.log('receivedfullPageLink', this.fullPageLink());
+          console.log('receivedfullPageLink', url);
         },
         error: () => {
           console.warn(
             'failed to fetch fullPageLink, fallback to routerLink',
-            this.routerLink,
+            this.navLinkService.buildRoutePath(cfg),
           );
-          // Fallback to local URL (already set in ngOnInit).
+          // Fallback to local URL (already set in effect).
         },
       });
   }
@@ -224,28 +308,9 @@ export class NavLink implements OnInit, OnDestroy {
     // since the routerLink itself does not contain query params, we will use
     // the router.navigate() method to navigate to the routerLink with query
     // params.
-
-    const cfg = this.config();
-    const strategy = NavigationStrategyRegistry.getRequired(cfg.type);
-
-    // to avoid unnecessary toExternalPayload computation, we only notify the parent window
-    // when running in embedded mode.
-    // So do NOT remove isEmbeddedMode check.
-    if (
-      strategy.supportsExternalNavigation &&
-      this.commonParamsService.isEmbeddedMode()
-    ) {
-      const {page, params} = this.toExternalPayload();
-      this.urlService.notifyNavigated(
-        page as 'host_details' | 'device_details',
-        params,
-      );
-    }
-
-    const queryParams = this.getCsnQueryParams();
-
-    this.router.navigate([this.routerLink], {
-      ...(Object.keys(queryParams).length > 0 ? {queryParams} : {}),
+    this.navLinkService.navigate(this.config(), {
+      queryParamsHandling: this.queryParamsHandling(),
+      customQueryParams: this.customQueryParams(),
     });
   }
 }

@@ -14,8 +14,7 @@ import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {NavigationEnd, Router} from '@angular/router';
 import {filter} from 'rxjs/operators';
 
-import {CommonParamsService} from '../../../../core/services/common_params_service';
-import {NavigationStrategyRegistry} from '../../../../core/utils/navigation';
+import {NavLinkService} from '../../../../shared/components/nav_link/nav_link';
 import {
   JUMP_SCOPE_LIST,
   JUMP_SCOPES,
@@ -46,7 +45,7 @@ import {
 })
 export class HeaderJumpBar implements OnInit {
   private readonly router = inject(Router);
-  private readonly commonParamsService = inject(CommonParamsService);
+  private readonly navLinkService = inject(NavLinkService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly hostElement = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly document = inject(DOCUMENT);
@@ -337,21 +336,14 @@ export class HeaderJumpBar implements OnInit {
    *   - scope: Active `JumpScopeKey`.
    * Output: None.
    * Explanation:
-   *   Uses `NavigationStrategyRegistry.getRequired('all_site_search')` to build clean
+   *   Delegates to `NavLinkService.navigate()` with `'all_site_search'` config to build clean
    *   CSN query parameters preserving Common Query Parameters (`fake_data`, `debug`, etc.).
    */
   private navigateToAllSiteSearch(query: string, scope: JumpScopeKey) {
-    const strategy = NavigationStrategyRegistry.getRequired('all_site_search');
-    const inputParams: Record<string, unknown> = {'q': query};
-    if (scope !== 'any') {
-      inputParams['scope'] = scope;
-    }
-    const queryParams = strategy.toCsnQueryParams(
-      inputParams,
-      this.commonParamsService.getCommonParams(),
-    );
-    this.router.navigate([strategy.buildRoutePath(inputParams)], {
-      queryParams,
+    this.navLinkService.navigate({
+      type: 'all_site_search',
+      q: query,
+      ...(scope !== 'any' ? {scope} : {}),
     });
   }
 }

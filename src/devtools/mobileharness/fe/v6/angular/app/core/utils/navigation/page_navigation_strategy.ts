@@ -63,7 +63,7 @@ export type NavLinkConfig =
     }
   | {
       type: 'all_site_search';
-      q: string;
+      q?: string;
       scope?: string;
     };
 

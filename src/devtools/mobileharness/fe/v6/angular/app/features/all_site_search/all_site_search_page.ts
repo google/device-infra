@@ -9,7 +9,7 @@ import {
   signal,
 } from '@angular/core';
 import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {ActivatedRoute, Router} from '@angular/router';
+import {ActivatedRoute} from '@angular/router';
 import {BehaviorSubject, combineLatest, EMPTY} from 'rxjs';
 import {catchError, distinctUntilChanged, map, switchMap} from 'rxjs/operators';
 
@@ -17,14 +17,12 @@ import {
   AllSiteMatch,
   ResolveAllSiteQueryRequest,
 } from '../../core/models/search';
-import {CommonParamsService} from '../../core/services/common_params_service';
 import {SEARCH_SERVICE} from '../../core/services/search/search_service';
-import {UrlService} from '../../core/services/url_service';
 import {
-  NavigationStrategyRegistry,
+  NavLink,
   NavLinkConfig,
-} from '../../core/utils/navigation';
-import {NavLink} from '../../shared/components/nav_link/nav_link';
+  NavLinkService,
+} from '../../shared/components/nav_link/nav_link';
 import {LoadingService} from '../../shared/services/loading_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
 import {getErrorMessage} from '../../shared/utils/error_utils';
@@ -96,10 +94,8 @@ export interface AmbiguousCandidateItem {
 })
 export class AllSiteSearchPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly searchService = inject(SEARCH_SERVICE);
-  private readonly commonParamsService = inject(CommonParamsService);
-  private readonly urlService = inject(UrlService);
+  private readonly navLinkService = inject(NavLinkService);
   private readonly loadingService = inject(LoadingService);
   private readonly snackBar = inject(SnackBarService);
   private readonly destroyRef = inject(DestroyRef);
@@ -223,7 +219,12 @@ export class AllSiteSearchPage implements OnInit {
 
   /** Target `NavLinkConfig` for the single-entity fallback chip when `isScopeSpecific()` is true. */
   readonly scopedFallbackNavConfig = computed<NavLinkConfig>(() => {
-    const pageType = this.currentScope().searchPageType || 'device_search';
+    const pageType = this.currentScope().searchPageType;
+    if (!pageType) {
+      throw new Error(
+        `Missing searchPageType for scope: ${this.scope()}`,
+      );
+    }
     return {type: pageType};
   });
 
@@ -316,63 +317,18 @@ export class AllSiteSearchPage implements OnInit {
   }
 
   /**
-   * Switches the scope from a specific identifier type back to `'any'` and re-runs resolution.
-   *
-   * Input: None.
-   * Output: None.
-   * Explanation:
-   *   Navigates to `/search?q=<query>` (dropping `scope`) while preserving Common Query Parameters.
-   */
-  tryAcrossAnyId() {
-    const strategy = NavigationStrategyRegistry.getRequired('all_site_search');
-    const q = this.query();
-    const inputParams: Record<string, unknown> = q ? {'q': q} : {};
-    const queryParams = strategy.toCsnQueryParams(
-      inputParams,
-      this.commonParamsService.getCommonParams(),
-    );
-    this.router.navigate([strategy.buildRoutePath(inputParams)], {
-      queryParams,
-    });
-  }
-
-  /**
    * Redirects (`replaceUrl: true`) to the Entity Detail page for a unique 1-Hit match.
    *
    * Input:
    *   - candidate: The resolved `AmbiguousCandidateItem` for the single match.
    * Output: None.
    * Explanation:
-   *   Uses `NavigationStrategyRegistry` for the matched entity type so that `q` and `scope`
-   *   are stripped and only Common Query Parameters + Detail Page parameters (`host_name`,
-   *   `universe`) are kept. Also notifies the parent frame when running in embedded mode.
+   *   Delegates to `NavLinkService.navigate()` with `replaceUrl: true` so that `q` and `scope`
+   *   are stripped, Common Query Parameters + Detail Page parameters (`host_name`, `universe`)
+   *   are kept, and the parent frame is notified when running in embedded mode.
    */
   private redirectToSingleMatch(candidate: AmbiguousCandidateItem) {
-    const cfg = candidate.navConfig;
-    const strategy = NavigationStrategyRegistry.getRequired(cfg.type);
-    const routePath = strategy.buildRoutePath(cfg);
-    const inputParams = cfg as unknown as Record<string, unknown>;
-    const commonParams = this.commonParamsService.getCommonParams();
-    const queryParams = strategy.toCsnQueryParams(inputParams, commonParams);
-
-    if (
-      strategy.supportsExternalNavigation &&
-      this.commonParamsService.isEmbeddedMode()
-    ) {
-      const {page, params} = strategy.toExternalPayload(
-        inputParams,
-        commonParams,
-      );
-      this.urlService.notifyNavigated(
-        page as 'host_details' | 'device_details',
-        params,
-      );
-    }
-
-    this.router.navigate([routePath], {
-      ...(Object.keys(queryParams).length > 0 ? {queryParams} : {}),
-      replaceUrl: true,
-    });
+    this.navLinkService.navigate(candidate.navConfig, {replaceUrl: true});
   }
 
   /**
