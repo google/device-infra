@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query.suggest;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.ComplexMatch;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FilterValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetAddGroupBy;
@@ -29,6 +30,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetStagedM
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetViewExisting;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.NoValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.StartsWith;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.KeyVocabulary;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.KeyDescriptor;
@@ -56,7 +58,7 @@ final class SuggestionActions {
         .build();
   }
 
-  static FleetOpenPicker openPickerNewChip(KeyVocabulary vocabulary, KeyDescriptor key) {
+  private static FleetOpenPicker openPickerNewChip(KeyVocabulary vocabulary, KeyDescriptor key) {
     return FleetOpenPicker.newBuilder()
         .setKey(key.id())
         .setMetadata(metadata(vocabulary, key))
@@ -113,6 +115,15 @@ final class SuggestionActions {
         .build();
   }
 
+  /** A complex prefix filter ({@code starts_with}) on {@code keyId}. */
+  static Filter startsWithFilter(String keyId, String prefix) {
+    return Filter.newBuilder()
+        .setKey(keyId)
+        .setComplex(
+            ComplexMatch.newBuilder().setStartsWith(StartsWith.newBuilder().setValue(prefix)))
+        .build();
+  }
+
   private static FleetFilterChipMetadata metadata(KeyVocabulary vocabulary, KeyDescriptor key) {
     return FleetFilterChipMetadata.newBuilder()
         .setKeyDisplayName(vocabulary.titleDisplayName(key))
@@ -122,12 +133,15 @@ final class SuggestionActions {
   }
 
   /**
-   * Compact condition text for the resulting chip pill of a {@link SimpleMatch} filter built by
-   * {@link #valueFilter} or {@link #noValueFilter}: a single value shows itself, several collapse
-   * to their count, an exclude is prefixed with the not-equal sign, and a no-value filter reads as
-   * "empty" or "not empty".
+   * Compact condition text for the resulting chip pill of a filter built by {@link #valueFilter},
+   * {@link #noValueFilter}, or {@link #startsWithFilter}: a prefix filter reads as "starts with x",
+   * a single value shows itself, several collapse to their count, an exclude is prefixed with the
+   * not-equal sign, and a no-value filter reads as "empty" or "not empty".
    */
   private static String pillCondition(FleetIndex index, Filter filter) {
+    if (filter.getModeCase() == Filter.ModeCase.COMPLEX) {
+      return "starts with " + filter.getComplex().getStartsWith().getValue();
+    }
     SimpleMatch simple = filter.getSimple();
     boolean negated = simple.getNegated();
     int count = simple.getValuesCount();

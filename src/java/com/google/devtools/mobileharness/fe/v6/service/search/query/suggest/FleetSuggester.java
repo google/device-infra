@@ -20,8 +20,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.applyFilter;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.noValueFilter;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.openPicker;
-import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.openPickerNewChip;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.openPickerStaged;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.startsWithFilter;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.valueFilter;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionText.conditionText;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionText.displayValue;
@@ -422,7 +422,8 @@ public final class FleetSuggester {
       SuggestionContext context, String token, boolean exclude) {
     FleetIndex index = context.index();
     KeyVocabulary vocabulary = context.vocabulary();
-    String value = Ascii.toLowerCase(stripQuotes(token));
+    String prefix = stripQuotes(token);
+    String value = Ascii.toLowerCase(prefix);
     ImmutableList.Builder<SuggestionCandidate> out = ImmutableList.builder();
     Set<String> seen = new HashSet<>();
 
@@ -449,7 +450,9 @@ public final class FleetSuggester {
     }
 
     for (String identifierKeyId : index.keyIds()) {
-      if (!context.corpus().isIdentifierKey(identifierKeyId)) {
+      if (exclude
+          || !context.corpus().isIdentifierKey(identifierKeyId)
+          || context.isActiveKey(identifierKeyId)) {
         continue;
       }
       Optional<KeyDescriptor> key = vocabulary.describe(identifierKeyId);
@@ -465,16 +468,18 @@ public final class FleetSuggester {
       if (matchCount == 0 || (matchCount == 1 && keyValues.get(loIndex).equals(value))) {
         continue;
       }
+      Filter filter = startsWithFilter(identifierKeyId, prefix);
       FleetSuggestion.Builder proto =
           FleetSuggestion.newBuilder()
               .setLabel("Add filter")
               .addAllMainText(
-                  segments(vocabulary.titleDisplayName(key.get()) + " starts with ", token))
-              .setCount(matchCount)
-              .setOpenPicker(openPickerNewChip(vocabulary, key.get()));
-      // The row opens the picker instead of applying a value, so among keys of the same priority
-      // it ranks below every concrete value that starts with the token.
-      out.add(SuggestionCandidate.keyOnly(key.get(), MatchTier.WEAK, proto));
+                  segments(vocabulary.titleDisplayName(key.get()) + " starts with ", prefix))
+              .setApplyFilter(applyFilter(vocabulary, index, key.get(), filter));
+      // The row applies a prefix filter rather than a single value, so among keys of the same
+      // priority it ranks below every concrete value that starts with the token.
+      out.add(
+          SuggestionCandidate.presetCondition(
+              key.get(), MatchTier.WEAK, proto, matchCount, /* rankCount= */ 0));
     }
     return out.build();
   }

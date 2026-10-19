@@ -50,9 +50,34 @@ public abstract class DeviceRecord {
     return values().getOrDefault(keyId, ImmutableList.of());
   }
 
+  /**
+   * Lowercased non-empty value sets per canonical key ID, precomputed at record construction time
+   * so filtered search, suggestion counting, group-by evaluation, and posting list construction can
+   * look up a key's normalized values in {@code O(1)} without per-query string lowercasing or set
+   * allocation.
+   */
+  public abstract ImmutableMap<String, ImmutableSet<String>> normalizedValues();
+
   /** Returns the lowercased normalized value set for indexing and search matching. */
   public ImmutableSet<String> normalizedValues(String keyId) {
-    ImmutableList<String> raw = values(keyId);
+    return normalizedValues().getOrDefault(keyId, ImmutableSet.of());
+  }
+
+  private static ImmutableMap<String, ImmutableSet<String>> normalizeValues(
+      ImmutableMap<String, ImmutableList<String>> values) {
+    ImmutableMap.Builder<String, ImmutableSet<String>> normalized =
+        ImmutableMap.builderWithExpectedSize(values.size());
+    values.forEach(
+        (keyId, raw) -> {
+          ImmutableSet<String> set = normalizeValueList(raw);
+          if (!set.isEmpty()) {
+            normalized.put(keyId, set);
+          }
+        });
+    return normalized.buildOrThrow();
+  }
+
+  private static ImmutableSet<String> normalizeValueList(ImmutableList<String> raw) {
     if (raw.isEmpty()) {
       return ImmutableSet.of();
     }
@@ -68,6 +93,6 @@ public abstract class DeviceRecord {
 
   public static DeviceRecord create(
       String deviceId, ImmutableMap<String, ImmutableList<String>> values) {
-    return new AutoValue_DeviceRecord(deviceId, values);
+    return new AutoValue_DeviceRecord(deviceId, values, normalizeValues(values));
   }
 }

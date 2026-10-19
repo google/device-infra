@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query.suggest;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
@@ -116,13 +117,39 @@ public final class FleetSuggesterTest {
   public void uuidPrefix_collapsesToSingleStartsWithSuggestion() {
     FleetSuggestionResponse response = suggester.suggest(corpus, request("device-"));
 
-    FleetSuggestion collapsed = firstOpenPicker(response, "device_field::uuid");
+    FleetSuggestion collapsed = firstApplyFilter(response, "device_field::uuid");
     assertThat(collapsed.getCount()).isEqualTo(4);
     assertThat(collapsed.getMainTextList())
         .containsExactly(
             TextSegment.newBuilder().setText("UUID starts with ").setEmphasized(false).build(),
             TextSegment.newBuilder().setText("device-").setEmphasized(true).build())
         .inOrder();
+    assertThat(
+            collapsed.getApplyFilter().getResultingFilter().getComplex().getStartsWith().getValue())
+        .isEqualTo("device-");
+    assertThat(collapsed.getApplyFilter().getPillKey()).isEqualTo("UUID");
+    assertThat(collapsed.getApplyFilter().getPillCondition()).isEqualTo("starts with device-");
+
+    // When the identifier key already carries an active chip, or when the prefix is negated, the
+    // collapsed "starts with" row is suppressed.
+    FleetSuggestionResponse withUuidChip =
+        suggester.suggest(corpus, request("device-", simple("device_field::uuid", "device-0")));
+    assertThat(
+            withUuidChip.getItemsList().stream()
+                .noneMatch(
+                    item ->
+                        item.hasApplyFilter()
+                            && item.getApplyFilter().getResultingFilter().hasComplex()))
+        .isTrue();
+
+    FleetSuggestionResponse negated = suggester.suggest(corpus, request("not device-"));
+    assertThat(
+            negated.getItemsList().stream()
+                .noneMatch(
+                    item ->
+                        item.hasApplyFilter()
+                            && item.getApplyFilter().getResultingFilter().hasComplex()))
+        .isTrue();
   }
 
   @Test
@@ -138,11 +165,14 @@ public final class FleetSuggesterTest {
     assertThat(uuid.getCount()).isEqualTo(1);
     assertThat(
             response.getItemsList().stream()
-                .noneMatch(
+                .filter(
                     item ->
-                        item.hasOpenPicker()
-                            && item.getOpenPicker().getKey().equals("device_field::uuid")))
-        .isTrue();
+                        item.hasApplyFilter()
+                            && item.getApplyFilter()
+                                .getResultingFilter()
+                                .getKey()
+                                .equals("device_field::uuid")))
+        .hasSize(1);
 
     // When an exact ID also shares a prefix with other IDs ("device-1" and "device-10".."device-19"
     // in a 60-device fleet), both the exact match and the collapsed "starts with" row are offered.
@@ -153,8 +183,39 @@ public final class FleetSuggesterTest {
     DeviceCorpus manyCorpus =
         new DeviceCorpus(manyPools, new LazyPostings(manyPools.devices()), new AtsCuration());
     FleetSuggestionResponse prefixAndExact = suggester.suggest(manyCorpus, request("device-1"));
-    assertThat(firstApplyFilter(prefixAndExact, "device_field::uuid").getCount()).isEqualTo(1);
-    assertThat(firstOpenPicker(prefixAndExact, "device_field::uuid").getCount()).isEqualTo(11);
+    ImmutableList<FleetSuggestion> uuidSuggestions =
+        prefixAndExact.getItemsList().stream()
+            .filter(
+                item ->
+                    item.hasApplyFilter()
+                        && item.getApplyFilter()
+                            .getResultingFilter()
+                            .getKey()
+                            .equals("device_field::uuid"))
+            .collect(toImmutableList());
+    assertThat(uuidSuggestions).hasSize(2);
+    assertThat(uuidSuggestions.get(0).getCount()).isEqualTo(1);
+    assertThat(
+            uuidSuggestions
+                .get(0)
+                .getApplyFilter()
+                .getResultingFilter()
+                .getSimple()
+                .getValues(0)
+                .getValue())
+        .isEqualTo("device-1");
+    assertThat(uuidSuggestions.get(1).getCount()).isEqualTo(11);
+    assertThat(
+            uuidSuggestions
+                .get(1)
+                .getApplyFilter()
+                .getResultingFilter()
+                .getComplex()
+                .getStartsWith()
+                .getValue())
+        .isEqualTo("device-1");
+    assertThat(uuidSuggestions.get(1).getApplyFilter().getPillCondition())
+        .isEqualTo("starts with device-1");
   }
 
   @Test

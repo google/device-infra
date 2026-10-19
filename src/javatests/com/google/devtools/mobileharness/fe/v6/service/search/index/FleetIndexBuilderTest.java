@@ -747,6 +747,46 @@ public final class FleetIndexBuilderTest {
         .isEqualTo(1);
   }
 
+  @Test
+  public void recordNormalizedValues_precomputesLowercasedNonEmptyValueSets() {
+    DeviceRecord device =
+        DeviceRecord.create(
+            "dev-0",
+            ImmutableMap.of(
+                "device_field::status", ImmutableList.of("IDLE"),
+                "dimension::tag", ImmutableList.of("Alpha", "ALPHA", "", "Beta"),
+                "dimension::empty_single", ImmutableList.of(""),
+                "dimension::empty_list", ImmutableList.of()));
+
+    assertThat(device.normalizedValues("device_field::status")).containsExactly("idle");
+    assertThat(device.normalizedValues("dimension::tag")).containsExactly("alpha", "beta");
+    assertThat(device.normalizedValues("dimension::empty_single")).isEmpty();
+    assertThat(device.normalizedValues("dimension::empty_list")).isEmpty();
+    assertThat(device.normalizedValues("dimension::missing")).isEmpty();
+    assertThat(device.normalizedValues().keySet())
+        .containsExactly("device_field::status", "dimension::tag");
+    assertThat(device.normalizedValues("dimension::tag"))
+        .isSameInstanceAs(device.normalizedValues("dimension::tag"));
+
+    HostRecord host =
+        HostRecord.create(
+            "host-0",
+            ImmutableMap.of(
+                "host_field::connectivity", ImmutableList.of("Running"),
+                "host_property::roles", ImmutableList.of("Core", "core", "", "Satellite"),
+                "host_property::empty_single", ImmutableList.of("")),
+            /* deviceCount= */ 2);
+
+    assertThat(host.normalizedValues("host_field::connectivity")).containsExactly("running");
+    assertThat(host.normalizedValues("host_property::roles")).containsExactly("core", "satellite");
+    assertThat(host.normalizedValues("host_property::empty_single")).isEmpty();
+    assertThat(host.normalizedValues("host_property::missing")).isEmpty();
+    assertThat(host.normalizedValues().keySet())
+        .containsExactly("host_field::connectivity", "host_property::roles");
+    assertThat(host.normalizedValues("host_property::roles"))
+        .isSameInstanceAs(host.normalizedValues("host_property::roles"));
+  }
+
   private static LabData labData(
       String hostName,
       String ip,
