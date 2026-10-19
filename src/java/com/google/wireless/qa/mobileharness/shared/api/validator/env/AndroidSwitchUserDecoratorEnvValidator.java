@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.validator.env;
 
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDesktopExecutorDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import javax.annotation.Nullable;
@@ -28,6 +29,11 @@ public class AndroidSwitchUserDecoratorEnvValidator implements EnvValidator {
 
   @Override
   public void validate(Device device) throws MobileHarnessException, InterruptedException {
+    // AndroidDesktopExecutorDevice extends BaseDevice rather than AndroidDevice and connects to
+    // the physical DUT only during preRunTest(), so skip the prepare()-time SDK version check.
+    if (device instanceof AndroidDesktopExecutorDevice) {
+      return;
+    }
     @Nullable Integer sdkVersion = ((AndroidDevice) device).getSdkVersion();
 
     String error = null;
