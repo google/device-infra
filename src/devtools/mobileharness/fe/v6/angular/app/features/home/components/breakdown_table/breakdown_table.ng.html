@@ -1,0 +1,102 @@
+@if (rows().length > 0) {
+  <button
+    mat-button
+    type="button"
+    class="m3-button-toggle"
+    (click)="toggleExpanded()"
+  >
+    {{ toggleButtonText() }}
+    <mat-icon
+      iconPositionEnd
+      class="material-symbols-outlined chevron-icon"
+      [class.expanded]="expanded()"
+    >expand_more</mat-icon>
+  </button>
+
+  @if (expanded()) {
+    <div class="breakdown-table-container">
+      <table mat-table [dataSource]="rows()" class="breakdown-table">
+        <!-- Name Column -->
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef class="th-name">{{ nameColumnHeader() }}</th>
+          <td mat-cell *matCellDef="let row" class="td-name">
+            <div class="td-name-wrapper">
+              <span class="legend-dot" [class]="row.dotClass || 'dot-partner'"></span>
+              <div class="name-text-group">
+                <span
+                  class="name-title"
+                  [matTooltip]="row.subtitle ? (row.name + ' — ' + row.subtitle) : row.name"
+                  matTooltipPosition="above"
+                >{{ row.name }}</span>
+                @if (row.subtitle) {
+                  <span
+                    class="name-subtitle"
+                    [matTooltip]="row.subtitle"
+                    matTooltipPosition="above"
+                  >{{ row.subtitle }}</span>
+                }
+              </div>
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Hosts Column -->
+        <ng-container matColumnDef="hosts">
+          <th mat-header-cell *matHeaderCellDef class="th-hosts">Hosts</th>
+          <td
+            mat-cell
+            *matCellDef="let row"
+            class="drill-cell td-hosts"
+          >
+            @let hostRoute = row.hosts?.search | drilldownRoute;
+            <a
+              class="clickable-number"
+              [routerLink]="hostRoute?.path"
+              [queryParams]="hostRoute?.queryParams"
+              queryParamsHandling="merge"
+              [matTooltip]="'Click to view hosts in ' + row.name"
+            >
+              {{ (row.hosts?.count ?? 0) | number }}
+            </a>
+          </td>
+        </ng-container>
+
+        <!-- Devices Column -->
+        <ng-container matColumnDef="devices">
+          <th mat-header-cell *matHeaderCellDef class="th-devices">Devices</th>
+          <td
+            mat-cell
+            *matCellDef="let row"
+            class="drill-cell td-devices"
+          >
+            @let devRoute = row.devices?.search | drilldownRoute;
+            <a
+              class="clickable-number"
+              [routerLink]="devRoute?.path"
+              [queryParams]="devRoute?.queryParams"
+              queryParamsHandling="merge"
+              [matTooltip]="'Click to view devices in ' + row.name"
+            >
+              {{ (row.devices?.count ?? 0) | number }}
+            </a>
+          </td>
+        </ng-container>
+
+        <!-- Device Utilization Column -->
+        <ng-container matColumnDef="utilization">
+          <th mat-header-cell *matHeaderCellDef class="th-util">Device Utilization</th>
+          <td mat-cell *matCellDef="let row" class="td-util">
+            <app-utilization-bar
+              mode="mini"
+              [utilization]="row.utilization"
+              [totalDevices]="row.devices?.count"
+            />
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns" class="drill-row"></tr>
+      </table>
+    </div>
+  }
+}

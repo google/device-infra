@@ -1,0 +1,412 @@
+@use '@angular/material' as mat;
+@use '../../../../shared/styles/common';
+
+:host {
+  display: block;
+  width: 100%;
+
+  @include mat.table-overrides(
+    (
+      background-color: transparent,
+      header-container-height: auto,
+      row-item-container-height: auto,
+      header-headline-color: #444746,
+      header-headline-weight: 500,
+      header-headline-size: 0.875rem,
+      row-item-label-text-color: #1f1f1f,
+      row-item-label-text-size: 0.875rem,
+      row-item-outline-color: #f0f4f9,
+      row-item-outline-width: 1px,
+    )
+  );
+
+  @include mat.button-overrides(
+    (
+      text-label-text-color: #444746,
+      text-label-text-font: inherit,
+      text-label-text-size: 16px,
+      text-label-text-weight: 500,
+    )
+  );
+}
+
+// Accordion Toggle Button
+.m3-button-toggle {
+  margin-top: 24px;
+  padding: 0 12px;
+  font-size: 16px;
+  letter-spacing: normal;
+
+  .chevron-icon {
+    margin-left: 8px;
+    transition: transform 0.2s ease;
+
+    &.expanded {
+      transform: rotate(180deg);
+    }
+  }
+}
+
+// Breakdown Table
+.breakdown-table-container {
+  margin-top: 16px;
+  width: 100%;
+  overflow-x: auto;
+  @include common.shared-scrollbar-style();
+  container-type: inline-size;
+  container-name: breakdown-container;
+}
+
+.breakdown-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+
+  tr[mat-header-row] {
+    border-bottom: 1px solid #c4c7c5;
+  }
+
+  th[mat-header-cell],
+  td[mat-cell] {
+    padding: 12px 8px;
+    box-sizing: border-box;
+
+    &.th-name,
+    &.td-name {
+      // Lab Type column: has enough space for single-line title (~180px–220px)
+      width: auto;
+      min-width: 190px;
+    }
+
+    &.th-hosts,
+    &.td-hosts {
+      width: 80px;
+      white-space: nowrap;
+    }
+
+    &.th-devices,
+    &.td-devices {
+      width: 90px;
+      white-space: nowrap;
+    }
+
+    &.th-util,
+    &.td-util {
+      // On large screen, utilization expands adaptively to fill remaining table space
+      width: 40%;
+      min-width: 270px;
+
+      app-utilization-bar {
+        display: block;
+        width: 100%;
+        min-width: 260px;
+      }
+    }
+  }
+
+  th[mat-header-cell] {
+    background: transparent;
+    text-align: left;
+  }
+
+  tr[mat-row].drill-row {
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background-color: #f0f4f9;
+    }
+  }
+
+  td[mat-cell] {
+    padding: 12px 8px;
+    vertical-align: middle;
+
+    &.td-name {
+      font-weight: 500;
+
+      .td-name-wrapper {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .name-text-group {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+
+      .name-title {
+        font-weight: 500;
+        color: #1f1f1f;
+        white-space: nowrap;
+        line-height: 1.35;
+      }
+
+      .name-subtitle {
+        font-size: 0.75rem;
+        font-weight: 400;
+        color: #444746;
+        line-height: 1.25;
+        white-space: normal;
+        word-break: break-word;
+      }
+    }
+
+    &.drill-cell {
+      .clickable-number {
+        cursor: pointer;
+        text-decoration: underline;
+        text-decoration-color: #c4c7c5;
+        text-underline-offset: 4px;
+        color: #1f1f1f;
+        font-variant-numeric: tabular-nums;
+        transition:
+          color 0.15s,
+          text-decoration-color 0.15s;
+
+        &:hover {
+          color: #0b57d0;
+          text-decoration-color: #0b57d0;
+        }
+      }
+    }
+  }
+}
+
+// Responsive:
+// 1. Medium width (<= 768px): Display subtitle in full via multi-line wrap
+// 2. Compact width (<= 580px): Compact padding and fonts; table scrolls horizontally if needed
+@container breakdown-container (max-width: 768px) {
+  .breakdown-table {
+    th[mat-header-cell],
+    td[mat-cell] {
+      padding: 10px 6px;
+
+      &.th-name,
+      &.td-name {
+        width: 42%;
+        min-width: 180px;
+
+        .name-title {
+          white-space: nowrap;
+          line-height: 1.35;
+        }
+
+        .name-subtitle {
+          white-space: normal;
+          word-break: break-word;
+          line-height: 1.25;
+        }
+      }
+
+      &.th-hosts,
+      &.td-hosts {
+        width: 70px;
+        padding: 10px 3px;
+      }
+
+      &.th-devices,
+      &.td-devices {
+        width: 75px;
+        padding: 10px 3px;
+      }
+
+      &.th-util,
+      &.td-util {
+        width: auto;
+        min-width: 260px;
+        padding: 10px 4px;
+      }
+    }
+  }
+}
+
+@container breakdown-container (max-width: 580px) {
+  .breakdown-table {
+    th[mat-header-cell],
+    td[mat-cell] {
+      padding: 8px 4px;
+      font-size: 0.8125rem;
+
+      &.th-name,
+      &.td-name {
+        width: 34%;
+        min-width: 175px;
+
+        .td-name-wrapper {
+          gap: 6px;
+        }
+
+        .legend-dot {
+          width: 8px;
+          height: 8px;
+        }
+
+        .name-title {
+          font-size: 0.8125rem;
+          white-space: nowrap;
+          line-height: 1.25;
+        }
+
+        .name-subtitle {
+          white-space: normal;
+          word-break: break-word;
+          line-height: 1.2;
+        }
+      }
+
+      &.th-hosts,
+      &.td-hosts {
+        width: 60px;
+        padding: 8px 3px;
+        font-size: 0.8125rem;
+      }
+
+      &.th-devices,
+      &.td-devices {
+        width: 65px;
+        padding: 8px 3px;
+        font-size: 0.8125rem;
+      }
+
+      &.th-util,
+      &.td-util {
+        width: auto;
+        min-width: 260px;
+        padding: 8px 4px;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .breakdown-table {
+    th[mat-header-cell],
+    td[mat-cell] {
+      padding: 10px 6px;
+
+      &.th-name,
+      &.td-name {
+        width: 32%;
+        min-width: 180px;
+
+        .name-title {
+          white-space: nowrap;
+          line-height: 1.35;
+        }
+
+        .name-subtitle {
+          white-space: normal;
+          word-break: break-word;
+          line-height: 1.25;
+        }
+      }
+
+      &.th-hosts,
+      &.td-hosts {
+        width: 70px;
+        padding: 10px 3px;
+      }
+
+      &.th-devices,
+      &.td-devices {
+        width: 75px;
+        padding: 10px 3px;
+      }
+
+      &.th-util,
+      &.td-util {
+        width: auto;
+        min-width: 260px;
+        padding: 10px 4px;
+      }
+    }
+  }
+}
+
+@media (max-width: 580px) {
+  .breakdown-table {
+    th[mat-header-cell],
+    td[mat-cell] {
+      padding: 8px 4px;
+      font-size: 0.8125rem;
+
+      &.th-name,
+      &.td-name {
+        width: 34%;
+        min-width: 175px;
+
+        .td-name-wrapper {
+          gap: 6px;
+        }
+
+        .legend-dot {
+          width: 8px;
+          height: 8px;
+        }
+
+        .name-title {
+          font-size: 0.8125rem;
+          white-space: nowrap;
+          line-height: 1.25;
+        }
+
+        .name-subtitle {
+          white-space: normal;
+          word-break: break-word;
+          line-height: 1.2;
+        }
+      }
+
+      &.th-hosts,
+      &.td-hosts {
+        width: 60px;
+        padding: 8px 3px;
+        font-size: 0.8125rem;
+      }
+
+      &.th-devices,
+      &.td-devices {
+        width: 65px;
+        padding: 8px 3px;
+        font-size: 0.8125rem;
+      }
+
+      &.th-util,
+      &.td-util {
+        width: auto;
+        min-width: 260px;
+        padding: 8px 4px;
+      }
+    }
+  }
+}
+
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+
+  &.dot-core {
+    background-color: #0b57d0;
+  }
+
+  &.dot-satellite {
+    background-color: #00639b;
+  }
+
+  &.dot-slaas {
+    background-color: #65558f;
+  }
+
+  &.dot-partner,
+  &.dot-orange {
+    background-color: #e8710a;
+  }
+}

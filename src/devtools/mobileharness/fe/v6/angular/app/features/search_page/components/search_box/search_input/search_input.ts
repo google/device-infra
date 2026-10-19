@@ -96,7 +96,7 @@ export class SearchInput {
     () => this.showCompositeFilterChip() || this.showCompositeGroupByChip(),
   );
 
-  /** Whether the M3 search suggestions panel is currently visible below the search box. */
+  /** Whether the search suggestions panel is currently visible below the search box. */
   readonly isPanelOpen = this.store.isSuggestionsPanelOpen;
 
   /** Summary tooltip for the composite `N filters` chip. */

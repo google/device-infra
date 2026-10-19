@@ -3,10 +3,9 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  effect,
   inject,
+  linkedSignal,
   OnInit,
-  signal,
 } from '@angular/core';
 import {rxResource} from '@angular/core/rxjs-interop';
 import {MatButtonModule} from '@angular/material/button';
@@ -18,8 +17,9 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {RouterLink} from '@angular/router';
 import {GlobalSummary} from '@deviceinfra/app/core/models/home';
 import {HOME_SERVICE} from '@deviceinfra/app/core/services/home';
-import {AtsBreakdownTable} from '@deviceinfra/app/features/home/components/ats_breakdown_table';
+import {BreakdownTable} from '@deviceinfra/app/features/home/components/breakdown_table';
 import {UtilizationBar} from '@deviceinfra/app/features/home/components/utilization_bar';
+import {BreakdownTableRow} from '@deviceinfra/app/features/home/models';
 import {DrilldownRoutePipe} from '@deviceinfra/app/features/home/utils';
 import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
 
@@ -42,7 +42,7 @@ import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
     MatProgressBarModule,
     MatTooltipModule,
     RouterLink,
-    AtsBreakdownTable,
+    BreakdownTable,
     UtilizationBar,
     DrilldownRoutePipe,
   ],
@@ -51,20 +51,20 @@ export class HomePage implements OnInit {
   private readonly homeService = inject(HOME_SERVICE);
   private readonly loadingService = inject(LoadingService);
 
-  readonly lastUpdated = signal<Date | null>(null);
-
-  constructor() {
-    effect(() => {
-      // Whenever data resolves successfully, update the timestamp
-      if (this.summaryResource.status() === 'resolved') {
-        this.lastUpdated.set(new Date());
-      }
-    });
-  }
-
   // Declarative reactive resource managing global summary data and async state
   readonly summaryResource = rxResource<GlobalSummary | null, void>({
     stream: () => this.homeService.getGlobalSummary(),
+  });
+
+  // Track the timestamp of successful data resolution declaratively without imperative effects
+  readonly lastUpdated = linkedSignal({
+    source: () => this.summaryResource.status(),
+    computation: (status, previous?: {value: Date | null}): Date | null => {
+      if (status === 'resolved') {
+        return new Date();
+      }
+      return previous?.value ?? null;
+    },
   });
 
   // Safely guard with hasValue(): Angular Resource.value() throws ResourceValueError in error state
@@ -87,6 +87,31 @@ export class HomePage implements OnInit {
   readonly isRefreshing = computed(
     () => this.summaryResource.isLoading() && this.summaryResource.hasValue(),
   );
+
+  readonly labTypeRows = computed<readonly BreakdownTableRow[]>(() => {
+    const items = this.summary()?.firstParty?.labTypes ?? [];
+    return items.map((item) => ({
+      id: item.id,
+      name: item.displayName,
+      subtitle: item.description,
+      dotClass: `dot-${item.id}`,
+      hosts: item.hosts,
+      devices: item.devices,
+      utilization: item.utilization,
+    }));
+  });
+
+  readonly partnerLabRows = computed<readonly BreakdownTableRow[]>(() => {
+    const labs = this.summary()?.partnerAtsLabs?.labs ?? [];
+    return labs.map((lab) => ({
+      id: lab.controllerId,
+      name: lab.displayName || lab.controllerId,
+      dotClass: 'dot-partner',
+      hosts: lab.hosts,
+      devices: lab.devices,
+      utilization: lab.utilization,
+    }));
+  });
 
   ngOnInit() {
     this.loadingService.hide();

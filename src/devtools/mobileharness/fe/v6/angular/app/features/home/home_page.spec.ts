@@ -55,44 +55,101 @@ describe('HomePage Component', () => {
     expect(fixture.nativeElement.querySelector('mat-progress-bar')).toBeNull();
   });
 
-  it('should display First-Party OmniLab metrics', () => {
+  it('should display Internal Labs metrics and taxonomy', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const text = compiled.textContent || '';
-    expect(text).toContain('First-Party OmniLab');
+    expect(text).toContain('Internal Labs');
+    expect(text).toContain('(Operated by Google)');
+    expect(text).toContain('Lab types guide');
     expect(text).toContain('5,124');
     expect(text).toContain('151,216');
     expect(text).toContain('In Service (BUSY)');
     expect(text).toContain('In Service (IDLE)');
     expect(text).toContain('Others');
+
+    const guideLink = compiled.querySelector(
+      'a.guide-link',
+    ) as HTMLAnchorElement;
+    expect(guideLink).toBeTruthy();
+    expect(guideLink.getAttribute('href')).toBe('http://go/omnilab-which');
+    expect(guideLink.getAttribute('target')).toBe('_blank');
+    expect(guideLink.getAttribute('rel')).toBe('noopener noreferrer');
+    const bookIcon = compiled.querySelector('.book-icon') as HTMLElement;
+    expect(bookIcon).toBeTruthy();
+    expect(bookIcon.classList).toContain('material-symbols-outlined');
+    expect(bookIcon.textContent?.trim()).toBe('menu_book');
+    expect(compiled.querySelector('.external-icon')).toBeTruthy();
   });
 
-  it('should display ATS Labs metrics', () => {
+  it('should display Partner Labs metrics and taxonomy', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const text = compiled.textContent || '';
-    expect(text).toContain("ATS Labs (including Partners')");
+    expect(text).toContain('Partner Labs');
+    expect(text).toContain('(Operated by OEM Partners)');
     expect(text).toContain('12');
     expect(text).toContain('24');
     expect(text).toContain('300');
   });
 
-  it('should toggle ATS breakdown table on accordion click', () => {
-    let table = fixture.nativeElement.querySelector('.ats-breakdown-table');
-    expect(table).toBeNull();
+  it('should render Internal Labs breakdown table expanded by default when breakdown is provided', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const tables = compiled.querySelectorAll('.breakdown-table');
+    // Section 1 table is expanded by default; Section 2 is collapsed by default
+    expect(tables.length).toBe(1);
 
-    const toggleBtn = fixture.nativeElement.querySelector(
+    const text = compiled.textContent || '';
+    expect(text).toContain('Hide Breakdown by Lab Type');
+    expect(text).toContain('Core Lab');
+    expect(text).toContain('Shared pool, operated by OmniLab team');
+    expect(text).toContain('Satellite Lab');
+    expect(text).toContain(
+      'Dedicated pools, operated by OmniLab customers',
+    );
+    expect(text).toContain('SLaaS (Satellite-Lab-as-a-Service) Lab');
+  });
+
+  it('should toggle Partner Labs breakdown table on accordion click', () => {
+    const toggleButtons = fixture.nativeElement.querySelectorAll(
       '.m3-button-toggle',
-    ) as HTMLElement;
-    expect(toggleBtn).toBeTruthy();
-    toggleBtn.click();
+    );
+    // Button 0 is Lab Type Breakdown (already expanded), Button 1 is Partner Lab Breakdown (collapsed)
+    expect(toggleButtons.length).toBe(2);
+
+    const partnerToggleBtn = toggleButtons[1] as HTMLElement;
+    expect(partnerToggleBtn.textContent).toContain(
+      'View Breakdown by Partner Lab',
+    );
+    partnerToggleBtn.click();
     fixture.detectChanges();
 
-    table = fixture.nativeElement.querySelector('.ats-breakdown-table');
-    expect(table).toBeTruthy();
+    const tables = fixture.nativeElement.querySelectorAll('.breakdown-table');
+    expect(tables.length).toBe(2);
 
     const text = fixture.nativeElement.textContent || '';
     expect(text).toContain('Xiaomi');
     expect(text).toContain('Samsung');
     expect(text).toContain('Oppo');
+  });
+
+  it('should not render Lab Type breakdown table when labTypes is missing in summary', async () => {
+    const summaryWithoutBreakdown = {
+      ...MOCK_GLOBAL_SUMMARY,
+      firstParty: {
+        ...MOCK_GLOBAL_SUMMARY.firstParty,
+        labTypes: undefined,
+      },
+    };
+    mockHomeService.getGlobalSummary.and.returnValue(
+      of(summaryWithoutBreakdown),
+    );
+    component.refresh();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).not.toContain('Breakdown by Lab Type');
+    expect(compiled.textContent).not.toContain('Core Lab');
   });
 
   it('should refresh data when refresh is clicked', async () => {

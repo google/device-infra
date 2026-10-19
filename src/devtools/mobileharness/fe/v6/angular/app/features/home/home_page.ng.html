@@ -43,12 +43,28 @@
       <span class="loading-text">Loading OmniLab summary…</span>
     </div>
   } @else if (summary(); as s) {
-    <!-- Section 1: First-Party OmniLab -->
+    <!-- Section 1: Internal Labs -->
     @if (s.firstParty; as fp) {
       @let hostRoute = fp.hosts?.search | drilldownRoute;
       @let devRoute = fp.devices?.search | drilldownRoute;
       <div class="util-section">
-        <h3 class="section-heading">First-Party OmniLab</h3>
+        <div class="section-heading-row">
+          <div class="section-title-group">
+            <h3 class="section-heading">Internal Labs</h3>
+            <span class="section-subtitle">(Operated by Google)</span>
+          </div>
+          <a
+            href="http://go/omnilab-which"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="guide-link"
+            matTooltip="Compare Core, Satellite, and SLaaS labs"
+          >
+            <mat-icon class="material-symbols-outlined book-icon">menu_book</mat-icon>
+            <span>Lab types guide</span>
+            <mat-icon class="material-symbols-outlined external-icon">open_in_new</mat-icon>
+          </a>
+        </div>
 
         <div class="stats-row">
           <a
@@ -90,6 +106,16 @@
           [utilization]="fp.utilization"
           [totalDevices]="fp.devices?.count"
         />
+
+        <!-- Breakdown by Lab Type (only when labTypes is present) -->
+        @if (fp.labTypes && fp.labTypes.length > 0) {
+          <app-breakdown-table
+            toggleLabel="Breakdown by Lab Type"
+            nameColumnHeader="Lab Type"
+            [expanded]="true"
+            [rows]="labTypeRows()"
+          />
+        }
       </div>
     }
 
@@ -98,16 +124,21 @@
       <mat-divider class="section-divider" />
     }
 
-    <!-- Section 2: ATS Labs (including Partners') -->
+    <!-- Section 2: Partner Labs -->
     @if (s.partnerAtsLabs; as pal) {
       @let hostRoute = pal.hosts?.search | drilldownRoute;
       @let devRoute = pal.devices?.search | drilldownRoute;
       <div class="util-section">
-        <h3 class="section-heading">ATS Labs (including Partners')</h3>
+        <div class="section-heading-row">
+          <div class="section-title-group">
+            <h3 class="section-heading">Partner Labs</h3>
+            <span class="section-subtitle">(Operated by OEM Partners)</span>
+          </div>
+        </div>
 
         <div class="stats-row ats-stats-row">
           <div class="stat-group stat-group-fixed">
-            <span class="stat-label">Labs (Controllers)</span>
+            <span class="stat-label">Partner Labs</span>
             <span class="stat-value">{{ pal.labCount | number }}</span>
           </div>
 
@@ -152,9 +183,13 @@
         />
 
         <!-- Breakdown Table -->
-        <app-ats-breakdown-table
-          [labs]="pal.labs"
-        />
+        @if (pal.labs && pal.labs.length > 0) {
+          <app-breakdown-table
+            toggleLabel="Breakdown by Partner Lab"
+            nameColumnHeader="Partner Lab Name"
+            [rows]="partnerLabRows()"
+          />
+        }
       </div>
     }
   }
