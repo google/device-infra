@@ -90,8 +90,11 @@ public class AndroidBusinessLogicSkipModuleDecorator extends SetupOnlyDecorator
   private static final ImmutableSet<String> BUSINESS_LOGIC_DEVICE_PROPERTIES =
       ImmutableSet.of(
           "ro.build.fingerprint",
+          "ro.build.version.release",
           "ro.build.version.sdk",
+          "ro.build.version.sdk_full",
           "ro.product.brand",
+          "ro.product.device",
           "ro.product.first_api_level",
           "ro.product.manufacturer",
           "ro.product.model",
