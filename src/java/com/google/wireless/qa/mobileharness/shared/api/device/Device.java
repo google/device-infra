@@ -19,6 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.api.device;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.annotations.Beta;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
@@ -309,6 +310,14 @@ public interface Device {
    */
   default Optional<CommunicationList> getCommunicationProperty() {
     return Optional.empty();
+  }
+
+  /** Sets the names of local ports registered in {@code PortRegistry} for this device. */
+  default void setRegisteredPortNames(Set<String> portNames) {}
+
+  /** Returns the names of local ports registered in {@code PortRegistry} for this device. */
+  default Set<String> getRegisteredPortNames() {
+    return ImmutableSet.of();
   }
 
   /**
