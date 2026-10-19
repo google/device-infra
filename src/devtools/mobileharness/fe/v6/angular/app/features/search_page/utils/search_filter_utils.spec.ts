@@ -13,7 +13,6 @@ import {
 import {EntityType, FilterChip} from '../models';
 import {
   EMPTY_FILTER_VALUE,
-  adaptCatalogSections,
   areFilterArraysEqual,
   buildFleetFilterFromChip,
   buildFleetGroupSort,
@@ -1447,122 +1446,6 @@ describe('search_filter_utils', () => {
         },
       ];
       expect(getSerializedChipsKey(chipsA)).toBe(getSerializedChipsKey(chipsB));
-    });
-  });
-
-  describe('adaptCatalogSections', () => {
-    it('returns empty array when sections is undefined or empty', () => {
-      expect(adaptCatalogSections(undefined, 'filter')).toEqual([]);
-      expect(adaptCatalogSections([], 'groupby')).toEqual([]);
-    });
-
-    it('adapts filter-key sections with device and host noun formatting', () => {
-      const sections = [
-        {
-          heading: 'Fields',
-          totalAvailable: 10,
-          entries: [
-            {
-              key: 'status',
-              metadata: {keyDisplayName: 'Device Status'},
-              coverage: {shown: {count: 1200}},
-              applied: false,
-            },
-            {
-              key: 'model',
-              metadata: {keyDisplayName: 'Model'},
-              applied: true,
-            },
-            {
-              key: 'pool',
-              applied: false,
-            },
-          ],
-        },
-      ];
-
-      const deviceResult = adaptCatalogSections(
-        sections,
-        'filter',
-        SearchEntity.SEARCH_ENTITY_DEVICE,
-      );
-      expect(deviceResult.length).toBe(1);
-      expect(deviceResult[0].heading).toBe('Fields');
-      expect(deviceResult[0].hasMore).toBeTrue();
-      expect(deviceResult[0].entries[0]).toEqual({
-        key: 'status',
-        name: 'Device Status',
-        meta: 'Used by 1,200 devices',
-        applied: false,
-        inert: false,
-        filterMetadata: {keyDisplayName: 'Device Status'},
-      });
-      expect(deviceResult[0].entries[1]).toEqual({
-        key: 'model',
-        name: 'Model',
-        meta: 'applied',
-        applied: true,
-        inert: false,
-        filterMetadata: {keyDisplayName: 'Model'},
-      });
-      expect(deviceResult[0].entries[2]).toEqual({
-        key: 'pool',
-        name: 'pool',
-        meta: '',
-        applied: false,
-        inert: false,
-        filterMetadata: undefined,
-      });
-
-      const hostResult = adaptCatalogSections(
-        sections,
-        'filter',
-        SearchEntity.SEARCH_ENTITY_HOST,
-      );
-      expect(hostResult[0].entries[0].meta).toBe('Used by 1,200 hosts');
-    });
-
-    it('adapts group-by-key sections marking applied items as inert with group counts', () => {
-      const sections = [
-        {
-          heading: 'Dimensions',
-          totalAvailable: 2,
-          entries: [
-            {
-              key: 'driver',
-              displayName: 'Driver',
-              groupCount: {shown: {count: 15}},
-              applied: false,
-            },
-            {
-              key: 'host_name',
-              displayName: 'Host Name',
-              groupCount: {shown: {count: 42}},
-              applied: true,
-            },
-          ],
-        },
-      ];
-
-      const result = adaptCatalogSections(sections, 'groupby');
-      expect(result.length).toBe(1);
-      expect(result[0].hasMore).toBeFalse();
-      expect(result[0].entries[0]).toEqual({
-        key: 'driver',
-        name: 'Driver',
-        meta: '15 groups',
-        applied: false,
-        inert: false,
-        filterMetadata: undefined,
-      });
-      expect(result[0].entries[1]).toEqual({
-        key: 'host_name',
-        name: 'Host Name',
-        meta: 'applied',
-        applied: true,
-        inert: true,
-        filterMetadata: undefined,
-      });
     });
   });
 

@@ -391,6 +391,7 @@ export declare interface FleetGroupByKeyEntry {
   displayName: string;
   groupCount?: GroupCountInfo;
   applied?: boolean;
+  coverage?: CoverageInfo;
 }
 
 /** Group-count display for a group-by key: either notShown or shown with count. */

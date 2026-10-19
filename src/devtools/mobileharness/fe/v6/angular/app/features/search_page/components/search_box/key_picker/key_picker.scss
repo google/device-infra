@@ -167,6 +167,7 @@
 .kp-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   min-height: 40px;
   padding: 0 8px;
@@ -182,17 +183,20 @@
     outline: none;
   }
 
-  &.kp-applied .kp-row-name {
-    color: #49454f;
-  }
+  &.kp-applied {
+    .kp-row-name {
+      color: #49454f;
+    }
 
-  &.kp-applied .kp-row-meta {
-    color: #0b57d0;
-    font-weight: 500;
+    .kp-row-meta,
+    .kp-applied-meta {
+      color: #0b57d0;
+    }
   }
 
   &.kp-inert {
     cursor: default;
+    opacity: 0.8;
 
     &:hover {
       background-color: transparent;
@@ -200,11 +204,58 @@
   }
 }
 
-.kp-row-name {
-  flex: 1;
+.kp-row-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
+  flex: 1;
+}
+
+.kp-row-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1d1b20;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kp-group-count {
+  font-size: 0.75rem;
+  color: #444746;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.kp-row-meta-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.kp-applied-meta {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #0b57d0;
+  white-space: nowrap;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.kp-meta-dot {
+  font-size: 0.75rem;
+  color: #747775;
+  user-select: none;
+  line-height: 1;
+}
+
+.kp-row-coverage {
+  font-size: 0.75rem;
+  color: #444746;
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 

@@ -88,13 +88,28 @@ describe('KeyPickerComponent', () => {
             key: 'driver',
             displayName: 'Driver',
             groupCount: {shown: {count: 14}},
+            coverage: {notShown: {}},
             applied: false,
           },
           {
             key: 'host_name',
             displayName: 'Host Name',
             groupCount: {shown: {count: 42}},
+            coverage: {notShown: {}},
             applied: true,
+          },
+        ],
+      },
+      {
+        heading: 'Dimensions',
+        totalAvailable: 1583,
+        entries: [
+          {
+            key: 'dim::os_version',
+            displayName: 'OS Version',
+            groupCount: {shown: {count: 12}},
+            coverage: {shown: {count: 1200}},
+            applied: false,
           },
         ],
       },
@@ -165,14 +180,18 @@ describe('KeyPickerComponent', () => {
       expect(rows[0].textContent).toContain('Device Status');
       expect(rows[0].classList.contains('kp-applied')).toBeFalse();
 
-      // Row 2: model (applied)
+      // Row 2: model (applied, coverage omitted when applied, text applied without chip)
       expect(rows[1].textContent).toContain('Model');
-      expect(rows[1].textContent).toContain('applied');
+      expect(rows[1].querySelector('.kp-applied-meta')?.textContent).toBe(
+        'applied',
+      );
+      expect(rows[1].querySelector('.kp-badge-applied')).toBeNull();
+      expect(rows[1].textContent).not.toContain('Used in 850 devices');
       expect(rows[1].classList.contains('kp-applied')).toBeTrue();
 
-      // Row 3: dim::label (used by 450 devices)
+      // Row 3: dim::label (used in 450 devices)
       expect(rows[2].textContent).toContain('Label');
-      expect(rows[2].textContent).toContain('Used by 450 devices');
+      expect(rows[2].textContent).toContain('Used in 450 devices');
     });
 
     it('picks a key, closes dialog, and opens quick filter', () => {
@@ -382,19 +401,52 @@ describe('KeyPickerComponent', () => {
       expect(titleEl?.textContent).toContain('Add a group-by');
     });
 
-    it('renders group counts and inert applied rows', () => {
+    it('renders group counts, coverage counts, and inert applied rows', () => {
       const rows = document.querySelectorAll('.kp-row');
-      expect(rows.length).toBe(2);
+      expect(rows.length).toBe(3);
 
-      // Row 1: driver (14 groups, unapplied)
-      expect(rows[0].textContent).toContain('Driver');
-      expect(rows[0].textContent).toContain('14 groups');
+      // Row 1: driver (14 groups, unapplied, coverage notShown)
+      expect(rows[0].querySelector('.kp-row-name')?.textContent).toContain(
+        'Driver',
+      );
+      expect(rows[0].querySelector('.kp-group-count')?.textContent).toBe(
+        '14 groups',
+      );
+      expect(
+        rows[0].querySelector('.kp-row-meta-group .kp-group-count'),
+      ).not.toBeNull();
+      expect(rows[0].querySelector('.kp-group-pill')).toBeNull();
+      expect(rows[0].querySelector('.kp-meta-dot')).toBeNull();
+      expect(rows[0].querySelector('.kp-row-meta')).toBeNull();
       expect(rows[0].classList.contains('kp-inert')).toBeFalse();
 
-      // Row 2: host_name (applied, inert)
-      expect(rows[1].textContent).toContain('Host Name');
-      expect(rows[1].textContent).toContain('applied');
+      // Row 2: host_name (applied, inert, groups and coverage omitted, text applied without chip)
+      expect(rows[1].querySelector('.kp-row-name')?.textContent).toContain(
+        'Host Name',
+      );
+      expect(rows[1].querySelector('.kp-group-count')).toBeNull();
+      expect(rows[1].querySelector('.kp-meta-dot')).toBeNull();
+      expect(rows[1].querySelector('.kp-applied-meta')?.textContent).toBe(
+        'applied',
+      );
+      expect(rows[1].querySelector('.kp-badge-applied')).toBeNull();
+      expect(rows[1].querySelector('.kp-row-meta')?.textContent).toBe(
+        'applied',
+      );
       expect(rows[1].classList.contains('kp-inert')).toBeTrue();
+
+      // Row 3: dim::os_version (12 groups, coverage shown: 1,200 devices, separated by dot)
+      expect(rows[2].querySelector('.kp-row-name')?.textContent).toContain(
+        'OS Version',
+      );
+      expect(rows[2].querySelector('.kp-group-count')?.textContent).toBe(
+        '12 groups',
+      );
+      expect(rows[2].querySelector('.kp-row-meta')?.textContent).toBe(
+        'Used in 1,200 devices',
+      );
+      expect(rows[2].querySelector('.kp-meta-dot')?.textContent).toBe('·');
+      expect(rows[2].classList.contains('kp-inert')).toBeFalse();
     });
 
     it('does not trigger pick when clicking an inert applied row', () => {

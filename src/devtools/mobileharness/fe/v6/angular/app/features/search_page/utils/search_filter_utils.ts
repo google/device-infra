@@ -5,11 +5,6 @@ import {
   Filter,
   FilterValue,
   Fleet,
-  FleetFilterChipMetadata,
-  FleetFilterKeyEntry,
-  FleetFilterKeySection,
-  FleetGroupByKeyEntry,
-  FleetGroupByKeySection,
   FleetGroupSort,
   FleetSuggestion,
   SearchEntity,
@@ -25,8 +20,6 @@ import {
   FilterChip,
   FilterPair,
   FleetScope,
-  KeyPickerMode,
-  KeyPickerSectionView,
   ParsedUrlQueryChips,
   SearchBoxSuggestion,
 } from '../models';
@@ -873,66 +866,4 @@ export function resolveInitialChips(route: ActivatedRoute): FilterChip[] {
 export function resolveInitialFleet(route: ActivatedRoute): FleetScope {
   const fleetParam = route.snapshot?.queryParams?.['fleet'];
   return fleetParam === 'ats' ? 'ats' : 'internal';
-}
-
-// ============================================================================
-// Catalog Response Adapters (BFF Anti-Corruption Layer)
-// ============================================================================
-
-/**
- * Adapts backend FleetFilterKeySection[] or FleetGroupByKeySection[] into
- * strongly-typed KeyPickerSectionView[] for UI presentation.
- * Decouples UI components from raw protobuf structures and downcasting logic.
- */
-export function adaptCatalogSections(
-  sections: Array<FleetFilterKeySection | FleetGroupByKeySection> | undefined,
-  mode: KeyPickerMode,
-  entity: SearchEntity = SearchEntity.SEARCH_ENTITY_DEVICE,
-): KeyPickerSectionView[] {
-  if (!sections) return [];
-  const isGroupBy = mode === 'groupby';
-  const noun = entity === SearchEntity.SEARCH_ENTITY_HOST ? 'hosts' : 'devices';
-
-  return sections.map((s) => ({
-    heading: s.heading,
-    totalAvailable: s.totalAvailable,
-    hasMore: Boolean(
-      s.totalAvailable && s.totalAvailable > (s.entries?.length ?? 0),
-    ),
-    entries: (s.entries || []).map((e) => {
-      const isApplied = Boolean(e.applied);
-      const inert = isApplied && isGroupBy;
-      let name = e.key;
-      let count: number | undefined;
-      let filterMetadata: FleetFilterChipMetadata | undefined;
-
-      if (isGroupBy) {
-        const groupEntry = e as FleetGroupByKeyEntry;
-        name = groupEntry.displayName || e.key;
-        count = groupEntry.groupCount?.shown?.count;
-      } else {
-        const filterEntry = e as FleetFilterKeyEntry;
-        filterMetadata = filterEntry.metadata;
-        name = filterMetadata?.keyDisplayName || e.key;
-        count = filterEntry.coverage?.shown?.count;
-      }
-
-      const meta = isApplied
-        ? 'applied'
-        : count != null
-          ? isGroupBy
-            ? `${count.toLocaleString()} groups`
-            : `Used by ${count.toLocaleString()} ${noun}`
-          : '';
-
-      return {
-        key: e.key,
-        name,
-        meta,
-        applied: isApplied,
-        inert,
-        filterMetadata,
-      };
-    }),
-  }));
 }

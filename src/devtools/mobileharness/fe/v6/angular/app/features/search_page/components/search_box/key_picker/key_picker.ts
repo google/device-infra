@@ -13,6 +13,7 @@ import {rxResource, toObservable, toSignal} from '@angular/core/rxjs-interop';
 import {MatButtonModule} from '@angular/material/button';
 import {MAT_DIALOG_DATA, MatDialogRef} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
+import {MatTooltipModule} from '@angular/material/tooltip';
 import {of, timer} from 'rxjs';
 import {debounce, distinctUntilChanged} from 'rxjs/operators';
 
@@ -20,23 +21,18 @@ import {
   Filter,
   Fleet,
   FleetFilterKeyCatalogResponse,
+  FleetFilterKeyEntry,
+  FleetFilterKeySection,
   FleetGroupByKeyCatalogResponse,
+  FleetGroupByKeyEntry,
+  FleetGroupByKeySection,
   SearchEntity,
 } from '../../../../../core/models/search';
 import {SEARCH_SERVICE} from '../../../../../core/services/search/search_service';
 import {Dialog} from '../../../../../shared/components/dialog/dialog';
-import {
-  KeyPickerDialogData,
-  KeyPickerEntryView,
-  KeyPickerMode,
-  KeyPickerSectionView,
-} from '../../../models';
+import {KeyPickerDialogData, KeyPickerMode} from '../../../models';
 import {SearchPageStore} from '../../../services/search_page_store';
-import {
-  adaptCatalogSections,
-  toFleetProto,
-  toSearchEntityProto,
-} from '../../../utils';
+import {toFleetProto, toSearchEntityProto} from '../../../utils';
 
 /**
  * Key Picker modal dialog for adding filters or group-by dimensions.
@@ -51,7 +47,13 @@ import {
   host: {
     'class': 'key-picker-dialog-host',
   },
-  imports: [DecimalPipe, MatButtonModule, MatIconModule, Dialog],
+  imports: [
+    DecimalPipe,
+    MatButtonModule,
+    MatIconModule,
+    MatTooltipModule,
+    Dialog,
+  ],
 })
 export class KeyPickerComponent {
   private readonly data = inject<KeyPickerDialogData>(MAT_DIALOG_DATA, {
@@ -151,13 +153,18 @@ export class KeyPickerComponent {
     return (err as {message?: string})?.message || 'Failed to load keys.';
   });
 
-  /** Pre-formatted view sections ready for direct template rendering. */
-  readonly currentSections = computed<KeyPickerSectionView[]>(() =>
-    adaptCatalogSections(
-      this.catalogResource.value()?.sections,
-      this.mode(),
-      this.entity(),
+  /** Catalog sections directly from the BFF response with non-empty entries. */
+  readonly currentSections = computed<
+    Array<FleetFilterKeySection | FleetGroupByKeySection>
+  >(() =>
+    (this.catalogResource.value()?.sections || []).filter(
+      (s) => (s.entries?.length ?? 0) > 0,
     ),
+  );
+
+  /** Entity noun ('devices' or 'hosts') for coverage display. */
+  readonly entityNoun = computed<string>(() =>
+    this.entity() === SearchEntity.SEARCH_ENTITY_HOST ? 'hosts' : 'devices',
   );
 
   /** Total count of matching entries across all visible catalog sections. */
@@ -205,20 +212,48 @@ export class KeyPickerComponent {
     this.catalogResource.reload();
   }
 
+  /** Resolves the display name from either a filter-key or group-by-key catalog entry. */
+  getEntryName(entry: FleetFilterKeyEntry | FleetGroupByKeyEntry): string {
+    if ('displayName' in entry && entry.displayName) {
+      return entry.displayName;
+    }
+    if ('metadata' in entry && entry.metadata?.keyDisplayName) {
+      return entry.metadata.keyDisplayName;
+    }
+    return entry.key;
+  }
+
+  /** Returns the group count for a group-by catalog entry when shown by BFF. */
+  getGroupCount(
+    entry: FleetFilterKeyEntry | FleetGroupByKeyEntry,
+  ): number | undefined {
+    if (this.mode() !== 'groupby' || !('groupCount' in entry)) {
+      return undefined;
+    }
+    return entry.groupCount?.shown?.count;
+  }
+
+  /** Whether a row is inert (an already-applied group-by key cannot be picked again). */
+  isInert(entry: FleetFilterKeyEntry | FleetGroupByKeyEntry): boolean {
+    return Boolean(entry.applied) && this.mode() === 'groupby';
+  }
+
   /**
    * Applies the picked entry directly according to BFF response:
    * For group-by: delegates directly to store.openQuickGroupBy.
    * For filter: delegates directly to store.openQuickFilter with backend metadata.
    */
-  onPick(entry: KeyPickerEntryView) {
-    if (entry.inert) return;
+  onPick(entry: FleetFilterKeyEntry | FleetGroupByKeyEntry) {
+    if (this.isInert(entry)) return;
     this.close();
 
+    const name = this.getEntryName(entry);
     if (this.mode() === 'groupby') {
-      this.store.openQuickGroupBy(entry.key, entry.name);
+      this.store.openQuickGroupBy(entry.key, name);
       return;
     }
 
-    this.store.openQuickFilter(entry.key, entry.name, entry.filterMetadata);
+    const metadata = 'metadata' in entry ? entry.metadata : undefined;
+    this.store.openQuickFilter(entry.key, name, metadata);
   }
 }

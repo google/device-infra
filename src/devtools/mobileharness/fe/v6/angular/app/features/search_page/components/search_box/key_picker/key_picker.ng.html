@@ -78,37 +78,64 @@
       </div>
     } @else {
       @for (section of currentSections(); track section.heading) {
-        @if (section.entries.length > 0) {
-          <section class="kp-section">
-            <h3 class="kp-head">
-              <span>{{ section.heading }}</span>
-              @if (section.hasMore) {
-                <span class="kp-hint">showing top {{ section.entries.length }} of {{ section.totalAvailable | number }}</span>
-              }
-            </h3>
-            @for (entry of section.entries; track entry.key) {
-              <div
-                class="kp-row"
-                [class.kp-applied]="entry.applied"
-                [class.kp-inert]="entry.inert"
-                role="button"
-                [attr.tabindex]="entry.inert ? -1 : 0"
-                [attr.aria-disabled]="entry.inert"
-                (click)="onPick(entry)"
-                (keydown.enter)="onPick(entry)"
-                (keydown.space)="$event.preventDefault(); onPick(entry)"
-              >
-                <span class="kp-row-name">{{ entry.name }}</span>
-                @if (entry.meta) {
-                  <span class="kp-row-meta">{{ entry.meta }}</span>
+        <section class="kp-section">
+          <h3 class="kp-head">
+            <span>{{ section.heading }}</span>
+            @if ((section.totalAvailable ?? 0) > (section.entries?.length ?? 0)) {
+              <span class="kp-hint">showing top {{ section.entries?.length }} of {{ section.totalAvailable | number }}</span>
+            }
+          </h3>
+          @for (entry of section.entries ?? []; track entry.key) {
+            @let inert = isInert(entry);
+            @let groupCount = getGroupCount(entry);
+            @let entryName = getEntryName(entry);
+            <div
+              class="kp-row"
+              [class.kp-applied]="entry.applied"
+              [class.kp-inert]="inert"
+              role="button"
+              [attr.tabindex]="inert ? -1 : 0"
+              [attr.aria-disabled]="inert"
+              (click)="onPick(entry)"
+              (keydown.enter)="onPick(entry)"
+              (keydown.space)="$event.preventDefault(); onPick(entry)"
+            >
+              <div class="kp-row-main">
+                <span
+                  class="kp-row-name"
+                  [matTooltip]="entryName"
+                  matTooltipPosition="above"
+                >{{ entryName }}</span>
+              </div>
+              <div class="kp-row-meta-group">
+                @if (entry.applied) {
+                  <span class="kp-applied-meta kp-row-meta">applied</span>
+                } @else {
+                  @if (entry.coverage?.shown; as shown) {
+                    <span
+                      class="kp-row-coverage kp-row-meta"
+                      [matTooltip]="'Used in ' + (shown.count | number) + ' ' + entityNoun() + ' across the fleet'"
+                      matTooltipPosition="above"
+                    >Used in {{ shown.count | number }} {{ entityNoun() }}</span>
+                    @if (groupCount !== undefined) {
+                      <span class="kp-meta-dot" aria-hidden="true">·</span>
+                    }
+                  }
+                  @if (groupCount !== undefined) {
+                    <span
+                      class="kp-group-count"
+                      [matTooltip]="groupCount + (groupCount === 1 ? ' group' : ' groups') + ' under current filters'"
+                      matTooltipPosition="above"
+                    >{{ groupCount | number }} {{ groupCount === 1 ? 'group' : 'groups' }}</span>
+                  }
                 }
               </div>
-            }
-            @if (section.hasMore) {
-              <div class="kp-more">Search above to find more</div>
-            }
-          </section>
-        }
+            </div>
+          }
+          @if ((section.totalAvailable ?? 0) > (section.entries?.length ?? 0)) {
+            <div class="kp-more">Search above to find more</div>
+          }
+        </section>
       }
     }
   </div>

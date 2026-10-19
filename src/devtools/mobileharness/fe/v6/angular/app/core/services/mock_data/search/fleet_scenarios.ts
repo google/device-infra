@@ -515,6 +515,21 @@ export const MOCK_FLEET_FILTER_KEY_SECTIONS: FleetFilterKeySection[] = [
     ],
   },
   {
+    heading: 'Built-in fields from connected host',
+    entries: [
+      {
+        key: 'host::host_name',
+        metadata: {keyDisplayName: 'Host Name'},
+        coverage: {notShown: {}},
+      },
+      {
+        key: 'host::lab_type',
+        metadata: {keyDisplayName: 'Lab Type'},
+        coverage: {notShown: {}},
+      },
+    ],
+  },
+  {
     heading: 'Dimensions',
     entries: [
       {
@@ -540,17 +555,12 @@ export const MOCK_FLEET_FILTER_KEY_SECTIONS: FleetFilterKeySection[] = [
     ],
   },
   {
-    heading: 'Host properties',
+    heading: 'Host properties from connected host',
     entries: [
       {
-        key: 'host::ats_controller',
+        key: 'prop::ats_controller',
         metadata: {keyDisplayName: 'ATS Controller'},
-        coverage: {shown: {count: 140}},
-      },
-      {
-        key: 'host::lab_type',
-        metadata: {keyDisplayName: 'Lab Type'},
-        coverage: {shown: {count: 980}},
+        coverage: {notShown: {}},
       },
     ],
   },
@@ -559,17 +569,53 @@ export const MOCK_FLEET_FILTER_KEY_SECTIONS: FleetFilterKeySection[] = [
 /** Mock sections for group-by key catalog. */
 export const MOCK_FLEET_GROUP_BY_KEY_SECTIONS: FleetGroupByKeySection[] = [
   {
+    heading: 'Suggested',
+    entries: [
+      {
+        key: 'host::lab_type',
+        displayName: 'Lab Type',
+        groupCount: {shown: {count: 3}},
+        coverage: {notShown: {}},
+      },
+      {
+        key: 'field::status',
+        displayName: 'Device Status',
+        groupCount: {shown: {count: 4}},
+        coverage: {notShown: {}},
+      },
+    ],
+  },
+  {
     heading: 'Built-in fields',
     entries: [
       {
         key: 'field::status',
         displayName: 'Device Status',
         groupCount: {shown: {count: 4}},
+        coverage: {notShown: {}},
       },
       {
         key: 'field::model',
         displayName: 'Model',
         groupCount: {shown: {count: 28}},
+        coverage: {notShown: {}},
+      },
+    ],
+  },
+  {
+    heading: 'Built-in fields from connected host',
+    entries: [
+      {
+        key: 'host::host_name',
+        displayName: 'Host Name',
+        groupCount: {shown: {count: 42}},
+        coverage: {notShown: {}},
+      },
+      {
+        key: 'host::lab_type',
+        displayName: 'Lab Type',
+        groupCount: {shown: {count: 3}},
+        coverage: {notShown: {}},
       },
     ],
   },
@@ -580,26 +626,24 @@ export const MOCK_FLEET_GROUP_BY_KEY_SECTIONS: FleetGroupByKeySection[] = [
         key: 'dim::os_version',
         displayName: 'OS Version',
         groupCount: {shown: {count: 12}},
+        coverage: {shown: {count: 1200}},
       },
       {
         key: 'dim::carrier',
         displayName: 'Carrier',
         groupCount: {shown: {count: 6}},
+        coverage: {shown: {count: 320}},
       },
     ],
   },
   {
-    heading: 'Host properties',
+    heading: 'Host properties from connected host',
     entries: [
       {
-        key: 'host::ats_controller',
+        key: 'prop::ats_controller',
         displayName: 'ATS Controller',
         groupCount: {shown: {count: 8}},
-      },
-      {
-        key: 'host::lab_type',
-        displayName: 'Lab Type',
-        groupCount: {shown: {count: 3}},
+        coverage: {notShown: {}},
       },
     ],
   },
