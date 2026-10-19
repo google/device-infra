@@ -851,13 +851,8 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
         getGetTestStatusRpcCallInterval(testInfo, Flags.getTestStatusRpcCallInterval.getNonNull());
 
     Duration maxConsecutiveErrorDuration =
-        Flags.maxConsecutiveGetTestStatusErrorDuration.getNonNull();
-    if (maxConsecutiveErrorDuration.compareTo(MIN_CONSECUTIVE_GET_TEST_STATUS_ERROR_DURATION) < 0) {
-      maxConsecutiveErrorDuration = MIN_CONSECUTIVE_GET_TEST_STATUS_ERROR_DURATION;
-    } else if (maxConsecutiveErrorDuration.compareTo(MAX_CONSECUTIVE_GET_TEST_STATUS_ERROR_DURATION)
-        > 0) {
-      maxConsecutiveErrorDuration = MAX_CONSECUTIVE_GET_TEST_STATUS_ERROR_DURATION;
-    }
+        getMaxConsecutiveGetTestStatusErrorDuration(
+            testInfo, Flags.maxConsecutiveGetTestStatusErrorDuration.getNonNull());
 
     int count = 0;
     while (!Thread.currentThread().isInterrupted()) {
@@ -978,6 +973,26 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
       rpcCallInterval = MAX_GET_TEST_STATUS_RPC_CALL_INTERVAL;
     }
     return rpcCallInterval;
+  }
+
+  @VisibleForTesting
+  static Duration getMaxConsecutiveGetTestStatusErrorDuration(
+      TestInfo testInfo, Duration defaultDuration) {
+    Duration maxConsecutiveErrorDuration =
+        testInfo
+            .jobInfo()
+            .params()
+            .getOptional(JobInfo.PARAM_MAX_CONSECUTIVE_GET_TEST_STATUS_ERROR_DURATION_MS)
+            .map(Long::valueOf)
+            .map(Duration::ofMillis)
+            .orElse(defaultDuration);
+    if (maxConsecutiveErrorDuration.compareTo(MIN_CONSECUTIVE_GET_TEST_STATUS_ERROR_DURATION) < 0) {
+      maxConsecutiveErrorDuration = MIN_CONSECUTIVE_GET_TEST_STATUS_ERROR_DURATION;
+    } else if (maxConsecutiveErrorDuration.compareTo(MAX_CONSECUTIVE_GET_TEST_STATUS_ERROR_DURATION)
+        > 0) {
+      maxConsecutiveErrorDuration = MAX_CONSECUTIVE_GET_TEST_STATUS_ERROR_DURATION;
+    }
+    return maxConsecutiveErrorDuration;
   }
 
   /**

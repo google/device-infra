@@ -1228,7 +1228,7 @@ public class Flags {
           "How long we can wait for the next successful RPC call before marking the test as ERROR"
               + " when the RPC fails.")
   public static final Flag<Duration> maxConsecutiveGetTestStatusErrorDuration =
-      DurationFlag.seconds(1L);
+      DurationFlag.seconds(100L);
 
   @FlagSpec(
       name = "max_drain_timeout",

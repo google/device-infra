@@ -161,6 +161,16 @@ public class JobInfo extends JobScheduleUnit {
   @ParamAnnotation(
       required = false,
       help =
+          "The maximum duration in milliseconds to wait for the next successful GetTestStatus RPC"
+              + " call before marking the test as ERROR when the RPC fails consecutively. The"
+              + " default value is 100000 (100s), the min value is 10000 (10s), and the max value"
+              + " is 600000 (10m).")
+  public static final String PARAM_MAX_CONSECUTIVE_GET_TEST_STATUS_ERROR_DURATION_MS =
+      "max_consecutive_get_test_status_error_duration_ms";
+
+  @ParamAnnotation(
+      required = false,
+      help =
           "If this flag is true, the not assigned tests will still show in sponge \"Test Method\" "
               + "but won't effect job result (target result).")
   public static final String PARAM_IGNORE_NOT_ASSIGNED_TESTS = "ignore_not_assigned_tests";
