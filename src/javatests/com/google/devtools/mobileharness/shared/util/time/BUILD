@@ -13,30 +13,21 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_library")
-load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
+load("@rules_java//java:java_test.bzl", "java_test")
 
 package(
     default_applicable_licenses = ["//:license"],
     default_testonly = 1,
 )
 
-java_library(
-    name = "time",
-    srcs = glob(["*.java"]),
+java_test(
+    name = "SleeperTest",
+    size = "medium",
+    srcs = ["SleeperTest.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
     ],
-)
-
-junit_test_suites(
-    name = "tests",
-    sizes = [
-        "small",
-        "medium",
-    ],
-    deps = [":time"],
 )
