@@ -3,7 +3,7 @@ import {Component} from '@angular/core';
 import {TestBed} from '@angular/core/testing';
 import {provideRouter, Router, Routes} from '@angular/router';
 
-import {routes} from './app_routes';
+import {fallbackRedirect, routes} from './app_routes';
 
 /** A lightweight stand-in for the real feature pages. */
 @Component({
@@ -40,7 +40,7 @@ describe('App routes', () => {
   it('should keep the wildcard fallback as the last route', () => {
     const lastRoute = routes[routes.length - 1];
     expect(lastRoute.path).toBe('**');
-    expect(lastRoute.redirectTo).toBe('home');
+    expect(lastRoute.redirectTo).toBe(fallbackRedirect);
   });
 
   it('should redirect the empty path to home', async () => {
@@ -48,9 +48,12 @@ describe('App routes', () => {
     expect(router.url).toBe('/home');
   });
 
-  it('should redirect an unknown path to home', async () => {
+  it('should redirect an unknown single segment path to all-site search', async () => {
     await router.navigateByUrl('/unknown');
-    expect(router.url).toBe('/home');
+    expect(router.url).toBe('/search?q=unknown');
+
+    await router.navigateByUrl('/abcd');
+    expect(router.url).toBe('/search?q=abcd');
   });
 
   it('should redirect an unknown nested path to home', async () => {
@@ -58,8 +61,13 @@ describe('App routes', () => {
     expect(router.url).toBe('/home');
   });
 
-  it('should preserve query params when falling back to home', async () => {
+  it('should preserve query params when redirecting to search or home', async () => {
     await router.navigateByUrl('/unknown?is_embedded_mode=true&fake_data=true');
+    expect(router.url).toBe(
+      '/search?is_embedded_mode=true&fake_data=true&q=unknown',
+    );
+
+    await router.navigateByUrl('/foo/bar?is_embedded_mode=true&fake_data=true');
     expect(router.url).toBe('/home?is_embedded_mode=true&fake_data=true');
   });
 
@@ -117,5 +125,11 @@ describe('App routes', () => {
 
     await router.navigateByUrl('/sessions/session-1');
     expect(router.url).toBe('/sessions/session-1');
+
+    await router.navigateByUrl('/search');
+    expect(router.url).toBe('/search');
+
+    await router.navigateByUrl('/search?q=existing');
+    expect(router.url).toBe('/search?q=existing');
   });
 });
