@@ -50,6 +50,7 @@ import com.google.devtools.mobileharness.platform.android.xts.constant.XtsProper
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestReportPropertiesUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryCommandLineArgsPreserver;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -112,8 +113,8 @@ public abstract class XtsJobCreator {
   private final ModuleShardingArgsGenerator moduleShardingArgsGenerator;
   private final SystemUtil systemUtil;
 
-  /** Retry subplans keyed by session requests. */
-  private final ConcurrentHashMap<SessionRequestInfo, SubPlan> retrySubPlans =
+  /** Retry contexts keyed by session requests. */
+  private final ConcurrentHashMap<SessionRequestInfo, RetryContext> retryContexts =
       new ConcurrentHashMap<>();
 
   protected XtsJobCreator(
@@ -333,7 +334,9 @@ public abstract class XtsJobCreator {
         logger.atInfo().log("Preparing for TF retry...");
         prepareTfRetry(sessionRequestInfo, driverParams, jobFiles, testReportProperties);
       } else {
-        SubPlan runRetryTfSubPlan = getRetrySubPlan(sessionRequestInfo, /* forTf= */ true);
+        RetryContext retryContext = getRetryContext(sessionRequestInfo, /* forTf= */ true);
+        sessionRequestInfo = retryContext.sessionRequestInfo();
+        SubPlan runRetryTfSubPlan = retryContext.subPlan();
         String prevSessionXtsTestPlan = runRetryTfSubPlan.getPreviousSessionXtsTestPlan();
         driverParams.put("prev_session_xts_test_plan", prevSessionXtsTestPlan);
         injectBuildFingerprint(extraJobProperties, runRetryTfSubPlan);
@@ -555,12 +558,15 @@ public abstract class XtsJobCreator {
     }
     injectSuiteVersion(sessionRequestInfo, extraJobProperties);
     SubPlan subPlan = null;
+    SessionRequestInfo effectiveSessionRequestInfo = sessionRequestInfo;
     if (SessionHandlerHelper.isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
       Optional<Properties> testReportProperties =
           addPrevSessionPropertiesForRetry(sessionRequestInfo, extraJobProperties);
       validateNonTfModuleForRetry(testReportProperties);
-      subPlan = getRetrySubPlan(sessionRequestInfo, /* forTf= */ false);
+      RetryContext retryContext = getRetryContext(sessionRequestInfo, /* forTf= */ false);
+      effectiveSessionRequestInfo = retryContext.sessionRequestInfo();
+      subPlan = retryContext.subPlan();
       injectBuildFingerprint(extraJobProperties, subPlan);
     } else if (sessionRequestInfo.hasSubPlanName()) {
       subPlan = resolveSubPlan(sessionRequestInfo).map(ResolvedSubPlan::subPlan).orElse(null);
@@ -571,9 +577,9 @@ public abstract class XtsJobCreator {
 
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            sessionRequestInfo, subPlan, extraJobProperties.buildOrThrow());
+            effectiveSessionRequestInfo, subPlan, extraJobProperties.buildOrThrow());
     for (JobInfo jobInfo : jobInfos) {
-      configureNonTradefedJobInfo(sessionRequestInfo, jobInfo);
+      configureNonTradefedJobInfo(effectiveSessionRequestInfo, jobInfo);
     }
     return jobInfos;
   }
@@ -1101,16 +1107,22 @@ public abstract class XtsJobCreator {
   }
 
   /**
-   * Returns the retry subplan of the session request. It is generated once per session request and
+   * Returns the retry context of the session request. It is generated once per session request and
    * shared by the TF and non-TF jobs, so the previous session result is only loaded once.
    */
-  private SubPlan getRetrySubPlan(SessionRequestInfo sessionRequestInfo, boolean forTf)
+  private RetryContext getRetryContext(SessionRequestInfo sessionRequestInfo, boolean forTf)
       throws MobileHarnessException {
-    SubPlan subPlan = retrySubPlans.get(sessionRequestInfo);
-    if (subPlan == null) {
-      subPlan = prepareRunRetrySubPlan(sessionRequestInfo);
-      retrySubPlans.put(sessionRequestInfo, subPlan);
+    RetryContext retryContext = retryContexts.get(sessionRequestInfo);
+    if (retryContext == null) {
+      SubPlan subPlan = prepareRunRetrySubPlan(sessionRequestInfo);
+      retryContext =
+          new RetryContext(
+              subPlan,
+              RetryCommandLineArgsPreserver.preservePreviousSessionArgs(
+                  sessionRequestInfo, subPlan.getPreviousSessionCommandLineArgs()));
+      retryContexts.put(sessionRequestInfo, retryContext);
     }
+    SubPlan subPlan = retryContext.subPlan();
     if ((forTf && !subPlan.hasAnyTfIncludeFilters() && !subPlan.hasAnyTfExcludeFilters())
         || (!forTf
             && !subPlan.hasAnyNonTfIncludeFilters()
@@ -1128,7 +1140,7 @@ public abstract class XtsJobCreator {
               sessionRequestInfo.hasRetryType() ? sessionRequestInfo.getRetryType() : "UNKNOWN"),
           /* cause= */ null);
     }
-    return subPlan;
+    return retryContext;
   }
 
   protected static ImmutableSet<String> getNonTfModules(Map<String, Configuration> configsMap) {
@@ -1183,6 +1195,9 @@ public abstract class XtsJobCreator {
 
   protected abstract SubPlan prepareRunRetrySubPlan(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException;
+
+  /** The retry subplan and the session request with the previous session's args preserved. */
+  private record RetryContext(SubPlan subPlan, SessionRequestInfo sessionRequestInfo) {}
 
   private static class ResolvedSubPlan {
     private final Path path;
