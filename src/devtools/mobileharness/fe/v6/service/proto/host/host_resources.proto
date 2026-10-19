@@ -361,7 +361,7 @@ enum IneligibilityReasonCode {
   // Device type is not supported (e.g., FailedDevice, AbnormalTestbedDevice, or
   // non-AndroidRealDevice in multi-selection mode).
   DEVICE_TYPE_NOT_SUPPORTED = 3;
-  // Host OS is MacOS.
+  // Host OS is not supported.
   HOST_OS_NOT_SUPPORTED = 4;
   // Device does not support AcidRemoteDriver.
   ACID_NOT_SUPPORTED = 5;
@@ -389,8 +389,8 @@ enum EligibilityStatus {
   // If the user has partial permission, the dialog will show the permission
   // denied device card and allow the user to proceed.
   READY = 1;
-  // Some selected devices are not eligible(e.g. status is busy, missing; no
-  // acid support; host OS is MacOS; etc).
+  // Some selected devices are not eligible (e.g. status is busy, missing; no
+  // acid support; etc).
   BLOCK_DEVICES_INELIGIBLE = 2;
   // All devices are eligible individually, but for multiple devices, they
   // share no common proxy type, or for a single device, it has no supported
