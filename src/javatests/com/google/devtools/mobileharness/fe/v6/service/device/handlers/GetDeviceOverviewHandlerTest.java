@@ -81,6 +81,7 @@ import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.Timestamp;
+import com.google.protobuf.util.Timestamps;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import java.time.Instant;
@@ -592,6 +593,43 @@ public final class GetDeviceOverviewHandlerTest {
             .build());
 
     assertThat(getHealthAndActivity().hasLastInServiceTime()).isFalse();
+  }
+
+  @Test
+  public void healthAndActivity_deviceStatusModifyTime_populatedWhenPresent() throws Exception {
+    Timestamp statusModifyTime = toProtoTimestamp(Instant.parse("2025-11-21T09:30:00Z"));
+    mockDeviceInfo(
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceCondition(
+                DEFAULT_DEVICE_INFO.getDeviceCondition().toBuilder()
+                    .setStatusModifyTime(statusModifyTime))
+            .build());
+
+    HealthAndActivityInfo info = getHealthAndActivity();
+    assertThat(info.getDeviceStatus().hasModifyTime()).isTrue();
+    assertThat(info.getDeviceStatus().getModifyTime()).isEqualTo(statusModifyTime);
+  }
+
+  @Test
+  public void healthAndActivity_deviceStatusModifyTime_omittedWhenUnsetOrEpoch() throws Exception {
+    assertThat(getHealthAndActivity().getDeviceStatus().hasModifyTime()).isFalse();
+
+    mockDeviceInfo(
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceCondition(
+                DEFAULT_DEVICE_INFO.getDeviceCondition().toBuilder()
+                    .setStatusModifyTime(Timestamps.EPOCH))
+            .build());
+    assertThat(
+            getDeviceOverviewHandler
+                .getDeviceOverview(
+                    DEFAULT_REQUEST.toBuilder().setForceRefresh(true).build(), SELF_UNIVERSE)
+                .get()
+                .getOverview()
+                .getHealthAndActivity()
+                .getDeviceStatus()
+                .hasModifyTime())
+        .isFalse();
   }
 
   @Test
