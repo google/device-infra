@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.rp
 import static java.util.Comparator.comparing;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ticker;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
@@ -139,6 +140,7 @@ public class CloudFileTransferServiceImpl {
         homeDir.resolve("gcs"),
         new LocalFileUtil(),
         DEFAULT_PROCESS_STATUS_CACHE_TTL,
+        Ticker.systemTicker(),
         homeDir.resolve("tmp"));
   }
 
@@ -148,6 +150,7 @@ public class CloudFileTransferServiceImpl {
       Path gcsHomeDir,
       LocalFileUtil localFileUtil,
       Duration processStatusCacheTtl,
+      Ticker processStatusCacheTicker,
       Path tmpDir) {
     this.gcsHomeDir = gcsHomeDir;
     this.localFileUtil = localFileUtil;
@@ -155,6 +158,7 @@ public class CloudFileTransferServiceImpl {
     this.processStatusCache =
         CacheBuilder.newBuilder()
             .expireAfterWrite(processStatusCacheTtl)
+            .ticker(processStatusCacheTicker)
             .removalListener(
                 (RemovalListener<String, ProcessResponseOrException>)
                     notification ->
