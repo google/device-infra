@@ -62,7 +62,6 @@ import {
   isChipNegated,
   isSameFilterChip,
   isSearchRouteActive,
-  mapToSearchBoxSuggestion,
   normalizeKey,
   parseUrlChips,
   resolveEntityFromPathOrUrl,
@@ -159,7 +158,7 @@ export abstract class SearchPageStore {
       debounceTime(300),
       distinctUntilChanged(),
     ),
-    {initialValue: ''},
+    {initialValue: this.searchQuery()},
   );
 
   /** Active list of filter and group-by chips applied to the current search. */
@@ -343,7 +342,8 @@ export abstract class SearchPageStore {
   readonly isSuggestionsPanelOpen = computed<boolean>(
     () =>
       this.showSuggestions() &&
-      (this.activeChips().length > 0 ||
+      (!this.isTjs() ||
+        this.activeChips().length > 0 ||
         !!this.pendingFilterKey() ||
         this.isSuggestionsLoading() ||
         this.suggestions().length > 0 ||
@@ -382,37 +382,22 @@ export abstract class SearchPageStore {
   /** Whether search box autocomplete suggestions are currently loading. */
   readonly isSuggestionsLoading: Signal<boolean> = signal(false);
 
-  /** Whether there are active filter or group-by criteria sufficient to fetch suggestions on empty input. */
-  protected readonly hasSuggestionCriteria = computed<boolean>(
-    () => this.effectiveFilters().length > 0 || this.groupByKeys().length > 0,
-  );
-
   /**
    * Resolves the active input string for suggestion resource queries, or null if suggestions
-   * should not be fetched (e.g. route inactive, popover closed, empty input & criteria, or still debouncing).
+   * should not be fetched (e.g. route inactive, popover closed, or still debouncing).
    */
   protected getActiveSuggestionInput(): string | null {
     if (!this.isCurrentRouteActive() || !this.showSuggestions()) return null;
     const rawInput = this.searchQuery().trim();
     const debouncedInput = this.debouncedSearchQuery().trim();
-    if (!rawInput && !this.hasSuggestionCriteria()) return null;
     if (rawInput && !debouncedInput) return null;
     return rawInput ? debouncedInput : '';
-  }
-
-  /** Maps raw suggestion items to SearchBoxSuggestion items when criteria or input are active. */
-  protected mapSuggestions(
-    items: ReadonlyArray<FleetSuggestion | TjsSuggestion> | undefined,
-  ): SearchBoxSuggestion[] {
-    if (!this.searchQuery().trim() && !this.hasSuggestionCriteria()) return [];
-    return (items || []).map(mapToSearchBoxSuggestion);
   }
 
   /** Computes whether suggestions are currently loading or debouncing user input. */
   protected computeSuggestionsLoading(resourceIsLoading: boolean): boolean {
     if (!this.showSuggestions()) return false;
     const rawInput = this.searchQuery().trim();
-    if (!rawInput && !this.hasSuggestionCriteria()) return false;
     return (
       resourceIsLoading ||
       (Boolean(rawInput) && rawInput !== this.debouncedSearchQuery().trim())
@@ -488,14 +473,16 @@ export abstract class SearchPageStore {
 
   /** Handles user selection of an autocomplete suggestion from the search box popover. */
   selectSuggestion(item: SearchBoxSuggestion) {
-    if (!item.rawItem) return;
+    if (!item) return;
     this.searchQuery.set('');
     if (item.openPicker) {
       this.showSuggestions.set(true);
     } else {
       this.showSuggestions.set(!this.autoCollapseAfterApply());
     }
-    this.applySuggestion(item.rawItem);
+    this.applySuggestion(
+      item.rawItem ?? (item as FleetSuggestion | TjsSuggestion),
+    );
   }
 
   /** Subclass hook to unpack domain-specific suggestion payload and apply to store. */
