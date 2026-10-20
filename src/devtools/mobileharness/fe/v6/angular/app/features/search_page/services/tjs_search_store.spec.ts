@@ -14,6 +14,7 @@ import {
   SearchService,
 } from '../../../core/services/search/search_service';
 import {SnackBarService} from '../../../shared/services/snackbar_service';
+import {SearchBoxSuggestion} from '../models';
 import {TjsSearchStore} from './tjs_search_store';
 
 @Component({standalone: true, template: ''})
@@ -356,5 +357,106 @@ describe('TjsSearchStore', () => {
     expect(store.entity()).toBe('tests');
     expect(store.activeChips().map((c) => c.key)).toEqual(['user']);
     expect(mockSnackBarService.showError).not.toHaveBeenCalled();
+  });
+
+  it('populates suggestions directly from backend and tracks loading state', async () => {
+    const mockItems: SearchBoxSuggestion[] = [
+      {
+        label: 'User is qiupingf',
+        mainText: [{text: 'qiupingf'}],
+        openPicker: {key: 'user', keyDisplayName: 'User'},
+        count: 10,
+      },
+    ];
+    mockSearchService.getTjsSuggestions.and.returnValue(of({items: mockItems}));
+
+    expect(store.suggestions()).toEqual([]);
+
+    store.showSuggestions.set(true);
+    await flushAsync();
+
+    expect(store.suggestions()).toEqual(mockItems);
+    expect(store.isSuggestionsLoading()).toBeFalse();
+  });
+
+  it('handles selectSuggestion with openPicker and applyFilter on TjsSearchStore', () => {
+    // 1. Safe no-op on null/undefined
+    store.selectSuggestion(null as unknown as SearchBoxSuggestion);
+
+    // 2. openPicker keeps showSuggestions true and sets pendingFilter
+    store.searchQuery.set('name');
+    store.selectSuggestion({
+      label: 'Filter by Name',
+      mainText: [{text: 'Name'}],
+      openPicker: {key: 'name', keyDisplayName: 'Name'},
+    });
+
+    expect(store.searchQuery()).toBe('');
+    expect(store.showSuggestions()).toBeTrue();
+    expect(store.pendingFilterKey()).toBe('name');
+
+    // 3. applyFilter with autoCollapseAfterApply = true closes suggestions and adds chip
+    store.autoCollapseAfterApply.set(true);
+    store.selectSuggestion({
+      label: 'User is qiupingf',
+      mainText: [{text: 'qiupingf'}],
+      applyFilter: {
+        filter: {key: 'user', stringValue: {value: 'qiupingf'}},
+        pillCondition: '(qiupingf)',
+      },
+    });
+
+    expect(store.showSuggestions()).toBeFalse();
+    expect(store.activeChips().some((c) => c.key === 'user')).toBeTrue();
+
+    // 4. applyFilter with autoCollapseAfterApply = false keeps suggestions open
+    store.autoCollapseAfterApply.set(false);
+    store.selectSuggestion({
+      label: 'Status is RUNNING',
+      mainText: [{text: 'RUNNING'}],
+      applyFilter: {
+        filter: {key: 'status', stringValue: {value: 'RUNNING'}},
+        pillCondition: 'RUNNING',
+      },
+    });
+
+    expect(store.showSuggestions()).toBeTrue();
+    expect(store.activeChips().some((c) => c.key === 'status')).toBeTrue();
+  });
+
+  it('computes isSuggestionsPanelOpen across all criteria combinations on TjsSearchStore', async () => {
+    // 1. Closed when showSuggestions is false
+    store.showSuggestions.set(false);
+    expect(store.isSuggestionsPanelOpen()).toBeFalse();
+
+    // 2. Closed when showSuggestions is true but all criteria/query/suggestions are empty and loading has settled
+    store.resetSearchState(false);
+    store.showSuggestions.set(true);
+    store.searchQuery.set('');
+    await flushAsync();
+    expect(store.activeChips()).toEqual([]);
+    expect(store.pendingFilterKey()).toBeNull();
+    expect(store.suggestions()).toEqual([]);
+    expect(store.isSuggestionsPanelOpen()).toBeFalse();
+
+    // 3. Open when searchQuery has text
+    store.searchQuery.set('device');
+    expect(store.isSuggestionsPanelOpen()).toBeTrue();
+    store.searchQuery.set('');
+
+    // 4. Open when activeChips has items
+    store.addFilterChip({
+      key: 'name',
+      pillKey: 'Name',
+      pillCondition: 'test-name',
+      isGroupBy: false,
+    });
+    expect(store.isSuggestionsPanelOpen()).toBeTrue();
+
+    // 5. Open when pendingFilterKey is set
+    store.resetSearchState(false);
+    store.showSuggestions.set(true);
+    store.openQuickFilter('name', 'Name');
+    expect(store.isSuggestionsPanelOpen()).toBeTrue();
   });
 });

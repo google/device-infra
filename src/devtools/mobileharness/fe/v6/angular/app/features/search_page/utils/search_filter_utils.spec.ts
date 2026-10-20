@@ -35,7 +35,6 @@ import {
   isChipNegated,
   isSameFilterChip,
   isSearchRouteActive,
-  mapToSearchBoxSuggestion,
   normalizeKey,
   parseArsenalQueryParam,
   parseComplexCondition,
@@ -1517,24 +1516,7 @@ describe('search_filter_utils', () => {
       ).toBe('status~');
     });
 
-    it('covers mapToSearchBoxSuggestion, toTjsEntityProto default, and extractRawValuesFromTjsFilter branches', () => {
-      const suggestion: FleetSuggestion = {
-        label: 'Status',
-        mainText: [{text: 'IDLE'}],
-        count: 5,
-      };
-      expect(mapToSearchBoxSuggestion(suggestion)).toEqual({
-        label: 'Status',
-        mainText: [{text: 'IDLE'}],
-        count: 5,
-        countPrefix: undefined,
-        countUnit: undefined,
-        overMax: undefined,
-        openPicker: undefined,
-        addGroupBy: undefined,
-        rawItem: suggestion,
-      });
-
+    it('covers toTjsEntityProto default, and extractRawValuesFromTjsFilter branches', () => {
       expect(toTjsEntityProto('devices')).toBe(TjsEntity.TJS_ENTITY_TEST);
 
       expect(

@@ -347,9 +347,7 @@ export class SearchInput {
     const key = event.key;
     if (!['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(key)) return;
 
-    const suggestions = this.store.isSuggestionsLoading()
-      ? []
-      : this.store.suggestions();
+    const suggestions = this.store.suggestions();
     const isShowing = this.store.showSuggestions() && suggestions.length > 0;
 
     switch (key) {
