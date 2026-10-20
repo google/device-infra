@@ -140,11 +140,6 @@ public final class FleetSuggester {
   public FleetSuggestionResponse suggest(SearchCorpus corpus, FleetSuggestionRequest request) {
     int limit = request.getLimit() > 0 ? Math.min(request.getLimit(), MAX_LIMIT) : DEFAULT_LIMIT;
     String query = WHITESPACE.matcher(request.getInput()).replaceAll(" ").trim();
-    if (query.isEmpty()
-        && request.getFiltersList().isEmpty()
-        && request.getGroupByList().isEmpty()) {
-      return FleetSuggestionResponse.getDefaultInstance();
-    }
     SuggestionContext context =
         SuggestionContext.create(corpus, request.getFiltersList(), filterEngine);
 
