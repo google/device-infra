@@ -16,9 +16,15 @@
 
 package com.google.devtools.mobileharness.shared.util.concurrent;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
+import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugStackTrace;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
+import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -26,14 +32,23 @@ import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
-import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 
 /** Concurrency utility for running tasks in parallel. */
 public class ConcurrencyUtil {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  /** Interval of the warning logs when waiting for interrupted sub tasks to finish. */
+  private static final Duration WAITING_WARNING_INTERVAL = Duration.ofMinutes(5L);
 
   /**
    * Sub task to run in parallel by {@link #runInParallel}.
@@ -76,11 +91,15 @@ public class ConcurrencyUtil {
    *
    * <p>If all sub tasks succeed, the given result merger will be called to merge all results.
    *
-   * <p>If one sub task fails (throws an exception), this method will return immediately with the
-   * exception thrown by the failed sub task.
+   * <p>If one sub task fails (throws an exception), this method will interrupt all other sub tasks,
+   * wait for all sub tasks to finish, and return with the exception thrown by the failed sub task.
+   * Exceptions thrown by other sub tasks will be added to it as suppressed exceptions.
    *
-   * <p>If one sub task fails or the current thread is interrupted, all sub tasks will be cancelled
-   * and interrupted before this method returns.
+   * <p>If one sub task fails or the current thread is interrupted, all sub tasks will be cancelled,
+   * interrupted, and waited until completion before this method returns. If the current thread is
+   * interrupted, exceptions thrown by sub tasks will be added to the thrown {@link
+   * InterruptedException} as suppressed exceptions. A warning will be logged periodically if any
+   * sub task has not finished for a long time after being interrupted.
    *
    * <p>The current trace context will be propagated to the threads of all sub tasks. A local trace
    * span will be created for each sub task and {@link SubTask#logTagName()}/{@link
@@ -106,7 +125,8 @@ public class ConcurrencyUtil {
     StackTraceElement caller = new Throwable().getStackTrace()[1];
 
     // Starts all sub tasks.
-    List<ListenableFuture<V>> futures =
+    ListeningExecutorService taskExecutor = executorService;
+    ImmutableList<TaskExecution<V>> executions =
         tasks.stream()
             .map(
                 task ->
@@ -119,17 +139,18 @@ public class ConcurrencyUtil {
                           return task.callable().call();
                         },
                         task::threadName))
-            .map(executorService::submit)
-            .collect(Collectors.toList());
+            .map(callable -> new TaskExecution<>(callable, taskExecutor))
+            .collect(toImmutableList());
 
     // Creates a fail-fast combined future which calls the result merger.
     ListenableFuture<V> combinedFuture =
-        Futures.whenAllSucceed(futures)
+        Futures.whenAllSucceed(
+                executions.stream().map(TaskExecution::future).collect(toImmutableList()))
             .call(
                 () -> {
-                  List<V> results = new ArrayList<>(futures.size());
-                  for (ListenableFuture<V> future : futures) {
-                    results.add(Futures.getDone(future));
+                  List<V> results = new ArrayList<>(executions.size());
+                  for (TaskExecution<V> execution : executions) {
+                    results.add(Futures.getDone(execution.future()));
                   }
                   return resultMerger.apply(results);
                 },
@@ -139,16 +160,187 @@ public class ConcurrencyUtil {
     try {
       return combinedFuture.get();
     } catch (ExecutionException e) {
-      // Interrupts all sub tasks if one fails.
-      futures.forEach(future -> future.cancel(true /* mayInterruptIfRunning */));
+      // Interrupts all sub tasks and waits for them to finish if one fails.
+      cancelAndAwaitAllTasks(executions);
+
+      // Attaches failures of other sub tasks to the failure.
+      addSubTaskFailuresAsSuppressed(e.getCause(), executions);
 
       // Casts the error to MH exception.
       return MobileHarnessExceptions.rethrow(
           e.getCause(), BasicErrorId.UNEXPECTED_NON_MH_CHECKED_EXCEPTION_FROM_SUB_TASK);
     } catch (InterruptedException e) {
-      // Interrupts all sub tasks if the current thread is interrupted.
-      combinedFuture.cancel(true /* mayInterruptIfRunning */);
+      // Interrupts all sub tasks and waits for them to finish if the current thread is interrupted.
+      combinedFuture.cancel(/* mayInterruptIfRunning= */ false);
+      cancelAndAwaitAllTasks(executions);
+
+      // Attaches failures of sub tasks to the interruption.
+      addSubTaskFailuresAsSuppressed(e, executions);
       throw e;
+    }
+  }
+
+  private static void cancelAndAwaitAllTasks(List<? extends TaskExecution<?>> executions) {
+    executions.forEach(TaskExecution::cancelAndInterrupt);
+    long startNanos = System.nanoTime();
+    boolean interrupted = false;
+    for (TaskExecution<?> execution : executions) {
+      while (true) {
+        try {
+          if (execution.awaitFinish(WAITING_WARNING_INTERVAL)) {
+            break;
+          }
+          // The sub task may hang (e.g., blocked by an uninterruptible operation). Keeps waiting
+          // because it may still be using resources (e.g., devices), and logs a warning
+          // periodically for debugging.
+          logger.atWarning().log(
+              "Sub task has not finished in %s after being interrupted, keep waiting. %s",
+              Duration.ofNanos(System.nanoTime() - startNanos), execution.getDebugInfo());
+        } catch (InterruptedException e) {
+          interrupted = true;
+          executions.forEach(TaskExecution::cancelAndInterrupt);
+        }
+      }
+    }
+    if (interrupted) {
+      Thread.currentThread().interrupt();
+    }
+  }
+
+  /**
+   * Adds failures of the given sub tasks to the given throwable as suppressed exceptions, skipping
+   * the throwable itself and duplicated failures.
+   */
+  private static void addSubTaskFailuresAsSuppressed(
+      Throwable throwable, List<? extends TaskExecution<?>> executions) {
+    // TODO: Prevent reference cycles caused by addSuppressed(), which may cause
+    // infinite recursion in code traversing the cause/suppressed graph (e.g., ErrorModelConverter).
+    Set<Throwable> addedFailures = Sets.newIdentityHashSet();
+    addedFailures.add(throwable);
+    for (TaskExecution<?> execution : executions) {
+      Throwable failure = execution.getFailure();
+      if (failure != null && addedFailures.add(failure)) {
+        throwable.addSuppressed(failure);
+      }
+    }
+  }
+
+  private static class TaskExecution<V> {
+    private final Object lock = new Object();
+
+    @GuardedBy("lock")
+    private boolean started = false;
+
+    @GuardedBy("lock")
+    private boolean finished = false;
+
+    @GuardedBy("lock")
+    @Nullable
+    private Thread runningThread = null;
+
+    @GuardedBy("lock")
+    @Nullable
+    private Throwable failure = null;
+
+    private final ListenableFuture<V> future;
+
+    private TaskExecution(Callable<V> callable, ListeningExecutorService executorService) {
+      this.future =
+          executorService.submit(
+              () -> {
+                if (!onStart()) {
+                  throw new InterruptedException("Sub task cancelled before starting");
+                }
+                try {
+                  return callable.call();
+                } catch (Exception | Error e) {
+                  // Records the failure here rather than reading it from the future later, because
+                  // the future may not be done yet right after onFinish() is called.
+                  onFailure(e);
+                  throw e;
+                } finally {
+                  onFinish();
+                }
+              });
+    }
+
+    private ListenableFuture<V> future() {
+      return future;
+    }
+
+    private boolean onStart() {
+      synchronized (lock) {
+        if (finished) {
+          return false;
+        }
+        started = true;
+        runningThread = Thread.currentThread();
+        return true;
+      }
+    }
+
+    private void onFailure(Throwable failure) {
+      synchronized (lock) {
+        this.failure = failure;
+      }
+    }
+
+    private void onFinish() {
+      synchronized (lock) {
+        finished = true;
+        runningThread = null;
+        lock.notifyAll();
+      }
+    }
+
+    @SuppressWarnings("Interruption")
+    private void cancelAndInterrupt() {
+      synchronized (lock) {
+        if (!started) {
+          finished = true;
+          future.cancel(/* mayInterruptIfRunning= */ false);
+          lock.notifyAll();
+        } else if (!finished && runningThread != null) {
+          runningThread.interrupt();
+        }
+      }
+    }
+
+    /**
+     * Waits until the sub task finishes or the given timeout elapses.
+     *
+     * @return whether the sub task has finished
+     */
+    private boolean awaitFinish(Duration timeout) throws InterruptedException {
+      long deadlineNanos = System.nanoTime() + timeout.toNanos();
+      synchronized (lock) {
+        while (!finished) {
+          long remainingNanos = deadlineNanos - System.nanoTime();
+          if (remainingNanos <= 0L) {
+            return false;
+          }
+          NANOSECONDS.timedWait(lock, remainingNanos);
+        }
+        return true;
+      }
+    }
+
+    @Nullable
+    private Throwable getFailure() {
+      synchronized (lock) {
+        return failure;
+      }
+    }
+
+    private String getDebugInfo() {
+      synchronized (lock) {
+        if (runningThread == null) {
+          return "The sub task has just finished.";
+        }
+        return String.format(
+            "thread_name=[%s], stack_trace=%s",
+            runningThread.getName(), shortDebugStackTrace(runningThread, /* maxLength= */ 0));
+      }
     }
   }
 
