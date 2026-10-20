@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandStartExcepti
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
+import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -360,6 +361,39 @@ public class AndroidCdpDecoratorTest {
     // Verify chmod 666 was run on both locations
     verify(adb).runShell(eq(DEVICE_ID), eq("chmod 666 /data/local/tmp/chrome-command-line"));
     verify(adb).runShell(eq(DEVICE_ID), eq("chmod 666 /data/local/chrome-command-line"));
+  }
+
+  @Test
+  public void setUp_browser_withChromeFlags_nonAndroidDevice_success() throws Exception {
+    Device nonAndroidDevice = mock(Device.class);
+    when(nonAndroidDevice.getDeviceId()).thenReturn(DEVICE_ID);
+    when(decoratedDriver.getDevice()).thenReturn(nonAndroidDevice);
+    mockParams(false, null, null, DEBUG_PORT, "--disable-gpu --no-sandbox", "");
+
+    when(processUtil.resolveDefaultActivity(DEVICE_ID, "com.android.chrome"))
+        .thenReturn("ChromeActivity");
+    doNothing()
+        .when(processUtil)
+        .startApplication(DEVICE_ID, "com.android.chrome", "ChromeActivity");
+    when(processUtil.stopApplication(any(UtilArgs.class), eq("com.android.chrome")))
+        .thenReturn(ImmutableList.of());
+    when(adb.runShell(eq(DEVICE_ID), anyString(), any(Duration.class)))
+        .thenReturn("chrome_devtools_remote");
+    when(fileUtil.push(
+            eq(DEVICE_ID), eq(0), anyString(), eq("/data/local/tmp/chrome-command-line")))
+        .thenReturn("");
+    when(fileUtil.push(eq(DEVICE_ID), eq(0), anyString(), eq("/data/local/chrome-command-line")))
+        .thenReturn("");
+    when(adb.runShell(eq(DEVICE_ID), eq("chmod 666 /data/local/tmp/chrome-command-line")))
+        .thenReturn("");
+    when(adb.runShell(eq(DEVICE_ID), eq("chmod 666 /data/local/chrome-command-line")))
+        .thenReturn("");
+
+    decorator.setUp(setupContext);
+
+    verify(fileUtil)
+        .push(eq(DEVICE_ID), eq(0), anyString(), eq("/data/local/tmp/chrome-command-line"));
+    verify(fileUtil).push(eq(DEVICE_ID), eq(0), anyString(), eq("/data/local/chrome-command-line"));
   }
 
   @Test

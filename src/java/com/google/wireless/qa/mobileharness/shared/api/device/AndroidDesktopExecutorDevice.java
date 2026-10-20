@@ -99,9 +99,13 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
     this.addSupportedDriver("MoblyTest");
     // For AndroidInstrumentation tests.
     this.addSupportedDriver("AndroidInstrumentation");
+    // For Web tests.
+    this.addSupportedDriver("PlaywrightWebDriver");
+    this.addSupportedDriver("ProtractorWebDriver");
     // Decorators for Mobly tests.
     this.addSupportedDecorator("AndroidAccountDecorator");
     this.addSupportedDecorator("AndroidAdbShellDecorator");
+    this.addSupportedDecorator("AndroidCdpDecorator");
     this.addSupportedDecorator("AndroidDesktopOtaUpdateDecorator");
     this.addSupportedDecorator("AndroidFilePullerDecorator");
     this.addSupportedDecorator("AndroidFilePusherDecorator");
@@ -109,6 +113,7 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
     this.addSupportedDecorator("AndroidLogCatDecorator");
     this.addSupportedDecorator("AndroidPerfettoDecorator");
     this.addSupportedDecorator("AndroidSwitchLanguageDecorator");
+    this.addSupportedDecorator("AndroidSwitchUserDecorator");
     this.addSupportedDecorator("CrosLsNexusDecorator");
     this.addSupportedDecorator("CrossOverAndroidDesktopProvisionDecorator");
     this.addSupportedDecorator("CrosDutTopologyDecorator");
