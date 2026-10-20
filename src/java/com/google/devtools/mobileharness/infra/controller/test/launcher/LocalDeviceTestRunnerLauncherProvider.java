@@ -33,9 +33,9 @@ import com.google.devtools.mobileharness.infra.controller.test.TestRunnerLaunche
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.InstantSource;
 import java.util.ArrayList;
 import java.util.List;
 import javax.inject.Inject;
@@ -54,10 +54,15 @@ public class LocalDeviceTestRunnerLauncherProvider implements LauncherProvider {
   private static final Duration WAIT_DEVICE_READY_TIMEOUT = Duration.ofSeconds(20L);
 
   private final TestExecutorProvider testExecutorProvider;
+  private final InstantSource instantSource;
+  private final Sleeper sleeper;
 
   @Inject
-  LocalDeviceTestRunnerLauncherProvider(TestExecutorProvider testExecutorProvider) {
+  LocalDeviceTestRunnerLauncherProvider(
+      TestExecutorProvider testExecutorProvider, InstantSource instantSource, Sleeper sleeper) {
     this.testExecutorProvider = testExecutorProvider;
+    this.instantSource = instantSource;
+    this.sleeper = sleeper;
   }
 
   @Override
@@ -75,15 +80,13 @@ public class LocalDeviceTestRunnerLauncherProvider implements LauncherProvider {
   private List<TestExecutor> getTestExecutorsUntilReady(List<String> deviceIds)
       throws MobileHarnessException, InterruptedException {
     // Waits for the device to be ready, since the device maybe INIT in LabServer.
-    Clock clock = Clock.systemUTC();
-    Instant expireTime = clock.instant().plus(WAIT_DEVICE_READY_TIMEOUT);
-    Sleeper sleeper = Sleeper.defaultSleeper();
+    Instant expireTime = instantSource.instant().plus(WAIT_DEVICE_READY_TIMEOUT);
     int attempts = 0;
     while (true) {
       try {
         return getTestExecutors(deviceIds);
       } catch (MobileHarnessException e) {
-        if (clock.instant().isAfter(expireTime)
+        if (instantSource.instant().isAfter(expireTime)
             || (e.getErrorId() != InfraErrorId.LAB_RPC_PREPARE_TEST_DEVICE_NOT_ALIVE
                 && e.getErrorId() != InfraErrorId.LAB_RPC_PREPARE_TEST_DEVICE_NOT_FOUND)) {
           throw e;
