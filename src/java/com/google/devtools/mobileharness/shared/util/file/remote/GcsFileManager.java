@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.shared.util.file.remote;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ticker;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalNotification;
@@ -118,7 +119,8 @@ public class GcsFileManager {
         cloudCacheTtl,
         localCacheTtl,
         uploadShardSize,
-        downloadShardSize);
+        downloadShardSize,
+        Ticker.systemTicker());
   }
 
   @VisibleForTesting
@@ -129,7 +131,8 @@ public class GcsFileManager {
       Optional<Duration> cloudCacheTtl,
       Duration localCacheTtl,
       Optional<Long> uploadShardSize,
-      Optional<Long> downloadShardSize)
+      Optional<Long> downloadShardSize,
+      Ticker localCacheTicker)
       throws MobileHarnessException, InterruptedException {
     this.homeDir = homeDir;
     this.gcsUtil = gcsUtil;
@@ -164,6 +167,7 @@ public class GcsFileManager {
     this.localCache =
         CacheBuilder.newBuilder()
             .expireAfterAccess(localCacheTtl)
+            .ticker(localCacheTicker)
             .removalListener(this::onLocalCacheRemoval)
             .build();
   }
