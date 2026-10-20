@@ -38,8 +38,11 @@ import com.google.devtools.mobileharness.fe.v6.service.search.pull.FleetDataSour
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.inject.Guice;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.InstantSource;
+import java.util.ArrayDeque;
+import java.util.Queue;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -106,6 +109,20 @@ public final class CoreFleetDataRefresherTest {
 
     assertThat(store.hasSnapshot(Fleet.FLEET_SELF)).isTrue();
     assertThat(store.get(Fleet.FLEET_SELF).deviceCount()).isEqualTo(2);
+    assertThat(selfSource.pullCount()).isEqualTo(1);
+  }
+
+  @Test
+  public void buildInitialIndexWithRetry_requiredFleetRecoversOnRetry_succeeds() {
+    FakeFleetDataSource selfSource = new FakeFleetDataSource(Fleet.FLEET_SELF);
+    selfSource.setResult(deviceResult(2));
+    selfSource.failNextPull(new RuntimeException("master unreachable"));
+
+    refresher(selfSource).buildInitialIndexWithRetry();
+
+    assertThat(store.hasSnapshot(Fleet.FLEET_SELF)).isTrue();
+    assertThat(store.get(Fleet.FLEET_SELF).deviceCount()).isEqualTo(2);
+    assertThat(selfSource.pullCount()).isEqualTo(2);
   }
 
   @Test
@@ -116,6 +133,7 @@ public final class CoreFleetDataRefresherTest {
 
     assertThrows(IllegalStateException.class, refresher::buildInitialIndexWithRetry);
     assertThat(store.hasSnapshot(Fleet.FLEET_SELF)).isFalse();
+    assertThat(selfSource.pullCount()).isEqualTo(3);
   }
 
   @Test
@@ -133,6 +151,8 @@ public final class CoreFleetDataRefresherTest {
     assertThat(store.hasSnapshot(Fleet.FLEET_SELF)).isTrue();
     assertThat(store.get(Fleet.FLEET_SELF).deviceCount()).isEqualTo(2);
     assertThat(store.hasSnapshot(Fleet.FLEET_ATS)).isFalse();
+    assertThat(selfSource.pullCount()).isEqualTo(1);
+    assertThat(atsSource.pullCount()).isEqualTo(1);
   }
 
   @Test
@@ -179,7 +199,8 @@ public final class CoreFleetDataRefresherTest {
         store,
         InstantSource.fixed(BUILD_TIME),
         newDirectExecutorService(),
-        ThreadPools.createStandardScheduledThreadPool("test-timeout", 1));
+        ThreadPools.createStandardScheduledThreadPool("test-timeout", 1),
+        Duration.ZERO);
   }
 
   private static LabQueryResult deviceResult(int deviceCount) {
@@ -201,6 +222,8 @@ public final class CoreFleetDataRefresherTest {
   private static final class FakeFleetDataSource implements FleetDataSource {
     private final Fleet fleet;
     private boolean optionalAtStartup;
+    private int pullCount;
+    private final Queue<ListenableFuture<CoreFleetRawData>> nextResults = new ArrayDeque<>();
     private ListenableFuture<CoreFleetRawData> result =
         immediateFuture(CoreFleetRawData.ofLabData(LabQueryResult.getDefaultInstance()));
 
@@ -214,6 +237,11 @@ public final class CoreFleetDataRefresherTest {
 
     void setFailure(RuntimeException failure) {
       this.result = immediateFailedFuture(failure);
+    }
+
+    /** Makes the next pull fail with {@code failure}; later pulls return the configured result. */
+    void failNextPull(RuntimeException failure) {
+      nextResults.add(immediateFailedFuture(failure));
     }
 
     void setOptionalAtStartup(boolean optionalAtStartup) {
@@ -232,7 +260,13 @@ public final class CoreFleetDataRefresherTest {
 
     @Override
     public ListenableFuture<CoreFleetRawData> pull() {
-      return result;
+      pullCount++;
+      ListenableFuture<CoreFleetRawData> next = nextResults.poll();
+      return next != null ? next : result;
+    }
+
+    int pullCount() {
+      return pullCount;
     }
 
     @Override

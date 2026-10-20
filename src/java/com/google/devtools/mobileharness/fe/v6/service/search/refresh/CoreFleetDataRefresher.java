@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.refresh;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -69,12 +70,16 @@ public final class CoreFleetDataRefresher {
 
   private static final Duration PULL_TIMEOUT = Duration.ofMinutes(2);
 
+  private static final int MAX_STARTUP_ATTEMPTS = 3;
+  private static final Duration INITIAL_RETRY_BACKOFF = Duration.ofSeconds(2);
+
   private final Map<Fleet, FleetDataSource> sources;
   private final FleetIndexBuilder indexBuilder;
   private final FleetSnapshotStore snapshotStore;
   private final InstantSource instantSource;
   private final ListeningExecutorService executor;
   private final ListeningScheduledExecutorService scheduledExecutor;
+  private final Duration initialRetryBackoff;
 
   // The periodic loop that drives refreshOnce at a fixed delay. Created in start(), torn down in
   // stop(). Distinct from the injected scheduledExecutor, which only backs the per-pull timeout.
@@ -89,12 +94,32 @@ public final class CoreFleetDataRefresher {
       InstantSource instantSource,
       ListeningExecutorService executor,
       ListeningScheduledExecutorService scheduledExecutor) {
+    this(
+        sources,
+        indexBuilder,
+        snapshotStore,
+        instantSource,
+        executor,
+        scheduledExecutor,
+        INITIAL_RETRY_BACKOFF);
+  }
+
+  @VisibleForTesting
+  CoreFleetDataRefresher(
+      Map<Fleet, FleetDataSource> sources,
+      FleetIndexBuilder indexBuilder,
+      FleetSnapshotStore snapshotStore,
+      InstantSource instantSource,
+      ListeningExecutorService executor,
+      ListeningScheduledExecutorService scheduledExecutor,
+      Duration initialRetryBackoff) {
     this.sources = sources;
     this.indexBuilder = indexBuilder;
     this.snapshotStore = snapshotStore;
     this.instantSource = instantSource;
     this.executor = executor;
     this.scheduledExecutor = scheduledExecutor;
+    this.initialRetryBackoff = initialRetryBackoff;
   }
 
   /**
@@ -150,9 +175,6 @@ public final class CoreFleetDataRefresher {
     }
   }
 
-  private static final int MAX_STARTUP_ATTEMPTS = 3;
-  private static final Duration INITIAL_RETRY_BACKOFF = Duration.ofSeconds(2);
-
   /**
    * Builds the initial fleet search index with retries and fails fast if a required fleet still has
    * no snapshot afterwards.
@@ -193,7 +215,7 @@ public final class CoreFleetDataRefresher {
         return;
       }
       if (attempt < MAX_STARTUP_ATTEMPTS) {
-        long backoffMs = INITIAL_RETRY_BACKOFF.toMillis() * attempt;
+        long backoffMs = initialRetryBackoff.toMillis() * attempt;
         logger.atWarning().log(
             "Initial fleet search index build attempt %d/%d has no snapshot for required fleets %s"
                 + " yet. Retrying in %d ms...",
