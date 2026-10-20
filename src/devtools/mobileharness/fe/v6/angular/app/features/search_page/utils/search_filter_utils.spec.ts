@@ -14,6 +14,7 @@ import {EntityType, FilterChip} from '../models';
 import {
   EMPTY_FILTER_VALUE,
   areFilterArraysEqual,
+  buildFilterChipFromResolved,
   buildFleetFilterFromChip,
   buildFleetGroupSort,
   buildResolvedFilterChips,
@@ -36,6 +37,7 @@ import {
   isSearchRouteActive,
   mapToSearchBoxSuggestion,
   normalizeKey,
+  parseArsenalQueryParam,
   parseComplexCondition,
   parseQueryFilterParam,
   parseUrlChips,
@@ -1550,6 +1552,194 @@ describe('search_filter_utils', () => {
       ).toEqual(['env', 'prod']);
 
       expect(extractRawValuesFromTjsFilter({key: 'empty'})).toBeUndefined();
+    });
+  });
+
+  describe('parseArsenalQueryParam', () => {
+    it('syntactically unpacks filter, column, and group_by parameters', () => {
+      const rawQuery =
+        'filter=dimension_pool:any_match:values:shared,dedicated&filter=host_name:match:substring:mtv&column=uuid,version,dimension_pool&group_by=model,version';
+      const unpacked = parseArsenalQueryParam(rawQuery);
+
+      expect(unpacked.filters).toEqual([
+        {
+          key: 'dimension_pool',
+          matchType: 'any_match',
+          valueType: 'values',
+          values: ['shared', 'dedicated'],
+        },
+        {
+          key: 'host_name',
+          matchType: 'match',
+          valueType: 'substring',
+          values: ['mtv'],
+        },
+      ]);
+      expect(unpacked.columns).toEqual(['uuid', 'version', 'dimension_pool']);
+      expect(unpacked.groupByKeys).toEqual(['model', 'version']);
+    });
+
+    it('preserves spaces and encoded commas inside unpacked values', () => {
+      const rawQuery =
+        'filter=host_name%3Amatch%3Aregex%3A%2520%255Elab%252C%255B0-9%255D%2520';
+      const unpacked = parseArsenalQueryParam(rawQuery);
+
+      expect(unpacked.filters).toEqual([
+        {
+          key: 'host_name',
+          matchType: 'match',
+          valueType: 'regex',
+          values: [' ^lab,[0-9] '],
+        },
+      ]);
+    });
+
+    it('keeps unencoded commas in substring and regex patterns as a single value', () => {
+      const rawQuery =
+        'filter=host_name:match:regex:^lab[0-9]{1,3}&filter=model:not_match:substring:pixel,pro';
+      const unpacked = parseArsenalQueryParam(rawQuery);
+
+      expect(unpacked.filters).toEqual([
+        {
+          key: 'host_name',
+          matchType: 'match',
+          valueType: 'regex',
+          values: ['^lab[0-9]{1,3}'],
+        },
+        {
+          key: 'model',
+          matchType: 'not_match',
+          valueType: 'substring',
+          values: ['pixel,pro'],
+        },
+      ]);
+    });
+
+    it('handles leading ?, empty or malformed filters, colons in values, empty/non_empty, default empty matchType, and repeated column/group_by params', () => {
+      const rawQuery = [
+        '?filter=',
+        'filter=   ',
+        'filter=malformed',
+        'filter=:match:values:IDLE',
+        'filter=status:',
+        'filter=status::values:IDLE',
+        'filter=label:empty',
+        'filter=owner:non_empty',
+        'filter=endpoint:match:values:http://a:8080,http://b:9090',
+        'column=uuid,model',
+        'column=status',
+        'group_by=model',
+        'group_by=status,owner',
+      ].join('&');
+      const unpacked = parseArsenalQueryParam(rawQuery);
+
+      expect(unpacked.filters).toEqual([
+        {
+          key: 'status',
+          matchType: '',
+          valueType: 'values',
+          values: ['IDLE'],
+        },
+        {
+          key: 'label',
+          matchType: 'empty',
+          valueType: undefined,
+          values: undefined,
+        },
+        {
+          key: 'owner',
+          matchType: 'non_empty',
+          valueType: undefined,
+          values: undefined,
+        },
+        {
+          key: 'endpoint',
+          matchType: 'match',
+          valueType: 'values',
+          values: ['http://a:8080', 'http://b:9090'],
+        },
+      ]);
+      expect(unpacked.columns).toEqual(['uuid', 'model', 'status']);
+      expect(unpacked.groupByKeys).toEqual(['model', 'status', 'owner']);
+    });
+  });
+
+  describe('buildFilterChipFromResolved', () => {
+    it('constructs a FilterChip from a resolved backend filter and valid chip', () => {
+      const filter = {
+        key: 'device_field::sdk_or_software_version',
+        simple: {values: [{value: '34'}], negated: false},
+      };
+      const metadata = {keyDisplayName: 'SDK or Software Version'};
+      const chip = buildFilterChipFromResolved(filter, {
+        pillKey: 'SDK or Software Version',
+        pillCondition: '34',
+        metadata,
+      });
+
+      expect(chip).toEqual({
+        key: 'device_field::sdk_or_software_version',
+        pillKey: 'SDK or Software Version',
+        pillCondition: '34',
+        isGroupBy: false,
+        metadata,
+        rawValues: ['34'],
+        negated: false,
+        complex: undefined,
+        fleetFilter: filter,
+      });
+    });
+
+    it('constructs negated simple FilterChips and maps noValue to EMPTY_FILTER_VALUE', () => {
+      const filter = {
+        key: 'dimension::label',
+        simple: {
+          values: [{noValue: {}}, {value: 'release'}],
+          negated: true,
+        },
+      };
+      const chip = buildFilterChipFromResolved(filter, {
+        pillKey: 'Label',
+        pillCondition: 'is not (no value), release',
+      });
+
+      expect(chip).toEqual({
+        key: 'dimension::label',
+        pillKey: 'Label',
+        pillCondition: 'is not (no value), release',
+        isGroupBy: false,
+        metadata: undefined,
+        rawValues: [EMPTY_FILTER_VALUE, 'release'],
+        negated: true,
+        complex: undefined,
+        fleetFilter: filter,
+      });
+    });
+
+    it('constructs complex FilterChips preserving complex match and negation', () => {
+      const complex = {
+        containsSubstring: {value: 'mtv', negated: true},
+      };
+      const filter = {
+        key: 'host_field::host_name',
+        complex,
+      };
+      const chip = buildFilterChipFromResolved(filter, {
+        pillKey: 'Host Name',
+        pillCondition: 'does not contain "mtv"',
+      });
+
+      expect(chip).toEqual({
+        key: 'host_field::host_name',
+        pillKey: 'Host Name',
+        pillCondition: 'does not contain "mtv"',
+        isGroupBy: false,
+        metadata: undefined,
+        rawValues: undefined,
+        negated: true,
+        complex,
+        fleetFilter: filter,
+      });
     });
   });
 });

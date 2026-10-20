@@ -15,7 +15,7 @@ import {
   toSignal,
 } from '@angular/core/rxjs-interop';
 import {ActivatedRoute, NavigationEnd, Router} from '@angular/router';
-import {asapScheduler, Observable, of, Subject} from 'rxjs';
+import {asapScheduler, EMPTY, Observable, of, Subject} from 'rxjs';
 import {
   catchError,
   debounceTime,
@@ -534,7 +534,7 @@ export abstract class SearchPageStore {
   // ===========================================================================
 
   /** Tracks the last URL query parameter key that was successfully synced or processed. */
-  private lastSyncedUrlKey: string | null = null;
+  protected lastSyncedUrlKey: string | null = null;
 
   /** Flag to prevent internal URL synchronizations from re-triggering navigation reset handlers. */
   private isInternalUrlSync = false;
@@ -543,13 +543,35 @@ export abstract class SearchPageStore {
   private readonly resolveFiltersSubject = new Subject<{
     parsedFilters: FilterChip[];
     gbKeys: string[];
-  }>();
+  } | null>();
+
+  /** Cancels any in-flight backend chip resolution request. */
+  protected cancelPendingChipResolution() {
+    this.resolveFiltersSubject.next(null);
+  }
+
+  /** Subclass hook to cancel any in-flight legacy query translation request. */
+  protected cancelPendingLegacyTranslation() {}
+
+  /** Subclass hook providing legacy query parameter keys to clear when syncing canonical URL state. */
+  protected getLegacyQueryParamKeys(): readonly string[] {
+    return [];
+  }
+
+  /** Subclass hook to intercept and translate legacy query parameters (e.g. ?arsenal_query=...). */
+  protected handleLegacyQueryParams(params: Record<string, unknown>): boolean {
+    return false;
+  }
 
   constructor() {
     // Asynchronously enhance chips with rich backend metadata via race-free switchMap
     this.resolveFiltersSubject
       .pipe(
-        switchMap(({parsedFilters, gbKeys}) => {
+        switchMap((req) => {
+          if (!req) {
+            return EMPTY;
+          }
+          const {parsedFilters, gbKeys} = req;
           if (parsedFilters.length === 0 && gbKeys.length === 0) {
             return of([]);
           }
@@ -585,12 +607,17 @@ export abstract class SearchPageStore {
       .subscribe(() => {
         if (!this.isCurrentRouteActive()) {
           this.lastSyncedUrlKey = null;
+          this.cancelPendingChipResolution();
+          this.cancelPendingLegacyTranslation();
           this.focusInputTrigger.set(false);
           return;
         }
         if (this.isInternalUrlSync) return;
         const qp = this.route.snapshot?.queryParams;
-        if (!this.isTjs()) {
+        const hasLegacyParams = this.getLegacyQueryParamKeys().some((key) =>
+          Boolean(qp?.[key]),
+        );
+        if (!this.isTjs() && !hasLegacyParams) {
           const fleetParam = (qp?.['fleet'] || 'internal') as
             | 'internal'
             | 'ats';
@@ -598,7 +625,7 @@ export abstract class SearchPageStore {
             this.fleet.set(fleetParam);
           }
         }
-        if (qp?.['f'] || qp?.['gb'] || qp?.['q']) {
+        if (qp?.['f'] || qp?.['gb'] || qp?.['q'] || hasLegacyParams) {
           this.syncFromQueryParams(qp);
           return;
         }
@@ -622,6 +649,10 @@ export abstract class SearchPageStore {
   ) {
     if (!params || !this.isCurrentRouteActive()) return;
 
+    if (this.handleLegacyQueryParams(params)) {
+      return;
+    }
+
     const fleetParam = ((params['fleet'] as string) || 'internal') as
       | 'internal'
       | 'ats';
@@ -643,8 +674,10 @@ export abstract class SearchPageStore {
       return;
     }
     this.lastSyncedUrlKey = incomingKey;
+    this.cancelPendingLegacyTranslation();
 
     if (fParams.length === 0 && gbKeys.length === 0) {
+      this.cancelPendingChipResolution();
       this.restoreDefaultState(false);
       if (qParam) {
         this.searchQuery.set(qParam);
@@ -689,6 +722,10 @@ export abstract class SearchPageStore {
       .filter(Boolean);
 
     this.lastSyncedUrlKey = buildUrlParamKey(filters, groupBys, fleet);
+    if (!replaceUrl) {
+      this.cancelPendingChipResolution();
+      this.cancelPendingLegacyTranslation();
+    }
 
     const queryParams: Record<string, string | string[] | null> = {
       'f': filters.length > 0 ? filters : null,
@@ -696,6 +733,9 @@ export abstract class SearchPageStore {
       'fleet': fleet !== 'internal' ? fleet : null,
       'q': null,
     };
+    for (const key of this.getLegacyQueryParamKeys()) {
+      queryParams[key] = null;
+    }
 
     this.isInternalUrlSync = true;
     this.router
