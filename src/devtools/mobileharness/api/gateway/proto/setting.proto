@@ -33,7 +33,7 @@ option java_outer_classname = "Setting";
 
 // Configuration for a single OmniLab job within a Gateway session.
 //
-// Next tag: 21
+// Next tag: 23
 message JobConfig {
   // Name of the job. If multiple jobs in the same session share a name, Gateway
   // appends a `_${index}` suffix to disambiguate them.
@@ -127,6 +127,16 @@ message JobConfig {
   // Allocation exit strategy of the job.
   optional mobileharness.api.model.AllocationExitStrategy
       allocation_exit_strategy = 20 [(google.api.field_behavior) = OPTIONAL];
+
+  // Parameters of `type.driver` as a JSON object, e.g.
+  // `{"sleep_time_sec": "5"}`. The driver reads them as its scoped specs, the
+  // same as `Driver.param` of a `mobileharness.client.JobConfig`.
+  optional string driver_param = 21 [(google.api.field_behavior) = OPTIONAL];
+
+  // Tags of the job. Gateway sets the `tags` param to them joined by ", ",
+  // replacing any `tags` in `param`, so the `tags` param is empty when `tag`
+  // is.
+  repeated string tag = 22 [(google.api.field_behavior) = OPTIONAL];
 
   reserved 9, 10, 13;
 }

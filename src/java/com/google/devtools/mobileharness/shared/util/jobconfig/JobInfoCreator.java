@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUti
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.Message;
@@ -723,7 +724,17 @@ public final class JobInfoCreator {
   @VisibleForTesting
   static Map.Entry<String, JsonObject> getNamespaceAndScopedSpecs(
       Driver driver, boolean isDecorator) throws MobileHarnessException {
-    JsonElement jsonParams = JsonParser.parseString(driver.getParam());
+    JsonElement jsonParams;
+    try {
+      jsonParams = JsonParser.parseString(driver.getParam());
+    } catch (JsonParseException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.JOB_SPEC_INVALID_JOB_TYPE_ERROR,
+          String.format(
+              "Params of driver [%s] is not valid JSON (%s): %s",
+              driver.getName(), e.getMessage(), driver.getParam()),
+          e);
+    }
     if (!jsonParams.isJsonObject()) {
       throw new MobileHarnessException(
           BasicErrorId.JOB_SPEC_INVALID_JOB_TYPE_ERROR,
