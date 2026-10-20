@@ -39,6 +39,7 @@ java_library(
     srcs = ["MoreThrowables.java"],
     deps = [
         ":throwing_runnable",
+        "@maven//:com_google_guava_guava",
     ],
 )
 
