@@ -1227,6 +1227,7 @@ public class AndroidInstrumentationUtil {
                       DEVICE_RECONNECT_INITIAL_DELAY,
                       DEVICE_RECONNECT_DELAY_MULTIPLIER,
                       DEVICE_RECONNECT_MAX_RETRIES))
+              .setSleeper(sleeper)
               .setPredicate(e -> e instanceof MobileHarnessException)
               .build()
               .call();
