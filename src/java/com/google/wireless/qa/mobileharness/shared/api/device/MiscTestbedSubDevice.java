@@ -16,6 +16,9 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.device;
 
+import com.google.common.collect.ImmutableSet;
+import java.util.Set;
+
 /**
  * A virtual device which acts as a placeholder for any testbed subdevice that has no supported
  * representation in Mobile Harness (e.g., a callbox, attenuators, etc.).
@@ -23,9 +26,21 @@ package com.google.wireless.qa.mobileharness.shared.api.device;
  * <p>NOTE: These Devices should only ever be instantiated within a {@link TestbedDevice}, and
  * should never affect the operation of any "core" Mobile Harness device types.
  */
-public class MiscTestbedSubDevice extends MiscDevice {
+public class MiscTestbedSubDevice extends MiscDevice implements PortServiceDevice {
+
+  private volatile ImmutableSet<String> registeredPortNames = ImmutableSet.of();
 
   public MiscTestbedSubDevice(String deviceId) {
     super(deviceId);
+  }
+
+  @Override
+  public void setRegisteredPortNames(Set<String> portNames) {
+    this.registeredPortNames = ImmutableSet.copyOf(portNames);
+  }
+
+  @Override
+  public ImmutableSet<String> getRegisteredPortNames() {
+    return registeredPortNames;
   }
 }
