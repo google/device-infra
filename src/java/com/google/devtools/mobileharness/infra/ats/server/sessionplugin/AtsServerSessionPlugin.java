@@ -287,6 +287,7 @@ final class AtsServerSessionPlugin {
 
       try {
         orchestrator.onSessionEnded();
+        invalidateDevicesCache();
         HandleResultProcessingResult handleResultProcessingResult =
             newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
         if (isAborted()) {

@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.endsWith;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -137,6 +138,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.Spy;
@@ -1029,6 +1031,8 @@ public final class AtsServerSessionPluginTest {
 
     when(jobInfo.resultWithCause()).thenReturn(result);
     when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
+    plugin.onTestStarting(
+        new TestStartingEvent(testInfo, allocation, DeviceInfo.getDefaultInstance()));
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
     CreateSessionResponse response =
         CreateSessionResponse.newBuilder()
@@ -1046,9 +1050,19 @@ public final class AtsServerSessionPluginTest {
         .thenReturn(Optional.of(resultBuilder.build()));
 
     plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null));
+    InOrder inOrder = inOrder(sessionDeviceCache, sessionResultHandlerUtil, localSessionStub);
+    inOrder
+        .verify(sessionDeviceCache)
+        .invalidateCache(
+            eq(
+                new InvalidateCacheRequest(
+                    LabLocator.LOCALHOST, ImmutableList.of("device_id_100"), "xts", "session_id")));
+    inOrder
+        .verify(sessionResultHandlerUtil)
+        .processResult(any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any());
     ArgumentCaptor<CreateSessionRequest> requestCaptor =
         ArgumentCaptor.forClass(CreateSessionRequest.class);
-    verify(localSessionStub).createSession(requestCaptor.capture());
+    inOrder.verify(localSessionStub).createSession(requestCaptor.capture());
     SessionRequest sessionRequest =
         requestCaptor
             .getValue()
@@ -1064,11 +1078,9 @@ public final class AtsServerSessionPluginTest {
     assertThat(newMultiCommandRequest.getAllPreviousSessionIdsList()).containsExactly("session_id");
     assertThat(newMultiCommandRequest.getCommandsList()).containsExactly(commandInfo);
 
-    // sessionInfo.setSessionPluginOutput() is called 4 times: 2 in onSessionStarting, 1 in
-    // onJobEnded, 1 in onSessionEnded.
-    // OnSessionStarting() after creating tradefed jobs. Second time in OnJobEnded()
-    // after job ended signal trigger session output update. 3th time in OnSessionEnded().
-    verify(sessionInfo, times(4))
+    // sessionInfo.setSessionPluginOutput() is called 5 times: 2 in onSessionStarting, 1 in
+    // onTestStarting, 1 in onJobEnded, 1 in onSessionEnded.
+    verify(sessionInfo, times(5))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);

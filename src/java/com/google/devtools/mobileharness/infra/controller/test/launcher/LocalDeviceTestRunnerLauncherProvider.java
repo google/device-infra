@@ -109,9 +109,10 @@ public class LocalDeviceTestRunnerLauncherProvider implements LauncherProvider {
           InfraErrorId.LAB_RPC_PREPARE_TEST_DEVICE_NOT_FOUND,
           () -> String.format("Device [%s] does not exist", deviceId));
       MobileHarnessExceptions.check(
-          testExecutor.isAlive(),
+          testExecutor.isAlive() && testExecutor.isReady(),
           InfraErrorId.LAB_RPC_PREPARE_TEST_DEVICE_NOT_ALIVE,
-          () -> String.format("Device [%s] is not alive when preparing test", deviceId));
+          () ->
+              String.format("Device [%s] is not alive or not ready when preparing test", deviceId));
       testExecutors.add(testExecutor);
     }
     return testExecutors;

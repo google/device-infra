@@ -55,6 +55,9 @@ public interface TestExecutor {
   /** Whether this executor is capable of running tests. */
   boolean isAlive();
 
+  /** Whether this executor is ready to run tests. */
+  boolean isReady();
+
   /** The current test running on this TestExecutor, or null if no test is running. */
   @Nullable
   LocalDeviceTestExecutor getTest();
