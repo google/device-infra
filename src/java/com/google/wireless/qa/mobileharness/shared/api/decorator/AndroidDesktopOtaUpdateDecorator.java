@@ -47,6 +47,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidDesktopOtaUpdateDecoratorSpec;
+import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.io.File;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -71,8 +72,10 @@ public class AndroidDesktopOtaUpdateDecorator extends SetupOnlyDecorator
   private static final String UPDATE_SUCCESS_OUTPUT =
       "onPayloadApplicationComplete(ErrorCode::kSuccess (0)";
   private static final Duration APPLY_OTA_PACKAGE_TIMEOUT = Duration.ofMinutes(25);
-  private static final Duration WAIT_FOR_DEVICE_TIMEOUT = Duration.ofMinutes(10);
-  private static final Duration CACHE_EXPIRATION_TIME = Duration.ofMinutes(15);
+  private static final Duration WAIT_FOR_DEVICE_TIMEOUT = Duration.ofMinutes(20);
+  private static final Duration CACHE_EXPIRATION_BUFFER = Duration.ofMinutes(5);
+  private static final Duration OVER_TCP_STATE_CHECK_TIMEOUT = Duration.ofSeconds(30);
+  private static final int OVER_TCP_RECONNECT_MAX_ATTEMPTS = 3;
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   private final CommandExecutor cmdExecutor;
@@ -303,16 +306,22 @@ public class AndroidDesktopOtaUpdateDecorator extends SetupOnlyDecorator
   /** Reboots device and ensures it is online and ready to respond. */
   private void rebootAndWaitUntilDeviceIsReady(String deviceId)
       throws MobileHarnessException, InterruptedException {
+    Duration waitForDeviceTimeout = getWaitForDeviceTimeout();
+    Duration cacheExpirationTime = waitForDeviceTimeout.plus(CACHE_EXPIRATION_BUFFER);
     try {
       // Cache device to avoid device detection issues during reboot.
       DeviceCache.getInstance()
-          .cache(deviceId, getDevice().getClass().getSimpleName(), CACHE_EXPIRATION_TIME);
+          .cache(deviceId, getDevice().getClass().getSimpleName(), cacheExpirationTime);
       // Reboot device
       androidSystemStateUtil.reboot(deviceId);
       // Wait for device to be online after reboot
-      androidSystemStateUtil.waitForState(
-          deviceId, DeviceConnectionState.DEVICE, WAIT_FOR_DEVICE_TIMEOUT);
-      androidSystemStateUtil.waitUntilReady(deviceId);
+      if (DeviceUtil.isOverTcpDevice(deviceId)) {
+        waitForOverTcpDeviceReady(deviceId, waitForDeviceTimeout);
+      } else {
+        androidSystemStateUtil.waitForState(
+            deviceId, DeviceConnectionState.DEVICE, waitForDeviceTimeout);
+        androidSystemStateUtil.waitUntilReady(deviceId);
+      }
 
       // Set the device "stay awake" status post-flash to prevent the newly provisioned OS
       // from sleeping, which will breaks downstream tests when ADB connection dropped.
@@ -325,6 +334,45 @@ public class AndroidDesktopOtaUpdateDecorator extends SetupOnlyDecorator
     } finally {
       // Invalidate device cache
       DeviceCache.getInstance().invalidateCache(deviceId);
+    }
+  }
+
+  private Duration getWaitForDeviceTimeout() {
+    if (spec != null && spec.getWaitForDeviceTimeoutSec() > 0) {
+      return Duration.ofSeconds(spec.getWaitForDeviceTimeoutSec());
+    }
+    return WAIT_FOR_DEVICE_TIMEOUT;
+  }
+
+  private void waitForOverTcpDeviceReady(String deviceId, Duration waitForDeviceTimeout)
+      throws MobileHarnessException, InterruptedException {
+    MobileHarnessException lastException = null;
+    for (int attempt = 1; attempt <= OVER_TCP_RECONNECT_MAX_ATTEMPTS; attempt++) {
+      try {
+        disconnectAdbQuietly(deviceId);
+        androidSystemStateUtil.waitForOverTcpDeviceConnection(deviceId, waitForDeviceTimeout);
+        androidSystemStateUtil.waitForState(
+            deviceId,
+            DeviceConnectionState.DEVICE,
+            min(waitForDeviceTimeout, OVER_TCP_STATE_CHECK_TIMEOUT));
+        androidSystemStateUtil.waitUntilReady(deviceId);
+        return;
+      } catch (MobileHarnessException e) {
+        lastException = e;
+        logger.atWarning().withCause(e).log(
+            "Over-TCP device %s failed to reconnect and become ready after reboot (attempt %d/%d)",
+            deviceId, attempt, OVER_TCP_RECONNECT_MAX_ATTEMPTS);
+      }
+    }
+    throw lastException;
+  }
+
+  private void disconnectAdbQuietly(String deviceId) throws InterruptedException {
+    try {
+      androidAdbUtil.disconnect(deviceId);
+    } catch (MobileHarnessException e) {
+      logger.atInfo().withCause(e).log(
+          "Ignored error while disconnecting over-TCP device %s before reconnect", deviceId);
     }
   }
 }
