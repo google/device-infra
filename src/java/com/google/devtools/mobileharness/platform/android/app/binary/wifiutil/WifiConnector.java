@@ -44,6 +44,7 @@ public class WifiConnector {
   private static final long DEFAULT_TIMEOUT = 120 * 1000;
   private static final long DEFAULT_WAIT_TIME = 5 * 1000;
   private static final long POLL_TIME = 1000;
+  private static final int DEFAULT_HTTP_TIMEOUT_MS = 10 * 1000;
 
   private Context mContext;
   private WifiManager mWifiManager;
@@ -250,7 +251,11 @@ public class WifiConnector {
     HttpURLConnection urlConnection = null;
     try {
       urlConnection = (HttpURLConnection) url.openConnection();
+      urlConnection.setConnectTimeout(DEFAULT_HTTP_TIMEOUT_MS);
+      urlConnection.setReadTimeout(DEFAULT_HTTP_TIMEOUT_MS);
       urlConnection.connect();
+      int responseCode = urlConnection.getResponseCode();
+      return responseCode >= 200 && responseCode < 400;
     } catch (final Exception e) {
       Log.e(TAG, "Failed to open connection to check connectivity. Error: " + e.getMessage(), e);
       return false;
@@ -259,7 +264,6 @@ public class WifiConnector {
         urlConnection.disconnect();
       }
     }
-    return true;
   }
 
   /**
