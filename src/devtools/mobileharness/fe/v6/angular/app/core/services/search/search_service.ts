@@ -29,6 +29,8 @@ import {
   TjsSearchResponse,
   TjsSuggestionRequest,
   TjsSuggestionResponse,
+  TranslateArsenalSearchRequest,
+  TranslateArsenalSearchResponse,
 } from '../../models/search';
 
 /** Injection token for referencing SearchService implementations. */
@@ -76,6 +78,10 @@ export abstract class SearchService {
   abstract getFleetGroupByKeyCatalog(
     request: FleetGroupByKeyCatalogRequest,
   ): Observable<FleetGroupByKeyCatalogResponse>;
+
+  abstract translateArsenalSearch(
+    request: TranslateArsenalSearchRequest,
+  ): Observable<TranslateArsenalSearchResponse>;
 
   // --- TJS (test/job/session) Search RPCs ---
   abstract getTjsSearchConfig(

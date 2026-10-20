@@ -1,8 +1,14 @@
 import {Component} from '@angular/core';
 import {TestBed} from '@angular/core/testing';
 import {ActivatedRoute, provideRouter, Router} from '@angular/router';
-import {of, Subject} from 'rxjs';
+import {of, Subject, throwError} from 'rxjs';
 
+import {
+  Fleet,
+  FleetChipResolverResponse,
+  SearchEntity,
+  TranslateArsenalSearchResponse,
+} from '../../../core/models/search';
 import {
   SEARCH_SERVICE,
   SearchService,
@@ -33,11 +39,16 @@ describe('FleetSearchStore', () => {
     };
 
     mockSearchService = jasmine.createSpyObj<SearchService>('SearchService', [
+      'getFleetSearchConfig',
+      'searchFleet',
       'getFleetSuggestions',
       'getFleetPromotedKeys',
       'getFleetValueList',
       'resolveFleetChips',
+      'translateArsenalSearch',
     ]);
+    mockSearchService.getFleetSearchConfig.and.returnValue(of({}));
+    mockSearchService.searchFleet.and.returnValue(of({}));
     mockSearchService.getFleetSuggestions.and.returnValue(of({items: []}));
     mockSearchService.getFleetPromotedKeys.and.returnValue(
       of({filterKeys: [], groupByKeys: []}),
@@ -138,5 +149,289 @@ describe('FleetSearchStore', () => {
 
     expect(store.fleet()).toBe('ats');
     expect(router.url).toContain('fleet=ats');
+  });
+
+  describe('legacy ?arsenal_query cold load', () => {
+    const arsenalQuery = 'filter=status:match:values:IDLE&group_by=model';
+
+    afterEach(() => {
+      localStorage.clear();
+    });
+
+    it('applies the translated fleet and chips and drops arsenal_query from the URL', async () => {
+      const arsenalQueryWithColumns =
+        'filter=status:match:values:IDLE&column=uuid&group_by=model';
+      const columns = [
+        {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+      ];
+      mockSearchService.translateArsenalSearch.and.returnValue(
+        of({
+          fleet: Fleet.FLEET_ATS,
+          filters: [
+            {key: 'device_field::status', simple: {values: [{value: 'IDLE'}]}},
+          ],
+          filterChips: [{valid: {pillKey: 'Status', pillCondition: 'IDLE'}}],
+          groupByKeys: ['dimension::model'],
+          groupByChips: [{valid: {pillKey: 'Model', displayName: 'Model'}}],
+          columns,
+        }),
+      );
+      const navigateSpy = spyOn(router, 'navigate').and.callThrough();
+
+      const store = await createStoreAt({
+        'arsenal_query': arsenalQueryWithColumns,
+      });
+
+      expect(mockSearchService.translateArsenalSearch).toHaveBeenCalledOnceWith(
+        {
+          entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+          filters: [
+            {
+              key: 'status',
+              matchType: 'match',
+              valueType: 'values',
+              values: ['IDLE'],
+            },
+          ],
+          columns: ['uuid'],
+          groupByKeys: ['model'],
+        },
+      );
+      expect(store.fleet()).toBe('ats');
+      expect(store.visibleColumnDescriptors()).toEqual(columns);
+      expect(localStorage.getItem('mh_fe_v6_visible_columns_devices_ats')).toBe(
+        JSON.stringify(columns),
+      );
+      expect(store.activeChips().map((c) => c.key)).toEqual([
+        'device_field::status',
+        'dimension::model',
+      ]);
+      expect(navigateSpy).toHaveBeenCalledWith(
+        [],
+        jasmine.objectContaining({replaceUrl: true}),
+      );
+      expect(mockSearchService.searchFleet).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+          fleet: Fleet.FLEET_ATS,
+          filters: [
+            {
+              key: 'device_field::status',
+              simple: {values: [{value: 'IDLE'}]},
+            },
+          ],
+          groupHeader: jasmine.objectContaining({
+            groupBy: ['dimension::model'],
+          }),
+        }),
+      );
+      expect(router.url).not.toContain('arsenal_query');
+    });
+
+    it('drops invalid translated chips, stays on the landing page, and does not persist default columns', async () => {
+      const defaultColumns = [
+        {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+      ];
+      mockSearchService.translateArsenalSearch.and.returnValue(
+        of({
+          fleet: Fleet.FLEET_SELF,
+          filters: [{key: 'no_such_key', simple: {values: [{value: 'x'}]}}],
+          filterChips: [{invalid: {reason: 'Unknown filter key: no_such_key'}}],
+          groupByKeys: ['version'],
+          groupByChips: [{invalid: {reason: 'Unknown group-by key: version'}}],
+          columns: defaultColumns,
+        }),
+      );
+
+      const store = await createStoreAt({'arsenal_query': arsenalQuery});
+
+      expect(store.fleet()).toBe('internal');
+      expect(store.visibleColumnDescriptors()).toEqual([]);
+      expect(
+        localStorage.getItem('mh_fe_v6_visible_columns_devices_internal'),
+      ).toBeNull();
+      expect(store.activeChips()).toEqual([]);
+      expect(store.browseAll()).toBeFalse();
+      expect(store.isLandingState()).toBeTrue();
+      expect(mockSearchService.searchFleet).not.toHaveBeenCalled();
+      expect(mockSnackBarService.showWarning).toHaveBeenCalledWith(
+        'Unknown filter key: no_such_key',
+      );
+      expect(mockSnackBarService.showWarning).toHaveBeenCalledWith(
+        'Unknown group-by key: version',
+      );
+    });
+
+    it('shows a warning and keeps arsenal_query when translation fails', async () => {
+      mockSearchService.translateArsenalSearch.and.returnValue(
+        throwError(() => new Error('translate failed')),
+      );
+
+      const store = await createStoreAt({'arsenal_query': arsenalQuery});
+
+      expect(mockSnackBarService.showWarning).toHaveBeenCalledWith(
+        'Could not translate legacy Arsenal query.',
+      );
+      expect(store.activeChips()).toEqual([]);
+      expect(mockSearchService.searchFleet).not.toHaveBeenCalled();
+      expect(router.url).toContain('arsenal_query');
+    });
+
+    it('does not translate the same arsenal_query twice when query params re-emit', async () => {
+      mockSearchService.translateArsenalSearch.and.returnValue(
+        throwError(() => new Error('translate failed')),
+      );
+
+      await createStoreAt({'arsenal_query': arsenalQuery});
+      queryParams$.next({'arsenal_query': arsenalQuery});
+      await flushAsync();
+
+      expect(mockSearchService.translateArsenalSearch).toHaveBeenCalledTimes(1);
+    });
+
+    it('browses all devices in the translated fleet for a valid universe-only query', async () => {
+      mockSearchService.translateArsenalSearch.and.returnValue(
+        of({
+          fleet: Fleet.FLEET_ATS,
+          filters: [],
+          filterChips: [],
+          groupByKeys: [],
+          groupByChips: [],
+        }),
+      );
+
+      const store = await createStoreAt({
+        'arsenal_query': 'filter=universe:not_match:values:google_1p',
+      });
+
+      expect(store.fleet()).toBe('ats');
+      expect(store.activeChips()).toEqual([]);
+      expect(store.browseAll()).toBeTrue();
+      expect(store.isLandingState()).toBeFalse();
+      expect(mockSearchService.searchFleet).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+          fleet: Fleet.FLEET_ATS,
+          filters: undefined,
+        }),
+      );
+    });
+
+    it('preserves fleet=ats on NavigationEnd when arsenal_query is present without fleet', async () => {
+      const translateSubject = new Subject<TranslateArsenalSearchResponse>();
+      mockSearchService.translateArsenalSearch.and.returnValue(
+        translateSubject,
+      );
+
+      const store = await createStoreAt({'fleet': 'ats'});
+      expect(store.fleet()).toBe('ats');
+
+      activatedRouteStub.snapshot.queryParams = {'arsenal_query': arsenalQuery};
+      await router.navigateByUrl(
+        `/devices?arsenal_query=${encodeURIComponent(arsenalQuery)}`,
+      );
+      queryParams$.next({'arsenal_query': arsenalQuery});
+      await flushAsync();
+
+      expect(store.fleet()).toBe('ats');
+      expect(translateSubject.observed).toBeTrue();
+    });
+
+    it('cancels in-flight chip resolution and ignores superseded translation when state changes', async () => {
+      const resolveSubject = new Subject<FleetChipResolverResponse>();
+      const translateSubject1 = new Subject<TranslateArsenalSearchResponse>();
+      const translateSubject2 = new Subject<TranslateArsenalSearchResponse>();
+      const translateSubject3 = new Subject<TranslateArsenalSearchResponse>();
+      mockSearchService.resolveFleetChips.and.returnValue(resolveSubject);
+      mockSearchService.translateArsenalSearch.and.returnValues(
+        translateSubject1,
+        translateSubject2,
+        translateSubject3,
+      );
+
+      const store = await createStoreAt({'f': 'device_field::status~BUSY'});
+      expect(resolveSubject.observed).toBeTrue();
+
+      // 1. Intercepting arsenal_query cancels in-flight resolveFiltersSubject.
+      activatedRouteStub.snapshot.queryParams = {'arsenal_query': arsenalQuery};
+      queryParams$.next({'arsenal_query': arsenalQuery});
+      await flushAsync();
+
+      expect(resolveSubject.observed).toBeFalse();
+      expect(translateSubject1.observed).toBeTrue();
+      resolveSubject.next({
+        filterChips: [{valid: {pillKey: 'Status', pillCondition: 'BUSY'}}],
+      });
+      await flushAsync();
+
+      // 2. Switching fleet cancels in-flight translation; late response is ignored.
+      store.setFleet('ats');
+      await flushAsync();
+
+      expect(translateSubject1.observed).toBeFalse();
+      translateSubject1.next({
+        fleet: Fleet.FLEET_SELF,
+        filters: [
+          {key: 'device_field::status', simple: {values: [{value: 'IDLE'}]}},
+        ],
+        filterChips: [{valid: {pillKey: 'Status', pillCondition: 'IDLE'}}],
+      });
+      await flushAsync();
+      expect(store.fleet()).toBe('ats');
+      expect(store.activeChips()).toEqual([]);
+
+      // 3. Navigating to a canonical ?f= URL cancels in-flight translation; late response is ignored.
+      const secondArsenalQuery = 'filter=status:match:values:MISSING';
+      activatedRouteStub.snapshot.queryParams = {
+        'arsenal_query': secondArsenalQuery,
+      };
+      queryParams$.next({'arsenal_query': secondArsenalQuery});
+      await flushAsync();
+      expect(translateSubject2.observed).toBeTrue();
+
+      activatedRouteStub.snapshot.queryParams = {
+        'f': 'device_field::status~LAB_MISSING',
+      };
+      queryParams$.next({'f': 'device_field::status~LAB_MISSING'});
+      await flushAsync();
+      expect(translateSubject2.observed).toBeFalse();
+      translateSubject2.next({
+        fleet: Fleet.FLEET_ATS,
+        filters: [
+          {key: 'device_field::status', simple: {values: [{value: 'MISSING'}]}},
+        ],
+        filterChips: [{valid: {pillKey: 'Status', pillCondition: 'MISSING'}}],
+      });
+      await flushAsync();
+      expect(store.activeChips().map((c) => c.pillCondition)).toEqual([
+        'LAB_MISSING',
+      ]);
+
+      // 4. Editing chips cancels in-flight resolveFiltersSubject.
+      store.addFilterChip({
+        key: 'dimension::pool',
+        pillKey: 'Pool',
+        pillCondition: 'shared',
+        rawValues: ['shared'],
+      });
+      await flushAsync();
+      expect(resolveSubject.observed).toBeFalse();
+
+      // 5. Leaving the active route cancels in-flight translation; late error does not show warning.
+      const thirdArsenalQuery = 'filter=status:match:values:DYING';
+      activatedRouteStub.snapshot.queryParams = {
+        'arsenal_query': thirdArsenalQuery,
+      };
+      queryParams$.next({'arsenal_query': thirdArsenalQuery});
+      await flushAsync();
+      expect(translateSubject3.observed).toBeTrue();
+
+      await router.navigateByUrl('/hosts');
+      await flushAsync();
+      expect(translateSubject3.observed).toBeFalse();
+      translateSubject3.error(new Error('late failure'));
+      await flushAsync();
+      expect(mockSnackBarService.showWarning).not.toHaveBeenCalled();
+    });
   });
 });
