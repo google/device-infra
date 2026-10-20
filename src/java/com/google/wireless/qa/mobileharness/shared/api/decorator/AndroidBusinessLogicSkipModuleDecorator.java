@@ -40,6 +40,8 @@ import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSyst
 import com.google.devtools.mobileharness.platform.android.xts.businesslogic.BusinessLogic;
 import com.google.devtools.mobileharness.platform.android.xts.businesslogic.BusinessLogicExecutor;
 import com.google.devtools.mobileharness.platform.android.xts.businesslogic.BusinessLogicFetcher;
+import com.google.devtools.mobileharness.platform.android.xts.config.DynamicConfig;
+import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupResult;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.SetupOnlyDecorator;
@@ -47,13 +49,17 @@ import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidBusinessLogicSkipModuleDecoratorSpec;
+import java.io.File;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
+import org.xmlpull.v1.XmlPullParserException;
 
 /**
  * Decorator that skips module execution based on xTS business logic rules. Only supports release
@@ -68,6 +74,10 @@ public class AndroidBusinessLogicSkipModuleDecorator extends SetupOnlyDecorator
   private static final String SUITE_PLACEHOLDER = "{suite-name}";
 
   private static final String FEATURE_PREFIX = "feature:";
+
+  private static final String DYNAMIC_CONFIG_FEATURES_KEY = "business_logic_device_features";
+  private static final String DYNAMIC_CONFIG_PROPERTIES_KEY = "business_logic_device_properties";
+  private static final String DYNAMIC_CONFIG_PACKAGES_KEY = "business_logic_device_packages";
 
   private static final ImmutableSet<String> BUSINESS_LOGIC_DEVICE_FEATURES =
       ImmutableSet.of(
@@ -280,19 +290,30 @@ public class AndroidBusinessLogicSkipModuleDecorator extends SetupOnlyDecorator
           .log("Failed to get device manufacturer");
     }
 
+    ImmutableMap<String, List<String>> dynamicConfig = loadDynamicConfig(testInfo);
+    ImmutableSet<String> businessLogicDeviceFeatures =
+        getDynamicConfigValues(
+            dynamicConfig, DYNAMIC_CONFIG_FEATURES_KEY, BUSINESS_LOGIC_DEVICE_FEATURES);
+    ImmutableSet<String> businessLogicDeviceProperties =
+        getDynamicConfigValues(
+            dynamicConfig, DYNAMIC_CONFIG_PROPERTIES_KEY, BUSINESS_LOGIC_DEVICE_PROPERTIES);
+    ImmutableSet<String> businessLogicDevicePackages =
+        getDynamicConfigValues(
+            dynamicConfig, DYNAMIC_CONFIG_PACKAGES_KEY, BUSINESS_LOGIC_DEVICE_PACKAGES);
+
     try {
       Set<String> deviceFeatures = androidSystemSpecUtil.getSystemFeatures(deviceId);
       Set<String> strippedFeatures =
           deviceFeatures.stream()
               .map(f -> f.substring(FEATURE_PREFIX.length()))
-              .filter(f -> BUSINESS_LOGIC_DEVICE_FEATURES.contains(f))
+              .filter(businessLogicDeviceFeatures::contains)
               .collect(toCollection(HashSet::new));
       paramsBuilder.putAll("features", strippedFeatures);
     } catch (MobileHarnessException e) {
       testInfo.log().atWarning().alsoTo(logger).withCause(e).log("Failed to get device features");
     }
 
-    for (String propertyName : BUSINESS_LOGIC_DEVICE_PROPERTIES) {
+    for (String propertyName : businessLogicDeviceProperties) {
       try {
         String propertyValue = androidAdbUtil.getProperty(deviceId, ImmutableList.of(propertyName));
         if (!Strings.isNullOrEmpty(propertyValue)) {
@@ -311,13 +332,53 @@ public class AndroidBusinessLogicSkipModuleDecorator extends SetupOnlyDecorator
     try {
       Set<String> installedPackages =
           new HashSet<>(androidPackageManagerUtil.listPackages(deviceId, PackageType.ALL));
-      installedPackages.retainAll(BUSINESS_LOGIC_DEVICE_PACKAGES);
+      installedPackages.retainAll(businessLogicDevicePackages);
       paramsBuilder.putAll("packages", installedPackages);
     } catch (MobileHarnessException e) {
       testInfo.log().atWarning().alsoTo(logger).withCause(e).log("Failed to list device packages");
     }
 
     return paramsBuilder.build();
+  }
+
+  /**
+   * Loads the suite-level dynamic config passed to the job by the session orchestrator (see {@link
+   * XtsConstants#XTS_SUITE_DYNAMIC_CONFIG_FILE_TAG}), or an empty map if the job has no usable one.
+   */
+  private static ImmutableMap<String, List<String>> loadDynamicConfig(TestInfo testInfo) {
+    ImmutableSet<String> files =
+        testInfo.jobInfo().files().get(XtsConstants.XTS_SUITE_DYNAMIC_CONFIG_FILE_TAG);
+    if (files.isEmpty()) {
+      return ImmutableMap.of();
+    }
+    String path = files.iterator().next();
+    try {
+      ImmutableMap<String, List<String>> dynamicConfig =
+          ImmutableMap.copyOf(DynamicConfig.createConfigMap(new File(path)));
+      testInfo.log().atInfo().alsoTo(logger).log("Loaded suite dynamic config from %s", path);
+      return dynamicConfig;
+    } catch (XmlPullParserException | IOException e) {
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .withCause(e)
+          .log("Failed to load suite dynamic config from %s, ignoring it.", path);
+      return ImmutableMap.of();
+    }
+  }
+
+  /**
+   * Returns the built-in {@code defaultValues} extended with the values of {@code key} in the suite
+   * dynamic config. The built-in sets are the baseline needed by every xTS suite (e.g. {@code
+   * ro.soc.model} for chipset based rules); the suite dynamic config can only add to them.
+   */
+  private static ImmutableSet<String> getDynamicConfigValues(
+      Map<String, List<String>> dynamicConfig, String key, ImmutableSet<String> defaultValues) {
+    return ImmutableSet.<String>builder()
+        .addAll(defaultValues)
+        .addAll(dynamicConfig.getOrDefault(key, ImmutableList.of()))
+        .build();
   }
 
   private String formatBusinessLogicUrl(String url, Map<String, String> xtsSuiteInfoMap) {

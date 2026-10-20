@@ -39,15 +39,18 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.xts.businesslogic.BusinessLogicFetcher;
+import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidBusinessLogicSkipModuleDecoratorSpec;
+import java.io.File;
 import java.time.Duration;
 import java.util.Optional;
 import org.junit.Before;
@@ -77,6 +80,7 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
   @Mock private TestLocator testLocator;
   @Mock private Properties testProperties;
   @Mock private Properties jobProperties;
+  @Mock private Files jobFiles;
   @Mock private Result testResultWithCause;
   @Mock private AndroidAdbUtil mockAndroidAdbUtil;
   @Mock private AndroidSystemSpecUtil mockAndroidSystemSpecUtil;
@@ -103,6 +107,8 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
     when(testLocator.getName()).thenReturn("test_module");
     when(testInfo.properties()).thenReturn(testProperties);
     when(jobInfo.properties()).thenReturn(jobProperties);
+    when(jobInfo.files()).thenReturn(jobFiles);
+    when(jobFiles.get(anyString())).thenReturn(ImmutableSet.of());
     when(testInfo.resultWithCause()).thenReturn(testResultWithCause);
     when(testInfo.getRootTest()).thenReturn(testInfo);
 
@@ -516,6 +522,114 @@ public final class AndroidBusinessLogicSkipModuleDecoratorTest {
     decorator.run(testInfo);
 
     // Verify that ro.soc.model is gathered and included in properties
+    verify(mockFetcher)
+        .fetchBusinessLogic(
+            eq("http://fake-url/logic"),
+            eq(""),
+            eq(""),
+            eq(System.getenv("APE_API_KEY")),
+            eq(Duration.ofSeconds(60)),
+            eq(
+                ImmutableSetMultimap.<String, String>builder()
+                    .put("features", "android.hardware.type.television")
+                    .put("properties", "ro.soc.model:SM8850")
+                    .put("packages", "com.google.android.gms")
+                    .build()));
+  }
+
+  @Test
+  public void run_withSuiteDynamicConfigFile_gathersDynamicConfigParams() throws Exception {
+    File configFile = File.createTempFile("gts", ".dynamic");
+    configFile.deleteOnExit();
+    java.nio.file.Files.writeString(
+        configFile.toPath(),
+        """
+        <dynamicConfig>
+          <entry key="business_logic_device_features">
+            <value>android.hardware.custom_feature</value>
+          </entry>
+          <entry key="business_logic_device_properties">
+            <value>ro.build.version.release</value>
+            <value>ro.product.device</value>
+          </entry>
+        </dynamicConfig>
+        """);
+    when(jobFiles.get(XtsConstants.XTS_SUITE_DYNAMIC_CONFIG_FILE_TAG))
+        .thenReturn(ImmutableSet.of(configFile.getAbsolutePath()));
+
+    AndroidBusinessLogicSkipModuleDecoratorSpec spec =
+        AndroidBusinessLogicSkipModuleDecoratorSpec.newBuilder()
+            .setBusinessLogicUrl("http://fake-url/logic")
+            .build();
+    when(jobInfo.combinedSpec(decorator, "fake_device_id")).thenReturn(spec);
+
+    when(mockAndroidSystemSpecUtil.getSystemFeatures("fake_device_id"))
+        .thenReturn(
+            ImmutableSet.of(
+                "feature:android.hardware.custom_feature",
+                "feature:android.hardware.type.television"));
+    when(mockAndroidAdbUtil.getProperty(
+            "fake_device_id", ImmutableList.of("ro.build.version.release")))
+        .thenReturn("16");
+    when(mockAndroidAdbUtil.getProperty("fake_device_id", ImmutableList.of("ro.product.device")))
+        .thenReturn("TCX01LD");
+    when(mockAndroidAdbUtil.getProperty("fake_device_id", ImmutableList.of("ro.soc.model")))
+        .thenReturn("SM8850");
+    when(mockAndroidPackageManagerUtil.listPackages("fake_device_id", PackageType.ALL))
+        .thenReturn(ImmutableSet.of("com.google.android.gms"));
+    when(mockFetcher.fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
+        .thenReturn("{}");
+
+    decorator.run(testInfo);
+
+    // The suite config extends the built-in sets: its entries (custom feature, release, device)
+    // are added, while built-in ones (television feature, ro.soc.model, GMS package) are kept
+    // even though the file does not list them.
+    verify(mockFetcher)
+        .fetchBusinessLogic(
+            eq("http://fake-url/logic"),
+            eq(""),
+            eq(""),
+            eq(System.getenv("APE_API_KEY")),
+            eq(Duration.ofSeconds(60)),
+            eq(
+                ImmutableSetMultimap.<String, String>builder()
+                    .put("features", "android.hardware.custom_feature")
+                    .put("features", "android.hardware.type.television")
+                    .put("properties", "ro.build.version.release:16")
+                    .put("properties", "ro.product.device:TCX01LD")
+                    .put("properties", "ro.soc.model:SM8850")
+                    .put("packages", "com.google.android.gms")
+                    .build()));
+  }
+
+  @Test
+  public void run_withUnparsableSuiteDynamicConfigFile_usesDefaults() throws Exception {
+    File configFile = File.createTempFile("gts", ".dynamic");
+    configFile.deleteOnExit();
+    java.nio.file.Files.writeString(configFile.toPath(), "<dynamicConfig>");
+    when(jobFiles.get(XtsConstants.XTS_SUITE_DYNAMIC_CONFIG_FILE_TAG))
+        .thenReturn(ImmutableSet.of(configFile.getAbsolutePath()));
+
+    AndroidBusinessLogicSkipModuleDecoratorSpec spec =
+        AndroidBusinessLogicSkipModuleDecoratorSpec.newBuilder()
+            .setBusinessLogicUrl("http://fake-url/logic")
+            .build();
+    when(jobInfo.combinedSpec(decorator, "fake_device_id")).thenReturn(spec);
+
+    when(mockAndroidSystemSpecUtil.getSystemFeatures("fake_device_id"))
+        .thenReturn(ImmutableSet.of("feature:android.hardware.type.television"));
+    when(mockAndroidAdbUtil.getProperty("fake_device_id", ImmutableList.of("ro.soc.model")))
+        .thenReturn("SM8850");
+    when(mockAndroidPackageManagerUtil.listPackages("fake_device_id", PackageType.ALL))
+        .thenReturn(ImmutableSet.of("com.google.android.gms"));
+    when(mockFetcher.fetchBusinessLogic(
+            anyString(), anyString(), anyString(), any(), any(Duration.class), any()))
+        .thenReturn("{}");
+
+    decorator.run(testInfo);
+
     verify(mockFetcher)
         .fetchBusinessLogic(
             eq("http://fake-url/logic"),

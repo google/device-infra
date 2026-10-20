@@ -48,6 +48,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -594,6 +595,7 @@ public class AtsSessionOrchestrator {
    */
   @CanIgnoreReturnValue
   private boolean addMainNonTradefedJobs() {
+    attachSuiteDynamicConfigFile(nonTradefedJobs);
     ImmutableList<String> nonTfJobIds = addJobsToSession(nonTradefedJobs);
     if (!nonTfJobIds.isEmpty()) {
       synchronized (runningNonTradefedJobs) {
@@ -602,6 +604,38 @@ public class AtsSessionOrchestrator {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Passes the suite-level dynamic config file produced by the setup job, if any, to the given
+   * non-Tradefed jobs as a job file. The file is among the generated files of the setup test, which
+   * are available on the session host once the test has finished.
+   */
+  private void attachSuiteDynamicConfigFile(ImmutableList<JobInfo> jobs) {
+    JobInfo setupJob = setupJobRef.get();
+    if (setupJob == null) {
+      return;
+    }
+    for (TestInfo setupTest : setupJob.tests().getAll().values()) {
+      Optional<String> relativePath =
+          setupTest
+              .properties()
+              .getOptional(XtsConstants.XTS_SUITE_DYNAMIC_CONFIG_HOST_FILE_PROPERTY_KEY);
+      if (relativePath.isEmpty()) {
+        continue;
+      }
+      try {
+        String file = new File(setupTest.getGenFileDir(), relativePath.get()).getPath();
+        for (JobInfo job : jobs) {
+          job.files().add(XtsConstants.XTS_SUITE_DYNAMIC_CONFIG_FILE_TAG, file);
+        }
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to pass suite dynamic config file [%s] of setup test [%s] to non-Tradefed jobs",
+            relativePath.get(), setupTest.locator().getId());
+      }
+      return;
+    }
   }
 
   /** Adds the teardown job to the session if present. */
