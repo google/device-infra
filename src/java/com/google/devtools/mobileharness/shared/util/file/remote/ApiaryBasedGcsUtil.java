@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions
 import com.google.devtools.mobileharness.shared.util.file.checksum.ChecksumUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import java.io.BufferedOutputStream;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -103,8 +104,9 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
       ChecksumUtil checksumUtil,
       ChecksumUtil crc32cChecksumUtil,
       LocalFileUtil localFileUtil,
-      SystemUtil systemUtil) {
-    super(storageParams, checksumUtil, crc32cChecksumUtil, localFileUtil, systemUtil);
+      SystemUtil systemUtil,
+      Sleeper sleeper) {
+    super(storageParams, checksumUtil, crc32cChecksumUtil, localFileUtil, systemUtil, sleeper);
     this.client = client;
   }
 

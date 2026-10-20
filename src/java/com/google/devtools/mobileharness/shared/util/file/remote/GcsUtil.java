@@ -247,6 +247,8 @@ public abstract class GcsUtil {
 
   protected final SystemUtil systemUtil;
 
+  private final Sleeper sleeper;
+
   /** Constructs a CloudStorageUtil given the related parameters about the storage. */
   protected GcsUtil(GcsParams storageParams) {
     this(
@@ -263,11 +265,28 @@ public abstract class GcsUtil {
       ChecksumUtil crc32cChecksumUtil,
       LocalFileUtil localFileUtil,
       SystemUtil systemUtil) {
+    this(
+        storageParams,
+        checksumUtil,
+        crc32cChecksumUtil,
+        localFileUtil,
+        systemUtil,
+        Sleeper.defaultSleeper());
+  }
+
+  protected GcsUtil(
+      GcsParams storageParams,
+      ChecksumUtil checksumUtil,
+      ChecksumUtil crc32cChecksumUtil,
+      LocalFileUtil localFileUtil,
+      SystemUtil systemUtil,
+      Sleeper sleeper) {
     this.storageParams = storageParams;
     this.checksumUtil = checksumUtil;
     this.crc32cChecksumUtil = crc32cChecksumUtil;
     this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
+    this.sleeper = sleeper;
   }
 
   /**
@@ -977,7 +996,7 @@ public abstract class GcsUtil {
   @CanIgnoreReturnValue
   protected <R> R retryIfMeetQuotaOrNetworkIssue(GcsMethod<R> m, String actionInfo)
       throws MobileHarnessException, InterruptedException {
-    return retryIfMeetQuotaOrNetworkIssue(m, actionInfo, Sleeper.defaultSleeper());
+    return retryIfMeetQuotaOrNetworkIssue(m, actionInfo, sleeper);
   }
 
   @CanIgnoreReturnValue
