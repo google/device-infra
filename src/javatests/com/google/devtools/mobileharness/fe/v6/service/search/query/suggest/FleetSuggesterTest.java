@@ -598,9 +598,13 @@ public final class FleetSuggesterTest {
   }
 
   @Test
-  public void emptyQuery_returnsNoSuggestions() {
+  public void emptyQuery_noFiltersOrGroupBys_returnsSuggestions() {
     FleetSuggestionResponse response = suggester.suggest(corpus, request(""));
-    assertThat(response.getItemsList()).isEmpty();
+    assertThat(response.getItemsList()).isNotEmpty();
+    assertThat(
+            response.getItemsList().stream()
+                .anyMatch(item -> item.hasOpenPicker() || item.hasApplyFilter()))
+        .isTrue();
   }
 
   @Test
