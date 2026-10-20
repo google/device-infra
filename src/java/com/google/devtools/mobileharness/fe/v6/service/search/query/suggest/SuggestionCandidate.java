@@ -36,8 +36,8 @@ import javax.annotation.Nullable;
  *   <li>{@link #valueCondition}: a concrete {@code <key> is <value>} row whose count the ranker
  *       computes under the current filters, because counting every candidate up front is wasteful
  *       when most fall below the result cap.
- *   <li>{@link #presetCondition}: a row whose generator already knows the count (emptiness and
- *       multi-value rows, which count sets rather than single values).
+ *   <li>{@link #presetCondition}: a row whose generator already knows the count (emptiness,
+ *       multi-value OR, and collapsed identifier prefix rows).
  *   <li>{@link #uncountedCondition}, {@link #keyOnly}, {@link #groupBy}: rows that never carry a
  *       record count (a cold long-tail filter, a picker affordance, a grouping with a group count).
  * </ul>

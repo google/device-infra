@@ -28,7 +28,6 @@ import com.google.devtools.mobileharness.fe.v6.service.search.query.FleetFilterE
 import com.google.devtools.mobileharness.fe.v6.service.search.query.KeyVocabulary;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.SearchCorpus;
 import java.util.BitSet;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -90,10 +89,10 @@ final class SuggestionContext {
    * Captures the request's filters and, when there are any, evaluates them against the corpus once.
    *
    * <p>With no filter the scope is the whole corpus, so {@link #current} stays empty and every
-   * counting method except a multi-value OR on a multi-valued key answers from the index or the
-   * per-snapshot key statistics instead. Listing every record position (about 150,000 for the 1P
-   * device fleet) would otherwise cost a corpus pass on each keystroke of unfiltered typeahead, the
-   * most common way the search box is used.
+   * counting method except a multi-value OR or identifier prefix count on a multi-valued key
+   * answers from the index or the per-snapshot key statistics instead. Listing every record
+   * position (about 150,000 for the 1P device fleet) would otherwise cost a corpus pass on each
+   * keystroke of unfiltered typeahead, the most common way the search box is used.
    */
   static SuggestionContext create(
       SearchCorpus corpus, List<Filter> filters, FleetFilterEngine filterEngine) {
@@ -250,8 +249,46 @@ final class SuggestionContext {
     return union.cardinality();
   }
 
+  /**
+   * Number of records in scope carrying any value that starts with {@code prefixLower} under {@code
+   * keyId}, where {@code matchingValues} is the slice of {@link FleetIndex#sortedValues} with that
+   * prefix.
+   *
+   * <p>Without filters, a key on which no record carries two values (its {@link
+   * FleetIndex#keyStats} are not {@code multiValued}) answers from the index as the sum of the
+   * value counts across {@code matchingValues}; a multi-valued key takes one pass over the corpus.
+   * With filters, one pass over {@link #current} checks {@link String#startsWith} directly without
+   * materializing a value set.
+   */
+  int scopePrefixCount(String keyId, String prefixLower, ImmutableList<String> matchingValues) {
+    if (!hasFilters() && !index.keyStats(keyId).multiValued()) {
+      return matchingValues.stream().mapToInt(value -> index.valueCount(keyId, value)).sum();
+    }
+    if (!hasFilters()) {
+      int count = 0;
+      for (int position = 0; position < corpus.recordCount(); position++) {
+        if (carriesPrefix(position, keyId, prefixLower)) {
+          count++;
+        }
+      }
+      return count;
+    }
+    int count = 0;
+    for (int position : current) {
+      if (carriesPrefix(position, keyId, prefixLower)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
   private boolean carriesAny(int position, String keyId, ImmutableSet<String> valuesLower) {
-    return !Collections.disjoint(corpus.valuesForKey(position, keyId), valuesLower);
+    return corpus.valuesForKey(position, keyId).stream().anyMatch(valuesLower::contains);
+  }
+
+  private boolean carriesPrefix(int position, String keyId, String prefixLower) {
+    return corpus.valuesForKey(position, keyId).stream()
+        .anyMatch(value -> value.startsWith(prefixLower));
   }
 
   /** Number of records in scope that have at least one value for {@code keyId}. */

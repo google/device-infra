@@ -42,9 +42,8 @@ enum MatchTier {
 
   /**
    * The weakest evidence of what the user meant: a key name or value that only contains the typed
-   * text, a collapsed {@code <Key> starts with} row that opens the picker for an identifier key
-   * instead of applying a value, or a literal condition on a cold long-tail key that the index
-   * cannot confirm.
+   * text, a collapsed {@code <Key> starts with} prefix filter on an identifier key, or a literal
+   * condition on a cold long-tail key that the index cannot confirm.
    */
   WEAK;
 

@@ -20,8 +20,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.applyFilter;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.noValueFilter;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.openPicker;
-import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.openPickerNewChip;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.openPickerStaged;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.startsWithFilter;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.valueFilter;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionText.conditionText;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionText.displayValue;
@@ -409,20 +409,22 @@ public final class FleetSuggester {
 
   /**
    * Conditions for a value with the key undetermined, searched across all keys: exact matches via
-   * the global reverse index, prefix matches via the sorted global value list, and one collapsed
-   * "starts with" row per identifier key so a UUID prefix does not produce thousands of rows.
+   * the global reverse index, prefix matches via the sorted global value list, and, for non-negated
+   * inputs on identifier keys that do not already carry a chip, one collapsed "starts with" row per
+   * identifier key so a UUID prefix does not produce thousands of rows.
    *
    * <p>Identifier keys are left out of the sorted global value list for that reason, but they are
    * in the global reverse index, so a complete ID always gets its exact {@code <Key> is <value>}
-   * row. The collapsed row shows the number of matching IDs in {@link FleetSuggestion#getCount},
-   * which the frontend renders right-aligned like every other count, so its main text does not
-   * repeat the number.
+   * row. The collapsed row shows the number of matching records in {@link
+   * FleetSuggestion#getCount}, which the frontend renders right-aligned like every other count, so
+   * its main text does not repeat the number.
    */
   private ImmutableList<SuggestionCandidate> suggestValues(
       SuggestionContext context, String token, boolean exclude) {
     FleetIndex index = context.index();
     KeyVocabulary vocabulary = context.vocabulary();
-    String value = Ascii.toLowerCase(stripQuotes(token));
+    String prefix = stripQuotes(token);
+    String value = Ascii.toLowerCase(prefix);
     ImmutableList.Builder<SuggestionCandidate> out = ImmutableList.builder();
     Set<String> seen = new HashSet<>();
 
@@ -449,7 +451,11 @@ public final class FleetSuggester {
     }
 
     for (String identifierKeyId : index.keyIds()) {
-      if (!context.corpus().isIdentifierKey(identifierKeyId)) {
+      // StartsWith is not negatable, and applying a new filter cannot overwrite an existing chip on
+      // the same key.
+      if (exclude
+          || !context.corpus().isIdentifierKey(identifierKeyId)
+          || context.isActiveKey(identifierKeyId)) {
         continue;
       }
       Optional<KeyDescriptor> key = vocabulary.describe(identifierKeyId);
@@ -458,23 +464,34 @@ public final class FleetSuggester {
         continue;
       }
       int loIndex = FleetFilterEngine.lowerBound(keyValues, value);
-      int matchCount = FleetFilterEngine.lowerBound(keyValues, value + '\uffff') - loIndex;
-      // A complete ID that no other ID extends already has its exact row, so a "starts with" row
-      // would only repeat that one record. When other IDs share the prefix (typing "device-1"
-      // with "device-10" present), the row covers records the exact row does not, and it stays.
-      if (matchCount == 0 || (matchCount == 1 && keyValues.get(loIndex).equals(value))) {
+      int hiIndex = FleetFilterEngine.lowerBound(keyValues, value + '\uffff');
+      // A complete identifier value that no other value extends (globally or in the active scope)
+      // already has its exact row, so a "starts with" row would only repeat those records. When
+      // other values share the prefix (typing "device-1" with "device-10" present), the row covers
+      // records the exact row does not, and it stays.
+      if (loIndex == hiIndex || (hiIndex - loIndex == 1 && keyValues.get(loIndex).equals(value))) {
         continue;
       }
+      int matchCount =
+          context.scopePrefixCount(identifierKeyId, value, keyValues.subList(loIndex, hiIndex));
+      if (matchCount == 0
+          || (keyValues.get(loIndex).equals(value)
+              && matchCount == context.scopeCount(identifierKeyId, value))) {
+        continue;
+      }
+      Filter filter = startsWithFilter(identifierKeyId, prefix);
       FleetSuggestion.Builder proto =
           FleetSuggestion.newBuilder()
               .setLabel("Add filter")
               .addAllMainText(
-                  segments(vocabulary.titleDisplayName(key.get()) + " starts with ", token))
-              .setCount(matchCount)
-              .setOpenPicker(openPickerNewChip(vocabulary, key.get()));
-      // The row opens the picker instead of applying a value, so among keys of the same priority
-      // it ranks below every concrete value that starts with the token.
-      out.add(SuggestionCandidate.keyOnly(key.get(), MatchTier.WEAK, proto));
+                  segments(vocabulary.titleDisplayName(key.get()) + " starts with ", prefix))
+              .setApplyFilter(applyFilter(vocabulary, index, key.get(), filter));
+      // The row applies a prefix filter rather than a single value, so MatchTier.WEAK places it
+      // below every concrete value match of the same key priority while still ordering it by
+      // matchCount ahead of uncounted rows.
+      out.add(
+          SuggestionCandidate.presetCondition(
+              key.get(), MatchTier.WEAK, proto, matchCount, matchCount));
     }
     return out.build();
   }

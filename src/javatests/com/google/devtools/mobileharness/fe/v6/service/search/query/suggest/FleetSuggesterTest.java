@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query.suggest;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
@@ -114,15 +115,83 @@ public final class FleetSuggesterTest {
 
   @Test
   public void uuidPrefix_collapsesToSingleStartsWithSuggestion() {
+    FleetFilterEngine filterEngine = Guice.createInjector().getInstance(FleetFilterEngine.class);
     FleetSuggestionResponse response = suggester.suggest(corpus, request("device-"));
 
-    FleetSuggestion collapsed = firstOpenPicker(response, "device_field::uuid");
+    FleetSuggestion collapsed = firstApplyFilter(response, "device_field::uuid");
     assertThat(collapsed.getCount()).isEqualTo(4);
     assertThat(collapsed.getMainTextList())
         .containsExactly(
             TextSegment.newBuilder().setText("UUID starts with ").setEmphasized(false).build(),
             TextSegment.newBuilder().setText("device-").setEmphasized(true).build())
         .inOrder();
+    assertThat(
+            collapsed.getApplyFilter().getResultingFilter().getComplex().getStartsWith().getValue())
+        .isEqualTo("device-");
+    assertThat(collapsed.getApplyFilter().getPillKey()).isEqualTo("UUID");
+    assertThat(collapsed.getApplyFilter().getPillCondition()).isEqualTo("starts with device-");
+    assertThat(
+            filterEngine.match(
+                corpus, ImmutableList.of(collapsed.getApplyFilter().getResultingFilter())))
+        .hasSize(collapsed.getCount());
+
+    // With an active chip on another key, the collapsed row's count reflects the active filter
+    // scope and matches what FleetFilterEngine produces when resulting_filter is applied.
+    Filter busyChip = simple("device_field::status", "BUSY");
+    FleetSuggestionResponse withBusyChip = suggester.suggest(corpus, request("device-", busyChip));
+    FleetSuggestion busyCollapsed = firstApplyFilter(withBusyChip, "device_field::uuid");
+    assertThat(busyCollapsed.getCount()).isEqualTo(1);
+    assertThat(
+            filterEngine.match(
+                corpus,
+                ImmutableList.of(busyChip, busyCollapsed.getApplyFilter().getResultingFilter())))
+        .containsExactly(2);
+
+    // A quoted or uppercase prefix preserves the stripped case in the displayed text and filter
+    // while matching case-insensitively against the lowercased index.
+    FleetSuggestionResponse quotedUppercase = suggester.suggest(corpus, request("'DEVICE-'"));
+    FleetSuggestion quotedCollapsed = firstApplyFilter(quotedUppercase, "device_field::uuid");
+    assertThat(quotedCollapsed.getCount()).isEqualTo(4);
+    assertThat(quotedCollapsed.getMainTextList())
+        .containsExactly(
+            TextSegment.newBuilder().setText("UUID starts with ").setEmphasized(false).build(),
+            TextSegment.newBuilder().setText("DEVICE-").setEmphasized(true).build())
+        .inOrder();
+    assertThat(
+            quotedCollapsed
+                .getApplyFilter()
+                .getResultingFilter()
+                .getComplex()
+                .getStartsWith()
+                .getValue())
+        .isEqualTo("DEVICE-");
+    assertThat(quotedCollapsed.getApplyFilter().getPillCondition())
+        .isEqualTo("starts with DEVICE-");
+    assertThat(
+            filterEngine.match(
+                corpus, ImmutableList.of(quotedCollapsed.getApplyFilter().getResultingFilter())))
+        .hasSize(4);
+
+    // When the identifier key already carries an active chip, or when the prefix is negated, the
+    // collapsed "starts with" row is suppressed.
+    FleetSuggestionResponse withUuidChip =
+        suggester.suggest(corpus, request("device-", simple("device_field::uuid", "device-0")));
+    assertThat(
+            withUuidChip.getItemsList().stream()
+                .noneMatch(
+                    item ->
+                        item.hasApplyFilter()
+                            && item.getApplyFilter().getResultingFilter().hasComplex()))
+        .isTrue();
+
+    FleetSuggestionResponse negated = suggester.suggest(corpus, request("not device-"));
+    assertThat(
+            negated.getItemsList().stream()
+                .noneMatch(
+                    item ->
+                        item.hasApplyFilter()
+                            && item.getApplyFilter().getResultingFilter().hasComplex()))
+        .isTrue();
   }
 
   @Test
@@ -138,11 +207,14 @@ public final class FleetSuggesterTest {
     assertThat(uuid.getCount()).isEqualTo(1);
     assertThat(
             response.getItemsList().stream()
-                .noneMatch(
+                .filter(
                     item ->
-                        item.hasOpenPicker()
-                            && item.getOpenPicker().getKey().equals("device_field::uuid")))
-        .isTrue();
+                        item.hasApplyFilter()
+                            && item.getApplyFilter()
+                                .getResultingFilter()
+                                .getKey()
+                                .equals("device_field::uuid")))
+        .hasSize(1);
 
     // When an exact ID also shares a prefix with other IDs ("device-1" and "device-10".."device-19"
     // in a 60-device fleet), both the exact match and the collapsed "starts with" row are offered.
@@ -153,8 +225,188 @@ public final class FleetSuggesterTest {
     DeviceCorpus manyCorpus =
         new DeviceCorpus(manyPools, new LazyPostings(manyPools.devices()), new AtsCuration());
     FleetSuggestionResponse prefixAndExact = suggester.suggest(manyCorpus, request("device-1"));
-    assertThat(firstApplyFilter(prefixAndExact, "device_field::uuid").getCount()).isEqualTo(1);
-    assertThat(firstOpenPicker(prefixAndExact, "device_field::uuid").getCount()).isEqualTo(11);
+    ImmutableList<FleetSuggestion> uuidSuggestions =
+        prefixAndExact.getItemsList().stream()
+            .filter(
+                item ->
+                    item.hasApplyFilter()
+                        && item.getApplyFilter()
+                            .getResultingFilter()
+                            .getKey()
+                            .equals("device_field::uuid"))
+            .collect(toImmutableList());
+    assertThat(uuidSuggestions).hasSize(2);
+    assertThat(uuidSuggestions.get(0).getCount()).isEqualTo(1);
+    assertThat(
+            uuidSuggestions
+                .get(0)
+                .getApplyFilter()
+                .getResultingFilter()
+                .getSimple()
+                .getValues(0)
+                .getValue())
+        .isEqualTo("device-1");
+    assertThat(uuidSuggestions.get(1).getCount()).isEqualTo(11);
+    assertThat(
+            uuidSuggestions
+                .get(1)
+                .getApplyFilter()
+                .getResultingFilter()
+                .getComplex()
+                .getStartsWith()
+                .getValue())
+        .isEqualTo("device-1");
+    assertThat(uuidSuggestions.get(1).getApplyFilter().getPillCondition())
+        .isEqualTo("starts with device-1");
+
+    // When an active filter narrows the scope to only device-1, the collapsed "starts with" row
+    // repeats the exact row and is suppressed; when only device-10 is in scope, the collapsed row
+    // stays with count 1; when neither is in scope, both rows are omitted.
+    FleetSuggestionResponse onlyExactInScope =
+        suggester.suggest(manyCorpus, request("device-1", simple("dimension::pool", "pool-1")));
+    ImmutableList<FleetSuggestion> onlyExactUuidSuggestions =
+        onlyExactInScope.getItemsList().stream()
+            .filter(
+                item ->
+                    item.hasApplyFilter()
+                        && item.getApplyFilter()
+                            .getResultingFilter()
+                            .getKey()
+                            .equals("device_field::uuid"))
+            .collect(toImmutableList());
+    assertThat(onlyExactUuidSuggestions).hasSize(1);
+    assertThat(onlyExactUuidSuggestions.get(0).getCount()).isEqualTo(1);
+    assertThat(
+            onlyExactUuidSuggestions
+                .get(0)
+                .getApplyFilter()
+                .getResultingFilter()
+                .getSimple()
+                .getValues(0)
+                .getValue())
+        .isEqualTo("device-1");
+
+    FleetSuggestionResponse onlyExtendedInScope =
+        suggester.suggest(manyCorpus, request("device-1", simple("dimension::pool", "pool-10")));
+    FleetSuggestion extendedCollapsed = firstApplyFilter(onlyExtendedInScope, "device_field::uuid");
+    assertThat(extendedCollapsed.getCount()).isEqualTo(1);
+    assertThat(extendedCollapsed.getApplyFilter().getResultingFilter().hasComplex()).isTrue();
+
+    FleetSuggestionResponse noneInScope =
+        suggester.suggest(manyCorpus, request("device-1", simple("dimension::pool", "pool-50")));
+    assertThat(
+            noneInScope.getItemsList().stream()
+                .noneMatch(
+                    item ->
+                        item.hasApplyFilter()
+                            && item.getApplyFilter()
+                                .getResultingFilter()
+                                .getKey()
+                                .equals("device_field::uuid")))
+        .isTrue();
+  }
+
+  @Test
+  public void identifierDimensionPrefix_countsMatchingRecordsWithoutBuildingPostings() {
+    // device-0 carries two iccids ("8901-a", "8901-b") and testbed_name "tb-alpha"; device-1
+    // carries testbed_name "tb-alpha"; BUSY device-2 carries testbed_name "tb-alpha-2". Unfiltered
+    // "device-" answers from index value counts without scanning records, whereas unfiltered
+    // "8901-" on multi-valued iccids scans dimension::iccids once to count matching records (1,
+    // not 2). Neither builds posting lists.
+    ImmutableList<DeviceInfo> devices =
+        ImmutableList.of(
+            deviceWith(
+                "device-0",
+                DeviceStatus.IDLE,
+                dimension("iccids", "8901-a"),
+                dimension("iccids", "8901-b"),
+                dimension("testbed_name", "tb-alpha")),
+            deviceWith("device-1", DeviceStatus.IDLE, dimension("testbed_name", "tb-alpha")),
+            deviceWith("device-2", DeviceStatus.BUSY, dimension("testbed_name", "tb-alpha-2")));
+    FleetSnapshot idDimSnapshot =
+        Guice.createInjector()
+            .getInstance(FleetIndexBuilder.class)
+            .build(labOf(devices), BUILD_TIME);
+    Set<String> postingKeysScanned = new HashSet<>();
+    LazyPostings trackingPostings =
+        new LazyPostings(
+            new LazyPostings.RecordValues() {
+              @Override
+              public int recordCount() {
+                return idDimSnapshot.devices().size();
+              }
+
+              @Override
+              public ImmutableSet<String> valuesForKey(int index, String keyId) {
+                postingKeysScanned.add(keyId);
+                return idDimSnapshot.devices().get(index).normalizedValues(keyId);
+              }
+            });
+    TrackingCorpus tracking =
+        new TrackingCorpus(new DeviceCorpus(idDimSnapshot, trackingPostings, new AtsCuration()));
+
+    FleetSuggestion uuidCollapsed =
+        firstApplyFilter(suggester.suggest(tracking, request("device-")), "device_field::uuid");
+    assertThat(uuidCollapsed.getCount()).isEqualTo(3);
+    assertThat(tracking.keysScannedInScope).isEmpty();
+    assertThat(postingKeysScanned).isEmpty();
+
+    FleetSuggestion iccidsCollapsed =
+        suggester.suggest(tracking, request("8901-")).getItemsList().stream()
+            .filter(
+                item ->
+                    item.hasApplyFilter()
+                        && item.getApplyFilter()
+                            .getResultingFilter()
+                            .getKey()
+                            .equals("dimension::iccids")
+                        && item.getApplyFilter().getResultingFilter().hasComplex())
+            .findFirst()
+            .orElseThrow();
+    assertThat(iccidsCollapsed.getCount()).isEqualTo(1);
+    assertThat(iccidsCollapsed.getApplyFilter().getPillCondition()).isEqualTo("starts with 8901-");
+    assertThat(tracking.keysScannedInScope).containsExactly("dimension::iccids");
+    assertThat(postingKeysScanned).isEmpty();
+
+    // An exact multi-valued identifier ("8901-a") with no longer prefix extensions skips
+    // scopePrefixCount via the pre-count guard without scanning records in scope.
+    tracking.keysScannedInScope.clear();
+    FleetSuggestionResponse exactIccid = suggester.suggest(tracking, request("8901-a"));
+    ImmutableList<FleetSuggestion> iccidSuggestions =
+        exactIccid.getItemsList().stream()
+            .filter(
+                item ->
+                    item.hasApplyFilter()
+                        && item.getApplyFilter()
+                            .getResultingFilter()
+                            .getKey()
+                            .equals("dimension::iccids"))
+            .collect(toImmutableList());
+    assertThat(iccidSuggestions).hasSize(1);
+    assertThat(iccidSuggestions.get(0).getCount()).isEqualTo(1);
+    assertThat(iccidSuggestions.get(0).getApplyFilter().getResultingFilter().hasSimple()).isTrue();
+    assertThat(tracking.keysScannedInScope).isEmpty();
+    assertThat(postingKeysScanned).isEmpty();
+
+    // Under status=IDLE, "tb-alpha" has a longer global extension ("tb-alpha-2" on BUSY device-2,
+    // so hiIndex - loIndex == 2), but all 2 in-scope matches equal "tb-alpha", so the post-count
+    // guard suppresses the redundant "starts with" row.
+    FleetSuggestionResponse sharedTestbedExact =
+        suggester.suggest(tracking, request("tb-alpha", simple("device_field::status", "IDLE")));
+    ImmutableList<FleetSuggestion> testbedSuggestions =
+        sharedTestbedExact.getItemsList().stream()
+            .filter(
+                item ->
+                    item.hasApplyFilter()
+                        && item.getApplyFilter()
+                            .getResultingFilter()
+                            .getKey()
+                            .equals("dimension::testbed_name"))
+            .collect(toImmutableList());
+    assertThat(testbedSuggestions).hasSize(1);
+    assertThat(testbedSuggestions.get(0).getCount()).isEqualTo(2);
+    assertThat(testbedSuggestions.get(0).getApplyFilter().getResultingFilter().hasSimple())
+        .isTrue();
   }
 
   @Test
