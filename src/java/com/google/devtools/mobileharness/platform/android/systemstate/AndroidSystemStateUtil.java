@@ -638,6 +638,7 @@ public class AndroidSystemStateUtil {
                 },
                 RETRY_STRATEGY)
             .setPredicate(e -> e instanceof VerifyException)
+            .setSleeper(sleeper)
             .build();
     try {
       String output = getStateCallable.call();
