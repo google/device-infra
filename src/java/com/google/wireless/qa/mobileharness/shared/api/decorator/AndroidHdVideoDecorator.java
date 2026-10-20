@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.platform.android.media.ScreenRecordArgs
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.AsyncTimerDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -79,7 +80,7 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator implements Andr
   @VisibleForTesting static final long MAX_RECORDING_TIME_MS = Duration.ofMinutes(3L).toMillis();
 
   /** The expected upper bound of post processing time of screenrecord. */
-  @VisibleForTesting static final long POST_PROCESSING_TIME_MS = Duration.ofSeconds(10L).toMillis();
+  @VisibleForTesting static final Duration POST_PROCESSING_TIME = Duration.ofSeconds(10L);
 
   @VisibleForTesting static final String DATA_LOCAL_TMP_DIR = "/data/local/tmp";
 
@@ -139,6 +140,8 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator implements Andr
 
   private final Clock clock;
 
+  private final Sleeper sleeper;
+
   private final Stopwatch stopwatch;
 
   @Inject
@@ -148,12 +151,14 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator implements Andr
       AndroidSystemSettingUtil systemSettingUtil,
       AndroidFileUtil androidFileUtil,
       AndroidMediaUtil androidMediaUtil,
-      Clock clock) {
+      Clock clock,
+      Sleeper sleeper) {
     super(decoratedDriver, testInfo);
     this.systemSettingUtil = systemSettingUtil;
     this.androidFileUtil = androidFileUtil;
     this.androidMediaUtil = androidMediaUtil;
     this.clock = clock;
+    this.sleeper = sleeper;
     this.stopwatch = Stopwatch.createUnstarted();
     runningProcesses = new LinkedList<>();
   }
@@ -329,7 +334,7 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator implements Andr
     } else {
       // First to stop the screen record program on device.
       try {
-        androidMediaUtil.stopScreenRecord(deviceId, Duration.ofMillis(POST_PROCESSING_TIME_MS));
+        androidMediaUtil.stopScreenRecord(deviceId, POST_PROCESSING_TIME);
       } catch (MobileHarnessException e) {
         testInfo
             .log()
@@ -356,7 +361,7 @@ public class AndroidHdVideoDecorator extends AsyncTimerDecorator implements Andr
         killRecordingProcesses(deviceId, testInfo);
       }
       // Waits for post processing completed, or the video files will be incomplete.
-      Thread.sleep(POST_PROCESSING_TIME_MS);
+      sleeper.sleep(POST_PROCESSING_TIME);
       // TODO: Uploads the video to test result even if the test result is TIMEOUT.
       if (testInfo.resultWithCause().get().type() == TestResult.TIMEOUT) {
         testInfo
