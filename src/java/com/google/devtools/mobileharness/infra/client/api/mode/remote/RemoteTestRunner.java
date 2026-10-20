@@ -995,6 +995,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     return maxConsecutiveErrorDuration;
   }
 
+  // TODO: Use LabRpcProtoConverter.createGetTestStatusRequest.
   /**
    * Recursively create {@link GetTestStatusRequest.Builder} for root testInfo and all its sub-tests
    */
@@ -1040,6 +1041,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     }
   }
 
+  // TODO: Use LabRpcProtoConverter.createGetTestGenDataRequest.
   /**
    * Recursively create {@link GetTestGenDataRequest.Builder} from root testInfo and all its
    * sub-tests
@@ -1057,6 +1059,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     return builder;
   }
 
+  // TODO: Use LabRpcProtoConverter.updateTestInfoTreeFromTestGenData.
   /** Update testInfo of the root and sub-tests with {@link GetTestGenDataResponse} */
   @VisibleForTesting
   void updateTestGenData(GetTestGenDataResponse resp, TestInfo testInfo)

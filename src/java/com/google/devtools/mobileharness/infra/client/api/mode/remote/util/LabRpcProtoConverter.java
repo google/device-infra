@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.stream.Collectors.toCollection;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -37,11 +38,14 @@ import com.google.devtools.mobileharness.shared.util.time.TimeoutUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.Message;
+import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.GetTestGenDataRequest;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.GetTestGenDataResponse;
+import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.GetTestStatusRequest;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.GetTestStatusResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.KickOffTestRequest;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.KickOffTestRequest.Job;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.KickOffTestRequest.Test;
+import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.SubTestGenDataResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.SubTestStatusResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.TestMessage;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
@@ -53,6 +57,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelp
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecWalker;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.JobSpec;
 import java.util.ArrayList;
@@ -177,6 +182,27 @@ public class LabRpcProtoConverter {
         .build();
   }
 
+  /**
+   * Creates a {@link GetTestStatusRequest} for the test and, recursively, all its known sub-tests,
+   * so that the lab returns each of their logs from where the last request stopped.
+   *
+   * @param remoteLogOffset the log offset of each test by its ID, which {@link #updateTestStatus}
+   *     moves forward. A test with no offset yet starts from 0.
+   */
+  public static GetTestStatusRequest createGetTestStatusRequest(
+      TestInfo testInfo, Map<String, Integer> remoteLogOffset) {
+    String testId = testInfo.locator().getId();
+    GetTestStatusRequest.Builder builder =
+        GetTestStatusRequest.newBuilder()
+            .setJobId(testInfo.jobInfo().locator().getId())
+            .setTestId(testId)
+            .setTestLogOffset(remoteLogOffset.getOrDefault(testId, 0));
+    for (TestInfo subTestInfo : testInfo.subTests().getAll().values()) {
+      builder.addSubTest(createGetTestStatusRequest(subTestInfo, remoteLogOffset));
+    }
+    return builder.build();
+  }
+
   /** Recursively update root testInfo and all its sub-tests */
   public void updateTestStatus(
       GetTestStatusResponse resp,
@@ -214,10 +240,7 @@ public class LabRpcProtoConverter {
           testMessageManager,
           testMessagePoster);
     }
-    for (String subTestId : leftOverSubTestIds) {
-      testInfo.subTests().remove(subTestId);
-      testInfo.log().atInfo().alsoTo(logger).log("The sub test %s has been removed.", subTestId);
-    }
+    removeSubTests(testInfo, leftOverSubTestIds);
 
     if (testMessageManager != null && testMessagePoster != null) {
       // Forwards test messages to the client side.
@@ -280,6 +303,82 @@ public class LabRpcProtoConverter {
           ResultInternalUtil.setNonPassing(
               testResult, resultType, resultCause, /* logStackTrace= */ false);
         }
+    }
+  }
+
+  /**
+   * Creates a {@link GetTestGenDataRequest} for the test and, recursively, all its known sub-tests.
+   * The lab only returns the gen data of the sub-tests listed in the request.
+   */
+  public static GetTestGenDataRequest createGetTestGenDataRequest(TestInfo testInfo) {
+    GetTestGenDataRequest.Builder builder =
+        GetTestGenDataRequest.newBuilder()
+            .setJobId(testInfo.jobInfo().locator().getId())
+            .setTestId(testInfo.locator().getId());
+    for (TestInfo subTestInfo : testInfo.subTests().getAll().values()) {
+      builder.addSubTest(createGetTestGenDataRequest(subTestInfo));
+    }
+    return builder.build();
+  }
+
+  /**
+   * Applies the response to a {@link #createGetTestGenDataRequest} request to the test and,
+   * recursively, its sub-tests, and removes the sub-tests that the lab no longer has.
+   *
+   * @return the gen data of each test it was applied to, root test first, so that the caller can
+   *     handle their generated files
+   */
+  public ImmutableMap<TestInfo, GetTestGenDataResponse> updateTestInfoTreeFromTestGenData(
+      GetTestGenDataResponse resp, TestInfo testInfo) throws MobileHarnessException {
+    ImmutableMap.Builder<TestInfo, GetTestGenDataResponse> appliedGenData = ImmutableMap.builder();
+    updateTestInfoTreeFromTestGenData(resp, testInfo, appliedGenData);
+    return appliedGenData.buildOrThrow();
+  }
+
+  private void updateTestInfoTreeFromTestGenData(
+      GetTestGenDataResponse resp,
+      TestInfo testInfo,
+      ImmutableMap.Builder<TestInfo, GetTestGenDataResponse> appliedGenData)
+      throws MobileHarnessException {
+    updateTestInfoFromTestGenData(resp, testInfo);
+    appliedGenData.put(testInfo, resp);
+
+    Set<String> leftOverSubTestIds =
+        testInfo.subTests().getAll().values().stream()
+            .map(t -> t.locator().getId())
+            .collect(toCollection(LinkedHashSet::new));
+    for (SubTestGenDataResponse subTestResp : resp.getSubTestList()) {
+      String subTestId = subTestResp.getTestId();
+      TestInfo subTestInfo = testInfo.subTests().getById(subTestId);
+      if (subTestInfo == null) {
+        // The lab only returns the requested sub-tests, so this is not expected.
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .log("Skipped the gen data of the unknown sub test %s.", subTestId);
+        continue;
+      }
+      updateTestInfoTreeFromTestGenData(subTestResp.getGenData(), subTestInfo, appliedGenData);
+      leftOverSubTestIds.remove(subTestId);
+    }
+    removeSubTests(testInfo, leftOverSubTestIds);
+  }
+
+  /**
+   * Removes the given sub-tests, which the lab no longer has. The lab only removes a sub-test that
+   * is not running, so one still running here has an outdated status; it is marked done first,
+   * since {@code TestInfos.remove} refuses a running test.
+   */
+  private static void removeSubTests(TestInfo testInfo, Set<String> subTestIds)
+      throws MobileHarnessException {
+    for (String subTestId : subTestIds) {
+      TestInfo subTestInfo = testInfo.subTests().getById(subTestId);
+      if (subTestInfo != null && subTestInfo.status().get() == TestStatus.RUNNING) {
+        subTestInfo.status().set(TestStatus.DONE);
+      }
+      testInfo.subTests().remove(subTestId);
+      testInfo.log().atInfo().alsoTo(logger).log("The sub test %s has been removed.", subTestId);
     }
   }
 
