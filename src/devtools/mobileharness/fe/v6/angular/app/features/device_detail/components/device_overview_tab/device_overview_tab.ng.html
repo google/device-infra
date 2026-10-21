@@ -453,9 +453,9 @@
             *ngTemplateOutlet="
               dimensionsContent;
               context: {
-                type: DIMENSION_TYPE_SUPPORTED,
-                title: 'Supported Dimensions',
-                data: groupedSupportedDimensions()
+                type: DIMENSION_TYPE_REQUIRED,
+                title: 'Required Dimensions',
+                data: groupedRequiredDimensions()
               }
             "
           ></ng-container>
@@ -465,9 +465,9 @@
               *ngTemplateOutlet="
                 dimensionsContent;
                 context: {
-                  type: DIMENSION_TYPE_REQUIRED,
-                  title: 'Required Dimensions',
-                  data: groupedRequiredDimensions()
+                  type: DIMENSION_TYPE_SUPPORTED,
+                  title: 'Supported Dimensions',
+                  data: groupedSupportedDimensions()
                 }
               "
             ></ng-container>
