@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidS
 import com.google.devtools.mobileharness.platform.android.systemsetting.PostSetDmVerityDeviceOp;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
+import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
@@ -54,6 +55,8 @@ public class InstallSystemApkStep {
   private final AndroidPackageManagerUtil packageManagerUtil;
 
   private final AndroidProcessUtil processUtil;
+
+  private final AndroidUserUtil userUtil;
 
   /** Logger for this driver. */
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -93,7 +96,8 @@ public class InstallSystemApkStep {
       AndroidFileUtil fileUtil,
       AndroidPackageManagerUtil packageManagerUtil,
       AndroidProcessUtil processUtil,
-      Aapt aapt) {
+      Aapt aapt,
+      AndroidUserUtil userUtil) {
     this.systemStateUtil = systemStateUtil;
     this.systemSettingUtil = systemSettingUtil;
     this.systemSpecUtil = systemSpectUtil;
@@ -101,6 +105,7 @@ public class InstallSystemApkStep {
     this.packageManagerUtil = packageManagerUtil;
     this.processUtil = processUtil;
     this.aapt = aapt;
+    this.userUtil = userUtil;
   }
 
   /**
@@ -223,6 +228,11 @@ public class InstallSystemApkStep {
   private void rebootAndWaitUntilReady(
       String deviceId, String deviceClassName, DeviceRebootType deviceRebootType, int sdkVersion)
       throws MobileHarnessException, InterruptedException {
+    if (deviceRebootType == DeviceRebootType.NONE) {
+      logger.atInfo().log("Device %s not rebooted.", deviceId);
+      return;
+    }
+    int currentUserId = userUtil.getCurrentUser(deviceId, sdkVersion);
     rebootDevice(deviceId, deviceClassName, deviceRebootType);
     if (sdkVersion == 23
         && systemSpecUtil.isEmulator(deviceId)
@@ -230,6 +240,14 @@ public class InstallSystemApkStep {
       systemStateUtil.waitUntilReady(deviceId, Duration.ofMinutes(20));
     } else {
       systemStateUtil.waitUntilReady(deviceId);
+    }
+    if (userUtil.getCurrentUser(deviceId, sdkVersion) != currentUserId) {
+      logger.atInfo().log(
+          "Switching device %s back to user %d after reboot.", deviceId, currentUserId);
+      userUtil.switchUser(deviceId, sdkVersion, currentUserId);
+      if (sdkVersion >= 24) {
+        userUtil.waitForUserReady(deviceId, sdkVersion, currentUserId);
+      }
     }
   }
 
