@@ -193,6 +193,24 @@ public abstract class AbstractFileResolver implements FileResolver {
     return Optional.empty();
   }
 
+  @Override
+  public Optional<String> getVersion(ResolveSource resolveSource)
+      throws MobileHarnessException, InterruptedException {
+    if (shouldActuallyResolve(resolveSource)) {
+      return computeVersion(resolveSource);
+    }
+    if (successor != null) {
+      return successor.getVersion(resolveSource);
+    }
+    return Optional.empty();
+  }
+
+  /** Computes the version of the file. See {@link FileResolver#getVersion}. */
+  protected Optional<String> computeVersion(ResolveSource resolveSource)
+      throws MobileHarnessException, InterruptedException {
+    return Optional.empty();
+  }
+
   /**
    * Pre step for files resolve.
    *

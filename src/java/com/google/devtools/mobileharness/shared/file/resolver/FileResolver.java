@@ -59,6 +59,21 @@ public interface FileResolver {
   Optional<Checksum> getChecksum(ResolveSource resolveSource)
       throws MobileHarnessException, InterruptedException;
 
+  /**
+   * Gets the version of the file to be resolved, which changes when the file is changed.
+   *
+   * <p>Unlike the checksum, the version should be cheap to get. It is used as part of the cache key
+   * of the resolved file, so a changed file is resolved again instead of reusing the stale cached
+   * one.
+   *
+   * @return the version of the file, or empty if not supported, in which case the resolved file is
+   *     cached by its path and parameters only
+   */
+  default Optional<String> getVersion(ResolveSource resolveSource)
+      throws MobileHarnessException, InterruptedException {
+    return Optional.empty();
+  }
+
   /** Resolved file. */
   @Immutable
   @AutoValue

@@ -21,6 +21,7 @@ import static java.util.concurrent.TimeUnit.HOURS;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
@@ -35,7 +36,9 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import java.time.Duration;
 import java.time.InstantSource;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
@@ -51,6 +54,9 @@ public class CacheFileResolver extends AbstractFileResolver {
 
   private static final Duration SUCCEED_CACHE_EXPIRATION_TIME = Duration.ofHours(3);
   private static final Duration FAIL_CACHE_EXPIRATION_TIME = Duration.ofMinutes(3);
+
+  /** The resolving parameter of the file version. See {@link FileResolver#getVersion}. */
+  @VisibleForTesting static final String PARAM_FILE_VERSION = "file_version";
 
   private final LocalCache localCache;
   @Nullable private final PersistentResolvedFileCache persistentResolvedFileCache;
@@ -102,6 +108,38 @@ public class CacheFileResolver extends AbstractFileResolver {
     return internalResolve(resolveSource);
   }
 
+  /**
+   * Adds the version of the file, if supported by the resolver, to the parameters of the resolve
+   * source, so that the version is part of the cache key and a changed file is not served from the
+   * cache. Removes any existing {@link #PARAM_FILE_VERSION} parameter if the version is empty or
+   * cannot be retrieved (e.g., on recursive retries in {@link #internalResolve}).
+   */
+  private ResolveSource withFileVersion(ResolveSource resolveSource) throws InterruptedException {
+    Optional<String> version = Optional.empty();
+    try {
+      version = getVersion(resolveSource);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to get version for %s. Fall back to caching without file version.",
+          resolveSource);
+    }
+    if (version.isEmpty() && !resolveSource.parameters().containsKey(PARAM_FILE_VERSION)) {
+      return resolveSource;
+    }
+    Map<String, String> parameters = new HashMap<>(resolveSource.parameters());
+    if (version.isPresent()) {
+      parameters.put(PARAM_FILE_VERSION, version.get());
+    } else {
+      parameters.remove(PARAM_FILE_VERSION);
+    }
+    return ResolveSource.create(
+        resolveSource.path(),
+        resolveSource.tag(),
+        ImmutableMap.copyOf(parameters),
+        resolveSource.targetDir(),
+        resolveSource.tmpDir());
+  }
+
   @SuppressWarnings("Interruption")
   private Optional<ResolveResult> internalResolve(ResolveSource resolveSource)
       throws MobileHarnessException, InterruptedException {
@@ -117,6 +155,7 @@ public class CacheFileResolver extends AbstractFileResolver {
         return persistentResolvedFileCache.getCachedResolveResult(resolveSource, checksum.get());
       }
     }
+    resolveSource = withFileVersion(resolveSource);
     CachedResolveResult cachedResult = localCache.getCachedResolveResult(resolveSource);
     if (!cachedResult.isCachedData()) {
       try {

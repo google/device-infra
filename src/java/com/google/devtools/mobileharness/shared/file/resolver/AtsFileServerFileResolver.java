@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 import com.google.protobuf.ByteString;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
@@ -68,6 +69,7 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
 
   static final int DOWNLOAD_RETRY_INTERVAL_SEC = 30;
   private static final int MAX_DOWNLOAD_ATTEMPTS = 3;
+  private static final Duration GET_FILE_METADATA_TIMEOUT = Duration.ofSeconds(30);
 
   private final LocalFileUtil localFileUtil;
   private final Sleeper sleeper;
@@ -104,19 +106,7 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
           resolveSource);
     } else {
       String sourcePath = getSourcePath(path);
-      String httpSourcePath =
-          String.join(
-              "/",
-              Flags.atsFileServer.getNonNull(),
-              PathUtil.join("file", UrlEscapers.urlFragmentEscaper().escape(sourcePath)));
-      try {
-        httpSourcePath = new URI(httpSourcePath).normalize().toString();
-      } catch (URISyntaxException e) {
-        throw new MobileHarnessException(
-            BasicErrorId.HTTP_INVALID_FILE_PATH_ERROR,
-            String.format("Invalid file path %s in ats file server.", httpSourcePath),
-            e);
-      }
+      String httpSourcePath = getHttpPath("file", sourcePath);
       String destination = PathUtil.join(resolveSource.targetDir(), sourcePath);
       localFileUtil.prepareParentDir(destination);
       for (int i = 0; i < MAX_DOWNLOAD_ATTEMPTS; i++) {
@@ -153,19 +143,9 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
   }
 
   private Optional<String> getFileSha256(String sourcePath) throws InterruptedException {
-    String httpHashPath =
-        String.join(
-            "/",
-            Flags.atsFileServer.getNonNull(),
-            PathUtil.join("hash", UrlEscapers.urlFragmentEscaper().escape(sourcePath)));
-    try {
-      httpHashPath = new URI(httpHashPath).normalize().toString();
-    } catch (URISyntaxException e) {
-      logger.atWarning().withCause(e).log("Invalid hash path %s in ats file server.", httpHashPath);
-      return Optional.empty();
-    }
     // TODO: b/452574841 - Speed up the hash computation.
     try {
+      String httpHashPath = getHttpPath("hash", sourcePath);
       String output =
           createCommandExecutor()
               .run(Command.of("curl", "-sfL", httpHashPath).timeout(Duration.ofMinutes(5)));
@@ -194,6 +174,71 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
 
   private static String getSourcePath(String path) {
     return path.replace(RemoteFileType.ATS_FILE_SERVER.prefix(), "");
+  }
+
+  private static String getHttpPath(String prefix, String sourcePath)
+      throws MobileHarnessException {
+    String httpPath =
+        String.join(
+            "/",
+            Flags.atsFileServer.getNonNull(),
+            PathUtil.join(prefix, UrlEscapers.urlFragmentEscaper().escape(sourcePath)));
+    try {
+      return new URI(httpPath).normalize().toString();
+    } catch (URISyntaxException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.HTTP_INVALID_FILE_PATH_ERROR,
+          String.format("Invalid %s path %s in ats file server.", prefix, httpPath),
+          e);
+    }
+  }
+
+  /**
+   * Gets the version of the file from its size, last modification time and status change time
+   * provided by the ATS file server, so a file replaced in place gets a new version.
+   */
+  @Override
+  protected Optional<String> computeVersion(ResolveSource resolveSource)
+      throws InterruptedException {
+    if (Boolean.parseBoolean(
+        resolveSource.parameters().get(PARAM_RESOLVE_ATS_FILE_SERVER_FILES_IN_LAB))) {
+      // The file is not downloaded here, so there is nothing to cache.
+      return Optional.empty();
+    }
+    String sourcePath = getSourcePath(resolveSource.path());
+    String output;
+    try {
+      String httpMetadataPath = getHttpPath("metadata", sourcePath);
+      output =
+          createCommandExecutor()
+              .run(Command.of("curl", "-sfL", httpMetadataPath).timeout(GET_FILE_METADATA_TIMEOUT));
+    } catch (MobileHarnessException e) {
+      // E.g., the file doesn't exist or the file server doesn't support the metadata API.
+      logger.atInfo().log(
+          "Failed to get metadata of %s from ats file server: %s", sourcePath, e.getMessage());
+      return Optional.empty();
+    }
+    try {
+      JsonObject metadata = JsonParser.parseString(output).getAsJsonObject();
+      if (!metadata.has("size") || !metadata.has("mtime_ns") || !metadata.has("ctime_ns")) {
+        logger.atWarning().log(
+            "Invalid metadata of %s from ats file server: %s", sourcePath, output);
+        return Optional.empty();
+      }
+      return Optional.of(
+          String.format(
+              "%s_%s_%s",
+              metadata.get("size").getAsLong(),
+              metadata.get("mtime_ns").getAsLong(),
+              metadata.get("ctime_ns").getAsLong()));
+    } catch (JsonParseException
+        | IllegalStateException
+        | NumberFormatException
+        | UnsupportedOperationException e) {
+      logger.atWarning().withCause(e).log(
+          "Invalid metadata of %s from ats file server: %s", sourcePath, output);
+      return Optional.empty();
+    }
   }
 
   private void downloadFile(String destination, String httpSourcePath)
