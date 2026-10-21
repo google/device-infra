@@ -17,10 +17,12 @@
 package com.google.devtools.mobileharness.infra.ats.console.result.mobly;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.MoblyResult;
 import com.google.devtools.mobileharness.infra.ats.console.util.TestRunfilesUtil;
+import java.io.ByteArrayInputStream;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -367,6 +369,106 @@ public final class MoblyYamlParserTest {
                 .setPassed(2)
                 .setFailed(0)
                 .setError(1)
+                .setSkipped(0)
+                .build());
+  }
+
+  @Test
+  public void parseTestClassInfoAndSuiteInfo_setupClassErrorWithoutSyntheticRecord()
+      throws Exception {
+    String yamlContent =
+        """
+        ---
+        Type: SuiteInfo
+        Begin Time: 1663584270000
+        End Time: 1663584290000
+        ---
+        Requested Tests:
+        - test_hello_world1_1
+        - test_hello_world1_2
+        Type: TestNameList
+        ---
+        Begin Time: 1663584277766
+        Details: Setup failed
+        End Time: 1663584280787
+        Extra Errors: {}
+        Extras: null
+        Result: SKIP
+        Signature: test_hello_world1_1-1663584277766
+        Stacktrace: null
+        Termination Signal Type: null
+        Test Class: HelloWorldTest1
+        Test Name: test_hello_world1_1
+        Type: Record
+        UID: null
+        ---
+        Begin Time: 1663584280794
+        Details: Setup failed
+        End Time: 1663584283819
+        Extra Errors: {}
+        Extras: null
+        Result: SKIP
+        Signature: test_hello_world1_2-1663584280794
+        Stacktrace: null
+        Termination Signal Type: null
+        Test Class: HelloWorldTest1
+        Test Name: test_hello_world1_2
+        Type: Record
+        UID: null
+        ---
+        Begin Time: 1663584273110
+        Details: The count for repeat must be larger than 1, got -1.
+        End Time: 1663584284000
+        Extras: null
+        Stacktrace: Traceback in repeat decorator
+        Termination Signal Type: ValueError
+        Test Class: HelloWorldTest1
+        Type: TestClassInfo
+        ---
+        Error: 1
+        Executed: 0
+        Failed: 0
+        Passed: 0
+        Requested: 2
+        Skipped: 2
+        Type: Summary
+        """;
+
+    ImmutableList<MoblyYamlDocEntry> results =
+        parser.parse(new ByteArrayInputStream(yamlContent.getBytes(UTF_8)));
+
+    assertThat(results).hasSize(4);
+
+    assertThat(results.get(0)).isInstanceOf(MoblyTestEntry.class);
+    MoblyTestEntry entry1 = (MoblyTestEntry) results.get(0);
+    assertThat(entry1.getResult()).isEqualTo(MoblyResult.ERROR);
+    assertThat(entry1.getTestClass()).isEqualTo("HelloWorldTest1");
+    assertThat(entry1.getTestName()).isEqualTo("test_hello_world1_1");
+
+    assertThat(results.get(1)).isInstanceOf(MoblyTestEntry.class);
+    MoblyTestEntry entry2 = (MoblyTestEntry) results.get(1);
+    assertThat(entry2.getResult()).isEqualTo(MoblyResult.ERROR);
+    assertThat(entry2.getTestClass()).isEqualTo("HelloWorldTest1");
+    assertThat(entry2.getTestName()).isEqualTo("test_hello_world1_2");
+
+    assertThat(results.get(2)).isInstanceOf(MoblyTestClassInfoEntry.class);
+    MoblyTestClassInfoEntry classInfo = (MoblyTestClassInfoEntry) results.get(2);
+    assertThat(classInfo.getTestClass()).isEqualTo("HelloWorldTest1");
+    assertThat(classInfo.getBeginTime()).hasValue(1663584273110L);
+    assertThat(classInfo.getEndTime()).hasValue(1663584284000L);
+    assertThat(classInfo.hasClassError()).isTrue();
+    assertThat(classInfo.isClassSkipped()).isFalse();
+
+    assertThat(results.get(3)).isInstanceOf(MoblySummaryEntry.class);
+    MoblySummaryEntry summaryEntry = (MoblySummaryEntry) results.get(3);
+    assertThat(summaryEntry)
+        .isEqualTo(
+            MoblySummaryEntry.builder()
+                .setRequested(2)
+                .setExecuted(0)
+                .setPassed(0)
+                .setFailed(0)
+                .setError(2)
                 .setSkipped(0)
                 .build());
   }

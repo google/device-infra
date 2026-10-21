@@ -50,8 +50,10 @@ public class MoblyYamlParser {
   private static final String RESULT_TYPE = "Type";
   private static final String RESULT_TYPE_TESTNAMELIST = "TestNameList";
   private static final String RESULT_TYPE_RECORD = "Record";
+  private static final String RESULT_TYPE_TESTCLASSINFO = "TestClassInfo";
   private static final String RESULT_TYPE_CONTROLLERINFO = "ControllerInfo";
   private static final String RESULT_TYPE_SUMMARY = "Summary";
+  private static final String RESULT_TYPE_SUITEINFO = "SuiteInfo";
   private static final String RESULT_TYPE_USERDATA = "UserData";
   private static final String RESULT_TESTNAME = "Test Name";
   private static final String RESULT_TESTCLASS = "Test Class";
@@ -105,7 +107,7 @@ public class MoblyYamlParser {
    * Reads in the {@link java.io.InputStream} of a Mobly test_summary.yaml file and parses the data
    * into a list of {@link MoblyYamlDocEntry} objects.
    */
-  private ImmutableList<MoblyYamlDocEntry> parse(InputStream input) throws MobileHarnessException {
+  ImmutableList<MoblyYamlDocEntry> parse(InputStream input) throws MobileHarnessException {
     // Load yaml summary file
     Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
     Iterable<Object> yamlDocuments = yaml.loadAll(input);
@@ -156,6 +158,47 @@ public class MoblyYamlParser {
             rootTestEntries.add(testEntry);
           }
         }
+        case RESULT_TYPE_TESTCLASSINFO -> {
+          MoblyTestClassInfoEntry classInfo = parseTestClassInfo(documentMap);
+          if (classInfo.hasClassError()) {
+            if (!hasSetupClassError
+                && !rootTestEntries.isEmpty()
+                && rootTestEntries.stream()
+                    .allMatch(
+                        e ->
+                            e.getResult() == MoblyResult.SKIP
+                                && !parentSignatureToChild.containsKey(
+                                    e.getSignature().orElse("")))) {
+              // When setup_class/pre_run fails and synthetic stage records are retired, all test
+              // cases in the class are recorded as SKIP and TestClassInfo carries the class error.
+              ImmutableList<MoblyTestEntry> updatedRootEntries =
+                  rootTestEntries.stream()
+                      .map(e -> e.toBuilder().setResult(MoblyResult.ERROR).build())
+                      .collect(toImmutableList());
+              rootTestEntries.clear();
+              rootTestEntries.addAll(updatedRootEntries);
+            }
+            if (teardownClassEntry == null) {
+              MoblyTestEntry.Builder syntheticTeardown =
+                  MoblyTestEntry.builder()
+                      .setTestName(STAGE_TEARDOWN_CLASS)
+                      .setTestClass(classInfo.getTestClass())
+                      .setResult(MoblyResult.ERROR);
+              classInfo.getBeginTime().ifPresent(syntheticTeardown::setBeginTime);
+              classInfo.getEndTime().ifPresent(syntheticTeardown::setEndTime);
+              classInfo.getDetails().ifPresent(syntheticTeardown::setDetails);
+              classInfo.getStacktrace().ifPresent(syntheticTeardown::setStacktrace);
+              teardownClassEntry = syntheticTeardown.build();
+            }
+          }
+          results.addAll(
+              mergeAndResetTestEntries(
+                  parentSignatureToChild, rootTestEntries, teardownClassEntry));
+          hasSetupClassError = false;
+          teardownClassEntry = null;
+          currentTestClass = null;
+          results.add(classInfo);
+        }
         case RESULT_TYPE_CONTROLLERINFO -> results.add(parseControllerInfo(documentMap));
         case RESULT_TYPE_USERDATA -> results.add(parseUserData(documentMap));
         case RESULT_TYPE_SUMMARY -> {
@@ -163,15 +206,20 @@ public class MoblyYamlParser {
           results.addAll(
               mergeAndResetTestEntries(
                   parentSignatureToChild, rootTestEntries, teardownClassEntry));
+          ImmutableList<MoblyYamlDocEntry> currentResults = results.build();
           results.add(
               parseSummary(
                   documentMap,
-                  results.build().stream()
+                  currentResults.stream()
                       .filter(entry -> entry instanceof MoblyTestEntry)
                       .map(entry -> (MoblyTestEntry) entry)
+                      .collect(toImmutableList()),
+                  currentResults.stream()
+                      .filter(entry -> entry instanceof MoblyTestClassInfoEntry)
+                      .map(entry -> (MoblyTestClassInfoEntry) entry)
                       .collect(toImmutableList())));
         }
-        case RESULT_TYPE_TESTNAMELIST -> {
+        case RESULT_TYPE_TESTNAMELIST, RESULT_TYPE_SUITEINFO -> {
           // Do nothing. We don't care about this for now
         }
         default -> {
@@ -426,6 +474,38 @@ public class MoblyYamlParser {
     }
   }
 
+  private MoblyTestClassInfoEntry parseTestClassInfo(Map<String, Object> record) {
+    Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
+    MoblyTestClassInfoEntry.Builder builder =
+        MoblyTestClassInfoEntry.builder()
+            .setTestClass(String.valueOf(record.get(RESULT_TESTCLASS)));
+    try {
+      if (record.get(RESULT_BEGIN_TIME) != null) {
+        builder.setBeginTime(Long.parseLong(String.valueOf(record.get(RESULT_BEGIN_TIME))));
+      }
+      if (record.get(RESULT_END_TIME) != null) {
+        builder.setEndTime(Long.parseLong(String.valueOf(record.get(RESULT_END_TIME))));
+      }
+    } catch (NumberFormatException e) {
+      logger.atSevere().withCause(e).log(
+          "Cannot parse Mobly timing info from summary file for test class %s",
+          record.get(RESULT_TESTCLASS));
+    }
+    if (record.get(RESULT_TERMINATION_SIGNAL_TYPE) != null) {
+      builder.setTerminationSignalType(String.valueOf(record.get(RESULT_TERMINATION_SIGNAL_TYPE)));
+    }
+    if (record.get(RESULT_DETAILS) != null) {
+      builder.setDetails(String.valueOf(record.get(RESULT_DETAILS)));
+    }
+    if (record.get(RESULT_STACKTRACE) != null) {
+      builder.setStacktrace(String.valueOf(record.get(RESULT_STACKTRACE)));
+    }
+    if (record.get(RESULT_EXTRAS) != null) {
+      builder.setExtras(yaml.dump(record.get(RESULT_EXTRAS)));
+    }
+    return builder.build();
+  }
+
   private MoblyTestEntry.ExtraError buildExtraError(Map<String, Object> extraErrorMap) {
     MoblyTestEntry.ExtraError.Builder builder = MoblyTestEntry.ExtraError.builder();
     builder.setPosition(String.valueOf(extraErrorMap.get(RESULT_EXTRA_ERRORS_POSITION)));
@@ -462,7 +542,9 @@ public class MoblyYamlParser {
   }
 
   private MoblySummaryEntry parseSummary(
-      Map<String, Object> record, List<MoblyTestEntry> testEntries) {
+      Map<String, Object> record,
+      List<MoblyTestEntry> testEntries,
+      List<MoblyTestClassInfoEntry> classInfoEntries) {
     try {
       int passedTestCount = 0;
       int failedTestCount = 0;
@@ -475,6 +557,19 @@ public class MoblyYamlParser {
           case ERROR -> errorTestCount++;
           case SKIP -> skippedTestCount++;
           default -> {}
+        }
+      }
+      for (MoblyTestClassInfoEntry classInfo : classInfoEntries) {
+        if (classInfo.hasClassError()) {
+          boolean classHasFailingTestEntry =
+              testEntries.stream()
+                  .anyMatch(
+                      entry ->
+                          entry.getTestClass().equals(classInfo.getTestClass())
+                              && isFailure(entry.getResult()));
+          if (!classHasFailingTestEntry) {
+            errorTestCount++;
+          }
         }
       }
       return MoblySummaryEntry.builder()

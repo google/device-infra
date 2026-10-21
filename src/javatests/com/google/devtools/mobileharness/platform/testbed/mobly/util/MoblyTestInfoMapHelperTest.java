@@ -22,6 +22,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyControllerInfoEntry;
+import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblySummaryEntry;
+import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyTestClassInfoEntry;
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyTestEntry;
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyUserDataEntry;
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyYamlDocEntry;
@@ -579,6 +581,50 @@ public final class MoblyTestInfoMapHelperTest {
 
     // Assert
     assertThat(result).contains("Test failure message");
+  }
+
+  @Test
+  public void mapTestClassInfoWithError_populatesClassSubTestInfoAndBlocksJobPass()
+      throws Exception {
+    TestInfo testInfo = buildNewTestInfo(GEN_FILE_DIR_PASS);
+    ImmutableList<MoblyYamlDocEntry> entries =
+        ImmutableList.of(
+            MoblyTestEntry.builder()
+                .setTestName("test_one")
+                .setResult(MoblyResult.PASS)
+                .setBeginTime(15L)
+                .setEndTime(25L)
+                .setTestClass("PancakeClass")
+                .build(),
+            MoblyTestClassInfoEntry.builder()
+                .setTestClass("PancakeClass")
+                .setBeginTime(10L)
+                .setEndTime(30L)
+                .setTerminationSignalType("ValueError")
+                .setDetails("The count for repeat must be larger than 1, got -1.")
+                .setStacktrace("Traceback in repeat decorator")
+                .build(),
+            MoblySummaryEntry.builder()
+                .setRequested(1)
+                .setExecuted(1)
+                .setPassed(1)
+                .setFailed(0)
+                .setError(1)
+                .setSkipped(0)
+                .build());
+
+    mapper.map(testInfo, entries);
+
+    TestInfo classTestInfo = testInfo.subTests().getByName("PancakeClass").get(0);
+    assertThat(classTestInfo.properties().get("test_type")).isEqualTo("mobly_class");
+    assertThat(classTestInfo.properties().get("mobly_begin_time")).isEqualTo("10");
+    assertThat(classTestInfo.properties().get("mobly_end_time")).isEqualTo("30");
+    assertThat(classTestInfo.resultWithCause().get().type()).isEqualTo(TestResult.ERROR);
+    assertThat(classTestInfo.properties().get(MoblyConstant.TestProperty.MOBLY_ERROR_MESSAGE_KEY))
+        .contains("Details: The count for repeat must be larger than 1, got -1.");
+    assertThat(classTestInfo.properties().get(MoblyConstant.TestProperty.MOBLY_STACK_TRACE_KEY))
+        .isEqualTo("Traceback in repeat decorator");
+    assertThat(testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_JOBS_PASSED)).isFalse();
   }
 
   private void addMoblyTestEntriesToMoblySummaryEntryList(List<MoblyYamlDocEntry> entries) {

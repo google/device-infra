@@ -45,6 +45,7 @@ java_library(
     srcs = [
         "MoblyControllerInfoEntry.java",
         "MoblySummaryEntry.java",
+        "MoblyTestClassInfoEntry.java",
         "MoblyTestEntry.java",
         "MoblyUserDataEntry.java",
         "MoblyYamlDocEntry.java",

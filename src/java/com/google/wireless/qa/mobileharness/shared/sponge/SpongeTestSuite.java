@@ -16,15 +16,42 @@
 
 package com.google.wireless.qa.mobileharness.shared.sponge;
 
+import com.google.auto.value.AutoValue;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /** The object to record test suite in sponge. */
 public class SpongeTestSuite extends SpongeNode {
+  /** A failure or error element attached directly to a test suite. */
+  @AutoValue
+  public abstract static class FailureOrError {
+    public static FailureOrError create(
+        boolean isError, String message, String stackTrace, String type) {
+      return new AutoValue_SpongeTestSuite_FailureOrError(
+          isError,
+          Strings.nullToEmpty(message),
+          Strings.nullToEmpty(stackTrace),
+          Strings.nullToEmpty(type));
+    }
+
+    public abstract boolean isError();
+
+    public abstract String message();
+
+    public abstract String stackTrace();
+
+    public abstract String type();
+  }
+
   /** The child test suite/test case list. */
   private final ConcurrentLinkedQueue<SpongeNode> childNodes = new ConcurrentLinkedQueue<>();
+
+  /** Suite-level failure and error elements. */
+  private final ConcurrentLinkedQueue<FailureOrError> failuresAndErrors =
+      new ConcurrentLinkedQueue<>();
 
   private volatile boolean isLock = false;
 
@@ -52,6 +79,25 @@ public class SpongeTestSuite extends SpongeNode {
     childNodes.clear();
   }
 
+  /** Adds a failure element to the test suite. */
+  @CanIgnoreReturnValue
+  public SpongeTestSuite addFailure(String message, String stackTrace, String type) {
+    failuresAndErrors.add(FailureOrError.create(false, message, stackTrace, type));
+    return this;
+  }
+
+  /** Adds an error element to the test suite. */
+  @CanIgnoreReturnValue
+  public SpongeTestSuite addError(String message, String stackTrace, String type) {
+    failuresAndErrors.add(FailureOrError.create(true, message, stackTrace, type));
+    return this;
+  }
+
+  /** Returns the failure and error elements attached directly to the test suite. */
+  public List<FailureOrError> getFailuresAndErrors() {
+    return ImmutableList.copyOf(failuresAndErrors);
+  }
+
   /** Returns true if the test suite can remove the child sponge node. */
   boolean removeChildNode(SpongeNode childNode) {
     return childNodes.remove(childNode);
@@ -60,6 +106,7 @@ public class SpongeTestSuite extends SpongeNode {
   /** Returns true if the test suite is empty. */
   public boolean isEmpty() {
     return childNodes.isEmpty()
+        && failuresAndErrors.isEmpty()
         && getProperties().isEmpty()
         && Strings.isNullOrEmpty(getGenFilesDir());
   }

@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.platform.testbed.mobly.util;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
@@ -24,6 +25,7 @@ import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblySummaryEntry;
+import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyTestClassInfoEntry;
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyTestEntry;
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyUserDataEntry;
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyYamlDocEntry;
@@ -33,6 +35,8 @@ import com.google.devtools.mobileharness.platform.testbed.mobly.MoblyConstant;
 import com.google.devtools.mobileharness.platform.testbed.mobly.MoblyConstant.TestProperty;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -197,37 +201,88 @@ public class MoblyTestInfoMapHelper {
   }
 
   /**
+   * Maps a {@link MoblyTestClassInfoEntry} to the class-level child {@link TestInfo} under the
+   * given parent {@link TestInfo}.
+   */
+  public void map(TestInfo testInfo, MoblyTestClassInfoEntry classInfoEntry)
+      throws MobileHarnessException {
+    TestInfo subTestInfo = getOrCreateClassSubTestInfo(testInfo, classInfoEntry.getTestClass());
+    if (classInfoEntry.getBeginTime().isPresent()) {
+      long beginTimeMs = classInfoEntry.getBeginTime().get();
+      boolean unused = subTestInfo.timing().start(Instant.ofEpochMilli(beginTimeMs));
+      subTestInfo
+          .properties()
+          .add(MoblyConstant.TestProperty.MOBLY_BEGIN_TIME_KEY, Long.toString(beginTimeMs));
+    }
+    if (classInfoEntry.getEndTime().isPresent()) {
+      long endTimeMs = classInfoEntry.getEndTime().get();
+      if (classInfoEntry.getBeginTime().isPresent()) {
+        boolean unused = subTestInfo.timing().end(Instant.ofEpochMilli(endTimeMs));
+      }
+      subTestInfo
+          .properties()
+          .add(MoblyConstant.TestProperty.MOBLY_END_TIME_KEY, Long.toString(endTimeMs));
+    }
+    if (classInfoEntry.isClassSkipped()) {
+      if (subTestInfo.resultWithCause().get().type() == TestResult.UNKNOWN) {
+        subTestInfo.resultWithCause().setPass();
+      }
+      subTestInfo
+          .properties()
+          .add(
+              MoblyConstant.TestProperty.SKIP_REASON_KEY,
+              createSpongeDescription(classInfoEntry.getDetails(), ImmutableList.of()));
+    } else if (classInfoEntry.hasClassError()) {
+      String description = createSpongeDescription(classInfoEntry.getDetails(), ImmutableList.of());
+      subTestInfo
+          .resultWithCause()
+          .setNonPassing(
+              TestResult.ERROR,
+              ErrorModelConverter.toExceptionDetail(
+                  new MobileHarnessException(ExtErrorId.MOBLY_TEST_CASE_ERROR, description),
+                  /* addStackTrace= */ false));
+      subTestInfo.properties().add(MoblyConstant.TestProperty.MOBLY_ERROR_MESSAGE_KEY, description);
+      if (classInfoEntry.getStacktrace().isPresent()) {
+        subTestInfo
+            .properties()
+            .add(
+                MoblyConstant.TestProperty.MOBLY_STACK_TRACE_KEY,
+                classInfoEntry.getStacktrace().get());
+      }
+    } else if (subTestInfo.resultWithCause().get().type() == TestResult.UNKNOWN) {
+      subTestInfo.resultWithCause().setPass();
+    }
+  }
+
+  /**
    * Maps a list of MoblyYamlDocEntry objects to children TestInfo under the given parent TestInfo.
-   *
-   * <p>Only MoblyTestEntry objects are mapped since that is all TestInfo object cares about.
    */
   public void map(TestInfo testInfo, List<MoblyYamlDocEntry> moblyEntryList)
       throws MobileHarnessException {
 
     String testClass = null;
+    boolean hasClassError = false;
+    List<TestInfo> classSubTestInfos = new ArrayList<>();
     for (MoblyYamlDocEntry entry : moblyEntryList) {
       if (Objects.equals(entry.getType(), MoblyYamlDocEntry.Type.RECORD)) {
         MoblyTestEntry testEntry = (MoblyTestEntry) entry;
         // Mobly summary entries in the list are ordered by test class so here we can create a new
         // sub test info when a new test class is seen.
         if (testEntry.getTestClass() != null && !testEntry.getTestClass().equals(testClass)) {
-          TestInfo subTestInfo = testInfo.subTests().add(testEntry.getTestClass());
-          // Set this to PASS to actually parse results.
-          subTestInfo.resultWithCause().setPass();
-          subTestInfo.status().set(TestStatus.DONE);
-          subTestInfo
-              .properties()
-              .add(
-                  MoblyConstant.TestProperty.TEST_TYPE_KEY,
-                  MoblyConstant.TestProperty.MOBLY_TEST_CLASS_VALUE);
-
-          subTestInfo
-              .properties()
-              .add(MoblyConstant.TestProperty.MOBLY_TEST_CLASS_KEY, testEntry.getTestClass());
-
+          classSubTestInfos.add(getOrCreateClassSubTestInfo(testInfo, testEntry.getTestClass()));
           testClass = testEntry.getTestClass();
         }
         map(testInfo, testEntry);
+      } else if (Objects.equals(entry.getType(), MoblyYamlDocEntry.Type.TEST_CLASS_INFO)) {
+        MoblyTestClassInfoEntry classInfoEntry = (MoblyTestClassInfoEntry) entry;
+        hasClassError |= classInfoEntry.hasClassError();
+        map(testInfo, classInfoEntry);
+      }
+    }
+    for (TestInfo classSubTestInfo : classSubTestInfos) {
+      if (classSubTestInfo.resultWithCause().get().type() == TestResult.UNKNOWN) {
+        // Set this to PASS to actually parse results when no TestClassInfo error was reported.
+        classSubTestInfo.resultWithCause().setPass();
       }
     }
 
@@ -251,14 +306,35 @@ public class MoblyTestInfoMapHelper {
         moblyTestSummary.put(MOBLY_TESTS_SKIPPED, String.valueOf(summaryEntry.skipped()));
         moblyTestSummary.put(MOBLY_TESTS_TOTAL, String.valueOf(summaryEntry.requested()));
         testInfo.properties().addAll(moblyTestSummary);
-        // Only if failed number is 0 and number of passed + skipped = requested, then we treat the
-        // mobly job as PASS.
-        if ((summaryEntry.failed() == 0)
+        // Only if failed number is 0, there is no class-level error, and number of passed +
+        // skipped = requested, then we treat the mobly job as PASS.
+        if (!hasClassError
+            && (summaryEntry.failed() == 0)
             && (summaryEntry.skipped() + summaryEntry.passed() == summaryEntry.requested())) {
           testInfo.properties().add(MOBLY_JOBS_PASSED, "true");
         }
       }
     }
+  }
+
+  private TestInfo getOrCreateClassSubTestInfo(TestInfo testInfo, String testClass)
+      throws MobileHarnessException {
+    for (TestInfo existing : testInfo.subTests().getByName(testClass)) {
+      if (Objects.equals(
+          existing.properties().get(MoblyConstant.TestProperty.TEST_TYPE_KEY),
+          MoblyConstant.TestProperty.MOBLY_TEST_CLASS_VALUE)) {
+        return existing;
+      }
+    }
+    TestInfo subTestInfo = testInfo.subTests().add(testClass);
+    subTestInfo.status().set(TestStatus.DONE);
+    subTestInfo
+        .properties()
+        .add(
+            MoblyConstant.TestProperty.TEST_TYPE_KEY,
+            MoblyConstant.TestProperty.MOBLY_TEST_CLASS_VALUE);
+    subTestInfo.properties().add(MoblyConstant.TestProperty.MOBLY_TEST_CLASS_KEY, testClass);
+    return subTestInfo;
   }
 
   /**
@@ -292,17 +368,22 @@ public class MoblyTestInfoMapHelper {
   /** Constructs a specific description string for sponge. */
   @VisibleForTesting
   String createSpongeDescription(MoblyTestEntry moblyEntry) {
+    return createSpongeDescription(moblyEntry.getDetails(), moblyEntry.getExtraErrors());
+  }
+
+  private String createSpongeDescription(
+      Optional<String> details, List<MoblyTestEntry.ExtraError> extraErrors) {
     StringBuilder builder = new StringBuilder();
 
-    if (moblyEntry.getDetails().isPresent()) {
+    if (details.isPresent()) {
       builder.append("Details: ");
-      builder.append(moblyEntry.getDetails().get());
+      builder.append(details.get());
       builder.append("\n");
     }
 
-    if (!moblyEntry.getExtraErrors().isEmpty()) {
+    if (!extraErrors.isEmpty()) {
       builder.append(EXTRA_ERROR_SECTION_SEPARATOR);
-      moblyEntry.getExtraErrors().forEach(err -> builder.append(stringifyException(err)));
+      extraErrors.forEach(err -> builder.append(stringifyException(err)));
     }
 
     if (builder.length() == 0) {
