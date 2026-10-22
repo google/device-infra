@@ -60,7 +60,8 @@ public final class FleetKeyPriority implements ScenarioCuration.KeyPriority {
           DeviceKeys.HOST_LAB_SERVER_VERSION,
           DeviceKeys.SOFTWARE_VERSION,
           DeviceKeys.SDK_OR_SOFTWARE_VERSION,
-          DeviceKeys.DEVICE_FORM);
+          DeviceKeys.DEVICE_FORM,
+          DeviceKeys.LABEL);
 
   /** Universal common host keys ranked highest for the host entity. */
   public static final ImmutableSet<HostKeyDescriptor> COMMON_HOST_KEY_TIER1 =

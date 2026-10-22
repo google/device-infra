@@ -125,6 +125,8 @@ public final class DeviceKeys {
           "device_class_name", KeyDisplay.of("Device Class"), "class", "device class name");
   public static final DeviceKeyDescriptor MANUFACTURER =
       dimensionKey("manufacturer", KeyDisplay.of("Manufacturer"), "make", "brand");
+  public static final DeviceKeyDescriptor LABEL =
+      dimensionKey("label", KeyDisplay.of("Label"), "device label");
 
   /** Standard Group 1 common device-native keys (present in every deployment). */
   public static final ImmutableList<DeviceKeyDescriptor> COMMON_DEVICE_KEYS =
@@ -141,7 +143,8 @@ public final class DeviceKeys {
           SDK_OR_SOFTWARE_VERSION,
           DEVICE_FORM,
           DEVICE_CLASS_NAME,
-          MANUFACTURER);
+          MANUFACTURER,
+          LABEL);
 
   /**
    * Group 1 host keys projected into device search (cross-entity host attributes stamped onto each
