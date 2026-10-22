@@ -42,11 +42,17 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidDumpSysSpec;
+import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
+import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
+import com.google.wireless.qa.mobileharness.shared.model.lab.LabLocator;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidDumpSysDecoratorSpec;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -68,7 +74,6 @@ public final class AndroidDumpSysDecoratorTest {
   @Mock private JobInfo jobInfo;
   @Mock private LocalFileUtil fileUtil;
   @Mock private TestInfo testInfo;
-  @Mock private Params params;
   @Mock private Warnings warnings;
   @Mock private Log log;
   @Mock private Result result;
@@ -86,7 +91,6 @@ public final class AndroidDumpSysDecoratorTest {
     when(decoratedDriver.getDevice()).thenReturn(device);
     when(device.getDeviceId()).thenReturn(DEVICE_ID);
     when(testInfo.jobInfo()).thenReturn(jobInfo);
-    when(jobInfo.params()).thenReturn(params);
     when(testInfo.warnings()).thenReturn(warnings);
     when(testInfo.log()).thenReturn(log);
     when(log.atInfo()).thenReturn(api);
@@ -95,7 +99,6 @@ public final class AndroidDumpSysDecoratorTest {
     when(rootTest.resultWithCause()).thenReturn(result);
     when(testInfo.resultWithCause()).thenReturn(result);
     when(result.get()).thenReturn(ResultTypeWithCause.create(TestResult.PASS, null));
-    when(params.getBool(AndroidDumpSysSpec.PARAM_DUMPSYS_ON_PASS, true)).thenReturn(true);
 
     decorator =
         new AndroidDumpSysDecorator(
@@ -150,6 +153,53 @@ public final class AndroidDumpSysDecoratorTest {
   }
 
   @Test
+  public void scopedSpec_overridesCollidingGlobalLogToFileParam() throws Exception {
+    JobType type =
+        JobType.newBuilder()
+            .setDevice("AndroidRealDevice")
+            .setDriver("AndroidInstrumentation")
+            .addDecorator("AndroidDumpSysDecorator")
+            .addDecorator("AndroidLogCatDecorator")
+            .build();
+    JobInfo realJobInfo =
+        JobInfo.newBuilder().setLocator(new JobLocator("job_name")).setType(type).build();
+    realJobInfo.params().add(AndroidDumpSysSpec.PARAM_LOG_TO_FILE, "true");
+    realJobInfo
+        .subDeviceSpecs()
+        .setAllocation(
+            new Allocation(
+                new TestLocator("test_id", "test_name", realJobInfo.locator()),
+                new DeviceLocator(DEVICE_ID, new LabLocator("127.0.0.1", "localhost")),
+                /* dimensions= */ null));
+    realJobInfo
+        .subDeviceSpecs()
+        .getSubDevice(0)
+        .scopedSpecs()
+        .add(
+            "AndroidDumpSysDecoratorSpec",
+            AndroidDumpSysDecoratorSpec.newBuilder()
+                .setLogToFile(false)
+                .setDumpsysOnPass(true)
+                .build());
+    when(testInfo.jobInfo()).thenReturn(realJobInfo);
+    when(systemStateManager.isOnline(DEVICE_ID)).thenReturn(true);
+    when(adbUtil.dumpSys(
+            eq(DEVICE_ID),
+            eq(DumpSysType.ACTIVITY),
+            eq(AndroidDumpSysSpec.PARAM_DUMPSYS_SUFFIX_DEFAULT)))
+        .thenReturn(DUMPSYS_LOG);
+
+    decorator.run(testInfo);
+
+    verify(adbUtil)
+        .dumpSys(
+            eq(DEVICE_ID),
+            eq(DumpSysType.ACTIVITY),
+            eq(AndroidDumpSysSpec.PARAM_DUMPSYS_SUFFIX_DEFAULT));
+    verify(fileUtil, never()).writeToFile(anyString(), anyString());
+  }
+
+  @Test
   public void run_success_customizedParam() throws Exception {
     mockBasicSetup(
         false,
@@ -171,7 +221,8 @@ public final class AndroidDumpSysDecoratorTest {
         /* logToFile= */ true,
         "first_command_log.txt,second_command_log.txt",
         "uimode,display",
-        "input,test");
+        "input,test",
+        /* dumpsysOnPass= */ true);
     when(adbUtil.dumpSys(eq(DEVICE_ID), eq(DumpSysType.UIMODE), eq("input")))
         .thenReturn(DUMPSYS_LOG);
     when(adbUtil.dumpSys(eq(DEVICE_ID), eq(DumpSysType.DISPLAY), eq("test")))
@@ -211,7 +262,8 @@ public final class AndroidDumpSysDecoratorTest {
         /* logToFile= */ true,
         "", // missing log file names
         "uimode,display",
-        "input,test");
+        "input,test",
+        /* dumpsysOnPass= */ true);
     when(adbUtil.dumpSys(eq(DEVICE_ID), eq(DumpSysType.UIMODE), eq("input")))
         .thenReturn(DUMPSYS_LOG);
     when(adbUtil.dumpSys(eq(DEVICE_ID), eq(DumpSysType.DISPLAY), eq("test")))
@@ -233,7 +285,8 @@ public final class AndroidDumpSysDecoratorTest {
         /* logToFile= */ false,
         "first_command_log.txt,second_command_log.txt",
         "uimode,display",
-        "input"); // missing suffix for second command
+        "input", // missing suffix for second command
+        /* dumpsysOnPass= */ true);
     when(adbUtil.dumpSys(eq(DEVICE_ID), eq(DumpSysType.UIMODE), eq("input")))
         .thenReturn(DUMPSYS_LOG);
     when(adbUtil.dumpSys(eq(DEVICE_ID), eq(DumpSysType.DISPLAY), eq("all")))
@@ -253,7 +306,8 @@ public final class AndroidDumpSysDecoratorTest {
         /* logToFile= */ false,
         "first_command_log.txt,second_command_log.txt",
         "uimode",
-        "input,all"); // missing suffix for second command
+        "input,all", // extra suffix
+        /* dumpsysOnPass= */ true);
     when(adbUtil.dumpSys(eq(DEVICE_ID), eq(DumpSysType.UIMODE), eq("input")))
         .thenReturn(DUMPSYS_LOG);
 
@@ -306,8 +360,7 @@ public final class AndroidDumpSysDecoratorTest {
 
   @Test
   public void run_tearDownWhenSetUpFailedEarly() throws Exception {
-    when(params.isTrue(AndroidDumpSysSpec.PARAM_LOG_TO_FILE))
-        .thenThrow(new RuntimeException("Params error"));
+    when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenThrow(new RuntimeException("Spec error"));
 
     assertThrows(RuntimeException.class, () -> decorator.run(testInfo));
   }
@@ -315,10 +368,11 @@ public final class AndroidDumpSysDecoratorTest {
   @Test
   public void run_skipOnPass_paramFalse() throws Exception {
     mockBasicSetup(
-        false,
+        /* logToFile= */ false,
+        "",
         AndroidDumpSysSpec.PARAM_DUMPSYS_TYPE_DEFAULT,
-        AndroidDumpSysSpec.PARAM_DUMPSYS_SUFFIX_DEFAULT);
-    when(params.getBool(AndroidDumpSysSpec.PARAM_DUMPSYS_ON_PASS, true)).thenReturn(false);
+        AndroidDumpSysSpec.PARAM_DUMPSYS_SUFFIX_DEFAULT,
+        /* dumpsysOnPass= */ false);
 
     decorator.run(testInfo);
 
@@ -330,10 +384,11 @@ public final class AndroidDumpSysDecoratorTest {
   @Test
   public void run_collectOnFail_paramFalse() throws Exception {
     mockBasicSetup(
-        false,
+        /* logToFile= */ false,
+        "",
         AndroidDumpSysSpec.PARAM_DUMPSYS_TYPE_DEFAULT,
-        AndroidDumpSysSpec.PARAM_DUMPSYS_SUFFIX_DEFAULT);
-    when(params.getBool(AndroidDumpSysSpec.PARAM_DUMPSYS_ON_PASS, true)).thenReturn(false);
+        AndroidDumpSysSpec.PARAM_DUMPSYS_SUFFIX_DEFAULT,
+        /* dumpsysOnPass= */ false);
     when(result.get())
         .thenReturn(
             ResultTypeWithCause.create(
@@ -361,23 +416,26 @@ public final class AndroidDumpSysDecoratorTest {
         logToFile,
         "", // No log file names
         dumpsysType,
-        dumpsysSuffix);
+        dumpsysSuffix,
+        /* dumpsysOnPass= */ true);
   }
 
   private void mockBasicSetup(
-      boolean logToFile, String dumpSysLogFileNames, String dumpsysType, String dumpsysSuffix)
+      boolean logToFile,
+      String dumpSysLogFileNames,
+      String dumpsysType,
+      String dumpsysSuffix,
+      boolean dumpsysOnPass)
       throws Exception {
-    when(params.isTrue(AndroidDumpSysSpec.PARAM_LOG_TO_FILE)).thenReturn(logToFile);
-    when(params.get(
-            AndroidDumpSysSpec.PARAM_DUMPSYS_TYPE, AndroidDumpSysSpec.PARAM_DUMPSYS_TYPE_DEFAULT))
-        .thenReturn(dumpsysType);
-    when(params.get(
-            AndroidDumpSysSpec.PARAM_DUMPSYS_SUFFIX,
-            AndroidDumpSysSpec.PARAM_DUMPSYS_SUFFIX_DEFAULT))
-        .thenReturn(dumpsysSuffix);
-    when(params.get(
-            AndroidDumpSysSpec.PARAM_LOG_FILE_NAME, AndroidDumpSysSpec.PARAM_LOG_FILE_NAME_DEFAULT))
-        .thenReturn(dumpSysLogFileNames);
+    AndroidDumpSysDecoratorSpec spec =
+        AndroidDumpSysDecoratorSpec.newBuilder()
+            .setLogToFile(logToFile)
+            .setDumpsysLogFileName(dumpSysLogFileNames)
+            .setDumpsysType(dumpsysType)
+            .setDumpsysSuffix(dumpsysSuffix)
+            .setDumpsysOnPass(dumpsysOnPass)
+            .build();
+    when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenReturn(spec);
     when(systemStateManager.isOnline(DEVICE_ID)).thenReturn(true);
     if (logToFile) {
       when(testInfo.getGenFileDir()).thenReturn(GEN_DIR);

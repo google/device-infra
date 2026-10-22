@@ -122,12 +122,14 @@ public final class DriverDecoratorMetadata {
     builder.put("AndroidDesktopOtaUpdateDecorator", "AndroidDesktopOtaUpdateDecoratorSpec");
     builder.put("AndroidDeviceFeaturesCheckDecorator", "AndroidDeviceFeaturesCheckDecoratorSpec");
     builder.put("AndroidDeviceSettingsDecorator", "AndroidDeviceSettingsDecoratorSpec");
+    builder.put("AndroidDumpSysDecorator", "AndroidDumpSysDecoratorSpec");
     builder.put("AndroidEmulatorVideoDecorator", "AndroidEmulatorVideoDecoratorSpec");
     builder.put("AndroidFilePullerDecorator", "AndroidFilePullerDecoratorSpec");
     builder.put("AndroidFlashGkiDecorator", "AndroidFlashGkiDecoratorSpec");
     builder.put("AndroidInstallAppsDecorator", "InstallApkStepSpec");
     builder.put(
         "AndroidLabTestSupportSettingsDecorator", "AndroidLabTestSupportSettingsDecoratorSpec");
+    builder.put("AndroidLogCatDecorator", "AndroidLogCatDecoratorSpec");
     builder.put("AndroidLogcatMonitoringDecorator", "AndroidLogcatMonitoringDecoratorSpec");
     builder.put("AndroidMainlineModulesCheckDecorator", "AndroidMainlineModulesCheckDecoratorSpec");
     builder.put("AndroidMinSdkVersionCheckDecorator", "AndroidMinSdkVersionCheckDecoratorSpec");

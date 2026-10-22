@@ -21,27 +21,61 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidLogCatSpec;
 import com.google.wireless.qa.mobileharness.shared.api.validator.util.AndroidDecoratorValidatorUtil;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidLogCatDecoratorSpec;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Job validator for {@link AndroidLogCatDecorator} */
-public class AndroidLogCatDecoratorJobValidator implements JobValidator {
+/** Job validator for {@code AndroidLogCatDecorator}. */
+public class AndroidLogCatDecoratorJobValidator
+    implements JobValidator, SpecConfigable<AndroidLogCatDecoratorSpec> {
 
   @Override
   public List<String> validate(JobInfo job) throws InterruptedException {
     List<String> errors = new ArrayList<>();
-    if (job.params().has(AndroidLogCatSpec.PARAM_LOG_BUFFER_SIZE_KB)) {
-      try {
-        job.params()
-            .checkInt(
-                AndroidLogCatSpec.PARAM_LOG_BUFFER_SIZE_KB,
-                AndroidLogCatSpec.LOG_BUFFER_SIZE_MIN_KB,
-                AndroidLogCatSpec.LOG_BUFFER_SIZE_MAX_KB);
-      } catch (MobileHarnessException e) {
-        errors.add(e.getMessage());
+    List<AndroidLogCatDecoratorSpec> specs;
+    try {
+      specs =
+          job.combinedSpecForDevices(
+              this,
+              subDeviceSpec ->
+                  subDeviceSpec.decorators().getAll().contains("AndroidLogCatDecorator"));
+    } catch (MobileHarnessException e) {
+      errors.add("Error getting combined spec: " + e.getErrorId());
+      return errors;
+    }
+
+    boolean hasAsyncLog = false;
+    for (AndroidLogCatDecoratorSpec spec : specs) {
+      if (spec.hasLogBufferSizeKb()) {
+        int logBufferSizeKb = spec.getLogBufferSizeKb();
+        if (logBufferSizeKb < AndroidLogCatSpec.LOG_BUFFER_SIZE_MIN_KB
+            || logBufferSizeKb > AndroidLogCatSpec.LOG_BUFFER_SIZE_MAX_KB) {
+          errors.add(
+              String.format(
+                  "Given value %d of %s is not in range [%d, %d].",
+                  logBufferSizeKb,
+                  AndroidLogCatSpec.PARAM_LOG_BUFFER_SIZE_KB,
+                  AndroidLogCatSpec.LOG_BUFFER_SIZE_MIN_KB,
+                  AndroidLogCatSpec.LOG_BUFFER_SIZE_MAX_KB));
+        }
+      } else if (job.params().has(AndroidLogCatSpec.PARAM_LOG_BUFFER_SIZE_KB)) {
+        try {
+          job.params()
+              .checkInt(
+                  AndroidLogCatSpec.PARAM_LOG_BUFFER_SIZE_KB,
+                  AndroidLogCatSpec.LOG_BUFFER_SIZE_MIN_KB,
+                  AndroidLogCatSpec.LOG_BUFFER_SIZE_MAX_KB);
+        } catch (MobileHarnessException e) {
+          errors.add(e.getMessage());
+        }
+      }
+      if (spec.getAsyncLog()) {
+        hasAsyncLog = true;
       }
     }
-    if (job.params().isTrue(AndroidLogCatSpec.PARAM_ASYNC_LOG)) {
+
+    if (hasAsyncLog) {
       // For async log, AndroidLogCatDecorator must execute after
       // AndroidReinstallSystemAppsDecorator otherwise AndroidReinstallSystemAppsDecorator will
       // reboot device which interrupt running async logcat command (b/144229264).
