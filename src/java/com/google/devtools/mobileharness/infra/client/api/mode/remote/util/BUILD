@@ -18,6 +18,21 @@ load("@rules_java//java:defs.bzl", "java_library")
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
+    name = "lab_resolve_files",
+    srcs = ["LabResolveFiles.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:__pkg__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/infra/lab/proto:prepare_test_service_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/file/remote/constant:remote_file_type",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "lab_rpc_proto_converter",
     srcs = ["LabRpcProtoConverter.java"],
     visibility = [

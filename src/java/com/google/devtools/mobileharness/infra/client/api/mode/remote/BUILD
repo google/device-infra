@@ -70,6 +70,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote/util:lab_resolve_files",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote/util:lab_rpc_proto_converter",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/longevity",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:abstract_test_runner",

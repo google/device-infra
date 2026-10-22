@@ -35,7 +35,6 @@ import com.google.devtools.common.metrics.stability.model.ErrorId;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.util.ErrorIdComparator;
-import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
@@ -43,6 +42,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
+import com.google.devtools.mobileharness.infra.client.api.mode.remote.util.LabResolveFiles;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.util.LabRpcProtoConverter;
 import com.google.devtools.mobileharness.infra.client.api.proto.ResourceFederationProto.ResourceFederation;
 import com.google.devtools.mobileharness.infra.client.api.util.longevity.LongevityTestHelper;
@@ -692,43 +692,16 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     }
     return allFiles.stream()
         .filter(entry -> !resolveInClient(entry.getValue(), jobInfo.params()))
-        .map(entry -> createResolveFileItem(entry.getKey(), entry.getValue(), jobInfo))
+        .map(
+            entry ->
+                LabResolveFiles.createResolveFileItem(entry.getKey(), entry.getValue(), jobInfo))
         .collect(toImmutableList());
   }
 
   /** Returns whether the file should be resolved in the client. */
   private static boolean resolveInClient(String filePath, Params jobParams) {
-    if (!Flags.enableClientFileTransfer.getNonNull()) {
-      return false;
-    }
-
-    if (filePath.startsWith(RemoteFileType.ATS_FILE_SERVER.prefix())) {
-      return false;
-    }
-
-    if (cachePersistentFileInLab(filePath, jobParams)) {
-      return false;
-    }
-    return true;
-  }
-
-  private static ResolveFileItem createResolveFileItem(
-      String tag, String filePath, JobInfo jobInfo) {
-    ResolveFileItem.Builder builder = ResolveFileItem.newBuilder().setTag(tag).setFile(filePath);
-    if (cachePersistentFileInLab(filePath, jobInfo.params())) {
-      builder.putResolvingParameter("persistent", "true");
-    }
-    return builder.build();
-  }
-
-  private static boolean cachePersistentFileInLab(String filePath, Params jobParams) {
-    return Flags.enablePersistentCache.getNonNull()
-        && jobParams
-            .getList(
-                JobInfo.PARAM_PERSISTENT_CACHE_FILE_LIST,
-                JobInfo.PERSISTENT_CACHE_FILE_LIST_SEPARATOR,
-                ImmutableList.of())
-            .contains(filePath);
+    return Flags.enableClientFileTransfer.getNonNull()
+        && !LabResolveFiles.isResolvedInLab(filePath, jobParams);
   }
 
   private TestEngineLocator waitUntilTestEngineAndLabResolvedFilesReady(
