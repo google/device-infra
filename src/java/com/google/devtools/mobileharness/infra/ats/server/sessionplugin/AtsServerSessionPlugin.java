@@ -693,7 +693,10 @@ final class AtsServerSessionPlugin {
     return !commandDetailsMap.isEmpty()
         && hasSessionCompleted(commandDetailsMap)
         && commandDetailsMap.values().stream()
-            .anyMatch(commandDetail -> commandDetail.getFailedTestCount() > 0);
+            .anyMatch(
+                commandDetail ->
+                    commandDetail.getFailedTestCount() > 0
+                        || commandDetail.getFailedModuleCount() > 0);
   }
 
   private static void appendErrorMessage(RequestDetail.Builder requestDetail, String newMessage) {
