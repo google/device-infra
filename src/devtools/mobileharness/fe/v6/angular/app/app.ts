@@ -93,6 +93,7 @@ export class App implements OnDestroy {
   private readonly cdr: ChangeDetectorRef = inject(ChangeDetectorRef);
   private readonly router: Router = inject(Router);
   readonly appData: AppData = inject(APP_DATA);
+  readonly currentYear = new Date().getFullYear();
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
   readonly omniLabUrl = getOmniLabUrl(this.appData.applicationId ?? '');
   readonly loadingService = inject(LoadingService);
@@ -255,11 +256,6 @@ export class App implements OnDestroy {
       this.showContent = false;
     }
     this.cdr.markForCheck();
-  }
-
-  logout() {
-    // TODO: Implement this.
-    console.log('logout');
   }
 
   ngOnDestroy() {

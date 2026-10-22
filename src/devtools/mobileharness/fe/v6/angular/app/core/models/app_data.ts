@@ -30,6 +30,8 @@ export declare interface AppData {
   readonly isDevMode?: boolean;
   /** Current labconsole version. */
   readonly labconsoleVersion?: string;
+  /** Current Master server version. */
+  readonly masterVersion?: string;
   /**
    * The url of lab console server. Do NOT pass value to this field, as it's a
    * computed filed via labConsoleServerPort and overrideLabConsoleServerUrl.
@@ -95,6 +97,7 @@ export function getAppData(): AppData {
     mttVersion: rawData.mttVersion ?? '20.0',
     isDevMode: rawData.isDevMode ?? false,
     labconsoleVersion: rawData.labconsoleVersion ?? '1.0',
+    masterVersion: rawData.masterVersion ?? 'unknown',
     labConsoleServerPort,
     // we should not set the default value for overrideLabConsoleServerUrl,
     // because, as its name suggested, if the overrideLabConsoleServerUrl is not
