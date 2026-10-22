@@ -16,18 +16,23 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.host;
 
+import static com.google.common.util.concurrent.Futures.immediateFuture;
+import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchPreflightLabServerReleaseRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchPreflightLabServerReleaseResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchReleaseLabServersRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchReleaseLabServersResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.UpdatePassThroughFlagsResponse;
 import io.grpc.stub.StreamObserver;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -43,7 +48,7 @@ public final class HostServiceGrpcImplTest {
   @Before
   public void setUp() {
     logic = mock(HostServiceLogic.class);
-    executor = MoreExecutors.newDirectExecutorService();
+    executor = newDirectExecutorService();
     service = new HostServiceGrpcImpl(logic, executor);
   }
 
@@ -63,10 +68,57 @@ public final class HostServiceGrpcImplTest {
         };
 
     when(logic.updatePassThroughFlags(any()))
-        .thenReturn(Futures.immediateFuture(UpdatePassThroughFlagsResponse.getDefaultInstance()));
+        .thenReturn(immediateFuture(UpdatePassThroughFlagsResponse.getDefaultInstance()));
 
     service.updatePassThroughFlags(request, responseObserver);
 
     verify(logic).updatePassThroughFlags(eq(request));
+  }
+
+  @Test
+  public void batchPreflightLabServerRelease_callsLogic() {
+    BatchPreflightLabServerReleaseRequest request =
+        BatchPreflightLabServerReleaseRequest.getDefaultInstance();
+    StreamObserver<BatchPreflightLabServerReleaseResponse> responseObserver =
+        new StreamObserver<BatchPreflightLabServerReleaseResponse>() {
+          @Override
+          public void onNext(BatchPreflightLabServerReleaseResponse response) {}
+
+          @Override
+          public void onError(Throwable t) {}
+
+          @Override
+          public void onCompleted() {}
+        };
+
+    when(logic.batchPreflightLabServerRelease(any(), any()))
+        .thenReturn(immediateFuture(BatchPreflightLabServerReleaseResponse.getDefaultInstance()));
+
+    service.batchPreflightLabServerRelease(request, responseObserver);
+
+    verify(logic).batchPreflightLabServerRelease(eq(request), eq(Optional.empty()));
+  }
+
+  @Test
+  public void batchReleaseLabServers_callsLogic() {
+    BatchReleaseLabServersRequest request = BatchReleaseLabServersRequest.getDefaultInstance();
+    StreamObserver<BatchReleaseLabServersResponse> responseObserver =
+        new StreamObserver<BatchReleaseLabServersResponse>() {
+          @Override
+          public void onNext(BatchReleaseLabServersResponse response) {}
+
+          @Override
+          public void onError(Throwable t) {}
+
+          @Override
+          public void onCompleted() {}
+        };
+
+    when(logic.batchReleaseLabServers(any(), any()))
+        .thenReturn(immediateFuture(BatchReleaseLabServersResponse.getDefaultInstance()));
+
+    service.batchReleaseLabServers(request, responseObserver);
+
+    verify(logic).batchReleaseLabServers(eq(request), eq(Optional.empty()));
   }
 }
