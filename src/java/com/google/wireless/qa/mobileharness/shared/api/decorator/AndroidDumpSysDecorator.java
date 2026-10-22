@@ -34,8 +34,9 @@ import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleD
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.TeardownOnlyDecorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidDumpSysSpec;
-import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidDumpSysDecoratorSpec;
 import java.util.List;
 import java.util.Locale;
 
@@ -70,7 +71,8 @@ import java.util.Locale;
 @DecoratorAnnotation(
     help =
         "For retrieving Android dumpsys log and send them back to client or test result service.")
-public final class AndroidDumpSysDecorator extends TeardownOnlyDecorator {
+public final class AndroidDumpSysDecorator extends TeardownOnlyDecorator
+    implements SpecConfigable<AndroidDumpSysDecoratorSpec> {
 
   /** Template which adds header and footer to the dumpsys log. */
   private static final String LOG_TEMPLATE =
@@ -116,17 +118,18 @@ public final class AndroidDumpSysDecorator extends TeardownOnlyDecorator {
   }
 
   @Override
-  protected void tearDown(TeardownContext context) throws InterruptedException {
+  protected void tearDown(TeardownContext context)
+      throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
-    JobInfo jobInfo = testInfo.jobInfo();
-    boolean logToFile = jobInfo.params().isTrue(AndroidDumpSysSpec.PARAM_LOG_TO_FILE);
-    ImmutableList<DumpSysCommandInfo> dumpSysCommands = makeDumpSysCommands(jobInfo);
+    String deviceId = getDevice().getDeviceId();
+    AndroidDumpSysDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this, deviceId);
+    boolean logToFile = spec.getLogToFile();
+    ImmutableList<DumpSysCommandInfo> dumpSysCommands = makeDumpSysCommands(spec);
     if (testInfo.getRootTest().resultWithCause().get().type() == TestResult.PASS
-        && !jobInfo.params().getBool(AndroidDumpSysSpec.PARAM_DUMPSYS_ON_PASS, true)) {
+        && !spec.getDumpsysOnPass()) {
       testInfo.log().atInfo().alsoTo(logger).log("Skip dumpsys when test passed");
       return;
     }
-    String deviceId = getDevice().getDeviceId();
     // Only invokes the dumpsys command when the device is detected.
     MobileHarnessException deviceOnlineException = null;
     boolean isDeviceOnline = false;
@@ -214,33 +217,25 @@ public final class AndroidDumpSysDecorator extends TeardownOnlyDecorator {
    * empty command, use the default comamnd, `PARAM_DUMPSYS_TYPE_DEFAULT`. Suffixes and log file
    * names are applied in order. If there are none, apply defaults.
    *
-   * @param jobInfo the jobInfo containing input parameters for this decorator.
+   * @param spec the decorator spec containing input parameters for this decorator.
    * @return a list of dumpsys commands and settings.
    */
-  private static ImmutableList<DumpSysCommandInfo> makeDumpSysCommands(JobInfo jobInfo) {
+  private static ImmutableList<DumpSysCommandInfo> makeDumpSysCommands(
+      AndroidDumpSysDecoratorSpec spec) {
     ImmutableList.Builder<DumpSysCommandInfo> dumpSysCommands = ImmutableList.builder();
     String dumpSysTypeParam =
-        jobInfo
-            .params()
-            .get(
-                AndroidDumpSysSpec.PARAM_DUMPSYS_TYPE,
-                AndroidDumpSysSpec.PARAM_DUMPSYS_TYPE_DEFAULT);
+        spec.getDumpsysType().isEmpty()
+            ? AndroidDumpSysSpec.PARAM_DUMPSYS_TYPE_DEFAULT
+            : spec.getDumpsysType();
     List<String> dumpSysTypes = SPLITTER.splitToList(dumpSysTypeParam);
 
     String dumpSysSuffixParam =
-        jobInfo
-            .params()
-            .get(
-                AndroidDumpSysSpec.PARAM_DUMPSYS_SUFFIX,
-                AndroidDumpSysSpec.PARAM_DUMPSYS_SUFFIX_DEFAULT);
+        spec.getDumpsysSuffix().isEmpty()
+            ? AndroidDumpSysSpec.PARAM_DUMPSYS_SUFFIX_DEFAULT
+            : spec.getDumpsysSuffix();
     List<String> dumpSysSuffixes = SPLITTER.splitToList(dumpSysSuffixParam);
 
-    String dumpSysLogNameParam =
-        jobInfo
-            .params()
-            .get(
-                AndroidDumpSysSpec.PARAM_LOG_FILE_NAME,
-                AndroidDumpSysSpec.PARAM_LOG_FILE_NAME_DEFAULT);
+    String dumpSysLogNameParam = spec.getDumpsysLogFileName();
     List<String> dumpSysLogNameInputs = SPLITTER.splitToList(dumpSysLogNameParam);
 
     for (int i = 0; i < dumpSysTypes.size(); i++) {

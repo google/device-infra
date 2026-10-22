@@ -37,11 +37,13 @@ proto_library(
         ":android_desktop_ota_update_decorator_spec_proto",
         ":android_device_features_check_decorator_spec_proto",
         ":android_device_setting_decorator_spec_proto",
+        ":android_dump_sys_decorator_spec_proto",
         ":android_emulator_video_decorator_spec_proto",
         ":android_file_puller_decorator_spec_proto",
         ":android_flash_gki_decorator_spec_proto",
         ":android_instrumentation_spec_proto",
         ":android_lab_test_support_settings_decorator_spec_proto",
+        ":android_logcat_decorator_spec_proto",
         ":android_logcat_monitoring_decorator_spec_proto",
         ":android_mainline_modules_check_decorator_spec_proto",
         ":android_min_sdk_version_check_decorator_spec_proto",
@@ -230,6 +232,17 @@ java_proto_library(
 )
 
 proto_library(
+    name = "android_dump_sys_decorator_spec_proto",
+    srcs = ["decorator/android_dump_sys_decorator_spec.proto"],
+    deps = [":base_spec_proto"],
+)
+
+java_proto_library(
+    name = "android_dump_sys_decorator_spec_java_proto",
+    deps = [":android_dump_sys_decorator_spec_proto"],
+)
+
+proto_library(
     name = "android_emulator_video_decorator_spec_proto",
     srcs = ["decorator/android_emulator_video_decorator_spec.proto"],
     deps = [
@@ -277,6 +290,17 @@ proto_library(
 java_proto_library(
     name = "android_lab_test_support_settings_decorator_spec_java_proto",
     deps = [":android_lab_test_support_settings_decorator_spec_proto"],
+)
+
+proto_library(
+    name = "android_logcat_decorator_spec_proto",
+    srcs = ["decorator/android_logcat_decorator_spec.proto"],
+    deps = [":base_spec_proto"],
+)
+
+java_proto_library(
+    name = "android_logcat_decorator_spec_java_proto",
+    deps = [":android_logcat_decorator_spec_proto"],
 )
 
 proto_library(

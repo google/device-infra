@@ -43,8 +43,9 @@ import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleD
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidLogCatSpec;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
-import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidLogCatDecoratorSpec;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.io.File;
 import java.io.IOException;
@@ -64,7 +65,8 @@ import javax.annotation.Nullable;
     help =
         "For retrieving Android device log of a test. It can save the device log "
             + "in file and send back to client or Sponge, or just merge into the test log.")
-public class AndroidLogCatDecorator extends LifecycleDecorator implements AndroidLogCatSpec {
+public class AndroidLogCatDecorator extends LifecycleDecorator
+    implements AndroidLogCatSpec, SpecConfigable<AndroidLogCatDecoratorSpec> {
 
   public static final boolean DEFAULT_IGNORE_LOG_BUFFER_SIZE_SET_FAILURE = false;
 
@@ -138,13 +140,13 @@ public class AndroidLogCatDecorator extends LifecycleDecorator implements Androi
       throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
     String deviceId = getDevice().getDeviceId();
-    JobInfo jobInfo = testInfo.jobInfo();
+    AndroidLogCatDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this, deviceId);
     String logcatSinceTime = null;
 
     // Only invokes the logcat command when the device is detected, otherwise the command will
     // wait for the device.
     if (isDeviceOnline(deviceId)) {
-      if (jobInfo.params().getBool(AndroidLogCatSpec.PARAM_CLEAR_LOG, true)) {
+      if (spec.getClearLog()) {
         testInfo.log().atInfo().alsoTo(logger).log("Start to clean logcat on device %s", deviceId);
         try {
           adbUtil.clearLog(deviceId);
@@ -180,8 +182,8 @@ public class AndroidLogCatDecorator extends LifecycleDecorator implements Androi
     }
 
     // Filter specs and format could be null.
-    filterSpecs = jobInfo.params().get(AndroidLogCatSpec.PARAM_LOG_FILTER_SPECS);
-    options = jobInfo.params().get(AndroidLogCatSpec.PARAM_LOG_OPTIONS);
+    filterSpecs = spec.hasLogFilterSpecs() ? spec.getLogFilterSpecs() : null;
+    options = spec.hasLogOptions() ? spec.getLogOptions() : null;
     if (!Strings.isNullOrEmpty(logcatSinceTime)) {
       options = String.format("%s -T '%s'", nullToEmpty(options), logcatSinceTime).trim();
     }
@@ -200,19 +202,18 @@ public class AndroidLogCatDecorator extends LifecycleDecorator implements Androi
           e);
     }
 
-    if (jobInfo.params().isTrue(AndroidLogCatSpec.PARAM_LOG_TO_FILE)) {
+    if (spec.getLogToFile()) {
       logFilePath = PathUtil.join(testInfo.getGenFileDir(), LOG_CAT_FILE_NAME);
     } else {
       logFilePath = null;
     }
     int sdkVersion = getDeviceSdkVersion(deviceId);
 
-    if (jobInfo.params().getBool(AndroidLogCatSpec.PARAM_SET_LOG_BUFFER_SIZE, true)) {
+    if (spec.getSetLogBufferSize()) {
       int bufferSize = AndroidLogCatSpec.LOG_BUFFER_SIZE_MAX_KB;
-      boolean isLogBufferSizeSpecified =
-          jobInfo.params().has(AndroidLogCatSpec.PARAM_LOG_BUFFER_SIZE_KB);
+      boolean isLogBufferSizeSpecified = spec.hasLogBufferSizeKb();
       if (isLogBufferSizeSpecified) {
-        bufferSize = jobInfo.params().getInt(AndroidLogCatSpec.PARAM_LOG_BUFFER_SIZE_KB, 0);
+        bufferSize = spec.getLogBufferSizeKb();
       }
       try {
         testInfo
@@ -223,13 +224,11 @@ public class AndroidLogCatDecorator extends LifecycleDecorator implements Androi
                 "Output setting log buffer size = %d KB: %s",
                 bufferSize, adbUtil.setLogCatBufferSize(deviceId, sdkVersion, bufferSize));
       } catch (MobileHarnessException e) {
-        if (isLogBufferSizeSpecified
-            && !jobInfo
-                .params()
-                .getBool(
-                    AndroidLogCatSpec.PARAM_IGNORE_LOG_BUFFER_SIZE_SET_FAILURE,
-                    DEFAULT_IGNORE_LOG_BUFFER_SIZE_SET_FAILURE)) {
-          if (DeviceUtil.inSharedLab()) {
+        if (isLogBufferSizeSpecified && !spec.getIgnoreLogBufferSizeSetFailure()) {
+          // DeviceUtil.inSharedLab() has no non-deprecated replacement for selecting the error ID.
+          @SuppressWarnings("deprecation")
+          boolean inSharedLab = DeviceUtil.inSharedLab();
+          if (inSharedLab) {
             throw new MobileHarnessException(
                 AndroidErrorId.ANDROID_LOGCAT_DECORATOR_SET_LOGCAT_BUFFER_SIZE_ERROR_IN_SHARED_LAB,
                 String.format("Failed to set logcat buffer size on device %s", deviceId),
@@ -256,7 +255,7 @@ public class AndroidLogCatDecorator extends LifecycleDecorator implements Androi
       }
     }
 
-    isAsyncLog = jobInfo.params().isTrue(AndroidLogCatSpec.PARAM_ASYNC_LOG);
+    isAsyncLog = spec.getAsyncLog();
     if (isAsyncLog) {
       startAsyncLog(testInfo, sdkVersion);
     } else {
@@ -386,7 +385,7 @@ public class AndroidLogCatDecorator extends LifecycleDecorator implements Androi
 
   /** Runs logcat asynchronously during the test is running. */
   private void startAsyncLog(final TestInfo testInfo, final int sdkVersion)
-      throws MobileHarnessException, InterruptedException {
+      throws MobileHarnessException {
     String deviceId = getDevice().getDeviceId();
 
     commandProcess = null;
