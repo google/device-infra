@@ -17,6 +17,10 @@
 package com.google.devtools.mobileharness.fe.v6.service.host;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchPreflightLabServerReleaseRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchPreflightLabServerReleaseResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchReleaseLabServersRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchReleaseLabServersResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionHostRequest;
@@ -101,4 +105,10 @@ public interface HostServiceLogic {
 
   ListenableFuture<ListTroubleshootScriptsResponse> listTroubleshootScripts(
       ListTroubleshootScriptsRequest request);
+
+  ListenableFuture<BatchPreflightLabServerReleaseResponse> batchPreflightLabServerRelease(
+      BatchPreflightLabServerReleaseRequest request, Optional<String> username);
+
+  ListenableFuture<BatchReleaseLabServersResponse> batchReleaseLabServers(
+      BatchReleaseLabServersRequest request, Optional<String> username);
 }
