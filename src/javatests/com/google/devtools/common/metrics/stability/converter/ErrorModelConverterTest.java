@@ -601,4 +601,74 @@ public class ErrorModelConverterTest {
     assertThat(detail.getSuppressed(0).getSummary().getStackTrace().getElementCount())
         .isGreaterThan(0);
   }
+
+  @Test
+  public void throwable_toExceptionDetail_suppressedReferenceCycle_skipped() {
+    Exception primary = new Exception("Primary");
+    Exception suppressed = new Exception("Suppressed", primary);
+    primary.addSuppressed(suppressed);
+
+    ExceptionDetail detail = ErrorModelConverter.toExceptionDetail(primary);
+
+    assertThat(detail.getSummary().getMessage()).isEqualTo("Primary");
+    assertThat(detail.hasCause()).isFalse();
+    assertThat(detail.getSuppressedCount()).isEqualTo(1);
+    assertThat(detail.getSuppressed(0).getSummary().getMessage()).isEqualTo("Suppressed");
+    // The cause of the suppressed exception (the primary exception) forms a reference cycle.
+    assertThat(detail.getSuppressed(0).hasCause()).isFalse();
+    assertThat(detail.getSuppressed(0).getSuppressedCount()).isEqualTo(0);
+  }
+
+  @Test
+  public void throwable_toExceptionDetail_causeReferenceCycle_skipped() {
+    Exception exception1 = new Exception("Exception 1");
+    Exception exception2 = new Exception("Exception 2", exception1);
+    exception1.initCause(exception2);
+
+    ExceptionDetail detail = ErrorModelConverter.toExceptionDetail(exception1);
+
+    assertThat(detail.getSummary().getMessage()).isEqualTo("Exception 1");
+    assertThat(detail.getCause().getSummary().getMessage()).isEqualTo("Exception 2");
+    // The cause of exception 2 (exception 1) forms a reference cycle.
+    assertThat(detail.getCause().hasCause()).isFalse();
+  }
+
+  @Test
+  public void throwable_toExceptionDetail_indirectNonRootReferenceCycle_skipped() {
+    // root -(suppressed)-> e1 -(cause)-> e2 -(cause)-> e3 -(suppressed)-> e1
+    Exception e3 = new Exception("e3");
+    Exception e2 = new Exception("e2", e3);
+    Exception e1 = new Exception("e1", e2);
+    e3.addSuppressed(e1);
+    Exception root = new Exception("Root");
+    root.addSuppressed(e1);
+
+    ExceptionDetail detail = ErrorModelConverter.toExceptionDetail(root);
+
+    assertThat(detail.getSummary().getMessage()).isEqualTo("Root");
+    assertThat(detail.getSuppressedCount()).isEqualTo(1);
+    ExceptionDetail e1Detail = detail.getSuppressed(0);
+    assertThat(e1Detail.getSummary().getMessage()).isEqualTo("e1");
+    ExceptionDetail e2Detail = e1Detail.getCause();
+    assertThat(e2Detail.getSummary().getMessage()).isEqualTo("e2");
+    ExceptionDetail e3Detail = e2Detail.getCause();
+    assertThat(e3Detail.getSummary().getMessage()).isEqualTo("e3");
+    // The suppressed exception of e3 (e1) is an indirect non-root ancestor, which forms a reference
+    // cycle.
+    assertThat(e3Detail.hasCause()).isFalse();
+    assertThat(e3Detail.getSuppressedCount()).isEqualTo(0);
+  }
+
+  @Test
+  public void throwable_toExceptionDetail_sharedReferenceWithoutCycle_notSkipped() {
+    Exception shared = new Exception("Shared");
+    Exception primary = new Exception("Primary", shared);
+    primary.addSuppressed(shared);
+
+    ExceptionDetail detail = ErrorModelConverter.toExceptionDetail(primary);
+
+    assertThat(detail.getCause().getSummary().getMessage()).isEqualTo("Shared");
+    assertThat(detail.getSuppressedCount()).isEqualTo(1);
+    assertThat(detail.getSuppressed(0).getSummary().getMessage()).isEqualTo("Shared");
+  }
 }

@@ -20,6 +20,7 @@ import static com.google.common.base.Strings.nullToEmpty;
 import static java.util.Arrays.stream;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.Sets;
 import com.google.devtools.common.metrics.stability.model.ErrorId;
 import com.google.devtools.common.metrics.stability.model.ErrorIdProvider;
 import com.google.devtools.common.metrics.stability.model.MetadataProvider;
@@ -33,6 +34,7 @@ import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.F
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.StackTrace;
 import com.google.devtools.common.metrics.stability.model.proto.NamespaceProto.Namespace;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -75,16 +77,39 @@ public class ErrorModelConverter {
    * may not work for gRPC exception payload.
    *
    * <p>{@code addStackTrace} applies to the throwable and all its causes and suppressed exceptions.
+   *
+   * <p>When converting causes and suppressed exceptions recursively, a cause or a suppressed
+   * exception which is one of the throwables on the current path from the root throwable (i.e.,
+   * which would form a reference cycle) is skipped, to avoid infinite recursion. A throwable
+   * referenced multiple times without forming a cycle is still converted each time.
    */
   public static ExceptionDetail toExceptionDetail(Throwable throwable, boolean addStackTrace) {
+    return toExceptionDetail(throwable, addStackTrace, Sets.newIdentityHashSet());
+  }
+
+  /**
+   * Converts a {@link Throwable} to a {@link ExceptionDetail}.
+   *
+   * @param ancestors throwables on the path from the root throwable to the given throwable
+   *     (exclusive) via causes and suppressed exceptions
+   */
+  private static ExceptionDetail toExceptionDetail(
+      Throwable throwable, boolean addStackTrace, Set<Throwable> ancestors) {
+    ancestors.add(throwable);
     ExceptionDetail.Builder result = ExceptionDetail.newBuilder();
     result.setSummary(getExceptionSummary(throwable, addStackTrace));
-    if (throwable.getCause() != null) {
-      result.setCause(toExceptionDetail(throwable.getCause(), addStackTrace));
+    // Skips the cause and suppressed exceptions which form reference cycles (e.g., created by
+    // Throwable.addSuppressed()) to avoid infinite recursion.
+    Throwable cause = throwable.getCause();
+    if (cause != null && !ancestors.contains(cause)) {
+      result.setCause(toExceptionDetail(cause, addStackTrace, ancestors));
     }
     for (Throwable suppressed : throwable.getSuppressed()) {
-      result.addSuppressed(toExceptionDetail(suppressed, addStackTrace));
+      if (!ancestors.contains(suppressed)) {
+        result.addSuppressed(toExceptionDetail(suppressed, addStackTrace, ancestors));
+      }
     }
+    ancestors.remove(throwable);
     return result.build();
   }
 
