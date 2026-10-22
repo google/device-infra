@@ -48,6 +48,11 @@ public final class DeviceKeyRegistryTest {
     assertThat(registry.getKey("dimension::os")).isPresent();
     assertThat(registry.getKey("dimension::device_class_name")).isPresent();
     assertThat(registry.getKey("dimension::manufacturer")).isPresent();
+    assertThat(registry.getKey("dimension::label")).isPresent();
+    assertThat(registry.getKey("dimension::label").get().isLongTail()).isFalse();
+    assertThat(registry.getKey("dimension::label").get().isOverlay()).isFalse();
+    assertThat(registry.getKey("dimension::label").get().aliases()).containsExactly("device label");
+    assertThat(registry.displayName("dimension::label")).hasValue("Label");
     assertThat(registry.getKey("device_field::sdk_or_software_version")).isPresent();
     assertThat(registry.displayName("device_field::sdk_or_software_version"))
         .hasValue("SDK or Software Version");
@@ -145,7 +150,8 @@ public final class DeviceKeyRegistryTest {
             "software_version",
             "device_form",
             "device_class_name",
-            "manufacturer");
+            "manufacturer",
+            "label");
     // Quarantine is 1P-only, so OSS does not pull device_condition and never names "quarantined".
     assertThat(mask.getFieldMask().getPathsList()).doesNotContain("device_condition");
     assertThat(mask.getSupportedDimensionsMask().getDimensionNamesList())
