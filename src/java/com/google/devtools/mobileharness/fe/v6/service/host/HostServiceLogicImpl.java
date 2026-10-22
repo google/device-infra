@@ -20,6 +20,7 @@ import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.CheckRemoteControlEligibilityHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.DecommissionHostHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.DecommissionMissingDevicesHandler;
@@ -36,6 +37,10 @@ import com.google.devtools.mobileharness.fe.v6.service.host.handlers.StartLabSer
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.StopLabServerHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.TroubleshootScriptHandler;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.UpdatePassThroughFlagsHandler;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchPreflightLabServerReleaseRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchPreflightLabServerReleaseResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchReleaseLabServersRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchReleaseLabServersResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionHostRequest;
@@ -81,6 +86,9 @@ import javax.inject.Singleton;
 /** Common implementation of {@link HostServiceLogic}. */
 @Singleton
 public final class HostServiceLogicImpl implements HostServiceLogic {
+
+  private static final String BATCH_RELEASE_UNIMPLEMENTED_MESSAGE =
+      "Batch Lab Server release is not implemented yet";
 
   private final GetHostOverviewHandler getHostOverviewHandler;
   private final GetHostDeviceSummariesHandler getHostDeviceSummariesHandler;
@@ -349,5 +357,19 @@ public final class HostServiceLogicImpl implements HostServiceLogic {
     }
 
     return troubleshootScriptHandler.listTroubleshootScripts(request, universe);
+  }
+
+  @Override
+  public ListenableFuture<BatchPreflightLabServerReleaseResponse> batchPreflightLabServerRelease(
+      BatchPreflightLabServerReleaseRequest request, Optional<String> username) {
+    return immediateFailedFuture(
+        FeServiceException.unimplemented(BATCH_RELEASE_UNIMPLEMENTED_MESSAGE));
+  }
+
+  @Override
+  public ListenableFuture<BatchReleaseLabServersResponse> batchReleaseLabServers(
+      BatchReleaseLabServersRequest request, Optional<String> username) {
+    return immediateFailedFuture(
+        FeServiceException.unimplemented(BATCH_RELEASE_UNIMPLEMENTED_MESSAGE));
   }
 }

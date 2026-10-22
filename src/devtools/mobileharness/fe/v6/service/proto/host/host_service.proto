@@ -183,6 +183,25 @@ service HostService {
       body: "*"
     };
   }
+
+  // Checks eligibility, current versions, release state, and candidate
+  // deployable versions for releasing Lab Server across a batch of hosts.
+  rpc BatchPreflightLabServerRelease(BatchPreflightLabServerReleaseRequest)
+      returns (BatchPreflightLabServerReleaseResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts:batchPreflightLabServerRelease"
+      body: "*"
+    };
+  }
+
+  // Deploys a Lab Server release version across a batch of eligible hosts.
+  rpc BatchReleaseLabServers(BatchReleaseLabServersRequest)
+      returns (BatchReleaseLabServersResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts:batchReleaseLabServers"
+      body: "*"
+    };
+  }
 }
 
 // Request message for GetHostHeaderInfo.
@@ -552,4 +571,93 @@ message TroubleshootScriptAction {
   optional string description = 3;
   optional bool enabled = 4;
   optional string constraint_tooltip = 5;
+}
+
+// Eligibility status of a single host in a batch Lab Server release.
+enum HostReleaseEligibilityStatus {
+  HOST_RELEASE_ELIGIBILITY_STATUS_UNSPECIFIED = 0;
+  // Host is eligible to receive a Lab Server release.
+  HOST_RELEASE_ELIGIBILITY_STATUS_ELIGIBLE = 1;
+  // Host is a Core Lab (managed centrally).
+  HOST_RELEASE_ELIGIBILITY_STATUS_INELIGIBLE_CORE_LAB = 2;
+  // Host is a Fusion Lab (does not run MobileHarness Lab Server).
+  HOST_RELEASE_ELIGIBILITY_STATUS_INELIGIBLE_FUSION_LAB = 3;
+  // Host's Daemon Server is missing or not in RUNNING state.
+  HOST_RELEASE_ELIGIBILITY_STATUS_INELIGIBLE_DAEMON_NOT_RUNNING = 4;
+  // Host already has an active Lab Server rollout in progress.
+  HOST_RELEASE_ELIGIBILITY_STATUS_INELIGIBLE_ROLLOUT_IN_PROGRESS = 5;
+  // Caller lacks host exec permission on this host.
+  HOST_RELEASE_ELIGIBILITY_STATUS_INELIGIBLE_PERMISSION_DENIED = 6;
+  // Host was not found in LabInfo or HostInfo.
+  HOST_RELEASE_ELIGIBILITY_STATUS_INELIGIBLE_NOT_FOUND = 7;
+}
+
+// Per-host preflight result for BatchPreflightLabServerRelease.
+message HostReleasePreflightItem {
+  // Unique name of the host.
+  string host_name = 1;
+
+  // User-facing lab type of the host (for example, "Satellite" or "SLaaS").
+  string lab_type = 2;
+
+  // Current Lab Server version recorded on the host (empty if unknown).
+  string current_version = 3;
+
+  // Current Lab Server release state (for example, RUNNING, STOPPED, ERROR).
+  // A host is considered already converged on a target version only when
+  // current_version matches the target version and lab_server_release_state is
+  // LAB_SERVER_RELEASE_STATE_RUNNING.
+  LabServerReleaseState lab_server_release_state = 4;
+
+  // Eligibility classification for this host.
+  HostReleaseEligibilityStatus eligibility_status = 5;
+
+  // Explanation when eligibility_status is not
+  // HOST_RELEASE_ELIGIBILITY_STATUS_ELIGIBLE.
+  string ineligibility_reason = 6;
+}
+
+// Request message for BatchPreflightLabServerRelease.
+message BatchPreflightLabServerReleaseRequest {
+  // Explicit host names selected by the operator.
+  repeated string host_names = 1;
+
+  // The universe the hosts belong to.
+  string universe = 2;
+}
+
+// Response message for BatchPreflightLabServerRelease.
+message BatchPreflightLabServerReleaseResponse {
+  // Whether Lab Server release is supported for the requested environment and
+  // universe. False on Partner ATS and OSS deployments.
+  bool enabled = 1;
+
+  // Fleet-wide candidate Lab Server versions available for deployment.
+  repeated DeployableVersion release_configs = 2;
+
+  // Per-host eligibility, current version, and release state in the same order
+  // as request.host_names.
+  repeated HostReleasePreflightItem hosts = 3;
+}
+
+// Request message for BatchReleaseLabServers.
+message BatchReleaseLabServersRequest {
+  // Eligible target host names to deploy to.
+  repeated string host_names = 1;
+
+  // The Lab Server version string to deploy (for example, "4.387.0").
+  string version = 2;
+
+  // Logical release configuration key (for example,
+  // "mobileharness_lab_server").
+  string release_name = 3;
+
+  // The universe the hosts belong to.
+  string universe = 4;
+}
+
+// Response message for BatchReleaseLabServers.
+message BatchReleaseLabServersResponse {
+  // Tracking URL for the multi-host Legislator rollout.
+  string tracking_url = 1;
 }

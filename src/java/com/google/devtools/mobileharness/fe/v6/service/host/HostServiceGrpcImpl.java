@@ -18,6 +18,10 @@ package com.google.devtools.mobileharness.fe.v6.service.host;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.fe.v6.service.grpc.FeGrpcInvoker;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchPreflightLabServerReleaseRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchPreflightLabServerReleaseResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchReleaseLabServersRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchReleaseLabServersResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CheckRemoteControlEligibilityResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionHostRequest;
@@ -294,5 +298,31 @@ public final class HostServiceGrpcImpl extends HostServiceGrpc.HostServiceImplBa
         executor,
         HostServiceGrpc.getServiceDescriptor(),
         HostServiceGrpc.getListTroubleshootScriptsMethod());
+  }
+
+  @Override
+  public void batchPreflightLabServerRelease(
+      BatchPreflightLabServerReleaseRequest request,
+      StreamObserver<BatchPreflightLabServerReleaseResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        req -> logic.batchPreflightLabServerRelease(req, Optional.empty()),
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getBatchPreflightLabServerReleaseMethod());
+  }
+
+  @Override
+  public void batchReleaseLabServers(
+      BatchReleaseLabServersRequest request,
+      StreamObserver<BatchReleaseLabServersResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        req -> logic.batchReleaseLabServers(req, Optional.empty()),
+        executor,
+        HostServiceGrpc.getServiceDescriptor(),
+        HostServiceGrpc.getBatchReleaseLabServersMethod());
   }
 }
