@@ -574,4 +574,31 @@ public class ErrorModelConverterTest {
             ExceptionSummary.MetadataEntry.newBuilder().setKey("key3").setValue("value3").build(),
             ExceptionSummary.MetadataEntry.newBuilder().setKey("key4").setValue("value4").build());
   }
+
+  @Test
+  public void throwable_toExceptionDetail_withoutStackTrace_appliesToCausesAndSuppressed() {
+    Exception primary = new Exception("Primary", new Exception("Cause"));
+    primary.addSuppressed(new Exception("Suppressed"));
+
+    ExceptionDetail detail = ErrorModelConverter.toExceptionDetail(primary, false);
+
+    assertThat(detail.getSummary().hasStackTrace()).isFalse();
+    assertThat(detail.getCause().getSummary().getMessage()).isEqualTo("Cause");
+    assertThat(detail.getCause().getSummary().hasStackTrace()).isFalse();
+    assertThat(detail.getSuppressed(0).getSummary().getMessage()).isEqualTo("Suppressed");
+    assertThat(detail.getSuppressed(0).getSummary().hasStackTrace()).isFalse();
+  }
+
+  @Test
+  public void throwable_toExceptionDetail_withStackTrace_appliesToCausesAndSuppressed() {
+    Exception primary = new Exception("Primary", new Exception("Cause"));
+    primary.addSuppressed(new Exception("Suppressed"));
+
+    ExceptionDetail detail = ErrorModelConverter.toExceptionDetail(primary, true);
+
+    assertThat(detail.getSummary().getStackTrace().getElementCount()).isGreaterThan(0);
+    assertThat(detail.getCause().getSummary().getStackTrace().getElementCount()).isGreaterThan(0);
+    assertThat(detail.getSuppressed(0).getSummary().getStackTrace().getElementCount())
+        .isGreaterThan(0);
+  }
 }

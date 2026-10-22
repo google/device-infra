@@ -73,15 +73,17 @@ public class ErrorModelConverter {
    *
    * <p>Note if {@code addStackTrace} is set to true to contains full stack trace information, it
    * may not work for gRPC exception payload.
+   *
+   * <p>{@code addStackTrace} applies to the throwable and all its causes and suppressed exceptions.
    */
   public static ExceptionDetail toExceptionDetail(Throwable throwable, boolean addStackTrace) {
     ExceptionDetail.Builder result = ExceptionDetail.newBuilder();
     result.setSummary(getExceptionSummary(throwable, addStackTrace));
     if (throwable.getCause() != null) {
-      result.setCause(toExceptionDetail(throwable.getCause()));
+      result.setCause(toExceptionDetail(throwable.getCause(), addStackTrace));
     }
     for (Throwable suppressed : throwable.getSuppressed()) {
-      result.addSuppressed(toExceptionDetail(suppressed));
+      result.addSuppressed(toExceptionDetail(suppressed, addStackTrace));
     }
     return result.build();
   }
