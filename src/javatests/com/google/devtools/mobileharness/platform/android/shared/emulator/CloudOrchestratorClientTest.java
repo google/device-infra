@@ -504,6 +504,7 @@ public class CloudOrchestratorClientTest {
     MobileHarnessException e1 =
         assertThrows(MobileHarnessException.class, () -> client.listHosts());
     assertThat(e1.getErrorId()).isEqualTo(BasicErrorId.LOCAL_NETWORK_ERROR);
+    assertThat(e1.getMessage()).contains("/v1/zones/local/hosts");
 
     // Test POST (via createHost)
     MobileHarnessException e2 =
@@ -511,11 +512,13 @@ public class CloudOrchestratorClientTest {
             MobileHarnessException.class,
             () -> client.createHost(new CloudOrchestratorMessages.CreateHostRequest()));
     assertThat(e2.getErrorId()).isEqualTo(BasicErrorId.LOCAL_NETWORK_ERROR);
+    assertThat(e2.getMessage()).contains("/v1/zones/local/hosts");
 
     // Test DELETE (via deleteHost)
     MobileHarnessException e3 =
         assertThrows(MobileHarnessException.class, () -> client.deleteHost("host-1"));
     assertThat(e3.getErrorId()).isEqualTo(BasicErrorId.LOCAL_NETWORK_ERROR);
+    assertThat(e3.getMessage()).contains("/v1/zones/local/hosts/host-1");
 
     // Test waitOperation (which calls executeRequest directly)
     MobileHarnessException e4 =
@@ -523,6 +526,7 @@ public class CloudOrchestratorClientTest {
             MobileHarnessException.class,
             () -> client.waitOperation("host-1", "op-1", Operation.class, 1, Duration.ofMillis(1)));
     assertThat(e4.getErrorId()).isEqualTo(BasicErrorId.LOCAL_NETWORK_ERROR);
+    assertThat(e4.getMessage()).contains("/v1/zones/local/hosts/host-1/operations/op-1/:wait");
   }
 
   @Test

@@ -1528,7 +1528,7 @@ public final class NewMultiCommandRequestHandlerTest {
         handleResultProcessingResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
     assertThat(commandDetail.getErrorMessage())
-        .isEqualTo("test failed with exception [MH|UNDETERMINED|JOB_TIMEOUT|20103]");
+        .contains("test failed with exception [MH|UNDETERMINED|JOB_TIMEOUT|20103]");
     assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.OMNILAB_ERROR);
   }
 
@@ -1544,7 +1544,11 @@ public final class NewMultiCommandRequestHandlerTest {
         .thenReturn(
             ResultTypeWithCause.create(
                 TestResult.ERROR,
-                new MobileHarnessException(BasicErrorId.JOB_TIMEOUT, "job failed with exception")));
+                new MobileHarnessException(
+                    BasicErrorId.JOB_TIMEOUT,
+                    "job failed with exception",
+                    new MobileHarnessException(
+                        BasicErrorId.LOCAL_NETWORK_ERROR, "Connection refused"))));
     when(jobInfo.resultWithCause()).thenReturn(newJobResult);
 
     HandleResultProcessingResult handleResultProcessingResult =
@@ -1554,7 +1558,10 @@ public final class NewMultiCommandRequestHandlerTest {
         handleResultProcessingResult.commandDetails().values().iterator().next();
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
     assertThat(commandDetail.getErrorMessage())
-        .isEqualTo("job failed with exception [MH|UNDETERMINED|JOB_TIMEOUT|20103]");
+        .contains("job failed with exception [MH|UNDETERMINED|JOB_TIMEOUT|20103]");
+    assertThat(commandDetail.getErrorMessage()).contains("Caused by:");
+    assertThat(commandDetail.getErrorMessage())
+        .contains("Connection refused [MH|INFRA_ISSUE|LOCAL_NETWORK_ERROR|");
     assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.OMNILAB_ERROR);
   }
 
