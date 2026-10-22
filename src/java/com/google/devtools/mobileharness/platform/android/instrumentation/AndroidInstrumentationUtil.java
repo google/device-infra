@@ -148,6 +148,9 @@ public class AndroidInstrumentationUtil {
   private static final String ANDROID_TEST_DEVICE_PATH_TEST_RUNFILES =
       TestStorageConstants.ON_DEVICE_TEST_RUNFILES;
 
+  /** Device directory for storing AndroidJUnitRunner test filter files. */
+  @VisibleForTesting static final String ANDROID_TEST_FILTER_DIR_ON_DEVICE = "/data/local/tmp/ajur";
+
   /** Test output files device path for AndroidX test library. */
   @VisibleForTesting
   static final String ANDROID_TEST_DEVICE_PATH_TEST_OUTPUT =
@@ -1352,6 +1355,66 @@ public class AndroidInstrumentationUtil {
   }
 
   /**
+   * Pushes a test filter file from the host to the device and returns the device file path to pass
+   * via {@code -e testFile} or {@code -e notTestFile}.
+   */
+  public String pushTestFile(
+      TestInfo testInfo,
+      String deviceId,
+      int deviceSdkVersion,
+      String hostFilePath,
+      String deviceRelativeFilePath,
+      @Nullable String externalStoragePath)
+      throws MobileHarnessException, InterruptedException {
+    boolean useTestStorageService =
+        testInfo
+            .jobInfo()
+            .params()
+            .getBool(AndroidInstrumentationDriverSpec.PARAM_USE_TEST_STORAGE_SERVICE, true);
+    if (useTestStorageService && isNullExternalStoragePath(testInfo, externalStoragePath)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_INSTRUMENTATION_EXTERNAL_STORAGE_NOT_FOUND,
+          "Cannot push test file to test storage because no writable external storage was"
+              + " found on device "
+              + deviceId);
+    }
+    String deviceFilePath =
+        PathUtil.join(ANDROID_TEST_FILTER_DIR_ON_DEVICE, deviceRelativeFilePath);
+    try {
+      String output =
+          androidFileUtil.push(deviceId, deviceSdkVersion, hostFilePath, deviceFilePath);
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Push test file to %s:\n%s", deviceFilePath, output);
+      if (useTestStorageService) {
+        // RunnerArgs.parseTestFile strips the leading '/' from deviceFilePath and passes it to
+        // TestStorage.openInputFile, which TestDataContentProvider resolves relative to
+        // testRunfilesDirOnDevice.
+        String testRunfilesDirOnDevice =
+            PathUtil.join(externalStoragePath, ANDROID_TEST_DEVICE_PATH_TEST_RUNFILES);
+        String testStorageFilePath = PathUtil.join(testRunfilesDirOnDevice, deviceFilePath);
+        String testStorageOutput =
+            androidFileUtil.push(deviceId, deviceSdkVersion, hostFilePath, testStorageFilePath);
+        testInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log(
+                "Push test file for TestStorage to %s:\n%s",
+                testStorageFilePath, testStorageOutput);
+      }
+      return deviceFilePath;
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_INSTRUMENTATION_PUSH_FILE_ERROR,
+          String.format("Failed to push test file %s to device %s", hostFilePath, deviceId),
+          e);
+    }
+  }
+
+  /**
    * Checks if need to show raw results for the "am instrument" command call.
    *
    * @param testInfo The target {@code testInfo} of this test
@@ -1749,7 +1812,10 @@ public class AndroidInstrumentationUtil {
    * converted to "com_google_codelab_mobileharness_android_hellomobileharness_testMethod.ec".
    */
   @VisibleForTesting
-  static String convertClassNameToCoverageFileName(String str) {
+  static String convertClassNameToCoverageFileName(@Nullable String str) {
+    if (Strings.isNullOrEmpty(str)) {
+      return "coverage.ec";
+    }
     return str.replace('.', '_').replace('#', '_') + ".ec";
   }
 }

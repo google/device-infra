@@ -29,6 +29,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -76,7 +77,9 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -820,6 +823,255 @@ public class AndroidInstrumentationTest {
             eq(setting),
             eq(TEST_TIMEOUT),
             ArgumentMatchers.isNull());
+  }
+
+  @Test
+  public void run_oversizedClassOption_spillsToTestFile() throws Exception {
+    ImmutableList<String> targets =
+        ImmutableList.<String>builder()
+            .addAll(
+                Collections.nCopies(
+                    1000, "com.google.spinner.test.SpinnerTest#testMethodWithLongName0123456789"))
+            .add("com.google.spinner.test.SpinnerTest#testParameterized[param1,param2]")
+            .add("com.google.spinner.test.SpinnerTest#testParens(arg1,arg2)")
+            .build();
+    String unescapedClassOption = String.join(",", targets);
+    String oversizedClassOption = unescapedClassOption.replace(",", "\\,");
+    String expectedFileContent = String.join("\n", targets);
+    String hostTestFilePath = PathUtil.join(TMP_FILE_DIR_PATH, "instrumentation_test_file.txt");
+    String deviceTestFilePath = "/data/local/tmp/ajur/instrumentation_test_file.txt";
+    mockRunTestBasicSteps(
+        AndroidInstrumentationDriverSpec.TEST_NAME_ALL,
+        "key1=value1,class=" + oversizedClassOption,
+        false,
+        false);
+    when(androidInstrumentationUtil.pushTestFile(
+            testInfo,
+            DEVICE_ID,
+            DEFAULT_SDK_VERSION,
+            hostTestFilePath,
+            "instrumentation_test_file.txt",
+            EXTERNAL_STORAGE))
+        .thenReturn(deviceTestFilePath);
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            /* className= */ null,
+            ImmutableMap.of("key1", "value1", "testFile", deviceTestFilePath),
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
+        .thenReturn("OK (1 test)");
+
+    driver.run(testInfo);
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    assertThat(testInfo.properties().get(AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS))
+        .isAnyOf(
+            "key1=value1,class=" + unescapedClassOption,
+            "class=" + unescapedClassOption + ",key1=value1");
+    verify(fileUtil).writeToFile(hostTestFilePath, expectedFileContent);
+  }
+
+  @Test
+  public void run_oversizedNotClassOption_spillsToNotTestFile() throws Exception {
+    List<String> notTargets =
+        Collections.nCopies(
+            1000, "com.google.spinner.test.SpinnerTest#testMethodWithLongName0123456789");
+    String unescapedNotClassOption = String.join(",", notTargets);
+    String oversizedNotClassOption = String.join("\\,", notTargets);
+    String expectedFileContent = String.join("\n", notTargets);
+    String hostNotTestFilePath =
+        PathUtil.join(TMP_FILE_DIR_PATH, "instrumentation_not_test_file.txt");
+    String deviceNotTestFilePath = "/data/local/tmp/ajur/instrumentation_not_test_file.txt";
+    mockRunTestBasicSteps(
+        AndroidInstrumentationDriverSpec.TEST_NAME_ALL,
+        "key1=value1,notClass=" + oversizedNotClassOption,
+        false,
+        false);
+    when(androidInstrumentationUtil.pushTestFile(
+            testInfo,
+            DEVICE_ID,
+            DEFAULT_SDK_VERSION,
+            hostNotTestFilePath,
+            "instrumentation_not_test_file.txt",
+            EXTERNAL_STORAGE))
+        .thenReturn(deviceNotTestFilePath);
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            /* className= */ null,
+            ImmutableMap.of("key1", "value1", "notTestFile", deviceNotTestFilePath),
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
+        .thenReturn("OK (1 test)");
+
+    driver.run(testInfo);
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    assertThat(testInfo.properties().get(AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS))
+        .isAnyOf(
+            "key1=value1,notClass=" + unescapedNotClassOption,
+            "notClass=" + unescapedNotClassOption + ",key1=value1");
+    verify(fileUtil).writeToFile(hostNotTestFilePath, expectedFileContent);
+  }
+
+  @Test
+  public void run_oversizedSmartShardTestNames_spillsToTestFile() throws Exception {
+    List<String> shardTargets =
+        Collections.nCopies(
+            1000, "com.google.spinner.test.SpinnerTest#testMethodWithLongName0123456789");
+    String oversizedShardTestNames = String.join(",", shardTargets);
+    String expectedFileContent = String.join("\n", shardTargets);
+    String hostTestFilePath = PathUtil.join(TMP_FILE_DIR_PATH, "instrumentation_test_file.txt");
+    String deviceTestFilePath = "/data/local/tmp/ajur/instrumentation_test_file.txt";
+    mockRunTestBasicSteps("shard_locator_name", OPTIONS, false, false);
+    testInfo
+        .properties()
+        .add(ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES, oversizedShardTestNames);
+    when(androidInstrumentationUtil.pushTestFile(
+            testInfo,
+            DEVICE_ID,
+            DEFAULT_SDK_VERSION,
+            hostTestFilePath,
+            "instrumentation_test_file.txt",
+            EXTERNAL_STORAGE))
+        .thenReturn(deviceTestFilePath);
+    HashMap<String, String> expectedOptions = new HashMap<>(OPTION_MAP);
+    expectedOptions.put("testFile", deviceTestFilePath);
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            /* className= */ null,
+            expectedOptions,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
+        .thenReturn("OK (1 test)");
+
+    driver.run(testInfo);
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    verify(fileUtil).writeToFile(hostTestFilePath, expectedFileContent);
+  }
+
+  @Test
+  public void run_oversizedClassOptionWithExistingTestFile_doesNotOverwriteTestFile()
+      throws Exception {
+    List<String> targets =
+        Collections.nCopies(
+            1000, "com.google.spinner.test.SpinnerTest#testMethodWithLongName0123456789");
+    String unescapedClassOption = String.join(",", targets);
+    String oversizedClassOption = String.join("\\,", targets);
+    String customTestFile = "/data/local/tmp/custom_test_file.txt";
+    mockRunTestBasicSteps(
+        AndroidInstrumentationDriverSpec.TEST_NAME_ALL,
+        "testFile=" + customTestFile + ",class=" + oversizedClassOption,
+        false,
+        false);
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            /* className= */ null,
+            ImmutableMap.of("testFile", customTestFile, "class", unescapedClassOption),
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
+        .thenReturn("OK (1 test)");
+
+    driver.run(testInfo);
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    verify(androidInstrumentationUtil, never())
+        .pushTestFile(any(), any(), anyInt(), any(), any(), any());
+  }
+
+  @Test
+  public void run_oversizedClassOptionWriteFileFails_throwsException() throws Exception {
+    List<String> targets =
+        Collections.nCopies(
+            1000, "com.google.spinner.test.SpinnerTest#testMethodWithLongName0123456789");
+    String oversizedClassOption = String.join("\\,", targets);
+    String hostTestFilePath = PathUtil.join(TMP_FILE_DIR_PATH, "instrumentation_test_file.txt");
+    mockRunTestBasicSteps(
+        AndroidInstrumentationDriverSpec.TEST_NAME_ALL,
+        "key1=value1,class=" + oversizedClassOption,
+        false,
+        false);
+    doThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_INSTRUMENTATION_WRITE_FILE_ERROR, "write failed"))
+        .when(fileUtil)
+        .writeToFile(eq(hostTestFilePath), any(String.class));
+
+    MobileHarnessException exception =
+        assertThrows(MobileHarnessException.class, () -> driver.run(testInfo));
+
+    assertThat(exception.getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_INSTRUMENTATION_WRITE_FILE_ERROR);
+  }
+
+  @Test
+  public void run_multipleOptionMapsWithOversizedClassOption_spillsToIndexedTestFile()
+      throws Exception {
+    List<String> targets =
+        Collections.nCopies(
+            1000, "com.google.spinner.test.SpinnerTest#testMethodWithLongName0123456789");
+    String unescapedClassOption = String.join(",", targets);
+    String oversizedClassOption = String.join("\\,", targets);
+    String expectedFileContent = String.join("\n", targets);
+    String hostTestFilePath = PathUtil.join(TMP_FILE_DIR_PATH, "instrumentation_test_file_0.txt");
+    String deviceTestFilePath = "/data/local/tmp/ajur/instrumentation_test_file_0.txt";
+    mockRunTestBasicSteps(AndroidInstrumentationDriverSpec.TEST_NAME_ALL, "", false, false);
+    jobInfo
+        .params()
+        .add(
+            AndroidInstrumentationDriverSpec.PARAM_OPTIONS + "_0", "class=" + oversizedClassOption);
+    jobInfo
+        .params()
+        .add(
+            AndroidInstrumentationDriverSpec.PARAM_OPTIONS + "_1",
+            AndroidInstrumentationDriverSpec.SKIPPED_OPTION_STR);
+    when(androidInstrumentationUtil.pushTestFile(
+            testInfo,
+            DEVICE_ID,
+            DEFAULT_SDK_VERSION,
+            hostTestFilePath,
+            "instrumentation_test_file_0.txt",
+            EXTERNAL_STORAGE))
+        .thenReturn(deviceTestFilePath);
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            /* className= */ null,
+            ImmutableMap.of("testFile", deviceTestFilePath),
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
+        .thenReturn("OK (1 test)");
+
+    driver.run(testInfo);
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    assertThat(testInfo.properties().get(AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS + "_0"))
+        .isEqualTo("class=" + unescapedClassOption);
+    verify(fileUtil).writeToFile(hostTestFilePath, expectedFileContent);
   }
 
   private AndroidInstrumentationSetting mockInstrumentSetting(

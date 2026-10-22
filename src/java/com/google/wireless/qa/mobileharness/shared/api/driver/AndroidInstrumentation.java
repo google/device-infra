@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.common.base.Strings.nullToEmpty;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_END_EPOCH_MS;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS;
@@ -27,6 +28,7 @@ import static java.lang.String.format;
 import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.base.Stopwatch;
+import com.google.common.base.Utf8;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -122,6 +124,22 @@ public class AndroidInstrumentation extends BaseDriver
   private static final String ARGUMENT_TEST_FILE = "testFile";
   private static final String ARGUMENT_NOT_TEST_FILE = "notTestFile";
   private static final String ARGUMENT_TESTS_REGEX = "tests_regex";
+
+  /**
+   * Maximum UTF-8 byte length for inline test target arguments ({@code class}, {@code notClass},
+   * {@code package}, {@code notPackage}) before spilling them to a device {@code testFile} or
+   * {@code notTestFile}. Even when {@code Adb.runShell} writes commands exceeding 4,090 bytes to a
+   * temporary device script ({@code /data/local/tmp/adb_shell_command_*.sh}), {@code
+   * /system/bin/sh} and {@code ShellMain} still pass the {@code -e class <targets>} value as a
+   * single {@code argv[i]} argument to {@code execve} when invoking {@code am} / {@code
+   * app_process}, which fails with {@code E2BIG} ({@code Argument list too long}) if any single
+   * argument exceeds the Linux kernel {@code MAX_ARG_STRLEN = 131072} bytes (128 KiB) limit. Using
+   * 65,536 UTF-8 bytes leaves ample headroom.
+   */
+  private static final int MAX_TEST_TARGET_ARG_LENGTH = 65536;
+
+  private static final String TEST_FILE_NAME = "instrumentation_test_file.txt";
+  private static final String NOT_TEST_FILE_NAME = "instrumentation_not_test_file.txt";
 
   /** Set of keys for specifying test target. */
   private static final ImmutableSet<String> TEST_TARGET_KEYS =
@@ -305,6 +323,10 @@ public class AndroidInstrumentation extends BaseDriver
                     : StrUtil.DEFAULT_MAP_JOINER.join(optionMap));
       }
     }
+
+    testTarget =
+        prepareTestFilesForOversizedTargets(
+            testInfo, deviceSdkVersion, externalStoragePath.orElse(null), optionMaps, testTarget);
 
     Long instrumentTimeoutMs = null;
     if (job.params().get(AndroidInstrumentationDriverSpec.PARAM_INSTRUMENT_TIMEOUT_SEC) != null) {
@@ -1081,6 +1103,172 @@ public class AndroidInstrumentation extends BaseDriver
         }
       }
     }
+  }
+
+  @Nullable
+  @SuppressWarnings("ReferenceEquality")
+  private String prepareTestFilesForOversizedTargets(
+      TestInfo testInfo,
+      int deviceSdkVersion,
+      @Nullable String externalStoragePath,
+      List<Map<String, String>> optionMaps,
+      @Nullable String testTarget)
+      throws MobileHarnessException, InterruptedException {
+    boolean hasOversizedTestTarget =
+        testTarget != null && Utf8.encodedLength(testTarget) > MAX_TEST_TARGET_ARG_LENGTH;
+    boolean spilledTestTarget = false;
+    int optionMapCount = optionMaps.size();
+    for (int i = 0; i < optionMapCount; i++) {
+      Map<String, String> optionMap = optionMaps.get(i);
+      if (optionMap != SKIPPED_OPTION_MAP) {
+        boolean spilledPositive =
+            spillPositiveTargetsIfNeeded(
+                testInfo,
+                deviceSdkVersion,
+                externalStoragePath,
+                optionMap,
+                hasOversizedTestTarget ? testTarget : null,
+                getScopedTestFileName(TEST_FILE_NAME, i, optionMapCount));
+        spilledTestTarget = spilledTestTarget || (hasOversizedTestTarget && spilledPositive);
+        spillNegativeTargetsIfNeeded(
+            testInfo,
+            deviceSdkVersion,
+            externalStoragePath,
+            optionMap,
+            getScopedTestFileName(NOT_TEST_FILE_NAME, i, optionMapCount));
+      }
+    }
+    return spilledTestTarget ? null : testTarget;
+  }
+
+  private static String getScopedTestFileName(
+      String baseFileName, int optionMapIdx, int optionMapCount) {
+    if (optionMapCount <= 1) {
+      return baseFileName;
+    }
+    return baseFileName.replace(".txt", "_" + optionMapIdx + ".txt");
+  }
+
+  private boolean spillPositiveTargetsIfNeeded(
+      TestInfo testInfo,
+      int deviceSdkVersion,
+      @Nullable String externalStoragePath,
+      Map<String, String> optionMap,
+      @Nullable String oversizedTestTarget,
+      String testFileName)
+      throws MobileHarnessException, InterruptedException {
+    if (optionMap.containsKey(ARGUMENT_TEST_FILE)) {
+      return false;
+    }
+    String classArg = optionMap.get(ARGUMENT_TEST_CLASS);
+    String packageArg = optionMap.get(ARGUMENT_TEST_PACKAGE);
+    int combinedUtf8Length =
+        Utf8.encodedLength(nullToEmpty(oversizedTestTarget))
+            + Utf8.encodedLength(nullToEmpty(classArg))
+            + Utf8.encodedLength(nullToEmpty(packageArg));
+    if (oversizedTestTarget == null && combinedUtf8Length <= MAX_TEST_TARGET_ARG_LENGTH) {
+      return false;
+    }
+    List<String> targets = new ArrayList<>();
+    addSplitTargets(targets, oversizedTestTarget);
+    addSplitTargets(targets, classArg);
+    addSplitTargets(targets, packageArg);
+    String deviceTestFilePath =
+        writeAndPushTestFile(
+            testInfo, deviceSdkVersion, externalStoragePath, testFileName, targets);
+    optionMap.remove(ARGUMENT_TEST_CLASS);
+    optionMap.remove(ARGUMENT_TEST_PACKAGE);
+    optionMap.put(ARGUMENT_TEST_FILE, deviceTestFilePath);
+    return true;
+  }
+
+  private void spillNegativeTargetsIfNeeded(
+      TestInfo testInfo,
+      int deviceSdkVersion,
+      @Nullable String externalStoragePath,
+      Map<String, String> optionMap,
+      String notTestFileName)
+      throws MobileHarnessException, InterruptedException {
+    if (optionMap.containsKey(ARGUMENT_NOT_TEST_FILE)) {
+      return;
+    }
+    String notClassArg = optionMap.get(ARGUMENT_NOT_TEST_CLASS);
+    String notPackageArg = optionMap.get(ARGUMENT_NOT_TEST_PACKAGE);
+    int combinedUtf8Length =
+        Utf8.encodedLength(nullToEmpty(notClassArg))
+            + Utf8.encodedLength(nullToEmpty(notPackageArg));
+    if (combinedUtf8Length <= MAX_TEST_TARGET_ARG_LENGTH) {
+      return;
+    }
+    List<String> notTargets = new ArrayList<>();
+    addSplitTargets(notTargets, notClassArg);
+    addSplitTargets(notTargets, notPackageArg);
+    String deviceNotTestFilePath =
+        writeAndPushTestFile(
+            testInfo, deviceSdkVersion, externalStoragePath, notTestFileName, notTargets);
+    optionMap.remove(ARGUMENT_NOT_TEST_CLASS);
+    optionMap.remove(ARGUMENT_NOT_TEST_PACKAGE);
+    optionMap.put(ARGUMENT_NOT_TEST_FILE, deviceNotTestFilePath);
+  }
+
+  private static void addSplitTargets(List<String> destination, @Nullable String commaSeparated) {
+    if (isNullOrEmpty(commaSeparated)) {
+      return;
+    }
+    int start = 0;
+    int squareBracketDepth = 0;
+    int parenDepth = 0;
+    int length = commaSeparated.length();
+    for (int i = 0; i < length; i++) {
+      char c = commaSeparated.charAt(i);
+      if (c == '\\' && i + 1 < length) {
+        i++;
+      } else if (c == '[') {
+        squareBracketDepth++;
+      } else if (c == ']' && squareBracketDepth > 0) {
+        squareBracketDepth--;
+      } else if (c == '(') {
+        parenDepth++;
+      } else if (c == ')' && parenDepth > 0) {
+        parenDepth--;
+      } else if (c == ',' && squareBracketDepth == 0 && parenDepth == 0) {
+        addTrimmedTarget(destination, commaSeparated.substring(start, i));
+        start = i + 1;
+      }
+    }
+    addTrimmedTarget(destination, commaSeparated.substring(start));
+  }
+
+  private static void addTrimmedTarget(List<String> destination, String rawTarget) {
+    String trimmed = rawTarget.replace(AndroidInstrumentationDriverSpec.COMMA_ESCAPED, ",").trim();
+    if (!trimmed.isEmpty()) {
+      destination.add(trimmed);
+    }
+  }
+
+  private String writeAndPushTestFile(
+      TestInfo testInfo,
+      int deviceSdkVersion,
+      @Nullable String externalStoragePath,
+      String fileName,
+      List<String> targets)
+      throws MobileHarnessException, InterruptedException {
+    String hostFilePath = PathUtil.join(testInfo.getTmpFileDir(), fileName);
+    try {
+      fileUtil.writeToFile(hostFilePath, String.join("\n", targets));
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_INSTRUMENTATION_WRITE_FILE_ERROR,
+          String.format("Failed to write test file %s on host", hostFilePath),
+          e);
+    }
+    return androidInstrumentationUtil.pushTestFile(
+        testInfo,
+        getDevice().getDeviceId(),
+        deviceSdkVersion,
+        hostFilePath,
+        fileName,
+        externalStoragePath);
   }
 
   protected ImmutableSet<String> getBuildApks(TestInfo testInfo)
