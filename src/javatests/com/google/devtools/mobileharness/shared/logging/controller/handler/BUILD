@@ -13,36 +13,38 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_library")
-load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
+load("@rules_java//java:java_test.bzl", "java_test")
 
 package(
     default_applicable_licenses = ["//:license"],
     default_testonly = 1,
 )
 
-java_library(
-    name = "handler",
-    srcs = glob(["*.java"]),
+java_test(
+    name = "SmallTests",
+    size = "small",
+    srcs = ["MobileHarnessLogHandlerTest.java"],
     deps = [
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/logging/controller/handler",
         "//src/java/com/google/devtools/mobileharness/shared/logging/controller/queue",
         "//src/java/com/google/devtools/mobileharness/shared/logging/util:log_entry_util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_api_grpc_proto_google_cloud_logging_v2",
-        "@maven//:com_google_inject_guice",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
     ],
 )
 
-junit_test_suites(
-    name = "tests",
-    sizes = [
-        "small",
-        "medium",
+java_test(
+    name = "MediumTests",
+    size = "medium",
+    srcs = ["LocalFileHandlerModuleTest.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/logging/controller/handler",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:com_google_inject_guice",
+        "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
-    deps = [":handler"],
 )
