@@ -67,7 +67,7 @@ public class ApiConfigV5 implements ApiConfig {
   private static final int DEFAULT_MAX_CONSECUTIVE_FAILS = 5;
   private static final int DEFAULT_MAX_CONSECUTIVE_TESTS = 10000;
   public static final String DEVICE_DEFAULT_OWNER = "mobileharness-device-default-owner";
-  private static final String DEVICE_DEFAULT_EXECUTOR = "mobileharness-device-default-executor";
+  public static final String DEVICE_DEFAULT_EXECUTOR = "mobileharness-device-default-executor";
 
   // The Key of device config mode. The value of this param is "device" by default.
   private static final String DEVICE_CONFIG_MODE_KEY = "device_config_mode";
@@ -322,6 +322,13 @@ public class ApiConfigV5 implements ApiConfig {
     DeviceConfig deviceConfig = deviceConfigs.get(deviceControlId);
     if (deviceConfig != null) {
       return Optional.of(deviceConfig);
+    }
+    DeviceConfig tenantConfig = tenantDeviceConfigs.get(deviceControlId);
+    if (tenantConfig != null) {
+      BasicDeviceConfig basic = tenantConfig.getBasicConfig();
+      if (basic.getOwnerCount() > 0 || basic.getExecutorCount() > 0) {
+        return Optional.empty();
+      }
     }
     Optional<DeviceId> deviceId = deviceIdManager.getDeviceIdFromControlId(deviceControlId);
     // For the device with stable UUID, need to store default device config if it has not been
