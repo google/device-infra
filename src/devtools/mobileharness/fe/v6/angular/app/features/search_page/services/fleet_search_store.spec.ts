@@ -5,6 +5,7 @@ import {of, Subject, throwError} from 'rxjs';
 
 import {
   Fleet,
+  FleetChipResolverRequest,
   FleetChipResolverResponse,
   FleetSuggestion,
   SearchEntity,
@@ -15,7 +16,7 @@ import {
   SearchService,
 } from '../../../core/services/search/search_service';
 import {SnackBarService} from '../../../shared/services/snackbar_service';
-import {mapToSearchBoxSuggestion} from '../utils';
+import {SearchBoxSuggestion} from '../models';
 import {FleetSearchStore} from './fleet_search_store';
 
 @Component({standalone: true, template: ''})
@@ -199,7 +200,7 @@ describe('FleetSearchStore', () => {
         pillCondition: '2',
       },
     };
-    store.selectSuggestion(mapToSearchBoxSuggestion(modifySuggestion));
+    store.selectSuggestion(modifySuggestion);
     await flushAsync();
 
     expect(store.showValuePicker()).toBeFalse();
@@ -236,7 +237,7 @@ describe('FleetSearchStore', () => {
         viewExisting: {},
       },
     };
-    store.selectSuggestion(mapToSearchBoxSuggestion(bareKeySuggestion));
+    store.selectSuggestion(bareKeySuggestion);
     await flushAsync();
     expect(store.showSuggestions()).toBeTrue();
     expect(store.pendingFilterOpenRequest()?.key).toBe('dimension::model');
@@ -523,6 +524,177 @@ describe('FleetSearchStore', () => {
       translateSubject3.error(new Error('late failure'));
       await flushAsync();
       expect(mockSnackBarService.showWarning).not.toHaveBeenCalled();
+    });
+  });
+
+  it('calls getFleetSuggestions with empty input when showSuggestions is true and no filters or groupby', async () => {
+    const store = await createStoreAt({});
+    mockSearchService.getFleetSuggestions.calls.reset();
+
+    expect(store.activeChips()).toEqual([]);
+    expect(store.searchQuery()).toBe('');
+
+    store.showSuggestions.set(true);
+    await flushAsync();
+
+    expect(mockSearchService.getFleetSuggestions).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        input: '',
+        filters: undefined,
+        groupBy: undefined,
+        limit: 10,
+      }),
+    );
+    expect(store.isSuggestionsPanelOpen()).toBeTrue();
+  });
+
+  it('populates suggestions directly from backend and tracks loading state', async () => {
+    const mockItems: SearchBoxSuggestion[] = [
+      {
+        label: 'Filter by Status',
+        mainText: [{text: 'Status'}],
+        openPicker: {key: 'status', metadata: {keyDisplayName: 'Status'}},
+        count: 42,
+      },
+    ];
+    mockSearchService.getFleetSuggestions.and.returnValue(of({items: mockItems}));
+
+    const store = await createStoreAt({});
+    expect(store.suggestions()).toEqual([]);
+
+    store.showSuggestions.set(true);
+    await flushAsync();
+
+    expect(store.suggestions()).toEqual(mockItems);
+    expect(store.isSuggestionsLoading()).toBeFalse();
+  });
+
+  it('handles selectSuggestion with openPicker, applyFilter, and addGroupBy correctly', async () => {
+    const store = await createStoreAt({});
+
+    // 1. Safe no-op on null/undefined
+    store.selectSuggestion(null as unknown as SearchBoxSuggestion);
+
+    // 2. openPicker keeps showSuggestions true and sets pendingFilter
+    store.searchQuery.set('stat');
+    store.selectSuggestion({
+      label: 'Filter by Status',
+      mainText: [{text: 'Status'}],
+      openPicker: {key: 'status', metadata: {keyDisplayName: 'Status'}},
+    });
+
+    expect(store.searchQuery()).toBe('');
+    expect(store.showSuggestions()).toBeTrue();
+    expect(store.pendingFilterKey()).toBe('status');
+
+    // 3. applyFilter with autoCollapseAfterApply = true closes suggestions and adds chip
+    store.autoCollapseAfterApply.set(true);
+    store.selectSuggestion({
+      label: 'Status is IDLE',
+      mainText: [{text: 'IDLE'}],
+      applyFilter: {
+        resultingFilter: {
+          key: 'status',
+          simple: {values: [{value: 'IDLE'}]},
+        },
+        pillCondition: 'IDLE',
+      },
+    });
+
+    expect(store.showSuggestions()).toBeFalse();
+    expect(store.activeChips().some((c) => c.key === 'status')).toBeTrue();
+
+    // 4. applyFilter with autoCollapseAfterApply = false keeps suggestions open
+    store.autoCollapseAfterApply.set(false);
+    store.selectSuggestion({
+      label: 'Model is Pixel 9',
+      mainText: [{text: 'Pixel 9'}],
+      applyFilter: {
+        resultingFilter: {
+          key: 'model',
+          simple: {values: [{value: 'Pixel 9'}]},
+        },
+        pillCondition: 'Pixel 9',
+      },
+    });
+
+    expect(store.showSuggestions()).toBeTrue();
+    expect(store.activeChips().some((c) => c.key === 'model')).toBeTrue();
+
+    // 5. addGroupBy adds group by chip
+    store.selectSuggestion({
+      label: 'Group by Model',
+      mainText: [{text: 'Model'}],
+      addGroupBy: {key: 'model', pillKey: 'Model'},
+    });
+
+    expect(store.groupByChips().some((c) => c.key === 'model')).toBeTrue();
+  });
+
+  it('computes isSuggestionsPanelOpen correctly on FleetSearchStore', async () => {
+    const store = await createStoreAt({});
+
+    // Fleet mode opens popover whenever showSuggestions is true
+    store.showSuggestions.set(false);
+    expect(store.isSuggestionsPanelOpen()).toBeFalse();
+
+    store.showSuggestions.set(true);
+    expect(store.isSuggestionsPanelOpen()).toBeTrue();
+  });
+
+  it('applies advanced matching filter and updates correctly when value is changed', async () => {
+    mockSearchService.resolveFleetChips.and.callFake(
+      (req: FleetChipResolverRequest) =>
+        of({
+          filterChips: (req.filters || []).map((f) => ({
+            valid: {
+              pillKey: f.key,
+              pillCondition: f.complex?.startsWith?.value
+                ? `^${f.complex.startsWith.value}`
+                : 'custom',
+            },
+          })),
+        }),
+    );
+
+    const store = await createStoreAt({});
+
+    // 1. First apply: prefix 'Pixel'
+    store.openValuePicker('model', null, 'Model');
+    store.applyValuePicker({
+      selected: [],
+      negate: false,
+      isAdvanced: true,
+      advMode: 'prefix',
+      advText: 'Pixel',
+    });
+
+    expect(store.activeChips().length).toBe(1);
+    expect(store.activeChips()[0].pillCondition).toBe('^Pixel');
+    expect(store.activeChips()[0].complex).toEqual({
+      startsWith: {value: 'Pixel'},
+    });
+
+    // 2. User edits chip and changes value to 'Pixel 9'
+    store.openValuePicker('model');
+    expect(store.effectivePickerState().advanced.active).toBeTrue();
+    expect(store.effectivePickerState().advanced.mode).toBe('prefix');
+    expect(store.effectivePickerState().advanced.text).toBe('Pixel');
+    expect(store.effectivePickerState().advanced.values).toEqual([]);
+
+    store.applyValuePicker({
+      selected: [],
+      negate: false,
+      isAdvanced: true,
+      advMode: 'prefix',
+      advText: 'Pixel 9',
+    });
+
+    // Verify chip was updated in place with new value
+    expect(store.activeChips().length).toBe(1);
+    expect(store.activeChips()[0].pillCondition).toBe('^Pixel 9');
+    expect(store.activeChips()[0].complex).toEqual({
+      startsWith: {value: 'Pixel 9'},
     });
   });
 });

@@ -1,4 +1,3 @@
-import {DecimalPipe} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -42,7 +41,6 @@ import {KeyPickerComponent} from '../key_picker/key_picker';
   styleUrl: './search_suggestions.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    DecimalPipe,
     MatIconModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
@@ -238,9 +236,13 @@ export class SearchSuggestions {
   /** Display title for the pending filter key being edited. */
   readonly pendingFilterTitle = this.store.pendingFilterTitle;
 
-  /** Whether there are any applied chips or a pending filter key in progress. */
-  readonly hasActiveCriteria = computed<boolean>(
-    () => this.hasActiveChips() || !!this.pendingFilterKey(),
+  /** Whether to show the criteria section (filters and group-by chips/buttons). */
+  readonly showCriteriaSection = computed<boolean>(
+    () =>
+      this.hasActiveChips() ||
+      !!this.pendingFilterKey() ||
+      this.showAddFilterButton() ||
+      this.showGroupBySection(),
   );
 
   /** Live result count label displayed in the panel header (e.g., "918 devices"). Semantic text for TJS. */
@@ -286,6 +288,41 @@ export class SearchSuggestions {
 
   /** Whether the 'Auto-collapse after applying' checkbox is checked (defaults to true if not in storage). */
   readonly isAutoCollapseChecked = this.store.autoCollapseAfterApply;
+
+  /** Stable tracking function for suggestion items in `@for` loop to avoid DOM churn. */
+  trackSuggestion(item: SearchBoxSuggestion): string {
+    if (item.openPicker?.key) {
+      return `picker:${item.openPicker.key}`;
+    }
+    if (item.addGroupBy?.key) {
+      return `groupby:${item.addGroupBy.key}`;
+    }
+    const af = item.applyFilter;
+    if (af && 'resultingFilter' in af && af.resultingFilter?.key) {
+      return `apply:${af.resultingFilter.key}:${item.label || ''}:${af.pillCondition || ''}`;
+    }
+    if (af && 'filter' in af && af.filter?.key) {
+      return `apply-tjs:${af.filter.key}:${item.label || ''}:${af.pillCondition || ''}`;
+    }
+    const text = (item.mainText || []).map((seg) => seg.text).join('');
+    return `item:${item.label || ''}:${text}`;
+  }
+
+  /** Formats the suggestion count badge text according to BFF count specifications. */
+  formatCount(item: SearchBoxSuggestion): string {
+    if (item.count === undefined || item.count === null) return '';
+    const prefix = item.count > 0 ? (item.countPrefix || '') : '';
+    const formattedNum = item.count.toLocaleString();
+    const unit = item.countUnit ? ` ${item.countUnit}` : '';
+    return `${prefix}${formattedNum}${unit}`;
+  }
+
+  /** Tooltip for counts that exceed maximum scan threshold. */
+  getCountTooltip(item: SearchBoxSuggestion): string {
+    return item.overMax
+      ? 'That many groups is hard to scan — consider filtering first.'
+      : '';
+  }
 
   onItemClick(item: SearchBoxSuggestion) {
     this.selectSuggestion.emit({item});

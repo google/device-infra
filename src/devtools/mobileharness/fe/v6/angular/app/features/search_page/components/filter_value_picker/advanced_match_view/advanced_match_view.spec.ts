@@ -136,4 +136,30 @@ describe('AdvancedMatchView', () => {
 
     expect(host.values()).toEqual(['val1', 'val2']);
   });
+
+  it('should migrate text into values when switching from single to multi-mode', () => {
+    host.mode.set('prefix');
+    host.text.set('migrated_text');
+    host.values.set([]);
+    fixture.detectChanges();
+
+    component.selectMode('exactly');
+    fixture.detectChanges();
+
+    expect(host.mode()).toBe('exactly');
+    expect(host.values()).toEqual(['migrated_text']);
+  });
+
+  it('should migrate first value into text when switching from multi to single-mode', () => {
+    host.mode.set('exactly');
+    host.text.set('');
+    host.values.set(['val_a', 'val_b']);
+    fixture.detectChanges();
+
+    component.selectMode('substring');
+    fixture.detectChanges();
+
+    expect(host.mode()).toBe('substring');
+    expect(host.text()).toBe('val_a');
+  });
 });
