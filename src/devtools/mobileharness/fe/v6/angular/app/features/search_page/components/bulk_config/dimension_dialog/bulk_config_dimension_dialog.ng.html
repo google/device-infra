@@ -1,0 +1,453 @@
+@let mode = viewMode();
+@let target = targetValues();
+@let summary = reviewSummary();
+@let dn = displayName();
+
+<app-dialog
+  [dialogTitle]="headline()"
+  [subtitle]="supportText()"
+  width="56rem"
+  height="48rem"
+  maxHeight="90vh"
+  footerType="normal"
+>
+  <div class="bw-body">
+    @switch (mode) {
+      @case ('applying') {
+        <app-bulk-wizard-status-view
+          mode="applying"
+          [willUpdateCount]="summary.willUpdateCount"
+        />
+      }
+
+      @case ('errors') {
+        <app-bulk-wizard-status-view
+          mode="errors"
+          [applySuccessCount]="applySuccessCount()"
+          [applyErrors]="applyErrors()"
+        />
+      }
+
+      @case ('success') {
+        <app-bulk-wizard-status-view
+          mode="success"
+          [willUpdateCount]="summary.willUpdateCount"
+          [successSupportText]="successSupportText()"
+        >
+          <div class="bw-new-card bw-success-card">
+            <div class="bw-new-label">{{ target.length === 0 ? 'Removed' : 'New value' }}</div>
+            @if (target.length === 0) {
+              <span class="bd-muted">Not set</span>
+            } @else {
+              <div class="bd-agg-vals">
+                @for (val of target; track val) {
+                  <span class="bd-pill">{{ val }}</span>
+                }
+              </div>
+            }
+          </div>
+        </app-bulk-wizard-status-view>
+      }
+
+      @case ('key_loading') {
+        <app-bulk-wizard-status-view
+          mode="loading"
+          message="Loading configurable dimensions…"
+        />
+      }
+
+      @case ('key_error') {
+        <app-bulk-wizard-status-view
+          mode="error"
+          [message]="stepError() ?? ''"
+        />
+      }
+
+      @case ('key') {
+        <!-- Key Selection Step (Custom Dimension Step 1) -->
+        <div class="bw-step1">
+          <!-- Top band: Dimension key input -->
+          <div class="bw-apply-band">
+            <div class="bw-apply-head">
+              <h4 class="bw-apply-title">Dimension key to configure</h4>
+              <span class="bw-apply-sub">
+                Choose an existing {{ isRequired ? 'required' : 'supported' }} dimension key or enter a new key for {{ deviceLabel }}
+              </span>
+            </div>
+            <div class="bw-apply-fields">
+              <div class="bw-tf bd-key-tf" [class.error]="customKeyError()">
+                <input
+                  #customKeyInput
+                  type="text"
+                  id="bd-custom-key-input"
+                  class="bw-tf-input"
+                  placeholder=" "
+                  [ngModel]="customKey()"
+                  (ngModelChange)="onCustomKeyInput($event)"
+                  (keydown.enter)="goFromKeyToValues()"
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+                <label class="bw-tf-label" for="bd-custom-key-input">Dimension key</label>
+              </div>
+            </div>
+            @if (customKeyError()) {
+              <div class="bd-key-error-msg">
+                <mat-icon class="error-icon material-symbols-outlined">error</mat-icon>
+                <span>{{ customKeyError() }}</span>
+              </div>
+            }
+            <div class="bd-key-hint-msg">
+              Use lowercase letters, digits, underscores (<code>_</code>), dashes (<code>-</code>), or dots (<code>.</code>). Dimensions automatically detected by OmniLab cannot be configured manually.
+            </div>
+          </div>
+
+          <!-- Existing dimensions in fleet panel -->
+          <div class="bw-panel">
+            <div class="bw-panel-head">
+              Existing {{ isRequired ? 'required' : 'supported' }} dimensions in fleet
+            </div>
+            <div class="bw-panel-list" role="list">
+              @if (isNewKey()) {
+                <div
+                  class="bw-li bw-li-active bd-agg-row"
+                  role="listitem"
+                >
+                  <mat-icon class="bw-li-lead new-key-lead material-symbols-outlined">add_circle</mat-icon>
+                  <div class="bw-li-body">
+                    <span class="bw-li-headline">{{ customKey() }}</span>
+                    <span class="bw-li-support">
+                      New {{ isRequired ? 'required' : 'supported' }} dimension · Not yet used in fleet
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    class="bw-text-btn"
+                    (click)="goFromKeyToValues()"
+                  >
+                    Next
+                  </button>
+                </div>
+              }
+
+              @for (k of filteredCandidateKeys(); track k.dimensionName) {
+                <div
+                  class="bw-li bd-agg-row"
+                  role="listitem"
+                  [class.bw-li-active]="customKey() === k.dimensionName.toLowerCase()"
+                >
+                  <mat-icon class="bw-li-lead material-symbols-outlined">label</mat-icon>
+                  <div class="bw-li-body">
+                    <span class="bw-li-headline">{{ k.dimensionName }}</span>
+                    <span class="bw-li-support">{{ k.fleetDeviceCount | number }} devices in fleet</span>
+                  </div>
+                  @if (formatCurrentSelectionBadge(k.selectedDeviceCount, totalCount, 'Configured on'); as badge) {
+                    <span class="bw-count-chip bw-count-chip-update">
+                      {{ badge }}
+                    </span>
+                  }
+                  <button
+                    type="button"
+                    class="bw-text-btn"
+                    (click)="pickKey(k.dimensionName)"
+                  >
+                    Use this
+                  </button>
+                </div>
+              } @empty {
+                @if (!isNewKey()) {
+                  <div class="bw-list-empty">No matching dimension key found.</div>
+                }
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      @case ('values_loading') {
+        <app-bulk-wizard-status-view
+          mode="loading"
+          message="Loading dimension values…"
+        />
+      }
+
+      @case ('values_error') {
+        <app-bulk-wizard-status-view
+          mode="error"
+          [message]="stepError() ?? ''"
+        />
+      }
+
+      @case ('values') {
+        <!-- Values Step (Step 1 for Curated, Step 2 for Custom) -->
+        <div class="bw-step1">
+          <!-- Top band: Value to apply -->
+          <div class="bw-apply-band">
+            <div class="bw-apply-head">
+              <h4 class="bw-apply-title">Value to apply</h4>
+              <span class="bw-apply-sub">Applied to all {{ deviceLabel }}</span>
+              <button
+                type="button"
+                class="bw-text-btn bd-band-actions"
+                (click)="clearTarget()"
+                [title]="'Clear the value, which removes ' + dn + ' from the devices'"
+              >
+                Clear values
+              </button>
+            </div>
+
+            <div class="bw-apply-fields">
+              <div
+                class="bd-chips"
+                role="group"
+                aria-label="Target dimension values"
+                (click)="focusChipInput($event)"
+              >
+                @for (v of target; track v; let i = $index) {
+                  <span class="bd-chip">
+                    <span>{{ v }}</span>
+                    <button
+                      type="button"
+                      class="bd-chip-remove"
+                      (click)="removeChip(i)"
+                      [title]="'Remove ' + v"
+                      [attr.aria-label]="'Remove ' + v"
+                    >
+                      <mat-icon class="material-symbols-outlined">close</mat-icon>
+                    </button>
+                  </span>
+                }
+                <input
+                  #chipInput
+                  type="text"
+                  class="bd-chip-input"
+                  [placeholder]="chipPlaceholder()"
+                  [(ngModel)]="inputValue"
+                  (keydown)="onInputKeydown($event)"
+                  (paste)="onInputPaste($event)"
+                  (blur)="commitInput()"
+                  autocomplete="off"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Suggested values panel -->
+          <div class="bw-panel">
+            <div class="bw-panel-head">Suggested values</div>
+            <div class="bw-panel-list" role="list">
+              @for (sug of candidateValues(); track (sug.values.join('::') || '__unset__')) {
+                <div class="bw-li bd-agg-row" role="listitem">
+                  <mat-icon class="bw-li-lead material-symbols-outlined">{{ sug.values.length === 0 ? 'block' : 'label' }}</mat-icon>
+                  <div class="bw-li-body">
+                    @if (sug.values.length === 0) {
+                      <span class="bw-li-headline bd-muted">Not set</span>
+                    } @else {
+                      <div class="bd-agg-vals">
+                        @for (v of sug.values; track v) {
+                          <span class="bd-pill">{{ v }}</span>
+                        }
+                      </div>
+                    }
+                    <span class="bw-li-support">{{ sug.deviceCount | number }} devices in fleet</span>
+                  </div>
+                  <button
+                    type="button"
+                    class="bw-text-btn"
+                    (click)="useValueSet(sug.values)"
+                  >
+                    Use this
+                  </button>
+                </div>
+              } @empty {
+                <div class="bw-list-empty">No values found.</div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      @case ('review_loading') {
+        <div class="bw-step2">
+          <app-bulk-wizard-status-view
+            mode="loading"
+            message="Checking device dimension configurations…"
+          />
+        </div>
+      }
+
+      @case ('review_error') {
+        <div class="bw-step2">
+          <app-bulk-wizard-status-view
+            mode="error"
+            [message]="stepError() ?? ''"
+          />
+        </div>
+      }
+
+      @case ('review') {
+        <!-- Review Step (Step 2 for Curated, Step 3 for Custom) -->
+        <div class="bw-step2">
+          <app-bulk-review-header-banner
+            [icon]="target.length === 0 ? 'block' : 'label'"
+            [subtitle]="'Target ' + dn"
+            [summary]="summary"
+            [nothingToUpdateMessage]="nothingToUpdateMessage()"
+          >
+            @if (target.length === 0) {
+              <span class="bw-cell-unset">Clear dimension (remove {{ dn }})</span>
+            } @else {
+              <div class="bd-agg-vals">
+                @for (v of target; track v) {
+                  <span class="bd-pill">{{ v }}</span>
+                }
+              </div>
+            }
+          </app-bulk-review-header-banner>
+
+          <!-- Device Comparison Table -->
+          <div class="bw-table-section">
+            <div class="bw-table-container">
+              <table class="bw-table bw-review-table" aria-label="Device dimension change review table">
+                <colgroup>
+                  <col style="width: 35%" />
+                  <col style="width: 45%" />
+                  <col style="width: 20%" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th scope="col">Device ID</th>
+                    <th scope="col">Current value</th>
+                    <th scope="col">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of reviewEntries(); track row.deviceId) {
+                    <tr>
+                      <td class="bw-li-mono" [title]="row.deviceId">{{ row.deviceId }}</td>
+                      <td>
+                        @if (!row.values || row.values.length === 0) {
+                          <span class="bw-cell-unset">Not set</span>
+                        } @else {
+                          @let isExpanded = expandedDeviceValues().has(row.deviceId);
+                          @if (row.values.length <= 2 || isExpanded) {
+                            <div class="bd-agg-vals" [class.is-expanded]="isExpanded">
+                              @for (v of row.values; track v) {
+                                <span class="bd-pill" [title]="v">{{ v }}</span>
+                              }
+                              @if (isExpanded && row.values.length > 2) {
+                                <button
+                                  type="button"
+                                  class="bd-pill bd-pill-action"
+                                  (click)="toggleExpandDeviceValues(row.deviceId)"
+                                >
+                                  Show less
+                                </button>
+                              }
+                            </div>
+                          } @else {
+                            <div class="bd-agg-vals">
+                              @for (v of row.values.slice(0, 2); track v) {
+                                <span class="bd-pill" [title]="v">{{ v }}</span>
+                              }
+                              <button
+                                type="button"
+                                class="bd-pill bd-pill-more"
+                                [matTooltip]="row.values.slice(2).join(', ')"
+                                matTooltipPosition="above"
+                                (click)="toggleExpandDeviceValues(row.deviceId)"
+                                [attr.aria-label]="'+' + (row.values.length - 2) + ' more values for ' + row.deviceId"
+                              >
+                                +{{ row.values.length - 2 }} more
+                              </button>
+                            </div>
+                          }
+                        }
+                      </td>
+                      <td>
+                        <app-bulk-status-pill
+                          [status]="row.status"
+                          [readOnlyReason]="row.readOnlyReason"
+                        />
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      }
+    }
+  </div>
+
+  <!-- Footer Actions -->
+  <ng-template #actionsTemplate>
+    @switch (mode) {
+      @case ('success') {
+        <button type="button" class="dialog-button dialog-button-primary" (click)="close()">Done</button>
+      }
+      @case ('errors') {
+        <button type="button" class="dialog-button dialog-button-primary" (click)="close()">Close</button>
+      }
+      @case ('key_error') {
+        <button type="button" class="dialog-button dialog-button-secondary" (click)="close()">Close</button>
+        <button type="button" class="dialog-button dialog-button-primary" (click)="loadConfigurableDimensionKeys()">Retry</button>
+      }
+      @case ('key') {
+        <button type="button" class="dialog-button dialog-button-secondary" (click)="close()">Cancel</button>
+        <button
+          type="button"
+          class="dialog-button dialog-button-primary"
+          [disabled]="!canProceedFromKeyStep()"
+          (click)="goFromKeyToValues()"
+        >
+          Next
+        </button>
+      }
+      @case ('values_error') {
+        @if (isCustom) {
+          <button type="button" class="dialog-button dialog-button-secondary" (click)="goBackToKey()">Back</button>
+        } @else {
+          <button type="button" class="dialog-button dialog-button-secondary" (click)="close()">Close</button>
+        }
+        <button type="button" class="dialog-button dialog-button-primary" (click)="loadValuesStepData()">Retry</button>
+      }
+      @case ('values') {
+        @if (isCustom) {
+          <button type="button" class="dialog-button dialog-button-secondary" (click)="goBackToKey()">Back</button>
+        } @else {
+          <button type="button" class="dialog-button dialog-button-secondary" (click)="close()">Cancel</button>
+        }
+        <button
+          type="button"
+          class="dialog-button dialog-button-primary"
+          (click)="goToReview()"
+        >
+          Next
+        </button>
+      }
+      @case ('review_loading') {
+        <button type="button" class="dialog-button dialog-button-secondary" disabled>Back</button>
+      }
+      @case ('review_error') {
+        <button type="button" class="dialog-button dialog-button-secondary" (click)="goBackToValues()">Back</button>
+        <button type="button" class="dialog-button dialog-button-primary" (click)="loadReviewData()">Retry</button>
+      }
+      @case ('review') {
+        <button type="button" class="dialog-button dialog-button-secondary" (click)="goBackToValues()">Back</button>
+        @if (summary.willUpdateCount === 0) {
+          <button type="button" class="dialog-button dialog-button-primary" (click)="close()">Close</button>
+        } @else {
+          <button
+            type="button"
+            class="dialog-button dialog-button-primary"
+            (click)="apply()"
+          >
+            Apply to {{ formatDeviceCount(summary.willUpdateCount) }}
+          </button>
+        }
+      }
+    }
+  </ng-template>
+</app-dialog>

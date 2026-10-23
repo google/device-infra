@@ -74,6 +74,7 @@ const SCENARIO_HOST_MANAGED_DEVICE_DATA: MockDeviceScenario = {
   scenarioName: 'Host Managed Device',
   overview: OVERVIEW,
   config: CONFIG,
+  isHostManaged: true,
   isQuarantined: false,
   actionVisibility: {
     screenshot: true,
@@ -87,7 +88,7 @@ const SCENARIO_HOST_MANAGED_DEVICE_DATA: MockDeviceScenario = {
 /**
  * Returns the mock scenario for host managed device.
  */
-export function SCENARIO_HOST_MANAGED_DEVICE(
+export function scenarioHostManagedDevice(
   callCount?: number,
 ): MockDeviceScenario {
   return SCENARIO_HOST_MANAGED_DEVICE_DATA;
