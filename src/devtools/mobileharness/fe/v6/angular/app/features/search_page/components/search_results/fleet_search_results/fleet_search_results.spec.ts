@@ -1,16 +1,21 @@
 import {signal} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {MatDialog} from '@angular/material/dialog';
+import {MatDialog, MatDialogRef} from '@angular/material/dialog';
 import {By} from '@angular/platform-browser';
 import {provideNoopAnimations} from '@angular/platform-browser/animations';
 
+import {of} from 'rxjs';
 import {Column, Row} from '../../../../../core/models/search';
+import {Fleet} from '../../../../../core/models/search_fleet';
+import {EnvUniverseService} from '../../../../../core/services/env_universe_service';
+import {BulkConfigDialogResult, FleetScope} from '../../../models';
 import {FleetSearchStore} from '../../../services/fleet_search_store';
+import {BulkConfigWifiDialog} from '../../bulk_config/wifi_dialog/bulk_config_wifi_dialog';
 import {FleetSearchResultsComponent} from './fleet_search_results';
 
 class MockFleetSearchStore {
   readonly groupByKeys = signal<string[]>([]);
-  readonly fleet = signal<'internal' | 'external'>('internal');
+  readonly fleet = signal<FleetScope>('internal');
   readonly entity = signal<string>('devices');
   readonly isLoading = signal<boolean>(false);
   readonly selectedItems = signal<Set<string>>(new Set());
@@ -73,10 +78,16 @@ describe('FleetSearchResultsComponent', () => {
   let fixture: ComponentFixture<FleetSearchResultsComponent>;
   let mockStore: MockFleetSearchStore;
   let mockDialog: jasmine.SpyObj<MatDialog>;
+  let mockEnvUniverseService: jasmine.SpyObj<EnvUniverseService>;
 
   beforeEach(async () => {
     mockStore = new MockFleetSearchStore();
     mockDialog = jasmine.createSpyObj<MatDialog>('MatDialog', ['open']);
+    mockEnvUniverseService = jasmine.createSpyObj<EnvUniverseService>(
+      'EnvUniverseService',
+      ['getUniverseString'],
+    );
+    mockEnvUniverseService.getUniverseString.and.returnValue('google_1p');
 
     await TestBed.configureTestingModule({
       imports: [FleetSearchResultsComponent],
@@ -84,6 +95,7 @@ describe('FleetSearchResultsComponent', () => {
         provideNoopAnimations(),
         {provide: FleetSearchStore, useValue: mockStore},
         {provide: MatDialog, useValue: mockDialog},
+        {provide: EnvUniverseService, useValue: mockEnvUniverseService},
       ],
     }).compileComponents();
 
@@ -211,18 +223,226 @@ describe('FleetSearchResultsComponent', () => {
     });
 
     it('computes batch action visibility correctly', () => {
-      mockStore.entity.set('devices');
       mockStore.selectAllMatching.set(false);
       expect(component.canShowBatchActions()).toBeTrue();
-      expect(component.canShowDeviceBatchActions()).toBeTrue();
-
-      mockStore.entity.set('hosts');
-      expect(component.canShowBatchActions()).toBeTrue();
-      expect(component.canShowDeviceBatchActions()).toBeFalse();
 
       mockStore.selectAllMatching.set(true);
       expect(component.canShowBatchActions()).toBeFalse();
-      expect(component.canShowDeviceBatchActions()).toBeFalse();
+    });
+
+    it('shows Configure Wi-Fi button only for devices when batch actions are enabled', () => {
+      mockStore.selectedCount.set(2);
+      mockStore.entity.set('devices');
+      mockStore.selectAllMatching.set(false);
+      fixture.detectChanges();
+
+      const buttons = fixture.debugElement.queryAll(
+        By.css('.rt-toolbar button'),
+      );
+      const buttonTexts = buttons.map((b) =>
+        b.nativeElement.textContent.trim(),
+      );
+      expect(buttonTexts.some((t) => t.includes('Configure Wi-Fi'))).toBeTrue();
+
+      mockStore.entity.set('hosts');
+      fixture.detectChanges();
+      const hostButtons = fixture.debugElement.queryAll(
+        By.css('.rt-toolbar button'),
+      );
+      const hostButtonTexts = hostButtons.map((b) =>
+        b.nativeElement.textContent.trim(),
+      );
+      expect(
+        hostButtonTexts.some((t) => t.includes('Configure Wi-Fi')),
+      ).toBeFalse();
+    });
+
+    it('opens BulkConfigWifiDialog with selected devices and clears selection on update', () => {
+      mockStore.selectedItems.set(new Set(['dev-1', 'dev-2']));
+      const openSpy = spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      ).and.returnValue({
+        afterClosed: () => of({updated: true}),
+      } as unknown as MatDialogRef<
+        BulkConfigWifiDialog,
+        BulkConfigDialogResult
+      >);
+
+      component.bulkConfig.openBulkConfigWifiDialog();
+
+      expect(openSpy).toHaveBeenCalledWith(
+        BulkConfigWifiDialog,
+        jasmine.objectContaining({
+          autoFocus: false,
+          data: {
+            deviceIds: ['dev-1', 'dev-2'],
+            universe: 'google_1p',
+            fleet: Fleet.FLEET_SELF,
+          },
+        }),
+      );
+      expect(mockStore.clearSelection).toHaveBeenCalled();
+      expect(mockStore.executeSearch).toHaveBeenCalled();
+    });
+
+    it('does not open dialog when selectedItems is empty', () => {
+      mockStore.selectedItems.set(new Set());
+      const openSpy = spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      );
+
+      component.bulkConfig.openBulkConfigWifiDialog();
+
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not clear selection or re-execute search when dialog is closed without update', () => {
+      mockStore.selectedItems.set(new Set(['dev-1']));
+      spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      ).and.returnValue({
+        afterClosed: () => of(undefined),
+      } as unknown as MatDialogRef<
+        BulkConfigWifiDialog,
+        BulkConfigDialogResult
+      >);
+
+      component.bulkConfig.openBulkConfigWifiDialog();
+
+      expect(mockStore.clearSelection).not.toHaveBeenCalled();
+      expect(mockStore.executeSearch).not.toHaveBeenCalled();
+    });
+
+    it('does not clear selection or re-execute search when dialog returns updated: false', () => {
+      mockStore.selectedItems.set(new Set(['dev-1']));
+      spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      ).and.returnValue({
+        afterClosed: () => of({updated: false}),
+      } as unknown as MatDialogRef<
+        BulkConfigWifiDialog,
+        BulkConfigDialogResult
+      >);
+
+      component.bulkConfig.openBulkConfigWifiDialog();
+
+      expect(mockStore.clearSelection).not.toHaveBeenCalled();
+      expect(mockStore.executeSearch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Column Selector', () => {
+    it('opens ColumnSelectorComponent and resets visible columns when result isReset is true', () => {
+      const openSpy = spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      ).and.returnValue({
+        afterClosed: () => of({isReset: true}),
+      } as unknown as MatDialogRef<unknown>);
+
+      component.openColumnSelector();
+
+      expect(openSpy).toHaveBeenCalled();
+      expect(mockStore.resetVisibleColumns).toHaveBeenCalled();
+      expect(mockStore.setVisibleColumns).not.toHaveBeenCalled();
+    });
+
+    it('sets visible columns when result contains columns', () => {
+      spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      ).and.returnValue({
+        afterClosed: () => of({columns: ['status', 'type']}),
+      } as unknown as MatDialogRef<unknown>);
+
+      component.openColumnSelector();
+
+      expect(mockStore.setVisibleColumns).toHaveBeenCalledWith([
+        'status',
+        'type',
+      ]);
+    });
+
+    it('does nothing when column selector dialog is dismissed without result', () => {
+      spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      ).and.returnValue({
+        afterClosed: () => of(undefined),
+      } as unknown as MatDialogRef<unknown>);
+
+      component.openColumnSelector();
+
+      expect(mockStore.resetVisibleColumns).not.toHaveBeenCalled();
+      expect(mockStore.setVisibleColumns).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when column selector returns empty columns array', () => {
+      spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      ).and.returnValue({
+        afterClosed: () => of({isReset: false, columns: []}),
+      } as unknown as MatDialogRef<unknown>);
+
+      component.openColumnSelector();
+
+      expect(mockStore.resetVisibleColumns).not.toHaveBeenCalled();
+      expect(mockStore.setVisibleColumns).not.toHaveBeenCalled();
+    });
+
+    it('clicks Columns button in toolbar to trigger openColumnSelector', () => {
+      mockStore.selectedCount.set(0);
+      fixture.detectChanges();
+
+      const openSpy = spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      ).and.returnValue({
+        afterClosed: () => of(undefined),
+      } as unknown as MatDialogRef<unknown>);
+
+      const colBtn = fixture.debugElement.query(
+        By.css('button[title="Configure table columns"]'),
+      );
+      expect(colBtn).toBeTruthy();
+      colBtn.nativeElement.click();
+
+      expect(openSpy).toHaveBeenCalled();
+    });
+
+    it('clicks Configure Wi-Fi button in selection toolbar and opens dialog', () => {
+      mockStore.selectedCount.set(2);
+      mockStore.selectedItems.set(new Set(['dev-1', 'dev-2']));
+      mockStore.entity.set('devices');
+      mockStore.selectAllMatching.set(false);
+      fixture.detectChanges();
+
+      const openSpy = spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      ).and.returnValue({
+        afterClosed: () => of({updated: true}),
+      } as unknown as MatDialogRef<
+        BulkConfigWifiDialog,
+        BulkConfigDialogResult
+      >);
+
+      const buttons = fixture.debugElement.queryAll(
+        By.css('.rt-toolbar button'),
+      );
+      const wifiBtn = buttons.find((b) =>
+        b.nativeElement.textContent.includes('Configure Wi-Fi'),
+      );
+      expect(wifiBtn).toBeTruthy();
+      wifiBtn!.nativeElement.click();
+
+      expect(openSpy).toHaveBeenCalled();
+      expect(mockStore.clearSelection).toHaveBeenCalled();
     });
   });
 

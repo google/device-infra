@@ -1,0 +1,71 @@
+@switch (mode()) {
+  @case ('loading') {
+    <div class="bw-loading-container">
+      <mat-spinner diameter="32"></mat-spinner>
+      <span>{{ message() }}</span>
+    </div>
+  }
+  @case ('error') {
+    <div class="bw-error-container">
+      <mat-icon class="material-symbols-outlined">error</mat-icon>
+      <span>{{ message() }}</span>
+    </div>
+  }
+  @case ('applying') {
+    <div class="bw-applying">
+      <div class="bw-applying-badge">
+        <mat-spinner diameter="48"></mat-spinner>
+      </div>
+      <div class="bw-success-headline">
+        Applying to {{ formatDeviceCount(willUpdateCount()) }}
+      </div>
+      <div class="bw-success-support">This usually takes a few seconds.</div>
+    </div>
+  }
+  @case ('success') {
+    <div class="bw-success">
+      <div class="bw-success-badge">
+        <mat-icon class="material-symbols-outlined">check</mat-icon>
+      </div>
+      <div class="bw-success-headline">
+        {{ formatDeviceCount(willUpdateCount()) }} updated
+      </div>
+      <div class="bw-success-support">{{ successSupportText() }}</div>
+      <ng-content />
+    </div>
+  }
+  @case ('errors') {
+    @let errList = applyErrors();
+    <div class="bw-table-section">
+      <div class="bw-review-banner bw-review-banner-error">
+        <mat-icon class="material-symbols-outlined">error</mat-icon>
+        <span>
+          Applied to {{ formatDeviceCount(applySuccessCount()) }};
+          <b>{{ formatDeviceCount(errList.length) }} failed</b>.
+        </span>
+      </div>
+      <div class="bw-table-container">
+        <table class="bw-table bw-error-table" aria-label="Failed devices">
+          <colgroup>
+            <col style="width: 34%" />
+            <col style="width: 66%" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col">Device ID</th>
+              <th scope="col">Reason</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (err of errList; track err.deviceId) {
+              <tr>
+                <td class="bw-li-mono" [title]="err.deviceId">{{ err.deviceId }}</td>
+                <td class="bw-error-cell" [title]="err.reason">{{ err.reason }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+}
