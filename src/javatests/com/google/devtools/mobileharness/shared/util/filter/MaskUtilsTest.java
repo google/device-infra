@@ -54,7 +54,8 @@ public final class MaskUtilsTest {
       createDeviceFeature(
           "owner1",
           ImmutableList.of(
-              DeviceDimension.newBuilder().setName("pool").setValue("required_pool").build()),
+              DeviceDimension.newBuilder().setName("pool").setValue("required_pool").build(),
+              DeviceDimension.newBuilder().setName("label").setValue("required_label").build()),
           ImmutableList.of(
               DeviceDimension.newBuilder().setName("pool").setValue("supported_pool").build(),
               DeviceDimension.newBuilder().setName("label").setValue("label_1").build()));
@@ -510,6 +511,40 @@ public final class MaskUtilsTest {
                                                                     .setName("pool")
                                                                     .setValue("fake_pool_1")))
                                                     .build()))))
+                    .addLabData(LabData.getDefaultInstance()))
+            .build();
+
+    MaskUtils.trimLabQueryResult(resultToTrim, mask);
+    assertThat(resultToTrim.build()).isEqualTo(expectedResult);
+  }
+
+  @Test
+  public void
+      trimLabQueryResult_withDeviceFeatureMaskAndEmptyOrAbsentDimensionsMask_retainsAllDimensions() {
+    LabQueryResult.Builder resultToTrim = LAB_QUERY_RESULT_WITH_LAB_VIEW.toBuilder();
+    Mask mask =
+        Mask.newBuilder()
+            .setLabInfoMask(LabInfoMask.newBuilder().setFieldMask(FieldMask.getDefaultInstance()))
+            .setDeviceInfoMask(
+                DeviceInfoMask.newBuilder()
+                    .setFieldMask(FieldMask.newBuilder().addPaths("device_feature"))
+                    .setSupportedDimensionsMask(DimensionsMask.getDefaultInstance()))
+            .build();
+
+    LabQueryResult expectedResult =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabView.newBuilder()
+                    .addLabData(
+                        LabData.newBuilder()
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .setDeviceTotalCount(2)
+                                    .addDeviceInfo(
+                                        DeviceInfo.newBuilder().setDeviceFeature(DEVICE_FEATURE_1))
+                                    .addDeviceInfo(
+                                        DeviceInfo.newBuilder()
+                                            .setDeviceFeature(DEVICE_FEATURE_2))))
                     .addLabData(LabData.getDefaultInstance()))
             .build();
 

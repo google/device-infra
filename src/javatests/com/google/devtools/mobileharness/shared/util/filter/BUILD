@@ -29,6 +29,7 @@ java_library(
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:filter_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/filter:dimension_name_matcher",
         "//src/java/com/google/devtools/mobileharness/shared/util/filter:filter_utils",
         "//src/java/com/google/devtools/mobileharness/shared/util/filter:mask_utils",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
