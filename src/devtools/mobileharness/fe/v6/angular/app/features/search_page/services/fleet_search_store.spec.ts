@@ -6,6 +6,7 @@ import {of, Subject, throwError} from 'rxjs';
 import {
   Fleet,
   FleetChipResolverResponse,
+  FleetSuggestion,
   SearchEntity,
   TranslateArsenalSearchResponse,
 } from '../../../core/models/search';
@@ -14,6 +15,7 @@ import {
   SearchService,
 } from '../../../core/services/search/search_service';
 import {SnackBarService} from '../../../shared/services/snackbar_service';
+import {mapToSearchBoxSuggestion} from '../utils';
 import {FleetSearchStore} from './fleet_search_store';
 
 @Component({standalone: true, template: ''})
@@ -149,6 +151,95 @@ describe('FleetSearchStore', () => {
 
     expect(store.fleet()).toBe('ats');
     expect(router.url).toContain('fleet=ats');
+  });
+
+  it('updates an active chip in place and closes ValuePicker when selecting a Modify filter applyFilter suggestion', async () => {
+    const store = await createStoreAt({});
+    store.addFilterChip({
+      key: 'dimension::model',
+      pillKey: 'Model',
+      pillCondition: 'Pixel 8',
+      rawValues: ['Pixel 8'],
+      fleetFilter: {
+        key: 'dimension::model',
+        simple: {values: [{value: 'Pixel 8'}]},
+      },
+    });
+    store.addFilterChip({
+      key: 'device_field::status',
+      pillKey: 'Status',
+      pillCondition: 'IDLE',
+      rawValues: ['IDLE'],
+      fleetFilter: {
+        key: 'device_field::status',
+        simple: {values: [{value: 'IDLE'}]},
+      },
+    });
+    store.openValuePicker('dimension::model', null, 'Model');
+    store.searchQuery.set('pixel 9');
+    await flushAsync();
+    expect(store.showValuePicker()).toBeTrue();
+    mockSearchService.resolveFleetChips.calls.reset();
+
+    const modifySuggestion: FleetSuggestion = {
+      label: 'Modify filter',
+      mainText: [
+        {text: 'Model: add ', emphasized: false},
+        {text: 'Pixel 9', emphasized: true},
+      ],
+      count: 12,
+      countPrefix: '+',
+      countUnit: 'devices',
+      applyFilter: {
+        resultingFilter: {
+          key: 'dimension::model',
+          simple: {values: [{value: 'Pixel 8'}, {value: 'Pixel 9'}]},
+        },
+        pillKey: 'Model',
+        pillCondition: '2',
+      },
+    };
+    store.selectSuggestion(mapToSearchBoxSuggestion(modifySuggestion));
+    await flushAsync();
+
+    expect(store.showValuePicker()).toBeFalse();
+    expect(store.searchQuery()).toBe('');
+    expect(mockSearchService.resolveFleetChips).not.toHaveBeenCalled();
+    expect(
+      store
+        .activeChips()
+        .map((c) => ({key: c.key, cond: c.pillCondition, vals: c.rawValues})),
+    ).toEqual([
+      {
+        key: 'dimension::model',
+        cond: '2',
+        vals: ['Pixel 8', 'Pixel 9'],
+      },
+      {
+        key: 'device_field::status',
+        cond: 'IDLE',
+        vals: ['IDLE'],
+      },
+    ]);
+    expect(store.serializedActiveFilters()).toEqual([
+      'dimension::model~Pixel%208,Pixel%209',
+      'device_field::status~IDLE',
+    ]);
+
+    // Bare-key Modify filter row (openPicker) keeps suggestions open and requests the picker.
+    const bareKeySuggestion: FleetSuggestion = {
+      label: 'Modify filter',
+      mainText: [{text: 'Model', emphasized: false}],
+      openPicker: {
+        key: 'dimension::model',
+        metadata: {keyDisplayName: 'Model', canUseAdvanced: true},
+        viewExisting: {},
+      },
+    };
+    store.selectSuggestion(mapToSearchBoxSuggestion(bareKeySuggestion));
+    await flushAsync();
+    expect(store.showSuggestions()).toBeTrue();
+    expect(store.pendingFilterOpenRequest()?.key).toBe('dimension::model');
   });
 
   describe('legacy ?arsenal_query cold load', () => {

@@ -17,15 +17,18 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.query.suggest;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.appendNoValue;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.appendValues;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.applyFilter;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.noValueFilter;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.openPicker;
-import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.openPickerStaged;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.startsWithFilter;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.valueFilter;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionText.conditionText;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionText.displayValue;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionText.label;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionText.modifyConditionText;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionText.modifyPrefix;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionText.segments;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionText.text;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionText.verb;
@@ -35,6 +38,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FilterValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestion;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionResponse;
@@ -293,13 +297,17 @@ public final class FleetSuggester {
 
   /**
    * Emptiness conditions for a named key. A key that is globally undiscriminating (every record has
-   * it, or none does) is skipped, and so is a condition that matches nothing in the current scope.
+   * it, or none does) is skipped, and so is a condition that matches nothing in the target scope.
+   * When the key already carries a compatible simple chip without {@code (no value)}, the row
+   * merges {@code (no value)} directly via {@code apply_filter}; when the existing chip conflicts
+   * or already includes {@code (no value)}, only the bare-key picker opener is offered.
    */
   private ImmutableList<SuggestionCandidate> suggestEmptiness(
       SuggestionContext context, String keyToken, boolean isEmpty) {
     KeyVocabulary vocabulary = context.vocabulary();
     ImmutableList.Builder<SuggestionCandidate> out = ImmutableList.builder();
     int globalTotal = context.corpus().recordCount();
+    boolean exclude = !isEmpty;
     for (KeyDescriptor key : vocabulary.resolve(keyToken)) {
       String keyId = key.id();
       if (!context.isIndexed(keyId)) {
@@ -313,27 +321,64 @@ public final class FleetSuggester {
       if (globallyUseless) {
         continue;
       }
+
+      Optional<Filter> chip = context.chipFor(keyId);
+      if (chip.isPresent()) {
+        if (conflictsWithChip(chip.get(), exclude) || chipContainsNoValue(chip.get())) {
+          FleetSuggestion.Builder opener =
+              FleetSuggestion.newBuilder()
+                  .setLabel(label(/* inChip= */ true))
+                  .addAllMainText(segments(vocabulary.titleDisplayName(key), null))
+                  .setOpenPicker(openPicker(vocabulary, key, /* inChip= */ true));
+          out.add(SuggestionCandidate.keyOnly(key, MatchTier.EXACT, opener));
+          continue;
+        }
+        Filter merged = appendNoValue(chip.get());
+        if (!exclude) {
+          int added = context.modifyIncludeEmptyDelta(keyId);
+          if (added <= 0) {
+            continue;
+          }
+          FleetSuggestion.Builder proto =
+              FleetSuggestion.newBuilder()
+                  .setLabel(label(/* inChip= */ true))
+                  .setCountPrefix("+")
+                  .addAllMainText(modifyConditionText(vocabulary, key, false, "(no value)"))
+                  .setApplyFilter(applyFilter(vocabulary, context.index(), key, merged));
+          out.add(SuggestionCandidate.presetCondition(key, MatchTier.EXACT, proto, added, added));
+          continue;
+        }
+        int scope = context.scopeSize();
+        int present = context.scopePresenceCount(keyId);
+        if (present <= 0) {
+          continue;
+        }
+        FleetSuggestion.Builder proto =
+            FleetSuggestion.newBuilder()
+                .setLabel(label(/* inChip= */ true))
+                .addAllMainText(modifyConditionText(vocabulary, key, true, "(no value)"))
+                .setApplyFilter(applyFilter(vocabulary, context.index(), key, merged));
+        boolean coversScope = present == scope;
+        MatchTier tier = coversScope ? MatchTier.EXACT.demoted() : MatchTier.EXACT;
+        int rankCount = coversScope ? 1 : present;
+        out.add(SuggestionCandidate.presetCondition(key, tier, proto, present, rankCount));
+        continue;
+      }
+
       int scope = context.scopeSize();
       int present = context.scopePresenceCount(keyId);
       int count = isEmpty ? scope - present : present;
       if (count <= 0) {
         continue;
       }
-
-      boolean inChip = context.isActiveKey(keyId);
-      ImmutableList<TextSegment> mainText =
-          conditionText(vocabulary, key, /* exclude= */ false, isEmpty ? "empty" : "not empty");
+      Filter filter = noValueFilter(keyId, /* negated= */ exclude);
       FleetSuggestion.Builder proto =
           FleetSuggestion.newBuilder()
-              .setLabel(label(vocabulary, key, inChip))
-              .addAllMainText(mainText);
-      if (inChip) {
-        proto.setOpenPicker(SuggestionActions.openPickerViewExisting(vocabulary, key));
-      } else {
-        Filter filter = noValueFilter(keyId, /* negated= */ !isEmpty);
-        proto.setApplyFilter(applyFilter(vocabulary, context.index(), key, filter));
-      }
-
+              .setLabel(label(/* inChip= */ false))
+              .addAllMainText(
+                  conditionText(
+                      vocabulary, key, /* exclude= */ false, isEmpty ? "empty" : "not empty"))
+              .setApplyFilter(applyFilter(vocabulary, context.index(), key, filter));
       // A condition covering the whole filtered set is valid but temporarily uninformative, so it
       // ranks one tier lower and as if it matched a single record.
       boolean coversScope = context.hasFilters() && count == scope;
@@ -520,7 +565,7 @@ public final class FleetSuggester {
       boolean inChip = context.isActiveKey(key.id());
       FleetSuggestion.Builder proto =
           FleetSuggestion.newBuilder()
-              .setLabel(label(vocabulary, key, inChip))
+              .setLabel(label(inChip))
               .addAllMainText(segments(vocabulary.titleDisplayName(key), null))
               .setOpenPicker(openPicker(vocabulary, key, inChip));
       out.add(SuggestionCandidate.keyOnly(key, tier, proto));
@@ -707,9 +752,10 @@ public final class FleetSuggester {
   }
 
   /**
-   * A {@code <key> is <value>} row, or empty when it fails the eligibility gate: the value must
-   * exist somewhere in the fleet, and when the key already carries a chip, that chip must be simple
-   * and of the same polarity (a conflicting or complex chip leaves only the key-level row).
+   * A concrete single-value row, or empty when it fails the eligibility gate: the value must exist
+   * somewhere in the fleet, and when the key already carries a chip, that chip must be simple, have
+   * the same polarity, and not yet contain the value (a conflicting or complex chip leaves only the
+   * bare-key picker row).
    */
   private static Optional<SuggestionCandidate> condition(
       SuggestionContext context,
@@ -727,39 +773,47 @@ public final class FleetSuggester {
     if (global == 0) {
       return Optional.empty();
     }
-    boolean inChip = context.isActiveKey(keyId);
-    if (inChip && conflictsWithChip(context.chipFor(keyId), exclude)) {
+    Optional<Filter> chip = context.chipFor(keyId);
+    boolean inChip = chip.isPresent();
+    if (inChip
+        && (conflictsWithChip(chip.get(), exclude) || chipContainsValue(chip.get(), valueLower))) {
       return Optional.empty();
     }
 
     String shown = displayValue(index, keyId, valueLower);
+    Filter filter =
+        inChip
+            ? appendValues(chip.get(), ImmutableList.of(shown))
+            : valueFilter(keyId, ImmutableList.of(shown), exclude);
+    ImmutableList<TextSegment> mainText =
+        inChip
+            ? modifyConditionText(vocabulary, key, exclude, shown)
+            : conditionText(vocabulary, key, exclude, shown);
     FleetSuggestion.Builder proto =
-        FleetSuggestion.newBuilder().setLabel(label(vocabulary, key, inChip));
-    if (inChip) {
-      // Editing an existing same-polarity chip stages the value in the picker; one-click apply is
-      // reserved for brand-new chips.
-      proto
-          .addAllMainText(segments(exclude ? "exclude " : "add ", shown))
-          .setOpenPicker(openPickerStaged(vocabulary, key, ImmutableList.of(shown)));
-    } else {
-      Filter filter = valueFilter(keyId, ImmutableList.of(shown), exclude);
-      proto
-          .addAllMainText(conditionText(vocabulary, key, exclude, shown))
-          .setApplyFilter(applyFilter(vocabulary, index, key, filter));
-    }
+        FleetSuggestion.newBuilder()
+            .setLabel(label(inChip))
+            .addAllMainText(mainText)
+            .setApplyFilter(applyFilter(vocabulary, index, key, filter));
     return Optional.of(
         SuggestionCandidate.valueCondition(key, tier, proto, valueLower, exclude, inChip, global));
   }
 
-  private static boolean conflictsWithChip(Optional<Filter> chip, boolean exclude) {
-    if (chip.isEmpty()) {
-      return false;
-    }
-    return switch (chip.get().getModeCase()) {
-      case COMPLEX -> true;
-      case SIMPLE -> chip.get().getSimple().getNegated() != exclude;
-      case MODE_NOT_SET -> false;
-    };
+  private static boolean conflictsWithChip(Filter chip, boolean exclude) {
+    return !chip.hasSimple() || chip.getSimple().getNegated() != exclude;
+  }
+
+  /**
+   * Whether {@code simpleChip} already lists {@code valueLower} (which is a non-empty indexed
+   * value, so {@code no_value} entries with {@code getValue() == ""} never match).
+   */
+  private static boolean chipContainsValue(Filter simpleChip, String valueLower) {
+    return simpleChip.getSimple().getValuesList().stream()
+        .anyMatch(v -> Ascii.equalsIgnoreCase(v.getValue(), valueLower));
+  }
+
+  private static boolean chipContainsNoValue(Filter simpleChip) {
+    return simpleChip.getSimple().getValuesList().stream()
+        .anyMatch(v -> v.getKindCase() == FilterValue.KindCase.NO_VALUE);
   }
 
   /** One OR row over the listed values that exist under the key, counted as a set. */
@@ -774,40 +828,77 @@ public final class FleetSuggester {
     ImmutableList<String> present =
         valuesLower.stream()
             .filter(value -> index.valueCount(keyId, value) > 0)
+            .distinct()
             .collect(toImmutableList());
     if (present.isEmpty()) {
       return Optional.empty();
     }
-    ImmutableList<String> shown =
-        present.stream().map(value -> displayValue(index, keyId, value)).collect(toImmutableList());
-    int orCount = context.scopeUnionCount(keyId, present);
-    if (orCount == 0) {
+
+    Optional<Filter> chip = context.chipFor(keyId);
+    if (chip.isPresent()) {
+      Filter existing = chip.get();
+      if (conflictsWithChip(existing, exclude)) {
+        return Optional.empty();
+      }
+      ImmutableList<String> addedLower =
+          present.stream()
+              .filter(value -> !chipContainsValue(existing, value))
+              .collect(toImmutableList());
+      if (addedLower.isEmpty()) {
+        return Optional.empty();
+      }
+      int count =
+          exclude
+              ? context.scopeSize() - context.scopeUnionCount(keyId, addedLower)
+              : context.modifyIncludeUnionDelta(keyId, addedLower);
+      if (count <= 0) {
+        return Optional.empty();
+      }
+      ImmutableList<String> addedShown =
+          addedLower.stream()
+              .map(value -> displayValue(index, keyId, value))
+              .collect(toImmutableList());
+      Filter merged = appendValues(chip.get(), addedShown);
+      FleetSuggestion.Builder proto =
+          FleetSuggestion.newBuilder()
+              .setLabel(label(/* inChip= */ true))
+              .addAllMainText(valueListMainText(modifyPrefix(vocabulary, key, exclude), addedShown))
+              .setApplyFilter(applyFilter(vocabulary, index, key, merged));
+      if (!exclude) {
+        proto.setCountPrefix("+");
+      }
+      return Optional.of(
+          SuggestionCandidate.presetCondition(key, MatchTier.EXACT, proto, count, count));
+    }
+
+    int unionMatches = context.scopeUnionCount(keyId, present);
+    int orCount = exclude ? context.scopeSize() - unionMatches : unionMatches;
+    if (orCount <= 0) {
       return Optional.empty();
     }
-    boolean inChip = context.isActiveKey(keyId);
+    ImmutableList<String> shown =
+        present.stream().map(value -> displayValue(index, keyId, value)).collect(toImmutableList());
+    String prefix = vocabulary.titleDisplayName(key) + " " + verb(key, exclude) + " ";
+    FleetSuggestion.Builder proto =
+        FleetSuggestion.newBuilder()
+            .setLabel(label(/* inChip= */ false))
+            .addAllMainText(valueListMainText(prefix, shown))
+            .setApplyFilter(
+                applyFilter(vocabulary, index, key, valueFilter(keyId, shown, exclude)));
+    return Optional.of(
+        SuggestionCandidate.presetCondition(key, MatchTier.EXACT, proto, orCount, orCount));
+  }
 
+  private static List<TextSegment> valueListMainText(String prefix, ImmutableList<String> shown) {
     List<TextSegment> mainText = new ArrayList<>();
-    mainText.add(
-        text(
-            inChip ? "add " : vocabulary.titleDisplayName(key) + " " + verb(key, exclude) + " ",
-            false));
+    mainText.add(text(prefix, false));
     for (int i = 0; i < shown.size(); i++) {
       if (i > 0) {
         mainText.add(text(" or ", false));
       }
       mainText.add(text(shown.get(i), true));
     }
-    FleetSuggestion.Builder proto =
-        FleetSuggestion.newBuilder()
-            .setLabel(label(vocabulary, key, inChip))
-            .addAllMainText(mainText);
-    if (inChip) {
-      proto.setOpenPicker(openPickerStaged(vocabulary, key, shown));
-    } else {
-      proto.setApplyFilter(applyFilter(vocabulary, index, key, valueFilter(keyId, shown, exclude)));
-    }
-    return Optional.of(
-        SuggestionCandidate.presetCondition(key, MatchTier.EXACT, proto, orCount, orCount));
+    return mainText;
   }
 
   /**

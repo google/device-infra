@@ -263,7 +263,7 @@ describe('FakeSearchService', () => {
         });
     });
 
-    it('should label active filters as Modify when input is empty', (done) => {
+    it('should label active filters as Modify filter when input is empty', (done) => {
       service
         .getFleetSuggestions({
           entity: SearchEntity.SEARCH_ENTITY_DEVICE,
@@ -275,7 +275,8 @@ describe('FakeSearchService', () => {
           const statusItem = res.items!.find(
             (item) => item.openPicker?.key === 'field::status',
           );
-          expect(statusItem?.label).toBe('Modify Status');
+          expect(statusItem?.label).toBe('Modify filter');
+          expect(statusItem?.mainText?.[0]?.text).toBe('Status');
           done();
         });
     });
@@ -311,18 +312,93 @@ describe('FakeSearchService', () => {
         });
     });
 
-    it('should label active filter matching known value as Modify', (done) => {
+    it('should format active filter matching known value as Modify filter with direct apply', (done) => {
       service
         .getFleetSuggestions({
           entity: SearchEntity.SEARCH_ENTITY_DEVICE,
           input: 'pixel 8',
-          filters: [{key: 'dim::model'}],
+          filters: [
+            {
+              key: 'dim::model',
+              simple: {values: [{value: 'Pixel 7'}]},
+            },
+          ],
         })
         .subscribe((res: FleetSuggestionResponse) => {
           expect(res.items).toBeDefined();
           expect(res.items!.length).toBeGreaterThan(0);
-          expect(res.items![0].label).toBe('Modify Model');
+          expect(res.items![0].label).toBe('Modify filter');
+          expect(res.items![0].mainText?.[0]?.text).toBe('Model: add ');
+          expect(res.items![0].mainText?.[1]?.text).toBe('Pixel 8');
+          expect(res.items![0].countPrefix).toBe('+');
+          expect(res.items![0].applyFilter?.pillCondition).toBe('2');
+          expect(res.items![0].applyFilter?.resultingFilter).toEqual({
+            key: 'dim::model',
+            simple: {values: [{value: 'Pixel 7'}, {value: 'Pixel 8'}]},
+          });
           done();
+        });
+    });
+
+    it('should skip active-chip value suggestion when active filter is negated, complex, or already contains the value', (done) => {
+      service
+        .getFleetSuggestions({
+          entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+          input: 'pixel 8',
+          filters: [
+            {
+              key: 'dim::model',
+              simple: {negated: true, values: [{value: 'Pixel 7'}]},
+            },
+          ],
+        })
+        .subscribe((negatedRes: FleetSuggestionResponse) => {
+          expect(
+            negatedRes.items!.some(
+              (item) => item.applyFilter?.resultingFilter?.key === 'dim::model',
+            ),
+          ).toBeFalse();
+
+          service
+            .getFleetSuggestions({
+              entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+              input: 'pixel 8',
+              filters: [
+                {
+                  key: 'dim::model',
+                  complex: {startsWith: {value: 'Pixel'}},
+                },
+              ],
+            })
+            .subscribe((complexRes: FleetSuggestionResponse) => {
+              expect(
+                complexRes.items!.some(
+                  (item) =>
+                    item.applyFilter?.resultingFilter?.key === 'dim::model',
+                ),
+              ).toBeFalse();
+
+              service
+                .getFleetSuggestions({
+                  entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+                  input: 'pixel 8',
+                  filters: [
+                    {
+                      key: 'dim::model',
+                      simple: {values: [{value: 'Pixel 8'}]},
+                    },
+                  ],
+                })
+                .subscribe((duplicateRes: FleetSuggestionResponse) => {
+                  expect(
+                    duplicateRes.items!.some(
+                      (item) =>
+                        item.applyFilter?.resultingFilter?.key === 'dim::model',
+                    ),
+                  ).toBeFalse();
+                  done();
+                });
+            });
         });
     });
 
@@ -1126,8 +1202,7 @@ describe('FakeSearchService', () => {
           expect(
             MOCK_HOST_SCENARIOS.some(
               (h) =>
-                h.hostName === deviceMatch?.hostName &&
-                !!h.factory(0).overview,
+                h.hostName === deviceMatch?.hostName && !!h.factory(0).overview,
             ),
           ).toBeTrue();
           done();

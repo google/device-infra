@@ -50,7 +50,7 @@ final class SuggestionCandidate {
 
   /** What clicking the suggestion does, which also decides how ranking treats its count. */
   enum Kind {
-    /** Applies or stages a filter condition. */
+    /** Applies a filter condition (creating a new chip or updating an existing one). */
     CONDITION,
     /** Opens the value picker for a key. */
     KEY,
@@ -251,7 +251,7 @@ final class SuggestionCandidate {
     return tier;
   }
 
-  /** The dim leading label ("Add filter", "Modify <Key>", "Group by"). */
+  /** The dim leading label ("Add filter", "Modify filter", "Group by"). */
   String label() {
     return proto.getLabel();
   }

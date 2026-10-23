@@ -26,7 +26,6 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetApplyFi
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterChipMetadata;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetNewChip;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetOpenPicker;
-import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetStagedModification;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetViewExisting;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.NoValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
@@ -66,20 +65,12 @@ final class SuggestionActions {
         .build();
   }
 
-  static FleetOpenPicker openPickerViewExisting(KeyVocabulary vocabulary, KeyDescriptor key) {
+  private static FleetOpenPicker openPickerViewExisting(
+      KeyVocabulary vocabulary, KeyDescriptor key) {
     return FleetOpenPicker.newBuilder()
         .setKey(key.id())
         .setMetadata(metadata(vocabulary, key))
         .setViewExisting(FleetViewExisting.getDefaultInstance())
-        .build();
-  }
-
-  static FleetOpenPicker openPickerStaged(
-      KeyVocabulary vocabulary, KeyDescriptor key, ImmutableList<String> values) {
-    return FleetOpenPicker.newBuilder()
-        .setKey(key.id())
-        .setMetadata(metadata(vocabulary, key))
-        .setStagedModify(FleetStagedModification.newBuilder().addAllValues(values))
         .build();
   }
 
@@ -102,6 +93,22 @@ final class SuggestionActions {
     SimpleMatch.Builder simple = SimpleMatch.newBuilder().setNegated(negated);
     values.forEach(value -> simple.addValues(FilterValue.newBuilder().setValue(value)));
     return Filter.newBuilder().setKey(keyId).setSimple(simple).build();
+  }
+
+  /** Returns a copy of {@code existingSimpleChip} with {@code values} appended to its selection. */
+  static Filter appendValues(Filter existingSimpleChip, ImmutableList<String> values) {
+    SimpleMatch.Builder simple = existingSimpleChip.getSimple().toBuilder();
+    values.forEach(value -> simple.addValues(FilterValue.newBuilder().setValue(value)));
+    return existingSimpleChip.toBuilder().setSimple(simple).build();
+  }
+
+  /** Returns a copy of {@code existingSimpleChip} with the no-value marker appended. */
+  static Filter appendNoValue(Filter existingSimpleChip) {
+    return existingSimpleChip.toBuilder()
+        .setSimple(
+            existingSimpleChip.getSimple().toBuilder()
+                .addValues(FilterValue.newBuilder().setNoValue(NoValue.getDefaultInstance())))
+        .build();
   }
 
   /** A simple filter over the no-value marker: "is empty" or, negated, "is not empty". */
@@ -134,9 +141,10 @@ final class SuggestionActions {
 
   /**
    * Compact condition text for the resulting chip pill of a filter built by {@link #valueFilter},
-   * {@link #noValueFilter}, or {@link #startsWithFilter}: a prefix filter reads as "starts with x",
-   * a single value shows itself, several collapse to their count, an exclude is prefixed with the
-   * not-equal sign, and a no-value filter reads as "empty" or "not empty".
+   * {@link #appendValues}, {@link #appendNoValue}, {@link #noValueFilter}, or {@link
+   * #startsWithFilter}: a prefix filter reads as "starts with x", a single value shows itself,
+   * several collapse to their count, an exclude is prefixed with the not-equal sign, and a lone
+   * no-value filter reads as "empty" or "not empty".
    */
   private static String pillCondition(FleetIndex index, Filter filter) {
     if (filter.getComplex().getKindCase() == ComplexMatch.KindCase.STARTS_WITH) {
@@ -145,11 +153,11 @@ final class SuggestionActions {
     SimpleMatch simple = filter.getSimple();
     boolean negated = simple.getNegated();
     int count = simple.getValuesCount();
-    FilterValue first = simple.getValues(0);
-    if (first.getKindCase() == FilterValue.KindCase.NO_VALUE) {
-      return negated ? "not empty" : "empty";
-    }
     if (count == 1) {
+      FilterValue first = simple.getValues(0);
+      if (first.getKindCase() == FilterValue.KindCase.NO_VALUE) {
+        return negated ? "not empty" : "empty";
+      }
       String shown =
           SuggestionText.displayValue(index, filter.getKey(), Ascii.toLowerCase(first.getValue()));
       return negated ? NOT_EQUAL + shown : shown;

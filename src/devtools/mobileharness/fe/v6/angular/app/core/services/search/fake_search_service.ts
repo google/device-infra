@@ -195,7 +195,7 @@ export class FakeSearchService extends SearchService {
         (k) => {
           const isActive = activeKeys.has(k.key.toLowerCase());
           return {
-            label: isActive ? `Modify ${k.name}` : 'Add filter',
+            label: isActive ? 'Modify filter' : 'Add filter',
             mainText: [{text: k.name, emphasized: false}],
             openPicker: {
               key: k.key,
@@ -204,6 +204,7 @@ export class FakeSearchService extends SearchService {
                 canUseAdvanced: true,
                 isPlural: k.isPlural,
               },
+              ...(isActive ? {viewExisting: {}} : {newChip: {}}),
             },
           };
         },
@@ -218,23 +219,42 @@ export class FakeSearchService extends SearchService {
         kv.val.toLowerCase().includes(input) ||
         kv.name.toLowerCase().includes(input)
       ) {
-        const isActive = activeKeys.has(kv.key.toLowerCase());
+        const activeFilter = activeFilters.find(
+          (f) => f.key.toLowerCase() === kv.key.toLowerCase(),
+        );
+        if (
+          activeFilter &&
+          (!activeFilter.simple ||
+            activeFilter.simple.negated ||
+            (activeFilter.simple.values || []).some(
+              (v) => v.value?.toLowerCase() === kv.val.toLowerCase(),
+            ))
+        ) {
+          continue;
+        }
+        const isActive = Boolean(activeFilter);
+        const existingValues = activeFilter?.simple?.values || [];
+        const mergedValues = [...existingValues, {value: kv.val}];
         items.push({
-          label: isActive ? `Modify ${kv.name}` : 'Add filter',
+          label: isActive ? 'Modify filter' : 'Add filter',
           mainText: [
             {
-              text: `${kv.name} ${kv.isPlural ? 'are' : 'is'} `,
+              text: isActive
+                ? `${kv.name}: add `
+                : `${kv.name} ${kv.isPlural ? 'are' : 'is'} `,
               emphasized: false,
             },
             {text: kv.val, emphasized: true},
           ],
           count: 10,
+          ...(isActive ? {countPrefix: '+'} : {}),
           applyFilter: {
             pillKey: kv.name,
-            pillCondition: kv.val,
+            pillCondition:
+              mergedValues.length > 1 ? String(mergedValues.length) : kv.val,
             resultingFilter: {
               key: kv.key,
-              simple: {values: [{value: kv.val}]},
+              simple: {values: mergedValues},
             },
             metadata: {
               keyDisplayName: kv.name,

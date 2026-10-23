@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
@@ -35,6 +36,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Cell;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Column;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.ComplexMatch;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FilterValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
@@ -42,8 +44,10 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggest
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetUtilization;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.NoValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.StartsWith;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextSegment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
@@ -496,21 +500,109 @@ public final class FleetSuggesterTest {
   }
 
   @Test
-  public void modifyExistingChip_usesPlusCountPrefixAndStagesValue() {
-    // A chip already filters model=pixel. Typing another model value offers a modify: stage the
-    // value in the picker, with the count shown as a "+" delta.
+  public void modifyExistingChip_usesPlusCountPrefixAndAppliesMergedFilterDirectly() {
+    FleetFilterEngine filterEngine = Guice.createInjector().getInstance(FleetFilterEngine.class);
+    // A chip already filters model=pixel. Typing another model value offers a one-click modify that
+    // merges "nexus" into the existing chip with a "+" delta count and "Modify filter" label.
     FleetSuggestionResponse response =
         suggester.suggest(corpus, request("nexus", simple("dimension::model", "pixel")));
 
-    FleetSuggestion modify = firstOpenPicker(response, "dimension::model");
-    assertThat(modify.getLabel()).isEqualTo("Modify Model");
-    assertThat(modify.getOpenPicker().getStagedModify().getValuesList()).containsExactly("nexus");
+    FleetSuggestion modify = firstApplyFilter(response, "dimension::model");
+    assertThat(modify.getLabel()).isEqualTo("Modify filter");
+    assertThat(modify.hasOpenPicker()).isFalse();
     assertThat(modify.getCountPrefix()).isEqualTo("+");
     // device-3 (model nexus) is the one device the modification would add.
     assertThat(modify.getCount()).isEqualTo(1);
-    assertThat(modify.getMainText(0).getText()).isEqualTo("add ");
-    assertThat(modify.getMainText(1).getText()).isEqualTo("nexus");
-    assertThat(modify.getMainText(1).getEmphasized()).isTrue();
+    assertThat(modify.getMainTextList())
+        .containsExactly(
+            TextSegment.newBuilder().setText("Model: add ").setEmphasized(false).build(),
+            TextSegment.newBuilder().setText("nexus").setEmphasized(true).build())
+        .inOrder();
+    assertThat(modify.getApplyFilter().getPillKey()).isEqualTo("Model");
+    assertThat(modify.getApplyFilter().getPillCondition()).isEqualTo("2");
+    assertThat(modify.getApplyFilter().getResultingFilter().getSimple().getValuesList())
+        .containsExactly(
+            FilterValue.newBuilder().setValue("pixel").build(),
+            FilterValue.newBuilder().setValue("nexus").build())
+        .inOrder();
+    assertThat(
+            filterEngine.match(
+                corpus, ImmutableList.of(modify.getApplyFilter().getResultingFilter())))
+        .containsExactly(0, 1, 3);
+
+    // A value already present in the active chip is suppressed rather than re-suggested.
+    assertThat(
+            suggester
+                .suggest(corpus, request("model is pixel", simple("dimension::model", "pixel")))
+                .getItemsList())
+        .isEmpty();
+
+    // When a key carries a complex chip (such as UUID starts with device-), typing the key name
+    // offers "Modify filter  UUID" as a view_existing picker opener without repeating the key name.
+    Filter uuidPrefixChip =
+        Filter.newBuilder()
+            .setKey("device_field::uuid")
+            .setComplex(
+                ComplexMatch.newBuilder()
+                    .setStartsWith(StartsWith.newBuilder().setValue("device-")))
+            .build();
+    FleetSuggestionResponse uuidKeyResp =
+        suggester.suggest(corpus, request("uuid", uuidPrefixChip));
+    FleetSuggestion uuidPicker = firstOpenPicker(uuidKeyResp, "device_field::uuid");
+    assertThat(uuidPicker.getLabel()).isEqualTo("Modify filter");
+    assertThat(uuidPicker.getOpenPicker().hasViewExisting()).isTrue();
+    assertThat(uuidPicker.getMainTextList())
+        .containsExactly(TextSegment.newBuilder().setText("UUID").setEmphasized(false).build());
+    assertThat(uuidKeyResp.getItemsList().stream().noneMatch(FleetSuggestion::hasApplyFilter))
+        .isTrue();
+
+    // A complex chip on a non-identifier key also conflicts with positive single-value, OR, and
+    // emptiness merges, suppressing value conditions and falling back to the picker on emptiness.
+    Filter modelPrefixChip =
+        Filter.newBuilder()
+            .setKey("dimension::model")
+            .setComplex(
+                ComplexMatch.newBuilder().setStartsWith(StartsWith.newBuilder().setValue("pix")))
+            .build();
+    assertThat(suggester.suggest(corpus, request("model is nexus", modelPrefixChip)).getItemsList())
+        .isEmpty();
+    assertThat(
+            suggester
+                .suggest(corpus, request("model is nexus, iphone", modelPrefixChip))
+                .getItemsList())
+        .isEmpty();
+    Filter labPrefixChip =
+        Filter.newBuilder()
+            .setKey("dimension::lab_location")
+            .setComplex(
+                ComplexMatch.newBuilder().setStartsWith(StartsWith.newBuilder().setValue("m")))
+            .build();
+    FleetSuggestionResponse complexEmptyResp =
+        suggester.suggest(corpus, request("no lab location", labPrefixChip));
+    assertThat(
+            firstOpenPicker(complexEmptyResp, "dimension::lab_location")
+                .getOpenPicker()
+                .hasViewExisting())
+        .isTrue();
+    assertThat(complexEmptyResp.getItemsList().stream().noneMatch(FleetSuggestion::hasApplyFilter))
+        .isTrue();
+
+    // Merging a concrete value onto an existing (no value) chip collapses pillCondition to "2".
+    Filter emptyLabChip =
+        Filter.newBuilder()
+            .setKey("dimension::lab_location")
+            .setSimple(
+                SimpleMatch.newBuilder()
+                    .addValues(FilterValue.newBuilder().setNoValue(NoValue.getDefaultInstance())))
+            .build();
+    FleetSuggestion addMtvToEmpty =
+        firstApplyFilter(
+            suggester.suggest(corpus, request("lab_location is mtv", emptyLabChip)),
+            "dimension::lab_location");
+    assertThat(addMtvToEmpty.getLabel()).isEqualTo("Modify filter");
+    assertThat(addMtvToEmpty.getCountPrefix()).isEqualTo("+");
+    assertThat(addMtvToEmpty.getCount()).isEqualTo(2);
+    assertThat(addMtvToEmpty.getApplyFilter().getPillCondition()).isEqualTo("2");
   }
 
   @Test
@@ -545,17 +637,152 @@ public final class FleetSuggesterTest {
   }
 
   @Test
-  public void emptinessWithActiveChip_opensExistingPickerAndDemotesFullCoverage() {
-    // When the key already carries an active chip, an emptiness condition opens the existing
-    // picker instead of applying a second chip on the same key.
-    FleetSuggestionResponse response =
+  public void emptinessWithActiveChip_mergesCompatibleSimpleChipAndFallsBackToPickerOnConflict() {
+    // 1. Conflicting polarity ("has lab location" requires negated=true, while lab_location=mtv is
+    // negated=false): offers the bare-key picker opener ("Modify filter  Dimension lab_location").
+    FleetSuggestionResponse conflictResp =
         suggester.suggest(
             corpus, request("has lab location", simple("dimension::lab_location", "mtv")));
 
-    FleetSuggestion modify = firstOpenPicker(response, "dimension::lab_location");
-    assertThat(modify.getLabel()).isEqualTo("Modify Dimension lab_location");
-    assertThat(modify.getOpenPicker().hasViewExisting()).isTrue();
-    assertThat(modify.getCount()).isEqualTo(2);
+    FleetSuggestion conflictPicker = firstOpenPicker(conflictResp, "dimension::lab_location");
+    assertThat(conflictPicker.getLabel()).isEqualTo("Modify filter");
+    assertThat(conflictPicker.getOpenPicker().hasViewExisting()).isTrue();
+    assertThat(conflictPicker.hasCount()).isFalse();
+    assertThat(conflictPicker.getMainTextList())
+        .containsExactly(
+            TextSegment.newBuilder()
+                .setText("Dimension lab_location")
+                .setEmphasized(false)
+                .build());
+
+    // 2. Compatible include ("no lab location" merges (no value) into lab_location=mtv, adding
+    // device-3 as +1, both when lab_location=mtv is the sole chip and alongside status=IDLE; under
+    // status=BUSY, device-3 is excluded by status so the delta is 0 and the row is omitted).
+    FleetSuggestion mergeIncludeSingle =
+        firstApplyFilter(
+            suggester.suggest(
+                corpus, request("no lab location", simple("dimension::lab_location", "mtv"))),
+            "dimension::lab_location");
+    assertThat(mergeIncludeSingle.getLabel()).isEqualTo("Modify filter");
+    assertThat(mergeIncludeSingle.getCountPrefix()).isEqualTo("+");
+    assertThat(mergeIncludeSingle.getCount()).isEqualTo(1);
+    assertThat(mergeIncludeSingle.getMainTextList())
+        .containsExactly(
+            TextSegment.newBuilder()
+                .setText("Dimension lab_location: add ")
+                .setEmphasized(false)
+                .build(),
+            TextSegment.newBuilder().setText("(no value)").setEmphasized(true).build())
+        .inOrder();
+    assertThat(mergeIncludeSingle.getApplyFilter().getPillCondition()).isEqualTo("2");
+
+    // When the active chip is the sole filter, modifyIncludeEmptyDelta computes the delta from
+    // recordCount - globalPresenceCount without fetching postings.forKey(keyId).
+    TrackingCorpus singleChipTracking = new TrackingCorpus(corpus);
+    FleetSuggestion trackedEmptyMerge =
+        firstApplyFilter(
+            suggester.suggest(
+                singleChipTracking,
+                request("no lab location", simple("dimension::lab_location", "mtv"))),
+            "dimension::lab_location");
+    assertThat(trackedEmptyMerge.getCount()).isEqualTo(1);
+    assertThat(singleChipTracking.postingsForKeyCalls).isEqualTo(0);
+
+    FleetSuggestion mergeIncludeMultiChip =
+        firstApplyFilter(
+            suggester.suggest(
+                corpus,
+                request(
+                    "no lab location",
+                    simple("dimension::lab_location", "mtv"),
+                    simple("device_field::status", "IDLE"))),
+            "dimension::lab_location");
+    assertThat(mergeIncludeMultiChip.getCountPrefix()).isEqualTo("+");
+    assertThat(mergeIncludeMultiChip.getCount()).isEqualTo(1);
+
+    assertThat(
+            suggester
+                .suggest(
+                    corpus,
+                    request(
+                        "no lab location",
+                        simple("dimension::lab_location", "mtv"),
+                        simple("device_field::status", "BUSY")))
+                .getItemsList())
+        .isEmpty();
+    assertThat(
+            suggester
+                .suggest(corpus, request("no lab location", simple("device_field::status", "BUSY")))
+                .getItemsList())
+        .isEmpty();
+
+    // 3. Compatible exclude ("has lab location" merges (no value) into negated lab_location!=mtv,
+    // excluding device-3 and leaving device-2 nyc with count 1).
+    Filter excludeMtv =
+        Filter.newBuilder()
+            .setKey("dimension::lab_location")
+            .setSimple(
+                SimpleMatch.newBuilder()
+                    .setNegated(true)
+                    .addValues(FilterValue.newBuilder().setValue("mtv")))
+            .build();
+    FleetSuggestion mergeExclude =
+        firstApplyFilter(
+            suggester.suggest(corpus, request("has lab location", excludeMtv)),
+            "dimension::lab_location");
+    assertThat(mergeExclude.getLabel()).isEqualTo("Modify filter");
+    assertThat(mergeExclude.getCountPrefix()).isEmpty();
+    assertThat(mergeExclude.getCount()).isEqualTo(1);
+    assertThat(mergeExclude.getMainTextList())
+        .containsExactly(
+            TextSegment.newBuilder()
+                .setText("Dimension lab_location: exclude ")
+                .setEmphasized(false)
+                .build(),
+            TextSegment.newBuilder().setText("(no value)").setEmphasized(true).build())
+        .inOrder();
+    assertThat(mergeExclude.getApplyFilter().getPillCondition()).isEqualTo("\u2260 2");
+
+    // When every record in the current scope already carries lab_location (lab_location!=mtv plus
+    // status=BUSY leaves only device-2 nyc), excluding (no value) covers the whole scope (1 == 1)
+    // and still applies directly; when every present value is already excluded (lab_location!=mtv,
+    // nyc leaves only device-3 without lab_location), present == 0 omits the row.
+    FleetSuggestion mergeExcludeFullCoverage =
+        firstApplyFilter(
+            suggester.suggest(
+                corpus,
+                request("has lab location", excludeMtv, simple("device_field::status", "BUSY"))),
+            "dimension::lab_location");
+    assertThat(mergeExcludeFullCoverage.getCount()).isEqualTo(1);
+    Filter excludeAllPresent =
+        Filter.newBuilder()
+            .setKey("dimension::lab_location")
+            .setSimple(
+                SimpleMatch.newBuilder()
+                    .setNegated(true)
+                    .addValues(FilterValue.newBuilder().setValue("mtv"))
+                    .addValues(FilterValue.newBuilder().setValue("nyc")))
+            .build();
+    assertThat(
+            suggester
+                .suggest(corpus, request("has lab location", excludeAllPresent))
+                .getItemsList())
+        .isEmpty();
+
+    // When the chip already contains (no value), repeating "no lab location" falls back to the
+    // bare-key picker opener instead of appending a duplicate NoValue entry.
+    Filter alreadyEmpty =
+        Filter.newBuilder()
+            .setKey("dimension::lab_location")
+            .setSimple(
+                SimpleMatch.newBuilder()
+                    .addValues(FilterValue.newBuilder().setNoValue(NoValue.getDefaultInstance())))
+            .build();
+    FleetSuggestion duplicateNoValueFallback =
+        firstOpenPicker(
+            suggester.suggest(corpus, request("no lab location", alreadyEmpty)),
+            "dimension::lab_location");
+    assertThat(duplicateNoValueFallback.getOpenPicker().hasViewExisting()).isTrue();
   }
 
   @Test
@@ -1320,7 +1547,8 @@ public final class FleetSuggesterTest {
 
     assertThat(response.getItemsCount()).isEqualTo(1);
     FleetSuggestion item = response.getItems(0);
-    assertThat(item.getOpenPicker().getKey()).isEqualTo("dimension::model");
+    assertThat(item.getLabel()).isEqualTo("Modify filter");
+    assertThat(item.getApplyFilter().getResultingFilter().getKey()).isEqualTo("dimension::model");
     assertThat(item.getCountPrefix()).isEqualTo("+");
     assertThat(item.getCount()).isEqualTo(4);
   }
@@ -1435,7 +1663,18 @@ public final class FleetSuggesterTest {
             .build();
     FleetSuggestionResponse excludeOnActive =
         suggester.suggest(corpus, request("model != pixel", excludeIphone));
-    assertThat(firstOpenPicker(excludeOnActive, "dimension::model").getCount()).isEqualTo(1);
+    FleetSuggestion excludePixel = firstApplyFilter(excludeOnActive, "dimension::model");
+    assertThat(excludePixel.getLabel()).isEqualTo("Modify filter");
+    assertThat(excludePixel.getCount()).isEqualTo(1);
+    assertThat(excludePixel.getCountPrefix()).isEmpty();
+    assertThat(excludePixel.getMainTextList())
+        .containsExactly(
+            TextSegment.newBuilder().setText("Model: exclude ").setEmphasized(false).build(),
+            TextSegment.newBuilder().setText("pixel").setEmphasized(true).build())
+        .inOrder();
+    assertThat(excludePixel.getApplyFilter().getPillCondition()).isEqualTo("\u2260 2");
+    assertThat(suggester.suggest(corpus, request("model != iphone", excludeIphone)).getItemsList())
+        .isEmpty();
 
     // 2. Modify-include with two active chips: model=pixel and pool=shared (matches device-0 and
     // device-1). Typing "model is nexus" checks matchesExceptChip (pool=shared matches device-0,
@@ -1447,7 +1686,7 @@ public final class FleetSuggesterTest {
                 "model is nexus",
                 simple("dimension::model", "pixel"),
                 simple("dimension::pool", "shared")));
-    FleetSuggestion nexus = firstOpenPicker(modifyWithOtherChip, "dimension::model");
+    FleetSuggestion nexus = firstApplyFilter(modifyWithOtherChip, "dimension::model");
     assertThat(nexus.getCount()).isEqualTo(1);
     assertThat(nexus.getCountPrefix()).isEqualTo("+");
 
@@ -1510,7 +1749,7 @@ public final class FleetSuggesterTest {
     FleetSuggestionResponse modifySingleChip =
         suggester.suggest(
             tracking, request("model is pixel", simple("dimension::model", "tablet")));
-    FleetSuggestion pixel = firstOpenPicker(modifySingleChip, "dimension::model");
+    FleetSuggestion pixel = firstApplyFilter(modifySingleChip, "dimension::model");
     assertThat(pixel.getCount()).isEqualTo(1);
     assertThat(pixel.getCountPrefix()).isEqualTo("+");
     // With the chip being the only one, modifyIncludeDelta matches nothing again, so the request
@@ -1729,18 +1968,137 @@ public final class FleetSuggesterTest {
   }
 
   @Test
-  public void suggest_filteredValueListOnChipKey_countsOnlyRecordsInScope() {
-    // Filters model=pixel and status=IDLE keep device-0 and device-1. "model is pixel, iphone"
-    // ORs over the chip key: device-2 is an iphone but BUSY, so only the two IDLE pixels count.
-    FleetSuggestionResponse response =
-        suggester.suggest(
-            corpus,
-            request(
-                "model is pixel, iphone",
-                simple("dimension::model", "pixel"),
-                simple("device_field::status", "IDLE")));
+  public void
+      suggest_filteredValueListOnChipKey_mergesNewValuesAndComputesIncludeAndExcludeCounts() {
+    // 1. Active include chip (model=pixel) alone: "model is nexus, iphone" adds device-2 and
+    // device-3 (+2) and merges both values into the chip.
+    FleetSuggestion addTwo =
+        firstApplyFilter(
+            suggester.suggest(
+                corpus, request("model is nexus, iphone", simple("dimension::model", "pixel"))),
+            "dimension::model");
+    assertThat(addTwo.getLabel()).isEqualTo("Modify filter");
+    assertThat(addTwo.getCountPrefix()).isEqualTo("+");
+    assertThat(addTwo.getCount()).isEqualTo(2);
+    assertThat(addTwo.getMainTextList())
+        .containsExactly(
+            TextSegment.newBuilder().setText("Model: add ").setEmphasized(false).build(),
+            TextSegment.newBuilder().setText("nexus").setEmphasized(true).build(),
+            TextSegment.newBuilder().setText(" or ").setEmphasized(false).build(),
+            TextSegment.newBuilder().setText("iphone").setEmphasized(true).build())
+        .inOrder();
+    assertThat(addTwo.getApplyFilter().getPillCondition()).isEqualTo("3");
 
-    assertThat(firstOpenPicker(response, "dimension::model").getCount()).isEqualTo(2);
+    // Multi-valued key (pool=shared matches device-0, which also carries "presubmit"): adding
+    // "presubmit" or "canary" excludes already-matched device-0 via union.andNot(currentBits) and
+    // reports +2 (device-1, device-2), not +3.
+    DeviceCorpus multiPoolCorpus =
+        corpusOf(
+            ImmutableList.of(
+                deviceWith(
+                    "device-0",
+                    DeviceStatus.IDLE,
+                    dimension("pool", "shared"),
+                    dimension("pool", "presubmit")),
+                deviceWith("device-1", DeviceStatus.IDLE, dimension("pool", "presubmit")),
+                deviceWith("device-2", DeviceStatus.IDLE, dimension("pool", "canary"))));
+    FleetSuggestion addOverlappingPools =
+        firstApplyFilter(
+            suggester.suggest(
+                multiPoolCorpus,
+                request("pool is presubmit, canary", simple("dimension::pool", "shared"))),
+            "dimension::pool");
+    assertThat(addOverlappingPools.getCountPrefix()).isEqualTo("+");
+    assertThat(addOverlappingPools.getCount()).isEqualTo(2);
+
+    // 2. With status=IDLE also active: "model is pixel, nexus, iphone" strips the already-present
+    // "pixel", evaluates matchesExceptChip for {nexus, iphone}, and reports +1 (only device-3 nexus
+    // is IDLE; device-2 iphone is BUSY). "model is pixel, iphone" adds +0 under status=IDLE and is
+    // omitted, as is a conflicting polarity or all-already-present list.
+    FleetSuggestion addUnderFilter =
+        firstApplyFilter(
+            suggester.suggest(
+                corpus,
+                request(
+                    "model is pixel, nexus, iphone",
+                    simple("dimension::model", "pixel"),
+                    simple("device_field::status", "IDLE"))),
+            "dimension::model");
+    assertThat(addUnderFilter.getCountPrefix()).isEqualTo("+");
+    assertThat(addUnderFilter.getCount()).isEqualTo(1);
+    assertThat(addUnderFilter.getApplyFilter().getPillCondition()).isEqualTo("3");
+
+    assertThat(
+            suggester
+                .suggest(
+                    corpus,
+                    request(
+                        "model is pixel, iphone",
+                        simple("dimension::model", "pixel"),
+                        simple("device_field::status", "IDLE")))
+                .getItemsList())
+        .isEmpty();
+    assertThat(
+            suggester
+                .suggest(
+                    corpus, request("model is pixel, pixel", simple("dimension::model", "pixel")))
+                .getItemsList())
+        .isEmpty();
+    assertThat(
+            suggester
+                .suggest(
+                    corpus, request("model != nexus, iphone", simple("dimension::model", "pixel")))
+                .getItemsList())
+        .isEmpty();
+
+    // 3. Active negated chip (model!=iphone, scope {device-0, device-1, device-3}): "model !=
+    // nexus, iphone" strips "iphone" and excludes "nexus", leaving 2 devices; "model != pixel,
+    // nexus" excludes all 3 remaining devices in scope (union over active key postings) and is
+    // omitted; "model != pixel" with a second value on a 3-model fleet leaves > 0 when one remains.
+    Filter excludeIphone =
+        Filter.newBuilder()
+            .setKey("dimension::model")
+            .setSimple(
+                SimpleMatch.newBuilder()
+                    .setNegated(true)
+                    .addValues(FilterValue.newBuilder().setValue("iphone")))
+            .build();
+    FleetSuggestion excludeMulti =
+        firstApplyFilter(
+            suggester.suggest(corpus, request("model != nexus, iphone", excludeIphone)),
+            "dimension::model");
+    assertThat(excludeMulti.getLabel()).isEqualTo("Modify filter");
+    assertThat(excludeMulti.getCountPrefix()).isEmpty();
+    assertThat(excludeMulti.getCount()).isEqualTo(2);
+    assertThat(excludeMulti.getMainTextList())
+        .containsExactly(
+            TextSegment.newBuilder().setText("Model: exclude ").setEmphasized(false).build(),
+            TextSegment.newBuilder().setText("nexus").setEmphasized(true).build())
+        .inOrder();
+    assertThat(excludeMulti.getApplyFilter().getPillCondition()).isEqualTo("\u2260 2");
+
+    assertThat(
+            suggester
+                .suggest(corpus, request("model != pixel, nexus", excludeIphone))
+                .getItemsList())
+        .isEmpty();
+
+    // Unapplied negated multi-value OR ("model != pixel, iphone" with no chip) leaves device-3 (1),
+    // while an unapplied OR matching 0 records in scope ("model is pixel, nexus" under status=BUSY)
+    // is omitted.
+    FleetSuggestion unappliedNegatedOr =
+        firstApplyFilter(
+            suggester.suggest(corpus, request("model != pixel, iphone")), "dimension::model");
+    assertThat(unappliedNegatedOr.getLabel()).isEqualTo("Add filter");
+    assertThat(unappliedNegatedOr.getCount()).isEqualTo(1);
+    assertThat(unappliedNegatedOr.getApplyFilter().getPillCondition()).isEqualTo("\u2260 2");
+    assertThat(
+            suggester
+                .suggest(
+                    corpus,
+                    request("model is pixel, nexus", simple("device_field::status", "BUSY")))
+                .getItemsList())
+        .isEmpty();
   }
 
   @Test
@@ -2211,12 +2569,14 @@ public final class FleetSuggesterTest {
 
   /**
    * Delegating {@link SearchCorpus} that records which keys are scanned via {@link #valuesForKey}
-   * and how many times {@link #recordCount} is read.
+   * and how many times {@link #recordCount} and {@link Postings#forKey} (via {@link
+   * #postingsForKeyCalls}) are called.
    */
   private static final class TrackingCorpus implements SearchCorpus {
     private final SearchCorpus delegate;
     final Set<String> keysScannedInScope = new HashSet<>();
     int recordCountCalls = 0;
+    int postingsForKeyCalls = 0;
 
     TrackingCorpus(SearchCorpus delegate) {
       this.delegate = delegate;
@@ -2229,7 +2589,19 @@ public final class FleetSuggesterTest {
 
     @Override
     public Postings postings() {
-      return delegate.postings();
+      Postings inner = delegate.postings();
+      return new Postings() {
+        @Override
+        public int[] get(String keyId, String value) {
+          return inner.get(keyId, value);
+        }
+
+        @Override
+        public ImmutableMap<String, int[]> forKey(String keyId) {
+          postingsForKeyCalls++;
+          return inner.forKey(keyId);
+        }
+      };
     }
 
     @Override

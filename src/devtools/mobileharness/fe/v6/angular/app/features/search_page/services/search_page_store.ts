@@ -493,6 +493,7 @@ export abstract class SearchPageStore {
     if (item.openPicker) {
       this.showSuggestions.set(true);
     } else {
+      this.closeValuePicker();
       this.showSuggestions.set(!this.autoCollapseAfterApply());
     }
     this.applySuggestion(item.rawItem);

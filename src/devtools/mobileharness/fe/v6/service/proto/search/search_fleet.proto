@@ -402,7 +402,7 @@ message FleetSuggestionResponse {
 // Carries what to display (structured text, no inline HTML) and what clicking
 // does (typed action — the frontend never infers behavior from text patterns).
 message FleetSuggestion {
-  // Gray prefix label (e.g. "Add filter", "Modify Model", "Group by").
+  // Gray prefix label (e.g. "Add filter", "Modify filter", "Group by").
   string label = 1;
 
   // Main text with emphasized segments (e.g. the value portion is bold).
@@ -451,9 +451,8 @@ message FleetFilterChipMetadata {
   bool is_plural = 3;
 }
 
-// One-click apply: creates a new chip and immediately triggers search.
-// Used ONLY for keys that do NOT already have a chip. If the key already has a
-// chip, the backend returns FleetOpenPicker instead.
+// One-click apply: creates a new chip or updates an existing simple chip on the
+// same key and immediately triggers search.
 message FleetApplyFilter {
   // The complete filter to apply.
   Filter resulting_filter = 1;
@@ -467,10 +466,9 @@ message FleetApplyFilter {
   FleetFilterChipMetadata metadata = 4;
 }
 
-// Open the chip detail picker (value list). Used for:
+// Open the chip detail picker (value list) for a bare-key suggestion row:
 // - New chips: empty picker
 // - Viewing existing chips: picker shows current selection
-// - Staged modifications: picker pre-checks suggested values
 message FleetOpenPicker {
   string key = 1;
   FleetFilterChipMetadata metadata = 2;
@@ -478,7 +476,9 @@ message FleetOpenPicker {
   oneof context {
     FleetNewChip new_chip = 3;
     FleetViewExisting view_existing = 4;
-    FleetStagedModification staged_modify = 5;
+    // Superseded by `FleetApplyFilter` with the merged filter. Retained as a
+    // deprecated field for rollout wire compatibility.
+    FleetStagedModification staged_modify = 5 [deprecated = true];
   }
 }
 
@@ -488,8 +488,8 @@ message FleetNewChip {}
 // Picker opens showing the existing chip's current values.
 message FleetViewExisting {}
 
-// Picker opens with current values plus staged values pre-checked and
-// highlighted. Supports comma-separated input staging multiple values at once.
+// Deprecated: concrete active-chip modifications use `FleetApplyFilter` with
+// the merged filter. Retained for rollout wire compatibility.
 message FleetStagedModification {
   // Values to pre-check and highlight in the picker.
   repeated string values = 1;

@@ -176,6 +176,11 @@ final class SuggestionContext {
     return scopedCounts(keyId).countFor(valueLower);
   }
 
+  private BitSet matchesOtherChips(String keyId) {
+    return matchesExceptChip.computeIfAbsent(
+        keyId, key -> toBitSet(filterEngine.match(corpus, filtersExcept(key))));
+  }
+
   /**
    * Number of records that adding {@code valueLower} to the existing chip on {@code keyId} would
    * bring into the scope: records that match every other active chip and carry {@code valueLower},
@@ -188,20 +193,53 @@ final class SuggestionContext {
    */
   int modifyIncludeDelta(String keyId, String valueLower) {
     int[] posting = postings.get(keyId, valueLower);
-    ImmutableList<Filter> otherChips = filtersExcept(keyId);
-    if (otherChips.isEmpty()) {
+    if (filtersExcept(keyId).isEmpty()) {
       return posting.length - intersectionCount(posting, currentBits);
     }
-    BitSet matchesOtherChips =
-        matchesExceptChip.computeIfAbsent(
-            keyId, key -> toBitSet(filterEngine.match(corpus, filtersExcept(key))));
+    BitSet otherChips = matchesOtherChips(keyId);
     int added = 0;
     for (int position : posting) {
-      if (matchesOtherChips.get(position) && !currentBits.get(position)) {
+      if (otherChips.get(position) && !currentBits.get(position)) {
         added++;
       }
     }
     return added;
+  }
+
+  /**
+   * Number of records that adding {@code valuesLower} (OR-ed) to the existing include chip on
+   * {@code keyId} would bring into the scope. Reuses the posting lists already built for the active
+   * chip key.
+   */
+  int modifyIncludeUnionDelta(String keyId, ImmutableList<String> valuesLower) {
+    BitSet union = new BitSet();
+    for (String value : valuesLower) {
+      for (int position : postings.get(keyId, value)) {
+        union.set(position);
+      }
+    }
+    union.andNot(currentBits);
+    if (!filtersExcept(keyId).isEmpty()) {
+      union.and(matchesOtherChips(keyId));
+    }
+    return union.cardinality();
+  }
+
+  /**
+   * Number of records lacking {@code keyId} that adding {@code (no value)} to an existing include
+   * chip (which does not yet include {@code (no value)}) would bring into the scope.
+   */
+  int modifyIncludeEmptyDelta(String keyId) {
+    if (filtersExcept(keyId).isEmpty()) {
+      return corpus.recordCount() - globalPresenceCount(keyId);
+    }
+    BitSet missing = (BitSet) matchesOtherChips(keyId).clone();
+    for (int[] posting : postings.forKey(keyId).values()) {
+      for (int position : posting) {
+        missing.clear(position);
+      }
+    }
+    return missing.cardinality();
   }
 
   /**
