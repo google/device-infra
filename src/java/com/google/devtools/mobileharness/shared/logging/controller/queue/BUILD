@@ -23,6 +23,7 @@ java_library(
     name = "queue",
     srcs = glob(["*.java"]),
     visibility = [
+        "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/shared/logging:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/shared/logging:__subpackages__",
     ],
