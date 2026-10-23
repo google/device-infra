@@ -1,12 +1,12 @@
 @if (shouldShowPopover()) {
   <div #popoverContainer class="search-suggestions-popover" (mousedown)="$event.preventDefault()">
-    @if (hasActiveCriteria()) {
+    @if (showCriteriaSection()) {
       <div class="active-criteria-section">
-        <div class="sp-head">
-          @if (resultCountLabel()) {
-            <span class="sp-title">{{ resultCountLabel() }}</span>
-          }
-          @if (hasActiveChips()) {
+        @if (hasActiveChips()) {
+          <div class="sp-head">
+            @if (resultCountLabel()) {
+              <span class="sp-title">{{ resultCountLabel() }}</span>
+            }
             <button
               type="button"
               class="sp-clear"
@@ -15,8 +15,8 @@
             >
               Clear all
             </button>
-          }
-        </div>
+          </div>
+        }
 
         <div class="criteria-group">
           <span class="criteria-group-label">Filters:</span>
@@ -122,29 +122,19 @@
       </div>
     }
 
-    @if (hasActiveCriteria() && (isSuggestionsLoading() || store.suggestions().length > 0 || hasNoMatches())) {
+    @if (showCriteriaSection() && (isSuggestionsLoading() || store.suggestions().length > 0 || hasNoMatches())) {
       <div class="suggestions-divider"></div>
     }
 
-    @if (isSuggestionsLoading()) {
-      <div
-        class="suggestion-items"
-        role="status"
-        aria-live="polite"
-      >
-        <div class="suggestion-item suggestion-loading">
-          <mat-spinner diameter="18"></mat-spinner>
-          <span>Loading suggestions…</span>
-        </div>
-      </div>
-    } @else if (store.suggestions().length > 0) {
+    @if (store.suggestions().length > 0) {
       <div
         class="suggestion-items"
         role="listbox"
         id="search-suggestions-listbox"
         aria-label="Search suggestions"
+        [class.is-refetching]="isSuggestionsLoading()"
       >
-        @for (item of store.suggestions(); track $index) {
+        @for (item of store.suggestions(); track trackSuggestion(item)) {
           <div
             #suggestionItem
             class="suggestion-item"
@@ -175,13 +165,24 @@
               <span
                 class="sg-count"
                 [class.over-max]="item.overMax"
-                [title]="item.overMax ? 'That many groups is hard to scan — consider filtering first.' : ''"
+                [title]="getCountTooltip(item)"
               >
-                {{ item.count > 0 ? (item.countPrefix || '') : '' }}{{ item.count | number }}{{ item.countUnit ? ' ' + item.countUnit : '' }}
+                {{ formatCount(item) }}
               </span>
             }
           </div>
         }
+      </div>
+    } @else if (isSuggestionsLoading()) {
+      <div
+        class="suggestion-items"
+        role="status"
+        aria-live="polite"
+      >
+        <div class="suggestion-item suggestion-loading">
+          <mat-spinner diameter="18"></mat-spinner>
+          <span>Loading suggestions…</span>
+        </div>
       </div>
     } @else if (hasNoMatches()) {
       <div class="suggestion-items">

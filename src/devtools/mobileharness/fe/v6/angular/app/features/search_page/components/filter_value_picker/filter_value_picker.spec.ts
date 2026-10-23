@@ -466,4 +466,42 @@ describe('FilterValuePicker', () => {
 
     expect(component.searchQuery()).toBe('');
   });
+
+  it('should apply updated advanced matching text on apply', () => {
+    mockStore.pickerConfig.set({
+      key: 'model',
+      title: 'Model',
+      type: 'list',
+      canUseAdvanced: true,
+    });
+    mockStore.effectivePickerState.set({
+      ...createInitialValuePickerState(),
+      loading: false,
+      advanced: {
+        active: true,
+        mode: 'prefix',
+        text: 'old_prefix',
+        values: [],
+      },
+    });
+    mockStore.showValuePicker.set(true);
+    fixture.detectChanges();
+
+    expect(component.isAdvanced()).toBeTrue();
+    expect(component.advMode()).toBe('prefix');
+    expect(component.advText()).toBe('old_prefix');
+
+    // User updates advText
+    component.advText.set('new_prefix');
+    component.onApply();
+
+    expect(mockStore.applyValuePicker).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        isAdvanced: true,
+        advMode: 'prefix',
+        advText: 'new_prefix',
+        advValues: undefined,
+      }),
+    );
+  });
 });

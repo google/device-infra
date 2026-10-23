@@ -23,7 +23,6 @@ import {
   FilterPair,
   FleetScope,
   ParsedUrlQueryChips,
-  SearchBoxSuggestion,
 } from '../models';
 
 // ============================================================================
@@ -582,24 +581,6 @@ export function getSerializedChipsKey(
     .map(getChipKey)
     .filter(Boolean);
   return buildUrlParamKey(filters, groupBys, fleet);
-}
-
-/** Maps a raw suggestion object into a unified SearchBoxSuggestion structure. */
-export function mapToSearchBoxSuggestion(
-  item: FleetSuggestion | TjsSuggestion,
-): SearchBoxSuggestion {
-  const fleetItem = item as FleetSuggestion;
-  return {
-    label: item.label,
-    mainText: item.mainText,
-    count: fleetItem.count,
-    countPrefix: fleetItem.countPrefix,
-    countUnit: fleetItem.countUnit,
-    overMax: fleetItem.overMax,
-    openPicker: item.openPicker,
-    addGroupBy: fleetItem.addGroupBy,
-    rawItem: item,
-  };
 }
 
 /** Maps string entity type to SearchEntity protobuf enum value. */

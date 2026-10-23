@@ -282,6 +282,11 @@
   gap: 0;
   padding: 8px 0;
   @include common.shared-scrollbar-style();
+
+  &.is-refetching {
+    opacity: 0.72;
+    transition: opacity 150ms ease;
+  }
 }
 
 .sp-empty {

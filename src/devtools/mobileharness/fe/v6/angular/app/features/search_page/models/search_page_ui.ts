@@ -1,5 +1,7 @@
 import {
+  ApplyTjsFilter,
   FleetAddGroupBy,
+  FleetApplyFilter,
   FleetFlatResults,
   FleetOpenPicker,
   FleetSearchConfig,
@@ -19,7 +21,10 @@ export type FleetScope = 'internal' | 'ats';
 /** Density option type for search results table rows. */
 export type TableDensity = 'compact' | 'default' | 'comfortable';
 
-/** Suggestion item entry rendered in the search box suggestion popover. */
+/**
+ * Suggestion item entry rendered in the search box suggestion popover.
+ * Directly corresponds to the BFF proto contracts (`FleetSuggestion` | `TjsSuggestion`).
+ */
 export interface SearchBoxSuggestion {
   label?: string;
   mainText?: TextSegment[];
@@ -27,6 +32,7 @@ export interface SearchBoxSuggestion {
   countPrefix?: string;
   countUnit?: string;
   overMax?: boolean;
+  applyFilter?: FleetApplyFilter | ApplyTjsFilter;
   openPicker?: FleetOpenPicker | OpenTjsPicker;
   addGroupBy?: FleetAddGroupBy;
   rawItem?: FleetSuggestion | TjsSuggestion;

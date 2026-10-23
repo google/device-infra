@@ -296,16 +296,25 @@ export function buildValuePickerApplyEvent(
   }
 
   const selectedList = Array.from(selectedSet);
+  const isMulti = isMultiModeAdvanced(payload.advMode);
 
   return {
     selected: selectedList,
     negate: negated,
     isAdvanced,
     advMode: isAdvanced ? payload.advMode : undefined,
-    advText: isAdvanced ? (payload.advText || '').trim() : undefined,
+    advText:
+      isAdvanced && !isMulti ? (payload.advText || '').trim() : undefined,
     advValues:
-      isAdvanced && payload.advValues ? [...payload.advValues] : undefined,
+      isAdvanced && isMulti && payload.advValues
+        ? [...payload.advValues]
+        : undefined,
   };
+}
+
+/** Helper to check whether an advanced match mode is multi-value (exactly, at_least). */
+export function isMultiModeAdvanced(mode?: AdvancedMatchMode): boolean {
+  return mode === 'exactly' || mode === 'at_least';
 }
 
 /** Helper to extract advanced matching state from a FilterChip for ValuePicker initialization. */
@@ -317,11 +326,12 @@ export function extractAdvancedStateFromChip(chip: FilterChip): {
 } {
   const info = extractComplexMatchInfo(chip.complex);
   if (info) {
+    const isMulti = isMultiModeAdvanced(info.mode);
     return {
       isAdv: true,
       advMode: info.mode,
-      advText: info.values.join(', '),
-      advValues: info.values,
+      advText: isMulti ? '' : info.values.join(', '),
+      advValues: isMulti ? info.values : [],
     };
   }
   return {
@@ -338,8 +348,11 @@ export function buildComplexMatchFromEvent(
 ): ComplexMatch | undefined {
   if (!event.isAdvanced || !event.advMode) return undefined;
 
-  const vals = event.advValues?.length
-    ? event.advValues
+  const isMulti = isMultiModeAdvanced(event.advMode);
+  const vals = isMulti
+    ? event.advValues?.length
+      ? event.advValues
+      : []
     : event.advText?.trim()
       ? [event.advText.trim()]
       : [];
@@ -354,7 +367,7 @@ export function isValuePickerSelectionEmpty(
   event: ValuePickerApplyEvent,
 ): boolean {
   if (event.isAdvanced) {
-    if (event.advMode === 'exactly' || event.advMode === 'at_least') {
+    if (isMultiModeAdvanced(event.advMode)) {
       return !event.advValues?.length;
     }
     return !event.advText?.trim();

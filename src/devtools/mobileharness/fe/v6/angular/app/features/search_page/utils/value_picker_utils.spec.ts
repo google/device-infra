@@ -9,6 +9,7 @@ import {
   extractAdvancedStateFromChip,
   getDefault24hRange,
   getPacificTimezoneName,
+  isMultiModeAdvanced,
   isValuePickerSelectionEmpty,
   pacificToUtc,
   parseDateRange,
@@ -426,13 +427,14 @@ describe('value_picker_utils', () => {
       });
     });
 
-    it('should construct advanced event', () => {
+    it('should construct advanced event for single-mode and isolate advText from advValues', () => {
       const event = buildValuePickerApplyEvent({
         isAdvanced: true,
         negated: false,
         selectedSet: new Set(),
         advMode: 'prefix',
         advText: 'test_prefix',
+        advValues: ['stale_value'],
       });
       expect(event).toEqual({
         selected: [],
@@ -444,6 +446,25 @@ describe('value_picker_utils', () => {
       });
     });
 
+    it('should construct advanced event for multi-mode and isolate advValues from advText', () => {
+      const event = buildValuePickerApplyEvent({
+        isAdvanced: true,
+        negated: false,
+        selectedSet: new Set(),
+        advMode: 'exactly',
+        advText: 'stale_text',
+        advValues: ['val1', 'val2'],
+      });
+      expect(event).toEqual({
+        selected: [],
+        negate: false,
+        isAdvanced: true,
+        advMode: 'exactly',
+        advText: undefined,
+        advValues: ['val1', 'val2'],
+      });
+    });
+
     it('should construct standard list event with negation', () => {
       const event = buildValuePickerApplyEvent({
         isAdvanced: false,
@@ -452,6 +473,22 @@ describe('value_picker_utils', () => {
       });
       expect(event.selected).toEqual(['item1']);
       expect(event.negate).toBeTrue();
+    });
+  });
+
+  describe('isMultiModeAdvanced', () => {
+    it('returns true for multi-chip modes (exactly, at_least)', () => {
+      expect(isMultiModeAdvanced('exactly')).toBeTrue();
+      expect(isMultiModeAdvanced('at_least')).toBeTrue();
+    });
+
+    it('returns false for single text modes and undefined', () => {
+      expect(isMultiModeAdvanced('prefix')).toBeFalse();
+      expect(isMultiModeAdvanced('substring')).toBeFalse();
+      expect(isMultiModeAdvanced('not_substring')).toBeFalse();
+      expect(isMultiModeAdvanced('regex')).toBeFalse();
+      expect(isMultiModeAdvanced('not_regex')).toBeFalse();
+      expect(isMultiModeAdvanced(undefined)).toBeFalse();
     });
   });
 
@@ -527,10 +564,36 @@ describe('value_picker_utils', () => {
         }),
       ).toEqual({matchesAtLeast: {values: ['X']}});
     });
+
+    it('uses updated advText for single-mode even if advValues has stale values', () => {
+      expect(
+        buildComplexMatchFromEvent({
+          selected: [],
+          negate: false,
+          isAdvanced: true,
+          advMode: 'prefix',
+          advText: 'UpdatedPixel',
+          advValues: ['StaleOldPixel'],
+        }),
+      ).toEqual({startsWith: {value: 'UpdatedPixel'}});
+    });
+
+    it('uses updated advValues for multi-mode even if advText has text', () => {
+      expect(
+        buildComplexMatchFromEvent({
+          selected: [],
+          negate: false,
+          isAdvanced: true,
+          advMode: 'exactly',
+          advText: 'StaleText',
+          advValues: ['UpdatedA', 'UpdatedB'],
+        }),
+      ).toEqual({matchesExactly: {values: ['UpdatedA', 'UpdatedB']}});
+    });
   });
 
   describe('extractAdvancedStateFromChip', () => {
-    it('extracts advanced state when chip contains complex match', () => {
+    it('extracts advanced state for single-mode chip with empty advValues', () => {
       const chip: FilterChip = {
         pillKey: 'model',
         pillCondition: 'prefix:Pixel',
@@ -540,7 +603,21 @@ describe('value_picker_utils', () => {
         isAdv: true,
         advMode: 'prefix',
         advText: 'Pixel',
-        advValues: ['Pixel'],
+        advValues: [],
+      });
+    });
+
+    it('extracts advanced state for multi-mode chip with empty advText', () => {
+      const chip: FilterChip = {
+        pillKey: 'tag',
+        pillCondition: 'Exactly A, B',
+        complex: {matchesExactly: {values: ['A', 'B']}},
+      };
+      expect(extractAdvancedStateFromChip(chip)).toEqual({
+        isAdv: true,
+        advMode: 'exactly',
+        advText: '',
+        advValues: ['A', 'B'],
       });
     });
 

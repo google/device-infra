@@ -9,7 +9,7 @@
       <label
         class="vp-adv-mode"
         [class.active]="mode() === m.id"
-        (click)="mode.set(m.id)"
+        (click)="selectMode(m.id)"
       >
         <mat-icon class="material-symbols-outlined vp-adv-radio">
           {{ mode() === m.id ? 'radio_button_checked' : 'radio_button_unchecked' }}

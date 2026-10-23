@@ -122,9 +122,9 @@ export class TjsSearchStore extends SearchPageStore {
     },
   });
 
-  /** Mapped search suggestions for SearchBox popover consumption directly from the BFF response. */
-  override readonly suggestions = computed<SearchBoxSuggestion[]>(() =>
-    this.mapSuggestions(this.suggestionsResource.value()),
+  /** Autocomplete suggestions consumed directly from the BFF response without transformation. */
+  override readonly suggestions = computed<SearchBoxSuggestion[]>(
+    () => this.suggestionsResource.value() ?? [],
   );
 
   /** Whether autocomplete suggestions are currently being fetched or debounced. */

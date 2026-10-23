@@ -66,7 +66,8 @@ class FakeSearchPageStore {
   readonly isSuggestionsPanelOpen = computed<boolean>(
     () =>
       this.showSuggestions() &&
-      (this.activeChips().length > 0 ||
+      (!this.isTjs() ||
+        this.activeChips().length > 0 ||
         !!this.pendingFilterKey() ||
         this.isSuggestionsLoading() ||
         this.suggestions().length > 0 ||
@@ -91,6 +92,14 @@ class FakeSearchPageStore {
         this.showSuggestions.set(!this.autoCollapseAfterApply());
       }
     });
+  cancelPendingFilter = jasmine
+    .createSpy('cancelPendingFilter')
+    .and.callFake(() => {
+      this.pendingFilter.set(null);
+    });
+  clearSearch = jasmine.createSpy('clearSearch').and.callFake(() => {
+    this.searchQuery.set('');
+  });
   resetSearchState = jasmine.createSpy('resetSearchState');
   clearSearchQuery = jasmine.createSpy('clearSearchQuery').and.callFake(() => {
     this.searchQuery.set('');
@@ -905,6 +914,22 @@ describe('SearchInput', () => {
     expect(component.activeSuggestionIndex()).toBe(1);
   });
 
+  it('should navigate suggestions via ArrowDown even when background refetch is pending (isSuggestionsLoading is true)', () => {
+    mockStore.showSuggestions.set(true);
+    mockStore.isSuggestionsLoading.set(true);
+    mockStore.suggestions.set([
+      {label: 'Filter 1', mainText: [{text: '1', emphasized: false}]},
+      {label: 'Filter 2', mainText: [{text: '2', emphasized: false}]},
+    ]);
+    fixture.detectChanges();
+
+    const input = fixture.nativeElement.querySelector('input.search-input');
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true}),
+    );
+    expect(component.activeSuggestionIndex()).toBe(0);
+  });
+
   it('should select suggestion on Enter when suggestions exist', () => {
     const suggestion: SearchBoxSuggestion = {
       label: 'Filter',
@@ -1037,5 +1062,50 @@ describe('SearchInput', () => {
     fixture.detectChanges();
 
     expect(mockStore.closeValuePicker).toHaveBeenCalled();
+  });
+
+  it('should ignore non-navigational keys and handle edge cases in onKeyDown', () => {
+    const input = fixture.nativeElement.querySelector('input.search-input');
+
+    // 1. Non-navigational key (e.g. 'Tab', 'a') does nothing
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', {key: 'Tab', bubbles: true}),
+    );
+    expect(component.activeSuggestionIndex()).toBe(-1);
+
+    // 2. ArrowDown / ArrowUp when suggestions popover is closed does nothing
+    mockStore.showSuggestions.set(false);
+    mockStore.suggestions.set([
+      {label: 'Filter 1', mainText: [{text: '1', emphasized: false}]},
+    ]);
+    fixture.detectChanges();
+
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true}),
+    );
+    expect(component.activeSuggestionIndex()).toBe(-1);
+
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', {key: 'ArrowUp', bubbles: true}),
+    );
+    expect(component.activeSuggestionIndex()).toBe(-1);
+
+    // 3. ArrowDown / ArrowUp when suggestions list is empty does nothing
+    mockStore.showSuggestions.set(true);
+    mockStore.suggestions.set([]);
+    fixture.detectChanges();
+
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', {key: 'ArrowDown', bubbles: true}),
+    );
+    expect(component.activeSuggestionIndex()).toBe(-1);
+
+    // 4. Enter when suggestions is empty and searchQuery is empty does nothing
+    mockStore.searchQuery.set('');
+    mockStore.executeSearch.calls.reset();
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}),
+    );
+    expect(mockStore.executeSearch).not.toHaveBeenCalled();
   });
 });
