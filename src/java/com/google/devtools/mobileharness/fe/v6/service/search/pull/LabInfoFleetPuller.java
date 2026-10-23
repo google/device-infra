@@ -72,6 +72,9 @@ public final class LabInfoFleetPuller {
           .addPaths("device_feature.composite_dimension")
           .build();
 
+  private static final LabInfoMask EMPTY_LAB_INFO_MASK =
+      LabInfoMask.newBuilder().setFieldMask(FieldMask.getDefaultInstance()).build();
+
   private final LabInfoProvider labInfoProvider;
 
   @Inject
@@ -133,6 +136,7 @@ public final class LabInfoFleetPuller {
                     .setLabViewRequest(LabQuery.LabViewRequest.getDefaultInstance())
                     .setMask(
                         LabQuery.Mask.newBuilder()
+                            .setLabInfoMask(EMPTY_LAB_INFO_MASK)
                             .setDeviceInfoMask(
                                 LabQuery.Mask.DeviceInfoMask.newBuilder()
                                     .setFieldMask(SINGLE_DIM_FIELD_MASK)
