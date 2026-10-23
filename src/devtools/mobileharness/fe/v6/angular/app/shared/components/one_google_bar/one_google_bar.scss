@@ -1,0 +1,402 @@
+$blue-50: #e8f0fe;
+$blue-600: #1a73e8;
+$grey-100: #f1f3f4;
+$grey-300: #dadce0;
+$grey-700: #5f6368;
+$grey-800: #3c4043;
+$grey-900: #202124;
+$white: #fff;
+
+app-one-google-bar.account-menu {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  justify-content: flex-end;
+  flex-shrink: 0;
+
+  .apps-launcher-button {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    mat-icon {
+      color: $grey-700;
+    }
+  }
+
+  button {
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-left: 0;
+    }
+
+    .user-monogram {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: $blue-600;
+      color: $white;
+      font-family: 'Google Sans', Roboto, sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 36px;
+      text-align: center;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}
+
+.mat-mdc-menu-panel.google-apps-menu {
+  width: 344px;
+  max-width: 344px;
+  max-height: 460px;
+  border-radius: 28px;
+  background: #e9eef6;
+  box-shadow:
+    0 4px 8px 3px rgba(60, 64, 67, 0.15),
+    0 1px 3px rgba(60, 64, 67, 0.3);
+
+  .mat-mdc-menu-content {
+    padding: 8px;
+  }
+
+  .google-apps-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .google-apps-section {
+    background: #f8fafd;
+    border-radius: 24px;
+    padding: 16px 12px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .google-apps-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .google-app-item {
+    display: flex;
+    justify-content: center;
+  }
+
+  .google-app-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    width: 84px;
+    padding: 8px 4px;
+    border-radius: 16px;
+    text-decoration: none;
+    color: $grey-900;
+    box-sizing: border-box;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background-color: $blue-50;
+    }
+  }
+
+  .google-app-logo-container {
+    width: 53px;
+    height: 53px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+  }
+
+  .google-app-sprite-logo {
+    display: inline-block;
+    width: 53px;
+    height: 53px;
+    background-image: url(https://ssl.gstatic.com/gb/images/sprites/p_2x_1b5e24e4e18f.png);
+    background-size: 53px 3069px;
+    background-repeat: no-repeat;
+  }
+
+  .google-app-account-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .google-app-label {
+    color: $grey-900;
+    font-family: 'Google Sans', Roboto, sans-serif;
+    font-size: 13px;
+    line-height: 18px;
+    letter-spacing: 0.1px;
+    text-align: center;
+    width: 76px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .google-apps-more-container {
+    display: flex;
+    justify-content: center;
+    padding: 14px 0 8px;
+    width: 100%;
+  }
+
+  .google-apps-more-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 24px;
+    border: 1px solid #747775;
+    border-radius: 100px;
+    background: transparent;
+    color: $blue-600;
+    font-family: 'Google Sans', Roboto, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    text-decoration: none;
+
+    &:hover {
+      background-color: rgba(26, 115, 232, 0.08);
+    }
+  }
+}
+
+.mat-mdc-menu-panel.account-switcher-menu {
+  width: 336px;
+  max-width: 336px;
+  border-radius: 24px;
+  background: $white;
+  box-shadow:
+    0 4px 8px 3px rgba(60, 64, 67, 0.15),
+    0 1px 3px rgba(60, 64, 67, 0.3);
+
+  .mat-mdc-menu-content {
+    padding: 0;
+  }
+
+  .account-switcher-profile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: 20px;
+    width: 100%;
+    box-sizing: border-box;
+
+    .profile-avatar-container {
+      position: relative;
+      width: 64px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .profile-avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .profile-monogram {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background-color: $blue-600;
+      color: $white;
+      font-family: 'Google Sans', Roboto, sans-serif;
+      font-size: 28px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .avatar-camera-badge {
+      position: absolute;
+      right: -2px;
+      bottom: -2px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: $white;
+      box-shadow:
+        0 1px 2px 0 rgba(60, 64, 67, 0.3),
+        0 1px 3px 1px rgba(60, 64, 67, 0.15);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: $grey-800;
+      text-decoration: none;
+
+      mat-icon {
+        font-size: 15px;
+        width: 15px;
+        height: 15px;
+        color: $grey-800;
+      }
+
+      &:hover {
+        background-color: $grey-100;
+        color: $blue-600;
+
+        mat-icon {
+          color: $blue-600;
+        }
+      }
+    }
+
+    .name {
+      color: $grey-800;
+      font-family: 'Google Sans', Roboto, sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      line-height: 24px;
+      letter-spacing: 0.1px;
+      margin-top: 12px;
+      padding: 0 16px;
+      text-align: center;
+      word-break: break-word;
+    }
+
+    .email {
+      color: $grey-700;
+      font-family: Roboto, sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      letter-spacing: 0.2px;
+      line-height: 20px;
+      padding: 0 16px;
+      text-align: center;
+      word-break: break-all;
+    }
+
+    .manage-account-button {
+      margin: 16px 24px;
+      padding: 0 24px;
+      height: 36px;
+      border-radius: 100px;
+      border-color: $grey-300;
+      color: $blue-600;
+      font-family: 'Google Sans', Roboto, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.25px;
+      text-decoration: none;
+    }
+
+    .divider {
+      border-top-color: $grey-300;
+      width: 100%;
+    }
+
+    .account-actions-row {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 12px 16px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .action-row-button {
+      flex: 1 1 0;
+      height: 44px;
+      padding: 0 12px;
+      border-color: $grey-300;
+      color: $grey-800;
+      font-family: 'Google Sans', Roboto, sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.1px;
+      white-space: nowrap;
+
+      mat-icon {
+        margin-right: 6px;
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: $blue-600;
+      }
+
+      &:hover {
+        background-color: $grey-100;
+      }
+    }
+
+    .switch-account-button {
+      border-radius: 22px 4px 4px 22px;
+    }
+
+    .signout-button {
+      border-radius: 4px 22px 22px 4px;
+    }
+
+    .policy {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 12px;
+      width: 100%;
+      box-sizing: border-box;
+
+      .policy-dot {
+        color: $grey-700;
+        font-weight: bold;
+        margin: 0 2px;
+      }
+
+      .policy-label {
+        display: flex;
+        flex-direction: row;
+        text-align: center;
+
+        a {
+          border-radius: 4px;
+          color: $grey-700;
+          font-family: Roboto, sans-serif;
+          font-size: 12px;
+          font-weight: 400;
+          padding: 4px 8px;
+          text-decoration: none;
+
+          &:hover {
+            background-color: $grey-100;
+            outline: none;
+          }
+        }
+      }
+    }
+  }
+}
