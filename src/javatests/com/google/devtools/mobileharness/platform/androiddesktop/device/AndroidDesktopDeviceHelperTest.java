@@ -504,4 +504,47 @@ public class AndroidDesktopDeviceHelperTest {
     // Child should NOT get properties (because it is not a leaf)
     verify(childProperties, never()).add(anyString(), anyString());
   }
+
+  @Test
+  public void extractHostname_nullInput_returnsNull() {
+    assertThat(AndroidDesktopDeviceHelper.extractHostname(null)).isNull();
+  }
+
+  @Test
+  public void extractHostname_bracketedIpv6_returnsBracketedIpv6() {
+    assertThat(AndroidDesktopDeviceHelper.extractHostname("[2001:db8::1]:5555"))
+        .isEqualTo("[2001:db8::1]");
+    assertThat(AndroidDesktopDeviceHelper.extractHostname("[2001:db8::1]"))
+        .isEqualTo("[2001:db8::1]");
+  }
+
+  @Test
+  public void extractHostname_hostWithPort_returnsHost() {
+    assertThat(AndroidDesktopDeviceHelper.extractHostname("192.168.1.50:5555"))
+        .isEqualTo("192.168.1.50");
+    assertThat(AndroidDesktopDeviceHelper.extractHostname("satlab-unit:22"))
+        .isEqualTo("satlab-unit");
+  }
+
+  @Test
+  public void extractHostname_hostWithoutPort_returnsHost() {
+    assertThat(AndroidDesktopDeviceHelper.extractHostname("satlab-unit")).isEqualTo("satlab-unit");
+  }
+
+  @Test
+  public void updateSchedulingDimensions_ipv6DeviceIdWithPort_usesBracketedIpv6HostName()
+      throws Exception {
+    CommandResult commandResult = FakeCommandResult.of("{}", "", 0);
+    when(mockCommandExecutor.exec(any(Command.class))).thenReturn(commandResult);
+    when(mockBaseDevice.getDeviceId()).thenReturn("[2001:db8::1]:5555");
+
+    androidDesktopDeviceHelper.updateSchedulingDimensions(mockBaseDevice);
+
+    verify(mockCommandExecutor)
+        .exec(
+            argThat(
+                command ->
+                    command.getCommand().get(1).equals("internal-print-bot-info")
+                        && command.getCommand().contains("[2001:db8::1]")));
+  }
 }

@@ -52,6 +52,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
+import javax.annotation.Nullable;
 
 /** Helper class for Android Desktop Device. */
 public class AndroidDesktopDeviceHelper {
@@ -94,12 +95,28 @@ public class AndroidDesktopDeviceHelper {
     this.random = new Random();
   }
 
+  /** Extracts the hostname from a {@code dutName} which may contain a port. */
+  @Nullable
+  public static String extractHostname(@Nullable String dutName) {
+    if (dutName == null) {
+      return null;
+    }
+    int closingBracket = dutName.indexOf(']');
+    if (dutName.startsWith("[") && closingBracket != -1) {
+      return dutName.substring(0, closingBracket + 1);
+    }
+    int colonIndex = dutName.indexOf(':');
+    if (colonIndex != -1) {
+      return dutName.substring(0, colonIndex);
+    }
+    return dutName;
+  }
+
   private String getHostName(String deviceId) {
     if (isNullOrEmpty(deviceId)) {
       return "";
     }
-    String[] parts = deviceId.split(":", 2);
-    return parts[0];
+    return extractHostname(deviceId);
   }
 
   /** Get android desktop scheduling labels from shivas. */

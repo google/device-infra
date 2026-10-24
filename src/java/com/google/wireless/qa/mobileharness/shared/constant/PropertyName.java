@@ -213,6 +213,9 @@ public interface PropertyName {
     /** The id of the device which runs the test. */
     DIMENSION_ID,
 
+    /** The hostname of the physical DUT allocated to run the test. */
+    DUT_NAME,
+
     /** Execution mode (lower case of ExecModeUtil.getModeName()). */
     EXEC_MODE,
 
