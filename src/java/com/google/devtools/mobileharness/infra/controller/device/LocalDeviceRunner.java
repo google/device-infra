@@ -524,6 +524,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
   }
 
   /** Returns whether this device is ready. */
+  @Override
   public boolean isReady() {
     boolean isAlive = isAlive();
     boolean isReady = initialized && isAlive;
