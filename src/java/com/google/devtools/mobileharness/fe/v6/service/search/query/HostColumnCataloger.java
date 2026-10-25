@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.query.KeyCatalogs.
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.ToIntFunction;
 import javax.inject.Inject;
 
@@ -154,16 +155,18 @@ public final class HostColumnCataloger {
     return FleetColumnCatalogEntry.newBuilder()
         .setKey(desc.id())
         .setDisplayName(HostKeyDisplays.titleDisplayName(desc))
+        .setDescription(desc.display().description())
         .setCoverage(KeyCatalogs.coverage(desc.isHostProperty(), hostCount))
         .build();
   }
 
   private static FleetColumnCatalogEntry suggestedEntry(
       HostCorpus corpus, String keyId, String reason) {
-    String displayName = corpus.getKey(keyId).map(HostKeyDisplays::titleDisplayName).orElse(keyId);
+    Optional<HostKeyDescriptor> key = corpus.getKey(keyId);
     return FleetColumnCatalogEntry.newBuilder()
         .setKey(keyId)
-        .setDisplayName(displayName)
+        .setDisplayName(key.map(HostKeyDisplays::titleDisplayName).orElse(keyId))
+        .setDescription(key.map(desc -> desc.display().description()).orElse(""))
         .setCoverage(KeyCatalogs.coverage(false, 0))
         .setReason(reason)
         .build();

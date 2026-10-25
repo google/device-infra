@@ -44,6 +44,7 @@ public final class FleetKeyPriority implements ScenarioCuration.KeyPriority {
           DeviceKeys.TYPE,
           DeviceKeys.MODEL,
           DeviceKeys.OS,
+          DeviceKeys.VERSION,
           DeviceKeys.SDK_VERSION,
           DeviceKeys.HOST_NAME,
           DeviceKeys.DEVICE_CLASS_NAME,

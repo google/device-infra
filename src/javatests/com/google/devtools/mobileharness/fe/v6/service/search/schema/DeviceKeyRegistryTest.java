@@ -51,6 +51,8 @@ public final class DeviceKeyRegistryTest {
     assertThat(registry.getKey("device_field::sdk_or_software_version")).isPresent();
     assertThat(registry.displayName("device_field::sdk_or_software_version"))
         .hasValue("SDK or Software Version");
+    assertThat(registry.getKey("device_field::version")).hasValue(DeviceKeys.VERSION);
+    assertThat(registry.displayName("device_field::version")).hasValue("Version");
     // Standalone ATS exclusive key.
     assertThat(registry.getKey("device_config::wifi_ssid")).isPresent();
     // Projected common host keys are usable in device search.
@@ -127,6 +129,15 @@ public final class DeviceKeyRegistryTest {
   }
 
   @Test
+  public void description_isSetOnlyWhereTheValueNeedsExplaining() {
+    assertThat(DeviceKeys.VERSION.display().description()).contains("release_version");
+    assertThat(DeviceKeys.VERSION.display().description()).contains("software_version");
+    assertThat(DeviceKeys.SDK_VERSION.display().description()).isEmpty();
+    assertThat(DeviceKeys.MODEL.display().description()).isEmpty();
+    assertThat(registry.getKey("dimension::carrier").get().display().description()).isEmpty();
+  }
+
+  @Test
   public void deriveDeviceInfoMask_unionsCommonSources_excludesOnePAndQuarantine() {
     DeviceInfoMask mask = registry.deriveDeviceInfoMask();
     assertThat(mask.getFieldMask().getPathsList())
@@ -141,6 +152,7 @@ public final class DeviceKeyRegistryTest {
         .containsAtLeast(
             "model",
             "os",
+            "release_version",
             "sdk_version",
             "software_version",
             "device_form",

@@ -100,15 +100,36 @@ public final class DeviceKeys {
           .setAliases("decorator(s)", "supported decorator(s)", "device supported decorator(s)")
           .build();
 
-  // Group 1: Universal common core dimensions. "version" alone is shared; SDK version is declared
-  // first in COMMON_DEVICE_KEYS and is therefore the preferred resolution.
+  // Group 1: Universal common core dimensions.
   public static final DeviceKeyDescriptor MODEL =
       dimensionKey("model", KeyDisplay.of("Model"), "device model");
   public static final DeviceKeyDescriptor OS = dimensionKey("os", KeyDisplay.of("OS"), "device os");
   public static final DeviceKeyDescriptor SDK_VERSION =
-      dimensionKey("sdk_version", KeyDisplay.of("SDK Version"), "version");
+      dimensionKey("sdk_version", KeyDisplay.of("SDK Version"), "sdk", "api level");
   public static final DeviceKeyDescriptor SOFTWARE_VERSION =
-      dimensionKey("software_version", KeyDisplay.of("Software Version"), "version");
+      dimensionKey("software_version", KeyDisplay.of("Software Version"));
+
+  /**
+   * The device's single "version", as the device detail pages show it: the {@code release_version}
+   * dimension when the device reports one, otherwise {@code software_version}. The sources are
+   * listed in that order of precedence; the index takes the first one with a value.
+   */
+  public static final DeviceKeyDescriptor VERSION =
+      DeviceKeyDescriptor.builder()
+          .setId(PREFIX_DEVICE_FIELD + "version")
+          .setDeviceInfoSources(
+              ImmutableList.of(
+                  DeviceInfoSource.dimension("release_version"),
+                  DeviceInfoSource.dimension("software_version")))
+          .setDisplay(
+              KeyDisplay.of("Version")
+                  .withDescription(
+                      "The device's OS version: the release_version dimension (for example"
+                          + " Android 16), or software_version when release_version is missing"
+                          + " (for example iOS). For the Android API level, use SDK Version."))
+          .setAliases("device version", "os version")
+          .build();
+
   public static final DeviceKeyDescriptor SDK_OR_SOFTWARE_VERSION =
       DeviceKeyDescriptor.builder()
           .setId(PREFIX_DEVICE_FIELD + "sdk_or_software_version")
@@ -136,6 +157,7 @@ public final class DeviceKeys {
           DECORATOR,
           MODEL,
           OS,
+          VERSION,
           SDK_VERSION,
           SOFTWARE_VERSION,
           SDK_OR_SOFTWARE_VERSION,

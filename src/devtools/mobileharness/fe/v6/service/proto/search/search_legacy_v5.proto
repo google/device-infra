@@ -1,0 +1,112 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package devtools.mobileharness.fe.v6.service.proto.search;
+
+import "src/devtools/mobileharness/fe/v6/service/proto/search/search_fleet.proto";
+import "src/devtools/mobileharness/fe/v6/service/proto/search/search_tjs.proto";
+
+option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.search";
+option java_multiple_files = true;
+option java_outer_classname = "SearchLegacyV5Proto";
+
+// =============================================================================
+// Legacy FE v5 URL resolution.
+//
+// FE v5, the previous Mobile Harness console, forwards its page URLs to FE v6
+// with the same path and query. FE v6 resolves each one to the FE v6 page that
+// shows the same thing: a detail or config page, a device or host search, a
+// test, job or session search, or the All-Site search.
+// =============================================================================
+
+// Request to resolve a legacy FE v5 URL, such as
+// "/devicelistview?filter=pool:shared" or "/labdetailview/<host>/<ip>".
+message ResolveLegacyV5UrlRequest {
+  // The URL path, starting with "/", percent-encoded as received (for example
+  // "/devicelistview" or "/labdetailview/<host>/<ip>").
+  string path = 1;
+
+  // The query string without the leading "?", percent-encoded as received.
+  string query = 2;
+
+  // The fragment without the leading "#", percent-encoded as received, for FE
+  // v4 "#subpage=" links.
+  string fragment = 3;
+}
+
+// The FE v6 destination of a legacy FE v5 URL.
+message ResolveLegacyV5UrlResponse {
+  // Exactly one is set. A URL with no FE v6 counterpart resolves to the home
+  // page, as a page destination with path "/".
+  oneof destination {
+    // A page given by its route: detail, config, home and All-Site pages.
+    LegacyV5PageDestination page = 1;
+
+    // A device or host search.
+    LegacyV5FleetSearchDestination fleet_search = 2;
+
+    // A test, job or session search.
+    LegacyV5TjsSearchDestination tjs_search = 3;
+  }
+
+  // What the FE v6 page cannot show exactly as FE v5 did, one sentence each,
+  // for example an OR across different keys that FE v6 shows as AND. Empty
+  // when the translation is exact.
+  repeated string warnings = 4;
+}
+
+// A FE v6 page given by its route.
+message LegacyV5PageDestination {
+  // The route path, starting with "/", each segment percent-encoded (for
+  // example "/hosts/lab-1.example.com" or "/jobs/j1/tests/t1").
+  string path = 1;
+
+  // The route's query parameters in order (for example "host_name" or
+  // "openHostConfig").
+  repeated LegacyV5QueryParam query_params = 2;
+}
+
+// One query parameter of a FE v6 route, not yet percent-encoded.
+message LegacyV5QueryParam {
+  string key = 1;
+  string value = 2;
+}
+
+// A FE v6 device or host search.
+message LegacyV5FleetSearchDestination {
+  // Whether to search devices or hosts.
+  SearchEntity entity = 1;
+
+  // The fleet to search.
+  Fleet fleet = 2;
+
+  // Canonical FE v6 filters, at most one per key.
+  repeated Filter filters = 3;
+
+  // Canonical FE v6 group-by key ids, in order.
+  repeated string group_by_keys = 4;
+}
+
+// A FE v6 test, job or session search.
+message LegacyV5TjsSearchDestination {
+  // Whether to search tests, jobs or sessions.
+  TjsEntity entity = 1;
+
+  // Canonical FE v6 TJS filters, at most one per key.
+  repeated TjsFilter filters = 2;
+}
