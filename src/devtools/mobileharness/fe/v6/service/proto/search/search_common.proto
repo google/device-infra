@@ -78,6 +78,10 @@ message Column {
 
   // User-facing column header label (e.g. "Status", "Test ID").
   string display_name = 2;
+
+  // What the column's value means, shown as a tooltip on the column header.
+  // Empty for keys whose meaning is clear from the name.
+  string description = 3;
 }
 
 // A single row in a search results table.

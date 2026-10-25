@@ -668,6 +668,80 @@ public final class FleetIndexBuilderTest {
   }
 
   @Test
+  public void build_version_prefersReleaseVersionAndFallsBackToSoftwareVersion() {
+    DeviceInfo androidDevice =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("dev-android"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(dimension("release_version", "16"))
+                            .addSupportedDimension(dimension("sdk_version", "36"))
+                            .addSupportedDimension(dimension("software_version", "BP2A.250605"))))
+            .build();
+    DeviceInfo iosDevice =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("dev-ios"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(dimension("software_version", "18.1"))))
+            .build();
+    DeviceInfo emptyReleaseDevice =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("dev-empty-release"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(dimension("release_version", ""))
+                            .addRequiredDimension(dimension("software_version", "2.5"))))
+            .build();
+    DeviceInfo noVersionDevice =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("dev-no-version"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(dimension("sdk_version", "34"))))
+            .build();
+    LabQueryResult labResult =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab-version",
+                            "10.0.0.2",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            androidDevice,
+                            iosDevice,
+                            emptyReleaseDevice,
+                            noVersionDevice)))
+            .build();
+
+    FleetSnapshot snapshot = builder.build(labResult, BUILD_TIME);
+
+    // release_version wins over software_version, and the SDK level is never the version.
+    assertThat(snapshot.devices().get(0).values("device_field::version")).containsExactly("16");
+    assertThat(snapshot.devices().get(1).values("device_field::version")).containsExactly("18.1");
+    // An empty release_version does not count; a required software_version does.
+    assertThat(snapshot.devices().get(2).values("device_field::version")).containsExactly("2.5");
+    assertThat(snapshot.devices().get(3).values()).doesNotContainKey("device_field::version");
+    assertThat(snapshot.index().valueCount("device_field::version", "16")).isEqualTo(1);
+    assertThat(snapshot.index().valueCount("device_field::version", "36")).isEqualTo(0);
+  }
+
+  @Test
   public void build_sdkOrSoftwareVersion_combinesAndDeduplicatesSdkAndSoftwareVersions() {
     DeviceInfo androidAndSoftwareDevice =
         DeviceInfo.newBuilder()

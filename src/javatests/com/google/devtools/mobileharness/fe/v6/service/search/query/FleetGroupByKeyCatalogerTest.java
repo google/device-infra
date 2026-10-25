@@ -455,10 +455,57 @@ public final class FleetGroupByKeyCatalogerTest {
     assertThat(suggestedLocation.getCoverage().getShown().getCount()).isEqualTo(2);
   }
 
+  @Test
+  public void versionEntry_carriesKeyDescriptionInSuggestedAndBuiltinSections() {
+    LabQueryResult versionLab =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab-a",
+                            "1.1.1.1",
+                            dims("location", "mtv"),
+                            device(
+                                "device-0",
+                                DeviceStatus.IDLE,
+                                "android_real_device",
+                                "alice",
+                                dims("release_version", "16")))))
+            .build();
+    FleetSnapshot versionSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(versionLab, BUILD_TIME);
+    ScenarioCuration versionCuration =
+        new SuggestedCoverageCuration() {
+          @Override
+          public ImmutableList<DeviceKeyDescriptor> deviceGroupByRow() {
+            return ImmutableList.of(DeviceKeys.VERSION);
+          }
+        };
+    DeviceCorpus versionCorpus =
+        new DeviceCorpus(
+            versionSnapshot, new LazyPostings(versionSnapshot.devices()), versionCuration);
+
+    FleetGroupByKeyCatalogResponse response =
+        cataloger.getGroupByKeyCatalog(
+            versionCorpus, FleetGroupByKeyCatalogRequest.getDefaultInstance());
+
+    assertThat(entryFor(section(response, "Suggested"), DeviceKeys.VERSION.id()).getDescription())
+        .isEqualTo(DeviceKeys.VERSION.display().description());
+    assertThat(
+            entryFor(section(response, "Built-in fields"), DeviceKeys.VERSION.id())
+                .getDescription())
+        .isEqualTo(DeviceKeys.VERSION.display().description());
+    assertThat(
+            entryFor(section(response, "Built-in fields"), DeviceKeys.STATUS.id()).getDescription())
+        .isEmpty();
+  }
+
   /**
    * Curation promoting a built-in field alongside a dimension (device) and host property (host).
    */
-  private static final class SuggestedCoverageCuration implements ScenarioCuration {
+  private static class SuggestedCoverageCuration implements ScenarioCuration {
     private final AtsDeviceKeyRegistry deviceRegistry = new AtsDeviceKeyRegistry();
     private final AtsHostKeyRegistry hostRegistry = new AtsHostKeyRegistry();
 

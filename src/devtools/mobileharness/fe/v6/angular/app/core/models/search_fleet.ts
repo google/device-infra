@@ -88,6 +88,8 @@ export declare interface FleetColumnDescriptor {
   key: string;
   displayName: string;
   locked?: boolean;
+  /** What the column's value means; absent when the name says it all. */
+  description?: string;
 }
 
 /** Fleet landing config. */
@@ -147,6 +149,8 @@ export declare interface FleetFilterChipMetadata {
   keyDisplayName?: string;
   canUseAdvanced?: boolean;
   isPlural?: boolean;
+  /** What the key's value means; absent when the name says it all. */
+  description?: string;
 }
 
 /** Sort for group headers. */
@@ -351,6 +355,8 @@ export declare interface FleetColumnCatalogEntry {
   displayName: string;
   reason?: string;
   coverage?: CoverageInfo;
+  /** What the key's value means; absent when the name says it all. */
+  description?: string;
 }
 
 // ============GetFleetFilterKeyCatalog - FleetFilterKeyCatalogResponse===============
@@ -392,6 +398,8 @@ export declare interface FleetGroupByKeyEntry {
   groupCount?: GroupCountInfo;
   applied?: boolean;
   coverage?: CoverageInfo;
+  /** What the key's value means; absent when the name says it all. */
+  description?: string;
 }
 
 /** Group-count display for a group-by key: either notShown or shown with count. */

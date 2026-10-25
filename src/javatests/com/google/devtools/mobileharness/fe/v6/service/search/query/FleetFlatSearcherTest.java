@@ -127,9 +127,15 @@ public final class FleetFlatSearcherTest {
             "device_field::uuid", "host_field::host_name", "device_field::status", "dimension::os")
         .inOrder();
     assertThat(results.getColumns(0).getDisplayName()).isEqualTo("UUID");
+    assertThat(results.getColumns(0).getDescription()).isEmpty();
     assertThat(results.getColumns(1).getDisplayName()).isEqualTo("Host Name");
     assertThat(results.getColumns(2).getDisplayName()).isEqualTo("Status");
     assertThat(results.getColumns(3).getDisplayName()).isEqualTo("OS");
+    assertThat(corpus.column("device_field::version").getDescription())
+        .isEqualTo(
+            "The device's OS version: the release_version dimension (for example Android 16), or"
+                + " software_version when release_version is missing (for example iOS). For the"
+                + " Android API level, use SDK Version.");
   }
 
   @Test

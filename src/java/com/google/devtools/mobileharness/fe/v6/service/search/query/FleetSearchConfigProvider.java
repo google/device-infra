@@ -63,6 +63,7 @@ public final class FleetSearchConfigProvider {
             FleetColumnDescriptor.newBuilder()
                 .setKey(descriptor.id())
                 .setDisplayName(descriptor.display().name())
+                .setDescription(descriptor.display().description())
                 .setLocked(descriptor.id().equals(identifierKey)));
       }
     } else {
@@ -72,6 +73,7 @@ public final class FleetSearchConfigProvider {
             FleetColumnDescriptor.newBuilder()
                 .setKey(descriptor.id())
                 .setDisplayName(descriptor.display().name())
+                .setDescription(descriptor.display().description())
                 .setLocked(descriptor.id().equals(identifierKey)));
       }
     }

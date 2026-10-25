@@ -106,6 +106,7 @@ public final class FleetPromotedKeysProvider {
                       .setKeyDisplayName(desc.display().name())
                       .setIsPlural(desc.display().isPlural())
                       .setCanUseAdvanced(true)
+                      .setDescription(desc.display().description())
                       .build()));
       emitted++;
     }

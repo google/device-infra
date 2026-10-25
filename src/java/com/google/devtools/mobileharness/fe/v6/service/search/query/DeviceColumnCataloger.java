@@ -46,6 +46,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.ToIntFunction;
@@ -227,17 +228,18 @@ public final class DeviceColumnCataloger {
     return FleetColumnCatalogEntry.newBuilder()
         .setKey(desc.id())
         .setDisplayName(DeviceKeyDisplays.titleDisplayName(desc))
+        .setDescription(desc.display().description())
         .setCoverage(KeyCatalogs.coverage(desc.isDimension(), deviceCount))
         .build();
   }
 
   private static FleetColumnCatalogEntry suggestedEntry(
       DeviceCorpus corpus, String keyId, String reason) {
-    String displayName =
-        corpus.getKey(keyId).map(DeviceKeyDisplays::titleDisplayName).orElse(keyId);
+    Optional<DeviceKeyDescriptor> key = corpus.getKey(keyId);
     return FleetColumnCatalogEntry.newBuilder()
         .setKey(keyId)
-        .setDisplayName(displayName)
+        .setDisplayName(key.map(DeviceKeyDisplays::titleDisplayName).orElse(keyId))
+        .setDescription(key.map(desc -> desc.display().description()).orElse(""))
         .setCoverage(KeyCatalogs.coverage(false, 0))
         .setReason(reason)
         .build();
