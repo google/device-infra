@@ -32,6 +32,10 @@ import com.google.auto.value.AutoValue;
  * It is a hand-picked display attribute, true only for keys whose label reads as a plural noun
  * (Owners, Supported Drivers, Supported Decorators, Executors); it is not the same axis as whether
  * a device can carry multiple values.
+ *
+ * <p>{@link #description()} is an optional one-sentence explanation of what the key's value means,
+ * shown wherever the key is named (value-picker title, column header, key catalogs). Only a curated
+ * key whose value is not self-evident from its name sets one; every other key leaves it empty.
  */
 @AutoValue
 public abstract class KeyDisplay {
@@ -42,13 +46,21 @@ public abstract class KeyDisplay {
   /** Whether the label is grammatically plural, e.g. "Owners are" vs "Model is". */
   public abstract boolean isPlural();
 
+  /** What the key's value means, or an empty string when the key needs no explanation. */
+  public abstract String description();
+
   /** A singular-grammar display name (for example {@code "Model"}). */
   public static KeyDisplay of(String name) {
-    return new AutoValue_KeyDisplay(name, /* isPlural= */ false);
+    return new AutoValue_KeyDisplay(name, /* isPlural= */ false, /* description= */ "");
   }
 
   /** A plural-grammar display name (for example {@code "Owners"}). */
   public static KeyDisplay plural(String name) {
-    return new AutoValue_KeyDisplay(name, /* isPlural= */ true);
+    return new AutoValue_KeyDisplay(name, /* isPlural= */ true, /* description= */ "");
+  }
+
+  /** This display with the given explanation of what the key's value means. */
+  public KeyDisplay withDescription(String description) {
+    return new AutoValue_KeyDisplay(name(), isPlural(), description);
   }
 }

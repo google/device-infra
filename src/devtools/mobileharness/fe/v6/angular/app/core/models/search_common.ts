@@ -26,6 +26,8 @@ export enum Indicator {
 export declare interface Column {
   key: string;
   displayName: string;
+  /** What the column's value means; absent when the name says it all. */
+  description?: string;
 }
 
 /** A single row in a search results table. */
