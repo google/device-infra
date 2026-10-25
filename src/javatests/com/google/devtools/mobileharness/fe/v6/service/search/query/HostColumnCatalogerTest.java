@@ -131,7 +131,8 @@ public final class HostColumnCatalogerTest {
             ImmutableList.of(
                 HostKeyDescriptor.builder()
                     .setId("host_field::lab_type")
-                    .setDisplay(KeyDisplay.of("Lab Type"))
+                    .setDisplay(
+                        KeyDisplay.of("Lab Type").withDescription("How the lab is managed."))
                     .build(),
                 HostKeyDescriptor.builder()
                     .setId("host_field::daemon_status")
@@ -245,8 +246,13 @@ public final class HostColumnCatalogerTest {
     assertThat(entryFor(builtin, "host_field::connectivity").getDisplayName())
         .isEqualTo("Lab Server Connectivity");
     assertThat(entryFor(builtin, "host_field::lab_type").getDisplayName()).isEqualTo("Lab Type");
+    assertThat(entryFor(builtin, "host_field::lab_type").getDescription())
+        .isEqualTo("How the lab is managed.");
+    assertThat(corpus.column("host_field::lab_type").getDescription())
+        .isEqualTo("How the lab is managed.");
     assertThat(entryFor(builtin, "host_field::daemon_status").getDisplayName())
         .isEqualTo("Daemon Server Status");
+    assertThat(entryFor(builtin, "host_field::daemon_status").getDescription()).isEmpty();
     assertThat(entryFor(builtin, "host_field::daemon_server_version").getDisplayName())
         .isEqualTo("Daemon Server Version");
     assertThat(entryFor(builtin, "host_field::release_status").getDisplayName())
@@ -303,6 +309,7 @@ public final class HostColumnCatalogerTest {
             .setEntity(SearchEntity.SEARCH_ENTITY_HOST)
             .addFilters(Filter.newBuilder().setKey("host_property::location"))
             .addRecentKeys("host_field::daemon_status")
+            .addRecentKeys("host_field::lab_type")
             .build();
 
     FleetColumnCatalogResponse response = cataloger.getColumnCatalog(corpus, request);
@@ -311,12 +318,15 @@ public final class HostColumnCatalogerTest {
     FleetColumnCatalogSection suggested = section(response, "Suggested for you");
 
     assertThat(keys(suggested))
-        .containsExactly("host_property::location", "host_field::daemon_status")
+        .containsExactly(
+            "host_property::location", "host_field::daemon_status", "host_field::lab_type")
         .inOrder();
     assertThat(entryFor(suggested, "host_property::location").getReason())
         .isEqualTo("in your active filters");
     assertThat(entryFor(suggested, "host_field::daemon_status").getReason())
         .isEqualTo("recently used");
+    assertThat(entryFor(suggested, "host_field::lab_type").getDescription())
+        .isEqualTo("How the lab is managed.");
     assertThat(suggested.getTotalAvailable()).isEqualTo(0);
   }
 

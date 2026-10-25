@@ -237,12 +237,15 @@ public final class DeviceCorpus implements SearchCorpus {
 
   @Override
   public Column column(String keyId) {
-    String displayName =
+    DeviceKeyDescriptor desc =
         registry
             .getKey(keyId)
-            .map(DeviceKeyDisplays::standardDisplayName)
             .orElseThrow(() -> new IllegalArgumentException("Unknown device key: " + keyId));
-    return Column.newBuilder().setKey(keyId).setDisplayName(displayName).build();
+    return Column.newBuilder()
+        .setKey(keyId)
+        .setDisplayName(DeviceKeyDisplays.standardDisplayName(desc))
+        .setDescription(desc.display().description())
+        .build();
   }
 
   @Override

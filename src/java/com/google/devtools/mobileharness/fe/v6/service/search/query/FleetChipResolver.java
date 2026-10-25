@@ -278,6 +278,7 @@ public final class FleetChipResolver {
         .setKeyDisplayName(displayName(key))
         .setCanUseAdvanced(true)
         .setIsPlural(key.display().isPlural())
+        .setDescription(key.display().description())
         .build();
   }
 
@@ -286,6 +287,7 @@ public final class FleetChipResolver {
         .setKeyDisplayName(displayName(key))
         .setCanUseAdvanced(true)
         .setIsPlural(key.display().isPlural())
+        .setDescription(key.display().description())
         .build();
   }
 
