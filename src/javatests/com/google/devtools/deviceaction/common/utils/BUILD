@@ -13,17 +13,18 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_library")
-load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
+load("@rules_java//java:java_test.bzl", "java_test")
 
 package(default_applicable_licenses = ["//:license"])
 
-java_library(
-    name = "tests",
-    testonly = 1,
-    srcs = glob(
-        ["*Test.java"],
-    ),
+java_test(
+    name = "SmallTests",
+    size = "small",
+    srcs = [
+        "FlagParserTest.java",
+        "ProtoHelperTest.java",
+        "TimeoutMonitorTest.java",
+    ],
     data = ["//src/javatests/com/google/devtools/deviceaction/testdata"],
     deps = [
         "//src/devtools/deviceaction/schemas/proto:base_spec_java_proto",
@@ -32,27 +33,38 @@ java_library(
         "//src/java/com/google/devtools/deviceaction/common/error",
         "//src/java/com/google/devtools/deviceaction/common/schemas",
         "//src/java/com/google/devtools/deviceaction/common/utils",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_truth_extensions_truth_proto_extension",
+        "@maven//:junit_junit",
+    ],
+)
+
+java_test(
+    name = "MediumTests",
+    size = "medium",
+    srcs = [
+        "BundletoolUtilTest.java",
+        "CommandHistoryWriterTest.java",
+        "CompositeResolverTest.java",
+        "GCSResolverTest.java",
+        "ResourceUtilTest.java",
+        "SimpleResolverTest.java",
+    ],
+    data = ["//src/javatests/com/google/devtools/deviceaction/testdata"],
+    deps = [
+        "//src/devtools/deviceaction/schemas/proto:base_spec_java_proto",
+        "//src/java/com/google/devtools/deviceaction/common/error",
+        "//src/java/com/google/devtools/deviceaction/common/utils",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/command/history",
         "//src/java/com/google/devtools/mobileharness/shared/util/command/testing",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
         "@maven//:com_google_apis_google_api_services_storage",
         "@maven//:com_google_guava_guava",
-        "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
-    ],
-)
-
-junit_test_suites(
-    name = "gen_tests",
-    sizes = [
-        "small",
-        "medium",
-    ],
-    deps = [
-        ":tests",
     ],
 )
