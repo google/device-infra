@@ -288,7 +288,8 @@ public final class FleetFilterKeyCataloger {
             FleetFilterChipMetadata.newBuilder()
                 .setKeyDisplayName(DeviceKeyDisplays.titleDisplayName(desc))
                 .setCanUseAdvanced(true)
-                .setIsPlural(desc.display().isPlural()))
+                .setIsPlural(desc.display().isPlural())
+                .setDescription(desc.display().description()))
         .setCoverage(KeyCatalogs.coverage(desc.isDimension(), deviceCount))
         .setApplied(applied)
         .build();
@@ -303,7 +304,8 @@ public final class FleetFilterKeyCataloger {
             FleetFilterChipMetadata.newBuilder()
                 .setKeyDisplayName(HostKeyDisplays.titleDisplayName(desc))
                 .setCanUseAdvanced(true)
-                .setIsPlural(desc.display().isPlural()))
+                .setIsPlural(desc.display().isPlural())
+                .setDescription(desc.display().description()))
         .setCoverage(KeyCatalogs.coverage(desc.isHostProperty(), hostCount))
         .setApplied(applied)
         .build();

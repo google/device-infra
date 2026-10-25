@@ -184,6 +184,12 @@ message FleetColumnDescriptor {
 
   // true = always shown, not removable by the user (e.g. device UUID).
   bool locked = 3;
+
+  // What the column's value means, shown as a tooltip on the column header
+  // before search results load and carried by saved column descriptors and
+  // translated Arsenal columns. Empty for keys whose meaning is clear from the
+  // name.
+  string description = 4;
 }
 
 // Landing page configuration. Shown before the first search when the user has
@@ -449,6 +455,11 @@ message FleetFilterChipMetadata {
   // The frontend renders whatever the backend says; it no longer hardcodes a
   // plural-key list.
   bool is_plural = 3;
+
+  // What the key's value means, shown as a tooltip next to the value picker
+  // title and as a second line in the Add filter dialog. Empty for keys whose
+  // meaning is clear from the name.
+  string description = 4;
 }
 
 // One-click apply: creates a new chip or updates an existing simple chip on the
@@ -776,6 +787,10 @@ message FleetColumnCatalogEntry {
   // section set `not_shown` because their right-hand label displays `reason`
   // instead.
   CoverageInfo coverage = 5;
+
+  // What the key's value means, shown as a second line under the column name.
+  // Empty for keys whose meaning is clear from the name.
+  string description = 6;
 }
 
 // =============================================================================
@@ -933,6 +948,10 @@ message FleetGroupByKeyEntry {
   // Counted over the unfiltered fleet, whereas `group_count` is computed over
   // the filtered result set.
   CoverageInfo coverage = 5;
+
+  // What the key's value means, shown as a second line under the key name.
+  // Empty for keys whose meaning is clear from the name.
+  string description = 6;
 }
 
 // The group-count display for a group-by key: either nothing, or a count. The

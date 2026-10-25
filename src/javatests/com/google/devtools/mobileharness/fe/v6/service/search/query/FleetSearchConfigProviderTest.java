@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRe
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.KeyDisplay;
 import com.google.inject.Guice;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -85,7 +86,11 @@ public final class FleetSearchConfigProviderTest {
         @Override
         public ImmutableList<DeviceKeyDescriptor> deviceDefaultColumns() {
           return ImmutableList.of(
-              DeviceKeys.UUID, DeviceKeys.HOST_NAME, DeviceKeys.STATUS, DeviceKeys.MODEL);
+              DeviceKeys.UUID,
+              DeviceKeys.HOST_NAME,
+              DeviceKeys.STATUS,
+              DeviceKeys.MODEL,
+              DeviceKeys.VERSION);
         }
 
         @Override
@@ -105,7 +110,11 @@ public final class FleetSearchConfigProviderTest {
 
         @Override
         public ImmutableList<HostKeyDescriptor> hostDefaultColumns() {
-          return ImmutableList.of();
+          return ImmutableList.of(
+              HostKeyDescriptor.builder()
+                  .setId("host_field::lab_type")
+                  .setDisplay(KeyDisplay.of("Lab Type").withDescription("How the lab is managed."))
+                  .build());
         }
 
         @Override
@@ -169,19 +178,25 @@ public final class FleetSearchConfigProviderTest {
             "device_field::uuid",
             "host_field::host_name",
             "device_field::status",
-            "dimension::model")
+            "dimension::model",
+            "device_field::version")
         .inOrder();
 
     assertThat(defaults.get(0).getDisplayName()).isEqualTo("UUID");
     assertThat(defaults.get(1).getDisplayName()).isEqualTo("Host Name");
     assertThat(defaults.get(2).getDisplayName()).isEqualTo("Status");
     assertThat(defaults.get(3).getDisplayName()).isEqualTo("Model");
+    assertThat(defaults.get(4).getDisplayName()).isEqualTo("Version");
+    assertThat(defaults.get(0).getDescription()).isEmpty();
+    assertThat(defaults.get(4).getDescription())
+        .isEqualTo(DeviceKeys.VERSION.display().description());
 
     // The device identifier column is locked; every other default column is removable.
     assertThat(defaults.get(0).getLocked()).isTrue();
     assertThat(defaults.get(1).getLocked()).isFalse();
     assertThat(defaults.get(2).getLocked()).isFalse();
     assertThat(defaults.get(3).getLocked()).isFalse();
+    assertThat(defaults.get(4).getLocked()).isFalse();
   }
 
   @Test
@@ -208,6 +223,8 @@ public final class FleetSearchConfigProviderTest {
 
     assertThat(config.getLanding().getBrowseAllCount()).isEqualTo(snapshot.hosts().size());
     assertThat(config.getLanding().getBrowseAllCount()).isEqualTo(2);
+    assertThat(config.getColumns().getDefaults(0).getDescription())
+        .isEqualTo("How the lab is managed.");
     List<FleetTryCategory> tryCategories = config.getLanding().getTryCategoriesList();
     assertThat(tryCategories).hasSize(2);
     assertThat(tryCategories.get(0).getLabel()).isEqualTo("a value");
@@ -267,7 +284,11 @@ public final class FleetSearchConfigProviderTest {
                 .setCompositeDimension(
                     DeviceCompositeDimension.newBuilder()
                         .addSupportedDimension(
-                            DeviceDimension.newBuilder().setName("model").setValue(model))))
+                            DeviceDimension.newBuilder().setName("model").setValue(model))
+                        .addSupportedDimension(
+                            DeviceDimension.newBuilder()
+                                .setName("release_version")
+                                .setValue("16"))))
         .build();
   }
 }

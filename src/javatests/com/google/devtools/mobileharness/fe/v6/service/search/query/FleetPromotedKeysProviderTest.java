@@ -126,6 +126,46 @@ public final class FleetPromotedKeysProviderTest {
     assertThat(model.getMetadata().getIsPlural()).isFalse();
     assertThat(model.getMetadata().getCanUseAdvanced()).isTrue();
     assertThat(model.getMetadata().getKeyDisplayName()).isEqualTo("Model");
+    assertThat(model.getMetadata().getDescription()).isEmpty();
+  }
+
+  @Test
+  public void filterKeys_populatesMetadataDescriptionWhenPresent() {
+    DeviceInfo versionDevice =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("device-0"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .addType("android_real_device")
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(dimension("release_version", "16"))))
+            .build();
+    LabQueryResult versionLab =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(labData("lab-a", "1.1.1.1", versionDevice)))
+            .build();
+    FleetSnapshot versionSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(versionLab, BUILD_TIME);
+    ScenarioCuration versionCuration =
+        new FakeCuration() {
+          @Override
+          public ImmutableList<DeviceKeyDescriptor> deviceFilterByRow() {
+            return ImmutableList.of(DeviceKeys.VERSION);
+          }
+        };
+    DeviceCorpus versionCorpus =
+        new DeviceCorpus(
+            versionSnapshot, new LazyPostings(versionSnapshot.devices()), versionCuration);
+
+    FleetPromotedKeysResponse response = provider.getPromotedKeys(versionCorpus, request());
+
+    assertThat(filterKey(response, DeviceKeys.VERSION.id()).getMetadata().getDescription())
+        .isEqualTo(DeviceKeys.VERSION.display().description());
   }
 
   @Test
@@ -267,7 +307,7 @@ public final class FleetPromotedKeysProviderTest {
    * trimming assertions below hold over the synthetic fleet regardless of the real deployment
    * curations.
    */
-  private static final class FakeCuration implements ScenarioCuration {
+  private static class FakeCuration implements ScenarioCuration {
     @Override
     public ImmutableList<DeviceKeyDescriptor> deviceFilterByRow() {
       return ImmutableList.of(

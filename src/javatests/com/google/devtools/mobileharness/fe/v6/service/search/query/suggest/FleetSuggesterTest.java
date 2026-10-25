@@ -437,8 +437,47 @@ public final class FleetSuggesterTest {
     FleetSuggestion keyOnly = firstOpenPicker(response, "device_field::status");
     assertThat(keyOnly.getOpenPicker().hasNewChip()).isTrue();
     assertThat(keyOnly.getMainText(0).getText()).isEqualTo("Status");
+    assertThat(keyOnly.getOpenPicker().getMetadata().getDescription()).isEmpty();
     // The value conditions for the same key are also present (IDLE, BUSY).
     assertThat(firstApplyFilter(response, "device_field::status")).isNotNull();
+  }
+
+  @Test
+  public void versionSuggestions_carryKeyDescriptionInMetadata() {
+    FleetSnapshot versionSnapshot =
+        Guice.createInjector()
+            .getInstance(FleetIndexBuilder.class)
+            .build(
+                labOf(
+                    ImmutableList.of(
+                        deviceWith(
+                            "device-0",
+                            DeviceStatus.IDLE,
+                            dimension("release_version", "16"),
+                            dimension("sdk_version", "36"),
+                            dimension("software_version", "16")))),
+                BUILD_TIME);
+    DeviceCorpus versionCorpus =
+        new DeviceCorpus(
+            versionSnapshot, new LazyPostings(versionSnapshot.devices()), new AtsCuration());
+
+    FleetSuggestionResponse response = suggester.suggest(versionCorpus, request("version"));
+
+    ImmutableList<String> openPickerKeys =
+        response.getItemsList().stream()
+            .filter(FleetSuggestion::hasOpenPicker)
+            .map(s -> s.getOpenPicker().getKey())
+            .collect(toImmutableList());
+    assertThat(openPickerKeys.get(0)).isEqualTo("device_field::version");
+    assertThat(openPickerKeys)
+        .containsAtLeast(
+            "device_field::version", "dimension::sdk_version", "dimension::software_version")
+        .inOrder();
+    FleetSuggestion openPicker = firstOpenPicker(response, "device_field::version");
+    assertThat(openPicker.getOpenPicker().getMetadata().getDescription()).isNotEmpty();
+    FleetSuggestion applyFilter = firstApplyFilter(response, "device_field::version");
+    assertThat(applyFilter.getApplyFilter().getMetadata().getDescription())
+        .isEqualTo(openPicker.getOpenPicker().getMetadata().getDescription());
   }
 
   @Test
