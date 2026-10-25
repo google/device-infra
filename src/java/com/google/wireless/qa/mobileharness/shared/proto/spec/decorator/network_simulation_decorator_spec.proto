@@ -1,0 +1,51 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.spec;
+
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.decorator";
+option java_multiple_files = true;
+
+// Specs for {@link NetworkSimulationDecorator}.
+// Next tag: 5
+message NetworkSimulationDecoratorSpec {
+  extend DecoratorSpec {
+    optional NetworkSimulationDecoratorSpec ext = 1030;
+  }
+
+  optional int64 rate_kbps = 1 [(field_detail) = {
+    help: "Bandwidth limit in Kbps (kilobits per second), e.g. 4000 for 4 Mbps. "
+          "Must be greater than 0."
+  }];
+
+  optional int32 delay_ms = 2 [(field_detail) = {
+    help: "Network latency to add, in milliseconds, e.g. 300. Must not be "
+          "negative."
+  }];
+
+  optional int32 delay_distro_ms = 3 [(field_detail) = {
+    help: "Latency jitter in milliseconds (normal distribution around "
+          "delay_ms), e.g. 60. Must not be negative."
+  }];
+
+  optional double loss_percent = 4 [
+    (field_detail) = { help: "Packet loss percentage in [0, 100], e.g. 0.5." }
+  ];
+}
