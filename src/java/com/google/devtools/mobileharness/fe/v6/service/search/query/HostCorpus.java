@@ -145,12 +145,15 @@ public final class HostCorpus implements SearchCorpus {
 
   @Override
   public Column column(String keyId) {
-    String displayName =
+    HostKeyDescriptor desc =
         registry
             .getKey(keyId)
-            .map(HostKeyDisplays::standardDisplayName)
             .orElseThrow(() -> new IllegalArgumentException("Unknown host key: " + keyId));
-    return Column.newBuilder().setKey(keyId).setDisplayName(displayName).build();
+    return Column.newBuilder()
+        .setKey(keyId)
+        .setDisplayName(HostKeyDisplays.standardDisplayName(desc))
+        .setDescription(desc.display().description())
+        .build();
   }
 
   @Override

@@ -330,7 +330,11 @@ public final class FleetGroupByKeyCataloger {
         descriptors.stream()
             .map(
                 desc ->
-                    new CandidateEntry(desc.id(), displayName.apply(desc), showCoverage.test(desc)))
+                    new CandidateEntry(
+                        desc.id(),
+                        displayName.apply(desc),
+                        desc.display().description(),
+                        showCoverage.test(desc)))
             .collect(toImmutableList());
     return new CandidateSection(heading, entries, limit, total, counted);
   }
@@ -387,6 +391,7 @@ public final class FleetGroupByKeyCataloger {
             FleetGroupByKeyEntry.newBuilder()
                 .setKey(keyId)
                 .setDisplayName(candidate.displayName())
+                .setDescription(candidate.description())
                 .setGroupCount(countInfo)
                 .setCoverage(
                     KeyCatalogs.coverage(
@@ -411,7 +416,8 @@ public final class FleetGroupByKeyCataloger {
   }
 
   /** One key offered in a section, before its group count is decided. */
-  private record CandidateEntry(String keyId, String displayName, boolean showCoverage) {}
+  private record CandidateEntry(
+      String keyId, String displayName, String description, boolean showCoverage) {}
 
   /**
    * One section before group counts are decided.

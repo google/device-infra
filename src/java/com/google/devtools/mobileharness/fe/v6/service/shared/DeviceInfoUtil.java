@@ -32,13 +32,16 @@ public final class DeviceInfoUtil {
   private DeviceInfoUtil() {}
 
   /**
-   * Gets the version of a device from its dimensions. Prioritizes 'release_version' over
-   * 'software_version', defaulting to an empty string.
+   * Gets the version of a device from its dimensions. Prioritizes a non-empty 'release_version'
+   * over 'software_version', defaulting to an empty string.
    */
   public static String getVersion(Map<String, String> dimensions) {
-    return dimensions.getOrDefault(
-        Dimension.Name.RELEASE_VERSION.lowerCaseName(),
-        dimensions.getOrDefault(Dimension.Name.SOFTWARE_VERSION.lowerCaseName(), ""));
+    String releaseVersion =
+        dimensions.getOrDefault(Dimension.Name.RELEASE_VERSION.lowerCaseName(), "");
+    if (!releaseVersion.isEmpty()) {
+      return releaseVersion;
+    }
+    return dimensions.getOrDefault(Dimension.Name.SOFTWARE_VERSION.lowerCaseName(), "");
   }
 
   /**

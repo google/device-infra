@@ -322,9 +322,34 @@ public final class KeyVocabularyTest {
 
   @Test
   public void resolve_keepsSharedAliasesInRegistryOrder() {
-    assertThat(device.resolve("version"))
-        .containsExactly(DeviceKeys.SDK_VERSION, DeviceKeys.SOFTWARE_VERSION)
+    DeviceKeyDescriptor first =
+        DeviceKeyDescriptor.builder()
+            .setId(DeviceKeys.dimensionKeyId("primary_build"))
+            .setDisplay(KeyDisplay.of("Primary Build"))
+            .setAliases("build")
+            .setIsDimension(true)
+            .build();
+    DeviceKeyDescriptor second =
+        DeviceKeyDescriptor.builder()
+            .setId(DeviceKeys.dimensionKeyId("fallback_build"))
+            .setDisplay(KeyDisplay.of("Fallback Build"))
+            .setAliases("build")
+            .setIsDimension(true)
+            .build();
+    DeviceKeyRegistry sharedAliasRegistry =
+        new DeviceKeyRegistry(ImmutableList.of(first, second)) {};
+
+    assertThat(deviceVocabulary(sharedAliasRegistry, null).resolve("build"))
+        .containsExactly(first, second)
         .inOrder();
+  }
+
+  @Test
+  public void resolve_versionMeansTheDeviceVersionKey() {
+    assertThat(device.resolve("version")).containsExactly(DeviceKeys.VERSION);
+    assertThat(device.resolve("os version")).containsExactly(DeviceKeys.VERSION);
+    assertThat(device.resolve("sdk")).containsExactly(DeviceKeys.SDK_VERSION);
+    assertThat(device.resolve("api level")).containsExactly(DeviceKeys.SDK_VERSION);
     assertThat(host.resolve("version")).containsExactly(HostKeys.LAB_SERVER_VERSION);
   }
 
