@@ -2,7 +2,7 @@ import {ChangeDetectorRef} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {MatDialog} from '@angular/material/dialog';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
-import {provideRouter} from '@angular/router';
+import {provideRouter, Router} from '@angular/router';
 import {ActionBarAction} from '@deviceinfra/app/core/constants/action_bar_config';
 import {APP_DATA} from '@deviceinfra/app/core/models/app_data';
 import {of, Subject} from 'rxjs';
@@ -387,5 +387,35 @@ describe('DeviceActionBar', () => {
       '1.2.3.4',
       '',
     );
+  });
+
+  it('opens device configuration for openDeviceConfig=true and removes the parameter', async () => {
+    const router = TestBed.inject(Router);
+    const navigateSpy = spyOn(router, 'navigate').and.callThrough();
+
+    await router.navigate([], {queryParams: {'openDeviceConfig': 'true'}});
+
+    expect(deviceActionService.configureDevice).toHaveBeenCalledOnceWith(
+      'test-device',
+      'test-host',
+      '1.2.3.4',
+      '',
+    );
+    expect(navigateSpy).toHaveBeenCalledWith(
+      [],
+      jasmine.objectContaining({
+        queryParams: {'openDeviceConfig': null},
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      }),
+    );
+  });
+
+  it('does not open device configuration without openDeviceConfig=true', async () => {
+    await TestBed.inject(Router).navigate([], {
+      queryParams: {'openDeviceConfig': 'false'},
+    });
+
+    expect(deviceActionService.configureDevice).not.toHaveBeenCalled();
   });
 });

@@ -254,5 +254,21 @@ describe('TestDetail Component', () => {
     expect(runningFixture.componentInstance.killActionState()?.enabled).toBeTrue();
     expect(runningFixture.componentInstance.killActionState()?.visible).toBeTrue();
   }));
+
+  it('renders timeline legacy link with redirect_to_v6=0', fakeAsync(() => {
+    fixture.detectChanges();
+    tick();
+    component.setActiveTab('timeline');
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const timelineLink = compiled.querySelector(
+      '.under-development-text a',
+    ) as HTMLAnchorElement | null;
+    expect(timelineLink).not.toBeNull();
+    expect(timelineLink?.getAttribute('href')).toBe(
+      `${component.legacyFeUrl}/testdetailview/job_456/test_123?tab=2&redirect_to_v6=0`,
+    );
+  }));
 });
 

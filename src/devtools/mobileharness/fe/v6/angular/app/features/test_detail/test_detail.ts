@@ -19,7 +19,11 @@ import {useJobActions} from '@deviceinfra/app/shared/composables/job_actions';
 import {usePageTitle} from '@deviceinfra/app/shared/composables/page_title';
 import {useSilentResource} from '@deviceinfra/app/shared/composables/silent_resource';
 import {JOB_ACTION_UI_CONFIG} from '../../core/constants/action_bar_config';
-import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
+import {
+  APP_DATA,
+  getLegacyFeUrl,
+  stayOnLegacyFe,
+} from '../../core/models/app_data';
 import {
   GetTestRequest,
   TestResult,
@@ -71,6 +75,7 @@ export class TestDetail {
   private readonly appData = inject(APP_DATA);
   protected readonly jobActions = useJobActions();
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
+  readonly stayOnLegacyFe = stayOnLegacyFe;
   readonly copyToClipboard = useCopyToClipboard();
   readonly jobActionUiConfig = JOB_ACTION_UI_CONFIG;
   readonly isKillingJob = this.jobActions.isKillingJob;

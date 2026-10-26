@@ -26,6 +26,7 @@ import {
 } from 'rxjs';
 import {
   catchError,
+  distinctUntilChanged,
   map,
   scan,
   shareReplay,
@@ -139,9 +140,13 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
 
   ngOnInit() {
     combineLatest([
-      this.route.paramMap.pipe(map((params) => params.get('id'))),
+      this.route.paramMap.pipe(
+        map((params) => params.get('id')),
+        distinctUntilChanged(),
+      ),
       this.route.queryParamMap.pipe(
         map((params) => params.get('is_embedded_mode') === 'true'),
+        distinctUntilChanged(),
       ),
     ])
       .pipe(takeUntil(this.destroyed))
@@ -174,8 +179,14 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
   }
 
   readonly devicePageData$: Observable<DevicePageData> = combineLatest([
-    this.route.paramMap.pipe(map((params) => params.get('id'))),
-    this.route.queryParamMap.pipe(map((params) => params.get('host_name'))),
+    this.route.paramMap.pipe(
+      map((params) => params.get('id')),
+      distinctUntilChanged(),
+    ),
+    this.route.queryParamMap.pipe(
+      map((params) => params.get('host_name')),
+      distinctUntilChanged(),
+    ),
   ]).pipe(
     switchMap(
       /**

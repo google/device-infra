@@ -14,7 +14,11 @@ import {ActivatedRoute, RouterModule} from '@angular/router';
 import {of} from 'rxjs';
 import {catchError, map} from 'rxjs/operators';
 import {JOB_ACTION_UI_CONFIG} from '../../core/constants/action_bar_config';
-import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
+import {
+  APP_DATA,
+  getLegacyFeUrl,
+  stayOnLegacyFe,
+} from '../../core/models/app_data';
 import {
   GetJobRequest,
   JobOverviewData,
@@ -68,6 +72,7 @@ export class JobDetail {
   protected readonly jobActions = useJobActions();
   readonly isKillingJob = this.jobActions.isKillingJob;
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
+  readonly stayOnLegacyFe = stayOnLegacyFe;
   readonly copyToClipboard = useCopyToClipboard();
 
   readonly jobActionUiConfig = JOB_ACTION_UI_CONFIG;

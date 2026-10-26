@@ -45,6 +45,7 @@ import {
   type AppData,
   getLegacyFeUrl,
   getOmniLabUrl,
+  stayOnLegacyFe,
 } from '@deviceinfra/app/core/models/app_data';
 import {CommonParamsService} from '@deviceinfra/app/core/services/common_params_service';
 import {UrlService} from '@deviceinfra/app/core/services/url_service';
@@ -94,6 +95,7 @@ export class App implements OnDestroy {
   private readonly router: Router = inject(Router);
   readonly appData: AppData = inject(APP_DATA);
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
+  readonly stayOnLegacyFe = stayOnLegacyFe;
   readonly omniLabUrl = getOmniLabUrl(this.appData.applicationId ?? '');
   readonly loadingService = inject(LoadingService);
   private readonly urlService = inject(UrlService);

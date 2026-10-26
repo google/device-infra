@@ -63,6 +63,25 @@ export function getLegacyFeUrl(applicationId: string): string {
   return '';
 }
 
+/** The query parameter with which FE v5 serves a page itself instead of forwarding it to FE v6. */
+const LEGACY_FE_STAY_QUERY = 'redirect_to_v6=0';
+
+/**
+ * Returns a FE v5 URL that FE v5 serves itself rather than forwarding the visit back to FE v6.
+ * Every FE v6 link to FE v5 goes through this, so a user who chose the legacy page stays there
+ * when the FE v5 redirect is on. Any fragment stays at the end; an empty URL stays empty.
+ */
+export function stayOnLegacyFe(url: string): string {
+  if (!url) {
+    return url;
+  }
+  const hashIndex = url.indexOf('#');
+  const beforeHash = hashIndex >= 0 ? url.slice(0, hashIndex) : url;
+  const hash = hashIndex >= 0 ? url.slice(hashIndex) : '';
+  const separator = beforeHash.includes('?') ? '&' : '?';
+  return `${beforeHash}${separator}${LEGACY_FE_STAY_QUERY}${hash}`;
+}
+
 /** Gets the OmniLab url. */
 export function getOmniLabUrl(applicationId: string): string {
   let url = '';

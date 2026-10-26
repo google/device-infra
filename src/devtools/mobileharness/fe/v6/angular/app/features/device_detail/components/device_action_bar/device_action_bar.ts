@@ -3,9 +3,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  DestroyRef,
   inject,
   input,
+  OnInit,
 } from '@angular/core';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
 import {MatDialog} from '@angular/material/dialog';
 import {MatIconModule} from '@angular/material/icon';
 import {MatMenuModule} from '@angular/material/menu';
@@ -49,7 +52,7 @@ import {ComingSoonService} from '../../../../shared/services/coming_soon_service
   styleUrl: './device_action_bar.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class DeviceActionBar {
+export class DeviceActionBar implements OnInit {
   protected readonly deviceActions = useDeviceActions();
 
   /**
@@ -146,10 +149,32 @@ export class DeviceActionBar {
   private readonly router = inject(Router);
   private readonly snackBar = inject(SnackBarService);
   private readonly urlService = inject(UrlService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
 
   readonly pageData = input.required<DeviceOverviewPageData>();
+
+  /**
+   * Opens the device configuration dialog when the page URL carries `openDeviceConfig=true`, then
+   * removes the parameter so a reload does not open it again. FE v5's device config page links
+   * here this way.
+   */
+  ngOnInit() {
+    this.route.queryParams
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        if (params['openDeviceConfig'] === 'true') {
+          this.onConfiguration();
+          this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: {'openDeviceConfig': null},
+            queryParamsHandling: 'merge',
+            replaceUrl: true,
+          });
+        }
+      });
+  }
 
   protected readonly actions = computed(
     () => this.pageData().headerInfo.actions,

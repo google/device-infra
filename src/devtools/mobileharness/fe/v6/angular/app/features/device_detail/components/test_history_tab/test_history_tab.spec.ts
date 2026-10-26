@@ -89,6 +89,15 @@ describe('TestHistoryTab Component', () => {
     });
   });
 
+  it('builds the legacy test detail link with redirect_to_v6=0', () => {
+    expect(
+      component.linkHref({
+        text: 't1',
+        target: {test: {testId: 't1', jobId: 'j1'}},
+      }),
+    ).toBe('http://mhfe/testdetailview/j1/t1?redirect_to_v6=0');
+  });
+
   it('returns null for unsupported link targets', () => {
     expect(
       component.getNavLinkConfig({

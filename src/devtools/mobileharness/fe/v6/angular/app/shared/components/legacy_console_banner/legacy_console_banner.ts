@@ -4,6 +4,7 @@ import {toSignal} from '@angular/core/rxjs-interop';
 import {MatIconModule} from '@angular/material/icon';
 import {ActivatedRoute} from '@angular/router';
 import {map} from 'rxjs/operators';
+import {stayOnLegacyFe} from '../../../core/models/app_data';
 import {EnvUniverseService} from '../../../core/services/env_universe_service';
 
 /**
@@ -25,6 +26,9 @@ export class LegacyConsoleBanner {
   readonly bannerType = input.required<
     'host' | 'device' | 'session' | 'job' | 'test'
   >();
+
+  /** The legacy page link, which FE v5 serves itself rather than forwarding back here. */
+  readonly legacyHref = computed(() => stayOnLegacyFe(this.legacyUrl()));
 
   private readonly isStandalone = toSignal(
     this.route.queryParamMap.pipe(

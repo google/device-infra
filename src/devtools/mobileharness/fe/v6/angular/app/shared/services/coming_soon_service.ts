@@ -5,6 +5,7 @@ import {
   ActionBarAction,
   ActionContext,
 } from '@deviceinfra/app/core/constants/action_bar_config';
+import {stayOnLegacyFe} from '../../core/models/app_data';
 import {ComingSoonDialog} from '../components/coming_soon_dialog/coming_soon_dialog';
 
 /**
@@ -53,7 +54,9 @@ export class ComingSoonService {
         message,
         icon: 'construction',
         confirmLabel: 'Go to Legacy Page',
-        legacyPageUrl,
+        legacyPageUrl: legacyPageUrl
+          ? stayOnLegacyFe(legacyPageUrl)
+          : undefined,
         legacyScreenshotLink,
       },
       panelClass: 'coming-soon-dialog-panel',

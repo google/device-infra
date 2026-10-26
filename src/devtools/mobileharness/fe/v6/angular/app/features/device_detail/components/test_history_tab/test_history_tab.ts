@@ -21,6 +21,7 @@ import {
   NavLink,
   NavLinkConfig,
 } from '@deviceinfra/app/shared/components/nav_link/nav_link';
+import {stayOnLegacyFe} from '../../../../core/models/app_data';
 import {
   Indicator,
   LinkCell,
@@ -181,7 +182,7 @@ export class TestHistoryTab implements OnInit {
     if (!testId || !jobId) {
       console.error('Missing testId or jobId for link:', link);
     }
-    return `http://mhfe/testdetailview/${jobId}/${testId}`;
+    return stayOnLegacyFe(`http://mhfe/testdetailview/${jobId}/${testId}`);
   }
 
   /**
