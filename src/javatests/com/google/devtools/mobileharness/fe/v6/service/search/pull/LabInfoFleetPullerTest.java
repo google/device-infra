@@ -125,6 +125,8 @@ public final class LabInfoFleetPullerTest {
     assertThat(raw.keyId()).isEqualTo("dimension::carrier");
     assertThat(raw.uuidToValues())
         .containsExactly("dev-1", ImmutableList.of("Verizon", "T-Mobile"));
+    assertThat(labInfoProvider.lastRequest.getLabQuery().getMask().getLabInfoMask())
+        .isEqualTo(LabInfoMask.newBuilder().setFieldMask(FieldMask.getDefaultInstance()).build());
     assertThat(
             labInfoProvider
                 .lastRequest
