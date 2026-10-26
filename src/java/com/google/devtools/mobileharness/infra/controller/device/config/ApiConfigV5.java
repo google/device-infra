@@ -67,7 +67,7 @@ public class ApiConfigV5 implements ApiConfig {
   private static final int DEFAULT_MAX_CONSECUTIVE_FAILS = 5;
   private static final int DEFAULT_MAX_CONSECUTIVE_TESTS = 10000;
   public static final String DEVICE_DEFAULT_OWNER = "mobileharness-device-default-owner";
-  private static final String DEVICE_DEFAULT_EXECUTOR = "mobileharness-device-default-executor";
+  public static final String DEVICE_DEFAULT_EXECUTOR = "mobileharness-device-default-executor";
 
   // The Key of device config mode. The value of this param is "device" by default.
   private static final String DEVICE_CONFIG_MODE_KEY = "device_config_mode";
@@ -323,39 +323,22 @@ public class ApiConfigV5 implements ApiConfig {
     if (deviceConfig != null) {
       return Optional.of(deviceConfig);
     }
+    DeviceConfig tenantConfig = tenantDeviceConfigs.get(deviceControlId);
+    if (tenantConfig != null) {
+      BasicDeviceConfig basic = tenantConfig.getBasicConfig();
+      if (basic.getOwnerCount() > 0 || basic.getExecutorCount() > 0) {
+        return Optional.empty();
+      }
+    }
     Optional<DeviceId> deviceId = deviceIdManager.getDeviceIdFromControlId(deviceControlId);
     // For the device with stable UUID, need to store default device config if it has not been
     // configured before.
     if (deviceId.isPresent() && !deviceId.get().isUuidVolatile()) {
-      if (!labConfig.getDefaultDeviceConfig().equals(BasicDeviceConfig.getDefaultInstance())) {
-        BasicDeviceConfig.Builder defaultDeviceConfig =
-            labConfig.getDefaultDeviceConfig().toBuilder();
-        if (!isDefaultPublic) {
-          if (defaultDeviceConfig.getOwnerCount() == 0) {
-            defaultDeviceConfig.addOwner(DEVICE_DEFAULT_OWNER);
-          }
-          if (defaultDeviceConfig.getExecutorCount() == 0) {
-            defaultDeviceConfig.addExecutor(DEVICE_DEFAULT_EXECUTOR);
-          }
-        }
-        return Optional.of(
-            DeviceConfig.newBuilder()
-                .setUuid(deviceId.get().uuid())
-                .setBasicConfig(defaultDeviceConfig)
-                .build());
-      } else if (isDefaultPublic) {
-        return Optional.of(
-            DeviceConfig.newBuilder()
-                .setUuid(deviceId.get().uuid())
-                .setBasicConfig(getPublicBasicDeviceConfig())
-                .build());
-      } else {
-        return Optional.of(
-            DeviceConfig.newBuilder()
-                .setUuid(deviceId.get().uuid())
-                .setBasicConfig(getBasicDeviceConfigWithDefaultOwner())
-                .build());
-      }
+      return Optional.of(
+          DeviceConfig.newBuilder()
+              .setUuid(deviceId.get().uuid())
+              .setBasicConfig(getDefaultBasicDeviceConfig())
+              .build());
     }
     return Optional.empty();
   }
@@ -436,11 +419,16 @@ public class ApiConfigV5 implements ApiConfig {
   }
 
   private BasicDeviceConfig getBasicDeviceConfig(String deviceControlId) {
+    Optional<DeviceId> deviceId = deviceIdManager.getDeviceIdFromControlId(deviceControlId);
     if (basicDeviceConfigMerger.enabled() && tenantDeviceConfigs.containsKey(deviceControlId)) {
-      BasicDeviceConfigSet.Builder basicDeviceConfigSetBuilder = BasicDeviceConfigSet.builder();
-      if (labConfig.hasDefaultDeviceConfig()) {
-        basicDeviceConfigSetBuilder.setLabConfig(labConfig.getDefaultDeviceConfig());
-      }
+      BasicDeviceConfig defaultLabConfig =
+          (isHostMode()
+                  || (deviceId.isPresent() && deviceId.get().isUuidVolatile())
+                  || deviceConfigs.containsKey(deviceControlId))
+              ? labConfig.getDefaultDeviceConfig()
+              : getDefaultBasicDeviceConfig();
+      BasicDeviceConfigSet.Builder basicDeviceConfigSetBuilder =
+          BasicDeviceConfigSet.builder().setLabConfig(defaultLabConfig);
       if (tenantDeviceConfigs.containsKey(deviceControlId)) {
         basicDeviceConfigSetBuilder.setTenantConfig(
             tenantDeviceConfigs.get(deviceControlId).getBasicConfig());
@@ -453,7 +441,6 @@ public class ApiConfigV5 implements ApiConfig {
     }
     // Legacy implementation below
     DeviceConfig deviceConfig = deviceConfigs.get(deviceControlId);
-    Optional<DeviceId> deviceId = deviceIdManager.getDeviceIdFromControlId(deviceControlId);
 
     if (isHostMode()) {
       return labConfig.getDefaultDeviceConfig();
@@ -461,6 +448,22 @@ public class ApiConfigV5 implements ApiConfig {
       return deviceConfig.getBasicConfig();
     } else if (deviceId.isPresent() && deviceId.get().isUuidVolatile()) {
       return labConfig.getDefaultDeviceConfig();
+    } else {
+      return getDefaultBasicDeviceConfig();
+    }
+  }
+
+  private BasicDeviceConfig getDefaultBasicDeviceConfig() {
+    if (!labConfig.getDefaultDeviceConfig().equals(BasicDeviceConfig.getDefaultInstance())) {
+      BasicDeviceConfig.Builder defaultDeviceConfig =
+          labConfig.getDefaultDeviceConfig().toBuilder();
+      if (!isDefaultPublic
+          && defaultDeviceConfig.getOwnerCount() == 0
+          && defaultDeviceConfig.getExecutorCount() == 0) {
+        defaultDeviceConfig.addOwner(DEVICE_DEFAULT_OWNER);
+        defaultDeviceConfig.addExecutor(DEVICE_DEFAULT_EXECUTOR);
+      }
+      return defaultDeviceConfig.build();
     } else if (isDefaultPublic) {
       return getPublicBasicDeviceConfig();
     } else {

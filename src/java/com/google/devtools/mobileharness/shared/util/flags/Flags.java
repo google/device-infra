@@ -579,6 +579,11 @@ public class Flags {
   public static final Flag<Boolean> deviceAdminLockRequired = Flag.value(false);
 
   @FlagSpec(
+      name = "device_config_manager_read_only",
+      help = "Whether device config manager is read only. Default is true.")
+  public static final Flag<Boolean> deviceConfigManagerReadOnly = Flag.value(true);
+
+  @FlagSpec(
       name = "device_list_to_debug_allocation",
       help = "The list of serial ids of the devices to debug allocation.")
   public static final Flag<List<String>> deviceListToDebugAllocation = Flag.stringList();
