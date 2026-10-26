@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.shared.auth;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 
 /** Checks the caller's Cloud IAM access to MobileHarness device and host resources. */
@@ -24,6 +25,18 @@ public interface IamPermissionChecker {
 
   /** Checks mobileharness.device.config permission (owner only) for a device. */
   ListenableFuture<Boolean> canConfigDevice(String deviceId, UniverseScope universe);
+
+  /**
+   * Checks mobileharness.device.config permission (owner only) for a device whose effective
+   * configuration the caller has already loaded.
+   *
+   * <p>Implementations that fall back to the device owners when Cloud IAM denies access read them
+   * from {@code effectiveDeviceConfig} instead of loading the device again.
+   */
+  default ListenableFuture<Boolean> canConfigDevice(
+      String deviceId, DeviceConfig effectiveDeviceConfig, UniverseScope universe) {
+    return canConfigDevice(deviceId, universe);
+  }
 
   /** Checks mobileharness.labdefaultdevice.config permission (owner only) for a host. */
   ListenableFuture<Boolean> canConfigHost(String hostName, UniverseScope universe);

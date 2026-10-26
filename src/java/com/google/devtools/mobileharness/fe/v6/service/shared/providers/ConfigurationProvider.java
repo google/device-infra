@@ -16,11 +16,14 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.shared.providers;
 
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
+
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.List;
+import java.util.Map;
 
 /** Interface for fetching and updating device and lab configurations. */
 public interface ConfigurationProvider {
@@ -34,6 +37,17 @@ public interface ConfigurationProvider {
 
   ListenableFuture<Void> updateDeviceConfig(
       String deviceId, DeviceConfig deviceConfig, UniverseScope universe);
+
+  /**
+   * Writes {@code deviceConfigs} (keyed by device ID) in a single batch request.
+   *
+   * @return a map from device ID to error message containing only the devices whose update failed
+   */
+  default ListenableFuture<Map<String, String>> updateDeviceConfigs(
+      Map<String, DeviceConfig> deviceConfigs, UniverseScope universe) {
+    return immediateFailedFuture(
+        new UnsupportedOperationException("updateDeviceConfigs is not implemented"));
+  }
 
   ListenableFuture<Void> updateLabConfig(
       String hostName, LabConfig labConfig, UniverseScope universe);

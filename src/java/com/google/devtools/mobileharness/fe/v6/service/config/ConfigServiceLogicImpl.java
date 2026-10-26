@@ -19,18 +19,25 @@ package com.google.devtools.mobileharness.fe.v6.service.config;
 import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.config.handlers.BatchGetConfigurableDimensionKeysHandler;
+import com.google.devtools.mobileharness.fe.v6.service.config.handlers.BatchGetDeviceDimensionConfigsHandler;
+import com.google.devtools.mobileharness.fe.v6.service.config.handlers.BatchGetDeviceWifiConfigsHandler;
+import com.google.devtools.mobileharness.fe.v6.service.config.handlers.BatchUpdateDeviceDimensionConfigsHandler;
+import com.google.devtools.mobileharness.fe.v6.service.config.handlers.BatchUpdateDeviceWifiConfigsHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.CheckDeviceConfigPermissionHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.CheckDeviceWritePermissionHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.CheckHostConfigPermissionHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.CheckHostWritePermissionHandler;
+import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetConfigurableDimensionsHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetDeviceConfigHandler;
+import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetDimensionValueSuggestionsHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetHostConfigHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetHostDefaultDeviceConfigHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetRecommendedWifiHandler;
+import com.google.devtools.mobileharness.fe.v6.service.config.handlers.GetWifiSuggestionsHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.UnlockHostPropertiesHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.UpdateDeviceConfigHandler;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.UpdateHostConfigHandler;
-import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetConfigurableDimensionKeysRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetConfigurableDimensionKeysResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDeviceDimensionConfigsRequest;
@@ -79,9 +86,6 @@ import javax.inject.Singleton;
 @Singleton
 public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
 
-  private static final String BATCH_CONFIG_UNIMPLEMENTED_MESSAGE =
-      "Batch device configuration is not implemented yet";
-
   private final GetDeviceConfigHandler getDeviceConfigHandler;
 
   @SuppressWarnings("deprecation") // Legacy CheckDeviceWritePermission RPC remains supported.
@@ -99,6 +103,14 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
   private final CheckHostConfigPermissionHandler checkHostConfigPermissionHandler;
   private final UpdateHostConfigHandler updateHostConfigHandler;
   private final UnlockHostPropertiesHandler unlockHostPropertiesHandler;
+  private final GetConfigurableDimensionsHandler getConfigurableDimensionsHandler;
+  private final BatchGetConfigurableDimensionKeysHandler batchGetConfigurableDimensionKeysHandler;
+  private final GetDimensionValueSuggestionsHandler getDimensionValueSuggestionsHandler;
+  private final BatchGetDeviceDimensionConfigsHandler batchGetDeviceDimensionConfigsHandler;
+  private final BatchUpdateDeviceDimensionConfigsHandler batchUpdateDeviceDimensionConfigsHandler;
+  private final GetWifiSuggestionsHandler getWifiSuggestionsHandler;
+  private final BatchGetDeviceWifiConfigsHandler batchGetDeviceWifiConfigsHandler;
+  private final BatchUpdateDeviceWifiConfigsHandler batchUpdateDeviceWifiConfigsHandler;
   private final UniverseFactory universeFactory;
 
   @Inject
@@ -115,6 +127,14 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
       CheckHostConfigPermissionHandler checkHostConfigPermissionHandler,
       UpdateHostConfigHandler updateHostConfigHandler,
       UnlockHostPropertiesHandler unlockHostPropertiesHandler,
+      GetConfigurableDimensionsHandler getConfigurableDimensionsHandler,
+      BatchGetConfigurableDimensionKeysHandler batchGetConfigurableDimensionKeysHandler,
+      GetDimensionValueSuggestionsHandler getDimensionValueSuggestionsHandler,
+      BatchGetDeviceDimensionConfigsHandler batchGetDeviceDimensionConfigsHandler,
+      BatchUpdateDeviceDimensionConfigsHandler batchUpdateDeviceDimensionConfigsHandler,
+      GetWifiSuggestionsHandler getWifiSuggestionsHandler,
+      BatchGetDeviceWifiConfigsHandler batchGetDeviceWifiConfigsHandler,
+      BatchUpdateDeviceWifiConfigsHandler batchUpdateDeviceWifiConfigsHandler,
       UniverseFactory universeFactory) {
     this.getDeviceConfigHandler = getDeviceConfigHandler;
     this.checkDeviceWritePermissionHandler = checkDeviceWritePermissionHandler;
@@ -127,6 +147,14 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
     this.checkHostConfigPermissionHandler = checkHostConfigPermissionHandler;
     this.updateHostConfigHandler = updateHostConfigHandler;
     this.unlockHostPropertiesHandler = unlockHostPropertiesHandler;
+    this.getConfigurableDimensionsHandler = getConfigurableDimensionsHandler;
+    this.batchGetConfigurableDimensionKeysHandler = batchGetConfigurableDimensionKeysHandler;
+    this.getDimensionValueSuggestionsHandler = getDimensionValueSuggestionsHandler;
+    this.batchGetDeviceDimensionConfigsHandler = batchGetDeviceDimensionConfigsHandler;
+    this.batchUpdateDeviceDimensionConfigsHandler = batchUpdateDeviceDimensionConfigsHandler;
+    this.getWifiSuggestionsHandler = getWifiSuggestionsHandler;
+    this.batchGetDeviceWifiConfigsHandler = batchGetDeviceWifiConfigsHandler;
+    this.batchUpdateDeviceWifiConfigsHandler = batchUpdateDeviceWifiConfigsHandler;
     this.universeFactory = universeFactory;
   }
 
@@ -269,57 +297,101 @@ public final class ConfigServiceLogicImpl implements ConfigServiceLogic {
   @Override
   public ListenableFuture<GetConfigurableDimensionsResponse> getConfigurableDimensions(
       GetConfigurableDimensionsRequest request) {
-    return immediateFailedFuture(
-        FeServiceException.unimplemented(BATCH_CONFIG_UNIMPLEMENTED_MESSAGE));
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return getConfigurableDimensionsHandler.getConfigurableDimensions(request, universe);
   }
 
   @Override
   public ListenableFuture<BatchGetConfigurableDimensionKeysResponse>
       batchGetConfigurableDimensionKeys(BatchGetConfigurableDimensionKeysRequest request) {
-    return immediateFailedFuture(
-        FeServiceException.unimplemented(BATCH_CONFIG_UNIMPLEMENTED_MESSAGE));
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return batchGetConfigurableDimensionKeysHandler.batchGetConfigurableDimensionKeys(
+        request, universe);
   }
 
   @Override
   public ListenableFuture<GetDimensionValueSuggestionsResponse> getDimensionValueSuggestions(
       GetDimensionValueSuggestionsRequest request) {
-    return immediateFailedFuture(
-        FeServiceException.unimplemented(BATCH_CONFIG_UNIMPLEMENTED_MESSAGE));
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return getDimensionValueSuggestionsHandler.getDimensionValueSuggestions(request, universe);
   }
 
   @Override
   public ListenableFuture<BatchGetDeviceDimensionConfigsResponse> batchGetDeviceDimensionConfigs(
       BatchGetDeviceDimensionConfigsRequest request, Optional<String> username) {
-    return immediateFailedFuture(
-        FeServiceException.unimplemented(BATCH_CONFIG_UNIMPLEMENTED_MESSAGE));
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return batchGetDeviceDimensionConfigsHandler.batchGetDeviceDimensionConfigs(
+        request, universe, username);
   }
 
   @Override
   public ListenableFuture<BatchUpdateDeviceDimensionConfigsResponse>
       batchUpdateDeviceDimensionConfigs(
           BatchUpdateDeviceDimensionConfigsRequest request, Optional<String> username) {
-    return immediateFailedFuture(
-        FeServiceException.unimplemented(BATCH_CONFIG_UNIMPLEMENTED_MESSAGE));
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return batchUpdateDeviceDimensionConfigsHandler.batchUpdateDeviceDimensionConfigs(
+        request, universe, username);
   }
 
   @Override
   public ListenableFuture<GetWifiSuggestionsResponse> getWifiSuggestions(
       GetWifiSuggestionsRequest request) {
-    return immediateFailedFuture(
-        FeServiceException.unimplemented(BATCH_CONFIG_UNIMPLEMENTED_MESSAGE));
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return getWifiSuggestionsHandler.getWifiSuggestions(request, universe);
   }
 
   @Override
   public ListenableFuture<BatchGetDeviceWifiConfigsResponse> batchGetDeviceWifiConfigs(
       BatchGetDeviceWifiConfigsRequest request, Optional<String> username) {
-    return immediateFailedFuture(
-        FeServiceException.unimplemented(BATCH_CONFIG_UNIMPLEMENTED_MESSAGE));
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return batchGetDeviceWifiConfigsHandler.batchGetDeviceWifiConfigs(request, universe, username);
   }
 
   @Override
   public ListenableFuture<BatchUpdateDeviceWifiConfigsResponse> batchUpdateDeviceWifiConfigs(
       BatchUpdateDeviceWifiConfigsRequest request, Optional<String> username) {
-    return immediateFailedFuture(
-        FeServiceException.unimplemented(BATCH_CONFIG_UNIMPLEMENTED_MESSAGE));
+    UniverseScope universe;
+    try {
+      universe = universeFactory.create(request.getUniverse());
+    } catch (IllegalArgumentException e) {
+      return immediateFailedFuture(e);
+    }
+    return batchUpdateDeviceWifiConfigsHandler.batchUpdateDeviceWifiConfigs(
+        request, universe, username);
   }
 }
