@@ -894,6 +894,9 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
           }
         }
         continue;
+      } catch (RuntimeException e) {
+        rethrowIfInterrupted(e);
+        throw e;
       }
 
       // Update root testInfo.
@@ -906,6 +909,22 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
       }
     }
     logger.atWarning().log("Timeout on device(s) %s!", deviceLocators);
+  }
+
+  /**
+   * Throws the {@link InterruptedException} that caused {@code e}, if any.
+   *
+   * <p>A blocking RPC that is interrupted (e.g., because the test is killed) may throw an unchecked
+   * exception caused by the {@link InterruptedException}, instead of the {@link
+   * InterruptedException} itself. Rethrowing it lets the test be handled like any other interrupted
+   * test rather than as a test runner fatal error. Like a directly thrown {@link
+   * InterruptedException}, it clears the interrupted status that the unchecked exception set.
+   */
+  private static void rethrowIfInterrupted(RuntimeException e) throws InterruptedException {
+    if (e.getCause() instanceof InterruptedException interruptedException) {
+      Thread.interrupted();
+      throw interruptedException;
+    }
   }
 
   /** Gets the test generated properties and downloads the generated files from lab server. */
