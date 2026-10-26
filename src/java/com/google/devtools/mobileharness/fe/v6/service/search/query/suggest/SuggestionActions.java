@@ -136,6 +136,7 @@ final class SuggestionActions {
         .setKeyDisplayName(vocabulary.titleDisplayName(key))
         .setCanUseAdvanced(true)
         .setIsPlural(key.display().isPlural())
+        .setDescription(key.display().description())
         .build();
   }
 

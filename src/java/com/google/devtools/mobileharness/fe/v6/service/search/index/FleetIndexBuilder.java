@@ -306,6 +306,7 @@ public final class FleetIndexBuilder {
     }
 
     values.put(DEVICE_FIELD_QUARANTINED, ImmutableList.of(isQuarantined(condition) ? "Yes" : "No"));
+    addVersion(values, deviceInfo);
     addSdkOrSoftwareVersion(values, deviceInfo);
 
     // Dimensions: append supported and required directly without deduplicating.
@@ -327,6 +328,25 @@ public final class FleetIndexBuilder {
         .ifPresent(s -> values.put(AtsDeviceKeys.WIFI_SSID.id(), ImmutableList.of(s)));
 
     return DeviceRecord.create(deviceId, values.buildOrThrow());
+  }
+
+  /**
+   * Adds the device's version: the values of the first {@link DeviceKeys#VERSION} source that has
+   * any ({@code release_version}, otherwise {@code software_version}). This is the same precedence
+   * {@code DeviceInfoUtil.getVersion} applies for the detail pages, so search and detail agree.
+   */
+  private static void addVersion(
+      ImmutableMap.Builder<String, ImmutableList<String>> valuesBuilder, DeviceInfo deviceInfo) {
+    DeviceKeys.VERSION.deviceInfoSources().stream()
+        .map(
+            source ->
+                source.extract(deviceInfo).stream()
+                    .filter(v -> !v.isEmpty())
+                    .distinct()
+                    .collect(toImmutableList()))
+        .filter(versions -> !versions.isEmpty())
+        .findFirst()
+        .ifPresent(versions -> valuesBuilder.put(DeviceKeys.VERSION.id(), versions));
   }
 
   /** Combines and deduplicates SDK and software version values for the unified version field. */

@@ -99,6 +99,13 @@ public final class DeviceInfoUtilTest {
   }
 
   @Test
+  public void getVersion_emptyReleaseVersion_fallsBackToSoftwareVersion() {
+    ImmutableMap<String, String> dimensions =
+        ImmutableMap.of("release_version", "", "software_version", "15.0.1");
+    assertThat(DeviceInfoUtil.getVersion(dimensions)).isEqualTo("15.0.1");
+  }
+
+  @Test
   public void getVersion_bothMissing_returnsEmptyString() {
     ImmutableMap<String, String> dimensions = ImmutableMap.of("other", "val");
     assertThat(DeviceInfoUtil.getVersion(dimensions)).isEmpty();

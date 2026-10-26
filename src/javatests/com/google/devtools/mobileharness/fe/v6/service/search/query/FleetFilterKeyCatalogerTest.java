@@ -45,8 +45,10 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterK
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterKeyEntry;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterKeySection;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.HostEnrichment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionCatalogStore;
 import com.google.inject.Guice;
@@ -147,6 +149,7 @@ public final class FleetFilterKeyCatalogerTest {
     assertThat(statusEntry.getMetadata().getKeyDisplayName()).isEqualTo("Status");
     assertThat(statusEntry.getMetadata().getCanUseAdvanced()).isTrue();
     assertThat(statusEntry.getMetadata().getIsPlural()).isFalse();
+    assertThat(statusEntry.getMetadata().getDescription()).isEmpty();
 
     FleetFilterKeyEntry hostNameEntry =
         entryFor(section(response, "Built-in fields from connected host"), "host_field::host_name");
@@ -165,6 +168,42 @@ public final class FleetFilterKeyCatalogerTest {
     assertThat(locationEntry.getCoverage().getDisplayCase()).isEqualTo(DisplayCase.NOT_SHOWN);
     assertThat(locationEntry.getApplied()).isFalse();
     assertThat(locationEntry.getMetadata().getKeyDisplayName()).isEqualTo("Host Property location");
+  }
+
+  @Test
+  public void versionEntry_carriesKeyDescriptionInMetadata() {
+    LabQueryResult versionLab =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab-a",
+                            "1.1.1.1",
+                            dims("location", "mtv"),
+                            device(
+                                "device-0",
+                                DeviceStatus.IDLE,
+                                "android_real_device",
+                                "alice",
+                                dims("release_version", "16")))))
+            .build();
+    FleetSnapshot versionSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(versionLab, BUILD_TIME);
+    DeviceCorpus versionCorpus =
+        new DeviceCorpus(
+            versionSnapshot, new LazyPostings(versionSnapshot.devices()), new AtsCuration());
+
+    FleetFilterKeyCatalogResponse response =
+        cataloger.getFilterKeyCatalog(
+            versionCorpus, FleetFilterKeyCatalogRequest.getDefaultInstance());
+
+    assertThat(
+            entryFor(section(response, "Built-in fields"), "device_field::version")
+                .getMetadata()
+                .getDescription())
+        .isNotEmpty();
   }
 
   @Test
@@ -278,6 +317,40 @@ public final class FleetFilterKeyCatalogerTest {
     assertThat(headings(searchResponse)).containsExactly("Host properties");
     assertThat(keys(section(searchResponse, "Host properties")))
         .containsExactly("host_property::location");
+  }
+
+  @Test
+  public void hostEntry_carriesKeyDescriptionInMetadata() {
+    FleetSnapshot enrichedSnapshot =
+        Guice.createInjector()
+            .getInstance(FleetIndexBuilder.class)
+            .build(
+                CoreFleetRawData.builder()
+                    .setLabData(fleet())
+                    .setHostEnrichments(
+                        ImmutableMap.of(
+                            "lab-a",
+                            HostEnrichment.builder()
+                                .setHostFields(
+                                    ImmutableMap.of(
+                                        "host_field::lab_type", ImmutableList.of("Core Lab")))
+                                .build()))
+                    .build(),
+                BUILD_TIME);
+    FleetFilterKeyCatalogResponse hostDescResponse =
+        cataloger.getFilterKeyCatalog(
+            new HostCorpus(
+                enrichedSnapshot,
+                LazyPostings.forHosts(enrichedSnapshot.hosts()),
+                FleetChipResolverTest.hostDescCuration()),
+            FleetFilterKeyCatalogRequest.newBuilder()
+                .setEntity(SearchEntity.SEARCH_ENTITY_HOST)
+                .build());
+    assertThat(
+            entryFor(section(hostDescResponse, "Built-in fields"), "host_field::lab_type")
+                .getMetadata()
+                .getDescription())
+        .isEqualTo("How the lab is managed.");
   }
 
   private static ImmutableList<String> headings(FleetFilterKeyCatalogResponse response) {

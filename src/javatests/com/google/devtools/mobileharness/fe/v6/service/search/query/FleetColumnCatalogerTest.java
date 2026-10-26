@@ -301,6 +301,50 @@ public final class FleetColumnCatalogerTest {
   }
 
   @Test
+  public void versionEntry_carriesKeyDescriptionInSuggestedAndBuiltinSections() {
+    LabQueryResult versionLab =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab-a",
+                            "1.1.1.1",
+                            "mtv",
+                            device(
+                                "device-0",
+                                DeviceStatus.IDLE,
+                                "android_real_device",
+                                "alice",
+                                dims("release_version", "16")))))
+            .build();
+    FleetSnapshot versionSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(versionLab, BUILD_TIME);
+    DeviceCorpus versionCorpus =
+        new DeviceCorpus(versionSnapshot, new LazyPostings(versionSnapshot.devices()), null);
+
+    FleetColumnCatalogResponse response =
+        cataloger.getColumnCatalog(
+            versionCorpus,
+            FleetColumnCatalogRequest.newBuilder().addRecentKeys("device_field::version").build());
+
+    assertThat(
+            entryFor(section(response, "Suggested for you"), "device_field::version")
+                .getDescription())
+        .isNotEmpty();
+    assertThat(
+            entryFor(section(response, "Built-in fields"), "device_field::version")
+                .getDescription())
+        .isEqualTo(
+            entryFor(section(response, "Suggested for you"), "device_field::version")
+                .getDescription());
+    assertThat(
+            entryFor(section(response, "Built-in fields"), "device_field::status").getDescription())
+        .isEmpty();
+  }
+
+  @Test
   public void suggested_omittedWhenNothingToSuggest() {
     FleetColumnCatalogResponse response =
         cataloger.getColumnCatalog(corpus, FleetColumnCatalogRequest.getDefaultInstance());

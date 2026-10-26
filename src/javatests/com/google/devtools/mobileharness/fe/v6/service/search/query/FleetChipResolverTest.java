@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.ComplexMatch;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.ContainsSubstring;
@@ -29,12 +31,18 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetChipRes
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetChipResolverResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetResolvedFilterChip;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetResolvedGroupByChip;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetTryCategory;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.MatchesExactly;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.MatchesRegex;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.NoValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.KeyDisplay;
 import io.grpc.Status;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -150,6 +158,19 @@ public final class FleetChipResolverTest {
         resolver.resolve(request(simple("device_field::status", "IDLE")));
 
     assertThat(response.getFilterChips(0).getValid().getMetadata().getCanUseAdvanced()).isTrue();
+  }
+
+  @Test
+  public void filterChip_carriesTheKeyDescriptionOnlyWhenTheKeyHasOne() {
+    FleetResolvedFilterChip version =
+        resolver.resolve(request(simple(DeviceKeys.VERSION.id(), "16"))).getFilterChips(0);
+    FleetResolvedFilterChip status =
+        resolver.resolve(request(simple("device_field::status", "IDLE"))).getFilterChips(0);
+
+    assertThat(version.getValid().getPillKey()).isEqualTo("Version");
+    assertThat(version.getValid().getMetadata().getDescription())
+        .isEqualTo(DeviceKeys.VERSION.display().description());
+    assertThat(status.getValid().getMetadata().getDescription()).isEmpty();
   }
 
   @Test
@@ -317,6 +338,21 @@ public final class FleetChipResolverTest {
     FleetResolvedFilterChip chip = response.getFilterChips(0);
     assertThat(chip.hasValid()).isTrue();
     assertThat(chip.getValid().getPillKey()).isEqualTo("Host Name");
+    assertThat(chip.getValid().getMetadata().getDescription()).isEmpty();
+  }
+
+  @Test
+  public void hostFilterChip_carriesTheKeyDescription() {
+    FleetChipResolver customResolver =
+        new FleetChipResolver(ImmutableMap.of(Fleet.FLEET_SELF, hostDescCuration()));
+    FleetChipResolverResponse descResponse =
+        customResolver.resolve(
+            FleetChipResolverRequest.newBuilder()
+                .setEntity(SearchEntity.SEARCH_ENTITY_HOST)
+                .addFilters(simple("host_field::lab_type", "Core Lab"))
+                .build());
+    assertThat(descResponse.getFilterChips(0).getValid().getMetadata().getDescription())
+        .isEqualTo("How the lab is managed.");
   }
 
   @Test
@@ -452,5 +488,85 @@ public final class FleetChipResolverTest {
         .setComplex(
             ComplexMatch.newBuilder().setMatchesRegex(MatchesRegex.newBuilder().setValue(pattern)))
         .build();
+  }
+
+  static ScenarioCuration hostDescCuration() {
+    return new ScenarioCuration() {
+      @Override
+      public DeviceKeyRegistry deviceKeyRegistry() {
+        return new AtsCuration().deviceKeyRegistry();
+      }
+
+      @Override
+      public HostKeyRegistry hostKeyRegistry() {
+        return new HostKeyRegistry(
+            ImmutableList.of(
+                HostKeyDescriptor.builder()
+                    .setId("host_field::lab_type")
+                    .setDisplay(
+                        KeyDisplay.of("Lab Type").withDescription("How the lab is managed."))
+                    .build())) {};
+      }
+
+      @Override
+      public ImmutableList<DeviceKeyDescriptor> deviceFilterByRow() {
+        return ImmutableList.of();
+      }
+
+      @Override
+      public ImmutableList<DeviceKeyDescriptor> deviceGroupByRow() {
+        return ImmutableList.of();
+      }
+
+      @Override
+      public ImmutableList<DeviceKeyDescriptor> deviceDefaultColumns() {
+        return ImmutableList.of();
+      }
+
+      @Override
+      public ImmutableList<DeviceKeyDescriptor> deviceRecommendedColumns() {
+        return ImmutableList.of();
+      }
+
+      @Override
+      public ImmutableList<HostKeyDescriptor> hostFilterByRow() {
+        return ImmutableList.of();
+      }
+
+      @Override
+      public ImmutableList<HostKeyDescriptor> hostGroupByRow() {
+        return ImmutableList.of();
+      }
+
+      @Override
+      public ImmutableList<HostKeyDescriptor> hostDefaultColumns() {
+        return ImmutableList.of();
+      }
+
+      @Override
+      public ImmutableList<HostKeyDescriptor> hostRecommendedColumns() {
+        return ImmutableList.of();
+      }
+
+      @Override
+      public KeyPriority keyPriority() {
+        return FleetKeyPriority.INSTANCE;
+      }
+
+      @Override
+      public boolean landingEnabled() {
+        return false;
+      }
+
+      @Override
+      public ImmutableList<FleetTryCategory> deviceTryCategories() {
+        return ImmutableList.of();
+      }
+
+      @Override
+      public ImmutableList<FleetTryCategory> hostTryCategories() {
+        return ImmutableList.of();
+      }
+    };
   }
 }
