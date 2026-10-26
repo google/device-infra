@@ -92,6 +92,22 @@ java_proto_library(
     deps = [":search_all_site_proto"],
 )
 
+# --- Legacy FE v5 URL resolution types ---
+
+proto_library(
+    name = "search_legacy_v5_proto",
+    srcs = ["search_legacy_v5.proto"],
+    deps = [
+        ":search_fleet_proto",
+        ":search_tjs_proto",
+    ],
+)
+
+java_proto_library(
+    name = "search_legacy_v5_java_proto",
+    deps = [":search_legacy_v5_proto"],
+)
+
 # --- SearchService definition ---
 
 proto_library(
