@@ -16,8 +16,10 @@
 
 package com.google.devtools.mobileharness.api.testrunner.device.cache;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCacheManager.CacheType;
+import com.google.devtools.mobileharness.infra.controller.device.DeviceInfoManager;
 import java.time.Duration;
 import java.util.Collection;
 import javax.annotation.Nullable;
@@ -25,28 +27,48 @@ import javax.annotation.Nullable;
 /** The facade of the device cache manager for RPC services. */
 public final class RpcDeviceCache {
 
-  private RpcDeviceCache() {}
+  private static final RpcDeviceCache INSTANCE = new RpcDeviceCache();
+
+  public static RpcDeviceCache getInstance() {
+    return INSTANCE;
+  }
+
+  private final DeviceCacheManager deviceCacheManager;
+  private final DeviceInfoManager deviceInfoManager;
+
+  private RpcDeviceCache() {
+    this(DeviceCacheManager.getInstance(), DeviceInfoManager.getInstance());
+  }
+
+  @VisibleForTesting
+  RpcDeviceCache(DeviceCacheManager deviceCacheManager, DeviceInfoManager deviceInfoManager) {
+    this.deviceCacheManager = deviceCacheManager;
+    this.deviceInfoManager = deviceInfoManager;
+  }
 
   /** Leases or extends the lease of the device caches for the specified string cache type. */
-  public static void cache(
+  public void cache(
       String cacheType,
       Collection<String> deviceControlIds,
       Duration timeout,
       @Nullable String leaseId) {
     CacheType type = getCacheType(cacheType);
-    DeviceCacheManager manager = DeviceCacheManager.getInstance();
     for (String deviceControlId : deviceControlIds) {
-      manager.cache(type, deviceControlId, /* deviceType= */ null, timeout, leaseId);
+      deviceCacheManager.cache(
+          type,
+          deviceControlId,
+          DeviceCacheManager.getDeviceType(deviceInfoManager, deviceControlId),
+          timeout,
+          leaseId);
     }
   }
 
   /** Invalidates the device caches of the specified string cache type. */
-  public static void invalidate(
+  public void invalidate(
       String cacheType, Collection<String> deviceControlIds, @Nullable String leaseId) {
     CacheType type = getCacheType(cacheType);
-    DeviceCacheManager manager = DeviceCacheManager.getInstance();
     for (String deviceControlId : deviceControlIds) {
-      manager.invalidate(type, deviceControlId, leaseId);
+      deviceCacheManager.invalidate(type, deviceControlId, leaseId);
     }
   }
 

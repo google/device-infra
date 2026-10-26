@@ -23,6 +23,7 @@ package(
     default_visibility = [
         "//:omnilab_fusion",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",

@@ -23,9 +23,11 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.infra.controller.device.DeviceInfoManager;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -117,13 +119,14 @@ public class DeviceCacheManager {
     synchronized (cachesByCacheType) {
       Set<CacheType> oldTypes = getCacheTypesOfDevice(deviceControlId);
       Map<String, CacheInfo> caches = cachesByCacheType.get(cacheType);
-      if (caches.containsKey(deviceControlId) && overriddenCount.incrementAndGet() % 100 == 0) {
+      CacheInfo oldCache = caches.get(deviceControlId);
+      if (oldCache != null && overriddenCount.incrementAndGet() % 100 == 0) {
         logger.atWarning().log(
             "Cache(%s) for device [%s] is overridden while the old cache info is %s with"
                 + " stacktrace: %s",
             cacheType,
             deviceControlId,
-            caches.get(deviceControlId),
+            oldCache,
             Throwables.getStackTraceAsString(new Throwable()));
       }
       logger.atInfo().log(
@@ -131,10 +134,12 @@ public class DeviceCacheManager {
           cacheType, deviceControlId, timeout, leaseId);
 
       Instant deadline = clock.instant().plus(timeout);
+      String effectiveDeviceType =
+          deviceType != null || oldCache == null ? deviceType : oldCache.deviceType().orElse(null);
       caches.put(
           deviceControlId,
           CacheInfo.create(
-              deviceType,
+              effectiveDeviceType,
               Timestamps.fromNanos(deadline.getEpochSecond() * 1_000_000_000 + deadline.getNano()),
               leaseId));
       Set<CacheType> newTypes = getCacheTypesOfDevice(deviceControlId);
@@ -204,7 +209,7 @@ public class DeviceCacheManager {
   }
 
   @GuardedBy("cachesByCacheType")
-  Set<String> getCachedDevices(CacheType cacheType, String deviceType) {
+  Set<String> getCachedDevices(CacheType cacheType, @Nullable String deviceType) {
     Set<String> cachedIds = new HashSet<>();
     Map<String, CacheInfo> caches = cachesByCacheType.get(cacheType);
     if (caches != null) {
@@ -220,7 +225,9 @@ public class DeviceCacheManager {
                               entry.getValue().expireTimestamp().getNanos())));
       caches.forEach(
           (key, value) -> {
-            if (value.deviceType().isEmpty() || value.deviceType().get().equals(deviceType)) {
+            if (deviceType == null
+                || value.deviceType().isEmpty()
+                || value.deviceType().get().equals(deviceType)) {
               cachedIds.add(key);
             }
           });
@@ -250,5 +257,16 @@ public class DeviceCacheManager {
       }
     }
     return types;
+  }
+
+  @Nullable
+  static String getDeviceType(DeviceInfoManager deviceInfoManager, String deviceControlId) {
+    return deviceInfoManager
+        .get(deviceControlId)
+        .flatMap(
+            deviceInfo ->
+                deviceInfo.dimensions().supported().get(Dimension.Name.DEVICE_CLASS_NAME).stream()
+                    .findFirst())
+        .orElse(null);
   }
 }

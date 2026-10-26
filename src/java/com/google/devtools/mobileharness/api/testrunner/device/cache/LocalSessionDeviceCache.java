@@ -21,21 +21,25 @@ import com.google.common.base.Ascii;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCacheManager.CacheType;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache;
+import com.google.devtools.mobileharness.infra.controller.device.DeviceInfoManager;
 import javax.inject.Inject;
 
 /** Local implementation of {@link SessionDeviceCache}. */
 public class LocalSessionDeviceCache implements SessionDeviceCache {
 
   private final DeviceCacheManager deviceCacheManager;
+  private final DeviceInfoManager deviceInfoManager;
 
   @Inject
   LocalSessionDeviceCache() {
-    this(DeviceCacheManager.getInstance());
+    this(DeviceCacheManager.getInstance(), DeviceInfoManager.getInstance());
   }
 
   @VisibleForTesting
-  LocalSessionDeviceCache(DeviceCacheManager deviceCacheManager) {
+  LocalSessionDeviceCache(
+      DeviceCacheManager deviceCacheManager, DeviceInfoManager deviceInfoManager) {
     this.deviceCacheManager = deviceCacheManager;
+    this.deviceInfoManager = deviceInfoManager;
   }
 
   @Override
@@ -45,7 +49,7 @@ public class LocalSessionDeviceCache implements SessionDeviceCache {
       deviceCacheManager.cache(
           type,
           deviceControlId,
-          /* deviceType= */ null,
+          DeviceCacheManager.getDeviceType(deviceInfoManager, deviceControlId),
           request.timeout(),
           /* leaseId= */ request.sessionId());
     }
