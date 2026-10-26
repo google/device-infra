@@ -18,7 +18,6 @@ load("@rules_java//java:defs.bzl", "java_library")
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//java/com/google/devtools/mobileharness/service/devicerunclh/shared/protoconverter/v1:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/plugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/strategy:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api/plugin:__pkg__",
@@ -44,7 +43,6 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/processor:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/plugin:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/shared/util/testresult:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api/controller/job/retry/processor:__pkg__",
     ],
 )
