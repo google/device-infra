@@ -504,6 +504,7 @@ public class CloudOrchestratorClientTest {
     MobileHarnessException e1 =
         assertThrows(MobileHarnessException.class, () -> client.listHosts());
     assertThat(e1.getErrorId()).isEqualTo(BasicErrorId.LOCAL_NETWORK_ERROR);
+    assertThat(e1).hasMessageThat().contains("/v1/zones/local/hosts");
 
     // Test POST (via createHost)
     MobileHarnessException e2 =
@@ -511,11 +512,13 @@ public class CloudOrchestratorClientTest {
             MobileHarnessException.class,
             () -> client.createHost(new CloudOrchestratorMessages.CreateHostRequest()));
     assertThat(e2.getErrorId()).isEqualTo(BasicErrorId.LOCAL_NETWORK_ERROR);
+    assertThat(e2).hasMessageThat().contains("/v1/zones/local/hosts");
 
     // Test DELETE (via deleteHost)
     MobileHarnessException e3 =
         assertThrows(MobileHarnessException.class, () -> client.deleteHost("host-1"));
     assertThat(e3.getErrorId()).isEqualTo(BasicErrorId.LOCAL_NETWORK_ERROR);
+    assertThat(e3).hasMessageThat().contains("/v1/zones/local/hosts/host-1");
 
     // Test waitOperation (which calls executeRequest directly)
     MobileHarnessException e4 =
@@ -523,6 +526,36 @@ public class CloudOrchestratorClientTest {
             MobileHarnessException.class,
             () -> client.waitOperation("host-1", "op-1", Operation.class, 1, Duration.ofMillis(1)));
     assertThat(e4.getErrorId()).isEqualTo(BasicErrorId.LOCAL_NETWORK_ERROR);
+    assertThat(e4).hasMessageThat().contains("/v1/zones/local/hosts/host-1/operations/op-1/:wait");
+
+    // Test PUT (via updateImageDirectory)
+    MobileHarnessException e5 =
+        assertThrows(
+            MobileHarnessException.class,
+            () -> client.updateImageDirectory("host-1", "dir-1", "checksum-1"));
+    assertThat(e5.getErrorId()).isEqualTo(BasicErrorId.LOCAL_NETWORK_ERROR);
+    assertThat(e5).hasMessageThat().contains("/v1/zones/local/hosts/host-1/cvd_imgs_dirs/dir-1");
+
+    // Test downloadFile
+    File targetFile = File.createTempFile("downloaded_test", ".txt");
+    targetFile.deleteOnExit();
+    MobileHarnessException e6 =
+        assertThrows(
+            MobileHarnessException.class, () -> client.downloadFile("/download/path", targetFile));
+    assertThat(e6.getErrorId()).isEqualTo(BasicErrorId.LOCAL_NETWORK_ERROR);
+    assertThat(e6).hasMessageThat().contains("/v1/zones/local/download/path");
+
+    // Test fetchAllLogs
+    File targetDir = java.nio.file.Files.createTempDirectory("cvd_logs").toFile();
+    targetDir.deleteOnExit();
+    MobileHarnessException e7 =
+        assertThrows(
+            MobileHarnessException.class,
+            () -> client.fetchAllLogs("host-1", "group-1", "name-1", targetDir));
+    assertThat(e7.getErrorId()).isEqualTo(BasicErrorId.LOCAL_NETWORK_ERROR);
+    assertThat(e7)
+        .hasMessageThat()
+        .contains("/v1/zones/local/hosts/host-1/cvds/group-1/name-1/logs/");
   }
 
   @Test
@@ -899,5 +932,64 @@ public class CloudOrchestratorClientTest {
 
     assertThat(e).hasCauseThat().isInstanceOf(HttpResponseException.class);
     assertThat(((HttpResponseException) e.getCause()).getStatusCode()).isEqualTo(500);
+    assertThat(e)
+        .hasMessageThat()
+        .contains("/v1/zones/local/hosts/host-1/cvds/group-1/name-1/logs/");
+  }
+
+  @Test
+  public void updateImageDirectory_error_throwsException() {
+    server.enqueue(new MockResponse().setResponseCode(400).setBody("Bad Request"));
+
+    MobileHarnessException e =
+        assertThrows(
+            MobileHarnessException.class,
+            () -> client.updateImageDirectory("host-1", "dir-1", "checksum-1"));
+
+    assertThat(e).hasCauseThat().isInstanceOf(HttpResponseException.class);
+    assertThat(((HttpResponseException) e.getCause()).getStatusCode()).isEqualTo(400);
+    assertThat(e).hasMessageThat().contains("/v1/zones/local/hosts/host-1/cvd_imgs_dirs/dir-1");
+  }
+
+  @Test
+  public void downloadFile_interrupted_throwsException() throws Exception {
+    server.enqueue(new MockResponse().setResponseCode(503));
+    File targetFile = File.createTempFile("downloaded_test", ".txt");
+    targetFile.deleteOnExit();
+
+    Thread.currentThread().interrupt();
+    try {
+      MobileHarnessException e =
+          assertThrows(
+              MobileHarnessException.class,
+              () -> client.downloadFile("/download/path", targetFile));
+      assertThat(e.getErrorId())
+          .isEqualTo(AndroidErrorId.ANDROID_CLOUD_ORCHESTRATOR_OPERATION_ERROR);
+      assertThat(e).hasMessageThat().contains("/v1/zones/local/download/path");
+    } finally {
+      Thread.interrupted();
+    }
+  }
+
+  @Test
+  public void fetchAllLogs_interrupted_throwsException() throws Exception {
+    server.enqueue(new MockResponse().setResponseCode(503));
+    File targetDir = java.nio.file.Files.createTempDirectory("cvd_logs").toFile();
+    targetDir.deleteOnExit();
+
+    Thread.currentThread().interrupt();
+    try {
+      MobileHarnessException e =
+          assertThrows(
+              MobileHarnessException.class,
+              () -> client.fetchAllLogs("host-1", "group-1", "name-1", targetDir));
+      assertThat(e.getErrorId())
+          .isEqualTo(AndroidErrorId.ANDROID_CLOUD_ORCHESTRATOR_OPERATION_ERROR);
+      assertThat(e)
+          .hasMessageThat()
+          .contains("/v1/zones/local/hosts/host-1/cvds/group-1/name-1/logs/");
+    } finally {
+      Thread.interrupted();
+    }
   }
 }

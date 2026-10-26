@@ -1166,7 +1166,7 @@ final class NewMultiCommandRequestHandler {
               .resultWithCause()
               .get()
               .causeException()
-              .map(Throwable::getMessage)
+              .map(e -> getStackTraceAsString(e))
               .orElse(
                   String.format(
                       "Test %s failed with result %s.",
@@ -1190,7 +1190,7 @@ final class NewMultiCommandRequestHandler {
               .resultWithCause()
               .get()
               .causeException()
-              .map(Throwable::getMessage)
+              .map(e -> getStackTraceAsString(e))
               .orElse(
                   String.format(
                       "Job %s failed with result %s.",
