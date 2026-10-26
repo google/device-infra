@@ -51,11 +51,11 @@
     <app-info-card id="job-tests" [cardTitle]="'Child Tests (' + testsList.length + ')'" [collapsible]="true" [expanded]="true" class="list-card">
       <div class="info-card-content zero-padding">
         <div class="table-container">
-          <table mat-table [dataSource]="testsList" class="data-table">
+          <table mat-table [dataSource]="sortedTests()" matSort (matSortChange)="onSortChange($event)" class="data-table">
 
             <!-- Test ID Column -->
             <ng-container matColumnDef="id">
-              <th mat-header-cell *matHeaderCellDef>Test ID</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Test ID</th>
               <td mat-cell *matCellDef="let test">
                 <div class="test-id-container">
                   <a [routerLink]="['/jobs', job().id, 'tests', test.id]" queryParamsHandling="merge" class="test-id-link" [matTooltip]="'View Test Details: ' + test.id">
@@ -71,7 +71,7 @@
 
             <!-- Test Name Column -->
             <ng-container matColumnDef="name">
-              <th mat-header-cell *matHeaderCellDef>Test Name</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Test Name</th>
               <td mat-cell *matCellDef="let test">
                 <div class="test-name-text" [matTooltip]="test.name">
                   {{ test.name }}
@@ -81,7 +81,7 @@
 
             <!-- Status Column -->
             <ng-container matColumnDef="status">
-              <th mat-header-cell *matHeaderCellDef>Status</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Status</th>
               <td mat-cell *matCellDef="let test">
                 @let badge = getTestStatusBadge(test);
                 <span class="status-badge-compact" [class]="badge.bgClass + ' ' + badge.colorClass">
@@ -93,7 +93,7 @@
 
             <!-- Result Column -->
             <ng-container matColumnDef="result">
-              <th mat-header-cell *matHeaderCellDef>Result</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Result</th>
               <td mat-cell *matCellDef="let test">
                 @let badge = getTestResultBadge(test);
                 @if (badge) {
@@ -109,7 +109,7 @@
 
             <!-- Start Time Column -->
             <ng-container matColumnDef="startTime">
-              <th mat-header-cell *matHeaderCellDef>Start Time</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Start Time</th>
               <td mat-cell *matCellDef="let test">
                 {{ getTestStartTime(test) }}
               </td>
@@ -117,7 +117,7 @@
 
             <!-- Duration Column -->
             <ng-container matColumnDef="duration">
-              <th mat-header-cell *matHeaderCellDef>Duration</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Duration</th>
               <td mat-cell *matCellDef="let test">
                 {{ getTestDuration(test) }}
               </td>
@@ -125,7 +125,7 @@
 
             <!-- Host Column -->
             <ng-container matColumnDef="host">
-              <th mat-header-cell *matHeaderCellDef>Host</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Host</th>
               <td mat-cell *matCellDef="let test">
                 @if (test.host?.name) {
                   <a app-nav-link
@@ -142,7 +142,7 @@
 
             <!-- Device Column -->
             <ng-container matColumnDef="device">
-              <th mat-header-cell *matHeaderCellDef>Device(s)</th>
+              <th mat-header-cell *matHeaderCellDef mat-sort-header>Device(s)</th>
               <td mat-cell *matCellDef="let test">
                 @let devList = getTestDevicesList(test);
                 @if (devList && devList.length > 0) {

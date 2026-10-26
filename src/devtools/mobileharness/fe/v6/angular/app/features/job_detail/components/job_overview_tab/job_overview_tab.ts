@@ -12,6 +12,7 @@ import {MatButtonModule} from '@angular/material/button';
 import {MatFormFieldModule} from '@angular/material/form-field';
 import {MatIconModule} from '@angular/material/icon';
 import {MatInputModule} from '@angular/material/input';
+import {MatSortModule, Sort, SortDirection} from '@angular/material/sort';
 import {MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {RouterModule} from '@angular/router';
@@ -54,6 +55,7 @@ import {dateUtils} from '../../../../shared/utils/date_utils';
     MatFormFieldModule,
     MatInputModule,
     MatIconModule,
+    MatSortModule,
     MatTableModule,
     MatTooltipModule,
     RouterModule,
@@ -82,6 +84,20 @@ export class JobOverviewTab {
 
   readonly copyToClipboard = useCopyToClipboard();
   readonly copiedTestIds = signal<Record<string, boolean>>({});
+  readonly sortColumn = signal<string>('');
+  readonly sortDirection = signal<SortDirection>('');
+
+  readonly sortedTests = computed<TestSummary[]>(() => {
+    const tests = this.job().tests?.test ?? [];
+    const column = this.sortColumn();
+    const direction = this.sortDirection();
+    if (!column || !direction) {
+      return tests;
+    }
+    return [...tests].sort((a, b) =>
+      this.compareTests(a, b, column, direction),
+    );
+  });
 
   private readonly propertiesFilter = createSearchFilter<string>(
     computed(() => this.job().properties),
@@ -190,21 +206,16 @@ export class JobOverviewTab {
     return basic;
   });
 
-  getTestDuration(test: TestSummary): string {
-    if (!test.startTime || !test.endTime) return 'N/A';
-    const start = dateUtils.parseUtcTimestamp(test.startTime);
-    const end = dateUtils.parseUtcTimestamp(test.endTime);
-    let diffSec = -1;
-    if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime())) {
-      const startIso = new Date(test.startTime);
-      const endIso = new Date(test.endTime);
-      if (isNaN(startIso.getTime()) || isNaN(endIso.getTime())) return 'N/A';
-      diffSec = Math.round((endIso.getTime() - startIso.getTime()) / 1000);
-    } else {
-      diffSec = Math.round((end.getTime() - start.getTime()) / 1000);
-    }
+  private getTestDurationSec(test: TestSummary): number | null {
+    const startMs = this.parseTimestampMs(test.startTime);
+    const endMs = this.parseTimestampMs(test.endTime);
+    if (startMs === null || endMs === null || endMs < startMs) return null;
+    return Math.round((endMs - startMs) / 1000);
+  }
 
-    if (diffSec < 0) return 'N/A';
+  getTestDuration(test: TestSummary): string {
+    const diffSec = this.getTestDurationSec(test);
+    if (diffSec === null) return 'N/A';
     if (diffSec < 60) return `${diffSec}s`;
     if (diffSec < 3600) {
       const m = Math.floor(diffSec / 60);
@@ -215,6 +226,113 @@ export class JobOverviewTab {
     const m = Math.floor((diffSec % 3600) / 60);
     const s = diffSec % 60;
     return `${h}h ${m}m ${s}s`;
+  }
+
+  private parseTimestampMs(timestamp?: string): number | null {
+    if (!timestamp) return null;
+    const ms = dateUtils.parseUtcTimestamp(timestamp).getTime();
+    return isNaN(ms) ? null : ms;
+  }
+
+  onSortChange(sort: Sort): void {
+    this.sortColumn.set(sort.active);
+    this.sortDirection.set(sort.direction);
+  }
+
+  private compareTests(
+    a: TestSummary,
+    b: TestSummary,
+    column: string,
+    direction: 'asc' | 'desc',
+  ): number {
+    const dir = direction === 'asc' ? 1 : -1;
+    let cmp = 0;
+
+    switch (column) {
+      case 'id':
+        cmp = this.compareStrings(a.id, b.id, dir);
+        break;
+      case 'name':
+        cmp = this.compareStrings(a.name, b.name, dir);
+        break;
+      case 'status':
+        cmp = this.compareStrings(
+          this.getTestStatusBadge(a).text,
+          this.getTestStatusBadge(b).text,
+          dir,
+        );
+        break;
+      case 'result':
+        cmp = this.compareNullableStrings(
+          this.getTestResultBadge(a)?.text ?? null,
+          this.getTestResultBadge(b)?.text ?? null,
+          dir,
+        );
+        break;
+      case 'startTime':
+        cmp = this.compareNullableNumbers(
+          this.parseTimestampMs(a.startTime),
+          this.parseTimestampMs(b.startTime),
+          dir,
+        );
+        break;
+      case 'duration':
+        cmp = this.compareNullableNumbers(
+          this.getTestDurationSec(a),
+          this.getTestDurationSec(b),
+          dir,
+        );
+        break;
+      case 'host':
+        cmp = this.compareNullableStrings(
+          a.host?.name || null,
+          b.host?.name || null,
+          dir,
+        );
+        break;
+      case 'device':
+        cmp = this.compareNullableStrings(
+          this.getTestDevicesList(a).join(', ') || null,
+          this.getTestDevicesList(b).join(', ') || null,
+          dir,
+        );
+        break;
+      default:
+        break;
+    }
+
+    return cmp !== 0 ? cmp : this.compareStrings(a.id, b.id, 1);
+  }
+
+  private compareStrings(a: string, b: string, dir: number): number {
+    return (
+      a.localeCompare(b, undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      }) * dir
+    );
+  }
+
+  private compareNullableStrings(
+    a: string | null,
+    b: string | null,
+    dir: number,
+  ): number {
+    if (a === null && b === null) return 0;
+    if (a === null) return 1;
+    if (b === null) return -1;
+    return this.compareStrings(a, b, dir);
+  }
+
+  private compareNullableNumbers(
+    a: number | null,
+    b: number | null,
+    dir: number,
+  ): number {
+    if (a === null && b === null) return 0;
+    if (a === null) return 1;
+    if (b === null) return -1;
+    return (a - b) * dir;
   }
 
   getTestDevicesList(test: TestSummary): string[] {
