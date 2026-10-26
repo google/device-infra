@@ -19,15 +19,43 @@ package com.google.devtools.mobileharness.infra.client.api.mode.remote.util;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.CreateTestRequest.ResolveFileItem;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
+import javax.annotation.Nullable;
 
 /**
- * Static utilities for the job files that the lab resolves itself, which a client lists in {@code
- * CreateTestRequest} instead of sending them.
+ * Static utilities for the job files of a remote test, which the client either sends to the lab or
+ * lists in {@code CreateTestRequest} for the lab to resolve itself.
  */
 public final class LabResolveFiles {
+
+  private static final LocalFileUtil localFileUtil = new LocalFileUtil();
+
+  /**
+   * Returns the relative path under the lab's run-file directory for a client-transferred file with
+   * the given resolved {@code path} and original {@code fileSpec}.
+   */
+  public static String getRelativePath(String path, @Nullable String fileSpec) {
+    return fileSpec == null ? path : getRelativePath(fileSpec);
+  }
+
+  /**
+   * Returns the relative path under the lab's run-file directory for a client-transferred file with
+   * the given {@code fileSpec}.
+   *
+   * <p>A remote spec is split into directory segments at {@code ::} (and at the last {@code file=}
+   * of an Android Build spec) and escaped so that the lab copy ends in the artifact's filename
+   * without raw spec syntax in its path.
+   */
+  public static String getRelativePath(String fileSpec) {
+    if (localFileUtil.isLocalFileOrDir(fileSpec)) {
+      return fileSpec;
+    }
+    String result = fileSpec;
+    return localFileUtil.escapeFilePath(result.replace("::", "/"));
+  }
 
   /**
    * Returns whether the lab fetches {@code filePath} itself rather than receiving it.
