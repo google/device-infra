@@ -130,6 +130,42 @@ public final class MaskUtilsTest {
           .build();
 
   @Test
+  public void isFieldRequested_emptyMask_returnsFalse() {
+    assertThat(MaskUtils.isFieldRequested(FieldMask.getDefaultInstance(), "lab_locator")).isFalse();
+    assertThat(MaskUtils.isFieldRequested(FieldMask.getDefaultInstance(), "")).isFalse();
+  }
+
+  @Test
+  public void isFieldRequested_exactAncestorAndDescendantPaths_returnsTrueOnlyForMatchingSubtree() {
+    FieldMask fieldMask =
+        FieldMask.newBuilder()
+            .addPaths("lab_locator.host_name")
+            .addPaths("lab_server_setting")
+            .build();
+
+    assertThat(MaskUtils.isFieldRequested(fieldMask, "lab_locator.host_name")).isTrue();
+    assertThat(MaskUtils.isFieldRequested(fieldMask, "lab_locator")).isTrue();
+    assertThat(MaskUtils.isFieldRequested(fieldMask, "lab_server_setting")).isTrue();
+    assertThat(MaskUtils.isFieldRequested(fieldMask, "lab_server_setting.port")).isTrue();
+    assertThat(MaskUtils.isFieldRequested(fieldMask, "lab_server_setting.port.num")).isTrue();
+    assertThat(MaskUtils.isFieldRequested(fieldMask, "lab_locator.ip")).isFalse();
+    assertThat(MaskUtils.isFieldRequested(fieldMask, "lab_status")).isFalse();
+  }
+
+  @Test
+  public void isFieldRequested_nonDotPrefixSiblings_returnsFalse() {
+    FieldMask shortPrefixMask = FieldMask.newBuilder().addPaths("lab_server").build();
+    FieldMask longPrefixMask =
+        FieldMask.newBuilder().addPaths("lab_server_setting").addPaths("device_locator.id").build();
+
+    assertThat(MaskUtils.isFieldRequested(shortPrefixMask, "lab_server_setting")).isFalse();
+    assertThat(MaskUtils.isFieldRequested(shortPrefixMask, "lab_server_feature")).isFalse();
+    assertThat(MaskUtils.isFieldRequested(longPrefixMask, "lab_server")).isFalse();
+    assertThat(MaskUtils.isFieldRequested(longPrefixMask, "lab_server_setting_extra")).isFalse();
+    assertThat(MaskUtils.isFieldRequested(longPrefixMask, "device_locator.id_extra")).isFalse();
+  }
+
+  @Test
   public void trimLabQueryResult_withLabView_withLabInfoMask_returnsFilteredResponse() {
     LabQueryResult.Builder resultToTrim = LAB_QUERY_RESULT_WITH_LAB_VIEW.toBuilder();
     Mask mask =
