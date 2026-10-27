@@ -87,6 +87,14 @@
     width: 90px;
   }
 
+  th.mat-column-status,
+  th.mat-column-result,
+  th.mat-column-duration {
+    ::ng-deep .mat-sort-header-container {
+      justify-content: center;
+    }
+  }
+
   .mat-column-host {
     font-family: overview.$labconsole-font;
     font-size: 0.75rem;
