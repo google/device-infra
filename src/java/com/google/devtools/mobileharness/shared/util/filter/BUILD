@@ -48,11 +48,13 @@ java_library(
 java_library(
     name = "mask_utils",
     srcs = [
+        "CompiledDeviceInfoMask.java",
         "CompiledLabInfoMask.java",
         "MaskUtils.java",
     ],
     deps = [
         ":dimension_name_matcher",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
