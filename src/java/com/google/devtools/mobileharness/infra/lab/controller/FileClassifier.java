@@ -60,7 +60,7 @@ public class FileClassifier implements FileCallback {
     // TODO: Investigates whether it is safe to create hard links for all run files.
     /** Suffixes of run files that are safe to create hard links and executed with the links. */
     private static final ImmutableSet<String> LINKABLE_FILE_SUFFIX =
-        ImmutableSet.of("apk", "gz", "img", "jar", "par", "tar", "zip");
+        ImmutableSet.of("aab", "apk", "gz", "img", "jar", "par", "tar", "zip");
 
     private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
