@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.primitives.Ints;
 import com.google.devtools.mobileharness.fe.v6.service.proto.common.DeviceDimension;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.SubDeviceInfo;
@@ -132,13 +133,13 @@ public class SubDeviceInfoListFactory {
 
     // Battery level.
     Optional.ofNullable(dimensionMap.get(Dimension.Name.BATTERY_LEVEL.lowerCaseName()))
-        .map(v -> tryParseInt(v, -1))
+        .map(Ints::tryParse)
         .ifPresent(subDeviceInfoBuilder::setBatteryLevel);
 
     // Network info.
     Optional<Integer> wifiRssi =
         Optional.ofNullable(dimensionMap.get(Dimension.Name.WIFI_RSSI.lowerCaseName()))
-            .map(v -> tryParseInt(v, 0));
+            .map(Ints::tryParse);
     Optional<Boolean> hasInternet =
         Optional.ofNullable(dimensionMap.get(Dimension.Name.INTERNET.lowerCaseName()))
             .map(Boolean::parseBoolean);
@@ -152,13 +153,5 @@ public class SubDeviceInfoListFactory {
     // RemoteControlEligibilityChecker in handlers.
 
     return subDeviceInfoBuilder.build();
-  }
-
-  private static int tryParseInt(String value, int defaultValue) {
-    try {
-      return Integer.parseInt(value);
-    } catch (NumberFormatException e) {
-      return defaultValue;
-    }
   }
 }
