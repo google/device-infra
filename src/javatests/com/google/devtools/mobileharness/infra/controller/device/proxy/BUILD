@@ -13,42 +13,30 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_library")
-load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
+load("@rules_java//java:java_test.bzl", "java_test")
 
 package(
     default_applicable_licenses = ["//:license"],
     default_testonly = 1,
 )
 
-java_library(
-    name = "proxy",
-    srcs = glob(["*.java"]),
+java_test(
+    name = "SmallTests",
+    size = "small",
+    srcs = ["ProxyDeviceManagerTest.java"],
     runtime_deps = [
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/proxy:no_op_device_proxy",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:no_op_test",
     ],
     deps = [
-        "//src/devtools/mobileharness/api/model/proto:job_java_proto",
-        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/job:locator",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api:annotations",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api:module",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:rule",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/proxy:proxy_device_manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/proxy:proxy_device_manager_module",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/proxy:proxy_device_requirement",
-        "//src/java/com/google/devtools/mobileharness/shared/util/base:stack_trace_extractor",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:capture_logs",
-        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:print_test_name",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/model/job:job_info_mocker",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_extensions_guice_testlib",
@@ -58,11 +46,34 @@ java_library(
     ],
 )
 
-junit_test_suites(
-    name = "gen_tests",
-    sizes = [
-        "small",
-        "medium",
+java_test(
+    name = "MediumTests",
+    size = "medium",
+    srcs = ["ProxyModeIntegrationTest.java"],
+    runtime_deps = [
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/proxy:no_op_device_proxy",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:no_op_test",
     ],
-    deps = [":proxy"],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:job_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api:annotations",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api:module",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:rule",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:stack_trace_extractor",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:capture_logs",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/junit/rule:print_test_name",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_extensions_guice_testlib",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+        "@maven//:junit_junit",
+    ],
 )
