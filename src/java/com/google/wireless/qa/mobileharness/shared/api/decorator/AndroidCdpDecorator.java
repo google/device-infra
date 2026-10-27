@@ -320,7 +320,10 @@ public class AndroidCdpDecorator extends LifecycleDecorator {
     }
 
     try {
-      Integer sdkVersion = ((AndroidDevice) getDevice()).getSdkVersion();
+      // Executor devices (e.g. AndroidDesktopExecutorDevice) extend BaseDevice rather than
+      // AndroidDevice.
+      Integer sdkVersion =
+          getDevice() instanceof AndroidDevice androidDevice ? androidDevice.getSdkVersion() : null;
       int sdkVersionInt = sdkVersion == null ? 0 : sdkVersion;
 
       String tmpDestPath = DATA_LOCAL_TMP_DIR + flagFile;
