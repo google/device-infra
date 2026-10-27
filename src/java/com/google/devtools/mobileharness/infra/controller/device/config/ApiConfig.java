@@ -78,6 +78,8 @@ public interface ApiConfig {
 
   void setTenantDeviceConfig(String deviceControlId, DeviceConfig deviceConfig);
 
+  Optional<DeviceConfig> getDeviceConfig(String deviceControlId);
+
   Optional<DeviceConfig> getDeviceConfigToStore(String deviceControlId);
 
   LabConfig getLabConfigToStore();
