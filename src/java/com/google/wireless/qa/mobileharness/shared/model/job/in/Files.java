@@ -26,7 +26,6 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
@@ -61,6 +60,11 @@ public class Files {
 
   public Files(com.google.devtools.mobileharness.api.model.job.in.Files newFiles) {
     this.newFiles = newFiles;
+  }
+
+  /** Returns the files this object delegates to, in the {@code api.model.job.in} data model. */
+  public com.google.devtools.mobileharness.api.model.job.in.Files toNewFiles() {
+    return newFiles;
   }
 
   /**
@@ -203,10 +207,7 @@ public class Files {
    * @throws MobileHarnessException if there is any tag doesn't map to any path
    */
   public void checkNotEmpty(String... tags) throws MobileHarnessException {
-    List<MobileHarnessException> errors = newFiles.validateNotEmpty(tags);
-    if (!errors.isEmpty()) {
-      throw errors.get(0);
-    }
+    newFiles.checkNotEmpty(tags);
   }
 
   /**
@@ -226,10 +227,7 @@ public class Files {
    * @throws MobileHarnessException if there is any tag doesn't map to exactly one single path
    */
   public synchronized void checkUnique(String... tags) throws MobileHarnessException {
-    List<MobileHarnessException> errors = newFiles.validateUnique(tags);
-    if (!errors.isEmpty()) {
-      throw errors.get(0);
-    }
+    newFiles.checkUnique(tags);
   }
 
   /**

@@ -256,9 +256,27 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
     return subTests;
   }
 
-  /** Input files. */
+  /**
+   * Input files.
+   *
+   * <p>Prefer {@link #inputFiles()} in new code once the runtime supports it (see its Javadoc and
+   * b/577939484).
+   */
   public Files files() {
     return files;
+  }
+
+  /**
+   * Input files, backed by the same storage as {@link #files()}.
+   *
+   * <p>A plugin can call this method only if the environment that runs it is at least the version
+   * in {@code @since}: Lab Server for lab plugins, Client for client plugins, Gateway for plugins
+   * run by Gateway. Otherwise it must keep calling {@link #files()}.
+   *
+   * @since Lab Server 4.388.1, Client 4.35.0, Gateway 4.318.1
+   */
+  public com.google.devtools.mobileharness.api.model.job.in.Files inputFiles() {
+    return files.toNewFiles();
   }
 
   /** Remote generated files. */

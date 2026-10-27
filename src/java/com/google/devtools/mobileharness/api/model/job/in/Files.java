@@ -472,6 +472,31 @@ public class Files {
   }
 
   /**
+   * Checks whether each of the given tags is associated with at least one file/dir.
+   *
+   * @throws MobileHarnessException if any tag doesn't map to a file/dir
+   */
+  public void checkNotEmpty(String... tags) throws MobileHarnessException {
+    throwFirst(validateNotEmpty(tags));
+  }
+
+  /**
+   * Checks whether each of the given tags is associated with exactly one file/dir.
+   *
+   * @throws MobileHarnessException if any tag doesn't map to exactly one file/dir
+   */
+  public void checkUnique(String... tags) throws MobileHarnessException {
+    throwFirst(validateUnique(tags));
+  }
+
+  private static void throwFirst(List<MobileHarnessException> errors)
+      throws MobileHarnessException {
+    if (!errors.isEmpty()) {
+      throw errors.get(0);
+    }
+  }
+
+  /**
    * Removes a file/dir with the given tag.
    *
    * @param tag the tag of the file/dir
