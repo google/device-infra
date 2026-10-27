@@ -50,6 +50,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerU
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelSession;
@@ -1167,6 +1168,70 @@ public final class AtsServerSessionPluginTest {
   }
 
   @Test
+  public void onSessionEnded_zeroFailedTestsButIncompleteModules_createRetrySession()
+      throws Exception {
+    request = request.toBuilder().setMaxRetryOnTestFailures(1).build();
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    timing.start();
+    var unused = timing.end();
+
+    when(testInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result result = new Result(timing.toNewTiming(), new Params(timing).toNewParams()).setPass();
+    when(testInfo.resultWithCause()).thenReturn(result);
+
+    when(jobInfo.resultWithCause()).thenReturn(result);
+    when(jobInfo.type()).thenReturn(TRADEFED_JOB_TYPE);
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+    CreateSessionResponse response =
+        CreateSessionResponse.newBuilder()
+            .setSessionId(SessionId.newBuilder().setId("retry_session_id"))
+            .build();
+    when(localSessionStub.createSession(any())).thenReturn(response);
+    ReportProto.Result.Builder resultBuilder =
+        ReportProto.Result.newBuilder()
+            .setSummary(
+                Summary.newBuilder()
+                    .setPassed(10)
+                    .setFailed(0)
+                    .setModulesTotal(2)
+                    .setModulesDone(1)
+                    .build());
+    when(sessionResultHandlerUtil.processResult(
+            any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
+        .thenReturn(Optional.of(resultBuilder.build()));
+    Mockito.doReturn(true).when(localFileUtil).isFileExist(any(Path.class));
+
+    plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null));
+    ArgumentCaptor<CreateSessionRequest> requestCaptor =
+        ArgumentCaptor.forClass(CreateSessionRequest.class);
+    verify(localSessionStub).createSession(requestCaptor.capture());
+    SessionRequest sessionRequest =
+        requestCaptor
+            .getValue()
+            .getSessionConfig()
+            .getSessionPluginConfigs()
+            .getSessionPluginConfig(0)
+            .getExecutionConfig()
+            .getConfig()
+            .unpack(SessionRequest.class);
+    NewMultiCommandRequest newMultiCommandRequest = sessionRequest.getNewMultiCommandRequest();
+    assertThat(newMultiCommandRequest.getMaxRetryOnTestFailures()).isEqualTo(0);
+    assertThat(newMultiCommandRequest.getRetryPreviousSessionId()).isEqualTo("session_id");
+    verifyResourceCleanup(testInfo, jobInfo);
+  }
+
+  @Test
   public void onSessionEnded_retryNeededHasCurrentContext_emptyRetryCommand() throws Exception {
     request =
         request.toBuilder()
@@ -1414,7 +1479,12 @@ public final class AtsServerSessionPluginTest {
             com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result
                 .newBuilder()
                 .setSummary(
-                    Summary.newBuilder().setPassed(5).setFailed(0).setModulesTotal(1).build());
+                    Summary.newBuilder()
+                        .setPassed(5)
+                        .setFailed(0)
+                        .setModulesTotal(1)
+                        .setModulesDone(1)
+                        .build());
     when(sessionResultHandlerUtil.processResult(
             any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
         .thenReturn(Optional.of(resultBuilder.build()));

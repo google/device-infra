@@ -2226,6 +2226,227 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
+  public void
+      handleResultProcessing_cloudOrchestratorJitEmulatorDeviceNotAvailableWithCompletedModule_toleratedAsCompleted()
+          throws Exception {
+    setUpPassingJobAndTestResults();
+    CommandInfo jitCommandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine(DEFAULT_COMMAND_LINE)
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("127.0.0.1:6520")
+                    .build())
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("127.0.0.1:6521")
+                    .build())
+            .build();
+    request = request.toBuilder().clearCommands().addCommands(jitCommandInfo).build();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(
+                ReportProto.Summary.newBuilder()
+                    .setPassed(10)
+                    .setFailed(0)
+                    .setModulesTotal(2)
+                    .setModulesDone(1)
+                    .build())
+            .build();
+    mockProcessResult(result);
+
+    String tradefedInvocationErrorMessage =
+        "com.android.tradefed.device.DeviceNotAvailableException: Device 127.0.0.1:6520 not"
+            + " available";
+    when(xtsTradefedRuntimeInfoFileUtil.readInfo(any(), any()))
+        .thenReturn(
+            Optional.of(
+                new XtsTradefedRuntimeInfoFileDetail(
+                    new XtsTradefedRuntimeInfo(
+                        ImmutableList.of(
+                            new TradefedInvocation(
+                                /* isRunning= */ false,
+                                ImmutableList.of("127.0.0.1:6520", "127.0.0.1:6521"),
+                                "failed",
+                                tradefedInvocationErrorMessage)),
+                        /* timestamp= */ Instant.now()),
+                    /* lastModifiedTime= */ Instant.now())));
+
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    PrepareSessionRequestResult prepareResult =
+        newMultiCommandRequestHandler.prepareSessionRequestInfo(request, sessionInfo);
+
+    RequestDetail.Builder requestDetail =
+        RequestDetail.newBuilder()
+            .setOriginalRequest(request)
+            .putCommandDetails(
+                prepareResult.commandDetail().get().getId(), prepareResult.commandDetail().get());
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+
+    HandleResultProcessingResult handleResultProcessingResult =
+        newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+
+    assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
+    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.UNKNOWN_REASON);
+    assertThat(commandDetail.getErrorMessage()).isEqualTo(tradefedInvocationErrorMessage);
+    assertThat(commandDetail.getTotalModuleCount()).isEqualTo(2);
+    assertThat(commandDetail.getFailedModuleCount()).isEqualTo(1);
+    assertThat(handleResultProcessingResult.errorReason()).hasValue(ErrorReason.UNKNOWN_REASON);
+  }
+
+  @Test
+  public void
+      handleResultProcessing_cloudOrchestratorJitEmulatorDeviceNotAvailableWithZeroCompletedModules_errorState()
+          throws Exception {
+    setUpPassingJobAndTestResults();
+    CommandInfo jitCommandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine(DEFAULT_COMMAND_LINE)
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("127.0.0.1:6520")
+                    .build())
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("127.0.0.1:6521")
+                    .build())
+            .build();
+    request = request.toBuilder().clearCommands().addCommands(jitCommandInfo).build();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(
+                ReportProto.Summary.newBuilder()
+                    .setPassed(0)
+                    .setFailed(0)
+                    .setModulesTotal(2)
+                    .setModulesDone(0)
+                    .build())
+            .build();
+    mockProcessResult(result);
+
+    String tradefedInvocationErrorMessage =
+        "com.android.tradefed.device.DeviceNotAvailableException: Device 127.0.0.1:6520 not"
+            + " available";
+    when(xtsTradefedRuntimeInfoFileUtil.readInfo(any(), any()))
+        .thenReturn(
+            Optional.of(
+                new XtsTradefedRuntimeInfoFileDetail(
+                    new XtsTradefedRuntimeInfo(
+                        ImmutableList.of(
+                            new TradefedInvocation(
+                                /* isRunning= */ false,
+                                ImmutableList.of("127.0.0.1:6520", "127.0.0.1:6521"),
+                                "failed",
+                                tradefedInvocationErrorMessage)),
+                        /* timestamp= */ Instant.now()),
+                    /* lastModifiedTime= */ Instant.now())));
+
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    PrepareSessionRequestResult prepareResult =
+        newMultiCommandRequestHandler.prepareSessionRequestInfo(request, sessionInfo);
+
+    RequestDetail.Builder requestDetail =
+        RequestDetail.newBuilder()
+            .setOriginalRequest(request)
+            .putCommandDetails(
+                prepareResult.commandDetail().get().getId(), prepareResult.commandDetail().get());
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+
+    HandleResultProcessingResult handleResultProcessingResult =
+        newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+
+    assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.TRADEFED_INVOCATION_ERROR);
+    assertThat(commandDetail.getErrorMessage()).isEqualTo(tradefedInvocationErrorMessage);
+  }
+
+  @Test
+  public void
+      handleResultProcessing_cloudOrchestratorJitEmulatorTargetSetupErrorWithCompletedModule_errorState()
+          throws Exception {
+    setUpPassingJobAndTestResults();
+    CommandInfo jitCommandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine(DEFAULT_COMMAND_LINE)
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("127.0.0.1:6520")
+                    .build())
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("127.0.0.1:6521")
+                    .build())
+            .build();
+    request = request.toBuilder().clearCommands().addCommands(jitCommandInfo).build();
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(
+                ReportProto.Summary.newBuilder()
+                    .setPassed(10)
+                    .setFailed(0)
+                    .setModulesTotal(2)
+                    .setModulesDone(1)
+                    .build())
+            .build();
+    mockProcessResult(result);
+
+    String tradefedInvocationErrorMessage =
+        "com.android.tradefed.targetprep.TargetSetupError: Failed to push file";
+    when(xtsTradefedRuntimeInfoFileUtil.readInfo(any(), any()))
+        .thenReturn(
+            Optional.of(
+                new XtsTradefedRuntimeInfoFileDetail(
+                    new XtsTradefedRuntimeInfo(
+                        ImmutableList.of(
+                            new TradefedInvocation(
+                                /* isRunning= */ false,
+                                ImmutableList.of("127.0.0.1:6520", "127.0.0.1:6521"),
+                                "failed",
+                                tradefedInvocationErrorMessage)),
+                        /* timestamp= */ Instant.now()),
+                    /* lastModifiedTime= */ Instant.now())));
+
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    PrepareSessionRequestResult prepareResult =
+        newMultiCommandRequestHandler.prepareSessionRequestInfo(request, sessionInfo);
+
+    RequestDetail.Builder requestDetail =
+        RequestDetail.newBuilder()
+            .setOriginalRequest(request)
+            .putCommandDetails(
+                prepareResult.commandDetail().get().getId(), prepareResult.commandDetail().get());
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+
+    HandleResultProcessingResult handleResultProcessingResult =
+        newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+
+    assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+    assertThat(commandDetail.getErrorReason()).isEqualTo(ErrorReason.TRADEFED_INVOCATION_ERROR);
+    assertThat(commandDetail.getErrorMessage()).isEqualTo(tradefedInvocationErrorMessage);
+  }
+
+  @Test
   public void handleResultProcessing_generatesManifestFile() throws Exception {
     setUpPassingJobAndTestResults();
     ReportProto.Result result =

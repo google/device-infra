@@ -55,6 +55,7 @@ import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.S
 import com.google.devtools.mobileharness.infra.ats.console.command.parser.CommandLineParser;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetailOrBuilder;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo.DeviceDimension;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
@@ -118,6 +119,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
@@ -151,6 +153,21 @@ final class NewMultiCommandRequestHandler {
           BasicErrorId.LOCAL_MOUNT_ZIP_TO_DIR_ERROR,
           BasicErrorId.LOCAL_FILE_UNZIP_ERROR,
           InfraErrorId.ATS_SERVER_INVALID_TEST_RESOURCE);
+
+  // Matches Cloud Orchestrator JIT emulator ADB serials (e.g. "127.0.0.1:6520" or "host:6548")
+  // in the Cuttlefish ADB port range 6520..6619.
+  private static final Pattern CLOUD_ORCHESTRATOR_JIT_EMULATOR_SERIAL_PATTERN =
+      Pattern.compile("^[^:\\s]+:(?:65[2-9]\\d|66[01]\\d)$");
+
+  private static final ImmutableSet<String> CLOUD_ORCHESTRATOR_JIT_EMULATOR_RESOURCE_NAMES =
+      ImmutableSet.of("cvd_host_package", "cvd_device_image");
+
+  private static final ImmutableSet<String> TOLERATED_JIT_EMULATOR_DEVICE_ERROR_KEYWORDS =
+      ImmutableSet.of(
+          "DeviceNotAvailableException",
+          "DeviceUnresponsiveException",
+          "DeviceDisconnectedException",
+          "DeviceRuntimeException");
 
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   private final SessionResultHandlerUtil sessionResultHandlerUtil;
@@ -809,10 +826,26 @@ final class NewMultiCommandRequestHandler {
             getTradefedInvocationErrorMessage(jobs, logDir);
         if (tradefedInvocationErrorMessage.isPresent()
             && isFatalTradefedError(tradefedInvocationErrorMessage.get())) {
-          setCommandError(
-              commandDetailBuilder,
-              ErrorReason.TRADEFED_INVOCATION_ERROR,
-              tradefedInvocationErrorMessage.get());
+          if (shouldTolerateTradefedDeviceErrorForCloudOrchestratorJitEmulator(
+              request, commandDetailBuilder, tradefedInvocationErrorMessage.get())) {
+            logger.atInfo().log(
+                "Tolerating Tradefed device error for Cloud Orchestrator JIT emulator on session"
+                    + " %s, command %s because %d/%d modules completed: %s",
+                sessionInfo.getSessionId(),
+                commandId,
+                commandDetailBuilder.getTotalModuleCount()
+                    - commandDetailBuilder.getFailedModuleCount(),
+                commandDetailBuilder.getTotalModuleCount(),
+                tradefedInvocationErrorMessage.get());
+            commandDetailBuilder
+                .setState(CommandState.COMPLETED)
+                .setErrorMessage(tradefedInvocationErrorMessage.get());
+          } else {
+            setCommandError(
+                commandDetailBuilder,
+                ErrorReason.TRADEFED_INVOCATION_ERROR,
+                tradefedInvocationErrorMessage.get());
+          }
         } else if (commandDetailBuilder.getTotalModuleCount() > 0) {
           commandDetailBuilder.setState(CommandState.COMPLETED);
         } else {
@@ -1267,6 +1300,42 @@ final class NewMultiCommandRequestHandler {
   private static boolean isFatalTradefedError(String errorMessage) {
     return errorMessage != null
         && XtsConstants.FATAL_TRADEFED_ERROR_KEYWORDS.stream().anyMatch(errorMessage::contains);
+  }
+
+  /**
+   * Returns true if a Tradefed device error on a Cloud Orchestrator JIT emulator should be
+   * tolerated so that partial results are preserved and remaining incomplete/failed modules can be
+   * retried.
+   */
+  private static boolean shouldTolerateTradefedDeviceErrorForCloudOrchestratorJitEmulator(
+      NewMultiCommandRequest request, CommandDetailOrBuilder commandDetail, String errorMessage) {
+    long completedModuleCount =
+        commandDetail.getTotalModuleCount() - commandDetail.getFailedModuleCount();
+    return completedModuleCount > 0
+        && isCloudOrchestratorJitEmulator(request, commandDetail)
+        && isToleratedJitEmulatorDeviceError(errorMessage);
+  }
+
+  private static boolean isCloudOrchestratorJitEmulator(
+      NewMultiCommandRequest request, CommandDetailOrBuilder commandDetail) {
+    if (!commandDetail.getDeviceSerialsList().isEmpty()
+        && commandDetail.getDeviceSerialsList().stream()
+            .allMatch(
+                serial ->
+                    CLOUD_ORCHESTRATOR_JIT_EMULATOR_SERIAL_PATTERN.matcher(serial).matches())) {
+      return true;
+    }
+    return request.getTestResourcesList().stream()
+        .map(TestResource::getName)
+        .anyMatch(CLOUD_ORCHESTRATOR_JIT_EMULATOR_RESOURCE_NAMES::contains);
+  }
+
+  private static boolean isToleratedJitEmulatorDeviceError(String errorMessage) {
+    return errorMessage != null
+        && TOLERATED_JIT_EMULATOR_DEVICE_ERROR_KEYWORDS.stream().anyMatch(errorMessage::contains)
+        && XtsConstants.FATAL_TRADEFED_ERROR_KEYWORDS.stream()
+            .filter(not(TOLERATED_JIT_EMULATOR_DEVICE_ERROR_KEYWORDS::contains))
+            .noneMatch(errorMessage::contains);
   }
 
   /** Maps a {@link MobileHarnessException} to its corresponding {@link ErrorReason}. */
