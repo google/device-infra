@@ -52,8 +52,9 @@ message JobConfig {
   // `type.device` and `sub_device_spec` are set, `JobConfigConverter` validates
   // that `sub_device_spec[0].type` equals `type.device` and
   // `sub_device_spec[0].decorators` equals `type.decorator` in reverse order
-  // (throwing `JOB_SPEC_INVALID_JOB_TYPE_ERROR` on mismatch), and only merges
-  // `sub_device_spec[0].dimensions` into the first device.
+  // (throwing `JOB_SPEC_INVALID_JOB_TYPE_ERROR` on mismatch), and merges
+  // `sub_device_spec[0].dimensions` and the params of
+  // `sub_device_spec[0].decorators` into the first device.
   optional mobileharness.shared.JobType type = 3
       [(google.api.field_behavior) = REQUIRED];
 
@@ -94,8 +95,9 @@ message JobConfig {
   // provided, `JobConfigConverter` validates that `sub_device_spec[0].type`
   // equals `type.device` and `sub_device_spec[0].decorators` equals
   // `type.decorator` in reverse order (throwing
-  // `JOB_SPEC_INVALID_JOB_TYPE_ERROR` on mismatch), and only merges
-  // `sub_device_spec[0].dimensions` into the first device.
+  // `JOB_SPEC_INVALID_JOB_TYPE_ERROR` on mismatch), and merges
+  // `sub_device_spec[0].dimensions` and the params of
+  // `sub_device_spec[0].decorators` into the first device.
   //
   // If both `dimension` and `sub_device_spec` provide dimensions for the same
   // key, the one in `dimension` will override the one in `sub_device_spec` to
