@@ -13,8 +13,7 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_library")
-load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
+load("@rules_java//java:java_test.bzl", "java_test")
 
 package(default_applicable_licenses = ["//:license"])
 
@@ -23,24 +22,22 @@ filegroup(
     srcs = glob(["testdata/**/*"]),
 )
 
-java_library(
-    name = "report",
-    testonly = 1,
-    srcs = glob(
-        ["*.java"],
-        exclude = ["TestModule.java"],
-    ),
+java_test(
+    name = "SmallTests",
+    size = "small",
+    srcs = [
+        "CompatibilityReportCreatorTest.java",
+        "MoblyReportHelperTest.java",
+        "MoblyReportParserTest.java",
+    ],
     data = [
         ":testdata",
     ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
-        "//src/devtools/mobileharness/infra/ats/console/tradefed/proto:record_java_proto",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info_factory",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_creator",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_merger",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_parser",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:mobly_report_helper",
@@ -63,12 +60,33 @@ java_library(
     ],
 )
 
-junit_test_suites(
-    name = "tests",
-    jvm_flags = ["-Dcom.google.testing.junit.runner.shouldInstallTestSecurityManager=false"],
-    sizes = [
-        "small",
-        "medium",
+java_test(
+    name = "MediumTests",
+    size = "medium",
+    srcs = [
+        "CompatibilityReportMergerTest.java",
+        "CompatibilityReportParserTest.java",
     ],
-    deps = [":report"],
+    data = [
+        ":testdata",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
+        "//src/devtools/mobileharness/infra/ats/console/tradefed/proto:record_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_merger",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_parser",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:mobly_report_parser",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/inject:common_module",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/util:test_runfiles_util",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+        "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
+        "@protobuf//:protobuf_java",
+    ],
 )
