@@ -190,6 +190,8 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_logcat_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/util:android_decorator_validator_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_logcat_decorator_spec_java_proto",
         "@maven//:com_google_guava_guava",
     ],
 )
