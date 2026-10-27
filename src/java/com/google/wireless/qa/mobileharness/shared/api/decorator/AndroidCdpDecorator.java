@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryExcep
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrategy;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCallable;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.FileAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
@@ -150,6 +151,7 @@ public class AndroidCdpDecorator extends LifecycleDecorator {
   private final AndroidProcessUtil processUtil;
   private final Adb adb;
   private final AndroidFileUtil fileUtil;
+  private final Sleeper sleeper;
 
   // Sole instance variable retained across lifecycle (live OS process cannot be serialized)
   private CommandProcess chromedriverProcess;
@@ -163,7 +165,8 @@ public class AndroidCdpDecorator extends LifecycleDecorator {
         new AndroidAdbUtil(),
         new AndroidProcessUtil(),
         new Adb(),
-        new AndroidFileUtil());
+        new AndroidFileUtil(),
+        Sleeper.defaultSleeper());
   }
 
   @VisibleForTesting
@@ -174,13 +177,15 @@ public class AndroidCdpDecorator extends LifecycleDecorator {
       AndroidAdbUtil adbUtil,
       AndroidProcessUtil processUtil,
       Adb adb,
-      AndroidFileUtil fileUtil) {
+      AndroidFileUtil fileUtil,
+      Sleeper sleeper) {
     super(decoratedDriver, testInfo);
     this.commandExecutor = commandExecutor;
     this.adbUtil = adbUtil;
     this.processUtil = processUtil;
     this.adb = adb;
     this.fileUtil = fileUtil;
+    this.sleeper = sleeper;
   }
 
   @Override
@@ -406,6 +411,7 @@ public class AndroidCdpDecorator extends LifecycleDecorator {
                     return p;
                   },
                   RetryStrategy.uniformDelay(Duration.ofMillis(100), 30))
+              .setSleeper(sleeper)
               .build()
               .call();
       testInfo
@@ -467,6 +473,7 @@ public class AndroidCdpDecorator extends LifecycleDecorator {
                 return true;
               },
               RetryStrategy.uniformDelay(Duration.ofMillis(500), 20))
+          .setSleeper(sleeper)
           .build()
           .call();
       testInfo.log().atInfo().alsoTo(logger).log("Chrome DevTools remote socket is ready.");
@@ -733,6 +740,7 @@ public class AndroidCdpDecorator extends LifecycleDecorator {
               },
               RetryStrategy.uniformDelay(
                   Duration.ofMillis(100), Math.max(1, (int) (timeout.toMillis() / 100))))
+          .setSleeper(sleeper)
           .build()
           .call();
     } catch (RetryException e) {

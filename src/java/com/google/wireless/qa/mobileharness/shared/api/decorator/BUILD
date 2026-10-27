@@ -257,6 +257,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent/retry",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:lifecycle_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",

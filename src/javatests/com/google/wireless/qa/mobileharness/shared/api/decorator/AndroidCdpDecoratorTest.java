@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.SetupContext;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator.TeardownContext;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
@@ -99,6 +100,7 @@ public class AndroidCdpDecoratorTest {
   @Mock private AndroidProcessUtil processUtil;
   @Mock private Adb adb;
   @Mock private AndroidFileUtil fileUtil;
+  @Mock private Sleeper sleeper;
 
   private SetupContext setupContext;
   private AndroidCdpDecorator decorator;
@@ -126,7 +128,14 @@ public class AndroidCdpDecoratorTest {
     decorator =
         Mockito.spy(
             new AndroidCdpDecorator(
-                decoratedDriver, testInfo, commandExecutor, adbUtil, processUtil, adb, fileUtil));
+                decoratedDriver,
+                testInfo,
+                commandExecutor,
+                adbUtil,
+                processUtil,
+                adb,
+                fileUtil,
+                sleeper));
   }
 
   @Test
@@ -180,6 +189,7 @@ public class AndroidCdpDecoratorTest {
 
     // Verify it retried 30 times (as defined in RetryStrategy)
     verify(processUtil, times(30)).getProcessId(any(UtilArgs.class), eq(PACKAGE_NAME));
+    verify(sleeper, times(29)).sleep(Duration.ofMillis(100));
   }
 
   @Test
@@ -235,6 +245,7 @@ public class AndroidCdpDecoratorTest {
             eq(DEVICE_ID),
             eq("cat /proc/net/unix | grep -e chrome_devtools -e webview_devtools"),
             any(Duration.class));
+    verify(sleeper, times(19)).sleep(Duration.ofMillis(500));
     // Verify it still proceeds to forward the port
     verify(adbUtil).forwardTcpPort(DEVICE_ID, DEBUG_PORT, "localabstract:chrome_devtools_remote");
   }
@@ -758,6 +769,7 @@ public class AndroidCdpDecoratorTest {
 
     assertThat(exception.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_CDP_CHROMEDRIVER_ERROR);
     assertThat(exception).hasMessageThat().contains("Timed out waiting for port");
+    verify(sleeper).sleep(Duration.ofMillis(100));
   }
 
   @Test
