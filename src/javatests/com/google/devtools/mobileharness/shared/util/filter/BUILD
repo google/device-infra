@@ -27,6 +27,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/api/model/proto:universe_java_proto",
         "//src/devtools/mobileharness/api/query/proto:filter_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",

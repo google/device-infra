@@ -33,11 +33,18 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.HealthCategory;
 import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestLocator;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask.DimensionsMask;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.FieldMask;
+import com.google.protobuf.Timestamp;
 import java.util.Optional;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -74,6 +81,10 @@ public final class CompiledDeviceInfoMaskTest {
         DeviceLocator.getDescriptor().getFields().stream()
             .map(field -> "device_locator." + field.getName())
             .collect(toImmutableSet());
+    ImmutableSet<String> conditionProtoPaths =
+        DeviceCondition.getDescriptor().getFields().stream()
+            .map(field -> "device_condition." + field.getName())
+            .collect(toImmutableSet());
     ImmutableSet<String> featureProtoPaths =
         DeviceFeature.getDescriptor().getFields().stream()
             .map(field -> "device_feature." + field.getName())
@@ -89,6 +100,11 @@ public final class CompiledDeviceInfoMaskTest {
                 .collect(toImmutableSet()))
         .containsExactlyElementsIn(locatorProtoPaths);
     assertThat(
+            CompiledDeviceInfoMask.ConditionField.ALL.stream()
+                .map(field -> field.path)
+                .collect(toImmutableSet()))
+        .containsExactlyElementsIn(conditionProtoPaths);
+    assertThat(
             CompiledDeviceInfoMask.FeatureField.ALL.stream()
                 .map(field -> field.path)
                 .collect(toImmutableSet()))
@@ -102,6 +118,7 @@ public final class CompiledDeviceInfoMaskTest {
             Streams.concat(
                     deviceInfoProtoPaths.stream(),
                     locatorProtoPaths.stream(),
+                    conditionProtoPaths.stream(),
                     featureProtoPaths.stream(),
                     compositeDimensionProtoPaths.stream())
                 .collect(toImmutableSet()));
@@ -602,7 +619,104 @@ public final class CompiledDeviceInfoMaskTest {
 
     assertThat(empty.hasDeviceCondition()).isFalse();
     assertThat(defaultCondition.hasDeviceCondition()).isFalse();
-    assertThat(populated.getDeviceCondition()).isEqualTo(populatedCondition);
+    assertThat(populated.getDeviceCondition()).isSameInstanceAs(populatedCondition);
+  }
+
+  @Test
+  public void setMaskedDeviceCondition_tempDimensionOnly_dropsOtherConditionFields() {
+    DeviceInfoMask mask =
+        DeviceInfoMask.newBuilder()
+            .setFieldMask(FieldMask.newBuilder().addPaths("device_condition.temp_dimension"))
+            .build();
+    CompiledDeviceInfoMask compiled = CompiledDeviceInfoMask.of(mask);
+    TempDimension tempDimension =
+        TempDimension.newBuilder()
+            .setDimension(DeviceDimension.newBuilder().setName("quarantined").setValue("true"))
+            .build();
+    DeviceCondition fullCondition =
+        DeviceCondition.newBuilder()
+            .setAllocatedTestLocator(TestLocator.newBuilder().setId("test-1"))
+            .addTempDimension(tempDimension)
+            .setLastHealthyTime(Timestamp.newBuilder().setSeconds(1234L))
+            .build();
+
+    assertThat(compiled.keepsDeviceCondition()).isTrue();
+    DeviceInfo built =
+        compiled
+            .newMaskedDeviceInfoBuilder()
+            .setMaskedDeviceCondition("dev-1", deviceId -> Optional.of(fullCondition))
+            .build()
+            .orElseThrow();
+
+    assertThat(built.getDeviceCondition())
+        .isEqualTo(DeviceCondition.newBuilder().addTempDimension(tempDimension).build());
+  }
+
+  @Test
+  public void setMaskedDeviceCondition_subFieldOnNonDefaultCondition_matchesMaskUtilsTrim() {
+    DeviceInfoMask mask =
+        DeviceInfoMask.newBuilder()
+            .setFieldMask(FieldMask.newBuilder().addPaths("device_condition.temp_dimension"))
+            .build();
+    DeviceCondition healthyOnly =
+        DeviceCondition.newBuilder()
+            .setLastHealthyTime(Timestamp.newBuilder().setSeconds(1234L))
+            .build();
+    DeviceInfo untrimmed = DeviceInfo.newBuilder().setDeviceCondition(healthyOnly).build();
+    LabQueryResult.Builder trimmedResult =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabView.newBuilder()
+                    .addLabData(
+                        LabData.newBuilder()
+                            .setDeviceList(DeviceList.newBuilder().addDeviceInfo(untrimmed))));
+    MaskUtils.trimLabQueryResult(trimmedResult, Mask.newBuilder().setDeviceInfoMask(mask).build());
+
+    DeviceInfo projected = CompiledDeviceInfoMask.of(mask).project(untrimmed).orElseThrow();
+
+    assertThat(projected)
+        .isEqualTo(trimmedResult.getLabView().getLabData(0).getDeviceList().getDeviceInfo(0));
+  }
+
+  @Test
+  public void conditionFieldCopy_copiesRequestedFieldIndependently() {
+    TestLocator testLocator = TestLocator.newBuilder().setId("test-1").build();
+    TempDimension tempDimension =
+        TempDimension.newBuilder()
+            .setDimension(DeviceDimension.newBuilder().setName("quarantined").setValue("true"))
+            .build();
+    Timestamp lastHealthyTime = Timestamp.newBuilder().setSeconds(1234L).build();
+    DeviceCondition full =
+        DeviceCondition.newBuilder()
+            .setAllocatedTestLocator(testLocator)
+            .addTempDimension(tempDimension)
+            .setLastHealthyTime(lastHealthyTime)
+            .build();
+
+    DeviceCondition.Builder locatorOnly = DeviceCondition.newBuilder();
+    CompiledDeviceInfoMask.ConditionField.ALLOCATED_TEST_LOCATOR.copy(full, locatorOnly);
+    assertThat(locatorOnly.build())
+        .isEqualTo(DeviceCondition.newBuilder().setAllocatedTestLocator(testLocator).build());
+
+    DeviceCondition.Builder tempDimOnly = DeviceCondition.newBuilder();
+    CompiledDeviceInfoMask.ConditionField.TEMP_DIMENSION.copy(full, tempDimOnly);
+    assertThat(tempDimOnly.build())
+        .isEqualTo(DeviceCondition.newBuilder().addTempDimension(tempDimension).build());
+
+    DeviceCondition.Builder timeOnly = DeviceCondition.newBuilder();
+    CompiledDeviceInfoMask.ConditionField.LAST_HEALTHY_TIME.copy(full, timeOnly);
+    assertThat(timeOnly.build())
+        .isEqualTo(DeviceCondition.newBuilder().setLastHealthyTime(lastHealthyTime).build());
+
+    DeviceCondition withoutSingularSubMessages =
+        DeviceCondition.newBuilder().addTempDimension(tempDimension).build();
+    DeviceCondition.Builder unsetOut = DeviceCondition.newBuilder();
+    CompiledDeviceInfoMask.ConditionField.ALLOCATED_TEST_LOCATOR.copy(
+        withoutSingularSubMessages, unsetOut);
+    CompiledDeviceInfoMask.ConditionField.LAST_HEALTHY_TIME.copy(
+        withoutSingularSubMessages, unsetOut);
+    assertThat(unsetOut.build().hasAllocatedTestLocator()).isFalse();
+    assertThat(unsetOut.build().hasLastHealthyTime()).isFalse();
   }
 
   @Test

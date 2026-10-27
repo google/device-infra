@@ -77,11 +77,11 @@ import javax.annotation.Nullable;
  *       is false and {@link MaskedDeviceInfoBuilder#build()} returns empty.
  *   <li><b>{@code field_mask} with paths</b>: a field is kept when the mask lists it, an ancestor
  *       of it, or a descendant of it (see {@link MaskUtils#isFieldRequested}). Every field of
- *       {@link DeviceInfo}, every field of {@link DeviceLocator} and every field of {@link
- *       DeviceFeature} has its own gate, so a mask made of those paths is honoured by construction
- *       alone. A mask that reaches deeper, for example {@code
- *       device_locator.lab_locator.host_name}, falls back to {@link FieldMaskUtil#merge} (with
- *       {@code replacePrimitiveFields = true} to preserve explicit field presence) on {@code
+ *       {@link DeviceInfo}, every field of {@link DeviceLocator}, every field of {@link
+ *       DeviceCondition}, and every field of {@link DeviceFeature} has its own gate, so a mask made
+ *       of those paths is honoured by construction alone. A mask that reaches deeper, for example
+ *       {@code device_locator.lab_locator.host_name}, falls back to {@link FieldMaskUtil#merge}
+ *       (with {@code replacePrimitiveFields = true} to preserve explicit field presence) on {@code
  *       build()}; such masks are rare and cost a reflective copy per device.
  *   <li><b>Dimension whitelists</b> ({@code supported_dimensions_mask}, {@code
  *       required_dimensions_mask}) apply on top of the field mask, only when the corresponding
@@ -129,6 +129,43 @@ public final class CompiledDeviceInfoMask {
     }
 
     abstract void copy(DeviceLocator full, DeviceLocator.Builder out);
+  }
+
+  /** The {@link DeviceCondition} fields, each with its mask path and how to copy it. */
+  @VisibleForTesting
+  enum ConditionField {
+    ALLOCATED_TEST_LOCATOR("device_condition.allocated_test_locator") {
+      @Override
+      void copy(DeviceCondition full, DeviceCondition.Builder out) {
+        if (full.hasAllocatedTestLocator()) {
+          out.setAllocatedTestLocator(full.getAllocatedTestLocator());
+        }
+      }
+    },
+    TEMP_DIMENSION("device_condition.temp_dimension") {
+      @Override
+      void copy(DeviceCondition full, DeviceCondition.Builder out) {
+        out.addAllTempDimension(full.getTempDimensionList());
+      }
+    },
+    LAST_HEALTHY_TIME("device_condition.last_healthy_time") {
+      @Override
+      void copy(DeviceCondition full, DeviceCondition.Builder out) {
+        if (full.hasLastHealthyTime()) {
+          out.setLastHealthyTime(full.getLastHealthyTime());
+        }
+      }
+    };
+
+    static final ImmutableSet<ConditionField> ALL = ImmutableSet.copyOf(values());
+
+    final String path;
+
+    ConditionField(String path) {
+      this.path = path;
+    }
+
+    abstract void copy(DeviceCondition full, DeviceCondition.Builder out);
   }
 
   /**
@@ -206,6 +243,7 @@ public final class CompiledDeviceInfoMask {
                   HEALTH_CATEGORY_PATH,
                   COMPOSITE_DIMENSION_PATH),
               LocatorField.ALL.stream().map(field -> field.path),
+              ConditionField.ALL.stream().map(field -> field.path),
               FeatureField.ALL.stream().map(field -> field.path))
           .collect(toImmutableSet());
 
@@ -220,7 +258,6 @@ public final class CompiledDeviceInfoMask {
 
   private final boolean keepsDeviceInfo;
   private final boolean keepsDeviceStatus;
-  private final boolean keepsDeviceCondition;
   private final boolean keepsHealthCategory;
 
   /** The {@code device_locator} fields that are kept; empty drops {@code device_locator}. */
@@ -228,6 +265,9 @@ public final class CompiledDeviceInfoMask {
 
   /** True when {@code device_locator.id} is the only kept locator field. */
   private final boolean keepsOnlyDeviceId;
+
+  /** The {@code device_condition} fields that are kept; empty drops {@code device_condition}. */
+  private final ImmutableSet<ConditionField> keptConditionFields;
 
   /** The {@code device_feature} sub-fields that are kept; empty drops {@code device_feature}. */
   private final ImmutableSet<FeatureField> keptFeatureFields;
@@ -269,11 +309,14 @@ public final class CompiledDeviceInfoMask {
             ? fieldMask
             : null;
     this.keepsDeviceStatus = keeps.test(DEVICE_STATUS_PATH);
-    this.keepsDeviceCondition = keeps.test(DEVICE_CONDITION_PATH);
     this.keepsHealthCategory = keeps.test(HEALTH_CATEGORY_PATH);
     this.keptLocatorFields =
         LocatorField.ALL.stream().filter(field -> keeps.test(field.path)).collect(toImmutableSet());
     this.keepsOnlyDeviceId = keptLocatorFields.equals(ImmutableSet.of(LocatorField.ID));
+    this.keptConditionFields =
+        ConditionField.ALL.stream()
+            .filter(field -> keeps.test(field.path))
+            .collect(toImmutableSet());
     this.keptFeatureFields =
         FeatureField.ALL.stream().filter(field -> keeps.test(field.path)).collect(toImmutableSet());
     this.supportedDimensions = matcherOf(mask.getSupportedDimensionsMask());
@@ -309,9 +352,9 @@ public final class CompiledDeviceInfoMask {
     return keepsDeviceStatus;
   }
 
-  /** Whether {@code device_condition} is kept and its getter will be evaluated. */
+  /** Whether any part of {@code device_condition} is kept and its getter will be evaluated. */
   public boolean keepsDeviceCondition() {
-    return keepsDeviceCondition;
+    return !keptConditionFields.isEmpty();
   }
 
   /** Whether {@code health_category} is kept and its getter will be evaluated. */
@@ -388,6 +431,18 @@ public final class CompiledDeviceInfoMask {
     DeviceLocator.Builder projected = DeviceLocator.newBuilder();
     for (LocatorField field : keptLocatorFields) {
       field.copy(fullLocator, projected);
+    }
+    return projected.build();
+  }
+
+  /** Projects {@code fullCondition} down to the kept fields; by reference when all are kept. */
+  private DeviceCondition projectDeviceCondition(DeviceCondition fullCondition) {
+    if (keptConditionFields.equals(ConditionField.ALL)) {
+      return fullCondition;
+    }
+    DeviceCondition.Builder projected = DeviceCondition.newBuilder();
+    for (ConditionField field : keptConditionFields) {
+      field.copy(fullCondition, projected);
     }
     return projected.build();
   }
@@ -487,16 +542,18 @@ public final class CompiledDeviceInfoMask {
     }
 
     /**
-     * Sets {@code device_condition} from {@code getter} when the mask keeps it. A getter returning
-     * empty or a default-instance condition leaves the field unset.
+     * Sets {@code device_condition} from {@code getter} when the mask keeps any part of it,
+     * projected to the kept fields. A getter returning empty or a default-instance condition leaves
+     * the field unset.
      */
     @CanIgnoreReturnValue
     public <S> MaskedDeviceInfoBuilder setMaskedDeviceCondition(
         S source, Function<S, Optional<DeviceCondition>> getter) {
-      if (mask.keepsDeviceCondition) {
+      if (mask.keepsDeviceCondition()) {
         getter
             .apply(source)
             .filter(condition -> !condition.equals(DeviceCondition.getDefaultInstance()))
+            .map(mask::projectDeviceCondition)
             .ifPresent(protoBuilder::setDeviceCondition);
       }
       return this;
