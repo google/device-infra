@@ -191,12 +191,12 @@ export function getHealthSummaryChartData(
   ];
 
   return prepareColumnChartData(
-    stats.dailyStats,
+    stats.dailyStats ?? [],
     columns,
     (d, date) => [
       date,
-      d.healthinessSummary.inServicePercent ?? 0,
-      d.healthinessSummary.outOfServicePercent ?? 0,
+      d.healthinessSummary?.inServicePercent ?? 0,
+      d.healthinessSummary?.outOfServicePercent ?? 0,
     ],
     options,
   );
@@ -256,7 +256,7 @@ export function getHealthDetailChartData(
   });
 
   return prepareColumnChartData(
-    stats.dailyStats,
+    stats.dailyStats ?? [],
     columns,
     (d, date) => {
       const row: Array<Date | number> = [date];

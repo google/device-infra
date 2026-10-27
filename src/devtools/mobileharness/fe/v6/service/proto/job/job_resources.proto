@@ -53,14 +53,17 @@ message ParentSessionInfo {
 }
 
 // Concrete execution settings parameter mapping.
+//
+// Fields with explicit presence are unset when the job does not carry the
+// setting; the frontend lists only the settings that are present.
 message Settings {
   int32 total_test_count = 1;
   string priority = 2;
-  int32 job_timeout_sec = 3;
-  int32 test_timeout_sec = 4;
-  int32 start_timeout_sec = 5;
-  int32 test_attempts = 6;
-  bool force_retry = 7;
+  optional int32 job_timeout_sec = 3;
+  optional int32 test_timeout_sec = 4;
+  optional int32 start_timeout_sec = 5;
+  optional int32 test_attempts = 6;
+  optional bool force_retry = 7;
   string retry_level = 8;
 }
 

@@ -372,7 +372,7 @@ export class HostSettings implements OnInit {
     if (!parent.editable) {
       return {
         visible:
-          this.uiStatus().deviceConfig.subSections?.permissions?.visible ??
+          this.uiStatus().deviceConfig.subSections?.permissions?.visible ===
           true,
         editability: {
           editable: false,
@@ -390,7 +390,7 @@ export class HostSettings implements OnInit {
     if (!parent.editable) {
       return {
         visible:
-          this.uiStatus().deviceConfig.subSections?.wifi?.visible ?? true,
+          this.uiStatus().deviceConfig.subSections?.wifi?.visible === true,
         editability: {
           editable: false,
           reason: parent.reason,
@@ -408,7 +408,7 @@ export class HostSettings implements OnInit {
       return {
         sectionStatus: {
           visible:
-            this.uiStatus().deviceConfig.subSections?.dimensions?.visible ??
+            this.uiStatus().deviceConfig.subSections?.dimensions?.visible ===
             true,
           editability: {
             editable: false,
@@ -429,7 +429,7 @@ export class HostSettings implements OnInit {
     if (!parent.editable) {
       return {
         visible:
-          this.uiStatus().deviceConfig.subSections?.settings?.visible ?? true,
+          this.uiStatus().deviceConfig.subSections?.settings?.visible === true,
         editability: {
           editable: false,
           reason: parent.reason,

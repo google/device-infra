@@ -78,11 +78,15 @@ message HostInfo {
 }
 
 // Network connectivity details for a device.
+//
+// Both fields have explicit presence: unset means the device does not report
+// the value, which the frontend renders differently from 0 dBm or from no
+// internet access.
 message NetworkInfo {
   // WiFi signal strength in dBm, e.g., -65.
-  sint32 wifi_rssi = 1;
+  optional sint32 wifi_rssi = 1;
   // Indicates if the device has internet access.
-  bool has_internet = 2;
+  optional bool has_internet = 2;
 }
 
 // Information about remote control capabilities and status.
@@ -250,8 +254,9 @@ message SubDeviceInfo {
   string model = 4;
   // Version of the sub-device.
   string version = 5;
-  // Battery level percentage (0-100), or -1 if not applicable.
-  int32 battery_level = 6;
+  // Battery level percentage (0-100). Unset if the sub-device does not report
+  // a valid battery level.
+  optional int32 battery_level = 6;
   // Network connectivity details.
   NetworkInfo network = 7;
   // Remote control support details.

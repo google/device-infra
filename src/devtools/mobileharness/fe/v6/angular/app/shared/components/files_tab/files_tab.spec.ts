@@ -167,4 +167,12 @@ describe('FilesTab Component', () => {
 
     expect(component.activeFile()).toBeNull();
   });
+
+  it('should format int64 sizes rendered as JSON strings', () => {
+    expect(component.formatBytes('0')).toBe('0 Bytes');
+    expect(component.formatBytes(0)).toBe('0 Bytes');
+    expect(component.formatBytes('2048')).toBe('2 KB');
+    expect(component.formatBytes(undefined)).toBe('unknown size');
+    expect(component.formatBytes('not a number')).toBe('unknown size');
+  });
 });

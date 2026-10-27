@@ -436,7 +436,7 @@
                 <td mat-cell *matCellDef="let element" [attr.colspan]="displayedColumns.length">
                   <div class="element-detail"
                        [class.expanded]="element === expandedElement()">
-                       @if(element.subDevices) {
+                       @if(element.subDevices?.length) {
                          <div class="sub-device-wrapper">
                            <table mat-table [dataSource]="element.subDevices" class="sub-device-table">
                              <!-- Sub-Device ID Column -->

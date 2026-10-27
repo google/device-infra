@@ -307,12 +307,18 @@ export class FilesTab {
     this.activeFile.set(null);
   }
 
-  formatBytes(bytes?: number): string {
-    if (bytes === undefined || bytes === null) return 'unknown size';
+  formatBytes(size?: number | string): string {
+    if (size === undefined || size === null) return 'unknown size';
+    // Proto3 JSON renders int64 as a string.
+    const bytes = Number(size);
+    if (!Number.isFinite(bytes) || bytes < 0) return 'unknown size';
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const i = Math.min(
+      Math.floor(Math.log(bytes) / Math.log(k)),
+      sizes.length - 1,
+    );
     return `${Number((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   }
 
