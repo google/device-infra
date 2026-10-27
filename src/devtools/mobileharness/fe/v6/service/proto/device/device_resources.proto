@@ -155,6 +155,8 @@ message HealthAndActivityInfo {
     string status = 1;
     // Flag indicating if this raw status is considered critical.
     bool is_critical = 2;
+    // The timestamp when the device entered this status.
+    google.protobuf.Timestamp modify_time = 3;
   }
   DeviceStatus device_status = 4;
 

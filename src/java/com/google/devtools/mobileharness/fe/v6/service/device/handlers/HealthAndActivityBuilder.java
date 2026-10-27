@@ -101,6 +101,7 @@ public final class HealthAndActivityBuilder {
     String status = deviceInfo.getDeviceStatus().toString();
     List<String> types = deviceInfo.getDeviceFeature().getTypeList();
     Timestamp lastInServiceTime = deviceInfo.getDeviceCondition().getLastHealthyTime();
+    Timestamp statusModifyTime = deviceInfo.getDeviceCondition().getStatusModifyTime();
     List<TempDimension> tempDimensions = deviceInfo.getDeviceCondition().getTempDimensionList();
 
     boolean isQuarantined =
@@ -204,11 +205,15 @@ public final class HealthAndActivityBuilder {
       }
     }
 
-    builder.setDeviceStatus(
+    HealthAndActivityInfo.DeviceStatus.Builder deviceStatusBuilder =
         HealthAndActivityInfo.DeviceStatus.newBuilder()
             .setStatus(status)
             .setIsCritical(
-                builder.getUiState() == UiState.ERROR || builder.getUiState() == UiState.BLOCKED));
+                builder.getUiState() == UiState.ERROR || builder.getUiState() == UiState.BLOCKED);
+    if (Timestamps.isValid(statusModifyTime) && statusModifyTime.getSeconds() > 0) {
+      deviceStatusBuilder.setModifyTime(statusModifyTime);
+    }
+    builder.setDeviceStatus(deviceStatusBuilder);
 
     if (Timestamps.isValid(lastInServiceTime) && lastInServiceTime.getSeconds() > 0) {
       builder.setLastInServiceTime(lastInServiceTime);
