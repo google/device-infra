@@ -23,6 +23,8 @@ describe('App Component', () => {
   const appData: AppData = {
     adbVersion: '1.0',
     mttVersion: '1.0',
+    labconsoleVersion: '2026.10.21 (cl/123456789)',
+    masterVersion: '5.29.0',
   };
 
   beforeEach(async () => {
@@ -120,6 +122,21 @@ describe('App Component', () => {
       toggleButton.click();
       standaloneFixture.detectChanges();
       expect(standaloneComponent.sideNavExpanded).toBeTrue();
+    });
+
+    it('should render master version, FE version, and current year in footer', () => {
+      const footer: HTMLElement =
+        standaloneFixture.nativeElement.querySelector('footer');
+      expect(footer).toBeTruthy();
+      expect(
+        footer
+          .querySelector('.version-info')
+          ?.textContent?.replace(/\s+/g, ' ')
+          .trim(),
+      ).toBe('Master: 5.29.0 | FE: 2026.10.21 (cl/123456789)');
+      expect(footer.querySelector('.copy-right-info')?.textContent).toContain(
+        `© ${new Date().getFullYear()} Google`,
+      );
     });
   });
 
