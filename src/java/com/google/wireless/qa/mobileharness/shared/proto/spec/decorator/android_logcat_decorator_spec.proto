@@ -1,0 +1,89 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.spec;
+
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.decorator";
+option java_multiple_files = true;
+option java_outer_classname = "AndroidLogCatDecoratorSpecOuterClass";
+
+// Specs for AndroidLogCatDecorator.
+message AndroidLogCatDecoratorSpec {
+  extend DecoratorSpec {
+    optional AndroidLogCatDecoratorSpec ext = 1031;
+  }
+
+  optional bool log_to_file = 1 [
+    default = false,
+    (field_detail) = {
+      help: "By default, merges the device log into the test log. If set to "
+            "true, saves the log in a file and sends it back to the client or "
+            "test result service."
+    }
+  ];
+
+  optional bool async_log = 2 [
+    default = false,
+    (field_detail) = {
+      help: "By default, dumps the device log only after the test finishes. "
+            "If set to true, dumps real-time device logs asynchronously while "
+            "the test is running."
+    }
+  ];
+
+  optional string log_filter_specs = 3 [(field_detail) = {
+    help: "A series of tag[:priority] filter expressions, where tag is a log "
+          "component tag (or '*' for all) and priority is V, D, I, W, E, F, "
+          "or S."
+  }];
+
+  optional string log_options = 4 [(field_detail) = {
+    help: "Extra logcat command-line options, e.g. '-b main -v time'."
+  }];
+
+  optional bool clear_log = 5 [
+    default = true,
+    (field_detail) = {
+      help: "Whether to clear the log before running the test. Default value "
+            "is true."
+    }
+  ];
+
+  optional bool set_log_buffer_size = 6 [
+    default = true,
+    (field_detail) = {
+      help: "Whether to set the size of the log buffer. Default value is true."
+    }
+  ];
+
+  optional int32 log_buffer_size_kb = 7 [(field_detail) = {
+    help: "The size of the log buffer in KB (from 64 to 16384). If not "
+          "specified, uses the default maximum buffer size."
+  }];
+
+  optional bool ignore_log_buffer_size_set_failure = 8 [
+    default = false,
+    (field_detail) = {
+      help: "Setting the logcat buffer size is only supported on API 21+. If "
+            "true, failures to set the buffer size are ignored and the test "
+            "proceeds."
+    }
+  ];
+}
