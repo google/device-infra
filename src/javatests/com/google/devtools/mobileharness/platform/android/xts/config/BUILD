@@ -13,7 +13,8 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:java_test.bzl", "java_test")
+load("@rules_java//java:defs.bzl", "java_library")
+load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
 filegroup(
     name = "testdata",
@@ -21,29 +22,27 @@ filegroup(
     visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__"],
 )
 
-java_test(
-    name = "MediumTests",
-    size = "medium",
-    srcs = [
-        "ConfigurationUtilTest.java",
-        "ConfigurationXmlParserTest.java",
-        "DynamicConfigHandlerTest.java",
-        "DynamicConfigTest.java",
-        "ModuleConfigurationHelperTest.java",
-    ],
+java_library(
+    name = "config",
+    testonly = 1,
+    srcs = glob(["*.java"]),
     data = [
         ":testdata",
     ],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:device_configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_xml_parser",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:dynamic_config",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:dynamic_config_handler",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:module_configuration_helper",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:module_configuration_lab_plugin_lib",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
@@ -52,30 +51,16 @@ java_test(
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
         "@protobuf//:protobuf_java",
     ],
 )
 
-java_test(
-    name = "SmallTests",
-    size = "small",
-    srcs = ["ModuleConfigurationLabPluginTest.java"],
-    data = [
-        ":testdata",
+junit_test_suites(
+    name = "gen_tests",
+    sizes = [
+        "medium",
+        "small",
     ],
-    deps = [
-        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
-        "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_util",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:module_configuration_helper",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:module_configuration_lab_plugin_lib",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:test",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "@maven//:com_google_guava_guava",
-        "@maven//:junit_junit",
-        "@maven//:org_mockito_mockito_core",
-    ],
+    deps = [":config"],
 )
