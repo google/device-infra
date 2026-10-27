@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.DeviceOpsStubProvider;
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.RunningTestInfoProvider;
+import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.host.builder.RemoteControlUrlBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerLifecycleActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.PreflightLabServerReleaseActionHelper;
@@ -39,6 +40,8 @@ import com.google.devtools.mobileharness.fe.v6.service.host.handlers.Troubleshoo
 import com.google.devtools.mobileharness.fe.v6.service.host.handlers.UpdatePassThroughFlagsActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostAuxiliaryInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.host.provider.HostLatestVersionProvider;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchPreflightLabServerReleaseRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.host.BatchReleaseLabServersRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.CommandResult;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionHostRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.host.DecommissionHostResponse;
@@ -70,12 +73,14 @@ import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.lab.proto.DeviceOpsServ;
+import io.grpc.Status;
 import java.time.InstantSource;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.function.ThrowingRunnable;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.Mock;
@@ -325,5 +330,27 @@ public final class HostServiceLogicImplTest {
         assertThrows(
             ExecutionException.class, () -> hostServiceLogicImpl.decommissionHost(request).get());
     assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void batchLabServerReleaseRpcs_returnUnimplemented() {
+    assertUnimplemented(
+        () ->
+            hostServiceLogicImpl
+                .batchPreflightLabServerRelease(
+                    BatchPreflightLabServerReleaseRequest.getDefaultInstance(), Optional.empty())
+                .get());
+    assertUnimplemented(
+        () ->
+            hostServiceLogicImpl
+                .batchReleaseLabServers(
+                    BatchReleaseLabServersRequest.getDefaultInstance(), Optional.empty())
+                .get());
+  }
+
+  private static void assertUnimplemented(ThrowingRunnable runnable) {
+    ExecutionException ex = assertThrows(ExecutionException.class, runnable);
+    assertThat(ex).hasCauseThat().isInstanceOf(FeServiceException.class);
+    assertThat(((FeServiceException) ex.getCause()).getCode()).isEqualTo(Status.Code.UNIMPLEMENTED);
   }
 }

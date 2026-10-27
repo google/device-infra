@@ -309,3 +309,75 @@ export declare interface ListTroubleshootScriptsResponse {
   readonly actions: TroubleshootScriptAction[];
 }
 
+/**
+ * Semantic state of Lab Server release status for batch release preflight.
+ */
+export type HostLabServerReleaseState =
+  | 'LAB_SERVER_RELEASE_STATE_UNSPECIFIED'
+  | 'LAB_SERVER_RELEASE_STATE_RUNNING'
+  | 'LAB_SERVER_RELEASE_STATE_STARTING'
+  | 'LAB_SERVER_RELEASE_STATE_ERROR'
+  | 'LAB_SERVER_RELEASE_STATE_DRAINING'
+  | 'LAB_SERVER_RELEASE_STATE_DRAINED'
+  | 'LAB_SERVER_RELEASE_STATE_STOPPING'
+  | 'LAB_SERVER_RELEASE_STATE_STOPPED'
+  | 'LAB_SERVER_RELEASE_STATE_UNKNOWN';
+
+/**
+ * Eligibility status of a single host in a batch Lab Server release.
+ */
+export type HostReleaseEligibilityStatus =
+  | 'HOST_RELEASE_ELIGIBILITY_STATUS_UNSPECIFIED'
+  | 'HOST_RELEASE_ELIGIBILITY_STATUS_ELIGIBLE'
+  | 'HOST_RELEASE_ELIGIBILITY_STATUS_INELIGIBLE_CORE_LAB'
+  | 'HOST_RELEASE_ELIGIBILITY_STATUS_INELIGIBLE_FUSION_LAB'
+  | 'HOST_RELEASE_ELIGIBILITY_STATUS_INELIGIBLE_DAEMON_NOT_RUNNING'
+  | 'HOST_RELEASE_ELIGIBILITY_STATUS_INELIGIBLE_ROLLOUT_IN_PROGRESS'
+  | 'HOST_RELEASE_ELIGIBILITY_STATUS_INELIGIBLE_PERMISSION_DENIED'
+  | 'HOST_RELEASE_ELIGIBILITY_STATUS_INELIGIBLE_NOT_FOUND';
+
+/**
+ * Per-host preflight result for BatchPreflightLabServerRelease.
+ */
+export declare interface HostReleasePreflightItem {
+  readonly hostName: string;
+  readonly labType: string;
+  readonly currentVersion: string;
+  readonly labServerReleaseState: HostLabServerReleaseState;
+  readonly eligibilityStatus: HostReleaseEligibilityStatus;
+  readonly ineligibilityReason?: string;
+}
+
+/**
+ * Request for BatchPreflightLabServerRelease API.
+ */
+export declare interface BatchPreflightLabServerReleaseRequest {
+  readonly hostNames: string[];
+  readonly universe?: string;
+}
+
+/**
+ * Response for BatchPreflightLabServerRelease API.
+ */
+export declare interface BatchPreflightLabServerReleaseResponse {
+  readonly enabled: boolean;
+  readonly releaseConfigs: DeployableVersion[];
+  readonly hosts: HostReleasePreflightItem[];
+}
+
+/**
+ * Request for BatchReleaseLabServers API.
+ */
+export declare interface BatchReleaseLabServersRequest {
+  readonly hostNames: string[];
+  readonly version: string;
+  readonly releaseName?: string;
+  readonly universe?: string;
+}
+
+/**
+ * Response for BatchReleaseLabServers API.
+ */
+export declare interface BatchReleaseLabServersResponse
+  extends RolloutResponse {}
+
