@@ -499,6 +499,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidBugreportDecorator");
     device.addSupportedDecorator("AndroidBusinessLogicSkipModuleDecorator");
     device.addSupportedDecorator("AndroidCdpDecorator");
+    device.addSupportedDecorator("AndroidChromeDriverProviderDecorator");
     device.addSupportedDecorator("AndroidCleanAppsDecorator");
     device.addSupportedDecorator("AndroidDeviceFeaturesCheckDecorator");
     // Advanced device settings. This decorator is only full tested on AndroidRealDevice. Some
