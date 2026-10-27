@@ -179,6 +179,16 @@ describe('DeviceOverviewTab Component', () => {
     ]);
   });
 
+  it('renders required dimensions before supported dimensions', () => {
+    const sectionTitles = fixture.debugElement
+      .queryAll(By.css('#overview-dimensions .dimension-section-title'))
+      .map((el) => el.nativeElement.textContent.trim());
+    expect(sectionTitles).toEqual([
+      'Required Dimensions',
+      'Supported Dimensions',
+    ]);
+  });
+
   it('should search capabilities', async () => {
     // Search drivers
     component.driversSearchTerm = 'mobly';
