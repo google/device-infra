@@ -71,6 +71,19 @@ java_proto_library(
 )
 
 proto_library(
+    name = "controller_proto",
+    srcs = ["controller.proto"],
+    deps = [
+        ":basic_proto",
+    ],
+)
+
+java_proto_library(
+    name = "controller_java_proto",
+    deps = [":controller_proto"],
+)
+
+proto_library(
     name = "conditioned_device_config_proto",
     srcs = ["conditioned_device_config.proto"],
     deps = [],
