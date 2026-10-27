@@ -34,7 +34,7 @@ public final class NoOpDeviceTestHistoryProvider implements DeviceTestHistoryPro
 
   @Override
   public ListenableFuture<GetDeviceTestHistoryResponse> getDeviceTestHistory(
-      String deviceId, String pageToken, UniverseScope universe) {
+      String deviceId, String hostName, String pageToken, UniverseScope universe) {
     return immediateFuture(GetDeviceTestHistoryResponse.getDefaultInstance());
   }
 }
