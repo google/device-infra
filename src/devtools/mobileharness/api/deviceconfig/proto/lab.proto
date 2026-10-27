@@ -104,6 +104,9 @@ message DetectorSpecs {
     repeated ManekiGenericDeviceDiscoverySpec
         maneki_generic_device_discovery_spec = 7;
 
+    repeated ManekiXboxDeviceDiscoverySpec maneki_xbox_device_discovery_spec =
+        8;
+
     message ManekiAndroidDeviceDiscoverySpec {
       string mac_address = 1;
     }
@@ -137,6 +140,11 @@ message DetectorSpecs {
     }
 
     message ManekiGenericDeviceDiscoverySpec {
+      string mac_address = 1;
+    }
+
+    message ManekiXboxDeviceDiscoverySpec {
+      // MAC address of the Xbox console, e.g. "AA:BB:CC:DD:EE:FF".
       string mac_address = 1;
     }
   }
