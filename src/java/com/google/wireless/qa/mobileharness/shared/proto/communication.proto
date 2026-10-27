@@ -92,6 +92,8 @@ message Communication {
     VIDEO video = 5;
     // New communication type for goldfish emulator control
     GoldfishEmulatorControl goldfish_emulator_control = 6;
+    // For port-based service control communication.
+    PortControl port_control = 7;
   }
 }
 
@@ -104,6 +106,26 @@ message GoldfishEmulatorControl {
     // The direct port number if available.
     int32 port_number = 2;
   }
+}
+
+// Communication parameters for port-based service control.
+message PortControl {
+  // Type of the service exposed on the port.
+  enum ServiceType {
+    SERVICE_TYPE_UNSPECIFIED = 0;
+    SERVICE_TYPE_DJAR = 1;
+  }
+
+  oneof port {
+    // The name of the port, originating from LHP's port registry.
+    string port_name = 1;
+
+    // The direct port number if available.
+    int32 port_number = 2;
+  }
+
+  // The service type running on the port.
+  ServiceType service_type = 3;
 }
 
 message CommunicationList {
