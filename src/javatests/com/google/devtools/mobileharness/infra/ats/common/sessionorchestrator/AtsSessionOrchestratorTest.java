@@ -49,6 +49,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.ScopedSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpecs;
@@ -108,6 +109,7 @@ public final class AtsSessionOrchestratorTest {
     SubDeviceSpecs subDeviceSpecs = mock(SubDeviceSpecs.class);
     when(subDeviceSpecs.getAllSubDevices()).thenReturn(ImmutableList.of());
     when(jobInfo.subDeviceSpecs()).thenReturn(subDeviceSpecs);
+    when(jobInfo.files()).thenReturn(mock(Files.class));
     TestInfos testInfos = mock(TestInfos.class);
     when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of());
     when(jobInfo.tests()).thenReturn(testInfos);
@@ -134,18 +136,27 @@ public final class AtsSessionOrchestratorTest {
     Properties setupTestProperties = new Properties(new Timing());
     setupTestProperties.add("phase_skippable_decorator_state::device1::decorator1::key1", "val1");
     setupTestProperties.add(
+        XtsConstants.XTS_SUITE_DYNAMIC_CONFIG_HOST_FILE_PROPERTY_KEY, "dynamic_config/gts.dynamic");
+    setupTestProperties.add(
         XtsConstants.XTS_DYNAMIC_DOWNLOAD_TEST_MODULES_PROPERTY_KEY, "CtsModuleA, CtsModuleB");
     setupTestProperties.add(
         XtsConstants.XTS_DYNAMIC_DOWNLOAD_HAS_PRELOADED_MAINLINE_MODULES_PROPERTY_KEY, "true");
     TestInfo setupTest = mock(TestInfo.class);
     when(setupTest.properties()).thenReturn(setupTestProperties);
+    when(setupTest.getGenFileDir()).thenReturn("/gen/setup_test");
     TestInfos setupTests = mock(TestInfos.class);
     when(setupTests.getAll()).thenReturn(ImmutableListMultimap.of("setup_test_id", setupTest));
     JobInfo setupJob = mockJobInfo("setup_job_id", XtsConstants.SETUP_JOB_NAME);
     when(setupJob.tests()).thenReturn(setupTests);
 
     JobInfo tfJob = mockJobInfo("tf_job_id", "tf_job");
+    Properties nonTfTestProperties = new Properties(new Timing());
+    TestInfo nonTfTest = mock(TestInfo.class);
+    when(nonTfTest.properties()).thenReturn(nonTfTestProperties);
+    TestInfos nonTfTests = mock(TestInfos.class);
+    when(nonTfTests.getAll()).thenReturn(ImmutableListMultimap.of("nontf_test_id", nonTfTest));
     JobInfo nonTfJob = mockJobInfo("nontf_job_id", "nontf_job");
+    when(nonTfJob.tests()).thenReturn(nonTfTests);
 
     Properties teardownTestProperties = new Properties(new Timing());
     TestInfo teardownTest = mock(TestInfo.class);
@@ -176,9 +187,18 @@ public final class AtsSessionOrchestratorTest {
     verify(sessionInfo, never()).addJob(nonTfJob);
     verify(sessionInfo, never()).addJob(teardownJob);
 
-    // Phase 2 -> Phase 3: Tradefed ends -> Non-Tradefed job scheduled
+    // Phase 2 -> Phase 3: Tradefed ends -> Non-Tradefed job scheduled with the suite dynamic
+    // config file, while phase-skippable states stay confined to the setup/teardown jobs.
     orchestrator.onJobEnd(new JobEndEvent(tfJob, /* jobError= */ null), DEFAULT_REQUEST_INFO);
     verify(sessionInfo).addJob(nonTfJob);
+    verify(nonTfJob.files())
+        .add(
+            XtsConstants.XTS_SUITE_DYNAMIC_CONFIG_FILE_TAG,
+            "/gen/setup_test/dynamic_config/gts.dynamic");
+    assertThat(
+            nonTfTestProperties.getOptional(
+                "phase_skippable_decorator_state::device1::decorator1::key1"))
+        .isEmpty();
     verify(sessionInfo, never()).addJob(teardownJob);
 
     // Phase 3 -> Phase 4: Non-Tradefed ends -> Teardown job scheduled with relayed state

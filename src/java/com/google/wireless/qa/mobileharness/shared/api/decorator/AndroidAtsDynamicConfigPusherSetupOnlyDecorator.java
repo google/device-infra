@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidS
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.DynamicConfig;
 import com.google.devtools.mobileharness.platform.android.xts.config.DynamicConfigHandler;
+import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.gson.JsonSyntaxException;
@@ -74,6 +75,9 @@ public class AndroidAtsDynamicConfigPusherSetupOnlyDecorator extends SetupOnlyDe
 
   private static final String MANAGED_FILE_CONTENT_PROVIDER_APK_RES_PATH =
       "/com/google/devtools/mobileharness/platform/android/app/binary/contentprovider/ManagedFileContentProvider.apk";
+
+  /** Sub directory of the test gen file dir holding the merged dynamic configs kept on the host. */
+  private static final String HOST_DYNAMIC_CONFIG_DIR = "dynamic_config";
 
   private final LocalFileUtil localFileUtil;
   private final AndroidFileUtil androidFileUtil;
@@ -130,6 +134,22 @@ public class AndroidAtsDynamicConfigPusherSetupOnlyDecorator extends SetupOnlyDe
     File hostFile = mergeConfigFiles(spec, localConfigFile, apfeConfig);
     AndroidAtsDynamicConfigPusherDecoratorState.Builder stateBuilder =
         AndroidAtsDynamicConfigPusherDecoratorState.newBuilder();
+    if (spec.getTarget().equals(TestTarget.HOST)) {
+      // Keep the merged file with the generated files of the test, which are returned to the
+      // session host with the other test artifacts, and publish its relative path for host-side
+      // consumers such as the session orchestrator. No content provider is needed since nothing
+      // is read from the device.
+      String relativePath = HOST_DYNAMIC_CONFIG_DIR + "/" + spec.getConfigFilename() + ".dynamic";
+      Path destFile = Path.of(testInfo.getGenFileDir(), relativePath);
+      localFileUtil.prepareParentDir(destFile);
+      localFileUtil.moveFileOrDir(hostFile.toPath(), destFile);
+      logger.atInfo().log("Saved dynamic config file %s on host for device %s", destFile, deviceId);
+      testInfo
+          .properties()
+          .add(XtsConstants.XTS_SUITE_DYNAMIC_CONFIG_HOST_FILE_PROPERTY_KEY, relativePath);
+      return SetupResult.continueDecorated();
+    }
+
     if (spec.getTarget().equals(TestTarget.DEVICE)) {
       String deviceDest =
           String.format(
