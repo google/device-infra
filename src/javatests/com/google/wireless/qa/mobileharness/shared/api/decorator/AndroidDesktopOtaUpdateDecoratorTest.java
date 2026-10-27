@@ -21,8 +21,10 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -34,6 +36,7 @@ import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.a
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConnectionState;
@@ -62,6 +65,7 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -73,7 +77,7 @@ public class AndroidDesktopOtaUpdateDecoratorTest {
   private static final String OTA_DOWNGRADE_PROP = "ro.ota.allow_downgrade";
   private static final String UPDATE_SUCCESS_OUTPUT =
       "onPayloadApplicationComplete(ErrorCode::kSuccess (0)";
-  private static final Duration WAIT_FOR_DEVICE_TIMEOUT = Duration.ofMinutes(10);
+  private static final Duration WAIT_FOR_DEVICE_TIMEOUT = Duration.ofMinutes(20);
 
   private AndroidDesktopOtaUpdateDecorator decorator;
   @Mock private CommandExecutor cmdExecutor;
@@ -497,6 +501,162 @@ public class AndroidDesktopOtaUpdateDecoratorTest {
 
     // Verify OTA update command still ran
     verify(cmdExecutor).run(any(Command.class));
+  }
+
+  @Test
+  public void run_otaUpdateWithCustomWaitForDeviceTimeout() throws Exception {
+    Duration customTimeout = Duration.ofMinutes(30);
+    mockSpec(
+        getDefaultTestSpecBuilder()
+            .setWipeUserData(false)
+            .setOtaTools(otaToolsZip.getAbsolutePath())
+            .setOtaPackage(otaPackage.getAbsolutePath())
+            .setWaitForDeviceTimeoutSec(customTimeout.toSeconds())
+            .build());
+
+    decorator.run(testInfo);
+
+    verify(androidSystemStateUtil).reboot("device_id");
+    verify(androidSystemStateUtil)
+        .waitForState("device_id", DeviceConnectionState.DEVICE, customTimeout);
+    verify(androidSystemStateUtil).waitUntilReady("device_id");
+    verify(decoratedDriver).run(testInfo);
+  }
+
+  @Test
+  public void run_otaUpdateOverTcpDevice_reconnectsAdbBeforeWaiting() throws Exception {
+    String tcpDeviceId = "100.115.161.134:5555";
+    when(device.getDeviceId()).thenReturn(tcpDeviceId);
+    mockSpec(
+        getDefaultTestSpecBuilder()
+            .setWipeUserData(false)
+            .setOtaTools(otaToolsZip.getAbsolutePath())
+            .setOtaPackage(otaPackage.getAbsolutePath())
+            .build());
+    doAnswer(
+            invocation -> {
+              assertThat(DeviceCache.getInstance().isCached(tcpDeviceId)).isTrue();
+              return null;
+            })
+        .when(androidSystemStateUtil)
+        .reboot(tcpDeviceId);
+
+    decorator.run(testInfo);
+
+    assertThat(DeviceCache.getInstance().isCached(tcpDeviceId)).isFalse();
+    InOrder inOrder =
+        inOrder(androidAdbUtil, adb, cmdExecutor, androidSystemStateUtil, decoratedDriver);
+    inOrder.verify(androidAdbUtil).getProperty(tcpDeviceId, AndroidProperty.INCREMENTAL_BUILD);
+    inOrder.verify(androidAdbUtil).setProperty(tcpDeviceId, OTA_DOWNGRADE_PROP, "1");
+    inOrder.verify(adb).runShell(tcpDeviceId, "update_engine_client --cancel");
+    inOrder.verify(adb).runShell(tcpDeviceId, "snapshotctl unmap-snapshots");
+    inOrder.verify(adb).runShell(tcpDeviceId, "snapshotctl delete-snapshots");
+    inOrder.verify(cmdExecutor).run(any(Command.class));
+    inOrder.verify(androidSystemStateUtil).reboot(tcpDeviceId);
+    inOrder.verify(androidAdbUtil).disconnect(tcpDeviceId);
+    inOrder
+        .verify(androidSystemStateUtil)
+        .waitForOverTcpDeviceConnection(tcpDeviceId, WAIT_FOR_DEVICE_TIMEOUT);
+    inOrder
+        .verify(androidSystemStateUtil)
+        .waitForState(tcpDeviceId, DeviceConnectionState.DEVICE, Duration.ofSeconds(30));
+    inOrder.verify(androidSystemStateUtil).waitUntilReady(tcpDeviceId);
+    inOrder.verify(adb).runShell(tcpDeviceId, "svc power stayon true");
+    inOrder.verify(androidAdbUtil).getProperty(tcpDeviceId, AndroidProperty.INCREMENTAL_BUILD);
+    inOrder.verify(decoratedDriver).run(testInfo);
+  }
+
+  @Test
+  public void run_otaUpdateOverTcpDevice_ignoresDisconnectErrorWhenRebootDropsSocket()
+      throws Exception {
+    String tcpDeviceId = "100.115.161.134:5555";
+    when(device.getDeviceId()).thenReturn(tcpDeviceId);
+    mockSpec(
+        getDefaultTestSpecBuilder()
+            .setWipeUserData(false)
+            .setOtaTools(otaToolsZip.getAbsolutePath())
+            .setOtaPackage(otaPackage.getAbsolutePath())
+            .build());
+    doThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_INTERNAL_UTIL_DISCONNECT_CMD_ERROR,
+                "Failed to disconnect from 100.115.161.134:5555"))
+        .when(androidAdbUtil)
+        .disconnect(tcpDeviceId);
+
+    decorator.run(testInfo);
+
+    assertThat(DeviceCache.getInstance().isCached(tcpDeviceId)).isFalse();
+    InOrder inOrder = inOrder(androidAdbUtil, androidSystemStateUtil, adb, decoratedDriver);
+    inOrder.verify(androidSystemStateUtil).reboot(tcpDeviceId);
+    inOrder.verify(androidAdbUtil).disconnect(tcpDeviceId);
+    inOrder
+        .verify(androidSystemStateUtil)
+        .waitForOverTcpDeviceConnection(tcpDeviceId, WAIT_FOR_DEVICE_TIMEOUT);
+    inOrder
+        .verify(androidSystemStateUtil)
+        .waitForState(tcpDeviceId, DeviceConnectionState.DEVICE, Duration.ofSeconds(30));
+    inOrder.verify(androidSystemStateUtil).waitUntilReady(tcpDeviceId);
+    inOrder.verify(adb).runShell(tcpDeviceId, "svc power stayon true");
+    inOrder.verify(decoratedDriver).run(testInfo);
+  }
+
+  @Test
+  public void run_otaUpdateOverTcpDevice_retriesOnTransientReadyFailure() throws Exception {
+    String tcpDeviceId = "100.115.161.134:5555";
+    when(device.getDeviceId()).thenReturn(tcpDeviceId);
+    mockSpec(
+        getDefaultTestSpecBuilder()
+            .setWipeUserData(false)
+            .setOtaTools(otaToolsZip.getAbsolutePath())
+            .setOtaPackage(otaPackage.getAbsolutePath())
+            .build());
+    doThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_SYSTEM_STATE_DEVICE_NOT_ONLINE_READY, "connection dropped"))
+        .doNothing()
+        .when(androidSystemStateUtil)
+        .waitUntilReady(tcpDeviceId);
+
+    decorator.run(testInfo);
+
+    verify(androidSystemStateUtil).reboot(tcpDeviceId);
+    verify(androidAdbUtil, times(2)).disconnect(tcpDeviceId);
+    verify(androidSystemStateUtil, times(2))
+        .waitForOverTcpDeviceConnection(tcpDeviceId, WAIT_FOR_DEVICE_TIMEOUT);
+    verify(androidSystemStateUtil, times(2))
+        .waitForState(tcpDeviceId, DeviceConnectionState.DEVICE, Duration.ofSeconds(30));
+    verify(androidSystemStateUtil, times(2)).waitUntilReady(tcpDeviceId);
+    verify(decoratedDriver).run(testInfo);
+  }
+
+  @Test
+  public void run_otaUpdateOverTcpDevice_exhaustsRetries_setsNeedsProvisionRepair()
+      throws Exception {
+    String tcpDeviceId = "100.115.161.134:5555";
+    when(device.getDeviceId()).thenReturn(tcpDeviceId);
+    mockSpec(
+        getDefaultTestSpecBuilder()
+            .setWipeUserData(false)
+            .setOtaTools(otaToolsZip.getAbsolutePath())
+            .setOtaPackage(otaPackage.getAbsolutePath())
+            .build());
+    doThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_INTERNAL_UTIL_CONNECT_ERROR, "failed to connect"))
+        .when(androidSystemStateUtil)
+        .waitForOverTcpDeviceConnection(tcpDeviceId, WAIT_FOR_DEVICE_TIMEOUT);
+
+    MobileHarnessException e =
+        assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
+
+    assertThat(e.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_ADB_INTERNAL_UTIL_CONNECT_ERROR);
+    assertThat(DeviceCache.getInstance().isCached(tcpDeviceId)).isFalse();
+    verify(androidAdbUtil, times(3)).disconnect(tcpDeviceId);
+    verify(androidSystemStateUtil, times(3))
+        .waitForOverTcpDeviceConnection(tcpDeviceId, WAIT_FOR_DEVICE_TIMEOUT);
+    verify(properties).add("needs_provision_repair", "true");
+    verify(decoratedDriver, never()).run(testInfo);
   }
 
   private void mockSpec(AndroidDesktopOtaUpdateDecoratorSpec spec) throws Exception {
