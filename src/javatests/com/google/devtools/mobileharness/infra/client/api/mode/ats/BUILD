@@ -13,17 +13,24 @@
 # limitations under the License.
 #
 
-load("@rules_java//java:defs.bzl", "java_library")
-load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
+load("@rules_java//java:java_test.bzl", "java_test")
 
 package(
     default_applicable_licenses = ["//:license"],
     default_testonly = 1,
 )
 
-java_library(
-    name = "ats",
-    srcs = glob(["*.java"]),
+java_test(
+    name = "SmallTests",
+    size = "small",
+    srcs = [
+        "AtsDeviceReserverTest.java",
+        "AtsModeTest.java",
+        "DeviceQuerierImplTest.java",
+        "JobSyncServiceTest.java",
+        "LabRecordManagerTest.java",
+        "RemoteDeviceManagerTest.java",
+    ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
@@ -64,10 +71,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:allocation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:job_schedule_unit",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:test_schedule_unit",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab:locator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
@@ -86,11 +91,44 @@ java_library(
     ],
 )
 
-junit_test_suites(
-    name = "gen_tests",
-    sizes = [
-        "small",
-        "medium",
+java_test(
+    name = "MediumTests",
+    size = "medium",
+    srcs = ["RemoteDeviceManagerIntegrationTest.java"],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:job_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
+        "//src/devtools/mobileharness/infra/master/rpc/proto:job_sync_service_java_proto",
+        "//src/devtools/mobileharness/infra/master/rpc/proto:lab_sync_service_java_proto",
+        "//src/devtools/mobileharness/shared/version/proto:version_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:annotations",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:job_sync_service",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:lab_record_manager",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:module",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:remote_device_manager",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:abstract_scheduler",
+        "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub/grpc:lab_sync",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:master_grpc_stub_helper",
+        "//src/java/com/google/devtools/mobileharness/shared/util/inject:common_module",
+        "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",
+        "//src/java/com/google/devtools/mobileharness/shared/version",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:allocation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:job_schedule_unit",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:test_schedule_unit",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@grpc-java//core",
+        "@grpc-java//netty",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_extensions_guice_testlib",
+        "@maven//:com_google_inject_guice",
+        "@maven//:com_google_truth_extensions_truth_proto_extension",
+        "@maven//:javax_inject_jsr330_api",
+        "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
-    deps = [":ats"],
 )
