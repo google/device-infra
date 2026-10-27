@@ -20,7 +20,6 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_END_EPOCH_MS;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -80,7 +79,6 @@ import java.nio.file.Files;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -131,8 +129,8 @@ public class AndroidInstrumentationTest {
   private static final ImmutableMap<String, String> OPTION_MAP =
       ImmutableMap.of("key1", "value1", "key2", "value2");
 
-  private static final String[] BUILD_PACKAGES =
-      new String[] {"com.google.spinner", "com.google.dependency"};
+  private static final ImmutableList<String> BUILD_PACKAGES =
+      ImmutableList.of("com.google.spinner", "com.google.dependency");
 
   private static final String TEST_APK_PATH = "/tmp/SpinnerTest/bin/SpinnerTest.apk";
   private static final String TEST_PACKAGE = "com.google.spinner.test";
@@ -156,22 +154,31 @@ public class AndroidInstrumentationTest {
   @Before
   public void setUp() throws Exception {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    AndroidInstrumentationTestFileSpiller testFileSpiller =
+        new AndroidInstrumentationTestFileSpiller(fileUtil, androidInstrumentationUtil);
+    AndroidInstrumentationOptionsPreparer optionsPreparer =
+        new AndroidInstrumentationOptionsPreparer(testFileSpiller);
+    AndroidInstrumentationRunner runner =
+        new AndroidInstrumentationRunner(
+            adb,
+            systemStateManager,
+            fileUtil,
+            androidInstrumentationUtil,
+            androidPackageManagerUtil,
+            clock);
     driver =
-        spy(
-            new AndroidInstrumentation(
-                device,
-                testInfo,
-                androidPackageManagerUtil,
-                adb,
-                aapt,
-                apkInstaller,
-                systemSettingManager,
-                systemStateManager,
-                fileUtil,
-                testMessageUtil,
-                androidInstrumentationUtil,
-                installApkStep,
-                clock));
+        new AndroidInstrumentation(
+            device,
+            testInfo,
+            androidPackageManagerUtil,
+            aapt,
+            apkInstaller,
+            systemSettingManager,
+            testMessageUtil,
+            androidInstrumentationUtil,
+            installApkStep,
+            optionsPreparer,
+            runner);
     when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(DEFAULT_SDK_VERSION);
     when(androidInstrumentationUtil.getTestArgs(any())).thenReturn(ImmutableMap.of());
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(1L)).thenReturn(Instant.ofEpochMilli(2L));
@@ -409,7 +416,7 @@ public class AndroidInstrumentationTest {
 
     File xmlResultFile = new File(PathUtil.join(genFileDirPath, "junit.xml"));
     assertThat(xmlResultFile.exists()).isTrue();
-    String xmlContent = new String(Files.readAllBytes(xmlResultFile.toPath()), UTF_8);
+    String xmlContent = Files.readString(xmlResultFile.toPath());
     assertThat(xmlContent).contains("<testsuites>");
     assertThat(xmlContent).contains("<testsuite ");
   }
@@ -419,16 +426,18 @@ public class AndroidInstrumentationTest {
     mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
 
     String instrumentationLog =
-        "INSTRUMENTATION_STATUS: class=com.google.Foo\n"
-            + "INSTRUMENTATION_STATUS: current=1\n"
-            + "INSTRUMENTATION_STATUS: id=AndroidJUnitRunner\n"
-            + "INSTRUMENTATION_STATUS: numtests=1\n"
-            + "INSTRUMENTATION_STATUS: stream=\n"
-            + "INSTRUMENTATION_STATUS: test=barTest\n"
-            + "INSTRUMENTATION_STATUS_CODE: 1\n"
-            + "INSTRUMENTATION_RESULT: shortMsg=java.lang.RuntimeException\n"
-            + "INSTRUMENTATION_RESULT: longMsg=java.lang.RuntimeException: No content..\n"
-            + "INSTRUMENTATION_CODE: 0";
+        """
+        INSTRUMENTATION_STATUS: class=com.google.Foo
+        INSTRUMENTATION_STATUS: current=1
+        INSTRUMENTATION_STATUS: id=AndroidJUnitRunner
+        INSTRUMENTATION_STATUS: numtests=1
+        INSTRUMENTATION_STATUS: stream=
+        INSTRUMENTATION_STATUS: test=barTest
+        INSTRUMENTATION_STATUS_CODE: 1
+        INSTRUMENTATION_RESULT: shortMsg=java.lang.RuntimeException
+        INSTRUMENTATION_RESULT: longMsg=java.lang.RuntimeException: No content..
+        INSTRUMENTATION_CODE: 0\
+        """;
     AndroidInstrumentationSetting setting =
         mockInstrumentSetting(
             TEST_NAME,
@@ -576,8 +585,8 @@ public class AndroidInstrumentationTest {
     driver.run(testInfo);
 
     assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.ERROR);
-    MobileHarnessException unused = testInfo.resultWithCause().get().causeException().get();
-    assertThat(testInfo.resultWithCause().get().causeException().get().getErrorId())
+    MobileHarnessException cause = testInfo.resultWithCause().get().causeException().get();
+    assertThat(cause.getErrorId())
         .isEqualTo(AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_DEVICE_OFFLINE);
     verify(fileUtil)
         .writeToFile(
@@ -703,8 +712,7 @@ public class AndroidInstrumentationTest {
       boolean noIsolatedStorage,
       int sdkVersion)
       throws Exception {
-    when(installApkStep.installBuildApks(device, testInfo))
-        .thenReturn(Arrays.asList(BUILD_PACKAGES));
+    when(installApkStep.installBuildApks(device, testInfo)).thenReturn(BUILD_PACKAGES);
 
     when(device.getDeviceId()).thenReturn(DEVICE_ID);
     TestLocator testLocator = spy(testInfo.locator());
@@ -713,8 +721,7 @@ public class AndroidInstrumentationTest {
     CountDownTimer testTimer = spy(testInfo.timer());
     when(testInfo.timer()).thenReturn(testTimer);
     when(testTimer.remainingTimeJava()).thenReturn(TEST_TIMEOUT);
-    when(androidInstrumentationUtil.getBuildApks(any()))
-        .thenReturn(ImmutableList.copyOf(BUILD_PACKAGES));
+    when(androidInstrumentationUtil.getBuildApks(any())).thenReturn(BUILD_PACKAGES);
     jobInfo
         .params()
         .add(
@@ -751,7 +758,7 @@ public class AndroidInstrumentationTest {
             eq(device),
             eq(
                 ApkInstallArgs.builder()
-                    .setApkPath(TEST_APK_PATH)
+                    .addApkPaths(TEST_APK_PATH)
                     .setGrantPermissions(true)
                     .setSkipDowngrade(false)
                     .build()),
@@ -1359,6 +1366,129 @@ public class AndroidInstrumentationTest {
         .getInstrumentationTargetPackage(any(), any(), any());
     verify(androidInstrumentationUtil, never()).configurePccSandbox(any(), any(), anyBoolean());
     verify(androidInstrumentationUtil, never()).cleanupPccSandbox(any(), any(), anyBoolean());
+  }
+
+  @Test
+  public void run_broadcastInstallMessageFails_recordsCreateMessageWarning() throws Exception {
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
+    jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_BROADCAST_INSTALL_MESSAGE, "true");
+    doThrow(
+            new MobileHarnessException(
+                BasicErrorId.MESSAGING_MESSAGE_DESTINATION_NOT_FOUND,
+                "failed to send install event"))
+        .when(testMessageUtil)
+        .sendMessageToTest(eq(TestInfoMocker.FAKE_TEST_ID), ArgumentMatchers.anyMap());
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            TEST_NAME,
+            OPTION_MAP,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
+        .thenReturn("OK (1 test)");
+
+    driver.run(testInfo);
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    assertThat(testInfo.warnings().get(AndroidErrorId.ANDROID_INSTRUMENTATION_CREATE_MESSAGE_ERROR))
+        .hasSize(6);
+  }
+
+  @Test
+  public void run_buildApkInstallFailureHandledByStep_returnsWithoutRunningInstrumentation()
+      throws Exception {
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
+    MobileHarnessException installError =
+        new MobileHarnessException(
+            AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_UPDATE_INCOMPATIBLE,
+            "install failed");
+    when(installApkStep.installBuildApks(eq(device), eq(testInfo), any(), any()))
+        .thenThrow(installError);
+    when(installApkStep.isInstallFailure(installError, testInfo)).thenReturn(true);
+
+    driver.run(testInfo);
+
+    verify(androidInstrumentationUtil, never()).instrument(any(), anyInt(), any(), any(), any());
+  }
+
+  @Test
+  public void run_recordsInstallAndExecutionDurationProperties() throws Exception {
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            TEST_NAME,
+            OPTION_MAP,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
+        .thenReturn("OK (1 test)");
+
+    driver.run(testInfo);
+
+    assertThat(
+            Long.parseLong(
+                testInfo
+                    .properties()
+                    .get(
+                        PropertyName.Test.AndroidInstrumentation
+                            .ANDROID_INSTRUMENTATION_INSTALL_APK_TIME_MS)))
+        .isAtLeast(0L);
+    assertThat(
+            Long.parseLong(
+                testInfo
+                    .properties()
+                    .get(
+                        PropertyName.Test.AndroidInstrumentation
+                            .ANDROID_INSTRUMENTATION_INSTALL_APK_TIME_SEC)))
+        .isAtLeast(0L);
+    assertThat(
+            Long.parseLong(
+                testInfo
+                    .properties()
+                    .get(
+                        PropertyName.Test.AndroidInstrumentation
+                            .ANDROID_INSTRUMENTATION_EXECUTION_TIME_MS)))
+        .isAtLeast(0L);
+    assertThat(
+            Long.parseLong(
+                testInfo
+                    .properties()
+                    .get(
+                        PropertyName.Test.AndroidInstrumentation
+                            .ANDROID_INSTRUMENTATION_EXECUTION_TIME_SEC)))
+        .isAtLeast(0L);
+  }
+
+  @Test
+  public void run_disableIsolatedStorageForApkFalse_skipsEnableLegacyStorage() throws Exception {
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false);
+    jobInfo
+        .params()
+        .add(AndroidInstrumentationDriverSpec.PARAM_DISABLE_ISOLATED_STORAGE_FOR_APK, "false");
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            TEST_NAME,
+            OPTION_MAP,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true);
+    when(androidInstrumentationUtil.instrument(
+            DEVICE_ID, DEFAULT_SDK_VERSION, setting, TEST_TIMEOUT, null))
+        .thenReturn("OK (1 test)");
+
+    driver.run(testInfo);
+
+    verify(androidInstrumentationUtil, never()).enableLegacyStorageForApk(any(), any());
   }
 
   private AndroidInstrumentationSetting mockInstrumentSetting(
