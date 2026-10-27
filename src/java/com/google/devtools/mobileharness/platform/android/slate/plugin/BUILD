@@ -21,7 +21,6 @@ java_library(
     name = "slate2aoa_script_generator_plugin",
     srcs = ["Slate2AoaScriptGeneratorPlugin.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/slate/plugin:__subpackages__",
     ],
