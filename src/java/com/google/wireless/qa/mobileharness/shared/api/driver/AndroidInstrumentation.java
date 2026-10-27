@@ -16,80 +16,38 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
-import static com.google.common.base.Strings.isNullOrEmpty;
-import static com.google.common.base.Strings.nullToEmpty;
-import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES;
-import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_END_EPOCH_MS;
-import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS;
-import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.SHARD_COUNT;
-import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.SHARD_INDEX;
-import static java.lang.String.format;
-
-import com.google.common.base.Ascii;
-import com.google.common.base.Splitter;
 import com.google.common.base.Stopwatch;
-import com.google.common.base.Utf8;
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.primitives.Booleans;
-import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.event.util.AppInstallEventUtil;
-import com.google.devtools.mobileharness.platform.android.instrumentation.AndroidInstrumentationSetting;
 import com.google.devtools.mobileharness.platform.android.instrumentation.AndroidInstrumentationUtil;
 import com.google.devtools.mobileharness.platform.android.instrumentation.PrepareTestArgsParams;
-import com.google.devtools.mobileharness.platform.android.instrumentation.parser.AmInstrumentationParser;
-import com.google.devtools.mobileharness.platform.android.instrumentation.parser.AmInstrumentationResultBuilder;
-import com.google.devtools.mobileharness.platform.android.instrumentation.parser.TestTimeTrackerKt;
-import com.google.devtools.mobileharness.platform.android.instrumentation.result.TestSuiteResultConverter;
-import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestStatus;
-import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestSuiteResult;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
 import com.google.devtools.mobileharness.platform.android.lightning.systemsetting.SystemSettingManager;
-import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
-import com.google.devtools.mobileharness.shared.util.base.StrUtil;
-import com.google.devtools.mobileharness.shared.util.command.LineCallback;
-import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.junit.xmlwriter.model.AntXmlResultWriter;
-import com.google.devtools.mobileharness.shared.util.junit.xmlwriter.model.XmlWriter;
-import com.google.devtools.mobileharness.shared.util.path.PathUtil;
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
-import com.google.wireless.qa.mobileharness.shared.android.parser.AndroidInstrumentationParser;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.StepAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.TestAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.api.driver.AndroidInstrumentationOptionsPreparer.PreparedInstrumentationOptions;
+import com.google.wireless.qa.mobileharness.shared.api.driver.AndroidInstrumentationRunner.ExecutionParams;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidInstrumentationDriverSpec;
 import com.google.wireless.qa.mobileharness.shared.api.spec.EntryDelimiterSpec;
 import com.google.wireless.qa.mobileharness.shared.api.step.android.InstallApkStep;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
-import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidInstrumentationSpec;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -113,76 +71,10 @@ public class AndroidInstrumentation extends BaseDriver
         SpecConfigable<AndroidInstrumentationSpec> {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  // Constants for supported instrumentation arguments
-  private static final String ARGUMENT_TEST_CLASS = "class";
-  private static final String ARGUMENT_NOT_TEST_CLASS = "notClass";
-  private static final String ARGUMENT_TEST_SIZE = "size";
-  private static final String ARGUMENT_ANNOTATION = "annotation";
-  private static final String ARGUMENT_NOT_ANNOTATION = "notAnnotation";
-  private static final String ARGUMENT_NUM_SHARDS = "numShards";
-  private static final String ARGUMENT_SHARD_INDEX = "shardIndex";
-  private static final String ARGUMENT_FILTER = "filter";
-  private static final String ARGUMENT_TEST_PACKAGE = "package";
-  private static final String ARGUMENT_NOT_TEST_PACKAGE = "notPackage";
-  private static final String ARGUMENT_TEST_FILE = "testFile";
-  private static final String ARGUMENT_NOT_TEST_FILE = "notTestFile";
-  private static final String ARGUMENT_TESTS_REGEX = "tests_regex";
-
-  /**
-   * Maximum UTF-8 byte length for inline test target arguments ({@code class}, {@code notClass},
-   * {@code package}, {@code notPackage}) before spilling them to a device {@code testFile} or
-   * {@code notTestFile}. Even when {@code Adb.runShell} writes commands exceeding 4,090 bytes to a
-   * temporary device script ({@code /data/local/tmp/adb_shell_command_*.sh}), {@code
-   * /system/bin/sh} and {@code ShellMain} still pass the {@code -e class <targets>} value as a
-   * single {@code argv[i]} argument to {@code execve} when invoking {@code am} / {@code
-   * app_process}, which fails with {@code E2BIG} ({@code Argument list too long}) if any single
-   * argument exceeds the Linux kernel {@code MAX_ARG_STRLEN = 131072} bytes (128 KiB) limit. Using
-   * 65,536 UTF-8 bytes leaves ample headroom.
-   */
-  private static final int MAX_TEST_TARGET_ARG_LENGTH = 65536;
-
-  private static final String TEST_FILE_PREFIX = "instrumentation_test_file";
-  private static final String NOT_TEST_FILE_PREFIX = "instrumentation_not_test_file";
-
-  /** Set of keys for specifying test target. */
-  private static final ImmutableSet<String> TEST_TARGET_KEYS =
-      ImmutableSet.of(
-          ARGUMENT_TEST_PACKAGE,
-          ARGUMENT_NOT_TEST_PACKAGE,
-          ARGUMENT_TEST_CLASS,
-          ARGUMENT_NOT_TEST_CLASS,
-          ARGUMENT_TEST_FILE,
-          ARGUMENT_NOT_TEST_FILE);
-
-  private static final ImmutableList<String> POSITIVE_TEST_TARGET_KEYS =
-      ImmutableList.of(ARGUMENT_TEST_CLASS, ARGUMENT_TEST_PACKAGE);
-  private static final ImmutableList<String> NEGATIVE_TEST_TARGET_KEYS =
-      ImmutableList.of(ARGUMENT_NOT_TEST_CLASS, ARGUMENT_NOT_TEST_PACKAGE);
-
-  /** Set of test filter keys. */
-  private static final ImmutableSet<String> TEST_FILTER_KEYS =
-      ImmutableSet.of(
-          ARGUMENT_ANNOTATION,
-          ARGUMENT_NOT_ANNOTATION,
-          ARGUMENT_FILTER,
-          ARGUMENT_TEST_SIZE,
-          ARGUMENT_TESTS_REGEX,
-          ARGUMENT_NUM_SHARDS,
-          ARGUMENT_SHARD_INDEX);
-
   @StepAnnotation private final InstallApkStep installApkStep;
-
-  /** An entry in the sequence option maps, to skip the run of the option entry. */
-  private static final ImmutableMap<String, String> SKIPPED_OPTION_MAP = ImmutableMap.of();
-
-  /** {@code AndroidInstrumentationUtil} fir instrument test on device. */
-  private final AndroidInstrumentationUtil androidInstrumentationUtil;
 
   /** {@code AndroidPackageManagerUtil} for package operations on Android devices. */
   protected final AndroidPackageManagerUtil androidPackageManagerUtil;
-
-  /** Android SDK ADB shell command line tool executor. */
-  private final Adb adb;
 
   /** {@code Aapt} for AAPT operations. */
   protected final Aapt aapt;
@@ -191,63 +83,49 @@ public class AndroidInstrumentation extends BaseDriver
   protected final ApkInstaller apkInstaller;
 
   private final SystemSettingManager systemSettingManager;
-
-  private final SystemStateManager systemStateManager;
-
-  /** Util for host side file operations. */
-  private final LocalFileUtil fileUtil;
-
-  /** For broadcasting messages when starting/finishing install an app. */
   private final TestMessageUtil testMessageUtil;
-
-  private final Clock clock;
+  private final AndroidInstrumentationUtil androidInstrumentationUtil;
+  private final AndroidInstrumentationOptionsPreparer optionsPreparer;
+  private final AndroidInstrumentationRunner runner;
 
   @Inject
   AndroidInstrumentation(
       Device device,
       TestInfo testInfo,
       AndroidPackageManagerUtil androidPackageManagerUtil,
-      Adb adb,
       Aapt aapt,
       ApkInstaller apkInstaller,
       SystemSettingManager systemSettingManager,
-      SystemStateManager systemStateManager,
-      LocalFileUtil fileUtil,
       TestMessageUtil testMessageUtil,
       AndroidInstrumentationUtil androidInstrumentationUtil,
       InstallApkStep installApkStep,
-      Clock clock) {
+      AndroidInstrumentationOptionsPreparer optionsPreparer,
+      AndroidInstrumentationRunner runner) {
     super(device, testInfo);
     this.androidPackageManagerUtil = androidPackageManagerUtil;
-    this.adb = adb;
     this.aapt = aapt;
     this.apkInstaller = apkInstaller;
     this.systemSettingManager = systemSettingManager;
-    this.systemStateManager = systemStateManager;
-    this.fileUtil = fileUtil;
     this.testMessageUtil = testMessageUtil;
     this.androidInstrumentationUtil = androidInstrumentationUtil;
     this.installApkStep = installApkStep;
-    this.clock = clock;
+    this.optionsPreparer = optionsPreparer;
+    this.runner = runner;
   }
 
   @Override
-  @SuppressWarnings("ReferenceEquality")
   public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    Stopwatch stopwatch = Stopwatch.createUnstarted();
     Device device = getDevice();
     String deviceId = device.getDeviceId();
     JobInfo job = testInfo.jobInfo();
-    List<String> buildPackageNames;
-    String testPackageName;
 
     ImmutableSet<String> jobBuildApks = getBuildApks(testInfo);
     String testApk = getTestApk(testInfo);
-
     int deviceSdkVersion = systemSettingManager.getDeviceSdkVersion(device);
 
-    // Install apks.
-    stopwatch.start();
+    List<String> buildPackageNames;
+    String testPackageName;
+    Stopwatch installStopwatch = Stopwatch.createStarted();
     try {
       buildPackageNames =
           installApkStep.installBuildApks(device, testInfo, jobBuildApks, /* spec= */ null);
@@ -255,622 +133,76 @@ public class AndroidInstrumentation extends BaseDriver
     } catch (MobileHarnessException e) {
       if (installApkStep.isInstallFailure(e, testInfo)) {
         return;
-      } else {
-        throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_INSTRUMENTATION_INSTALL_APK_ERROR, e.getMessage(), e);
       }
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_INSTRUMENTATION_INSTALL_APK_ERROR, e.getMessage(), e);
     }
-    stopwatch.stop();
-    long installApkTimeMs = stopwatch.elapsed().toMillis();
-    testInfo
-        .properties()
-        .add(
-            PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_INSTALL_APK_TIME_MS,
-            Long.toString(installApkTimeMs));
-    testInfo
-        .properties()
-        .add(
-            PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_INSTALL_APK_TIME_SEC,
-            Long.toString(installApkTimeMs / 1000));
-    stopwatch.reset();
+    recordDurationProperties(
+        testInfo,
+        installStopwatch.stop().elapsed(),
+        PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_INSTALL_APK_TIME_MS,
+        PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_INSTALL_APK_TIME_SEC);
 
-    // Gets the runner name.
     String runnerName =
         androidInstrumentationUtil.getTestRunnerClassName(
             testInfo, deviceId, testPackageName, testApk, /* analyzeApk= */ false);
-
-    // Gets the option maps.
-    List<Map<String, String>> optionMaps = getOptionMaps(job);
-
-    // Cleans $EXTERNAL_STORAGE/googletest/ dir.
-    Optional<String> externalStoragePath =
-        androidInstrumentationUtil.cleanTestStorageOnDevice(testInfo, deviceId, deviceSdkVersion);
-
-    // Pushed test data.
+    String externalStoragePath =
+        androidInstrumentationUtil
+            .cleanTestStorageOnDevice(testInfo, deviceId, deviceSdkVersion)
+            .orElse(null);
     androidInstrumentationUtil.pushTestData(
         testInfo,
         deviceId,
         job.inputFiles().get(AndroidInstrumentationDriverSpec.TAG_TEST_DATA),
-        externalStoragePath.orElse(null));
+        externalStoragePath);
+    prepareTestArgs(testInfo, externalStoragePath);
 
-    // Prepares the test arg.
-    prepareTestArgs(testInfo, externalStoragePath.orElse(null));
-
-    // Finalizes the test target.
-    @Nullable String testTarget = getTestTarget(testInfo, optionMaps);
-
-    // Sets the test properties.
     testInfo.properties().add(AndroidInstrumentationDriverSpec.PROPERTY_PACKAGE, testPackageName);
     testInfo.properties().add(AndroidInstrumentationDriverSpec.PROPERTY_RUNNER, runnerName);
 
-    if (isUniformSharding(testInfo)) {
-      populateOptionMapsForUniformSharding(testInfo, optionMaps);
-    }
+    PreparedInstrumentationOptions preparedOptions =
+        optionsPreparer.prepare(testInfo, deviceId, deviceSdkVersion, externalStoragePath);
 
-    if (optionMaps.size() == 1
-        && job.params().get(AndroidInstrumentationDriverSpec.PARAM_OPTIONS + "_0") == null) {
-      testInfo
-          .properties()
-          .add(
-              AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS,
-              StrUtil.DEFAULT_MAP_JOINER.join(optionMaps.get(0)));
-    } else {
-      testInfo
-          .properties()
-          .add(
-              AndroidInstrumentationDriverSpec.PROPERTY_ITER_COUNT,
-              String.valueOf(optionMaps.size()));
-      int idx = 0;
-      for (Map<String, String> optionMap : optionMaps) {
-        testInfo
-            .properties()
-            .add(
-                AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS + "_" + idx++,
-                optionMap == SKIPPED_OPTION_MAP
-                    ? AndroidInstrumentationDriverSpec.SKIPPED_OPTION_STR
-                    : StrUtil.DEFAULT_MAP_JOINER.join(optionMap));
-      }
-    }
-
-    testTarget =
-        prepareTestFilesForOversizedTargets(
-            testInfo, deviceSdkVersion, externalStoragePath.orElse(null), optionMaps, testTarget);
-
-    Long instrumentTimeoutMs = null;
-    if (job.params().get(AndroidInstrumentationDriverSpec.PARAM_INSTRUMENT_TIMEOUT_SEC) != null) {
-      instrumentTimeoutMs =
-          Duration.ofSeconds(
-                  Integer.parseInt(
-                      job.params()
-                          .get(AndroidInstrumentationDriverSpec.PARAM_INSTRUMENT_TIMEOUT_SEC)))
-              .toMillis();
-    }
-    // Prints raw test results preparing to parse.
     boolean showRawResults = androidInstrumentationUtil.showRawResultsIfNeeded(testInfo);
 
-    boolean noIsolatedStorage =
-        job.params()
-            .isTrue(
-                AndroidInstrumentationDriverSpec
-                    .PARAM_DISABLE_ISOLATED_STORAGE_FOR_INSTRUMENTATION);
-
-    stopwatch.start();
-    if (job.params().isTrue(AndroidInstrumentationDriverSpec.PARAM_ASYNC)) {
-      // When async is enable, only one single run with only one option map is allowed.
-      Map<String, String> optionMap = Iterables.getOnlyElement(optionMaps);
-      asyncRun(
-          testInfo,
-          optionMap,
-          testTarget,
-          testPackageName,
-          runnerName,
-          deviceSdkVersion,
-          instrumentTimeoutMs,
-          showRawResults,
-          noIsolatedStorage);
-    } else {
-      try {
-        syncRun(
-            testInfo,
-            optionMaps,
-            testTarget,
-            testPackageName,
-            runnerName,
-            deviceSdkVersion,
-            instrumentTimeoutMs,
-            buildPackageNames,
-            showRawResults,
-            noIsolatedStorage);
-      } finally {
-        androidInstrumentationUtil.pullInstrumentationFilesFromDevice(
-            deviceId, testInfo, externalStoragePath.orElse(null));
-      }
-    }
-    stopwatch.stop();
-    long executeTimeMs = stopwatch.elapsed().toMillis();
-    testInfo
-        .properties()
-        .add(
-            PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_EXECUTION_TIME_MS,
-            Long.toString(executeTimeMs));
-    testInfo
-        .properties()
-        .add(
-            PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_EXECUTION_TIME_SEC,
-            Long.toString(executeTimeMs / 1000));
-    stopwatch.reset();
+    Stopwatch executionStopwatch = Stopwatch.createStarted();
+    runner.run(
+        ExecutionParams.builder()
+            .setTestInfo(testInfo)
+            .setDeviceId(deviceId)
+            .setDeviceSdkVersion(deviceSdkVersion)
+            .setTestPackageName(testPackageName)
+            .setRunnerName(runnerName)
+            .setBuildPackageNames(buildPackageNames)
+            .setExternalStoragePath(externalStoragePath)
+            .setPreparedOptions(preparedOptions)
+            .setShowRawResults(showRawResults)
+            .build());
+    recordDurationProperties(
+        testInfo,
+        executionStopwatch.stop().elapsed(),
+        PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_EXECUTION_TIME_MS,
+        PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_EXECUTION_TIME_SEC);
   }
 
-  /** Async run the instrumentation. */
-  private void asyncRun(
-      TestInfo testInfo,
-      Map<String, String> optionMap,
-      @Nullable String testTarget,
-      String testPackageName,
-      String runnerName,
-      @Nullable Integer deviceSdkVersion,
-      @Nullable Long instrumentTimeoutMs,
-      boolean showRawResults,
-      boolean noIsolatedStorage)
+  protected ImmutableSet<String> getBuildApks(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
-    JobInfo job = testInfo.jobInfo();
-    // When async is enable, only one option map is allowed.
-    long testTimeoutMs = testInfo.timer().remainingTimeJava().toMillis();
-    if (instrumentTimeoutMs != null) {
-      testTimeoutMs = Math.min(testTimeoutMs, instrumentTimeoutMs);
-    }
-    String deviceId = getDevice().getDeviceId();
-    testInfo
-        .log()
-        .atInfo()
-        .alsoTo(logger)
-        .log(
-            "%nAsync run instrumentation: %n"
-                + " - test target: %s%n - timeout: %d ms%n - options: %s",
-            testTarget, testTimeoutMs, StrUtil.DEFAULT_MAP_JOINER.join(optionMap));
-    if (deviceSdkVersion == null) {
-      try {
-        deviceSdkVersion = systemSettingManager.getDeviceSdkVersion(getDevice());
-      } catch (MobileHarnessException e) {
-        throw new MobileHarnessException(
-            AndroidErrorId.ANDROID_INSTRUMENTATION_GET_SDK_VERSION_ERROR,
-            "Failed to get device SDK version info",
-            e);
-      }
-    }
-    if (deviceSdkVersion < 21) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_INSTRUMENTATION_INCOMPATIBLE_DEVICE,
-          "Device sdk version is " + deviceSdkVersion + " (<21) which cannot support async run.");
-    }
-    try {
-      androidInstrumentationUtil.instrument(
-          deviceId,
-          deviceSdkVersion,
-          AndroidInstrumentationSetting.create(
-              testPackageName,
-              runnerName,
-              testTarget,
-              optionMap,
-              /* async= */ true,
-              showRawResults,
-              job.params()
-                  .getBool(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, false),
-              noIsolatedStorage,
-              job.params()
-                  .getBool(AndroidInstrumentationDriverSpec.PARAM_USE_TEST_STORAGE_SERVICE, true),
-              job.params().getBool(AndroidInstrumentationDriverSpec.PARAM_ENABLE_COVERAGE, false),
-              job.params().getBool(AndroidInstrumentationDriverSpec.PARAM_USE_ORCHESTRATOR, false)),
-          Duration.ofMillis(testTimeoutMs));
-    } catch (MobileHarnessException e) {
-      if (e.getErrorId() == AndroidErrorId.ANDROID_INSTRUMENTATION_COMMAND_EXEC_TIMEOUT) {
-        testInfo.resultWithCause().setNonPassing(TestResult.TIMEOUT, e);
-      }
-      throw e;
-    }
-    testInfo.log().atInfo().alsoTo(logger).log("Instrumentation started\n");
-    // Async run is usually used in battery tests. No way to adjust the test result at this moment.
-    // Leaves it to the latter logic of the decorators/plugins.
+    return ImmutableSet.copyOf(androidInstrumentationUtil.getBuildApks(testInfo));
   }
 
-  /** Sync run the instrumentation. */
-  @SuppressWarnings("ReferenceEquality")
-  private void syncRun(
-      TestInfo testInfo,
-      List<Map<String, String>> optionMaps,
-      @Nullable String testTarget,
-      String testPackageName,
-      String runnerName,
-      @Nullable Integer deviceSdkVersion,
-      @Nullable Long instrumentTimeoutMs,
-      List<String> buildPackageNames,
-      boolean showRawResults,
-      boolean noIsolatedStorage)
-      throws MobileHarnessException, InterruptedException {
-    JobInfo job = testInfo.jobInfo();
-    Properties properties = testInfo.properties();
-    String deviceId = getDevice().getDeviceId();
-
-    boolean hasError = false;
-    boolean hasFail = false;
-    boolean hasPass = false;
-    MobileHarnessException errorResultCause = null;
-    MobileHarnessException failResultCause = null;
-
-    properties.add(PropertyName.Test.ANDROID_INST_TEST_METHOD_REPEAT_TIMES, String.valueOf(1));
-    boolean hasSequentialOptionMaps =
-        optionMaps.size() > 1
-            || job.params().get(AndroidInstrumentationDriverSpec.PARAM_OPTIONS + "_0") != null;
-
-    boolean iterClearBuild =
-        optionMaps.size() > 1
-            && !buildPackageNames.isEmpty()
-            && job.params().isTrue(AndroidInstrumentationDriverSpec.PARAM_ITER_CLEAR_BUILD);
-    boolean iterClearTest =
-        optionMaps.size() > 1
-            && job.params().isTrue(AndroidInstrumentationDriverSpec.PARAM_ITER_CLEAR_TEST);
-
-    StringBuilder logFilenames = new StringBuilder();
-
-    for (int optionMapIdx = 0; optionMapIdx < optionMaps.size(); optionMapIdx++) {
-      Map<String, String> optionMap = optionMaps.get(optionMapIdx);
-      if (optionMap == SKIPPED_OPTION_MAP) {
-        // Skips this run.
-        properties.add(
-            AndroidInstrumentationDriverSpec.PROPERTY_RESULT + "_" + optionMapIdx,
-            AndroidInstrumentationDriverSpec.SKIPPED_OPTION_STR);
-        continue;
-      }
-
-      // Run adb shell commands before running instrument.
-      if (hasSequentialOptionMaps) {
-        String beforeIterShellCmd =
-            job.params()
-                .get(
-                    AndroidInstrumentationDriverSpec.PARAM_ITER_ADB_SHELL_BEFORE_INSTRUMENTATION
-                        + "_"
-                        + optionMapIdx);
-        if (beforeIterShellCmd != null) {
-          try {
-            String beforeTestOutput =
-                adb.runShell(
-                    deviceId, beforeIterShellCmd, /* timeout= */ null, /* lineCallback= */ null);
-            testInfo
-                .log()
-                .atInfo()
-                .alsoTo(logger)
-                .log("Run [adb shell %s]:%n%s%n", beforeIterShellCmd, beforeTestOutput);
-          } catch (MobileHarnessException e) {
-            throw new MobileHarnessException(
-                AndroidErrorId.ANDROID_INSTRUMENTATION_ADB_COMMAND_ERROR,
-                format("Failed to execute ADB command before test: %s", beforeIterShellCmd),
-                e);
-          }
-        }
-      }
-
-      Supplier<LineCallback> lineCallbackFactory = null;
-      TestSuiteResult.Builder testSuiteResultBuilder = null;
-      AmInstrumentationParser amInstrumentationParser = null;
-      if (showRawResults) {
-        testSuiteResultBuilder = TestSuiteResult.newBuilder();
-
-        // This builder is final so it can be captured by the lambda.
-        final TestSuiteResult.Builder finalBuilder = testSuiteResultBuilder;
-        amInstrumentationParser =
-            new AmInstrumentationParser(
-                ImmutableSet.of(new AmInstrumentationResultBuilder(finalBuilder)),
-                () -> TestTimeTrackerKt.TestTimeTracker(Instant::now));
-        final AmInstrumentationParser finalParser = amInstrumentationParser;
-
-        // Create the factory that provides new LineCallback instances.
-        lineCallbackFactory =
-            () -> {
-              // For each new callback, clear the builder to reset the state.
-              finalBuilder.clear();
-              return new LineCallback() {
-                @Override
-                public LineCallback.Response onLine(String line) {
-                  finalParser.parse(line);
-                  return LineCallback.Response.empty();
-                }
-              };
-            };
-      }
-
-      // Actually run the instrument.
-      long testTimeoutMs = testInfo.timer().remainingTimeJava().toMillis();
-      if (instrumentTimeoutMs != null) {
-        testTimeoutMs = Math.min(testTimeoutMs, instrumentTimeoutMs);
-      }
-      String message =
-          String.format(
-              "%nStart instrumentation: %n"
-                  + " - test target: %s%n - timeout: %d ms%n - options: %s",
-              testTarget, testTimeoutMs, StrUtil.DEFAULT_MAP_JOINER.join(optionMap));
-      testInfo.log().atInfo().alsoTo(logger).log("%s", message);
-      Instant instrumentationStartTime = clock.instant();
-      testInfo
-          .properties()
-          .add(
-              ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS,
-              Long.toString(instrumentationStartTime.toEpochMilli()));
-
-      String output;
-      MobileHarnessException mhException = null;
-      try {
-        output =
-            androidInstrumentationUtil.instrument(
-                deviceId,
-                deviceSdkVersion,
-                AndroidInstrumentationSetting.create(
-                    testPackageName,
-                    runnerName,
-                    testTarget,
-                    optionMap,
-                    /* async= */ false,
-                    showRawResults,
-                    job.params()
-                        .getBool(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, false),
-                    noIsolatedStorage,
-                    job.params()
-                        .getBool(
-                            AndroidInstrumentationDriverSpec.PARAM_USE_TEST_STORAGE_SERVICE, true),
-                    job.params()
-                        .getBool(AndroidInstrumentationDriverSpec.PARAM_ENABLE_COVERAGE, false),
-                    job.params()
-                        .getBool(AndroidInstrumentationDriverSpec.PARAM_USE_ORCHESTRATOR, false)),
-                Duration.ofMillis(testTimeoutMs),
-                lineCallbackFactory);
-      } catch (MobileHarnessException e) {
-        testInfo
-            .log()
-            .atInfo()
-            .alsoTo(logger)
-            .withCause(e)
-            .log("MobileHarnessException captured during instrumentation test");
-        mhException = e;
-        output = e.getMessage();
-      }
-      if (amInstrumentationParser != null) {
-        amInstrumentationParser.done();
-      }
-
-      testInfo
-          .properties()
-          .add(
-              ANDROID_INSTRUMENTATION_TEST_END_EPOCH_MS,
-              Long.toString(clock.instant().toEpochMilli()));
-      testInfo.log().atInfo().alsoTo(logger).log("Finish instrumentation: %s", output);
-      // Also log to file.
-      String instrumentLogFileName =
-          "instrument" + (hasSequentialOptionMaps ? "_" + optionMapIdx : "") + ".log";
-      try {
-        fileUtil.writeToFile(
-            PathUtil.join(testInfo.getGenFileDir(), instrumentLogFileName), output);
-        logFilenames.append(instrumentLogFileName).append(";");
-      } catch (MobileHarnessException e) {
-        testInfo
-            .warnings()
-            .addAndLog(
-                new MobileHarnessException(
-                    AndroidErrorId.ANDROID_INSTRUMENTATION_WRITE_FILE_ERROR, e.getMessage()),
-                logger);
-      }
-
-      if (testSuiteResultBuilder != null) {
-        TestSuiteResult testSuiteResult = testSuiteResultBuilder.build();
-        fileUtil.writeToFile(
-            PathUtil.join(testInfo.getGenFileDir(), "instrument_test_result.textproto"),
-            testSuiteResult.toString());
-        fileUtil.writeToFile(
-            PathUtil.join(testInfo.getGenFileDir(), "instrument_test_result.pb"),
-            testSuiteResult.toByteArray());
-        generateJunitXml(testSuiteResult, testInfo, instrumentationStartTime);
-      }
-
-      // Checks the result.
-      boolean useAndroidInstrumentationParser =
-          job.params()
-              .getBool(
-                  AndroidInstrumentationDriverSpec.PARAM_USE_ANDROIDINSTRUMENTATION_PARSER, true);
-      TestResult result;
-      StringBuilder errorMsg = new StringBuilder();
-
-      if (useAndroidInstrumentationParser) {
-        AndroidInstrumentationParser parser = new AndroidInstrumentationParser();
-        result =
-            parser.parseOutput(
-                output,
-                errorMsg,
-                mhException,
-                job.params().getBool(PARAM_FAIL_IF_NO_TESTS_RAN, false));
-      } else {
-        String filePathOnDevice =
-            job.params().get(AndroidInstrumentationDriverSpec.PARAM_GTEST_XML_FILE_ON_DEVICE);
-        if (filePathOnDevice == null) {
-          // TODO: Move this check to AndroidInstrumentationJobValidator class.
-          throw new MobileHarnessException(
-              AndroidErrorId.ANDROID_INSTRUMENTATION_GTEST_XML_FILE_ON_DEVICE_NOT_SET,
-              "Param gtest_xml_file_on_device is not set."
-                  + " This is required when using gtest XML parser.");
-        }
-        AndroidInstrumentationUtil.GtestResult gtestResult =
-            androidInstrumentationUtil.processGtestResult(
-                deviceId, testInfo, filePathOnDevice, mhException);
-        result = gtestResult.testResult();
-        errorMsg.append(gtestResult.errorMessage());
-      }
-      if (job.params().getBool(AndroidInstrumentationDriverSpec.PARAM_FAIL_ON_ALL_SKIPPED, false)
-          && result == TestResult.PASS
-          && testSuiteResultBuilder != null) {
-        TestSuiteResult testSuiteResult = testSuiteResultBuilder.build();
-        if (testSuiteResult.getTestResultList().stream()
-            .allMatch(testResult -> testResult.getTestStatus() == TestStatus.IGNORED)) {
-          logger.atInfo().log(
-              "All tests were ignored or assumption failures, assigning FAIL result.");
-          result = TestResult.FAIL;
-          errorMsg.append("All tests were ignored or assumption failures.");
-          if (testSuiteResult.getTestResultList().isEmpty()) {
-            // No test cases ran at all, e.g., an empty shard of uniform sharding. Retrying won't
-            // change the result, so halt further retries. This is consistent with the legacy FTL
-            // behavior of not rerunning steps that have zero test cases.
-            testInfo
-                .log()
-                .atInfo()
-                .alsoTo(logger)
-                .log("No test cases ran. Halt retries of this test since retry won't help.");
-            properties.add(Test.HALT_RETRY, "true");
-          }
-        }
-      }
-
-      switch (result) {
-        case PASS:
-          hasPass = true;
-          break;
-        case FAIL:
-          hasFail = true;
-          failResultCause =
-              new MobileHarnessException(
-                  AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_FAILED,
-                  "Instrumentation failures: "
-                      + errorMsg
-                      + "\nThis usually indicates validation errors of the test app, or "
-                      + "bugs of the app under test. You should be able to reproduce it with "
-                      + "\"adb shell am instrument ...\" with your local devices, without "
-                      + "Mobile Harness.",
-                  mhException);
-          break;
-        case ERROR:
-          hasError = true;
-          if (systemStateManager.isOnline(deviceId)) {
-            errorResultCause =
-                new MobileHarnessException(
-                    AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_ERROR,
-                    "Instrumentation start/finish unexpectedly: " + errorMsg,
-                    mhException);
-          } else {
-            errorResultCause =
-                new MobileHarnessException(
-                    AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_DEVICE_OFFLINE,
-                    "Device is offline, instrumentation start/finish unexpectedly: " + errorMsg,
-                    mhException);
-          }
-
-          break;
-        case TIMEOUT:
-          MobileHarnessException timeoutCause =
-              new MobileHarnessException(
-                  AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_TIMEOUT,
-                  String.format(
-                      "Instrumentation timeout [please try to increase test_timeout_sec"
-                          + ", or instrument_timeout_sec if it has been set.]:%n%s",
-                      errorMsg),
-                  mhException);
-          testInfo.resultWithCause().setNonPassing(TestResult.TIMEOUT, timeoutCause);
-          throw timeoutCause;
-        default:
-          MobileHarnessException errorCause =
-              new MobileHarnessException(
-                  AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_RESULT_NOT_FOUND,
-                  "Unexpected Test Result Found",
-                  mhException);
-          testInfo.resultWithCause().setNonPassing(TestResult.ERROR, errorCause);
-          throw errorCause;
-      }
-
-      // Extra adb shell commands or clean up after instrument.
-      if (hasSequentialOptionMaps) {
-        String afterTestShellCmd =
-            job.params()
-                .get(
-                    AndroidInstrumentationDriverSpec.PARAM_ITER_ADB_SHELL_AFTER_INSTRUMENTATION
-                        + "_"
-                        + optionMapIdx);
-        if (afterTestShellCmd != null) {
-          try {
-            String afterTestOutput =
-                adb.runShell(
-                    deviceId, afterTestShellCmd, /* timeout= */ null, /* lineCallback= */ null);
-            testInfo
-                .log()
-                .atInfo()
-                .alsoTo(logger)
-                .log("Run [adb shell %s]:%n%s%n", afterTestShellCmd, afterTestOutput);
-          } catch (MobileHarnessException e) {
-            // Only log the failure after the main test finished.
-            testInfo
-                .warnings()
-                .addAndLog(
-                    new MobileHarnessException(
-                        AndroidErrorId.ANDROID_INSTRUMENTATION_ADB_COMMAND_ERROR,
-                        String.format(
-                            "Failed to execute ADB command after test: %s", afterTestShellCmd),
-                        e),
-                    logger);
-          }
-        }
-
-        // Set result property.
-        if (result != null) {
-          properties.add(
-              AndroidInstrumentationDriverSpec.PROPERTY_RESULT + "_" + optionMapIdx, result.name());
-        }
-        try {
-          // Cleanup.
-          if (iterClearBuild) {
-            for (String buildPackageName : buildPackageNames) {
-              androidPackageManagerUtil.clearPackage(deviceId, buildPackageName);
-              testInfo
-                  .log()
-                  .atInfo()
-                  .alsoTo(logger)
-                  .log("%nClear build package %s", buildPackageName);
-            }
-          }
-          if (iterClearTest) {
-            androidPackageManagerUtil.clearPackage(deviceId, testPackageName);
-            testInfo.log().atInfo().alsoTo(logger).log("%nClear test package %s", testPackageName);
-          }
-        } catch (MobileHarnessException e) {
-          throw new MobileHarnessException(
-              AndroidErrorId.ANDROID_INSTRUMENTATION_CLEAR_PACKAGE_ERROR,
-              "Failed to clear package with exception raised",
-              e);
-        }
-      }
-    }
-
-    if (logFilenames.length() > 0) {
-      // Remove the trailing ";"
-      logFilenames.deleteCharAt(logFilenames.length() - 1);
-    }
-    properties.add(
-        PropertyName.Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_LOG_FILENAMES,
-        logFilenames.toString());
-
-    // Uses the worse case as the final result.
-    if (hasError) {
-      testInfo.resultWithCause().setNonPassing(TestResult.ERROR, errorResultCause);
-    } else if (hasFail) {
-      testInfo.resultWithCause().setNonPassing(TestResult.FAIL, failResultCause);
-    } else if (hasPass) {
-      testInfo.resultWithCause().setPass();
-    }
+  protected String getTestApk(TestInfo testInfo) {
+    return Iterables.getOnlyElement(
+        testInfo.jobInfo().inputFiles().get(AndroidInstrumentationDriverSpec.TAG_TEST_APK));
   }
 
   /**
-   * Installs the test apk, basic_services.apk and test_services.apk.
-   *
-   * @return the package name of the test apk
+   * Installs the test apk, basic_services.apk, and test_services.apk, returning the package name of
+   * the test apk.
    */
   private String installTestApks(TestInfo testInfo, int deviceSdkVersion, String testApk)
       throws MobileHarnessException, InterruptedException {
-    // Gets the package name from the test apk.
     String testPackageName = aapt.getApkPackageName(testApk);
 
-    // Installs APKs.
     postAppInstallStartEvent(testInfo, testPackageName);
     apkInstaller.installApkIfNotExist(
         getDevice(),
@@ -893,7 +225,6 @@ public class AndroidInstrumentation extends BaseDriver
         .jobInfo()
         .params()
         .getBool(AndroidInstrumentationDriverSpec.PARAM_DISABLE_ISOLATED_STORAGE_FOR_APK, true)) {
-      // Disable isolated-storage for test apk.
       androidInstrumentationUtil.enableLegacyStorageForApk(
           getDevice().getDeviceId(), testPackageName);
     }
@@ -906,145 +237,20 @@ public class AndroidInstrumentation extends BaseDriver
     return testPackageName;
   }
 
-  /**
-   * Finalizes the option maps. The result contains at least one option map, even the map is empty.
-   */
-  private List<Map<String, String>> getOptionMaps(JobInfo jobInfo) {
-    // Finalizes the option maps.
-    List<Map<String, String>> optionMaps = new ArrayList<>();
-    String paramOption = jobInfo.params().get(AndroidInstrumentationDriverSpec.PARAM_OPTIONS);
-    boolean commaEncoded = false;
-    if (paramOption != null
-        && paramOption.contains(AndroidInstrumentationDriverSpec.COMMA_ESCAPED)) {
-      commaEncoded = true;
-      paramOption =
-          paramOption.replace(
-              AndroidInstrumentationDriverSpec.COMMA_ESCAPED,
-              AndroidInstrumentationDriverSpec.COMMA_ENCODED);
-    }
-    Map<String, String> singletonOptionMap = new HashMap<>(StrUtil.toMap(paramOption, true));
-    if (!singletonOptionMap.isEmpty()) {
-      optionMaps.add(singletonOptionMap);
-    } else {
-      for (int i = 0; ; i++) {
-        String paramKey = AndroidInstrumentationDriverSpec.PARAM_OPTIONS + "_" + i;
-        String paramValue = jobInfo.params().get(paramKey);
-        if (paramValue == null) {
-          break;
-        } else if (paramValue.equals(AndroidInstrumentationDriverSpec.SKIPPED_OPTION_STR)) {
-          optionMaps.add(SKIPPED_OPTION_MAP);
-          continue;
-        }
-        if (paramValue.contains(AndroidInstrumentationDriverSpec.COMMA_ESCAPED)) {
-          commaEncoded = true;
-          paramValue =
-              paramValue.replace(
-                  AndroidInstrumentationDriverSpec.COMMA_ESCAPED,
-                  AndroidInstrumentationDriverSpec.COMMA_ENCODED);
-        }
-        Map<String, String> sequentialOptionMap = new HashMap<>(StrUtil.toMap(paramValue, true));
-        if (sequentialOptionMap.isEmpty()) {
-          break;
-        }
-        optionMaps.add(sequentialOptionMap);
-      }
-      if (optionMaps.isEmpty()) {
-        // No options specified, adds an empty option map.
-        optionMaps.add(singletonOptionMap);
-      }
-    }
-
-    if (commaEncoded) {
-      for (Map<String, String> optionMap : optionMaps) {
-        for (Map.Entry<String, String> entry : optionMap.entrySet()) {
-          entry.setValue(
-              entry.getValue().replace(AndroidInstrumentationDriverSpec.COMMA_ENCODED, ","));
-        }
-      }
-    }
-    return optionMaps;
-  }
-
-  private void cleanUpOptionMapsExplicitTestTargets(
-      TestInfo testInfo, List<Map<String, String>> optionMaps) {
-    for (Map<String, String> optionMap : optionMaps) {
-      if (optionMap.isEmpty()) {
-        continue;
-      }
-      optionMap
-          .entrySet()
-          .removeIf(
-              entry -> {
-                String key = entry.getKey();
-                if (TEST_TARGET_KEYS.contains(key) || TEST_FILTER_KEYS.contains(key)) {
-                  testInfo
-                      .log()
-                      .atInfo()
-                      .alsoTo(logger)
-                      .log(
-                          "Removed test target/filter key %s (value = %s) from option map.",
-                          key, entry.getValue());
-                  return true;
-                }
-                return false;
-              });
-    }
-  }
-
-  /** Get test target from either test name or user input. */
-  private String getTestTarget(TestInfo testInfo, List<Map<String, String>> optionMaps) {
-
-    String testName = testInfo.locator().getName();
-    String testTarget;
-    if (Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_ALL)) {
-      testTarget = null;
-      testInfo.log().atInfo().alsoTo(logger).log("Running all tests");
-    } else if (isUniformSharding(testInfo)) {
-      testTarget = null;
-      testInfo
-          .log()
-          .atInfo()
-          .alsoTo(logger)
-          .log("Running %s tests with uniform sharding", testName);
-    } else if (testInfo.properties().has(ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES)) {
-      testTarget = testInfo.properties().get(ANDROID_INSTRUMENTATION_SMART_SHARD_TEST_NAMES);
-    } else if (Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_SMALL)
-        || Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_MEDIUM)
-        || Ascii.equalsIgnoreCase(testName, AndroidInstrumentationDriverSpec.TEST_NAME_LARGE)) {
-      testTarget = null;
-      String size = Ascii.toLowerCase(testName);
-      for (Map<String, String> optionMap : optionMaps) {
-        optionMap.put("size", size);
-      }
-      testInfo.log().atInfo().alsoTo(logger).log("Running all %s tests", size);
-    } else {
-      testTarget = testName;
-    }
-    return testTarget;
-  }
-
-  private String getTestTargetForRetryTest(TestInfo testInfo) {
-    String testName = testInfo.locator().getName();
-    String retryTestTargets =
-        testInfo
-            .properties()
-            .getOptional(Test.AndroidInstrumentation.ANDROID_INSTRUMENTATION_RETRY_TEST_TARGETS)
-            .orElse("");
-    testInfo
-        .log()
-        .atInfo()
-        .alsoTo(logger)
-        .log(
-            "Running test %s with retry test targets:\n%s",
-            testName, String.join("\n", Splitter.on(',').split(retryTestTargets)));
-    return retryTestTargets;
-  }
-
-  private boolean isUniformSharding(TestInfo testInfo) {
-    return false;
+  private void postAppInstallStartEvent(TestInfo testInfo, String packageName) {
+    postAppInstallEvent(
+        testInfo,
+        () -> AppInstallEventUtil.createStartMessage(getDevice().getDimensions(), packageName));
   }
 
   private void postAppInstallFinishEvent(TestInfo testInfo, String packageName) {
+    postAppInstallEvent(
+        testInfo,
+        () -> AppInstallEventUtil.createFinishMessage(getDevice().getDimensions(), packageName));
+  }
+
+  private void postAppInstallEvent(
+      TestInfo testInfo, Supplier<Map<String, String>> messageSupplier) {
     if (!testInfo
         .jobInfo()
         .params()
@@ -1052,9 +258,7 @@ public class AndroidInstrumentation extends BaseDriver
       return;
     }
     try {
-      testMessageUtil.sendMessageToTest(
-          testInfo.locator().getId(),
-          AppInstallEventUtil.createFinishMessage(getDevice().getDimensions(), packageName));
+      testMessageUtil.sendMessageToTest(testInfo.locator().getId(), messageSupplier.get());
     } catch (MobileHarnessException e) {
       testInfo
           .warnings()
@@ -1065,35 +269,12 @@ public class AndroidInstrumentation extends BaseDriver
     }
   }
 
-  private void postAppInstallStartEvent(TestInfo testInfo, String packageName) {
-    if (!testInfo
-        .jobInfo()
-        .params()
-        .getBool(AndroidInstrumentationDriverSpec.PARAM_BROADCAST_INSTALL_MESSAGE, false)) {
-      return;
-    }
-    try {
-      testMessageUtil.sendMessageToTest(
-          testInfo.locator().getId(),
-          AppInstallEventUtil.createStartMessage(getDevice().getDimensions(), packageName));
-    } catch (MobileHarnessException e) {
-      testInfo
-          .warnings()
-          .addAndLog(
-              new MobileHarnessException(
-                  AndroidErrorId.ANDROID_INSTRUMENTATION_CREATE_MESSAGE_ERROR, e.getMessage()),
-              logger);
-    }
-  }
-
-  /** Cleans/creates test args files. */
   private void prepareTestArgs(TestInfo testInfo, @Nullable String externalStoragePath)
       throws MobileHarnessException, InterruptedException {
-    ImmutableMap<String, String> testArgs = androidInstrumentationUtil.getTestArgs(testInfo);
     androidInstrumentationUtil.prepareTestArgs(
         PrepareTestArgsParams.builder()
             .setSerial(getDevice().getDeviceId())
-            .setTestArgs(testArgs)
+            .setTestArgs(androidInstrumentationUtil.getTestArgs(testInfo))
             .setDeviceExternalStoragePath(externalStoragePath)
             .setHostTmpFileDir(testInfo.getTmpFileDir())
             .setLog(testInfo.log())
@@ -1109,228 +290,12 @@ public class AndroidInstrumentation extends BaseDriver
             .build());
   }
 
-  @SuppressWarnings("ReferenceEquality")
-  private void populateOptionMapsForUniformSharding(
-      TestInfo testInfo, List<Map<String, String>> optionMaps) {
-    String shardIndex = testInfo.properties().get(SHARD_INDEX);
-    String shardCount = testInfo.properties().get(SHARD_COUNT);
-    if (!isNullOrEmpty(shardIndex) && !isNullOrEmpty(shardCount)) {
-      for (Map<String, String> optionMap : optionMaps) {
-        if (optionMap != SKIPPED_OPTION_MAP) {
-          optionMap.put("shardIndex", shardIndex);
-          optionMap.put("numShards", shardCount);
-        }
-      }
-    }
-  }
-
-  @Nullable
-  @SuppressWarnings("ReferenceEquality")
-  private String prepareTestFilesForOversizedTargets(
+  private static void recordDurationProperties(
       TestInfo testInfo,
-      int deviceSdkVersion,
-      @Nullable String externalStoragePath,
-      List<Map<String, String>> optionMaps,
-      @Nullable String testTarget)
-      throws MobileHarnessException, InterruptedException {
-    int optionMapCount = optionMaps.size();
-    boolean[] spilledPositivePerMap = new boolean[optionMapCount];
-    for (int i = 0; i < optionMapCount; i++) {
-      Map<String, String> optionMap = optionMaps.get(i);
-      if (optionMap != SKIPPED_OPTION_MAP) {
-        spilledPositivePerMap[i] =
-            spillTargetsIfNeeded(
-                testInfo,
-                deviceSdkVersion,
-                externalStoragePath,
-                optionMap,
-                ARGUMENT_TEST_FILE,
-                POSITIVE_TEST_TARGET_KEYS,
-                testTarget,
-                getScopedTestFileName(TEST_FILE_PREFIX, i, optionMapCount));
-        spillTargetsIfNeeded(
-            testInfo,
-            deviceSdkVersion,
-            externalStoragePath,
-            optionMap,
-            ARGUMENT_NOT_TEST_FILE,
-            NEGATIVE_TEST_TARGET_KEYS,
-            /* extraTarget= */ null,
-            getScopedTestFileName(NOT_TEST_FILE_PREFIX, i, optionMapCount));
-      }
-    }
-    if (!Booleans.contains(spilledPositivePerMap, true)) {
-      return testTarget;
-    }
-    // testTarget is already in the testFile of each map that spilled, so return null to stop
-    // it being passed again as className. Maps that did not spill still need testTarget, so
-    // pass it through their `class` option instead.
-    if (testTarget != null) {
-      for (int i = 0; i < optionMapCount; i++) {
-        if (!spilledPositivePerMap[i]) {
-          Map<String, String> optionMap = optionMaps.get(i);
-          if (optionMap != SKIPPED_OPTION_MAP) {
-            optionMap.merge(
-                ARGUMENT_TEST_CLASS,
-                testTarget,
-                (existingClass, newValue) -> newValue + "," + existingClass);
-          }
-        }
-      }
-    }
-    return null;
-  }
-
-  private static String getScopedTestFileName(String prefix, int optionMapIdx, int optionMapCount) {
-    return optionMapCount <= 1 ? prefix + ".txt" : prefix + "_" + optionMapIdx + ".txt";
-  }
-
-  @CanIgnoreReturnValue
-  private boolean spillTargetsIfNeeded(
-      TestInfo testInfo,
-      int deviceSdkVersion,
-      @Nullable String externalStoragePath,
-      Map<String, String> optionMap,
-      String fileKey,
-      ImmutableList<String> targetKeys,
-      @Nullable String extraTarget,
-      String fileName)
-      throws MobileHarnessException, InterruptedException {
-    int combinedUtf8Length = Utf8.encodedLength(nullToEmpty(extraTarget));
-    for (String targetKey : targetKeys) {
-      combinedUtf8Length += Utf8.encodedLength(nullToEmpty(optionMap.get(targetKey)));
-    }
-    if (combinedUtf8Length <= MAX_TEST_TARGET_ARG_LENGTH) {
-      return false;
-    }
-    if (optionMap.containsKey(fileKey)) {
-      testInfo
-          .log()
-          .atWarning()
-          .alsoTo(logger)
-          .log(
-              "Oversized test targets (%d bytes) exceed limit of %d bytes, but cannot be"
-                  + " spilled because '%s' is already specified: %s",
-              combinedUtf8Length, MAX_TEST_TARGET_ARG_LENGTH, fileKey, optionMap.get(fileKey));
-      return false;
-    }
-    List<String> targets = new ArrayList<>();
-    addSplitTargets(targets, extraTarget);
-    for (String targetKey : targetKeys) {
-      addSplitTargets(targets, optionMap.get(targetKey));
-    }
-    String deviceFilePath =
-        writeAndPushTestFile(testInfo, deviceSdkVersion, externalStoragePath, fileName, targets);
-    optionMap.keySet().removeAll(targetKeys);
-    optionMap.put(fileKey, deviceFilePath);
-    return true;
-  }
-
-  private static void addSplitTargets(List<String> destination, @Nullable String commaSeparated) {
-    if (isNullOrEmpty(commaSeparated)) {
-      return;
-    }
-    int start = 0;
-    int length = commaSeparated.length();
-    for (int i = 0; i < length; i++) {
-      char c = commaSeparated.charAt(i);
-      if (c == '[') {
-        int end = findMatchingClose(commaSeparated, i, '[', ']');
-        if (end != -1) {
-          i = end;
-        }
-      } else if (c == '(') {
-        int end = findMatchingClose(commaSeparated, i, '(', ')');
-        if (end != -1) {
-          i = end;
-        }
-      } else if (c == ',') {
-        addTrimmedTarget(destination, commaSeparated.substring(start, i));
-        start = i + 1;
-      }
-    }
-    addTrimmedTarget(destination, commaSeparated.substring(start));
-  }
-
-  private static int findMatchingClose(String input, int openIndex, char openChar, char closeChar) {
-    int depth = 1;
-    for (int i = openIndex + 1; i < input.length(); i++) {
-      char c = input.charAt(i);
-      if (c == openChar) {
-        depth++;
-      } else if (c == closeChar) {
-        depth--;
-        if (depth == 0) {
-          return i;
-        }
-      }
-    }
-    return -1;
-  }
-
-  private static void addTrimmedTarget(List<String> destination, String rawTarget) {
-    String trimmed = rawTarget.trim();
-    if (!trimmed.isEmpty()) {
-      destination.add(trimmed);
-    }
-  }
-
-  private String writeAndPushTestFile(
-      TestInfo testInfo,
-      int deviceSdkVersion,
-      @Nullable String externalStoragePath,
-      String fileName,
-      List<String> targets)
-      throws MobileHarnessException, InterruptedException {
-    String hostFilePath = PathUtil.join(testInfo.getTmpFileDir(), fileName);
-    try {
-      fileUtil.writeToFile(hostFilePath, String.join("\n", targets));
-    } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_INSTRUMENTATION_WRITE_FILE_ERROR,
-          String.format("Failed to write test file %s on host", hostFilePath),
-          e);
-    }
-    return androidInstrumentationUtil.pushTestFile(
-        testInfo,
-        getDevice().getDeviceId(),
-        deviceSdkVersion,
-        hostFilePath,
-        fileName,
-        externalStoragePath);
-  }
-
-  protected ImmutableSet<String> getBuildApks(TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
-    return ImmutableSet.copyOf(androidInstrumentationUtil.getBuildApks(testInfo));
-  }
-
-  protected String getTestApk(TestInfo testInfo) {
-    return Iterables.getOnlyElement(
-        testInfo.jobInfo().inputFiles().get(AndroidInstrumentationDriverSpec.TAG_TEST_APK));
-  }
-
-  private static void generateJunitXml(
-      TestSuiteResult testSuiteResult, TestInfo testInfo, Instant instrumentationStartTime)
-      throws MobileHarnessException {
-    String testResultFilePath = PathUtil.join(testInfo.getGenFileDir(), "junit.xml");
-    try {
-      com.google.devtools.mobileharness.shared.util.junit.xmlwriter.model.TestResult testResult =
-          TestSuiteResultConverter.toJunitTestResult(
-              testSuiteResult, Timestamps.fromMillis(instrumentationStartTime.toEpochMilli()));
-      try (OutputStream outputStream = new FileOutputStream(testResultFilePath)) {
-        XmlWriter writer = new XmlWriter(outputStream);
-        AntXmlResultWriter resultWriter =
-            new AntXmlResultWriter(/* optionalTestSuitesNode= */ false);
-        resultWriter.writeTestSuites(writer, testResult);
-      }
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_INSTRUMENTATION_WRITE_JUNIT_XML_ERROR,
-          String.format(
-              "Failed to write instrumentation test result to the XML file: %s",
-              testResultFilePath),
-          e);
-    }
+      Duration elapsed,
+      PropertyName.Test.AndroidInstrumentation msProperty,
+      PropertyName.Test.AndroidInstrumentation secProperty) {
+    testInfo.properties().add(msProperty, Long.toString(elapsed.toMillis()));
+    testInfo.properties().add(secProperty, Long.toString(elapsed.toSeconds()));
   }
 }

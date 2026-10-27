@@ -151,22 +151,31 @@ public class AndroidInstrumentationTest {
   @Before
   public void setUp() throws Exception {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    AndroidInstrumentationTestFileSpiller testFileSpiller =
+        new AndroidInstrumentationTestFileSpiller(fileUtil, androidInstrumentationUtil);
+    AndroidInstrumentationOptionsPreparer optionsPreparer =
+        new AndroidInstrumentationOptionsPreparer(testFileSpiller);
+    AndroidInstrumentationRunner runner =
+        new AndroidInstrumentationRunner(
+            adb,
+            systemStateManager,
+            fileUtil,
+            androidInstrumentationUtil,
+            androidPackageManagerUtil,
+            clock);
     driver =
-        spy(
-            new AndroidInstrumentation(
-                device,
-                testInfo,
-                androidPackageManagerUtil,
-                adb,
-                aapt,
-                apkInstaller,
-                systemSettingManager,
-                systemStateManager,
-                fileUtil,
-                testMessageUtil,
-                androidInstrumentationUtil,
-                installApkStep,
-                clock));
+        new AndroidInstrumentation(
+            device,
+            testInfo,
+            androidPackageManagerUtil,
+            aapt,
+            apkInstaller,
+            systemSettingManager,
+            testMessageUtil,
+            androidInstrumentationUtil,
+            installApkStep,
+            optionsPreparer,
+            runner);
     when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(DEFAULT_SDK_VERSION);
     when(androidInstrumentationUtil.getTestArgs(any())).thenReturn(ImmutableMap.of());
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(1L)).thenReturn(Instant.ofEpochMilli(2L));

@@ -95,7 +95,12 @@ java_library(
 
 java_library(
     name = "android_instrumentation",
-    srcs = ["AndroidInstrumentation.java"],
+    srcs = [
+        "AndroidInstrumentation.java",
+        "AndroidInstrumentationOptionsPreparer.java",
+        "AndroidInstrumentationRunner.java",
+        "AndroidInstrumentationTestFileSpiller.java",
+    ],
     deps = [
         ":base_driver",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
@@ -111,12 +116,14 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemsetting",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemstate",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:android_package_manager_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/junit/xmlwriter/model",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android/parser:android_instrumentation_parser",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
@@ -134,7 +141,6 @@ java_library(
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
-        "@protobuf//:protobuf_java_util",
     ],
 )
 
