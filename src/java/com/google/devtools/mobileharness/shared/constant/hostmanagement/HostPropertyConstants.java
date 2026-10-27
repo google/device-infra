@@ -49,6 +49,8 @@ public final class HostPropertyConstants {
     TOTAL_MEM,
     /** The CPU architecture of the host. */
     CPU_ARCHITECTURE,
+    /** The negotiated network link speed of the primary network interface of the host. */
+    NETWORK_SPEED,
   }
 
   private HostPropertyConstants() {}
