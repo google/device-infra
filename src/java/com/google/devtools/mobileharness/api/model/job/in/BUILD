@@ -141,6 +141,19 @@ java_library(
 )
 
 java_library(
+    name = "files_internal",
+    srcs = ["FilesInternal.java"],
+    visibility = [
+        # Note: only for MH infra, please don't add more visibilities.
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in:__pkg__",
+    ],
+    deps = [
+        ":files",
+        "@maven//:com_google_code_findbugs_jsr305",
+    ],
+)
+
+java_library(
     name = "in_factory",
     srcs = ["JobInInternalFactory.java"],
     visibility = [

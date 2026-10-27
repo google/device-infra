@@ -40,6 +40,7 @@ java_library(
         "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/in:files_internal",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/model/job/in:device_requirements",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",
@@ -58,6 +59,19 @@ java_library(
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@protobuf//:protobuf_java",
+    ],
+)
+
+java_library(
+    name = "files_internal",
+    srcs = ["JobFilesInternal.java"],
+    visibility = [
+        # Note: only for the Gateway V2 worker, which localizes staged job files on read. Please
+        # don't add more visibilities.
+    ],
+    deps = [
+        ":in",
+        "@maven//:com_google_code_findbugs_jsr305",
     ],
 )
 

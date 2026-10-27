@@ -21,12 +21,15 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.in.Files.FileInfo;
+import com.google.devtools.mobileharness.api.model.job.in.FilesInternal;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
+import javax.annotation.Nullable;
 
 /** Input files of a job/test. */
 public class Files {
@@ -139,13 +142,26 @@ public class Files {
   }
 
   /**
+   * Registers a hook invoked before {@link #get}, {@link #getSingle}, or {@link #getSingleFileInfo}
+   * reads a tag, e.g. to localize a staged file on first access.
+   *
+   * <p>The hook runs outside the {@code Files} monitors, so a slow hook does not block other calls
+   * on it. The hook guards its own state, and may be called by several threads at once.
+   *
+   * <p>Package-private: only MH infra registers it, through {@link JobFilesInternal}.
+   */
+  void setOnGetTag(@Nullable Consumer<String> onGetTag) {
+    FilesInternal.setOnGetTag(newFiles, onGetTag);
+  }
+
+  /**
    * Finds a single input file/dir marked with the given tag.
    *
    * @param tag file/dir tag
    * @return the full path of the file/dir with the given tag
    * @throws MobileHarnessException when tag did not match exactly one input file/dir
    */
-  public synchronized String getSingle(String tag) throws MobileHarnessException {
+  public String getSingle(String tag) throws MobileHarnessException {
     return newFiles.getSingle(tag);
   }
 
@@ -156,7 +172,7 @@ public class Files {
    * @return the FileInfo of the file/dir with the given tag
    * @throws MobileHarnessException when tag did not match exactly one input file/dir
    */
-  public synchronized FileInfo getSingleFileInfo(String tag) throws MobileHarnessException {
+  public FileInfo getSingleFileInfo(String tag) throws MobileHarnessException {
     return newFiles.getSingleFileInfo(tag);
   }
 
@@ -166,7 +182,7 @@ public class Files {
    * @return a copy of the file/dir full path, or <b>an empty set</b> if there is no file/dir with
    *     the given tag
    */
-  public synchronized ImmutableSet<String> get(String tag) {
+  public ImmutableSet<String> get(String tag) {
     return newFiles.get(tag);
   }
 

@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
@@ -99,6 +100,12 @@ public class Files {
 
   /** File util for checking local files. */
   private final LocalFileUtil fileUtil;
+
+  /**
+   * Hook invoked before reading a tag in {@link #get}, {@link #getSingle}, or {@link
+   * #getSingleFileInfo}.
+   */
+  @Nullable private volatile Consumer<String> onGetTag;
 
   /** Creates the input file segment of a job/test. */
   public Files() {
@@ -290,25 +297,41 @@ public class Files {
   }
 
   /**
+   * Registers a hook invoked before {@link #get}, {@link #getSingle}, or {@link #getSingleFileInfo}
+   * reads a tag, e.g. to localize a staged file on first access.
+   *
+   * <p>The hook runs outside this {@code Files} instance's monitor, so a slow hook does not block
+   * other calls on it. The hook guards its own state, and may be called by several threads at once.
+   *
+   * <p>Package-private: only MH infra registers it, through {@link FilesInternal}.
+   */
+  void setOnGetTag(@Nullable Consumer<String> onGetTag) {
+    this.onGetTag = onGetTag;
+  }
+
+  /**
    * Finds a single input file/dir marked with the given tag.
    *
    * @param tag file/dir tag
    * @return the full path of the file/dir with the given tag
    * @throws MobileHarnessException when tag did not match exactly one input file/dir
    */
-  public synchronized String getSingle(String tag) throws MobileHarnessException {
-    Map<String, FileInfo> tagFileOrDirs = getTagFileOrDirs(tag);
-    if (tagFileOrDirs.isEmpty()) {
-      throw new MobileHarnessException(
-          BasicErrorId.JOB_OR_TEST_FILE_NOT_FOUND,
-          String.format("No input file/dir tagged with [%s]", tag));
-    } else if (tagFileOrDirs.size() > 1) {
-      throw new MobileHarnessException(
-          BasicErrorId.JOB_OR_TEST_FILE_MULTI_PATHS,
-          String.format(
-              "More than one input files/dirs %s are tagged with [%s]", tagFileOrDirs, tag));
-    } else {
-      return Iterables.getOnlyElement(tagFileOrDirs.keySet());
+  public String getSingle(String tag) throws MobileHarnessException {
+    runOnGetTag(tag);
+    synchronized (this) {
+      Map<String, FileInfo> tagFileOrDirs = getTagFileOrDirs(tag);
+      if (tagFileOrDirs.isEmpty()) {
+        throw new MobileHarnessException(
+            BasicErrorId.JOB_OR_TEST_FILE_NOT_FOUND,
+            String.format("No input file/dir tagged with [%s]", tag));
+      } else if (tagFileOrDirs.size() > 1) {
+        throw new MobileHarnessException(
+            BasicErrorId.JOB_OR_TEST_FILE_MULTI_PATHS,
+            String.format(
+                "More than one input files/dirs %s are tagged with [%s]", tagFileOrDirs, tag));
+      } else {
+        return Iterables.getOnlyElement(tagFileOrDirs.keySet());
+      }
     }
   }
 
@@ -319,19 +342,22 @@ public class Files {
    * @return the FileInfo of the file/dir with the given tag
    * @throws MobileHarnessException when tag did not match exactly one input file/dir
    */
-  public synchronized FileInfo getSingleFileInfo(String tag) throws MobileHarnessException {
-    Map<String, FileInfo> tagFileOrDirs = getTagFileOrDirs(tag);
-    if (tagFileOrDirs.isEmpty()) {
-      throw new MobileHarnessException(
-          BasicErrorId.JOB_OR_TEST_FILE_NOT_FOUND,
-          String.format("No input file/dir tagged with [%s]", tag));
-    } else if (tagFileOrDirs.size() > 1) {
-      throw new MobileHarnessException(
-          BasicErrorId.JOB_OR_TEST_FILE_MULTI_PATHS,
-          String.format(
-              "More than one input files/dirs %s are tagged with [%s]", tagFileOrDirs, tag));
-    } else {
-      return Iterables.getOnlyElement(tagFileOrDirs.values());
+  public FileInfo getSingleFileInfo(String tag) throws MobileHarnessException {
+    runOnGetTag(tag);
+    synchronized (this) {
+      Map<String, FileInfo> tagFileOrDirs = getTagFileOrDirs(tag);
+      if (tagFileOrDirs.isEmpty()) {
+        throw new MobileHarnessException(
+            BasicErrorId.JOB_OR_TEST_FILE_NOT_FOUND,
+            String.format("No input file/dir tagged with [%s]", tag));
+      } else if (tagFileOrDirs.size() > 1) {
+        throw new MobileHarnessException(
+            BasicErrorId.JOB_OR_TEST_FILE_MULTI_PATHS,
+            String.format(
+                "More than one input files/dirs %s are tagged with [%s]", tagFileOrDirs, tag));
+      } else {
+        return Iterables.getOnlyElement(tagFileOrDirs.values());
+      }
     }
   }
 
@@ -341,10 +367,21 @@ public class Files {
    * @return a copy of the file/dir full path, or <b>an empty set</b> if there is no file/dir with
    *     the given tag
    */
-  public synchronized ImmutableSet<String> get(String tag) {
-    Map<String, FileInfo> tagFilesOrDirs = getTagFileOrDirs(tag);
-    // Returns a new copy of the set to avoid concurrency issue.
-    return ImmutableSet.copyOf(tagFilesOrDirs.keySet());
+  public ImmutableSet<String> get(String tag) {
+    runOnGetTag(tag);
+    synchronized (this) {
+      Map<String, FileInfo> tagFilesOrDirs = getTagFileOrDirs(tag);
+      // Returns a new copy of the set to avoid concurrency issue.
+      return ImmutableSet.copyOf(tagFilesOrDirs.keySet());
+    }
+  }
+
+  /** Runs the {@link #setOnGetTag} hook, if any, outside this instance's monitor. */
+  private void runOnGetTag(String tag) {
+    Consumer<String> hook = onGetTag;
+    if (hook != null) {
+      hook.accept(tag);
+    }
   }
 
   /** Gets the {tag, path} mapping of all the input files/dirs. */
