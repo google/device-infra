@@ -875,7 +875,7 @@ public class OlcServerIntegrationTest {
           requiredDimensions.stream()
               .anyMatch(
                   dimension ->
-                      dimension.getName().equals("ALLOCATION_KEY")
+                      dimension.getName().equals("allocation_key")
                           && dimension.getValue().equals("fake_allocation_key"));
 
       String deviceUuid = deviceInfo.getDeviceLocator().getId();
@@ -883,14 +883,14 @@ public class OlcServerIntegrationTest {
       if (isAllocatedDevice) {
         foundAllocatedDevice = true;
         assertWithMessage(
-                "Allocated device %s should contain ALLOCATION_KEY=fake_allocation_key in required"
+                "Allocated device %s should contain allocation_key=fake_allocation_key in required"
                     + " dimensions. Full response: %s",
                 deviceUuid, getLabInfoResponse)
             .that(hasTempRequiredDimension)
             .isTrue();
       } else {
         assertWithMessage(
-                "Non-allocated device %s should NOT contain ALLOCATION_KEY=fake_allocation_key in"
+                "Non-allocated device %s should NOT contain allocation_key=fake_allocation_key in"
                     + " required dimensions. Full response: %s",
                 deviceUuid, getLabInfoResponse)
             .that(hasTempRequiredDimension)

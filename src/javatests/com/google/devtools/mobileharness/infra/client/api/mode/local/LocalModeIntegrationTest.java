@@ -62,6 +62,7 @@ import com.google.inject.Inject;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartedEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -162,7 +163,7 @@ public class LocalModeIntegrationTest {
     assertThat(deviceInfo.getDimensionList())
         .contains(
             DeviceQuery.Dimension.newBuilder()
-                .setName("ALLOCATION_KEY")
+                .setName("allocation_key")
                 .setValue(allocationKey)
                 .setRequired(true)
                 .build());
@@ -175,6 +176,14 @@ public class LocalModeIntegrationTest {
     clientApi.waitForJob(jobInfo2.locator().getId());
 
     assertThat(jobInfo2.resultWithCause().get().type()).isEqualTo(TestResult.ERROR);
+
+    JobInfo jobInfo3 = createJobInfo("fake_job_name_3");
+    jobInfo3.dimensions().add(Dimension.Name.ALLOCATION_KEY, allocationKey);
+
+    clientApi.startJob(jobInfo3, localMode);
+    clientApi.waitForJob(jobInfo3.locator().getId());
+
+    assertThat(jobInfo3.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
   }
 
   @Test

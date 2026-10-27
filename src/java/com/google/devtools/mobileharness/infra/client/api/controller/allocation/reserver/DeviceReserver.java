@@ -66,7 +66,7 @@ public abstract class DeviceReserver {
       DeviceLocator deviceLocator, String allocationKey, Duration ttl)
       throws MobileHarnessException, InterruptedException {
     addTempAllocationKeyToDevice(
-        deviceLocator, Dimension.Name.ALLOCATION_KEY.name(), allocationKey, ttl);
+        deviceLocator, Dimension.Name.ALLOCATION_KEY.lowerCaseName(), allocationKey, ttl);
   }
 
   /**
