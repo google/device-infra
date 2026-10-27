@@ -236,7 +236,7 @@ public class MasterSyncerForDevice implements Runnable, ApiConfigListener {
     try {
       heartbeatResp = labSyncHelper.heartbeatLab(devicesToSync);
     } catch (MobileHarnessException e) {
-      logger.atWarning().log("%s", e.getMessage());
+      logger.atWarning().withCause(e).log("%s", e.getMessage());
     }
 
     if (heartbeatResp != null) {
