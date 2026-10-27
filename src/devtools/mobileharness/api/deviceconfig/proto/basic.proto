@@ -42,7 +42,8 @@ message BasicDeviceConfig {
   repeated string owner = 1;
 
   // Default WIFI that the device will connect to preferentially.
-  WifiConfig default_wifi = 2;
+  // Deprecated. Use wifi_config in LabConfig instead.
+  WifiConfig default_wifi = 2 [deprecated = true];
 
   // Additional supported/required dimensions to be added to this device.
   mobileharness.api.model.DeviceCompositeDimension composite_dimension = 3;

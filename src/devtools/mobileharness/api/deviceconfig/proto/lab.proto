@@ -25,6 +25,7 @@ option java_package = "com.google.devtools.mobileharness.api.deviceconfig.proto"
 option java_outer_classname = "Lab";
 
 // The configuration of a lab.
+// Next ID: 15
 message LabConfig {
   // The host name of the lab, used to index the config.
   string host_name = 1;
@@ -57,6 +58,11 @@ message LabConfig {
 
   // The SSH groups of this lab.
   repeated SshGroup ssh_group = 12;
+
+  // The wifi config that will be used by all devices in this lab. If both
+  // default_device_config and wifi_config are set, wifi_config will take
+  // precedence.
+  WifiConfig wifi_config = 14;
 
   reserved 7, 8, 10;
 }
