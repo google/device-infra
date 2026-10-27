@@ -1,0 +1,129 @@
+<div class="markdown-container">
+  <!-- Reusable template for parsing inline tokens safely -->
+  <ng-template #inlineTokens let-text="text">
+    @for (token of parseInline(text); track $index) {
+      @switch (token.type) {
+        @case ('bold') {
+          <strong>{{ token.text }}</strong>
+        }
+        @case ('italic') {
+          <em>{{ token.text }}</em>
+        }
+        @case ('code') {
+          <code class="inline-code">{{ token.text }}</code>
+        }
+        @case ('link') {
+          <a class="markdown-link" [href]="token.url" target="_blank" rel="noopener noreferrer">{{ token.text }}</a>
+        }
+        @default {
+          {{ token.text }}
+        }
+      }
+    }
+  </ng-template>
+
+  @for (block of blocks(); track $index) {
+    @switch (block.type) {
+      @case ('heading') {
+        @switch (block.level) {
+          @case (1) {
+            <h1 class="markdown-h1">
+              <ng-container *ngTemplateOutlet="inlineTokens; context: {text: block.text}" />
+            </h1>
+          }
+          @case (2) {
+            <h2 class="markdown-h2">
+              <ng-container *ngTemplateOutlet="inlineTokens; context: {text: block.text}" />
+            </h2>
+          }
+          @case (3) {
+            <h3 class="markdown-h3">
+              <ng-container *ngTemplateOutlet="inlineTokens; context: {text: block.text}" />
+            </h3>
+          }
+          @default {
+            <h4 class="markdown-h4">
+              <ng-container *ngTemplateOutlet="inlineTokens; context: {text: block.text}" />
+            </h4>
+          }
+        }
+      }
+      @case ('code') {
+        <div class="code-block-wrapper">
+          <div class="code-block-header">
+            <span class="code-lang-tag">{{ block.language }}</span>
+            <button
+              mat-button
+              type="button"
+              class="copy-code-button"
+              (click)="copyCode(block.code, $index)"
+              [matTooltip]="isCopied($index) ? 'Copied to clipboard' : 'Copy code'"
+              aria-label="Copy code to clipboard">
+              <mat-icon class="copy-icon">{{ isCopied($index) ? 'check' : 'content_copy' }}</mat-icon>
+              <span class="copy-label">{{ isCopied($index) ? 'Copied' : 'Copy' }}</span>
+            </button>
+          </div>
+          <pre class="code-block-content"><code class="code-body">{{ block.code }}</code></pre>
+        </div>
+      }
+      @case ('table') {
+        <div class="table-container">
+          <table class="markdown-table">
+            <thead>
+              <tr>
+                @for (header of block.headers; track $index) {
+                  <th>
+                    <ng-container *ngTemplateOutlet="inlineTokens; context: {text: header}" />
+                  </th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of block.rows; track $index) {
+                <tr>
+                  @for (cell of row; track $index) {
+                    <td>
+                      <ng-container *ngTemplateOutlet="inlineTokens; context: {text: cell}" />
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+      @case ('list') {
+        @if (block.ordered) {
+          <ol class="markdown-ol">
+            @for (item of block.items; track $index) {
+              <li>
+                <ng-container *ngTemplateOutlet="inlineTokens; context: {text: item}" />
+              </li>
+            }
+          </ol>
+        } @else {
+          <ul class="markdown-ul">
+            @for (item of block.items; track $index) {
+              <li>
+                <ng-container *ngTemplateOutlet="inlineTokens; context: {text: item}" />
+              </li>
+            }
+          </ul>
+        }
+      }
+      @case ('blockquote') {
+        <blockquote class="markdown-blockquote">
+          <ng-container *ngTemplateOutlet="inlineTokens; context: {text: block.text}" />
+        </blockquote>
+      }
+      @case ('hr') {
+        <hr class="markdown-hr" />
+      }
+      @case ('paragraph') {
+        <p class="markdown-p">
+          <ng-container *ngTemplateOutlet="inlineTokens; context: {text: block.text}" />
+        </p>
+      }
+    }
+  }
+</div>
