@@ -32,7 +32,7 @@ import java.util.List;
 public class AndroidNativeBinLister implements Lister {
   @Override
   public List<String> listTests(JobInfo jobInfo) throws MobileHarnessException {
-    ImmutableSet<String> binPaths = jobInfo.files().get(AndroidNativeBin.TAG_BIN);
+    ImmutableSet<String> binPaths = jobInfo.inputFiles().get(AndroidNativeBin.TAG_BIN);
     List<String> results = new ArrayList<>(binPaths.size());
     for (String binPath : binPaths) {
       results.add(new File(binPath).getName());

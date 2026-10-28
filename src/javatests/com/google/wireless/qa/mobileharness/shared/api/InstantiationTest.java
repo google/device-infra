@@ -33,6 +33,7 @@ import com.google.common.reflect.ClassPath;
 import com.google.common.reflect.ClassPath.ClassInfo;
 import com.google.common.reflect.TypeToken;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.in.Files;
 import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
 import com.google.devtools.mobileharness.api.model.lab.LiteDeviceInfoFactory;
 import com.google.inject.Guice;
@@ -48,7 +49,6 @@ import com.google.wireless.qa.mobileharness.shared.api.metadata.DecoratorType;
 import com.google.wireless.qa.mobileharness.shared.api.metadata.DriverDecoratorMetadata;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfoMocker;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
 import java.io.IOException;
 import java.lang.reflect.ParameterizedType;
@@ -276,7 +276,7 @@ public class InstantiationTest {
     when(decoratedDriver.getDevice()).thenReturn(device);
 
     for (String jobFileTag : constraints.jobFileTags()) {
-      testInfo.jobInfo().files().add(jobFileTag, "fake_value");
+      testInfo.jobInfo().inputFiles().add(jobFileTag, "fake_value");
     }
 
     if (!constraints.enableInstantiationTest()) {
@@ -287,7 +287,7 @@ public class InstantiationTest {
   }
 
   private void cleanupMockedDataModel() throws MobileHarnessException {
-    Files jobFiles = testInfo.jobInfo().files();
+    Files jobFiles = testInfo.jobInfo().inputFiles();
     for (String jobFileTag : jobFiles.getAll().keySet()) {
       jobFiles.replaceAll(jobFileTag, ImmutableList.of());
     }

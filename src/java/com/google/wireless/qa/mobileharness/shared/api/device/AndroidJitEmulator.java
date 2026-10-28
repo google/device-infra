@@ -198,11 +198,11 @@ public class AndroidJitEmulator extends AndroidDevice {
     this.cvdName = cvdId;
 
     String hostImagePath =
-        Optional.ofNullable(testInfo.jobInfo().files().get(FILE_TAG_HOST_IMAGE))
+        Optional.ofNullable(testInfo.jobInfo().inputFiles().get(FILE_TAG_HOST_IMAGE))
             .flatMap(files -> files.stream().findFirst())
             .orElse("");
     String deviceImagePath =
-        Optional.ofNullable(testInfo.jobInfo().files().get(FILE_TAG_DEVICE_IMAGE))
+        Optional.ofNullable(testInfo.jobInfo().inputFiles().get(FILE_TAG_DEVICE_IMAGE))
             .flatMap(files -> files.stream().findFirst())
             .orElse("");
 

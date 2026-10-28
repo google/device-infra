@@ -42,8 +42,8 @@ public @interface ConstraintsForTesting {
   String[] deviceTypes() default {};
 
   /**
-   * The constructor needs {@code testInfo.jobInfo().files()} to contain the given tags to make a
-   * driver/decorator instantiation in unit tests succeeds.
+   * The constructor needs {@code testInfo.jobInfo().inputFiles()} to contain the given tags to make
+   * a driver/decorator instantiation in unit tests succeeds.
    */
   String[] jobFileTags() default {};
 
