@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutionException;
 
 /** Local device test runner launcher which uses {@code TestExecutor}s to launch the test. */
 public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner> {
@@ -83,7 +84,10 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
         TestExecutionResult result = LocalDeviceTestRunnerLauncher.this.executeTest();
         resultFuture.set(result);
         return result;
-      } catch (InterruptedException | RuntimeException e) {
+      } catch (Throwable e) {
+        // Always completes the result future, otherwise secondary device runners, which keep
+        // waiting
+        // for the result even if they are interrupted, will be blocked forever.
         resultFuture.setException(e);
         throw e;
       }
@@ -115,6 +119,45 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
           "Secondary device runner [%s] of test [%s] is waiting test execution result",
           getTestExecutor().getDevice().getDeviceId(),
           getTestRunner().getTestExecutionUnit().locator().id());
+      // Waits until the primary device runner finishes the test even if the current thread is
+      // interrupted, to prevent the secondary device from being released (and reallocated) while
+      // the primary device runner is still running.
+      InterruptedException interruption = null;
+      while (!resultFuture.isDone()) {
+        try {
+          resultFuture.get();
+        } catch (InterruptedException e) {
+          if (interruption == null) {
+            interruption = e;
+            if (!resultFuture.isDone()) {
+              logger.atInfo().log(
+                  "Secondary device runner [%s] of test [%s] is interrupted, killing the test and"
+                      + " waiting until the primary device runner finishes",
+                  getTestExecutor().getDevice().getDeviceId(),
+                  getTestRunner().getTestExecutionUnit().locator().id());
+              try {
+                getTestRunner().kill(/* timeout= */ false);
+              } catch (RuntimeException | Error killError) {
+                // Keeps waiting for the primary device runner even if failing to kill the test.
+                logger.atWarning().withCause(killError).log(
+                    "Secondary device runner [%s] failed to kill test [%s]",
+                    getTestExecutor().getDevice().getDeviceId(),
+                    getTestRunner().getTestExecutionUnit().locator().id());
+              }
+            }
+          }
+          // Further interruptions are ignored.
+        } catch (ExecutionException ignored) {
+          // Handled by getUnchecked() below if the current thread is not interrupted.
+        }
+      }
+      if (interruption != null) {
+        // Rethrows the InterruptedException with the interrupt status cleared (which may be set by
+        // an interruption after the last wait), so that LocalDeviceRunner can do post-test steps
+        // without being interrupted.
+        Thread.interrupted();
+        throw interruption;
+      }
       return getUnchecked(resultFuture);
     }
   }
