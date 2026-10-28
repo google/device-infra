@@ -124,7 +124,7 @@ public class InstallApkStep implements InstallApkStepConstants {
   public List<String> installBuildApks(Device device, TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
     return installBuildApks(
-        device, testInfo, testInfo.jobInfo().files().get(TAG_BUILD_APK), /* spec= */ null);
+        device, testInfo, testInfo.jobInfo().inputFiles().get(TAG_BUILD_APK), /* spec= */ null);
   }
 
   @CanIgnoreReturnValue
@@ -158,15 +158,15 @@ public class InstallApkStep implements InstallApkStepConstants {
 
     // Makes sure the first apk in 'build_apk' will still be the first element inserted.
     coordinator.addApks(jobBuildApks);
-    coordinator.addApks(testInfo.files().get(TAG_BUILD_APK));
-    coordinator.addApks(testInfo.files().get(TAG_EXTRA_APK));
+    coordinator.addApks(testInfo.inputFiles().get(TAG_BUILD_APK));
+    coordinator.addApks(testInfo.inputFiles().get(TAG_EXTRA_APK));
     coordinator.addApks(getExtraApks(spec, jobInfo));
 
     String extraFileTags = spec.getInstallApkExtraFileTags();
     for (String fileTag : Splitter.on(',').split(extraFileTags)) {
       testInfo.log().atInfo().alsoTo(logger).log("Get extra tag %s", fileTag);
-      coordinator.addApks(testInfo.files().get(fileTag));
-      coordinator.addApks(jobInfo.files().get(fileTag));
+      coordinator.addApks(testInfo.inputFiles().get(fileTag));
+      coordinator.addApks(jobInfo.inputFiles().get(fileTag));
     }
 
     coordinator.addDexMetadataFiles(getDexMetadataFiles(spec, testInfo));
@@ -453,14 +453,14 @@ public class InstallApkStep implements InstallApkStepConstants {
   private static ImmutableSet<String> getBuildApks(InstallApkStepSpec spec, JobInfo jobInfo) {
     return new ImmutableSet.Builder<String>()
         .addAll(expandG3Files(spec.getBuildApkList()))
-        .addAll(jobInfo.files().get(TAG_BUILD_APK))
+        .addAll(jobInfo.inputFiles().get(TAG_BUILD_APK))
         .build();
   }
 
   private static ImmutableSet<String> getExtraApks(InstallApkStepSpec spec, JobInfo jobInfo) {
     return new ImmutableSet.Builder<String>()
         .addAll(expandG3Files(spec.getExtraApkList()))
-        .addAll(jobInfo.files().get(TAG_EXTRA_APK))
+        .addAll(jobInfo.inputFiles().get(TAG_EXTRA_APK))
         .build();
   }
 
@@ -468,8 +468,8 @@ public class InstallApkStep implements InstallApkStepConstants {
       InstallApkStepSpec spec, TestInfo testInfo) {
     return new ImmutableSet.Builder<String>()
         .addAll(expandG3Files(spec.getDexMetadataList()))
-        .addAll(testInfo.files().get(TAG_DEX_METADATA))
-        .addAll(testInfo.jobInfo().files().get(TAG_DEX_METADATA))
+        .addAll(testInfo.inputFiles().get(TAG_DEX_METADATA))
+        .addAll(testInfo.jobInfo().inputFiles().get(TAG_DEX_METADATA))
         .build();
   }
 

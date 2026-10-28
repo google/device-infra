@@ -264,7 +264,7 @@ public class AndroidInstrumentation extends BaseDriver
     androidInstrumentationUtil.pushTestData(
         testInfo,
         deviceId,
-        job.files().get(AndroidInstrumentationDriverSpec.TAG_TEST_DATA),
+        job.inputFiles().get(AndroidInstrumentationDriverSpec.TAG_TEST_DATA),
         externalStoragePath.orElse(null));
 
     // Prepares the test arg.
@@ -1090,7 +1090,7 @@ public class AndroidInstrumentation extends BaseDriver
 
   protected String getTestApk(TestInfo testInfo) {
     return Iterables.getOnlyElement(
-        testInfo.jobInfo().files().get(AndroidInstrumentationDriverSpec.TAG_TEST_APK));
+        testInfo.jobInfo().inputFiles().get(AndroidInstrumentationDriverSpec.TAG_TEST_APK));
   }
 
   private static void generateJunitXml(

@@ -145,9 +145,9 @@ public class AndroidNativeBin extends BaseDriver implements AndroidNativeBinSpec
     }
 
     // Update testPath and runDir accordingly if Zip file is provided
-    ImmutableSet<String> binZipPaths = jobInfo.files().get(TAG_BIN_ZIP);
+    ImmutableSet<String> binZipPaths = jobInfo.inputFiles().get(TAG_BIN_ZIP);
     if (!binZipPaths.isEmpty()) {
-      ImmutableSet<String> binPaths = jobInfo.files().get(TAG_BIN);
+      ImmutableSet<String> binPaths = jobInfo.inputFiles().get(TAG_BIN);
       testPath = getUnzipFilePath(binPaths, testInfo.locator().getName());
       runDir = PathUtil.join(runDir, DEFAULT_UNZIP_DIR_NAME);
     }
@@ -374,8 +374,8 @@ public class AndroidNativeBin extends BaseDriver implements AndroidNativeBinSpec
     }
 
     // Pushes the bin files to the device.
-    ImmutableSet<String> binFilePaths = jobInfo.files().get(TAG_BIN);
-    ImmutableSet<String> binZipPaths = jobInfo.files().get(TAG_BIN_ZIP);
+    ImmutableSet<String> binFilePaths = jobInfo.inputFiles().get(TAG_BIN);
+    ImmutableSet<String> binZipPaths = jobInfo.inputFiles().get(TAG_BIN_ZIP);
 
     if (!binZipPaths.isEmpty()) {
       String unzipDir = PathUtil.join(testInfo.getTmpFileDir(), DEFAULT_UNZIP_DIR_NAME);

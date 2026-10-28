@@ -690,7 +690,7 @@ public class AndroidInstrumentationTest {
             AndroidInstrumentationDriverSpec.PARAM_DISABLE_ISOLATED_STORAGE_FOR_INSTRUMENTATION,
             Boolean.toString(noIsolatedStorage));
 
-    jobInfo.files().add(AndroidInstrumentationDriverSpec.TAG_TEST_APK, TEST_APK_PATH);
+    jobInfo.inputFiles().add(AndroidInstrumentationDriverSpec.TAG_TEST_APK, TEST_APK_PATH);
     jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_OPTIONS, options);
     JobSetting jobSetting = spy(jobInfo.setting());
     doReturn(jobSetting).when(jobInfo).setting();

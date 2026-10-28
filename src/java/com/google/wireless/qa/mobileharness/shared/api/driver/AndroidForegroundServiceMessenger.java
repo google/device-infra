@@ -486,7 +486,7 @@ public class AndroidForegroundServiceMessenger extends BaseDriver
   Optional<String> getInputFilePathIfPresent(
       TestInfo testInfo, String inputFileTag, Duration waitTimeOut) throws InterruptedException {
     Optional<String> inputFilePath =
-        testInfo.jobInfo().files().get(inputFileTag).stream().findFirst();
+        testInfo.jobInfo().inputFiles().get(inputFileTag).stream().findFirst();
     boolean fileCompletelyReceived = false;
     Stopwatch waitForFile = Stopwatch.createStarted();
     while (!fileCompletelyReceived && waitForFile.elapsed().compareTo(waitTimeOut) < 0) {

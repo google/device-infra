@@ -141,7 +141,7 @@ public class PerfettoStep {
     RunPerfettoArgs.Builder builder = RunPerfettoArgs.builder();
     try {
       builder
-          .setConfigFile(Optional.ofNullable(jobInfo.files().getSingle(FILE_PERFETTO_CONFIG)))
+          .setConfigFile(Optional.ofNullable(jobInfo.inputFiles().getSingle(FILE_PERFETTO_CONFIG)))
           .setTags(Optional.empty())
           .setTime(Duration.ZERO)
           .setBufferSizeKb(0);
@@ -216,7 +216,7 @@ public class PerfettoStep {
     RunPerfettoArgs.Builder builder = RunPerfettoArgs.builder();
     try {
       builder
-          .setConfigFile(Optional.ofNullable(jobInfo.files().getSingle(FILE_PERFETTO_CONFIG)))
+          .setConfigFile(Optional.ofNullable(jobInfo.inputFiles().getSingle(FILE_PERFETTO_CONFIG)))
           .setTags(Optional.empty())
           .setBufferSizeKb(0);
       testInfo

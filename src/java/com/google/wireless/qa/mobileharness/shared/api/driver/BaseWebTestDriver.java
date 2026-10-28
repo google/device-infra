@@ -108,7 +108,8 @@ public abstract class BaseWebTestDriver extends BaseDriver {
    */
   @Override
   public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    String testFile = Iterables.getOnlyElement(testInfo.jobInfo().files().get(getTestFileTag()));
+    String testFile =
+        Iterables.getOnlyElement(testInfo.jobInfo().inputFiles().get(getTestFileTag()));
 
     // Ensure wrapper script has execute permissions
     localFileUtil.grantFileOrDirFullAccess(testFile);

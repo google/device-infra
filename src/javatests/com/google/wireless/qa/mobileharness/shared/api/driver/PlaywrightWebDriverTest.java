@@ -30,6 +30,7 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.in.Files;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
@@ -42,7 +43,6 @@ import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
@@ -108,7 +108,7 @@ public class PlaywrightWebDriverTest {
 
     // Common mock setup
     when(testInfo.jobInfo()).thenReturn(jobInfo);
-    when(jobInfo.files()).thenReturn(files);
+    when(jobInfo.inputFiles()).thenReturn(files);
     when(files.get(PlaywrightWebDriver.TAG_PLAYWRIGHT_TEST_FILE))
         .thenReturn(ImmutableSet.of(testFile.getAbsolutePath()));
     when(testInfo.getGenFileDir()).thenReturn(genFileDir.getAbsolutePath());

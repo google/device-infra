@@ -124,7 +124,7 @@ public class MoblyAospTest extends MoblyTest implements MoblyAospTestSpec {
   @VisibleForTesting
   String[] generateTestCommand(TestInfo testInfo, File configFile)
       throws MobileHarnessException, InterruptedException {
-    Path moblyPkg = Path.of(testInfo.jobInfo().files().getSingle(FILE_MOBLY_PKG));
+    Path moblyPkg = Path.of(testInfo.jobInfo().inputFiles().getSingle(FILE_MOBLY_PKG));
     localFileUtil.grantFileOrDirFullAccess(moblyPkg.toString());
     Path moblyUnzipDir = Path.of(testInfo.getTmpFileDir(), "mobly");
     localFileUtil.prepareDir(moblyUnzipDir);

@@ -353,13 +353,13 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
       }
     }
     // Dump all files from MH into a key called 'mh_files' in userparams.
-    // The test and job file sets are different. jobInfo.files() comes from the build tuple and
-    // contains user-added files. testInfo.files() contains only files added specifically to that
-    // test by a plugin.
+    // The test and job file sets are different. jobInfo.inputFiles() comes from the build tuple
+    // and contains user-added files. testInfo.inputFiles() contains only files added specifically
+    // to that test by a plugin.
     ImmutableMultimap<String, String> mhFiles =
         new ImmutableMultimap.Builder<String, String>()
-            .putAll(testInfo.jobInfo().files().getAll())
-            .putAll(testInfo.files().getAll())
+            .putAll(testInfo.jobInfo().inputFiles().getAll())
+            .putAll(testInfo.inputFiles().getAll())
             .build();
     if (!mhFiles.isEmpty()) {
       testParams.put(MoblyConstant.ConfigKey.TEST_PARAM_MH_FILES, mhFiles.asMap());
@@ -412,8 +412,8 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
     if (testInfo.properties().has(FILE_MOBLY_CONFIG)) {
       customConfigPath = testInfo.properties().get(FILE_MOBLY_CONFIG);
       logger.atInfo().log("Detected custom Mobly path from test properties: %s.", customConfigPath);
-    } else if (testInfo.jobInfo().files().isTagNotEmpty(FILE_MOBLY_CONFIG)) {
-      customConfigPath = testInfo.jobInfo().files().getSingle(FILE_MOBLY_CONFIG);
+    } else if (testInfo.jobInfo().inputFiles().isTagNotEmpty(FILE_MOBLY_CONFIG)) {
+      customConfigPath = testInfo.jobInfo().inputFiles().getSingle(FILE_MOBLY_CONFIG);
       logger.atInfo().log("Detected custom Mobly path from job-info: %s.", customConfigPath);
     } else {
       logger.atInfo().log("No custom Mobly config detected.");
@@ -633,7 +633,7 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
   String[] generateTestCommand(TestInfo testInfo, File configFile)
       throws MobileHarnessException, InterruptedException {
     // Get par file.
-    String testLibPar = testInfo.jobInfo().files().getSingle(FILE_TEST_LIB_PAR);
+    String testLibPar = testInfo.jobInfo().inputFiles().getSingle(FILE_TEST_LIB_PAR);
     // Make sure this file is executable; by default transferred files have no execute permissions.
     localFileUtil.grantFileOrDirFullAccess(testLibPar);
 

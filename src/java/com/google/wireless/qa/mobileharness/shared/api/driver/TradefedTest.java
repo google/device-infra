@@ -920,7 +920,7 @@ public class TradefedTest extends BaseDriver
               TradefedConfigGenerator.COMMAND_LINE_TEMPLATE,
               String.join(" ", formattedCommandBuilder.build()));
       // Replace ${FILE_tag} with the real file path
-      for (Entry<String, String> entry : testInfo.jobInfo().files().getAll().entries()) {
+      for (Entry<String, String> entry : testInfo.jobInfo().inputFiles().getAll().entries()) {
         config =
             config.replace(
                 String.format(TradefedConfigGenerator.FILE_TEMPLATE, entry.getKey()),
@@ -1055,7 +1055,7 @@ public class TradefedTest extends BaseDriver
   private static boolean useTfRunRetry(TradefedTestDriverSpec spec, TestInfo testInfo) {
     return spec.getXtsTestPlan().equals("retry")
         && !spec.getPrevSessionTestResultXml().isEmpty()
-        && testInfo.jobInfo().files().isTagNotEmpty(TAG_PREV_SESSION_TEST_RECORD_PB_FILES);
+        && testInfo.jobInfo().inputFiles().isTagNotEmpty(TAG_PREV_SESSION_TEST_RECORD_PB_FILES);
   }
 
   /**
