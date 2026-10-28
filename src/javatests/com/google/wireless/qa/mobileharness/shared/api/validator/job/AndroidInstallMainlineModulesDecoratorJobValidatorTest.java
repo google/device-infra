@@ -57,17 +57,17 @@ public final class AndroidInstallMainlineModulesDecoratorJobValidatorTest {
     File apks1 = tmpFolder.newFile("apks1");
 
     jobInfo
-        .files()
+        .inputFiles()
         .add(
             AndroidInstallMainlineModulesDecoratorSpec.TAG_BUNDLETOOL_FILE,
             bundletool1.getAbsolutePath());
     jobInfo
-        .files()
+        .inputFiles()
         .add(
             AndroidInstallMainlineModulesDecoratorSpec.TAG_BUNDLETOOL_FILE,
             bundletool2.getAbsolutePath());
     jobInfo
-        .files()
+        .inputFiles()
         .add(AndroidInstallMainlineModulesDecoratorSpec.TAG_MODULE_FILES, apks1.getAbsolutePath());
 
     assertThat(validator.validate(jobInfo)).hasSize(1);
@@ -77,7 +77,7 @@ public final class AndroidInstallMainlineModulesDecoratorJobValidatorTest {
   public void validateJob_hasNoModules() throws Exception {
     File bundletool = tmpFolder.newFile("bundletool");
     jobInfo
-        .files()
+        .inputFiles()
         .add(
             AndroidInstallMainlineModulesDecoratorSpec.TAG_BUNDLETOOL_FILE,
             bundletool.getAbsolutePath());
@@ -92,15 +92,15 @@ public final class AndroidInstallMainlineModulesDecoratorJobValidatorTest {
     File apks2 = tmpFolder.newFile("apks2");
 
     jobInfo
-        .files()
+        .inputFiles()
         .add(
             AndroidInstallMainlineModulesDecoratorSpec.TAG_BUNDLETOOL_FILE,
             bundletool.getAbsolutePath());
     jobInfo
-        .files()
+        .inputFiles()
         .add(AndroidInstallMainlineModulesDecoratorSpec.TAG_MODULE_FILES, apks1.getAbsolutePath());
     jobInfo
-        .files()
+        .inputFiles()
         .add(AndroidInstallMainlineModulesDecoratorSpec.TAG_MODULE_FILES, apks2.getAbsolutePath());
 
     assertThat(validator.validate(jobInfo)).isEmpty();
@@ -112,10 +112,10 @@ public final class AndroidInstallMainlineModulesDecoratorJobValidatorTest {
     File apks2 = tmpFolder.newFile("apks2");
 
     jobInfo
-        .files()
+        .inputFiles()
         .add(AndroidInstallMainlineModulesDecoratorSpec.TAG_MODULE_FILES, apks1.getAbsolutePath());
     jobInfo
-        .files()
+        .inputFiles()
         .add(AndroidInstallMainlineModulesDecoratorSpec.TAG_MODULE_FILES, apks2.getAbsolutePath());
 
     assertThat(validator.validate(jobInfo)).isEmpty();

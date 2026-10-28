@@ -54,14 +54,16 @@ public class InstallApkStepJobValidator implements JobValidator {
 
     // {apk_path, apk_tag} mapping.
     Map<String, String> apks = new HashMap<>();
-    ImmutableSet<String> buildApkPaths = job.files().get(InstallApkStepConstants.TAG_BUILD_APK);
+    ImmutableSet<String> buildApkPaths =
+        job.inputFiles().get(InstallApkStepConstants.TAG_BUILD_APK);
     if (buildApkPaths != null) {
       for (String buildApkPath : buildApkPaths) {
         apks.put(buildApkPath, InstallApkStepConstants.TAG_BUILD_APK);
       }
     }
 
-    ImmutableSet<String> extraApkPaths = job.files().get(InstallApkStepConstants.TAG_EXTRA_APK);
+    ImmutableSet<String> extraApkPaths =
+        job.inputFiles().get(InstallApkStepConstants.TAG_EXTRA_APK);
     if (extraApkPaths != null) {
       for (String extraApkPath : extraApkPaths) {
         apks.put(extraApkPath, InstallApkStepConstants.TAG_EXTRA_APK);
@@ -80,7 +82,8 @@ public class InstallApkStepJobValidator implements JobValidator {
           newPath = PathUtil.join(job.setting().getRunFileDir(), path + APK_EXT_NAME);
           fileUtil.prepareParentDir(newPath);
           fileUtil.copyFileOrDir(path, newPath);
-          job.files().replaceFileInfos(tag, path, ImmutableList.of(FileInfo.create(newPath, null)));
+          job.inputFiles()
+              .replaceFileInfos(tag, path, ImmutableList.of(FileInfo.create(newPath, null)));
         } catch (MobileHarnessException e) {
           errors.add(
               String.format(

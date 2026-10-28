@@ -50,7 +50,7 @@ public class AndroidPerfettoDecoratorJobValidator implements JobValidator {
             || job.params().get(PARAM_PERFETTO_BUFFER_SIZE) != null;
     boolean hasConfig = false;
     try {
-      hasConfig = job.files().getSingle(FILE_PERFETTO_CONFIG) != null;
+      hasConfig = job.inputFiles().getSingle(FILE_PERFETTO_CONFIG) != null;
     } catch (MobileHarnessException e) {
       if (e.getErrorId() == BasicErrorId.JOB_OR_TEST_FILE_MULTI_PATHS) {
         return Optional.of("Only one perfetto config file is accepted");

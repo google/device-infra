@@ -29,10 +29,11 @@ public class AndroidInstallMainlineModulesDecoratorJobValidator implements JobVa
   public List<String> validate(JobInfo job) throws InterruptedException {
     List<String> errors = new ArrayList<>();
     try {
-      job.files().checkNotEmpty(AndroidInstallMainlineModulesDecoratorSpec.TAG_MODULE_FILES);
-      if (job.files()
+      job.inputFiles().checkNotEmpty(AndroidInstallMainlineModulesDecoratorSpec.TAG_MODULE_FILES);
+      if (job.inputFiles()
           .isTagNotEmpty(AndroidInstallMainlineModulesDecoratorSpec.TAG_BUNDLETOOL_FILE)) {
-        job.files().checkUnique(AndroidInstallMainlineModulesDecoratorSpec.TAG_BUNDLETOOL_FILE);
+        job.inputFiles()
+            .checkUnique(AndroidInstallMainlineModulesDecoratorSpec.TAG_BUNDLETOOL_FILE);
       }
     } catch (MobileHarnessException e) {
       errors.add(e.getMessage());

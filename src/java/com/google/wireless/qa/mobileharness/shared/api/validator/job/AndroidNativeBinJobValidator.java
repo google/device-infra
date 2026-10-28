@@ -34,7 +34,7 @@ public class AndroidNativeBinJobValidator implements JobValidator {
        * As long as the tag "bin" is not empty, we are good here. Both driver and lister can support
        * multiple binary already (b/80501459).
        */
-      job.files().checkNotEmpty(AndroidNativeBinSpec.TAG_BIN);
+      job.inputFiles().checkNotEmpty(AndroidNativeBinSpec.TAG_BIN);
     } catch (MobileHarnessException e) {
       errors.add(e.getMessage());
     }
