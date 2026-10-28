@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.api.spec.CrosDecoratorSpec;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import java.nio.file.Path;
@@ -135,9 +136,9 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
     deviceIdOverride = getDeviceIdOverride(testInfo);
     testInfo.log().atInfo().alsoTo(logger).log("deviceIdOverride: %s", deviceIdOverride);
     if (deviceIdOverride != null) {
-      String rawDutName = testInfo.jobInfo().params().get(TEST_ARG_DUT_NAME);
-      String dutName = extractHostname(rawDutName);
-      testInfo.properties().add(TEST_ARG_DUT_NAME, dutName);
+      String rawDutName = getDutName(testInfo);
+      String dutName = AndroidDesktopDeviceHelper.extractHostname(rawDutName);
+      testInfo.properties().add(PropertyName.Test.DUT_NAME, dutName);
 
       try {
         // TODO: Support multi-duts units in the future.
@@ -178,7 +179,7 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
   @Override
   public PostTestDeviceOp postRunTest(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
-    String dutName = testInfo.properties().get("dut_name");
+    String dutName = testInfo.properties().get(PropertyName.Test.DUT_NAME);
     if (dutName != null) {
       try {
         Map<String, String> dimensions = androidDesktopDeviceHelper.getDeviceDimensions(dutName);
@@ -237,7 +238,7 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
         }
       }
     } finally {
-      if (deviceIdOverride != null && deviceIdOverride.contains(":")) {
+      if (deviceIdOverride != null && hasPort(deviceIdOverride)) {
         try {
           // TODO: Support multi-duts units in the future.
           adbInternalUtil.disconnect(deviceIdOverride);
@@ -262,7 +263,7 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
       testInfo.log().atInfo().alsoTo(logger).log("Device %s is already online.", deviceId);
       return deviceId;
     }
-    String ipConnection = deviceId.contains(":") ? deviceId : dutName + ":5555";
+    String ipConnection = hasPort(deviceId) ? deviceId : dutName + ":5555";
     testInfo.log().atInfo().alsoTo(logger).log("Connecting to device %s.", ipConnection);
     adbInternalUtil.connect(ipConnection);
     testInfo
@@ -276,7 +277,7 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
   /**
    * Gets the device ID override from the test info.
    *
-   * <p>If dutName contains ":" it is assumed to be in explicit host:port format and is returned
+   * <p>If dutName includes an explicit port (e.g., "host:port" or "[::1]:port"), it is returned
    * directly. Otherwise, attempts to resolve the device identifier via dt-converter
    * resolve-device-id.
    *
@@ -293,11 +294,11 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
   @VisibleForTesting
   @Nullable
   String getDeviceIdOverride(TestInfo testInfo) throws InterruptedException {
-    String dutName = testInfo.jobInfo().params().get(TEST_ARG_DUT_NAME);
-    if (dutName == null) {
+    String dutName = getDutName(testInfo);
+    if (Strings.isNullOrEmpty(dutName)) {
       return null;
     }
-    if (dutName.contains(":")) {
+    if (hasPort(dutName)) {
       return dutName;
     }
     List<String> resolvedDeviceIds = resolveDeviceIds(testInfo, dutName);
@@ -457,21 +458,27 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
     return null;
   }
 
-  /** Extracts the hostname from a dutName which may contain a port. */
-  @VisibleForTesting
+  /**
+   * Returns the target DUT name for the test, preferring the per-test {@link
+   * PropertyName.Test#DUT_NAME} property over the job-level {@code dut_name} parameter, while
+   * preserving an explicit {@code host:port} from the job parameter when it refers to the same
+   * host.
+   */
   @Nullable
-  static String extractHostname(@Nullable String dutName) {
-    if (dutName == null) {
-      return null;
+  private static String getDutName(TestInfo testInfo) {
+    String propDutName = testInfo.properties().get(PropertyName.Test.DUT_NAME);
+    String paramDutName = testInfo.jobInfo().params().get(TEST_ARG_DUT_NAME);
+    if (!Strings.isNullOrEmpty(propDutName)) {
+      if (!Strings.isNullOrEmpty(paramDutName)
+          && propDutName.equals(AndroidDesktopDeviceHelper.extractHostname(paramDutName))) {
+        return paramDutName;
+      }
+      return propDutName;
     }
-    int closingBracket = dutName.indexOf(']');
-    if (dutName.startsWith("[") && closingBracket != -1) {
-      return dutName.substring(0, closingBracket + 1);
-    }
-    int colonIndex = dutName.indexOf(':');
-    if (colonIndex != -1) {
-      return dutName.substring(0, colonIndex);
-    }
-    return dutName;
+    return paramDutName;
+  }
+
+  private static boolean hasPort(String dutName) {
+    return !dutName.equals(AndroidDesktopDeviceHelper.extractHostname(dutName));
   }
 }
