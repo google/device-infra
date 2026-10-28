@@ -707,13 +707,13 @@ public class AndroidInstrumentationUtil {
     String basicServiceApkPath =
         testInfo
                 .jobInfo()
-                .files()
+                .inputFiles()
                 .get(AndroidInstrumentationDriverSpec.TAG_BASIC_SERVICES_APK)
                 .isEmpty()
             ? getResourceFile(AndroidInstrumentationDriverSpec.BASIC_SERVICE_APK_PATH)
             : testInfo
                 .jobInfo()
-                .files()
+                .inputFiles()
                 .getSingle(AndroidInstrumentationDriverSpec.TAG_BASIC_SERVICES_APK);
     String basicServicePackageName = aapt.getApkPackageName(basicServiceApkPath);
     ApkInstallArgs basicServiceApkInstallArgs =
@@ -737,13 +737,13 @@ public class AndroidInstrumentationUtil {
       testServicesApkPath = androidxDependencies.getTestServicesApkPath(orchestratorVersion);
     } else if (!testInfo
         .jobInfo()
-        .files()
+        .inputFiles()
         .get(AndroidInstrumentationDriverSpec.TAG_TEST_SERVICES_APK)
         .isEmpty()) {
       testServicesApkPath =
           testInfo
               .jobInfo()
-              .files()
+              .inputFiles()
               .getSingle(AndroidInstrumentationDriverSpec.TAG_TEST_SERVICES_APK);
     } else {
       testServicesApkPath =
@@ -766,13 +766,13 @@ public class AndroidInstrumentationUtil {
       orchestratorApkPath = androidxDependencies.getOrchestratorApkPath(orchestratorVersion);
     } else if (!testInfo
         .jobInfo()
-        .files()
+        .inputFiles()
         .get(AndroidInstrumentationDriverSpec.TAG_ORCHESTRATOR_APK)
         .isEmpty()) {
       orchestratorApkPath =
           testInfo
               .jobInfo()
-              .files()
+              .inputFiles()
               .getSingle(AndroidInstrumentationDriverSpec.TAG_ORCHESTRATOR_APK);
     }
     if (orchestratorApkPath != null) {
