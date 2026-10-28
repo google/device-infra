@@ -11,8 +11,12 @@ import {
   viewChild,
 } from '@angular/core';
 import {MatButtonModule} from '@angular/material/button';
+import {MatIconModule} from '@angular/material/icon';
+import {MatMenuModule} from '@angular/material/menu';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
+import {ActivatedRoute, Router} from '@angular/router';
 
+import {ArsenalSavedQuery} from '../../core/models/search_fleet';
 import {EnvUniverseService} from '../../core/services/env_universe_service';
 import {UrlService} from '../../core/services/url_service';
 import {LoadingService} from '../../shared/services/loading_service';
@@ -31,6 +35,8 @@ import {SearchPageStore} from './services/search_page_store';
   imports: [
     DecimalPipe,
     MatButtonModule,
+    MatIconModule,
+    MatMenuModule,
     MatProgressSpinnerModule,
     FleetSearchResultsComponent,
     TjsSearchResultsComponent,
@@ -43,6 +49,8 @@ export class SearchPage implements OnInit {
   private readonly injector = inject(Injector);
   private readonly urlService = inject(UrlService);
   private readonly envUniverseService = inject(EnvUniverseService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   private readonly searchBox = viewChild(SearchBox);
 
@@ -115,5 +123,16 @@ export class SearchPage implements OnInit {
   onBrowseAll() {
     this.store.browseAll.set(true);
     this.store.executeSearch();
+  }
+
+  /**
+   * Opens an Alkali Arsenal saved query. The search store translates the
+   * `arsenal_query` parameter into FE v6 search state and runs the search.
+   */
+  openArsenalSavedQuery(query: ArsenalSavedQuery) {
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {'arsenal_query': query.arsenalQuery},
+    });
   }
 }

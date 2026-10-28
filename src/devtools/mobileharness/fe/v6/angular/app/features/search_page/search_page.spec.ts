@@ -2,10 +2,12 @@ import {DecimalPipe} from '@angular/common';
 import {Component, signal} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {MatButtonModule} from '@angular/material/button';
+import {MatIconModule} from '@angular/material/icon';
+import {MatMenuModule} from '@angular/material/menu';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {By} from '@angular/platform-browser';
 import {provideNoopAnimations} from '@angular/platform-browser/animations';
-import {provideRouter} from '@angular/router';
+import {provideRouter, Router} from '@angular/router';
 
 import {LoadingService} from '../../shared/services/loading_service';
 import {SearchBox} from './components/search_box/search_box';
@@ -81,6 +83,8 @@ describe('SearchPage', () => {
           imports: [
             DecimalPipe,
             MatButtonModule,
+            MatIconModule,
+            MatMenuModule,
             MatProgressSpinnerModule,
             StubSearchBox,
             StubFleetSearchResults,
@@ -166,6 +170,73 @@ describe('SearchPage', () => {
     component.onBrowseAll();
     expect(mockStore.browseAll()).toBeTrue();
     expect(mockStore.executeSearch).toHaveBeenCalled();
+  });
+
+  it('shows no old saved queries button when the caller has no Arsenal saved queries', () => {
+    mockStore.searchConfig.set({landing: {browseAllCount: 42}});
+    fixture.detectChanges();
+
+    expect(
+      fixture.debugElement.query(By.css('.arsenal-saved-queries-btn')),
+    ).toBeNull();
+
+    mockStore.searchConfig.set({
+      landing: {browseAllCount: 42, arsenalSavedQueries: []},
+    });
+    fixture.detectChanges();
+
+    expect(
+      fixture.debugElement.query(By.css('.arsenal-saved-queries-btn')),
+    ).toBeNull();
+  });
+
+  it('lists Arsenal saved queries and opens one through arsenal_query', async () => {
+    const router = TestBed.inject(Router);
+    const navigate = spyOn(router, 'navigate').and.resolveTo(true);
+    mockStore.searchConfig.set({
+      landing: {
+        browseAllCount: 42,
+        arsenalSavedQueries: [
+          {
+            name: 'Shared pool',
+            arsenalQuery: 'filter=dimension_pool%3Aany_match%3Avalues%3Ashared',
+          },
+          {name: 'Idle', arsenalQuery: 'filter=status%3Amatch%3Avalues%3AIDLE'},
+        ],
+      },
+    });
+    fixture.detectChanges();
+
+    const button = fixture.debugElement.query(
+      By.css('.arsenal-saved-queries-btn'),
+    );
+    expect(button.nativeElement.textContent).toContain('Old saved queries');
+
+    button.nativeElement.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const items = Array.from(
+      document.querySelectorAll<HTMLButtonElement>(
+        '.arsenal-saved-queries-menu [mat-menu-item]',
+      ),
+    );
+    expect(items.map((item) => item.textContent?.trim())).toEqual([
+      'Shared pool',
+      'Idle',
+    ]);
+
+    items[0].click();
+
+    expect(navigate).toHaveBeenCalledWith(
+      [],
+      jasmine.objectContaining({
+        queryParams: {
+          'arsenal_query':
+            'filter=dimension_pool%3Aany_match%3Avalues%3Ashared',
+        },
+      }),
+    );
   });
 
   it('focuses searchBox once when arriving with initial searchQuery and showSuggestions', () => {

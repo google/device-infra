@@ -28,11 +28,30 @@
           </section>
         }
 
-        @if ((landing?.browseAllCount ?? 0) > 0) {
+        @let savedQueries = landing?.arsenalSavedQueries ?? [];
+        @if ((landing?.browseAllCount ?? 0) > 0 || savedQueries.length) {
           <section class="rt-land-section rt-land-browse">
-            <button mat-flat-button color="primary" class="browse-all-btn" (click)="onBrowseAll()">
-              Browse all {{ landing!.browseAllCount | number }} {{ store.entity() }}
-            </button>
+            @if ((landing?.browseAllCount ?? 0) > 0) {
+              <button mat-flat-button color="primary" class="browse-all-btn" (click)="onBrowseAll()">
+                Browse all {{ landing!.browseAllCount | number }} {{ store.entity() }}
+              </button>
+            }
+            @if (savedQueries.length) {
+              <button
+                mat-button
+                class="arsenal-saved-queries-btn"
+                [matMenuTriggerFor]="arsenalSavedQueriesMenu">
+                <mat-icon>saved_search</mat-icon>
+                Old saved queries
+              </button>
+              <mat-menu #arsenalSavedQueriesMenu="matMenu" class="arsenal-saved-queries-menu">
+                @for (query of savedQueries; track $index) {
+                  <button mat-menu-item (click)="openArsenalSavedQuery(query)">
+                    {{ query.name }}
+                  </button>
+                }
+              </mat-menu>
+            }
           </section>
         }
       </div>

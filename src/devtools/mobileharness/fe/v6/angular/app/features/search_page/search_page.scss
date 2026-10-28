@@ -98,6 +98,10 @@ app-tjs-search-results {
   }
 
   &.rt-land-browse {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
     padding-bottom: 0;
   }
 }
@@ -232,5 +236,19 @@ button.browse-all-btn {
   @media (max-width: 600px) {
     margin-left: 8px;
     max-width: calc(100% - 16px);
+  }
+}
+
+// Matches the saved-queries button on Alkali Arsenal's search page.
+button.arsenal-saved-queries-btn {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 20px;
+  color: #0b57d0;
+  font-weight: 500;
+  letter-spacing: normal;
+
+  &[aria-expanded='true'] {
+    background-color: rgba(11, 87, 208, 0.1);
   }
 }

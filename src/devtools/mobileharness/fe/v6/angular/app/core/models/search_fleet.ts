@@ -97,6 +97,11 @@ export declare interface FleetLandingConfig {
   enabled?: boolean;
   browseAllCount?: number;
   tryCategories?: FleetTryCategory[];
+  /**
+   * Saved queries the caller created on Alkali Arsenal's search page for this
+   * entity, newest first. Absent or empty when the caller saved none.
+   */
+  arsenalSavedQueries?: ArsenalSavedQuery[];
 }
 
 /** Fleet try category. */
@@ -417,4 +422,12 @@ export declare interface ArsenalFilterParam {
   matchType: string;
   valueType?: string;
   values?: string[];
+}
+
+/** A saved query a user created on Alkali Arsenal's search page. */
+export declare interface ArsenalSavedQuery {
+  /** The name the user gave the query in Arsenal. */
+  name: string;
+  /** The query as an Arsenal URL query string, passed as `arsenal_query`. */
+  arsenalQuery: string;
 }
