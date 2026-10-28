@@ -146,6 +146,31 @@ public class AndroidRoboTestTest {
   }
 
   @Test
+  public void run_crawlerApkFromJobFiles_pass() throws Exception {
+    String crawlerApkPath = temporaryFolder.newFile("file_crawler.apk").getAbsolutePath();
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setAppPackageId("com.some.app")
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .setCrawlTimeoutSecs(60)
+            .build();
+    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
+    jobInfo.files().add(AndroidRoboTest.TAG_CRAWLER_APK, crawlerApkPath);
+    TestInfo testInfo = jobInfo.tests().add("fake test");
+    AndroidRoboTest roboTest = createAndroidRoboTest(testInfo);
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(2)).thenReturn(Instant.ofEpochMilli(3));
+    when(commandExecutor.start(any())).thenReturn(commandProcess);
+    when(commandProcess.await(any())).thenReturn(FakeCommandResult.of("", "", 0));
+
+    roboTest.run(testInfo);
+
+    AndroidRoboTestSpec expectedSpec = spec.toBuilder().setCrawlerApk(crawlerApkPath).build();
+    verify(preProcessor).installApks(testInfo, device, expectedSpec, "stubapp.apk");
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    verify(postProcessor).uninstallApks(testInfo, device, expectedSpec);
+  }
+
+  @Test
   public void run_fail() throws Exception {
     AndroidRoboTestSpec spec =
         AndroidRoboTestSpec.newBuilder()

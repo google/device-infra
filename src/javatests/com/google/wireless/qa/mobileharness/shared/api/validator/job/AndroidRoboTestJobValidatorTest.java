@@ -20,7 +20,9 @@ import static com.google.common.truth.Truth.assertThat;
 
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
 import com.google.wireless.qa.mobileharness.shared.proto.Job;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.JobSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidRoboTestSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidRoboTestSpec.ControllerEndpoint;
 import org.junit.Before;
@@ -51,6 +53,87 @@ public class AndroidRoboTestJobValidatorTest {
     jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
 
     assertThat(validator.validate(jobInfo)).isEmpty();
+  }
+
+  @Test
+  public void validate_crawlerApkInJobFiles_hasNoErrorMessages() throws Exception {
+    JobInfo jobInfo = setUpJobInfo();
+    jobInfo.files().add("crawler_apk", "mpm::cloud/test/base_crawler::live::crawler_app.apk");
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setAppPackageId("com.some.app")
+            .setCrawlTimeoutSecs(60)
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .build();
+    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
+
+    assertThat(validator.validate(jobInfo)).isEmpty();
+  }
+
+  @Test
+  public void validate_noCrawlerApk_hasErrorMessages() throws Exception {
+    JobInfo jobInfo = setUpJobInfo();
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setAppPackageId("com.some.app")
+            .setCrawlTimeoutSecs(60)
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .build();
+    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
+
+    assertThat(validator.validate(jobInfo)).containsExactly("Crawler apk cannot be empty.");
+  }
+
+  @Test
+  public void validate_crawlerApkInBothScopedSpecAndJobFiles_hasErrorMessages() throws Exception {
+    JobInfo jobInfo = setUpJobInfo();
+    jobInfo.files().add("crawler_apk", "mpm::cloud/test/base_crawler::live::crawler_app.apk");
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setCrawlerApk("specCrawlerPath")
+            .setAppPackageId("com.some.app")
+            .setCrawlTimeoutSecs(60)
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .build();
+    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
+
+    assertThat(validator.validate(jobInfo))
+        .containsExactly("Crawler apk cannot be set in both AndroidRoboTestSpec and job files.");
+  }
+
+  @Test
+  public void validate_crawlerApkInBothProtoSpecAndJobFiles_hasErrorMessages() throws Exception {
+    JobInfo jobInfo = setUpJobInfo();
+    jobInfo.files().add("crawler_apk", "mpm::cloud/test/base_crawler::live::crawler_app.apk");
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setCrawlerApk("specCrawlerPath")
+            .setAppPackageId("com.some.app")
+            .setCrawlTimeoutSecs(60)
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .build();
+    JobSpec.Builder jobSpec = JobSpec.newBuilder();
+    JobSpecHelper.getDefaultHelper().setSpec(jobSpec, spec);
+    jobInfo.protoSpec().setProto(jobSpec.build());
+
+    assertThat(validator.validate(jobInfo))
+        .containsExactly("Crawler apk cannot be set in both AndroidRoboTestSpec and job files.");
+  }
+
+  @Test
+  public void validate_multipleCrawlerApksInJobFiles_hasErrorMessages() throws Exception {
+    JobInfo jobInfo = setUpJobInfo();
+    jobInfo.files().add("crawler_apk", "mpm::cloud/test/base_crawler::live::crawler_app_1.apk");
+    jobInfo.files().add("crawler_apk", "mpm::cloud/test/base_crawler::live::crawler_app_2.apk");
+    AndroidRoboTestSpec spec =
+        AndroidRoboTestSpec.newBuilder()
+            .setAppPackageId("com.some.app")
+            .setCrawlTimeoutSecs(60)
+            .setControllerEndpoint(ControllerEndpoint.AUTOPUSH)
+            .build();
+    jobInfo.scopedSpecs().add("AndroidRoboTestSpec", spec);
+
+    assertThat(validator.validate(jobInfo)).isNotEmpty();
   }
 
   @Test

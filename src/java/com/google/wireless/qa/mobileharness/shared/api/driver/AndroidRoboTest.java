@@ -42,6 +42,7 @@ import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.protobuf.ExtensionRegistry;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.annotation.FileAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.TestAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -63,6 +64,9 @@ import javax.inject.Inject;
             + "the UTP AndroidRoboDriver.")
 @TestAnnotation(required = false, help = "Crawls the app. No specific test to execute.")
 public class AndroidRoboTest extends BaseDriver implements SpecConfigable<AndroidRoboTestSpec> {
+
+  @FileAnnotation(required = false, help = "The crawler apk, which contains the base crawler apk.")
+  public static final String TAG_CRAWLER_APK = "crawler_apk";
 
   private static final String MH_EXCEPTION_DETAIL_PROTO_FILE_NAME = "exception-detail.pb";
 
@@ -118,7 +122,7 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
         .log("Running Android Robo Driver on %s.", this.getDevice().getDeviceId());
     testInfo.log().atInfo().alsoTo(logger).log("Job Info: %s", this.getTest().jobInfo());
 
-    AndroidRoboTestSpec spec = testInfo.jobInfo().combinedSpec(this);
+    AndroidRoboTestSpec spec = getAndroidRoboTestSpec(testInfo);
     testInfo.log().atInfo().alsoTo(logger).log("\n\nAndroid Robo Test Spec: \n\n%s", spec);
     UtpBinaries utpBinaries = utpBinariesExtractor.setUpUtpBinaries();
     preProcessor.installApks(testInfo, getDevice(), spec, utpBinaries.stubAppPath());
@@ -127,6 +131,18 @@ public class AndroidRoboTest extends BaseDriver implements SpecConfigable<Androi
 
     setResult(testInfo, result);
     postProcessor.uninstallApks(testInfo, getDevice(), spec);
+  }
+
+  private AndroidRoboTestSpec getAndroidRoboTestSpec(TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
+    AndroidRoboTestSpec spec = testInfo.jobInfo().combinedSpec(this);
+    if (testInfo.jobInfo().files().isTagNotEmpty(TAG_CRAWLER_APK)) {
+      spec =
+          spec.toBuilder()
+              .setCrawlerApk(testInfo.jobInfo().files().getSingle(TAG_CRAWLER_APK))
+              .build();
+    }
+    return spec;
   }
 
   private static int pickUnusedPort() throws InterruptedException, MobileHarnessException {

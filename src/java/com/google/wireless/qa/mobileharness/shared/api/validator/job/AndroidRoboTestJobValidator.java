@@ -32,6 +32,7 @@ public class AndroidRoboTestJobValidator
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final String PARAM_IS_FROM_DDP = "is_from_ddp";
+  private static final String TAG_CRAWLER_APK = "crawler_apk";
 
   @Override
   public List<String> validate(JobInfo jobInfo) throws InterruptedException {
@@ -39,8 +40,12 @@ public class AndroidRoboTestJobValidator
     jobInfo.log().atInfo().alsoTo(logger).log("--- Running AndroidRoboTestJobValidator ---");
     boolean isFromDdp = jobInfo.params().getBool(PARAM_IS_FROM_DDP, false);
     AndroidRoboTestSpec spec;
+    boolean hasSpecCrawlerApk;
     try {
       spec = jobInfo.combinedSpec(this);
+      hasSpecCrawlerApk =
+          !jobInfo.scopedSpecs().getSpec(AndroidRoboTestSpec.class).getCrawlerApk().isEmpty()
+              || !jobInfo.protoSpec().getSpec(AndroidRoboTestSpec.class).getCrawlerApk().isEmpty();
       jobInfo.log().atInfo().alsoTo(logger).log("Android Robo Test Spec: %s", spec);
     } catch (MobileHarnessException ex) {
       if (ex.getMessage() != null) {
@@ -50,7 +55,20 @@ public class AndroidRoboTestJobValidator
       }
       return errorsBuilder.build();
     }
-    if (spec.getCrawlerApk().isEmpty()) {
+    boolean hasFileCrawlerApk = jobInfo.files().isTagNotEmpty(TAG_CRAWLER_APK);
+    if (hasFileCrawlerApk) {
+      try {
+        jobInfo.files().checkUnique(TAG_CRAWLER_APK);
+      } catch (MobileHarnessException ex) {
+        errorsBuilder.add(
+            ex.getMessage() != null
+                ? ex.getMessage()
+                : "Error validating crawler_apk file: " + ex.getErrorId());
+      }
+    }
+    if (hasSpecCrawlerApk && hasFileCrawlerApk) {
+      errorsBuilder.add("Crawler apk cannot be set in both AndroidRoboTestSpec and job files.");
+    } else if (!hasSpecCrawlerApk && !hasFileCrawlerApk) {
       errorsBuilder.add("Crawler apk cannot be empty.");
     }
     // If the test is from DDP, don't check for the app package ID. The app package ID is
