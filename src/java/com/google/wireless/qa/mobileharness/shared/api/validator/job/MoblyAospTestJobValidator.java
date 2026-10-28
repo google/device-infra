@@ -38,7 +38,7 @@ public class MoblyAospTestJobValidator implements JobValidator {
     List<String> errors = new ArrayList<>();
     // Ensure that only one test package is specified in the job info.
     try {
-      job.files().checkUnique(MoblyAospTestSpec.FILE_MOBLY_PKG);
+      job.inputFiles().checkUnique(MoblyAospTestSpec.FILE_MOBLY_PKG);
     } catch (MobileHarnessException e) {
       errors.add(e.getMessage());
     }

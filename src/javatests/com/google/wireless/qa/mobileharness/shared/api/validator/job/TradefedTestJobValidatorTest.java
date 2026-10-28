@@ -20,9 +20,9 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.google.devtools.mobileharness.api.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.api.spec.TradefedTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.TradefedTestDriverSpec;
 import java.util.List;
 import org.junit.Before;
@@ -47,7 +47,7 @@ public final class TradefedTestJobValidatorTest {
   @Before
   public void setUp() {
     validator = new TradefedTestJobValidator();
-    when(mockJobInfo.files()).thenReturn(mockJobFiles);
+    when(mockJobInfo.inputFiles()).thenReturn(mockJobFiles);
   }
 
   @Test

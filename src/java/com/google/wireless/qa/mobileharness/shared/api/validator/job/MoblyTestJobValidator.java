@@ -31,7 +31,7 @@ public class MoblyTestJobValidator implements JobValidator, MoblyTestSpec {
   public List<String> validate(JobInfo job) {
     List<String> errors = Lists.newLinkedList();
     try {
-      job.files().checkUnique(MoblyTestSpec.FILE_TEST_LIB_PAR);
+      job.inputFiles().checkUnique(MoblyTestSpec.FILE_TEST_LIB_PAR);
     } catch (MobileHarnessException e) {
       errors.add(e.getMessage());
     }

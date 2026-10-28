@@ -89,7 +89,7 @@ public class TradefedTestJobValidator
       if (spec.getPrevSessionTestResultXml().isEmpty()
           && spec.getPrevSessionTestRecordFiles().isEmpty()
           && !jobInfo
-              .files()
+              .inputFiles()
               .isTagNotEmpty(TradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES)) {
         errors.add(
             "When the test plan is 'retry' and no 'prev_session_test_result_xml',"
@@ -101,7 +101,7 @@ public class TradefedTestJobValidator
                 + " 'prev_session_test_result_xml' must be specified.");
       } else if (spec.getPrevSessionTestRecordFiles().isEmpty()
           && !jobInfo
-              .files()
+              .inputFiles()
               .isTagNotEmpty(TradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES)) {
         errors.add(
             "When the test plan is 'retry' and no 'prev_session_xts_test_plan' specified, either"

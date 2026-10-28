@@ -84,15 +84,15 @@ public final class CompositeDeviceAdapterValidatorUtil {
       subJobInfo.params().add(param.getName(), param.getValue());
     }
     // Add files from job's root info to sub job info.
-    subJobInfo.files().addAll(rootJobInfo.files().getAll());
+    subJobInfo.inputFiles().addAll(rootJobInfo.inputFiles().getAll());
     // Add files from scoped job spec to sub job info.
     for (FileSpec fileSpec : deviceSpec.getFilesList()) {
       for (String filePath : fileSpec.getFilesList()) {
-        subJobInfo.files().add(fileSpec.getTag(), filePath);
+        subJobInfo.inputFiles().add(fileSpec.getTag(), filePath);
       }
       for (Google3File file : fileSpec.getG3FilesList()) {
         for (String output : file.getOutputList()) {
-          subJobInfo.files().add(fileSpec.getTag(), output);
+          subJobInfo.inputFiles().add(fileSpec.getTag(), output);
         }
       }
     }

@@ -25,9 +25,9 @@ import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyAospTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import java.util.List;
 import org.junit.Before;
@@ -52,7 +52,7 @@ public final class MoblyAospTestJobValidatorTest {
   @Before
   public void setUp() {
     validator = new MoblyAospTestJobValidator();
-    when(mockJobInfo.files()).thenReturn(jobFiles);
+    when(mockJobInfo.inputFiles()).thenReturn(jobFiles);
     when(mockJobInfo.params()).thenReturn(jobParams);
     when(jobParams.getBool("enable_mobly_aosp_test_validator", true)).thenReturn(true);
   }
