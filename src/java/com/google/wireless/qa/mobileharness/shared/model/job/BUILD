@@ -93,12 +93,12 @@ java_library(
     name = "job",
     srcs = [
         "JobInfo.java",
-        "JobSetting.java",
         "TestInfo.java",
         "TestInfos.java",
     ],
     visibility = ["//visibility:public"],
     exports = [
+        ":job_setting",
         ":locator",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in:files",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
@@ -106,6 +106,7 @@ java_library(
     ],
     deps = [
         ":job_schedule_unit",
+        ":job_setting",
         ":locator",
         ":test_schedule_unit",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
