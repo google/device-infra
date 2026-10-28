@@ -268,6 +268,13 @@ public class JobInfo extends JobScheduleUnit {
               + " default value is false. But it will be set true if master_cloud_endpoint is set.")
   public static final String PARAM_USE_GRPC_ROUTER = "use_grpc_router";
 
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Whether to use the test execution environment (e.g., Otter) for device allocation. The"
+              + " default value is false.")
+  public static final String PARAM_USE_TEST_EXEC_ENV = "use_test_exec_env";
+
   /** Input files of the job. */
   private final Files files;
 

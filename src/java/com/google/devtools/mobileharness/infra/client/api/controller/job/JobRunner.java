@@ -294,7 +294,8 @@ public class JobRunner implements Runnable {
     this.clock = clock;
     this.sleeper = sleeper;
     if (Flags.disableDeviceQuerier.getNonNull()
-        || jobInfo.params().getBool(JobInfo.PARAM_DISABLE_DEVICE_QUERIER, false)) {
+        || jobInfo.params().getBool(JobInfo.PARAM_DISABLE_DEVICE_QUERIER, false)
+        || jobInfo.params().getBool(JobInfo.PARAM_USE_TEST_EXEC_ENV, false)) {
       this.deviceQuerier = null;
       this.suitableDeviceChecker = null;
     } else {
