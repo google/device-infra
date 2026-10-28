@@ -43,7 +43,9 @@ java_proto_library(
 proto_library(
     name = "search_fleet_proto",
     srcs = ["search_fleet.proto"],
-    deps = [":search_common_proto"],
+    deps = [
+        ":search_common_proto",
+    ],
 )
 
 java_proto_library(
