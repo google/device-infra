@@ -22,6 +22,7 @@ import static org.junit.Assert.assertThrows;
 
 import com.google.common.base.Function;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import java.io.InterruptedIOException;
 import java.nio.channels.ClosedByInterruptException;
 import org.junit.Test;
@@ -161,6 +162,97 @@ public class MoreThrowablesTest {
             "com.google.devtools.mobileharness.shared.util.error.MoreThrowablesTest.f1",
             "com.google.devtools.mobileharness.shared.util.error.MoreThrowablesTest.shortDebugCurrentStackTrace")
         .inOrder();
+  }
+
+  @Test
+  public void addSuppressed_addsExceptionsInOrder() {
+    Exception primary = new Exception("Primary");
+    Exception suppressed1 = new Exception("Suppressed 1");
+    Exception suppressed2 = new Exception("Suppressed 2");
+    Exception suppressed3 = new Exception("Suppressed 3");
+
+    assertThat(MoreThrowables.addSuppressed(primary, suppressed1)).isEmpty();
+    assertThat(MoreThrowables.addSuppressed(primary, suppressed2, suppressed3)).isEmpty();
+
+    assertThat(primary.getSuppressed())
+        .asList()
+        .containsExactly(suppressed1, suppressed2, suppressed3)
+        .inOrder();
+  }
+
+  @Test
+  public void addSuppressed_list_addsExceptionsInOrder() {
+    Exception primary = new Exception("Primary");
+    Exception suppressed1 = new Exception("Suppressed 1");
+    Exception suppressed2 = new Exception("Suppressed 2");
+
+    assertThat(MoreThrowables.addSuppressed(primary, ImmutableList.of(suppressed1, suppressed2)))
+        .isEmpty();
+
+    assertThat(primary.getSuppressed())
+        .asList()
+        .containsExactly(suppressed1, suppressed2)
+        .inOrder();
+  }
+
+  @Test
+  public void addSuppressed_skipsExceptionsWhichWouldCreateReferenceCycles() {
+    Exception primary = new Exception("Primary");
+    // The primary exception is the cause.
+    Exception cycle1 = new Exception("Cycle 1", primary);
+    // The primary exception is a suppressed exception.
+    Exception cycle2 = new Exception("Cycle 2");
+    cycle2.addSuppressed(primary);
+    // The primary exception is reachable indirectly.
+    Exception cycle3 = new Exception("Cycle 3", new Exception("Cause of cycle 3", cycle2));
+    Exception suppressed = new Exception("Suppressed");
+
+    assertThat(MoreThrowables.addSuppressed(primary, primary, cycle1, suppressed, cycle2, cycle3))
+        .containsExactly(primary, cycle1, cycle2, cycle3)
+        .inOrder();
+
+    assertThat(primary.getSuppressed()).asList().containsExactly(suppressed);
+  }
+
+  @Test
+  public void addSuppressed_addsExceptionsSharingReferencesWithoutCycles() {
+    Exception cause = new Exception("Cause");
+    Exception primary = new Exception("Primary", cause);
+    Exception suppressed1 = new Exception("Suppressed 1", cause);
+    Exception suppressed2 = new Exception("Suppressed 2", suppressed1);
+
+    assertThat(MoreThrowables.addSuppressed(primary, cause, suppressed1, suppressed2)).isEmpty();
+
+    assertThat(primary.getSuppressed())
+        .asList()
+        .containsExactly(cause, suppressed1, suppressed2)
+        .inOrder();
+  }
+
+  @Test
+  public void addSuppressed_existingReferenceCycle_terminates() {
+    Exception cycle1 = new Exception("Cycle 1");
+    Exception cycle2 = new Exception("Cycle 2");
+    cycle1.addSuppressed(cycle2);
+    cycle2.addSuppressed(cycle1);
+    Exception primary = new Exception("Primary");
+
+    assertThat(MoreThrowables.addSuppressed(primary, cycle1)).isEmpty();
+    assertThat(MoreThrowables.addSuppressed(cycle1, primary)).containsExactly(primary);
+
+    assertThat(primary.getSuppressed()).asList().containsExactly(cycle1);
+    assertThat(cycle1.getSuppressed()).asList().containsExactly(cycle2);
+  }
+
+  @Test
+  public void addSuppressed_nullException_throwsNullPointerExceptionWithoutAddingAny() {
+    Exception primary = new Exception("Primary");
+    Exception suppressed = new Exception("Suppressed");
+
+    assertThrows(
+        NullPointerException.class, () -> MoreThrowables.addSuppressed(primary, suppressed, null));
+
+    assertThat(primary.getSuppressed()).isEmpty();
   }
 
   private String f1() {

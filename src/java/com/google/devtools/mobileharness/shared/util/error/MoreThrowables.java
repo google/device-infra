@@ -18,11 +18,20 @@ package com.google.devtools.mobileharness.shared.util.error;
 
 import static java.util.Arrays.stream;
 import static java.util.Comparator.comparing;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.InterruptedIOException;
 import java.nio.channels.ClosedByInterruptException;
+import java.util.ArrayDeque;
+import java.util.Arrays;
+import java.util.Deque;
+import java.util.List;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /** More utilities for {@link Throwable}. */
@@ -206,6 +215,93 @@ public class MoreThrowables {
     return e instanceof InterruptedException
         || e instanceof ClosedByInterruptException
         || e instanceof InterruptedIOException;
+  }
+
+  /**
+   * Adds the given exceptions to the suppressed exceptions of the given throwable in order.
+   *
+   * <p>Same as {@link #addSuppressed(Throwable, List)}.
+   *
+   * @return the skipped exceptions in order
+   */
+  @CanIgnoreReturnValue
+  public static ImmutableList<Throwable> addSuppressed(
+      Throwable throwable, Throwable... suppressedExceptions) {
+    return addSuppressed(throwable, Arrays.asList(suppressedExceptions));
+  }
+
+  /**
+   * Adds the given exceptions to the suppressed exceptions of the given throwable in order.
+   *
+   * <p>It is the same as calling {@link Throwable#addSuppressed(Throwable)} for each given
+   * exception, except that an exception which would create a reference cycle is skipped, i.e., an
+   * exception from which the given throwable is reachable via causes and suppressed exceptions
+   * (including the given throwable itself). Reference cycles of throwables may cause infinite
+   * recursion in code which traverses causes and suppressed exceptions of a throwable.
+   *
+   * <p>The skipped exceptions are returned so that the caller can handle them (e.g., log them),
+   * since otherwise their information (e.g., messages and stack traces) is dropped silently.
+   *
+   * @return the skipped exceptions in order
+   * @throws NullPointerException if the given throwable or any of the given exceptions is null, in
+   *     which case none of the given exceptions is added
+   */
+  @CanIgnoreReturnValue
+  public static ImmutableList<Throwable> addSuppressed(
+      Throwable throwable, List<? extends Throwable> suppressedExceptions) {
+    requireNonNull(throwable);
+    // Checks null exceptions before adding any exception, to avoid adding only part of them.
+    for (Throwable suppressedException : suppressedExceptions) {
+      requireNonNull(suppressedException, "Cannot suppress a null exception.");
+    }
+    // Throwables from which the given throwable is known to be unreachable. It is shared among all
+    // the given exceptions to avoid traversing the same throwables repeatedly, and it is still
+    // valid after an exception is added, because the newly added reference starts from the given
+    // throwable itself.
+    Set<Throwable> unreachableThrowables = Sets.newIdentityHashSet();
+    ImmutableList.Builder<Throwable> skippedExceptions = ImmutableList.builder();
+    for (Throwable suppressedException : suppressedExceptions) {
+      if (isReachable(throwable, suppressedException, unreachableThrowables)) {
+        skippedExceptions.add(suppressedException);
+      } else {
+        throwable.addSuppressed(suppressedException);
+      }
+    }
+    return skippedExceptions.build();
+  }
+
+  /**
+   * Returns whether the target is reachable from the source (including the source itself) via
+   * causes and suppressed exceptions.
+   *
+   * @param unreachableThrowables throwables from which the target is known to be unreachable, which
+   *     will be skipped during the traversal, and will be updated if the target is unreachable
+   */
+  @SuppressWarnings("ReferenceEquality") // Throwables are intentionally compared by identity.
+  private static boolean isReachable(
+      Throwable target, Throwable source, Set<Throwable> unreachableThrowables) {
+    Set<Throwable> visited = Sets.newIdentityHashSet();
+    Deque<Throwable> stack = new ArrayDeque<>();
+    stack.push(source);
+    while (!stack.isEmpty()) {
+      Throwable current = stack.pop();
+      if (current == target) {
+        return true;
+      }
+      if (unreachableThrowables.contains(current) || !visited.add(current)) {
+        continue;
+      }
+      Throwable cause = current.getCause();
+      if (cause != null) {
+        stack.push(cause);
+      }
+      for (Throwable suppressed : current.getSuppressed()) {
+        stack.push(suppressed);
+      }
+    }
+    // The target is unreachable from all visited throwables.
+    unreachableThrowables.addAll(visited);
+    return false;
   }
 
   /**
