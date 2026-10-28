@@ -681,6 +681,17 @@ public class AndroidInstrumentation extends BaseDriver
               "All tests were ignored or assumption failures, assigning FAIL result.");
           result = TestResult.FAIL;
           errorMsg.append("All tests were ignored or assumption failures.");
+          if (testSuiteResult.getTestResultList().isEmpty()) {
+            // No test cases ran at all, e.g., an empty shard of uniform sharding. Retrying won't
+            // change the result, so halt further retries. This is consistent with the legacy FTL
+            // behavior of not rerunning steps that have zero test cases.
+            testInfo
+                .log()
+                .atInfo()
+                .alsoTo(logger)
+                .log("No test cases ran. Halt retries of this test since retry won't help.");
+            properties.add(Test.HALT_RETRY, "true");
+          }
         }
       }
 
