@@ -167,7 +167,7 @@ public class AndroidFilePusherDecorator extends SetupOnlyDecorator
         }
       }
       try {
-        for (String srcPathOnHost : jobInfo.files().get(tag)) {
+        for (String srcPathOnHost : jobInfo.inputFiles().get(tag)) {
           FilePushArgs.Builder pushArgsBuilder =
               FilePushArgs.builder()
                   .setSrcPathOnHost(srcPathOnHost)

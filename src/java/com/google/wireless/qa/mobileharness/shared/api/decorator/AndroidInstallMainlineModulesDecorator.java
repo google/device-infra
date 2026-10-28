@@ -88,10 +88,10 @@ public class AndroidInstallMainlineModulesDecorator extends SetupOnlyDecorator
   protected SetupResult setUp(SetupContext context)
       throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
-    if (testInfo.jobInfo().files().isTagNotEmpty(TAG_BUNDLETOOL_FILE)) {
+    if (testInfo.jobInfo().inputFiles().isTagNotEmpty(TAG_BUNDLETOOL_FILE)) {
       bundletool =
           bundletool.withCustomBundletoolJar(
-              Path.of(testInfo.jobInfo().files().getSingle(TAG_BUNDLETOOL_FILE)));
+              Path.of(testInfo.jobInfo().inputFiles().getSingle(TAG_BUNDLETOOL_FILE)));
     }
     installModules(testInfo);
     return SetupResult.continueDecorated();
@@ -101,7 +101,7 @@ public class AndroidInstallMainlineModulesDecorator extends SetupOnlyDecorator
       throws MobileHarnessException, InterruptedException {
     String genFileDirRoot = testInfo.getGenFileDir();
 
-    ImmutableSet<String> modules = testInfo.jobInfo().files().get(TAG_MODULE_FILES);
+    ImmutableSet<String> modules = testInfo.jobInfo().inputFiles().get(TAG_MODULE_FILES);
     testInfo.log().atInfo().alsoTo(logger).log("Going to install mainline modules %s", modules);
 
     JavaSystemProperties javaProps = BundletoolUtil.createJavaSystemProperties(testInfo);

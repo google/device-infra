@@ -36,6 +36,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.in.Files;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
@@ -51,7 +52,6 @@ import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
@@ -275,7 +275,7 @@ public class AndroidCdpDecoratorTest {
     when(params.get(AndroidCdpDecorator.PARAM_CHROME_FLAGS, "")).thenReturn(chromeFlags);
 
     // Files tagging mocks
-    when(jobInfo.files()).thenReturn(mockFiles());
+    when(jobInfo.inputFiles()).thenReturn(mockFiles());
   }
 
   @Test
@@ -500,11 +500,10 @@ public class AndroidCdpDecoratorTest {
   @Test
   public void setUp_browser_chromedriverStartFailed_throwsException() throws Exception {
     mockParams(false, null, null, DEBUG_PORT);
-    com.google.wireless.qa.mobileharness.shared.model.job.in.Files files =
-        mock(com.google.wireless.qa.mobileharness.shared.model.job.in.Files.class);
+    Files files = mock(Files.class);
     when(files.isTagNotEmpty(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn(true);
     when(files.getSingle(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn("/path/to/chromedriver");
-    when(jobInfo.files()).thenReturn(files);
+    when(jobInfo.inputFiles()).thenReturn(files);
 
     when(processUtil.resolveDefaultActivity(DEVICE_ID, "com.android.chrome"))
         .thenReturn("ChromeActivity");
@@ -526,11 +525,10 @@ public class AndroidCdpDecoratorTest {
   @Test
   public void setUp_browser_chromedriverBindFailed_throwsException() throws Exception {
     mockParams(false, null, null, DEBUG_PORT);
-    com.google.wireless.qa.mobileharness.shared.model.job.in.Files files =
-        mock(com.google.wireless.qa.mobileharness.shared.model.job.in.Files.class);
+    Files files = mock(Files.class);
     when(files.isTagNotEmpty(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn(true);
     when(files.getSingle(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn("/path/to/chromedriver");
-    when(jobInfo.files()).thenReturn(files);
+    when(jobInfo.inputFiles()).thenReturn(files);
 
     when(processUtil.resolveDefaultActivity(DEVICE_ID, "com.android.chrome"))
         .thenReturn("ChromeActivity");
@@ -560,11 +558,10 @@ public class AndroidCdpDecoratorTest {
   @Test
   public void tearDown_chromeCleanup_success() throws Exception {
     mockParams(false, null, null, DEBUG_PORT);
-    com.google.wireless.qa.mobileharness.shared.model.job.in.Files files =
-        mock(com.google.wireless.qa.mobileharness.shared.model.job.in.Files.class);
+    Files files = mock(Files.class);
     when(files.isTagNotEmpty(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn(true);
     when(files.getSingle(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn("/path/to/chromedriver");
-    when(jobInfo.files()).thenReturn(files);
+    when(jobInfo.inputFiles()).thenReturn(files);
 
     when(processUtil.resolveDefaultActivity(DEVICE_ID, "com.android.chrome"))
         .thenReturn("ChromeActivity");
@@ -592,11 +589,10 @@ public class AndroidCdpDecoratorTest {
   @Test
   public void tearDown_webViewCleanup_success() throws Exception {
     mockParams(true, PACKAGE_NAME, ACTIVITY_NAME, DEBUG_PORT, "", "8081:8081,8082:8082");
-    com.google.wireless.qa.mobileharness.shared.model.job.in.Files files =
-        mock(com.google.wireless.qa.mobileharness.shared.model.job.in.Files.class);
+    Files files = mock(Files.class);
     when(files.isTagNotEmpty(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn(true);
     when(files.getSingle(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn("/path/to/chromedriver");
-    when(jobInfo.files()).thenReturn(files);
+    when(jobInfo.inputFiles()).thenReturn(files);
 
     when(processUtil.resolveDefaultActivity(DEVICE_ID, PACKAGE_NAME)).thenReturn(ACTIVITY_NAME);
     doNothing().when(processUtil).startApplication(DEVICE_ID, PACKAGE_NAME, ACTIVITY_NAME);
@@ -623,11 +619,10 @@ public class AndroidCdpDecoratorTest {
   @Test
   public void tearDown_cleanupStepsThrowExceptions_logsWarnings() throws Exception {
     mockParams(true, PACKAGE_NAME, ACTIVITY_NAME, DEBUG_PORT, "", "8081:8081");
-    com.google.wireless.qa.mobileharness.shared.model.job.in.Files files =
-        mock(com.google.wireless.qa.mobileharness.shared.model.job.in.Files.class);
+    Files files = mock(Files.class);
     when(files.isTagNotEmpty(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn(true);
     when(files.getSingle(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn("/path/to/chromedriver");
-    when(jobInfo.files()).thenReturn(files);
+    when(jobInfo.inputFiles()).thenReturn(files);
 
     when(processUtil.resolveDefaultActivity(DEVICE_ID, PACKAGE_NAME)).thenReturn(ACTIVITY_NAME);
     doNothing().when(processUtil).startApplication(DEVICE_ID, PACKAGE_NAME, ACTIVITY_NAME);
@@ -961,7 +956,7 @@ public class AndroidCdpDecoratorTest {
     when(params.get(AndroidCdpDecorator.PARAM_LOCAL_SERVER_PORT, "")).thenReturn("");
     when(params.getInt(AndroidCdpDecorator.PARAM_DEBUG_PORT, 0)).thenReturn(DEBUG_PORT);
     when(params.get(AndroidCdpDecorator.PARAM_CHROME_FLAGS, "")).thenReturn("");
-    when(jobInfo.files()).thenReturn(mockFiles());
+    when(jobInfo.inputFiles()).thenReturn(mockFiles());
 
     when(processUtil.resolveDefaultActivity(DEVICE_ID, customBrowserPkg))
         .thenReturn("ChromeActivity");
@@ -1190,11 +1185,10 @@ public class AndroidCdpDecoratorTest {
   public void setUp_browser_withChromedriver_stdoutCallback_logsToTestInfo() throws Exception {
     mockParams(false, null, null, DEBUG_PORT);
     // Mock Files object to return fake chromedriver path
-    com.google.wireless.qa.mobileharness.shared.model.job.in.Files files =
-        mock(com.google.wireless.qa.mobileharness.shared.model.job.in.Files.class);
+    Files files = mock(Files.class);
     when(files.isTagNotEmpty(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn(true);
     when(files.getSingle(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn("/path/to/chromedriver");
-    when(jobInfo.files()).thenReturn(files);
+    when(jobInfo.inputFiles()).thenReturn(files);
 
     when(processUtil.resolveDefaultActivity(DEVICE_ID, "com.android.chrome"))
         .thenReturn("ChromeActivity");
@@ -1227,11 +1221,10 @@ public class AndroidCdpDecoratorTest {
   @Test
   public void setUp_browser_withChromedriver_success() throws Exception {
     mockParams(false, null, null, DEBUG_PORT);
-    com.google.wireless.qa.mobileharness.shared.model.job.in.Files files =
-        mock(com.google.wireless.qa.mobileharness.shared.model.job.in.Files.class);
+    Files files = mock(Files.class);
     when(files.isTagNotEmpty(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn(true);
     when(files.getSingle(AndroidCdpDecorator.TAG_CHROMEDRIVER)).thenReturn("/path/to/chromedriver");
-    when(jobInfo.files()).thenReturn(files);
+    when(jobInfo.inputFiles()).thenReturn(files);
 
     when(processUtil.resolveDefaultActivity(DEVICE_ID, "com.android.chrome"))
         .thenReturn("ChromeActivity");

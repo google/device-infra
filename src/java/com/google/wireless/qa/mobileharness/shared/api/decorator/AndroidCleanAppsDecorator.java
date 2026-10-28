@@ -201,8 +201,8 @@ public class AndroidCleanAppsDecorator extends SetupOnlyDecorator implements And
     String deviceId = getDevice().getDeviceId();
     Log testLog = testInfo.log();
     Set<String> buildApks = new HashSet<>();
-    buildApks.addAll(jobInfo.files().get(AndroidCleanAppsSpec.TAG_BUILD_APK));
-    buildApks.addAll(testInfo.files().get(AndroidCleanAppsSpec.TAG_BUILD_APK));
+    buildApks.addAll(jobInfo.inputFiles().get(AndroidCleanAppsSpec.TAG_BUILD_APK));
+    buildApks.addAll(testInfo.inputFiles().get(AndroidCleanAppsSpec.TAG_BUILD_APK));
     if (!buildApks.isEmpty()) {
       // Gets the packages of the build_apks.
       Set<String> buildPackages = new HashSet<>();

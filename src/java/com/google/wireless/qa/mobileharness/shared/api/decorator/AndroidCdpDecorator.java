@@ -633,8 +633,8 @@ public class AndroidCdpDecorator extends LifecycleDecorator {
   private int startChromeDriverIfConfigured(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
     String chromedriverPath = null;
-    if (testInfo.jobInfo().files().isTagNotEmpty(TAG_CHROMEDRIVER)) {
-      chromedriverPath = testInfo.jobInfo().files().getSingle(TAG_CHROMEDRIVER);
+    if (testInfo.jobInfo().inputFiles().isTagNotEmpty(TAG_CHROMEDRIVER)) {
+      chromedriverPath = testInfo.jobInfo().inputFiles().getSingle(TAG_CHROMEDRIVER);
     }
     if (Strings.isNullOrEmpty(chromedriverPath)) {
       chromedriverPath = testInfo.jobInfo().params().get(PARAM_CHROMEDRIVER_PATH, null);

@@ -82,7 +82,8 @@ public class AndroidLabTestSupportSettingsDecorator extends SetupOnlyDecorator
     String deviceId = getDevice().getDeviceId();
     AndroidLabTestSupportSettingsDecoratorSpec spec =
         testInfo.jobInfo().combinedSpec(this, deviceId);
-    String labTestSupportApkPath = testInfo.jobInfo().files().getSingle(TAG_LAB_TEST_SUPPORT_APK);
+    String labTestSupportApkPath =
+        testInfo.jobInfo().inputFiles().getSingle(TAG_LAB_TEST_SUPPORT_APK);
     int deviceSdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(deviceId);
 
     apkInstaller.installApkIfNotExist(
