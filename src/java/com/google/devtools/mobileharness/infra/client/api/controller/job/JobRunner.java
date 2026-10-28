@@ -685,9 +685,9 @@ public class JobRunner implements Runnable {
     if (!jobInfo.params().isEmpty()) {
       buf.append(String.format("\nPARAMETERS:\n- %s\n", mapJoiner.join(jobInfo.params().getAll())));
     }
-    if (!jobInfo.files().isEmpty()) {
+    if (!jobInfo.inputFiles().isEmpty()) {
       buf.append(
-          String.format("\nFILES:\n- %s\n", mapJoiner.join(jobInfo.files().getAll().asMap())));
+          String.format("\nFILES:\n- %s\n", mapJoiner.join(jobInfo.inputFiles().getAll().asMap())));
     }
     if (!jobInfo.tests().isEmpty()) {
       buf.append(
@@ -803,7 +803,7 @@ public class JobRunner implements Runnable {
         .log("Loading client jar plugins for job %s", jobInfo.locator().getId());
     final PluginCreator loader =
         new PluginCreator(
-            jobInfo.files().get(JobInfo.TAG_CLIENT_PLUGIN),
+            jobInfo.inputFiles().get(JobInfo.TAG_CLIENT_PLUGIN),
             jobInfo.params().getList(JobInfo.PARAM_CLIENT_PLUGIN, null),
             jobInfo.params().getList(JobInfo.PARAM_CLIENT_PLUGIN_MODULES, null),
             jobInfo.params().get(JobInfo.PARAM_CLIENT_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX),

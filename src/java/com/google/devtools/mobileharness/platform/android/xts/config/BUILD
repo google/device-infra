@@ -122,6 +122,7 @@ java_library(
     srcs = ["ModuleConfigurationLabPlugin.java"],
     visibility = [
         "//java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//javatests/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/config:__pkg__",
     ],
     deps = [

@@ -107,7 +107,7 @@ public class LabFileNotifier {
     }
     logger.atInfo().log(
         "Job/test files were handled, job_files=%s, test_files=%s",
-        testInfo.jobInfo().files().getAll().asMap(), testInfo.files().getAll().asMap());
+        testInfo.jobInfo().inputFiles().getAll().asMap(), testInfo.inputFiles().getAll().asMap());
   }
 
   /** Handles a job/test file if the test has already started, otherwise adds it to a cache. */
@@ -187,7 +187,7 @@ public class LabFileNotifier {
   @GuardedBy("fileCache")
   protected void addTestFile(TestFileUnit testFileUnit) throws MobileHarnessException {
     testInfo
-        .files()
+        .inputFiles()
         .add(
             testFileUnit.getTag(),
             FileInfo.create(
@@ -201,7 +201,7 @@ public class LabFileNotifier {
     if (!jobFileUnit.getTag().startsWith(JobSpecHelper.FILE_TAG_PREFIX)
         && !jobFileUnit.getTag().startsWith(ScopedSpecs.FILE_TAG_PREFIX)) {
       jobInfo
-          .files()
+          .inputFiles()
           .add(
               jobFileUnit.getTag(),
               FileInfo.create(

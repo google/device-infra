@@ -88,7 +88,7 @@ public class SessionPluginForTesting {
             .build();
     jobInfo.dimensions().addAll(config.getJobDeviceDimensionsMap());
     jobInfo.params().add("sleep_time_sec", Integer.toString(config.getNoOpDriverSleepTimeSec()));
-    jobInfo.files().addAll(config.getExtraJobFilesMap());
+    jobInfo.inputFiles().addAll(config.getExtraJobFilesMap());
 
     sessionInfo.addJob(jobInfo);
     logger.atInfo().log("JobInfo added");

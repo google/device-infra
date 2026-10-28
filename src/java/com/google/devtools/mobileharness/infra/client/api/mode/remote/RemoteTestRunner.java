@@ -684,7 +684,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
   private ImmutableList<ResolveFileItem> getLabResolveFiles(JobInfo jobInfo)
       throws MobileHarnessException, InterruptedException {
     List<Entry<String, String>> allFiles = new ArrayList<>();
-    allFiles.addAll(jobInfo.files().getAll().entries());
+    allFiles.addAll(jobInfo.inputFiles().getAll().entries());
     allFiles.addAll(JobSpecHelper.getFiles(jobInfo.protoSpec().getProto()).entrySet());
     allFiles.addAll(jobInfo.scopedSpecs().getFiles(jobSpecHelper).entrySet());
     for (SubDeviceSpec subDeviceSpec : jobInfo.subDeviceSpecs().getAllSubDevices()) {

@@ -132,7 +132,7 @@ public class LocalTestFlow {
         .alsoTo(logger)
         .log("Loading lab plugins for test %s", testInfo.locator().getId());
     JobInfo jobInfo = testInfo.jobInfo();
-    ImmutableSet<String> labPluginPaths = jobInfo.files().get(JobInfo.TAG_LAB_PLUGIN);
+    ImmutableSet<String> labPluginPaths = jobInfo.inputFiles().get(JobInfo.TAG_LAB_PLUGIN);
     List<String> labPluginClasses = jobInfo.params().getList(JobInfo.PARAM_LAB_PLUGIN, null);
     List<String> labPluginModuleClasses =
         jobInfo.params().getList(JobInfo.PARAM_CLIENT_PLUGIN_MODULES, null);

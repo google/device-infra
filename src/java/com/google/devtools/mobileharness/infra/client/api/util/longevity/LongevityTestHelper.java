@@ -107,7 +107,7 @@ public class LongevityTestHelper {
         jobInfo.properties().add(Job._IS_RESUMED_JOB, "true");
 
         if (!resumeFiles && newJobInfo != null) {
-          jobInfo.files().addAll(newJobInfo.files().getAll());
+          jobInfo.inputFiles().addAll(newJobInfo.inputFiles().getAll());
           jobInfo
               .protoSpec()
               .setProto(

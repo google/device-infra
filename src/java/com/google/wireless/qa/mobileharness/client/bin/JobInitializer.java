@@ -117,7 +117,7 @@ public final class JobInitializer {
             jobConfigBuilder,
             jobInfo.params().getAll(),
             jobInfo.subDeviceSpecs(),
-            jobInfo.files().getAll());
+            jobInfo.inputFiles().getAll());
         jobInfos.add(jobInfo);
       } catch (MobileHarnessException e) {
         systemUtil.exit(ExitCode.Client.JOB_INFO_ERROR, e);
