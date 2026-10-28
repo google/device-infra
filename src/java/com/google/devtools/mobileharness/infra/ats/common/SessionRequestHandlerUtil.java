@@ -1466,7 +1466,7 @@ public class SessionRequestHandlerUtil {
           .add(MoblyTestSpec.CLI_ARG_OVERRIDE_KEY_PREFIX + entry.getKey(), entry.getValue());
     }
     for (Entry<String, Collection<String>> file : files.asMap().entrySet()) {
-      jobInfo.files().replaceAll(file.getKey(), file.getValue());
+      jobInfo.inputFiles().replaceAll(file.getKey(), file.getValue());
     }
 
     jobInfo.properties().add(Job.IS_XTS_NON_TF_JOB, "true");
@@ -1735,7 +1735,7 @@ public class SessionRequestHandlerUtil {
         jobInfo.locator().getName(),
         jobInfo.params().getAll(),
         jobInfo.subDeviceSpecs(),
-        jobInfo.files().getAll());
+        jobInfo.inputFiles().getAll());
   }
 
   public static Duration calculateTestTimeout(Duration jobTimeout) {

@@ -601,7 +601,7 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
         && !spec.getPrevSessionTestResultXml().isEmpty()
         && testInfo
             .jobInfo()
-            .files()
+            .inputFiles()
             .isTagNotEmpty(TradefedTestSpec.TAG_PREV_SESSION_TEST_RECORD_PB_FILES);
   }
 

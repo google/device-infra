@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.in.Files;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -38,7 +39,6 @@ import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
@@ -167,7 +167,7 @@ public final class AtsServerSessionUtilTest {
   public void insertAdditionalTestResource_addsNonXtsZipFileResourcesToJobInfo() throws Exception {
     JobInfo jobInfo = mock(JobInfo.class);
     Files jobFiles = mock(Files.class);
-    when(jobInfo.files()).thenReturn(jobFiles);
+    when(jobInfo.inputFiles()).thenReturn(jobFiles);
 
     atsServerSessionUtil.insertAdditionalTestResource(
         jobInfo,

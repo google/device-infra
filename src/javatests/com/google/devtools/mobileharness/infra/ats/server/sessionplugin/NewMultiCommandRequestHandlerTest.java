@@ -39,7 +39,6 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMultimap;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
@@ -89,7 +88,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
@@ -155,7 +153,6 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Mock private SessionInfo sessionInfo;
   @Mock private JobInfo jobInfo;
-  @Mock private Files files;
   @Mock private TestInfo testInfo;
   @Mock private TestInfos testInfos;
   @Mock private Result newJobResult;
@@ -176,7 +173,6 @@ public final class NewMultiCommandRequestHandlerTest {
         UUID.nameUUIDFromBytes(DEFAULT_COMMAND_LINE.getBytes(UTF_8)).toString());
     when(jobInfo.locator()).thenReturn(new JobLocator("job_id", "job_name"));
     when(jobInfo.properties()).thenReturn(properties);
-    when(jobInfo.files()).thenReturn(files);
     when(jobInfo.tests()).thenReturn(testInfos);
     when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
     when(sessionRequestHandlerUtil.addXtsModuleInfo(any()))
@@ -1614,7 +1610,6 @@ public final class NewMultiCommandRequestHandlerTest {
             .putCommandDetails(
                 prepareResult.commandDetail().get().getId(), prepareResult.commandDetail().get());
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-    when(files.getAll()).thenReturn(ImmutableMultimap.of());
     HandleResultProcessingResult handleResultProcessingResult =
         newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
     assertThat(handleResultProcessingResult.state()).isEqualTo(RequestState.ERROR);
@@ -1832,7 +1827,6 @@ public final class NewMultiCommandRequestHandlerTest {
         UUID.nameUUIDFromBytes(DEFAULT_COMMAND_LINE.getBytes(UTF_8)).toString());
     when(jobInfo2.locator()).thenReturn(new JobLocator("job_id_2", "job_name_2"));
     when(jobInfo2.properties()).thenReturn(properties2);
-    when(jobInfo2.files()).thenReturn(files);
     TestInfos testInfos2 = Mockito.mock(TestInfos.class);
     when(jobInfo2.tests()).thenReturn(testInfos2);
     when(testInfos2.getAll()).thenReturn(ImmutableListMultimap.of("test_id_2", testInfo2));

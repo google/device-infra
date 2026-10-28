@@ -161,7 +161,7 @@ public class AtsServerSessionUtil {
             "Adding additional test resource: %s %s",
             testResource.getPath(), testResourceUrl.getPath());
         jobInfo
-            .files()
+            .inputFiles()
             .add(testResource.getName(), replacePathForRemoteRunner(testResourceUrl.getPath()));
       }
     }

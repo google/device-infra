@@ -33,7 +33,6 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
@@ -109,7 +108,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.ScopedSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
@@ -179,7 +177,6 @@ public final class AtsServerSessionPluginTest {
   @Mock private JobInfo jobInfo2;
   @Mock private JobInfo moblyJobInfo;
   @Mock private JobInfo moblyJobInfo2;
-  @Mock private Files files;
   private Properties properties;
   @Mock private TestInfo testInfo;
   @Mock private TestInfos testInfos;
@@ -235,11 +232,6 @@ public final class AtsServerSessionPluginTest {
     when(xtsJobCreator.createXtsNonTradefedJobs(any()))
         .thenReturn(ImmutableList.of(moblyJobInfo))
         .thenReturn(ImmutableList.of(moblyJobInfo2));
-    when(jobInfo.files()).thenReturn(files);
-    when(jobInfo2.files()).thenReturn(files);
-    when(moblyJobInfo.files()).thenReturn(files);
-    when(moblyJobInfo2.files()).thenReturn(files);
-    when(files.getAll()).thenReturn(ImmutableMultimap.of());
     when(sessionRequestHandlerUtil.addXtsModuleInfo(any()))
         .thenAnswer(invocation -> invocation.getArgument(0));
     Mockito.doNothing().when(localFileUtil).mergeDir(any(Path.class), any(Path.class));
@@ -1952,7 +1944,6 @@ public final class AtsServerSessionPluginTest {
     setupProps.add(Job.IS_XTS_NON_TF_JOB, "true");
     setupProps.add(XtsConstants.XTS_JOB_NAME, XtsConstants.SETUP_JOB_NAME);
     when(setupJob.properties()).thenReturn(setupProps);
-    when(setupJob.files()).thenReturn(new Files(new Timing(), new LocalFileUtil()));
     TestInfos setupTests = mock(TestInfos.class);
     when(setupTests.getAll()).thenReturn(LinkedListMultimap.create());
     when(setupJob.tests()).thenReturn(setupTests);

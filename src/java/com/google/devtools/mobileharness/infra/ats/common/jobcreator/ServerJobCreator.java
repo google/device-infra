@@ -359,14 +359,14 @@ public class ServerJobCreator extends XtsJobCreator {
    */
   private void reformatResourcePathForNonTradefedJob(JobInfo jobInfo)
       throws MobileHarnessException, InterruptedException {
-    ImmutableMultimap<String, String> resources = jobInfo.files().getAll();
+    ImmutableMultimap<String, String> resources = jobInfo.inputFiles().getAll();
     for (String tag : resources.keySet()) {
       ImmutableCollection<String> files = resources.get(tag);
       Set<String> newFiles = new HashSet<>();
       for (String file : files) {
         newFiles.add(atsServerSessionUtil.replacePathForRemoteRunner(file));
       }
-      jobInfo.files().replaceAll(tag, newFiles);
+      jobInfo.inputFiles().replaceAll(tag, newFiles);
     }
   }
 }

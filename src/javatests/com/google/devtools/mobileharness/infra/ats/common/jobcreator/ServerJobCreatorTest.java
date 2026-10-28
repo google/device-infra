@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.in.Files;
 import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.TradefedJobInfo;
@@ -63,7 +64,6 @@ import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
@@ -1187,7 +1187,7 @@ public final class ServerJobCreatorTest {
     JobInfo jobInfo = mock(JobInfo.class);
     Files jobFiles = mock(Files.class);
     Properties jobProperties = new Properties(new Timing());
-    when(jobInfo.files()).thenReturn(jobFiles);
+    when(jobInfo.inputFiles()).thenReturn(jobFiles);
     when(jobInfo.properties()).thenReturn(jobProperties);
     when(jobFiles.getAll())
         .thenReturn(

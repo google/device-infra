@@ -1657,8 +1657,8 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(jobInfos).hasSize(2);
     assertThat(jobInfos.get(0).params().get("option")).isEqualTo("value");
     assertThat(jobInfos.get(1).params().get("option")).isNull();
-    assertThat(jobInfos.get(0).files().get("config")).containsExactly(file1, file2);
-    assertThat(jobInfos.get(1).files().get("config")).isEmpty();
+    assertThat(jobInfos.get(0).inputFiles().get("config")).containsExactly(file1, file2);
+    assertThat(jobInfos.get(1).inputFiles().get("config")).isEmpty();
     assertThat(jobInfos.get(0).params().get(MoblyTestSpec.CLI_ARG_OVERRIDE_KEY_PREFIX + "option"))
         .isEqualTo("value");
     assertThat(jobInfos.get(1).params().get(MoblyTestSpec.CLI_ARG_OVERRIDE_KEY_PREFIX + "option"))
