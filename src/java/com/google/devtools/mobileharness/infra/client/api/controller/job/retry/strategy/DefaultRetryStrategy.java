@@ -63,7 +63,7 @@ public class DefaultRetryStrategy implements RetryStrategy {
 
   /** Blocklist for disabling the extra retry for infra errors by user. */
   private static final ImmutableSet<String> USER_BLOCK_LIST_FOR_INFRA_ERROR_EXTRA_RETRY =
-      ImmutableSet.of("ytlr-lab-users", "pte-sensor-lab-jobs");
+      ImmutableSet.of("ytlr-lab-users", "pte-sensor-lab-jobs", "fusion-guitar-jobs");
 
   /** Minimal job remaining time needed for triggering the extra retry for infra errors. */
   private static final Duration MIN_JOB_REMAINING_TIME_FOR_INFRA_ERROR_EXTRA_RETRY =
