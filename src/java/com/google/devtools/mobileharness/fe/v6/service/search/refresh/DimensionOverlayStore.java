@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.fe.v6.service.search.refresh;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ticker;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableMap;
@@ -51,16 +53,18 @@ import javax.inject.Singleton;
  *
  * <p>Asynchronously loads cold dimensions via {@link FleetDataSource#pullDimensions(Set)} with
  * per-key in-flight deduplication and returns strong-reference maps for query execution. Overlays
- * are cached in a bounded per-fleet LRU cache (capacity 50, TTL 30m).
+ * are cached in a bounded per-fleet LRU cache (capacity {@link #MAX_CACHE_SIZE}, TTL {@link
+ * #CACHE_TTL}).
  */
 @Singleton
 public final class DimensionOverlayStore {
 
-  private static final long MAX_CACHE_SIZE = 50L;
-  private static final Duration CACHE_TTL = Duration.ofMinutes(30);
+  @VisibleForTesting static final long MAX_CACHE_SIZE = 50L;
+  @VisibleForTesting static final Duration CACHE_TTL = Duration.ofMinutes(5);
 
   private final Map<Fleet, FleetDataSource> dataSources;
   private final FleetSnapshotStore snapshotStore;
+  private final Ticker ticker;
   private final ConcurrentMap<Fleet, Cache<String, DimensionOverlay>> memoryCaches =
       new ConcurrentHashMap<>();
   private final ConcurrentMap<Fleet, ConcurrentMap<String, ListenableFuture<DimensionOverlay>>>
@@ -68,8 +72,15 @@ public final class DimensionOverlayStore {
 
   @Inject
   DimensionOverlayStore(Map<Fleet, FleetDataSource> dataSources, FleetSnapshotStore snapshotStore) {
+    this(dataSources, snapshotStore, Ticker.systemTicker());
+  }
+
+  @VisibleForTesting
+  DimensionOverlayStore(
+      Map<Fleet, FleetDataSource> dataSources, FleetSnapshotStore snapshotStore, Ticker ticker) {
     this.dataSources = checkNotNull(dataSources);
     this.snapshotStore = checkNotNull(snapshotStore);
+    this.ticker = checkNotNull(ticker);
   }
 
   /**
@@ -94,6 +105,7 @@ public final class DimensionOverlayStore {
                 CacheBuilder.newBuilder()
                     .maximumSize(MAX_CACHE_SIZE)
                     .expireAfterWrite(CACHE_TTL)
+                    .ticker(ticker)
                     .build());
     ConcurrentMap<String, ListenableFuture<DimensionOverlay>> inFlightMap =
         inFlight.computeIfAbsent(fleet, f -> new ConcurrentHashMap<>());
