@@ -46,11 +46,11 @@ import javax.inject.Inject;
 /**
  * Decorator for capturing video or screenshots of Android devices during tests.
  *
- * <p>It currently assumes a single device per test: all recorders and {@link
- * #VIDEO_OUTPUT_PB_FILE_NAME} write to the test gen file dir without a device-specific name.
+ * <p>All recorders and {@link #VIDEO_OUTPUT_PB_FILE_NAME} write to the gen file dir of the {@link
+ * TestInfo} that this decorator runs with. In a multi-device test, the decorator stack of each
+ * device runs with a per-device {@link TestInfo}, whose gen file dir is a sub-directory of the gen
+ * file dir of the test, so the file names need no device-specific part.
  */
-// TODO: Support multi-device tests (device-specific output names, one VideoOutput
-// per device, and AndroidVideoDecoratorProcessorPlugin support).
 @DecoratorAnnotation(
     help = "Decorator for capturing video or screenshots of Android devices during tests.")
 public class AndroidVideoDecorator extends LifecycleDecorator
