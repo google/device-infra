@@ -435,7 +435,7 @@ public final class JobInfoCreator {
                   } else {
                     localFileUtil.copyFileOrDir(fileOrDirPath, fileValue);
                   }
-                  jobInfo.files().add(tag, fileValue);
+                  jobInfo.inputFiles().add(tag, fileValue);
                 } catch (MobileHarnessException e) {
                   // It's acceptable to ignore failed run file copy which is not necessary for
                   // session running.
@@ -443,11 +443,11 @@ public final class JobInfoCreator {
                       "Failed to copy file from %s to %s.", fileOrDirPath, fileValue);
                 }
               } else {
-                jobInfo.files().add(tag, fileOrDirPath);
+                jobInfo.inputFiles().add(tag, fileOrDirPath);
               }
             }
           } else {
-            jobInfo.files().add(tag, file);
+            jobInfo.inputFiles().add(tag, file);
           }
         }
       }
@@ -460,7 +460,7 @@ public final class JobInfoCreator {
       }
 
       for (String fileOrDirPath : files) {
-        jobInfo.files().add(tag, fileOrDirPath);
+        jobInfo.inputFiles().add(tag, fileOrDirPath);
       }
     }
   }

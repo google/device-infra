@@ -185,7 +185,7 @@ public class AdhocTestbedDriver extends BaseDriver {
                             // subTestInfo so decorators in sub-device stack can retrieve those
                             // files (b/162563952).
                             ListMultimap<String, String> files =
-                                testInfo.files().getAll().entries().stream()
+                                testInfo.inputFiles().getAll().entries().stream()
                                     .filter(
                                         e -> e.getKey().contains(driver.getDevice().getDeviceId()))
                                     .collect(
@@ -196,7 +196,7 @@ public class AdhocTestbedDriver extends BaseDriver {
                                                 MultimapBuilder.hashKeys()
                                                     .arrayListValues()
                                                     .build()));
-                            subTestInfo.files().addAll(files);
+                            subTestInfo.inputFiles().addAll(files);
                             // Several decorators dump test outputs to the directory provided
                             // through TestInfo.getGenFileDir(). To ensure each decorator stack
                             // records device specific outputs correctly, we need to provide a
