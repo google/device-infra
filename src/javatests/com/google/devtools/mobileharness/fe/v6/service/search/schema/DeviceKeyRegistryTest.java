@@ -53,9 +53,6 @@ public final class DeviceKeyRegistryTest {
     assertThat(registry.getKey("dimension::label").get().isOverlay()).isFalse();
     assertThat(registry.getKey("dimension::label").get().aliases()).containsExactly("device label");
     assertThat(registry.displayName("dimension::label")).hasValue("Label");
-    assertThat(registry.getKey("device_field::sdk_or_software_version")).isPresent();
-    assertThat(registry.displayName("device_field::sdk_or_software_version"))
-        .hasValue("SDK or Software Version");
     assertThat(registry.getKey("device_field::version")).hasValue(DeviceKeys.VERSION);
     assertThat(registry.displayName("device_field::version")).hasValue("Version");
     // Standalone ATS exclusive key.

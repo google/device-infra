@@ -137,7 +137,7 @@ describe('search_filter_utils', () => {
       });
     });
 
-    it('parses exactly and atleast comma-separated lists', () => {
+    it('parses exactly~ and atleast~ comma-separated lists', () => {
       expect(parseComplexCondition('exactly~IDLE,BUSY')).toEqual({
         matchesExactly: {values: ['IDLE', 'BUSY']},
       });
@@ -444,7 +444,7 @@ describe('search_filter_utils', () => {
   });
 
   describe('serializeComplexCondition', () => {
-    it('serializes starts, contains, regex, exactly, atleast conditions to Scheme B DSL', () => {
+    it('serializes starts~, contains~, regex~, exactly~ and atleast~ conditions to Scheme B DSL', () => {
       expect(serializeComplexCondition({startsWith: {value: 'Pixel'}})).toBe(
         'starts~Pixel',
       );
@@ -1649,23 +1649,23 @@ describe('search_filter_utils', () => {
   describe('buildFilterChipFromResolved', () => {
     it('constructs a FilterChip from a resolved backend filter and valid chip', () => {
       const filter = {
-        key: 'device_field::sdk_or_software_version',
-        simple: {values: [{value: '34'}], negated: false},
+        key: 'device_field::version',
+        simple: {values: [{value: '16'}], negated: false},
       };
-      const metadata = {keyDisplayName: 'SDK or Software Version'};
+      const metadata = {keyDisplayName: 'Version'};
       const chip = buildFilterChipFromResolved(filter, {
-        pillKey: 'SDK or Software Version',
-        pillCondition: '34',
+        pillKey: 'Version',
+        pillCondition: '16',
         metadata,
       });
 
       expect(chip).toEqual({
-        key: 'device_field::sdk_or_software_version',
-        pillKey: 'SDK or Software Version',
-        pillCondition: '34',
+        key: 'device_field::version',
+        pillKey: 'Version',
+        pillCondition: '16',
         isGroupBy: false,
         metadata,
-        rawValues: ['34'],
+        rawValues: ['16'],
         negated: false,
         complex: undefined,
         fleetFilter: filter,
