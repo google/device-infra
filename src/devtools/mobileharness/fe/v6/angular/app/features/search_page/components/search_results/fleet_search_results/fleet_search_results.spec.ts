@@ -38,24 +38,13 @@ class MockFleetSearchStore {
   readonly hasNextPage = signal<boolean>(true);
   readonly prevPage = jasmine.createSpy('prevPage');
   readonly nextPage = jasmine.createSpy('nextPage');
-  readonly selectedCount = signal<number>(0);
   readonly effectiveTotalCount = signal<number>(0);
-  readonly selectAllMatching = signal<boolean>(false);
   readonly density = signal<'compact' | 'normal' | 'comfortable'>('normal');
   readonly executeSearch = jasmine.createSpy('executeSearch');
   readonly rows = signal<Row[]>([]);
-  readonly showSelectAllMatchingBanner = signal<boolean>(false);
-  readonly excludedCount = signal<number>(0);
   readonly clearSelection = jasmine.createSpy('clearSelection');
-  readonly selectAllMatchingRecords = jasmine.createSpy(
-    'selectAllMatchingRecords',
-  );
   readonly isAllSelected = signal<boolean>(false);
   readonly isSomeSelected = signal<boolean>(false);
-  readonly toggleSelectAll = jasmine.createSpy('toggleSelectAll');
-  readonly isRowSelected = jasmine
-    .createSpy('isRowSelected')
-    .and.returnValue(false);
   readonly sortColumn = signal<string>('');
   readonly sortAsc = signal<boolean>(true);
   readonly toggleSort = jasmine.createSpy('toggleSort');
@@ -183,46 +172,31 @@ describe('FleetSearchResultsComponent', () => {
     });
   });
 
-  describe('Select-All Banner and Toolbar Selections', () => {
-    it('computes selectedBannerMode correctly', () => {
-      mockStore.showSelectAllMatchingBanner.set(false);
-      expect(component.selectedBannerMode()).toBe('hidden');
-
-      mockStore.showSelectAllMatchingBanner.set(true);
-      mockStore.selectAllMatching.set(false);
-      expect(component.selectedBannerMode()).toBe('page_only');
-
-      mockStore.selectAllMatching.set(true);
-      expect(component.selectedBannerMode()).toBe('all_matching');
-    });
-
-    it('computes flatToolbarSelectedText correctly', () => {
-      mockStore.selectedCount.set(5);
-      mockStore.fleet.set('internal');
-      mockStore.selectAllMatching.set(false);
-      expect(component.flatToolbarSelectedText()).toBe(
-        '5 selected · Google Internal',
-      );
-
-      mockStore.selectAllMatching.set(true);
-      expect(component.flatToolbarSelectedText()).toBe(
-        'All 5 matching devices selected · Google Internal',
-      );
-    });
-
-    it('computes batch action visibility correctly', () => {
+  describe('Toolbar Selections', () => {
+    it('shows Configure Wi-Fi button only for devices', () => {
+      mockStore.selectedItems.set(new Set(['dev-1', 'dev-2']));
       mockStore.entity.set('devices');
-      mockStore.selectAllMatching.set(false);
-      expect(component.canShowBatchActions()).toBeTrue();
-      expect(component.canShowDeviceBatchActions()).toBeTrue();
+      fixture.detectChanges();
+
+      const buttons = fixture.debugElement.queryAll(
+        By.css('.rt-toolbar button'),
+      );
+      const buttonTexts = buttons.map((b) =>
+        b.nativeElement.textContent.trim(),
+      );
+      expect(buttonTexts.some((t) => t.includes('Configure Wi-Fi'))).toBeTrue();
 
       mockStore.entity.set('hosts');
-      expect(component.canShowBatchActions()).toBeTrue();
-      expect(component.canShowDeviceBatchActions()).toBeFalse();
-
-      mockStore.selectAllMatching.set(true);
-      expect(component.canShowBatchActions()).toBeFalse();
-      expect(component.canShowDeviceBatchActions()).toBeFalse();
+      fixture.detectChanges();
+      const hostButtons = fixture.debugElement.queryAll(
+        By.css('.rt-toolbar button'),
+      );
+      const hostButtonTexts = hostButtons.map((b) =>
+        b.nativeElement.textContent.trim(),
+      );
+      expect(
+        hostButtonTexts.some((t) => t.includes('Configure Wi-Fi')),
+      ).toBeFalse();
     });
   });
 

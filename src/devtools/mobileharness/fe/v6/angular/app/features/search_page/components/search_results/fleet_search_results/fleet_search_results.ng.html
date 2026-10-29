@@ -1,28 +1,28 @@
 @let isGrouped = store.groupByKeys().length > 0;
-@let fleetLabel = store.fleet() === 'internal' ? 'Google Internal' : 'ATS Labs';
+@let label = fleetLabel();
 @let entity = store.entity();
 @let isLoading = store.isLoading();
+@let selectedItems = store.selectedItems();
 
 <mat-card
   class="results-area"
   [class.grouped-mode]="isGrouped"
 >
   @if (isGrouped) {
-    @let selectedGroupItems = store.selectedItems();
     <!-- Grouped Mode Toolbar -->
     <div
       class="rt-toolbar"
-      [class.rt-toolbar-active]="selectedGroupItems.size > 0"
+      [class.rt-toolbar-active]="selectedItems.size > 0"
     >
-      @if (selectedGroupItems.size > 0) {
+      @if (selectedItems.size > 0) {
         <span class="rt-count">
-          {{ selectedGroupItems.size | number }} selected · {{ fleetLabel }}
+          {{ selectedItems.size | number }} selected · {{ label }}
         </span>
         <ng-container *ngTemplateOutlet="selectionActions"></ng-container>
       } @else {
         <span class="rt-count">
           {{ (store.groupedResults()?.totalItems || 0) | number }} {{ entity }} in
-          {{ (store.groupedResults()?.totalGroups || 0) | number }} groups · {{ fleetLabel }}
+          {{ (store.groupedResults()?.totalGroups || 0) | number }} groups · {{ label }}
         </span>
         <span class="rt-divider"></span>
         @if (store.groupKeysText()) {
@@ -96,7 +96,7 @@
               [groupState]="store.expandedGroupPages().get(g.groupId)"
               [entity]="entity"
               [columns]="store.displayColumns()"
-              [selectedSet]="selectedGroupItems"
+              [selectedSet]="selectedItems"
               (toggleGroup)="store.toggleGroup($event)"
               (toggleSelectGroupPage)="store.toggleSelectRows($event)"
               (toggleSelectRow)="store.toggleSelectRow($event)"
@@ -140,17 +140,16 @@
     }
   } @else {
     <!-- Toolbar -->
-    @let selectedCount = store.selectedCount();
     @let totalCount = store.effectiveTotalCount();
-    <div class="rt-toolbar" [class.rt-toolbar-active]="selectedCount > 0">
-      @if (selectedCount > 0) {
+    <div class="rt-toolbar" [class.rt-toolbar-active]="selectedItems.size > 0">
+      @if (selectedItems.size > 0) {
         <span class="rt-count">
-          {{ flatToolbarSelectedText() }}
+          {{ selectedItems.size | number }} selected · {{ label }}
         </span>
         <ng-container *ngTemplateOutlet="selectionActions"></ng-container>
       } @else {
         <span class="rt-count">
-          {{ totalCount | number }} {{ entity }} · {{ fleetLabel }}
+          {{ totalCount | number }} {{ entity }} · {{ label }}
         </span>
         <span class="rt-divider"></span>
 
@@ -208,32 +207,6 @@
       }
       @case ('table') {
         <mat-card-content class="results-card-content">
-          <!-- Select-All-Matching Banner -->
-          @switch (selectedBannerMode()) {
-            @case ('all_matching') {
-              <div class="rt-banner rt-banner-info" id="rt-selall-banner">
-                <mat-icon class="material-symbols-outlined">info</mat-icon>
-                <span>
-                  All <b>{{ totalCount | number }}</b> {{ entity }} matching your filters are selected
-                  @if (store.excludedCount() > 0) {
-                    <span class="rt-excluded">({{ store.excludedCount() | number }} excluded)</span>
-                  }
-                  .
-                </span>
-                <button class="rt-btn-text" (click)="store.clearSelection()">Clear selection</button>
-              </div>
-            }
-            @case ('page_only') {
-              <div class="rt-banner rt-banner-info" id="rt-selall-banner">
-                <mat-icon class="material-symbols-outlined">info</mat-icon>
-                <span>All {{ rows.length }} {{ entity }} on this page are selected.</span>
-                <button class="rt-btn-text" (click)="store.selectAllMatchingRecords()">
-                  Select all {{ totalCount | number }} matching your filters
-                </button>
-              </div>
-            }
-          }
-
           <!-- Data Table -->
           <div
             class="table-container"
@@ -247,12 +220,12 @@
                   <mat-checkbox
                     [checked]="store.isAllSelected()"
                     [indeterminate]="store.isSomeSelected()"
-                    (change)="store.toggleSelectAll()"
+                    (change)="store.toggleSelectRows(rows)"
                   ></mat-checkbox>
                 </th>
                 <td mat-cell *matCellDef="let row" class="checkbox-col">
                   <mat-checkbox
-                    [checked]="store.isRowSelected(row.id)"
+                    [checked]="selectedItems.has(row.id)"
                     (change)="store.toggleSelectRow(row.id)"
                   ></mat-checkbox>
                 </td>
@@ -278,7 +251,7 @@
               }
 
               <tr mat-header-row *matHeaderRowDef="columnsToDisplay(); sticky: true"></tr>
-              <tr mat-row *matRowDef="let row; columns: columnsToDisplay()" [class.selected-row]="store.isRowSelected(row.id)"></tr>
+              <tr mat-row *matRowDef="let row; columns: columnsToDisplay()" [class.selected-row]="selectedItems.has(row.id)"></tr>
             </table>
           </div>
         </mat-card-content>
@@ -300,13 +273,12 @@
   <!-- Shared Selection Action Toolbar Fragment -->
   <ng-template #selectionActions>
     <span class="rt-divider"></span>
-    @if (canShowBatchActions()) {
-      <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
-        <mat-icon class="material-symbols-outlined">gpp_bad</mat-icon>
-        Quarantine
-      </button>
-    }
-    @if (canShowDeviceBatchActions()) {
+    <!-- TODO: remove hidden when the feature is ready. -->
+    <button class="rt-btn-text hidden" [disabled]="true" title="Feature is under development">
+      <mat-icon class="material-symbols-outlined">gpp_bad</mat-icon>
+      Quarantine
+    </button>
+    @if (entity === 'devices') {
       <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
         <mat-icon class="material-symbols-outlined">wifi</mat-icon>
         Configure Wi-Fi

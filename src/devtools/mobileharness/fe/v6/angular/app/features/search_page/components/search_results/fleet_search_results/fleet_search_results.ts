@@ -87,35 +87,6 @@ export class FleetSearchResultsComponent {
     return this.store.hasActiveFilters() ? 'empty_filtered' : 'empty_all';
   });
 
-  /** Display mode for the select-all-matching banner. */
-  readonly selectedBannerMode = computed<
-    'all_matching' | 'page_only' | 'hidden'
-  >(() => {
-    if (!this.store.showSelectAllMatchingBanner()) return 'hidden';
-    return this.store.selectAllMatching() ? 'all_matching' : 'page_only';
-  });
-
-  /** Text label displayed in the toolbar when rows are selected in flat table mode. */
-  readonly flatToolbarSelectedText = computed<string>(() => {
-    const count = this.store.selectedCount().toLocaleString();
-    const entity = this.store.entity();
-    const label = this.fleetLabel();
-    if (this.store.selectAllMatching()) {
-      return `All ${count} matching ${entity} selected · ${label}`;
-    }
-    return `${count} selected · ${label}`;
-  });
-
-  /** Whether general batch actions can be performed on selected items. */
-  readonly canShowBatchActions = computed<boolean>(
-    () => !this.store.selectAllMatching(),
-  );
-
-  /** Whether device-specific batch actions can be performed. */
-  readonly canShowDeviceBatchActions = computed<boolean>(
-    () => !this.store.selectAllMatching() && this.store.entity() === 'devices',
-  );
-
   /** Opens the column selector dialog to configure visible table columns. */
   openColumnSelector() {
     const dialogRef = this.dialog.open<

@@ -347,74 +347,23 @@ export class FleetSearchStore extends SearchPageStore {
   /** Set of currently selected item (device/host) IDs across search results. */
   readonly selectedItems = signal<Set<string>>(new Set());
 
-  /** Whether all matching records across all pages are selected. */
-  readonly selectAllMatching = signal<boolean>(false);
-
-  /** Set of item IDs excluded from a select-all-matching selection. */
-  readonly excludedItems = signal<Set<string>>(new Set());
-
-  /** Total count of items excluded from a select-all-matching selection. */
-  readonly excludedCount = computed(() => this.excludedItems().size);
-
-  /** Total count of selected items, respecting selectAllMatching and excluded items. */
-  readonly selectedCount = computed(() => {
-    if (this.selectAllMatching()) {
-      return Math.max(0, this.effectiveTotalCount() - this.excludedCount());
-    }
-    return this.selectedItems().size;
-  });
-
-  /** Clears the current selection state (both individual and select-all-matching). */
+  /** Clears the current selection state. */
   clearSelection() {
     this.selectedItems.set(new Set());
-    this.selectAllMatching.set(false);
-    this.excludedItems.set(new Set());
-  }
-
-  /** Selects all matching records across all pages. */
-  selectAllMatchingRecords() {
-    this.selectAllMatching.set(true);
-    this.excludedItems.set(new Set());
   }
 
   /** Toggles individual row selection state. */
   toggleSelectRow(id: string) {
-    if (this.selectAllMatching()) {
-      const currentExcluded = new Set(this.excludedItems());
-      if (currentExcluded.has(id)) {
-        currentExcluded.delete(id);
-      } else {
-        currentExcluded.add(id);
-      }
-      this.excludedItems.set(currentExcluded);
-      if (currentExcluded.size === this.effectiveTotalCount()) {
-        this.clearSelection();
-      }
+    const nextSet = new Set(this.selectedItems());
+    if (nextSet.has(id)) {
+      nextSet.delete(id);
     } else {
-      const nextSet = new Set(this.selectedItems());
-      if (nextSet.has(id)) {
-        nextSet.delete(id);
-      } else {
-        nextSet.add(id);
-      }
-      this.selectedItems.set(nextSet);
+      nextSet.add(id);
     }
+    this.selectedItems.set(nextSet);
   }
 
-  /** Toggles selection of all rows currently visible on page. */
-  toggleSelectAll() {
-    if (this.selectAllMatching() || this.isAllSelected()) {
-      this.clearSelection();
-    } else {
-      const nextSet = new Set(this.selectedItems());
-      this.visibleRowIds().forEach((id) => {
-        nextSet.add(id);
-      });
-      this.selectedItems.set(nextSet);
-    }
-  }
-
-  /** Toggles selection for a list of rows (e.g. from an expanded group card page). */
+  /** Toggles selection for a list of rows (e.g. current flat page or an expanded group card page). */
   toggleSelectRows(rows: Array<{id: string}> | undefined) {
     if (!rows || rows.length === 0) return;
     const current = new Set(this.selectedItems());
@@ -429,14 +378,6 @@ export class FleetSearchStore extends SearchPageStore {
       });
     }
     this.selectedItems.set(current);
-  }
-
-  /** Checks whether a specific row is selected. */
-  isRowSelected(id: string): boolean {
-    if (this.selectAllMatching()) {
-      return !this.excludedItems().has(id);
-    }
-    return this.selectedItems().has(id);
   }
 
   /** Current column key used for table sorting, defaulting to the locked identity column from BFF. */
@@ -880,48 +821,21 @@ export class FleetSearchStore extends SearchPageStore {
     return (this.searchResource.value()?.flat?.rows as Row[]) || [];
   });
 
-  /** Array of row IDs visible on the current flat search results page. */
-  readonly visibleRowIds = computed<string[]>(() => {
-    return this.rows().map((r) => r.id);
-  });
-
   /** Checks whether all visible rows on current flat results page are selected. */
   readonly isAllSelected = computed<boolean>(() => {
-    if (this.selectAllMatching()) {
-      return this.excludedItems().size === 0;
-    }
-    const visibleIds = this.visibleRowIds();
-    return (
-      visibleIds.length > 0 &&
-      visibleIds.every((id) => this.selectedItems().has(id))
-    );
+    const rows = this.rows();
+    if (rows.length === 0) return false;
+    const selected = this.selectedItems();
+    return rows.every((r) => selected.has(r.id));
   });
 
   /** Checks whether some (but not all) visible rows on current flat results page are selected. */
   readonly isSomeSelected = computed<boolean>(() => {
-    if (this.selectAllMatching()) {
-      const excludedCount = this.excludedCount();
-      return excludedCount > 0 && excludedCount < this.effectiveTotalCount();
-    }
-    const visibleIds = this.visibleRowIds();
-    const len = visibleIds.length;
-    if (len === 0) return false;
+    const rows = this.rows();
+    if (rows.length === 0) return false;
     const selected = this.selectedItems();
-    let count = 0;
-    for (const id of visibleIds) {
-      if (selected.has(id)) count++;
-    }
-    return count > 0 && count < len;
-  });
-
-  /** Whether to show the select-all-matching banner across pages. */
-  readonly showSelectAllMatchingBanner = computed<boolean>(() => {
-    if (this.groupByKeys().length > 0) return false;
-    if (this.selectAllMatching()) return true;
-    return (
-      this.isAllSelected() &&
-      this.effectiveTotalCount() > this.visibleRowIds().length
-    );
+    const count = rows.filter((r) => selected.has(r.id)).length;
+    return count > 0 && count < rows.length;
   });
 
   /** Determines whether a next page is available based on API nextPageToken. */

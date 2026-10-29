@@ -187,65 +187,6 @@ mat-card.results-area.grouped-mode,
   color: #5f6368;
 }
 
-// --- Select-All-Matching Banner ---
-.rt-banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-  padding: 10px 16px;
-  font-size: 0.8125rem;
-  border-bottom: 1px solid #c4c7c5;
-  transition: all 0.2s ease-in-out;
-
-  .material-symbols-outlined,
-  mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    vertical-align: middle;
-  }
-
-  span b {
-    font-weight: 600;
-  }
-
-  .rt-btn-text {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #0b57d0;
-    margin-left: 8px;
-    text-decoration: none;
-    border-radius: 20px;
-    padding: 0 12px;
-
-    &:hover {
-      background: rgba(11, 87, 208, 0.08);
-    }
-  }
-}
-
-.rt-banner-info {
-  background: #e8f0fe;
-  color: #1a3d6d;
-}
-
-.rt-banner-error {
-  background: #fce8e6;
-  color: #9a2016;
-}
-
-.rt-excluded {
-  opacity: 0.75;
-  font-style: italic;
-}
-
 // --- Column Widths ---
 [class*='col-'][class*='id'] {
   width: 220px;
@@ -325,4 +266,8 @@ mat-card.results-area.grouped-mode,
   width: 240px;
   min-width: 180px;
   max-width: 280px;
+}
+
+.rt-btn-text.hidden {
+  display: none;
 }

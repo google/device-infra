@@ -556,7 +556,9 @@ describe('FleetSearchStore', () => {
         count: 42,
       },
     ];
-    mockSearchService.getFleetSuggestions.and.returnValue(of({items: mockItems}));
+    mockSearchService.getFleetSuggestions.and.returnValue(
+      of({items: mockItems}),
+    );
 
     const store = await createStoreAt({});
     expect(store.suggestions()).toEqual([]);
@@ -639,5 +641,59 @@ describe('FleetSearchStore', () => {
 
     store.showSuggestions.set(true);
     expect(store.isSuggestionsPanelOpen()).toBeTrue();
+  });
+
+  describe('row selection', () => {
+    it('toggles row selection, computes isAllSelected and isSomeSelected, and clears selection', async () => {
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          flat: {
+            rows: [{id: 'dev-1'}, {id: 'dev-2'}],
+            rangeStart: 1,
+            rangeEnd: 2,
+            totalItems: 2,
+          },
+        }),
+      );
+      const store = await createStoreAt({});
+      store.addFilterChip({
+        key: 'device_field::status',
+        pillKey: 'Status',
+        pillCondition: 'IDLE',
+        rawValues: ['IDLE'],
+        fleetFilter: {
+          key: 'device_field::status',
+          simple: {values: [{value: 'IDLE'}]},
+        },
+      });
+      await flushAsync();
+
+      expect(store.isAllSelected()).toBeFalse();
+      expect(store.isSomeSelected()).toBeFalse();
+
+      // Toggle single row via toggleSelectRow
+      store.toggleSelectRow('dev-1');
+      expect(store.selectedItems().has('dev-1')).toBeTrue();
+      expect(store.isAllSelected()).toBeFalse();
+      expect(store.isSomeSelected()).toBeTrue();
+
+      store.toggleSelectRow('dev-1');
+      expect(store.selectedItems().has('dev-1')).toBeFalse();
+
+      // Select all rows via toggleSelectRows
+      store.toggleSelectRows([{id: 'dev-1'}, {id: 'dev-2'}]);
+      expect(store.selectedItems().size).toBe(2);
+      expect(store.isAllSelected()).toBeTrue();
+      expect(store.isSomeSelected()).toBeFalse();
+
+      // Deselect all when all are selected
+      store.toggleSelectRows([{id: 'dev-1'}, {id: 'dev-2'}]);
+      expect(store.selectedItems().size).toBe(0);
+
+      // Clear selection
+      store.toggleSelectRow('dev-1');
+      store.clearSelection();
+      expect(store.selectedItems().size).toBe(0);
+    });
   });
 });
