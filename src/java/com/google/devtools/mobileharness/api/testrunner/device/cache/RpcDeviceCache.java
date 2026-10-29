@@ -19,31 +19,26 @@ package com.google.devtools.mobileharness.api.testrunner.device.cache;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCacheManager.CacheType;
-import com.google.devtools.mobileharness.infra.controller.device.DeviceInfoManager;
 import java.time.Duration;
 import java.util.Collection;
 import javax.annotation.Nullable;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 /** The facade of the device cache manager for RPC services. */
-public final class RpcDeviceCache {
-
-  private static final RpcDeviceCache INSTANCE = new RpcDeviceCache();
-
-  public static RpcDeviceCache getInstance() {
-    return INSTANCE;
-  }
+@Singleton
+public class RpcDeviceCache {
 
   private final DeviceCacheManager deviceCacheManager;
-  private final DeviceInfoManager deviceInfoManager;
 
-  private RpcDeviceCache() {
-    this(DeviceCacheManager.getInstance(), DeviceInfoManager.getInstance());
+  @Inject
+  RpcDeviceCache() {
+    this(DeviceCacheManager.getInstance());
   }
 
   @VisibleForTesting
-  RpcDeviceCache(DeviceCacheManager deviceCacheManager, DeviceInfoManager deviceInfoManager) {
+  RpcDeviceCache(DeviceCacheManager deviceCacheManager) {
     this.deviceCacheManager = deviceCacheManager;
-    this.deviceInfoManager = deviceInfoManager;
   }
 
   /** Leases or extends the lease of the device caches for the specified string cache type. */
@@ -53,14 +48,8 @@ public final class RpcDeviceCache {
       Duration timeout,
       @Nullable String leaseId) {
     CacheType type = getCacheType(cacheType);
-    for (String deviceControlId : deviceControlIds) {
-      deviceCacheManager.cache(
-          type,
-          deviceControlId,
-          DeviceCacheManager.getDeviceType(deviceInfoManager, deviceControlId),
-          timeout,
-          leaseId);
-    }
+    deviceControlIds.forEach(
+        deviceControlId -> deviceCacheManager.cache(type, deviceControlId, timeout, leaseId));
   }
 
   /** Invalidates the device caches of the specified string cache type. */
