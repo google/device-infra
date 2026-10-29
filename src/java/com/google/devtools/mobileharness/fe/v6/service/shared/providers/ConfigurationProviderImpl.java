@@ -20,6 +20,7 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -37,6 +38,7 @@ import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.DeviceConfigStub;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import javax.inject.Inject;
 
@@ -149,6 +151,27 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
           }
           return null;
         },
+        executor);
+  }
+
+  @Override
+  public ListenableFuture<Map<String, String>> updateDeviceConfigs(
+      Map<String, DeviceConfig> deviceConfigs, UniverseScope universe) {
+    if (deviceConfigs.isEmpty()
+        || !configServiceCapabilityFactory.create(universe).isConfigServiceAvailable()) {
+      return immediateFuture(ImmutableMap.of());
+    }
+    UpdateDeviceConfigsRequest.Builder requestBuilder =
+        UpdateDeviceConfigsRequest.newBuilder().setClient(CLIENT);
+    deviceConfigs.forEach(
+        (deviceId, deviceConfig) ->
+            requestBuilder.addDeviceLocatorConfig(
+                DeviceLocatorConfigPair.newBuilder()
+                    .setDeviceLocator(DeviceLocator.newBuilder().setDeviceUuid(deviceId))
+                    .setDeviceConfig(deviceConfig)));
+    return Futures.transform(
+        deviceConfigStub.updateDeviceConfigsAsync(requestBuilder.build(), useClientRpcAuthority),
+        response -> response.getErrorMessageMap(),
         executor);
   }
 

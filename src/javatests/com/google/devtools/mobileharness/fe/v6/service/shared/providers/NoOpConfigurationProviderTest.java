@@ -19,10 +19,13 @@ package com.google.devtools.mobileharness.fe.v6.service.shared.providers;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import org.junit.Before;
 import org.junit.Test;
@@ -67,6 +70,60 @@ public class NoOpConfigurationProviderTest {
     ListenableFuture<Void> future =
         provider.updateLabConfig(
             "host_name", LabConfig.getDefaultInstance(), new UniverseScope.SelfUniverse());
+    ExecutionException thrown = assertThrows(ExecutionException.class, future::get);
+    assertThat(thrown).hasCauseThat().isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void updateDeviceConfigs_throwUnsupported() {
+    ListenableFuture<Map<String, String>> future =
+        provider.updateDeviceConfigs(
+            ImmutableMap.of("device_id", DeviceConfig.getDefaultInstance()),
+            new UniverseScope.SelfUniverse());
+    ExecutionException thrown = assertThrows(ExecutionException.class, future::get);
+    assertThat(thrown).hasCauseThat().isInstanceOf(UnsupportedOperationException.class);
+  }
+
+  @Test
+  public void defaultUpdateDeviceConfigs_returnsFailedFutureInsteadOfThrowing() {
+    ConfigurationProvider withoutBatchWrite =
+        new ConfigurationProvider() {
+          @Override
+          public ListenableFuture<ConfigResult<DeviceConfig>> getDeviceConfig(
+              String deviceId, UniverseScope universe) {
+            return provider.getDeviceConfig(deviceId, universe);
+          }
+
+          @Override
+          public ListenableFuture<List<DeviceConfig>> getDeviceConfigs(
+              List<String> deviceIds, UniverseScope universe) {
+            return provider.getDeviceConfigs(deviceIds, universe);
+          }
+
+          @Override
+          public ListenableFuture<ConfigResult<LabConfig>> getLabConfig(
+              String hostName, UniverseScope universe) {
+            return provider.getLabConfig(hostName, universe);
+          }
+
+          @Override
+          public ListenableFuture<Void> updateDeviceConfig(
+              String deviceId, DeviceConfig deviceConfig, UniverseScope universe) {
+            return provider.updateDeviceConfig(deviceId, deviceConfig, universe);
+          }
+
+          @Override
+          public ListenableFuture<Void> updateLabConfig(
+              String hostName, LabConfig labConfig, UniverseScope universe) {
+            return provider.updateLabConfig(hostName, labConfig, universe);
+          }
+        };
+
+    ListenableFuture<Map<String, String>> future =
+        withoutBatchWrite.updateDeviceConfigs(
+            ImmutableMap.of("device_id", DeviceConfig.getDefaultInstance()),
+            new UniverseScope.SelfUniverse());
+
     ExecutionException thrown = assertThrows(ExecutionException.class, future::get);
     assertThat(thrown).hasCauseThat().isInstanceOf(UnsupportedOperationException.class);
   }

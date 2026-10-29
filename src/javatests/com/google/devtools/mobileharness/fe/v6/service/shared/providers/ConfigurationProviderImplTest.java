@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetDeviceConfigsResponse;
@@ -39,6 +40,7 @@ import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigService
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.DeviceConfigStub;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import org.junit.Before;
 import org.junit.Rule;
@@ -90,8 +92,7 @@ public final class ConfigurationProviderImplTest {
         configurationProvider.getDeviceConfig("device_id", UNIVERSE).get();
 
     assertThat(result.isAvailable()).isTrue();
-    assertThat(result.config()).isPresent();
-    assertThat(result.config().get()).isEqualTo(deviceConfig);
+    assertThat(result.config()).hasValue(deviceConfig);
   }
 
   @Test
@@ -106,8 +107,7 @@ public final class ConfigurationProviderImplTest {
         configurationProvider.getLabConfig("host_name", UNIVERSE).get();
 
     assertThat(result.isAvailable()).isTrue();
-    assertThat(result.config()).isPresent();
-    assertThat(result.config().get()).isEqualTo(labConfig);
+    assertThat(result.config()).hasValue(labConfig);
   }
 
   @Test
@@ -215,5 +215,41 @@ public final class ConfigurationProviderImplTest {
     assertThat(thrown).hasCauseThat().isInstanceOf(IllegalStateException.class);
     assertThat(thrown).hasCauseThat().hasMessageThat().contains(deviceId);
     assertThat(thrown).hasCauseThat().hasMessageThat().contains("invalid owner: bad_user");
+  }
+
+  @Test
+  public void updateDeviceConfigs_returnsErrorMessageMap() throws Exception {
+    DeviceConfig config1 = DeviceConfig.newBuilder().setUuid("dev1").build();
+    DeviceConfig config2 = DeviceConfig.newBuilder().setUuid("dev2").build();
+    UpdateDeviceConfigsResponse response =
+        UpdateDeviceConfigsResponse.newBuilder().putErrorMessage("dev2", "failed to save").build();
+    when(deviceConfigStub.updateDeviceConfigsAsync(any(), eq(false)))
+        .thenReturn(immediateFuture(response));
+
+    Map<String, String> errors =
+        configurationProvider
+            .updateDeviceConfigs(ImmutableMap.of("dev1", config1, "dev2", config2), UNIVERSE)
+            .get();
+
+    assertThat(errors).containsExactly("dev2", "failed to save");
+    ArgumentCaptor<UpdateDeviceConfigsRequest> captor =
+        ArgumentCaptor.forClass(UpdateDeviceConfigsRequest.class);
+    verify(deviceConfigStub).updateDeviceConfigsAsync(captor.capture(), eq(false));
+    assertThat(captor.getValue().getDeviceLocatorConfigList()).hasSize(2);
+    assertThat(captor.getValue().getClient()).isEqualTo("mobileharness-fe");
+  }
+
+  @Test
+  public void updateDeviceConfigs_emptyOrUnavailable_returnsEmptyMap() throws Exception {
+    assertThat(configurationProvider.updateDeviceConfigs(ImmutableMap.of(), UNIVERSE).get())
+        .isEmpty();
+
+    when(configServiceCapability.isConfigServiceAvailable()).thenReturn(false);
+    DeviceConfig config1 = DeviceConfig.newBuilder().setUuid("dev1").build();
+    assertThat(
+            configurationProvider
+                .updateDeviceConfigs(ImmutableMap.of("dev1", config1), UNIVERSE)
+                .get())
+        .isEmpty();
   }
 }

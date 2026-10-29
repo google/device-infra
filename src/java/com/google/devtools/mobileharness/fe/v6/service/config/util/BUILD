@@ -73,3 +73,16 @@ java_library(
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
     ],
 )
+
+java_library(
+    name = "batch_device_config_util",
+    srcs = ["BatchDeviceConfigUtil.java"],
+    deps = [
+        "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
+        "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)
