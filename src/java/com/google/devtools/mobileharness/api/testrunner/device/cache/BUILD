@@ -29,8 +29,10 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_info_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_protobuf_protobuf_java",
         "@protobuf//:protobuf_java_util",
@@ -119,9 +121,11 @@ java_library(
     ],
     deps = [
         ":device_cache_manager",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_info_manager",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_id_manager",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 
@@ -136,7 +140,6 @@ java_library(
         ":device_cache_manager",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:session_device_cache",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_info_manager",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],

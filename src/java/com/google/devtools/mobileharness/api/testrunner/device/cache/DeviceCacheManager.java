@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceInfoManager;
+import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
@@ -77,8 +78,16 @@ public class DeviceCacheManager {
   private final Map<CacheType, Map<String, CacheInfo>> cachesByCacheType =
       new EnumMap<>(CacheType.class);
 
+  private final DeviceInfoManager deviceInfoManager;
+
   @VisibleForTesting
   DeviceCacheManager() {
+    this(DeviceInfoManager.getInstance());
+  }
+
+  @VisibleForTesting
+  DeviceCacheManager(DeviceInfoManager deviceInfoManager) {
+    this.deviceInfoManager = deviceInfoManager;
     for (CacheType cacheType : CacheType.values()) {
       cachesByCacheType.put(cacheType, new HashMap<>());
     }
@@ -87,13 +96,13 @@ public class DeviceCacheManager {
   @AutoValue
   abstract static class CacheInfo {
     private static CacheInfo create(
-        @Nullable String deviceType, Timestamp expireTimestamp, @Nullable String leaseId) {
+        String deviceType, Timestamp expireTimestamp, @Nullable String leaseId) {
       return new AutoValue_DeviceCacheManager_CacheInfo(
-          Optional.ofNullable(deviceType), expireTimestamp, Optional.ofNullable(leaseId));
+          deviceType, expireTimestamp, Optional.ofNullable(leaseId));
     }
 
-    /** Device type this cache is for. Empty to match any types */
-    abstract Optional<String> deviceType();
+    /** Device type this cache is for. */
+    abstract String deviceType();
 
     /** Timestamp when this cache will expire. */
     abstract Timestamp expireTimestamp();
@@ -109,11 +118,37 @@ public class DeviceCacheManager {
     XTS,
   }
 
+  /**
+   * Caches the device by looking up its device type from {@link DeviceInfoManager}, falling back to
+   * any existing cached device type for renewal. Returns {@code false} if the device type cannot be
+   * determined.
+   */
+  @CanIgnoreReturnValue
+  boolean cache(
+      CacheType cacheType, String deviceControlId, Duration timeout, @Nullable String leaseId) {
+    synchronized (cachesByCacheType) {
+      String deviceType = getDeviceType(deviceControlId);
+      if (deviceType == null) {
+        CacheInfo oldCache = cachesByCacheType.get(cacheType).get(deviceControlId);
+        if (oldCache != null) {
+          deviceType = oldCache.deviceType();
+        }
+      }
+      if (deviceType == null) {
+        logger.atWarning().log(
+            "Skip adding [%s] cache for device [%s] because its device type cannot be determined.",
+            cacheType, deviceControlId);
+        return false;
+      }
+      return cache(cacheType, deviceControlId, deviceType, timeout, leaseId);
+    }
+  }
+
   @CanIgnoreReturnValue
   boolean cache(
       CacheType cacheType,
       String deviceControlId,
-      @Nullable String deviceType,
+      String deviceType,
       Duration timeout,
       @Nullable String leaseId) {
     synchronized (cachesByCacheType) {
@@ -134,12 +169,10 @@ public class DeviceCacheManager {
           cacheType, deviceControlId, timeout, leaseId);
 
       Instant deadline = clock.instant().plus(timeout);
-      String effectiveDeviceType =
-          deviceType != null || oldCache == null ? deviceType : oldCache.deviceType().orElse(null);
       caches.put(
           deviceControlId,
           CacheInfo.create(
-              effectiveDeviceType,
+              deviceType,
               Timestamps.fromNanos(deadline.getEpochSecond() * 1_000_000_000 + deadline.getNano()),
               leaseId));
       Set<CacheType> newTypes = getCacheTypesOfDevice(deviceControlId);
@@ -209,25 +242,14 @@ public class DeviceCacheManager {
   }
 
   @GuardedBy("cachesByCacheType")
-  Set<String> getCachedDevices(CacheType cacheType, @Nullable String deviceType) {
+  Set<String> getCachedDevices(CacheType cacheType, String deviceType) {
     Set<String> cachedIds = new HashSet<>();
     Map<String, CacheInfo> caches = cachesByCacheType.get(cacheType);
     if (caches != null) {
-      caches
-          .entrySet()
-          .removeIf(
-              entry ->
-                  clock
-                      .instant()
-                      .isAfter(
-                          Instant.ofEpochSecond(
-                              entry.getValue().expireTimestamp().getSeconds(),
-                              entry.getValue().expireTimestamp().getNanos())));
+      removeExpiredCaches(caches);
       caches.forEach(
           (key, value) -> {
-            if (deviceType == null
-                || value.deviceType().isEmpty()
-                || value.deviceType().get().equals(deviceType)) {
+            if (value.deviceType().equals(deviceType)) {
               cachedIds.add(key);
             }
           });
@@ -239,13 +261,27 @@ public class DeviceCacheManager {
     synchronized (cachesByCacheType) {
       ImmutableMap.Builder<CacheType, ImmutableSet<String>> result = ImmutableMap.builder();
       for (CacheType cacheType : CacheType.values()) {
-        Set<String> devices = getCachedDevices(cacheType, /* deviceType= */ null);
-        if (!devices.isEmpty()) {
-          result.put(cacheType, ImmutableSet.copyOf(devices));
+        Map<String, CacheInfo> caches = cachesByCacheType.get(cacheType);
+        if (caches != null) {
+          removeExpiredCaches(caches);
+          if (!caches.isEmpty()) {
+            result.put(cacheType, ImmutableSet.copyOf(caches.keySet()));
+          }
         }
       }
       return result.buildOrThrow();
     }
+  }
+
+  @GuardedBy("cachesByCacheType")
+  private void removeExpiredCaches(Map<String, CacheInfo> caches) {
+    caches
+        .entrySet()
+        .removeIf(
+            entry ->
+                clock
+                    .instant()
+                    .isAfter(TimeUtils.toJavaInstant(entry.getValue().expireTimestamp())));
   }
 
   @GuardedBy("cachesByCacheType")
@@ -260,7 +296,7 @@ public class DeviceCacheManager {
   }
 
   @Nullable
-  static String getDeviceType(DeviceInfoManager deviceInfoManager, String deviceControlId) {
+  private String getDeviceType(String deviceControlId) {
     return deviceInfoManager
         .get(deviceControlId)
         .flatMap(

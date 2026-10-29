@@ -141,6 +141,7 @@ public class PrepareTestServiceImpl {
 
   private final DeviceProvider deviceProvider;
   private final LauncherProvider launcherProvider;
+  private final RpcDeviceCache rpcDeviceCache;
 
   @Inject
   public PrepareTestServiceImpl(
@@ -158,6 +159,7 @@ public class PrepareTestServiceImpl {
       @CloudRpcShardName String cloudRpcShardName,
       DeviceProvider deviceProvider,
       LauncherProvider launcherProvider,
+      RpcDeviceCache rpcDeviceCache,
       @GlobalEventBus EventBus globalInternalEventBus) {
     this.jobManager = jobManager;
     this.testManager = testManager;
@@ -174,6 +176,7 @@ public class PrepareTestServiceImpl {
     this.fileResolver = fileResolver;
     this.deviceProvider = deviceProvider;
     this.launcherProvider = launcherProvider;
+    this.rpcDeviceCache = rpcDeviceCache;
   }
 
   @CanIgnoreReturnValue
@@ -354,7 +357,7 @@ public class PrepareTestServiceImpl {
     Duration lease = toJavaDuration(req.getLeaseDuration());
     String cacheType = req.getCacheType();
     String leaseId = req.getLeaseId().isEmpty() ? null : req.getLeaseId();
-    RpcDeviceCache.getInstance().cache(cacheType, req.getDeviceControlIdsList(), lease, leaseId);
+    rpcDeviceCache.cache(cacheType, req.getDeviceControlIdsList(), lease, leaseId);
     return LeaseDeviceCacheResponse.getDefaultInstance();
   }
 
@@ -363,7 +366,7 @@ public class PrepareTestServiceImpl {
     logger.atInfo().log("ReleaseDeviceCacheRequest [%s]", shortDebugString(req));
     String leaseId = req.getLeaseId().isEmpty() ? null : req.getLeaseId();
     String cacheType = req.getCacheType();
-    RpcDeviceCache.getInstance().invalidate(cacheType, req.getDeviceControlIdsList(), leaseId);
+    rpcDeviceCache.invalidate(cacheType, req.getDeviceControlIdsList(), leaseId);
     return ReleaseDeviceCacheResponse.getDefaultInstance();
   }
 
