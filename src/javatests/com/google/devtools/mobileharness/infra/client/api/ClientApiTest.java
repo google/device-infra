@@ -23,6 +23,10 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutur
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaInstant;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
 import static com.google.devtools.mobileharness.shared.util.truth.Correspondences.containsAll;
+import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
@@ -45,11 +49,15 @@ import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.Mess
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageSend;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageSendDestination;
 import com.google.devtools.mobileharness.api.messaging.proto.MessagingProto.MessageSubscriberInfo;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDriverStartingEvent;
 import com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
+import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalModeRule;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessageSenderFinder;
 import com.google.devtools.mobileharness.infra.controller.messaging.MessagingManager;
@@ -256,6 +264,41 @@ public class ClientApiTest {
                 .setGlobalMessageReceivingEnd(GlobalMessageReceivingEnd.getDefaultInstance())
                 .build())
         .inOrder();
+  }
+
+  @Test
+  public void startJob_mobileHarnessException_addsSevereFinding() throws Exception {
+    JobInfo jobInfo = createJobInfo(/* sleepTimeSec= */ 1);
+    ExecMode failingExecMode = mock(ExecMode.class);
+    when(failingExecMode.createDeviceAllocator(any(), any()))
+        .thenThrow(
+            new MobileHarnessException(
+                InfraErrorId.CLIENT_REMOTE_MODE_NO_FORGE, "Failed to create device allocator"));
+
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class, () -> clientApi.startJob(jobInfo, failingExecMode));
+
+    assertThat(thrown.getErrorId()).isEqualTo(InfraErrorId.CLIENT_API_START_JOB_ERROR);
+    assertThat(jobInfo.findings().getAll()).hasSize(1);
+    assertThat(jobInfo.findings().getAll().get(0).getSeverity()).isEqualTo(Severity.SEVERE);
+    assertThat(jobInfo.findings().getAll().get(0).getDetail().getSummary().getErrorId().getCode())
+        .isEqualTo(InfraErrorId.CLIENT_REMOTE_MODE_NO_FORGE.code());
+  }
+
+  @Test
+  public void startJob_unexpectedThrowable_addsSevereFinding() throws Exception {
+    JobInfo jobInfo = createJobInfo(/* sleepTimeSec= */ 1);
+    ExecMode failingExecMode = mock(ExecMode.class);
+    when(failingExecMode.createDeviceAllocator(any(), any()))
+        .thenThrow(new IllegalStateException("Unexpected allocator error"));
+
+    assertThrows(IllegalStateException.class, () -> clientApi.startJob(jobInfo, failingExecMode));
+
+    assertThat(jobInfo.findings().getAll()).hasSize(1);
+    assertThat(jobInfo.findings().getAll().get(0).getSeverity()).isEqualTo(Severity.SEVERE);
+    assertThat(jobInfo.findings().getAll().get(0).getDetail().getSummary().getErrorId().getCode())
+        .isEqualTo(InfraErrorId.CLIENT_API_START_JOB_ERROR.code());
   }
 
   @Subscribe

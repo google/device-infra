@@ -581,7 +581,7 @@ public class JobRunner implements Runnable {
       jobInfo
           .findings()
           .addAndLog(
-              Severity.SEVERE,
+              isManuallyAborted(jobInfo) ? Severity.INFO : Severity.SEVERE,
               createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_JOB_EXEC_INTERRUPTED, "Job interrupted", e),
               logger);
@@ -796,6 +796,10 @@ public class JobRunner implements Runnable {
 
   private static boolean isResumedJob(JobInfo jobInfo) {
     return jobInfo.properties().getBoolean(PropertyName.Job._IS_RESUMED_JOB).orElse(false);
+  }
+
+  private static boolean isManuallyAborted(JobInfo jobInfo) {
+    return jobInfo.properties().getBoolean(PropertyName.Job.MANUALLY_ABORTED).orElse(false);
   }
 
   private void loadClientPlugins() throws MobileHarnessException {
@@ -1278,7 +1282,7 @@ public class JobRunner implements Runnable {
       // Don't override the existing result, like TIMEOUT.
       return;
     }
-    if (jobInfo.properties().getBoolean(PropertyName.Job.MANUALLY_ABORTED).orElse(false)) {
+    if (isManuallyAborted(jobInfo)) {
       Optional<String> abortReason =
           jobInfo.properties().getOptional(PropertyName.Job.JOB_ABORT_REASON);
       String abortMsg =

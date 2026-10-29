@@ -29,15 +29,18 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/api/messaging:messaging_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:diagnostic_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/messaging:exception",
         "//src/java/com/google/devtools/mobileharness/api/messaging:messaging_subscriber",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test:client_test_events",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test:lab_test_events",
         "//src/java/com/google/devtools/mobileharness/infra/client/api",
         "//src/java/com/google/devtools/mobileharness/infra/client/api:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/client/api:module",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:rule",
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:message_sender_finder",
         "//src/java/com/google/devtools/mobileharness/infra/controller/messaging:messaging_manager",
@@ -65,6 +68,7 @@ java_library(
         "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
 )
 
