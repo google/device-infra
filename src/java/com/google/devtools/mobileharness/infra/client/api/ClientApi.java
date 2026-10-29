@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.EnvThreadPool;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.ExtraGlobalInternalPlugins;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.ExtraJobInternalPlugins;
@@ -148,13 +149,14 @@ public class ClientApi {
       initializeJobManager();
       jobManager.startJob(jobInfo, execMode, jobPlugins);
     } catch (MobileHarnessException e) {
-      jobInfo.warnings().add(e);
+      jobInfo.findings().add(Severity.SEVERE, e);
       throw new MobileHarnessException(
           InfraErrorId.CLIENT_API_START_JOB_ERROR, "Failed to start job", e);
     } catch (Throwable e) {
       jobInfo
-          .warnings()
+          .findings()
           .add(
+              Severity.SEVERE,
               new MobileHarnessException(
                   InfraErrorId.CLIENT_API_START_JOB_ERROR, "Failed to start job", e));
       throw e;

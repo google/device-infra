@@ -28,6 +28,7 @@ java_library(
     ],
     deps = [
         ":annotations",
+        "//src/devtools/mobileharness/api/model/proto:diagnostic_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",

@@ -21,22 +21,28 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.job.TestLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabScheduleUnit;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.controller.device.proxy.ProxyDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.simple.SimpleScheduler;
+import com.google.devtools.mobileharness.shared.util.flags.core.SetFlags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import java.lang.reflect.Field;
 import java.time.Duration;
 import java.util.Optional;
@@ -56,6 +62,7 @@ import org.mockito.junit.MockitoRule;
 public final class LocalDeviceAllocatorTest {
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
+  @Rule public final SetFlags flags = new SetFlags();
 
   @Mock private LocalDeviceAllocator.DeviceVerifier deviceVerifier;
   @Mock private AbstractScheduler scheduler;
@@ -115,6 +122,81 @@ public final class LocalDeviceAllocatorTest {
 
     // Verifies scheduler.addTest is called to add the test back after unallocation.
     verify(scheduler).addTest(testInfo);
+    assertThat(jobInfo.findings().getAll()).hasSize(1);
+    assertThat(jobInfo.findings().getAll().get(0).getSeverity()).isEqualTo(Severity.WARNING);
+    assertThat(jobInfo.findings().getAll().get(0).getDetail().getSummary().getErrorId().getCode())
+        .isEqualTo(InfraErrorId.CLIENT_LOCAL_MODE_DEVICE_NOT_READY.code());
+  }
+
+  @Test
+  public void pollAllocations_testNotFoundOrNotNew_addsWarningsAndUnallocates() throws Exception {
+    DeviceLocator device1 = DeviceLocator.of("device-1", LabLocator.LOCALHOST);
+    TestLocator unknownTestLocator =
+        TestLocator.of("unknown_test_id", "unknown_test_name", jobInfo.locator().toNewJobLocator());
+    Allocation unknownTestAllocation =
+        new Allocation(unknownTestLocator, ImmutableList.of(device1));
+    testInfo.status().set(TestStatus.RUNNING);
+    Allocation runningTestAllocation =
+        new Allocation(testInfo.locator().toNewTestLocator(), ImmutableList.of(device1));
+
+    Field allocationsField = LocalDeviceAllocator.class.getDeclaredField("allocations");
+    allocationsField.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    ConcurrentLinkedQueue<Allocation> allocations =
+        (ConcurrentLinkedQueue<Allocation>) allocationsField.get(allocator);
+    allocations.add(unknownTestAllocation);
+    allocations.add(runningTestAllocation);
+
+    assertThat(allocator.pollAllocations()).isEmpty();
+
+    verify(scheduler).unallocate(unknownTestAllocation, ImmutableList.of(), /* closeTest= */ true);
+    verify(scheduler).unallocate(runningTestAllocation, ImmutableList.of(), /* closeTest= */ true);
+    assertThat(jobInfo.findings().getAll()).hasSize(2);
+    assertThat(jobInfo.findings().getAll().get(0).getSeverity()).isEqualTo(Severity.WARNING);
+    assertThat(jobInfo.findings().getAll().get(0).getDetail().getSummary().getErrorId().getCode())
+        .isEqualTo(InfraErrorId.CLIENT_LOCAL_MODE_TEST_NOT_FOUND.code());
+    assertThat(jobInfo.findings().getAll().get(1).getSeverity()).isEqualTo(Severity.WARNING);
+    assertThat(jobInfo.findings().getAll().get(1).getDetail().getSummary().getErrorId().getCode())
+        .isEqualTo(InfraErrorId.CLIENT_LOCAL_MODE_TEST_NOT_NEW.code());
+  }
+
+  @Test
+  public void pollAllocations_proxyModeTestNotFoundOrNotNew_addsWarningsAndReleasesDevices()
+      throws Exception {
+    DeviceLocator device1 = DeviceLocator.of("device-1", LabLocator.LOCALHOST);
+    TestLocator unknownTestLocator =
+        TestLocator.of("unknown_test_id", "unknown_test_name", jobInfo.locator().toNewJobLocator());
+    Allocation unknownTestAllocation =
+        new Allocation(unknownTestLocator, ImmutableList.of(device1));
+    testInfo.status().set(TestStatus.RUNNING);
+    TestLocator runningTestLocator = testInfo.locator().toNewTestLocator();
+    Allocation runningTestAllocation =
+        new Allocation(runningTestLocator, ImmutableList.of(device1));
+
+    flags.setAll(ImmutableMap.of("enable_proxy_mode", "true"));
+    allocator =
+        new LocalDeviceAllocator(
+            jobInfo, deviceVerifier, threadPool, proxyDeviceManager, scheduler);
+
+    Field allocationsField = LocalDeviceAllocator.class.getDeclaredField("allocations");
+    allocationsField.setAccessible(true);
+    @SuppressWarnings("unchecked")
+    ConcurrentLinkedQueue<Allocation> allocations =
+        (ConcurrentLinkedQueue<Allocation>) allocationsField.get(allocator);
+    allocations.add(unknownTestAllocation);
+    allocations.add(runningTestAllocation);
+
+    assertThat(allocator.pollAllocations()).isEmpty();
+
+    verify(proxyDeviceManager).releaseDevicesOfTest(unknownTestLocator);
+    verify(proxyDeviceManager).releaseDevicesOfTest(runningTestLocator);
+    assertThat(jobInfo.findings().getAll()).hasSize(2);
+    assertThat(jobInfo.findings().getAll().get(0).getSeverity()).isEqualTo(Severity.WARNING);
+    assertThat(jobInfo.findings().getAll().get(0).getDetail().getSummary().getErrorId().getCode())
+        .isEqualTo(InfraErrorId.CLIENT_LOCAL_MODE_TEST_NOT_FOUND.code());
+    assertThat(jobInfo.findings().getAll().get(1).getSeverity()).isEqualTo(Severity.WARNING);
+    assertThat(jobInfo.findings().getAll().get(1).getDetail().getSummary().getErrorId().getCode())
+        .isEqualTo(InfraErrorId.CLIENT_LOCAL_MODE_TEST_NOT_NEW.code());
   }
 
   @Test

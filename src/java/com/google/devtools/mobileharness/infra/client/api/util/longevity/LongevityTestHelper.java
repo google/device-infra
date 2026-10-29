@@ -22,6 +22,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Striped;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator;
 import com.google.devtools.mobileharness.service.moss.proto.Slg.JobInfoProto;
 import com.google.devtools.mobileharness.service.moss.util.slg.JobInfoConverter;
@@ -187,8 +188,9 @@ public class LongevityTestHelper {
       logger.atInfo().withCause(e).log(
           "Failed to write JobInfo into remote file %s", jobPersistentPath);
       jobInfo
-          .warnings()
+          .findings()
           .add(
+              Severity.WARNING,
               new MobileHarnessException(
                   InfraErrorId.CLIENT_LONGEVITY_JOB_INFO_PERSISTENT_ERROR,
                   String.format("Failed to write JobInfo into remote file %s", jobPersistentPath),

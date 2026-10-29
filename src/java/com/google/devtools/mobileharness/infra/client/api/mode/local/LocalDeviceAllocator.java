@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.api.model.job.JobLocator;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AbstractDeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AllocationWithStats;
@@ -165,8 +166,9 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
       if (enableProxyMode) {
         if (test == null) {
           jobInfo
-              .warnings()
+              .findings()
               .addAndLog(
+                  Severity.WARNING,
                   new MobileHarnessException(
                       InfraErrorId.CLIENT_LOCAL_MODE_TEST_NOT_FOUND,
                       String.format("Unknown test %s of job %s in the allocation.", testId, jobId)),
@@ -175,8 +177,9 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
           continue;
         } else if (test.status().get() != TestStatus.NEW) {
           jobInfo
-              .warnings()
+              .findings()
               .addAndLog(
+                  Severity.WARNING,
                   new MobileHarnessException(
                       InfraErrorId.CLIENT_LOCAL_MODE_TEST_NOT_NEW,
                       "Unexpected allocation to test with status " + test.status().get()),
@@ -187,8 +190,9 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
       } else {
         if (test == null) {
           jobInfo
-              .warnings()
+              .findings()
               .addAndLog(
+                  Severity.WARNING,
                   new MobileHarnessException(
                       InfraErrorId.CLIENT_LOCAL_MODE_TEST_NOT_FOUND,
                       String.format("Unknown test %s of job %s in the allocation.", testId, jobId)),
@@ -202,8 +206,9 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
           continue;
         } else if (test.status().get() != TestStatus.NEW) {
           jobInfo
-              .warnings()
+              .findings()
               .addAndLog(
+                  Severity.WARNING,
                   new MobileHarnessException(
                       InfraErrorId.CLIENT_LOCAL_MODE_TEST_NOT_NEW,
                       "Unexpected allocation to test with status " + test.status().get()),
@@ -224,8 +229,9 @@ public class LocalDeviceAllocator extends AbstractDeviceAllocator {
               deviceVerifier.verifyDeviceForAllocation(deviceSerial);
           if (verificationError.isPresent()) {
             jobInfo
-                .warnings()
+                .findings()
                 .addAndLog(
+                    Severity.WARNING,
                     new MobileHarnessException(
                         InfraErrorId.CLIENT_LOCAL_MODE_DEVICE_NOT_READY, verificationError.get()),
                     logger);

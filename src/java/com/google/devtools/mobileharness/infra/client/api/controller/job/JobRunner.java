@@ -573,13 +573,14 @@ public class JobRunner implements Runnable {
               });
     } catch (MobileHarnessException e) {
       jobError = e;
-      jobInfo.warnings().addAndLog(e, logger);
+      jobInfo.findings().addAndLog(Severity.SEVERE, e, logger);
     } catch (InterruptedException e) {
       jobError = e;
       Thread.currentThread().interrupt();
       jobInfo
-          .warnings()
+          .findings()
           .addAndLog(
+              Severity.SEVERE,
               createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_JOB_EXEC_INTERRUPTED, "Job interrupted", e),
               logger);
@@ -588,8 +589,9 @@ public class JobRunner implements Runnable {
       jobError = t;
       logger.atSevere().withCause(t).log("FATAL JOB ERROR");
       jobInfo
-          .warnings()
+          .findings()
           .addAndLog(
+              Severity.SEVERE,
               createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_JOB_EXEC_FATAL_ERROR, "Fatal job error", t));
     } finally {
@@ -876,8 +878,9 @@ public class JobRunner implements Runnable {
       String error = "Receive allocation which doesn't belong to this job: " + allocation;
       logger.atSevere().log("%s", error);
       jobInfo
-          .warnings()
+          .findings()
           .addAndLog(
+              Severity.WARNING,
               createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_ALLOC_RESULT_TEST_NOT_IN_JOB, error));
       return;
@@ -889,8 +892,9 @@ public class JobRunner implements Runnable {
       String error = "Test of the allocation not found: " + allocation;
       logger.atSevere().log("%s", error);
       jobInfo
-          .warnings()
+          .findings()
           .addAndLog(
+              Severity.WARNING,
               createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_ALLOC_RESULT_TEST_NOT_FOUND, error));
       return;
@@ -899,8 +903,9 @@ public class JobRunner implements Runnable {
     // Doesn't need to start the test if the test of the allocation is already running.
     if (testManager.isTestRunning(allocation)) {
       jobInfo
-          .warnings()
+          .findings()
           .addAndLog(
+              Severity.WARNING,
               createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_ALLOC_RESULT_TEST_ALREADY_ALLOCATED,
                   "Ignore allocation "
@@ -1036,13 +1041,14 @@ public class JobRunner implements Runnable {
     try {
       deviceAllocator.tearDown();
     } catch (MobileHarnessException e) {
-      jobInfo.warnings().addAndLog(e, logger);
+      jobInfo.findings().addAndLog(Severity.WARNING, e, logger);
     } catch (Throwable t) {
       // For safety, prints out the unknown error.
       logger.atSevere().withCause(t).log("FATAL job error when tearing down allocator");
       jobInfo
-          .warnings()
+          .findings()
           .addAndLog(
+              Severity.SEVERE,
               createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_JOB_TEAR_DOWN_ALLOCATOR_FATAL_ERROR,
                   "FATAL job error when tearing down allocator",
@@ -1066,8 +1072,9 @@ public class JobRunner implements Runnable {
         boolean terminated = threadPool.awaitTermination(TERMINATE_TEST_TIMEOUT);
         if (!terminated) {
           jobInfo
-              .warnings()
+              .findings()
               .addAndLog(
+                  Severity.WARNING,
                   createExceptionWithoutStackTrace(
                       InfraErrorId.CLIENT_JR_JOB_SHUT_DOWN_THRAD_POOL_INTERRUPTED,
                       String.format(
@@ -1082,8 +1089,9 @@ public class JobRunner implements Runnable {
         String errorMessage = "Failed to shutdown test thread pool";
         logger.atWarning().withCause(e).log("%s", errorMessage);
         jobInfo
-            .warnings()
+            .findings()
             .addAndLog(
+                Severity.SEVERE,
                 createExceptionWithoutStackTrace(
                     InfraErrorId.CLIENT_JR_JOB_SHUT_DOWN_THREAD_POOL_FATAL_ERROR, errorMessage, e));
       }
@@ -1093,13 +1101,14 @@ public class JobRunner implements Runnable {
       try {
         finalizeJobResult(failFastError, isDeviceAllocatorSetUp, false, jobError);
       } catch (MobileHarnessException e) {
-        jobInfo.warnings().addAndLog(e, logger);
+        jobInfo.findings().addAndLog(Severity.SEVERE, e, logger);
       } catch (Throwable e) {
         String errorMessage = "Failed to finalize job";
         logger.atWarning().withCause(e).log("%s", errorMessage);
         jobInfo
-            .warnings()
+            .findings()
             .addAndLog(
+                Severity.SEVERE,
                 createExceptionWithoutStackTrace(
                     InfraErrorId.CLIENT_JR_JOB_FINALIZE_RESULT_FATAL_ERROR, errorMessage, e));
       }
@@ -1147,8 +1156,9 @@ public class JobRunner implements Runnable {
         String errorMessage = "Failed to post JobEndEvent";
         logger.atWarning().withCause(e).log("%s", errorMessage);
         jobInfo
-            .warnings()
+            .findings()
             .addAndLog(
+                Severity.SEVERE,
                 createExceptionWithoutStackTrace(
                     InfraErrorId.CLIENT_JR_JOB_END_EVENT_POST_FATAL_ERROR,
                     errorMessage + ": " + e.getMessage()));
@@ -1173,8 +1183,9 @@ public class JobRunner implements Runnable {
       // For safety, prints out the unknown error.
       logger.atSevere().withCause(e).log("FATAL ERROR");
       jobInfo
-          .warnings()
+          .findings()
           .addAndLog(
+              Severity.SEVERE,
               createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_JOB_TEAR_DOWN_FATAL_ERROR,
                   "Fatal job error when tearing down job: ",
@@ -1193,8 +1204,9 @@ public class JobRunner implements Runnable {
     } catch (Exception e) {
       logger.atWarning().withCause(e).log("Failed to remove %s-file dir %s", dirType, path);
       jobInfo
-          .warnings()
+          .findings()
           .addAndLog(
+              Severity.WARNING,
               createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_JOB_CLEAN_UP_DIR_ERROR,
                   "Failed to remove " + dirType + "-file dir",
@@ -1613,8 +1625,9 @@ public class JobRunner implements Runnable {
                     Runtime.getRuntime().maxMemory(),
                     Flags.lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnostic.getNonNull());
             jobInfo
-                .warnings()
+                .findings()
                 .addAndLog(
+                    Severity.WARNING,
                     createExceptionWithoutStackTrace(
                         InfraErrorId.CLIENT_JR_ALLOC_DIAGNOSTIC_ERROR, message),
                     logger);
@@ -1634,8 +1647,9 @@ public class JobRunner implements Runnable {
       }
     } catch (MobileHarnessException e) {
       jobInfo
-          .warnings()
+          .findings()
           .addAndLog(
+              Severity.WARNING,
               createExceptionWithoutStackTrace(
                   InfraErrorId.CLIENT_JR_ALLOC_DIAGNOSTIC_ERROR,
                   "Failed to diagnose the allocation failure",
@@ -1684,8 +1698,9 @@ public class JobRunner implements Runnable {
       SkipResultWithCause skipResultWithCause = SkipInformationHandler.getJobResult(skipInfos);
       if (postRunJob) {
         jobInfo
-            .warnings()
+            .findings()
             .addAndLog(
+                Severity.WARNING,
                 createExceptionWithoutStackTrace(
                     InfraErrorId.TR_PLUGIN_INVALID_SKIP_EXCEPTION_ERROR,
                     String.format(

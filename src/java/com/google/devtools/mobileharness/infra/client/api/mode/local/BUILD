@@ -168,6 +168,7 @@ java_library(
     ],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:diagnostic_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/model/error",

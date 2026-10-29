@@ -30,6 +30,7 @@ java_library(
     deps = [
         ":composite_storage_backend",
         ":storage_backend",
+        "//src/devtools/mobileharness/api/model/proto:diagnostic_java_proto",
         "//src/devtools/mobileharness/infra/container/proto:test_engine_java_proto",
         "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
