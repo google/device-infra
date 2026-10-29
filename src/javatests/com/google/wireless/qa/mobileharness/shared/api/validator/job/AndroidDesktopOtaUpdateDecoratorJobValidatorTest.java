@@ -23,7 +23,6 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidDesktopOtaUpdateDecoratorSpec;
 import org.junit.Before;
 import org.junit.Rule;
@@ -39,14 +38,12 @@ import org.mockito.junit.MockitoRule;
 public final class AndroidDesktopOtaUpdateDecoratorJobValidatorTest {
 
   @Mock private JobInfo jobInfo;
-  @Mock private Files files;
   private AndroidDesktopOtaUpdateDecoratorJobValidator validator;
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
   @Before
   public void setUp() throws Exception {
-    when(jobInfo.files()).thenReturn(files);
     validator = new AndroidDesktopOtaUpdateDecoratorJobValidator();
   }
 

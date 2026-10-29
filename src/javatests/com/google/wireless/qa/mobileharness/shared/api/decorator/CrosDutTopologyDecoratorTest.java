@@ -41,11 +41,11 @@ import com.google.wireless.qa.mobileharness.shared.api.spec.CrosDecoratorSpec;
 import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.AbstractMap;
 import java.util.List;
@@ -74,7 +74,6 @@ public class CrosDutTopologyDecoratorTest {
   @Mock private JobInfo jobInfo;
   @Mock private Log log;
   @Mock private Params params;
-  @Mock private Files files;
   @Mock private Properties properties;
   @Mock private Api atInfo;
   @Mock private Api alsoTo;
@@ -91,7 +90,6 @@ public class CrosDutTopologyDecoratorTest {
     when(jobInfo.params()).thenReturn(params);
     when(params.has(DT_CONVERTER_CIPD_TAG)).thenReturn(true);
     when(params.get(DT_CONVERTER_CIPD_TAG)).thenReturn("");
-    when(jobInfo.files()).thenReturn(files);
     when(driver.getDevice()).thenReturn(device);
     when(device.getDeviceId()).thenReturn("test_device:1234");
     when(log.atInfo()).thenReturn(atInfo);
@@ -364,8 +362,8 @@ public class CrosDutTopologyDecoratorTest {
               if (rootIdx != -1 && rootIdx + 1 < cmdArgs.size()) {
                 Path rootPath = Path.of(cmdArgs.get(rootIdx + 1));
                 Path bin = rootPath.resolve("dt-converter");
-                if (!java.nio.file.Files.exists(bin)) {
-                  java.nio.file.Files.createFile(bin);
+                if (!Files.exists(bin)) {
+                  Files.createFile(bin);
                 }
               }
               return commandResult;
@@ -386,7 +384,7 @@ public class CrosDutTopologyDecoratorTest {
     assertThat(decorator.getResolvedDtConverterPath()).isNotEqualTo(DT_CONVERTER_CIPD_PATH);
     assertThat(decorator.getResolvedDtConverterPath()).contains("dt-converter");
     assertThat(decorator.getCipdDownloadedDir()).isNotNull();
-    assertThat(java.nio.file.Files.exists(decorator.getCipdDownloadedDir())).isTrue();
+    assertThat(Files.exists(decorator.getCipdDownloadedDir())).isTrue();
 
     ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
     verify(commandExecutor, times(3)).exec(commandCaptor.capture());
@@ -406,12 +404,12 @@ public class CrosDutTopologyDecoratorTest {
 
     Path downloadedDir = decorator.getCipdDownloadedDir();
     assertThat(downloadedDir).isNotNull();
-    assertThat(java.nio.file.Files.exists(downloadedDir)).isTrue();
+    assertThat(Files.exists(downloadedDir)).isTrue();
 
     // Clean up
     decorator.tearDown(TeardownContext.create(testInfo, null, null));
     assertThat(decorator.getCipdDownloadedDir()).isNull();
-    assertThat(java.nio.file.Files.exists(downloadedDir)).isFalse();
+    assertThat(Files.exists(downloadedDir)).isFalse();
   }
 
   @Test
@@ -430,7 +428,7 @@ public class CrosDutTopologyDecoratorTest {
     assertThat(decorator.getCipdDownloadedDir()).isNotNull();
     Path downloadedDir = decorator.getCipdDownloadedDir();
     assertThat(downloadedDir).isNotNull();
-    assertThat(java.nio.file.Files.exists(downloadedDir)).isTrue();
+    assertThat(Files.exists(downloadedDir)).isTrue();
 
     ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
     verify(commandExecutor, times(3)).exec(commandCaptor.capture());
@@ -447,7 +445,7 @@ public class CrosDutTopologyDecoratorTest {
     // Clean up
     decorator.tearDown(TeardownContext.create(testInfo, null, null));
     assertThat(decorator.getCipdDownloadedDir()).isNull();
-    assertThat(java.nio.file.Files.exists(downloadedDir)).isFalse();
+    assertThat(Files.exists(downloadedDir)).isFalse();
   }
 
   @Test
@@ -467,7 +465,7 @@ public class CrosDutTopologyDecoratorTest {
     assertThat(decorator.getResolvedDtConverterPath()).contains("dt-converter");
     Path downloadedDir = decorator.getCipdDownloadedDir();
     assertThat(downloadedDir).isNotNull();
-    assertThat(java.nio.file.Files.exists(downloadedDir)).isTrue();
+    assertThat(Files.exists(downloadedDir)).isTrue();
 
     ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
     verify(commandExecutor, times(3)).exec(commandCaptor.capture());
@@ -484,7 +482,7 @@ public class CrosDutTopologyDecoratorTest {
     // Clean up
     decorator.tearDown(TeardownContext.create(testInfo, null, null));
     assertThat(decorator.getCipdDownloadedDir()).isNull();
-    assertThat(java.nio.file.Files.exists(downloadedDir)).isFalse();
+    assertThat(Files.exists(downloadedDir)).isFalse();
   }
 
   @Test

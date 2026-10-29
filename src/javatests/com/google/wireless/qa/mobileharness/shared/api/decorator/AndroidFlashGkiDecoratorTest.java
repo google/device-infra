@@ -53,7 +53,6 @@ import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidFlashGkiDecoratorSpec;
@@ -95,7 +94,6 @@ public final class AndroidFlashGkiDecoratorTest {
   @Mock private JobInfo mockJobInfo;
   @Mock private Driver mockDriver;
   @Mock private Device mockDevice;
-  @Mock private Files mockFiles;
   @Mock private CommandTimeoutException mockTimeoutException;
 
   @Mock private CommandExecutor mockCommandExecutor;
@@ -120,7 +118,6 @@ public final class AndroidFlashGkiDecoratorTest {
   @Before
   public void setUp() throws Exception {
     when(mockTestInfo.jobInfo()).thenReturn(mockJobInfo);
-    when(mockJobInfo.files()).thenReturn(mockFiles);
     when(mockTestInfo.getTmpFileDir()).thenReturn(TMP_DIR);
     when(mockDriver.getDevice()).thenReturn(mockDevice);
     when(mockAdb.runShell(any(), eq("ps -ef | grep [s]napuserd")))
@@ -187,8 +184,7 @@ public final class AndroidFlashGkiDecoratorTest {
         .thenReturn("OKAY [  0.001s]");
     when(mockFastboot.getVar(TEST_DEVICE_ID, FastbootProperty.IS_USERSPACE)).thenReturn("no");
     inOrder =
-        Mockito.inOrder(
-            mockFiles, mockAndroidSystemStateUtil, mockFastboot, mockAndroidSystemSettingUtil);
+        Mockito.inOrder(mockAndroidSystemStateUtil, mockFastboot, mockAndroidSystemSettingUtil);
 
     decorator.run(mockTestInfo);
     inOrder.verify(mockAndroidSystemStateUtil).reboot(TEST_DEVICE_ID, RebootMode.BOOTLOADER);
@@ -303,8 +299,7 @@ public final class AndroidFlashGkiDecoratorTest {
         .thenReturn("OKAY [  0.001s]");
     when(mockFastboot.getVar(TEST_DEVICE_ID, FastbootProperty.IS_USERSPACE)).thenReturn("no");
     inOrder =
-        Mockito.inOrder(
-            mockFiles, mockAndroidSystemStateUtil, mockFastboot, mockAndroidSystemSettingUtil);
+        Mockito.inOrder(mockAndroidSystemStateUtil, mockFastboot, mockAndroidSystemSettingUtil);
 
     decorator.run(mockTestInfo);
     inOrder.verify(mockAndroidSystemStateUtil).reboot(TEST_DEVICE_ID, RebootMode.BOOTLOADER);
