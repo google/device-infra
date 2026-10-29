@@ -18,9 +18,11 @@ package com.google.devtools.mobileharness.fe.v6.service.search.pull;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
+import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
@@ -34,6 +36,8 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.KeyDisplay;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.DeviceDimensionSummary;
@@ -139,6 +143,103 @@ public final class LabInfoFleetPullerTest {
   }
 
   @Test
+  public void pullDimensions_batchesMultipleDimensionsInSingleGetLabInfoCall() throws Exception {
+    DeviceInfo dev1 =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("dev-1"))
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder().setName("carrier").setValue("Verizon"))
+                            .addRequiredDimension(
+                                DeviceDimension.newBuilder().setName("os_version").setValue("16"))))
+            .build();
+    DeviceInfo dev2 =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("dev-2"))
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder().setName("os_version").setValue("15"))))
+            .build();
+    DeviceInfo unnamed = DeviceInfo.getDefaultInstance();
+    labInfoProvider.setResult(
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .addLabData(
+                        LabData.newBuilder()
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .addDeviceInfo(dev1)
+                                    .addDeviceInfo(dev2)
+                                    .addDeviceInfo(unnamed))))
+            .build());
+
+    AtsDeviceKeyRegistry registry = new AtsDeviceKeyRegistry();
+    DeviceKeyDescriptor carrierKey = registry.createLongTailDimensionKey("carrier").get();
+    DeviceKeyDescriptor duplicateCarrierKey =
+        DeviceKeyDescriptor.builder()
+            .setId("dimension::carrier")
+            .setDisplay(KeyDisplay.of("Carrier"))
+            .setIsDimension(true)
+            .setIsLongTail(true)
+            .build();
+    DeviceKeyDescriptor osVersionKey = registry.createLongTailDimensionKey("os_version").get();
+    DeviceKeyDescriptor absentKey = registry.createLongTailDimensionKey("absent_dim").get();
+
+    ImmutableMap<String, DimensionOverlayRaw> overlays =
+        puller
+            .pullDimensions(
+                ImmutableSet.of(carrierKey, duplicateCarrierKey, osVersionKey, absentKey))
+            .get();
+
+    assertThat(labInfoProvider.getLabInfoCalls).isEqualTo(1);
+    assertThat(
+            labInfoProvider
+                .lastRequest
+                .getLabQuery()
+                .getMask()
+                .getDeviceInfoMask()
+                .getSupportedDimensionsMask()
+                .getDimensionNamesList())
+        .containsExactly("carrier", "os_version", "absent_dim");
+    assertThat(
+            labInfoProvider
+                .lastRequest
+                .getLabQuery()
+                .getMask()
+                .getDeviceInfoMask()
+                .getRequiredDimensionsMask()
+                .getDimensionNamesList())
+        .containsExactly("carrier", "os_version", "absent_dim");
+    assertThat(overlays.get("dimension::carrier").uuidToValues())
+        .containsExactly("dev-1", ImmutableList.of("Verizon"));
+    assertThat(overlays.get("dimension::os_version").uuidToValues())
+        .containsExactly("dev-1", ImmutableList.of("16"), "dev-2", ImmutableList.of("15"));
+    assertThat(overlays.get("dimension::absent_dim").uuidToValues()).isEmpty();
+  }
+
+  @Test
+  public void pullDimensions_emptySet_returnsEmptyWithoutGetLabInfoCall() throws Exception {
+    assertThat(puller.pullDimensions(ImmutableSet.of()).get()).isEmpty();
+    assertThat(labInfoProvider.getLabInfoCalls).isEqualTo(0);
+  }
+
+  @Test
+  public void pullDimensions_nonDimensionKey_throwsIllegalArgumentException() {
+    assertThrows(
+        IllegalArgumentException.class,
+        () -> puller.pullDimensions(ImmutableSet.of(DeviceKeys.UUID)));
+    assertThrows(IllegalArgumentException.class, () -> puller.pullDimension(DeviceKeys.UUID));
+    assertThat(labInfoProvider.getLabInfoCalls).isEqualTo(0);
+  }
+
+  @Test
   public void pullDimensionCounts_extractsDimensionCountsAndFiltersInvalidEntries()
       throws Exception {
     labInfoProvider.setDimensionsResponse(
@@ -164,6 +265,7 @@ public final class LabInfoFleetPullerTest {
     private GetAllDeviceDimensionsResponse dimensionsResponse =
         GetAllDeviceDimensionsResponse.getDefaultInstance();
     private GetLabInfoRequest lastRequest;
+    private int getLabInfoCalls;
 
     void setResult(LabQueryResult result) {
       this.result = result;
@@ -177,6 +279,7 @@ public final class LabInfoFleetPullerTest {
     public ListenableFuture<GetLabInfoResponse> getLabInfoAsync(
         GetLabInfoRequest request, UniverseScope universe) {
       this.lastRequest = request;
+      this.getLabInfoCalls++;
       return immediateFuture(GetLabInfoResponse.newBuilder().setLabQueryResult(result).build());
     }
 

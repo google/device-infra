@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.fe.v6.service.shared.providers.Configur
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import javax.inject.Inject;
 
 /**
@@ -100,6 +101,12 @@ public final class AtsFleetDataSource implements FleetDataSource {
   }
 
   @Override
+  public ListenableFuture<ImmutableMap<String, DimensionOverlayRaw>> pullDimensions(
+      Set<DeviceKeyDescriptor> dimensionKeys) {
+    return labInfoFleetPuller.pullDimensions(dimensionKeys);
+  }
+
+  @Override
   public ListenableFuture<ImmutableMap<String, Integer>> pullDimensionCounts() {
     return labInfoFleetPuller.pullDimensionCounts(UniverseScope.SELF);
   }
@@ -127,6 +134,7 @@ public final class AtsFleetDataSource implements FleetDataSource {
    * result, so the builder can join each device to its enrichment. Configs with no SSID are dropped
    * so they leave no empty index entry.
    */
+  @SuppressWarnings("deprecation") // BasicDeviceConfig.getDefaultWifi() is still populated in ATS.
   private static ImmutableMap<String, DeviceEnrichment> deviceEnrichments(
       List<DeviceConfig> deviceConfigs) {
     ImmutableMap.Builder<String, DeviceEnrichment> deviceEnrichments = ImmutableMap.builder();

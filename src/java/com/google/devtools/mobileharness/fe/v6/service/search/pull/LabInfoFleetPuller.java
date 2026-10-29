@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.fe.v6.service.search.pull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
 import com.google.common.base.Stopwatch;
@@ -44,11 +46,14 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProt
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.protobuf.FieldMask;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 import javax.inject.Inject;
 
 /**
- * Pulls the core fleet or on-demand single dimensions from {@code LabInfoService}.
+ * Pulls the core fleet, or the values of one or more dimensions on demand, from {@code
+ * LabInfoService}. {@link #pullDimensions} fetches several dimensions in a single {@code
+ * GetLabInfo} call.
  *
  * <p>Unlike the per-entity detail-page reads, this asks for the whole fleet in one call: no filter
  * (every lab and device) and no page limit, using {@code DeviceInfoMask} and {@code LabInfoMask}
@@ -126,8 +131,30 @@ public final class LabInfoFleetPuller {
   /** Starts an on-demand single dimension pull from the specified universe. */
   public ListenableFuture<DimensionOverlayRaw> pullDimension(
       DeviceKeyDescriptor dimensionKey, UniverseScope universeScope) {
-    checkArgument(dimensionKey.isDimension(), "Key must be a dimension: %s", dimensionKey.id());
-    String dimName = dimensionKey.bareName();
+    return Futures.transform(
+        pullDimensions(ImmutableSet.of(dimensionKey), universeScope),
+        overlays -> overlays.get(dimensionKey.id()),
+        directExecutor());
+  }
+
+  /** Starts an on-demand single dimension pull from the self universe. */
+  public ListenableFuture<DimensionOverlayRaw> pullDimension(DeviceKeyDescriptor dimensionKey) {
+    return pullDimension(dimensionKey, UniverseScope.SELF);
+  }
+
+  /**
+   * Starts a batched on-demand pull of multiple dimensions from the specified universe in a single
+   * {@code GetLabInfo} call, returning a map keyed by {@link DeviceKeyDescriptor#id()}.
+   */
+  public ListenableFuture<ImmutableMap<String, DimensionOverlayRaw>> pullDimensions(
+      Set<DeviceKeyDescriptor> dimensionKeys, UniverseScope universeScope) {
+    if (dimensionKeys.isEmpty()) {
+      return immediateFuture(ImmutableMap.of());
+    }
+    dimensionKeys.forEach(
+        key -> checkArgument(key.isDimension(), "Key must be a dimension: %s", key.id()));
+    ImmutableSet<String> dimNames =
+        dimensionKeys.stream().map(DeviceKeyDescriptor::bareName).collect(toImmutableSet());
 
     GetLabInfoRequest request =
         GetLabInfoRequest.newBuilder()
@@ -142,10 +169,10 @@ public final class LabInfoFleetPuller {
                                     .setFieldMask(SINGLE_DIM_FIELD_MASK)
                                     .setSupportedDimensionsMask(
                                         LabQuery.Mask.DeviceInfoMask.DimensionsMask.newBuilder()
-                                            .addDimensionNames(dimName))
+                                            .addAllDimensionNames(dimNames))
                                     .setRequiredDimensionsMask(
                                         LabQuery.Mask.DeviceInfoMask.DimensionsMask.newBuilder()
-                                            .addDimensionNames(dimName)))))
+                                            .addAllDimensionNames(dimNames)))))
             .setPage(Page.newBuilder().setLimit(0))
             .build();
 
@@ -153,31 +180,45 @@ public final class LabInfoFleetPuller {
     return Futures.transform(
         labInfoProvider.getLabInfoAsync(request, universeScope),
         response -> {
-          ImmutableMap<String, ImmutableList<String>> uuidToValues =
+          ImmutableList<DeviceInfo> devices =
               response.getLabQueryResult().getLabView().getLabDataList().stream()
                   .flatMap(labData -> labData.getDeviceList().getDeviceInfoList().stream())
                   .filter(deviceInfo -> !deviceInfo.getDeviceLocator().getId().isEmpty())
-                  .map(
-                      deviceInfo ->
-                          Map.entry(
-                              deviceInfo.getDeviceLocator().getId(),
-                              dimensionValues(deviceInfo, dimName)))
-                  .filter(entry -> !entry.getValue().isEmpty())
+                  .collect(toImmutableList());
+          // Keyed by each requested key id, so every requested key gets an entry.
+          ImmutableMap<String, DimensionOverlayRaw> overlays =
+              dimensionKeys.stream()
                   .collect(
                       toImmutableMap(
-                          Map.Entry::getKey, Map.Entry::getValue, (first, second) -> second));
+                          DeviceKeyDescriptor::id,
+                          key ->
+                              DimensionOverlayRaw.create(
+                                  key.id(), extractDimensionValues(devices, key.bareName())),
+                          (first, second) -> first));
 
           logger.atInfo().log(
-              "GetLabInfo on-demand dim '%s' returned %d devices in %d ms.",
-              dimensionKey.id(), uuidToValues.size(), stopwatch.elapsed().toMillis());
-          return DimensionOverlayRaw.create(dimensionKey.id(), uuidToValues);
+              "GetLabInfo on-demand dims %s (%s universe) scanned %d devices in %d ms.",
+              overlays.keySet(), universeScope, devices.size(), stopwatch.elapsed().toMillis());
+          return overlays;
         },
         directExecutor());
   }
 
-  /** Starts an on-demand single dimension pull from the self universe. */
-  public ListenableFuture<DimensionOverlayRaw> pullDimension(DeviceKeyDescriptor dimensionKey) {
-    return pullDimension(dimensionKey, UniverseScope.SELF);
+  /** Starts a batched on-demand pull of multiple dimensions from the self universe. */
+  public ListenableFuture<ImmutableMap<String, DimensionOverlayRaw>> pullDimensions(
+      Set<DeviceKeyDescriptor> dimensionKeys) {
+    return pullDimensions(dimensionKeys, UniverseScope.SELF);
+  }
+
+  private static ImmutableMap<String, ImmutableList<String>> extractDimensionValues(
+      ImmutableList<DeviceInfo> devices, String dimName) {
+    return devices.stream()
+        .map(
+            deviceInfo ->
+                Map.entry(
+                    deviceInfo.getDeviceLocator().getId(), dimensionValues(deviceInfo, dimName)))
+        .filter(entry -> !entry.getValue().isEmpty())
+        .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue, (first, second) -> second));
   }
 
   /**

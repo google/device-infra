@@ -21,11 +21,16 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
@@ -35,6 +40,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
@@ -121,6 +127,47 @@ public final class AtsFleetDataSourceTest {
             .build());
 
     assertThat(source.pullDimensionCounts().get()).containsExactly("model", 12, "pool", 8);
+  }
+
+  @Test
+  public void pullDimensions_delegatesBatchAndSingleDimensionPulls() throws Exception {
+    labInfoProvider.setResult(
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .addLabData(
+                        LabData.newBuilder()
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .addDeviceInfo(
+                                        DeviceInfo.newBuilder()
+                                            .setDeviceLocator(
+                                                DeviceLocator.newBuilder().setId("device-0"))
+                                            .setDeviceFeature(
+                                                DeviceFeature.newBuilder()
+                                                    .setCompositeDimension(
+                                                        DeviceCompositeDimension.newBuilder()
+                                                            .addSupportedDimension(
+                                                                DeviceDimension.newBuilder()
+                                                                    .setName("carrier")
+                                                                    .setValue("Verizon"))
+                                                            .addSupportedDimension(
+                                                                DeviceDimension.newBuilder()
+                                                                    .setName("os_version")
+                                                                    .setValue("16"))))))))
+            .build());
+    AtsDeviceKeyRegistry registry = new AtsDeviceKeyRegistry();
+    DeviceKeyDescriptor carrierKey = registry.createLongTailDimensionKey("carrier").get();
+    DeviceKeyDescriptor osVersionKey = registry.createLongTailDimensionKey("os_version").get();
+
+    assertThat(source.pullDimension(carrierKey).get().uuidToValues())
+        .containsExactly("device-0", ImmutableList.of("Verizon"));
+    ImmutableMap<String, DimensionOverlayRaw> batch =
+        source.pullDimensions(ImmutableSet.of(carrierKey, osVersionKey)).get();
+    assertThat(batch.get("dimension::carrier").uuidToValues())
+        .containsExactly("device-0", ImmutableList.of("Verizon"));
+    assertThat(batch.get("dimension::os_version").uuidToValues())
+        .containsExactly("device-0", ImmutableList.of("16"));
   }
 
   private static DeviceConfig deviceConfigWithWifi(String deviceId, String ssid) {

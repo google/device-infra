@@ -16,13 +16,18 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.pull;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * A source of raw search data for a single fleet.
@@ -56,6 +61,26 @@ public interface FleetDataSource {
    * the raw overlay data.
    */
   ListenableFuture<DimensionOverlayRaw> pullDimension(DeviceKeyDescriptor dimensionKey);
+
+  /**
+   * Starts a batched on-demand pull of multiple dimensions' values for this fleet and returns a
+   * future for the raw overlay data keyed by the {@link DeviceKeyDescriptor#id()} of each requested
+   * key. The map holds an entry for every requested key id.
+   */
+  default ListenableFuture<ImmutableMap<String, DimensionOverlayRaw>> pullDimensions(
+      Set<DeviceKeyDescriptor> dimensionKeys) {
+    return Futures.transform(
+        Futures.allAsList(
+            dimensionKeys.stream()
+                .map(
+                    key ->
+                        Futures.transform(
+                            pullDimension(key), raw -> Map.entry(key.id(), raw), directExecutor()))
+                .collect(toImmutableList())),
+        entries ->
+            ImmutableMap.<String, DimensionOverlayRaw>builder().putAll(entries).buildKeepingLast(),
+        directExecutor());
+  }
 
   /**
    * Starts a pull of all available device dimension names and their device counts for this fleet
