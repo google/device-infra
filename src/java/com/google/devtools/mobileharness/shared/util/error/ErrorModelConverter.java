@@ -44,9 +44,11 @@ public class ErrorModelConverter {
         .getMetadataList()
         .forEach(metadata -> result.addMetadata(metadata.getKey(), metadata.getValue()));
     result.setStackTrace(getStackTrace(detail.getSummary()));
-    detail
-        .getSuppressedList()
-        .forEach(suppressed -> result.addSuppressed(toMobileHarnessException(suppressed)));
+    MoreThrowables.addSuppressed(
+        result,
+        detail.getSuppressedList().stream()
+            .map(ErrorModelConverter::toMobileHarnessException)
+            .collect(toImmutableList()));
     return result;
   }
 

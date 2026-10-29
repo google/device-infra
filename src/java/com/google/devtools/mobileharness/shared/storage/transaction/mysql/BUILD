@@ -51,6 +51,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/storage/transaction:transaction_runner",
         "//src/java/com/google/devtools/mobileharness/shared/storage/transaction:transaction_worker",
         "//src/java/com/google/devtools/mobileharness/shared/util/database:database_connections",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",

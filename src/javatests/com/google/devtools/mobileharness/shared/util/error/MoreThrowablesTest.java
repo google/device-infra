@@ -85,6 +85,32 @@ public class MoreThrowablesTest {
   }
 
   @Test
+  public void runAndSuppressException_throwsPrimaryException_skipsSelfSuppression() {
+    Exception primary = new Exception("Primary");
+
+    MoreThrowables.runAndSuppressException(
+        primary,
+        () -> {
+          throw primary;
+        });
+
+    assertThat(primary.getSuppressed()).isEmpty();
+  }
+
+  @Test
+  public void runAndSuppressException_throwsExceptionCausedByPrimary_skipsSuppression() {
+    Exception primary = new Exception("Primary");
+
+    MoreThrowables.runAndSuppressException(
+        primary,
+        () -> {
+          throw new Exception("Secondary", primary);
+        });
+
+    assertThat(primary.getSuppressed()).isEmpty();
+  }
+
+  @Test
   public void runAndSuppressException_primaryNull_throwsOriginalUncheckedException() {
     RuntimeException expected = new RuntimeException("Unchecked");
     RuntimeException thrown =

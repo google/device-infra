@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.io.File;
@@ -360,17 +361,17 @@ public final class CrosCipdUtil {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       if (primaryException != null) {
-        primaryException.addSuppressed(e);
+        MoreThrowables.addSuppressed(primaryException, e);
       }
       logWarning(testInfo, "Interrupted while removing temporary directory: " + targetDir, e);
     } catch (MobileHarnessException e) {
       if (primaryException != null) {
-        primaryException.addSuppressed(e);
+        MoreThrowables.addSuppressed(primaryException, e);
       }
       logWarning(testInfo, "Failed to remove temporary directory: " + targetDir, e);
     } catch (RuntimeException e) {
       if (primaryException != null) {
-        primaryException.addSuppressed(e);
+        MoreThrowables.addSuppressed(primaryException, e);
       }
       logWarning(testInfo, "Unexpected error removing temporary directory: " + targetDir, e);
     }

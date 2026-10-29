@@ -72,6 +72,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SessionFilter;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionQueryUtil;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.Any;
@@ -583,7 +584,8 @@ public class AtsSessionStub {
 
     // Adds other errors as suppressed errors of the first one.
     MobileHarnessException result = sortedSessionErrors.get(0);
-    sortedSessionErrors.stream().skip(1L).forEach(result::addSuppressed);
+    MoreThrowables.addSuppressed(
+        result, sortedSessionErrors.subList(1, sortedSessionErrors.size()));
 
     return Optional.of(result);
   }

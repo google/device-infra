@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.shared.storage.transaction.TransactionC
 import com.google.devtools.mobileharness.shared.storage.transaction.TransactionRunner;
 import com.google.devtools.mobileharness.shared.storage.transaction.TransactionWorker;
 import com.google.devtools.mobileharness.shared.util.database.DatabaseConnections;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import java.sql.Connection;
 import java.sql.SQLException;
 import javax.inject.Inject;
@@ -63,7 +64,7 @@ public final class MySqlTransactionRunner implements TransactionRunner {
         try {
           connection.rollback();
         } catch (SQLException sqlException) {
-          e.addSuppressed(sqlException);
+          MoreThrowables.addSuppressed(e, sqlException);
         }
       }
       throw new MobileHarnessException(

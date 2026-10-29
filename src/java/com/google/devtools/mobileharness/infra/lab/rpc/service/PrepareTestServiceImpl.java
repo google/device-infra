@@ -92,6 +92,7 @@ import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.Resol
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveSource;
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proxy.DualConduitUtil;
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proxy.ServerType;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -518,7 +519,7 @@ public class PrepareTestServiceImpl {
       } catch (ExecutionException e) {
         resolveFileStatus = ResolveFileStatus.RESOLVE_FILE_FAILED;
         if (testEngineErrorInResponse.isPresent()) {
-          testEngineErrorInResponse.get().addSuppressed(e.getCause());
+          MoreThrowables.addSuppressed(testEngineErrorInResponse.get(), e.getCause());
         } else {
           testEngineErrorInResponse = Optional.ofNullable(e.getCause());
         }

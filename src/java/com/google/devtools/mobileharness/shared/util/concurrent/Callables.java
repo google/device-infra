@@ -122,7 +122,7 @@ public final class Callables {
       error = null;
     } else {
       error = errors.get(0);
-      errors.stream().skip(1L).forEach(error::addSuppressed);
+      MoreThrowables.addSuppressed(error, errors.subList(1, errors.size()));
     }
     if (interrupted && !MoreThrowables.isInterruption(error)) {
       Thread.currentThread().interrupt();

@@ -25,6 +25,7 @@ import com.google.common.collect.Streams;
 import com.google.devtools.common.metrics.stability.converter.DeserializedException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginError;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -79,7 +80,8 @@ public class SessionErrorUtil {
 
     // Adds other errors as suppressed errors of the first one.
     DeserializedException result = sortedSessionErrors.get(0);
-    sortedSessionErrors.stream().skip(1L).forEach(result::addSuppressed);
+    MoreThrowables.addSuppressed(
+        result, sortedSessionErrors.subList(1, sortedSessionErrors.size()));
 
     return Optional.of(result);
   }

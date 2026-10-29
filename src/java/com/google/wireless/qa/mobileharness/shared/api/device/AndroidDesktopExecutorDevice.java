@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.platform.androiddesktop.device.CrosCipd
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.api.spec.CrosDecoratorSpec;
@@ -169,7 +170,7 @@ public class AndroidDesktopExecutorDevice extends BaseDevice {
         } catch (MobileHarnessException | InterruptedException ex) {
           testInfo.log().atWarning().log(
               "Failed to update device DUT state to needs_repair: %s", ex.getMessage());
-          e.addSuppressed(ex);
+          MoreThrowables.addSuppressed(e, ex);
         }
         throw e;
       }

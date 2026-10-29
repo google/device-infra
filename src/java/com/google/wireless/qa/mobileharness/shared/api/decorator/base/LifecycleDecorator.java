@@ -201,7 +201,7 @@ public abstract class LifecycleDecorator extends BaseDecorator {
         if (MoreThrowables.isInterruption(e)) {
           Thread.currentThread().interrupt();
         }
-        primaryException.addSuppressed(e);
+        MoreThrowables.addSuppressed(primaryException, e);
       } else {
         throw e;
       }

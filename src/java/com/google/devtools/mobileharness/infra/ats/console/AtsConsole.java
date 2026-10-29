@@ -71,6 +71,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stu
 import com.google.devtools.mobileharness.infra.controller.device.proto.DeviceFilterSetting;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.constant.inject.Annotations.MainArgs;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.flags.core.FlagsManager;
 import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
@@ -467,7 +468,7 @@ public class AtsConsole {
                 .getParent()
                 .resolve(OLC_SERVER_CLASS_PATH);
       } catch (URISyntaxException | RuntimeException e2) {
-        e.addSuppressed(e2);
+        MoreThrowables.addSuppressed(e, e2);
         throw MobileHarnessExceptionFactory.createUserFacingException(
             InfraErrorId.ATSC_EMBEDDED_MODE_OLC_SERVER_JAR_NOT_FOUND,
             String.format(

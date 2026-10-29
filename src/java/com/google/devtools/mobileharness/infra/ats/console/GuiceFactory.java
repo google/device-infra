@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.console;
 
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.inject.ConfigurationException;
 import com.google.inject.Injector;
 import picocli.CommandLine;
@@ -38,7 +39,7 @@ public final class GuiceFactory implements IFactory {
       try {
         return CommandLine.defaultFactory().create(clazz); // Falls back for command options.
       } catch (Exception e2) {
-        e.addSuppressed(e2);
+        MoreThrowables.addSuppressed(e, e2);
         throw e;
       }
     }

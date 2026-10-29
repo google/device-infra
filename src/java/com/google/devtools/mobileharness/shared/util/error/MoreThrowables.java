@@ -319,7 +319,7 @@ public class MoreThrowables {
         Thread.currentThread().interrupt();
       }
       if (primaryException != null) {
-        primaryException.addSuppressed(t);
+        addSuppressed(primaryException, t);
       } else {
         if (t instanceof RuntimeException) {
           throw (RuntimeException) t;

@@ -27,6 +27,7 @@ java_library(
     name = "error_model_converter",
     srcs = ["ErrorModelConverter.java"],
     deps = [
+        ":more_throwables",
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/model/error:unknown_error",

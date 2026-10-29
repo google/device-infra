@@ -126,6 +126,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/androiddesktop/device:android_desktop_device_helper",
         "//src/java/com/google/devtools/mobileharness/platform/androiddesktop/device:cros_cipd_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

@@ -81,6 +81,7 @@ import com.google.devtools.mobileharness.shared.util.algorithm.GraphMatching;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.event.EventBus.SubscriberExceptionContext;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -1258,7 +1259,7 @@ public class JobRunner implements Runnable {
             Boolean.toString(isStartTimeoutExpired));
     MobileHarnessException exception = createExceptionWithoutStackTrace(errorId, errorMsg);
     if (suppressed != null) {
-      exception.addSuppressed(suppressed);
+      MoreThrowables.addSuppressed(exception, suppressed);
     }
     throw exception;
   }

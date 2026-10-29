@@ -29,6 +29,7 @@ java_library(
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/converter",
         "//src/java/com/google/devtools/common/metrics/stability/converter:deserialized_exception",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "@maven//:com_google_guava_guava",
     ],
 )

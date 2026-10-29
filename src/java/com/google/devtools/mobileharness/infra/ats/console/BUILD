@@ -86,6 +86,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "//src/java/com/google/devtools/mobileharness/shared/constant/inject:annotations",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:flags_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/inject:common_module",
@@ -142,6 +143,7 @@ java_library(
     srcs = ["GuiceFactory.java"],
     visibility = DEFAULT_VISIBILITY,
     deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "@maven//:com_google_inject_guice",
         "@maven//:info_picocli_picocli",
     ],

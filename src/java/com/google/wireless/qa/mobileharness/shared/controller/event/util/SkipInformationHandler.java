@@ -185,9 +185,11 @@ public final class SkipInformationHandler {
     MobileHarnessException resultCauseException =
         createExceptionWithoutStackTrace(
             resultCauseExceptionErrorId, messageWithResult, skipReasonException);
-    for (SkipInformation otherReason : splitSkipInfos.otherSkipReasons()) {
-      resultCauseException.addSuppressed(otherReason.context().exception());
-    }
+    MoreThrowables.addSuppressed(
+        resultCauseException,
+        splitSkipInfos.otherSkipReasons().stream()
+            .map(otherReason -> otherReason.context().exception())
+            .collect(toImmutableList()));
     return resultCauseException;
   }
 
