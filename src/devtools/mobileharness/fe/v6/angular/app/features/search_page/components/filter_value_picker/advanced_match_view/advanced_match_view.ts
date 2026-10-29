@@ -45,6 +45,31 @@ export class AdvancedMatchView {
     return found?.placeholder || 'Enter value…';
   });
 
+  selectMode(newMode: AdvancedMatchMode) {
+    const wasMulti = this.isMultiMode();
+    this.mode.set(newMode);
+    if (wasMulti === this.isMultiMode()) return;
+
+    if (wasMulti) {
+      this.syncMultiToSingle();
+    } else {
+      this.syncSingleToMulti();
+    }
+  }
+
+  private syncSingleToMulti() {
+    const val = this.text().trim();
+    if (val && this.values().length === 0) {
+      this.values.set([val]);
+    }
+  }
+
+  private syncMultiToSingle() {
+    if (!this.text().trim() && this.values().length > 0) {
+      this.text.set(this.values()[0]);
+    }
+  }
+
   addChip() {
     const val = this.inputVal().trim();
     if (!val) return;

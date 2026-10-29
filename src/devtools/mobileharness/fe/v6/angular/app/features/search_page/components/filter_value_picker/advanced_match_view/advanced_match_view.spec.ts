@@ -136,4 +136,136 @@ describe('AdvancedMatchView', () => {
 
     expect(host.values()).toEqual(['val1', 'val2']);
   });
+
+  it('should migrate text into values when switching from single to multi-mode', () => {
+    host.mode.set('prefix');
+    host.text.set('migrated_text');
+    host.values.set([]);
+    fixture.detectChanges();
+
+    component.selectMode('exactly');
+    fixture.detectChanges();
+
+    expect(host.mode()).toBe('exactly');
+    expect(host.values()).toEqual(['migrated_text']);
+  });
+
+  it('should migrate first value into text when switching from multi to single-mode', () => {
+    host.mode.set('exactly');
+    host.text.set('');
+    host.values.set(['val_a', 'val_b']);
+    fixture.detectChanges();
+
+    component.selectMode('substring');
+    fixture.detectChanges();
+
+    expect(host.mode()).toBe('substring');
+    expect(host.text()).toBe('val_a');
+  });
+
+  it('should no-op when selecting the same mode', () => {
+    host.mode.set('prefix');
+    host.text.set('existing');
+    fixture.detectChanges();
+
+    component.selectMode('prefix');
+    fixture.detectChanges();
+
+    expect(host.mode()).toBe('prefix');
+    expect(host.text()).toBe('existing');
+  });
+
+  it('should not add empty value when switching from single to multi-mode with empty text', () => {
+    host.mode.set('prefix');
+    host.text.set('   ');
+    host.values.set([]);
+    fixture.detectChanges();
+
+    component.selectMode('exactly');
+    fixture.detectChanges();
+
+    expect(host.mode()).toBe('exactly');
+    expect(host.values()).toEqual([]);
+  });
+
+  it('should not overwrite existing values when switching from single to multi-mode', () => {
+    host.mode.set('prefix');
+    host.text.set('migrated_text');
+    host.values.set(['already_present']);
+    fixture.detectChanges();
+
+    component.selectMode('at_least');
+    fixture.detectChanges();
+
+    expect(host.mode()).toBe('at_least');
+    expect(host.values()).toEqual(['already_present']);
+  });
+
+  it('should preserve existing text when switching from multi to single-mode', () => {
+    host.mode.set('exactly');
+    host.text.set('already_has_text');
+    host.values.set(['val_a', 'val_b']);
+    fixture.detectChanges();
+
+    component.selectMode('regex');
+    fixture.detectChanges();
+
+    expect(host.mode()).toBe('regex');
+    expect(host.text()).toBe('already_has_text');
+  });
+
+  it('should not set text when switching from multi to single-mode with empty values', () => {
+    host.mode.set('exactly');
+    host.text.set('');
+    host.values.set([]);
+    fixture.detectChanges();
+
+    component.selectMode('not_regex');
+    fixture.detectChanges();
+
+    expect(host.mode()).toBe('not_regex');
+    expect(host.text()).toBe('');
+  });
+
+  it('should change mode without touching text or values when switching between single modes', () => {
+    host.mode.set('prefix');
+    host.text.set('test_text');
+    host.values.set([]);
+    fixture.detectChanges();
+
+    component.selectMode('substring');
+    fixture.detectChanges();
+
+    expect(host.mode()).toBe('substring');
+    expect(host.text()).toBe('test_text');
+    expect(host.values()).toEqual([]);
+  });
+
+  it('should change mode without touching values or setting text when switching between multi modes', () => {
+    host.mode.set('exactly');
+    host.text.set('');
+    host.values.set(['val1', 'val2']);
+    fixture.detectChanges();
+
+    component.selectMode('at_least');
+    fixture.detectChanges();
+
+    expect(host.mode()).toBe('at_least');
+    expect(host.values()).toEqual(['val1', 'val2']);
+    expect(host.text()).toBe('');
+  });
+
+  it('should not migrate text to values when switching between multi modes even if values is empty', () => {
+    host.mode.set('exactly');
+    host.text.set('some_text');
+    host.values.set([]);
+    fixture.detectChanges();
+
+    component.selectMode('at_least');
+    fixture.detectChanges();
+
+    expect(host.mode()).toBe('at_least');
+    expect(host.values()).toEqual([]);
+    expect(host.text()).toBe('some_text');
+  });
 });

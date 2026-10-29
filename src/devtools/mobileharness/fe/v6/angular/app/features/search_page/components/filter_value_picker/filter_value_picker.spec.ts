@@ -466,4 +466,174 @@ describe('FilterValuePicker', () => {
 
     expect(component.searchQuery()).toBe('');
   });
+
+  it('should apply updated advanced matching text on apply', () => {
+    mockStore.pickerConfig.set({
+      key: 'model',
+      title: 'Model',
+      type: 'list',
+      canUseAdvanced: true,
+    });
+    mockStore.effectivePickerState.set({
+      ...createInitialValuePickerState(),
+      loading: false,
+      advanced: {
+        active: true,
+        mode: 'prefix',
+        text: 'old_prefix',
+        values: [],
+      },
+    });
+    mockStore.showValuePicker.set(true);
+    fixture.detectChanges();
+
+    expect(component.isAdvanced()).toBeTrue();
+    expect(component.advMode()).toBe('prefix');
+    expect(component.advText()).toBe('old_prefix');
+
+    // User updates advText
+    component.advText.set('new_prefix');
+    component.onApply();
+
+    expect(mockStore.applyValuePicker).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        isAdvanced: true,
+        advMode: 'prefix',
+        advText: 'new_prefix',
+        advValues: undefined,
+      }),
+    );
+  });
+
+  it('should apply updated advanced matching values in multi-mode on apply', () => {
+    mockStore.pickerConfig.set({
+      key: 'model',
+      title: 'Model',
+      type: 'list',
+      canUseAdvanced: true,
+    });
+    mockStore.effectivePickerState.set({
+      ...createInitialValuePickerState(),
+      loading: false,
+      advanced: {
+        active: true,
+        mode: 'exactly',
+        text: '',
+        values: ['Pixel 6'],
+      },
+    });
+    mockStore.showValuePicker.set(true);
+    fixture.detectChanges();
+
+    component.advValues.set(['Pixel 7', 'Pixel 8']);
+    component.onApply();
+
+    expect(mockStore.applyValuePicker).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        isAdvanced: true,
+        advMode: 'exactly',
+        advText: undefined,
+        advValues: ['Pixel 7', 'Pixel 8'],
+      }),
+    );
+  });
+
+  describe('footerStatusText', () => {
+    it('returns empty string for non-list filter types', () => {
+      mockStore.pickerConfig.set({
+        key: 'date',
+        title: 'Date Range',
+        type: 'range',
+      });
+      fixture.detectChanges();
+      expect(component.footerStatusText()).toBe('');
+    });
+
+    it('computes selected and excluded status text for standard list filters', () => {
+      mockStore.pickerConfig.set({
+        key: 'status',
+        title: 'Device Status',
+        type: 'list',
+      });
+      component.isNegated.set(false);
+      component.selectedSet.set(new Set());
+      fixture.detectChanges();
+      expect(component.footerStatusText()).toBe('No options selected');
+
+      component.selectedSet.set(new Set(['IDLE']));
+      fixture.detectChanges();
+      expect(component.footerStatusText()).toBe('1 option selected');
+
+      component.selectedSet.set(new Set(['IDLE', 'BUSY']));
+      fixture.detectChanges();
+      expect(component.footerStatusText()).toBe('2 options selected');
+
+      component.isNegated.set(true);
+      component.selectedSet.set(new Set());
+      fixture.detectChanges();
+      expect(component.footerStatusText()).toBe('No options excluded');
+
+      component.selectedSet.set(new Set(['IDLE']));
+      fixture.detectChanges();
+      expect(component.footerStatusText()).toBe('1 option excluded');
+    });
+
+    it('computes status text for advanced single-mode (prefix, substring, regex)', () => {
+      mockStore.pickerConfig.set({
+        key: 'model',
+        title: 'Model',
+        type: 'list',
+        canUseAdvanced: true,
+      });
+      mockStore.effectivePickerState.set({
+        ...createInitialValuePickerState(),
+        loading: false,
+        advanced: {
+          active: true,
+          mode: 'prefix',
+          text: '',
+          values: [],
+        },
+      });
+      mockStore.showValuePicker.set(true);
+      fixture.detectChanges();
+
+      expect(component.footerStatusText()).toBe('No values added');
+
+      component.advText.set('Pixel');
+      fixture.detectChanges();
+      expect(component.footerStatusText()).toBe('1 value added');
+    });
+
+    it('computes status text for advanced multi-mode (exactly, at_least)', () => {
+      mockStore.pickerConfig.set({
+        key: 'model',
+        title: 'Model',
+        type: 'list',
+        canUseAdvanced: true,
+      });
+      mockStore.effectivePickerState.set({
+        ...createInitialValuePickerState(),
+        loading: false,
+        advanced: {
+          active: true,
+          mode: 'exactly',
+          text: '',
+          values: [],
+        },
+      });
+      mockStore.showValuePicker.set(true);
+      fixture.detectChanges();
+
+      expect(component.footerStatusText()).toBe('No values added');
+
+      component.advValues.set(['Pixel 7']);
+      fixture.detectChanges();
+      expect(component.footerStatusText()).toBe('1 value added');
+
+      component.advValues.set(['Pixel 7', 'Pixel 8']);
+      fixture.detectChanges();
+      expect(component.footerStatusText()).toBe('2 values added');
+    });
+  });
 });

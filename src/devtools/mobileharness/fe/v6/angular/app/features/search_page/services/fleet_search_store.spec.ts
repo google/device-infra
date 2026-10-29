@@ -5,6 +5,7 @@ import {of, Subject, throwError} from 'rxjs';
 
 import {
   Fleet,
+  FleetChipResolverRequest,
   FleetChipResolverResponse,
   FleetSuggestion,
   SearchEntity,
@@ -642,7 +643,6 @@ describe('FleetSearchStore', () => {
     store.showSuggestions.set(true);
     expect(store.isSuggestionsPanelOpen()).toBeTrue();
   });
-
   describe('row selection', () => {
     it('toggles row selection, computes isAllSelected and isSomeSelected, and clears selection', async () => {
       mockSearchService.searchFleet.and.returnValue(
@@ -694,6 +694,62 @@ describe('FleetSearchStore', () => {
       store.toggleSelectRow('dev-1');
       store.clearSelection();
       expect(store.selectedItems().size).toBe(0);
+    });
+  });
+
+  it('applies advanced matching filter and updates correctly when value is changed', async () => {
+    mockSearchService.resolveFleetChips.and.callFake(
+      (req: FleetChipResolverRequest) =>
+        of({
+          filterChips: (req.filters || []).map((f) => ({
+            valid: {
+              pillKey: f.key,
+              pillCondition: f.complex?.startsWith?.value
+                ? `^${f.complex.startsWith.value}`
+                : 'custom',
+            },
+          })),
+        }),
+    );
+
+    const store = await createStoreAt({});
+
+    // 1. First apply: prefix 'Pixel'
+    store.openValuePicker('model', null, 'Model');
+    store.applyValuePicker({
+      selected: [],
+      negate: false,
+      isAdvanced: true,
+      advMode: 'prefix',
+      advText: 'Pixel',
+    });
+
+    expect(store.activeChips().length).toBe(1);
+    expect(store.activeChips()[0].pillCondition).toBe('^Pixel');
+    expect(store.activeChips()[0].complex).toEqual({
+      startsWith: {value: 'Pixel'},
+    });
+
+    // 2. User edits chip and changes value to 'Pixel 9'
+    store.openValuePicker('model');
+    expect(store.effectivePickerState().advanced.active).toBeTrue();
+    expect(store.effectivePickerState().advanced.mode).toBe('prefix');
+    expect(store.effectivePickerState().advanced.text).toBe('Pixel');
+    expect(store.effectivePickerState().advanced.values).toEqual([]);
+
+    store.applyValuePicker({
+      selected: [],
+      negate: false,
+      isAdvanced: true,
+      advMode: 'prefix',
+      advText: 'Pixel 9',
+    });
+
+    // Verify chip was updated in place with new value
+    expect(store.activeChips().length).toBe(1);
+    expect(store.activeChips()[0].pillCondition).toBe('^Pixel 9');
+    expect(store.activeChips()[0].complex).toEqual({
+      startsWith: {value: 'Pixel 9'},
     });
   });
 });

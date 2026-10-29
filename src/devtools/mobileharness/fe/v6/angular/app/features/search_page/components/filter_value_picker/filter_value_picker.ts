@@ -28,6 +28,7 @@ import {
   computeFilteredAndSortedValues,
   computePinnedValues,
   getPacificTimezoneName,
+  isMultiModeAdvanced,
   parseDateRange,
 } from '../../utils';
 import {AdvancedMatchView} from './advanced_match_view/advanced_match_view';
@@ -316,8 +317,7 @@ export class FilterValuePicker {
   /** Footer status summary text indicating selected/excluded count or advanced values count. */
   readonly footerStatusText = computed(() => {
     if (this.isAdvanced()) {
-      const isMulti =
-        this.advMode() === 'exactly' || this.advMode() === 'at_least';
+      const isMulti = isMultiModeAdvanced(this.advMode());
       if (!isMulti) {
         return this.advText().trim() ? '1 value added' : 'No values added';
       }
