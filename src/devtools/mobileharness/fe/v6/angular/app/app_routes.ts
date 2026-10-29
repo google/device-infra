@@ -1,5 +1,5 @@
 import {inject} from '@angular/core';
-import {CanActivateFn, Router, Routes} from '@angular/router';
+import {CanActivateFn, RedirectFunction, Router, Routes} from '@angular/router';
 import {AllSiteSearchPage} from './features/all_site_search/all_site_search_page';
 import {DevHarnessPage} from './features/dev_harness/dev_harness_page';
 import {DeviceDetailPage} from './features/device_detail/device_detail_page';
@@ -29,6 +29,31 @@ const stripUniverseGuard: CanActivateFn = (route, state) => {
     return urlTree;
   }
   return true;
+};
+
+/**
+ * Redirect function for unmatched routes ('**').
+ * - Unmatched URLs with no subpaths (single segment, e.g. '/abcd') are treated
+ *   as query strings for all-site search: redirects to '/search?q=abcd'.
+ * - Unmatched URLs with subpaths (e.g. '/foo/bar') fall back to '/home'.
+ * Existing query parameters (e.g. 'is_embedded_mode', 'universe') are preserved.
+ */
+export const fallbackRedirect: RedirectFunction = (redirectData) => {
+  const router = inject(Router);
+  const segments = redirectData.url;
+
+  if (segments.length === 1 && segments[0].path) {
+    return router.createUrlTree(['/search'], {
+      queryParams: {
+        ...redirectData.queryParams,
+        'q': segments[0].path,
+      },
+    });
+  }
+
+  return router.createUrlTree(['/home'], {
+    queryParams: redirectData.queryParams,
+  });
 };
 
 /**
@@ -143,11 +168,11 @@ export const routes: Routes = [
     redirectTo: 'sessions',
     pathMatch: 'full',
   },
-  // Fallback: any unknown URL is redirected to the home page. Without it, the
-  // initial navigation fails and the initial loading overlay is never removed.
+  // Fallback: any unknown URL is redirected. Single segments without subpaths
+  // redirect to all-site search (/search?q=...), while subpaths fall back to home.
   // This must be the last route.
   {
     path: '**',
-    redirectTo: 'home',
+    redirectTo: fallbackRedirect,
   },
 ];
