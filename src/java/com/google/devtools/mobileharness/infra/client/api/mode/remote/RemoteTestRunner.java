@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.util.LabResolveFiles;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.util.LabRpcProtoConverter;
@@ -124,8 +125,12 @@ import javax.annotation.Nullable;
 public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
   /**
-   * Param to control whether to throw an error if the test's gen dir cannot be downloaded (default
-   * false).
+   * Param to control whether to mark the test as ERROR if the test's gen data cannot be fetched or
+   * its gen dir cannot be downloaded from the lab (default false).
+   *
+   * <p>Since the test result is usually already set by the lab at that point, it should be used
+   * together with "allow_override_pass_to_error" (and "allow_override_fail_to_error") to take
+   * effect.
    */
   static final String PARAM_THROW_ON_GEN_DIR_DOWNLOAD_ERROR = "throw_on_gen_dir_download_error";
 
@@ -904,8 +909,8 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
   }
 
   /** Gets the test generated properties and downloads the generated files from lab server. */
-  private void getTestGenData(TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
+  @VisibleForTesting
+  void getTestGenData(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     // Request root testInfo.
     GetTestGenDataRequest.Builder builder = createGetTestGenDataRequest(testInfo);
 
@@ -914,20 +919,27 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     try {
       resp = execTestStub.getTestGenData(builder.build(), impersonationUser);
     } catch (RpcExceptionWithErrorId e) {
-      testInfo
-          .findings()
-          .addAndLog(
-              Severity.SEVERE,
-              createExceptionWithoutStackTrace(
-                  InfraErrorId.CLIENT_REMOTE_MODE_TEST_GET_GEN_DATA_ERROR,
-                  "Failed to get test generated data from " + testEngineLocator,
-                  e),
-              logger);
+      // Without the gen data, none of the test generated files can be downloaded.
+      handleGenFileTransferError(
+          testInfo,
+          InfraErrorId.CLIENT_REMOTE_MODE_TEST_GET_GEN_DATA_ERROR,
+          "Failed to get test generated data from " + testEngineLocator,
+          e);
       return;
     }
 
     // Update root testInfo.
     updateTestGenData(resp, testInfo);
+  }
+
+  /** Handles a failure of getting the test generated data or files from the lab. */
+  private void handleGenFileTransferError(
+      TestInfo testInfo, InfraErrorId errorId, String message, Throwable cause) {
+    MobileHarnessException error = createExceptionWithoutStackTrace(errorId, message, cause);
+    testInfo.findings().addAndLog(Severity.SEVERE, error, logger);
+    if (testInfo.jobInfo().params().isTrue(PARAM_THROW_ON_GEN_DIR_DOWNLOAD_ERROR)) {
+      testInfo.resultWithCause().setNonPassing(TestResult.ERROR, error);
+    }
   }
 
   @VisibleForTesting
