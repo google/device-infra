@@ -21,9 +21,11 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -48,6 +50,7 @@ import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryException;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrategy;
@@ -73,8 +76,11 @@ import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.AndroidInst
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
-import java.io.Serializable;
+import java.io.OutputStream;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.HashMap;
@@ -173,6 +179,26 @@ public class AndroidInstrumentationUtil {
 
   /** ADB shell content command return output for no result. */
   private static final String CONTENT_QUERY_OUTPUT_NO_RESULT = "No result found";
+
+  /** Max folder depth when recursively reading content from the test storage on device. */
+  @VisibleForTesting static final int MAX_CONTENT_FOLDER_DEPTH = 32;
+
+  /** Path segments which are not allowed in content names returned by the device. */
+  private static final ImmutableSet<String> INVALID_CONTENT_NAME_SEGMENTS =
+      ImmutableSet.of("", ".", "..");
+
+  /**
+   * Deserialization filter for test property files, which come from the device under test and are
+   * untrusted. Only allows a {@code HashMap} with simple value types ({@code Map$Entry} is required
+   * by {@code HashMap.readObject()}).
+   */
+  private static final ObjectInputFilter TEST_PROPERTY_FILE_FILTER =
+      ObjectInputFilter.Config.createFilter(
+          "maxdepth=5;maxrefs=100000;maxarray=100000;maxbytes=67108864;"
+              + "java.util.HashMap;java.util.Map$Entry;"
+              + "java.lang.String;java.lang.Boolean;java.lang.Character;java.lang.Number;"
+              + "java.lang.Byte;java.lang.Short;java.lang.Integer;java.lang.Long;"
+              + "java.lang.Float;java.lang.Double;!*");
 
   /** Default value of parameter of forcing to install basic service apk. */
   @VisibleForTesting static final boolean DEFAULT_FORCE_REINSTALL_BASIC_SERVICE_APK = true;
@@ -1046,7 +1072,6 @@ public class AndroidInstrumentationUtil {
                         ? TestStorageConstants.INTERNAL_USE_PROVIDER_AUTHORITY
                         : TestStorageConstants.TEST_OUTPUT_PROVIDER_AUTHORITY),
                 tmpHostDir,
-                /* subPath= */ null,
                 getCurrentUser(deviceId, deviceSdkVersion).orElse(null));
       } else {
         // Use adb pull for Android Q-.
@@ -1148,7 +1173,6 @@ public class AndroidInstrumentationUtil {
                 String.format(
                     "content://%s", TestStorageConstants.OUTPUT_PROPERTIES_PROVIDER_AUTHORITY),
                 hostPropertyDir,
-                /* subPath= */ null,
                 getCurrentUser(deviceId, deviceSdkVersion).orElse(null));
       } else {
         // Use adb pull for Android Q-.
@@ -1178,12 +1202,11 @@ public class AndroidInstrumentationUtil {
     }
 
     for (File propertyFile : localFileUtil.listFiles(hostPropertyDir, true)) {
-      try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(propertyFile))) {
-        @SuppressWarnings("unchecked") // safe by specification
-        Map<String, Serializable> properties = (Map<String, Serializable>) in.readObject();
-        for (Entry<String, Serializable> property : properties.entrySet()) {
-          testInfo.properties().add(property.getKey(), property.getValue().toString());
-        }
+      try {
+        readTestPropertyFile(propertyFile)
+            .forEach(
+                (key, value) ->
+                    testInfo.properties().add(String.valueOf(key), String.valueOf(value)));
       } catch (IOException | ClassNotFoundException e) {
         testInfo
             .warnings()
@@ -1197,6 +1220,24 @@ public class AndroidInstrumentationUtil {
                     e),
                 logger);
       }
+    }
+  }
+
+  /**
+   * Reads a test property file written by AndroidX {@code TestStorage.addOutputProperties()} as a
+   * serialized {@code HashMap<String, Serializable>}.
+   */
+  private static Map<?, ?> readTestPropertyFile(File propertyFile)
+      throws IOException, ClassNotFoundException {
+    try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(propertyFile))) {
+      in.setObjectInputFilter(TEST_PROPERTY_FILE_FILTER);
+      Object properties = in.readObject();
+      if (properties instanceof Map<?, ?> map) {
+        return map;
+      }
+      throw new IOException(
+          "Expected a map in test property file but got "
+              + (properties == null ? "null" : properties.getClass().getName()));
     }
   }
 
@@ -1510,44 +1551,90 @@ public class AndroidInstrumentationUtil {
    * file.
    */
   private boolean contentReadFolder(
+      String deviceId, String contentUri, String tmpHostDir, @Nullable String userId)
+      throws MobileHarnessException, InterruptedException {
+    return contentReadFolder(
+        deviceId,
+        contentUri,
+        Path.of(tmpHostDir).normalize(),
+        userId,
+        /* subPath= */ null,
+        /* depth= */ 0);
+  }
+
+  private boolean contentReadFolder(
       String deviceId,
       String contentUri,
-      String tmpHostDir,
+      Path hostDir,
+      @Nullable String userId,
       @Nullable String subPath,
-      @Nullable String userId)
+      int depth)
       throws MobileHarnessException, InterruptedException {
-    boolean hasOutput = false;
-    String newUri = String.format("%s%s", contentUri, Strings.nullToEmpty(subPath));
+    String folderUri = contentUri + Strings.nullToEmpty(subPath);
+    if (depth > MAX_CONTENT_FOLDER_DEPTH) {
+      logger.atWarning().log(
+          "Skip content folder %s which exceeds max depth %d", folderUri, MAX_CONTENT_FOLDER_DEPTH);
+      return false;
+    }
 
-    String output = contentQuery(deviceId, newUri, userId);
+    String output = contentQuery(deviceId, folderUri, userId);
     if (output.contains(CONTENT_QUERY_OUTPUT_NO_RESULT)) {
       return false;
     }
-    logger.atInfo().log("Query content %s output: %s", contentUri, output);
+    logger.atInfo().log("Query content %s output: %s", folderUri, output);
 
+    boolean hasOutput = false;
     for (Entry<String, String> entry : parseContentQueryResult(output).entrySet()) {
-      if (entry.getValue().equals(AndroidTestContent.FileType.DIRECTORY.getType())) {
-        // If it is a folder, recursively read that folder.
-        hasOutput |= contentReadFolder(deviceId, contentUri, tmpHostDir, entry.getKey(), userId);
+      String name = entry.getKey();
+      Optional<Path> hostPath = resolveContentNameOnHost(hostDir, subPath, name);
+      if (hostPath.isEmpty()) {
+        logger.atWarning().log("Skip invalid content name [%s] in %s", name, folderUri);
+      } else if (entry.getValue().equals(AndroidTestContent.FileType.DIRECTORY.getType())) {
+        hasOutput |= contentReadFolder(deviceId, contentUri, hostDir, userId, name, depth + 1);
       } else {
-        String tmpContentUri = contentUri + entry.getKey();
-        String newHostPath = PathUtil.join(tmpHostDir, entry.getKey());
-        String parentPath = PathUtil.dirname(newHostPath);
-        try {
-          // Create the folder if it is not there.
-          localFileUtil.prepareDir(parentPath);
-          output = contentRead(deviceId, tmpContentUri, userId, newHostPath);
-          logger.atInfo().log("ContentRead output: %s", output);
-          hasOutput = true;
-        } catch (MobileHarnessException e) {
-          throw new MobileHarnessException(
-              AndroidErrorId.ANDROID_INSTRUMENTATION_CONTENT_READ_FOLDER_ERROR,
-              String.format("Failed to read content %s from folder.", tmpContentUri),
-              e);
-        }
+        contentReadFile(deviceId, contentUri + name, userId, hostPath.get());
+        hasOutput = true;
       }
     }
     return hasOutput;
+  }
+
+  /**
+   * Resolves a content name returned by the device to a path under {@code hostDir}.
+   *
+   * <p>The name is untrusted. It is valid only if it is an absolute provider path (e.g.,
+   * "/dir/file.txt") strictly under {@code parentName} (if any), has no control characters or
+   * empty/"."/".." segments, and resolves strictly inside {@code hostDir}.
+   *
+   * @return the resolved host path, or empty if the name is invalid
+   */
+  @VisibleForTesting
+  static Optional<Path> resolveContentNameOnHost(
+      Path hostDir, @Nullable String parentName, String name) {
+    if (!name.startsWith(Strings.nullToEmpty(parentName) + "/")
+        || name.chars().anyMatch(Character::isISOControl)
+        || Splitter.on('/')
+            .splitToStream(name.substring(1))
+            .anyMatch(INVALID_CONTENT_NAME_SEGMENTS::contains)) {
+      return Optional.empty();
+    }
+    return Optional.of(hostDir.resolve(name.substring(1)).normalize())
+        .filter(hostPath -> hostPath.startsWith(hostDir) && !hostPath.equals(hostDir));
+  }
+
+  /** Reads a content file to the host path, creating its parent folder if needed. */
+  private void contentReadFile(String deviceId, String uri, @Nullable String userId, Path hostPath)
+      throws MobileHarnessException, InterruptedException {
+    try {
+      localFileUtil.prepareDir(hostPath.getParent().toString());
+      String output = contentRead(deviceId, uri, userId, hostPath);
+      logger.atInfo().log("ContentRead output: %s", output);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_INSTRUMENTATION_CONTENT_READ_FOLDER_ERROR,
+          String.format("Failed to read content %s from folder.", uri),
+          e);
+    }
   }
 
   /**
@@ -1559,24 +1646,20 @@ public class AndroidInstrumentationUtil {
    * @param desFilePath file path on host machine as output
    * @return output of command execution
    */
-  private String contentRead(
-      String deviceId, String uri, @Nullable String userId, String desFilePath)
+  private String contentRead(String deviceId, String uri, @Nullable String userId, Path desFilePath)
       throws MobileHarnessException, InterruptedException {
-    String adbPath = adb.getAdbPath();
-    String contentCommand =
-        String.format("content read --uri %s ", uri)
-            + (userId != null ? String.format("--user %s", userId) : "");
-
     // Redirect the output directly into a file in host machine which is recommended way.
     // See b/126805032 for detail.
-    String shellCommand =
-        String.format("%s -s %s shell %s > %s", adbPath, deviceId, contentCommand, desFilePath);
+    Command command =
+        getAdbContentCommand(deviceId, "read", uri, userId)
+            .redirectStderr(false)
+            .writeStdoutTo(desFilePath);
     try {
-      return commandExecutor.run(Command.of("bash", "-c", shellCommand)).trim();
+      return commandExecutor.run(command).trim();
     } catch (CommandException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_INSTRUMENTATION_CONTENT_READ_ERROR,
-          String.format("Failed to read content with command: %s", shellCommand),
+          String.format("Failed to read content with command: %s", command),
           e);
     }
   }
@@ -1592,22 +1675,20 @@ public class AndroidInstrumentationUtil {
   private void contentWrite(
       String deviceId, String uri, @Nullable String userId, String srcFilePath)
       throws MobileHarnessException, InterruptedException {
-    String adbPath = adb.getAdbPath();
-    String contentCommand =
-        String.format("content write --uri %s ", uri)
-            + (userId != null ? String.format("--user %s", userId) : "");
-
     // Redirect the input directly from a file in host machine which is recommended way.
     // See b/126805032 for detail.
-    String shellCommand =
-        String.format("%s -s %s shell %s < %s", adbPath, deviceId, contentCommand, srcFilePath);
-    try {
-      String output = commandExecutor.run(Command.of("bash", "-c", shellCommand));
-      logger.atInfo().log("Executed command [%s]: [%s]", shellCommand, output);
-    } catch (CommandException e) {
+    Command command = getAdbContentCommand(deviceId, "write", uri, userId);
+    try (InputStream input = new FileInputStream(srcFilePath)) {
+      CommandProcess process = commandExecutor.start(command);
+      // Closing stdin sends EOF to adb.
+      try (OutputStream stdin = process.stdinStream()) {
+        input.transferTo(stdin);
+      }
+      logger.atInfo().log("Executed command [%s]: [%s]", command, process.await().stdout());
+    } catch (IOException | CommandException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_INSTRUMENTATION_CONTENT_WRITE_ERROR,
-          String.format("Failed to write content with command: %s", shellCommand),
+          String.format("Failed to write content from %s with command: %s", srcFilePath, command),
           e);
     }
   }
@@ -1622,9 +1703,7 @@ public class AndroidInstrumentationUtil {
    */
   private String contentQuery(String deviceId, String uri, @Nullable String userId)
       throws MobileHarnessException, InterruptedException {
-    String contentCommand =
-        String.format("content query --uri %s ", uri)
-            + (userId != null ? String.format("--user %s", userId) : "");
+    String contentCommand = getContentShellCommand("query", uri, userId);
 
     try {
       return adb.runShell(deviceId, contentCommand);
@@ -1634,6 +1713,22 @@ public class AndroidInstrumentationUtil {
           String.format("Failed to query content with command: %s", contentCommand),
           e);
     }
+  }
+
+  /**
+   * Gets the "adb shell content ..." command. It runs adb directly rather than through a host
+   * shell, since the uri may come from the device.
+   */
+  private Command getAdbContentCommand(
+      String deviceId, String action, String uri, @Nullable String userId) {
+    return Command.of(
+        adb.getAdbPath(), "-s", deviceId, "shell", getContentShellCommand(action, uri, userId));
+  }
+
+  /** Gets the "content ..." command for the device shell, with all arguments shell-escaped. */
+  private static String getContentShellCommand(String action, String uri, @Nullable String userId) {
+    return String.format("content %s --uri %s", action, ShellUtils.shellEscape(uri))
+        + (userId == null ? "" : " --user " + ShellUtils.shellEscape(userId));
   }
 
   /**
