@@ -240,6 +240,10 @@ public class ApiConfigV5 implements ApiConfig {
 
   @Override
   public Basic.WifiConfig getDefaultWifi(String deviceControlId) {
+    Basic.WifiConfig wifiConfig = labConfig.getWifiConfig();
+    if (!wifiConfig.getSsid().isEmpty()) {
+      return wifiConfig;
+    }
     return getBasicDeviceConfig(deviceControlId).getDefaultWifi();
   }
 
