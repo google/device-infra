@@ -21,38 +21,32 @@ import com.google.common.base.Ascii;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCacheManager.CacheType;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionDeviceCache;
-import com.google.devtools.mobileharness.infra.controller.device.DeviceInfoManager;
 import javax.inject.Inject;
 
 /** Local implementation of {@link SessionDeviceCache}. */
 public class LocalSessionDeviceCache implements SessionDeviceCache {
 
   private final DeviceCacheManager deviceCacheManager;
-  private final DeviceInfoManager deviceInfoManager;
 
   @Inject
   LocalSessionDeviceCache() {
-    this(DeviceCacheManager.getInstance(), DeviceInfoManager.getInstance());
+    this(DeviceCacheManager.getInstance());
   }
 
   @VisibleForTesting
-  LocalSessionDeviceCache(
-      DeviceCacheManager deviceCacheManager, DeviceInfoManager deviceInfoManager) {
+  LocalSessionDeviceCache(DeviceCacheManager deviceCacheManager) {
     this.deviceCacheManager = deviceCacheManager;
-    this.deviceInfoManager = deviceInfoManager;
   }
 
   @Override
   public void cache(CacheRequest request) throws MobileHarnessException {
     CacheType type = CacheType.valueOf(Ascii.toUpperCase(request.cacheType()));
-    for (String deviceControlId : request.deviceControlIds()) {
-      deviceCacheManager.cache(
-          type,
-          deviceControlId,
-          DeviceCacheManager.getDeviceType(deviceInfoManager, deviceControlId),
-          request.timeout(),
-          /* leaseId= */ request.sessionId());
-    }
+    request
+        .deviceControlIds()
+        .forEach(
+            deviceControlId ->
+                deviceCacheManager.cache(
+                    type, deviceControlId, request.timeout(), /* leaseId= */ request.sessionId()));
   }
 
   @Override
