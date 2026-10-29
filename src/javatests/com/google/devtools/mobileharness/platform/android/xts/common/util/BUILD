@@ -82,3 +82,22 @@ java_test(
         "@maven//:junit_junit",
     ],
 )
+
+java_test(
+    name = "XtsPackageUnzipCacheTest",
+    size = "small",
+    srcs = ["XtsPackageUnzipCacheTest.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/common/dir",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_chunked_test_cases_restorer",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_package_unzip_cache",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:mobile_harness_runnable",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
+        "@maven//:com_google_guava_guava",
+        "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
+    ],
+)

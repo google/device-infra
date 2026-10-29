@@ -345,6 +345,34 @@ public class Flags {
   public static final Flag<Integer> atsWorkerGrpcPort = Flag.value(7031);
 
   @FlagSpec(
+      name = "ats_xts_unzip_cache_enabled",
+      help =
+          "Whether to cache unzipped and chunk-restored xTS packages across ATS server sessions"
+              + " and lab worker test runs. Default is false.")
+  public static final Flag<Boolean> atsXtsUnzipCacheEnabled = Flag.value(false);
+
+  @FlagSpec(
+      name = "ats_xts_unzip_cache_max_entries",
+      help =
+          "Maximum number of unzipped xTS package directories to retain in the shared cache before"
+              + " evicting least-recently-accessed idle entries. Default is 3.")
+  public static final Flag<Integer> atsXtsUnzipCacheMaxEntries = Flag.value(3);
+
+  @FlagSpec(
+      name = "ats_xts_unzip_cache_max_size_gb",
+      help =
+          "Maximum total disk size in GB for the shared unzipped xTS package cache before evicting"
+              + " least-recently-accessed idle entries. Default is 100.")
+  public static final Flag<Long> atsXtsUnzipCacheMaxSizeGb = Flag.value(100L);
+
+  @FlagSpec(
+      name = "ats_xts_unzip_cache_ttl",
+      help =
+          "Time-to-live (retention duration) since last access for idle entries in the shared"
+              + " unzipped xTS package cache. Default is 24 hours.")
+  public static final Flag<Duration> atsXtsUnzipCacheTtl = DurationFlag.hours(24L);
+
+  @FlagSpec(
       name = "ats_xts_work_dir",
       help =
           "The work directory of ATS xTS process. Default value is empty string, which is to let"

@@ -65,6 +65,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:session_device_cache",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/model/job/in:device_requirements",
         "//src/java/com/google/devtools/mobileharness/infra/lab/common/dir",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_package_unzip_cache",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_constants",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/constant:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/runtime:xts_tradefed_runtime_info",

@@ -110,6 +110,31 @@ java_library(
 )
 
 java_library(
+    name = "xts_package_unzip_cache",
+    srcs = ["XtsPackageUnzipCache.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/common/util:__subpackages__",
+    ],
+    deps = [
+        ":xts_chunked_test_cases_restorer",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/common/dir",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:data_size",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:mobile_harness_runnable",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "mobly_test_loader",
     srcs = ["MoblyTestLoader.java"],
     visibility = [

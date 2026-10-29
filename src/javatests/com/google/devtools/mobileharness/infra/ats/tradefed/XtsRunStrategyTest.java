@@ -20,8 +20,11 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -46,6 +49,7 @@ import java.time.ZoneId;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.Mock;
@@ -60,6 +64,7 @@ public final class XtsRunStrategyTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Rule public final SetFlags flags = new SetFlags();
+  @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
 
   @Mock private LocalFileUtil localFileUtil;
   @Mock private ResUtil resUtil;
@@ -72,6 +77,8 @@ public final class XtsRunStrategyTest {
 
   @Before
   public void setUp() throws Exception {
+    flags.set("public_dir", tmpFolder.newFolder("public_dir").getAbsolutePath());
+    flags.set("tmp_dir_root", tmpFolder.newFolder("tmp_dir_root").getAbsolutePath());
     JobInfo jobInfo =
         JobInfo.newBuilder()
             .setLocator(new JobLocator("job_id", "job_name"))
@@ -151,5 +158,83 @@ public final class XtsRunStrategyTest {
     assertThat(exception.getErrorId())
         .isEqualTo(AndroidErrorId.XTS_TRADEFED_GET_XTS_ROOT_DIR_ERROR);
     verify(localFileUtil, never()).unzipFile(anyString(), anyString(), any(Duration.class), any());
+  }
+
+  @Test
+  public void getXtsRootDir_unzipCacheEnabled_returnsExpectedUnzippedPath() throws Exception {
+    flags.set("ats_xts_unzip_cache_enabled", "true");
+    TradefedTestDriverSpec spec =
+        TradefedTestDriverSpec.newBuilder().setAndroidXtsZip(ANDROID_XTS_ZIP).build();
+    String expectedUnzippedPath =
+        PathUtil.join(testInfo.getTmpFileDir(), ANDROID_XTS_ZIP.replace('.', '_') + "_unzipped");
+
+    Path xtsRootDir = xtsRunStrategy.getXtsRootDir(spec, testInfo);
+
+    assertThat(xtsRootDir).isEqualTo(Path.of(expectedUnzippedPath));
+  }
+
+  @Test
+  public void getXtsRootDir_unzipCacheEnabled_unzipsWithWorkerTimeoutAndRestores()
+      throws Exception {
+    flags.set("ats_xts_unzip_cache_enabled", "true");
+    TradefedTestDriverSpec spec =
+        TradefedTestDriverSpec.newBuilder().setAndroidXtsZip(ANDROID_XTS_ZIP).build();
+    String expectedUnzippedPath =
+        PathUtil.join(testInfo.getTmpFileDir(), ANDROID_XTS_ZIP.replace('.', '_') + "_unzipped");
+
+    Path unused = xtsRunStrategy.getXtsRootDir(spec, testInfo);
+
+    verify(localFileUtil)
+        .unzipFile(eq(ANDROID_XTS_ZIP), anyString(), eq(Duration.ofHours(2L)), eq(""));
+    verify(localFileUtil).linkFileOrDir(anyString(), eq(expectedUnzippedPath));
+    verify(xtsChunkedTestCasesRestorer).restoreTestCases(anyString(), eq(XTS_TYPE));
+  }
+
+  @Test
+  public void cleanUp_unzipCacheEnabled_removesTestUnzippedSymlinkAndPreservesCacheDir()
+      throws Exception {
+    flags.set("ats_xts_unzip_cache_enabled", "true");
+    LocalFileUtil realFileUtil = spy(new LocalFileUtil());
+    doReturn("unzipped")
+        .when(realFileUtil)
+        .unzipFile(anyString(), anyString(), any(Duration.class), anyString());
+    XtsRunStrategy strategyWithRealFs =
+        new XtsRunStrategy(
+            realFileUtil,
+            resUtil,
+            systemUtil,
+            Clock.fixed(Instant.ofEpochMilli(1000L), ZoneId.systemDefault()),
+            XTS_TYPE,
+            xtsCommandUtil,
+            xtsChunkedTestCasesRestorer);
+    TradefedTestDriverSpec spec =
+        TradefedTestDriverSpec.newBuilder().setAndroidXtsZip(ANDROID_XTS_ZIP).build();
+    Path xtsRootDir = strategyWithRealFs.getXtsRootDir(spec, testInfo);
+    Path cachedDir = realFileUtil.getFileOrDirRealPath(xtsRootDir);
+
+    strategyWithRealFs.cleanUp(testInfo);
+
+    assertThat(realFileUtil.isFileOrDirExist(xtsRootDir)).isFalse();
+    assertThat(realFileUtil.isDirExist(cachedDir)).isTrue();
+  }
+
+  @Test
+  public void getXtsRootDir_unzipCacheEnabledAndRestoreFailed_propagatesRestoreError()
+      throws Exception {
+    flags.set("ats_xts_unzip_cache_enabled", "true");
+    TradefedTestDriverSpec spec =
+        TradefedTestDriverSpec.newBuilder().setAndroidXtsZip(ANDROID_XTS_ZIP).build();
+    doThrow(
+            new MobileHarnessException(
+                AndroidErrorId.XTS_RESTORE_CHUNKED_TEST_CASES_ERROR, "restore failed"))
+        .when(xtsChunkedTestCasesRestorer)
+        .restoreTestCases(anyString(), anyString());
+
+    MobileHarnessException exception =
+        assertThrows(
+            MobileHarnessException.class, () -> xtsRunStrategy.getXtsRootDir(spec, testInfo));
+
+    assertThat(exception.getErrorId())
+        .isEqualTo(AndroidErrorId.XTS_RESTORE_CHUNKED_TEST_CASES_ERROR);
   }
 }

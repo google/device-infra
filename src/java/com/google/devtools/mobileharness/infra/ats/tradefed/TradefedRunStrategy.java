@@ -133,6 +133,13 @@ public interface TradefedRunStrategy {
   }
 
   /**
+   * Cleans up any strategy-specific resources after the test run completes.
+   *
+   * @param testInfo the test info
+   */
+  default void cleanUp(TestInfo testInfo) {}
+
+  /**
    * Sets the MH test result after the Tradefed process has exited.
    *
    * <p>The default implementation only looks at the process exit code ({@code tfExitCode} is empty

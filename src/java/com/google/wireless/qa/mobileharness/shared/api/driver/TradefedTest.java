@@ -70,6 +70,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandTimeoutExcep
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.command.LineCallbackException;
 import com.google.devtools.mobileharness.shared.util.command.linecallback.CommandOutputLogger;
+import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -266,7 +267,14 @@ public class TradefedTest extends BaseDriver
       handleDeviceErrorForProvisioning(testInfo);
       scheduledThreadPool.shutdown();
       CompositeDeviceUtil.uncacheTestbed(getDevice());
-      postTest(workDir, testInfo);
+      final Path finalWorkDir = workDir;
+      Callables.runAll(
+          (Runnable) () -> postTest(finalWorkDir, testInfo),
+          () -> {
+            if (tradefedRunStrategy != null) {
+              tradefedRunStrategy.cleanUp(testInfo);
+            }
+          });
     }
   }
 

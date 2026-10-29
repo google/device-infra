@@ -124,7 +124,7 @@ public class FileCleaner implements Runnable {
   private final ConcurrentHashMap<String, Duration> managedDirs = new ConcurrentHashMap<>();
 
   /** The sub directories which should be skipped by FileCleaner for expiration check. */
-  private final List<String> skippedSubDirs = new ArrayList<>();
+  private final ImmutableList<String> skippedSubDirs = getSkippedSubDirs();
 
   private int consecutiveFileSystemIoCheckFailures;
   private int consecutiveFileSystemIoCheckSuccesses;
@@ -152,6 +152,18 @@ public class FileCleaner implements Runnable {
     this.sleeper = sleeper;
     this.clock = clock;
     this.commandExecutor = commandExecutor;
+  }
+
+  private static ImmutableList<String> getSkippedSubDirs() {
+    // Cloud received directory is in the TempDir which should be skipped and managed by
+    // cloud file transfer itself.
+    // TODO: Align the deleting strategy of Cloud FileTransfer with others.
+    // Shared xTS unzip cache directories are managed by XtsPackageUnzipCache
+    // (--ats_xts_unzip_cache_ttl).
+    return ImmutableList.of(
+        DirUtil.getCloudReceivedDir(),
+        DirUtil.getXtsUnzipCacheDir(),
+        DirUtil.getXtsWorkerUnzipCacheDir());
   }
 
   @Override
@@ -253,11 +265,6 @@ public class FileCleaner implements Runnable {
               : JobSetting.MAX_TEST_TIMEOUT;
       managedDirs.putIfAbsent(DirUtil.getPublicGenDir(), genFileExpireTime);
       managedDirs.putIfAbsent(DirUtil.getPrivateGenDir(), genFileExpireTime);
-
-      // Cloud received directory is in the TempDir which should be skipped and managed by
-      // cloud file transfer itself.
-      // TODO: Align the deleting strategy of Cloud FileTransfer with others.
-      skippedSubDirs.add(DirUtil.getCloudReceivedDir());
 
       while (!Thread.currentThread().isInterrupted()) {
         // Checks file system IO
@@ -365,7 +372,8 @@ public class FileCleaner implements Runnable {
     for (File fileOrDir : fileOrDirs) {
       // Check if the folder or file should be skipped.
       String fileOrDirPath = fileOrDir.getAbsolutePath();
-      if (skippedSubDirs.stream().anyMatch(skippedPath -> fileOrDirPath.contains(skippedPath))) {
+      if (fileOrDirPath != null
+          && skippedSubDirs.stream().anyMatch(skippedPath -> fileOrDirPath.contains(skippedPath))) {
         continue;
       }
       long lastModified = fileOrDir.lastModified();

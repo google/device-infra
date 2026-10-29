@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.platform.android.shared.emulator.Androi
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsChunkedTestCasesRestorer;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsPackageUnzipCache;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
@@ -120,7 +121,9 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
   private final String xtsType;
   private final XtsCommandUtil xtsCommandUtil;
   private final XtsChunkedTestCasesRestorer xtsChunkedTestCasesRestorer;
+  private final XtsPackageUnzipCache xtsPackageUnzipCache;
   private ImmutableSet<String> previousResultDirNames = ImmutableSet.of();
+  private String cachedUnzippedPath = "";
 
   public XtsRunStrategy(
       LocalFileUtil localFileUtil,
@@ -137,6 +140,9 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
     this.xtsType = checkNotNull(xtsType, "xtsType cannot be null for XtsRunStrategy");
     this.xtsCommandUtil = xtsCommandUtil;
     this.xtsChunkedTestCasesRestorer = xtsChunkedTestCasesRestorer;
+    this.xtsPackageUnzipCache =
+        XtsPackageUnzipCache.forWorker(
+            localFileUtil, xtsChunkedTestCasesRestorer, clock, ANDROID_XTS_ZIP_UNCOMPRESS_TIMEOUT);
   }
 
   private boolean isJarFileIncluded(
@@ -264,12 +270,37 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
       String unzippedPath =
           PathUtil.join(
               testInfo.getTmpFileDir(), androidXtsZip.toString().replace('.', '_') + "_unzipped");
+      String password =
+          testInfo.jobInfo().properties().getOptional(Job.XTS_ZIP_FILE_PASSWORD).orElse(null);
+      if (Flags.atsXtsUnzipCacheEnabled.getNonNull()) {
+        long startTime = clock.instant().toEpochMilli();
+        try {
+          xtsPackageUnzipCache.acquire(
+              testInfo.locator().getId(),
+              androidXtsZip.toString(),
+              unzippedPath,
+              Strings.nullToEmpty(password),
+              dir -> xtsType);
+          cachedUnzippedPath = unzippedPath;
+          return Path.of(unzippedPath);
+        } catch (MobileHarnessException e) {
+          if (e.getErrorId().equals(AndroidErrorId.XTS_RESTORE_CHUNKED_TEST_CASES_ERROR)) {
+            throw e;
+          }
+          throw new MobileHarnessException(
+              AndroidErrorId.XTS_TRADEFED_GET_XTS_ROOT_DIR_ERROR,
+              "Failed to unzip " + androidXtsZip,
+              e);
+        } finally {
+          logger.atInfo().log(
+              "Acquiring cached unzipped xTS package %s took %d seconds",
+              androidXtsZip,
+              Duration.between(Instant.ofEpochMilli(startTime), clock.instant()).toSeconds());
+        }
+      }
       long startTime = clock.instant().toEpochMilli();
       try {
         localFileUtil.prepareDir(unzippedPath);
-        // TODO: cache the unzip result to reduce lab disk usage.
-        String password =
-            testInfo.jobInfo().properties().getOptional(Job.XTS_ZIP_FILE_PASSWORD).orElse(null);
         localFileUtil.unzipFile(
             androidXtsZip.toString(), unzippedPath, ANDROID_XTS_ZIP_UNCOMPRESS_TIMEOUT, password);
       } catch (MobileHarnessException | InterruptedException e) {
@@ -730,5 +761,24 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
   @Override
   public Path getGenFileDir(TestInfo testInfo) throws MobileHarnessException {
     return Path.of(testInfo.getGenFileDir(), String.format("android-%s-gen-files", xtsType));
+  }
+
+  @Override
+  public void cleanUp(TestInfo testInfo) {
+    if (!Flags.atsXtsUnzipCacheEnabled.getNonNull() || cachedUnzippedPath.isEmpty()) {
+      return;
+    }
+    try {
+      xtsPackageUnzipCache.release(testInfo.locator().getId(), cachedUnzippedPath);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to release cached unzipped xTS package [%s] for test [%s]",
+          cachedUnzippedPath, testInfo.locator().getId());
+    } catch (InterruptedException e) {
+      logger.atWarning().withCause(e).log(
+          "Interrupted while releasing cached unzipped xTS package [%s] for test [%s]",
+          cachedUnzippedPath, testInfo.locator().getId());
+      Thread.currentThread().interrupt();
+    }
   }
 }

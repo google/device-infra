@@ -82,6 +82,26 @@ public final class DirUtil {
     return PathUtil.join(DirCommon.getPublicDirRoot(), DIR_PREFIX + "_gen_files");
   }
 
+  /**
+   * Returns directory for caching unzipped xTS packages on the ATS Controller / Local Mode host.
+   *
+   * <p>The files in this directory are managed by {@code XtsPackageUnzipCache} and should be
+   * skipped by {@code FileCleaner}.
+   */
+  public static String getXtsUnzipCacheDir() {
+    return PathUtil.join(getPublicGenDir(), "xts_unzip_cache");
+  }
+
+  /**
+   * Returns directory for caching unzipped xTS packages on the Lab Worker host.
+   *
+   * <p>The files in this directory are managed by {@code XtsPackageUnzipCache} and should be
+   * skipped by {@code FileCleaner}.
+   */
+  public static String getXtsWorkerUnzipCacheDir() {
+    return PathUtil.join(getPublicGenDir(), "xts_worker_unzip_cache");
+  }
+
   /** Returns directory for storing recovery image backups. */
   public static String getRecoveryImageBackupDir() {
     return PathUtil.join(DirCommon.getTempDirRoot(), "mh_android_recovery_img");

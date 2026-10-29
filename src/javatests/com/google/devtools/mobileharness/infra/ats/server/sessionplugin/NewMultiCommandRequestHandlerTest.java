@@ -67,6 +67,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsPackageUnzipCache;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo;
@@ -160,6 +161,7 @@ public final class NewMultiCommandRequestHandlerTest {
   private final Properties properties = new Properties(new Timing());
 
   @Inject private NewMultiCommandRequestHandler newMultiCommandRequestHandler;
+  @Inject private XtsPackageUnzipCache xtsPackageUnzipCache;
 
   @Before
   public void setup() throws Exception {
@@ -2984,5 +2986,176 @@ public final class NewMultiCommandRequestHandlerTest {
     File manifestFile = new File(outputDir, OUTPUT_MANIFEST_FILE_NAME);
     assertThat(localFileUtil.isFileExist(manifestFile.getAbsolutePath())).isTrue();
     assertThat(localFileUtil.readFile(manifestFile.getAbsolutePath())).isEmpty();
+  }
+
+  @Test
+  public void prepareSessionRequestInfo_localModeWithUnzipCacheEnabled_linksSessionRootToCache()
+      throws Exception {
+    flags.set("ats_xts_unzip_cache_enabled", "true");
+    when(atsServerSessionUtil.isLocalMode()).thenReturn(true);
+    doReturn("output")
+        .when(localFileUtil)
+        .unzipFile(anyString(), anyString(), any(Duration.class), anyString());
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    PrepareSessionRequestResult unused =
+        newMultiCommandRequestHandler.prepareSessionRequestInfo(request, sessionInfo);
+    newMultiCommandRequestHandler.cleanup(sessionInfo);
+    SessionInfo sessionInfo2 = Mockito.mock(SessionInfo.class);
+    when(sessionInfo2.getSessionId()).thenReturn("session_id_2");
+    NewMultiCommandRequestHandler handler2 =
+        Guice.createInjector(BoundFieldModule.of(this))
+            .getInstance(NewMultiCommandRequestHandler.class);
+
+    PrepareSessionRequestResult result2 = handler2.prepareSessionRequestInfo(request, sessionInfo2);
+
+    String xtsRootDir2 = DirUtil.getPublicGenDir() + "/session_session_id_2/file";
+    assertThat(result2.sessionRequestInfo()).isPresent();
+    assertThat(result2.sessionRequestInfo().get().getXtsRootDir()).isEqualTo(xtsRootDir2);
+    assertThat(result2.sessionRequestInfo().get().getXtsType()).isEqualTo("cts");
+    assertThat(localFileUtil.isSymbolicLink(Path.of(xtsRootDir2))).isTrue();
+  }
+
+  @Test
+  public void
+      prepareSessionRequestInfo_localModeWithUnzipCacheEnabled_unzipsOnlyOnceAcrossSessions()
+          throws Exception {
+    flags.set("ats_xts_unzip_cache_enabled", "true");
+    when(atsServerSessionUtil.isLocalMode()).thenReturn(true);
+    doReturn("output")
+        .when(localFileUtil)
+        .unzipFile(anyString(), anyString(), any(Duration.class), anyString());
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    PrepareSessionRequestResult unused1 =
+        newMultiCommandRequestHandler.prepareSessionRequestInfo(request, sessionInfo);
+    newMultiCommandRequestHandler.cleanup(sessionInfo);
+    SessionInfo sessionInfo2 = Mockito.mock(SessionInfo.class);
+    when(sessionInfo2.getSessionId()).thenReturn("session_id_2");
+    NewMultiCommandRequestHandler handler2 =
+        Guice.createInjector(BoundFieldModule.of(this))
+            .getInstance(NewMultiCommandRequestHandler.class);
+
+    PrepareSessionRequestResult unused2 = handler2.prepareSessionRequestInfo(request, sessionInfo2);
+
+    verify(localFileUtil)
+        .unzipFile(eq("/path/to/xts/zip/file.zip"), anyString(), eq(Duration.ofHours(1)), eq(""));
+  }
+
+  @Test
+  public void cleanup_localModeWithUnzipCacheEnabled_removesSessionSymlink() throws Exception {
+    flags.set("ats_xts_unzip_cache_enabled", "true");
+    when(atsServerSessionUtil.isLocalMode()).thenReturn(true);
+    doReturn("output")
+        .when(localFileUtil)
+        .unzipFile(anyString(), anyString(), any(Duration.class), anyString());
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    PrepareSessionRequestResult unused =
+        newMultiCommandRequestHandler.prepareSessionRequestInfo(request, sessionInfo);
+
+    newMultiCommandRequestHandler.cleanup(sessionInfo);
+
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    assertThat(localFileUtil.isFileOrDirExist(xtsRootDir)).isFalse();
+  }
+
+  @Test
+  public void cleanup_localModeWithUnzipCacheEnabled_releasesCacheLeaseSoIdleEntryCanExpire()
+      throws Exception {
+    flags.set("ats_xts_unzip_cache_enabled", "true");
+    flags.set("ats_xts_unzip_cache_ttl", "1h");
+    when(atsServerSessionUtil.isLocalMode()).thenReturn(true);
+    doReturn("output")
+        .when(localFileUtil)
+        .unzipFile(anyString(), anyString(), any(Duration.class), anyString());
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    PrepareSessionRequestResult unused =
+        newMultiCommandRequestHandler.prepareSessionRequestInfo(request, sessionInfo);
+    assertThat(xtsPackageUnzipCache.isCached("/path/to/xts/zip/file.zip", "")).isTrue();
+
+    newMultiCommandRequestHandler.cleanup(sessionInfo);
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000L).plus(Duration.ofHours(2)));
+
+    assertThat(xtsPackageUnzipCache.isCached("/path/to/xts/zip/file.zip", "")).isFalse();
+  }
+
+  @Test
+  public void cleanup_remoteModeMountFailedWithUnzipCacheEnabled_releasesCacheLeaseWithoutUnmount()
+      throws Exception {
+    flags.set("ats_xts_unzip_cache_enabled", "true");
+    flags.set("ats_xts_unzip_cache_ttl", "1h");
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    String zipFile = "/path/to/xts/zip/file.zip";
+    CommandException commandException = Mockito.mock(CommandException.class);
+    when(commandException.getMessage()).thenReturn("fuse-zip not found");
+    when(commandExecutor.run(
+            Command.of("fuse-zip", "-r", zipFile, xtsRootDir).timeout(Duration.ofMinutes(10))))
+        .thenThrow(commandException);
+    doReturn("output")
+        .when(localFileUtil)
+        .unzipFile(anyString(), anyString(), any(Duration.class), anyString());
+    PrepareSessionRequestResult unused =
+        newMultiCommandRequestHandler.prepareSessionRequestInfo(request, sessionInfo);
+    assertThat(localFileUtil.isSymbolicLink(Path.of(xtsRootDir))).isTrue();
+
+    newMultiCommandRequestHandler.cleanup(sessionInfo);
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000L).plus(Duration.ofHours(2)));
+
+    verify(commandExecutor, never())
+        .run(Command.of("fusermount", "-u", xtsRootDir).timeout(Duration.ofMinutes(10)));
+    assertThat(localFileUtil.isFileOrDirExist(xtsRootDir)).isFalse();
+    assertThat(xtsPackageUnzipCache.isCached(zipFile, "")).isFalse();
+  }
+
+  @Test
+  public void
+      prepareSessionRequestInfo_chunkedXtsZipWithUnzipCacheEnabled_secondSessionSkipsMountAndUnzip()
+          throws Exception {
+    flags.set("ats_xts_unzip_cache_enabled", "true");
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    doReturn(true).when(localFileUtil).isDirExist(endsWith("/android-cts/chunked-testcases"));
+    doReturn(true).when(localFileUtil).isFileExist(endsWith("/android-cts/tools/cts_restorer"));
+    doReturn("output")
+        .when(localFileUtil)
+        .unzipFile(anyString(), anyString(), any(Duration.class), anyString());
+    PrepareSessionRequestResult unused1 =
+        newMultiCommandRequestHandler.prepareSessionRequestInfo(request, sessionInfo);
+    newMultiCommandRequestHandler.cleanup(sessionInfo);
+    SessionInfo sessionInfo2 = Mockito.mock(SessionInfo.class);
+    when(sessionInfo2.getSessionId()).thenReturn("session_id_2");
+    NewMultiCommandRequestHandler handler2 =
+        Guice.createInjector(BoundFieldModule.of(this))
+            .getInstance(NewMultiCommandRequestHandler.class);
+
+    PrepareSessionRequestResult unused2 = handler2.prepareSessionRequestInfo(request, sessionInfo2);
+
+    String xtsRootDir2 = DirUtil.getPublicGenDir() + "/session_session_id_2/file";
+    Command mountCommand2 =
+        Command.of("fuse-zip", "-r", "/path/to/xts/zip/file.zip", xtsRootDir2)
+            .timeout(Duration.ofMinutes(10));
+    verify(localFileUtil)
+        .unzipFile(eq("/path/to/xts/zip/file.zip"), anyString(), eq(Duration.ofHours(1)), eq(""));
+    verify(commandExecutor, never()).run(mountCommand2);
+  }
+
+  @Test
+  public void
+      prepareSessionRequestInfo_resumedRemoteSessionWithDanglingCacheSymlink_reacquiresCache()
+          throws Exception {
+    flags.set("ats_xts_unzip_cache_enabled", "true");
+    doReturn("output")
+        .when(localFileUtil)
+        .unzipFile(anyString(), anyString(), any(Duration.class), anyString());
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    String evictedCacheDir = tmpFolder.newFolder("evicted_cache_entry").getAbsolutePath();
+    localFileUtil.prepareParentDir(xtsRootDir);
+    localFileUtil.linkFileOrDir(evictedCacheDir, xtsRootDir);
+    localFileUtil.removeFileOrDir(evictedCacheDir);
+
+    PrepareSessionRequestResult result =
+        newMultiCommandRequestHandler.prepareSessionRequestInfo(request, sessionInfo);
+
+    assertThat(result.state()).isEqualTo(RequestState.RUNNING);
+    assertThat(result.sessionRequestInfo()).isPresent();
+    assertThat(localFileUtil.isSymbolicLink(Path.of(xtsRootDir))).isTrue();
+    assertThat(localFileUtil.isDirExist(xtsRootDir)).isTrue();
   }
 }
