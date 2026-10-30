@@ -199,15 +199,22 @@ public class AndroidInstrumentationUtil {
   private static final Escaper URI_SEGMENT_ESCAPER =
       new PercentEscaper("_-!.~'()*", /* plusForSpace= */ false);
 
+  // 4 MiB limits for reading test property files to prevent OutOfMemoryError.
+  private static final long MAX_TEST_PROPERTY_FILE_BYTES = 4L * 1024 * 1024;
+  private static final long MAX_TOTAL_TEST_PROPERTY_CHARS = 4L * 1024 * 1024;
+
   /**
    * Deserialization filter for test property files, which come from the device under test and are
    * untrusted. Only allows a {@code HashMap} with simple value types ({@code Map$Entry} is required
-   * by {@code HashMap.readObject()}).
+   * by {@code HashMap.readObject()}). Requires maxdepth=3 instead of maxdepth=2 because
+   * java.io.ObjectInputStream checks the superclass descriptors (e.g. java.lang.Number for Integer
+   * and Double) recursively.
    */
   private static final ObjectInputFilter TEST_PROPERTY_FILE_FILTER =
       ObjectInputFilter.Config.createFilter(
-          "maxdepth=5;maxrefs=100000;maxarray=100000;maxbytes=67108864;"
-              + "java.util.HashMap;java.util.Map$Entry;"
+          "maxdepth=3;maxrefs=100000;maxarray=100000;maxbytes="
+              + MAX_TEST_PROPERTY_FILE_BYTES
+              + ";java.util.HashMap;java.util.Map$Entry;"
               + "java.lang.String;java.lang.Boolean;java.lang.Character;java.lang.Number;"
               + "java.lang.Byte;java.lang.Short;java.lang.Integer;java.lang.Long;"
               + "java.lang.Float;java.lang.Double;!*");
@@ -1213,12 +1220,19 @@ public class AndroidInstrumentationUtil {
       return;
     }
 
+    long remainingChars = MAX_TOTAL_TEST_PROPERTY_CHARS;
     for (File propertyFile : localFileUtil.listFiles(hostPropertyDir, true)) {
       try {
-        readTestPropertyFile(propertyFile)
-            .forEach(
-                (key, value) ->
-                    testInfo.properties().add(String.valueOf(key), String.valueOf(value)));
+        ImmutableMap<String, String> properties = readTestPropertyFile(propertyFile);
+        remainingChars -=
+            properties.entrySet().stream()
+                .mapToLong(e -> (long) e.getKey().length() + e.getValue().length())
+                .sum();
+        if (remainingChars < 0) {
+          throw new IOException(
+              "Test properties exceed " + MAX_TOTAL_TEST_PROPERTY_CHARS + " characters");
+        }
+        properties.forEach(testInfo.properties()::add);
       } catch (IOException | ClassNotFoundException e) {
         testInfo
             .warnings()
@@ -1239,18 +1253,45 @@ public class AndroidInstrumentationUtil {
    * Reads a test property file written by AndroidX {@code TestStorage.addOutputProperties()} as a
    * serialized {@code HashMap<String, Serializable>}.
    */
-  private static Map<?, ?> readTestPropertyFile(File propertyFile)
+  private static ImmutableMap<String, String> readTestPropertyFile(File propertyFile)
       throws IOException, ClassNotFoundException {
+    // ObjectInputStream.readString() does not invoke ObjectInputFilter on TC_LONGSTRING.
+    if (propertyFile.length() > MAX_TEST_PROPERTY_FILE_BYTES) {
+      throw new IOException(
+          "Test property file exceeds " + MAX_TEST_PROPERTY_FILE_BYTES + " bytes");
+    }
     try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(propertyFile))) {
       in.setObjectInputFilter(TEST_PROPERTY_FILE_FILTER);
-      Object properties = in.readObject();
-      if (properties instanceof Map<?, ?> map) {
-        return map;
+      Object properties;
+      try {
+        properties = in.readObject();
+      } catch (StackOverflowError e) {
+        throw new IOException("Malformed test property file", e);
       }
-      throw new IOException(
-          "Expected a map in test property file but got "
-              + (properties == null ? "null" : properties.getClass().getName()));
+      if (!(properties instanceof Map<?, ?> map)) {
+        throw new IOException(
+            "Expected a map in test property file but got "
+                + (properties == null ? "null" : properties.getClass().getName()));
+      }
+      ImmutableMap.Builder<String, String> builder =
+          ImmutableMap.builderWithExpectedSize(map.size());
+      for (Map.Entry<?, ?> entry : map.entrySet()) {
+        Object value = entry.getValue();
+        if (!(entry.getKey() instanceof String key) || !isAllowedPropertyValue(value)) {
+          throw new IOException("Property contains disallowed nested type or non-String key");
+        }
+        builder.put(key, String.valueOf(value));
+      }
+      return builder.buildKeepingLast();
     }
+  }
+
+  private static boolean isAllowedPropertyValue(@Nullable Object value) {
+    return value == null
+        || value instanceof String
+        || value instanceof Number
+        || value instanceof Boolean
+        || value instanceof Character;
   }
 
   public void pullInstrumentationFilesFromDevice(
