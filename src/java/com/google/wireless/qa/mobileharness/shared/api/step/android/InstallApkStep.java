@@ -156,11 +156,19 @@ public class InstallApkStep implements InstallApkStepConstants {
     JobInfo jobInfo = testInfo.jobInfo();
     InstallCoordinator coordinator = new InstallCoordinator(testInfo, apkInstaller);
 
+    boolean skipJobFiles =
+        testInfo
+            .properties()
+            .getBoolean(PROPERTY_SKIP_JOB_EXTRA_AND_DEX_METADATA_FILES)
+            .orElse(false);
+
     // Makes sure the first apk in 'build_apk' will still be the first element inserted.
     coordinator.addApks(jobBuildApks);
     coordinator.addApks(testInfo.inputFiles().get(TAG_BUILD_APK));
     coordinator.addApks(testInfo.inputFiles().get(TAG_EXTRA_APK));
-    coordinator.addApks(getExtraApks(spec, jobInfo));
+    if (!skipJobFiles) {
+      coordinator.addApks(getExtraApks(spec, jobInfo));
+    }
 
     String extraFileTags = spec.getInstallApkExtraFileTags();
     for (String fileTag : Splitter.on(',').split(extraFileTags)) {
@@ -466,11 +474,19 @@ public class InstallApkStep implements InstallApkStepConstants {
 
   private static ImmutableSet<String> getDexMetadataFiles(
       InstallApkStepSpec spec, TestInfo testInfo) {
-    return new ImmutableSet.Builder<String>()
-        .addAll(expandG3Files(spec.getDexMetadataList()))
-        .addAll(testInfo.inputFiles().get(TAG_DEX_METADATA))
-        .addAll(testInfo.jobInfo().inputFiles().get(TAG_DEX_METADATA))
-        .build();
+    boolean skipJobFiles =
+        testInfo
+            .properties()
+            .getBoolean(PROPERTY_SKIP_JOB_EXTRA_AND_DEX_METADATA_FILES)
+            .orElse(false);
+    ImmutableSet.Builder<String> builder =
+        new ImmutableSet.Builder<String>()
+            .addAll(expandG3Files(spec.getDexMetadataList()))
+            .addAll(testInfo.inputFiles().get(TAG_DEX_METADATA));
+    if (!skipJobFiles) {
+      builder.addAll(testInfo.jobInfo().inputFiles().get(TAG_DEX_METADATA));
+    }
+    return builder.build();
   }
 
   private static ImmutableSet<String> expandG3Files(List<Google3File> g3Files) {

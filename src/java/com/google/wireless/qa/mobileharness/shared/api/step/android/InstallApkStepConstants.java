@@ -37,6 +37,9 @@ public interface InstallApkStepConstants {
       help = "Extra apks to install.  Used in combination with TAG_BUILD_APK")
   String TAG_EXTRA_APK = "extra_apk";
 
+  /** Property on TestInfo to skip reading extra_apk and dex_metadata files from jobInfo. */
+  String PROPERTY_SKIP_JOB_EXTRA_AND_DEX_METADATA_FILES = "skip_job_extra_and_dex_metadata_files";
+
   @ParamAnnotation(
       required = false,
       help =
