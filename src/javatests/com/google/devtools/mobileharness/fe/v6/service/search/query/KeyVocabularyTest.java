@@ -522,6 +522,72 @@ public final class KeyVocabularyTest {
         .containsExactly(HostKeys.DEVICE_COUNT);
   }
 
+  @Test
+  public void searchCorpusFactory_bindsPostingsAndRecordsFromPublishedBundle() {
+    FleetSnapshotStore store = Guice.createInjector().getInstance(FleetSnapshotStore.class);
+    store.publish(Fleet.FLEET_SELF, snapshot);
+    SearchCorpusFactory factory =
+        new SearchCorpusFactory(
+            store, ImmutableMap.of(Fleet.FLEET_SELF, curation), new DimensionCatalogStore());
+
+    SearchCorpus initialDeviceCorpus =
+        factory.getCorpus(Fleet.FLEET_SELF, SearchEntity.SEARCH_ENTITY_DEVICE);
+    SearchCorpus initialHostCorpus =
+        factory.getCorpus(Fleet.FLEET_SELF, SearchEntity.SEARCH_ENTITY_HOST);
+
+    LabQueryResult replacementFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        LabData.newBuilder()
+                            .setLabInfo(
+                                LabInfo.newBuilder()
+                                    .setLabLocator(
+                                        LabLocator.newBuilder()
+                                            .setHostName("lab-b")
+                                            .setIp("2.2.2.2"))
+                                    .setLabStatus(LabStatus.LAB_RUNNING))
+                            .setDeviceList(
+                                DeviceList.newBuilder()
+                                    .setDeviceTotalCount(1)
+                                    .addDeviceInfo(
+                                        DeviceInfo.newBuilder()
+                                            .setDeviceLocator(
+                                                DeviceLocator.newBuilder().setId("device-replaced"))
+                                            .setDeviceStatus(DeviceStatus.FAILED)))))
+            .build();
+    FleetSnapshot replacementSnapshot =
+        Guice.createInjector()
+            .getInstance(FleetIndexBuilder.class)
+            .build(replacementFleet, BUILD_TIME.plusSeconds(120));
+    store.publish(Fleet.FLEET_SELF, replacementSnapshot);
+
+    SearchCorpus updatedDeviceCorpus =
+        factory.getCorpus(Fleet.FLEET_SELF, SearchEntity.SEARCH_ENTITY_DEVICE);
+    SearchCorpus updatedHostCorpus =
+        factory.getCorpus(Fleet.FLEET_SELF, SearchEntity.SEARCH_ENTITY_HOST);
+
+    assertThat(initialDeviceCorpus.postings().get(DeviceKeys.STATUS.id(), "idle"))
+        .asList()
+        .containsExactly(0);
+    assertThat(initialDeviceCorpus.recordId(0)).isEqualTo("device-0");
+    assertThat(initialHostCorpus.postings().get(HostKeys.HOST_NAME.id(), "lab-a"))
+        .asList()
+        .containsExactly(0);
+    assertThat(initialHostCorpus.recordId(0)).isEqualTo("lab-a");
+
+    assertThat(updatedDeviceCorpus.postings().get(DeviceKeys.STATUS.id(), "failed"))
+        .asList()
+        .containsExactly(0);
+    assertThat(updatedDeviceCorpus.recordId(0)).isEqualTo("device-replaced");
+    assertThat(updatedHostCorpus.postings().get(HostKeys.HOST_NAME.id(), "lab-b"))
+        .asList()
+        .containsExactly(0);
+    assertThat(updatedHostCorpus.recordId(0)).isEqualTo("lab-b");
+  }
+
   /** Delegates every curation call so a test can override one method. */
   private static class DelegatingCuration implements ScenarioCuration {
     private final ScenarioCuration delegate;

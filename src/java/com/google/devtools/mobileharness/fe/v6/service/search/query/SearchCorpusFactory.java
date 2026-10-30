@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapsho
 import com.google.devtools.mobileharness.fe.v6.service.search.index.OverlayView;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.DimensionCatalogStore;
 import com.google.devtools.mobileharness.fe.v6.service.search.refresh.FleetSnapshotStore;
+import com.google.devtools.mobileharness.fe.v6.service.search.refresh.FleetSnapshotStore.SnapshotBundle;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyRegistry;
 import java.util.Map;
@@ -96,19 +97,19 @@ public final class SearchCorpusFactory {
       Fleet fleet, SearchEntity entity, ImmutableMap<String, DimensionOverlay> overlays) {
     ScenarioCuration curation = curations.get(fleet);
     KeyTables tables = keyTables.getOrDefault(fleet, defaultKeyTables);
+    SnapshotBundle bundle = store.getBundle(fleet);
     if (entity == SearchEntity.SEARCH_ENTITY_HOST) {
       return new HostCorpus(
-          store.get(fleet),
-          store.hostPostings(fleet),
+          bundle.snapshot(),
+          bundle.hostPostings(),
           curation,
           tables.hostRegistry(),
           tables.hostAliases());
     }
-    FleetSnapshot snapshot = store.get(fleet);
-    OverlayView overlayView = OverlayView.bind(snapshot, overlays);
+    OverlayView overlayView = OverlayView.bind(bundle.snapshot(), overlays);
     return new DeviceCorpus(
-        snapshot,
-        store.postings(fleet),
+        bundle.snapshot(),
+        bundle.devicePostings(),
         curation,
         tables.deviceRegistry(),
         tables.deviceAliases(),
