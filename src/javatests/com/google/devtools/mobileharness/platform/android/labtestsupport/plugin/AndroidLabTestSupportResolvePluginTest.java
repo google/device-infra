@@ -72,7 +72,8 @@ public final class AndroidLabTestSupportResolvePluginTest {
 
     plugin.onJobStart(event);
 
-    assertThat(jobInfo.files().get(AndroidLabTestSupportResolvePlugin.TAG_LAB_TEST_SUPPORT_APK))
+    assertThat(
+            jobInfo.inputFiles().get(AndroidLabTestSupportResolvePlugin.TAG_LAB_TEST_SUPPORT_APK))
         .containsExactly(labTestSupportApkPath);
     assertThat(
             jobInfo

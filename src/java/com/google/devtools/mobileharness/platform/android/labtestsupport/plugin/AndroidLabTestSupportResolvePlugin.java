@@ -100,7 +100,7 @@ public class AndroidLabTestSupportResolvePlugin {
     logger.atInfo().log(
         "Adding LabTestSupport APK to job files with tag \"%s\": %s",
         TAG_LAB_TEST_SUPPORT_APK, labTestSupportApkPath);
-    jobInfo.files().add(TAG_LAB_TEST_SUPPORT_APK, labTestSupportApkPath);
+    jobInfo.inputFiles().add(TAG_LAB_TEST_SUPPORT_APK, labTestSupportApkPath);
     // Enables file cache in the lab.
     jobInfo.params().add(String.format("file_accessor_%s", TAG_LAB_TEST_SUPPORT_APK), "lab");
   }
