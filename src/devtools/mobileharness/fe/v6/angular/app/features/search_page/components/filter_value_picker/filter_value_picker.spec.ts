@@ -120,6 +120,30 @@ describe('FilterValuePicker', () => {
     expect(component.isNegated()).toBeTrue();
   });
 
+  it('closes polarity menu when search input is focused', () => {
+    const polarityBtn = overlayContainerElement.querySelector(
+      '.vp-polarity-btn',
+    ) as HTMLButtonElement;
+    polarityBtn.click();
+    fixture.detectChanges();
+
+    expect(component.showPolarityMenu()).toBeTrue();
+    expect(
+      overlayContainerElement.querySelector('.vp-polarity-menu.open'),
+    ).not.toBeNull();
+
+    const searchInput = overlayContainerElement.querySelector(
+      '.vp-search input',
+    ) as HTMLInputElement;
+    searchInput.focus();
+    fixture.detectChanges();
+
+    expect(component.showPolarityMenu()).toBeFalse();
+    expect(
+      overlayContainerElement.querySelector('.vp-polarity-menu.open'),
+    ).toBeNull();
+  });
+
   it('should toggle item selection when clicked', () => {
     expect(component.selectedSet().has('IDLE')).toBeTrue();
     expect(component.selectedSet().has('BUSY')).toBeFalse();

@@ -36,7 +36,7 @@
             <button
               class="vp-polarity-btn"
               [class.negate]="isNegated()"
-              (click)="showPolarityMenu.set(!showPolarityMenu())"
+              (click)="togglePolarityMenu()"
             >
               <span>{{ isNegated() ? negVerb() : posVerb() }}</span>
               <mat-icon class="material-symbols-outlined">arrow_drop_down</mat-icon>
@@ -133,25 +133,27 @@
           @case ('namedPair') {
             <!-- Property Key-Value Picker -->
             @if (config()?.needsName) {
-              <div class="vp-search">
+              <div class="vp-search" (focusin)="showPolarityMenu.set(false)">
                 <input
                   type="text"
                   class="vp-name"
                   [placeholder]="config()?.namePlaceholder || 'Name'"
                   [ngModel]="propName()"
                   (ngModelChange)="propName.set($event)"
+                  (focus)="showPolarityMenu.set(false)"
                   (keydown.enter)="onApply()"
                   (keydown.escape)="onCancel()"
                 />
               </div>
             }
-            <div class="vp-search">
+            <div class="vp-search" (focusin)="showPolarityMenu.set(false)">
               <input
                 type="text"
                 class="vp-text"
                 [placeholder]="config()?.valPlaceholder || 'Value'"
                 [ngModel]="propVal()"
                 (ngModelChange)="propVal.set($event)"
+                (focus)="showPolarityMenu.set(false)"
                 (keydown.enter)="onApply()"
                 (keydown.escape)="onCancel()"
               />
@@ -159,13 +161,14 @@
           }
           @case ('text') {
             <!-- Plain Text Picker -->
-            <div class="vp-search">
+            <div class="vp-search" (focusin)="showPolarityMenu.set(false)">
               <input
                 type="text"
                 class="vp-text"
                 [placeholder]="config()?.valPlaceholder || 'Value'"
                 [ngModel]="textVal()"
                 (ngModelChange)="textVal.set($event)"
+                (focus)="showPolarityMenu.set(false)"
                 (keydown.enter)="onApply()"
                 (keydown.escape)="onCancel()"
               />
@@ -174,13 +177,14 @@
           @default {
             <!-- Standard Multi-column Filter List -->
             @if (showSearchInput()) {
-              <div class="vp-search">
+              <div class="vp-search" (focusin)="showPolarityMenu.set(false)">
                 <input
                   #searchInput
                   type="text"
                   placeholder="Filter or add value…"
                   [ngModel]="searchQuery()"
                   (ngModelChange)="searchQuery.set($event)"
+                  (focus)="showPolarityMenu.set(false)"
                   (keydown.enter)="onSearchEnter()"
                 />
               </div>

@@ -348,6 +348,15 @@ export class FilterValuePicker {
   }
 
   // ===================== User Interaction Handlers =====================
+  /** Toggles the polarity dropdown menu open state. */
+  togglePolarityMenu() {
+    const next = !this.showPolarityMenu();
+    this.showPolarityMenu.set(next);
+    if (next) {
+      this.searchInput()?.nativeElement.blur();
+    }
+  }
+
   /** Toggles sort direction or changes the active sorting column. */
   toggleSort(col: 'value' | 'filtered' | 'total') {
     if (this.sortBy() === col) {
