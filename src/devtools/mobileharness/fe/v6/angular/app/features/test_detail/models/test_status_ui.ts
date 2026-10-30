@@ -14,33 +14,33 @@ export declare interface StatusDisplayMeta {
 /** Mapping of TestStatus to UI display properties. */
 export const TEST_STATUS_DISPLAY_MAP: Record<TestStatus, StatusDisplayMeta> = {
   [TestStatus.TEST_STATUS_RUNNING]: {
-    label: 'RUNNING',
+    label: 'Running',
     cssClass: 'blue',
     icon: 'sync',
     isSpinning: true,
   },
   [TestStatus.TEST_STATUS_SUSPENDED]: {
-    label: 'SUSPENDED',
+    label: 'Suspended',
     cssClass: 'yellow',
     icon: 'pause_circle_filled',
   },
   [TestStatus.TEST_STATUS_DONE]: {
-    label: 'DONE',
+    label: 'Done',
     cssClass: 'gray',
     icon: 'watch_later',
   },
   [TestStatus.TEST_STATUS_NEW]: {
-    label: 'NEW',
+    label: 'Queued',
     cssClass: 'gray',
     icon: 'fiber_new',
   },
   [TestStatus.TEST_STATUS_ASSIGNED]: {
-    label: 'ASSIGNED',
+    label: 'Assigned',
     cssClass: 'gray',
     icon: 'assignment_ind',
   },
   [TestStatus.TEST_STATUS_UNSPECIFIED]: {
-    label: 'UNSPECIFIED',
+    label: 'Unknown',
     cssClass: 'gray',
     icon: 'help_outline',
   },
@@ -49,37 +49,37 @@ export const TEST_STATUS_DISPLAY_MAP: Record<TestStatus, StatusDisplayMeta> = {
 /** Mapping of TestResult to UI display properties. */
 export const TEST_RESULT_DISPLAY_MAP: Record<TestResult, StatusDisplayMeta> = {
   [TestResult.TEST_RESULT_PASS]: {
-    label: 'PASS',
+    label: 'Pass',
     cssClass: 'green',
     icon: 'check_circle',
   },
   [TestResult.TEST_RESULT_FAIL]: {
-    label: 'FAIL',
+    label: 'Fail',
     cssClass: 'red',
     icon: 'error',
   },
   [TestResult.TEST_RESULT_ERROR]: {
-    label: 'ERROR',
+    label: 'Error',
     cssClass: 'red',
     icon: 'error',
   },
   [TestResult.TEST_RESULT_TIMEOUT]: {
-    label: 'TIMEOUT',
+    label: 'Timeout',
     cssClass: 'red',
     icon: 'access_time',
   },
   [TestResult.TEST_RESULT_SKIP]: {
-    label: 'SKIP',
+    label: 'Skipped',
     cssClass: 'gray',
     icon: 'block',
   },
   [TestResult.TEST_RESULT_ABORT]: {
-    label: 'ABORT',
+    label: 'Aborted',
     cssClass: 'gray',
     icon: 'cancel',
   },
   [TestResult.TEST_RESULT_UNSPECIFIED]: {
-    label: 'UNKNOWN',
+    label: 'Unknown',
     cssClass: 'gray',
     icon: 'help_outline',
   },

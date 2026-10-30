@@ -1,5 +1,9 @@
 import {JobResult, JobStatus} from '../../core/models/common_models';
-import {TestResult, TestStatus} from '../../core/models/test_overview';
+import {
+  TestResult,
+  TestStatus,
+  TestSummary,
+} from '../../core/models/test_overview';
 
 /** Configuration model for rendering status badge UI elements. */
 export interface StatusBadge {
@@ -422,4 +426,22 @@ export function getTestResultBadge(result?: TestResult | string): StatusBadge {
     text: 'N/A',
     spin: false,
   };
+}
+
+/**
+ * Returns the UI result badge for a `TestSummary`, or `null` when no result
+ * should be displayed (e.g. `UNSPECIFIED`, or when `requireDoneStatus` is true
+ * and `test.status` is not `TEST_STATUS_DONE`).
+ */
+export function getTestSummaryResultBadge(
+  test: TestSummary,
+  options: {requireDoneStatus?: boolean} = {},
+): StatusBadge | null {
+  if (options.requireDoneStatus && test.status !== TestStatus.TEST_STATUS_DONE) {
+    return null;
+  }
+  if (!test.result || test.result === TestResult.TEST_RESULT_UNSPECIFIED) {
+    return null;
+  }
+  return getTestResultBadge(test.result);
 }

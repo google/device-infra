@@ -1,16 +1,19 @@
 import {
   ComponentFixture,
+  DeferBlockState,
   TestBed,
   fakeAsync,
   tick,
 } from '@angular/core/testing';
+import {By} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {
   ActivatedRoute,
+  ParamMap,
   convertToParamMap,
   provideRouter,
 } from '@angular/router';
-import {of} from 'rxjs';
+import {BehaviorSubject, of} from 'rxjs';
 
 import {APP_DATA} from '../../core/models/app_data';
 import {
@@ -32,6 +35,8 @@ import {
 import {ClipboardService} from '../../shared/services/clipboard_service';
 import {LoadingService} from '../../shared/services/loading_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
+import {TestFilesTab} from './components/test_files_tab/test_files_tab';
+import {TestLogTab} from './components/test_log_tab/test_log_tab';
 import {TestDetail} from './test_detail';
 
 describe('TestDetail Component', () => {
@@ -43,6 +48,8 @@ describe('TestDetail Component', () => {
   let mockSnackBarService: jasmine.SpyObj<SnackBarService>;
   let mockLoadingService: jasmine.SpyObj<LoadingService>;
   let mockActivatedRoute: Partial<ActivatedRoute>;
+  let paramMapSubject: BehaviorSubject<ParamMap>;
+  let queryParamMapSubject: BehaviorSubject<ParamMap>;
 
   const mockOverviewData: TestOverviewData = {
     id: 'test_123',
@@ -111,9 +118,11 @@ describe('TestDetail Component', () => {
       'hide',
     ]);
 
+    paramMapSubject = new BehaviorSubject(convertToParamMap({'id': 'test_123'}));
+    queryParamMapSubject = new BehaviorSubject(convertToParamMap({}));
     mockActivatedRoute = {
-      paramMap: of(convertToParamMap({'id': 'test_123'})),
-      queryParamMap: of(convertToParamMap({})),
+      paramMap: paramMapSubject.asObservable(),
+      queryParamMap: queryParamMapSubject.asObservable(),
     };
 
     await TestBed.configureTestingModule({
@@ -253,6 +262,9 @@ describe('TestDetail Component', () => {
     expect(killButton.disabled).toBeFalse();
     expect(runningFixture.componentInstance.killActionState()?.enabled).toBeTrue();
     expect(runningFixture.componentInstance.killActionState()?.visible).toBeTrue();
+    expect(compiled.querySelector('.live-badge')?.textContent).toContain(
+      'LIVE',
+    );
   }));
 
   it('renders timeline legacy link with redirect_to_v6=0', fakeAsync(() => {
@@ -270,5 +282,170 @@ describe('TestDetail Component', () => {
       `${component.legacyFeUrl}/testdetailview/job_456/test_123?tab=2&redirect_to_v6=0`,
     );
   }));
+
+  it('supports sub-test route params, breadcrumb, Part of chips, legacy URL, child tabs, and silent reload', async () => {
+    const subTestOverviewData: TestOverviewData = {
+      ...mockOverviewData,
+      id: 'sub_test_abcdef1234',
+      name: 'SubTestExecution',
+      status: TestStatus.TEST_STATUS_NEW,
+      subTestsInfo: {
+        rootTestId: 'root_test_12345678',
+      },
+      fileExplorer: {
+        cnsPath: '/cns-fake/test-path',
+        files: [],
+      },
+    };
+    mockTestService.getTest.and.returnValue(of({test: subTestOverviewData}));
+    paramMapSubject.next(
+      convertToParamMap({'id': 'root_test_12345678', 'jobId': 'job_456'}),
+    );
+    queryParamMapSubject.next(
+      convertToParamMap({'sub_test_id': 'sub_test_abcdef1234'}),
+    );
+
+    const subFixture = TestBed.createComponent(TestDetail);
+    const subComponent = subFixture.componentInstance;
+    subFixture.detectChanges();
+    await subFixture.whenStable();
+    subFixture.detectChanges();
+
+    expect(mockTestService.getTest).toHaveBeenCalledWith({
+      testId: 'root_test_12345678',
+      subTestId: 'sub_test_abcdef1234',
+      jobId: 'job_456',
+    });
+    expect(subComponent.rootTestId()).toBe('root_test_12345678');
+    expect(subComponent.subTestId()).toBe('sub_test_abcdef1234');
+    expect(subComponent.isSubTest()).toBeTrue();
+    expect(subComponent.shortId('root_test_12345678')).toBe('root_tes…');
+    expect(subComponent.shortId('short')).toBe('short');
+    expect(subComponent.legacyTestDetailUrl()).toBe(
+      `${subComponent.legacyFeUrl}/testdetailview/job_456/root_test_12345678?sub_test=sub_test_abcdef1234`,
+    );
+
+    const compiled = subFixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.breadcrumb')?.textContent).toContain(
+      'Sub-test sub_test…',
+    );
+    const partOfChips = compiled.querySelectorAll('.part-of-chip');
+    expect(partOfChips.length).toBe(2);
+    expect(partOfChips[0]?.textContent).toContain('Test');
+    expect(partOfChips[0]?.textContent).toContain('root_test_12345678');
+    expect(partOfChips[1]?.textContent).toContain('Job');
+    expect(partOfChips[1]?.textContent).toContain('job_456');
+    expect(compiled.querySelector('.live-badge')).toBeNull();
+    expect(compiled.querySelector('.status-indicator')?.textContent).not.toContain(
+      'Status:',
+    );
+    expect(compiled.querySelector('.status-indicator')?.textContent).toContain(
+      'Result: Pass',
+    );
+
+    subComponent.setActiveTab('timeline');
+    subFixture.detectChanges();
+    const timelineLink = compiled.querySelector(
+      '.under-development-text a',
+    ) as HTMLAnchorElement | null;
+    expect(timelineLink?.getAttribute('href')).toBe(
+      `${subComponent.legacyFeUrl}/testdetailview/job_456/root_test_12345678?sub_test=sub_test_abcdef1234&tab=2&redirect_to_v6=0`,
+    );
+
+    subComponent.setActiveTab('log');
+    subFixture.detectChanges();
+    await subFixture.whenStable();
+    for (const block of await subFixture.getDeferBlocks()) {
+      await block.render(DeferBlockState.Complete);
+    }
+    subFixture.detectChanges();
+    const logTab = subFixture.debugElement.query(
+      By.directive(TestLogTab),
+    ).componentInstance as TestLogTab;
+    expect(logTab.testId()).toBe('root_test_12345678');
+    expect(logTab.subTestId()).toBe('sub_test_abcdef1234');
+
+    subComponent.setActiveTab('files');
+    subFixture.detectChanges();
+    await subFixture.whenStable();
+    for (const block of await subFixture.getDeferBlocks()) {
+      await block.render(DeferBlockState.Complete);
+    }
+    subFixture.detectChanges();
+    const filesTab = subFixture.debugElement.query(
+      By.directive(TestFilesTab),
+    ).componentInstance as TestFilesTab;
+    expect(filesTab.testId()).toBe('root_test_12345678');
+    expect(filesTab.subTestId()).toBe('sub_test_abcdef1234');
+
+    mockTestService.getTest.calls.reset();
+    subComponent.onLogStreamCompleted();
+    subFixture.detectChanges();
+    await subFixture.whenStable();
+    subFixture.detectChanges();
+    expect(mockTestService.getTest).toHaveBeenCalledWith({
+      testId: 'root_test_12345678',
+      subTestId: 'sub_test_abcdef1234',
+      jobId: 'job_456',
+    });
+
+    // When a sub-test is still NEW and has no result yet, .vertical-separator and .status-indicator are hidden.
+    mockTestService.getTest.and.returnValue(
+      of({
+        test: {
+          ...subTestOverviewData,
+          status: TestStatus.TEST_STATUS_NEW,
+          result: TestResult.TEST_RESULT_UNSPECIFIED,
+        },
+      }),
+    );
+    subComponent.onLogStreamCompleted();
+    subFixture.detectChanges();
+    await subFixture.whenStable();
+    subFixture.detectChanges();
+    expect(compiled.querySelector('.vertical-separator')).toBeNull();
+    expect(compiled.querySelector('.status-indicator')).toBeNull();
+
+    // When a sub-test's root test is SUSPENDED without a sub-test result, the Status: pill is shown.
+    mockTestService.getTest.and.returnValue(
+      of({
+        test: {
+          ...subTestOverviewData,
+          status: TestStatus.TEST_STATUS_SUSPENDED,
+          result: TestResult.TEST_RESULT_UNSPECIFIED,
+        },
+      }),
+    );
+    const suspendedSubFixture = TestBed.createComponent(TestDetail);
+    suspendedSubFixture.detectChanges();
+    await suspendedSubFixture.whenStable();
+    suspendedSubFixture.detectChanges();
+    const suspendedCompiled = suspendedSubFixture.nativeElement as HTMLElement;
+    expect(
+      suspendedCompiled.querySelector('.status-indicator')?.textContent,
+    ).toContain('Status: Suspended');
+
+    // When a sub-test is already DONE, onLogStreamCompleted() does not trigger reloadSilent().
+    mockTestService.getTest.and.returnValue(
+      of({
+        test: {
+          ...subTestOverviewData,
+          status: TestStatus.TEST_STATUS_DONE,
+          result: TestResult.TEST_RESULT_PASS,
+        },
+      }),
+    );
+    const doneSubFixture = TestBed.createComponent(TestDetail);
+    const doneSubComponent = doneSubFixture.componentInstance;
+    doneSubFixture.detectChanges();
+    await doneSubFixture.whenStable();
+    doneSubFixture.detectChanges();
+    mockTestService.getTest.calls.reset();
+    doneSubComponent.onLogStreamCompleted();
+    doneSubFixture.detectChanges();
+    await doneSubFixture.whenStable();
+    doneSubFixture.detectChanges();
+    expect(mockTestService.getTest).not.toHaveBeenCalled();
+  });
 });
 

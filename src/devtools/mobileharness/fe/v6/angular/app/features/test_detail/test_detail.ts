@@ -43,6 +43,9 @@ import {
   TEST_STATUS_DISPLAY_MAP,
 } from './models/test_status_ui';
 
+/** Number of leading id characters the breadcrumb shows (one UUID group). */
+const SHORT_ID_LENGTH = 8;
+
 /**
  * Component for displaying the detailed information of a single test.
  * It fetches test data based on the ID from the route parameters and
@@ -177,6 +180,38 @@ export class TestDetail {
     () => this.testOverview()?.job?.id || this.testPageData()?.jobId || '',
   );
 
+  readonly subTestId = computed(() => this.routeParams()?.subTestId);
+
+  readonly rootTestId = computed(
+    () =>
+      this.testOverview()?.subTestsInfo?.rootTestId ||
+      this.testId() ||
+      this.testOverview()?.id ||
+      '',
+  );
+
+  readonly isSubTest = computed(() => {
+    const test = this.testOverview();
+    const rootId = this.rootTestId();
+    return Boolean(this.subTestId() || (test && rootId && rootId !== test.id));
+  });
+
+  /** Shortens an id for the breadcrumb; the full id is in the tooltip. */
+  shortId(id: string): string {
+    return id.length > SHORT_ID_LENGTH
+      ? `${id.slice(0, SHORT_ID_LENGTH)}…`
+      : id;
+  }
+
+  readonly legacyTestDetailUrl = computed(() => {
+    const test = this.testOverview();
+    if (!test) return '';
+    const base = `${this.legacyFeUrl}/testdetailview/${this.jobId()}/${this.rootTestId()}`;
+    return this.isSubTest()
+      ? `${base}?sub_test=${encodeURIComponent(test.id)}`
+      : base;
+  });
+
   readonly pageTitle = computed(() => {
     const test = this.testOverview();
     const id = this.testId();
@@ -208,20 +243,17 @@ export class TestDetail {
       : TEST_RESULT_DISPLAY_MAP[result as keyof typeof TEST_RESULT_DISPLAY_MAP];
   });
 
-  readonly getTestFileContent = (path: string) => {
-    const test = this.testOverview();
-    const jobId = test?.job?.id || this.testPageData()?.jobId || '';
-    const testId = this.testId() || '';
-    return this.testService.getTestFile(testId, jobId, path);
-  };
-
   setActiveTab(tab: 'overview' | 'timeline' | 'log' | 'files') {
     this.activeTab.set(tab);
   }
 
   onLogStreamCompleted() {
     const test = this.testOverview();
-    if (test && test.status === TestStatus.TEST_STATUS_RUNNING) {
+    if (
+      test &&
+      (test.status === TestStatus.TEST_STATUS_RUNNING ||
+        (this.isSubTest() && test.status === TestStatus.TEST_STATUS_NEW))
+    ) {
       this.silentResourceResult.reloadSilent();
     }
   }

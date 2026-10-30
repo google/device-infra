@@ -1,5 +1,6 @@
 @use '@angular/material' as mat;
 @use '../../../../shared/styles/overview';
+@use '../../../../shared/styles/common';
 
 :host {
   display: block;
@@ -9,6 +10,267 @@
   .warning-info-card .info-card-content {
     padding: 0;
   }
+}
+
+.table-container {
+  width: 100%;
+  max-height: 380px;
+  overflow: auto;
+  @include common.shared-scrollbar-style();
+}
+
+.data-table {
+  width: 100%;
+  min-width: 650px;
+  border-collapse: collapse;
+  background-color: transparent;
+  letter-spacing: normal;
+
+  tr.mat-mdc-header-row {
+    height: 45px;
+  }
+
+  th.mat-mdc-header-cell,
+  td.mat-mdc-cell {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+    vertical-align: middle;
+    font-size: 0.875rem;
+    background-color: transparent;
+    letter-spacing: normal;
+  }
+
+  th.mat-mdc-header-cell {
+    font-weight: 500;
+    color: #5f6368;
+    height: 45px;
+    padding-top: 0;
+    padding-bottom: 0;
+    background-color: #f9fafb;
+  }
+
+  td.mat-mdc-cell {
+    color: #3c4043;
+  }
+
+  .mat-column-id {
+    font-family: overview.$labconsole-font;
+    font-size: 0.75rem;
+  }
+
+  th.mat-column-result,
+  td.mat-column-result {
+    text-align: center;
+    width: 90px;
+  }
+
+  .mat-column-startTime {
+    color: #5f6368;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    width: 170px;
+  }
+
+  th.mat-column-duration,
+  td.mat-column-duration {
+    text-align: center;
+    color: #5f6368;
+    font-size: 0.75rem;
+    width: 90px;
+  }
+
+  .mat-column-host {
+    font-family: overview.$labconsole-font;
+    font-size: 0.75rem;
+    color: #5f6368;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    a {
+      color: #1a73e8;
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  .mat-column-device {
+    font-family: overview.$labconsole-font;
+    font-size: 0.75rem;
+    color: #5f6368;
+    white-space: nowrap;
+
+    a {
+      color: #1a73e8;
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+
+  // Every column header shares one size and stays on one line; the narrower
+  // body font of some columns applies to their cells only. The container
+  // scrolls horizontally when the columns do not fit.
+  th.mat-mdc-header-cell {
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+}
+
+.test-id-container {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.test-id-link {
+  display: inline-block;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #2563eb;
+  font-weight: 500;
+  vertical-align: middle;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  @media (min-width: 1024px) {
+    max-width: 180px;
+  }
+
+  @media (min-width: 1280px) {
+    max-width: none;
+  }
+}
+
+.test-name-text {
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  @media (min-width: 1024px) {
+    max-width: 320px;
+  }
+
+  @media (min-width: 1280px) {
+    max-width: 400px;
+  }
+}
+
+.copy-button {
+  border: none;
+  background: transparent;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #80868b;
+  flex-shrink: 0;
+
+  &:hover {
+    background-color: #f1f3f4;
+    color: #202124;
+  }
+
+  &:disabled {
+    cursor: default;
+    pointer-events: none;
+  }
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+  }
+
+  &.success {
+    color: #1e8e3e;
+    &:hover {
+      background-color: #f1f3f4;
+      color: #1e8e3e;
+    }
+  }
+}
+
+mat-icon.copy-icon {
+  font-size: 12px;
+  width: 12px;
+  height: 12px;
+}
+
+.status-badge-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  line-height: 15px;
+  white-space: nowrap;
+
+  mat-icon {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+  }
+
+  &.bg-blue-50 {
+    background-color: #e8f0fe;
+    color: #1a73e8;
+  }
+
+  &.bg-green-50 {
+    background-color: #e6f4ea;
+    color: #1e8e3e;
+  }
+
+  &.bg-red-50 {
+    background-color: #fee2e2;
+    color: #dc2626;
+  }
+
+  &.bg-gray-50 {
+    background-color: #f1f3f4;
+    color: #5f6368;
+  }
+
+  &.bg-yellow-55 {
+    background-color: #fff8e1;
+    color: #b78103;
+  }
+}
+
+.value-stack-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.empty-fallback-text {
+  font-style: italic;
+  color: #9ca3af;
+  font-family: overview.$labconsole-font;
+}
+
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 // Overview Tab via MasterDetailLayout

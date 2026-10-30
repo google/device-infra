@@ -113,3 +113,54 @@ export function createTimestampInfoMap(
     return result;
   });
 }
+
+/**
+ * Formats the elapsed duration between two UTC timestamp strings (e.g. '2m 5s'),
+ * or returns 'N/A' when either timestamp is missing, unparseable, or negative.
+ */
+export function formatExecutionDuration(
+  startTime?: string,
+  endTime?: string,
+): string {
+  if (!startTime || !endTime) return 'N/A';
+  const start = dateUtils.parseUtcTimestamp(startTime);
+  const end = dateUtils.parseUtcTimestamp(endTime);
+  let diffSec = -1;
+  if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime())) {
+    const startIso = new Date(startTime);
+    const endIso = new Date(endTime);
+    if (isNaN(startIso.getTime()) || isNaN(endIso.getTime())) return 'N/A';
+    diffSec = Math.round((endIso.getTime() - startIso.getTime()) / 1000);
+  } else {
+    diffSec = Math.round((end.getTime() - start.getTime()) / 1000);
+  }
+
+  if (diffSec < 0) return 'N/A';
+  if (diffSec < 60) return `${diffSec}s`;
+  if (diffSec < 3600) {
+    const m = Math.floor(diffSec / 60);
+    const s = diffSec % 60;
+    return `${m}m ${s}s`;
+  }
+  const h = Math.floor(diffSec / 3600);
+  const m = Math.floor((diffSec % 3600) / 60);
+  const s = diffSec % 60;
+  return `${h}h ${m}m ${s}s`;
+}
+
+/**
+ * Formats a test start time string in detailed local time, falling back to the
+ * raw string if parsing fails or 'N/A' if empty.
+ */
+export function formatExecutionStartTime(startTime?: string): string {
+  if (!startTime) return 'N/A';
+  const date = dateUtils.parseUtcTimestamp(startTime);
+  if (!date || isNaN(date.getTime())) {
+    const fallback = new Date(startTime);
+    if (!isNaN(fallback.getTime())) {
+      return dateUtils.formatDetailedLocal(fallback);
+    }
+    return startTime;
+  }
+  return dateUtils.formatDetailedLocal(date);
+}

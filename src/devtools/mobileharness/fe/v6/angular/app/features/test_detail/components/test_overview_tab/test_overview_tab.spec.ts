@@ -1,5 +1,10 @@
 import {ChangeDetectionStrategy, Component} from '@angular/core';
-import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {
+  ComponentFixture,
+  TestBed,
+  fakeAsync,
+  tick,
+} from '@angular/core/testing';
 import {By} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
@@ -12,6 +17,10 @@ import {
   TestStatus,
 } from '../../../../core/models/test_overview';
 import {AccordionItem} from '../../../../shared/components/accordion_item/accordion_item';
+import {NavLink} from '../../../../shared/components/nav_link/nav_link';
+import {getTestSummaryResultBadge} from '../../../../shared/composables/status_badge';
+import {ClipboardService} from '../../../../shared/services/clipboard_service';
+import {dateUtils} from '../../../../shared/utils/date_utils';
 import {TestOverviewTab} from './test_overview_tab';
 
 @Component({
@@ -217,4 +226,344 @@ describe('TestOverviewTab Component', () => {
       'error-panel-1-trigger',
     );
   });
+
+  it('should show sub-tests card and nav item when subTestsInfo has sub-tests', () => {
+    const testWithSubTests: TestOverviewData = {
+      ...mockTest,
+      subTestsInfo: {
+        rootTestId: 'test_123',
+        subTests: {
+          test: [
+            {
+              id: 'sub_01',
+              name: 'SubTestCase1',
+              status: TestStatus.TEST_STATUS_DONE,
+              result: TestResult.TEST_RESULT_PASS,
+            },
+          ],
+        },
+      },
+    };
+    fixture.componentInstance.test = testWithSubTests;
+    fixture.detectChanges();
+
+    expect(component.overviewNavList()).toEqual([
+      {id: 'test-sub-tests', label: 'Sub-tests'},
+      {id: 'overview-execution', label: 'Execution Details'},
+      {id: 'overview-properties', label: 'Test Properties'},
+    ]);
+
+    const subTestsCard = fixture.debugElement.query(By.css('#test-sub-tests'));
+    expect(subTestsCard).not.toBeNull();
+  });
+
+  it('shows the MOSS result of a sub-test whose status stays NEW and has no Status column', () => {
+    const testWithSubTests: TestOverviewData = {
+      ...mockTest,
+      subTestsInfo: {
+        rootTestId: 'test_123',
+        subTests: {
+          test: [
+            {
+              id: 'sub_01',
+              name: 'MoblyTest',
+              status: TestStatus.TEST_STATUS_NEW,
+              result: TestResult.TEST_RESULT_PASS,
+            },
+          ],
+        },
+      },
+    };
+    fixture.componentInstance.test = testWithSubTests;
+    fixture.detectChanges();
+
+    const subTestsCard = fixture.debugElement.query(By.css('#test-sub-tests'));
+    expect(subTestsCard.query(By.css('th.mat-column-status'))).toBeNull();
+    const resultCell = subTestsCard.query(By.css('td.mat-column-result'));
+    expect(resultCell.nativeElement.textContent).toContain('Pass');
+    expect(resultCell.nativeElement.textContent).not.toContain('N/A');
+  });
+
+  it('binds sub-test Host and Device NavLink configs with universe only when labUniverse is set', () => {
+    const subTestWithHostAndDevices = {
+      id: 'sub_01',
+      name: 'MoblyTest',
+      status: TestStatus.TEST_STATUS_DONE,
+      result: TestResult.TEST_RESULT_PASS,
+      host: {
+        name: 'sub-host.example.com',
+        ip: '10.0.0.2',
+      },
+      devices: {
+        device: [{id: 'sub-dev-1'}],
+      },
+    };
+    const emptyUniverseFixture = TestBed.createComponent(TestHostComponent);
+    emptyUniverseFixture.componentInstance.test = {
+      ...mockTest,
+      labUniverse: '',
+      subTestsInfo: {
+        rootTestId: 'test_123',
+        subTests: {test: [subTestWithHostAndDevices]},
+      },
+    };
+    emptyUniverseFixture.detectChanges();
+
+    const emptySubTestsCard = emptyUniverseFixture.debugElement.query(
+      By.css('#test-sub-tests'),
+    );
+    const emptyHostLink = emptySubTestsCard
+      .query(By.css('td.mat-column-host a'))
+      .injector.get(NavLink);
+    const emptyDeviceLink = emptySubTestsCard
+      .query(By.css('td.mat-column-device a'))
+      .injector.get(NavLink);
+    expect(emptyHostLink.config()).toEqual({
+      type: 'host',
+      hostName: 'sub-host.example.com',
+      hostIp: '10.0.0.2',
+    });
+    expect(emptyDeviceLink.config()).toEqual({
+      type: 'device',
+      hostName: 'sub-host.example.com',
+      hostIp: '10.0.0.2',
+      deviceId: 'sub-dev-1',
+    });
+
+    const atsUniverseFixture = TestBed.createComponent(TestHostComponent);
+    atsUniverseFixture.componentInstance.test = {
+      ...mockTest,
+      labUniverse: 'ats_1',
+      subTestsInfo: {
+        rootTestId: 'test_123',
+        subTests: {test: [subTestWithHostAndDevices]},
+      },
+    };
+    atsUniverseFixture.detectChanges();
+
+    const atsSubTestsCard = atsUniverseFixture.debugElement.query(
+      By.css('#test-sub-tests'),
+    );
+    const atsHostLink = atsSubTestsCard
+      .query(By.css('td.mat-column-host a'))
+      .injector.get(NavLink);
+    const atsDeviceLink = atsSubTestsCard
+      .query(By.css('td.mat-column-device a'))
+      .injector.get(NavLink);
+    expect(atsHostLink.config()).toEqual({
+      type: 'host',
+      hostName: 'sub-host.example.com',
+      hostIp: '10.0.0.2',
+      universe: 'ats_1',
+    });
+    expect(atsDeviceLink.config()).toEqual({
+      type: 'device',
+      hostName: 'sub-host.example.com',
+      hostIp: '10.0.0.2',
+      deviceId: 'sub-dev-1',
+      universe: 'ats_1',
+    });
+  });
+
+  it('computes sub-test duration, start time, devices list, and result badge across edge cases', () => {
+    expect(
+      component.getTestDuration({
+        id: 's1',
+        name: 's1',
+        status: TestStatus.TEST_STATUS_DONE,
+        result: TestResult.TEST_RESULT_PASS,
+      }),
+    ).toBe('N/A');
+
+    expect(
+      component.getTestDuration({
+        id: 's2',
+        name: 's2',
+        status: TestStatus.TEST_STATUS_DONE,
+        result: TestResult.TEST_RESULT_PASS,
+        startTime: '2026-06-08T03:00:00Z',
+        endTime: '2026-06-08T03:00:45Z',
+      }),
+    ).toBe('45s');
+
+    expect(
+      component.getTestDuration({
+        id: 's3',
+        name: 's3',
+        status: TestStatus.TEST_STATUS_DONE,
+        result: TestResult.TEST_RESULT_PASS,
+        startTime: '2026-06-08T03:00:00Z',
+        endTime: '2026-06-08T03:02:05Z',
+      }),
+    ).toBe('2m 5s');
+
+    expect(
+      component.getTestDuration({
+        id: 's4',
+        name: 's4',
+        status: TestStatus.TEST_STATUS_DONE,
+        result: TestResult.TEST_RESULT_PASS,
+        startTime: '2026-06-08T03:00:00Z',
+        endTime: '2026-06-08T04:02:03Z',
+      }),
+    ).toBe('1h 2m 3s');
+
+    expect(
+      component.getTestDuration({
+        id: 's5',
+        name: 's5',
+        status: TestStatus.TEST_STATUS_DONE,
+        result: TestResult.TEST_RESULT_PASS,
+        startTime: '2026-06-08T04:00:00Z',
+        endTime: '2026-06-08T03:00:00Z',
+      }),
+    ).toBe('N/A');
+
+    expect(
+      component.getTestDuration({
+        id: 's6',
+        name: 's6',
+        status: TestStatus.TEST_STATUS_DONE,
+        result: TestResult.TEST_RESULT_PASS,
+        startTime: 'June 8, 2026 03:00:00 UTC',
+        endTime: 'June 8, 2026 03:00:30 UTC',
+      }),
+    ).toBe('30s');
+
+    expect(
+      component.getTestDuration({
+        id: 's7',
+        name: 's7',
+        status: TestStatus.TEST_STATUS_DONE,
+        result: TestResult.TEST_RESULT_PASS,
+        startTime: 'not-a-date',
+        endTime: 'also-not-a-date',
+      }),
+    ).toBe('N/A');
+
+    expect(
+      component.getTestDevicesList({
+        id: 's1',
+        name: 's1',
+        status: TestStatus.TEST_STATUS_DONE,
+        result: TestResult.TEST_RESULT_PASS,
+        devices: {device: [{id: 'dev-1'}, {id: 'dev-2'}]},
+      }),
+    ).toEqual(['dev-1', 'dev-2']);
+
+    expect(
+      component.getTestDevicesList({
+        id: 's2',
+        name: 's2',
+        status: TestStatus.TEST_STATUS_DONE,
+        result: TestResult.TEST_RESULT_PASS,
+      }),
+    ).toEqual([]);
+
+    expect(
+      component.getTestResultBadge({
+        id: 's1',
+        name: 's1',
+        status: TestStatus.TEST_STATUS_DONE,
+        result: TestResult.TEST_RESULT_UNSPECIFIED,
+      }),
+    ).toBeNull();
+
+    expect(
+      getTestSummaryResultBadge(
+        {
+          id: 's1',
+          name: 's1',
+          status: TestStatus.TEST_STATUS_RUNNING,
+          result: TestResult.TEST_RESULT_PASS,
+        },
+        {requireDoneStatus: true},
+      ),
+    ).toBeNull();
+
+    expect(
+      getTestSummaryResultBadge(
+        {
+          id: 's1',
+          name: 's1',
+          status: TestStatus.TEST_STATUS_DONE,
+          result: TestResult.TEST_RESULT_UNSPECIFIED,
+        },
+        {requireDoneStatus: true},
+      ),
+    ).toBeNull();
+
+    expect(
+      getTestSummaryResultBadge(
+        {
+          id: 's1',
+          name: 's1',
+          status: TestStatus.TEST_STATUS_DONE,
+          result: TestResult.TEST_RESULT_PASS,
+        },
+        {requireDoneStatus: true},
+      )?.text,
+    ).toBe('Pass');
+
+    expect(
+      component.getTestStartTime({
+        id: 's1',
+        name: 's1',
+        status: TestStatus.TEST_STATUS_DONE,
+        result: TestResult.TEST_RESULT_PASS,
+      }),
+    ).toBe('N/A');
+
+    expect(
+      component.getTestStartTime({
+        id: 's2',
+        name: 's2',
+        status: TestStatus.TEST_STATUS_DONE,
+        result: TestResult.TEST_RESULT_PASS,
+        startTime: 'invalid-timestamp',
+      }),
+    ).toBe('invalid-timestamp');
+
+    expect(
+      component.getTestStartTime({
+        id: 's3',
+        name: 's3',
+        status: TestStatus.TEST_STATUS_DONE,
+        result: TestResult.TEST_RESULT_PASS,
+        startTime: '2026-06-08T03:01:00Z',
+      }),
+    ).toBe(dateUtils.formatDetailedLocal(new Date('2026-06-08T03:01:00Z')));
+
+    expect(
+      component.getTestStartTime({
+        id: 's4',
+        name: 's4',
+        status: TestStatus.TEST_STATUS_DONE,
+        result: TestResult.TEST_RESULT_PASS,
+        startTime: '2026-06-08T05:01:00+02:00',
+      }),
+    ).toBe(
+      dateUtils.formatDetailedLocal(new Date('2026-06-08T05:01:00+02:00')),
+    );
+  });
+
+  it('tracks copied sub-test ID state and resets after 2 seconds', fakeAsync(() => {
+    const clipboard = TestBed.inject(ClipboardService);
+    const copySpy = spyOn(clipboard, 'copyToClipboard').and.returnValue(true);
+
+    component.copyTestId('sub_01');
+    expect(component.copiedTestIds()['sub_01']).toBeTrue();
+
+    tick(1000);
+    component.copyTestId('sub_01');
+    tick(1000);
+    expect(component.copiedTestIds()['sub_01']).toBeTrue();
+
+    tick(1000);
+    expect(component.copiedTestIds()['sub_01']).toBeFalse();
+
+    copySpy.and.returnValue(false);
+    component.copyTestId('sub_02');
+    expect(component.copiedTestIds()['sub_02']).toBeUndefined();
+  }));
 });

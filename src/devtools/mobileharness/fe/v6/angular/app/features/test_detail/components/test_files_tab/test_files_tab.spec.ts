@@ -14,6 +14,7 @@ class MockTestService {
     testId: string,
     jobId: string,
     filePath: string,
+    subTestId?: string,
   ): Observable<string> {
     return of(`mock content for ${filePath} (test: ${testId}, job: ${jobId})`);
   }
@@ -26,6 +27,7 @@ class MockTestService {
   template: `
     <app-test-files-tab
       [testId]="testId"
+      [subTestId]="subTestId"
       [jobId]="jobId"
       [fileExplorer]="fileExplorer"
     />
@@ -33,6 +35,7 @@ class MockTestService {
 })
 class TestHostComponent {
   testId = 'test_123';
+  subTestId?: string;
   jobId = 'job_456';
   fileExplorer: FileExplorer = {
     cnsPath: '/cns-fake/test-path',
@@ -83,6 +86,27 @@ describe('TestFilesTab Component', () => {
       'test_123',
       'job_456',
       'test_output.txt',
+      undefined,
+    );
+  });
+
+  it('should delegate getTestFile with subTestId when subTestId is provided', () => {
+    const subFixture = TestBed.createComponent(TestHostComponent);
+    subFixture.componentInstance.subTestId = 'sub_789';
+    subFixture.detectChanges();
+
+    const testFilesTab: TestFilesTab = subFixture.debugElement.query(
+      By.directive(TestFilesTab),
+    ).componentInstance;
+
+    spyOn(mockTestService, 'getTestFile').and.callThrough();
+    testFilesTab.getFileContent('test_output.txt').subscribe();
+
+    expect(mockTestService.getTestFile).toHaveBeenCalledWith(
+      'test_123',
+      'job_456',
+      'test_output.txt',
+      'sub_789',
     );
   });
 });

@@ -24,12 +24,14 @@ import {TestLogTab} from './test_log_tab';
   standalone: true,
   imports: [TestLogTab],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<app-test-log-tab [testId]="testId" [jobId]="jobId" [cloudLogLink]="cloudLogLink"></app-test-log-tab>`,
+  template: `<app-test-log-tab [testId]="testId" [subTestId]="subTestId" [jobId]="jobId" [cloudLogLink]="cloudLogLink" [initialStatus]="initialStatus"></app-test-log-tab>`,
 })
 class TestHostComponent {
   testId!: string;
+  subTestId?: string;
   jobId = 'job_123';
   cloudLogLink = 'http://cloud-log-link';
+  initialStatus = TestStatus.TEST_STATUS_UNSPECIFIED;
 }
 
 describe('TestLogTab Component', () => {
@@ -91,6 +93,67 @@ describe('TestLogTab Component', () => {
       expect(component.logLines()).toEqual(['Log Content 1', 'Log Content 2']);
       expect(component.cloudLogLink()).toBe('http://cloud-log-link');
       expect(component.logViewport()).toBeTruthy();
+    });
+
+    it('should include subTestId in getTestLog request and determine isDone from testStatus', () => {
+      mockTestService.getTestLog.and.returnValue(
+        of({
+          logContent: 'Sub-test log line',
+          nextOffset: 17,
+          testStatus: TestStatus.TEST_STATUS_NEW,
+          logReset: false,
+          contentHash: 'hash-sub',
+        }),
+      );
+      mockTestService.getTestLog.calls.reset();
+      const subFixture = TestBed.createComponent(TestHostComponent);
+      subFixture.componentInstance.testId = 'test_123';
+      subFixture.componentInstance.subTestId = 'sub_789';
+      subFixture.componentInstance.initialStatus = TestStatus.TEST_STATUS_NEW;
+      subFixture.detectChanges();
+
+      expect(mockTestService.getTestLog).toHaveBeenCalledWith({
+        testId: 'test_123',
+        subTestId: 'sub_789',
+        jobId: 'job_123',
+        offset: 0,
+        contentHash: undefined,
+      });
+
+      const subComponent: TestLogTab = subFixture.debugElement.query(
+        By.directive(TestLogTab),
+      ).componentInstance;
+      expect(subComponent.isTestRunning()).toBeTrue();
+      let isDoneResult: boolean | undefined;
+      subComponent.logStrategy(10, 'hash-123').subscribe((res) => {
+        isDoneResult = res.isDone;
+      });
+      expect(isDoneResult).toBeFalse();
+
+      const doneSubFixture = TestBed.createComponent(TestHostComponent);
+      doneSubFixture.componentInstance.testId = 'test_123';
+      doneSubFixture.componentInstance.subTestId = 'sub_789';
+      doneSubFixture.componentInstance.initialStatus =
+        TestStatus.TEST_STATUS_DONE;
+      doneSubFixture.detectChanges();
+      const doneSubComponent: TestLogTab = doneSubFixture.debugElement.query(
+        By.directive(TestLogTab),
+      ).componentInstance;
+      expect(doneSubComponent.isTestRunning()).toBeFalse();
+
+      mockTestService.getTestLog.and.returnValue(
+        of({
+          logContent: 'Sub-test finished line',
+          nextOffset: 39,
+          testStatus: TestStatus.TEST_STATUS_DONE,
+          logReset: false,
+          contentHash: 'hash-sub-done',
+        }),
+      );
+      subComponent.logStrategy(17, 'hash-sub').subscribe((res) => {
+        isDoneResult = res.isDone;
+      });
+      expect(isDoneResult).toBeTrue();
     });
   });
 

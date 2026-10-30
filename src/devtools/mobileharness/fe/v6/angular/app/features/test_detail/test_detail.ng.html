@@ -10,26 +10,34 @@
     </div>
   } @else if (test(); as test) {
     <app-legacy-console-banner
-      [legacyUrl]="legacyFeUrl + '/testdetailview/' + jobId() + '/' + test.id"
+      [legacyUrl]="legacyTestDetailUrl()"
       bannerType="test">
     </app-legacy-console-banner>
     <div class="main-card">
       <!-- Breadcrumb Navigation -->
       <header class="card-header">
-        <div class="header-device-id">
+        <nav class="header-device-id breadcrumb" aria-label="Breadcrumb">
           @if (test.job; as job) {
             <a app-nav-link
               [config]="{type: 'job', jobId: job.id}"
               queryParamsHandling="merge"
-              class="host-link"
-              title="Navigate to job: {{ job.id }}"
-            >
-              {{ job.id }}
-            </a>
-            <mat-icon class="chevron-icon">chevron_right</mat-icon>
+              class="crumb crumb-link"
+              [matTooltip]="'Job ' + job.id"
+            >Job {{ shortId(job.id) }}</a>
+            <mat-icon class="chevron-icon" aria-hidden="true">chevron_right</mat-icon>
           }
-          <span class="device-id-text monospaced-text" title="Test ID: {{ test.id }}">{{ test.id }}</span>
-        </div>
+          @if (isSubTest()) {
+            <a app-nav-link
+              [config]="{type: 'test', jobId: jobId(), testId: rootTestId()}"
+              queryParamsHandling="merge"
+              class="crumb crumb-link"
+              [matTooltip]="'Test ' + rootTestId()"
+            >Test {{ shortId(rootTestId()) }}</a>
+            <mat-icon class="chevron-icon" aria-hidden="true">chevron_right</mat-icon>
+          }
+          <span class="crumb crumb-current" aria-current="page" [matTooltip]="(isSubTest() ? 'Sub-test ' : 'Test ') + test.id"
+          >{{ isSubTest() ? 'Sub-test' : 'Test' }} {{ shortId(test.id) }}</span>
+        </nav>
 
         <div class="header-actions">
           @if (killActionState(); as killAction) {
@@ -53,107 +61,130 @@
         <div class="device-title-bar">
             <div class="title-left-section">
               <div class="title-text-wrapper">
-                <div class="title-label">Test Name</div>
+                <div class="title-label">{{ isSubTest() ? 'Sub-test Name' : 'Test Name' }}</div>
                 <h1 class="device-title" [matTooltip]="test.name" tooltipIfTruncated>{{ test.name }}</h1>
 
                 <div class="metadata-grid">
                   <!-- Row 1: Test ID -->
-                  <span class="metadata-label">Test ID:</span>
+                  <span class="metadata-label">{{ isSubTest() ? 'Sub-test ID:' : 'Test ID:' }}</span>
                   <div class="metadata-value">
                     <span class="value-text" [matTooltip]="test.id" tooltipIfTruncated>{{ test.id }}</span>
-                    <button (click)="copyToClipboard(test.id)" class="inline-copy-button" matTooltip="Copy Test ID">
+                    <button (click)="copyToClipboard(test.id)" class="inline-copy-button" [matTooltip]="isSubTest() ? 'Copy Sub-test ID' : 'Copy Test ID'">
                       <mat-icon>content_copy</mat-icon>
                     </button>
                   </div>
 
-                  <div class="vertical-separator"></div>
+                  <!-- MOSS never advances a sub-test past NEW, so a sub-test shows its result only (unless its root test finished without a sub-test result). -->
+                  @if (!isSubTest() || resultDisplay() || test.status !== 'TEST_STATUS_NEW') {
+                    <div class="vertical-separator"></div>
 
-                  <div class="status-indicator">
-                    <mat-icon
-                      [class]="'status-' + (resultDisplay()?.cssClass || statusDisplay().cssClass) + '-icon'"
-                      [class.spin-animation]="statusDisplay().isSpinning"
-                    >
-                      {{ resultDisplay()?.icon || statusDisplay().icon }}
-                    </mat-icon>
+                    <div class="status-indicator">
+                      <mat-icon
+                        [class]="'status-' + (resultDisplay()?.cssClass || statusDisplay().cssClass) + '-icon'"
+                        [class.spin-animation]="statusDisplay().isSpinning"
+                      >
+                        {{ resultDisplay()?.icon || statusDisplay().icon }}
+                      </mat-icon>
 
-                    <span class="status-pill"
-                      [class]="'status-' + statusDisplay().cssClass + '-pill'"
-                    >Status: {{ statusDisplay().label }}</span>
+                      @if (!isSubTest() || !resultDisplay()) {
+                        <span class="status-pill"
+                          [class]="'status-' + statusDisplay().cssClass + '-pill'"
+                        >Status: {{ statusDisplay().label }}</span>
+                      }
 
-                    @if (resultDisplay(); as result) {
-                      <span class="status-pill"
-                        [class]="'result-' + result.cssClass + '-pill'"
-                      >Result: {{ result.label }}</span>
-                    }
-                  </div>
+                      @if (resultDisplay(); as result) {
+                        <span class="status-pill"
+                          [class]="'result-' + result.cssClass + '-pill'"
+                        >Result: {{ result.label }}</span>
+                      }
+                    </div>
+                  }
 
-                  <!-- Row 2: Part of Job -->
-                  @if (test.job; as job) {
-                    <span class="metadata-label">Part of Job:</span>
-                    <div class="metadata-value">
-                      <div class="job-hover-container">
-                        <a app-nav-link
-                          [config]="{type: 'job', jobId: job.id}"
-                          queryParamsHandling="merge"
-                          class="job-link-value"
-                        >
-                          {{ job.id }}
-                        </a>
-                        <div class="job-details-panel">
-                          <div class="panel-section-title">Job Name</div>
-                          <div class="panel-section-value font-sans">{{ job.name }}</div>
+                  <!-- Row 2: what this test belongs to, one chip per parent. -->
+                  @if (isSubTest() || test.job) {
+                    <span class="metadata-label part-of-label">Part of:</span>
+                    <div class="part-of-chips">
+                      @if (isSubTest()) {
+                        <div class="metadata-value part-of-chip">
+                          <span class="chip-type">Test</span>
+                          <a app-nav-link
+                            [config]="{type: 'test', jobId: jobId(), testId: rootTestId()}"
+                            queryParamsHandling="merge"
+                            class="job-link-value"
+                          >{{ rootTestId() }}</a>
+                          <button (click)="copyToClipboard(rootTestId())" class="inline-copy-button" matTooltip="Copy Test ID">
+                            <mat-icon>content_copy</mat-icon>
+                          </button>
+                        </div>
+                      }
+                      @if (test.job; as job) {
+                        <div class="metadata-value part-of-chip">
+                          <span class="chip-type">Job</span>
+                          <div class="job-hover-container">
+                            <a app-nav-link
+                              [config]="{type: 'job', jobId: job.id}"
+                              queryParamsHandling="merge"
+                              class="job-link-value"
+                            >
+                              {{ job.id }}
+                            </a>
+                            <div class="job-details-panel">
+                              <div class="panel-section-title">Job Name</div>
+                              <div class="panel-section-value font-sans">{{ job.name }}</div>
 
-                          @if (job.status) {
-                            <div class="panel-row-grid mt-2">
-                              <div class="panel-grid-item">
-                                <div class="panel-section-title">Status</div>
-                                <div class="panel-section-value font-sans"
-                                  [class.text-green]="job.status === 'JOB_STATUS_DONE'"
-                                  [class.text-blue]="job.status === 'JOB_STATUS_RUNNING'"
-                                >{{ job.status.replace('JOB_STATUS_', '') }}</div>
-                              </div>
-                              @if (job.result) {
-                                <div class="panel-grid-item">
-                                  <div class="panel-section-title">Result</div>
-                                  <div class="panel-section-value font-sans"
-                                    [class.text-green]="job.result === 'JOB_RESULT_PASS'"
-                                    [class.text-red]="job.result === 'JOB_RESULT_FAIL' || job.result === 'JOB_RESULT_ERROR'"
-                                  >{{ job.result.replace('JOB_RESULT_', '') }}</div>
+                              @if (job.status) {
+                                <div class="panel-row-grid mt-2">
+                                  <div class="panel-grid-item">
+                                    <div class="panel-section-title">Status</div>
+                                    <div class="panel-section-value font-sans"
+                                      [class.text-green]="job.status === 'JOB_STATUS_DONE'"
+                                      [class.text-blue]="job.status === 'JOB_STATUS_RUNNING'"
+                                    >{{ job.status.replace('JOB_STATUS_', '') | titlecase }}</div>
+                                  </div>
+                                  @if (job.result) {
+                                    <div class="panel-grid-item">
+                                      <div class="panel-section-title">Result</div>
+                                      <div class="panel-section-value font-sans"
+                                        [class.text-green]="job.result === 'JOB_RESULT_PASS'"
+                                        [class.text-red]="job.result === 'JOB_RESULT_FAIL' || job.result === 'JOB_RESULT_ERROR'"
+                                      >{{ job.result.replace('JOB_RESULT_', '') | titlecase }}</div>
+                                    </div>
+                                  }
                                 </div>
                               }
-                            </div>
-                          }
-                          <div class="panel-footer-links mt-2">
-                            @if (killActionState(); as killAction) {
-                              @if (killAction.visible) {
-                                <button
-                                  type="button"
-                                  class="panel-kill-job-btn"
-                                  [disabled]="!killAction.enabled || isKillingJob()"
-                                  [matTooltip]="killAction.tooltip"
-                                  (click)="onKillJobClicked(job.id)"
-                                >
-                                  @if (isKillingJob()) {
-                                    <mat-icon class="spin-animation">sync</mat-icon>
-                                    <span>{{ jobActionUiConfig.kill.loadingLabel || 'Killing...' }}</span>
-                                  } @else {
-                                    <mat-icon>cancel</mat-icon>
-                                    <span>Kill Job</span>
+                              <div class="panel-footer-links mt-2">
+                                @if (killActionState(); as killAction) {
+                                  @if (killAction.visible) {
+                                    <button
+                                      type="button"
+                                      class="panel-kill-job-btn"
+                                      [disabled]="!killAction.enabled || isKillingJob()"
+                                      [matTooltip]="killAction.tooltip"
+                                      (click)="onKillJobClicked(job.id)"
+                                    >
+                                      @if (isKillingJob()) {
+                                        <mat-icon class="spin-animation">sync</mat-icon>
+                                        <span>{{ jobActionUiConfig.kill.loadingLabel || 'Killing...' }}</span>
+                                      } @else {
+                                        <mat-icon>cancel</mat-icon>
+                                        <span>Kill Job</span>
+                                      }
+                                    </button>
                                   }
-                                </button>
-                              }
-                            }
-                            <a [href]="job.spongeLink || 'http://sponge/mock-job-link'" target="_blank" class="sponge-link">
-                              <span>View on Sponge</span>
-                              <mat-icon>open_in_new</mat-icon>
-                            </a>
+                                }
+                                <a [href]="job.spongeLink || 'http://sponge/mock-job-link'" target="_blank" class="sponge-link">
+                                  <span>View on Sponge</span>
+                                  <mat-icon>open_in_new</mat-icon>
+                                </a>
+                              </div>
+                              <div class="panel-arrow"></div>
+                            </div>
                           </div>
-                          <div class="panel-arrow"></div>
+                          <button (click)="copyToClipboard(job.id)" class="inline-copy-button" matTooltip="Copy Job ID">
+                            <mat-icon>content_copy</mat-icon>
+                          </button>
                         </div>
-                      </div>
-                      <button (click)="copyToClipboard(job.id)" class="inline-copy-button" matTooltip="Copy Job ID">
-                        <mat-icon>content_copy</mat-icon>
-                      </button>
+                      }
                     </div>
                   }
                 </div>
@@ -225,7 +256,7 @@
             <button (click)="setActiveTab('log')" [class.active]="activeTab() === 'log'" class="tab-link">
               <span class="tab-link-content">
                 <span>Test Log</span>
-                @if (statusDisplay().label === 'RUNNING') {
+                @if (test.status === 'TEST_STATUS_RUNNING') {
                   <span class="live-badge">
                     <span class="live-dot"></span>
                     <span>LIVE</span>
@@ -263,7 +294,7 @@
               -->
               <div class="under-development-container">
                 <p class="under-development-text">
-                  This feature is currently under development in V6. Please view this timeline in the <a [href]="stayOnLegacyFe(legacyFeUrl + '/testdetailview/' + jobId() + '/' + test.id + '?tab=2')" target="_blank">legacy page</a>.
+                  This feature is currently under development in V6. Please view this timeline in the <a [href]="stayOnLegacyFe(legacyTestDetailUrl() + (isSubTest() ? '&tab=2' : '?tab=2'))" target="_blank">legacy page</a>.
                 </p>
               </div>
             </div>
@@ -274,7 +305,8 @@
             <div class="tab-content">
               @defer {
                 <app-test-log-tab
-                  [testId]="test.id"
+                  [testId]="rootTestId()"
+                  [subTestId]="subTestId()"
                   [jobId]="jobId()"
                   [cloudLogLink]="test.executionDetails?.cloudLogLink || ''"
                   [initialStatus]="test.status"
@@ -291,7 +323,8 @@
             <div class="tab-content">
               @defer {
                 <app-test-files-tab
-                  [testId]="test.id"
+                  [testId]="rootTestId()"
+                  [subTestId]="subTestId()"
                   [jobId]="jobId()"
                   [fileExplorer]="test.fileExplorer"
                 ></app-test-files-tab>

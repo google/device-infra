@@ -90,7 +90,7 @@ export class FakeTestService extends TestService {
   override getTestLog(
     request: GetTestLogRequest,
   ): Observable<GetTestLogResponse> {
-    const id = request.testId;
+    const id = request.subTestId || request.testId;
     const numOffset = Number(request.offset) || 0;
     const scenario = MOCK_TEST_SCENARIOS.find(
       (s) => s.id === id || s.overview.id === id,
@@ -161,9 +161,11 @@ export class FakeTestService extends TestService {
     testId: string,
     jobId: string,
     filePath: string,
+    subTestId?: string,
   ): Observable<string> {
+    const subTestLine = subTestId ? `\nSub-Test ID: ${subTestId}` : '';
     return of(
-      `[Simulated File Content]\nTest ID: ${testId}\nJob ID: ${jobId}\nFile: ${filePath}\n\nThis is simulated test file content.`,
+      `[Simulated File Content]\nTest ID: ${testId}${subTestLine}\nJob ID: ${jobId}\nFile: ${filePath}\n\nThis is simulated test file content.`,
     ).pipe(delay(200));
   }
 }

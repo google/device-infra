@@ -33,41 +33,50 @@
   gap: 1rem;
 }
 
+// Breadcrumb: "Job 0f2a8683… > Test 7e4eded6… > Sub-test ed458c07…".
+// M3 title-medium size at one weight; links use the primary color and the
+// current page uses on-surface. The full id is in each crumb's tooltip.
 .header-device-id {
   display: flex;
   align-items: center;
-  font-size: 1.125rem;
-  color: #6b7280;
   min-width: 0;
   flex-grow: 1;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  letter-spacing: 0.15px;
 
-  .host-link {
-    color: #3b82f6;
-    text-decoration: none;
+  .crumb {
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    padding: 0.25rem 0.5rem;
+    margin: 0 -0.5rem;
+    border-radius: 0.5rem;
+  }
+
+  .crumb-link {
+    color: var(--mat-sys-primary, #1a73e8);
+    text-decoration: none;
 
     &:hover {
-      text-decoration: underline;
+      background-color: rgba(26, 115, 232, 0.08);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--mat-sys-primary, #1a73e8);
+      outline-offset: 2px;
     }
   }
 
+  .crumb-current {
+    color: var(--mat-sys-on-surface, #1f1f1f);
+  }
+
   .chevron-icon {
-    color: #d1d5db;
-    margin: 0 0.5rem;
+    color: var(--mat-sys-on-surface-variant, #444746);
+    margin: 0 0.75rem;
     flex-shrink: 0;
     font-size: 20px;
     height: 20px;
     width: 20px;
-  }
-
-  .device-id-text {
-    font-weight: 500;
-    color: #1f2937;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 }
 
@@ -153,12 +162,13 @@
     min-width: 0;
   }
 
+  // M3 label-medium, sentence case.
   .title-label {
-    font-size: 10px;
-    font-weight: 700;
-    color: #9aa0a6;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    color: var(--mat-sys-on-surface-variant, #444746);
     margin-bottom: 0.25rem;
   }
 
@@ -181,13 +191,50 @@
     font-size: 0.75rem;
 
     @media (min-width: 576px) {
-      grid-template-columns: max-content minmax(0, max-content) max-content auto;
+      grid-template-columns: max-content minmax(0, max-content) max-content 1fr;
     }
   }
 
   .metadata-label {
     color: #9ca3af;
     font-weight: 400;
+
+    // "Part of:" heads a stack of chips, so it lines up with the first chip.
+    &.part-of-label {
+      grid-column: 1;
+      align-self: start;
+      display: flex;
+      align-items: center;
+      min-height: 1.75rem;
+    }
+  }
+
+  // "Part of:" stack: one chip per parent ("Test <id>", then "Job <id>"), one
+  // per row, starting in the value column.
+  .part-of-chips {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    min-width: 0;
+
+    @media (min-width: 576px) {
+      grid-column: 2 / -1;
+    }
+
+    .part-of-chip {
+      width: auto;
+      max-width: 100%;
+      justify-content: flex-start;
+      gap: 0.5rem;
+    }
+
+    // One width for "Test" and "Job" so the ids line up.
+    .chip-type {
+      min-width: 1.75rem;
+      font-family: Roboto, sans-serif;
+      color: #5f6368;
+    }
   }
 
   .metadata-value {
@@ -264,11 +311,11 @@
       }
 
       .panel-section-title {
-        font-size: 9px;
-        font-weight: 600;
+        font-size: 11px;
+        line-height: 1rem;
+        font-weight: 500;
         color: #9ca3af;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.5px;
         margin-bottom: 4px;
         font-family: Roboto, sans-serif;
       }
@@ -655,7 +702,6 @@
     background-color: #e6f4ea;
     color: #1e8e3e;
     margin-left: 0.25rem;
-    text-transform: uppercase;
     letter-spacing: 0.05em;
     animation: pulse-animation-live 2s infinite ease-in-out;
     vertical-align: middle;

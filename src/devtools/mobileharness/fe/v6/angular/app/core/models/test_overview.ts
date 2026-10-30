@@ -105,6 +105,7 @@ export declare interface GetTestRequest {
 /** Request structure for the getTestLog API. */
 export declare interface GetTestLogRequest {
   testId: string;
+  subTestId?: string;
   offset: number;
   jobId: string;
   contentHash?: string;
@@ -125,4 +126,12 @@ export declare interface GetTestLogResponse {
   testStatus: TestStatus;
   logReset: boolean;
   contentHash: string;
+}
+
+/** Extracts the non-empty device IDs from a `TestSummary`. */
+export function getTestSummaryDevicesList(test: TestSummary): string[] {
+  if (test.devices?.device && test.devices.device.length > 0) {
+    return test.devices.device.map((d) => d.id).filter(Boolean);
+  }
+  return [];
 }

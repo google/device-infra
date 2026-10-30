@@ -5,7 +5,6 @@ import {
   computed,
   input,
   Signal,
-  signal,
 } from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {MatButtonModule} from '@angular/material/button';
@@ -16,11 +15,11 @@ import {MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {RouterModule} from '@angular/router';
 
+import {JobOverviewData} from '../../../../core/models/job_overview';
 import {
-  JobOverviewData,
-  TestStatus,
-} from '../../../../core/models/job_overview';
-import {TestSummary} from '../../../../core/models/test_overview';
+  getTestSummaryDevicesList,
+  TestSummary,
+} from '../../../../core/models/test_overview';
 import {AccordionItem} from '../../../../shared/components/accordion_item/accordion_item';
 import {InfoCard} from '../../../../shared/components/info_card/info_card';
 import {
@@ -28,20 +27,21 @@ import {
   NavItem,
 } from '../../../../shared/components/master_detail_layout/master_detail_layout';
 import {NavLink} from '../../../../shared/components/nav_link/nav_link';
-import {useCopyToClipboard} from '../../../../shared/composables/copy';
+import {useCopiedIds} from '../../../../shared/composables/copy';
 import {
   createSearchFilter,
   FilterEntry,
 } from '../../../../shared/composables/search_filter';
 import {
-  getTestResultBadge,
   getTestStatusBadge,
+  getTestSummaryResultBadge,
 } from '../../../../shared/composables/status_badge';
 import {
   createTimestampInfoMap,
+  formatExecutionDuration,
+  formatExecutionStartTime,
   STANDARD_TIMESTAMP_KEYS,
 } from '../../../../shared/composables/timestamp_info';
-import {dateUtils} from '../../../../shared/utils/date_utils';
 
 /** Component for rendering the job overview tab content. */
 @Component({
@@ -80,8 +80,10 @@ export class JobOverviewTab {
     'device',
   ];
 
-  readonly copyToClipboard = useCopyToClipboard();
-  readonly copiedTestIds = signal<Record<string, boolean>>({});
+  private readonly testIdCopy = useCopiedIds('Test ID copied to clipboard!');
+  readonly copiedTestIds = this.testIdCopy.copiedIds;
+  readonly copyTestId = this.testIdCopy.copyId;
+  readonly getTestDevicesList = getTestSummaryDevicesList;
 
   private readonly propertiesFilter = createSearchFilter<string>(
     computed(() => this.job().properties),
@@ -191,51 +193,7 @@ export class JobOverviewTab {
   });
 
   getTestDuration(test: TestSummary): string {
-    if (!test.startTime || !test.endTime) return 'N/A';
-    const start = dateUtils.parseUtcTimestamp(test.startTime);
-    const end = dateUtils.parseUtcTimestamp(test.endTime);
-    let diffSec = -1;
-    if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime())) {
-      const startIso = new Date(test.startTime);
-      const endIso = new Date(test.endTime);
-      if (isNaN(startIso.getTime()) || isNaN(endIso.getTime())) return 'N/A';
-      diffSec = Math.round((endIso.getTime() - startIso.getTime()) / 1000);
-    } else {
-      diffSec = Math.round((end.getTime() - start.getTime()) / 1000);
-    }
-
-    if (diffSec < 0) return 'N/A';
-    if (diffSec < 60) return `${diffSec}s`;
-    if (diffSec < 3600) {
-      const m = Math.floor(diffSec / 60);
-      const s = diffSec % 60;
-      return `${m}m ${s}s`;
-    }
-    const h = Math.floor(diffSec / 3600);
-    const m = Math.floor((diffSec % 3600) / 60);
-    const s = diffSec % 60;
-    return `${h}h ${m}m ${s}s`;
-  }
-
-  getTestDevicesList(test: TestSummary): string[] {
-    if (test.devices?.device && test.devices.device.length > 0) {
-      return test.devices.device.map((d) => d.id).filter(Boolean);
-    }
-    return [];
-  }
-
-  copyTestId(id: string) {
-    this.copyToClipboard(id, 'Test ID copied to clipboard!');
-    this.copiedTestIds.update((map: Record<string, boolean>) => ({
-      ...map,
-      [id]: true,
-    }));
-    setTimeout(() => {
-      this.copiedTestIds.update((map: Record<string, boolean>) => ({
-        ...map,
-        [id]: false,
-      }));
-    }, 2000);
+    return formatExecutionDuration(test.startTime, test.endTime);
   }
 
   getTestStatusBadge(test: TestSummary) {
@@ -243,16 +201,10 @@ export class JobOverviewTab {
   }
 
   getTestResultBadge(test: TestSummary) {
-    if (test.status !== TestStatus.TEST_STATUS_DONE || !test.result) {
-      return null;
-    }
-    return getTestResultBadge(test.result);
+    return getTestSummaryResultBadge(test, {requireDoneStatus: true});
   }
 
   getTestStartTime(test: TestSummary): string {
-    if (!test.startTime) return 'N/A';
-    const date = dateUtils.parseUtcTimestamp(test.startTime);
-    if (!date || isNaN(date.getTime())) return test.startTime || 'N/A';
-    return dateUtils.formatDetailedLocal(date);
+    return formatExecutionStartTime(test.startTime);
   }
 }
