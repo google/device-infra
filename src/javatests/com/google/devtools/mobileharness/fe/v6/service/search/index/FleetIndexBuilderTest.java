@@ -37,6 +37,10 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceInfoSource;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.KeyDisplay;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -739,6 +743,112 @@ public final class FleetIndexBuilderTest {
     assertThat(snapshot.devices().get(3).values()).doesNotContainKey("device_field::version");
     assertThat(snapshot.index().valueCount("device_field::version", "16")).isEqualTo(1);
     assertThat(snapshot.index().valueCount("device_field::version", "36")).isEqualTo(0);
+  }
+
+  @Test
+  public void build_derivedDeviceKeys_combinesAndDeduplicatesSourcesAndSkipsEmpty() {
+    DeviceKeyDescriptor ownerOrExecutor =
+        DeviceKeyDescriptor.builder()
+            .setId(DeviceKeys.PREFIX_DEVICE_FIELD + "owner_or_executor")
+            .setDeviceInfoSources(
+                ImmutableList.of(
+                    DeviceInfoSource.field(
+                        "device_feature.owner",
+                        d ->
+                            d.getDeviceFeature().getOwnerList().isEmpty()
+                                ? ImmutableList.of("anyone")
+                                : ImmutableList.copyOf(d.getDeviceFeature().getOwnerList())),
+                    DeviceInfoSource.field(
+                        "device_feature.executor",
+                        d -> ImmutableList.copyOf(d.getDeviceFeature().getExecutorList()))))
+            .setDisplay(KeyDisplay.plural("Owners or Executors"))
+            .build();
+    DeviceKeyDescriptor rawOwnerOrExecutor =
+        DeviceKeyDescriptor.builder()
+            .setId(DeviceKeys.PREFIX_DEVICE_FIELD + "raw_owner_or_executor")
+            .setDeviceInfoSources(
+                ImmutableList.of(
+                    DeviceInfoSource.field(
+                        "device_feature.owner",
+                        d -> ImmutableList.copyOf(d.getDeviceFeature().getOwnerList())),
+                    DeviceInfoSource.field(
+                        "device_feature.executor",
+                        d -> ImmutableList.copyOf(d.getDeviceFeature().getExecutorList()))))
+            .setDisplay(KeyDisplay.plural("Raw Owners or Executors"))
+            .build();
+
+    DeviceInfo ownerAndExecutor =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("d-both"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .addOwner("alice")
+                    .addOwner("Team-A")
+                    .addExecutor("team-a")
+                    .addExecutor("bob"))
+            .build();
+    DeviceInfo executorOnly =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("d-exec"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(DeviceFeature.newBuilder().addExecutor("carol"))
+            .build();
+    DeviceInfo publicDevice =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("d-public"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .build();
+
+    LabQueryResult labResult =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab-access",
+                            "10.0.0.2",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            ownerAndExecutor,
+                            executorOnly,
+                            publicDevice)))
+            .build();
+
+    FleetSnapshot snapshot =
+        builder.build(
+            CoreFleetRawData.builder()
+                .setLabData(labResult)
+                .setDerivedDeviceKeys(
+                    ImmutableList.of(ownerOrExecutor, ownerOrExecutor, rawOwnerOrExecutor))
+                .build(),
+            BUILD_TIME);
+
+    assertThat(snapshot.devices().get(0).values("device_field::owner_or_executor"))
+        .containsExactly("alice", "Team-A", "bob")
+        .inOrder();
+    assertThat(snapshot.devices().get(1).values("device_field::owner_or_executor"))
+        .containsExactly("anyone", "carol")
+        .inOrder();
+    assertThat(snapshot.devices().get(2).values("device_field::owner_or_executor"))
+        .containsExactly("anyone");
+    assertThat(snapshot.devices().get(2).values())
+        .doesNotContainKey("device_field::raw_owner_or_executor");
+    assertThat(snapshot.index().valueCount("device_field::owner_or_executor", "team-a"))
+        .isEqualTo(1);
+    assertThat(snapshot.index().valueCount("device_field::owner_or_executor", "carol"))
+        .isEqualTo(1);
+    assertThat(snapshot.index().valueCount("device_field::owner_or_executor", "anyone"))
+        .isEqualTo(2);
+    assertThat(snapshot.index().keyStats("device_field::owner_or_executor").entityCount())
+        .isEqualTo(3);
+    assertThat(snapshot.index().keyStats("device_field::owner_or_executor").hasMissing(3))
+        .isFalse();
+    assertThat(snapshot.index().keyStats("device_field::raw_owner_or_executor").entityCount())
+        .isEqualTo(2);
+    assertThat(snapshot.index().keyStats("device_field::raw_owner_or_executor").hasMissing(3))
+        .isTrue();
   }
 
   private static LabData labData(

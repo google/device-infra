@@ -17,8 +17,10 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.index;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 
 /**
  * The complete set of raw inputs a data source produces for one core build pass, consumed by {@link
@@ -45,11 +47,19 @@ public abstract class CoreFleetRawData {
   /** Per-host enrichment keyed by host name. */
   public abstract ImmutableMap<String, HostEnrichment> hostEnrichments();
 
+  /**
+   * Deployment-defined composite device keys whose values {@link FleetIndexBuilder} extracts from
+   * each {@code DeviceInfo}'s {@link DeviceKeyDescriptor#deviceInfoSources()} and deduplicates in
+   * order.
+   */
+  public abstract ImmutableList<DeviceKeyDescriptor> derivedDeviceKeys();
+
   /** Creates a new builder with empty enrichment maps. */
   public static Builder builder() {
     return new AutoValue_CoreFleetRawData.Builder()
         .setDeviceEnrichments(ImmutableMap.of())
-        .setHostEnrichments(ImmutableMap.of());
+        .setHostEnrichments(ImmutableMap.of())
+        .setDerivedDeviceKeys(ImmutableList.of());
   }
 
   /** Creates raw data from lab query results alone, with no enrichment. */
@@ -67,6 +77,9 @@ public abstract class CoreFleetRawData {
 
     public abstract Builder setHostEnrichments(
         ImmutableMap<String, HostEnrichment> hostEnrichments);
+
+    public abstract Builder setDerivedDeviceKeys(
+        ImmutableList<DeviceKeyDescriptor> derivedDeviceKeys);
 
     public abstract CoreFleetRawData build();
   }

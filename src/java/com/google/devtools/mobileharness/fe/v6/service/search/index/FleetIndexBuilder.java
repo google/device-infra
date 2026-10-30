@@ -37,6 +37,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostConnectivityStatuses;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import java.time.Instant;
@@ -161,7 +162,8 @@ public final class FleetIndexBuilder {
                     Optional<DeviceEnrichment> deviceEnrichment =
                         Optional.ofNullable(raw.deviceEnrichments().get(deviceId));
                     DeviceRecord record =
-                        buildDeviceRecord(deviceInfo, hostRecord, deviceEnrichment);
+                        buildDeviceRecord(
+                            deviceInfo, hostRecord, deviceEnrichment, raw.derivedDeviceKeys());
                     devices.add(record);
                     indexDevice(accum, record);
                   }
@@ -270,7 +272,10 @@ public final class FleetIndexBuilder {
   }
 
   private static DeviceRecord buildDeviceRecord(
-      DeviceInfo deviceInfo, HostRecord host, Optional<DeviceEnrichment> enrichment) {
+      DeviceInfo deviceInfo,
+      HostRecord host,
+      Optional<DeviceEnrichment> enrichment,
+      ImmutableList<DeviceKeyDescriptor> derivedDeviceKeys) {
     DeviceFeature feature = deviceInfo.getDeviceFeature();
     DeviceCondition condition = deviceInfo.getDeviceCondition();
     String deviceId = deviceInfo.getDeviceLocator().getId();
@@ -307,6 +312,9 @@ public final class FleetIndexBuilder {
 
     values.put(DEVICE_FIELD_QUARANTINED, ImmutableList.of(isQuarantined(condition) ? "Yes" : "No"));
     addVersion(values, deviceInfo);
+    for (DeviceKeyDescriptor derivedKey : derivedDeviceKeys) {
+      addCombinedSources(values, deviceInfo, derivedKey);
+    }
 
     // Dimensions: append supported and required directly without deduplicating.
     addDimensions(values, feature.getCompositeDimension());
@@ -326,7 +334,7 @@ public final class FleetIndexBuilder {
         .filter(s -> !s.isEmpty())
         .ifPresent(s -> values.put(AtsDeviceKeys.WIFI_SSID.id(), ImmutableList.of(s)));
 
-    return DeviceRecord.create(deviceId, values.buildOrThrow());
+    return DeviceRecord.create(deviceId, values.buildKeepingLast());
   }
 
   /**
@@ -346,6 +354,25 @@ public final class FleetIndexBuilder {
         .filter(versions -> !versions.isEmpty())
         .findFirst()
         .ifPresent(versions -> valuesBuilder.put(DeviceKeys.VERSION.id(), versions));
+  }
+
+  /**
+   * Combines and case-insensitively deduplicates all non-empty values across {@code key}'s sources
+   * in order, keeping the first-seen display casing.
+   */
+  private static void addCombinedSources(
+      ImmutableMap.Builder<String, ImmutableList<String>> valuesBuilder,
+      DeviceInfo deviceInfo,
+      DeviceKeyDescriptor key) {
+    Set<String> seenLower = new HashSet<>();
+    ImmutableList<String> extracted =
+        key.deviceInfoSources().stream()
+            .flatMap(source -> source.extract(deviceInfo).stream())
+            .filter(v -> !v.isEmpty() && seenLower.add(Ascii.toLowerCase(v)))
+            .collect(toImmutableList());
+    if (!extracted.isEmpty()) {
+      valuesBuilder.put(key.id(), extracted);
+    }
   }
 
   /** Appends all supported and required dimensions without deduplication. */
