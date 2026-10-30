@@ -206,6 +206,45 @@ service ConfigService {
       body: "*"
     };
   }
+
+  // Retrieves current host-level Wi-Fi configurations and change status for the
+  // selected hosts.
+  rpc BatchGetHostWifiConfigs(BatchGetHostWifiConfigsRequest)
+      returns (BatchGetHostWifiConfigsResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts:batchGetWifiConfigs"
+      body: "*"
+    };
+  }
+
+  // Updates or clears the host-level default Wi-Fi configuration across the
+  // selected hosts.
+  rpc BatchUpdateHostWifiConfigs(BatchUpdateHostWifiConfigsRequest)
+      returns (BatchUpdateHostWifiConfigsResponse) {
+    option (google.api.http) = {
+      post: "/v6/hosts:batchUpdateWifiConfigs"
+      body: "*"
+    };
+  }
+
+  // Retrieves the controller-level device configuration template applied when
+  // new unconfigured devices first connect.
+  rpc GetDeviceConfigTemplate(GetDeviceConfigTemplateRequest)
+      returns (GetDeviceConfigTemplateResponse) {
+    option (google.api.http) = {
+      get: "/v6/configs/deviceTemplate"
+    };
+  }
+
+  // Updates the controller-level device configuration template applied when new
+  // unconfigured devices first connect.
+  rpc UpdateDeviceConfigTemplate(UpdateDeviceConfigTemplateRequest)
+      returns (UpdateDeviceConfigTemplateResponse) {
+    option (google.api.http) = {
+      post: "/v6/configs/deviceTemplate:update"
+      body: "*"
+    };
+  }
 }
 
 // Request for GetDeviceConfig.
@@ -716,4 +755,115 @@ message BatchUpdateDeviceWifiConfigsResponse {
   // Per-device error details for devices that failed to update.
   // Key is device_id. An empty map indicates all target devices succeeded.
   map<string, UpdateError> errors = 1;
+}
+
+// Change classification for a selected host in a batch configuration dialog.
+enum HostConfigChangeStatus {
+  HOST_CONFIG_CHANGE_STATUS_UNSPECIFIED = 0;
+  // The host configuration can be modified by the current user, and no target
+  // value was supplied in the request yet (Step 1 initial load).
+  HOST_CONFIG_CHANGE_STATUS_WRITABLE = 1;
+  // The host is writable and its current configuration differs from the
+  // requested target configuration (Step 2 review).
+  HOST_CONFIG_CHANGE_STATUS_WILL_UPDATE = 2;
+  // The host is writable and its current configuration already matches the
+  // requested target configuration (Step 2 review). No write is needed.
+  HOST_CONFIG_CHANGE_STATUS_ALREADY_MATCHES = 3;
+  // The host configuration cannot be modified by the current user (e.g.
+  // restricted by Config Pusher, insufficient permission, or per-host config
+  // read failure).
+  HOST_CONFIG_CHANGE_STATUS_READ_ONLY = 4;
+}
+
+// Request for BatchGetHostWifiConfigs.
+message BatchGetHostWifiConfigsRequest {
+  // Explicit host names selected by the operator.
+  repeated string host_names = 1;
+
+  // Optional target Wi-Fi to compare against. When omitted (Step 1 initial
+  // load), writable hosts return HOST_CONFIG_CHANGE_STATUS_WRITABLE. When set
+  // (Step 2 review), writable hosts return
+  // HOST_CONFIG_CHANGE_STATUS_WILL_UPDATE or
+  // HOST_CONFIG_CHANGE_STATUS_ALREADY_MATCHES.
+  TargetDeviceWifi target = 2;
+
+  // The universe the hosts belong to.
+  string universe = 3;
+}
+
+// Response for BatchGetHostWifiConfigs.
+message BatchGetHostWifiConfigsResponse {
+  // Current Wi-Fi configuration and change status for a single selected host.
+  message HostWifiConfigEntry {
+    string host_name = 1;
+    // Current host-level default Wi-Fi configuration (empty ssid if
+    // unconfigured). Includes ssid, psk, and scan_ssid.
+    DeviceWifi current_wifi = 2;
+    // Change status for this host.
+    HostConfigChangeStatus status = 3;
+    // Explanation when status is HOST_CONFIG_CHANGE_STATUS_READ_ONLY (e.g.
+    // restricted by Config Pusher, no permission, or config read error).
+    string read_only_reason = 4;
+  }
+
+  repeated HostWifiConfigEntry entries = 1;
+}
+
+// Request for BatchUpdateHostWifiConfigs.
+message BatchUpdateHostWifiConfigsRequest {
+  // Target host names to update (only the hosts with WILL_UPDATE status).
+  repeated string host_names = 1;
+
+  // Target Wi-Fi state to apply to LabConfig.wifi_config. Required; an unset
+  // target is rejected with INVALID_ARGUMENT.
+  TargetDeviceWifi target = 2;
+
+  // The universe the hosts belong to.
+  string universe = 3;
+}
+
+// Response for BatchUpdateHostWifiConfigs.
+message BatchUpdateHostWifiConfigsResponse {
+  // Per-host error details for hosts that failed to update.
+  // Key is host_name. An empty map indicates all target hosts succeeded.
+  map<string, UpdateError> errors = 1;
+}
+
+// Controller-level device configuration template applied to newly connected
+// unconfigured devices.
+message DeviceConfigTemplate {
+  // Default dimensions copied onto newly connected unconfigured devices.
+  DeviceConfig.Dimensions dimensions = 1;
+}
+
+// Request for GetDeviceConfigTemplate.
+message GetDeviceConfigTemplateRequest {
+  // The universe the controller belongs to.
+  string universe = 1;
+}
+
+// Response for GetDeviceConfigTemplate.
+message GetDeviceConfigTemplateResponse {
+  // Whether controller-level device configuration templates are supported in
+  // the current environment (true in ATS, false in Internal 1P).
+  bool enabled = 1;
+
+  // Current controller-level device configuration template, or empty when no
+  // template has been saved on the controller yet.
+  DeviceConfigTemplate device_config_template = 2;
+}
+
+// Request for UpdateDeviceConfigTemplate.
+message UpdateDeviceConfigTemplateRequest {
+  // Updated controller-level device configuration template to store.
+  DeviceConfigTemplate device_config_template = 1;
+
+  // The universe the controller belongs to.
+  string universe = 2;
+}
+
+// Response for UpdateDeviceConfigTemplate.
+message UpdateDeviceConfigTemplateResponse {
+  bool success = 1;
+  UpdateError error = 2;
 }

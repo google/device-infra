@@ -207,3 +207,56 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
     ],
 )
+
+java_library(
+    name = "batch_host_config_helper",
+    srcs = ["BatchHostConfigHelper.java"],
+    deps = [
+        "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_pusher_helper",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_service_capability",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/auth",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:config_result",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "batch_get_host_wifi_configs_handler",
+    srcs = ["BatchGetHostWifiConfigsHandler.java"],
+    deps = [
+        ":batch_host_config_helper",
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_service_capability",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/errors",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "batch_update_host_wifi_configs_handler",
+    srcs = ["BatchUpdateHostWifiConfigsHandler.java"],
+    deps = [
+        ":batch_host_config_helper",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_service_capability",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/errors",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
