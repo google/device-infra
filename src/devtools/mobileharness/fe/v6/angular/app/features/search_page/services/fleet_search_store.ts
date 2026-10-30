@@ -436,11 +436,21 @@ export class FleetSearchStore extends SearchPageStore {
   });
 
   /** Set of column keys currently requested/visible in the data table for search query execution. */
-  readonly visibleColumns = computed<Set<string>>(() => {
-    return new Set(this.visibleColumnDescriptors().map((c) => c.key));
-  });
+  readonly visibleColumns = computed<Set<string>>(
+    () => new Set(this.visibleColumnDescriptors().map((c) => c.key)),
+    {
+      equal: (a, b) => {
+        if (a.size !== b.size) return false;
+        const iterB = b.values();
+        for (const key of a) {
+          if (key !== iterB.next().value) return false;
+        }
+        return true;
+      },
+    },
+  );
 
-  /** Sets the visible table columns, persists them to localStorage, and re-executes search query. */
+  /** Sets the visible table columns, persists them to localStorage, and updates table results if columns changed. */
   setVisibleColumns(columns: readonly FleetColumnDescriptor[]) {
     const descriptors = [...columns];
     const defs = this.defaultColumns();
@@ -454,17 +464,38 @@ export class FleetSearchStore extends SearchPageStore {
       return;
     }
 
-    this.visibleColumnDescriptors.set(descriptors);
     saveStoredVisibleColumns(this.entity(), this.fleet(), descriptors);
-    this.executeSearch();
+    this.applyVisibleColumnUpdate(descriptors);
   }
 
-  /** Resets visible table columns to searchConfig defaults, clears custom saved preferences, and re-executes search query. */
+  /** Resets visible table columns to searchConfig defaults and clears custom saved preferences. */
   resetVisibleColumns() {
     clearStoredVisibleColumns(this.entity(), this.fleet());
     const defaults = this.searchConfig()?.columns?.defaults ?? [];
-    this.visibleColumnDescriptors.set(defaults);
-    this.executeSearch();
+    this.applyVisibleColumnUpdate(defaults);
+  }
+
+  private applyVisibleColumnUpdate(nextDescriptors: FleetColumnDescriptor[]) {
+    const prev = this.visibleColumns();
+    this.visibleColumnDescriptors.set(nextDescriptors);
+    // visibleColumns keeps its previous Set when the ordered keys are unchanged.
+    if (this.visibleColumns() === prev) {
+      return;
+    }
+
+    this.clearSelection();
+    if (this.groupByKeys().length > 0) {
+      // Group headers do not depend on visible columns, so the header page stays where it is and
+      // only the open groups reload their rows for the new columns.
+      const openIds = Array.from(this.openGroupIds());
+      this.expandedGroupPages.set(new Map());
+      for (const groupId of openIds) {
+        this.onLoadGroupRows(groupId);
+      }
+    } else {
+      this.pageIndex.set(0);
+      this.pageToken.set('');
+    }
   }
 
   /** Authoritative default column keys provided by BFF search config. */
@@ -650,8 +681,16 @@ export class FleetSearchStore extends SearchPageStore {
     this.openGroupIds.set(current);
   }
 
+  /**
+   * Sequence number of the latest onLoadGroupRows request per group. A response from an older
+   * request, such as one for a previous column set, is dropped so it cannot overwrite newer rows.
+   */
+  private readonly groupLoadSeq = new Map<string, number>();
+
   /** Loads flat rows for a specific expanded group header. */
   onLoadGroupRows(groupId: string, pageToken?: string) {
+    const seq = (this.groupLoadSeq.get(groupId) ?? 0) + 1;
+    this.groupLoadSeq.set(groupId, seq);
     const filters = this.effectiveFilters();
 
     const req: FleetSearchRequest = {
@@ -672,12 +711,18 @@ export class FleetSearchStore extends SearchPageStore {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
+          if (this.groupLoadSeq.get(groupId) !== seq) {
+            return;
+          }
           this.updateGroupExpandState(groupId, {
             loading: false,
             data: res.flat,
           });
         },
         error: (err) => {
+          if (this.groupLoadSeq.get(groupId) !== seq) {
+            return;
+          }
           this.updateGroupExpandState(groupId, {
             loading: false,
             error: err?.message || 'Failed to load group rows.',
@@ -802,8 +847,13 @@ export class FleetSearchStore extends SearchPageStore {
     params: () => {
       if (!this.isCurrentRouteActive()) return undefined;
       if (this.isLandingState()) return undefined;
-      // Wait for searchConfig to load default columns on clean page entry to prevent sending empty columns
-      if (this.isConfigLoading() && this.visibleColumns().size === 0) {
+      // Wait for searchConfig on clean flat-search entry so neither empty columns nor an empty
+      // default sort key fires a throwaway SearchFleet before defaults/lockedColumns resolve.
+      if (
+        this.isConfigLoading() &&
+        (this.visibleColumns().size === 0 ||
+          (this.groupByKeys().length === 0 && !this.sortColumn()))
+      ) {
         return undefined;
       }
 

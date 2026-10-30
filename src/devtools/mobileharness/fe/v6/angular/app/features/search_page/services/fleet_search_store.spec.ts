@@ -7,6 +7,8 @@ import {
   Fleet,
   FleetChipResolverRequest,
   FleetChipResolverResponse,
+  FleetSearchConfig,
+  FleetSearchResults,
   FleetSuggestion,
   SearchEntity,
   TranslateArsenalSearchResponse,
@@ -1125,5 +1127,257 @@ describe('FleetSearchStore', () => {
     } finally {
       localStorage.clear();
     }
+  });
+
+  describe('duplicate SearchFleet prevention', () => {
+    afterEach(() => {
+      localStorage.clear();
+    });
+
+    it('waits for searchConfig locked sort key on flat search even when localStorage has saved columns', async () => {
+      const savedColumns = [
+        {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+        {key: 'dimension::model', displayName: 'Model'},
+      ];
+      localStorage.setItem(
+        'mh_fe_v6_visible_columns_devices_internal',
+        JSON.stringify(savedColumns),
+      );
+      const configSubject = new Subject<FleetSearchConfig>();
+      mockSearchService.getFleetSearchConfig.and.returnValue(configSubject);
+      mockSearchService.resolveFleetChips.and.returnValue(
+        of({
+          filterChips: [{valid: {pillKey: 'Status', pillCondition: 'IDLE'}}],
+          groupByChips: [],
+        }),
+      );
+
+      const store = await createStoreAt({'f': 'device_field::status~IDLE'});
+
+      expect(store.isConfigLoading()).toBeTrue();
+      expect(mockSearchService.searchFleet).not.toHaveBeenCalled();
+
+      configSubject.next({
+        columns: {
+          defaults: [
+            {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+            {key: 'device_field::status', displayName: 'Status'},
+          ],
+        },
+      });
+      configSubject.complete();
+      await flushAsync();
+
+      expect(mockSearchService.searchFleet).toHaveBeenCalledTimes(1);
+      expect(mockSearchService.searchFleet).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          flat: jasmine.objectContaining({
+            columns: ['device_field::uuid', 'dimension::model'],
+            sort: {key: 'device_field::uuid', ascending: true},
+          }),
+        }),
+      );
+    });
+
+    it('re-fetches flat results once when visible columns change and skips RPC when unchanged', async () => {
+      mockSearchService.getFleetSearchConfig.and.returnValue(
+        of({
+          columns: {
+            defaults: [
+              {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+              {key: 'device_field::status', displayName: 'Status'},
+            ],
+          },
+        }),
+      );
+      mockSearchService.resolveFleetChips.and.returnValue(
+        of({
+          filterChips: [{valid: {pillKey: 'Status', pillCondition: 'IDLE'}}],
+          groupByChips: [],
+        }),
+      );
+      mockSearchService.searchFleet.and.returnValue(
+        of({flat: {rows: [{id: 'dev-1', cells: []}], nextPageToken: 'p2'}}),
+      );
+
+      const store = await createStoreAt({'f': 'device_field::status~IDLE'});
+      expect(mockSearchService.searchFleet).toHaveBeenCalledTimes(1);
+
+      store.nextPage();
+      await flushAsync();
+      store.toggleSelectRow('dev-1');
+      expect(store.pageIndex()).toBe(1);
+      expect(store.selectedItems().size).toBe(1);
+      mockSearchService.searchFleet.calls.reset();
+
+      // Applying the exact same columns does not fire SearchFleet or drop pagination/selection.
+      store.setVisibleColumns([
+        {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+        {key: 'device_field::status', displayName: 'Status'},
+      ]);
+      await flushAsync();
+      expect(mockSearchService.searchFleet).not.toHaveBeenCalled();
+      expect(store.pageIndex()).toBe(1);
+      expect(store.selectedItems().size).toBe(1);
+
+      // Changing columns resets pagination/selection and triggers exactly one flat SearchFleet.
+      store.setVisibleColumns([
+        {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+        {key: 'dimension::model', displayName: 'Model'},
+      ]);
+      await flushAsync();
+      expect(mockSearchService.searchFleet).toHaveBeenCalledTimes(1);
+      expect(
+        mockSearchService.searchFleet.calls.mostRecent().args[0].flat?.page
+          ?.pageToken,
+      ).toBeUndefined();
+      expect(store.pageIndex()).toBe(0);
+      expect(store.selectedItems().size).toBe(0);
+
+      // Re-applying the same custom columns as a new array does not fire SearchFleet.
+      mockSearchService.searchFleet.calls.reset();
+      store.setVisibleColumns([
+        {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+        {key: 'dimension::model', displayName: 'Model'},
+      ]);
+      await flushAsync();
+      expect(mockSearchService.searchFleet).not.toHaveBeenCalled();
+
+      // Resetting back to defaults triggers exactly one flat SearchFleet, and a second reset is a no-op.
+      mockSearchService.searchFleet.calls.reset();
+      store.resetVisibleColumns();
+      await flushAsync();
+      expect(mockSearchService.searchFleet).toHaveBeenCalledTimes(1);
+
+      mockSearchService.searchFleet.calls.reset();
+      store.resetVisibleColumns();
+      await flushAsync();
+      expect(mockSearchService.searchFleet).not.toHaveBeenCalled();
+    });
+
+    it('reloads only open group rows without re-fetching group headers when visible columns change in grouped mode', async () => {
+      mockSearchService.getFleetSearchConfig.and.returnValue(
+        of({
+          columns: {
+            defaults: [
+              {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+            ],
+          },
+        }),
+      );
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          grouped: {
+            groups: [
+              {groupId: 'dimension::model=pixel 8', values: ['Pixel 8']},
+            ],
+            totalGroups: 1,
+            totalItems: 5,
+            nextPageToken: 'g2',
+          },
+          flat: {rows: [{id: 'dev-1', cells: []}]},
+        }),
+      );
+
+      const store = await createStoreAt({'gb': 'dimension::model'});
+      expect(mockSearchService.searchFleet).toHaveBeenCalledTimes(1);
+
+      store.toggleGroup('dimension::model=pixel 8');
+      await flushAsync();
+      expect(store.openGroupIds().has('dimension::model=pixel 8')).toBeTrue();
+      store.nextPage();
+      await flushAsync();
+      expect(store.pageIndex()).toBe(1);
+      mockSearchService.searchFleet.calls.reset();
+
+      store.setVisibleColumns([
+        {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+        {key: 'dimension::os', displayName: 'OS'},
+      ]);
+      await flushAsync();
+
+      // The group header page stays on page 2 and only the open group reloads its rows.
+      expect(store.pageIndex()).toBe(1);
+      expect(store.openGroupIds().has('dimension::model=pixel 8')).toBeTrue();
+      expect(mockSearchService.searchFleet).toHaveBeenCalledTimes(1);
+      expect(mockSearchService.searchFleet).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          groupExpand: jasmine.objectContaining({
+            groupId: 'dimension::model=pixel 8',
+            columns: ['device_field::uuid', 'dimension::os'],
+          }),
+        }),
+      );
+
+      // A failed reload drops the rows fetched with the previous columns instead of showing them
+      // under the new column headers.
+      mockSearchService.searchFleet.and.returnValue(
+        throwError(() => new Error('reload failed')),
+      );
+      store.setVisibleColumns([
+        {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+        {key: 'dimension::sdk', displayName: 'SDK'},
+      ]);
+      await flushAsync();
+
+      const groupState = store
+        .expandedGroupPages()
+        .get('dimension::model=pixel 8');
+      expect(groupState?.data).toBeUndefined();
+      expect(groupState?.error).toBe('reload failed');
+    });
+
+    it('drops group row responses from older requests that resolve after a newer reload', async () => {
+      mockSearchService.getFleetSearchConfig.and.returnValue(
+        of({
+          columns: {
+            defaults: [
+              {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+            ],
+          },
+        }),
+      );
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          grouped: {
+            groups: [
+              {groupId: 'dimension::model=pixel 8', values: ['Pixel 8']},
+            ],
+            totalGroups: 1,
+            totalItems: 5,
+          },
+        }),
+      );
+      const store = await createStoreAt({'gb': 'dimension::model'});
+
+      const toggleLoad = new Subject<FleetSearchResults>();
+      const firstColumnReload = new Subject<FleetSearchResults>();
+      mockSearchService.searchFleet.and.returnValues(
+        toggleLoad,
+        firstColumnReload,
+        of({flat: {rows: [{id: 'dev-newest', cells: []}]}}),
+      );
+      store.toggleGroup('dimension::model=pixel 8');
+      store.setVisibleColumns([
+        {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+        {key: 'dimension::os', displayName: 'OS'},
+      ]);
+      store.setVisibleColumns([
+        {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+        {key: 'dimension::sdk', displayName: 'SDK'},
+      ]);
+      await flushAsync();
+
+      // The two older requests resolve last, one with rows and one with an error; both are dropped.
+      toggleLoad.next({flat: {rows: [{id: 'dev-stale', cells: []}]}});
+      firstColumnReload.error(new Error('stale failure'));
+      await flushAsync();
+
+      const groupState = store
+        .expandedGroupPages()
+        .get('dimension::model=pixel 8');
+      expect(groupState?.data?.rows?.map((r) => r.id)).toEqual(['dev-newest']);
+      expect(groupState?.error).toBeUndefined();
+    });
   });
 });
