@@ -1,0 +1,86 @@
+@switch (mode()) {
+  @case ('loading') {
+    <div class="bw-loading-container">
+      <mat-spinner diameter="32"></mat-spinner>
+      <span>{{ message() }}</span>
+    </div>
+  }
+  @case ('step_error') {
+    <div class="bw-error-container">
+      <mat-icon class="material-symbols-outlined">error</mat-icon>
+      <span>{{ message() }}</span>
+    </div>
+  }
+  @case ('errors') {
+    <div class="bw-table-section">
+      <div class="bw-review-banner bw-review-banner-error">
+        <mat-icon class="material-symbols-outlined">error</mat-icon>
+        <span>
+          Applied to {{ applySuccessLabel() }};
+          <b>{{ applyErrorLabel() }} failed</b>.
+        </span>
+      </div>
+      <div class="bw-table-container">
+        <table
+          mat-table
+          [dataSource]="applyErrors()"
+          class="bw-table bw-error-table"
+          aria-label="Failed devices"
+        >
+          <ng-container matColumnDef="deviceId">
+            <th mat-header-cell *matHeaderCellDef scope="col">Device ID</th>
+            <td
+              mat-cell
+              *matCellDef="let err"
+              class="bw-li-mono"
+              [title]="err.deviceId"
+            >
+              {{ err.deviceId }}
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="reason">
+            <th mat-header-cell *matHeaderCellDef scope="col">Reason</th>
+            <td
+              mat-cell
+              *matCellDef="let err"
+              class="bw-error-cell"
+              [title]="err.reason"
+            >
+              {{ err.reason }}
+            </td>
+          </ng-container>
+
+          <tr
+            mat-header-row
+            *matHeaderRowDef="errorColumns; sticky: true"
+          ></tr>
+          <tr mat-row *matRowDef="let err; columns: errorColumns"></tr>
+        </table>
+      </div>
+    </div>
+  }
+  @case ('applying') {
+    <div class="bw-applying">
+      <div class="bw-applying-badge">
+        <mat-spinner diameter="48"></mat-spinner>
+      </div>
+      <div class="bw-success-headline">
+        Applying to {{ willUpdateLabel() }}
+      </div>
+      <div class="bw-success-support">This usually takes a few seconds.</div>
+    </div>
+  }
+  @case ('success') {
+    <div class="bw-success">
+      <div class="bw-success-badge">
+        <mat-icon class="material-symbols-outlined">check</mat-icon>
+      </div>
+      <div class="bw-success-headline">
+        {{ willUpdateLabel() }} updated
+      </div>
+      <div class="bw-success-support">{{ successSupportText() }}</div>
+      <ng-content />
+    </div>
+  }
+}

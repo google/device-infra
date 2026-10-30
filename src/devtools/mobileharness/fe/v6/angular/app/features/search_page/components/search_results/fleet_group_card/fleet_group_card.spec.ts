@@ -98,8 +98,7 @@ describe('FleetGroupCardComponent', () => {
     fixture.componentRef.setInput('selectedSet', new Set(['dev-1']));
     fixture.detectChanges();
 
-    expect(component.isGroupPageAllSelected()).toBeFalse();
-    expect(component.isGroupPageSomeSelected()).toBeTrue();
+    expect(component.selectionState()).toEqual({all: false, some: true});
 
     const rows = fixture.debugElement.queryAll(By.css('tbody tr'));
     expect(rows.length).toBe(2);
@@ -110,13 +109,21 @@ describe('FleetGroupCardComponent', () => {
 
     fixture.componentRef.setInput('selectedSet', new Set(['dev-1', 'dev-2']));
     fixture.detectChanges();
-    expect(component.isGroupPageAllSelected()).toBeTrue();
-    expect(component.isGroupPageSomeSelected()).toBeFalse();
+    expect(component.selectionState()).toEqual({all: true, some: false});
 
     fixture.componentRef.setInput('selectedSet', new Set());
     fixture.detectChanges();
-    expect(component.isGroupPageAllSelected()).toBeFalse();
-    expect(component.isGroupPageSomeSelected()).toBeFalse();
+    expect(component.selectionState()).toEqual({all: false, some: false});
+
+    let emittedRows: Row[] = [];
+    component.toggleSelectRows.subscribe((r) => {
+      emittedRows = r;
+    });
+    const checkboxes = fixture.debugElement.queryAll(By.css('mat-checkbox'));
+    checkboxes[0].triggerEventHandler('change', {});
+    expect(emittedRows).toEqual(mockRows);
+    checkboxes[1].triggerEventHandler('change', {});
+    expect(emittedRows).toEqual([mockRows[0]]);
   });
 
   it('renders inner pagination and emits loadGroupPage output on page navigation', () => {
@@ -173,7 +180,6 @@ describe('FleetGroupCardComponent', () => {
     fixture.componentRef.setInput('groupState', undefined);
     fixture.detectChanges();
 
-    expect(component.isLoading()).toBeTrue();
     let loadingEl = fixture.debugElement.query(By.css('.rt-group-loading'));
     expect(loadingEl).not.toBeNull();
     expect(loadingEl.nativeElement.textContent).toContain('Loading devices...');
@@ -181,7 +187,6 @@ describe('FleetGroupCardComponent', () => {
     fixture.componentRef.setInput('groupState', {loading: true});
     fixture.detectChanges();
 
-    expect(component.isLoading()).toBeTrue();
     loadingEl = fixture.debugElement.query(By.css('.rt-group-loading'));
     expect(loadingEl).not.toBeNull();
   });
@@ -195,7 +200,6 @@ describe('FleetGroupCardComponent', () => {
     });
     fixture.detectChanges();
 
-    expect(component.errorMessage()).toBe('Network connection failed');
     const errorEl = fixture.debugElement.query(By.css('.rt-group-error-msg'));
     expect(errorEl).not.toBeNull();
     expect(errorEl.nativeElement.textContent).toContain(
@@ -254,7 +258,7 @@ describe('FleetGroupCardComponent', () => {
     });
     fixture.detectChanges();
 
-    expect(component.hasGroupRows()).toBeFalse();
+    expect(component.rowItems().length).toBe(0);
     const emptyEl = fixture.debugElement.query(By.css('.rt-group-empty'));
     expect(emptyEl).not.toBeNull();
     expect(emptyEl.nativeElement.textContent).toContain(

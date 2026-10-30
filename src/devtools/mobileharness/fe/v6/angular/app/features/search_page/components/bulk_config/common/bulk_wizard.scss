@@ -1,0 +1,770 @@
+@use '../../../../../shared/styles/action_bar';
+@use '../../../../../shared/styles/common';
+
+// Shared status count chips used in Step 1 candidate lists and Step 2 review banners.
+@mixin bulk-count-chips {
+  .bw-count-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .bw-count-chip-update {
+    background: #d3e3fd;
+    color: #041e49;
+  }
+
+  .bw-count-chip-same {
+    background: #eceef4;
+    color: #49454f;
+  }
+
+  .bw-count-chip-skip {
+    background: #f9dedc;
+    color: #410e0b;
+  }
+}
+
+// Shared table layout used in Step 2 review tables and terminal error tables.
+@mixin bulk-table {
+  .bw-table-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    gap: 12px;
+  }
+
+  .bw-table-container {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    @include common.shared-scrollbar-style();
+    border: 1px solid #cac4d0;
+    border-radius: 12px;
+    background: #fff;
+  }
+
+  .bw-table-container .bw-table {
+    width: 100%;
+    border-spacing: 0;
+    border: 0;
+    table-layout: fixed;
+    white-space: nowrap;
+    background: #fff;
+
+    th,
+    td {
+      box-sizing: border-box;
+      text-align: start;
+      padding-block: 0;
+      padding-inline: 20px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border-block-end: 1px solid #cac4d0;
+
+      &:last-child {
+        text-align: end;
+      }
+    }
+
+    thead tr {
+      background-color: #f8fafd;
+      height: 44px;
+    }
+
+    thead th {
+      position: sticky;
+      inset-block-start: 0;
+      top: 0;
+      z-index: 2;
+      height: 44px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      line-height: 1rem;
+      letter-spacing: 0.1px;
+      background-color: #f8fafd;
+      color: #49454f;
+    }
+
+    tbody tr {
+      height: 48px;
+      transition: background-color 0.15s;
+
+      &:last-child td {
+        border-block-end: none;
+      }
+
+      &:hover td {
+        background: #f2f4f8;
+      }
+    }
+
+    tbody td {
+      font-size: 0.875rem;
+      font-weight: 400;
+      line-height: 1.25rem;
+      color: #1f1f1f;
+      background: #fff;
+      vertical-align: middle;
+    }
+  }
+
+  .bw-li-mono {
+    font-family: inherit;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.875rem;
+    color: #1f1f1f;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bw-device-cell {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    padding: 4px 0;
+  }
+
+  .bw-device-host {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: #49454f;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+// Scoped styles for BulkStatusPill (`app-bulk-status-pill`).
+@mixin bulk-status-pill {
+  :host {
+    display: contents;
+  }
+
+  .bw-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.125rem;
+  }
+
+  .bw-status-update {
+    background: #d3e3fd;
+    color: #041e49;
+  }
+
+  .bw-status-same {
+    color: #49454f;
+    font-weight: 400;
+  }
+
+  .bw-status-skip {
+    background: #f9dedc;
+    color: #410e0b;
+  }
+}
+
+// Scoped styles for BulkReviewHeaderBanner (`app-bulk-review-header-banner`).
+@mixin bulk-review-header-banner {
+  :host {
+    display: contents;
+  }
+
+  @include bulk-count-chips;
+
+  .bw-review-banner {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: #f8fafd;
+    border: 1px solid #cac4d0;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: #1f1f1f;
+
+    &.bw-review-banner-info {
+      background: var(--md-sys-color-secondary-container, #c2e7ff);
+      color: var(--md-sys-color-on-secondary-container, #001d35);
+      border-color: transparent;
+      justify-content: flex-start;
+      gap: 10px;
+
+      mat-icon {
+        font-family: 'Material Symbols Outlined', sans-serif;
+        font-variation-settings: 'FILL' 0;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+        color: var(--md-sys-color-on-secondary-container, #001d35);
+      }
+    }
+  }
+
+  .bw-review-target {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .bw-review-target-icon {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #d3e3fd;
+    color: #041e49;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  .bw-review-target-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .bw-review-target-headline {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    color: #1f1f1f;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .bw-review-target-sub {
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1rem;
+    color: #49454f;
+  }
+
+  .bw-review-counts {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+}
+
+// Scoped styles for BulkReviewTable (`app-bulk-review-table`).
+@mixin bulk-review-table {
+  :host {
+    display: contents;
+  }
+
+  @include bulk-table;
+
+  .bw-review-table {
+    .mat-column-deviceId {
+      width: 35%;
+    }
+
+    .mat-column-currentValue {
+      width: 45%;
+      overflow: visible;
+    }
+
+    .mat-column-status {
+      width: 20%;
+    }
+  }
+}
+
+// Scoped styles for BulkWizardStatusView (`app-bulk-wizard-status-view`).
+@mixin bulk-wizard-status-view {
+  :host {
+    display: contents;
+  }
+
+  @include bulk-table;
+
+  .bw-loading-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: #49454f;
+    font-size: 0.875rem;
+  }
+
+  .bw-error-container {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: #b3261e;
+    font-size: 0.875rem;
+  }
+
+  .bw-review-banner {
+    flex: none;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+
+    &.bw-review-banner-error {
+      color: #b3261e;
+      background: #fdf2f2;
+      border: 1px solid #f9dedc;
+      justify-content: flex-start;
+
+      mat-icon {
+        color: #b3261e;
+      }
+    }
+  }
+
+  .bw-error-table {
+    .mat-column-deviceId {
+      width: 34%;
+    }
+
+    .mat-column-reason {
+      width: 66%;
+    }
+  }
+
+  .bw-error-cell {
+    color: #b3261e;
+    font-size: 0.8125rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bw-success,
+  .bw-applying {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 8px 24px 24px;
+  }
+
+  .bw-applying-badge {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .bw-success-badge {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #d3e3fd;
+    color: #041e49;
+
+    mat-icon {
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  .bw-success-headline {
+    font-size: 1.375rem;
+    line-height: 1.75rem;
+    font-weight: 400;
+    color: #1f1f1f;
+  }
+
+  .bw-success-support {
+    margin-top: 6px;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: #49454f;
+  }
+}
+
+// Base styles for bulk wizard parent dialogs (`BulkConfigWifiDialog`, `BulkConfigDimensionDialog`).
+@mixin bulk-wizard-base {
+  :host {
+    display: block;
+    box-sizing: border-box;
+  }
+
+  @include bulk-count-chips;
+
+  // --- Body ---
+  .bw-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 24px;
+    gap: 20px;
+    overflow-y: auto;
+    @include common.shared-scrollbar-style();
+  }
+
+  // --- Step 1 Layout ---
+  .bw-step1 {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: 20px;
+  }
+
+  // Top band
+  .bw-apply-band {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .bw-apply-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  .bw-apply-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.5rem;
+    color: #1f1f1f;
+  }
+
+  .bw-apply-sub {
+    font-size: 0.8125rem;
+    line-height: 1.25rem;
+    color: #49454f;
+  }
+
+  .bw-apply-fields {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  // M3 filled text field
+  .bw-tf {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    height: 56px;
+    background: #dde3ea;
+    border-radius: 4px 4px 0 0;
+    border-bottom: 1px solid #49454f;
+    box-sizing: border-box;
+
+    &:hover {
+      border-bottom-color: #1f1f1f;
+    }
+
+    &:focus-within {
+      border-bottom: 2px solid #0b57d0;
+    }
+  }
+
+  .bw-tf-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 24px 16px 8px;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-family: inherit;
+    font-size: 1rem;
+    line-height: 1.5rem;
+    color: #1f1f1f;
+  }
+
+  .bw-tf-trailing .bw-tf-input {
+    padding-right: 44px;
+  }
+
+  .bw-tf-label {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1rem;
+    line-height: 1.5rem;
+    color: #49454f;
+    pointer-events: none;
+    transition:
+      top 0.15s,
+      font-size 0.15s,
+      color 0.15s;
+  }
+
+  .bw-tf-input:focus ~ .bw-tf-label,
+  .bw-tf-input:not(:placeholder-shown) ~ .bw-tf-label {
+    top: 14px;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: #0b57d0;
+  }
+
+  .bw-tf-input:not(:focus):not(:placeholder-shown) ~ .bw-tf-label {
+    color: #49454f;
+  }
+
+  .bw-tf-icon {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px;
+    cursor: pointer;
+    color: #49454f;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  // Panel
+  .bw-panel {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #cac4d0;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .bw-panel-head {
+    flex: none;
+    padding: 12px 16px;
+    border-bottom: 1px solid #cac4d0;
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    color: #49454f;
+  }
+
+  .bw-panel-search {
+    flex: none;
+    position: relative;
+    padding: 8px 12px;
+    border-bottom: 1px solid #cac4d0;
+
+    mat-icon {
+      position: absolute;
+      left: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #49454f;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      height: 40px;
+      padding: 0 12px 0 40px;
+      font-family: inherit;
+      font-size: 0.875rem;
+      color: #1f1f1f;
+      background: #dde3ea;
+      border: none;
+      border-radius: 20px;
+      outline: none;
+    }
+  }
+
+  .bw-panel-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 4px 0;
+    @include common.shared-scrollbar-style();
+  }
+
+  .bw-list-empty {
+    padding: 24px 16px;
+    text-align: center;
+    font-size: 0.875rem;
+    color: #49454f;
+  }
+
+  // List items
+  .bw-li {
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 16px;
+    min-height: 56px;
+    transition: background 0.15s;
+
+    &:hover {
+      background: rgba(11, 87, 208, 0.08);
+    }
+
+    &.bw-li-active {
+      background: rgba(11, 87, 208, 0.12);
+
+      .bw-li-lead {
+        color: #0b57d0;
+      }
+    }
+  }
+
+  .bw-li-lead {
+    flex: none;
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+    color: #49454f;
+  }
+
+  .bw-li-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .bw-li-headline {
+    font-size: 0.875rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    color: #1f1f1f;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .bw-li-support {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: #49454f;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .bw-text-btn {
+    height: 36px;
+    padding: 0 12px;
+    border: none;
+    background: transparent;
+    color: #0b57d0;
+    font-family: inherit;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 18px;
+    cursor: pointer;
+    transition: background-color 0.15s;
+
+    &:hover {
+      background-color: rgba(11, 87, 208, 0.08);
+    }
+  }
+
+  // --- Step 2 Layout ---
+  .bw-step2 {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    gap: 16px;
+  }
+
+  .bw-cell-unset {
+    font-size: 0.875rem;
+    font-weight: 400;
+    font-style: normal;
+    color: #49454f;
+  }
+
+  // --- Projected Success Summary Card ---
+  .bw-success-card {
+    width: 100%;
+    min-width: 200px;
+    max-width: 300px;
+    margin-top: 24px;
+    text-align: left;
+  }
+
+  .bw-new-card {
+    padding: 20px;
+    background: var(--md-sys-color-secondary-container, #c2e7ff);
+    color: var(--md-sys-color-on-secondary-container, #001d35);
+    border-radius: 16px;
+  }
+
+  .bw-new-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    line-height: 1.25rem;
+    color: var(--md-sys-color-on-secondary-container, #001d35);
+    margin-bottom: 12px;
+  }
+}

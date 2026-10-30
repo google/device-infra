@@ -99,8 +99,7 @@
               [columnDescriptions]="store.columnDescriptions()"
               [selectedSet]="selectedItems"
               (toggleGroup)="store.toggleGroup($event)"
-              (toggleSelectGroupPage)="store.toggleSelectRows($event)"
-              (toggleSelectRow)="store.toggleSelectRow($event)"
+              (toggleSelectRows)="store.toggleSelectRows($event)"
               (loadGroupPage)="store.onLoadGroupRows(g.groupId, $event)"
             ></app-fleet-group-card>
           }
@@ -166,23 +165,6 @@
           [density]="store.density()"
           (densityChange)="store.density.set($event)"
         ></app-density-dropdown>
-
-        <span class="rt-grow"></span>
-
-        <!-- More Options Menu -->
-        <button class="rt-icon-btn" [matMenuTriggerFor]="moreMenu" title="More options">
-          <mat-icon class="material-symbols-outlined">more_vert</mat-icon>
-        </button>
-        <mat-menu #moreMenu="matMenu" class="more-dropdown-menu">
-          <button mat-menu-item (click)="store.executeSearch()">
-            <mat-icon class="material-symbols-outlined">refresh</mat-icon>
-            <span>Refresh</span>
-          </button>
-          <button mat-menu-item [disabled]="true" title="Feature is under development">
-            <mat-icon class="material-symbols-outlined">download</mat-icon>
-            <span>Export</span>
-          </button>
-        </mat-menu>
       }
     </div>
 
@@ -214,20 +196,21 @@
             [class]="'density-' + store.density()"
             [class.stale-loading]="isLoading"
           >
-            <table mat-table [dataSource]="rows" class="results-table">
+            <table mat-table [dataSource]="tableRows()" [trackBy]="trackByRow" class="results-table">
               <!-- Checkbox Column -->
               <ng-container matColumnDef="checkbox">
                 <th mat-header-cell *matHeaderCellDef class="checkbox-col">
+                  @let selState = store.selectionState();
                   <mat-checkbox
-                    [checked]="store.isAllSelected()"
-                    [indeterminate]="store.isSomeSelected()"
+                    [checked]="selState.all"
+                    [indeterminate]="selState.some"
                     (change)="store.toggleSelectRows(rows)"
                   ></mat-checkbox>
                 </th>
-                <td mat-cell *matCellDef="let row" class="checkbox-col">
+                <td mat-cell *matCellDef="let item" class="checkbox-col">
                   <mat-checkbox
-                    [checked]="selectedItems.has(row.id)"
-                    (change)="store.toggleSelectRow(row.id)"
+                    [checked]="item.selected"
+                    (change)="store.toggleSelectRows([item.row])"
                   ></mat-checkbox>
                 </td>
               </ng-container>
@@ -256,14 +239,14 @@
                       }
                     </span>
                   </th>
-                  <td mat-cell *matCellDef="let row" [class]="'col-' + col.key">
-                    <app-search-cell [cell]="row.cells?.[colIdx]" [column]="col"></app-search-cell>
+                  <td mat-cell *matCellDef="let item" [class]="'col-' + col.key">
+                    <app-search-cell [cell]="item.row.cells?.[colIdx]" [column]="col"></app-search-cell>
                   </td>
                 </ng-container>
               }
 
               <tr mat-header-row *matHeaderRowDef="columnsToDisplay(); sticky: true"></tr>
-              <tr mat-row *matRowDef="let row; columns: columnsToDisplay()" [class.selected-row]="selectedItems.has(row.id)"></tr>
+              <tr mat-row *matRowDef="let item; columns: columnsToDisplay()" [class.selected-row]="item.selected"></tr>
             </table>
           </div>
         </mat-card-content>
@@ -291,20 +274,100 @@
       Quarantine
     </button>
     @if (entity === 'devices') {
-      <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
+      <button class="rt-btn-text" (click)="bulkConfig.openWifiDialog()">
         <mat-icon class="material-symbols-outlined">wifi</mat-icon>
         Configure Wi-Fi
       </button>
-      <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
-        <mat-icon class="material-symbols-outlined">tune</mat-icon>
-        Configuration
-      </button>
+      @let dimConfig = bulkConfig.dimensionConfig();
+      @if (dimConfig.enabled) {
+        <button
+          class="rt-btn-text"
+          [class.is-loading]="dimConfig.isLoading"
+          [matMenuTriggerFor]="configureMenu"
+          [disabled]="dimConfig.isLoading"
+          title="Configure device dimensions"
+        >
+          @if (dimConfig.isLoading) {
+            <mat-spinner diameter="16" class="shared-button-spinner"></mat-spinner>
+          } @else {
+            <mat-icon class="material-symbols-outlined">tune</mat-icon>
+          }
+          Configuration
+          <mat-icon class="material-symbols-outlined rt-caret">arrow_drop_down</mat-icon>
+        </button>
+        <mat-menu #configureMenu="matMenu" class="configure-dropdown-menu">
+          <div class="configure-menu-items">
+            @for (dim of dimConfig.dimensions; track dim.dimensionName) {
+              <button mat-menu-item (click)="bulkConfig.openDimensionDialog(dim)">
+                <span>{{ dim.displayName || dim.dimensionName }}</span>
+              </button>
+            } @empty {
+              @if (!dimConfig.allowCustom) {
+                <div class="menu-empty-message">No dimensions available</div>
+              }
+            }
+          </div>
+          @if (dimConfig.allowCustom) {
+            <mat-divider></mat-divider>
+            <div class="configure-menu-footer">
+              <button
+                mat-menu-item
+                (click)="bulkConfig.openDimensionDialog('supported')"
+              >
+                <mat-icon class="material-symbols-outlined">add</mat-icon>
+                <span>Supported Dimension…</span>
+              </button>
+              <button
+                mat-menu-item
+                (click)="bulkConfig.openDimensionDialog('required')"
+              >
+                <mat-icon class="material-symbols-outlined">add</mat-icon>
+                <span>Required Dimension…</span>
+              </button>
+            </div>
+          }
+        </mat-menu>
+      }
     }
 
-    <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
-      <mat-icon class="material-symbols-outlined">download</mat-icon>
-      Export
-    </button>
+    <span
+      class="rt-export-trigger-wrapper"
+      [matTooltip]="exportDisabledTooltip()"
+      [matTooltipDisabled]="!isExportDisabled()"
+    >
+      <button
+        type="button"
+        class="rt-btn-text"
+        [matMenuTriggerFor]="exportMenu"
+        [disabled]="isExportDisabled()"
+        [title]="isExportDisabled() ? '' : 'Export selected items'"
+      >
+        <mat-icon class="material-symbols-outlined">download</mat-icon>
+        Export
+        <mat-icon class="material-symbols-outlined rt-caret">arrow_drop_down</mat-icon>
+      </button>
+    </span>
+    <mat-menu
+      #exportMenu="matMenu"
+      class="export-dropdown-menu rt-menu rt-menu-no-check"
+    >
+      <button
+        mat-menu-item
+        class="rt-menu-item rt-menu-action"
+        (click)="exportSelection('csv')"
+      >
+        <mat-icon class="material-symbols-outlined rt-menu-icon">download</mat-icon>
+        <span class="rt-menu-label">{{ selectionExportLabel() }}</span>
+      </button>
+      <button
+        mat-menu-item
+        class="rt-menu-item rt-menu-action"
+        (click)="exportSelection('tsv')"
+      >
+        <mat-icon class="material-symbols-outlined rt-menu-icon">content_copy</mat-icon>
+        <span class="rt-menu-label">Copy table to clipboard</span>
+      </button>
+    </mat-menu>
     <span class="rt-grow"></span>
     <button class="rt-btn-text" (click)="store.clearSelection()">
       <mat-icon class="material-symbols-outlined">close</mat-icon>
