@@ -57,9 +57,9 @@ import javax.inject.Singleton;
  * fleets: one in the OSS build (FLEET_SELF), two in the internal build (FLEET_SELF and FLEET_ATS).
  *
  * <p>The fleets refresh in parallel. Each fleet's pull runs asynchronously with a {@link
- * #PULL_TIMEOUT} bound, and its index build and publish run on the shared executor. A single
- * refresh cycle fans out all the fleets and then waits for them all to finish before returning, so
- * the fixed-delay cadence measures the gap between completed cycles.
+ * #PULL_TIMEOUT} bound, and its index build and publish run on the {@link FleetRefreshExecutor}
+ * background pool. A single refresh cycle fans out all the fleets and then waits for them all to
+ * finish before returning, so the fixed-delay cadence measures the gap between completed cycles.
  */
 @Singleton
 public final class CoreFleetDataRefresher {
@@ -92,7 +92,7 @@ public final class CoreFleetDataRefresher {
       FleetIndexBuilder indexBuilder,
       FleetSnapshotStore snapshotStore,
       InstantSource instantSource,
-      ListeningExecutorService executor,
+      @FleetRefreshExecutor ListeningExecutorService executor,
       ListeningScheduledExecutorService scheduledExecutor) {
     this(
         sources,

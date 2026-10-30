@@ -16,16 +16,20 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.refresh;
 
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.AtsFleetDataSource;
 import com.google.devtools.mobileharness.fe.v6.service.search.pull.FleetDataSource;
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
 import com.google.inject.multibindings.MapBinder;
 
 /**
  * Guice bindings for the OSS standalone ATS fleet search data pipeline.
  *
- * <p>Binds the per-fleet {@link FleetDataSource} map that {@link CoreFleetDataRefresher} iterates.
+ * <p>Binds the per-fleet {@link FleetDataSource} map that {@link CoreFleetDataRefresher} iterates
+ * and provides the dedicated {@link FleetRefreshExecutor} pool.
  */
 public final class FleetSearchDataModule extends AbstractModule {
 
@@ -37,5 +41,12 @@ public final class FleetSearchDataModule extends AbstractModule {
 
     bind(DimensionCatalogStore.class).asEagerSingleton();
     bind(DimensionCatalogRefresher.class).asEagerSingleton();
+  }
+
+  @Provides
+  @Singleton
+  @FleetRefreshExecutor
+  ListeningExecutorService provideFleetRefreshExecutor() {
+    return FleetRefreshExecutors.create();
   }
 }

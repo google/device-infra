@@ -71,6 +71,7 @@ java_library(
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:core_fleet_raw_data",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:device_enrichment",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:fleet_refresh_executor",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_registry",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",

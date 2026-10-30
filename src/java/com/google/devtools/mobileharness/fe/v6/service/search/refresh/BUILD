@@ -32,9 +32,23 @@ java_library(
 )
 
 java_library(
+    name = "fleet_refresh_executor",
+    srcs = [
+        "FleetRefreshExecutor.java",
+        "FleetRefreshExecutors.java",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "core_fleet_data_refresher",
     srcs = ["CoreFleetDataRefresher.java"],
     deps = [
+        ":fleet_refresh_executor",
         ":fleet_snapshot_store",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:core_fleet_raw_data",
@@ -70,9 +84,11 @@ java_library(
     deps = [
         ":dimension_catalog_refresher",
         ":dimension_catalog_store",
+        ":fleet_refresh_executor",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:ats_fleet_data_source",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:fleet_data_source",
+        "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
     ],
 )
@@ -92,6 +108,7 @@ java_library(
     srcs = ["DimensionCatalogRefresher.java"],
     deps = [
         ":dimension_catalog_store",
+        ":fleet_refresh_executor",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/pull:fleet_data_source",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

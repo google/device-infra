@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryR
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.DeviceEnrichment;
+import com.google.devtools.mobileharness.fe.v6.service.search.refresh.FleetRefreshExecutor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
@@ -57,7 +58,7 @@ public final class AtsFleetDataSource implements FleetDataSource {
   private final AtsDeviceKeyRegistry deviceKeyRegistry;
   private final AtsHostKeyRegistry hostKeyRegistry;
   private final ConfigurationProvider configurationProvider;
-  private final ListeningExecutorService executor;
+  private final ListeningExecutorService refreshExecutor;
 
   @Inject
   AtsFleetDataSource(
@@ -65,12 +66,12 @@ public final class AtsFleetDataSource implements FleetDataSource {
       AtsDeviceKeyRegistry deviceKeyRegistry,
       AtsHostKeyRegistry hostKeyRegistry,
       ConfigurationProvider configurationProvider,
-      ListeningExecutorService executor) {
+      @FleetRefreshExecutor ListeningExecutorService refreshExecutor) {
     this.labInfoFleetPuller = labInfoFleetPuller;
     this.deviceKeyRegistry = deviceKeyRegistry;
     this.hostKeyRegistry = hostKeyRegistry;
     this.configurationProvider = configurationProvider;
-    this.executor = executor;
+    this.refreshExecutor = refreshExecutor;
   }
 
   @Override
@@ -91,8 +92,8 @@ public final class AtsFleetDataSource implements FleetDataSource {
                         .setLabData(labData)
                         .setDeviceEnrichments(deviceEnrichments(deviceConfigs))
                         .build(),
-                executor),
-        executor);
+                refreshExecutor),
+        refreshExecutor);
   }
 
   @Override

@@ -71,7 +71,7 @@ public final class DimensionCatalogRefresher {
   DimensionCatalogRefresher(
       Map<Fleet, FleetDataSource> sources,
       DimensionCatalogStore catalogStore,
-      ListeningExecutorService executor,
+      @FleetRefreshExecutor ListeningExecutorService executor,
       ListeningScheduledExecutorService scheduledExecutor) {
     this.sources = sources;
     this.catalogStore = catalogStore;
