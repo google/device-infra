@@ -43,8 +43,10 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {
   APP_DATA,
   type AppData,
+  getFaqsUrl,
   getLegacyFeUrl,
   getOmniLabUrl,
+  getUserGuideUrl,
   stayOnLegacyFe,
 } from '@deviceinfra/app/core/models/app_data';
 import {CommonParamsService} from '@deviceinfra/app/core/services/common_params_service';
@@ -97,6 +99,8 @@ export class App implements OnDestroy {
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
   readonly stayOnLegacyFe = stayOnLegacyFe;
   readonly omniLabUrl = getOmniLabUrl(this.appData.applicationId ?? '');
+  readonly userGuideUrl = getUserGuideUrl();
+  readonly faqsUrl = getFaqsUrl();
   readonly loadingService = inject(LoadingService);
   private readonly urlService = inject(UrlService);
   readonly dockService = inject(HeaderSearchDockService);

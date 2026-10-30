@@ -121,6 +121,28 @@ describe('App Component', () => {
       standaloneFixture.detectChanges();
       expect(standaloneComponent.sideNavExpanded).toBeTrue();
     });
+
+    it('should expose and render User Guide and FAQs URLs', () => {
+      expect(
+        standaloneComponent.userGuideUrl.startsWith('https://'),
+      ).toBeTrue();
+      expect(standaloneComponent.faqsUrl.startsWith('https://')).toBeTrue();
+
+      const navLinks = Array.from<HTMLAnchorElement>(
+        standaloneFixture.nativeElement.querySelectorAll(
+          'mat-nav-list a[mat-list-item]',
+        ),
+      );
+      const linkMap = new Map(
+        navLinks.map((a) => [
+          a.querySelector('span')?.textContent?.trim(),
+          a.getAttribute('href'),
+        ]),
+      );
+
+      expect(linkMap.get('User Guide')).toBe(standaloneComponent.userGuideUrl);
+      expect(linkMap.get('FAQs')).toBe(standaloneComponent.faqsUrl);
+    });
   });
 
   describe('isNavActive', () => {

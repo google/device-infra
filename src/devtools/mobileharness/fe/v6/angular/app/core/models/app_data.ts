@@ -88,6 +88,20 @@ export function getOmniLabUrl(applicationId: string): string {
   return url;
 }
 
+/** Gets the User Guide documentation URL for the current deployment. */
+export function getUserGuideUrl(): string {
+  let url =
+    'https://source.android.com/compatibility/tests/development/android-test-station/ats-user-guide';
+  return url;
+}
+
+/** Gets the FAQs documentation URL for the current deployment. */
+export function getFaqsUrl(): string {
+  let url =
+    'https://source.android.com/compatibility/tests/development/android-test-station/faq';
+  return url;
+}
+
 
 const OSS_DEFAULTS = {
   // for OSS, we use the localhost:8080 as the default lab console server url.
