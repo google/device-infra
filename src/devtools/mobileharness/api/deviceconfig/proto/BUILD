@@ -71,6 +71,19 @@ java_proto_library(
 )
 
 proto_library(
+    name = "global_proto",
+    srcs = ["global.proto"],
+    deps = [
+        ":basic_proto",
+    ],
+)
+
+java_proto_library(
+    name = "global_java_proto",
+    deps = [":global_proto"],
+)
+
+proto_library(
     name = "conditioned_device_config_proto",
     srcs = ["conditioned_device_config.proto"],
     deps = [],
@@ -100,6 +113,7 @@ proto_library(
     srcs = ["device_config_service.proto"],
     deps = [
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_proto",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:global_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_proto",
         "@protobuf//:field_mask_proto",
     ],
