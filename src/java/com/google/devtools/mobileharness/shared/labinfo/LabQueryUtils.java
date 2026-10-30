@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableList.sortedCopyOf;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.google.common.collect.Maps.immutableEntry;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Comparator.comparing;
@@ -67,13 +66,18 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
 /** Utilities for doing lab query. */
 public class LabQueryUtils {
+
+  /** The {@code LabInfo} field {@link LabInfoComparator} reads. */
+  static final String LAB_SORT_KEY_PATH = "lab_locator.host_name";
+
+  /** The {@code DeviceInfo} field {@link DeviceInfoComparator} reads. */
+  static final String DEVICE_SORT_KEY_PATH = "device_locator.id";
 
   public static LabQueryResult createNewLabQueryResult(
       LabQuery query, LabInfoProvider labInfoProvider) throws MobileHarnessException {
@@ -142,7 +146,7 @@ public class LabQueryUtils {
    * Sorts the {@link DeviceInfo} list in a {@link LabData} by the given {@link
    * DeviceInfoComparator}.
    */
-  public static LabData sortDeviceListInLabData(
+  private static LabData sortDeviceListInLabData(
       LabData labData, DeviceInfoComparator deviceInfoComparator) {
     LabData.Builder result = labData.toBuilder();
     DeviceList.Builder deviceListBuilder = result.getDeviceListBuilder();
@@ -355,9 +359,9 @@ public class LabQueryUtils {
     if (groupLimit > 0) {
       // Purges groups in accordance with group limit.
       deviceGroupsByList =
-          allDeviceGroupsByList.entrySet().stream()
+          allDeviceGroupsByList.keySet().stream()
               .limit(groupLimit)
-              .collect(toImmutableMap(Entry::getKey, Entry::getValue));
+              .collect(toImmutableMap(key -> key, allDeviceGroupsByList::get));
     } else {
       deviceGroupsByList = allDeviceGroupsByList;
     }
@@ -413,9 +417,9 @@ public class LabQueryUtils {
     if (groupLimit > 0) {
       // Purges groups in accordance with group limit.
       deviceGroupsByStatus =
-          allDeviceGroupsByStatus.entrySet().stream()
+          allDeviceGroupsByStatus.keySet().stream()
               .limit(groupLimit)
-              .collect(toImmutableMap(Entry::getKey, Entry::getValue));
+              .collect(toImmutableMap(key -> key, allDeviceGroupsByStatus::get));
     } else {
       deviceGroupsByStatus = allDeviceGroupsByStatus;
     }
@@ -450,36 +454,36 @@ public class LabQueryUtils {
         deviceGroupOperation.getDeviceGroupCondition().getSingleDimensionValue().getDimensionName();
 
     ImmutableMap<Optional<String>, DeviceGroup.Builder> allDeviceGroupsByDimensionValue =
-        Stream.<Entry<Optional<String>, DeviceGroup.Builder>>concat(
+        Stream.concat(
                 // Adds a device group representing a device doesn't have the dimension.
-                Stream.of(
-                    immutableEntry(
-                        Optional.empty(),
+                Stream.of(Optional.<String>empty()),
+                // Adds device group for each distinct dimension value, sorted by dimension name.
+                deviceInfoList.stream()
+                    .flatMap(deviceInfo -> getDimensionValues(deviceInfo, dimensionName))
+                    .sorted()
+                    .distinct()
+                    .map(Optional::of))
+            .collect(
+                toImmutableMap(
+                    dimensionValue -> dimensionValue,
+                    dimensionValue ->
                         DeviceGroup.newBuilder()
                             .setDeviceGroupKey(
                                 DeviceGroupKey.newBuilder()
                                     .setHasDimensionValue(
-                                        HasDimensionValue.newBuilder()
-                                            .setDimensionName(dimensionName)
-                                            .setNoDimensionValue(
-                                                NoDimensionValue.getDefaultInstance()))))),
-                // Adds device group for each distinct dimension value, sorted by dimension name.
-                deviceInfoList.stream()
-                    .flatMap(deviceInfo -> getDimensionValues(deviceInfo, dimensionName))
-                    .distinct()
-                    .sorted()
-                    .map(
-                        dimensionValue ->
-                            immutableEntry(
-                                Optional.of(dimensionValue),
-                                DeviceGroup.newBuilder()
-                                    .setDeviceGroupKey(
-                                        DeviceGroupKey.newBuilder()
-                                            .setHasDimensionValue(
-                                                HasDimensionValue.newBuilder()
-                                                    .setDimensionName(dimensionName)
-                                                    .setDimensionValue(dimensionValue))))))
-            .collect(toImmutableMap(Entry::getKey, Entry::getValue));
+                                        dimensionValue
+                                            .map(
+                                                value ->
+                                                    HasDimensionValue.newBuilder()
+                                                        .setDimensionName(dimensionName)
+                                                        .setDimensionValue(value))
+                                            .orElseGet(
+                                                () ->
+                                                    HasDimensionValue.newBuilder()
+                                                        .setDimensionName(dimensionName)
+                                                        .setNoDimensionValue(
+                                                            NoDimensionValue
+                                                                .getDefaultInstance()))))));
     int deviceGroupTotalCount = allDeviceGroupsByDimensionValue.size();
 
     // Handles group limit.
@@ -491,9 +495,9 @@ public class LabQueryUtils {
     if (groupLimit > 0) {
       // Purges groups in accordance with group limit.
       deviceGroupsByDimensionValue =
-          allDeviceGroupsByDimensionValue.entrySet().stream()
+          allDeviceGroupsByDimensionValue.keySet().stream()
               .limit(groupLimit)
-              .collect(toImmutableMap(Entry::getKey, Entry::getValue));
+              .collect(toImmutableMap(key -> key, allDeviceGroupsByDimensionValue::get));
     } else {
       deviceGroupsByDimensionValue = allDeviceGroupsByDimensionValue;
     }
