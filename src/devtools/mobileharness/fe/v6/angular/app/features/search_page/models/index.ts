@@ -1,3 +1,4 @@
+export * from './bulk_config_models';
 export * from './column_selector_models';
 export * from './filter_picker_models';
 export * from './key_picker_models';

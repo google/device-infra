@@ -78,6 +78,12 @@ const SCENARIO_WIFI_DIMENSIONS_ONLY_DATA: MockDeviceScenario = {
   scenarioName: 'WiFi & Dimensions Only',
   overview: OVERVIEW,
   config: CONFIG,
+  configUiStatus: {
+    permissions: {visible: false},
+    wifi: {visible: true, editability: {editable: true}},
+    dimensions: {visible: true, editability: {editable: true}},
+    settings: {visible: false},
+  },
   isQuarantined: false,
   actionVisibility: {
     screenshot: true,
@@ -91,7 +97,7 @@ const SCENARIO_WIFI_DIMENSIONS_ONLY_DATA: MockDeviceScenario = {
 /**
  * Returns the mock scenario for wifi dimensions only.
  */
-export function SCENARIO_WIFI_DIMENSIONS_ONLY(
+export function scenarioWifiDimensionsOnly(
   callCount?: number,
 ): MockDeviceScenario {
   return SCENARIO_WIFI_DIMENSIONS_ONLY_DATA;

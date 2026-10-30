@@ -1,0 +1,51 @@
+<div class="bw-table-section">
+  <div class="bw-table-container">
+    <table
+      mat-table
+      [dataSource]="rows()"
+      class="bw-table bw-review-table"
+      [attr.aria-label]="ariaLabel()"
+    >
+      <ng-container matColumnDef="deviceId">
+        <th mat-header-cell *matHeaderCellDef scope="col">Device ID</th>
+        <td
+          mat-cell
+          *matCellDef="let row"
+          [title]="row.hostName ? row.deviceId + ' (' + row.hostName + ')' : row.deviceId"
+        >
+          <div class="bw-device-cell">
+            <span class="bw-li-mono">{{ row.deviceId }}</span>
+            @if (row.hostName) {
+              <span class="bw-device-host">{{ row.hostName }}</span>
+            }
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="currentValue">
+        <th mat-header-cell *matHeaderCellDef scope="col">
+          {{ currentHeader() }}
+        </th>
+        <td mat-cell *matCellDef="let row">
+          <ng-container
+            [ngTemplateOutlet]="currentValueCell()"
+            [ngTemplateOutletContext]="{$implicit: row}"
+          />
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef scope="col">Status</th>
+        <td mat-cell *matCellDef="let row">
+          <app-bulk-status-pill
+            [status]="row.status"
+            [readOnlyReason]="row.readOnlyReason"
+          />
+        </td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns; sticky: true"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    </table>
+  </div>
+</div>

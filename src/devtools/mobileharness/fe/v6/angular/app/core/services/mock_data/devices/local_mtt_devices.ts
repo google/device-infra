@@ -2,14 +2,23 @@
  * @fileoverview Mock device scenarios matching local MTT development environment.
  */
 
-import {DeviceConfig} from '../../../models/device_config_models';
+import {DeviceConfig, WifiConfig} from '../../../models/device_config_models';
 import {DeviceOverview} from '../../../models/device_overview';
 import {MockDeviceScenario} from '../models';
 
 const HOST_NAME = 'mtt-host.example.com';
 
+const LOCAL_MTT_WIFI_BY_INDEX: readonly WifiConfig[] = [
+  {type: 'custom', ssid: 'lab-guest-5g', psk: '', scanSsid: false},
+  {type: 'custom', ssid: 'lab-guest-5g', psk: '', scanSsid: false},
+  {type: 'custom', ssid: 'xiaomi-test-ap', psk: 'secret123', scanSsid: true},
+  {type: 'custom', ssid: 'test-net-2g', psk: '', scanSsid: false},
+  {type: 'none', ssid: '', psk: '', scanSsid: false},
+];
+
 function createLocalMttDeviceScenario(index: number): MockDeviceScenario {
   const id = `${HOST_NAME}:NoOpDevice-${index}`;
+  const owners = index < 4 ? ['derekchen', 'tianch'] : ['tianch'];
   const overview: DeviceOverview = {
     id,
     host: {name: HOST_NAME, ip: '127.0.0.1'},
@@ -30,7 +39,7 @@ function createLocalMttDeviceScenario(index: number): MockDeviceScenario {
       network: {},
     },
     permissions: {
-      owners: ['tianch'],
+      owners,
       executors: ['tianch'],
     },
     capabilities: {
@@ -50,10 +59,10 @@ function createLocalMttDeviceScenario(index: number): MockDeviceScenario {
 
   const config: DeviceConfig = {
     permissions: {
-      owners: ['tianch'],
+      owners,
       executors: ['tianch'],
     },
-    wifi: {
+    wifi: LOCAL_MTT_WIFI_BY_INDEX[index] ?? {
       type: 'none',
       ssid: '',
       psk: '',

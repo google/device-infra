@@ -1,0 +1,313 @@
+@let mode = wizard.viewMode();
+@let target = targetWifi();
+@let summary = wizard.reviewSummary();
+
+<app-dialog
+  [dialogTitle]="headline()"
+  [subtitle]="supportText()"
+  width="56rem"
+  height="48rem"
+  maxHeight="90vh"
+  footerType="normal"
+>
+  <!-- Body -->
+  <div class="bw-body">
+    @switch (mode) {
+      @case ('network') {
+        <!-- Step 1: Choose a network -->
+        <div class="bw-step1">
+          <!-- Top band: Wi-Fi to apply -->
+          <div class="bw-apply-band">
+            <div class="bw-apply-head">
+              <h4 class="bw-apply-title">Wi-Fi to apply</h4>
+              <span class="bw-apply-sub">Applied to all {{ deviceLabel }}</span>
+            </div>
+
+            @if (isClearWifi()) {
+              <div class="bw-clear-banner">
+                <div class="bw-clear-left">
+                  <mat-icon class="bw-clear-icon">wifi_off</mat-icon>
+                  <div class="bw-clear-text">
+                    <span class="bw-clear-title">No default Wi-Fi</span>
+                    <span class="bw-clear-sub">Removes the default Wi-Fi configuration from the selected devices</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  class="bw-text-btn"
+                  (click)="isClearWifi.set(false)"
+                >
+                  Set a network instead
+                </button>
+              </div>
+            } @else {
+              <div class="bw-apply-fields">
+                <!-- SSID input -->
+                <div class="bw-tf">
+                  <input
+                    type="text"
+                    id="bw-ssid"
+                    class="bw-tf-input"
+                    placeholder=" "
+                    [ngModel]="target.ssid"
+                    (ngModelChange)="updateTargetWifi({ssid: $event})"
+                    (keydown.enter)="goToReview()"
+                    required
+                    aria-required="true"
+                    autocomplete="off"
+                  />
+                  <label class="bw-tf-label" for="bw-ssid">Network name (SSID)</label>
+                </div>
+                <!-- Password input -->
+                @let showPwd = showPassword();
+                <div class="bw-tf bw-tf-trailing">
+                  <input
+                    [type]="showPwd ? 'text' : 'password'"
+                    id="bw-psk"
+                    class="bw-tf-input"
+                    placeholder=" "
+                    [ngModel]="target.psk"
+                    (ngModelChange)="updateTargetWifi({psk: $event})"
+                    (keydown.enter)="goToReview()"
+                    autocomplete="current-password"
+                  />
+                  <label class="bw-tf-label" for="bw-psk">Password</label>
+                  <button
+                    type="button"
+                    class="bw-tf-icon"
+                    (click)="togglePasswordVisibility()"
+                    [attr.aria-label]="showPwd ? 'Hide password' : 'Show password'"
+                    [title]="showPwd ? 'Hide password' : 'Show password'"
+                  >
+                    <mat-icon>{{ showPwd ? 'visibility' : 'visibility_off' }}</mat-icon>
+                  </button>
+                </div>
+                <!-- Hidden checkbox -->
+                <label class="bw-check" for="bw-hidden">
+                  <input
+                    type="checkbox"
+                    id="bw-hidden"
+                    [ngModel]="target.scanSsid"
+                    (ngModelChange)="updateTargetWifi({scanSsid: $event})"
+                  />
+                  <span>Hidden network</span>
+                </label>
+              </div>
+            }
+          </div>
+
+          <!-- Current and suggested Wi-Fi networks list -->
+          <div class="bw-panel">
+            <div class="bw-panel-head">Current and suggested Wi-Fi networks</div>
+            <div class="bw-panel-search">
+              <mat-icon>search</mat-icon>
+              <input
+                type="text"
+                placeholder="Search by SSID"
+                aria-label="Search by SSID"
+                [(ngModel)]="searchFilter"
+                autocomplete="off"
+              />
+            </div>
+            <div class="bw-panel-list" role="list">
+              @let showClear = matchesClearOption();
+              @if (showClear) {
+                <div
+                  class="bw-li"
+                  role="listitem"
+                  [class.bw-li-active]="isClearWifi()"
+                >
+                  <mat-icon class="bw-li-lead">wifi_off</mat-icon>
+                  <span class="bw-li-body">
+                    <span class="bw-li-headline">No default Wi-Fi</span>
+                    <span class="bw-li-support">Removes default Wi-Fi</span>
+                  </span>
+                  @if (unconfiguredBadge(); as badge) {
+                    <span class="bw-count-chip bw-count-chip-same">{{ badge }}</span>
+                  }
+                  <button
+                    type="button"
+                    class="bw-text-btn"
+                    (click)="clearTargetWifi()"
+                  >
+                    Use this
+                  </button>
+                </div>
+              }
+              @for (opt of filteredWifiOptions(); track opt.wifi.ssid) {
+                <div
+                  class="bw-li"
+                  role="listitem"
+                  [class.bw-li-active]="opt.isActive"
+                >
+                  <mat-icon class="bw-li-lead">wifi</mat-icon>
+                  <span class="bw-li-body">
+                    <span class="bw-li-headline">{{ opt.wifi.ssid }}</span>
+                    @if (opt.subtitle) {
+                      <span class="bw-li-support">{{ opt.subtitle }}</span>
+                    }
+                  </span>
+                  @if (opt.badge) {
+                    <span class="bw-count-chip bw-count-chip-same">{{ opt.badge }}</span>
+                  }
+                  @if (!opt.wifi.psk) {
+                    <span class="bw-li-open">Open</span>
+                  }
+                  <button
+                    type="button"
+                    class="bw-text-btn"
+                    (click)="selectWifi(opt.wifi)"
+                  >
+                    Use this
+                  </button>
+                </div>
+              } @empty {
+                @if (!showClear) {
+                  <div class="bw-list-empty">No matching network found.</div>
+                }
+              }
+            </div>
+          </div>
+        </div>
+      }
+      @case ('review') {
+        <!-- Step 2: Review and apply -->
+        <div class="bw-step2">
+          <app-bulk-review-header-banner
+            [icon]="isClearWifi() ? 'wifi_off' : 'wifi'"
+            [subtitle]="reviewTargetSubtitle()"
+            [summary]="summary"
+            [nothingToUpdateMessage]="nothingToUpdateMessage()"
+          >
+            {{ isClearWifi() ? 'No default Wi-Fi' : target.ssid }}
+          </app-bulk-review-header-banner>
+
+          <app-bulk-review-table
+            [rows]="wizard.reviewEntries()"
+            currentHeader="Current Wi-Fi"
+            ariaLabel="Device Wi-Fi change review table"
+          >
+            <ng-template #currentValueCell let-row>
+              @if (row.currentWifi?.ssid) {
+                <app-wifi-detail-chip [wifi]="row.currentWifi!" />
+              } @else {
+                <span class="bw-cell-unset">Not configured</span>
+              }
+            </ng-template>
+          </app-bulk-review-table>
+        </div>
+      }
+      @default {
+        <app-bulk-wizard-status-view
+          [mode]="mode"
+          [message]="wizard.statusMessage()"
+          [willUpdateCount]="summary.willUpdateCount"
+          [applyErrors]="wizard.applyErrors()"
+          [successSupportText]="successSupportText()"
+        >
+          <div class="bw-new-card bw-success-card">
+            <div class="bw-new-label">{{ isClearWifi() ? 'Default Wi-Fi' : 'New Wi-Fi' }}</div>
+            <div class="bw-success-card-wifi">
+              <mat-icon>{{ isClearWifi() ? 'wifi_off' : 'wifi' }}</mat-icon>
+              <span class="bw-success-card-ssid">{{ isClearWifi() ? 'No default Wi-Fi' : target.ssid }}</span>
+            </div>
+            @if (isClearWifi()) {
+              <div class="bw-success-card-detail">Default Wi-Fi removed from devices</div>
+            } @else {
+              <div class="bw-success-card-detail">{{ target.psk ? 'Password protected' : 'Open network' }}</div>
+              @if (target.scanSsid) {
+                <div class="bw-success-card-tag"><span class="bw-tag">Hidden</span></div>
+              }
+            }
+          </div>
+        </app-bulk-wizard-status-view>
+      }
+    }
+  </div>
+
+  <!-- Footer Actions -->
+  <ng-template #actionsTemplate>
+    @switch (mode) {
+      @case ('success') {
+        <button type="button" class="dialog-button dialog-button-primary" (click)="wizard.close()">Done</button>
+      }
+      @case ('errors') {
+        <button type="button" class="dialog-button dialog-button-primary" (click)="wizard.close()">Close</button>
+      }
+      @case ('loading') {
+        @if (wizard.phase() === 'review') {
+          <button
+            type="button"
+            class="dialog-button dialog-button-secondary"
+            disabled
+          >
+            Back
+          </button>
+        }
+      }
+      @case ('step_error') {
+        @if (wizard.phase() === 'review') {
+          <button
+            type="button"
+            class="dialog-button dialog-button-secondary"
+            (click)="wizard.setPhase('network')"
+          >
+            Back
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="dialog-button dialog-button-secondary"
+            (click)="wizard.close()"
+          >
+            Close
+          </button>
+        }
+        <button
+          type="button"
+          class="dialog-button dialog-button-primary"
+          (click)="wizard.retryStep()"
+        >
+          Retry
+        </button>
+      }
+      @case ('network') {
+        <button type="button" class="dialog-button dialog-button-secondary" (click)="wizard.close()">Cancel</button>
+        <button
+          type="button"
+          class="dialog-button dialog-button-primary"
+          [disabled]="!canGoNext()"
+          (click)="goToReview()"
+        >
+          Next
+        </button>
+      }
+      @case ('review') {
+        <button
+          type="button"
+          class="dialog-button dialog-button-secondary"
+          (click)="wizard.setPhase('network')"
+        >
+          Back
+        </button>
+        @if (summary.willUpdateCount > 0) {
+          <button
+            type="button"
+            class="dialog-button dialog-button-primary"
+            (click)="apply()"
+          >
+            Apply to {{ summary.willUpdateLabel }}
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="dialog-button dialog-button-primary"
+            (click)="wizard.close()"
+          >
+            Close
+          </button>
+        }
+      }
+    }
+  </ng-template>
+</app-dialog>
