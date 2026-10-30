@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.pull;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 
@@ -32,9 +33,13 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeD
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Fleet;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
@@ -50,7 +55,12 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProt
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -90,6 +100,63 @@ public final class AtsFleetDataSourceTest {
     assertThat(rawData.deviceEnrichments().keySet()).containsExactly("device-0", "device-1");
     assertThat(rawData.deviceEnrichments().get("device-0").wifiSsid()).hasValue("guest-net");
     assertThat(rawData.deviceEnrichments().get("device-1").wifiSsid()).hasValue("lab-net");
+  }
+
+  @Test
+  public void pull_hostWifiConfigOverridesDeviceDefaultWifiAndEnrichesUnconfiguredDevices()
+      throws Exception {
+    labInfoProvider.setResult(hostedLabQueryResult("host-a", "device-0", "device-1"));
+    configurationProvider.putLabConfig(
+        "host-a",
+        LabConfig.newBuilder()
+            .setHostName("host-a")
+            .setWifiConfig(WifiConfig.newBuilder().setSsid("ats-host-wifi"))
+            .build());
+    configurationProvider.setDeviceConfigs(
+        ImmutableList.of(deviceConfigWithWifi("device-0", "stale-device-wifi")));
+
+    CoreFleetRawData rawData = source.pull().get();
+
+    assertThat(rawData.deviceEnrichments().keySet()).containsExactly("device-0", "device-1");
+    assertThat(rawData.deviceEnrichments().get("device-0").wifiSsid()).hasValue("ats-host-wifi");
+    assertThat(rawData.deviceEnrichments().get("device-1").wifiSsid()).hasValue("ats-host-wifi");
+  }
+
+  @Test
+  @SuppressWarnings("deprecation") // Exercises fallback to BasicDeviceConfig.default_wifi.
+  public void pull_sharedHostModeUsesLegacyHostDefaultWifiWhenWifiConfigUnset() throws Exception {
+    labInfoProvider.setResult(hostedLabQueryResult("host-shared", "device-0"));
+    configurationProvider.putLabConfig(
+        "host-shared",
+        LabConfig.newBuilder()
+            .setHostName("host-shared")
+            .setHostProperties(
+                HostProperties.newBuilder()
+                    .addHostProperty(
+                        HostProperty.newBuilder().setKey("device_config_mode").setValue("host")))
+            .setDefaultDeviceConfig(
+                BasicDeviceConfig.newBuilder()
+                    .setDefaultWifi(WifiConfig.newBuilder().setSsid("shared-host-wifi")))
+            .build());
+    configurationProvider.setDeviceConfigs(
+        ImmutableList.of(deviceConfigWithWifi("device-0", "ignored-device-wifi")));
+
+    CoreFleetRawData rawData = source.pull().get();
+
+    assertThat(rawData.deviceEnrichments().get("device-0").wifiSsid()).hasValue("shared-host-wifi");
+  }
+
+  @Test
+  public void pull_labConfigFailureFallsBackToDeviceConfig() throws Exception {
+    labInfoProvider.setResult(hostedLabQueryResult("host-broken", "device-0"));
+    configurationProvider.failHost("host-broken");
+    configurationProvider.setDeviceConfigs(
+        ImmutableList.of(deviceConfigWithWifi("device-0", "device-fallback-wifi")));
+
+    CoreFleetRawData rawData = source.pull().get();
+
+    assertThat(rawData.deviceEnrichments().get("device-0").wifiSsid())
+        .hasValue("device-fallback-wifi");
   }
 
   @Test
@@ -170,6 +237,7 @@ public final class AtsFleetDataSourceTest {
         .containsExactly("device-0", ImmutableList.of("16"));
   }
 
+  @SuppressWarnings("deprecation") // Populates legacy BasicDeviceConfig.default_wifi fixture.
   private static DeviceConfig deviceConfigWithWifi(String deviceId, String ssid) {
     return DeviceConfig.newBuilder()
         .setUuid(deviceId)
@@ -179,15 +247,22 @@ public final class AtsFleetDataSourceTest {
   }
 
   private static LabQueryResult labQueryResult(String... deviceIds) {
+    return hostedLabQueryResult("", deviceIds);
+  }
+
+  private static LabQueryResult hostedLabQueryResult(String hostName, String... deviceIds) {
     DeviceList.Builder deviceList = DeviceList.newBuilder();
     for (String deviceId : deviceIds) {
       deviceList.addDeviceInfo(
           DeviceInfo.newBuilder().setDeviceLocator(DeviceLocator.newBuilder().setId(deviceId)));
     }
+    LabData.Builder labData = LabData.newBuilder().setDeviceList(deviceList);
+    if (!hostName.isEmpty()) {
+      labData.setLabInfo(
+          LabInfo.newBuilder().setLabLocator(LabLocator.newBuilder().setHostName(hostName)));
+    }
     return LabQueryResult.newBuilder()
-        .setLabView(
-            LabQueryResult.LabView.newBuilder()
-                .addLabData(LabData.newBuilder().setDeviceList(deviceList)))
+        .setLabView(LabQueryResult.LabView.newBuilder().addLabData(labData))
         .build();
   }
 
@@ -218,12 +293,22 @@ public final class AtsFleetDataSourceTest {
     }
   }
 
-  /** In-memory {@link ConfigurationProvider} that returns a configured device config list. */
+  /** In-memory {@link ConfigurationProvider} that returns configured lab and device configs. */
   private static final class FakeConfigurationProvider implements ConfigurationProvider {
     private List<DeviceConfig> deviceConfigs = ImmutableList.of();
+    private final Map<String, LabConfig> labConfigs = new HashMap<>();
+    private final Set<String> failingHosts = new HashSet<>();
 
     void setDeviceConfigs(List<DeviceConfig> deviceConfigs) {
       this.deviceConfigs = deviceConfigs;
+    }
+
+    void putLabConfig(String hostName, LabConfig labConfig) {
+      this.labConfigs.put(hostName, labConfig);
+    }
+
+    void failHost(String hostName) {
+      this.failingHosts.add(hostName);
     }
 
     @Override
@@ -241,7 +326,10 @@ public final class AtsFleetDataSourceTest {
     @Override
     public ListenableFuture<ConfigResult<LabConfig>> getLabConfig(
         String hostName, UniverseScope universe) {
-      throw new UnsupportedOperationException();
+      if (failingHosts.contains(hostName)) {
+        return immediateFailedFuture(new RuntimeException("Simulated getLabConfig failure"));
+      }
+      return immediateFuture(ConfigResult.available(Optional.ofNullable(labConfigs.get(hostName))));
     }
 
     @Override
