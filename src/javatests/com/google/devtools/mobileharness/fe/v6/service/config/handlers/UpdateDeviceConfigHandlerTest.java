@@ -74,6 +74,8 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
+@SuppressWarnings(
+    "deprecation") // Verifies 1P BasicDeviceConfig.default_wifi behavior and ATS no-op.
 public final class UpdateDeviceConfigHandlerTest {
 
   private static final UniverseScope SELF_UNIVERSE = new UniverseScope.SelfUniverse();
@@ -191,7 +193,27 @@ public final class UpdateDeviceConfigHandlerTest {
   }
 
   @Test
-  public void updateDeviceConfig_ats_allSection_onlyUpdatesAtsSections() throws Exception {
+  public void updateDeviceConfig_ats_wifiSection_fail() throws Exception {
+    when(environment.isAts()).thenReturn(true);
+    UpdateDeviceConfigRequest request =
+        UpdateDeviceConfigRequest.newBuilder()
+            .setId("test_device")
+            .setSection(DeviceConfigSection.WIFI)
+            .build();
+
+    UpdateDeviceConfigResponse response =
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.empty())
+            .get();
+
+    assertThat(response.getSuccess()).isFalse();
+    assertThat(response.getError().getCode()).isEqualTo(UpdateError.Code.VALIDATION_ERROR);
+    assertThat(response.getError().getMessage())
+        .contains("Configuration section 'WIFI' is not supported in the ATS environment.");
+  }
+
+  @Test
+  public void updateDeviceConfig_ats_allSection_onlyUpdatesDimensions() throws Exception {
     when(environment.isAts()).thenReturn(true);
     String deviceId = "test_device";
     String universe = "google_1p";
@@ -242,11 +264,8 @@ public final class UpdateDeviceConfigHandlerTest {
     verify(configurationProvider)
         .updateDeviceConfig(eq(deviceId), captor.capture(), eq(SELF_UNIVERSE));
     Device.DeviceConfig updatedConfig = captor.getValue();
-    // Owners should NOT be updated in ATS when section is ALL
     assertThat(updatedConfig.getBasicConfig().getOwnerList()).containsExactly("owner1");
-    // Wifi SHOULD be updated
-    assertThat(updatedConfig.getBasicConfig().getDefaultWifi().getSsid()).isEqualTo("new_ssid");
-    // Dimensions SHOULD be updated
+    assertThat(updatedConfig.getBasicConfig().hasDefaultWifi()).isFalse();
     assertThat(updatedConfig.getBasicConfig().getCompositeDimension().getSupportedDimensionList())
         .containsExactly(
             com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension.newBuilder()
@@ -706,7 +725,7 @@ public final class UpdateDeviceConfigHandlerTest {
     assertThat(e).hasCauseThat().isInstanceOf(FeServiceException.class);
     FeServiceException fe = (FeServiceException) e.getCause();
     assertThat(fe.getCode()).isEqualTo(Status.Code.INTERNAL);
-    assertThat(fe.getMessage()).contains("Failed to update config: IAM error");
+    assertThat(fe).hasMessageThat().contains("Failed to update config: IAM error");
   }
 
   @Test
@@ -757,7 +776,8 @@ public final class UpdateDeviceConfigHandlerTest {
     assertThat(e).hasCauseThat().isInstanceOf(FeServiceException.class);
     FeServiceException fe = (FeServiceException) e.getCause();
     assertThat(fe.getCode()).isEqualTo(Status.Code.INTERNAL);
-    assertThat(fe.getMessage())
+    assertThat(fe)
+        .hasMessageThat()
         .contains("please make sure the provided user IDs in owner/executor fields are correct");
   }
 
@@ -806,6 +826,6 @@ public final class UpdateDeviceConfigHandlerTest {
     assertThat(e).hasCauseThat().isInstanceOf(FeServiceException.class);
     FeServiceException fe = (FeServiceException) e.getCause();
     assertThat(fe.getCode()).isEqualTo(Status.Code.INTERNAL);
-    assertThat(fe.getMessage()).contains("Unexpected backend failure");
+    assertThat(fe).hasMessageThat().contains("Unexpected backend failure");
   }
 }

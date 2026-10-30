@@ -43,7 +43,36 @@ public final class ConfigConverter {
 
   private ConfigConverter() {}
 
+  /**
+   * Converts internal {@link
+   * com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig} to FE {@link
+   * WifiConfig}.
+   */
+  public static WifiConfig toFeWifiConfig(
+      com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig internalWifi) {
+    return WifiConfig.newBuilder()
+        .setSsid(internalWifi.getSsid())
+        .setPsk(internalWifi.getPsk())
+        .setScanSsid(internalWifi.getScanSsid())
+        .setType(internalWifi.getSsid().isEmpty() ? "none" : "custom")
+        .build();
+  }
+
+  /**
+   * Converts FE {@link WifiConfig} to internal {@link
+   * com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig}.
+   */
+  public static com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig
+      toInternalWifiConfig(WifiConfig feWifi) {
+    return com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig.newBuilder()
+        .setSsid(feWifi.getSsid())
+        .setPsk(feWifi.getPsk())
+        .setScanSsid(feWifi.getScanSsid())
+        .build();
+  }
+
   /** Converts internal {@link BasicDeviceConfig} to FE {@link DeviceConfig}. */
+  @SuppressWarnings("deprecation") // BasicDeviceConfig.default_wifi remains supported in 1P.
   public static DeviceConfig toFeDeviceConfig(BasicDeviceConfig basicConfig) {
     DeviceConfig.Builder builder = DeviceConfig.newBuilder();
 
@@ -56,15 +85,7 @@ public final class ConfigConverter {
 
     // Wifi
     if (basicConfig.hasDefaultWifi()) {
-      com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig internalWifi =
-          basicConfig.getDefaultWifi();
-      builder.setWifi(
-          WifiConfig.newBuilder()
-              .setSsid(internalWifi.getSsid())
-              .setPsk(internalWifi.getPsk())
-              .setScanSsid(internalWifi.getScanSsid())
-              .setType(internalWifi.getSsid().isEmpty() ? "none" : "custom")
-              .build());
+      builder.setWifi(toFeWifiConfig(basicConfig.getDefaultWifi()));
     }
 
     // Dimensions
@@ -106,6 +127,7 @@ public final class ConfigConverter {
   }
 
   /** Converts FE {@link DeviceConfig} to internal {@link BasicDeviceConfig}. */
+  @SuppressWarnings("deprecation") // BasicDeviceConfig.default_wifi remains supported in 1P.
   public static BasicDeviceConfig toBasicDeviceConfig(DeviceConfig feConfig) {
     BasicDeviceConfig.Builder builder = BasicDeviceConfig.newBuilder();
 
@@ -118,12 +140,7 @@ public final class ConfigConverter {
 
     // Wifi
     if (feConfig.hasWifi()) {
-      builder.setDefaultWifi(
-          com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig.newBuilder()
-              .setSsid(feConfig.getWifi().getSsid())
-              .setPsk(feConfig.getWifi().getPsk())
-              .setScanSsid(feConfig.getWifi().getScanSsid())
-              .build());
+      builder.setDefaultWifi(toInternalWifiConfig(feConfig.getWifi()));
     }
 
     // Dimensions
@@ -184,6 +201,11 @@ public final class ConfigConverter {
     // Device Config
     if (labConfig.hasDefaultDeviceConfig()) {
       builder.setDeviceConfig(toFeDeviceConfig(labConfig.getDefaultDeviceConfig()));
+    }
+    if (!labConfig.getWifiConfig().getSsid().isEmpty()) {
+      builder.getDeviceConfigBuilder().setWifi(toFeWifiConfig(labConfig.getWifiConfig()));
+    } else if (labConfig.hasWifiConfig() && !builder.getDeviceConfig().hasWifi()) {
+      builder.getDeviceConfigBuilder().setWifi(toFeWifiConfig(labConfig.getWifiConfig()));
     }
 
     // Host Properties

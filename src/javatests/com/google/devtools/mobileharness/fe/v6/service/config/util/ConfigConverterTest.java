@@ -42,6 +42,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
+@SuppressWarnings("deprecation") // Verifies 1P and legacy BasicDeviceConfig.default_wifi mappings.
 public final class ConfigConverterTest {
 
   @Test
@@ -352,5 +353,79 @@ public final class ConfigConverterTest {
     assertThat(feConfig.hasDeviceConfig()).isTrue();
     assertThat(feConfig.getDeviceConfig().getPermissions().getOwnersList())
         .containsExactly("owner1");
+  }
+
+  @Test
+  public void toFeHostConfig_wifiConfigOverridesDefaultDeviceWifi() {
+    LabConfig labConfig =
+        LabConfig.newBuilder()
+            .setDefaultDeviceConfig(
+                BasicDeviceConfig.newBuilder()
+                    .setDefaultWifi(
+                        com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig
+                            .newBuilder()
+                            .setSsid("legacy-ssid")
+                            .setPsk("legacy-psk")
+                            .build())
+                    .build())
+            .setWifiConfig(
+                com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig
+                    .newBuilder()
+                    .setSsid("host-wifi")
+                    .setPsk("host-psk")
+                    .setScanSsid(true)
+                    .build())
+            .build();
+
+    HostConfig feConfig = ConfigConverter.toFeHostConfig(labConfig);
+
+    assertThat(feConfig.getDeviceConfig().getWifi())
+        .isEqualTo(
+            WifiConfig.newBuilder()
+                .setType("custom")
+                .setSsid("host-wifi")
+                .setPsk("host-psk")
+                .setScanSsid(true)
+                .build());
+  }
+
+  @Test
+  public void toFeHostConfig_wifiConfigWithoutDefaultDeviceConfig() {
+    LabConfig labConfig =
+        LabConfig.newBuilder()
+            .setWifiConfig(
+                com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig
+                    .newBuilder()
+                    .setSsid("ats-host-wifi")
+                    .setPsk("ats-psk")
+                    .build())
+            .build();
+
+    HostConfig feConfig = ConfigConverter.toFeHostConfig(labConfig);
+
+    assertThat(feConfig.getDeviceConfig().getWifi().getSsid()).isEqualTo("ats-host-wifi");
+    assertThat(feConfig.getDeviceConfig().getWifi().getType()).isEqualTo("custom");
+  }
+
+  @Test
+  public void toFeHostConfig_fallsBackToDefaultDeviceWifiWhenWifiConfigEmpty() {
+    LabConfig labConfig =
+        LabConfig.newBuilder()
+            .setDefaultDeviceConfig(
+                BasicDeviceConfig.newBuilder()
+                    .setDefaultWifi(
+                        com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig
+                            .newBuilder()
+                            .setSsid("fallback-ssid")
+                            .build())
+                    .build())
+            .setWifiConfig(
+                com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig
+                    .getDefaultInstance())
+            .build();
+
+    HostConfig feConfig = ConfigConverter.toFeHostConfig(labConfig);
+
+    assertThat(feConfig.getDeviceConfig().getWifi().getSsid()).isEqualTo("fallback-ssid");
   }
 }
