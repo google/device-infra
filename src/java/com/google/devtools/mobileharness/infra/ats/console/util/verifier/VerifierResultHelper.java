@@ -34,11 +34,18 @@ import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilA
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
+import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.linecallback.ScanSignalOutputCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.gson.Gson;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Collection;
@@ -301,15 +308,25 @@ public class VerifierResultHelper {
       throws InterruptedException {
     int user = getUserId(serial);
     for (Path path : files) {
-      try {
-        String shellCommand =
-            String.format(
-                "%s -s %s shell content write --user %d --uri"
-                    + " content://com.android.cts.verifier.testresultsprovider/logs/%s < %s",
-                adb.getAdbPath(), serial, user, basePath.relativize(path), path);
-        // Use bash to handle the file redirection.
-        var unused = commandExecutor.run(Command.of("bash", "-c", shellCommand));
-      } catch (MobileHarnessException e) {
+      String uri =
+          "content://com.android.cts.verifier.testresultsprovider/logs/"
+              + basePath.relativize(path);
+      // Runs adb without a host shell, since report log file names may come from the device.
+      Command command =
+          Command.of(
+              adb.getAdbPath(),
+              "-s",
+              serial,
+              "shell",
+              String.format("content write --user %d --uri %s", user, ShellUtils.shellEscape(uri)));
+      try (InputStream input = Files.newInputStream(path)) {
+        CommandProcess process = commandExecutor.start(command);
+        // Closing stdin sends EOF to adb.
+        try (OutputStream stdin = process.stdinStream()) {
+          input.transferTo(stdin);
+        }
+        var unused = process.await();
+      } catch (IOException | CommandException e) {
         logger.atWarning().withCause(e).log(
             "Failed to push report log %s to device %s", path, serial);
       }

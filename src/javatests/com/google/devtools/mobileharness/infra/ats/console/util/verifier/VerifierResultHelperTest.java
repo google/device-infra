@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.util.verifier;
 
+import static com.google.common.truth.Truth.assertThat;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -40,10 +42,13 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidS
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import javax.inject.Inject;
 import org.junit.Before;
@@ -71,6 +76,9 @@ public class VerifierResultHelperTest {
   @Bind @Mock private AndroidSystemSettingUtil androidSystemSettingUtil;
   @Bind @Mock private AndroidUserUtil androidUserUtil;
   @Bind @Mock private CommandExecutor commandExecutor;
+  @Mock private CommandProcess commandProcess;
+
+  private final ByteArrayOutputStream stdin = new ByteArrayOutputStream();
 
   @Inject private VerifierResultHelper verifierResultHelper;
 
@@ -84,6 +92,8 @@ public class VerifierResultHelperTest {
         .thenReturn(ImmutableSet.of("com.android.cts.verifier"));
     when(androidPackageManagerUtil.getAppVersionName(anyString(), anyString())).thenReturn("16_r1");
     when(androidPackageManagerUtil.getApkVersionName(anyString())).thenReturn("16_r1");
+    when(commandExecutor.start(any())).thenReturn(commandProcess);
+    when(commandProcess.stdinStream()).thenReturn(stdin);
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
   }
 
@@ -215,27 +225,51 @@ public class VerifierResultHelperTest {
         folder.newFolder("xts_root").toPath(),
         resultPath);
 
-    verify(commandExecutor, times(2)).run(any());
+    verify(commandExecutor, times(2)).start(any());
     verify(commandExecutor)
-        .run(
+        .start(
             Command.of(
-                "bash",
-                "-c",
-                String.format(
-                    "/path/to/adb -s device shell content write --user 10 --uri"
-                        + " content://com.android.cts.verifier.testresultsprovider/logs/config <"
-                        + " %s",
-                    config.toAbsolutePath())));
+                "/path/to/adb",
+                "-s",
+                "device",
+                "shell",
+                "content write --user 10 --uri"
+                    + " content://com.android.cts.verifier.testresultsprovider/logs/config"));
     verify(commandExecutor)
-        .run(
+        .start(
             Command.of(
-                "bash",
-                "-c",
-                String.format(
-                    "/path/to/adb -s device shell content write --user 10 --uri"
-                        + " content://com.android.cts.verifier.testresultsprovider/logs/report-log-files/1.json"
-                        + " < %s",
-                    reportLog.toAbsolutePath())));
+                "/path/to/adb",
+                "-s",
+                "device",
+                "shell",
+                "content write --user 10 --uri"
+                    + " content://com.android.cts.verifier.testresultsprovider/logs/"
+                    + "report-log-files/1.json"));
+  }
+
+  @Test
+  public void testPushReportLogs_fileNameWithShellMetacharacters() throws Exception {
+    Path resultPath = folder.newFolder("result").toPath();
+    resultPath.resolve("report-log-files").toFile().mkdirs();
+    Files.writeString(resultPath.resolve("report-log-files/a;touch x.json"), "report_log");
+
+    verifierResultHelper.pushResults(
+        ImmutableList.of("device"),
+        Result.getDefaultInstance(),
+        folder.newFolder("xts_root").toPath(),
+        resultPath);
+
+    verify(commandExecutor)
+        .start(
+            Command.of(
+                "/path/to/adb",
+                "-s",
+                "device",
+                "shell",
+                "content write --user 0 --uri"
+                    + " 'content://com.android.cts.verifier.testresultsprovider/logs/"
+                    + "report-log-files/a;touch x.json'"));
+    assertThat(stdin.toString(UTF_8)).isEqualTo("report_log");
   }
 
   private void verifyCommandsOnDevice(String serial) throws Exception {
