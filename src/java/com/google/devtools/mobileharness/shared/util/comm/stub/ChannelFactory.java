@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.shared.util.comm.stub;
 
+import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import io.grpc.ManagedChannel;
@@ -43,6 +44,12 @@ public class ChannelFactory {
       NettyChannelBuilder channelBuilder, Executor executor) {
     return channelBuilder
         .enableRetry()
+        // Disable gRPC's default 30-minute idle timeout. ChannelManager manages channel lifecycle
+        // and evicts unused channels after 6-12 hours. Allowing a cached xDS channel to enter
+        // gRPC's internal IDLE mode while its configSelector is a FailingConfigSelector causes
+        // grpc-java to shut down XdsNameResolver without resetting configSelector to
+        // INITIAL_PENDING_SELECTOR, permanently wedging subsequent RPCs on that channel.
+        .idleTimeout(7, DAYS)
         .negotiationType(NegotiationType.PLAINTEXT)
         .executor(executor)
         .maxInboundMessageSize(32 * 1024 * 1024) // 32 MB
