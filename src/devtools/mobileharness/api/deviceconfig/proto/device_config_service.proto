@@ -20,6 +20,7 @@ package mobileharness.api.deviceconfig;
 
 import "google/protobuf/field_mask.proto";
 import "src/devtools/mobileharness/api/deviceconfig/proto/device.proto";
+import "src/devtools/mobileharness/api/deviceconfig/proto/global.proto";
 import "src/devtools/mobileharness/api/deviceconfig/proto/lab.proto";
 
 option features.field_presence = IMPLICIT;
@@ -53,6 +54,13 @@ message GetLabConfigResponse {
   LabConfig lab_config = 1;
 }
 
+message GetGlobalConfigRequest {}
+
+message GetGlobalConfigResponse {
+  // The global configuration.
+  GlobalConfig global_config = 1;
+}
+
 message DeleteDeviceConfigsRequest {
   // The UUID of the devices to be deleted.
   repeated string device_uuid = 1;
@@ -69,6 +77,10 @@ message DeleteLabConfigRequest {
 }
 
 message DeleteLabConfigResponse {}
+
+message DeleteGlobalConfigRequest {}
+
+message DeleteGlobalConfigResponse {}
 
 message UpdateDeviceConfigsRequest {
   // All locator and configuration of devices to be updated. The UUID of the
@@ -99,6 +111,20 @@ message UpdateLabConfigRequest {
 }
 
 message UpdateLabConfigResponse {}
+
+message UpdateGlobalConfigRequest {
+  // The global configuration to be updated.
+  GlobalConfig global_config = 1;
+
+  // The client to update the config.
+  string client = 2;
+
+  // Mask of fields to update the GlobalConfig. If not set, all fields will be
+  // updated.
+  google.protobuf.FieldMask update_mask = 3;
+}
+
+message UpdateGlobalConfigResponse {}
 
 message CopyDeviceConfigsRequest {
   // The source UUID of the device whose configuration is going to be copied.
@@ -158,6 +184,10 @@ service DeviceConfigService {
   // Gets the configuration of a lab.
   rpc GetLabConfig(GetLabConfigRequest) returns (GetLabConfigResponse) {}
 
+  // Gets the global configuration.
+  rpc GetGlobalConfig(GetGlobalConfigRequest)
+      returns (GetGlobalConfigResponse) {}
+
   // Deletes a list of configurations of devices.
   rpc DeleteDeviceConfigs(DeleteDeviceConfigsRequest)
       returns (DeleteDeviceConfigsResponse) {}
@@ -166,6 +196,10 @@ service DeviceConfigService {
   rpc DeleteLabConfig(DeleteLabConfigRequest)
       returns (DeleteLabConfigResponse) {}
 
+  // Deletes the global configuration.
+  rpc DeleteGlobalConfig(DeleteGlobalConfigRequest)
+      returns (DeleteGlobalConfigResponse) {}
+
   // Updates a list of configurations of devices.
   rpc UpdateDeviceConfigs(UpdateDeviceConfigsRequest)
       returns (UpdateDeviceConfigsResponse) {}
@@ -173,6 +207,10 @@ service DeviceConfigService {
   // Updates the configuration of a lab.
   rpc UpdateLabConfig(UpdateLabConfigRequest)
       returns (UpdateLabConfigResponse) {}
+
+  // Updates the global configuration.
+  rpc UpdateGlobalConfig(UpdateGlobalConfigRequest)
+      returns (UpdateGlobalConfigResponse) {}
 
   // Copies the configuration of a device to multiple ones.
   rpc CopyDeviceConfigs(CopyDeviceConfigsRequest)
