@@ -215,7 +215,8 @@ public final class NonXtsRunStrategyTest {
 
   @Test
   public void getJvmDefines_success() {
-    assertThat(nonXtsRunStrategy.getJvmDefines(WORK_DIR)).isEmpty();
+    assertThat(nonXtsRunStrategy.getJvmDefines(WORK_DIR))
+        .containsExactly("-DTF_JAR_DIR=" + TRADEFED_DIR);
   }
 
   @Test
