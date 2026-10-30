@@ -60,6 +60,9 @@ java_library(
         "CompositeDimensions.java",
         "Dimensions.java",
     ],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/dimension:value_comparator",
