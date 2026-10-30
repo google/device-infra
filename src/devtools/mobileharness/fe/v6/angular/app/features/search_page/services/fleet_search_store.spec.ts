@@ -352,11 +352,159 @@ describe('FleetSearchStore', () => {
       expect(store.browseAll()).toBeFalse();
       expect(store.isLandingState()).toBeTrue();
       expect(mockSearchService.searchFleet).not.toHaveBeenCalled();
-      expect(mockSnackBarService.showWarning).toHaveBeenCalledWith(
-        'Unknown filter key: no_such_key',
+      expect(mockSnackBarService.showWarning).toHaveBeenCalledOnceWith(
+        'Unknown filter key: no_such_key; Unknown group-by key: version',
       );
-      expect(mockSnackBarService.showWarning).toHaveBeenCalledWith(
-        'Unknown group-by key: version',
+    });
+
+    it('keeps the valid filter chip and shows a warning snackbar when an unmergeable duplicate-key condition is ignored', async () => {
+      const duplicateKeyQuery =
+        'filter=host_name:match:substring:3a-cm&filter=universe:match:values:google_1p&filter=host_name:not_match:substring:10-19';
+      mockSearchService.translateArsenalSearch.and.returnValue(
+        of({
+          fleet: Fleet.FLEET_SELF,
+          filters: [
+            {
+              key: 'host_field::host_name',
+              complex: {containsSubstring: {value: '3a-cm', negated: false}},
+            },
+            {key: 'host_field::host_name'},
+          ],
+          filterChips: [
+            {
+              valid: {
+                pillKey: 'Host Name',
+                pillCondition: 'contains 3a-cm',
+              },
+            },
+            {
+              invalid: {
+                reason:
+                  'Only one filter per key is supported; ignored Host Name (does not contain 10-19).',
+              },
+            },
+          ],
+        }),
+      );
+
+      const store = await createStoreAt({'arsenal_query': duplicateKeyQuery});
+
+      expect(store.activeChips().map((c) => c.pillCondition)).toEqual([
+        'contains 3a-cm',
+      ]);
+      expect(store.serializedActiveFilters()).toEqual([
+        'host_field::host_name~contains~3a-cm',
+      ]);
+      expect(mockSnackBarService.showWarning).toHaveBeenCalledOnceWith(
+        'Only one filter per key is supported; ignored Host Name (does not contain 10-19).',
+      );
+      expect(mockSearchService.searchFleet).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+          fleet: Fleet.FLEET_SELF,
+          filters: [
+            {
+              key: 'host_field::host_name',
+              complex: {containsSubstring: {value: '3a-cm', negated: false}},
+            },
+          ],
+        }),
+      );
+    });
+
+    it('coalesces multiple ignored duplicate-key conditions into a single sentence without stacking lines', async () => {
+      const multiDuplicateQuery =
+        'filter=host_name:not_match:substring:10-19&filter=host_name:match:substring:3a-cm&filter=owner:any_match:values:chengwilliam&filter=owner:none_match:values:pte-bluetooth-automation';
+      mockSearchService.translateArsenalSearch.and.returnValue(
+        of({
+          fleet: Fleet.FLEET_SELF,
+          filters: [
+            {
+              key: 'host_field::host_name',
+              complex: {containsSubstring: {value: '3a-cm', negated: false}},
+            },
+            {
+              key: 'device_field::owner',
+              simple: {values: [{value: 'chengwilliam'}], negated: false},
+            },
+            {key: 'host_field::host_name'},
+            {key: 'device_field::owner'},
+          ],
+          filterChips: [
+            {
+              valid: {
+                pillKey: 'Host Name',
+                pillCondition: 'contains 3a-cm',
+              },
+            },
+            {
+              valid: {
+                pillKey: 'Owners',
+                pillCondition: 'chengwilliam',
+              },
+            },
+            {
+              invalid: {
+                reason:
+                  'Only one filter per key is supported; ignored Host Name (does not contain 10-19).',
+              },
+            },
+            {
+              invalid: {
+                reason:
+                  'Only one filter per key is supported; ignored Owners (\u2260 pte-bluetooth-automation).',
+              },
+            },
+          ],
+        }),
+      );
+
+      await createStoreAt({'arsenal_query': multiDuplicateQuery});
+
+      expect(mockSnackBarService.showWarning).toHaveBeenCalledOnceWith(
+        'Only one filter per key is supported; ignored Host Name (does not contain 10-19), Owners (\u2260 pte-bluetooth-automation).',
+      );
+    });
+
+    it('drops invalid URL filter and group-by chips and shows a coalesced warning snackbar', async () => {
+      mockSearchService.resolveFleetChips.and.returnValue(
+        of({
+          filterChips: [
+            {valid: {pillKey: 'Status', pillCondition: 'IDLE'}},
+            {
+              invalid: {
+                reason:
+                  'Only one filter per key is supported; ignored Host Name (does not contain 10-19).',
+              },
+            },
+            {
+              invalid: {
+                reason:
+                  'Only one filter per key is supported; ignored Host Name (does not contain 10-19).',
+              },
+            },
+          ],
+          groupByChips: [
+            {invalid: {reason: 'Unknown group-by key: bad_gb'}},
+            {invalid: {reason: 'Unknown group-by key: bad_gb'}},
+          ],
+        }),
+      );
+
+      const store = await createStoreAt({
+        'f': [
+          'device_field::status~IDLE',
+          'host_field::host_name~not_contains~10-19',
+          'host_field::host_name~not_contains~10-19',
+        ],
+        'gb': 'bad_gb,bad_gb2',
+      });
+
+      expect(store.activeChips().map((c) => c.key)).toEqual([
+        'device_field::status',
+      ]);
+      expect(mockSnackBarService.showWarning).toHaveBeenCalledOnceWith(
+        'Only one filter per key is supported; ignored Host Name (does not contain 10-19); Unknown group-by key: bad_gb',
       );
     });
 

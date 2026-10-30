@@ -7,6 +7,7 @@ import {
 } from '@deviceinfra/app/shared/components/snackbar/snackbar';
 
 const SNACKBAR_DURATION_MS_DEFAULT = 4000; // unit is milliseconds
+const SNACKBAR_WARNING_DURATION_MS_DEFAULT = 6000; // unit is milliseconds
 
 /** A service to show snack bar notifications. */
 @Injectable({
@@ -27,7 +28,10 @@ export class SnackBarService {
   }
 
   /** Shows a warning snackbar message. */
-  showWarning(message: string, duration = SNACKBAR_DURATION_MS_DEFAULT) {
+  showWarning(
+    message: string,
+    duration = SNACKBAR_WARNING_DURATION_MS_DEFAULT,
+  ) {
     this.snackBar.openFromComponent(SnackBar, {
       duration,
       verticalPosition: 'bottom',

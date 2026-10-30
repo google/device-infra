@@ -23,11 +23,20 @@
 
 /* Base styles for all custom snackbars */
 .mat-mdc-snack-bar-container.custom-snackbar .mdc-snackbar__surface {
-  padding: 0 16px; /* Adjust padding as Material defaults might be too large */
+  border-radius: 4px !important;
+  box-shadow:
+    0 3px 5px -1px rgba(0, 0, 0, 0.2),
+    0 6px 10px 0 rgba(0, 0, 0, 0.14),
+    0 1px 18px 0 rgba(0, 0, 0, 0.12) !important;
+  padding: 0 !important;
 }
 
-.custom-snackbar .snackbar-content mat-icon {
-  margin-right: 12px;
+.mat-mdc-snack-bar-container.custom-snackbar .mdc-snackbar__label {
+  padding: 8px 8px 8px 16px !important;
+}
+
+.custom-snackbar .snackbar-content .main-content mat-icon {
+  margin-inline-end: 12px;
 }
 
 /* Success Type */
@@ -57,13 +66,20 @@
   color: white !important;
 }
 
-/* Warning Type */
+/* Warning Type (Material 3 inverse-surface container without a leading icon gutter) */
+.mat-mdc-snack-bar-container.snackbar-warning,
 .snackbar-warning .mdc-snackbar__surface {
-  background-color: #f57c00 !important;
+  max-width: min(880px, calc(100vw - 32px)) !important;
+}
+.snackbar-warning .mdc-snackbar__surface {
+  background-color: #303030 !important;
 }
 .snackbar-warning .snackbar-content,
-.snackbar-warning .snackbar-content mat-icon {
-  color: white !important;
+.snackbar-warning .snackbar-content .close-icon {
+  color: #f2f2f2 !important;
+}
+.snackbar-warning .snackbar-content .main-content mat-icon {
+  display: none !important;
 }
 
 /* In-Progress Type */

@@ -81,6 +81,9 @@ export class FleetSearchStore extends SearchPageStore {
   // 1. Dynamic UI Prompts & Suggestion Signals
   // ===========================================================================
 
+  private static readonly DUPLICATE_KEY_WARNING_PREFIX =
+    'Only one filter per key is supported; ignored ';
+
   private static readonly SUPPORTED_ENTITIES = new Set<EntityType>([
     'devices',
     'hosts',
@@ -1001,12 +1004,13 @@ export class FleetSearchStore extends SearchPageStore {
     return this.searchService.resolveFleetChips(req).pipe(
       map((res) => {
         // Scenarios 1, 2, 5: Backend-resolved filters only; invalid or un-returned are dropped with warning
+        const warnings: string[] = [];
         const updatedFilterChips = buildResolvedFilterChips(
           filterPairs,
           res.filterChips,
           (chip, resolved) => {
             if (resolved.invalid?.reason) {
-              this.snackBarService.showWarning(resolved.invalid.reason);
+              warnings.push(resolved.invalid.reason);
             }
             if (resolved.invalid || !resolved.valid) {
               return null;
@@ -1024,7 +1028,11 @@ export class FleetSearchStore extends SearchPageStore {
         const updatedGroupByChips = this.resolveGroupByChips(
           groupByKeys,
           res.groupByChips,
+          warnings,
         );
+        if (warnings.length > 0) {
+          this.snackBarService.showWarning(this.formatChipWarnings(warnings));
+        }
 
         return [...updatedFilterChips, ...updatedGroupByChips];
       }),
@@ -1076,10 +1084,11 @@ export class FleetSearchStore extends SearchPageStore {
     const filters = res.filters || [];
     const filterChips = res.filterChips || [];
     const resolvedFilterChips: FilterChip[] = [];
+    const warnings: string[] = [];
     for (let i = 0; i < filters.length; i++) {
       const fc = filterChips[i];
       if (fc?.invalid?.reason) {
-        this.snackBarService.showWarning(fc.invalid.reason);
+        warnings.push(fc.invalid.reason);
       }
       if (fc?.valid) {
         resolvedFilterChips.push(
@@ -1091,7 +1100,11 @@ export class FleetSearchStore extends SearchPageStore {
     const resolvedGroupByChips = this.resolveGroupByChips(
       res.groupByKeys || [],
       res.groupByChips,
+      warnings,
     );
+    if (warnings.length > 0) {
+      this.snackBarService.showWarning(this.formatChipWarnings(warnings));
+    }
 
     const allChips = [...resolvedFilterChips, ...resolvedGroupByChips];
     const hadTranslatedCriteria =
@@ -1109,13 +1122,14 @@ export class FleetSearchStore extends SearchPageStore {
   private resolveGroupByChips(
     groupByKeys: string[],
     groupByChips: FleetResolvedGroupByChip[] | undefined,
+    warnings: string[] = [],
   ): FilterChip[] {
     const resolved: FilterChip[] = [];
     for (let i = 0; i < groupByKeys.length; i++) {
       const gbKey = groupByKeys[i];
       const gbc = groupByChips?.[i];
       if (gbc?.invalid?.reason) {
-        this.snackBarService.showWarning(gbc.invalid.reason);
+        warnings.push(gbc.invalid.reason);
       }
       if (gbc?.invalid) {
         continue;
@@ -1128,6 +1142,34 @@ export class FleetSearchStore extends SearchPageStore {
       );
     }
     return resolved;
+  }
+
+  /**
+   * Formats one or more dropped-chip reasons into a single concise snackbar line, coalescing
+   * multiple ignored duplicate-key conditions into one sentence instead of stacking lines.
+   */
+  private formatChipWarnings(warnings: readonly string[]): string {
+    const prefix = FleetSearchStore.DUPLICATE_KEY_WARNING_PREFIX;
+    const duplicateKeyTargets: string[] = [];
+    const otherWarnings: string[] = [];
+    for (const raw of warnings) {
+      const trimmed = raw.trim();
+      if (trimmed.startsWith(prefix)) {
+        const target = trimmed.slice(prefix.length).replace(/\.$/, '').trim();
+        if (!duplicateKeyTargets.includes(target)) {
+          duplicateKeyTargets.push(target);
+        }
+      } else if (!otherWarnings.includes(trimmed)) {
+        otherWarnings.push(trimmed);
+      }
+    }
+    const clauses: string[] = [];
+    if (duplicateKeyTargets.length > 0) {
+      const suffix = otherWarnings.length === 0 ? '.' : '';
+      clauses.push(`${prefix}${duplicateKeyTargets.join(', ')}${suffix}`);
+    }
+    clauses.push(...otherWarnings);
+    return clauses.join('; ');
   }
 
   /** Constructs Fleet-specific ValuePicker configuration. */

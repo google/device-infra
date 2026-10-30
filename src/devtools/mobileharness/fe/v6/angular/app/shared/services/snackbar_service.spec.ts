@@ -39,7 +39,7 @@ describe('SnackBarService', () => {
     const message = 'Warning message';
     service.showWarning(message);
     expect(snackBarSpy.openFromComponent).toHaveBeenCalledWith(SnackBar, {
-      duration: 4000,
+      duration: 6000,
       verticalPosition: 'bottom',
       horizontalPosition: 'center',
       panelClass: ['custom-snackbar', 'snackbar-warning'],

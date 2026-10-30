@@ -8,18 +8,27 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   width: 100%;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.2px;
 
   .main-content {
     display: flex;
     align-items: center;
     flex-grow: 1;
+    padding-block: 6px;
     // Prevents long text from pushing the button out
     min-width: 0;
   }
 
   mat-icon:not(.close-icon) {
-    margin-right: 12px;
+    margin-inline-end: 12px;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
     flex-shrink: 0;
   }
 
@@ -30,13 +39,13 @@
   }
 
   .close-button {
-    // margin-left: 16px;
     flex-shrink: 0;
     width: 32px;
     height: 32px;
     line-height: 32px;
     padding: 0;
     margin: 0;
+    margin-inline-start: 4px;
     // Make the icon white by default
     color: white;
     // Vertically center the button
@@ -51,7 +60,7 @@
       width: 20px;
       height: 20px;
       line-height: 20px;
-      margin-right: 0;
+      margin-inline-end: 0;
     }
 
     // Adjust ripple color to be visible on dark backgrounds
