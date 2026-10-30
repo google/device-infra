@@ -103,7 +103,7 @@ public final class HostCellMapper {
    * The host's display-cased values for a key, in the same key-namespace scheme the host index
    * builder uses.
    */
-  static ImmutableList<String> displayValues(
+  private static ImmutableList<String> displayValues(
       HostRecord host, String keyId, FleetSnapshot snapshot) {
     ImmutableList<String> values = host.values(keyId);
     if (values.isEmpty()) {

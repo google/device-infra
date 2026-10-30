@@ -61,6 +61,15 @@ public final class FleetFilterEngine {
    * recordCount - 1).
    */
   public ImmutableList<Integer> match(SearchCorpus corpus, List<Filter> filters) {
+    return toSortedList(matchBits(corpus, filters));
+  }
+
+  /**
+   * Returns a mutable {@link BitSet} of the record indices matching all of the given filters.
+   *
+   * <p>An empty filter list sets bits {@code 0} through {@code recordCount - 1}.
+   */
+  BitSet matchBits(SearchCorpus corpus, List<Filter> filters) {
     int recordCount = corpus.recordCount();
     BitSet result = null;
     for (Filter filter : filters) {
@@ -74,7 +83,7 @@ public final class FleetFilterEngine {
     if (result == null) {
       result = allRecords(recordCount);
     }
-    return toSortedList(result);
+    return result;
   }
 
   /** Record-index set for one filter. A filter with no mode set imposes no constraint. */

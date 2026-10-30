@@ -123,10 +123,9 @@ public final class FleetCellMapper {
   /**
    * The device's display-cased values for a key, in the same key-namespace scheme the index builder
    * uses. A single-valued key yields a one-element list (or an empty list when the value is
-   * absent); a multi-valued key yields all its values. The searcher reuses this to derive sort
-   * values.
+   * absent); a multi-valued key yields all its values.
    */
-  static ImmutableList<String> displayValues(
+  private static ImmutableList<String> displayValues(
       DeviceRecord device, String keyId, FleetSnapshot snapshot) {
     ImmutableList<String> values = device.values(keyId);
     if (values.isEmpty()) {

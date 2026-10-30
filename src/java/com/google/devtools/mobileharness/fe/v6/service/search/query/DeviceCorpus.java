@@ -45,9 +45,9 @@ import javax.annotation.Nullable;
  * The device projection of a {@link FleetSnapshot} for the query classes.
  *
  * <p>Records are the snapshot's devices, identified by device UUID. The value projection delegates
- * to {@link DeviceRecord#normalizedValues} (lowercased sets) and {@link FleetCellMapper} (display
- * values, headers, typed cells), falling back to {@link OverlayView} for on-demand long-tail
- * dimensions.
+ * to {@link DeviceRecord#normalizedValues} (lowercased sets), {@link DeviceRecord#values} (sort
+ * keys), and {@link FleetCellMapper} (headers, typed cells), falling back to {@link OverlayView}
+ * for on-demand long-tail dimensions.
  */
 public final class DeviceCorpus implements SearchCorpus {
 
@@ -220,11 +220,12 @@ public final class DeviceCorpus implements SearchCorpus {
   }
 
   @Override
-  public ImmutableList<String> displayValues(int index, String keyId) {
-    if (overlayView.containsKey(keyId)) {
-      return overlayView.displayValues(index, keyId);
-    }
-    return FleetCellMapper.displayValues(snapshot.devices().get(index), keyId, snapshot);
+  public String firstSortKey(int index, String keyId) {
+    ImmutableList<String> values =
+        overlayView.containsKey(keyId)
+            ? overlayView.displayValues(index, keyId)
+            : snapshot.devices().get(index).values(keyId);
+    return values.isEmpty() ? "" : Ascii.toLowerCase(values.get(0));
   }
 
   public DeviceKeyRegistry deviceKeyRegistry() {

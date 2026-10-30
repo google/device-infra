@@ -2680,8 +2680,8 @@ public final class FleetSuggesterTest {
     }
 
     @Override
-    public ImmutableList<String> displayValues(int index, String keyId) {
-      return delegate.displayValues(index, keyId);
+    public String firstSortKey(int index, String keyId) {
+      return delegate.firstSortKey(index, keyId);
     }
 
     @Override

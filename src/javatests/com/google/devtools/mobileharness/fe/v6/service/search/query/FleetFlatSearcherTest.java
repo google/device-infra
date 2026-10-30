@@ -17,9 +17,11 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
@@ -42,17 +44,27 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FilterValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetColumnSort;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFlatResults;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetPageRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetUtilization;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Indicator;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Row;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.CoreFleetRawData;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.DimensionOverlay;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndexBuilder;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.HostEnrichment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.LazyPostings;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.OverlayView;
+import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
+import com.google.devtools.mobileharness.fe.v6.service.search.pull.DimensionOverlayRaw;
 import com.google.inject.Guice;
 import java.time.Instant;
+import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -369,6 +381,359 @@ public final class FleetFlatSearcherTest {
     assertThat(results.getNextPageToken()).isEmpty();
   }
 
+  @Test
+  public void sortByOverlayDimension_ordersMixedCaseAndMissingValues() {
+    String overlayKey = "dimension::carrier";
+    DimensionOverlay overlay =
+        DimensionOverlay.create(
+            DimensionOverlayRaw.create(
+                overlayKey,
+                ImmutableMap.of(
+                    "device-0", ImmutableList.of("Verizon"), "device-1", ImmutableList.of("att"))),
+            snapshot);
+    DeviceCorpus overlayCorpus =
+        new DeviceCorpus(
+            snapshot,
+            postings,
+            null,
+            OverlayView.bind(snapshot, ImmutableMap.of(overlayKey, overlay)));
+    ImmutableList<String> columns = ImmutableList.of("device_field::uuid", overlayKey);
+
+    // Missing value ("") sorts first on ascending, and "Verizon" lowercases to "verizon" after
+    // "att" despite 'V' < 'a' in ASCII.
+    FleetFlatResults ascending =
+        searcher.searchFlat(
+            overlayCorpus,
+            ImmutableList.of(),
+            columns,
+            FleetColumnSort.newBuilder().setKey(overlayKey).setAscending(true).build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(rowIds(ascending)).containsExactly("device-2", "device-1", "device-0").inOrder();
+    assertThat(ascending.getRows(2).getCells(1).getText().getValue()).isEqualTo("Verizon");
+
+    FleetFlatResults descending =
+        searcher.searchFlat(
+            overlayCorpus,
+            ImmutableList.of(),
+            columns,
+            FleetColumnSort.newBuilder().setKey(overlayKey).setAscending(false).build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(rowIds(descending)).containsExactly("device-0", "device-1", "device-2").inOrder();
+  }
+
+  @Test
+  public void boundedTopKPaging_multiLevelHeapWalksAllPagesAscendingAndDescending() {
+    LabQueryResult eightDeviceFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab1",
+                            "1.1.1.1",
+                            deviceWithModel("dev-0", "Zulu"),
+                            deviceWithModel("dev-1", "mike"),
+                            deviceWithModel("dev-2", "Alpha"),
+                            deviceWithModel("dev-3", ""),
+                            deviceWithModel("dev-4", "charlie"),
+                            deviceWithModel("dev-5", "Bravo"),
+                            deviceWithModel("dev-6", "charlie"),
+                            deviceWithModel("dev-7", "echo"))))
+            .build();
+    FleetSnapshot eightSnapshot =
+        Guice.createInjector()
+            .getInstance(FleetIndexBuilder.class)
+            .build(eightDeviceFleet, BUILD_TIME);
+    DeviceCorpus eightCorpus =
+        new DeviceCorpus(eightSnapshot, new LazyPostings(eightSnapshot.devices()), null);
+    ImmutableList<String> columns = ImmutableList.of("device_field::uuid", "dimension::model");
+
+    FleetColumnSort ascSort =
+        FleetColumnSort.newBuilder().setKey("dimension::model").setAscending(true).build();
+    FleetFlatResults ascPage1 =
+        searcher.searchFlat(
+            eightCorpus,
+            ImmutableList.of(),
+            columns,
+            ascSort,
+            FleetPageRequest.newBuilder().setPageSize(3).build());
+    assertThat(rowIds(ascPage1)).containsExactly("dev-3", "dev-2", "dev-5").inOrder();
+    assertThat(ascPage1.getRangeStart()).isEqualTo(1);
+    assertThat(ascPage1.getRangeEnd()).isEqualTo(3);
+
+    FleetFlatResults ascPage2 =
+        searcher.searchFlat(
+            eightCorpus,
+            ImmutableList.of(),
+            columns,
+            ascSort,
+            FleetPageRequest.newBuilder()
+                .setPageSize(3)
+                .setPageToken(ascPage1.getNextPageToken())
+                .build());
+    assertThat(rowIds(ascPage2)).containsExactly("dev-4", "dev-6", "dev-7").inOrder();
+    assertThat(ascPage2.getRangeStart()).isEqualTo(4);
+    assertThat(ascPage2.getRangeEnd()).isEqualTo(6);
+
+    FleetFlatResults ascPage3 =
+        searcher.searchFlat(
+            eightCorpus,
+            ImmutableList.of(),
+            columns,
+            ascSort,
+            FleetPageRequest.newBuilder()
+                .setPageSize(3)
+                .setPageToken(ascPage2.getNextPageToken())
+                .build());
+    assertThat(rowIds(ascPage3)).containsExactly("dev-1", "dev-0").inOrder();
+    assertThat(ascPage3.getRangeStart()).isEqualTo(7);
+    assertThat(ascPage3.getRangeEnd()).isEqualTo(8);
+    assertThat(ascPage3.getNextPageToken()).isEmpty();
+
+    // Exercise a 4-element heap (child index 3 -> parent index 1 -> root 0).
+    FleetFlatResults ascFour =
+        searcher.searchFlat(
+            eightCorpus,
+            ImmutableList.of(),
+            columns,
+            ascSort,
+            FleetPageRequest.newBuilder().setPageSize(4).build());
+    assertThat(rowIds(ascFour)).containsExactly("dev-3", "dev-2", "dev-5", "dev-4").inOrder();
+
+    // Exercise right-child selection at root 0 in siftDown (pageSize = 3: heap = [7, 2, 3] when 1
+    // replaces 7) and even-child parent indexing in siftUp at child = 6 (pageSize = 7: true parent
+    // (6 - 1) >>> 1 = 2 holds "3" while sibling index 6 >>> 1 = 3 holds "7", so "6" at child = 6
+    // must sift up past "3" at index 2 so "5a" later evicts "6").
+    LabQueryResult heapBranchFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab1",
+                            "1.1.1.1",
+                            deviceWithModel("dev-0", "9"),
+                            deviceWithModel("dev-1", "8"),
+                            deviceWithModel("dev-2", "3"),
+                            deviceWithModel("dev-3", "7"),
+                            deviceWithModel("dev-4", "2"),
+                            deviceWithModel("dev-5", "1"),
+                            deviceWithModel("dev-6", "6"),
+                            deviceWithModel("dev-7", "0"),
+                            deviceWithModel("dev-8", "4"),
+                            deviceWithModel("dev-9", "5"),
+                            deviceWithModel("dev-10", "5a"))))
+            .build();
+    FleetSnapshot heapBranchSnapshot =
+        Guice.createInjector()
+            .getInstance(FleetIndexBuilder.class)
+            .build(heapBranchFleet, BUILD_TIME);
+    DeviceCorpus heapBranchCorpus =
+        new DeviceCorpus(heapBranchSnapshot, new LazyPostings(heapBranchSnapshot.devices()), null);
+
+    FleetFlatResults branchTop3 =
+        searcher.searchFlat(
+            heapBranchCorpus,
+            ImmutableList.of(),
+            columns,
+            ascSort,
+            FleetPageRequest.newBuilder().setPageSize(3).build());
+    assertThat(rowIds(branchTop3)).containsExactly("dev-7", "dev-5", "dev-4").inOrder();
+
+    FleetFlatResults branchTop7 =
+        searcher.searchFlat(
+            heapBranchCorpus,
+            ImmutableList.of(),
+            columns,
+            ascSort,
+            FleetPageRequest.newBuilder().setPageSize(7).build());
+    assertThat(rowIds(branchTop7))
+        .containsExactly("dev-7", "dev-5", "dev-4", "dev-2", "dev-8", "dev-9", "dev-10")
+        .inOrder();
+
+    FleetColumnSort descSort =
+        FleetColumnSort.newBuilder().setKey("dimension::model").setAscending(false).build();
+    FleetFlatResults descPage1 =
+        searcher.searchFlat(
+            eightCorpus,
+            ImmutableList.of(),
+            columns,
+            descSort,
+            FleetPageRequest.newBuilder().setPageSize(3).build());
+    assertThat(rowIds(descPage1)).containsExactly("dev-0", "dev-1", "dev-7").inOrder();
+
+    FleetFlatResults descPage2 =
+        searcher.searchFlat(
+            eightCorpus,
+            ImmutableList.of(),
+            columns,
+            descSort,
+            FleetPageRequest.newBuilder()
+                .setPageSize(3)
+                .setPageToken(descPage1.getNextPageToken())
+                .build());
+    assertThat(rowIds(descPage2)).containsExactly("dev-6", "dev-4", "dev-5").inOrder();
+
+    FleetFlatResults descPage3 =
+        searcher.searchFlat(
+            eightCorpus,
+            ImmutableList.of(),
+            columns,
+            descSort,
+            FleetPageRequest.newBuilder()
+                .setPageSize(3)
+                .setPageToken(descPage2.getNextPageToken())
+                .build());
+    assertThat(rowIds(descPage3)).containsExactly("dev-2", "dev-3").inOrder();
+    assertThat(descPage3.getNextPageToken()).isEmpty();
+  }
+
+  @Test
+  public void emptyAndOutOfRangePages_skipSortKeyExtractionAndClampTokens() {
+    CountingCorpus counting = new CountingCorpus(corpus);
+
+    FleetFlatResults noMatches =
+        searcher.searchFlat(
+            counting,
+            ImmutableList.of(simple("device_field::status", "NONEXISTENT")),
+            COLUMNS,
+            null,
+            null);
+    assertThat(noMatches.getRowsList()).isEmpty();
+    assertThat(noMatches.getTotal()).isEqualTo(0);
+    assertThat(noMatches.getRangeStart()).isEqualTo(0);
+    assertThat(noMatches.getRangeEnd()).isEqualTo(0);
+    assertThat(noMatches.getNextPageToken()).isEmpty();
+    assertThat(noMatches.getPrevPageToken()).isEmpty();
+    assertThat(counting.firstSortKeyCalls).isEqualTo(0);
+
+    String pastEndToken = Base64.getUrlEncoder().encodeToString("o:10".getBytes(UTF_8));
+    FleetFlatResults pastEnd =
+        searcher.searchFlat(
+            counting,
+            ImmutableList.of(),
+            COLUMNS,
+            FleetColumnSort.getDefaultInstance(),
+            FleetPageRequest.newBuilder().setPageSize(2).setPageToken(pastEndToken).build());
+    assertThat(pastEnd.getRowsList()).isEmpty();
+    assertThat(pastEnd.getTotal()).isEqualTo(3);
+    assertThat(pastEnd.getRangeStart()).isEqualTo(0);
+    assertThat(pastEnd.getRangeEnd()).isEqualTo(3);
+    assertThat(pastEnd.getNextPageToken()).isEmpty();
+    assertThat(pastEnd.getPrevPageToken()).isNotEmpty();
+    assertThat(counting.firstSortKeyCalls).isEqualTo(0);
+
+    // Malformed, foreign, non-numeric, and negative tokens fall back or clamp to page 1.
+    for (String badToken :
+        ImmutableList.of(
+            "!!!not-base64!!!",
+            Base64.getUrlEncoder().encodeToString("foreign:2".getBytes(UTF_8)),
+            Base64.getUrlEncoder().encodeToString("o:not-an-int".getBytes(UTF_8)),
+            Base64.getUrlEncoder().encodeToString("o:-5".getBytes(UTF_8)))) {
+      FleetFlatResults fallback =
+          searcher.searchFlat(
+              corpus,
+              ImmutableList.of(),
+              COLUMNS,
+              null,
+              FleetPageRequest.newBuilder().setPageSize(1).setPageToken(badToken).build());
+      assertThat(rowIds(fallback)).containsExactly("device-0");
+      assertThat(fallback.getPrevPageToken()).isEmpty();
+    }
+  }
+
+  @Test
+  public void duplicateRecordId_preservesFirstEncounteredRecordInBoundedHeap() {
+    LabQueryResult dupFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(2)
+                    .addLabData(labData("lab1", "1.1.1.1", deviceWithModel("dup-uuid", "Pixel 8")))
+                    .addLabData(labData("lab2", "2.2.2.2", deviceWithModel("dup-uuid", "Pixel 8"))))
+            .build();
+    FleetSnapshot dupSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(dupFleet, BUILD_TIME);
+    DeviceCorpus dupCorpus =
+        new DeviceCorpus(dupSnapshot, new LazyPostings(dupSnapshot.devices()), null);
+
+    FleetColumnSort ascStatusSort =
+        FleetColumnSort.newBuilder().setKey("device_field::status").setAscending(true).build();
+    FleetFlatResults ascFirst =
+        searcher.searchFlat(
+            dupCorpus,
+            ImmutableList.of(),
+            COLUMNS,
+            ascStatusSort,
+            FleetPageRequest.newBuilder().setPageSize(1).build());
+    assertThat(ascFirst.getRows(0).getCells(1).getLink().getText()).isEqualTo("lab1");
+
+    FleetFlatResults ascSecond =
+        searcher.searchFlat(
+            dupCorpus,
+            ImmutableList.of(),
+            COLUMNS,
+            ascStatusSort,
+            FleetPageRequest.newBuilder()
+                .setPageSize(1)
+                .setPageToken(ascFirst.getNextPageToken())
+                .build());
+    assertThat(ascSecond.getRows(0).getCells(1).getLink().getText()).isEqualTo("lab2");
+
+    FleetFlatResults ascBoth =
+        searcher.searchFlat(
+            dupCorpus,
+            ImmutableList.of(),
+            COLUMNS,
+            ascStatusSort,
+            FleetPageRequest.newBuilder().setPageSize(2).build());
+    assertThat(
+            ImmutableList.of(
+                ascBoth.getRows(0).getCells(1).getLink().getText(),
+                ascBoth.getRows(1).getCells(1).getLink().getText()))
+        .containsExactly("lab1", "lab2")
+        .inOrder();
+
+    FleetColumnSort descStatusSort =
+        FleetColumnSort.newBuilder().setKey("device_field::status").setAscending(false).build();
+    FleetFlatResults descFirst =
+        searcher.searchFlat(
+            dupCorpus,
+            ImmutableList.of(),
+            COLUMNS,
+            descStatusSort,
+            FleetPageRequest.newBuilder().setPageSize(1).build());
+    assertThat(descFirst.getRows(0).getCells(1).getLink().getText()).isEqualTo("lab1");
+
+    FleetFlatResults descSecond =
+        searcher.searchFlat(
+            dupCorpus,
+            ImmutableList.of(),
+            COLUMNS,
+            descStatusSort,
+            FleetPageRequest.newBuilder()
+                .setPageSize(1)
+                .setPageToken(descFirst.getNextPageToken())
+                .build());
+    assertThat(descSecond.getRows(0).getCells(1).getLink().getText()).isEqualTo("lab2");
+
+    FleetFlatResults descBoth =
+        searcher.searchFlat(
+            dupCorpus,
+            ImmutableList.of(),
+            COLUMNS,
+            descStatusSort,
+            FleetPageRequest.newBuilder().setPageSize(2).build());
+    assertThat(
+            ImmutableList.of(
+                descBoth.getRows(0).getCells(1).getLink().getText(),
+                descBoth.getRows(1).getCells(1).getLink().getText()))
+        .containsExactly("lab1", "lab2")
+        .inOrder();
+  }
+
   // --- Helpers ---
 
   private static ImmutableList<String> rowIds(FleetFlatResults results) {
@@ -501,7 +866,102 @@ public final class FleetFlatSearcherTest {
         .build();
   }
 
+  private static DeviceInfo deviceWithModel(String id, String model) {
+    DeviceCompositeDimension.Builder dims =
+        DeviceCompositeDimension.newBuilder().addSupportedDimension(dimension("os", "android"));
+    if (!model.isEmpty()) {
+      dims.addSupportedDimension(dimension("model", model));
+    }
+    return DeviceInfo.newBuilder()
+        .setDeviceLocator(DeviceLocator.newBuilder().setId(id))
+        .setDeviceStatus(DeviceStatus.IDLE)
+        .setDeviceFeature(
+            DeviceFeature.newBuilder().addType("AndroidRealDevice").setCompositeDimension(dims))
+        .build();
+  }
+
   private static DeviceDimension dimension(String name, String value) {
     return DeviceDimension.newBuilder().setName(name).setValue(value).build();
+  }
+
+  private static final class CountingCorpus implements SearchCorpus {
+    private final SearchCorpus delegate;
+    int firstSortKeyCalls;
+
+    CountingCorpus(SearchCorpus delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public FleetIndex index() {
+      return delegate.index();
+    }
+
+    @Override
+    public Postings postings() {
+      return delegate.postings();
+    }
+
+    @Override
+    public int recordCount() {
+      return delegate.recordCount();
+    }
+
+    @Override
+    public String recordId(int index) {
+      return delegate.recordId(index);
+    }
+
+    @Override
+    public SearchEntity entity() {
+      return delegate.entity();
+    }
+
+    @Override
+    public String identifierKey() {
+      return delegate.identifierKey();
+    }
+
+    @Override
+    public boolean isIdentifierKey(String keyId) {
+      return delegate.isIdentifierKey(keyId);
+    }
+
+    @Override
+    public ImmutableSet<String> valuesForKey(int index, String keyId) {
+      return delegate.valuesForKey(index, keyId);
+    }
+
+    @Override
+    public String firstSortKey(int index, String keyId) {
+      firstSortKeyCalls++;
+      return delegate.firstSortKey(index, keyId);
+    }
+
+    @Override
+    public Column column(String keyId) {
+      return delegate.column(keyId);
+    }
+
+    @Override
+    public Cell cell(int index, String keyId) {
+      return delegate.cell(index, keyId);
+    }
+
+    @Override
+    public Optional<FleetUtilization> utilization(List<Integer> memberIndices) {
+      return delegate.utilization(memberIndices);
+    }
+
+    @Override
+    @Nullable
+    public ScenarioCuration curation() {
+      return delegate.curation();
+    }
+
+    @Override
+    public KeyVocabulary vocabulary() {
+      return delegate.vocabulary();
+    }
   }
 }

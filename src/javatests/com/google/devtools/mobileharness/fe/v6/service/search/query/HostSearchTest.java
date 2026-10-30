@@ -236,6 +236,61 @@ public final class HostSearchTest {
   }
 
   @Test
+  public void flat_sortsByHostPropertyCaseInsensitivelyAndMissingFirst() {
+    LabQueryResult rackFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(3)
+                    .addLabData(
+                        hostLab(
+                            "lab-a",
+                            "1.1.1.1",
+                            LabStatus.LAB_RUNNING,
+                            hostProperties("rack", "Rack-B"),
+                            1))
+                    .addLabData(
+                        hostLab(
+                            "lab-b",
+                            "2.2.2.2",
+                            LabStatus.LAB_RUNNING,
+                            hostProperties("rack", "rack-a"),
+                            1))
+                    .addLabData(
+                        hostLab(
+                            "lab-c",
+                            "3.3.3.3",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            0)))
+            .build();
+    FleetSnapshot rackSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(rackFleet, BUILD_TIME);
+    HostCorpus rackCorpus =
+        new HostCorpus(rackSnapshot, LazyPostings.forHosts(rackSnapshot.hosts()), null);
+    ImmutableList<String> columns =
+        ImmutableList.of("host_field::host_name", "host_property::rack");
+
+    FleetFlatResults ascending =
+        flatSearcher.searchFlat(
+            rackCorpus,
+            ImmutableList.of(),
+            columns,
+            FleetColumnSort.newBuilder().setKey("host_property::rack").setAscending(true).build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(rowIds(ascending)).containsExactly("lab-c", "lab-b", "lab-a").inOrder();
+
+    FleetFlatResults descending =
+        flatSearcher.searchFlat(
+            rackCorpus,
+            ImmutableList.of(),
+            columns,
+            FleetColumnSort.newBuilder().setKey("host_property::rack").setAscending(false).build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(rowIds(descending)).containsExactly("lab-a", "lab-b", "lab-c").inOrder();
+  }
+
+  @Test
   public void flat_hostLinkCarriesUniverseWhenAtsControllerIdPresent() {
     CoreFleetRawData raw =
         CoreFleetRawData.builder()

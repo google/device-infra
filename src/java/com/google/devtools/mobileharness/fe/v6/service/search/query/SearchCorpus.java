@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Cell;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Column;
@@ -37,7 +36,7 @@ import javax.annotation.Nullable;
  * com.google.devtools.mobileharness.fe.v6.service.search.index.FleetSnapshot} plus record type. The
  * corpus supplies the value index and posting lists, the record identity and count, and the per-key
  * value projection (both the lowercased set used for filtering, partitioning, redundancy, and
- * combination counting, and the display-cased list used for sorting), plus the typed header and
+ * combination counting, and the lowercased first value used for sorting), plus the typed header and
  * cell that the record type dictates.
  *
  * <p>Keeping the projection inside the corpus, rather than behind a shared record interface,
@@ -79,10 +78,11 @@ public interface SearchCorpus {
   ImmutableSet<String> valuesForKey(int index, String keyId);
 
   /**
-   * The display-cased values the record at {@code index} carries for {@code keyId}, in the record's
-   * own order. Used to derive sort values.
+   * The lowercased first value the record at {@code index} carries for {@code keyId} in the
+   * record's own order, or {@code ""} when the record carries no value for {@code keyId}. Used to
+   * derive flat-search sort keys without allocating display-cased value lists.
    */
-  ImmutableList<String> displayValues(int index, String keyId);
+  String firstSortKey(int index, String keyId);
 
   /** The index-driven header for {@code keyId}. */
   Column column(String keyId);

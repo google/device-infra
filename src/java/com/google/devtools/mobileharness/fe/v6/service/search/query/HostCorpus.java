@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Cell;
@@ -38,9 +39,11 @@ import javax.annotation.Nullable;
  *
  * <p>Records are the snapshot's hosts, identified by host name. The value projection delegates to
  * {@link com.google.devtools.mobileharness.fe.v6.service.search.index.HostRecord#normalizedValues}
- * (lowercased sets) and {@link HostCellMapper} (display values, headers, typed cells), so it
- * mirrors exactly what the host index builder recorded. Utilization is a device concept, so a host
- * group carries no utilization breakdown and {@link #utilization} returns empty.
+ * (lowercased sets), {@link
+ * com.google.devtools.mobileharness.fe.v6.service.search.index.HostRecord#values} (sort keys), and
+ * {@link HostCellMapper} (headers, typed cells), so it mirrors exactly what the host index builder
+ * recorded. Utilization is a device concept, so a host group carries no utilization breakdown and
+ * {@link #utilization} returns empty.
  */
 public final class HostCorpus implements SearchCorpus {
 
@@ -131,8 +134,9 @@ public final class HostCorpus implements SearchCorpus {
   }
 
   @Override
-  public ImmutableList<String> displayValues(int index, String keyId) {
-    return HostCellMapper.displayValues(snapshot.hosts().get(index), keyId, snapshot);
+  public String firstSortKey(int index, String keyId) {
+    ImmutableList<String> values = snapshot.hosts().get(index).values(keyId);
+    return values.isEmpty() ? "" : Ascii.toLowerCase(values.get(0));
   }
 
   public HostKeyRegistry hostKeyRegistry() {
