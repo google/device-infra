@@ -1,0 +1,39 @@
+@let s = summary();
+
+<div class="bw-review-banner">
+  <div class="bw-review-target">
+    <div class="bw-review-target-icon">
+      <mat-icon class="material-symbols-outlined">{{ icon() }}</mat-icon>
+    </div>
+    <div class="bw-review-target-text">
+      <div class="bw-review-target-headline">
+        <ng-content />
+      </div>
+      <div class="bw-review-target-sub">{{ subtitle() }}</div>
+    </div>
+  </div>
+  <div class="bw-review-counts">
+    @if (s.willUpdateCount > 0) {
+      <span class="bw-count-chip bw-count-chip-update">
+        {{ s.willUpdateLabel }} will update
+      </span>
+    }
+    @if (s.alreadyMatchCount > 0) {
+      <span class="bw-count-chip bw-count-chip-same">
+        {{ s.alreadyMatchLabel }} already match
+      </span>
+    }
+    @if (s.readOnlyCount > 0) {
+      <span class="bw-count-chip bw-count-chip-skip">
+        {{ s.readOnlyLabel }} read-only
+      </span>
+    }
+  </div>
+</div>
+
+@if (s.willUpdateCount === 0) {
+  <div class="bw-review-banner bw-review-banner-info">
+    <mat-icon class="material-symbols-outlined">info</mat-icon>
+    <span>{{ nothingToUpdateMessage() }}</span>
+  </div>
+}

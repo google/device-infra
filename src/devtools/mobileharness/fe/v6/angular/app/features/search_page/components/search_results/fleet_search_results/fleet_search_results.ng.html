@@ -99,8 +99,7 @@
               [columnDescriptions]="store.columnDescriptions()"
               [selectedSet]="selectedItems"
               (toggleGroup)="store.toggleGroup($event)"
-              (toggleSelectGroupPage)="store.toggleSelectRows($event)"
-              (toggleSelectRow)="store.toggleSelectRow($event)"
+              (toggleSelectRows)="store.toggleSelectRows($event)"
               (loadGroupPage)="store.onLoadGroupRows(g.groupId, $event)"
             ></app-fleet-group-card>
           }
@@ -214,20 +213,21 @@
             [class]="'density-' + store.density()"
             [class.stale-loading]="isLoading"
           >
-            <table mat-table [dataSource]="rows" class="results-table">
+            <table mat-table [dataSource]="tableRows()" [trackBy]="trackByRow" class="results-table">
               <!-- Checkbox Column -->
               <ng-container matColumnDef="checkbox">
                 <th mat-header-cell *matHeaderCellDef class="checkbox-col">
+                  @let selState = store.selectionState();
                   <mat-checkbox
-                    [checked]="store.isAllSelected()"
-                    [indeterminate]="store.isSomeSelected()"
+                    [checked]="selState.all"
+                    [indeterminate]="selState.some"
                     (change)="store.toggleSelectRows(rows)"
                   ></mat-checkbox>
                 </th>
-                <td mat-cell *matCellDef="let row" class="checkbox-col">
+                <td mat-cell *matCellDef="let item" class="checkbox-col">
                   <mat-checkbox
-                    [checked]="selectedItems.has(row.id)"
-                    (change)="store.toggleSelectRow(row.id)"
+                    [checked]="item.selected"
+                    (change)="store.toggleSelectRows([item.row])"
                   ></mat-checkbox>
                 </td>
               </ng-container>
@@ -256,14 +256,14 @@
                       }
                     </span>
                   </th>
-                  <td mat-cell *matCellDef="let row" [class]="'col-' + col.key">
-                    <app-search-cell [cell]="row.cells?.[colIdx]" [column]="col"></app-search-cell>
+                  <td mat-cell *matCellDef="let item" [class]="'col-' + col.key">
+                    <app-search-cell [cell]="item.row.cells?.[colIdx]" [column]="col"></app-search-cell>
                   </td>
                 </ng-container>
               }
 
               <tr mat-header-row *matHeaderRowDef="columnsToDisplay(); sticky: true"></tr>
-              <tr mat-row *matRowDef="let row; columns: columnsToDisplay()" [class.selected-row]="selectedItems.has(row.id)"></tr>
+              <tr mat-row *matRowDef="let item; columns: columnsToDisplay()" [class.selected-row]="item.selected"></tr>
             </table>
           </div>
         </mat-card-content>
@@ -291,7 +291,7 @@
       Quarantine
     </button>
     @if (entity === 'devices') {
-      <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
+      <button class="rt-btn-text" (click)="bulkConfig.openWifiDialog()">
         <mat-icon class="material-symbols-outlined">wifi</mat-icon>
         Configure Wi-Fi
       </button>
