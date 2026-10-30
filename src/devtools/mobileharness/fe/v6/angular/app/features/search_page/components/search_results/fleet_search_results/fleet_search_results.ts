@@ -16,6 +16,7 @@ import {MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
 
 import {Column} from '../../../../../core/models/search';
+import {KeyDescriptionTooltipDirective} from '../../../../../shared/directives/key_description_tooltip/key_description_tooltip';
 import {TooltipIfTruncatedDirective} from '../../../../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
 import {FleetSearchStore} from '../../../services/fleet_search_store';
 
@@ -45,6 +46,7 @@ import {FleetGroupCardComponent} from '../fleet_group_card/fleet_group_card';
     MatSelectModule,
     MatTableModule,
     MatTooltipModule,
+    KeyDescriptionTooltipDirective,
     TooltipIfTruncatedDirective,
     DensityDropdownComponent,
     FleetGroupCardComponent,

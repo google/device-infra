@@ -1,10 +1,5 @@
 import {signal} from '@angular/core';
-import {
-  ComponentFixture,
-  fakeAsync,
-  TestBed,
-  tick,
-} from '@angular/core/testing';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {MatDialogRef} from '@angular/material/dialog';
 import {
   MatTestDialogOpener,
@@ -69,7 +64,10 @@ describe('KeyPickerComponent', () => {
         entries: [
           {
             key: 'dim::label',
-            metadata: {keyDisplayName: 'Label'},
+            metadata: {
+              keyDisplayName: 'Label',
+              description: 'Free-form tags that lab owners attach to devices.',
+            },
             coverage: {shown: {count: 450}},
             applied: false,
           },
@@ -107,6 +105,7 @@ describe('KeyPickerComponent', () => {
           {
             key: 'dim::os_version',
             displayName: 'OS Version',
+            description: 'The OS version the device reports.',
             groupCount: {shown: {count: 12}},
             coverage: {shown: {count: 1200}},
             applied: false,
@@ -194,6 +193,38 @@ describe('KeyPickerComponent', () => {
       expect(rows[2].textContent).toContain('Used in 450 devices');
     });
 
+    it('renders an inline info icon only for keys with a description without picking on icon click', () => {
+      const rows = document.querySelectorAll('.kp-row');
+
+      expect(document.querySelector('.kp-row-desc')).toBeNull();
+      expect(rows[0].querySelector('.kp-row-info')).toBeNull();
+      expect(rows[0].getAttribute('aria-label')).toBe('Device Status');
+      expect(rows[0].getAttribute('aria-description')).toBeNull();
+
+      const infoIcon = rows[2].querySelector(
+        '.kp-row-info',
+      ) as HTMLElement | null;
+      expect(infoIcon).not.toBeNull();
+      expect(infoIcon?.getAttribute('aria-label')).toBe(
+        'Free-form tags that lab owners attach to devices.',
+      );
+      expect(rows[2].getAttribute('aria-label')).toBe('Label');
+      expect(rows[2].getAttribute('aria-description')).toBe(
+        'Free-form tags that lab owners attach to devices.',
+      );
+
+      infoIcon!.click();
+      infoIcon!.dispatchEvent(
+        new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}),
+      );
+      infoIcon!.dispatchEvent(
+        new KeyboardEvent('keydown', {key: ' ', bubbles: true}),
+      );
+      openerFixture.detectChanges();
+      expect(mockDialogRef.close).not.toHaveBeenCalled();
+      expect(mockStore.openQuickFilter).not.toHaveBeenCalled();
+    });
+
     it('picks a key, closes dialog, and opens quick filter', () => {
       const rows = document.querySelectorAll<HTMLElement>('.kp-row');
       rows[0].click();
@@ -218,21 +249,25 @@ describe('KeyPickerComponent', () => {
       expect(component.query()).toBe('label');
     });
 
-    it('debounces search query before triggering RPC and suppresses intermediate typing', fakeAsync(() => {
+    it('debounces search query before triggering RPC and suppresses intermediate typing', async () => {
+      const waitMs = (ms: number) =>
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, ms);
+        });
       const input = document.querySelector(
         '.kp-searchbar input',
       ) as HTMLInputElement;
 
-      // Simulate continuous typing: 'd' -> 'de' -> 'dev' with 150ms intervals (< 300ms)
+      // Simulate continuous typing: 'd' -> 'de' -> 'dev' with 80ms intervals (< 300ms)
       input.value = 'd';
       input.dispatchEvent(new Event('input'));
       openerFixture.detectChanges();
-      tick(150);
+      await waitMs(80);
 
       input.value = 'de';
       input.dispatchEvent(new Event('input'));
       openerFixture.detectChanges();
-      tick(150);
+      await waitMs(80);
 
       input.value = 'dev';
       input.dispatchEvent(new Event('input'));
@@ -247,7 +282,9 @@ describe('KeyPickerComponent', () => {
       ).not.toHaveBeenCalledWith(jasmine.objectContaining({query: 'de'}));
 
       // Wait until 300ms debounce expires
-      tick(300);
+      await waitMs(350);
+      openerFixture.detectChanges();
+      await openerFixture.whenStable();
       openerFixture.detectChanges();
 
       expect(component.debouncedQuery()).toBe('dev');
@@ -255,21 +292,32 @@ describe('KeyPickerComponent', () => {
       expect(mockSearchService.getFleetFilterKeyCatalog).toHaveBeenCalledWith(
         jasmine.objectContaining({query: 'dev'}),
       );
-    }));
+    });
 
-    it('clears query immediately without debounce delay on clearSearch', fakeAsync(() => {
+    it('clears query immediately without debounce delay on clearSearch', async () => {
+      const waitMs = (ms: number) =>
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, ms);
+        });
       component.onSearch('model');
-      tick(300);
+      openerFixture.detectChanges();
+      await waitMs(350);
+      openerFixture.detectChanges();
+      await openerFixture.whenStable();
+      openerFixture.detectChanges();
       expect(component.debouncedQuery()).toBe('model');
 
       component.clearSearch();
-      tick(0);
+      openerFixture.detectChanges();
+      await waitMs(20);
+      openerFixture.detectChanges();
+      await openerFixture.whenStable();
       openerFixture.detectChanges();
 
       expect(component.query()).toBe('');
       expect(component.debouncedQuery()).toBe('');
       expect(component.isDebouncing()).toBeFalse();
-    }));
+    });
 
     it('renders clear button when query is present and clicking it clears search', () => {
       const input = document.querySelector(
@@ -306,17 +354,22 @@ describe('KeyPickerComponent', () => {
       );
     });
 
-    it('displays no key matches message when catalog returns empty sections', fakeAsync(() => {
+    it('displays no key matches message when catalog returns empty sections', async () => {
       mockSearchService.getFleetFilterKeyCatalog.and.returnValue(
         of({sections: []}),
       );
       component.onSearch('xyz');
-      tick(300);
+      openerFixture.detectChanges();
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 350);
+      });
+      openerFixture.detectChanges();
+      await openerFixture.whenStable();
       openerFixture.detectChanges();
 
       const emptyEl = document.querySelector('.kp-empty');
       expect(emptyEl?.textContent).toContain('No key matches “xyz”');
-    }));
+    });
 
     it('displays no keys available message when query is empty and catalog has no sections', async () => {
       mockSearchService.getFleetFilterKeyCatalog.and.returnValue(
@@ -446,6 +499,26 @@ describe('KeyPickerComponent', () => {
       ).toBe('Used in 1,200 devices');
       expect(rows[2].querySelector('.kp-meta-dot')).toBeNull();
       expect(rows[2].classList.contains('kp-inert')).toBeFalse();
+    });
+
+    it('renders an inline info icon for a group-by key description without picking on icon click', () => {
+      const rows = document.querySelectorAll('.kp-row');
+
+      expect(document.querySelector('.kp-row-desc')).toBeNull();
+      expect(rows[0].querySelector('.kp-row-info')).toBeNull();
+
+      const infoIcon = rows[2].querySelector(
+        '.kp-row-info',
+      ) as HTMLElement | null;
+      expect(infoIcon).not.toBeNull();
+      expect(infoIcon?.getAttribute('aria-label')).toBe(
+        'The OS version the device reports.',
+      );
+
+      infoIcon!.click();
+      openerFixture.detectChanges();
+      expect(mockDialogRef.close).not.toHaveBeenCalled();
+      expect(mockStore.openQuickGroupBy).not.toHaveBeenCalled();
     });
 
     it('does not trigger pick when clicking an inert applied row', () => {

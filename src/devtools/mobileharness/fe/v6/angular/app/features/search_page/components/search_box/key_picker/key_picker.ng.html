@@ -89,6 +89,7 @@
             @let inert = isInert(entry);
             @let groupCount = getGroupCount(entry);
             @let entryName = getEntryName(entry);
+            @let entryDescription = getEntryDescription(entry);
             <div
               class="kp-row"
               [class.kp-applied]="entry.applied"
@@ -96,16 +97,33 @@
               role="button"
               [attr.tabindex]="inert ? -1 : 0"
               [attr.aria-disabled]="inert"
+              [attr.aria-label]="entryName"
+              [attr.aria-description]="entryDescription || null"
               (click)="onPick(entry)"
               (keydown.enter)="onPick(entry)"
               (keydown.space)="$event.preventDefault(); onPick(entry)"
             >
               <div class="kp-row-main">
-                <span
-                  class="kp-row-name"
-                  [matTooltip]="entryName"
-                  matTooltipPosition="above"
-                >{{ entryName }}</span>
+                <span #kpLabel class="kp-row-label">
+                  <span
+                    class="kp-row-name"
+                    [matTooltip]="entryName"
+                    matTooltipPosition="above"
+                  >{{ entryName }}</span>
+                  @if (entryDescription) {
+                    <mat-icon
+                      class="material-symbols-outlined kp-row-info"
+                      tabindex="0"
+                      role="img"
+                      [appKeyDescriptionTooltip]="entryDescription"
+                      [tooltipAlignOrigin]="kpLabel"
+                      [attr.aria-label]="entryDescription"
+                      (click)="$event.stopPropagation()"
+                      (keydown.enter)="$event.stopPropagation()"
+                      (keydown.space)="$event.preventDefault(); $event.stopPropagation()"
+                    >info</mat-icon>
+                  }
+                </span>
                 @if (!entry.applied && groupCount !== undefined) {
                   <span
                     class="kp-group-count"

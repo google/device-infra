@@ -18,7 +18,19 @@
     >
       <!-- Header -->
       <div class="vp-header">
-        <span class="vp-title">{{ store.pickerTitle() || store.pickerKey() }}</span>
+        <span #vpTitleGroup class="vp-title-group">
+          <span class="vp-title">{{ store.pickerTitle() || store.pickerKey() }}</span>
+          @if (config()?.description; as description) {
+            <mat-icon
+              class="material-symbols-outlined vp-title-info"
+              tabindex="0"
+              role="img"
+              [appKeyDescriptionTooltip]="description"
+              [tooltipAlignOrigin]="vpTitleGroup"
+              [attr.aria-label]="description"
+            >info</mat-icon>
+          }
+        </span>
         @if (showNegateToggle()) {
           <div class="vp-polarity-wrap">
             <button

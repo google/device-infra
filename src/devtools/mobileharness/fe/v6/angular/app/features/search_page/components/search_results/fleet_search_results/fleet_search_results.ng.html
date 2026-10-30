@@ -96,6 +96,7 @@
               [groupState]="store.expandedGroupPages().get(g.groupId)"
               [entity]="entity"
               [columns]="store.displayColumns()"
+              [columnDescriptions]="store.columnDescriptions()"
               [selectedSet]="selectedItems"
               (toggleGroup)="store.toggleGroup($event)"
               (toggleSelectGroupPage)="store.toggleSelectRows($event)"
@@ -235,8 +236,19 @@
               @for (col of store.displayColumns(); track col.key; let colIdx = $index) {
                 <ng-container [matColumnDef]="col.key">
                   <th mat-header-cell *matHeaderCellDef (click)="store.toggleSort(col.key)" class="sortable-header" [class]="'col-' + col.key">
-                    <span class="header-content">
-                      {{ col.displayName }}
+                    <span #colHeader class="header-content">
+                      <span class="header-name">{{ col.displayName }}</span>
+                      @if (col.description || store.columnDescriptions().get(col.key); as description) {
+                        <mat-icon
+                          class="material-symbols-outlined header-info"
+                          tabindex="0"
+                          role="img"
+                          [appKeyDescriptionTooltip]="description"
+                          [tooltipAlignOrigin]="colHeader"
+                          [attr.aria-label]="description"
+                          (click)="$event.stopPropagation()"
+                        >info</mat-icon>
+                      }
                       @if (store.sortColumn() === col.key) {
                         <mat-icon class="material-symbols-outlined sort-icon">
                           {{ store.sortAsc() ? 'arrow_upward' : 'arrow_downward' }}

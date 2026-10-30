@@ -445,6 +445,22 @@
     background-color: #f3f4f6;
   }
 
+  .header-with-info {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .version-info {
+    flex-shrink: 0;
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    line-height: 14px;
+    color: #5f6368;
+    cursor: help;
+  }
+
   // .sticky-start {
   //   box-shadow: inset -1px 0 #e5e7eb;
   // }

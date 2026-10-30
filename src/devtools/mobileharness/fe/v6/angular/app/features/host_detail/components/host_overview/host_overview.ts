@@ -41,6 +41,7 @@ import {
   DEVICE_ACTION_UI_CONFIG,
   LAB_SERVER_ACTION_UI_CONFIG,
 } from '../../../../core/constants/action_bar_config';
+import {DEVICE_VERSION_DESCRIPTION} from '../../../../core/constants/device_version_constants';
 import {ActionButtonState} from '../../../../core/models/action_common';
 import {APP_DATA, getLegacyFeUrl} from '../../../../core/models/app_data';
 import {DeviceActions} from '../../../../core/models/device_action';
@@ -78,6 +79,7 @@ import {
   SearchableListOverlayData,
 } from '../../../../shared/components/searchable_list_overlay/searchable_list_overlay';
 import {useDeviceActions} from '../../../../shared/composables/device_actions';
+import {KeyDescriptionTooltipDirective} from '../../../../shared/directives/key_description_tooltip/key_description_tooltip';
 import {TooltipIfTruncatedDirective} from '../../../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
 import {ComingSoonService} from '../../../../shared/services/coming_soon_service';
 import {SnackBarService} from '../../../../shared/services/snackbar_service';
@@ -197,6 +199,7 @@ const STATUS_SEMANTIC_MAP: Record<string, {icon: string; colorClass: string}> =
     SearchableListOverlayComponent,
     OverflowChipListComponent,
     ActionButton,
+    KeyDescriptionTooltipDirective,
     TooltipIfTruncatedDirective,
   ],
   providers: [LabServerActionService],
@@ -213,6 +216,7 @@ export class HostOverviewPage {
   private readonly actionService = inject(LabServerActionService);
 
   readonly legacyFeUrl = getLegacyFeUrl(this.appData.applicationId ?? '');
+  readonly versionDescription = DEVICE_VERSION_DESCRIPTION;
 
   readonly objectUtils = objectUtils;
   readonly dateUtils = dateUtils;

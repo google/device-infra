@@ -247,9 +247,16 @@
         direction: ltr;
         vertical-align: middle;
         max-width: 100%;
+        min-width: 0;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+      }
+
+      .header-name {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
       .sort-icon {
@@ -259,6 +266,16 @@
         width: 16px;
         height: 16px;
         flex-shrink: 0;
+      }
+
+      .header-info {
+        margin-left: 2px;
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+        line-height: 14px;
+        flex-shrink: 0;
+        cursor: help;
       }
     }
 

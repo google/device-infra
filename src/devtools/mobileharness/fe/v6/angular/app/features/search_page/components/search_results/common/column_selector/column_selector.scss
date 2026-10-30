@@ -254,6 +254,41 @@
   white-space: nowrap;
 }
 
+.cs-row-label-spacer {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.cs-row-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+
+  .cs-row-name {
+    flex: 0 1 auto;
+  }
+}
+
+.cs-row-info {
+  flex-shrink: 0;
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  line-height: 14px;
+  color: var(--mat-sys-color-on-surface-variant, #444746);
+  cursor: help;
+  border-radius: 50%;
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-color-primary, #0b57d0);
+    outline-offset: 1px;
+  }
+}
+
 .cs-row-meta {
   flex-shrink: 0;
   font-size: 0.75rem;

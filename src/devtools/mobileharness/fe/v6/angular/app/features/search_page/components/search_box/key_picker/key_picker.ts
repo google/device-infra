@@ -30,6 +30,7 @@ import {
 } from '../../../../../core/models/search';
 import {SEARCH_SERVICE} from '../../../../../core/services/search/search_service';
 import {Dialog} from '../../../../../shared/components/dialog/dialog';
+import {KeyDescriptionTooltipDirective} from '../../../../../shared/directives/key_description_tooltip/key_description_tooltip';
 import {KeyPickerDialogData, KeyPickerMode} from '../../../models';
 import {SearchPageStore} from '../../../services/search_page_store';
 import {toFleetProto, toSearchEntityProto} from '../../../utils';
@@ -53,6 +54,7 @@ import {toFleetProto, toSearchEntityProto} from '../../../utils';
     MatIconModule,
     MatTooltipModule,
     Dialog,
+    KeyDescriptionTooltipDirective,
   ],
 })
 export class KeyPickerComponent {
@@ -221,6 +223,19 @@ export class KeyPickerComponent {
       return entry.metadata.keyDisplayName;
     }
     return entry.key;
+  }
+
+  /** Returns what a catalog entry's key means, or '' when the backend sends no description. */
+  getEntryDescription(
+    entry: FleetFilterKeyEntry | FleetGroupByKeyEntry,
+  ): string {
+    if ('description' in entry && entry.description) {
+      return entry.description;
+    }
+    if ('metadata' in entry && entry.metadata?.description) {
+      return entry.metadata.description;
+    }
+    return '';
   }
 
   /** Returns the group count for a group-by catalog entry when shown by BFF. */

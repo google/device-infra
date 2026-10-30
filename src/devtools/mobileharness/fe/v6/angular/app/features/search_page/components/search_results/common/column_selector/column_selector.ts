@@ -36,6 +36,7 @@ import {
 } from '../../../../../../core/models/search';
 import {SEARCH_SERVICE} from '../../../../../../core/services/search/search_service';
 import {Dialog} from '../../../../../../shared/components/dialog/dialog';
+import {KeyDescriptionTooltipDirective} from '../../../../../../shared/directives/key_description_tooltip/key_description_tooltip';
 import {
   ColumnSelectorDialogData,
   ColumnSelectorResult,
@@ -66,6 +67,7 @@ import {toFleetProto, toSearchEntityProto} from '../../../../utils';
     MatDialogModule,
     MatIconModule,
     Dialog,
+    KeyDescriptionTooltipDirective,
   ],
 })
 export class ColumnSelectorComponent {
@@ -242,7 +244,11 @@ export class ColumnSelectorComponent {
     if (checked && !this.isSelected(entry.key)) {
       this.draftColumns.update((cols) => [
         ...cols,
-        {key: entry.key, displayName: entry.displayName},
+        {
+          key: entry.key,
+          displayName: entry.displayName,
+          ...(entry.description ? {description: entry.description} : {}),
+        },
       ]);
     } else if (!checked) {
       this.draftColumns.update((cols) =>

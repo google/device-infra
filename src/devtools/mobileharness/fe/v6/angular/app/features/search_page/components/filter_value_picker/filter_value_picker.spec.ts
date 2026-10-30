@@ -85,6 +85,24 @@ describe('FilterValuePicker', () => {
     expect(polarityBtn.textContent).toContain('is');
   });
 
+  it('renders .vp-title-info only when pickerConfig().description is set', () => {
+    expect(overlayContainerElement.querySelector('.vp-title-info')).toBeNull();
+
+    mockStore.pickerConfig.set({
+      key: 'device_field::version',
+      title: 'Version',
+      description: 'The device OS version.',
+      type: 'list',
+    });
+    fixture.detectChanges();
+
+    const infoIcon = overlayContainerElement.querySelector(
+      '.vp-title-info',
+    ) as HTMLElement | null;
+    expect(infoIcon).not.toBeNull();
+    expect(infoIcon?.getAttribute('aria-label')).toBe('The device OS version.');
+  });
+
   it('should toggle polarity menu and negate selection', () => {
     const polarityBtn = overlayContainerElement.querySelector(
       '.vp-polarity-btn',

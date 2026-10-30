@@ -9,6 +9,7 @@ import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
 import {firstValueFrom, of, timer} from 'rxjs';
 
+import {DEVICE_VERSION_DESCRIPTION} from '../../../../core/constants/device_version_constants';
 import {DeviceOverview} from '../../../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 
@@ -430,5 +431,15 @@ describe('DeviceOverviewTab Component', () => {
 
     batteryEl = fixture.debugElement.query(By.css('dt[title="Battery"]'));
     expect(batteryEl).toBeFalsy();
+  });
+
+  it('renders version-info icon with aria-label bound to DEVICE_VERSION_DESCRIPTION', () => {
+    const versionInfo = fixture.debugElement.query(
+      By.css('dt.label-with-help .version-info'),
+    );
+    expect(versionInfo).not.toBeNull();
+    expect(versionInfo.nativeElement.getAttribute('aria-label')).toBe(
+      DEVICE_VERSION_DESCRIPTION,
+    );
   });
 });

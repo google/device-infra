@@ -63,6 +63,13 @@
     box-sizing: border-box;
   }
 
+  .vp-title-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+  }
+
   .vp-title {
     font-size: 0.875rem;
     font-weight: 600;
@@ -71,6 +78,22 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     min-width: 0;
+  }
+
+  .vp-title-info {
+    flex-shrink: 0;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    color: #444746;
+    cursor: help;
+    border-radius: 50%;
+
+    &:focus-visible {
+      outline: 2px solid #0b57d0;
+      outline-offset: 1px;
+    }
   }
 
   .vp-polarity-wrap {

@@ -146,7 +146,18 @@
           }
 
           @if (device.isAndroid || (device.basicInfo.version && device.basicInfo.version !== 'N/A')) {
-            <dt title="Version">Version</dt>
+            <dt #versionLabel class="label-with-help">
+              <span title="Version">Version</span>
+              <mat-icon
+                class="material-symbols-outlined version-info"
+                tabindex="0"
+                role="img"
+                [appKeyDescriptionTooltip]="versionDescription"
+                [tooltipAlignOrigin]="versionLabel"
+                tooltipPreferredSide="below"
+                [attr.aria-label]="versionDescription"
+              >info</mat-icon>
+            </dt>
             <dd [title]="device.basicInfo.version">
               {{ device.basicInfo.version || 'N/A' }}
             </dd>

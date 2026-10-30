@@ -1,10 +1,5 @@
 import {CdkDragDrop} from '@angular/cdk/drag-drop';
-import {
-  ComponentFixture,
-  fakeAsync,
-  TestBed,
-  tick,
-} from '@angular/core/testing';
+import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {MatDialogRef} from '@angular/material/dialog';
 import {
   MatTestDialogOpener,
@@ -50,6 +45,12 @@ describe('ColumnSelectorComponent', () => {
           {key: 'owner', displayName: 'Owner', coverage: {notShown: {}}},
           {key: 'hostName', displayName: 'Host Name', coverage: {notShown: {}}},
           {key: 'ip', displayName: 'IP Address', coverage: {notShown: {}}},
+          {
+            key: 'device_field::version',
+            displayName: 'Version',
+            description: 'The device OS version.',
+            coverage: {notShown: {}},
+          },
         ],
       },
       {
@@ -122,6 +123,8 @@ describe('ColumnSelectorComponent', () => {
   });
 
   afterEach(() => {
+    mockDialogRef?.close();
+    fixture?.destroy();
     localStorage.clear();
   });
 
@@ -273,7 +276,7 @@ describe('ColumnSelectorComponent', () => {
     expect(component.recentKeys()).toEqual(['status', 'type', 'owner']);
   });
 
-  it('debounces search input and requests catalog', fakeAsync(() => {
+  it('debounces search input and requests catalog', async () => {
     const inputEl = document.querySelector(
       '.cs-searchbar input',
     ) as HTMLInputElement;
@@ -284,9 +287,14 @@ describe('ColumnSelectorComponent', () => {
     expect(component.searchQuery()).toBe('battery');
     expect(component.debouncedQuery()).toBe('');
 
-    tick(250);
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 250);
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
     expect(component.debouncedQuery()).toBe('battery');
-  }));
+  });
 
   it('renders catalog sections and hints', () => {
     fixture.detectChanges();
@@ -325,10 +333,55 @@ describe('ColumnSelectorComponent', () => {
       coverage: {notShown: {}},
     });
 
-    expect(component.matchedColumnsCount()).toBe(10);
+    expect(component.matchedColumnsCount()).toBe(11);
   });
 
-  it('preserves selected column display names in left pane when filtering catalog via search query', fakeAsync(() => {
+  it('renders an inline info icon only for catalog entries with a description without toggling selection on icon click', () => {
+    fixture.detectChanges();
+    const rows = Array.from(document.querySelectorAll('.cs-row'));
+    const statusRow = rows.find((el) =>
+      el.querySelector('.cs-row-name')?.textContent?.includes('Device ID'),
+    );
+    const versionRow = rows.find((el) =>
+      el.querySelector('.cs-row-name')?.textContent?.includes('Version'),
+    );
+
+    expect(document.querySelector('.cs-row-desc')).toBeNull();
+    expect(statusRow?.querySelector('.cs-row-info')).toBeNull();
+
+    const infoIcon = versionRow?.querySelector(
+      '.cs-row-info',
+    ) as HTMLElement | null;
+    expect(infoIcon).not.toBeNull();
+    expect(infoIcon?.getAttribute('aria-label')).toBe('The device OS version.');
+
+    expect(component.isSelected('device_field::version')).toBeFalse();
+    infoIcon!.click();
+    infoIcon!.dispatchEvent(
+      new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}),
+    );
+    infoIcon!.dispatchEvent(
+      new KeyboardEvent('keydown', {key: ' ', bubbles: true}),
+    );
+    fixture.detectChanges();
+    expect(component.isSelected('device_field::version')).toBeFalse();
+
+    component.toggleColumn(
+      {
+        key: 'device_field::version',
+        displayName: 'Version',
+        description: 'The device OS version.',
+      },
+      true,
+    );
+    expect(component.draftColumns()).toContain({
+      key: 'device_field::version',
+      displayName: 'Version',
+      description: 'The device OS version.',
+    });
+  });
+
+  it('preserves selected column display names in left pane when filtering catalog via search query', async () => {
     // Return filtered catalog when searching "battery"
     mockSearchService.getFleetColumnCatalog.and.callFake((req) => {
       if (req.query === 'battery') {
@@ -352,7 +405,12 @@ describe('ColumnSelectorComponent', () => {
 
     // Enter search query
     component.searchQuery.set('battery');
-    tick(250);
+    fixture.detectChanges();
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 250);
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
     fixture.detectChanges();
 
     // Selected columns in left pane should still display human-readable names directly from draftColumns
@@ -361,9 +419,9 @@ describe('ColumnSelectorComponent', () => {
     expect(rows[1]?.textContent).toContain('Status');
     expect(rows[2]?.textContent).toContain('Device Type');
     expect(rows[3]?.textContent).toContain('Owner');
-  }));
+  });
 
-  it('renders coverage.shown count when coverage is present, omitting count for notShown', fakeAsync(() => {
+  it('renders coverage.shown count when coverage is present, omitting count for notShown', async () => {
     mockSearchService.getFleetColumnCatalog.and.callFake((req) => {
       if (req.query === 'custom') {
         return of({
@@ -390,7 +448,12 @@ describe('ColumnSelectorComponent', () => {
     });
 
     component.searchQuery.set('custom');
-    tick(250);
+    fixture.detectChanges();
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 250);
+    });
+    fixture.detectChanges();
+    await fixture.whenStable();
     fixture.detectChanges();
 
     const metaSpans = document.querySelectorAll('.cs-section .cs-row-meta');
@@ -399,5 +462,5 @@ describe('ColumnSelectorComponent', () => {
     expect(metaTexts).toContain('25 devices');
     expect(metaTexts).not.toContain('0 devices');
     expect(metaTexts.length).toBe(1);
-  }));
+  });
 });

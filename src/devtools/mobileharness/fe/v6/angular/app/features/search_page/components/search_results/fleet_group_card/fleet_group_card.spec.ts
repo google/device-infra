@@ -203,6 +203,45 @@ describe('FleetGroupCardComponent', () => {
     );
   });
 
+  it('renders an info icon in the header only for columns with a description', () => {
+    const groupState: GroupPageState = {
+      loading: false,
+      data: {
+        rows: [
+          {id: 'dev-1', cells: [{text: {value: 'D1'}}, {text: {value: '16'}}]},
+        ],
+        columns: [
+          {key: 'device_field::uuid', displayName: 'UUID'},
+          {key: 'device_field::version', displayName: 'Version'},
+        ],
+      },
+    };
+
+    fixture.componentRef.setInput('group', mockGroup);
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.componentRef.setInput('groupState', groupState);
+    fixture.componentRef.setInput(
+      'columnDescriptions',
+      new Map([['device_field::version', 'The device OS version.']]),
+    );
+    fixture.detectChanges();
+
+    const headers = fixture.debugElement.queryAll(By.css('thead th'));
+    // The first header is the select-all checkbox column.
+    expect(
+      headers[1].query(By.css('.rt-header-name')).nativeElement.textContent,
+    ).toBe('UUID');
+    expect(headers[1].query(By.css('.rt-header-info'))).toBeNull();
+    expect(
+      headers[2].query(By.css('.rt-header-name')).nativeElement.textContent,
+    ).toBe('Version');
+    const info = headers[2].query(By.css('.rt-header-info'));
+    expect(info).not.toBeNull();
+    expect(info.nativeElement.getAttribute('aria-label')).toBe(
+      'The device OS version.',
+    );
+  });
+
   it('renders empty message when group has no rows', () => {
     fixture.componentRef.setInput('group', mockGroup);
     fixture.componentRef.setInput('isOpen', true);

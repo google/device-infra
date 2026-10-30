@@ -26,6 +26,7 @@ class MockFleetSearchStore {
   readonly openGroupIds = signal<Set<string>>(new Set());
   readonly expandedGroupPages = signal<Map<string, unknown>>(new Map());
   readonly displayColumns = signal<Column[]>([]);
+  readonly columnDescriptions = signal<ReadonlyMap<string, string>>(new Map());
   readonly groups = signal<unknown[]>([]);
   readonly toggleGroup = jasmine.createSpy('toggleGroup');
   readonly toggleSelectRows = jasmine.createSpy('toggleSelectRows');
@@ -120,6 +121,31 @@ describe('FleetSearchResultsComponent', () => {
       expect(component.columnsToDisplay()).toEqual(['checkbox', 'id']);
       const tableEl = fixture.debugElement.query(By.css('table.results-table'));
       expect(tableEl).toBeTruthy();
+    });
+
+    it('renders a header info icon only for columns with a description', () => {
+      mockStore.displayColumns.set([
+        {key: 'id', displayName: 'Device ID'},
+        {key: 'device_field::version', displayName: 'Version'},
+      ]);
+      mockStore.columnDescriptions.set(
+        new Map([['device_field::version', 'The device OS version.']]),
+      );
+      mockStore.rows.set([
+        {id: 'dev-1', cells: [{text: {value: 'dev-1'}}, {text: {value: '16'}}]},
+      ]);
+      fixture.detectChanges();
+
+      const infoIcons = fixture.debugElement.queryAll(
+        By.css('th .header-info'),
+      );
+      expect(infoIcons.length).toBe(1);
+      expect(infoIcons[0].nativeElement.getAttribute('aria-label')).toBe(
+        'The device OS version.',
+      );
+
+      infoIcons[0].nativeElement.click();
+      expect(mockStore.toggleSort).not.toHaveBeenCalled();
     });
   });
 

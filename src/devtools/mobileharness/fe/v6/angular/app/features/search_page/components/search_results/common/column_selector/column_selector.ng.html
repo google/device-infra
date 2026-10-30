@@ -118,7 +118,24 @@
                     (change)="toggleColumn(entry, $event.checked)"
                     [attr.aria-label]="'Select column ' + entry.displayName"
                   ></mat-checkbox>
-                  <span class="cs-row-name" [title]="entry.displayName">{{ entry.displayName }}</span>
+                  <span class="cs-row-label-spacer">
+                    <span #csLabel class="cs-row-label">
+                      <span class="cs-row-name" [title]="entry.displayName">{{ entry.displayName }}</span>
+                      @if (entry.description) {
+                        <mat-icon
+                          class="material-symbols-outlined cs-row-info"
+                          tabindex="0"
+                          role="img"
+                          [appKeyDescriptionTooltip]="entry.description"
+                          [tooltipAlignOrigin]="csLabel"
+                          [attr.aria-label]="entry.description"
+                          (click)="$event.preventDefault(); $event.stopPropagation()"
+                          (keydown.enter)="$event.preventDefault(); $event.stopPropagation()"
+                          (keydown.space)="$event.preventDefault(); $event.stopPropagation()"
+                        >info</mat-icon>
+                      }
+                    </span>
+                  </span>
                   @if (entry.reason) {
                     <span class="cs-row-meta cs-row-reason">{{ entry.reason }}</span>
                   } @else if (entry.coverage?.shown; as shown) {

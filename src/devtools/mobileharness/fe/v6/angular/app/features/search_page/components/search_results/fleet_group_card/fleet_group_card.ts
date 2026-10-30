@@ -10,6 +10,7 @@ import {MatCheckboxModule} from '@angular/material/checkbox';
 import {MatIconModule} from '@angular/material/icon';
 
 import {Column, FleetGroup, Row} from '../../../../../core/models/search';
+import {KeyDescriptionTooltipDirective} from '../../../../../shared/directives/key_description_tooltip/key_description_tooltip';
 import {GroupPageState} from '../../../models';
 import {SearchCellComponent} from '../common/search_cell/search_cell';
 import {SearchPaginationComponent} from '../common/search_pagination/search_pagination';
@@ -25,6 +26,7 @@ import {SearchPaginationComponent} from '../common/search_pagination/search_pagi
     DecimalPipe,
     MatCheckboxModule,
     MatIconModule,
+    KeyDescriptionTooltipDirective,
     SearchCellComponent,
     SearchPaginationComponent,
   ],
@@ -70,6 +72,9 @@ export class FleetGroupCardComponent {
 
   /** Default table column definitions. */
   readonly columns = input<Column[]>([]);
+
+  /** Descriptions of the column keys that have one, shown as header tooltips. */
+  readonly columnDescriptions = input<ReadonlyMap<string, string>>(new Map());
 
   /** Currently selected row ID set. */
   readonly selectedSet = input<Set<string>>(new Set());

@@ -306,6 +306,22 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    &.label-with-help {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .version-info {
+      flex-shrink: 0;
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+      line-height: 14px;
+      color: #5f6368;
+      cursor: help;
+    }
   }
 
   dd {

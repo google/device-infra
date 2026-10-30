@@ -322,16 +322,24 @@ export class FleetSearchStore extends SearchPageStore {
   /** Dynamic dictionary map containing metadata for all known filter and group-by keys. */
   override readonly keyMetadataMap = computed<Map<string, FilterKeyMetadata>>(
     () => {
-      const res = this.promotedKeysResource.value();
-      if (!res) return new Map();
-
       const nextMap = new Map<string, FilterKeyMetadata>();
-      for (const pk of res.filterKeys) {
+      for (const chip of this.activeChips()) {
+        const chipKey = getChipKey(chip);
+        if (chipKey && chip.metadata) {
+          nextMap.set(chipKey, chip.metadata);
+        }
+      }
+      const pending = this.pendingFilter();
+      if (pending?.metadata) {
+        nextMap.set(pending.key, pending.metadata);
+      }
+      const res = this.promotedKeysResource.value();
+      for (const pk of res?.filterKeys ?? []) {
         if (pk.metadata) {
           nextMap.set(pk.key, pk.metadata);
         }
       }
-      for (const gk of res.groupByKeys) {
+      for (const gk of res?.groupByKeys ?? []) {
         if (!nextMap.has(gk.key)) {
           nextMap.set(gk.key, {keyDisplayName: gk.displayName});
         }
@@ -481,9 +489,40 @@ export class FleetSearchStore extends SearchPageStore {
       return descriptors.map((c) => ({
         key: c.key,
         displayName: c.displayName,
+        ...(c.description ? {description: c.description} : {}),
       }));
     }
     return [];
+  });
+
+  /**
+   * Descriptions of the column keys that have one, for the table header tooltips. Seeds saved
+   * visible column descriptors first so live key metadata, BFF default column descriptors, and
+   * flat or grouped result columns override any cached localStorage text for the same key.
+   */
+  readonly columnDescriptions = computed<ReadonlyMap<string, string>>(() => {
+    const descriptions = new Map<string, string>();
+    for (const descriptor of this.visibleColumnDescriptors()) {
+      if (descriptor.description) {
+        descriptions.set(descriptor.key, descriptor.description);
+      }
+    }
+    for (const [key, meta] of this.keyMetadataMap()) {
+      if (meta.description) {
+        descriptions.set(key, meta.description);
+      }
+    }
+    const liveDescriptors = [
+      ...(this.searchConfig()?.columns?.defaults ?? []),
+      ...(this.searchResource.value()?.flat?.columns ?? []),
+      ...(this.searchResource.value()?.grouped?.groupByKeys ?? []),
+    ];
+    for (const descriptor of liveDescriptors) {
+      if (descriptor.description) {
+        descriptions.set(descriptor.key, descriptor.description);
+      }
+    }
+    return descriptions;
   });
 
   // ===========================================================================
@@ -1104,6 +1143,8 @@ export class FleetSearchStore extends SearchPageStore {
       key,
       type: 'list',
       title: displayTitle,
+      description:
+        meta?.description || this.columnDescriptions().get(key) || undefined,
       canUseAdvanced: !!meta?.canUseAdvanced,
       isPlural: !!meta?.isPlural,
     };

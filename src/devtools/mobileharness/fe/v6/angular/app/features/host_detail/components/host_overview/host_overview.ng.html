@@ -363,7 +363,20 @@
 
               <!-- Version Column -->
               <ng-container matColumnDef="version">
-                <th mat-header-cell *matHeaderCellDef>VERSION</th>
+                <th mat-header-cell *matHeaderCellDef>
+                  <span #versionHeader class="header-with-info">
+                    VERSION
+                    <mat-icon
+                      class="material-symbols-outlined version-info"
+                      tabindex="0"
+                      role="img"
+                      [appKeyDescriptionTooltip]="versionDescription"
+                      [tooltipAlignOrigin]="versionHeader"
+                      tooltipPreferredSide="below"
+                      [attr.aria-label]="versionDescription"
+                    >info</mat-icon>
+                  </span>
+                </th>
                 <td mat-cell *matCellDef="let element" class="limit-width">
                   <span
                     class="truncate-text"
@@ -453,7 +466,20 @@
 
                              <!-- Version Column -->
                              <ng-container matColumnDef="version">
-                               <th mat-header-cell *matHeaderCellDef> VERSION </th>
+                               <th mat-header-cell *matHeaderCellDef>
+                                 <span #subVersionHeader class="header-with-info">
+                                   VERSION
+                                   <mat-icon
+                                     class="material-symbols-outlined version-info"
+                                     tabindex="0"
+                                     role="img"
+                                     [appKeyDescriptionTooltip]="versionDescription"
+                                     [tooltipAlignOrigin]="subVersionHeader"
+                                     tooltipPreferredSide="below"
+                                     [attr.aria-label]="versionDescription"
+                                   >info</mat-icon>
+                                 </span>
+                               </th>
                                <td mat-cell *matCellDef="let sub"> {{sub.version || '-'}} </td>
                              </ng-container>
 

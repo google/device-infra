@@ -37,6 +37,8 @@ export interface ValuePickerConfig {
   key: string;
   type: 'list' | 'range' | 'namedPair' | 'text';
   title?: string;
+  /** What the key's value means, shown as a tooltip next to the title; absent for most keys. */
+  description?: string;
   canUseAdvanced?: boolean;
   isPlural?: boolean;
   needsName?: boolean;

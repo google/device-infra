@@ -97,7 +97,21 @@
                   ></mat-checkbox>
                 </th>
                 @for (col of groupCols; track col.key) {
-                  <th [class]="'col-' + col.key">{{ col.displayName }}</th>
+                  <th [class]="'col-' + col.key">
+                    <span #groupColHeader class="rt-header-content">
+                      <span class="rt-header-name">{{ col.displayName }}</span>
+                      @if (col.description || columnDescriptions().get(col.key); as description) {
+                        <mat-icon
+                          class="material-symbols-outlined rt-header-info"
+                          tabindex="0"
+                          role="img"
+                          [appKeyDescriptionTooltip]="description"
+                          [tooltipAlignOrigin]="groupColHeader"
+                          [attr.aria-label]="description"
+                        >info</mat-icon>
+                      }
+                    </span>
+                  </th>
                 }
               </tr>
             </thead>

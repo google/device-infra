@@ -752,4 +752,224 @@ describe('FleetSearchStore', () => {
       startsWith: {value: 'Pixel 9'},
     });
   });
+
+  it('merges keyMetadataMap and columnDescriptions with live BFF sources overriding saved visible descriptors', async () => {
+    localStorage.clear();
+    try {
+      mockSearchService.getFleetPromotedKeys.and.returnValue(
+        of({
+          filterKeys: [
+            {
+              key: 'dimension::label',
+              metadata: {
+                keyDisplayName: 'Label',
+                description: 'Promoted label description.',
+                canUseAdvanced: true,
+              },
+            },
+            {
+              key: 'device_field::status',
+              metadata: {keyDisplayName: 'Status'},
+            },
+          ],
+          groupByKeys: [
+            {
+              key: 'dimension::label',
+              displayName: 'Label',
+            },
+            {
+              key: 'device_field::version',
+              displayName: 'Version',
+            },
+            {
+              key: 'device_field::driver',
+              displayName: 'Driver',
+            },
+          ],
+        }),
+      );
+      mockSearchService.getFleetSearchConfig.and.returnValue(
+        of({
+          columns: {
+            defaults: [
+              {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+              {
+                key: 'dimension::default_col',
+                displayName: 'Default Col',
+                description: 'Default col description.',
+              },
+              {
+                key: 'device_field::version',
+                displayName: 'Version',
+                description: 'Default version description.',
+              },
+            ],
+          },
+        }),
+      );
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          grouped: {
+            groupByKeys: [
+              {
+                key: 'dimension::pool',
+                displayName: 'Pool',
+                description: 'Grouped pool description.',
+              },
+            ],
+          },
+        }),
+      );
+
+      const store = await createStoreAt({});
+      store.addFilterChip({
+        key: 'device_field::status',
+        pillKey: 'Status',
+        pillCondition: 'IDLE',
+        rawValues: ['IDLE'],
+        fleetFilter: {
+          key: 'device_field::status',
+          simple: {values: [{value: 'IDLE'}]},
+        },
+      });
+      store.addFilterChip({
+        key: 'dimension::chip_only',
+        pillKey: 'Chip Only',
+        pillCondition: 'v1',
+        rawValues: ['v1'],
+        metadata: {
+          keyDisplayName: 'Chip Only',
+          description: 'Active chip description.',
+        },
+        fleetFilter: {
+          key: 'dimension::chip_only',
+          simple: {values: [{value: 'v1'}]},
+        },
+      });
+      store.setVisibleColumns([
+        {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+        {
+          key: 'device_field::version',
+          displayName: 'Version',
+          description: 'Stale cached version description.',
+        },
+        {
+          key: 'dimension::label',
+          displayName: 'Label',
+          description: 'Stale cached label description.',
+        },
+        {
+          key: 'dimension::saved_col',
+          displayName: 'Saved Col',
+          description: 'Saved col description.',
+        },
+      ]);
+      await flushAsync();
+
+      expect(store.displayColumns()).toEqual([
+        {key: 'device_field::uuid', displayName: 'UUID'},
+        {
+          key: 'device_field::version',
+          displayName: 'Version',
+          description: 'Stale cached version description.',
+        },
+        {
+          key: 'dimension::label',
+          displayName: 'Label',
+          description: 'Stale cached label description.',
+        },
+        {
+          key: 'dimension::saved_col',
+          displayName: 'Saved Col',
+          description: 'Saved col description.',
+        },
+      ]);
+      expect(store.columnDescriptions().get('dimension::saved_col')).toBe(
+        'Saved col description.',
+      );
+      expect(store.columnDescriptions().get('dimension::label')).toBe(
+        'Promoted label description.',
+      );
+      expect(store.columnDescriptions().get('dimension::default_col')).toBe(
+        'Default col description.',
+      );
+      expect(store.columnDescriptions().get('dimension::chip_only')).toBe(
+        'Active chip description.',
+      );
+      expect(
+        store.columnDescriptions().has('device_field::status'),
+      ).toBeFalse();
+      expect(store.columnDescriptions().get('device_field::version')).toBe(
+        'Default version description.',
+      );
+      expect(store.columnDescriptions().get('dimension::pool')).toBe(
+        'Grouped pool description.',
+      );
+
+      store.openValuePicker('dimension::label');
+      expect(store.pickerConfig()?.description).toBe(
+        'Promoted label description.',
+      );
+      expect(store.pickerConfig()?.canUseAdvanced).toBeTrue();
+
+      store.openValuePicker('device_field::version');
+      expect(store.pickerConfig()?.title).toBe('Version');
+      expect(store.pickerConfig()?.description).toBe(
+        'Default version description.',
+      );
+
+      store.openValuePicker('device_field::driver');
+      expect(store.pickerConfig()?.title).toBe('Driver');
+      expect(store.pickerConfig()?.description).toBeUndefined();
+
+      store.openValuePicker('dimension::chip_only');
+      expect(store.pickerConfig()?.description).toBe(
+        'Active chip description.',
+      );
+
+      store.openQuickFilter('dimension::pending_only', 'Pending Only', {
+        keyDisplayName: 'Pending Only',
+        description: 'Pending filter description.',
+      });
+      store.openValuePicker('device_field::status');
+      expect(store.pickerConfig()?.description).toBeUndefined();
+
+      // Reopen the staged pending filter without passing explicit metadata.
+      store.openValuePicker('dimension::pending_only');
+      expect(store.pickerConfig()?.description).toBe(
+        'Pending filter description.',
+      );
+
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          flat: {
+            columns: [
+              {
+                key: 'dimension::flat_col',
+                displayName: 'Flat Col',
+                description: 'Flat col description.',
+              },
+            ],
+            rows: [],
+          },
+        }),
+      );
+      store.addFilterChip({
+        key: 'dimension::label',
+        pillKey: 'Label',
+        pillCondition: 'v1',
+        rawValues: ['v1'],
+        fleetFilter: {
+          key: 'dimension::label',
+          simple: {values: [{value: 'v1'}]},
+        },
+      });
+      await flushAsync();
+      expect(store.columnDescriptions().get('dimension::flat_col')).toBe(
+        'Flat col description.',
+      );
+    } finally {
+      localStorage.clear();
+    }
+  });
 });

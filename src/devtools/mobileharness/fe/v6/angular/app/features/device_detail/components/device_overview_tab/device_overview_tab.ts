@@ -22,6 +22,7 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 import {ActivatedRoute} from '@angular/router';
 import {Subject} from 'rxjs';
 import {debounceTime, distinctUntilChanged, takeUntil} from 'rxjs/operators';
+import {DEVICE_VERSION_DESCRIPTION} from '../../../../core/constants/device_version_constants';
 import type {ActionButtonState} from '../../../../core/models/action_common';
 import type {DeviceOverview} from '../../../../core/models/device_overview';
 import {
@@ -41,6 +42,7 @@ import {
   NavItem,
 } from '../../../../shared/components/master_detail_layout/master_detail_layout';
 import {useDeviceActions} from '../../../../shared/composables/device_actions';
+import {KeyDescriptionTooltipDirective} from '../../../../shared/directives/key_description_tooltip/key_description_tooltip';
 import {dateUtils} from '../../../../shared/utils/date_utils';
 import {objectUtils} from '../../../../shared/utils/object_utils';
 import {TestbedConfigViewer} from '../testbed_config_viewer/testbed_config_viewer';
@@ -79,6 +81,7 @@ interface DimensionItem {
     FormsModule,
     MasterDetailLayout,
     InfoCard,
+    KeyDescriptionTooltipDirective,
   ],
   templateUrl: './device_overview_tab.ng.html',
   styleUrl: './device_overview_tab.scss',
@@ -101,6 +104,7 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
 
   readonly objectUtils = objectUtils;
   readonly dateUtils = dateUtils;
+  readonly versionDescription = DEVICE_VERSION_DESCRIPTION;
 
   // Dimensions filtering
   dimensionsSearchTerm = '';

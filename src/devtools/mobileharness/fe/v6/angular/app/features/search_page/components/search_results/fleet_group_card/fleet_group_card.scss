@@ -287,6 +287,31 @@
     box-sizing: border-box;
     overflow: hidden;
     text-overflow: ellipsis;
+
+    .rt-header-content {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      max-width: 100%;
+      min-width: 0;
+      vertical-align: middle;
+    }
+
+    .rt-header-name {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .rt-header-info {
+      flex-shrink: 0;
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+      line-height: 14px;
+      color: #444746;
+      cursor: help;
+    }
   }
 
   tbody tr {

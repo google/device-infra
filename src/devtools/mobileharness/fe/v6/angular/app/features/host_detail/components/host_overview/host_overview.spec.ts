@@ -6,6 +6,7 @@ import {provideRouter} from '@angular/router';
 import {Observable, of, Subject, throwError} from 'rxjs';
 
 import {ActionBarAction} from '../../../../core/constants/action_bar_config';
+import {DEVICE_VERSION_DESCRIPTION} from '../../../../core/constants/device_version_constants';
 import {APP_DATA} from '../../../../core/models/app_data';
 import {
   DeviceActions,
@@ -718,5 +719,48 @@ describe('HostOverview Component', () => {
 
     component.toggleRow(mockDevice);
     expect(component.expandedElement()).toBeNull();
+  });
+
+  it('renders version-info icons with DEVICE_VERSION_DESCRIPTION in device and sub-device VERSION headers', () => {
+    const testbedDevice = {
+      id: 'testbed-1',
+      healthState: {
+        health: 'IN_SERVICE_IDLE',
+        title: 'Idle',
+        tooltip: 'Healthy',
+      },
+      types: [{type: 'TestbedDevice', isAbnormal: false}],
+      deviceStatus: {status: 'IDLE', isCritical: false},
+      label: '',
+      requiredDims: '',
+      model: 'Pixel Testbed',
+      version: '16',
+      subDevices: [
+        {
+          id: 'sub-1',
+          types: [{type: 'AndroidRealDevice', isAbnormal: false}],
+          model: 'Pixel 9',
+          version: '16',
+        },
+      ],
+    } as unknown as DeviceSummary;
+
+    fixture.detectChanges();
+    component.isDeviceLoading.set(false);
+    component.deviceDataSource.data = [testbedDevice];
+    component.expandedElement.set(testbedDevice);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const versionIcons = compiled.querySelectorAll(
+      '.device-table-container th .version-info',
+    );
+    expect(versionIcons.length).toBe(2);
+    expect(versionIcons[0].getAttribute('aria-label')).toBe(
+      DEVICE_VERSION_DESCRIPTION,
+    );
+    expect(versionIcons[1].getAttribute('aria-label')).toBe(
+      DEVICE_VERSION_DESCRIPTION,
+    );
   });
 });

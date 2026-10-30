@@ -19,6 +19,7 @@ import {MatButtonModule} from '@angular/material/button';
 import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
 
+import {KeyDescriptionTooltipDirective} from '../../../../shared/directives/key_description_tooltip/key_description_tooltip';
 import {TooltipIfTruncatedDirective} from '../../../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
 import {AdvancedMatchMode, DateRangeState, PickerValueItem} from '../../models';
 import {SearchPageStore} from '../../services/search_page_store';
@@ -52,6 +53,7 @@ import {AdvancedMatchView} from './advanced_match_view/advanced_match_view';
     MatIconModule,
     MatTooltipModule,
     ScrollingModule,
+    KeyDescriptionTooltipDirective,
     TooltipIfTruncatedDirective,
     AdvancedMatchView,
   ],

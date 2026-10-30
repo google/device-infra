@@ -82,3 +82,8 @@
   display: flex;
   align-items: center;
 }
+
+/* Keep key description tooltip overlay panes non-interactive on hover */
+.cdk-overlay-pane.key-description-tooltip-pane {
+  pointer-events: none;
+}
