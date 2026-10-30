@@ -246,6 +246,12 @@ describe('FleetSearchStore', () => {
   describe('legacy ?arsenal_query cold load', () => {
     const arsenalQuery = 'filter=status:match:values:IDLE&group_by=model';
 
+    // Other suites populate localStorage keys and Karma runs specs in random
+    // order, so each test starts from a clean localStorage state.
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
     afterEach(() => {
       localStorage.clear();
     });
