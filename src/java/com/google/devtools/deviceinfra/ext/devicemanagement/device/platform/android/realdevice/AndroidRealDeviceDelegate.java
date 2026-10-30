@@ -496,6 +496,10 @@ public abstract class AndroidRealDeviceDelegate {
     // Trigger checkin.
     installMtaasToolsAndTriggerCheckin();
 
+    // Ensure persist.sys.usb.config contains 'adb' on unrooted devices after TestHarness reset
+    // so subsequent reboots do not lose ADB connectivity (b/452760233, b/579118590).
+    mtaasToolsInstantiator.resetAdbIfNecessary(device);
+
     // The periodical check also applies to device initialization.
     checkOnlineModeDevice();
 
@@ -583,6 +587,7 @@ public abstract class AndroidRealDeviceDelegate {
     } finally {
       androidAdbUtil.setProperty(deviceId, RESET_PROPERTY_LABEL, "", /* ignoreError= */ true);
     }
+    mtaasToolsInstantiator.resetAdbIfNecessary(device);
     logger.atInfo().log("Device %s reset is done", deviceId);
   }
 
@@ -1403,6 +1408,7 @@ public abstract class AndroidRealDeviceDelegate {
                 device.info(), /* waitTime= */ null, /* log= */ null);
             device.removeDimension(Dimension.Name.RECOVERY_STATUS);
           } else {
+            mtaasToolsInstantiator.resetAdbIfNecessary(device);
             logger.atInfo().log("Device %s reboot to normal mode", deviceId);
             systemStateUtil.reboot(deviceId);
           }
