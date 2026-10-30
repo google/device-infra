@@ -58,7 +58,7 @@ export function generateMockDeviceRows(): Row[] {
         {
           link: {
             text: id,
-            target: {device: {id}},
+            target: {device: {id, hostName}},
           },
         },
         {
