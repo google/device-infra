@@ -160,7 +160,7 @@ public final class JobInfoConverter {
         jobInfo.findings().getAll().stream().map(Finding::toProto).collect(toImmutableList());
     return JobInfoProto.newBuilder()
         .setJobScheduleUnit(jobScheduleUnit)
-        .setFiles(FilesConverter.toProto(jobInfo.files()))
+        .setFiles(FilesConverter.toProto(jobInfo.inputFiles()))
         .setRemoteGenFiles(RemoteFilesConverter.toProto(jobInfo.remoteGenFiles()))
         .setRemoteRunFiles(RemoteFilesConverter.toProto(jobInfo.remoteRunFiles()))
         .setStatus(StatusConverter.toProto(jobInfo.status()))

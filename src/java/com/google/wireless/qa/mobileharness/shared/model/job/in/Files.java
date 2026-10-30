@@ -21,14 +21,11 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.in.Files.FileInfo;
-import com.google.devtools.mobileharness.api.model.job.in.FilesInternal;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import java.util.Collection;
 import java.util.Map;
-import java.util.function.Consumer;
-import javax.annotation.Nullable;
 
 /** Input files of a job/test. */
 public class Files {
@@ -143,19 +140,6 @@ public class Files {
   /** Returns whether the file map is empty. */
   public boolean isEmpty() {
     return newFiles.isEmpty();
-  }
-
-  /**
-   * Registers a hook invoked before {@link #get}, {@link #getSingle}, or {@link #getSingleFileInfo}
-   * reads a tag, e.g. to localize a staged file on first access.
-   *
-   * <p>The hook runs outside the {@code Files} monitors, so a slow hook does not block other calls
-   * on it. The hook guards its own state, and may be called by several threads at once.
-   *
-   * <p>Package-private: only MH infra registers it, through {@link JobFilesInternal}.
-   */
-  void setOnGetTag(@Nullable Consumer<String> onGetTag) {
-    FilesInternal.setOnGetTag(newFiles, onGetTag);
   }
 
   /**

@@ -126,7 +126,7 @@ public final class TestInfoConverter {
             TestScheduleUnitProto.newBuilder()
                 .setTestLocator(testInfo.locator().toNewTestLocator().toProto())
                 .setTiming(TimingConverter.toProto(testInfo.timing())))
-        .setFiles(FilesConverter.toProto(testInfo.files()))
+        .setFiles(FilesConverter.toProto(testInfo.inputFiles()))
         .setRemoteGenFiles(RemoteFilesConverter.toProto(testInfo.remoteGenFiles()))
         .setStatus(StatusConverter.toProto(testInfo.status()))
         .setResult(ResultConverter.toProto(testInfo.resultWithCause()))

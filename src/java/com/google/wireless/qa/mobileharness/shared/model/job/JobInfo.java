@@ -557,8 +557,8 @@ public class JobInfo extends JobScheduleUnit {
   /**
    * Gets spec of {@link SpecConfigable} for the class of object {@code configable}.
    *
-   * @return a spec that combines all relevant values in {@link #params()}, {@link #files} and
-   *     {@link #protoSpec}
+   * @return a spec that combines all relevant values in {@link #params()}, {@link #inputFiles()}
+   *     and {@link #protoSpec}
    */
   public <T extends Message> T combinedSpec(SpecConfigable<T> configable)
       throws InterruptedException, MobileHarnessException {
@@ -612,8 +612,8 @@ public class JobInfo extends JobScheduleUnit {
   /**
    * Gets spec with class {@code specClass}.
    *
-   * @return a spec that combines all relevant values in {@link #params()}, {@link #files} and
-   *     {@link #protoSpec}
+   * @return a spec that combines all relevant values in {@link #params()}, {@link #inputFiles()}
+   *     and {@link #protoSpec}
    */
   public <T extends Message> T combinedSpecOfClass(Class<T> specClass)
       throws MobileHarnessException {
@@ -628,8 +628,8 @@ public class JobInfo extends JobScheduleUnit {
   /**
    * Gets a union of all specs of the job.
    *
-   * @return a spec union that combines all relevant values in {@link #params()}, {@link #files} and
-   *     {@link #protoSpec}
+   * @return a spec union that combines all relevant values in {@link #params()}, {@link
+   *     #inputFiles()} and {@link #protoSpec}
    */
   public UnionJobSpec getUnionJobSpec(@Nullable SubDeviceSpec subDeviceSpec) {
     UnionJobSpec unionJobSpec = new UnionJobSpec();
@@ -642,7 +642,7 @@ public class JobInfo extends JobScheduleUnit {
     }
     return unionJobSpec
         .addWrapper(new ParamsJobSpec(params()))
-        .addWrapper(new FilesJobSpec(files()))
+        .addWrapper(new FilesJobSpec(inputFiles()))
         .addWrapper(protoSpec());
   }
 

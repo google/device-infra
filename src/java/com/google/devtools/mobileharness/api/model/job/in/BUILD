@@ -147,7 +147,6 @@ java_library(
     srcs = ["FilesInternal.java"],
     visibility = [
         # Note: only for MH infra, please don't add more visibilities.
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in:__pkg__",
     ],
     deps = [
         ":files",

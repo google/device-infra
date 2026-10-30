@@ -34,8 +34,11 @@ final class FilesConverter {
             timing, filesProto));
   }
 
-  /** Gets a {@link FilesProto} by the given {@link Files}. */
-  static FilesProto toProto(Files files) {
+  /**
+   * Gets a {@link FilesProto} by the given {@link
+   * com.google.devtools.mobileharness.api.model.job.in.Files}.
+   */
+  static FilesProto toProto(com.google.devtools.mobileharness.api.model.job.in.Files files) {
     FilesProto.Builder filesProto = FilesProto.newBuilder();
     files
         .getAll()
