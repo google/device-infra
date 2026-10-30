@@ -150,8 +150,14 @@ public final class ConfigServiceCapabilityTest {
     HostConfigUiStatus status = capability.calculateHostUiStatus();
 
     assertThat(status.getHostAdmins().getVisible()).isFalse();
-    assertThat(status.getDeviceConfigMode().getVisible()).isTrue();
+    assertThat(status.getDeviceConfigMode().getVisible()).isFalse();
     assertThat(status.getDeviceConfig().getSectionStatus().getVisible()).isTrue();
+    assertThat(status.getDeviceConfig().getSubSections().getWifi().getVisible()).isTrue();
+    assertThat(status.getDeviceConfig().getSubSections().getWifi().getEditability().getEditable())
+        .isTrue();
+    assertThat(status.getDeviceConfig().getSubSections().getPermissions().getVisible()).isFalse();
+    assertThat(status.getDeviceConfig().getSubSections().getDimensions().getVisible()).isFalse();
+    assertThat(status.getDeviceConfig().getSubSections().getSettings().getVisible()).isFalse();
     assertThat(status.getHostProperties().getSectionStatus().getVisible()).isFalse();
     assertThat(status.getDeviceDiscovery().getVisible()).isFalse();
   }
@@ -167,6 +173,10 @@ public final class ConfigServiceCapabilityTest {
     assertThat(status.getHostAdmins().getEditability().getEditable()).isTrue();
     assertThat(status.getDeviceConfigMode().getVisible()).isTrue();
     assertThat(status.getDeviceConfig().getSectionStatus().getVisible()).isTrue();
+    assertThat(status.getDeviceConfig().getSubSections().getPermissions().getVisible()).isTrue();
+    assertThat(status.getDeviceConfig().getSubSections().getWifi().getVisible()).isTrue();
+    assertThat(status.getDeviceConfig().getSubSections().getDimensions().getVisible()).isTrue();
+    assertThat(status.getDeviceConfig().getSubSections().getSettings().getVisible()).isTrue();
     assertThat(status.getHostProperties().getSectionStatus().getVisible()).isTrue();
     assertThat(status.getDeviceDiscovery().getVisible()).isTrue();
   }
@@ -179,8 +189,10 @@ public final class ConfigServiceCapabilityTest {
     DeviceConfigUiStatus status = capability.calculateDeviceUiStatus();
 
     assertThat(status.getPermissions().getVisible()).isFalse();
-    assertThat(status.getWifi().getVisible()).isTrue();
+    assertThat(status.getWifi().getVisible()).isFalse();
+    assertThat(status.getWifi().getEditability().getEditable()).isFalse();
     assertThat(status.getDimensions().getVisible()).isTrue();
+    assertThat(status.getDimensions().getEditability().getEditable()).isTrue();
     assertThat(status.getSettings().getVisible()).isFalse();
   }
 

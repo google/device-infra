@@ -84,6 +84,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
+@SuppressWarnings("deprecation") // Verifies 1P BasicDeviceConfig.default_wifi and ATS clearing.
 public final class UpdateHostConfigHandlerTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
@@ -237,7 +238,7 @@ public final class UpdateHostConfigHandlerTest {
             .setHostName(hostName)
             .setUniverse(universe)
             .setConfig(incomingConfig)
-            .setScope(HostConfigUpdateScope.newBuilder().build())
+            .setScope(HostConfigUpdateScope.getDefaultInstance())
             .build();
 
     // Old existing config in DB
@@ -379,7 +380,7 @@ public final class UpdateHostConfigHandlerTest {
     UpdateHostConfigRequest request =
         UpdateHostConfigRequest.newBuilder()
             .setHostName(hostName)
-            .setScope(HostConfigUpdateScope.newBuilder().build())
+            .setScope(HostConfigUpdateScope.getDefaultInstance())
             .build();
 
     when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
@@ -421,7 +422,8 @@ public final class UpdateHostConfigHandlerTest {
   }
 
   @Test
-  public void updateHostConfig_atsEnvironment_deviceConfigSection_success() throws Exception {
+  public void updateHostConfig_atsEnvironment_deviceConfigSection_writesLabWifiConfig()
+      throws Exception {
     when(environment.isAts()).thenReturn(true);
     String hostName = "test_host";
     String universe = "oss";
@@ -429,7 +431,13 @@ public final class UpdateHostConfigHandlerTest {
         HostConfig.newBuilder()
             .setDeviceConfig(
                 DeviceConfig.newBuilder()
-                    .setWifi(WifiConfig.newBuilder().setSsid("new_wifi").build())
+                    .setWifi(
+                        WifiConfig.newBuilder()
+                            .setType("custom")
+                            .setSsid("new_wifi")
+                            .setPsk("new_psk")
+                            .setScanSsid(true)
+                            .build())
                     .setDimensions(
                         DeviceConfig.Dimensions.newBuilder()
                             .addSupported(
@@ -454,11 +462,20 @@ public final class UpdateHostConfigHandlerTest {
                     "device_config.settings"))
             .build();
 
+    LabConfig existingConfig =
+        LabConfig.newBuilder()
+            .setHostName(hostName)
+            .setDefaultDeviceConfig(
+                BasicDeviceConfig.newBuilder()
+                    .setDefaultWifi(
+                        com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig
+                            .newBuilder()
+                            .setSsid("legacy_wifi")
+                            .build())
+                    .build())
+            .build();
     when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
-        .thenReturn(
-            immediateFuture(
-                ConfigResult.available(
-                    Optional.of(LabConfig.newBuilder().setHostName(hostName).build()))));
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
     when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
 
@@ -470,11 +487,65 @@ public final class UpdateHostConfigHandlerTest {
     verify(configurationProvider)
         .updateLabConfig(eq(hostName), captor.capture(), eq(SELF_UNIVERSE));
     LabConfig updatedConfig = captor.getValue();
-    BasicDeviceConfig deviceConfig = updatedConfig.getDefaultDeviceConfig();
-    assertThat(deviceConfig.getDefaultWifi().getSsid()).isEqualTo("new_wifi");
-    assertThat(deviceConfig.getCompositeDimension().toString()).contains("new_dimension");
-    // In ATS, ALL only updates WIFI and DIMENSIONS
-    assertThat(deviceConfig.getOwnerList()).isEmpty();
+    assertThat(updatedConfig.getWifiConfig().getSsid()).isEqualTo("new_wifi");
+    assertThat(updatedConfig.getWifiConfig().getPsk()).isEqualTo("new_psk");
+    assertThat(updatedConfig.getWifiConfig().getScanSsid()).isTrue();
+    assertThat(updatedConfig.getDefaultDeviceConfig().hasDefaultWifi()).isFalse();
+    assertThat(
+            updatedConfig
+                .getDefaultDeviceConfig()
+                .getCompositeDimension()
+                .getSupportedDimensionList())
+        .isEmpty();
+    assertThat(updatedConfig.getDefaultDeviceConfig().getOwnerList()).isEmpty();
+  }
+
+  @Test
+  public void updateHostConfig_atsEnvironment_clearWifi_clearsBothLabAndLegacyWifi()
+      throws Exception {
+    when(environment.isAts()).thenReturn(true);
+    String hostName = "test_host";
+    HostConfig feConfig =
+        HostConfig.newBuilder().setDeviceConfig(DeviceConfig.getDefaultInstance()).build();
+    UpdateHostConfigRequest request =
+        UpdateHostConfigRequest.newBuilder()
+            .setHostName(hostName)
+            .setConfig(feConfig)
+            .setScope(createScope("device_config.wifi"))
+            .build();
+
+    LabConfig existingConfig =
+        LabConfig.newBuilder()
+            .setHostName(hostName)
+            .setWifiConfig(
+                com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig
+                    .newBuilder()
+                    .setSsid("existing_host_wifi")
+                    .build())
+            .setDefaultDeviceConfig(
+                BasicDeviceConfig.newBuilder()
+                    .setDefaultWifi(
+                        com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig
+                            .newBuilder()
+                            .setSsid("legacy_wifi")
+                            .build())
+                    .build())
+            .build();
+    when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
+    when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(SELF_UNIVERSE)))
+        .thenReturn(immediateVoidFuture());
+
+    UpdateHostConfigResponse response =
+        updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
+
+    assertThat(response.getSuccess()).isTrue();
+    ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), eq(SELF_UNIVERSE));
+    LabConfig updatedConfig = captor.getValue();
+    assertThat(updatedConfig.hasWifiConfig()).isFalse();
+    assertThat(updatedConfig.getDefaultDeviceConfig().hasDefaultWifi()).isFalse();
   }
 
   @Test
@@ -556,7 +627,7 @@ public final class UpdateHostConfigHandlerTest {
         UpdateHostConfigRequest.newBuilder()
             .setHostName(hostName)
             .setConfig(feConfig)
-            .setScope(HostConfigUpdateScope.newBuilder().build())
+            .setScope(HostConfigUpdateScope.getDefaultInstance())
             .build();
 
     when(groupMembershipProvider.isMemberOfAny(eq(user), any())).thenReturn(immediateFuture(false));
@@ -580,7 +651,7 @@ public final class UpdateHostConfigHandlerTest {
         UpdateHostConfigRequest.newBuilder()
             .setHostName(hostName)
             .setConfig(feConfig)
-            .setScope(HostConfigUpdateScope.newBuilder().build())
+            .setScope(HostConfigUpdateScope.getDefaultInstance())
             .build();
 
     when(groupMembershipProvider.isMemberOfAny(eq(user), any())).thenReturn(immediateFuture(false));
@@ -804,7 +875,7 @@ public final class UpdateHostConfigHandlerTest {
     when(configurationProvider.getLabConfig(eq(hostName), any(UniverseScope.class)))
         .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingLabConfig))));
 
-    DeviceDiscoverySettings discovery = DeviceDiscoverySettings.newBuilder().build();
+    DeviceDiscoverySettings discovery = DeviceDiscoverySettings.getDefaultInstance();
     HostConfig feConfig = HostConfig.newBuilder().setDeviceDiscovery(discovery).build();
     UpdateHostConfigRequest request =
         UpdateHostConfigRequest.newBuilder()
@@ -857,7 +928,7 @@ public final class UpdateHostConfigHandlerTest {
     UpdateHostConfigRequest request =
         UpdateHostConfigRequest.newBuilder()
             .setHostName(hostName)
-            .setScope(HostConfigUpdateScope.newBuilder().build())
+            .setScope(HostConfigUpdateScope.getDefaultInstance())
             .setConfig(
                 HostConfig.newBuilder()
                     .setDeviceConfigMode(DeviceConfigMode.SHARED)
@@ -1067,7 +1138,7 @@ public final class UpdateHostConfigHandlerTest {
             .setHostName(hostName)
             .setUniverse(universe)
             .setConfig(feConfig)
-            .setScope(HostConfigUpdateScope.newBuilder().build())
+            .setScope(HostConfigUpdateScope.getDefaultInstance())
             .build();
 
     when(configurationProvider.getLabConfig(hostName, SELF_UNIVERSE))
@@ -1164,7 +1235,8 @@ public final class UpdateHostConfigHandlerTest {
     assertThat(e).hasCauseThat().isInstanceOf(FeServiceException.class);
     FeServiceException fe = (FeServiceException) e.getCause();
     assertThat(fe.getCode()).isEqualTo(Status.Code.INTERNAL);
-    assertThat(fe.getMessage())
+    assertThat(fe)
+        .hasMessageThat()
         .contains("please make sure the provided user IDs in Host Permissions are correct");
   }
 
@@ -1194,7 +1266,8 @@ public final class UpdateHostConfigHandlerTest {
     assertThat(e).hasCauseThat().isInstanceOf(FeServiceException.class);
     FeServiceException fe = (FeServiceException) e.getCause();
     assertThat(fe.getCode()).isEqualTo(Status.Code.INTERNAL);
-    assertThat(fe.getMessage())
+    assertThat(fe)
+        .hasMessageThat()
         .contains("please make sure the provided user IDs in Device Executors are correct");
   }
 
@@ -1225,7 +1298,8 @@ public final class UpdateHostConfigHandlerTest {
     assertThat(e).hasCauseThat().isInstanceOf(FeServiceException.class);
     FeServiceException fe = (FeServiceException) e.getCause();
     assertThat(fe.getCode()).isEqualTo(Status.Code.INTERNAL);
-    assertThat(fe.getMessage())
+    assertThat(fe)
+        .hasMessageThat()
         .contains(
             "please make sure the provided user IDs in Host Permissions or Device Executors are"
                 + " correct");

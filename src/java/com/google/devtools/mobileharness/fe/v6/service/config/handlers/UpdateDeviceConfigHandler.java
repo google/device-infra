@@ -111,7 +111,7 @@ public final class UpdateDeviceConfigHandler {
 
     if (environment.isAts()) {
       switch (request.getSection()) {
-        case WIFI, DIMENSIONS, ALL -> {}
+        case DIMENSIONS, ALL -> {}
         default ->
             throw new IllegalArgumentException(
                 String.format(
@@ -177,11 +177,13 @@ public final class UpdateDeviceConfigHandler {
                   updateBasicConfig(configToUpdate.getBasicConfig(), request, incoming);
               configToUpdate.setBasicConfig(updatedBasicConfig);
 
-              return Futures.transform(
+              ListenableFuture<Void> updateFuture =
                   configurationProvider.updateDeviceConfig(
-                      request.getId(), configToUpdate.build(), universe),
-                  unused -> UpdateDeviceConfigResponse.newBuilder().setSuccess(true).build(),
-                  executor);
+                      request.getId(), configToUpdate.build(), universe);
+              return Futures.whenAllSucceed(updateFuture)
+                  .call(
+                      () -> UpdateDeviceConfigResponse.newBuilder().setSuccess(true).build(),
+                      executor);
             },
             executor)
         .catching(
@@ -236,7 +238,6 @@ public final class UpdateDeviceConfigHandler {
       case ALL -> {
         if (environment.isAts()) {
           builder.setCompositeDimension(incoming.getCompositeDimension());
-          updateDefaultWifi(builder, incoming);
         } else {
           // Update everything in BasicDeviceConfig
           builder
@@ -255,6 +256,7 @@ public final class UpdateDeviceConfigHandler {
     return builder.build();
   }
 
+  @SuppressWarnings("deprecation") // BasicDeviceConfig.default_wifi remains supported in 1P.
   private static void updateDefaultWifi(
       BasicDeviceConfig.Builder builder, BasicDeviceConfig incoming) {
     if (incoming.hasDefaultWifi()) {

@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigPusherH
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigUtil;
 import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfig;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfigMode;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceDiscoverySettings;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.HostConfig;
@@ -195,10 +196,12 @@ public final class UpdateHostConfigHandler {
 
     updateLabConfigBuilder(builder, request.getConfig(), request.getScope());
 
+    ListenableFuture<Void> updateFuture =
+        configurationProvider.updateLabConfig(request.getHostName(), builder.build(), universe);
     return FluentFuture.from(
-            configurationProvider.updateLabConfig(request.getHostName(), builder.build(), universe))
-        .transform(
-            unused -> UpdateHostConfigResponse.newBuilder().setSuccess(true).build(), executor)
+            Futures.whenAllSucceed(updateFuture)
+                .call(
+                    () -> UpdateHostConfigResponse.newBuilder().setSuccess(true).build(), executor))
         .catching(
             Exception.class,
             e -> {
@@ -311,11 +314,17 @@ public final class UpdateHostConfigHandler {
     if (isPathInFieldMask("device_config", mask)
         && !configPusherHelper.isSectionRestricted(
             HostConfigSection.DEVICE_CONFIG, existingConfig)) {
-      builder.setDefaultDeviceConfig(
-          updateBasicConfig(
-              builder.getDefaultDeviceConfig(),
-              ConfigConverter.toBasicDeviceConfig(incoming.getDeviceConfig()),
-              mask));
+      if (environment.isAts()) {
+        if (isPathInFieldMask("device_config.wifi", mask)) {
+          updateHostWifiConfig(builder, incoming.getDeviceConfig());
+        }
+      } else {
+        builder.setDefaultDeviceConfig(
+            updateBasicConfig(
+                builder.getDefaultDeviceConfig(),
+                ConfigConverter.toBasicDeviceConfig(incoming.getDeviceConfig()),
+                mask));
+      }
     }
 
     if (isPathInFieldMask("device_discovery", mask)
@@ -465,6 +474,22 @@ public final class UpdateHostConfigHandler {
     return builder.build();
   }
 
+  @SuppressWarnings("deprecation") // Clears legacy default_wifi alongside LabConfig.wifi_config.
+  private static void updateHostWifiConfig(
+      LabConfig.Builder builder, DeviceConfig incomingDeviceConfig) {
+    if (incomingDeviceConfig.hasWifi()
+        && !incomingDeviceConfig.getWifi().getSsid().isEmpty()
+        && !incomingDeviceConfig.getWifi().getType().equals("none")) {
+      builder.setWifiConfig(ConfigConverter.toInternalWifiConfig(incomingDeviceConfig.getWifi()));
+    } else {
+      builder.clearWifiConfig();
+    }
+    if (builder.hasDefaultDeviceConfig()) {
+      builder.getDefaultDeviceConfigBuilder().clearDefaultWifi();
+    }
+  }
+
+  @SuppressWarnings("deprecation") // BasicDeviceConfig.default_wifi remains supported in 1P.
   private static void updateDefaultWifi(
       BasicDeviceConfig.Builder builder, BasicDeviceConfig incoming) {
     if (incoming.hasDefaultWifi()) {
