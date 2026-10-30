@@ -70,6 +70,10 @@ import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.devtools.mobileharness.shared.trace.proto.SpanProto.ParentSpan;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
+import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryException;
+import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrategy;
+import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCallable;
+import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCallable.ThrowStrategy;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
@@ -163,6 +167,11 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
   private static final int KICK_OFF_TEST_MAX_TRY_COUNT = 15;
   private static final Duration KICK_OFF_TEST_RETRY_INTERVAL = Duration.ofSeconds(2L);
+
+  private static final RetryStrategy GET_TEST_GEN_DATA_RETRY_STRATEGY =
+      RetryStrategy.exponentialBackoff(
+              Duration.ofSeconds(10L), /* multiplier= */ 2, /* numAttempts= */ 3)
+          .withRandomization(0.5);
 
   private final Sleeper sleeper;
   private final Clock clock;
@@ -908,23 +917,47 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     logger.atWarning().log("Timeout on device(s) %s!", deviceLocators);
   }
 
-  /** Gets the test generated properties and downloads the generated files from lab server. */
+  /**
+   * Gets the test generated properties and downloads the generated files from lab server.
+   *
+   * <p>Getting the gen data does not change the test, so it is retried on RPC errors.
+   */
   @VisibleForTesting
   void getTestGenData(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     // Request root testInfo.
-    GetTestGenDataRequest.Builder builder = createGetTestGenDataRequest(testInfo);
+    GetTestGenDataRequest request = createGetTestGenDataRequest(testInfo).build();
+    ExecTestStub execTestStub = getTestEngineExecTestStub();
+    RetryingCallable<GetTestGenDataResponse> getTestGenData =
+        RetryingCallable.newBuilder(
+                () -> execTestStub.getTestGenData(request, impersonationUser),
+                GET_TEST_GEN_DATA_RETRY_STRATEGY)
+            .setSleeper(sleeper)
+            .setThrowStrategy(ThrowStrategy.THROW_LAST)
+            .setPredicate(e -> e instanceof RpcExceptionWithErrorId)
+            .build();
 
     GetTestGenDataResponse resp;
-    ExecTestStub execTestStub = getTestEngineExecTestStub();
     try {
-      resp = execTestStub.getTestGenData(builder.build(), impersonationUser);
-    } catch (RpcExceptionWithErrorId e) {
+      resp = getTestGenData.call();
+    } catch (RetryException e) {
+      // RetryingCallable reports an interrupt only by the interrupt flag.
+      if (Thread.interrupted()) {
+        InterruptedException interrupted =
+            new InterruptedException("Interrupted while getting test generated data");
+        interrupted.addSuppressed(e.getCause());
+        throw interrupted;
+      }
+      if (e.getCause() instanceof RuntimeException runtimeException) {
+        throw runtimeException;
+      }
       // Without the gen data, none of the test generated files can be downloaded.
       handleGenFileTransferError(
           testInfo,
           InfraErrorId.CLIENT_REMOTE_MODE_TEST_GET_GEN_DATA_ERROR,
-          "Failed to get test generated data from " + testEngineLocator,
-          e);
+          String.format(
+              "Failed to get test generated data from %s after %d attempt(s)",
+              testEngineLocator, e.getTries()),
+          e.getCause());
       return;
     }
 
