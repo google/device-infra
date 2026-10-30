@@ -17,16 +17,18 @@
 package com.google.devtools.mobileharness.platform.android.instrumentation;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.escape.Escaper;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.net.PercentEscaper;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -80,9 +82,13 @@ import java.io.InputStream;
 import java.io.ObjectInputFilter;
 import java.io.ObjectInputStream;
 import java.io.OutputStream;
+import java.net.URLDecoder;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -173,9 +179,11 @@ public class AndroidInstrumentationUtil {
 
   @VisibleForTesting static final String APP_OP_MANAGE_EXTERNAL_STORAGE = "MANAGE_EXTERNAL_STORAGE";
 
-  /** Pattern to only parse first two items from content query. */
-  private static final String CONTENT_QUERY_OUTPUT_PATTERN =
-      "Row.*name=(?<NAME>.*),\\stype=(?<TYPE>.*),\\ssize=";
+  private static final Pattern CONTENT_QUERY_ROW_PREFIX_PATTERN =
+      Pattern.compile("^Row:\\s+\\d+\\s+name=");
+
+  private static final Pattern CONTENT_QUERY_CHILD_PATTERN =
+      Pattern.compile("^(?<NAME>[^/,]+),\\stype=(?<TYPE>[^,\\s]+),\\ssize=");
 
   /** ADB shell content command return output for no result. */
   private static final String CONTENT_QUERY_OUTPUT_NO_RESULT = "No result found";
@@ -186,6 +194,10 @@ public class AndroidInstrumentationUtil {
   /** Path segments which are not allowed in content names returned by the device. */
   private static final ImmutableSet<String> INVALID_CONTENT_NAME_SEGMENTS =
       ImmutableSet.of("", ".", "..");
+
+  /** Escapes a URI path segment exactly like {@code android.net.Uri#encode(String)}. */
+  private static final Escaper URI_SEGMENT_ESCAPER =
+      new PercentEscaper("_-!.~'()*", /* plusForSpace= */ false);
 
   /**
    * Deserialization filter for test property files, which come from the device under test and are
@@ -1546,80 +1558,144 @@ public class AndroidInstrumentationUtil {
     return false;
   }
 
-  /**
-   * Content read does not support folder, so recursively query and read a folder until a regular
-   * file.
-   */
+  /** A provider folder: its content URI, decoded provider path, and host directory. */
+  private record ContentFolder(String uri, String providerPath, Path hostDir, int depth) {
+    String childUri(String name) {
+      return uri + "/" + URI_SEGMENT_ESCAPER.escape(name);
+    }
+
+    ContentFolder child(String name, Path childHostDir) {
+      return new ContentFolder(childUri(name), providerPath + "/" + name, childHostDir, depth + 1);
+    }
+  }
+
+  /** A single entry returned by {@code adb shell content query}, with its decoded child name. */
+  @VisibleForTesting
+  record ContentRow(String name, String type) {
+    boolean isDirectory() {
+      return type.equals(AndroidTestContent.FileType.DIRECTORY.getType());
+    }
+
+    boolean isFile() {
+      return type.equals(AndroidTestContent.FileType.FILE.getType());
+    }
+  }
+
+  /** Content read does not support folder, so iteratively query folders and read regular files. */
   private boolean contentReadFolder(
       String deviceId, String contentUri, String tmpHostDir, @Nullable String userId)
       throws MobileHarnessException, InterruptedException {
-    return contentReadFolder(
-        deviceId,
-        contentUri,
-        Path.of(tmpHostDir).normalize(),
-        userId,
-        /* subPath= */ null,
-        /* depth= */ 0);
-  }
-
-  private boolean contentReadFolder(
-      String deviceId,
-      String contentUri,
-      Path hostDir,
-      @Nullable String userId,
-      @Nullable String subPath,
-      int depth)
-      throws MobileHarnessException, InterruptedException {
-    String folderUri = contentUri + Strings.nullToEmpty(subPath);
-    if (depth > MAX_CONTENT_FOLDER_DEPTH) {
-      logger.atWarning().log(
-          "Skip content folder %s which exceeds max depth %d", folderUri, MAX_CONTENT_FOLDER_DEPTH);
-      return false;
-    }
-
-    String output = contentQuery(deviceId, folderUri, userId);
-    if (output.contains(CONTENT_QUERY_OUTPUT_NO_RESULT)) {
-      return false;
-    }
-    logger.atInfo().log("Query content %s output: %s", folderUri, output);
-
+    Deque<ContentFolder> folders = new ArrayDeque<>();
+    folders.push(
+        new ContentFolder(
+            contentUri, /* providerPath= */ "", Path.of(tmpHostDir).normalize(), /* depth= */ 0));
     boolean hasOutput = false;
-    for (Entry<String, String> entry : parseContentQueryResult(output).entrySet()) {
-      String name = entry.getKey();
-      Optional<Path> hostPath = resolveContentNameOnHost(hostDir, subPath, name);
-      if (hostPath.isEmpty()) {
-        logger.atWarning().log("Skip invalid content name [%s] in %s", name, folderUri);
-      } else if (entry.getValue().equals(AndroidTestContent.FileType.DIRECTORY.getType())) {
-        hasOutput |= contentReadFolder(deviceId, contentUri, hostDir, userId, name, depth + 1);
-      } else {
-        contentReadFile(deviceId, contentUri + name, userId, hostPath.get());
-        hasOutput = true;
+    while (!folders.isEmpty()) {
+      ContentFolder folder = folders.pop();
+      if (folder.depth() > MAX_CONTENT_FOLDER_DEPTH) {
+        logger.atWarning().log(
+            "Skip content folder %s which exceeds max depth %d",
+            folder.uri(), MAX_CONTENT_FOLDER_DEPTH);
+        continue;
+      }
+      String output = contentQuery(deviceId, folder.uri(), userId);
+      logger.atInfo().log("Query content %s output: %s", folder.uri(), output);
+      for (ContentRow row : parseChildRows(output, folder.providerPath())) {
+        Optional<Path> hostPath = resolveChildHostPath(folder.hostDir(), row.name());
+        if (hostPath.isEmpty()) {
+          logger.atWarning().log("Skip invalid content name [%s] in %s", row.name(), folder.uri());
+          continue;
+        }
+        if (row.isDirectory()) {
+          folders.push(folder.child(row.name(), hostPath.get()));
+        } else if (row.isFile()) {
+          contentReadFile(deviceId, folder.childUri(row.name()), userId, hostPath.get());
+          hasOutput = true;
+        } else {
+          logger.atWarning().log(
+              "Skip unsupported content type [%s] in %s", row.type(), folder.uri());
+        }
       }
     }
     return hasOutput;
   }
 
   /**
-   * Resolves a content name returned by the device to a path under {@code hostDir}.
+   * Parses direct child rows under {@code providerPath} from {@code adb shell content query}
+   * output.
    *
-   * <p>The name is untrusted. It is valid only if it is an absolute provider path (e.g.,
-   * "/dir/file.txt") strictly under {@code parentName} (if any), has no control characters or
-   * empty/"."/".." segments, and resolves strictly inside {@code hostDir}.
+   * <p>{@code AbstractFileContentProvider.query()} emits each row's {@code name} as {@code
+   * uri.getPath() + "/" + Uri.encode(child.getName())}: the parent prefix {@code providerPath} is
+   * URI-decoded, while only the direct child segment is percent-encoded:
    *
-   * @return the resolved host path, or empty if the name is invalid
+   * <pre>
+   * $ adb shell content query --uri content://outputfiles
+   * Row: 0 name=/test.txt, type=f, size=15, _data=/test.txt, _display_name=test.txt, _size=15
+   * Row: 1 name=/my%20folder, type=d, size=1, _data=/my folder, _display_name=my folder, _size=4096
+   * $ adb shell content query --uri content://outputfiles/my%20folder
+   * Row: 0 name=/my folder/sub%20file.txt, type=f, size=0, _data=/my folder/sub file.txt, _size=0
+   * </pre>
    */
   @VisibleForTesting
-  static Optional<Path> resolveContentNameOnHost(
-      Path hostDir, @Nullable String parentName, String name) {
-    if (!name.startsWith(Strings.nullToEmpty(parentName) + "/")
-        || name.chars().anyMatch(Character::isISOControl)
-        || Splitter.on('/')
-            .splitToStream(name.substring(1))
-            .anyMatch(INVALID_CONTENT_NAME_SEGMENTS::contains)) {
+  static ImmutableList<ContentRow> parseChildRows(String output, String providerPath) {
+    if (output.trim().startsWith(CONTENT_QUERY_OUTPUT_NO_RESULT)) {
+      return ImmutableList.of();
+    }
+    String expectedPrefix = providerPath + "/";
+    Matcher rowPrefixMatcher = CONTENT_QUERY_ROW_PREFIX_PATTERN.matcher("");
+    Matcher childMatcher = CONTENT_QUERY_CHILD_PATTERN.matcher("");
+    ImmutableList.Builder<ContentRow> rows = ImmutableList.builder();
+    for (String line : Splitters.LINE_SPLITTER.split(output)) {
+      if (!rowPrefixMatcher.reset(line).find()) {
+        continue;
+      }
+      if (!line.startsWith(expectedPrefix, rowPrefixMatcher.end())
+          || !childMatcher
+              .reset(line.substring(rowPrefixMatcher.end() + expectedPrefix.length()))
+              .find()) {
+        logger.atWarning().log("Skip invalid content row [%s] under [%s]", line, providerPath);
+        continue;
+      }
+      decodeUriSegment(childMatcher.group("NAME"))
+          .ifPresentOrElse(
+              name -> rows.add(new ContentRow(name, childMatcher.group("TYPE"))),
+              () ->
+                  logger.atWarning().log(
+                      "Skip malformed content name [%s] under [%s]",
+                      childMatcher.group("NAME"), providerPath));
+    }
+    return rows.build();
+  }
+
+  /**
+   * Resolves a decoded single-segment child name under normalized {@code hostFolder}, rejecting
+   * empty/dot/dot-dot segments, path separators, and control characters.
+   */
+  @VisibleForTesting
+  static Optional<Path> resolveChildHostPath(Path hostFolder, String childName) {
+    if (INVALID_CONTENT_NAME_SEGMENTS.contains(childName)
+        || childName.indexOf('/') >= 0
+        || childName.indexOf('\\') >= 0) {
       return Optional.empty();
     }
-    return Optional.of(hostDir.resolve(name.substring(1)).normalize())
-        .filter(hostPath -> hostPath.startsWith(hostDir) && !hostPath.equals(hostDir));
+    try {
+      return Optional.of(hostFolder.resolve(childName).normalize())
+          .filter(
+              path ->
+                  childName.chars().noneMatch(Character::isISOControl)
+                      && hostFolder.equals(path.getParent()));
+    } catch (InvalidPathException e) {
+      return Optional.empty();
+    }
+  }
+
+  /** Decodes a {@code Uri.encode()}d path segment; returns empty for malformed escapes. */
+  private static Optional<String> decodeUriSegment(String segment) {
+    try {
+      return Optional.of(URLDecoder.decode(segment.replace("+", "%2B"), UTF_8));
+    } catch (IllegalArgumentException e) {
+      return Optional.empty();
+    }
   }
 
   /** Reads a content file to the host path, creating its parent folder if needed. */
@@ -1627,8 +1703,8 @@ public class AndroidInstrumentationUtil {
       throws MobileHarnessException, InterruptedException {
     try {
       localFileUtil.prepareDir(hostPath.getParent().toString());
-      String output = contentRead(deviceId, uri, userId, hostPath);
-      logger.atInfo().log("ContentRead output: %s", output);
+      contentRead(deviceId, uri, userId, hostPath);
+      logger.atInfo().log("Read content %s to %s", uri, hostPath);
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_INSTRUMENTATION_CONTENT_READ_FOLDER_ERROR,
@@ -1644,9 +1720,8 @@ public class AndroidInstrumentationUtil {
    * @param uri uri address for content
    * @param userId which user to read the content
    * @param desFilePath file path on host machine as output
-   * @return output of command execution
    */
-  private String contentRead(String deviceId, String uri, @Nullable String userId, Path desFilePath)
+  private void contentRead(String deviceId, String uri, @Nullable String userId, Path desFilePath)
       throws MobileHarnessException, InterruptedException {
     // Redirect the output directly into a file in host machine which is recommended way.
     // See b/126805032 for detail.
@@ -1655,7 +1730,7 @@ public class AndroidInstrumentationUtil {
             .redirectStderr(false)
             .writeStdoutTo(desFilePath);
     try {
-      return commandExecutor.run(command).trim();
+      var unused = commandExecutor.run(command);
     } catch (CommandException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_INSTRUMENTATION_CONTENT_READ_ERROR,
@@ -1803,46 +1878,6 @@ public class AndroidInstrumentationUtil {
   private static String getEntryDelimiter(JobInfo job) {
     return job.params()
         .get(EntryDelimiterSpec.PARAM_ENTRY_DELIMITER, StrUtil.DEFAULT_ENTRY_DELIMITER);
-  }
-
-  /**
-   * Parse output from "content query" to perform as list file functionality.
-   *
-   * <p>Example output from content query:
-   *
-   * <pre>
-   * $ adb shell content query --uri content://outputfiles
-   * Row: 0 name=/test.txt, type=f, size=15, _data=/test.txt, _display_name=test.txt, _size=15
-   * Row: 1 name=/test_folder, type=d, size=1, _data=/test_folder, _display_name=test_folder, \
-   * _size=4096
-   * $ adb shell content query --uri content://outputfiles/test_folder
-   * Row: 0 name=/test_folder/sub_folder, type=d, size=1, _data=/test_folder/sub_folder, \
-   * _display_name=sub_folder, _size=4096
-   * $ adb shell content query --uri content://outputfiles/test_folder/sub_folder
-   * Row: 0 name=/test_folder/sub_folder/sub_test.txt, type=f, size=0, \
-   * _data=/outputfiles/test_folder/sub_folder/sub_test.txt, _display_name=sub_test.txt, _size=0
-   * </pre>
-   */
-  private static Map<String, String> parseContentQueryResult(String output) {
-    Map<String, String> contentMap = new HashMap<>();
-    if (!Strings.isNullOrEmpty(output)) {
-      Pattern contentPattern = Pattern.compile(CONTENT_QUERY_OUTPUT_PATTERN);
-      Matcher contentMatcher = contentPattern.matcher("");
-      for (String line : Splitters.LINE_SPLITTER.split(output)) {
-        contentMatcher.reset(line);
-        if (!contentMatcher.find()) {
-          continue;
-        }
-
-        String contentName = contentMatcher.group("NAME").trim();
-        String contentType = contentMatcher.group("TYPE").trim();
-        if (Strings.isNullOrEmpty(contentName)) {
-          continue;
-        }
-        contentMap.put(contentName, contentType);
-      }
-    }
-    return contentMap;
   }
 
   /** Pulls the instrument output/property files from device to host machine. */
