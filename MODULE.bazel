@@ -321,3 +321,29 @@ maven.install(
 
 # Make the @maven repository available
 use_repo(maven, "maven")
+
+# Redirect the maven groups that rules_android 0.6.6 pulls in without a lock_file. Those are
+# resolved by a coursier subprocess that ignores --downloader_config and goes straight to
+# Maven Central, which rate-limits ephemeral Kokoro containers (HTTP 429; b/579650708).
+# Coursier requires the serving host to be a declared repository, so the mirror has to go
+# here rather than in CI config; the root module's `repositories` take precedence over a
+# dependency's. Only `repositories` is overridden, never `artifacts`. Artifacts fetched by
+# Bazel's own downloader (e.g. the pinned @maven) are redirected by the Kokoro scripts via
+# --downloader_config instead.
+# TODO: b/579650708 - Remove once rules_android pins these maven groups with lock files
+# (upstream PR #572).
+[
+    maven.install(
+        name = name,
+        repositories = [
+            "https://maven.google.com",
+            "https://maven-central.storage-download.googleapis.com/maven2",
+            "https://repo1.maven.org/maven2",
+        ],
+    )
+    for name in [
+        "android_ide_common_30_1_3",
+        "bazel_worker_maven",
+        "rules_android_maven",
+    ]
+]
