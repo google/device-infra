@@ -376,6 +376,34 @@ public final class KeyVocabularyTest {
     // A namespaced token that failed to resolve names a family the entity lacks; it is not minted.
     assertThat(host.mintLongTailKey("dimension:battery_status")).isEmpty();
     assertThat(device.mintLongTailKey("host property:rack")).isEmpty();
+    // Bare or incomplete namespace prefixes name no key yet and must not mint bogus keys such as
+    // dimension::dimension or host_property::dimension.
+    for (String prefix :
+        ImmutableList.of(
+            "dimension",
+            "Dimension",
+            "device dimension",
+            "device_dimension",
+            "dimension:",
+            "dimension:___",
+            "host property",
+            "host_property",
+            "hostproperty",
+            "host property:",
+            "host_property: ___")) {
+      assertWithMessage("device mintLongTailKey(%s)", prefix)
+          .that(device.mintLongTailKey(prefix))
+          .isEmpty();
+      assertWithMessage("host mintLongTailKey(%s)", prefix)
+          .that(host.mintLongTailKey(prefix))
+          .isEmpty();
+    }
+    // Ordinary words that merely start with "dimension" or "host_property" characters remain valid
+    // bare names.
+    assertThat(device.mintLongTailKey("dimensional"))
+        .hasValue(deviceRegistry.dimensionKey("dimensional").get());
+    assertThat(host.mintLongTailKey("host_properties"))
+        .hasValue(hostRegistry.hostPropertyKey("host_properties").get());
   }
 
   // ---- Aliases come from the registry and nowhere else ----

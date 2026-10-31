@@ -1437,6 +1437,172 @@ public final class FleetSuggesterTest {
   }
 
   @Test
+  public void keyWithOperator_suggestsTopValuesFollowedByPickerOpener() {
+    // 1. "model is" emits Model's counted top values in descending frequency order followed by the
+    // uncounted bare-key picker opener ("Add filter  Model").
+    FleetSuggestionResponse modelIs = suggester.suggest(corpus, request("model is"));
+    assertThat(modelIs.getItemsCount()).isEqualTo(4);
+    assertThat(
+            modelIs.getItemsList().subList(0, 3).stream()
+                .map(
+                    item ->
+                        item.getApplyFilter()
+                            .getResultingFilter()
+                            .getSimple()
+                            .getValues(0)
+                            .getValue()))
+        .containsExactly("pixel", "iphone", "nexus")
+        .inOrder();
+    assertThat(modelIs.getItems(0).getCount()).isEqualTo(2);
+    FleetSuggestion modelPicker = modelIs.getItems(3);
+    assertThat(modelPicker.getLabel()).isEqualTo("Add filter");
+    assertThat(modelPicker.hasCount()).isFalse();
+    assertThat(modelPicker.getMainTextList())
+        .containsExactly(TextSegment.newBuilder().setText("Model").setEmphasized(false).build());
+    assertThat(modelPicker.getOpenPicker().getKey()).isEqualTo("dimension::model");
+    assertThat(modelPicker.getOpenPicker().hasNewChip()).isTrue();
+
+    // 2. Indexed non-cold-capable built-in field ("status is"): offers IDLE (3), BUSY (1), and the
+    // bare-key picker opener ("Add filter  Status").
+    FleetSuggestionResponse statusIs = suggester.suggest(corpus, request("status is"));
+    assertThat(statusIs.getItemsCount()).isEqualTo(3);
+    assertThat(statusIs.getItems(0).getCount()).isEqualTo(3);
+    assertThat(statusIs.getItems(1).getCount()).isEqualTo(1);
+    FleetSuggestion statusPicker = statusIs.getItems(2);
+    assertThat(statusPicker.getLabel()).isEqualTo("Add filter");
+    assertThat(statusPicker.getOpenPicker().getKey()).isEqualTo("device_field::status");
+    assertThat(statusPicker.getOpenPicker().hasNewChip()).isTrue();
+
+    // 3. Negated operator ("model !=") emits negated value conditions followed by the picker
+    // opener.
+    FleetSuggestionResponse modelNot = suggester.suggest(corpus, request("model !="));
+    assertThat(modelNot.getItemsCount()).isEqualTo(4);
+    assertThat(modelNot.getItems(0).getApplyFilter().getResultingFilter().getSimple().getNegated())
+        .isTrue();
+    assertThat(modelNot.getItems(0).getCount()).isEqualTo(3);
+    assertThat(modelNot.getItems(3).getOpenPicker().getKey()).isEqualTo("dimension::model");
+    assertThat(modelNot.getItems(3).getOpenPicker().hasNewChip()).isTrue();
+
+    // 4. On a key with 10 values under the frontend's limit = 10, KEY_VALUES_PER_KEY (8) top values
+    // plus the bare-key picker opener fit within the 10-item budget (9 items total).
+    FleetSnapshot tenPools =
+        Guice.createInjector()
+            .getInstance(FleetIndexBuilder.class)
+            .build(manyPoolFleet(10), BUILD_TIME);
+    DeviceCorpus tenPoolsCorpus =
+        new DeviceCorpus(tenPools, new LazyPostings(tenPools.devices()), new AtsCuration());
+    FleetSuggestionResponse poolIs =
+        suggester.suggest(tenPoolsCorpus, request("pool is").toBuilder().setLimit(10).build());
+    assertThat(poolIs.getItemsCount()).isEqualTo(9);
+    assertThat(poolIs.getItemsList().subList(0, 8).stream().allMatch(FleetSuggestion::hasCount))
+        .isTrue();
+    assertThat(poolIs.getItems(8).getOpenPicker().getKey()).isEqualTo("dimension::pool");
+
+    // 5. Compatible active chip on Model ("pixel"): "model is" offers "+1" modify-include rows for
+    // the remaining values followed by "Modify filter  Model" (view_existing).
+    Filter pixelChip = simple("dimension::model", "pixel");
+    FleetSuggestionResponse modifyCompatible =
+        suggester.suggest(corpus, request("model is", pixelChip));
+    assertThat(modifyCompatible.getItemsCount()).isEqualTo(3);
+    assertThat(modifyCompatible.getItems(0).getLabel()).isEqualTo("Modify filter");
+    assertThat(modifyCompatible.getItems(0).getCountPrefix()).isEqualTo("+");
+    assertThat(modifyCompatible.getItems(0).getCount()).isEqualTo(1);
+    FleetSuggestion modifyPicker = modifyCompatible.getItems(2);
+    assertThat(modifyPicker.getLabel()).isEqualTo("Modify filter");
+    assertThat(modifyPicker.getOpenPicker().getKey()).isEqualTo("dimension::model");
+    assertThat(modifyPicker.getOpenPicker().hasViewExisting()).isTrue();
+
+    // 6. Conflicting polarity ("model !=" on positive chip) or complex chip ("model is" on
+    // starts_with chip) suppresses all value rows and leaves "Modify filter  Model".
+    FleetSuggestionResponse modifyConflict =
+        suggester.suggest(corpus, request("model !=", pixelChip));
+    assertThat(modifyConflict.getItemsCount()).isEqualTo(1);
+    assertThat(modifyConflict.getItems(0).getLabel()).isEqualTo("Modify filter");
+    assertThat(modifyConflict.getItems(0).getOpenPicker().hasViewExisting()).isTrue();
+
+    Filter complexModelChip =
+        Filter.newBuilder()
+            .setKey("dimension::model")
+            .setComplex(
+                ComplexMatch.newBuilder().setStartsWith(StartsWith.newBuilder().setValue("pix")))
+            .build();
+    FleetSuggestionResponse modifyComplex =
+        suggester.suggest(corpus, request("model is", complexModelChip));
+    assertThat(modifyComplex.getItemsCount()).isEqualTo(1);
+    assertThat(modifyComplex.getItems(0).getOpenPicker().hasViewExisting()).isTrue();
+  }
+
+  @Test
+  public void keyWithOperator_coldLongTailDimensionsAndUnindexedBuiltInEligibility() {
+    DeviceCorpus withCatalog = corpusWithCatalog("Monsoon_Status", "battery_status");
+
+    // 1. Cataloged cold long-tail dimension resolves with catalog casing and offers its picker
+    // opener for both positive ("is", ":") and negated ("!=") operators.
+    FleetSuggestion monsoonPicker =
+        firstOpenPicker(
+            suggester.suggest(withCatalog, request("monsoon status is")),
+            "dimension::Monsoon_Status");
+    assertThat(monsoonPicker.getLabel()).isEqualTo("Add filter");
+    assertThat(monsoonPicker.getOpenPicker().hasNewChip()).isTrue();
+    assertThat(monsoonPicker.getMainTextList())
+        .containsExactly(
+            TextSegment.newBuilder()
+                .setText("Dimension Monsoon_Status")
+                .setEmphasized(false)
+                .build());
+
+    assertThat(
+            firstOpenPicker(
+                    suggester.suggest(withCatalog, request("battery_status !=")),
+                    "dimension::battery_status")
+                .getOpenPicker()
+                .hasNewChip())
+        .isTrue();
+
+    // 2. Explicit dimension namespace ("dimension:screen_density is") and uncataloged bare
+    // long-tail dimension ("brand_new_dim is") both offer their picker opener.
+    assertThat(
+            firstOpenPicker(
+                    suggester.suggest(corpus, request("dimension:screen_density is")),
+                    "dimension::screen_density")
+                .getOpenPicker()
+                .hasNewChip())
+        .isTrue();
+
+    FleetSuggestion mintedPicker =
+        firstOpenPicker(
+            suggester.suggest(corpus, request("brand_new_dim is")), "dimension::brand_new_dim");
+    assertThat(mintedPicker.getLabel()).isEqualTo("Add filter");
+    assertThat(mintedPicker.getOpenPicker().hasNewChip()).isTrue();
+    assertThat(mintedPicker.getMainTextList())
+        .containsExactly(
+            TextSegment.newBuilder()
+                .setText("Dimension brand_new_dim")
+                .setEmphasized(false)
+                .build());
+
+    // 3. Separator-only or bare namespace-prefix tokens ("___ is", "dimension:", "device
+    // dimension:", "host property:", "dimension is") resolve and mint nothing.
+    assertThat(suggester.suggest(corpus, request("___ is")).getItemsList()).isEmpty();
+    assertThat(suggester.suggest(corpus, request("dimension:")).getItemsList()).isEmpty();
+    assertThat(suggester.suggest(corpus, request("device dimension:")).getItemsList()).isEmpty();
+    assertThat(suggester.suggest(corpus, request("host property:")).getItemsList()).isEmpty();
+    assertThat(suggester.suggest(corpus, request("dimension is")).getItemsList()).isEmpty();
+
+    // 4. An unindexed non-cold-capable built-in field ("decorator is" when no device has a
+    // decorator) is skipped unless that key already carries an active chip.
+    assertThat(suggester.suggest(corpus, request("decorator is")).getItemsList()).isEmpty();
+    FleetSuggestion activeUnindexedBuiltIn =
+        firstOpenPicker(
+            suggester.suggest(
+                corpus,
+                request("decorator is", simple("device_field::decorator", "NoOpDecorator"))),
+            "device_field::decorator");
+    assertThat(activeUnindexedBuiltIn.getLabel()).isEqualTo("Modify filter");
+    assertThat(activeUnindexedBuiltIn.getOpenPicker().hasViewExisting()).isTrue();
+  }
+
+  @Test
   public void deviceSearch_neverLeaksHostOnlyKeysOrColdFallbackOnIndexedKeys() {
     // 1. Host-only alias "device count" must never resolve to host_field::device_count on
     // DeviceCorpus.

@@ -64,6 +64,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 
 /**
@@ -247,11 +248,7 @@ public final class FleetSuggester {
    */
   private ImmutableList<SuggestionCandidate> suggestKeyValue(
       SuggestionContext context, String keyToken, String rawValue, boolean exclude) {
-    KeyVocabulary vocabulary = context.vocabulary();
-    ImmutableList<KeyDescriptor> keys = vocabulary.resolve(keyToken);
-    if (keys.isEmpty()) {
-      keys = vocabulary.mintLongTailKey(keyToken).map(ImmutableList::of).orElse(ImmutableList.of());
-    }
+    ImmutableList<KeyDescriptor> keys = resolveOrMint(context.vocabulary(), keyToken);
 
     if (isUnquotedList(rawValue)) {
       ImmutableList<String> parts = splitCommaLower(rawValue);
@@ -320,12 +317,7 @@ public final class FleetSuggester {
       Optional<Filter> chip = context.chipFor(keyId);
       if (chip.isPresent()) {
         if (conflictsWithChip(chip.get(), exclude) || chipContainsNoValue(chip.get())) {
-          FleetSuggestion.Builder opener =
-              FleetSuggestion.newBuilder()
-                  .setLabel(label(/* inChip= */ true))
-                  .addAllMainText(segments(vocabulary.titleDisplayName(key), null))
-                  .setOpenPicker(openPicker(vocabulary, key, /* inChip= */ true));
-          out.add(SuggestionCandidate.keyOnly(key, MatchTier.EXACT, opener));
+          out.add(pickerOpener(context, key, MatchTier.EXACT));
           continue;
         }
         Filter merged = appendNoValue(chip.get());
@@ -386,16 +378,39 @@ public final class FleetSuggester {
 
   // ---- <key> is (value pending) ----
 
-  /** The key's most common values as ready-to-apply conditions, the text form of the picker. */
+  /**
+   * For a key named before an operator with no value typed yet: ready-to-apply conditions on its
+   * top values followed by the bare-key picker opener. An unresolved bare token falls back to a
+   * minted long-tail key so uncataloged dimensions and host properties still offer their picker; an
+   * unindexed built-in key that is neither cold-capable nor already active is skipped.
+   */
   private ImmutableList<SuggestionCandidate> suggestTopValuesOfKey(
       SuggestionContext context, String keyToken, boolean exclude) {
-    return context.vocabulary().resolve(keyToken).stream()
+    KeyVocabulary vocabulary = context.vocabulary();
+    return resolveOrMint(vocabulary, keyToken).stream()
+        .filter(
+            key ->
+                context.isIndexed(key.id())
+                    || vocabulary.isColdCapable(key)
+                    || context.isActiveKey(key.id()))
         .flatMap(
             key ->
-                topValues(context, key.id(), KEY_VALUES_PER_KEY).stream()
-                    .flatMap(
-                        value -> condition(context, key, value, MatchTier.EXACT, exclude).stream()))
+                Stream.concat(
+                    topValues(context, key.id(), KEY_VALUES_PER_KEY).stream()
+                        .flatMap(
+                            value ->
+                                condition(context, key, value, MatchTier.EXACT, exclude).stream()),
+                    Stream.of(pickerOpener(context, key, MatchTier.EXACT))))
         .collect(toImmutableList());
+  }
+
+  private static ImmutableList<KeyDescriptor> resolveOrMint(
+      KeyVocabulary vocabulary, String keyToken) {
+    ImmutableList<KeyDescriptor> keys = vocabulary.resolve(keyToken);
+    if (!keys.isEmpty()) {
+      return keys;
+    }
+    return vocabulary.mintLongTailKey(keyToken).map(ImmutableList::of).orElse(ImmutableList.of());
   }
 
   // ---- <value1>, <value2> ----
@@ -546,7 +561,6 @@ public final class FleetSuggester {
    */
   private ImmutableList<SuggestionCandidate> suggestKeyNames(
       SuggestionContext context, ImmutableList<KeyMatch> keyMatches) {
-    KeyVocabulary vocabulary = context.vocabulary();
     ImmutableList.Builder<SuggestionCandidate> out = ImmutableList.builder();
     int rank = 0;
     for (KeyMatch keyMatch : keyMatches) {
@@ -557,13 +571,7 @@ public final class FleetSuggester {
           condition(context, key, value, tier, /* exclude= */ false).ifPresent(out::add);
         }
       }
-      boolean inChip = context.isActiveKey(key.id());
-      FleetSuggestion.Builder proto =
-          FleetSuggestion.newBuilder()
-              .setLabel(label(inChip))
-              .addAllMainText(segments(vocabulary.titleDisplayName(key), null))
-              .setOpenPicker(openPicker(vocabulary, key, inChip));
-      out.add(SuggestionCandidate.keyOnly(key, tier, proto));
+      out.add(pickerOpener(context, key, tier));
       rank++;
     }
     return out.build();
@@ -736,6 +744,19 @@ public final class FleetSuggester {
   }
 
   // ---- Candidate builders shared by several shapes ----
+
+  /** The bare-key row that opens the value picker (for a new chip, or to view the active one). */
+  private static SuggestionCandidate pickerOpener(
+      SuggestionContext context, KeyDescriptor key, MatchTier tier) {
+    KeyVocabulary vocabulary = context.vocabulary();
+    boolean inChip = context.isActiveKey(key.id());
+    FleetSuggestion.Builder proto =
+        FleetSuggestion.newBuilder()
+            .setLabel(label(inChip))
+            .addAllMainText(segments(vocabulary.titleDisplayName(key), null))
+            .setOpenPicker(openPicker(vocabulary, key, inChip));
+    return SuggestionCandidate.keyOnly(key, tier, proto);
+  }
 
   /** {@link #condition} for a key id taken from the index, which the vocabulary may not know. */
   private static Optional<SuggestionCandidate> conditionFor(

@@ -109,12 +109,13 @@ public interface KeyVocabulary {
 
   /**
    * The key this entity denotes for an unresolved bare token, or empty if the token is blank or
-   * uses a namespace spelling. Device search mints a dimension, host search mints a host property.
+   * uses a namespace prefix (including a bare or incomplete prefix such as {@code "dimension"} or
+   * {@code "host property"}). Device search mints a dimension, host search mints a host property.
    * This is the last resort of key resolution and lets a user filter on a key the catalog has not
    * discovered yet. If the name is one the deployment declares, the built-in descriptor is returned
    * rather than a long-tail twin, so a filter typed as {@code model is pixel} never lands on a
-   * second {@code model} key. A namespaced token that did not resolve names a family this entity
-   * lacks, so nothing is minted for it.
+   * second {@code model} key. A namespaced token that did not resolve either names a family this
+   * entity lacks or has no key name yet, so nothing is minted for it.
    */
   Optional<KeyDescriptor> mintLongTailKey(String bareName);
 }

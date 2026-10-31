@@ -170,6 +170,33 @@ public final class HostSuggesterTest {
   }
 
   @Test
+  public void keyWithOperator_suggestsHostValuesAndColdHostPropertyPickerWithoutDeviceLeak() {
+    // lab-a and lab-b carry "debian" (2) and lab-c defaults host_os to "Unknown" (1), followed by
+    // the bare-key picker opener ("Add filter  Host OS").
+    FleetSuggestionResponse hostOsIs = suggester.suggest(corpus, request("os is"));
+    assertThat(hostOsIs.getItemsCount()).isEqualTo(3);
+    assertThat(hostOsIs.getItems(0).getCount()).isEqualTo(2);
+    assertThat(hostOsIs.getItems(1).getCount()).isEqualTo(1);
+    assertThat(hostOsIs.getItems(2).getLabel()).isEqualTo("Add filter");
+    assertThat(hostOsIs.getItems(2).getOpenPicker().getKey()).isEqualTo("host_property::host_os");
+    assertThat(hostOsIs.getItems(2).getOpenPicker().hasNewChip()).isTrue();
+
+    FleetSuggestion coldPropPicker =
+        firstOpenPicker(
+            suggester.suggest(corpus, request("custom_host_prop is")),
+            "host_property::custom_host_prop");
+    assertThat(coldPropPicker.getLabel()).isEqualTo("Add filter");
+    assertThat(coldPropPicker.getMainText(0).getText()).isEqualTo("Host Property custom_host_prop");
+    assertThat(coldPropPicker.getOpenPicker().hasNewChip()).isTrue();
+
+    assertThat(suggester.suggest(corpus, request("dimension:battery_status is")).getItemsList())
+        .isEmpty();
+    assertThat(suggester.suggest(corpus, request("dimension:")).getItemsList()).isEmpty();
+    assertThat(suggester.suggest(corpus, request("host property:")).getItemsList()).isEmpty();
+    assertThat(suggester.suggest(corpus, request("host property is")).getItemsList()).isEmpty();
+  }
+
+  @Test
   public void hostSearch_neverSuggestsDeviceDimensionsOrFields() {
     // Typing "status" on a host corpus must never return dimension::* or device_field::* keys.
     FleetSuggestionResponse statusResponse = suggester.suggest(corpus, request("status"));

@@ -53,6 +53,13 @@ public final class KeyTokens {
       Pattern.compile("^host[\\s_]*property[\\s_:]+(.+)$");
 
   /**
+   * Either namespace prefix, with or without a key name yet ({@code "dimension:foo"}, {@code
+   * "dimension:"}, {@code "dimension"}, {@code "device dimension"}, {@code "host property"}).
+   */
+  private static final Pattern NAMESPACE_PREFIX =
+      Pattern.compile("^(?:(?:device[\\s_]+)?dimension|host[\\s_]*property)(?:$|[\\s_:].*)$");
+
+  /**
    * Canonical form of a key token: lowercased, every run of whitespace or underscores collapsed to
    * a single underscore, and no underscore at either end. This is the form alias tables are keyed
    * by and the form a typed token is compared against discovered key names. A token made only of
@@ -74,9 +81,12 @@ public final class KeyTokens {
     return namespaced(HOST_PROPERTY_NAMESPACE, token);
   }
 
-  /** Whether the token uses either namespace spelling. */
+  /**
+   * Whether the token uses either namespace prefix, including a bare or incomplete prefix with no
+   * key name yet.
+   */
   static boolean isNamespaced(String token) {
-    return dimensionName(token).isPresent() || hostPropertyName(token).isPresent();
+    return NAMESPACE_PREFIX.matcher(lower(token)).matches();
   }
 
   private static Optional<String> namespaced(Pattern namespace, String token) {
