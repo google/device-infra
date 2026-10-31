@@ -41,6 +41,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/labinfo:local_lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/filter:mask_utils",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
