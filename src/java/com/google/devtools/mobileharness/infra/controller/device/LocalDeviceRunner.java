@@ -461,18 +461,21 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
    * {@code UNAVAILABLE}, or {@code UNKNOWN}, the device is considered unavailable/prepping in
    * external DM.
    */
-  private boolean isAvailableOrReservedByMhInExternalDeviceManager() {
+  private boolean isAvailableOrReservedByMhInExternalDeviceManager(boolean realtimeQuery) {
     ExternalDeviceManager.DeviceStatus deviceStatus =
         externalDeviceManager.getDeviceStatus(
-            device.getDeviceId(), device.getClass().getSimpleName(), device.getDeviceTypes());
+            device.getDeviceId(),
+            device.getClass().getSimpleName(),
+            device.getDeviceTypes(),
+            realtimeQuery);
     boolean isAvailableOrReservedByMh =
         deviceStatus.equals(ExternalDeviceManager.DeviceStatus.IDLE)
             || deviceStatus.equals(ExternalDeviceManager.DeviceStatus.RESERVED_BY_MH);
     if (!isAvailableOrReservedByMh) {
       logger.atInfo().atMostEvery(10, SECONDS).log(
           "Device %s is NOT available or reserved by MH in external device manager:"
-              + " deviceStatus=%s",
-          device.getDeviceId(), deviceStatus);
+              + " deviceStatus=%s, realtimeQuery=%s",
+          device.getDeviceId(), deviceStatus, realtimeQuery);
     }
     return isAvailableOrReservedByMh;
   }
@@ -485,12 +488,17 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
    * simultaneously, the device state might still be cached as {@code RESERVED_BY_MH}. Since
    * MobileHarness itself owns the reservation, it is safe to proceed.
    *
+   * <p>The cached status may lag behind the real-time status in the external DM (e.g., Tradefed's
+   * bulk device status is refreshed every 60 seconds), so a non-available cached status is verified
+   * with a real-time query before waiting for the next check.
+   *
    * @return whether the device is IDLE or RESERVED_BY_MH in external device manager
    */
   private boolean waitIdleInExternalDeviceManager(Duration timeout) {
     Instant expireTime = clock.instant().plus(timeout);
     while (clock.instant().isBefore(expireTime)) {
-      if (isAvailableOrReservedByMhInExternalDeviceManager()) {
+      if (isAvailableOrReservedByMhInExternalDeviceManager(/* realtimeQuery= */ false)
+          || isAvailableOrReservedByMhInExternalDeviceManager(/* realtimeQuery= */ true)) {
         return true;
       }
       try {
@@ -543,7 +551,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
             || !device.getDimension(Dimension.Name.CLOUDRPC_FAILURE).isEmpty()
             || !device.getDimension(Dimension.Name.GCS_FAILURE).isEmpty()
             || !device.getDimension(Dimension.Name.LAB_FILE_SYSTEM_IO_ERROR).isEmpty()
-            || !isAvailableOrReservedByMhInExternalDeviceManager();
+            || !isAvailableOrReservedByMhInExternalDeviceManager(/* realtimeQuery= */ false);
     if (isPrepping) {
       logger.atInfo().atMostEvery(10, SECONDS).log(
           "Device %s is PREPPING: Device.isPrepping=%s,"
@@ -552,7 +560,7 @@ public class LocalDeviceRunner implements TestExecutor, Runnable {
               + " lab_file_system_io_error=%s",
           device.getDeviceId(),
           device.isPrepping(),
-          isAvailableOrReservedByMhInExternalDeviceManager(),
+          isAvailableOrReservedByMhInExternalDeviceManager(/* realtimeQuery= */ false),
           device.getDimension(Dimension.Name.ALERT_LAB_DISK_USABLE_SIZE),
           device.getDimension(Dimension.Name.CLOUDRPC_FAILURE),
           device.getDimension(Dimension.Name.GCS_FAILURE),
