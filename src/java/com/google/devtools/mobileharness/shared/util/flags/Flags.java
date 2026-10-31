@@ -838,6 +838,13 @@ public class Flags {
   public static final Flag<Boolean> enableFileSystemIoCheck = Flag.value(true);
 
   @FlagSpec(
+      name = "enable_get_lab_info_projection_pushdown",
+      help =
+          "Whether to push LabQuery.Mask projection down into LabInfoProvider in"
+              + " LabInfoService.GetLabInfo. Default is true.")
+  public static final Flag<Boolean> enableGetLabInfoProjectionPushdown = Flag.value(true);
+
+  @FlagSpec(
       name = "enable_grpc_lab_server",
       help = "Whether to enable gRPC connection to lab server. Default is false.")
   public static final Flag<Boolean> enableGrpcLabServer = Flag.value(false);

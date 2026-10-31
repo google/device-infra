@@ -17,26 +17,37 @@
 package com.google.devtools.mobileharness.shared.labinfo;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.Futures.immediateFuture;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatusWithTimestamp;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask.DimensionsMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusInfo;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager.DeviceKey;
 import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager.DeviceTempRequiredDimensions;
+import com.google.devtools.mobileharness.shared.util.filter.CompiledDeviceInfoMask;
+import com.google.devtools.mobileharness.shared.util.filter.CompiledLabInfoMask;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.protobuf.FieldMask;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import java.time.Instant;
 import java.util.Optional;
@@ -68,7 +79,7 @@ public class LocalLabInfoProviderTest {
 
   @Before
   public void setUp() throws Exception {
-    localDeviceManagerFuture = Futures.immediateFuture(localDeviceManager);
+    localDeviceManagerFuture = immediateFuture(localDeviceManager);
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
   }
 
@@ -116,5 +127,69 @@ public class LocalLabInfoProviderTest {
     assertThat(
             deviceInfo.getDeviceFeature().getCompositeDimension().getRequiredDimension(0).getName())
         .isEqualTo("key1");
+  }
+
+  @Test
+  public void getLabInfos_maskedOverload_prunesFieldsAndDimensionsAndSkipsTempLookup()
+      throws Exception {
+    when(device.getDeviceUuid()).thenReturn("device_uuid");
+    when(localDeviceManager.getAllDeviceStatus(false))
+        .thenReturn(ImmutableMap.of(device, deviceStatusInfo));
+    when(device.toFeature())
+        .thenReturn(
+            DeviceFeature.newBuilder()
+                .addOwner("owner1")
+                .setCompositeDimension(
+                    DeviceCompositeDimension.newBuilder()
+                        .addSupportedDimension(
+                            DeviceDimension.newBuilder().setName("model").setValue("pixel"))
+                        .addSupportedDimension(
+                            DeviceDimension.newBuilder().setName("sdk").setValue("34")))
+                .build());
+
+    CompiledDeviceInfoMask deviceMask =
+        CompiledDeviceInfoMask.of(
+            DeviceInfoMask.newBuilder()
+                .setFieldMask(
+                    FieldMask.newBuilder()
+                        .addPaths("device_locator.id")
+                        .addPaths("device_feature.composite_dimension.supported_dimension"))
+                .setSupportedDimensionsMask(DimensionsMask.newBuilder().addDimensionNames("model"))
+                .build());
+
+    LabView labView =
+        localLabInfoProvider.getLabInfos(
+            Filter.getDefaultInstance(), CompiledLabInfoMask.retainAll(), deviceMask);
+
+    verify(tempRequiredDimensionManager, never()).getDimensions(any());
+    assertThat(labView.getLabData(0).getDeviceList().getDeviceTotalCount()).isEqualTo(1);
+    DeviceInfo deviceInfo = labView.getLabData(0).getDeviceList().getDeviceInfo(0);
+    assertThat(deviceInfo.getDeviceLocator().getId()).isEqualTo("device_uuid");
+    assertThat(deviceInfo.getDeviceStatus()).isEqualTo(DeviceStatus.INIT);
+    assertThat(deviceInfo.hasDeviceCondition()).isFalse();
+    assertThat(deviceInfo.getDeviceFeature().getOwnerList()).isEmpty();
+    assertThat(deviceInfo.getDeviceFeature().getCompositeDimension().getSupportedDimensionList())
+        .containsExactly(DeviceDimension.newBuilder().setName("model").setValue("pixel").build());
+  }
+
+  @Test
+  public void
+      getLabInfos_emptyDeviceFieldMask_dropsDeviceInfoButPreservesTotalCountAndSkipsFeature()
+          throws Exception {
+    when(localDeviceManager.getAllDeviceStatus(false))
+        .thenReturn(ImmutableMap.of(device, deviceStatusInfo));
+
+    CompiledDeviceInfoMask dropAllDeviceMask =
+        CompiledDeviceInfoMask.of(
+            DeviceInfoMask.newBuilder().setFieldMask(FieldMask.getDefaultInstance()).build());
+
+    LabView labView =
+        localLabInfoProvider.getLabInfos(
+            Filter.getDefaultInstance(), CompiledLabInfoMask.retainAll(), dropAllDeviceMask);
+
+    verify(device, never()).toFeature();
+    verify(tempRequiredDimensionManager, never()).getDimensions(any());
+    assertThat(labView.getLabData(0).getDeviceList().getDeviceTotalCount()).isEqualTo(1);
+    assertThat(labView.getLabData(0).getDeviceList().getDeviceInfoList()).isEmpty();
   }
 }
