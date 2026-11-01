@@ -41,7 +41,6 @@ java_library(
         "//java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
         "//javatests/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
         "//javatests/com/google/wireless/qa/mobileharness/shared/api/decorator/base:__pkg__",
-        "//javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator/base:__pkg__",
