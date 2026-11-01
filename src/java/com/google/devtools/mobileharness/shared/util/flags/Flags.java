@@ -1721,6 +1721,15 @@ public class Flags {
   @FlagSpec(name = "xts_tf_xmx", help = "-Xmx of TF of TradefedTest. Default is \"24g\".")
   public static final Flag<String> xtsTfXmx = Flag.value("24g");
 
+  @FlagSpec(
+      name = "xts_tf_cluster_launcher_xmx",
+      help =
+          "-Xmx of TF of TradefedTest when it runs a ClusterCommandLauncher test plan (ATS server"
+              + " mode). That TF process only relays events and logs of the xTS TF subprocess,"
+              + " whose heap is set separately by the jvm-option of the test plan, so it needs"
+              + " much less memory than --xts_tf_xmx. Default is \"4g\".")
+  public static final Flag<String> xtsTfClusterLauncherXmx = Flag.value("4g");
+
   @FlagConstraint
   public static void checkConstraints() {
     checkArgument(

@@ -475,7 +475,7 @@ public class TradefedTest extends BaseDriver
     // Creates JVM flags.
     ImmutableList.Builder<String> jvmFlagsBuilder =
         ImmutableList.<String>builder()
-            .add("-Xmx" + Flags.xtsTfXmx.getNonNull(), "-XX:+HeapDumpOnOutOfMemoryError")
+            .add("-Xmx" + getTradefedXmx(spec), "-XX:+HeapDumpOnOutOfMemoryError")
             .add("-Djdk.xml.totalEntitySizeLimit=0", "-Djdk.xml.enableExtensionFunctions=true");
     jvmFlagsBuilder.addAll(getJavaVersionJvmFlags(javaPath));
     if (Flags.enableXtsTradefedInvocationAgent.getNonNull()) {
@@ -1186,6 +1186,20 @@ public class TradefedTest extends BaseDriver
   private static Duration getTradefedTimeout(TestInfo testInfo) throws MobileHarnessException {
     // Use remaining time to run the Tradefed command but leave 2 minutes for post processing.
     return testInfo.timer().remainingTimeJava().minusMinutes(2);
+  }
+
+  /**
+   * Returns the -Xmx value of the TF process started by this driver.
+   *
+   * <p>With a test plan file (ATS server mode), the TF process runs a ClusterCommandLauncher that
+   * only relays events and logs of the xTS TF subprocess, and the subprocess heap is set by the
+   * jvm-option of the test plan. Giving both processes the full xTS heap lets their combined
+   * footprint exceed the host memory, because G1 grows the committed heap towards -Xmx.
+   */
+  private static String getTradefedXmx(TradefedTestDriverSpec spec) {
+    return spec.getXtsTestPlanFile().isEmpty()
+        ? Flags.xtsTfXmx.getNonNull()
+        : Flags.xtsTfClusterLauncherXmx.getNonNull();
   }
 
   @VisibleForTesting
