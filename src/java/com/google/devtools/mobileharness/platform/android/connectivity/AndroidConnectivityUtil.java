@@ -81,6 +81,9 @@ public class AndroidConnectivityUtil {
   /** ADB shell command for showing net status. */
   @VisibleForTesting static final String ADB_SHELL_GET_NET_STATUS = "netstat";
 
+  /** ADB shell command for triggering a wifi scan. */
+  @VisibleForTesting static final String ADB_SHELL_START_WIFI_SCAN = "cmd wifi start-scan";
+
   /** ADB shell template for connecting to wifi without password. Should fill with: wifi ssid. */
   @VisibleForTesting
   static final String ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITHOUT_PASSWORD =
@@ -117,6 +120,8 @@ public class AndroidConnectivityUtil {
   @VisibleForTesting static final Duration WAIT_FOR_WIFI_STATE_TIMEOUT = Duration.ofSeconds(30);
 
   private static final Duration WAIT_FOR_WIFI_STATE_INTERVAL = Duration.ofSeconds(3);
+
+  @VisibleForTesting static final Duration RE_ENABLE_WIFI_INTERVAL = Duration.ofSeconds(1);
 
   @VisibleForTesting
   static final String WIFI_UTIL_ADB_SHELL_SET_WIFI_TEMPLATE =
@@ -723,6 +728,7 @@ public class AndroidConnectivityUtil {
           AndroidErrorId.ANDROID_CONNECTIVITY_DISABLE_WIFI_ERROR,
           String.format("Failed to disable wifi on device %s", serial));
     }
+    sleeper.sleep(RE_ENABLE_WIFI_INTERVAL);
     if (!setWifiEnabled(serial, /* enabled= */ true, log)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_CONNECTIVITY_ENABLE_WIFI_ERROR,
@@ -1288,7 +1294,24 @@ public class AndroidConnectivityUtil {
     try {
       SharedLogUtil.logMsg(
           logger, Level.INFO, log, /* cause= */ null, "Checking wifi scan status...");
-      return checkWifiScanResults(dumpWifiScanResults(serial, sdkVersion), ssid);
+      if (checkWifiScanResults(dumpWifiScanResults(serial, sdkVersion), ssid)) {
+        return true;
+      }
+      if (sdkVersion >= AndroidVersion.PI.getStartSdkVersion()) {
+        try {
+          String unused = adb.runShell(serial, ADB_SHELL_START_WIFI_SCAN);
+        } catch (MobileHarnessException e) {
+          SharedLogUtil.logMsg(
+              logger,
+              Level.WARNING,
+              log,
+              /* cause= */ null,
+              "Failed to start wifi scan for device %s:%n%s",
+              serial,
+              e.getMessage());
+        }
+      }
+      return false;
     } catch (MobileHarnessException e) {
       SharedLogUtil.logMsg(
           logger,

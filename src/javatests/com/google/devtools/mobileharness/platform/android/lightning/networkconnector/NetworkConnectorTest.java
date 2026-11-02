@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.android.lightning.networkconn
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -394,5 +395,131 @@ public final class NetworkConnectorTest {
         .isTrue();
     InOrder order = inOrder(connectivityUtil);
     order.verify(connectivityUtil, times(1)).connectToWifi(wifiArgs, testLog);
+  }
+
+  @Test
+  public void connectToWifi_firstAttemptAndReEnableWifiFail_succeedsOnForceTryConnectRetry()
+      throws Exception {
+    when(connectivityUtil.getNetworkSsid(DEVICE_ID, DEFAULT_SDK_VERSION)).thenReturn("");
+    when(wifiUtil.getWifiUtilApkPath()).thenReturn(PATH_TO_WIFI_UTIL_APK);
+    ConnectToWifiArgs wifiArgs =
+        ConnectToWifiArgs.builder()
+            .setSerial(DEVICE_ID)
+            .setSdkVersion(DEFAULT_SDK_VERSION)
+            .setWifiSsid("ssid")
+            .setWifiPsk("psk")
+            .setScanSsid(false)
+            .setWaitTimeout(Duration.ofMinutes(1))
+            .build();
+    ConnectToWifiArgs forceWifiArgs = wifiArgs.toBuilder().setForceTryConnect(true).build();
+    when(connectivityUtil.connectToWifi(wifiArgs, testLog)).thenReturn(false);
+    doThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_CONNECTIVITY_ENABLE_WIFI_ERROR, "Failed to re-enable wifi"))
+        .when(connectivityUtil)
+        .reEnableWifi(DEVICE_ID, testLog);
+    when(connectivityUtil.connectToWifi(forceWifiArgs, testLog)).thenReturn(true);
+
+    assertThat(
+            networkConnector.connectToWifi(
+                device,
+                WifiConnectArgs.builder()
+                    .setWifiSsid("ssid")
+                    .setWifiPsk("psk")
+                    .setLogFailuresOnly(false)
+                    .setRetryNum(1)
+                    .setWaitTimeout(Duration.ofMinutes(1))
+                    .build(),
+                testLog))
+        .isTrue();
+
+    InOrder order = inOrder(connectivityUtil);
+    order.verify(connectivityUtil).connectToWifi(wifiArgs, testLog);
+    order.verify(connectivityUtil).reEnableWifi(DEVICE_ID, testLog);
+    order.verify(connectivityUtil).connectToWifi(forceWifiArgs, testLog);
+  }
+
+  @Test
+  public void
+      connectToWifi_earlierAttemptThrowsAndFinalAttemptReturnsFalse_throwsConnectToWifiFailure()
+          throws Exception {
+    when(connectivityUtil.getNetworkSsid(DEVICE_ID, DEFAULT_SDK_VERSION)).thenReturn("");
+    when(wifiUtil.getWifiUtilApkPath()).thenReturn(PATH_TO_WIFI_UTIL_APK);
+    ConnectToWifiArgs wifiArgs =
+        ConnectToWifiArgs.builder()
+            .setSerial(DEVICE_ID)
+            .setSdkVersion(DEFAULT_SDK_VERSION)
+            .setWifiSsid("ssid")
+            .setWifiPsk("psk")
+            .setScanSsid(false)
+            .setWaitTimeout(Duration.ofMinutes(1))
+            .build();
+    ConnectToWifiArgs forceWifiArgs = wifiArgs.toBuilder().setForceTryConnect(true).build();
+    when(connectivityUtil.connectToWifi(wifiArgs, testLog))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_CONNECTIVITY_FAIL_CONNECT_TO_WIFI, "Attempt 1 error"));
+    doThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_CONNECTIVITY_ENABLE_WIFI_ERROR, "Re-enable error"))
+        .when(connectivityUtil)
+        .reEnableWifi(DEVICE_ID, testLog);
+    when(connectivityUtil.connectToWifi(forceWifiArgs, testLog)).thenReturn(false);
+
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class,
+            () ->
+                networkConnector.connectToWifi(
+                    device,
+                    WifiConnectArgs.builder()
+                        .setWifiSsid("ssid")
+                        .setWifiPsk("psk")
+                        .setLogFailuresOnly(false)
+                        .setRetryNum(1)
+                        .setWaitTimeout(Duration.ofMinutes(1))
+                        .build(),
+                    testLog));
+    assertThat(thrown.getErrorId())
+        .isEqualTo(AndroidErrorId.NETWORK_CONNECTOR_CONNECT_TO_WIFI_FAILURE);
+    assertThat(thrown).hasCauseThat().isNull();
+  }
+
+  @Test
+  public void connectToWifi_finalAttemptThrows_throwsConnectToWifiError() throws Exception {
+    when(connectivityUtil.getNetworkSsid(DEVICE_ID, DEFAULT_SDK_VERSION)).thenReturn("");
+    when(wifiUtil.getWifiUtilApkPath()).thenReturn(PATH_TO_WIFI_UTIL_APK);
+    ConnectToWifiArgs wifiArgs =
+        ConnectToWifiArgs.builder()
+            .setSerial(DEVICE_ID)
+            .setSdkVersion(DEFAULT_SDK_VERSION)
+            .setWifiSsid("ssid")
+            .setWifiPsk("psk")
+            .setScanSsid(false)
+            .setWaitTimeout(Duration.ofMinutes(1))
+            .build();
+    ConnectToWifiArgs forceWifiArgs = wifiArgs.toBuilder().setForceTryConnect(true).build();
+    when(connectivityUtil.connectToWifi(wifiArgs, testLog)).thenReturn(false);
+    when(connectivityUtil.connectToWifi(forceWifiArgs, testLog))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_CONNECTIVITY_FAIL_CONNECT_TO_WIFI, "Final attempt error"));
+
+    MobileHarnessException thrown =
+        assertThrows(
+            MobileHarnessException.class,
+            () ->
+                networkConnector.connectToWifi(
+                    device,
+                    WifiConnectArgs.builder()
+                        .setWifiSsid("ssid")
+                        .setWifiPsk("psk")
+                        .setLogFailuresOnly(false)
+                        .setRetryNum(1)
+                        .setWaitTimeout(Duration.ofMinutes(1))
+                        .build(),
+                    testLog));
+    assertThat(thrown.getErrorId())
+        .isEqualTo(AndroidErrorId.NETWORK_CONNECTOR_CONNECT_TO_WIFI_ERROR);
   }
 }

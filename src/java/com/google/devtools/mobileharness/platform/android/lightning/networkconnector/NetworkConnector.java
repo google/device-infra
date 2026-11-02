@@ -186,6 +186,7 @@ public class NetworkConnector {
     }
 
     do {
+      connectWifiException = null;
       if (retryCnt > 0 && retryNum == 0) {
         // Forces connecting to wifi at the last retry when the given retry number > 0.
         argsBuilder.setForceTryConnect(true);
