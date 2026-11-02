@@ -22,6 +22,7 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.junit.Assert.assertThrows;
 
+import com.google.common.base.Ticker;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -44,6 +45,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -120,6 +122,56 @@ public final class DimensionOverlayStoreTest {
 
     assertThat(secondResult.keySet()).containsExactly("dimension::carrier");
     assertThat(dataSource.pullCount.get()).isEqualTo(1);
+  }
+
+  @Test
+  public void loadOverlaysAsync_cachedEntryExpiresAfterTtl() throws Exception {
+    AtomicLong elapsedNanos = new AtomicLong(0L);
+    Ticker ticker =
+        new Ticker() {
+          @Override
+          public long read() {
+            return elapsedNanos.get();
+          }
+        };
+    DimensionOverlayStore timedStore =
+        new DimensionOverlayStore(
+            ImmutableMap.of(Fleet.FLEET_SELF, dataSource), snapshotStore, ticker);
+    dataSource.rawResult =
+        DimensionOverlayRaw.create(
+            "dimension::carrier", ImmutableMap.of("dev-1", ImmutableList.of("Verizon")));
+
+    assertThat(
+            timedStore
+                .loadOverlaysAsync(Fleet.FLEET_SELF, ImmutableSet.of(CARRIER_KEY), executor)
+                .get()
+                .get("dimension::carrier")
+                .valuesForUuid("dev-1"))
+        .containsExactly("Verizon");
+    assertThat(dataSource.pullCount.get()).isEqualTo(1);
+
+    elapsedNanos.set(DimensionOverlayStore.CACHE_TTL.minusSeconds(1).toNanos());
+    assertThat(
+            timedStore
+                .loadOverlaysAsync(Fleet.FLEET_SELF, ImmutableSet.of(CARRIER_KEY), executor)
+                .get()
+                .get("dimension::carrier")
+                .valuesForUuid("dev-1"))
+        .containsExactly("Verizon");
+    assertThat(dataSource.pullCount.get()).isEqualTo(1);
+
+    dataSource.rawResult =
+        DimensionOverlayRaw.create(
+            "dimension::carrier", ImmutableMap.of("dev-1", ImmutableList.of("TMobile")));
+    elapsedNanos.set(DimensionOverlayStore.CACHE_TTL.plusSeconds(1).toNanos());
+    assertThat(
+            timedStore
+                .loadOverlaysAsync(Fleet.FLEET_SELF, ImmutableSet.of(CARRIER_KEY), executor)
+                .get()
+                .get("dimension::carrier")
+                .valuesForUuid("dev-1"))
+        .containsExactly("TMobile");
+    assertThat(dataSource.pullCount.get()).isEqualTo(2);
   }
 
   @Test
