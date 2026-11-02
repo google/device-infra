@@ -138,7 +138,13 @@ func (s *Server) DeregisterEndpoint(ctx context.Context, serviceName, hostname, 
 
 	if _, exists := info.PhysicalAddresses[physicalAddress]; exists {
 		delete(info.PhysicalAddresses, physicalAddress)
-		if len(info.PhysicalAddresses) == 0 {
+		// For gRPC services, keep the service entry with an empty PhysicalAddresses map so
+		// that the LDS ApiListener and CDS Cluster remain present with an empty EDS
+		// ClusterLoadAssignment during transient conduit disconnects/reboots. Deleting the
+		// LDS Listener causes proxyless gRPC xDS clients without ignore_resource_deletion to
+		// fail with "LDS resource does not exist" and can permanently wedge cached channels
+		// when they enter gRPC idle mode.
+		if len(info.PhysicalAddresses) == 0 && info.Protocol != "grpc" {
 			delete(s.services, logicalName)
 		}
 

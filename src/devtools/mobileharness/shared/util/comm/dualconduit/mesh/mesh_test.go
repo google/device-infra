@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	clusterpb "github.com/envoyproxy/go-control-plane/envoy/config/cluster/v3"
+	endpointpb "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	httppb "github.com/envoyproxy/go-control-plane/envoy/extensions/upstreams/http/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 )
@@ -75,5 +76,67 @@ func TestGenerateSnapshot(t *testing.T) {
 	listeners := snap.GetResources(resource.ListenerType)
 	if len(listeners) != 2 {
 		t.Errorf("generateSnapshot() listeners count = %d, want 2", len(listeners))
+	}
+}
+
+func TestDeregisterEndpoint_GRPCKeepsListenerWithEmptyEndpoints(t *testing.T) {
+	ctx := t.Context()
+	srv := New(ctx, 80, 443, "strict_dns")
+
+	logicalName, err := srv.RegisterEndpoint(ctx, "olc", "satlab-host", "127.0.0.1:39701", "grpc")
+	if err != nil {
+		t.Fatalf("RegisterEndpoint() failed: %v", err)
+	}
+	if logicalName != "olc.satlab-host.dcon" {
+		t.Fatalf("RegisterEndpoint() logicalName = %q, want %q", logicalName, "olc.satlab-host.dcon")
+	}
+
+	if err := srv.DeregisterEndpoint(ctx, "olc", "satlab-host", "127.0.0.1:39701"); err != nil {
+		t.Fatalf("DeregisterEndpoint() failed: %v", err)
+	}
+
+	snap, err := srv.generateSnapshot("v2")
+	if err != nil {
+		t.Fatalf("generateSnapshot() after DeregisterEndpoint failed: %v", err)
+	}
+
+	listeners := snap.GetResources(resource.ListenerType)
+	if _, ok := listeners["olc.satlab-host.dcon"]; !ok {
+		t.Errorf("generateSnapshot() missing listener %q after DeregisterEndpoint, got %v", "olc.satlab-host.dcon", listeners)
+	}
+
+	clusters := snap.GetResources(resource.ClusterType)
+	if _, ok := clusters["cluster.olc.satlab-host"]; !ok {
+		t.Errorf("generateSnapshot() missing cluster %q after DeregisterEndpoint, got %v", "cluster.olc.satlab-host", clusters)
+	}
+
+	endpoints := snap.GetResources(resource.EndpointType)
+	epResource, ok := endpoints["cluster.olc.satlab-host"]
+	if !ok {
+		t.Fatalf("generateSnapshot() missing endpoint %q after DeregisterEndpoint, got %v", "cluster.olc.satlab-host", endpoints)
+	}
+	cla, ok := epResource.(*endpointpb.ClusterLoadAssignment)
+	if !ok {
+		t.Fatalf("generateSnapshot() endpoint resource type = %T, want *endpointpb.ClusterLoadAssignment", epResource)
+	}
+	if len(cla.GetEndpoints()) != 1 || len(cla.GetEndpoints()[0].GetLbEndpoints()) != 0 {
+		t.Errorf("generateSnapshot() LbEndpoints = %v, want 0 endpoints", cla.GetEndpoints())
+	}
+
+	// Re-registering the service on a new port should restore the endpoint on the same listener.
+	if _, err := srv.RegisterEndpoint(ctx, "olc", "satlab-host", "127.0.0.1:43563", "grpc"); err != nil {
+		t.Fatalf("RegisterEndpoint() on reconnect failed: %v", err)
+	}
+	snap, err = srv.generateSnapshot("v3")
+	if err != nil {
+		t.Fatalf("generateSnapshot() after reconnect failed: %v", err)
+	}
+	epResource = snap.GetResources(resource.EndpointType)["cluster.olc.satlab-host"]
+	cla, ok = epResource.(*endpointpb.ClusterLoadAssignment)
+	if !ok {
+		t.Fatalf("generateSnapshot() endpoint resource type = %T, want *endpointpb.ClusterLoadAssignment", epResource)
+	}
+	if len(cla.GetEndpoints()) != 1 || len(cla.GetEndpoints()[0].GetLbEndpoints()) != 1 {
+		t.Errorf("generateSnapshot() LbEndpoints after reconnect = %v, want 1 endpoint", cla.GetEndpoints())
 	}
 }

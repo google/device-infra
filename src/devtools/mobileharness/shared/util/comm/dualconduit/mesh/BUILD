@@ -59,6 +59,7 @@ go_test(
     embed = [":mesh"],
     deps = [
         "@com_github_envoyproxy_go_control_plane_envoy//config/cluster/v3:go_default_library",
+        "@com_github_envoyproxy_go_control_plane_envoy//config/endpoint/v3:go_default_library",
         "@com_github_envoyproxy_go_control_plane_envoy//extensions/upstreams/http/v3:go_default_library",
         "@com_github_envoyproxy_go_control_plane//pkg/resource/v3:resource",
     ],
