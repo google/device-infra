@@ -58,6 +58,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/labinfo:device_temp_required_dimension_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:master_grpc_stub_helper",
+        "//src/java/com/google/devtools/mobileharness/shared/util/filter:mask_utils",
         "//src/java/com/google/devtools/mobileharness/shared/util/inject:common_module",
         "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",

@@ -19,6 +19,9 @@ package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -69,6 +72,9 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask.DimensionsMask;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.LabInfoMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.LabRecordManager.DeviceRecordData;
@@ -84,6 +90,8 @@ import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimens
 import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager.DeviceTempRequiredDimensions;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHelper;
+import com.google.devtools.mobileharness.shared.util.filter.CompiledDeviceInfoMask;
+import com.google.devtools.mobileharness.shared.util.filter.CompiledLabInfoMask;
 import com.google.devtools.mobileharness.shared.util.inject.CommonModule;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.version.Version;
@@ -91,6 +99,7 @@ import com.google.devtools.mobileharness.shared.version.proto.VersionProto.Versi
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.protobuf.FieldMask;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
@@ -311,10 +320,61 @@ public class RemoteDeviceManagerTest {
   @Test
   public void getLabInfo() throws Exception {
     labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
+    clearInvocations(deviceTempRequiredDimensionManager);
 
     LabView labInfo = remoteDeviceManager.getLabInfos(Filter.getDefaultInstance());
 
     assertThat(labInfo).isEqualTo(LAB_VIEW_WITH_OLC);
+    verify(deviceTempRequiredDimensionManager)
+        .getDimensions(new DeviceKey("fake_lab_host_name", "fake_uuid"));
+  }
+
+  @Test
+  public void getLabInfo_withMask_prunesUnrequestedFieldsAtSource() throws Exception {
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
+    clearInvocations(deviceTempRequiredDimensionManager);
+
+    DeviceInfoMask deviceInfoMask =
+        DeviceInfoMask.newBuilder()
+            .setFieldMask(
+                FieldMask.newBuilder()
+                    .addPaths("device_locator")
+                    .addPaths("device_feature.composite_dimension.supported_dimension"))
+            .setSupportedDimensionsMask(DimensionsMask.newBuilder().addDimensionNames("host_name"))
+            .build();
+    LabInfoMask labInfoMask =
+        LabInfoMask.newBuilder()
+            .setFieldMask(FieldMask.newBuilder().addPaths("lab_locator"))
+            .build();
+
+    LabView labInfo =
+        remoteDeviceManager.getLabInfos(
+            Filter.getDefaultInstance(),
+            CompiledLabInfoMask.of(labInfoMask),
+            CompiledDeviceInfoMask.of(deviceInfoMask));
+
+    verify(deviceTempRequiredDimensionManager, never()).getDimensions(any());
+    assertThat(labInfo.getLabDataCount()).isEqualTo(1);
+    LabData labData = labInfo.getLabData(0);
+
+    // Verify LabInfo pruned
+    assertThat(labData.getLabInfo().getLabLocator().getHostName()).isEqualTo("fake_lab_host_name");
+    assertThat(labData.getLabInfo().hasLabServerFeature()).isFalse();
+
+    // Verify DeviceInfo pruned
+    assertThat(labData.getDeviceList().getDeviceInfoCount()).isEqualTo(1);
+    DeviceInfo device = labData.getDeviceList().getDeviceInfo(0);
+    assertThat(device.getDeviceLocator().getId()).isEqualTo("fake_uuid");
+    assertThat(device.getDeviceStatus()).isEqualTo(DeviceStatus.INIT);
+    assertThat(device.hasDeviceCondition()).isFalse();
+    assertThat(device.getDeviceFeature().getTypeCount()).isEqualTo(0);
+    assertThat(device.getDeviceFeature().getDriverCount()).isEqualTo(0);
+    assertThat(device.getDeviceFeature().getCompositeDimension().getRequiredDimensionCount())
+        .isEqualTo(0);
+    assertThat(device.getDeviceFeature().getCompositeDimension().getSupportedDimensionCount())
+        .isEqualTo(1);
+    assertThat(device.getDeviceFeature().getCompositeDimension().getSupportedDimension(0).getName())
+        .isEqualTo("host_name");
   }
 
   @Test

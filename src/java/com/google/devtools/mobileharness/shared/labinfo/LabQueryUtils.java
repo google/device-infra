@@ -80,12 +80,29 @@ public class LabQueryUtils {
   static final String DEVICE_SORT_KEY_PATH = "device_locator.id";
 
   public static LabQueryResult createNewLabQueryResult(
-      LabQuery query, LabInfoProvider labInfoProvider) throws MobileHarnessException {
+      LabQuery query, LabInfoProvider labInfoProvider, boolean useProjectionPushdown)
+      throws MobileHarnessException {
     LabQueryResult.Builder result =
         LabQueryResult.newBuilder().setTimestamp(TimeUtils.toProtoTimestamp(Instant.now()));
 
-    // Gets filtered lab/device info from device manager.
-    LabView rawLabView = labInfoProvider.getLabInfos(query.getFilter());
+    if (!useProjectionPushdown) {
+      LabView rawLabView = labInfoProvider.getLabInfos(query.getFilter());
+      setViewAndSort(result, rawLabView, query);
+      groupDevice(result, query.getDeviceViewRequest());
+      applyMask(result, query.getMask());
+      return result.build();
+    }
+
+    Projection projection = Projection.of(query);
+
+    // Gets filtered lab/device info from the provider. A masked query is built under the push-down
+    // masks; a mask-less query takes the plain overload so that path is exactly what it was without
+    // masks.
+    LabView rawLabView =
+        query.hasMask()
+            ? labInfoProvider.getLabInfos(
+                query.getFilter(), projection.labInfoMask(), projection.deviceInfoMask())
+            : labInfoProvider.getLabInfos(query.getFilter());
 
     // Sets lab view / device view, sorts all LabInfo/DeviceInfo in it.
     setViewAndSort(result, rawLabView, query);
@@ -93,8 +110,8 @@ public class LabQueryUtils {
     // Groups devices if necessary, handles device limit in group and group limit.
     groupDevice(result, query.getDeviceViewRequest());
 
-    // Removes fields and dimensions from all LabInfo/DeviceInfo if necessary.
-    applyMask(result, query.getMask());
+    // Removes the fields that were kept only for ordering and grouping.
+    projection.undoWidening(result);
 
     return result.build();
   }
