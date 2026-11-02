@@ -49,7 +49,7 @@ public class NoopExternalDeviceManager implements ExternalDeviceManager {
 
   @Override
   public DeviceStatus getDeviceStatus(
-      String deviceId, String deviceClass, Set<String> deviceTypes) {
+      String deviceId, String deviceClass, Set<String> deviceTypes, boolean realtimeQuery) {
     return DeviceStatus.IDLE;
   }
 

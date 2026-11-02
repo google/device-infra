@@ -50,9 +50,13 @@ public interface ExternalDeviceManager extends DrainHandler {
    * @param deviceId the device id to get the status
    * @param deviceClass the device class name to get the status
    * @param deviceTypes the device types to get the status
+   * @param realtimeQuery whether to query the real-time status from the external device manager
+   *     instead of returning a cached status. Implementations may fall back to the cached status if
+   *     the real-time query fails.
    * @return the device status
    */
-  DeviceStatus getDeviceStatus(String deviceId, String deviceClass, Set<String> deviceTypes);
+  DeviceStatus getDeviceStatus(
+      String deviceId, String deviceClass, Set<String> deviceTypes, boolean realtimeQuery);
 
   /**
    * Gets the extra dimensions provided by external device manager.
