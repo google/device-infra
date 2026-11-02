@@ -157,7 +157,7 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
 
   @Override
   public ImmutableList<String> getJvmDefines(Path workDir) {
-    return ImmutableList.of();
+    return ImmutableList.of("-DTF_JAR_DIR=" + Flags.tradefedBinaryDir.get());
   }
 
   @Override
