@@ -1,3 +1,4 @@
+import {signal, type WritableSignal} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {
@@ -8,10 +9,14 @@ import {
 } from '@angular/router';
 import {of, Subject} from 'rxjs';
 
-import {App} from './app';
+import {
+  App,
+  EMBEDDED_HEADER_BAND_CLASS,
+  EMBEDDED_HEADER_BAND_HEIGHT_PROPERTY,
+} from './app';
 import {APP_DATA, type AppData} from './core/models/app_data';
 import {CommonParamsService} from './core/services/common_params_service';
-import {UrlService} from './core/services/url_service';
+import {type EmbeddedHeaderSlot, UrlService} from './core/services/url_service';
 
 describe('App Component', () => {
   let component: App;
@@ -26,9 +31,14 @@ describe('App Component', () => {
   };
 
   beforeEach(async () => {
-    mockUrlService = jasmine.createSpyObj('UrlService', ['isInEmbeddedMode'], {
-      navigate$: new Subject<string>(),
-    });
+    mockUrlService = jasmine.createSpyObj(
+      'UrlService',
+      ['isInEmbeddedMode', 'isInAtsEmbeddedMode', 'requestEmbeddedHeaderSlot'],
+      {
+        navigate$: new Subject<string>(),
+        embeddedHeaderSlot: signal<EmbeddedHeaderSlot | null>(null),
+      },
+    );
 
     mockActivatedRoute = {
       snapshot: {
@@ -274,6 +284,126 @@ describe('App Component', () => {
         routeSpy.and.returnValue(searchPath);
         expect(component.isShowHeaderJumpBar()).toBeFalse();
       }
+    });
+  });
+
+  describe('embedded header band', () => {
+    let routeSpy: jasmine.Spy;
+    let slot: WritableSignal<EmbeddedHeaderSlot | null>;
+
+    beforeEach(() => {
+      routeSpy = spyOn(component, 'getCurrentRoutePath');
+      slot = mockUrlService.embeddedHeaderSlot as WritableSignal<
+        EmbeddedHeaderSlot | null
+      >;
+      // Embedded in the ATS host (OSS build) unless a test says otherwise.
+      mockUrlService.isInAtsEmbeddedMode.and.returnValue(true);
+    });
+
+    it('shows the band on entity search routes in ATS embedded mode and requests the host slot once', () => {
+      component.isEmbeddedMode = true;
+      routeSpy.and.returnValue('devices');
+
+      component.updateShowContent();
+      fixture.detectChanges();
+
+      expect(component.showEmbeddedHeaderBand).toBeTrue();
+      expect(mockUrlService.requestEmbeddedHeaderSlot).toHaveBeenCalledTimes(1);
+      const band = fixture.nativeElement.querySelector(
+        '.embedded-header-band',
+      ) as HTMLElement;
+      expect(band).not.toBeNull();
+      expect(band.style.height).toBe('64px');
+
+      // Navigating to the hosts search page keeps the band without a new request.
+      routeSpy.and.returnValue('hosts');
+      component.updateShowContent();
+      expect(component.showEmbeddedHeaderBand).toBeTrue();
+      expect(mockUrlService.requestEmbeddedHeaderSlot).toHaveBeenCalledTimes(1);
+    });
+
+    it('positions the search dock from the slot geometry sent by the host', () => {
+      component.isEmbeddedMode = true;
+      routeSpy.and.returnValue('devices');
+      component.updateShowContent();
+      slot.set({left: 240, width: 800, height: 56, borderColor: 'rgb(1, 2, 3)'});
+      fixture.detectChanges();
+
+      const band = fixture.nativeElement.querySelector(
+        '.embedded-header-band',
+      ) as HTMLElement;
+      const dock = fixture.nativeElement.querySelector(
+        '.embedded-header-search-dock',
+      ) as HTMLElement;
+      expect(band.style.height).toBe('56px');
+      expect(band.style.borderBottomColor).toBe('rgb(1, 2, 3)');
+      expect(dock.style.marginLeft).toBe('240px');
+      expect(dock.style.width).toBe('800px');
+    });
+
+    it('hides the band on detail routes and in standalone mode', () => {
+      component.isEmbeddedMode = true;
+      routeSpy.and.returnValue('devices/:id');
+      component.updateShowContent();
+      expect(component.showEmbeddedHeaderBand).toBeFalse();
+
+      component.isEmbeddedMode = false;
+      mockUrlService.isInAtsEmbeddedMode.and.returnValue(false);
+      routeSpy.and.returnValue('devices');
+      component.updateShowContent();
+      expect(component.showEmbeddedHeaderBand).toBeFalse();
+      expect(mockUrlService.requestEmbeddedHeaderSlot).not.toHaveBeenCalled();
+      fixture.detectChanges();
+      expect(
+        fixture.nativeElement.querySelector('.embedded-header-band'),
+      ).toBeNull();
+    });
+
+    it('hides the band in the Google-internal embedded mode (e.g. Arsenal)', () => {
+      component.isEmbeddedMode = true;
+      mockUrlService.isInAtsEmbeddedMode.and.returnValue(false);
+      routeSpy.and.returnValue('devices');
+
+      component.updateShowContent();
+      fixture.detectChanges();
+
+      expect(component.showEmbeddedHeaderBand).toBeFalse();
+      expect(mockUrlService.requestEmbeddedHeaderSlot).not.toHaveBeenCalled();
+      expect(
+        fixture.nativeElement.querySelector('.embedded-header-band'),
+      ).toBeNull();
+    });
+
+    it('marks <body> with the band height so full-viewport layers (dialogs) stay below the band', () => {
+      const container = document.body;
+      component.isEmbeddedMode = true;
+      routeSpy.and.returnValue('devices');
+
+      // Band shown: <body> carries the band height for the offset of the
+      // full-viewport layers (see app.scss).
+      component.updateShowContent();
+      fixture.detectChanges();
+      expect(container.classList).toContain(EMBEDDED_HEADER_BAND_CLASS);
+      expect(
+        container.style.getPropertyValue(EMBEDDED_HEADER_BAND_HEIGHT_PROPERTY),
+      ).toBe('64px');
+
+      // The offset follows the geometry sent by the host.
+      slot.set({left: 240, width: 800, height: 56});
+      fixture.detectChanges();
+      expect(
+        container.style.getPropertyValue(EMBEDDED_HEADER_BAND_HEIGHT_PROPERTY),
+      ).toBe('56px');
+
+      // No band (e.g. a detail page): no offset.
+      routeSpy.and.returnValue('devices/:id');
+      component.updateShowContent();
+      expect(container.classList).not.toContain(
+        EMBEDDED_HEADER_BAND_CLASS,
+      );
+      expect(
+        container.style.getPropertyValue(EMBEDDED_HEADER_BAND_HEIGHT_PROPERTY),
+      ).toBe('');
     });
   });
 
