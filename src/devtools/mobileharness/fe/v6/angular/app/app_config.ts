@@ -6,7 +6,12 @@ import {
 } from '@angular/core';
 import {MatSnackBarModule} from '@angular/material/snack-bar';
 import {provideAnimations} from '@angular/platform-browser/animations';
-import {ActivatedRoute, provideRouter, withRouterConfig} from '@angular/router';
+import {
+  ActivatedRoute,
+  provideRouter,
+  TitleStrategy,
+  withRouterConfig,
+} from '@angular/router';
 
 import {routes} from './app_routes';
 import {authInterceptor} from './core/interceptors/auth_interceptor';
@@ -38,6 +43,7 @@ import {SESSION_SERVICE} from './core/services/session/session_service';
 import {FakeTestService} from './core/services/test/fake_test_service';
 import {HttpTestService} from './core/services/test/http_test_service';
 import {TEST_SERVICE} from './core/services/test/test_service';
+import {PageTitleStrategy} from './shared/composables/page_title';
 
 /**
  * The application configuration.
@@ -47,6 +53,7 @@ export const appConfig: ApplicationConfig = {
     provideZonelessChangeDetection(),
     importProvidersFrom(MatSnackBarModule),
     provideRouter(routes, withRouterConfig({onSameUrlNavigation: 'reload'})),
+    {provide: TitleStrategy, useClass: PageTitleStrategy},
     provideHttpClient(
       withInterceptors([
         authInterceptor,

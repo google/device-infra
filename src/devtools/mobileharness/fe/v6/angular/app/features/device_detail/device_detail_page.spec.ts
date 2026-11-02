@@ -1,9 +1,10 @@
 import {
   ComponentFixture,
-  TestBed,
   fakeAsync,
+  TestBed,
   tick,
 } from '@angular/core/testing';
+import {Title} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {
   ActivatedRoute,
@@ -159,4 +160,32 @@ describe('DeviceDetailPage Component', () => {
 
     expect(deviceServiceSpy.getDeviceOverview).toHaveBeenCalledTimes(1);
   }));
+
+  it('names the device in the browser page title', () => {
+    const title = TestBed.inject(Title);
+    title.setTitle('Previous page');
+
+    fixture.detectChanges();
+
+    expect(title.getTitle()).toBe('Device device-1 - OmniLab Console');
+  });
+
+  it('shows only the product name in the browser page title in embedded mode', () => {
+    const title = TestBed.inject(Title);
+    title.setTitle('Previous page');
+    queryParamMapSubject.next(convertToParamMap({'is_embedded_mode': 'true'}));
+
+    fixture.detectChanges();
+
+    expect(title.getTitle()).toBe('OmniLab Console');
+  });
+
+  it('restores the product name in the browser page title when it closes', () => {
+    const title = TestBed.inject(Title);
+    fixture.detectChanges();
+
+    fixture.destroy();
+
+    expect(title.getTitle()).toBe('OmniLab Console');
+  });
 });

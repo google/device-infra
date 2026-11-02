@@ -4,6 +4,7 @@ import {
   fakeAsync,
   tick,
 } from '@angular/core/testing';
+import {Title} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {
   ActivatedRoute,
@@ -110,6 +111,16 @@ describe('JobDetail Component', () => {
     expect(timelineLink).not.toBeNull();
     expect(timelineLink?.getAttribute('href')).toBe(
       `${component.legacyFeUrl}/jobdetailview/job_456?tab=2&redirect_to_v6=0`,
+    );
+  }));
+
+  it('names the job in the browser page title once it loads', fakeAsync(() => {
+    fixture.detectChanges();
+    tick();
+    fixture.detectChanges();
+
+    expect(TestBed.inject(Title).getTitle()).toBe(
+      'Job job_456... - OmniLab Console',
     );
   }));
 });

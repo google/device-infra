@@ -5,7 +5,7 @@ import {
   fakeAsync,
   tick,
 } from '@angular/core/testing';
-import {By} from '@angular/platform-browser';
+import {By, Title} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {
   ActivatedRoute,
@@ -23,15 +23,9 @@ import {
   TestResult,
   TestStatus,
 } from '../../core/models/test_overview';
-import {
-  JOB_SERVICE,
-  JobService,
-} from '../../core/services/job/job_service';
+import {JOB_SERVICE, JobService} from '../../core/services/job/job_service';
 import {MOCK_TEST_SCENARIOS} from '../../core/services/mock_data/tests';
-import {
-  TEST_SERVICE,
-  TestService,
-} from '../../core/services/test/test_service';
+import {TEST_SERVICE, TestService} from '../../core/services/test/test_service';
 import {ClipboardService} from '../../shared/services/clipboard_service';
 import {LoadingService} from '../../shared/services/loading_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
@@ -118,7 +112,9 @@ describe('TestDetail Component', () => {
       'hide',
     ]);
 
-    paramMapSubject = new BehaviorSubject(convertToParamMap({'id': 'test_123'}));
+    paramMapSubject = new BehaviorSubject(
+      convertToParamMap({'id': 'test_123'}),
+    );
     queryParamMapSubject = new BehaviorSubject(convertToParamMap({}));
     mockActivatedRoute = {
       paramMap: paramMapSubject.asObservable(),
@@ -159,6 +155,32 @@ describe('TestDetail Component', () => {
     const pageData = component.testPageData();
     expect(pageData).toBeTruthy();
     expect(pageData!.testOverviewData!.id).toBe('test_123');
+  }));
+
+  it('names the test in the browser page title once it loads', fakeAsync(() => {
+    fixture.detectChanges();
+    tick();
+    fixture.detectChanges();
+
+    expect(TestBed.inject(Title).getTitle()).toBe(
+      'Example test execution - OmniLab Console',
+    );
+  }));
+
+  it('names a test without a name by its ID in the browser page title', fakeAsync(() => {
+    fixture.destroy();
+    mockTestService.getTest.and.returnValue(
+      of({test: {...mockOverviewData, name: ''}}),
+    );
+
+    const unnamedFixture = TestBed.createComponent(TestDetail);
+    unnamedFixture.detectChanges();
+    tick();
+    unnamedFixture.detectChanges();
+
+    expect(TestBed.inject(Title).getTitle()).toBe(
+      'Test test_123... - OmniLab Console',
+    );
   }));
 
   it('should copy test id to clipboard when copy button is clicked', () => {
@@ -260,8 +282,12 @@ describe('TestDetail Component', () => {
     ) as HTMLButtonElement;
     expect(killButton).not.toBeNull();
     expect(killButton.disabled).toBeFalse();
-    expect(runningFixture.componentInstance.killActionState()?.enabled).toBeTrue();
-    expect(runningFixture.componentInstance.killActionState()?.visible).toBeTrue();
+    expect(
+      runningFixture.componentInstance.killActionState()?.enabled,
+    ).toBeTrue();
+    expect(
+      runningFixture.componentInstance.killActionState()?.visible,
+    ).toBeTrue();
     expect(compiled.querySelector('.live-badge')?.textContent).toContain(
       'LIVE',
     );
@@ -336,9 +362,9 @@ describe('TestDetail Component', () => {
     expect(partOfChips[1]?.textContent).toContain('Job');
     expect(partOfChips[1]?.textContent).toContain('job_456');
     expect(compiled.querySelector('.live-badge')).toBeNull();
-    expect(compiled.querySelector('.status-indicator')?.textContent).not.toContain(
-      'Status:',
-    );
+    expect(
+      compiled.querySelector('.status-indicator')?.textContent,
+    ).not.toContain('Status:');
     expect(compiled.querySelector('.status-indicator')?.textContent).toContain(
       'Result: Pass',
     );
@@ -359,9 +385,8 @@ describe('TestDetail Component', () => {
       await block.render(DeferBlockState.Complete);
     }
     subFixture.detectChanges();
-    const logTab = subFixture.debugElement.query(
-      By.directive(TestLogTab),
-    ).componentInstance as TestLogTab;
+    const logTab = subFixture.debugElement.query(By.directive(TestLogTab))
+      .componentInstance as TestLogTab;
     expect(logTab.testId()).toBe('root_test_12345678');
     expect(logTab.subTestId()).toBe('sub_test_abcdef1234');
 
@@ -372,9 +397,8 @@ describe('TestDetail Component', () => {
       await block.render(DeferBlockState.Complete);
     }
     subFixture.detectChanges();
-    const filesTab = subFixture.debugElement.query(
-      By.directive(TestFilesTab),
-    ).componentInstance as TestFilesTab;
+    const filesTab = subFixture.debugElement.query(By.directive(TestFilesTab))
+      .componentInstance as TestFilesTab;
     expect(filesTab.testId()).toBe('root_test_12345678');
     expect(filesTab.subTestId()).toBe('sub_test_abcdef1234');
 
@@ -448,4 +472,3 @@ describe('TestDetail Component', () => {
     expect(mockTestService.getTest).not.toHaveBeenCalled();
   });
 });
-

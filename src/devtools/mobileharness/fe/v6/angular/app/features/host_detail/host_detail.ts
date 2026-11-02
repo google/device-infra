@@ -38,6 +38,7 @@ import {HostOverviewPageData} from '../../core/models/host_overview';
 import {HOST_SERVICE} from '../../core/services/host/host_service';
 import {LegacyConsoleBanner} from '../../shared/components/legacy_console_banner/legacy_console_banner';
 import {OpenInNewTabButton} from '../../shared/components/open_in_new_tab_button/open_in_new_tab_button';
+import {formatPageTitle} from '../../shared/composables/page_title';
 import {ClipboardService} from '../../shared/services/clipboard_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
 import {getErrorMessage} from '../../shared/utils/error_utils';
@@ -207,9 +208,9 @@ export class HostDetail implements OnInit, OnDestroy {
         this.cdr.markForCheck();
         // for embedded mode, we don't need to set the title.
         if (isStandalone && hostName) {
-          this.titleService.setTitle(`OmniLab Console - Host ${hostName}`);
+          this.titleService.setTitle(formatPageTitle(`Host ${hostName}`));
         } else {
-          this.titleService.setTitle(`OmniLab Console`);
+          this.titleService.setTitle(formatPageTitle());
         }
       });
   }
@@ -221,6 +222,6 @@ export class HostDetail implements OnInit, OnDestroy {
     this.refreshSubject$.complete();
     this.destroyed.next();
     this.destroyed.complete();
-    this.titleService.setTitle(`OmniLab Console`);
+    this.titleService.setTitle(formatPageTitle());
   }
 }

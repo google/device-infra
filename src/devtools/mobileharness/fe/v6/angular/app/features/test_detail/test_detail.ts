@@ -216,10 +216,10 @@ export class TestDetail {
     const test = this.testOverview();
     const id = this.testId();
     if (test?.name) {
-      return `OmniLab Console - ${test.name}`;
+      return test.name;
     }
     if (id) {
-      return `OmniLab Console - Test ${id.substring(0, 8)}...`;
+      return `Test ${id.substring(0, 8)}...`;
     }
     return null;
   });

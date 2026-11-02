@@ -44,6 +44,7 @@ import {EnvUniverseService} from '../../core/services/env_universe_service';
 import {LegacyConsoleBanner} from '../../shared/components/legacy_console_banner/legacy_console_banner';
 import {NavLink} from '../../shared/components/nav_link/nav_link';
 import {OpenInNewTabButton} from '../../shared/components/open_in_new_tab_button/open_in_new_tab_button';
+import {formatPageTitle} from '../../shared/composables/page_title';
 import {ClipboardService} from '../../shared/services/clipboard_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
 import {getErrorMessage} from '../../shared/utils/error_utils';
@@ -156,9 +157,9 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
         this.cdr.markForCheck();
         // for embedded mode, we don't need to set the title.
         if (isStandalone && id) {
-          this.titleService.setTitle(`OmniLab Console - Device ${id}`);
+          this.titleService.setTitle(formatPageTitle(`Device ${id}`));
         } else {
-          this.titleService.setTitle(`OmniLab Console`);
+          this.titleService.setTitle(formatPageTitle());
         }
       });
   }
@@ -175,7 +176,7 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
     this.healthRefresh$.complete();
     this.destroyed.next();
     this.destroyed.complete();
-    this.titleService.setTitle(`OmniLab Console`);
+    this.titleService.setTitle(formatPageTitle());
   }
 
   readonly devicePageData$: Observable<DevicePageData> = combineLatest([

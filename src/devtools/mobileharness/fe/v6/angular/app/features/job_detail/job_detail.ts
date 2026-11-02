@@ -136,7 +136,7 @@ export class JobDetail {
 
   readonly pageTitle = computed(() => {
     const id = this.jobPageData()?.jobOverviewData?.id;
-    return id ? `OmniLab Console - Job ${id.substring(0, 8)}...` : null;
+    return id ? `Job ${id.substring(0, 8)}...` : null;
   });
 
   constructor() {

@@ -58,6 +58,10 @@ export const fallbackRedirect: RedirectFunction = (redirectData) => {
 
 /**
  * The application routes.
+ *
+ * The `title` of a route is the page-specific part of the browser page title,
+ * which `PageTitleStrategy` completes with the product name. The detail pages
+ * declare no `title` because they set a title that names the entity they show.
  */
 export const routes: Routes = [
   {
@@ -73,10 +77,12 @@ export const routes: Routes = [
   {
     path: 'dev/device-harness',
     component: DevHarnessPage,
+    title: 'Dev harness',
   },
   {
     path: 'devices',
     component: SearchPage,
+    title: 'Devices',
     providers: [
       FleetSearchStore,
       {provide: SearchPageStore, useExisting: FleetSearchStore},
@@ -85,6 +91,7 @@ export const routes: Routes = [
   {
     path: 'hosts',
     component: SearchPage,
+    title: 'Hosts',
     providers: [
       FleetSearchStore,
       {provide: SearchPageStore, useExisting: FleetSearchStore},
@@ -93,6 +100,7 @@ export const routes: Routes = [
   {
     path: 'tests',
     component: SearchPage,
+    title: 'Tests',
     providers: [
       TjsSearchStore,
       {provide: SearchPageStore, useExisting: TjsSearchStore},
@@ -101,6 +109,7 @@ export const routes: Routes = [
   {
     path: 'jobs',
     component: SearchPage,
+    title: 'Jobs',
     providers: [
       TjsSearchStore,
       {provide: SearchPageStore, useExisting: TjsSearchStore},
@@ -109,6 +118,7 @@ export const routes: Routes = [
   {
     path: 'sessions',
     component: SearchPage,
+    title: 'Sessions',
     providers: [
       TjsSearchStore,
       {provide: SearchPageStore, useExisting: TjsSearchStore},

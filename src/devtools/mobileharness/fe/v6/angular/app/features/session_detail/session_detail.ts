@@ -113,7 +113,7 @@ export class SessionDetailPage {
 
   readonly pageTitle = computed(() => {
     const id = this.session()?.id;
-    return id ? `OmniLab Console - Session ${id.substring(0, 8)}...` : null;
+    return id ? `Session ${id.substring(0, 8)}...` : null;
   });
 
   constructor() {

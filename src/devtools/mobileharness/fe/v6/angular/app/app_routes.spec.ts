@@ -1,9 +1,11 @@
 import {provideLocationMocks} from '@angular/common/testing';
 import {Component} from '@angular/core';
 import {TestBed} from '@angular/core/testing';
-import {provideRouter, Router, Routes} from '@angular/router';
+import {Title} from '@angular/platform-browser';
+import {provideRouter, Router, Routes, TitleStrategy} from '@angular/router';
 
 import {fallbackRedirect, routes} from './app_routes';
+import {PageTitleStrategy} from './shared/composables/page_title';
 
 /** A lightweight stand-in for the real feature pages. */
 @Component({
@@ -24,6 +26,19 @@ function stubRoutes(input: Routes): Routes {
     }
     delete stubbed.providers;
     return stubbed;
+  });
+}
+
+/**
+ * Returns the full paths of the routes, nested ones included, that render a
+ * page, eagerly or lazily, without declaring a title.
+ */
+function findUntitledPagePaths(input: Routes, parentPath = ''): string[] {
+  return input.flatMap((route) => {
+    const path = [parentPath, route.path ?? ''].filter(Boolean).join('/');
+    const rendersPage = Boolean(route.component || route.loadComponent);
+    const untitled = rendersPage && route.title === undefined ? [path] : [];
+    return [...untitled, ...findUntitledPagePaths(route.children ?? [], path)];
   });
 }
 
@@ -131,5 +146,76 @@ describe('App routes', () => {
 
     await router.navigateByUrl('/search?q=existing');
     expect(router.url).toBe('/search?q=existing');
+  });
+});
+
+describe('App route titles', () => {
+  let router: Router;
+  let title: Title;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter(stubRoutes(routes)),
+        provideLocationMocks(),
+        {provide: TitleStrategy, useClass: PageTitleStrategy},
+      ],
+    });
+    router = TestBed.inject(Router);
+    title = TestBed.inject(Title);
+  });
+
+  const expectedTitles: ReadonlyArray<[string, string]> = [
+    ['/home', 'Home - OmniLab Console'],
+    ['/search', 'Search - OmniLab Console'],
+    ['/devices', 'Devices - OmniLab Console'],
+    ['/hosts', 'Hosts - OmniLab Console'],
+    ['/tests', 'Tests - OmniLab Console'],
+    ['/jobs', 'Jobs - OmniLab Console'],
+    ['/sessions', 'Sessions - OmniLab Console'],
+    ['/dev/device-harness', 'Dev harness - OmniLab Console'],
+  ];
+
+  for (const [url, expectedTitle] of expectedTitles) {
+    it(`should set the browser page title of ${url}`, async () => {
+      await router.navigateByUrl(url);
+      expect(title.getTitle()).toBe(expectedTitle);
+    });
+  }
+
+  it('should replace the home page title when opening a search page', async () => {
+    await router.navigateByUrl('/home');
+    await router.navigateByUrl('/devices');
+    expect(title.getTitle()).toBe('Devices - OmniLab Console');
+  });
+
+  it('should declare a title on every page route except the detail pages', () => {
+    // Detail pages set a title that names the entity they show.
+    const detailPagePaths = new Set([
+      'devices/:id',
+      'hosts/:hostName',
+      'jobs/:jobId/tests/:id',
+      'jobs/:id',
+      'sessions/:id',
+    ]);
+    const untitledPagePaths = findUntitledPagePaths(routes).filter(
+      (path) => !detailPagePaths.has(path),
+    );
+    expect(untitledPagePaths).toEqual([]);
+  });
+
+  it('should find untitled pages among nested and lazily loaded routes', () => {
+    const untitledPagePaths = findUntitledPagePaths([
+      {path: 'titled', component: StubPage, title: 'Titled'},
+      {
+        path: 'parent',
+        children: [
+          {path: 'eager', component: StubPage},
+          {path: 'lazy', loadComponent: () => StubPage},
+          {path: 'lazy-titled', loadComponent: () => StubPage, title: 'Lazy'},
+        ],
+      },
+    ]);
+    expect(untitledPagePaths).toEqual(['parent/eager', 'parent/lazy']);
   });
 });

@@ -1,11 +1,13 @@
 import {ComponentFixture, TestBed} from '@angular/core/testing';
+import {Title} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {
   ActivatedRoute,
   convertToParamMap,
+  ParamMap,
   provideRouter,
 } from '@angular/router';
-import {of} from 'rxjs';
+import {BehaviorSubject, of} from 'rxjs';
 import {APP_DATA} from '../../core/models/app_data';
 import {HostOverviewPageData} from '../../core/models/host_overview';
 import {FakeHostService} from '../../core/services/host/fake_host_service';
@@ -69,8 +71,10 @@ describe('HostDetail Component', () => {
   let mockSnackBarService: jasmine.SpyObj<SnackBarService>;
   let mockClipboardService: jasmine.SpyObj<ClipboardService>;
   let hostService: FakeHostService;
+  let queryParamMapSubject: BehaviorSubject<ParamMap>;
 
   beforeEach(async () => {
+    queryParamMapSubject = new BehaviorSubject<ParamMap>(convertToParamMap({}));
     mockSnackBarService = jasmine.createSpyObj('SnackBarService', [
       'showSuccess',
       'showError',
@@ -92,7 +96,7 @@ describe('HostDetail Component', () => {
             paramMap: of(
               convertToParamMap({'hostName': 'host-a-1.example.com'}),
             ),
-            queryParamMap: of(convertToParamMap({})),
+            queryParamMap: queryParamMapSubject.asObservable(),
             queryParams: of({}),
           },
         },
@@ -132,5 +136,26 @@ describe('HostDetail Component', () => {
     expect(
       compiled.querySelector('.host-title-group')?.textContent,
     ).not.toContain('ATE');
+  });
+
+  it('names the host in the browser page title', () => {
+    const title = TestBed.inject(Title);
+    title.setTitle('Previous page');
+
+    fixture.detectChanges();
+
+    expect(title.getTitle()).toBe(
+      'Host host-a-1.example.com - OmniLab Console',
+    );
+  });
+
+  it('shows only the product name in the browser page title in embedded mode', () => {
+    const title = TestBed.inject(Title);
+    title.setTitle('Previous page');
+    queryParamMapSubject.next(convertToParamMap({'is_embedded_mode': 'true'}));
+
+    fixture.detectChanges();
+
+    expect(title.getTitle()).toBe('OmniLab Console');
   });
 });
