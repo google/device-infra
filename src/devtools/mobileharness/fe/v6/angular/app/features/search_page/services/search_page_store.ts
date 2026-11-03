@@ -527,6 +527,9 @@ export abstract class SearchPageStore {
   /** Flag to prevent internal URL synchronizations from re-triggering navigation reset handlers. */
   private isInternalUrlSync = false;
 
+  /** Whether a backend chip resolution request from URL query parameters is currently in flight. */
+  readonly isResolvingChips = signal<boolean>(false);
+
   /** Subject driving asynchronous filter chip resolution with race condition protection via switchMap. */
   private readonly resolveFiltersSubject = new Subject<{
     parsedFilters: FilterChip[];
@@ -535,6 +538,7 @@ export abstract class SearchPageStore {
 
   /** Cancels any in-flight backend chip resolution request. */
   protected cancelPendingChipResolution() {
+    this.isResolvingChips.set(false);
     this.resolveFiltersSubject.next(null);
   }
 
@@ -574,6 +578,7 @@ export abstract class SearchPageStore {
         next: (updatedChips) => {
           // Scenario 1 & 5: Clear or update activeChips directly with backend resolved result
           this.activeChips.set(updatedChips || []);
+          this.isResolvingChips.set(false);
         },
       });
 
@@ -687,6 +692,7 @@ export abstract class SearchPageStore {
     }
 
     // Asynchronously enhance chips with rich backend metadata
+    this.isResolvingChips.set(true);
     this.resolveFiltersSubject.next({parsedFilters, gbKeys});
   }
 
@@ -1028,6 +1034,7 @@ export abstract class SearchPageStore {
 
   /** Resets UI overlays and applies the specified active chips and URL synchronization. */
   protected applySearchState(chips: FilterChip[], updateUrl: boolean) {
+    this.cancelPendingChipResolution();
     this.resetTransientUiState();
     this.activeChips.set(chips);
     if (updateUrl) {

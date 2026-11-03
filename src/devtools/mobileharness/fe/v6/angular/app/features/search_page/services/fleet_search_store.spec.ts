@@ -1380,4 +1380,198 @@ describe('FleetSearchStore', () => {
       expect(groupState?.error).toBeUndefined();
     });
   });
+
+  describe('initial load and URL refresh loading states', () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    afterEach(() => {
+      localStorage.clear();
+    });
+
+    it('fires grouped search in parallel with getFleetSearchConfig without flashing empty state', async () => {
+      const configSubject = new Subject<FleetSearchConfig>();
+      const searchSubject = new Subject<FleetSearchResults>();
+      const resolveSubject = new Subject<FleetChipResolverResponse>();
+      mockSearchService.getFleetSearchConfig.and.returnValue(configSubject);
+      mockSearchService.searchFleet.and.returnValue(searchSubject);
+      mockSearchService.resolveFleetChips.and.returnValue(resolveSubject);
+
+      const store = await createStoreAt({
+        'f': 'device_field::status~IDLE',
+        'gb': 'dimension::model',
+      });
+
+      // Even before getFleetSearchConfig resolves, grouped search is already in flight and isLoading is true.
+      expect(store.isConfigLoading()).toBeTrue();
+      expect(mockSearchService.searchFleet).toHaveBeenCalledOnceWith(
+        jasmine.objectContaining({
+          groupHeader: jasmine.objectContaining({
+            groupBy: ['dimension::model'],
+          }),
+        }),
+      );
+      expect(store.isLoading()).toBeTrue();
+      expect(store.groups()).toEqual([]);
+
+      searchSubject.next({
+        grouped: {
+          groups: [
+            {
+              groupId: 'Pixel 9',
+              values: ['Pixel 9'],
+              itemCount: 3,
+            },
+          ],
+          totalGroups: 1,
+        },
+      });
+      await flushAsync();
+
+      expect(store.groups().length).toBe(1);
+      expect(store.isLoading()).toBeFalse();
+
+      resolveSubject.next({
+        filterChips: [{valid: {pillKey: 'Status', pillCondition: 'IDLE'}}],
+        groupByChips: [{valid: {pillKey: 'Model', displayName: 'Model'}}],
+      });
+      configSubject.next({
+        columns: {
+          defaults: [
+            {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+          ],
+        },
+      });
+      await flushAsync();
+
+      expect(store.isLoading()).toBeFalse();
+      expect(mockSearchService.searchFleet).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps isLoading true while flat search waits for initial default columns from searchConfig', async () => {
+      const configSubject = new Subject<FleetSearchConfig>();
+      mockSearchService.getFleetSearchConfig.and.returnValue(configSubject);
+      mockSearchService.resolveFleetChips.and.returnValue(
+        of({
+          filterChips: [{valid: {pillKey: 'Status', pillCondition: 'IDLE'}}],
+        }),
+      );
+      mockSearchService.searchFleet.and.returnValue(
+        of({
+          flat: {
+            rows: [{id: 'dev-1'}],
+            rangeStart: 1,
+            rangeEnd: 1,
+            totalItems: 1,
+          },
+        }),
+      );
+
+      const store = await createStoreAt({
+        'f': 'device_field::status~IDLE',
+      });
+
+      // Flat search has not fired yet because default columns have not loaded,
+      // but store.isLoading() must be true so the UI does not flash "No devices match your filters".
+      expect(store.isConfigLoading()).toBeTrue();
+      expect(store.visibleColumns().size).toBe(0);
+      expect(mockSearchService.searchFleet).not.toHaveBeenCalled();
+      expect(store.isLoading()).toBeTrue();
+
+      configSubject.next({
+        columns: {
+          defaults: [
+            {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+          ],
+        },
+      });
+      await flushAsync();
+
+      expect(mockSearchService.searchFleet).toHaveBeenCalledTimes(1);
+      expect(store.rows().length).toBe(1);
+      expect(store.isLoading()).toBeFalse();
+    });
+
+    it('keeps isLoading true when initial search with an unvalidated URL chip returns empty while resolveFleetChips is still pending', async () => {
+      const resolveSubject = new Subject<FleetChipResolverResponse>();
+      mockSearchService.resolveFleetChips.and.returnValue(resolveSubject);
+
+      let searchCallCount = 0;
+      mockSearchService.searchFleet.and.callFake(() => {
+        searchCallCount++;
+        if (searchCallCount === 1) {
+          // Search #1 with raw invalid chip returns 0 groups
+          return of({grouped: {groups: [], totalGroups: 0}});
+        }
+        // Search #2 after invalid filter chip is dropped returns matching groups
+        return of({
+          grouped: {
+            groups: [
+              {
+                groupId: 'IDLE',
+                values: ['IDLE'],
+                itemCount: 5,
+              },
+            ],
+            totalGroups: 1,
+          },
+        });
+      });
+
+      const store = await createStoreAt({
+        'f': 'device_field::invalid_key~foo',
+        'gb': 'device_field::status',
+      });
+
+      // Search #1 completed with 0 groups, but resolveFleetChips is still in flight,
+      // so store.isLoading() remains true instead of flashing empty state.
+      expect(mockSearchService.searchFleet).toHaveBeenCalledTimes(1);
+      expect(store.groups()).toEqual([]);
+      expect(store.isResolvingChips()).toBeTrue();
+      expect(store.isLoading()).toBeTrue();
+
+      // resolveFleetChips drops the invalid filter chip and keeps the valid group-by chip
+      resolveSubject.next({
+        filterChips: [{invalid: {reason: 'Unknown filter key'}}],
+        groupByChips: [{valid: {pillKey: 'Status', displayName: 'Status'}}],
+      });
+      await flushAsync();
+
+      expect(store.isResolvingChips()).toBeFalse();
+      expect(mockSearchService.searchFleet).toHaveBeenCalledTimes(2);
+      expect(store.groups().length).toBe(1);
+      expect(store.isLoading()).toBeFalse();
+    });
+
+    it('initializes isResolvingChips as false and resets it to false when pending chip resolution is cancelled', async () => {
+      const resolveSubject = new Subject<FleetChipResolverResponse>();
+      mockSearchService.resolveFleetChips.and.returnValue(resolveSubject);
+      mockSearchService.searchFleet.and.returnValue(
+        of({grouped: {groups: [], totalGroups: 0}}),
+      );
+
+      activatedRouteStub.snapshot.queryParams = {};
+      await router.navigateByUrl('/devices');
+      const store = TestBed.inject(FleetSearchStore);
+      // Before queryParams$ emits, isResolvingChips is initialized to false.
+      expect(store.isResolvingChips()).toBeFalse();
+
+      queryParams$.next({
+        'f': 'device_field::invalid_key~foo',
+        'gb': 'device_field::status',
+      });
+      await flushAsync();
+
+      expect(store.isResolvingChips()).toBeTrue();
+      expect(store.isLoading()).toBeTrue();
+
+      // Cancelling pending chip resolution (e.g. via restoreDefaultState(false)) immediately clears isResolvingChips.
+      store.restoreDefaultState(false);
+      await flushAsync();
+
+      expect(store.isResolvingChips()).toBeFalse();
+      expect(store.isLoading()).toBeFalse();
+    });
+  });
 });

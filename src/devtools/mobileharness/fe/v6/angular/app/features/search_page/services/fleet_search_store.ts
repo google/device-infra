@@ -847,15 +847,6 @@ export class FleetSearchStore extends SearchPageStore {
     params: () => {
       if (!this.isCurrentRouteActive()) return undefined;
       if (this.isLandingState()) return undefined;
-      // Wait for searchConfig on clean flat-search entry so neither empty columns nor an empty
-      // default sort key fires a throwaway SearchFleet before defaults/lockedColumns resolve.
-      if (
-        this.isConfigLoading() &&
-        (this.visibleColumns().size === 0 ||
-          (this.groupByKeys().length === 0 && !this.sortColumn()))
-      ) {
-        return undefined;
-      }
 
       const fleet = this.fleet();
       const pageSize = this.pageSize();
@@ -881,6 +872,14 @@ export class FleetSearchStore extends SearchPageStore {
           },
         };
       } else {
+        // Wait for searchConfig on clean flat-search entry so neither empty columns nor an empty
+        // default sort key fires a throwaway SearchFleet before defaults/lockedColumns resolve.
+        if (
+          this.isConfigLoading() &&
+          (this.visibleColumns().size === 0 || !this.sortColumn())
+        ) {
+          return undefined;
+        }
         const visibleColumns = Array.from(this.visibleColumns());
         const sortColumn = this.sortColumn();
         const sortAsc = this.sortAsc();
@@ -905,8 +904,24 @@ export class FleetSearchStore extends SearchPageStore {
     },
   });
 
-  /** Exposes loading status of primary search resource. */
-  override readonly isLoading = computed(() => this.searchResource.isLoading());
+  /** Whether a flat search is waiting for initial default columns or sort key from searchConfig before firing. */
+  private readonly isWaitingForInitialColumns = computed<boolean>(
+    () =>
+      !this.isLandingState() &&
+      this.groupByKeys().length === 0 &&
+      this.isConfigLoading() &&
+      (this.visibleColumns().size === 0 || !this.sortColumn()),
+  );
+
+  /** Exposes loading status of primary search resource, initial column hydration, or URL chip resolution. */
+  override readonly isLoading = computed<boolean>(
+    () =>
+      this.searchResource.isLoading() ||
+      this.isWaitingForInitialColumns() ||
+      (this.isResolvingChips() &&
+        this.groups().length === 0 &&
+        this.rows().length === 0),
+  );
 
   /** Rows array to render in search results table. */
   override readonly rows = computed<Row[]>(() => {
