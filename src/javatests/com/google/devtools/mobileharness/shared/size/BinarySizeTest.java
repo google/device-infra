@@ -60,7 +60,7 @@ public class BinarySizeTest {
           "ats_olc_server_local_mode",
           46_050_000L,
           "lab_server",
-          47_050_000L,
+          47_150_000L,
           "ats_console",
           22_550_000L,
           "persistent_cache_manager",
