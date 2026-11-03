@@ -32,7 +32,7 @@ export class HostProperties {
   readonly columns: MetadataColumn[] = [
     {
       columnDef: 'key',
-      header: 'NAME',
+      header: 'Name',
       cell: 'key',
       type: 'input',
       inputType: 'text',
@@ -40,7 +40,7 @@ export class HostProperties {
     },
     {
       columnDef: 'value',
-      header: 'VALUE',
+      header: 'Value',
       cell: 'value',
       type: 'input',
       inputType: 'text',

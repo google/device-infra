@@ -228,6 +228,9 @@ describe('FleetGroupCardComponent', () => {
 
     const headers = fixture.debugElement.queryAll(By.css('thead th'));
     // The first header is the select-all checkbox column.
+    expect(getComputedStyle(headers[1].nativeElement).textTransform).toBe(
+      'none',
+    );
     expect(
       headers[1].query(By.css('.rt-header-name')).nativeElement.textContent,
     ).toBe('UUID');

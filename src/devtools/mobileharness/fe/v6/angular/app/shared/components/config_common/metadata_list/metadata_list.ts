@@ -105,14 +105,14 @@ export class MetadataList<T extends Record<keyof T, string>>
   columns: MetadataColumn[] = [
     {
       columnDef: 'name',
-      header: 'NAME',
+      header: 'Name',
       cell: 'name',
       type: 'input',
       inputType: 'text',
     },
     {
       columnDef: 'value',
-      header: 'VALUE',
+      header: 'Value',
       cell: 'value',
       type: 'input',
       inputType: 'text',

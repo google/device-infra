@@ -42,4 +42,30 @@ describe('StatisticBreakdown Component', () => {
   it('should be created', () => {
     expect(component).toBeTruthy();
   });
+
+  it('renders Result, Count, and Percentage headers in Title Case', () => {
+    fixture.componentRef.setInput('tableColumns', [
+      'label',
+      'count',
+      'percentage',
+    ]);
+    fixture.componentRef.setInput('tableData', [
+      {label: 'Pass', count: 10, percent: 100, type: 'summary'},
+    ]);
+    fixture.detectChanges();
+
+    const headerCells = Array.from<HTMLElement>(
+      fixture.nativeElement.querySelectorAll(
+        '.breakdown-table th[mat-header-cell]',
+      ),
+    );
+    expect(headerCells.map((el) => el.textContent?.trim())).toEqual([
+      'Result',
+      'Count',
+      'Percentage',
+    ]);
+    for (const cell of headerCells) {
+      expect(getComputedStyle(cell).textTransform).toBe('none');
+    }
+  });
 });

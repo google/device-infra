@@ -63,7 +63,7 @@ export class Dimensions {
   readonly dimensionColumns: MetadataColumn[] = [
     {
       columnDef: 'name',
-      header: 'NAME',
+      header: 'Name',
       cell: 'name',
       type: 'input',
       inputType: 'text',
@@ -71,7 +71,7 @@ export class Dimensions {
     },
     {
       columnDef: 'value',
-      header: 'VALUE',
+      header: 'Value',
       cell: 'value',
       type: 'input',
       inputType: 'text',

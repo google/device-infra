@@ -22,7 +22,7 @@
           <ng-container matColumnDef="label">
             <th mat-header-cell *matHeaderCellDef class="label-cell">
               @if (tableColumns.includes('count')) {
-                RESULT
+                Result
               }
             </th>
             <td mat-cell *matCellDef="let row" [class.pl-6]="row.type === 'detail' && !tableColumns.includes('count')" [class.pl-10]="row.type === 'detail' && tableColumns.includes('count')" [class.pl-4]="row.type === 'summary' && tableColumns.includes('count')" class="label-cell">
@@ -47,15 +47,15 @@
 
           <!-- Count Column (For Test/Recovery) -->
           <ng-container matColumnDef="count">
-            <th mat-header-cell *matHeaderCellDef class="value-cell">COUNT</th>
-            <td mat-cell *matCellDef="let row" class="value-cell" [style.color]="row.type === 'summary' ? '#000' : 'inherit'" [class.summary-value]="row.type === 'summary'" [style.font-weight]="row.type === 'summary' || row.type === 'total' ? 700 : 'normal'">
+            <th mat-header-cell *matHeaderCellDef class="value-cell">Count</th>
+            <td mat-cell *matCellDef="let row" [class.summary-value]="row.type === 'summary'" [style.color]="row.type === 'summary' ? '#000' : 'inherit'" [style.font-weight]="row.type === 'summary' || row.type === 'total' ? 700 : 'normal'" class="value-cell">
               {{ row.count }}
             </td>
           </ng-container>
 
           <!-- Percentage Column (For Test/Recovery) -->
           <ng-container matColumnDef="percentage">
-            <th mat-header-cell *matHeaderCellDef class="value-cell">PERCENTAGE</th>
+            <th mat-header-cell *matHeaderCellDef class="value-cell">Percentage</th>
             <td mat-cell *matCellDef="let row" class="value-cell" [style.color]="row.type === 'summary' ? '#000' : 'inherit'" [class.summary-value]="row.type === 'summary'" [style.font-weight]="row.type === 'summary' || row.type === 'total' ? 700 : 'normal'">
               {{ row.percent | number:'1.2-2' }}%
             </td>

@@ -76,7 +76,7 @@ describe('MetadataList Component', () => {
     component.columns = [
       {
         columnDef: 'name',
-        header: 'NAME',
+        header: 'Name',
         cell: 'name',
         type: 'input',
         pattern: '^[a-z]+$',
@@ -94,11 +94,27 @@ describe('MetadataList Component', () => {
     );
   });
 
+  it('renders default Name, Value, and Action headers in Title Case', () => {
+    const headerCells = Array.from<HTMLElement>(
+      fixture.nativeElement.querySelectorAll(
+        '.metadata-list-table th[mat-header-cell]',
+      ),
+    );
+    expect(headerCells.map((el) => el.textContent?.trim())).toEqual([
+      'Name',
+      'Value',
+      'Action',
+    ]);
+    for (const cell of headerCells) {
+      expect(getComputedStyle(cell).textTransform).toBe('none');
+    }
+  });
+
   it('should handle select options correctly', async () => {
     component.columns = [
       {
         columnDef: 'type',
-        header: 'TYPE',
+        header: 'Type',
         cell: 'type',
         type: 'select',
         options: [

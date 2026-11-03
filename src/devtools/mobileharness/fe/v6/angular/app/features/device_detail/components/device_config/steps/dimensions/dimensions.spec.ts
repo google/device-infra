@@ -31,6 +31,26 @@ describe('Dimensions Component', () => {
     expect(component).toBeTruthy();
   });
 
+  it('renders Name, Value, and Action headers in Title Case for both dimension tables', () => {
+    const tables = Array.from<HTMLElement>(
+      fixture.nativeElement.querySelectorAll('.metadata-list-table'),
+    );
+    expect(tables.length).toBe(2);
+    for (const table of tables) {
+      const headerCells = Array.from<HTMLElement>(
+        table.querySelectorAll('th[mat-header-cell]'),
+      );
+      expect(headerCells.map((el) => el.textContent?.trim())).toEqual([
+        'Name',
+        'Value',
+        'Action',
+      ]);
+      for (const cell of headerCells) {
+        expect(getComputedStyle(cell).textTransform).toBe('none');
+      }
+    }
+  });
+
   it('should compute dimensions correctly, defaulting to empty arrays', () => {
     fixture.componentRef.setInput('dimensions', {});
     fixture.detectChanges();

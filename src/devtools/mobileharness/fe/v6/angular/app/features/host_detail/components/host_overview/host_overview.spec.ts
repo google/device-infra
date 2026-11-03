@@ -721,7 +721,7 @@ describe('HostOverview Component', () => {
     expect(component.expandedElement()).toBeNull();
   });
 
-  it('renders version-info icons with DEVICE_VERSION_DESCRIPTION in device and sub-device VERSION headers', () => {
+  it('renders Title Case headers and version-info icons with DEVICE_VERSION_DESCRIPTION in device and sub-device tables', () => {
     const testbedDevice = {
       id: 'testbed-1',
       healthState: {
@@ -752,6 +752,45 @@ describe('HostOverview Component', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
+    const mainHeaderCells = Array.from<HTMLElement>(
+      compiled.querySelectorAll(
+        '.device-table-container > table > thead th.mat-mdc-header-cell',
+      ),
+    );
+    const mainHeaders = mainHeaderCells.map(
+      (el) => el.textContent?.trim() ?? '',
+    );
+    expect(mainHeaders).toContain('ID');
+    expect(mainHeaders).toContain('Health');
+    expect(mainHeaders).toContain('Type');
+    expect(mainHeaders).toContain('Status');
+    expect(mainHeaders).toContain('Label');
+    expect(mainHeaders).toContain('Required Dims');
+    expect(mainHeaders).toContain('Model');
+    for (const cell of mainHeaderCells) {
+      expect(getComputedStyle(cell).textTransform).toBe('none');
+    }
+
+    const subHeaderCells = Array.from<HTMLElement>(
+      compiled.querySelectorAll('.sub-device-table thead th'),
+    );
+    const subHeaders = subHeaderCells.map((el) => el.textContent?.trim() ?? '');
+    expect(subHeaders).toContain('Sub-Device ID');
+    expect(subHeaders).toContain('Model');
+    expect(subHeaders).toContain('Type');
+    expect(subHeaders).toContain('Battery');
+    expect(subHeaders).toContain('Wi-Fi');
+    expect(subHeaders).toContain('Action');
+    for (const cell of subHeaderCells) {
+      expect(getComputedStyle(cell).textTransform).toBe('none');
+    }
+
+    const versionHeaders = Array.from(
+      compiled.querySelectorAll('.device-table-container th .header-with-info'),
+      (el) => el.childNodes[0]?.textContent?.trim() ?? '',
+    );
+    expect(versionHeaders).toEqual(['Version', 'Version']);
+
     const versionIcons = compiled.querySelectorAll(
       '.device-table-container th .version-info',
     );

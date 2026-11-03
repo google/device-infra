@@ -136,6 +136,20 @@ describe('FleetSearchResultsComponent', () => {
       ]);
       fixture.detectChanges();
 
+      const headers = fixture.debugElement.queryAll(
+        By.css('th.sortable-header'),
+      );
+      expect(headers.length).toBe(2);
+      for (const header of headers) {
+        expect(getComputedStyle(header.nativeElement).textTransform).toBe(
+          'none',
+        );
+      }
+      const headerNames = fixture.debugElement
+        .queryAll(By.css('th .header-name'))
+        .map((el) => el.nativeElement.textContent.trim());
+      expect(headerNames).toEqual(['Device ID', 'Version']);
+
       const infoIcons = fixture.debugElement.queryAll(
         By.css('th .header-info'),
       );
