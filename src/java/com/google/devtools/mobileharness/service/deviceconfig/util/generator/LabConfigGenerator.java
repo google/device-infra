@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.service.deviceconfig.util.generator;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
@@ -29,7 +31,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.Config.DeviceConfig;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /** The utility class to help generating {@link LabConfig} instances. */
 public final class LabConfigGenerator {
@@ -51,7 +52,7 @@ public final class LabConfigGenerator {
         deviceConfigs.stream()
             .filter(DeviceConfig::getOverTcp)
             .map(DeviceConfig::getId)
-            .collect(Collectors.toList()));
+            .collect(toImmutableList()));
 
     // Merges the monitored control IDs set in api config and all device configs.
     Set<String> monitoredControlIds = new HashSet<>(apiConfig.getMonitoredDeviceIdList());
@@ -59,7 +60,7 @@ public final class LabConfigGenerator {
         deviceConfigs.stream()
             .filter(DeviceConfig::getMonitor)
             .map(DeviceConfig::getId)
-            .collect(Collectors.toList()));
+            .collect(toImmutableList()));
     labConfig.addAllMonitoredDeviceUuid(monitoredControlIds);
 
     // Generates a basic device config from the api config.

@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.service.deviceconfig.util.generator;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.auto.value.AutoValue;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
@@ -26,7 +28,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.Config.ApiConfig;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * The utility class to help generating {@link ApiConfig} and {@link Config.DeviceConfig} instances.
@@ -73,7 +74,7 @@ public final class ApiConfigGenerator {
                         deviceConfig.deviceControlId(),
                         deviceConfig.deviceConfig(),
                         overTcpIds.contains(deviceConfig.deviceControlId())))
-            .collect(Collectors.toList()));
+            .collect(toImmutableList()));
     if (defaultDeviceConfig.hasDefaultWifi()) {
       Config.WifiConfig.Builder wifiConfig = Config.WifiConfig.newBuilder();
       ProtoUtil.convert(defaultDeviceConfig.getDefaultWifi(), wifiConfig);

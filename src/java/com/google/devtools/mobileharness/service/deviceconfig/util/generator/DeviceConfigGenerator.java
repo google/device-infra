@@ -26,7 +26,6 @@ import com.google.devtools.mobileharness.shared.util.message.ProtoUtil;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.protobuf.Int32Value;
 import com.google.wireless.qa.mobileharness.shared.proto.Config;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
@@ -109,7 +108,7 @@ public final class DeviceConfigGenerator {
                     firstDeviceConfig.getExecutorList().stream(),
                     secondDeviceConfig.getExecutorList().stream())
                 .distinct()
-                .collect(Collectors.toList()));
+                .collect(toImmutableList()));
     if (firstDeviceConfig.hasCompositeDimension() || secondDeviceConfig.hasCompositeDimension()) {
       firstDeviceConfigBuilder
           .getCompositeDimensionBuilder()
@@ -122,7 +121,7 @@ public final class DeviceConfigGenerator {
                           .getRequiredDimensionList()
                           .stream())
                   .distinct()
-                  .collect(Collectors.toList()))
+                  .collect(toImmutableList()))
           .clearSupportedDimension()
           .addAllSupportedDimension(
               Stream.concat(
@@ -135,7 +134,7 @@ public final class DeviceConfigGenerator {
                           .getSupportedDimensionList()
                           .stream())
                   .distinct()
-                  .collect(Collectors.toList()));
+                  .collect(toImmutableList()));
     }
     if (firstDeviceConfig.getDefaultWifi().getSsid().isEmpty()
         && !secondDeviceConfig.getDefaultWifi().getSsid().isEmpty()) {
