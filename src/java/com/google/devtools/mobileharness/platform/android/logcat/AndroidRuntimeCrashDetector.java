@@ -21,15 +21,18 @@ import static com.google.devtools.mobileharness.platform.android.logcat.LogcatEv
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.LinkedListMultimap;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashedProcess;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.ProcessCategory;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatParser.LogcatLine;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.OptionalInt;
 import java.util.concurrent.ExecutorService;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -47,11 +50,8 @@ public class AndroidRuntimeCrashDetector implements LineProcessor {
   private static final Pattern CRASHED_PROCESS_PATTERN =
       Pattern.compile("Process: (.+), PID: (\\d+)");
 
-  private final LinkedListMultimap<Integer, String> androidRuntimeLinesToPid =
-      LinkedListMultimap.create();
-
-  private final ConcurrentHashMap<Integer, CrashedProcess> detectedCrashEvents =
-      new ConcurrentHashMap<>();
+  private final List<PidCrashBuffer> crashBuffers = new ArrayList<>();
+  private final Map<Integer, PidCrashBuffer> activeBuffersByPid = new HashMap<>();
 
   private final TestInfo testInfo;
   private final Device device;
@@ -77,47 +77,77 @@ public class AndroidRuntimeCrashDetector implements LineProcessor {
     if (!line.tag().equals(ANDROID_RUNTIME_TAG)) {
       return;
     }
-    androidRuntimeLinesToPid.put(line.pid(), line.message());
-    var crashedProcess = processArtLines(androidRuntimeLinesToPid.get(line.pid()));
-
-    if (crashedProcess.isEmpty()) {
-      return;
+    String message = line.message();
+    PidCrashBuffer buffer = activeBuffersByPid.get(line.pid());
+    if (buffer == null
+        || (buffer.hasStartedException() && FATAL_EXCEPTION_PATTERN.matcher(message).matches())) {
+      buffer = new PidCrashBuffer();
+      crashBuffers.add(buffer);
+      activeBuffersByPid.put(line.pid(), buffer);
     }
-    detectedCrashEvents.put(line.pid(), crashedProcess.get());
-    executorService.execute(
-        () ->
-            crashDialogDetector.scan(testInfo, device, monitoringConfig.reportAsFailurePackages()));
-  }
-
-  private Optional<CrashedProcess> processArtLines(List<String> lines) {
-    if (lines.stream().noneMatch(FATAL_EXCEPTION_PATTERN.asMatchPredicate())) {
-      return Optional.empty();
+    if (buffer.append(message, monitoringConfig)) {
+      executorService.execute(
+          () ->
+              crashDialogDetector.scan(
+                  testInfo, device, monitoringConfig.dialogPackagesToIgnore()));
     }
-    Optional<String> matched =
-        lines.stream().filter(CRASHED_PROCESS_PATTERN.asMatchPredicate()).findFirst();
-    if (matched.isEmpty()) {
-      return Optional.empty();
-    }
-    Matcher matcher = CRASHED_PROCESS_PATTERN.matcher(matched.get());
-    if (!matcher.matches()) {
-      return Optional.empty();
-    }
-    var processName = matcher.group(1);
-    var pid = matcher.group(2);
-    var category = monitoringConfig.categorizeProcess(processName);
-    return Optional.of(
-        new CrashedProcess(processName, Integer.parseInt(pid), category, ANDROID_RUNTIME));
   }
 
   @Override
   public ImmutableList<LogcatEvent> getEvents() {
-    return detectedCrashEvents.values().stream()
-        .map(
-            process ->
-                new CrashEvent(
-                    process,
-                    Joiner.on(System.lineSeparator())
-                        .join(androidRuntimeLinesToPid.get(process.pid()))))
+    return crashBuffers.stream()
+        .map(PidCrashBuffer::toCrashEvent)
+        .flatMap(Optional::stream)
         .collect(toImmutableList());
+  }
+
+  private static OptionalInt tryParsePid(String pidText) {
+    try {
+      return OptionalInt.of(Integer.parseInt(pidText));
+    } catch (NumberFormatException e) {
+      return OptionalInt.empty();
+    }
+  }
+
+  /** Buffers {@code AndroidRuntime} lines for a single fatal exception on a reporting PID. */
+  private static final class PidCrashBuffer {
+    private final List<String> logLines = new ArrayList<>();
+    private Optional<CrashedProcess> crashedProcess = Optional.empty();
+    private boolean hasFatalException = false;
+    private boolean processLineHandled = false;
+
+    boolean append(String message, MonitoringConfig monitoringConfig) {
+      logLines.add(message);
+      if (processLineHandled) {
+        return false;
+      }
+      if (!hasFatalException) {
+        hasFatalException = FATAL_EXCEPTION_PATTERN.matcher(message).matches();
+        return false;
+      }
+      Matcher matcher = CRASHED_PROCESS_PATTERN.matcher(message);
+      if (!matcher.matches()) {
+        return false;
+      }
+      processLineHandled = true;
+      OptionalInt pid = tryParsePid(matcher.group(2));
+      if (pid.isEmpty()) {
+        return false;
+      }
+      String processName = matcher.group(1);
+      ProcessCategory category = monitoringConfig.categorizeProcess(processName);
+      crashedProcess =
+          Optional.of(new CrashedProcess(processName, pid.getAsInt(), category, ANDROID_RUNTIME));
+      return category != ProcessCategory.IGNORED;
+    }
+
+    boolean hasStartedException() {
+      return hasFatalException;
+    }
+
+    Optional<CrashEvent> toCrashEvent() {
+      return crashedProcess.map(
+          process -> new CrashEvent(process, Joiner.on(System.lineSeparator()).join(logLines)));
+    }
   }
 }
