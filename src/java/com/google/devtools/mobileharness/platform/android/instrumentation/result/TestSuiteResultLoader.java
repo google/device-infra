@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.platform.android.instrumentation.result;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.instrumentation.result.proto.TestSuiteResult;
@@ -26,6 +25,7 @@ import com.google.protobuf.ExtensionRegistryLite;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.Optional;
+import javax.inject.Inject;
 
 /** Loader for Android instrumentation test result. */
 public class TestSuiteResultLoader {
@@ -38,7 +38,7 @@ public class TestSuiteResultLoader {
     this(new LocalFileUtil());
   }
 
-  @VisibleForTesting
+  @Inject
   TestSuiteResultLoader(LocalFileUtil localFileUtil) {
     this.localFileUtil = localFileUtil;
   }

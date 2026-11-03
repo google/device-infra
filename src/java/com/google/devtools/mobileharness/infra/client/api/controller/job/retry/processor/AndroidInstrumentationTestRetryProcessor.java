@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.client.api.controller.job.retry.
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.stream.Collectors.joining;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -32,6 +31,7 @@ import com.google.devtools.mobileharness.platform.android.instrumentation.result
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.Optional;
+import javax.inject.Inject;
 
 /** Processor to process Android instrumentation test retry. */
 class AndroidInstrumentationTestRetryProcessor {
@@ -44,7 +44,7 @@ class AndroidInstrumentationTestRetryProcessor {
     this(new TestSuiteResultLoader());
   }
 
-  @VisibleForTesting
+  @Inject
   AndroidInstrumentationTestRetryProcessor(TestSuiteResultLoader testSuiteResultLoader) {
     this.testSuiteResultLoader = testSuiteResultLoader;
   }

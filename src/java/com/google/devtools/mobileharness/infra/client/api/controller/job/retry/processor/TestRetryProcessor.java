@@ -16,11 +16,11 @@
 
 package com.google.devtools.mobileharness.infra.client.api.controller.job.retry.processor;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidInstrumentationDriverSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import javax.inject.Inject;
 
 /** Processor to process test retry. */
 public class TestRetryProcessor {
@@ -33,7 +33,7 @@ public class TestRetryProcessor {
     this(new AndroidInstrumentationTestRetryProcessor());
   }
 
-  @VisibleForTesting
+  @Inject
   TestRetryProcessor(
       AndroidInstrumentationTestRetryProcessor androidInstrumentationTestRetryProcessor) {
     this.androidInstrumentationTestRetryProcessor = androidInstrumentationTestRetryProcessor;
