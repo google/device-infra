@@ -16,7 +16,9 @@
 
 package com.google.devtools.mobileharness.shared.util.message;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Comparator.comparing;
+import static java.util.stream.Collectors.toCollection;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
@@ -37,7 +39,6 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /** The proto util. */
 public final class ProtoUtil {
@@ -294,7 +295,7 @@ public final class ProtoUtil {
   /** Gets the field name to FieldDescriptor map of a message. */
   public static Map<String, FieldDescriptor> getFields(Message.Builder message) {
     return message.getDescriptorForType().getFields().stream()
-        .collect(Collectors.toMap(FieldDescriptor::getName, Function.identity()));
+        .collect(toImmutableMap(FieldDescriptor::getName, Function.identity()));
   }
 
   /**
@@ -380,7 +381,7 @@ public final class ProtoUtil {
             .sorted(
                 comparing(FieldNameAndShouldSelect::fieldName)
                     .thenComparing(FieldNameAndShouldSelect::shouldSelect))
-            .collect(Collectors.toList());
+            .collect(toCollection(ArrayList::new));
     if (filterFilterRuleList.isEmpty()) {
       return;
     }
@@ -430,9 +431,9 @@ public final class ProtoUtil {
     } else {
       needRemove = true;
       for (FieldDescriptor childFieldDescriptor :
-          messageBuilder.getDescriptorForType().getFields().stream()
-              .sorted(comparing(FieldDescriptor::getName))
-              .collect(Collectors.toList())) {
+          ImmutableList.sortedCopyOf(
+              comparing(FieldDescriptor::getName),
+              messageBuilder.getDescriptorForType().getFields())) {
         boolean fieldRemoved = false;
         String childFieldFullName = fieldFullNamePrefix + childFieldDescriptor.getName();
         // Skip the rule which is before this field of alphabet order.

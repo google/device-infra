@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.shared.util.command.history;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
@@ -28,7 +30,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import javax.annotation.concurrent.GuardedBy;
 
 /**
@@ -67,7 +68,7 @@ public class CommandHistory {
 
   /** Returns all commands which are still saved and meet the requirements of the filter. */
   public List<CommandRecord> searchCommands(Predicate<CommandRecord> commandRecordFilter) {
-    return getAllCommands().stream().filter(commandRecordFilter).collect(Collectors.toList());
+    return getAllCommands().stream().filter(commandRecordFilter).collect(toImmutableList());
   }
 
   /**

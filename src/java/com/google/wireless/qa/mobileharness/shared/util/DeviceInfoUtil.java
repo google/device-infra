@@ -16,12 +16,13 @@
 
 package com.google.wireless.qa.mobileharness.shared.util;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
-import java.util.stream.Collectors;
 
 /** Util for creating {@link DeviceInfo}s. */
 public class DeviceInfoUtil {
@@ -47,7 +48,7 @@ public class DeviceInfoUtil {
                             .setName(dimension.getName())
                             .setValue(dimension.getValue())
                             .build())
-                .collect(Collectors.toList()))
+                .collect(toImmutableList()))
         .addAllDimension(
             deviceFeature.getCompositeDimension().getRequiredDimensionList().stream()
                 .map(
@@ -57,7 +58,7 @@ public class DeviceInfoUtil {
                             .setName(dimension.getName())
                             .setValue(dimension.getValue())
                             .build())
-                .collect(Collectors.toList()))
+                .collect(toImmutableList()))
         .setJobId(testInfo.jobInfo().locator().getId())
         .setJobName(testInfo.jobInfo().locator().getName())
         .setTestId(testInfo.locator().getId())
