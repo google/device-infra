@@ -143,6 +143,19 @@ describe('App Component', () => {
       expect(linkMap.get('User Guide')).toBe(standaloneComponent.userGuideUrl);
       expect(linkMap.get('FAQs')).toBe(standaloneComponent.faqsUrl);
     });
+
+    it('should render header toolbar logo and title inside a link to /home', () => {
+      const brandLink: HTMLAnchorElement | null =
+        standaloneFixture.nativeElement.querySelector(
+          '.app-toolbar a.toolbar-brand-link',
+        );
+      expect(brandLink).toBeTruthy();
+      expect(brandLink?.getAttribute('href')).toContain('/home');
+      expect(brandLink?.querySelector('img')).toBeTruthy();
+      expect(brandLink?.querySelector('.title')?.textContent?.trim()).toBe(
+        'OmniLab Console',
+      );
+    });
   });
 
   describe('isNavActive', () => {

@@ -26,9 +26,14 @@
         <mat-icon aria-label="Side nav toggle icon">menu</mat-icon>
       </button>
       <!-- <img src="boq-omnilabfrontend/images/logo-title.png" alt="Omnilab ATS Logo"> -->
-      <img src="https://www.gstatic.com/mobileharness/images/omnilab_mark_primary_l.png" alt="Omnilab ATS Logo">
-
-      <span class="title">OmniLab Console</span>
+      <a
+        class="toolbar-brand-link"
+        routerLink="/home"
+        [queryParams]="getPreservedQueryParams()"
+      >
+        <img src="https://www.gstatic.com/mobileharness/images/omnilab_mark_primary_l.png" alt="Omnilab ATS Logo">
+        <span class="title">OmniLab Console</span>
+      </a>
       <div class="header-search-dock" [class.active]="dockService.isDocked()">
         <ng-template [cdkPortalOutlet]="dockService.activePortal()"></ng-template>
       </div>
