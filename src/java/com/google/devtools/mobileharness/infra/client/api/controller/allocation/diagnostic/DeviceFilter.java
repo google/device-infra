@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
@@ -28,7 +30,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimen
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * For pre-filtering the device candidates. For the devices that are excluded by this filter, it
@@ -97,7 +98,7 @@ public class DeviceFilter {
           }
         });
     List<DimensionFilter> dedupedDimensionFilters =
-        filter.getDimensionFilterList().stream().distinct().collect(Collectors.toList());
+        filter.getDimensionFilterList().stream().distinct().collect(toImmutableList());
     filter.clearDimensionFilter().addAllDimensionFilter(dedupedDimensionFilters);
     return filter.build();
   }

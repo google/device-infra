@@ -16,6 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.multidevice;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -31,11 +34,9 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
 import java.time.Duration;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
-import java.util.stream.Collectors;
 
 /** A {@link Report} for a lab host and its ability to satisfy multi-device job requirements. */
 public final class LabReport implements Report {
@@ -187,7 +188,7 @@ public final class LabReport implements Report {
       List<DeviceCandidate> perfectCandidates =
           candidates.stream()
               .filter(candidate -> candidate.assessment().hasMaxScore())
-              .collect(Collectors.toList());
+              .collect(toImmutableList());
       readableReport.append(
           String.format(
               "Requirement %d can be fulfilled with the following devices:\n", requirementNumber));
@@ -198,7 +199,7 @@ public final class LabReport implements Report {
       List<DeviceCandidate> imperfectCandidates =
           candidates.stream()
               .filter(candidate -> !candidate.assessment().hasMaxScore())
-              .collect(Collectors.toList());
+              .collect(toImmutableList());
       if (!imperfectCandidates.isEmpty()) {
         readableReport.append(
             String.format("Other candidates for requirement %d:\n", requirementNumber));
@@ -246,7 +247,7 @@ public final class LabReport implements Report {
               Report.DECORATORS_NOT_SUPPORTED,
               deviceAssessment.getUnsupportedDecorators().stream()
                   .sorted()
-                  .collect(Collectors.toList())));
+                  .collect(toImmutableList())));
     }
     if (!deviceAssessment.isDimensionsSupported()) {
       readableReport.append(
@@ -274,19 +275,16 @@ public final class LabReport implements Report {
     }
   }
 
-  private static List<LabAssessment> getPerfectLabs(List<LabAssessment> labs) {
-    return labs.stream().filter(LabAssessment::hasMaxScore).collect(Collectors.toList());
+  private static ImmutableList<LabAssessment> getPerfectLabs(List<LabAssessment> labs) {
+    return labs.stream().filter(LabAssessment::hasMaxScore).collect(toImmutableList());
   }
 
-  private static Map<String, String> sortedMap(Map<String, String> map) {
+  private static ImmutableMap<String, String> sortedMap(Map<String, String> map) {
     return map.entrySet().stream()
         .sorted(Map.Entry.comparingByKey())
         .collect(
-            Collectors.toMap(
-                Map.Entry::getKey,
-                Map.Entry::getValue,
-                (oldValue, newValue) -> oldValue,
-                LinkedHashMap::new));
+            toImmutableMap(
+                Map.Entry::getKey, Map.Entry::getValue, (oldValue, newValue) -> oldValue));
   }
 
   /** A utility for printing {@link SubDeviceSpec}s as JSON strings. */

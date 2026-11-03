@@ -47,7 +47,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /** For diagnostic the reasons about why a job can not allocate devices. */
@@ -159,7 +158,7 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
     List<DeviceInfo> candidates =
         diagnosticQuerier.queryDevice(job, candidateFilter).getDeviceInfoList().stream()
             .map(this::convertDeviceInfo)
-            .collect(Collectors.toList());
+            .collect(toImmutableList());
     candidates =
         candidates.stream()
             .filter(
@@ -184,7 +183,7 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
                   }
                   return true;
                 })
-            .collect(Collectors.toList());
+            .collect(toImmutableList());
     return candidates;
   }
 
