@@ -309,17 +309,21 @@ public abstract class GcsUtil {
   public void copyFileOrDirectoryToLocal(String gcsFileOrDir, Path localFileOrDir)
       throws MobileHarnessException, InterruptedException {
     Path gcsPath = GcsUri.parseUri(gcsFileOrDir).objectPath();
-    if (isFile(gcsPath.toString())) {
+    if (!gcsFileOrDir.endsWith("/") && isFile(gcsPath.toString())) {
       copyFileToLocal(gcsPath, localFileOrDir);
     } else {
       copyDirectoryToLocal(gcsPath, localFileOrDir);
     }
   }
 
-  /** Returns true if the file is a file, false if it is a directory or not exist. */
+  /**
+   * Returns true if {@code fileOrDirPath} exists as a file object and has no child objects under
+   * {@code fileOrDirPath + "/"}, or false if it is a directory or does not exist.
+   */
   private boolean isFile(String fileOrDirPath) throws MobileHarnessException {
-    List<String> files = listFiles(fileOrDirPath);
-    return files.size() == 1 && files.get(0).equals(fileOrDirPath);
+    List<String> files = listFiles(fileOrDirPath, "/");
+    String dirPrefix = fileOrDirPath + "/";
+    return files.contains(fileOrDirPath) && files.stream().noneMatch(f -> f.startsWith(dirPrefix));
   }
 
   /**
