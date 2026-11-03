@@ -490,6 +490,13 @@ public abstract class GcsUtil {
 
       for (int i = 1; i < shards.size(); i++) {
         localFileUtil.appendToFile(shards.get(i), shards.get(0));
+        // Removes each merged shard right away so the peak disk and page-cache usage stays around
+        // the file size plus one shard instead of twice the file size.
+        tryRemoveFile(shards.get(i));
+        // tryRemoveFile() restores but does not throw on interruption, so stop merging here.
+        if (Thread.interrupted()) {
+          throw new InterruptedException("Interrupted while merging the split gcs file");
+        }
       }
       logger.atInfo().log("Merged the split gcs file %s to one", gcsFile);
 
