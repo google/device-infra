@@ -231,12 +231,16 @@ public class SessionRequestHandlerUtil {
 
     String testPlan = sessionRequestInfo.getTestPlan();
     String xtsType = sessionRequestInfo.getXtsType();
-    int requestedShardCount =
-        sessionRequestInfo.hasShardCount() ? sessionRequestInfo.getShardCount() : 0;
-    int minDeviceCount = testPlan.matches(xtsType + "-multi-?device") ? 2 : 1;
-    int shardCount = max(requestedShardCount, minDeviceCount);
     ImmutableSet<DeviceDetails> availableDevices =
         localDeviceUtil.getLocalAvailableDevices(sessionRequestInfo);
+    // In MODULE sharding mode without an explicit --shard-count, default multi-device jobs to all
+    // available devices (while single-device jobs below still request 1 device each).
+    int requestedShardCount =
+        sessionRequestInfo.hasShardCount()
+            ? sessionRequestInfo.getShardCount()
+            : shouldEnableModuleSharding(sessionRequestInfo) ? availableDevices.size() : 0;
+    int minDeviceCount = testPlan.matches(xtsType + "-multi-?device") ? 2 : 1;
+    int shardCount = max(requestedShardCount, minDeviceCount);
     // For single-device jobs (e.g. MODULE sharding mode), allocate exactly one device matching
     // any of the available devices so multiple shards can run concurrently on separate devices.
     if (!forMultiDeviceJob) {
@@ -650,8 +654,7 @@ public class SessionRequestHandlerUtil {
             && SessionHandlerHelper.useTfRetry(
                 sessionRequestInfo.getIsAtsServerRequest(),
                 sessionRequestInfo.getXtsType(),
-                sessionRequestInfo.hasTestSuiteInfo()
-                        && sessionRequestInfo.getTestSuiteInfo().hasTestSuiteVersion()
+                sessionRequestInfo.getTestSuiteInfo().hasTestSuiteVersion()
                     ? sessionRequestInfo.getTestSuiteInfo().getTestSuiteVersion()
                     : null)
             && !sessionRequestInfo.getModuleNamesList().isEmpty();
@@ -819,7 +822,7 @@ public class SessionRequestHandlerUtil {
                         ? sessionRequestInfo.getDeviceInfo()
                         : null)));
 
-    ImmutableList<String> modules = ImmutableList.copyOf(sessionRequestInfo.getModuleNamesList());
+    List<String> modules = sessionRequestInfo.getModuleNamesList();
     ImmutableSet<String> allNonTfModules = getNonTfModules(configsMap);
     updatedSessionRequestInfo
         .clearGivenMatchedNonTfModules()

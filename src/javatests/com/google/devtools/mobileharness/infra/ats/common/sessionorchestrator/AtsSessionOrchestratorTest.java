@@ -21,6 +21,7 @@ import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -33,9 +34,11 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.in.Decorators;
 import com.google.devtools.mobileharness.api.model.job.in.Dimensions;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
+import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.controller.scheduler.model.job.in.DeviceRequirement;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
@@ -43,7 +46,7 @@ import com.google.devtools.mobileharness.platform.android.xts.message.proto.Test
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
-import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -55,11 +58,15 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Status;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
+import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
+import com.google.wireless.qa.mobileharness.shared.model.lab.LabLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
+import java.time.Duration;
 import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.Mock;
@@ -81,6 +88,7 @@ public final class AtsSessionOrchestratorTest {
   @Mock private SessionInfo sessionInfo;
   @Mock private XtsJobCreator xtsJobCreator;
   @Mock private TestMessageUtil testMessageUtil;
+  @Mock private DeviceReserver deviceReserver;
 
   private AtsSessionOrchestrator orchestrator;
 
@@ -94,7 +102,8 @@ public final class AtsSessionOrchestratorTest {
         .thenReturn(ImmutableList.of());
     when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
 
-    orchestrator = new AtsSessionOrchestrator(sessionInfo, xtsJobCreator, testMessageUtil);
+    orchestrator =
+        new AtsSessionOrchestrator(sessionInfo, xtsJobCreator, testMessageUtil, deviceReserver);
   }
 
   private static JobInfo mockJobInfo(String jobId, String jobName) {
@@ -114,7 +123,7 @@ public final class AtsSessionOrchestratorTest {
     return jobInfo;
   }
 
-  @org.junit.Test
+  @Test
   public void startSession_withSetupJob_schedulesSetupJobAndDefersMainJobs() throws Exception {
     JobInfo setupJob = mockJobInfo("setup_job_id", XtsConstants.SETUP_JOB_NAME);
     JobInfo tfJob = mockJobInfo("tf_job_id", "tf_job");
@@ -128,7 +137,7 @@ public final class AtsSessionOrchestratorTest {
     verify(sessionInfo, never()).addJob(tfJob);
   }
 
-  @org.junit.Test
+  @Test
   public void onJobEnd_fullPhasedLifecycle_schedulesSetupThenTfThenNonTfThenTeardown()
       throws Exception {
     Properties setupTestProperties = new Properties(new Timing());
@@ -190,10 +199,10 @@ public final class AtsSessionOrchestratorTest {
         .isEqualTo("val1");
   }
 
-  @org.junit.Test
+  @Test
   public void onJobEnd_runnerSharding_chainsDynamicJobAndPinsDeviceSerials() throws Exception {
     Properties staticTestProps = new Properties(new Timing());
-    staticTestProps.add(Test.DEVICE_ID_LIST, "device_1,device_2");
+    staticTestProps.add(PropertyName.Test.DEVICE_ID_LIST, "device_1,device_2");
     TestInfo staticTest = mock(TestInfo.class);
     when(staticTest.properties()).thenReturn(staticTestProps);
     TestInfos staticTests = mock(TestInfos.class);
@@ -233,7 +242,7 @@ public final class AtsSessionOrchestratorTest {
     verify(sessionInfo).addJob(dynamicJob);
   }
 
-  @org.junit.Test
+  @Test
   public void startSession_moduleSharding_schedulesAllTradefedJobsConcurrently() throws Exception {
     JobInfo staticJob = mockJobInfo("static_job_id", "m1_" + XtsConstants.STATIC_XTS_JOB_NAME);
     JobInfo dynamicJob = mockJobInfo("dynamic_job_id", "m2_" + XtsConstants.DYNAMIC_MCTS_JOB_NAME);
@@ -247,7 +256,7 @@ public final class AtsSessionOrchestratorTest {
     verify(sessionInfo).addJob(dynamicJob);
   }
 
-  @org.junit.Test
+  @Test
   public void startSession_noJobsCreated_throwsUserFacingException() throws Exception {
     when(xtsJobCreator.createXtsTradefedTestJob(
             DEFAULT_REQUEST_INFO, ImmutableSet.of(), /* skipDynamicMctsJob= */ false))
@@ -265,15 +274,15 @@ public final class AtsSessionOrchestratorTest {
     assertThat(exception.getErrorId()).isEqualTo(InfraErrorId.XTS_NO_JOB_CREATED_FOR_SESSION);
   }
 
-  @org.junit.Test
+  @Test
   public void onSessionCancellation_stopsNewJobsAndForwardsSignalToStartedAndLateTests()
       throws Exception {
+    JobLocator jobLocator = new JobLocator("job_id", "job_name");
     TestInfo startedTest = mock(TestInfo.class);
-    TestLocator startedLocator = mock(TestLocator.class);
-    when(startedLocator.getId()).thenReturn("started_test_id");
-    when(startedTest.locator()).thenReturn(startedLocator);
+    when(startedTest.locator())
+        .thenReturn(new TestLocator("started_test_id", "started_test_name", jobLocator));
 
-    orchestrator.onTestStarting(startedTest);
+    orchestrator.onTestStarting(startedTest, ImmutableList.of());
     orchestrator.onSessionCancellation("Cancelled by user", 15);
 
     XtsTradefedRunCancellation expectedMessage =
@@ -285,14 +294,13 @@ public final class AtsSessionOrchestratorTest {
 
     // Late-starting test also receives the cancellation message immediately
     TestInfo lateTest = mock(TestInfo.class);
-    TestLocator lateLocator = mock(TestLocator.class);
-    when(lateLocator.getId()).thenReturn("late_test_id");
-    when(lateTest.locator()).thenReturn(lateLocator);
-    orchestrator.onTestStarting(lateTest);
+    when(lateTest.locator())
+        .thenReturn(new TestLocator("late_test_id", "late_test_name", jobLocator));
+    orchestrator.onTestStarting(lateTest, ImmutableList.of());
     verify(testMessageUtil).sendProtoMessageToTest(lateTest, expectedMessage);
   }
 
-  @org.junit.Test
+  @Test
   public void onJobEnd_resumedSessionWithConcurrentTfJobs_waitsForAllTfJobsBeforeAddingNonTfJobs()
       throws Exception {
     JobInfo tfJob1 = mockJobInfo("tf_job_1_id", "tf_job_1");
@@ -329,7 +337,7 @@ public final class AtsSessionOrchestratorTest {
     verify(sessionInfo).addJob(nonTfJob);
   }
 
-  @org.junit.Test
+  @Test
   public void onJobEnd_resumedSessionSetupJobEnds_createsAndSchedulesTeardownJobAfterMainJobs()
       throws Exception {
     JobInfo setupJob = mockJobInfo("setup_job_id", XtsConstants.SETUP_JOB_NAME);
@@ -365,7 +373,7 @@ public final class AtsSessionOrchestratorTest {
     verify(sessionInfo).addJob(teardownJob);
   }
 
-  @org.junit.Test
+  @Test
   public void onJobEnd_resumedSessionRunnerSharding_pinsDevicesAndSchedulesNextTradefedJob()
       throws Exception {
     JobInfo staticTfJob = mockJobInfo("static_tf_id", XtsConstants.STATIC_XTS_JOB_NAME);
@@ -374,7 +382,7 @@ public final class AtsSessionOrchestratorTest {
     when(staticTfJob.type()).thenReturn(TRADEFED_JOB_TYPE);
     when(staticTfJob.status()).thenReturn(new Status(new Timing()).set(TestStatus.DONE));
     Properties testProps = new Properties(new Timing());
-    testProps.add(Test.DEVICE_ID_LIST, "device_serial_1,device_serial_2");
+    testProps.add(PropertyName.Test.DEVICE_ID_LIST, "device_serial_1,device_serial_2");
     TestInfo staticTest = mock(TestInfo.class);
     when(staticTest.properties()).thenReturn(testProps);
     TestInfos staticTestInfos = mock(TestInfos.class);
@@ -407,7 +415,7 @@ public final class AtsSessionOrchestratorTest {
     verify(sessionInfo).addJob(dynamicTfJob);
   }
 
-  @org.junit.Test
+  @Test
   public void startSession_runnerShardingMultipleStaticJobs_startsFirstAndQueuesRemaining()
       throws Exception {
     JobInfo staticJob1 = mockJobInfo("static_1_id", XtsConstants.STATIC_XTS_JOB_NAME + "_1");
@@ -431,7 +439,7 @@ public final class AtsSessionOrchestratorTest {
     verify(sessionInfo).addJob(dynamicJob);
   }
 
-  @org.junit.Test
+  @Test
   public void onJobEnd_resumedSessionNonTfJobEnds_schedulesRemainingNonTfJobsAndFiltersTriggered()
       throws Exception {
     JobInfo tfJob = mockJobInfo("tf_job_id", "tf_job");
@@ -463,7 +471,7 @@ public final class AtsSessionOrchestratorTest {
     verify(sessionInfo).addJob(teardownJob);
   }
 
-  @org.junit.Test
+  @Test
   public void onSessionEnded_preventsAddingJobsToSession() throws Exception {
     JobInfo setupJob = mockJobInfo("setup_job_id", "setup_job");
     when(xtsJobCreator.createXtsSetupJob(DEFAULT_REQUEST_INFO)).thenReturn(Optional.of(setupJob));
@@ -472,5 +480,394 @@ public final class AtsSessionOrchestratorTest {
     orchestrator.startSession(DEFAULT_REQUEST_INFO);
 
     verify(sessionInfo, never()).addJob(any());
+  }
+
+  private static SubDeviceSpec createSubDeviceSpec() {
+    return createSubDeviceSpec(new Dimensions());
+  }
+
+  private static SubDeviceSpec createSubDeviceSpec(Dimensions dimensions) {
+    return SubDeviceSpec.createForTesting(
+        DeviceRequirement.create("AndroidRealDevice", new Decorators(), dimensions),
+        new ScopedSpecs(new Timing()),
+        new Timing());
+  }
+
+  private static JobInfo mockJobInfoWithSubDevices(
+      String jobId, String jobName, ImmutableList<SubDeviceSpec> subDevices) {
+    JobInfo jobInfo = mockJobInfo(jobId, jobName);
+    SubDeviceSpecs subDeviceSpecs = mock(SubDeviceSpecs.class);
+    when(subDeviceSpecs.getAllSubDevices()).thenReturn(subDevices);
+    when(jobInfo.subDeviceSpecs()).thenReturn(subDeviceSpecs);
+    return jobInfo;
+  }
+
+  private static TestInfo attachMockSetupTest(JobInfo setupJob) {
+    JobLocator setupJobLocator = setupJob.locator();
+    TestInfo setupTest = mock(TestInfo.class);
+    when(setupTest.locator())
+        .thenReturn(new TestLocator("setup_test_id", "setup_test_name", setupJobLocator));
+    when(setupTest.jobInfo()).thenReturn(setupJob);
+    when(setupTest.properties()).thenReturn(new Properties(new Timing()));
+    TestInfos setupTests = mock(TestInfos.class);
+    when(setupTests.getAll()).thenReturn(ImmutableListMultimap.of("setup_test_id", setupTest));
+    when(setupJob.tests()).thenReturn(setupTests);
+    return setupTest;
+  }
+
+  private static SessionRequestInfo narrowRequest(SessionRequestInfo base, String... serials) {
+    return base.toBuilder()
+        .clearDeviceSerials()
+        .addAllDeviceSerials(ImmutableList.copyOf(serials))
+        .setAllowPartialDeviceMatch(false)
+        .build();
+  }
+
+  @Test
+  public void onTestStarting_setupJobWithAllocatedDevices_reservesDevicesImmediately()
+      throws Exception {
+    JobInfo setupJob = mockJobInfo("setup_job_id", XtsConstants.SETUP_JOB_NAME);
+    TestInfo setupTest = attachMockSetupTest(setupJob);
+    when(xtsJobCreator.createXtsSetupJob(MODULE_SHARDING_REQUEST_INFO))
+        .thenReturn(Optional.of(setupJob));
+    DeviceLocator deviceLocator1 = new DeviceLocator("device_1", LabLocator.LOCALHOST);
+    DeviceLocator deviceLocator2 = new DeviceLocator("device_2", LabLocator.LOCALHOST);
+
+    orchestrator.startSession(MODULE_SHARDING_REQUEST_INFO);
+    orchestrator.onTestStarting(setupTest, ImmutableList.of(deviceLocator1, deviceLocator2));
+
+    verify(deviceReserver)
+        .addTempAllocationKeyToDevice(
+            deviceLocator1, "session_id", SessionRequestHandlerUtil.DEFAULT_TRADEFED_JOB_TIMEOUT);
+    verify(deviceReserver)
+        .addTempAllocationKeyToDevice(
+            deviceLocator2, "session_id", SessionRequestHandlerUtil.DEFAULT_TRADEFED_JOB_TIMEOUT);
+  }
+
+  @Test
+  public void onTestStarting_nonSetupJobWithAllocatedDevices_doesNotReserveDevices()
+      throws Exception {
+    JobInfo tfJob = mockJobInfo("tf_job_id", "tf_job");
+    TestInfo tfTest = mock(TestInfo.class);
+    when(tfTest.jobInfo()).thenReturn(tfJob);
+    when(xtsJobCreator.createXtsTradefedTestJob(eq(MODULE_SHARDING_REQUEST_INFO), any(), eq(false)))
+        .thenReturn(ImmutableList.of(tfJob));
+    DeviceLocator deviceLocator = new DeviceLocator("device_1", LabLocator.LOCALHOST);
+
+    orchestrator.startSession(MODULE_SHARDING_REQUEST_INFO);
+    orchestrator.onTestStarting(tfTest, ImmutableList.of(deviceLocator));
+
+    verify(deviceReserver, never()).addTempAllocationKeyToDevice(any(), any(), any());
+  }
+
+  @Test
+  public void
+      onJobEnd_setupJobWithAllocatedDevices_stampsAllocationKeyAndKeepsReservationUntilTeardownEnds()
+          throws Exception {
+    JobInfo setupJob = mockJobInfo("setup_job_id", XtsConstants.SETUP_JOB_NAME);
+    TestInfo setupTest = attachMockSetupTest(setupJob);
+
+    SubDeviceSpec tfSpec1 = createSubDeviceSpec();
+    SubDeviceSpec tfSpec2 = createSubDeviceSpec();
+    JobInfo tfJob1 = mockJobInfoWithSubDevices("tf_1", "tf_job_1", ImmutableList.of(tfSpec1));
+    JobInfo tfJob2 = mockJobInfoWithSubDevices("tf_2", "tf_job_2", ImmutableList.of(tfSpec2));
+
+    SubDeviceSpec nonTfSpec = createSubDeviceSpec();
+    JobInfo nonTfJob =
+        mockJobInfoWithSubDevices("nontf_1", "nontf_job", ImmutableList.of(nonTfSpec));
+
+    SubDeviceSpec teardownSpec1 = createSubDeviceSpec();
+    SubDeviceSpec teardownSpec2 = createSubDeviceSpec();
+    JobInfo teardownJob =
+        mockJobInfoWithSubDevices(
+            "teardown_job_id",
+            XtsConstants.TEARDOWN_JOB_NAME,
+            ImmutableList.of(teardownSpec1, teardownSpec2));
+
+    SessionRequestInfo narrowedModuleShardingRequestInfo =
+        narrowRequest(MODULE_SHARDING_REQUEST_INFO, "device_1", "device_2");
+    when(xtsJobCreator.createXtsSetupJob(MODULE_SHARDING_REQUEST_INFO))
+        .thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsTearDownJob(narrowedModuleShardingRequestInfo))
+        .thenReturn(Optional.of(teardownJob));
+    when(xtsJobCreator.createXtsTradefedTestJob(
+            eq(narrowedModuleShardingRequestInfo), any(), eq(false)))
+        .thenReturn(ImmutableList.of(tfJob1, tfJob2));
+    when(xtsJobCreator.createXtsNonTradefedJobs(narrowedModuleShardingRequestInfo))
+        .thenReturn(ImmutableList.of(nonTfJob));
+
+    DeviceLocator deviceLocator1 = new DeviceLocator("device_1", LabLocator.LOCALHOST);
+    DeviceLocator deviceLocator2 = new DeviceLocator("device_2", LabLocator.LOCALHOST);
+
+    orchestrator.startSession(MODULE_SHARDING_REQUEST_INFO);
+    verify(xtsJobCreator, never()).createXtsTearDownJob(any());
+    orchestrator.onTestStarting(setupTest, ImmutableList.of(deviceLocator1, deviceLocator2));
+    orchestrator.onJobEnd(
+        new JobEndEvent(setupJob, /* jobError= */ null), MODULE_SHARDING_REQUEST_INFO);
+    orchestrator.onJobEnd(
+        new JobEndEvent(tfJob1, /* jobError= */ null), MODULE_SHARDING_REQUEST_INFO);
+    orchestrator.onJobEnd(
+        new JobEndEvent(tfJob2, /* jobError= */ null), MODULE_SHARDING_REQUEST_INFO);
+    orchestrator.onJobEnd(
+        new JobEndEvent(nonTfJob, /* jobError= */ null), MODULE_SHARDING_REQUEST_INFO);
+
+    verify(deviceReserver)
+        .addTempAllocationKeyToDevice(
+            deviceLocator1, "session_id", SessionRequestHandlerUtil.DEFAULT_TRADEFED_JOB_TIMEOUT);
+    verify(deviceReserver)
+        .addTempAllocationKeyToDevice(
+            deviceLocator2, "session_id", SessionRequestHandlerUtil.DEFAULT_TRADEFED_JOB_TIMEOUT);
+    assertThat(tfSpec1.dimensions().get(Name.ALLOCATION_KEY)).isEqualTo("session_id");
+    assertThat(tfSpec2.dimensions().get(Name.ALLOCATION_KEY)).isEqualTo("session_id");
+    assertThat(nonTfSpec.dimensions().get(Name.ALLOCATION_KEY)).isEqualTo("session_id");
+    assertThat(teardownSpec1.dimensions().get(Name.ALLOCATION_KEY)).isEqualTo("session_id");
+    assertThat(teardownSpec2.dimensions().get(Name.ALLOCATION_KEY)).isEqualTo("session_id");
+    verify(sessionInfo).addJob(teardownJob);
+    verify(deviceReserver, never())
+        .addTempAllocationKeyToDevice(any(), eq("session_id"), eq(Duration.ZERO));
+  }
+
+  @Test
+  public void onJobEnd_teardownJobEnds_releasesReservedSetupDevicesOnce() throws Exception {
+    JobInfo setupJob = mockJobInfo("setup_job_id", XtsConstants.SETUP_JOB_NAME);
+    TestInfo setupTest = attachMockSetupTest(setupJob);
+
+    JobInfo tfJob = mockJobInfo("tf_1", "tf_job_1");
+    JobInfo teardownJob = mockJobInfo("teardown_job_id", XtsConstants.TEARDOWN_JOB_NAME);
+
+    SessionRequestInfo narrowedModuleShardingRequestInfo =
+        narrowRequest(MODULE_SHARDING_REQUEST_INFO, "device_1", "device_2");
+    when(xtsJobCreator.createXtsSetupJob(MODULE_SHARDING_REQUEST_INFO))
+        .thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsTearDownJob(narrowedModuleShardingRequestInfo))
+        .thenReturn(Optional.of(teardownJob));
+    when(xtsJobCreator.createXtsTradefedTestJob(
+            eq(narrowedModuleShardingRequestInfo), any(), eq(false)))
+        .thenReturn(ImmutableList.of(tfJob));
+
+    DeviceLocator deviceLocator1 = new DeviceLocator("device_1", LabLocator.LOCALHOST);
+    DeviceLocator deviceLocator2 = new DeviceLocator("device_2", LabLocator.LOCALHOST);
+
+    orchestrator.startSession(MODULE_SHARDING_REQUEST_INFO);
+    orchestrator.onTestStarting(setupTest, ImmutableList.of(deviceLocator1, deviceLocator2));
+    orchestrator.onJobEnd(
+        new JobEndEvent(setupJob, /* jobError= */ null), MODULE_SHARDING_REQUEST_INFO);
+    orchestrator.onJobEnd(
+        new JobEndEvent(tfJob, /* jobError= */ null), MODULE_SHARDING_REQUEST_INFO);
+    orchestrator.onJobEnd(
+        new JobEndEvent(teardownJob, /* jobError= */ null), MODULE_SHARDING_REQUEST_INFO);
+    orchestrator.onSessionEnded();
+
+    verify(deviceReserver)
+        .addTempAllocationKeyToDevice(deviceLocator1, "session_id", Duration.ZERO);
+    verify(deviceReserver)
+        .addTempAllocationKeyToDevice(deviceLocator2, "session_id", Duration.ZERO);
+  }
+
+  @Test
+  public void onTestStarting_setupDeviceReservationFailsPartway_rollsBackAndContinuesUnreserved()
+      throws Exception {
+    JobInfo setupJob = mockJobInfo("setup_job_id", XtsConstants.SETUP_JOB_NAME);
+    TestInfo setupTest = attachMockSetupTest(setupJob);
+
+    SubDeviceSpec tfSpec = createSubDeviceSpec();
+    JobInfo tfJob = mockJobInfoWithSubDevices("tf_id", "tf_job", ImmutableList.of(tfSpec));
+
+    when(xtsJobCreator.createXtsSetupJob(MODULE_SHARDING_REQUEST_INFO))
+        .thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsTradefedTestJob(eq(MODULE_SHARDING_REQUEST_INFO), any(), eq(false)))
+        .thenReturn(ImmutableList.of(tfJob));
+
+    DeviceLocator deviceLocator1 = new DeviceLocator("device_1", LabLocator.LOCALHOST);
+    DeviceLocator deviceLocator2 = new DeviceLocator("device_2", LabLocator.LOCALHOST);
+    doThrow(
+            new MobileHarnessException(
+                InfraErrorId.XTS_NO_JOB_CREATED_FOR_SESSION, "Reservation error"))
+        .when(deviceReserver)
+        .addTempAllocationKeyToDevice(
+            deviceLocator2, "session_id", SessionRequestHandlerUtil.DEFAULT_TRADEFED_JOB_TIMEOUT);
+
+    orchestrator.startSession(MODULE_SHARDING_REQUEST_INFO);
+    orchestrator.onTestStarting(setupTest, ImmutableList.of(deviceLocator1, deviceLocator2));
+    orchestrator.onJobEnd(
+        new JobEndEvent(setupJob, /* jobError= */ null), MODULE_SHARDING_REQUEST_INFO);
+
+    verify(deviceReserver)
+        .addTempAllocationKeyToDevice(
+            deviceLocator1, "session_id", SessionRequestHandlerUtil.DEFAULT_TRADEFED_JOB_TIMEOUT);
+    verify(deviceReserver)
+        .addTempAllocationKeyToDevice(deviceLocator1, "session_id", Duration.ZERO);
+    verify(deviceReserver, never())
+        .addTempAllocationKeyToDevice(deviceLocator2, "session_id", Duration.ZERO);
+    assertThat(tfSpec.dimensions().get(Name.ALLOCATION_KEY)).isNull();
+  }
+
+  @Test
+  public void onJobEnd_setupJobWithoutTeardownJob_releasesReservedDevicesAfterMainJobsEnd()
+      throws Exception {
+    JobInfo setupJob = mockJobInfo("setup_job_id", XtsConstants.SETUP_JOB_NAME);
+    TestInfo setupTest = attachMockSetupTest(setupJob);
+
+    SubDeviceSpec tfSpec = createSubDeviceSpec();
+    JobInfo tfJob = mockJobInfoWithSubDevices("tf_id", "tf_job", ImmutableList.of(tfSpec));
+
+    SessionRequestInfo narrowedRequestInfo = narrowRequest(DEFAULT_REQUEST_INFO, "device_1");
+    when(xtsJobCreator.createXtsSetupJob(DEFAULT_REQUEST_INFO)).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsTearDownJob(narrowedRequestInfo)).thenReturn(Optional.empty());
+    when(xtsJobCreator.createXtsTradefedTestJob(eq(narrowedRequestInfo), any(), eq(false)))
+        .thenReturn(ImmutableList.of(tfJob));
+
+    DeviceLocator deviceLocator = new DeviceLocator("device_1", LabLocator.LOCALHOST);
+
+    orchestrator.startSession(DEFAULT_REQUEST_INFO);
+    orchestrator.onTestStarting(setupTest, ImmutableList.of(deviceLocator));
+    orchestrator.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null), DEFAULT_REQUEST_INFO);
+    orchestrator.onJobEnd(new JobEndEvent(tfJob, /* jobError= */ null), DEFAULT_REQUEST_INFO);
+
+    assertThat(tfSpec.dimensions().get(Name.ALLOCATION_KEY)).isEqualTo("session_id");
+    verify(deviceReserver).addTempAllocationKeyToDevice(deviceLocator, "session_id", Duration.ZERO);
+  }
+
+  @Test
+  public void onSessionCancellation_afterSetupDevicesReserved_releasesReservedDevices()
+      throws Exception {
+    JobInfo setupJob = mockJobInfo("setup_job_id", XtsConstants.SETUP_JOB_NAME);
+    TestInfo setupTest = attachMockSetupTest(setupJob);
+
+    SessionRequestInfo narrowedRequestInfo = narrowRequest(DEFAULT_REQUEST_INFO, "device_1");
+    JobInfo tfJob = mockJobInfo("tf_id", "tf_job");
+    when(xtsJobCreator.createXtsSetupJob(DEFAULT_REQUEST_INFO)).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsTradefedTestJob(eq(narrowedRequestInfo), any(), eq(false)))
+        .thenReturn(ImmutableList.of(tfJob));
+
+    DeviceLocator deviceLocator = new DeviceLocator("device_1", LabLocator.LOCALHOST);
+
+    orchestrator.startSession(DEFAULT_REQUEST_INFO);
+    orchestrator.onTestStarting(setupTest, ImmutableList.of(deviceLocator));
+    orchestrator.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null), DEFAULT_REQUEST_INFO);
+
+    orchestrator.onSessionCancellation("Cancelled by user", 15);
+
+    verify(deviceReserver).addTempAllocationKeyToDevice(deviceLocator, "session_id", Duration.ZERO);
+  }
+
+  @Test
+  public void onSessionEnded_beforeTeardownEnds_releasesReservedDevices() throws Exception {
+    JobInfo setupJob = mockJobInfo("setup_job_id", XtsConstants.SETUP_JOB_NAME);
+    TestInfo setupTest = attachMockSetupTest(setupJob);
+
+    SessionRequestInfo narrowedRequestInfo = narrowRequest(DEFAULT_REQUEST_INFO, "device_1");
+    JobInfo tfJob = mockJobInfo("tf_id", "tf_job");
+    JobInfo teardownJob = mockJobInfo("teardown_id", XtsConstants.TEARDOWN_JOB_NAME);
+    when(xtsJobCreator.createXtsSetupJob(DEFAULT_REQUEST_INFO)).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsTearDownJob(narrowedRequestInfo))
+        .thenReturn(Optional.of(teardownJob));
+    when(xtsJobCreator.createXtsTradefedTestJob(eq(narrowedRequestInfo), any(), eq(false)))
+        .thenReturn(ImmutableList.of(tfJob));
+
+    DeviceLocator deviceLocator = new DeviceLocator("device_1", LabLocator.LOCALHOST);
+
+    orchestrator.startSession(DEFAULT_REQUEST_INFO);
+    orchestrator.onTestStarting(setupTest, ImmutableList.of(deviceLocator));
+    orchestrator.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null), DEFAULT_REQUEST_INFO);
+
+    orchestrator.onSessionEnded();
+
+    verify(deviceReserver).addTempAllocationKeyToDevice(deviceLocator, "session_id", Duration.ZERO);
+  }
+
+  @Test
+  public void onJobEnd_setupJobMainJobCreationFails_releasesReservedDevices() throws Exception {
+    JobInfo setupJob = mockJobInfo("setup_job_id", XtsConstants.SETUP_JOB_NAME);
+    TestInfo setupTest = attachMockSetupTest(setupJob);
+    when(xtsJobCreator.createXtsSetupJob(DEFAULT_REQUEST_INFO)).thenReturn(Optional.of(setupJob));
+
+    DeviceLocator deviceLocator = new DeviceLocator("device_1", LabLocator.LOCALHOST);
+
+    orchestrator.startSession(DEFAULT_REQUEST_INFO);
+    orchestrator.onTestStarting(setupTest, ImmutableList.of(deviceLocator));
+
+    MobileHarnessException exception =
+        assertThrows(
+            MobileHarnessException.class,
+            () ->
+                orchestrator.onJobEnd(
+                    new JobEndEvent(setupJob, /* jobError= */ null), DEFAULT_REQUEST_INFO));
+
+    assertThat(exception.getErrorId()).isEqualTo(InfraErrorId.XTS_NO_JOB_CREATED_FOR_SESSION);
+    verify(deviceReserver).addTempAllocationKeyToDevice(deviceLocator, "session_id", Duration.ZERO);
+  }
+
+  @Test
+  public void onJobEnd_partialDeviceMatchSetupJob_narrowsSubsequentJobsToReservedDevices()
+      throws Exception {
+    SessionRequestInfo partialMatchRequest =
+        SessionRequestInfo.newBuilder()
+            .setIsAtsServerRequest(true)
+            .setAllowPartialDeviceMatch(true)
+            .addDeviceSerials("device_1")
+            .addDeviceSerials("device_2")
+            .addDeviceSerials("device_3")
+            .build();
+    SessionRequestInfo expectedNarrowedRequest =
+        narrowRequest(partialMatchRequest, "device_1", "device_2");
+
+    JobInfo setupJob = mockJobInfo("setup_job_id", XtsConstants.SETUP_JOB_NAME);
+    TestInfo setupTest = attachMockSetupTest(setupJob);
+
+    SubDeviceSpec tfSpec1 = createSubDeviceSpec(new Dimensions().add(Name.UUID, "device_1"));
+    SubDeviceSpec tfSpec2 = createSubDeviceSpec(new Dimensions().add(Name.UUID, "device_2"));
+    JobInfo tfJob =
+        mockJobInfoWithSubDevices("tf_id", "tf_job", ImmutableList.of(tfSpec1, tfSpec2));
+    JobInfo teardownJob = mockJobInfo("teardown_id", XtsConstants.TEARDOWN_JOB_NAME);
+
+    when(xtsJobCreator.createXtsSetupJob(partialMatchRequest)).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsTradefedTestJob(eq(expectedNarrowedRequest), any(), eq(false)))
+        .thenReturn(ImmutableList.of(tfJob));
+    when(xtsJobCreator.createXtsTearDownJob(expectedNarrowedRequest))
+        .thenReturn(Optional.of(teardownJob));
+
+    // Only device_1 and device_2 were IDLE and allocated when setupJob ran (device_3 was BUSY).
+    DeviceLocator deviceLocator1 = new DeviceLocator("device_1", LabLocator.LOCALHOST);
+    DeviceLocator deviceLocator2 = new DeviceLocator("device_2", LabLocator.LOCALHOST);
+
+    orchestrator.startSession(partialMatchRequest);
+    verify(xtsJobCreator, never()).createXtsTearDownJob(any());
+    orchestrator.onTestStarting(setupTest, ImmutableList.of(deviceLocator1, deviceLocator2));
+    orchestrator.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null), partialMatchRequest);
+
+    verify(xtsJobCreator).createXtsTradefedTestJob(eq(expectedNarrowedRequest), any(), eq(false));
+    verify(xtsJobCreator).createXtsNonTradefedJobs(expectedNarrowedRequest);
+    verify(xtsJobCreator).createXtsTearDownJob(expectedNarrowedRequest);
+    assertThat(tfSpec1.dimensions().get(Name.ALLOCATION_KEY)).isEqualTo("session_id");
+    assertThat(tfSpec2.dimensions().get(Name.ALLOCATION_KEY)).isEqualTo("session_id");
+  }
+
+  @Test
+  public void onJobEnd_multiDeviceMoblyJob_stampsAllSubDeviceSpecs() throws Exception {
+    JobInfo setupJob = mockJobInfo("setup_job_id", XtsConstants.SETUP_JOB_NAME);
+    TestInfo setupTest = attachMockSetupTest(setupJob);
+
+    // 2-device Mobly module: all SubDeviceSpecs must receive allocation_key so no slot can match an
+    // unprepared device.
+    SubDeviceSpec subDeviceSpec1 = createSubDeviceSpec();
+    SubDeviceSpec subDeviceSpec2 = createSubDeviceSpec();
+    JobInfo twoDeviceMoblyJob =
+        mockJobInfoWithSubDevices(
+            "mobly_2dev", "mobly_2dev_job", ImmutableList.of(subDeviceSpec1, subDeviceSpec2));
+
+    SessionRequestInfo narrowedRequestInfo = narrowRequest(DEFAULT_REQUEST_INFO, "device_1");
+    when(xtsJobCreator.createXtsSetupJob(DEFAULT_REQUEST_INFO)).thenReturn(Optional.of(setupJob));
+    when(xtsJobCreator.createXtsNonTradefedJobs(narrowedRequestInfo))
+        .thenReturn(ImmutableList.of(twoDeviceMoblyJob));
+
+    DeviceLocator deviceLocator1 = new DeviceLocator("device_1", LabLocator.LOCALHOST);
+
+    orchestrator.startSession(DEFAULT_REQUEST_INFO);
+    orchestrator.onTestStarting(setupTest, ImmutableList.of(deviceLocator1));
+    orchestrator.onJobEnd(new JobEndEvent(setupJob, /* jobError= */ null), DEFAULT_REQUEST_INFO);
+
+    assertThat(subDeviceSpec1.dimensions().get(Name.ALLOCATION_KEY)).isEqualTo("session_id");
+    assertThat(subDeviceSpec2.dimensions().get(Name.ALLOCATION_KEY)).isEqualTo("session_id");
   }
 }

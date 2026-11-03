@@ -330,10 +330,9 @@ public class AtsConsoleSessionPlugin {
   public void onTestStarting(LocalTestStartingEvent event) {
     TestInfo testInfo = event.getTest();
     boolean tfTest = testInfo.jobInfo().properties().getBoolean(Job.IS_XTS_TF_JOB).orElse(false);
+    ImmutableList<DeviceLocator> deviceLocators = event.getAllocation().getAllDeviceLocators();
     ImmutableList<String> deviceSerials =
-        event.getAllocation().getAllDeviceLocators().stream()
-            .map(DeviceLocator::getSerial)
-            .collect(toImmutableList());
+        deviceLocators.stream().map(DeviceLocator::getSerial).collect(toImmutableList());
 
     synchronized (runningTestsLock) {
       AtomicReference<Invocations> testInvocations = new AtomicReference<>();
@@ -369,8 +368,8 @@ public class AtsConsoleSessionPlugin {
     sessionInfo.putSessionProperty(
         SessionProperties.PROPERTY_KEY_SESSION_CONTAIN_STARTED_TEST, "true");
 
-    // Sends cancellation test message if necessary.
-    orchestrator.onTestStarting(testInfo);
+    // Sends cancellation test message if necessary, and records setup job devices if applicable.
+    orchestrator.onTestStarting(testInfo, deviceLocators);
 
     // Caches devices (as a xTS type) used in the test.
     // The intention is to make sure if any device goes offline between job runs, the next job

@@ -654,10 +654,9 @@ public final class SessionRequestHandlerUtilTest {
             !SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo));
     assertThrows(
         MobileHarnessException.class,
-        () -> {
-          sessionRequestHandlerUtil.initializeJobConfig(
-              sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
-        });
+        () ->
+            sessionRequestHandlerUtil.initializeJobConfig(
+                sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of()));
   }
 
   @Test
@@ -776,6 +775,41 @@ public final class SessionRequestHandlerUtilTest {
             sessionRequestInfo, ImmutableMap.of(), subDeviceSpecs, ImmutableMultimap.of());
 
     assertThat(jobConfig.getDevice().getSubDeviceSpecList())
+        .containsExactly(subDeviceSpecWithDimension("id", "regex:(device_id_1|device_id_2)"));
+  }
+
+  @Test
+  public void
+      getSessionSubDeviceSpecList_consoleModuleSharding_forMultiDeviceJobWithoutShardCount_allocatesAllAvailableDevices()
+          throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder().setShardingMode(ShardingMode.MODULE));
+
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo, /* forMultiDeviceJob= */ true);
+
+    SubDeviceSpec expectedSpec =
+        subDeviceSpecWithDimension("id", "regex:(device_id_1|device_id_2)");
+    assertThat(subDeviceSpecs).containsExactly(expectedSpec, expectedSpec);
+  }
+
+  @Test
+  public void
+      getSessionSubDeviceSpecList_consoleModuleSharding_forMultiDeviceJobWithShardCount1_respectsShardCount()
+          throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfoUtil.buildAndValidate(
+            defaultSessionRequestInfoBuilder()
+                .setShardingMode(ShardingMode.MODULE)
+                .setShardCount(1));
+
+    ImmutableList<SubDeviceSpec> subDeviceSpecs =
+        sessionRequestHandlerUtil.getSessionSubDeviceSpecList(
+            sessionRequestInfo, /* forMultiDeviceJob= */ true);
+
+    assertThat(subDeviceSpecs)
         .containsExactly(subDeviceSpecWithDimension("id", "regex:(device_id_1|device_id_2)"));
   }
 

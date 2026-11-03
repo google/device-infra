@@ -228,11 +228,10 @@ final class AtsServerSessionPlugin {
       RequestDetail.Builder requestDetail = requestDetailSupplier.get();
       try {
         TestInfo testInfo = event.getTest();
+        var allocatedDeviceLocators = event.getAllocation().getAllDeviceLocators();
         ImmutableList<DeviceLocator> deviceLocators =
-            event.getAllocation().getAllDeviceLocators().stream()
-                .map(
-                    com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator
-                        ::toNewDeviceLocator)
+            allocatedDeviceLocators.stream()
+                .map(locator -> locator.toNewDeviceLocator())
                 .collect(toImmutableList());
         if (!deviceLocators.isEmpty()) {
           cacheDevices(deviceLocators);
@@ -240,8 +239,9 @@ final class AtsServerSessionPlugin {
         requestDetail
             .setWorkingJobId(testInfo.jobInfo().locator().getId())
             .setWorkingTestId(testInfo.locator().getId());
-        // Sends cancellation test message if necessary.
-        orchestrator.onTestStarting(testInfo);
+        // Sends cancellation test message if necessary, and records setup job devices if
+        // applicable.
+        orchestrator.onTestStarting(testInfo, allocatedDeviceLocators);
       } finally {
         updateSessionPluginOutput(requestDetail);
       }

@@ -28,12 +28,14 @@ import static java.util.stream.Collectors.toCollection;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
@@ -47,7 +49,9 @@ import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
+import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -60,6 +64,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 
@@ -82,6 +87,7 @@ public class AtsSessionOrchestrator {
   private final SessionInfo sessionInfo;
   private final XtsJobCreator xtsJobCreator;
   private final TestMessageUtil testMessageUtil;
+  private final DeviceReserver deviceReserver;
 
   @GuardedBy("itself")
   private final Map<String, Boolean> runningTradefedJobs = new HashMap<>();
@@ -103,6 +109,9 @@ public class AtsSessionOrchestrator {
   @GuardedBy("addingJobLock")
   private boolean sessionEnded;
 
+  @GuardedBy("addingJobLock")
+  private final Set<DeviceLocator> reservedSetupDevices = new LinkedHashSet<>();
+
   private final Queue<JobInfo> additionalTradefedJobs = new ConcurrentLinkedQueue<>();
 
   private volatile ImmutableList<JobInfo> tradefedJobs = ImmutableList.of();
@@ -115,10 +124,14 @@ public class AtsSessionOrchestrator {
 
   @Inject
   AtsSessionOrchestrator(
-      SessionInfo sessionInfo, XtsJobCreator xtsJobCreator, TestMessageUtil testMessageUtil) {
+      SessionInfo sessionInfo,
+      XtsJobCreator xtsJobCreator,
+      TestMessageUtil testMessageUtil,
+      DeviceReserver deviceReserver) {
     this.sessionInfo = sessionInfo;
     this.xtsJobCreator = xtsJobCreator;
     this.testMessageUtil = testMessageUtil;
+    this.deviceReserver = deviceReserver;
   }
 
   /**
@@ -128,14 +141,14 @@ public class AtsSessionOrchestrator {
   public void startSession(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
     Optional<JobInfo> setupJobOpt = xtsJobCreator.createXtsSetupJob(sessionRequestInfo);
-    Optional<JobInfo> teardownJobOpt = xtsJobCreator.createXtsTearDownJob(sessionRequestInfo);
-
     setupJobOpt.ifPresent(setupJobRef::set);
-    teardownJobOpt.ifPresent(teardownJobRef::set);
 
     if (setupJobOpt.isPresent()) {
+      // Defer creating the teardown job until onJobEnd(setupJob) so its SubDeviceSpecs target the
+      // exact devices prepared and reserved by the setup job.
       addSetupJob(setupJobOpt.get());
     } else {
+      xtsJobCreator.createXtsTearDownJob(sessionRequestInfo).ifPresent(teardownJobRef::set);
       createMainJobs(
           sessionRequestInfo,
           /* dynamicMctsModules= */ ImmutableSet.of(),
@@ -144,11 +157,15 @@ public class AtsSessionOrchestrator {
     }
   }
 
-  /** Marks the session as ended so no further jobs are scheduled. */
+  /**
+   * Marks the session as ended so no further jobs are scheduled, and releases any reserved setup
+   * devices.
+   */
   public void onSessionEnded() {
     synchronized (addingJobLock) {
       sessionEnded = true;
     }
+    releaseReservedSetupDevices();
   }
 
   /**
@@ -166,12 +183,11 @@ public class AtsSessionOrchestrator {
         runningSetupJobId.compareAndSet(jobId, null)
             || (runningSetupJobId.get() == null && isSetupJob(currentJob));
     if (isSetupJobEnd) {
-      // If the session was resumed after a server restart, setupJobRef and teardownJobRef were not
-      // populated by startSession in this process; initialize them now.
-      if (setupJobRef.get() == null) {
-        setupJobRef.set(currentJob);
-        xtsJobCreator.createXtsTearDownJob(sessionRequestInfo).ifPresent(teardownJobRef::set);
-      }
+      // If the session was resumed after a server restart, setupJobRef was not populated by
+      // startSession in this process; initialize it now.
+      // TODO: Once OLC server persists temp required dimensions across restarts,
+      // recover reserved setup devices here as well.
+      setupJobRef.compareAndSet(null, currentJob);
       logger.atInfo().log("Setup job [%s] ended, starting main jobs.", jobId);
       // Extract dynamic MCTS module names downloaded during the setup job, and create Tradefed jobs
       // now that the canonical list of dynamic modules is known.
@@ -180,7 +196,28 @@ public class AtsSessionOrchestrator {
       // builds), it does not need dynamic MCTS, so skip creating the dynamic MCTS job to avoid
       // booting Tradefed for 0 tests.
       boolean skipDynamicMctsJob = !extractHasPreloadedMainlineModules(currentJob);
-      createMainJobs(sessionRequestInfo, dynamicMctsModules, skipDynamicMctsJob);
+      try {
+        ImmutableSet<String> reservedSerials = getReservedSetupDeviceSerials();
+        SessionRequestInfo narrowedRequestInfo =
+            narrowRequestInfoToReservedDevices(sessionRequestInfo, reservedSerials);
+        createMainJobs(narrowedRequestInfo, dynamicMctsModules, skipDynamicMctsJob);
+        xtsJobCreator.createXtsTearDownJob(narrowedRequestInfo).ifPresent(teardownJobRef::set);
+        if (!reservedSerials.isEmpty()) {
+          // Stamp allocation_key onto all subsequent session jobs so the scheduler binds them to
+          // the reserved setup devices.
+          String allocationKey = sessionInfo.getSessionId();
+          Streams.concat(
+                  tradefedJobs.stream(),
+                  nonTradefedJobs.stream(),
+                  Stream.ofNullable(teardownJobRef.get()))
+              .forEach(job -> addAllocationKeyToJob(job, allocationKey));
+        }
+      } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
+        // Release setup device reservations if main/teardown job creation fails so devices are not
+        // left locked until TTL expiry.
+        releaseReservedSetupDevices();
+        throw e;
+      }
       addMainJobs(sessionRequestInfo);
       return;
     }
@@ -191,6 +228,7 @@ public class AtsSessionOrchestrator {
         runningTeardownJobId.compareAndSet(jobId, null) || isTeardownJob(currentJob);
     if (isTeardownJobEnd) {
       logger.atInfo().log("Teardown job [%s] ended.", jobId);
+      releaseReservedSetupDevices();
       return;
     }
 
@@ -254,10 +292,16 @@ public class AtsSessionOrchestrator {
   }
 
   /**
-   * Records a started test and sends a pending cancellation message to it immediately if the
-   * session has already been cancelled.
+   * Records a started test (reserving allocated devices immediately for the setup job so no
+   * unreserved window exists when its test allocation ends) and sends a pending cancellation
+   * message to it immediately if the session has already been cancelled.
    */
-  public void onTestStarting(TestInfo testInfo) {
+  public void onTestStarting(TestInfo testInfo, ImmutableList<DeviceLocator> deviceLocators) {
+    if (!deviceLocators.isEmpty() && isSetupJob(testInfo.jobInfo())) {
+      // Reserve while the setup test still holds its device allocation, since the allocation is
+      // released before JobEndEvent arrives.
+      reserveSetupDevices(deviceLocators);
+    }
     // Sends cancellation test message if necessary.
     XtsTradefedRunCancellation lastCancellationTestMessage;
     synchronized (testCancellationLock) {
@@ -310,6 +354,7 @@ public class AtsSessionOrchestrator {
     }
     additionalTradefedJobs.clear();
     teardownJobRef.set(null);
+    releaseReservedSetupDevices();
 
     // Creates test message.
     XtsTradefedRunCancellation cancellationTestMessage =
@@ -604,7 +649,10 @@ public class AtsSessionOrchestrator {
     return false;
   }
 
-  /** Adds the teardown job to the session if present. */
+  /**
+   * Adds the teardown job to the session if present, or releases reserved setup devices immediately
+   * when no teardown job is scheduled.
+   */
   private void addTeardownJobIfAny() {
     JobInfo teardownJob = teardownJobRef.getAndSet(null);
     if (teardownJob != null) {
@@ -626,8 +674,120 @@ public class AtsSessionOrchestrator {
       ImmutableList<String> jobIds = addJobsToSession(ImmutableList.of(teardownJob));
       if (!jobIds.isEmpty()) {
         runningTeardownJobId.set(jobIds.get(0));
+        return;
       }
     }
+    // No teardown job was scheduled (absent, or session cancelled/ended while adding); release now.
+    releaseReservedSetupDevices();
+  }
+
+  /**
+   * Reserves the devices allocated to the setup job using the session ID as a temporary allocation
+   * key so subsequent jobs in this session only run on those prepared devices.
+   */
+  private void reserveSetupDevices(ImmutableList<DeviceLocator> deviceLocators) {
+    synchronized (addingJobLock) {
+      // Guard against a late onTestStarting arriving after cancellation or session end so we do
+      // not create a dangling reservation after releaseReservedSetupDevices() has already run.
+      if (sessionCancelReason != null || sessionEnded) {
+        return;
+      }
+      String allocationKey = sessionInfo.getSessionId();
+      // Use the max Tradefed job timeout as a safety-net TTL; normal completion/cancellation
+      // explicitly clears the key via Duration.ZERO.
+      Duration ttl = SessionRequestHandlerUtil.DEFAULT_TRADEFED_JOB_TIMEOUT;
+      try {
+        for (DeviceLocator deviceLocator : deviceLocators) {
+          if (reservedSetupDevices.contains(deviceLocator)) {
+            continue;
+          }
+          logger.atInfo().log(
+              "Reserving setup device [%s] with allocation_key [%s] for [%s].",
+              deviceLocator, allocationKey, ttl);
+          deviceReserver.addTempAllocationKeyToDevice(deviceLocator, allocationKey, ttl);
+          reservedSetupDevices.add(deviceLocator);
+        }
+      } catch (MobileHarnessException | InterruptedException e) {
+        // Roll back any partial reservations and proceed unreserved rather than failing the setup
+        // test.
+        releaseReservedSetupDevices();
+        if (MoreThrowables.isInterruption(e)) {
+          Thread.currentThread().interrupt();
+        }
+        logger.atWarning().withCause(e).log(
+            "Failed to reserve setup devices %s on test start.", deviceLocators);
+      } catch (RuntimeException | Error e) {
+        releaseReservedSetupDevices();
+        throw e;
+      }
+    }
+  }
+
+  /**
+   * Returns the serials of reserved setup devices (device serial in local mode, device UUID in ATS
+   * server mode, matching {@code SessionRequestInfo.device_serials}).
+   */
+  private ImmutableSet<String> getReservedSetupDeviceSerials() {
+    synchronized (addingJobLock) {
+      return reservedSetupDevices.stream().map(DeviceLocator::getSerial).collect(toImmutableSet());
+    }
+  }
+
+  /**
+   * Narrows {@code sessionRequestInfo} to {@code reservedSerials} when setup devices were reserved,
+   * and disables {@code allow_partial_device_match}.
+   *
+   * <p>This prevents subsequent job creation (Tradefed, non-Tradefed, and teardown) from picking up
+   * newly {@code IDLE} devices that did not run the setup job (e.g. under ATS Server {@code
+   * allow_partial_device_match} or Console {@code --shard-count}), and avoids failing {@code
+   * allow_partial_device_match}'s instantaneous {@code IDLE} check while reserved setup devices are
+   * still rebooting right after the setup job ends.
+   */
+  private static SessionRequestInfo narrowRequestInfoToReservedDevices(
+      SessionRequestInfo sessionRequestInfo, ImmutableSet<String> reservedSerials) {
+    if (reservedSerials.isEmpty()) {
+      return sessionRequestInfo;
+    }
+    return sessionRequestInfo.toBuilder()
+        .clearDeviceSerials()
+        .addAllDeviceSerials(reservedSerials)
+        .setAllowPartialDeviceMatch(false)
+        .build();
+  }
+
+  /** Releases any setup devices temporarily reserved for this session. */
+  private void releaseReservedSetupDevices() {
+    synchronized (addingJobLock) {
+      if (reservedSetupDevices.isEmpty()) {
+        return;
+      }
+      ImmutableList<DeviceLocator> devicesToRelease = ImmutableList.copyOf(reservedSetupDevices);
+      reservedSetupDevices.clear();
+      String allocationKey = sessionInfo.getSessionId();
+      for (DeviceLocator deviceLocator : devicesToRelease) {
+        logger.atInfo().log(
+            "Releasing reserved setup device [%s] with allocation_key [%s].",
+            deviceLocator, allocationKey);
+        try {
+          // Passing Duration.ZERO removes the temporary allocation_key dimension immediately.
+          deviceReserver.addTempAllocationKeyToDevice(deviceLocator, allocationKey, Duration.ZERO);
+        } catch (MobileHarnessException | InterruptedException e) {
+          if (MoreThrowables.isInterruption(e)) {
+            Thread.currentThread().interrupt();
+          }
+          logger.atWarning().withCause(e).log(
+              "Failed to release reserved setup device [%s] with allocation_key [%s].",
+              deviceLocator, allocationKey);
+        }
+      }
+    }
+  }
+
+  /** Stamps {@link Name#ALLOCATION_KEY} onto all {@link SubDeviceSpec}s of {@code job}. */
+  private static void addAllocationKeyToJob(JobInfo job, String allocationKey) {
+    job.subDeviceSpecs()
+        .getAllSubDevices()
+        .forEach(spec -> spec.dimensions().add(Name.ALLOCATION_KEY, allocationKey));
   }
 
   /**
@@ -678,6 +838,9 @@ public class AtsSessionOrchestrator {
       Optional<JobInfo> existingSetupJob =
           sessionInfo.getAllJobs().stream().filter(AtsSessionOrchestrator::isSetupJob).findFirst();
       if (existingSetupJob.isPresent()) {
+        // TODO: Once OLC server persists temp required dimensions across restarts,
+        // recover reserved setup devices here so reconstructed untriggered jobs receive
+        // allocation_key and the reservation is released when the session finishes.
         setupJobRef.set(existingSetupJob.get());
         dynamicMctsModules = extractDynamicMctsModules(existingSetupJob.get());
         skipDynamicMctsJob = !extractHasPreloadedMainlineModules(existingSetupJob.get());

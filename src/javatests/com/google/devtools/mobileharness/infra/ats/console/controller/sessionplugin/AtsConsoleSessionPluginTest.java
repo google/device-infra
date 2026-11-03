@@ -32,6 +32,7 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
@@ -39,6 +40,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginNotification;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
+import com.google.devtools.mobileharness.infra.client.api.controller.allocation.reserver.DeviceReserver;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
@@ -70,6 +72,8 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
+import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
+import com.google.wireless.qa.mobileharness.shared.model.lab.LabLocator;
 import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
@@ -98,6 +102,7 @@ public final class AtsConsoleSessionPluginTest {
   @Bind @Mock private XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil;
   @Bind @Mock private LocalFileUtil localFileUtil;
   @Bind @Mock private SessionDeviceCache sessionDeviceCache;
+  @Bind @Mock private DeviceReserver deviceReserver;
 
   @Inject private AtsConsoleSessionPlugin atsConsoleSessionPlugin;
 
@@ -996,5 +1001,44 @@ public final class AtsConsoleSessionPluginTest {
         () -> atsConsoleSessionPlugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null)));
 
     verify(sessionDeviceCache).invalidateCache(any());
+  }
+
+  @Test
+  public void onTestStarting_setupJob_reservesAllocatedDevicesViaDeviceReserver() throws Exception {
+    when(sessionInfo.getSessionId()).thenReturn("session_id");
+    RunCommand runCommand = RunCommand.getDefaultInstance();
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build()))
+                .build());
+    atsConsoleSessionPlugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+
+    Properties setupProperties = new Properties(new Timing());
+    setupProperties.add(XtsConstants.XTS_JOB_NAME, XtsConstants.SETUP_JOB_NAME);
+    JobInfo setupJob = mock(JobInfo.class);
+    when(setupJob.properties()).thenReturn(setupProperties);
+
+    TestInfo setupTest = mock(TestInfo.class);
+    TestLocator testLocator = mock(TestLocator.class);
+    when(testLocator.getId()).thenReturn("setup_test_id");
+    when(setupTest.locator()).thenReturn(testLocator);
+    when(setupTest.jobInfo()).thenReturn(setupJob);
+
+    DeviceLocator deviceLocator = new DeviceLocator("device_1", LabLocator.LOCALHOST);
+    Allocation allocation = mock(Allocation.class);
+    when(allocation.getAllDeviceLocators()).thenReturn(ImmutableList.of(deviceLocator));
+
+    LocalTestStartingEvent startingEvent = mock(LocalTestStartingEvent.class);
+    when(startingEvent.getTest()).thenReturn(setupTest);
+    when(startingEvent.getAllocation()).thenReturn(allocation);
+    when(startingEvent.getLocalDevices()).thenReturn(ImmutableMap.of());
+
+    atsConsoleSessionPlugin.onTestStarting(startingEvent);
+
+    verify(deviceReserver)
+        .addTempAllocationKeyToDevice(
+            deviceLocator, "session_id", SessionRequestHandlerUtil.DEFAULT_TRADEFED_JOB_TIMEOUT);
   }
 }

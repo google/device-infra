@@ -27,7 +27,9 @@ package(
         "//java/com/google/wireless/qa/mobileharness/client/api:__subpackages__",
         "//javatests/com/google/devtools/mobileharness/service/moscar:__subpackages__",
         "//javatests/com/google/wireless/qa/mobileharness/client/api:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
     ],
 )
