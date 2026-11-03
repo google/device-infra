@@ -27,11 +27,19 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter.DeviceMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter.DeviceMatchCondition.DimensionMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.IntegerMatch;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.IntegerMatch.GreaterThanOrEqual;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMultimapMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask;
@@ -55,10 +63,13 @@ import javax.inject.Inject;
  * LabInfoService}. {@link #pullDimensions} fetches several dimensions in a single {@code
  * GetLabInfo} call.
  *
- * <p>Unlike the per-entity detail-page reads, this asks for the whole fleet in one call: no filter
- * (every lab and device) and no page limit, using {@code DeviceInfoMask} and {@code LabInfoMask}
- * derived from the schema registry. It accepts the master's cached data, which is enough for a
- * periodically refreshed index that does not need the per-query realtime path.
+ * <p>Unlike the per-entity detail-page reads, {@link #pull} asks for the whole fleet in one call:
+ * no filter (every lab and device) and no page limit, using {@code DeviceInfoMask} and {@code
+ * LabInfoMask} derived from the schema registry. Single-dimension on-demand pulls ({@link
+ * #pullDimension} and single-key {@link #pullDimensions}) pre-filter devices with a {@link
+ * DeviceFilter} matching devices that carry at least one value for the dimension. It accepts the
+ * master's cached data, which is enough for a periodically refreshed index that does not need the
+ * per-query realtime path.
  *
  * <p>{@link #pull} is non-blocking: it returns the {@link ListenableFuture} from the async {@code
  * LabInfoService} call, transformed to its {@link LabQueryResult}. Timeouts and failure handling
@@ -156,23 +167,31 @@ public final class LabInfoFleetPuller {
     ImmutableSet<String> dimNames =
         dimensionKeys.stream().map(DeviceKeyDescriptor::bareName).collect(toImmutableSet());
 
+    LabQuery.Builder labQuery =
+        LabQuery.newBuilder()
+            .setLabViewRequest(LabQuery.LabViewRequest.getDefaultInstance())
+            .setMask(
+                LabQuery.Mask.newBuilder()
+                    .setLabInfoMask(EMPTY_LAB_INFO_MASK)
+                    .setDeviceInfoMask(
+                        LabQuery.Mask.DeviceInfoMask.newBuilder()
+                            .setFieldMask(SINGLE_DIM_FIELD_MASK)
+                            .setSupportedDimensionsMask(
+                                LabQuery.Mask.DeviceInfoMask.DimensionsMask.newBuilder()
+                                    .addAllDimensionNames(dimNames))
+                            .setRequiredDimensionsMask(
+                                LabQuery.Mask.DeviceInfoMask.DimensionsMask.newBuilder()
+                                    .addAllDimensionNames(dimNames))));
+    // DeviceFilter combines multiple DeviceMatchConditions with AND, so pre-filtering by dimension
+    // key presence applies only when pulling a single dimension name. Interactive UI edits add one
+    // cold key at a time (hitting this filtered path), whereas cold multi-key deep links stay a
+    // single unfiltered masked GetLabInfo RPC rather than fanning out N concurrent RPCs to Master.
+    if (dimNames.size() == 1) {
+      labQuery.setFilter(singleDimensionFilter(Iterables.getOnlyElement(dimNames)));
+    }
     GetLabInfoRequest request =
         GetLabInfoRequest.newBuilder()
-            .setLabQuery(
-                LabQuery.newBuilder()
-                    .setLabViewRequest(LabQuery.LabViewRequest.getDefaultInstance())
-                    .setMask(
-                        LabQuery.Mask.newBuilder()
-                            .setLabInfoMask(EMPTY_LAB_INFO_MASK)
-                            .setDeviceInfoMask(
-                                LabQuery.Mask.DeviceInfoMask.newBuilder()
-                                    .setFieldMask(SINGLE_DIM_FIELD_MASK)
-                                    .setSupportedDimensionsMask(
-                                        LabQuery.Mask.DeviceInfoMask.DimensionsMask.newBuilder()
-                                            .addAllDimensionNames(dimNames))
-                                    .setRequiredDimensionsMask(
-                                        LabQuery.Mask.DeviceInfoMask.DimensionsMask.newBuilder()
-                                            .addAllDimensionNames(dimNames)))))
+            .setLabQuery(labQuery)
             .setPage(Page.newBuilder().setLimit(0))
             .build();
 
@@ -197,8 +216,13 @@ public final class LabInfoFleetPuller {
                           (first, second) -> first));
 
           logger.atInfo().log(
-              "GetLabInfo on-demand dims %s (%s universe) scanned %d devices in %d ms.",
-              overlays.keySet(), universeScope, devices.size(), stopwatch.elapsed().toMillis());
+              "GetLabInfo on-demand dims %s (%s universe) received %d devices (filtered=%s) in"
+                  + " %d ms.",
+              overlays.keySet(),
+              universeScope,
+              devices.size(),
+              dimNames.size() == 1,
+              stopwatch.elapsed().toMillis());
           return overlays;
         },
         directExecutor());
@@ -208,6 +232,27 @@ public final class LabInfoFleetPuller {
   public ListenableFuture<ImmutableMap<String, DimensionOverlayRaw>> pullDimensions(
       Set<DeviceKeyDescriptor> dimensionKeys) {
     return pullDimensions(dimensionKeys, UniverseScope.SELF);
+  }
+
+  private static LabQuery.Filter singleDimensionFilter(String dimName) {
+    return LabQuery.Filter.newBuilder()
+        .setDeviceFilter(
+            DeviceFilter.newBuilder()
+                .addDeviceMatchCondition(
+                    DeviceMatchCondition.newBuilder()
+                        .setDimensionMatchCondition(
+                            DimensionMatchCondition.newBuilder()
+                                .setCondition(
+                                    StringMultimapMatchCondition.newBuilder()
+                                        .setKey(dimName)
+                                        .setValueCondition(
+                                            StringListMatchCondition.newBuilder()
+                                                .setLengthMatch(
+                                                    IntegerMatch.newBuilder()
+                                                        .setGreaterThanOrEqual(
+                                                            GreaterThanOrEqual.newBuilder()
+                                                                .setMinValue(1))))))))
+        .build();
   }
 
   private static ImmutableMap<String, ImmutableList<String>> extractDimensionValues(

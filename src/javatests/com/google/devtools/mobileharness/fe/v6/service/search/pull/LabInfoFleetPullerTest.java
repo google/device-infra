@@ -28,9 +28,17 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeD
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter.DeviceMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.DeviceFilter.DeviceMatchCondition.DimensionMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.IntegerMatch;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.IntegerMatch.GreaterThanOrEqual;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringListMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.FilterProto.StringMultimapMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.LabInfoMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
@@ -131,6 +139,26 @@ public final class LabInfoFleetPullerTest {
         .containsExactly("dev-1", ImmutableList.of("Verizon", "T-Mobile"));
     assertThat(labInfoProvider.lastRequest.getLabQuery().getMask().getLabInfoMask())
         .isEqualTo(LabInfoMask.newBuilder().setFieldMask(FieldMask.getDefaultInstance()).build());
+    assertThat(labInfoProvider.lastRequest.getLabQuery().getFilter())
+        .isEqualTo(
+            LabQuery.Filter.newBuilder()
+                .setDeviceFilter(
+                    DeviceFilter.newBuilder()
+                        .addDeviceMatchCondition(
+                            DeviceMatchCondition.newBuilder()
+                                .setDimensionMatchCondition(
+                                    DimensionMatchCondition.newBuilder()
+                                        .setCondition(
+                                            StringMultimapMatchCondition.newBuilder()
+                                                .setKey("carrier")
+                                                .setValueCondition(
+                                                    StringListMatchCondition.newBuilder()
+                                                        .setLengthMatch(
+                                                            IntegerMatch.newBuilder()
+                                                                .setGreaterThanOrEqual(
+                                                                    GreaterThanOrEqual.newBuilder()
+                                                                        .setMinValue(1))))))))
+                .build());
     assertThat(
             labInfoProvider
                 .lastRequest
@@ -199,6 +227,7 @@ public final class LabInfoFleetPullerTest {
             .get();
 
     assertThat(labInfoProvider.getLabInfoCalls).isEqualTo(1);
+    assertThat(labInfoProvider.lastRequest.getLabQuery().hasFilter()).isFalse();
     assertThat(
             labInfoProvider
                 .lastRequest
@@ -222,6 +251,68 @@ public final class LabInfoFleetPullerTest {
     assertThat(overlays.get("dimension::os_version").uuidToValues())
         .containsExactly("dev-1", ImmutableList.of("16"), "dev-2", ImmutableList.of("15"));
     assertThat(overlays.get("dimension::absent_dim").uuidToValues()).isEmpty();
+  }
+
+  @Test
+  public void pullDimensions_duplicateKeysForSingleDimension_attachesSingleDimensionFilter()
+      throws Exception {
+    DeviceInfo dev1 =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("dev-1"))
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("carrier")
+                                    .setValue("Verizon"))))
+            .build();
+    labInfoProvider.setResult(
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .addLabData(
+                        LabData.newBuilder()
+                            .setDeviceList(DeviceList.newBuilder().addDeviceInfo(dev1))))
+            .build());
+
+    DeviceKeyDescriptor carrierKey =
+        new AtsDeviceKeyRegistry().createLongTailDimensionKey("carrier").get();
+    DeviceKeyDescriptor duplicateCarrierKey =
+        DeviceKeyDescriptor.builder()
+            .setId("dimension::carrier")
+            .setDisplay(KeyDisplay.of("Carrier"))
+            .setIsDimension(true)
+            .setIsLongTail(true)
+            .build();
+
+    ImmutableMap<String, DimensionOverlayRaw> overlays =
+        puller.pullDimensions(ImmutableSet.of(carrierKey, duplicateCarrierKey)).get();
+
+    assertThat(labInfoProvider.getLabInfoCalls).isEqualTo(1);
+    assertThat(labInfoProvider.lastRequest.getLabQuery().getFilter())
+        .isEqualTo(
+            LabQuery.Filter.newBuilder()
+                .setDeviceFilter(
+                    DeviceFilter.newBuilder()
+                        .addDeviceMatchCondition(
+                            DeviceMatchCondition.newBuilder()
+                                .setDimensionMatchCondition(
+                                    DimensionMatchCondition.newBuilder()
+                                        .setCondition(
+                                            StringMultimapMatchCondition.newBuilder()
+                                                .setKey("carrier")
+                                                .setValueCondition(
+                                                    StringListMatchCondition.newBuilder()
+                                                        .setLengthMatch(
+                                                            IntegerMatch.newBuilder()
+                                                                .setGreaterThanOrEqual(
+                                                                    GreaterThanOrEqual.newBuilder()
+                                                                        .setMinValue(1))))))))
+                .build());
+    assertThat(overlays.get("dimension::carrier").uuidToValues())
+        .containsExactly("dev-1", ImmutableList.of("Verizon"));
   }
 
   @Test
