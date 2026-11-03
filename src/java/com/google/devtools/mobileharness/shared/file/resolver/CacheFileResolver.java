@@ -20,9 +20,12 @@ import static com.google.devtools.mobileharness.shared.file.resolver.cache.Persi
 import static java.util.concurrent.TimeUnit.HOURS;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -57,6 +60,10 @@ public class CacheFileResolver extends AbstractFileResolver {
 
   /** The resolving parameter of the file version. See {@link FileResolver#getVersion}. */
   @VisibleForTesting static final String PARAM_FILE_VERSION = "file_version";
+
+  /** Suffixes of resolved files that are safe to create hard links across target directories. */
+  private static final ImmutableSet<String> LINKABLE_FILE_SUFFIX =
+      ImmutableSet.of("aab", "apk", "gz", "img", "jar", "par", "tar", "zip");
 
   private final LocalCache localCache;
   @Nullable private final PersistentResolvedFileCache persistentResolvedFileCache;
@@ -272,7 +279,38 @@ public class CacheFileResolver extends AbstractFileResolver {
             if (!localFileUtil.isFileOrDirExist(thisPath)) {
               try {
                 localFileUtil.prepareDir(PathUtil.dirname(thisPath));
-                localFileUtil.copyFileOrDir(cachedResolvedFile.path(), thisPath);
+                // Hard links can be used for read-only archive/package files so multiple jobs
+                // sharing the same resolved file share the same inode and page cache (and keep the
+                // file alive even if the first job cleans up its run directory), while other files
+                // and directories are copied to avoid in-place mutation side effects.
+                if (LINKABLE_FILE_SUFFIX.contains(
+                        Ascii.toLowerCase(Files.getFileExtension(thisPath)))
+                    && !localFileUtil.isDirExist(cachedResolvedFile.path())) {
+                  try {
+                    localFileUtil.hardLinkFile(cachedResolvedFile.path(), thisPath);
+                  } catch (MobileHarnessException e) {
+                    // Hard links may fail across filesystems or due to permissions. If the cached
+                    // file is gone or a concurrent resolve already created thisPath, let the outer
+                    // catch handle it instead of falling back to copy.
+                    if (!localFileUtil.isFileExist(cachedResolvedFile.path())
+                        || localFileUtil.isFileOrDirExist(thisPath)) {
+                      throw e;
+                    }
+                    logger.atInfo().withCause(e).log(
+                        "Failed to hard link %s to %s. Fall back to copy.",
+                        cachedResolvedFile.path(), thisPath);
+                    localFileUtil.copyFileOrDir(cachedResolvedFile.path(), thisPath);
+                  }
+                } else {
+                  // copyFileOrDir() silently copies nothing if the source is gone, so let the
+                  // outer catch re-resolve instead.
+                  if (!localFileUtil.isFileOrDirExist(cachedResolvedFile.path())) {
+                    throw new MobileHarnessException(
+                        BasicErrorId.LOCAL_FILE_OR_DIR_NOT_FOUND,
+                        "Cached resolved file " + cachedResolvedFile.path() + " doesn't exist");
+                  }
+                  localFileUtil.copyFileOrDir(cachedResolvedFile.path(), thisPath);
+                }
               } catch (MobileHarnessException e) {
                 // There may be race condition. The cached file is removed after first check.
                 // So check again.
@@ -280,8 +318,8 @@ public class CacheFileResolver extends AbstractFileResolver {
                     && localFileUtil.getFileOrDirSize(cachedResolvedFile.path())
                         == localFileUtil.getFileOrDirSize(thisPath)) {
                   logger.atInfo().withCause(e).log(
-                      "Failed to copy file because of two concurrent copies to same destination."
-                          + " It's acceptable because the former copy succeeds.");
+                      "Failed to copy or link file because of two concurrent copies to same"
+                          + " destination. It's acceptable because the former copy succeeds.");
                 } else {
                   logger.atInfo().withCause(e).log(
                       "Previous cached resolved file for %s doesn't exist any more. Need to"
