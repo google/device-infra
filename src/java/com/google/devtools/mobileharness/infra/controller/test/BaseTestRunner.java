@@ -365,6 +365,22 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
                 "The process is shutting down.",
                 e),
             /* logStackTrace= */ false);
+      } else if (testInfo
+          .jobInfo()
+          .properties()
+          .getBoolean(PropertyName.Job._HAS_JOB_LEVEL_ERROR)
+          .orElse(false)) {
+        if (testInfo.resultWithCause().get().type() == TestResult.UNKNOWN) {
+          ResultInternalUtil.setNonPassing(
+              testInfo.resultWithCause(),
+              Test.TestResult.ERROR,
+              createExceptionWithoutStackTrace(
+                  InfraErrorId.CLIENT_JR_TEST_HAS_JOB_LEVEL_ERROR,
+                  "Job has infra errors. Check job level error for more detail.",
+                  e),
+              /* logStackTrace= */ false);
+        }
+        testInfo.properties().add(PropertyName.Test.HALT_RETRY, "true");
       } else {
         // If job is not timeout but test timeout, TestManager has already marked the test as
         // TIMEOUT and can not be overwritten here.
