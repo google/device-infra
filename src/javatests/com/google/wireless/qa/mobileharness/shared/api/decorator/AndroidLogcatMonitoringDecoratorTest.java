@@ -20,8 +20,14 @@ import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -69,12 +75,15 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -98,6 +107,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
   @Mock CrashDialogDetector crashDialogDetector;
   @Mock AndroidSystemSettingUtil androidSystemSettingUtil;
 
+  private Log log;
   private Findings findings;
   private Result result;
   private LocalFileUtil localFileUtil;
@@ -109,7 +119,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
     decoratorOutputDir = genFilesDir.resolve("logcat_monitoring");
     localFileUtil = new LocalFileUtil();
     var timing = new Timing();
-    var log = new Log(timing);
+    log = new Log(timing);
     findings = new Findings(log);
     result = new Result(timing.toNewTiming(), new Params(timing).toNewParams()).setPass();
 
@@ -118,6 +128,7 @@ public class AndroidLogcatMonitoringDecoratorTest {
     when(testInfo.getGenFileDir()).thenReturn(genFilesDir.toString());
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(jobInfo.timer()).thenReturn(timer);
+    when(testInfo.timer()).thenReturn(timer);
     when(testInfo.log()).thenReturn(log);
     when(testInfo.findings()).thenReturn(findings);
     when(testInfo.resultWithCause()).thenReturn(result);
@@ -266,7 +277,8 @@ public class AndroidLogcatMonitoringDecoratorTest {
                 DropboxTag.DATA_APP_CRASH,
                 DropboxTag.SYSTEM_APP_CRASH),
             LocalDateTime.of(2025, 1, 1, 10, 0, 0),
-            decoratorOutputDir);
+            decoratorOutputDir,
+            DropboxExtractor.DEFAULT_MAX_ENTRIES);
   }
 
   @Test
@@ -1083,6 +1095,321 @@ public class AndroidLogcatMonitoringDecoratorTest {
 
     Path reportPath = decoratorOutputDir.resolve("logcat_monitoring_report.proto");
     assertThat(Files.exists(reportPath)).isFalse();
+  }
+
+  @Test
+  public void run_normalExecution_usesTestTimerAndStopsSessionBeforeReadingCrashDialog()
+      throws Exception {
+    CountDownTimer jobTimer = mock(CountDownTimer.class);
+    when(jobTimer.remainingTimeJava()).thenReturn(Duration.ofHours(2));
+    when(jobInfo.timer()).thenReturn(jobTimer);
+    when(timer.remainingTimeJava()).thenReturn(Duration.ofSeconds(42));
+
+    ExecutorService mockExecutor = mock(ExecutorService.class);
+    when(mockExecutor.awaitTermination(anyLong(), any())).thenReturn(true);
+
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addReportAsFailurePackages("com.test.me")
+            .build();
+    when(jobInfo.combinedSpec(any())).thenReturn(spec);
+    when(logcatLineProxy.getLogcatEventsFromProcessors()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil,
+            () -> mockExecutor);
+
+    decorator.run(testInfo);
+
+    verify(adb)
+        .runShellAsync(
+            "deviceId",
+            "logcat -v threadtime -T \"2025-01-30 10:15:20.000\"",
+            Duration.ofSeconds(42),
+            logcatLineProxy);
+
+    InOrder inOrder = inOrder(commandProcess, mockExecutor, crashDialogDetector);
+    inOrder.verify(commandProcess).killAndThenKillForcibly(Duration.ofSeconds(5));
+    inOrder.verify(commandProcess).stopReadingOutput();
+    inOrder.verify(mockExecutor).shutdown();
+    inOrder.verify(mockExecutor).awaitTermination(12_000L, TimeUnit.MILLISECONDS);
+    inOrder.verify(crashDialogDetector, atLeastOnce()).crashDialogPackageName();
+  }
+
+  @Test
+  public void run_dialogScanShutdownTimesOut_logsWarningAndCancelsExecutor() throws Exception {
+    ExecutorService mockExecutor = mock(ExecutorService.class);
+    when(mockExecutor.awaitTermination(anyLong(), any())).thenReturn(false);
+
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addReportAsFailurePackages("com.test.me")
+            .build();
+    when(jobInfo.combinedSpec(any())).thenReturn(spec);
+    when(logcatLineProxy.getLogcatEventsFromProcessors()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil,
+            () -> mockExecutor);
+
+    decorator.run(testInfo);
+
+    assertThat(log.get(0)).contains("Timed out waiting PT12S for crash dialog scan to complete");
+    verify(mockExecutor).shutdownNow();
+  }
+
+  @Test
+  public void run_asyncLogcatStartFailsInSetUp_shutsDownExecutorWithoutSuppressedError()
+      throws Exception {
+    ExecutorService asyncFailExecutor = mock(ExecutorService.class);
+    when(jobInfo.combinedSpec(any()))
+        .thenReturn(
+            AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+                .addReportAsFailurePackages("com.test.me")
+                .build());
+    when(adb.runShellAsync(any(), anyString(), any(), any()))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_ASYNC_CMD_START_ERROR, "Async start failed"));
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil,
+            () -> asyncFailExecutor);
+
+    MobileHarnessException thrown =
+        assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
+
+    assertThat(thrown.getErrorId()).isEqualTo(AndroidErrorId.ANDROID_ADB_ASYNC_CMD_START_ERROR);
+    assertThat(thrown.getSuppressed()).isEmpty();
+    verify(asyncFailExecutor).shutdownNow();
+    verify(decoratedDriver, never()).run(testInfo);
+  }
+
+  @Test
+  public void run_setupWifiAndDateFailures_logsWarningsFallsBackToLogcatT1AndPreservesVerdict()
+      throws Exception {
+    AndroidLogcatMonitoringDecoratorSpec spec =
+        AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+            .addReportAsFailurePackages("com.test.app")
+            .setOverrideTestResultOnProcessCrash(true)
+            .build();
+    when(jobInfo.combinedSpec(any())).thenReturn(spec);
+    when(adb.runShell("deviceId", "cmd wifi status"))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "wifi status failed"));
+    when(adb.runShell("deviceId", "date +%Y-%m-%d\\ %H:%M:%S.000"))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "date failed"));
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.app",
+                        10,
+                        ProcessCategory.FAILURE,
+                        LogcatEvent.CrashType.ANDROID_RUNTIME),
+                    "crash_log")));
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil);
+
+    decorator.run(testInfo);
+
+    assertThat(result.get().type()).isEqualTo(TestResult.FAIL);
+    assertThat(log.get(0)).contains("Failed to check WiFi status on device deviceId.");
+    assertThat(log.get(0)).contains("falling back to 'logcat -T 1'");
+    verify(adb)
+        .runShellAsync(
+            "deviceId", "logcat -v threadtime -T 1", Duration.ofSeconds(5), logcatLineProxy);
+    verify(dropboxExtractor, never()).extract(any(), any(), any(), any(), any(), anyInt());
+  }
+
+  @Test
+  public void run_diagnosticIoFailures_logsWarningsAndDoesNotMaskVerdict() throws Exception {
+    LocalFileUtil failingFileUtil = mock(LocalFileUtil.class);
+    doThrow(
+            new MobileHarnessException(
+                BasicErrorId.LOCAL_FILE_WRITE_BYTE_ERROR, "report write err"))
+        .when(failingFileUtil)
+        .writeToFile(anyString(), any(byte[].class));
+    doThrow(new MobileHarnessException(BasicErrorId.LOCAL_FILE_WRITE_STRING_ERROR, "unparsed err"))
+        .when(failingFileUtil)
+        .writeToFile(anyString(), anyString());
+    doThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "dropbox offline"))
+        .when(dropboxExtractor)
+        .extract(any(), any(), any(), any(), any(), anyInt());
+    doThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_FILE_UTIL_PULL_FILE_ERROR, "pull failed"))
+        .when(androidFileUtil)
+        .pull(anyString(), anyString(), anyString());
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of("bad line"));
+    when(crashDialogDetector.crashDialogPackageName()).thenReturn(Optional.of("com.test.infra"));
+    when(crashDialogDetector.crashDialogScreenshot())
+        .thenReturn(Optional.of("/data/local/tmp/dialog.png"));
+    when(jobInfo.combinedSpec(any()))
+        .thenReturn(
+            AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+                .addReportAsFailurePackages("com.test.app")
+                .setThrowExceptionOnCrashDialogDetection(true)
+                .build());
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.app",
+                        1,
+                        ProcessCategory.FAILURE,
+                        LogcatEvent.CrashType.ANDROID_RUNTIME),
+                    "crash")));
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            failingFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil);
+
+    MobileHarnessException dialogEx =
+        assertThrows(MobileHarnessException.class, () -> decorator.run(testInfo));
+
+    assertThat(dialogEx.getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_CRASH_DIALOG_DETECTED);
+    assertThat(log.get(0)).contains("Failed to write logcat monitoring report.");
+    assertThat(log.get(0)).contains("Failed to write unparsed logcat lines.");
+    assertThat(log.get(0)).contains("Failed to extract dropbox entries.");
+    assertThat(log.get(0)).contains("Failed to pull crash dialog screenshot");
+  }
+
+  @Test
+  public void run_zeroMaxDropboxEntries_skipsDropboxExtraction() throws Exception {
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.app",
+                        1,
+                        ProcessCategory.FAILURE,
+                        LogcatEvent.CrashType.ANDROID_RUNTIME),
+                    "crash")));
+    when(jobInfo.combinedSpec(any()))
+        .thenReturn(
+            AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+                .addReportAsFailurePackages("com.test.app")
+                .setMaxDropboxEntries(0)
+                .build());
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil);
+
+    decorator.run(testInfo);
+
+    verify(dropboxExtractor, never()).extract(any(), any(), any(), any(), any(), anyInt());
+  }
+
+  @Test
+  public void run_customPositiveMaxDropboxEntries_forwardsConfiguredLimit() throws Exception {
+    when(logcatLineProxy.getUnparsedLines()).thenReturn(ImmutableList.of());
+    when(logcatLineProxy.getLogcatEventsFromProcessors())
+        .thenReturn(
+            ImmutableList.of(
+                new CrashEvent(
+                    new CrashedProcess(
+                        "com.test.app",
+                        1,
+                        ProcessCategory.FAILURE,
+                        LogcatEvent.CrashType.ANDROID_RUNTIME),
+                    "crash")));
+    when(jobInfo.combinedSpec(any()))
+        .thenReturn(
+            AndroidLogcatMonitoringDecoratorSpec.newBuilder()
+                .addReportAsFailurePackages("com.test.app")
+                .setMaxDropboxEntries(3)
+                .build());
+
+    AndroidLogcatMonitoringDecorator decorator =
+        new AndroidLogcatMonitoringDecorator(
+            decoratedDriver,
+            testInfo,
+            adb,
+            logcatLineProxy,
+            localFileUtil,
+            androidFileUtil,
+            dropboxExtractor,
+            crashDialogDetector,
+            androidSystemSettingUtil);
+
+    decorator.run(testInfo);
+
+    verify(dropboxExtractor)
+        .extract(
+            "deviceId",
+            ImmutableSet.of("com.test.app"),
+            ImmutableSet.of(DropboxTag.DATA_APP_CRASH, DropboxTag.SYSTEM_APP_CRASH),
+            LocalDateTime.of(2025, 1, 30, 10, 15, 20),
+            decoratorOutputDir,
+            3);
   }
 
   private static void assertTestIssueFinding(

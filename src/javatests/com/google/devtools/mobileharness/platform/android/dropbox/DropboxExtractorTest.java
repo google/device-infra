@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
@@ -89,8 +90,9 @@ public class DropboxExtractorTest {
         "device_id",
         ImmutableSet.of("com.test.app.one", "com.test.app.two"),
         ImmutableSet.of(DropboxTag.DATA_APP_CRASH),
-        LocalDateTime.of(2025, 10, 24, 02, 0, 0),
-        outputDir);
+        LocalDateTime.of(2025, 10, 24, 2, 0, 0),
+        outputDir,
+        DropboxExtractor.DEFAULT_MAX_ENTRIES);
 
     verify(localFileUtil, never())
         .writeToFile(
@@ -101,13 +103,76 @@ public class DropboxExtractorTest {
   }
 
   @Test
+  public void extract_minimumTimestampWithSubSecondNanos_truncatesToIncludeStartingSecond()
+      throws Exception {
+    dropboxExtractor.extract(
+        "device_id",
+        ImmutableSet.of("com.test.app.one"),
+        ImmutableSet.of(DropboxTag.DATA_APP_CRASH),
+        LocalDateTime.of(2025, 10, 23, 10, 0, 0, 750_000_000),
+        outputDir,
+        DropboxExtractor.DEFAULT_MAX_ENTRIES);
+
+    verify(localFileUtil)
+        .writeToFile(
+            eq("/tmp/test_output/data_app_crash_0_com_test_app_one.txt"), any(String.class));
+  }
+
+  @Test
+  public void extract_maxEntriesSmallerThanMatchingEntries_capsWrittenFiles() throws Exception {
+    dropboxExtractor.extract(
+        "device_id",
+        ImmutableSet.of("com.test.app.one", "com.test.app.two"),
+        ImmutableSet.of(DropboxTag.DATA_APP_CRASH),
+        LocalDateTime.of(2025, 10, 23, 0, 0, 0),
+        outputDir,
+        /* maxEntries= */ 1);
+
+    verify(localFileUtil)
+        .writeToFile(
+            eq("/tmp/test_output/data_app_crash_0_com_test_app_one.txt"), any(String.class));
+    verify(localFileUtil, never())
+        .writeToFile(
+            eq("/tmp/test_output/data_app_crash_1_com_test_app_two.txt"), any(String.class));
+  }
+
+  @Test
+  public void extract_nonPositiveMaxEntries_skipsDumpsys() throws Exception {
+    dropboxExtractor.extract(
+        "device_id",
+        ImmutableSet.of("com.test.app.one"),
+        ImmutableSet.of(DropboxTag.DATA_APP_CRASH),
+        LocalDateTime.of(2025, 10, 23, 0, 0, 0),
+        outputDir,
+        /* maxEntries= */ 0);
+
+    verifyNoInteractions(adb);
+    verifyNoInteractions(localFileUtil);
+  }
+
+  @Test
+  public void extract_emptyPackagesToMonitor_skipsDumpsys() throws Exception {
+    dropboxExtractor.extract(
+        "device_id",
+        ImmutableSet.of(),
+        ImmutableSet.of(DropboxTag.DATA_APP_CRASH),
+        LocalDateTime.of(2025, 10, 23, 0, 0, 0),
+        outputDir,
+        DropboxExtractor.DEFAULT_MAX_ENTRIES);
+
+    verifyNoInteractions(adb);
+    verifyNoInteractions(localFileUtil);
+  }
+
+  @Test
   public void extract_filtersOnProcessName() throws Exception {
     dropboxExtractor.extract(
         "device_id",
         ImmutableSet.of("com.test.app.two"),
         ImmutableSet.of(DropboxTag.DATA_APP_CRASH),
-        LocalDateTime.of(2025, 10, 23, 02, 0, 0),
-        outputDir);
+        LocalDateTime.of(2025, 10, 23, 2, 0, 0),
+        outputDir,
+        DropboxExtractor.DEFAULT_MAX_ENTRIES);
 
     verify(localFileUtil, never())
         .writeToFile(
@@ -137,7 +202,8 @@ public class DropboxExtractorTest {
         ImmutableSet.of("com.test.app.one", "com.test.app.nativecrasher"),
         ImmutableSet.of(DropboxTag.DATA_APP_CRASH, DropboxTag.SYSTEM_TOMBSTONE),
         LocalDateTime.of(2025, 10, 23, 1, 0),
-        outputDir);
+        outputDir,
+        DropboxExtractor.DEFAULT_MAX_ENTRIES);
 
     verify(localFileUtil)
         .writeToFile(

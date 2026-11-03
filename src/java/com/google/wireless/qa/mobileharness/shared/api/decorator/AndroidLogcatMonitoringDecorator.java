@@ -26,7 +26,9 @@ import static com.google.devtools.mobileharness.platform.android.dropbox.Dropbox
 import static com.google.devtools.mobileharness.platform.android.dropbox.DropboxTag.SYSTEM_TOMBSTONE;
 import static com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashType.ANDROID_RUNTIME;
 import static com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashType.ANR;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -59,6 +61,7 @@ import com.google.devtools.mobileharness.platform.android.logcat.proto.LogcatMon
 import com.google.devtools.mobileharness.platform.android.logcat.proto.LogcatMonitoringReport.TestEventType;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
@@ -73,9 +76,11 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.function.Supplier;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /** Decorator for monitoring for crashes, ANRs and device events in logcat. */
@@ -88,6 +93,11 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
   private static final String DATE_COMMAND = "date +%Y-%m-%d\\ %H:%M:%S.000";
   private static final DateTimeFormatter DATE_TIME_FORMATTER =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+  private static final Duration PROCESS_STOP_TIMEOUT = Duration.ofSeconds(5);
+  private static final Duration DIALOG_SCAN_SHUTDOWN_TIMEOUT = Duration.ofSeconds(12);
+  private static final String DIALOG_EXECUTOR_THREAD_PREFIX =
+      "android-logcat-monitoring-dialog-detector";
+  private static final int DIALOG_EXECUTOR_MAX_THREADS = 3;
 
   // Directory within the test genFilesDir which holds all the decorator outputs.
   private static final String DECORATOR_OUTPUTS_DIR = "logcat_monitoring";
@@ -100,21 +110,54 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
   private static final String FINDING_METADATA_KEY_PROCESS_NAME = "process_name";
   private static final String FINDING_METADATA_KEY_CRASH_PACKAGE = "crash_package";
 
+  /**
+   * Active resources and configuration created by {@link #setUp} and cleaned up in {@link
+   * #tearDown}.
+   */
+  private record MonitoringSession(
+      AndroidLogcatMonitoringDecoratorSpec spec,
+      Optional<LocalDateTime> deviceTimeOnStart,
+      ImmutableList<DeviceEvent> initialWifiChecks,
+      ExecutorService executorService,
+      CommandProcess process) {
+
+    void stopOutputAndAwaitDialogScan(TestInfo testInfo) throws InterruptedException {
+      try {
+        try {
+          process.killAndThenKillForcibly(PROCESS_STOP_TIMEOUT);
+        } finally {
+          process.stopReadingOutput();
+        }
+        executorService.shutdown();
+        if (!executorService.awaitTermination(
+            DIALOG_SCAN_SHUTDOWN_TIMEOUT.toMillis(), MILLISECONDS)) {
+          testInfo
+              .log()
+              .atWarning()
+              .alsoTo(logger)
+              .log(
+                  "Timed out waiting %s for crash dialog scan to complete; cancelling.",
+                  DIALOG_SCAN_SHUTDOWN_TIMEOUT);
+          executorService.shutdownNow();
+        }
+      } catch (Throwable t) {
+        process.killForcibly();
+        executorService.shutdownNow();
+        throw t;
+      }
+    }
+  }
+
   private final Adb adb;
   private final LogcatLineProxy logcatLineProxy;
   private final LocalFileUtil localFileUtil;
   private final AndroidFileUtil androidFileUtil;
   private final DropboxExtractor dropboxExtractor;
   private final CrashDialogDetector crashDialogDetector;
-
   private final AndroidSystemSettingUtil androidSystemSettingUtil;
-  private LocalDateTime deviceTimeOnStart = null;
+  private final Supplier<ExecutorService> executorServiceSupplier;
 
-  private ImmutableList<DeviceEvent> initialWifiChecks = ImmutableList.of();
-
-  private AndroidLogcatMonitoringDecoratorSpec spec;
-  private ExecutorService executorService;
-  private CommandProcess process;
+  @Nullable private MonitoringSession activeSession;
 
   @Inject
   AndroidLogcatMonitoringDecorator(
@@ -127,6 +170,31 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
       DropboxExtractor dropboxExtractor,
       CrashDialogDetector crashDialogDetector,
       AndroidSystemSettingUtil androidSystemSettingUtil) {
+    this(
+        decorated,
+        testInfo,
+        adb,
+        logcatLineProxy,
+        localFileUtil,
+        androidFileUtil,
+        dropboxExtractor,
+        crashDialogDetector,
+        androidSystemSettingUtil,
+        AndroidLogcatMonitoringDecorator::createDefaultDialogExecutor);
+  }
+
+  @VisibleForTesting
+  AndroidLogcatMonitoringDecorator(
+      Driver decorated,
+      TestInfo testInfo,
+      Adb adb,
+      LogcatLineProxy logcatLineProxy,
+      LocalFileUtil localFileUtil,
+      AndroidFileUtil androidFileUtil,
+      DropboxExtractor dropboxExtractor,
+      CrashDialogDetector crashDialogDetector,
+      AndroidSystemSettingUtil androidSystemSettingUtil,
+      Supplier<ExecutorService> executorServiceSupplier) {
     super(decorated, testInfo);
     this.adb = adb;
     this.logcatLineProxy = logcatLineProxy;
@@ -135,13 +203,19 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
     this.dropboxExtractor = dropboxExtractor;
     this.crashDialogDetector = crashDialogDetector;
     this.androidSystemSettingUtil = androidSystemSettingUtil;
+    this.executorServiceSupplier = executorServiceSupplier;
+  }
+
+  private static ExecutorService createDefaultDialogExecutor() {
+    return ThreadPools.createStandardThreadPoolWithMaxSize(
+        DIALOG_EXECUTOR_THREAD_PREFIX, DIALOG_EXECUTOR_MAX_THREADS);
   }
 
   @Override
   protected SetupResult setUp(SetupContext context)
       throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = context.testInfo();
-    spec = testInfo.jobInfo().combinedSpec(this);
+    AndroidLogcatMonitoringDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this);
     testInfo
         .log()
         .atInfo()
@@ -149,68 +223,73 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
         .log("------- In Android LogcatMonitoring Decorator --------\n Spec: %s", spec);
 
     String deviceId = getDevice().getDeviceId();
+    ImmutableList<DeviceEventConfig> deviceEventConfigs = makeDeviceEventDetectorConfig(spec);
+    ImmutableList<DeviceEvent> initialWifiChecks = checkWifiStatus(testInfo, deviceId);
+    Optional<LocalDateTime> deviceTimeOnStart = queryDeviceStartTime(testInfo, deviceId);
 
-    executorService = Executors.newFixedThreadPool(3);
+    ExecutorService executorService = executorServiceSupplier.get();
+    try {
+      var monitoringConfig =
+          new MonitoringConfig(
+              spec.getReportAsFailurePackagesList(),
+              spec.getErrorOnCrashPackagesList(),
+              spec.getPackagesToIgnoreList());
+      var artProcessor =
+          new AndroidRuntimeCrashDetector(
+              testInfo, getDevice(), monitoringConfig, crashDialogDetector, executorService);
+      var anrProcessor =
+          new AnrDetector(
+              testInfo, getDevice(), monitoringConfig, crashDialogDetector, executorService);
+      var nativeCrashProcessor =
+          new NativeCrashDetector(
+              testInfo, getDevice(), monitoringConfig, crashDialogDetector, executorService);
+      var deviceEventDetector = new DeviceEventDetector(deviceEventConfigs);
+      var testEventDetector = new TestEventDetector(monitoringConfig);
 
-    checkWifiStatus(deviceId);
+      logcatLineProxy.addLineProcessor(artProcessor);
+      logcatLineProxy.addLineProcessor(anrProcessor);
+      logcatLineProxy.addLineProcessor(nativeCrashProcessor);
+      logcatLineProxy.addLineProcessor(deviceEventDetector);
+      logcatLineProxy.addLineProcessor(testEventDetector);
 
-    var monitoringConfig =
-        new MonitoringConfig(
-            spec.getReportAsFailurePackagesList(),
-            spec.getErrorOnCrashPackagesList(),
-            spec.getPackagesToIgnoreList());
-    var artProcessor =
-        new AndroidRuntimeCrashDetector(
-            testInfo, getDevice(), monitoringConfig, crashDialogDetector, executorService);
-    var anrProcessor =
-        new AnrDetector(
-            testInfo, getDevice(), monitoringConfig, crashDialogDetector, executorService);
-    var nativeCrashProcessor =
-        new NativeCrashDetector(
-            testInfo, getDevice(), monitoringConfig, crashDialogDetector, executorService);
-    var deviceEventDetector = new DeviceEventDetector(makeDeviceEventDetectorConfig(spec));
-    var testEventDetector = new TestEventDetector(monitoringConfig);
-
-    logcatLineProxy.addLineProcessor(artProcessor);
-    logcatLineProxy.addLineProcessor(anrProcessor);
-    logcatLineProxy.addLineProcessor(nativeCrashProcessor);
-    logcatLineProxy.addLineProcessor(deviceEventDetector);
-    logcatLineProxy.addLineProcessor(testEventDetector);
-
-    String timeOnDevice = adb.runShell(deviceId, DATE_COMMAND);
-    deviceTimeOnStart = LocalDateTime.parse(timeOnDevice, DATE_TIME_FORMATTER);
-    testInfo.log().atInfo().alsoTo(logger).log("---- Device time: %s ----\n", deviceTimeOnStart);
-
-    process =
-        adb.runShellAsync(
-            getDevice().getDeviceId(),
-            String.format("logcat -v threadtime -T \"%s\"", timeOnDevice),
-            testInfo.jobInfo().timer().remainingTimeJava(),
-            logcatLineProxy);
-    return SetupResult.continueDecorated();
+      String logcatCommand =
+          deviceTimeOnStart
+              .map(ts ->
+                  String.format("logcat -v threadtime -T \"%s\"", DATE_TIME_FORMATTER.format(ts)))
+              .orElse("logcat -v threadtime -T 1");
+      CommandProcess process =
+          adb.runShellAsync(
+              deviceId, logcatCommand, testInfo.timer().remainingTimeJava(), logcatLineProxy);
+      activeSession =
+          new MonitoringSession(
+              spec, deviceTimeOnStart, initialWifiChecks, executorService, process);
+      return SetupResult.continueDecorated();
+    } catch (Throwable t) {
+      executorService.shutdownNow();
+      throw t;
+    }
   }
 
   @Override
   protected void tearDown(TeardownContext context)
       throws MobileHarnessException, InterruptedException {
-    TestInfo testInfo = context.testInfo();
-    if (process != null) {
-      process.killAndThenKillForcibly(Duration.ofSeconds(5));
+    MonitoringSession session = activeSession;
+    if (session == null) {
+      return;
     }
+    activeSession = null;
+    TestInfo testInfo = context.testInfo();
+    session.stopOutputAndAwaitDialogScan(testInfo);
     ImmutableList<LogcatEvent> logcatEvents = getLogcatEvents();
-    writeMonitoringReport(testInfo, logcatEvents);
+    writeMonitoringReport(testInfo, session.initialWifiChecks(), logcatEvents);
     addCrashFindings(testInfo, logcatEvents);
     writeUnparsedLogcatLines(testInfo);
-    extractDropboxEntries(testInfo, logcatEvents);
-    if (spec != null) {
-      checkForCrashDialog(testInfo, spec.getThrowExceptionOnCrashDialogDetection());
-    }
-    if (executorService != null) {
-      executorService.shutdown();
-    }
+    extractDropboxEntries(testInfo, session.spec(), session.deviceTimeOnStart(), logcatEvents);
+    pullCrashDialogScreenshot(testInfo);
+    checkForCrashDialog(session.spec().getThrowExceptionOnCrashDialogDetection());
     checkForOrchestratorConnectionErrors(logcatEvents);
     checkForInfraError(logcatEvents);
-    checkForTestFailureEvents(testInfo, logcatEvents);
+    checkForTestFailureEvents(testInfo, session.spec(), logcatEvents);
     addTestEventFindings(testInfo, logcatEvents);
   }
 
@@ -222,17 +301,29 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
         .build();
   }
 
-  private void writeMonitoringReport(TestInfo testInfo, ImmutableList<LogcatEvent> logcatEvents)
-      throws MobileHarnessException {
+  private void writeMonitoringReport(
+      TestInfo testInfo,
+      ImmutableList<DeviceEvent> initialWifiChecks,
+      ImmutableList<LogcatEvent> logcatEvents) {
     var allEvents =
         ImmutableList.<LogcatEvent>builder().addAll(initialWifiChecks).addAll(logcatEvents).build();
-    if (allEvents.isEmpty()) {
+    Optional<String> crashDialogPackage = crashDialogDetector.crashDialogPackageName();
+    if (allEvents.isEmpty() && crashDialogPackage.isEmpty()) {
       return;
     }
-    var report = createReport(allEvents, crashDialogDetector.crashDialogPackageName());
+    var report = createReport(allEvents, crashDialogPackage);
     testInfo.log().atInfo().alsoTo(logger).log("\n#### Logcat Monitoring Report ####\n%s", report);
-    Path reportPath = getDecoratorOutputsDir(testInfo).resolve(LOGCAT_MONITORING_REPORT_PROTO);
-    localFileUtil.writeToFile(reportPath.toString(), report.toByteArray());
+    try {
+      Path reportPath = getDecoratorOutputsDir(testInfo).resolve(LOGCAT_MONITORING_REPORT_PROTO);
+      localFileUtil.writeToFile(reportPath.toString(), report.toByteArray());
+    } catch (MobileHarnessException e) {
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .withCause(e)
+          .log("Failed to write logcat monitoring report.");
+    }
   }
 
   private static ImmutableList<TestEvent> getTestEventsFromCrashes(
@@ -244,14 +335,24 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
         .collect(toImmutableList());
   }
 
-  private void writeUnparsedLogcatLines(TestInfo testInfo) throws MobileHarnessException {
+  private void writeUnparsedLogcatLines(TestInfo testInfo) {
     ImmutableList<String> unparsedLogcatLines = logcatLineProxy.getUnparsedLines();
     if (unparsedLogcatLines.isEmpty()) {
       return;
     }
-    Path unparsedLogcatPath = getDecoratorOutputsDir(testInfo).resolve(UNPARSED_LOGCAT_FILE);
-    localFileUtil.writeToFile(
-        unparsedLogcatPath.toString(), Joiner.on(System.lineSeparator()).join(unparsedLogcatLines));
+    try {
+      Path unparsedLogcatPath = getDecoratorOutputsDir(testInfo).resolve(UNPARSED_LOGCAT_FILE);
+      localFileUtil.writeToFile(
+          unparsedLogcatPath.toString(),
+          Joiner.on(System.lineSeparator()).join(unparsedLogcatLines));
+    } catch (MobileHarnessException e) {
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .withCause(e)
+          .log("Failed to write unparsed logcat lines.");
+    }
   }
 
   private static LogcatMonitoringReport createReport(
@@ -347,9 +448,20 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
         .addMetadata(FINDING_METADATA_KEY_CRASH_PACKAGE, packageName);
   }
 
-  private void extractDropboxEntries(TestInfo testInfo, ImmutableList<LogcatEvent> logcatEvents)
-      throws InterruptedException, MobileHarnessException {
-    if (logcatEvents.isEmpty()) {
+  private void extractDropboxEntries(
+      TestInfo testInfo,
+      AndroidLogcatMonitoringDecoratorSpec spec,
+      Optional<LocalDateTime> deviceTimeOnStart,
+      ImmutableList<LogcatEvent> logcatEvents)
+      throws InterruptedException {
+    if (deviceTimeOnStart.isEmpty() || logcatEvents.isEmpty()) {
+      return;
+    }
+    int maxEntries =
+        spec.hasMaxDropboxEntries()
+            ? spec.getMaxDropboxEntries()
+            : DropboxExtractor.DEFAULT_MAX_ENTRIES;
+    if (maxEntries <= 0) {
       return;
     }
     var tagsBuilder = ImmutableSet.<DropboxTag>builder();
@@ -376,31 +488,54 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
       return;
     }
 
-    dropboxExtractor.extract(
-        getDevice().getDeviceId(),
-        packagesToScan,
-        tags,
-        deviceTimeOnStart,
-        getDecoratorOutputsDir(testInfo));
+    try {
+      dropboxExtractor.extract(
+          getDevice().getDeviceId(),
+          packagesToScan,
+          tags,
+          deviceTimeOnStart.get(),
+          getDecoratorOutputsDir(testInfo),
+          maxEntries);
+    } catch (MobileHarnessException e) {
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .withCause(e)
+          .log("Failed to extract dropbox entries.");
+    }
   }
 
-  private void checkForCrashDialog(TestInfo testInfo, boolean throwOnCrashDialogDetected)
-      throws MobileHarnessException, InterruptedException {
+  private void pullCrashDialogScreenshot(TestInfo testInfo) throws InterruptedException {
     if (crashDialogDetector.crashDialogPackageName().isEmpty()) {
       return;
     }
-    if (crashDialogDetector.crashDialogScreenshot().isPresent()) {
+    Optional<String> screenshotPath = crashDialogDetector.crashDialogScreenshot();
+    if (screenshotPath.isEmpty()) {
+      return;
+    }
+    try {
       androidFileUtil.pull(
           getDevice().getDeviceId(),
-          crashDialogDetector.crashDialogScreenshot().get(),
+          screenshotPath.get(),
           getDecoratorOutputsDir(testInfo).toString());
+    } catch (MobileHarnessException e) {
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .withCause(e)
+          .log("Failed to pull crash dialog screenshot %s from device.", screenshotPath.get());
     }
-    if (throwOnCrashDialogDetected) {
+  }
+
+  private void checkForCrashDialog(boolean throwOnCrashDialogDetected)
+      throws MobileHarnessException {
+    Optional<String> packageName = crashDialogDetector.crashDialogPackageName();
+    if (throwOnCrashDialogDetected && packageName.isPresent()) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_LOGCAT_MONITORING_DECORATOR_CRASH_DIALOG_DETECTED,
-          String.format(
-              "Crash dialog detected during test. Process: %s",
-              crashDialogDetector.crashDialogPackageName().get()));
+          String.format("Crash dialog detected during test. Process: %s", packageName.get()));
     }
   }
 
@@ -443,7 +578,9 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
   }
 
   private void checkForTestFailureEvents(
-      TestInfo testInfo, ImmutableList<LogcatEvent> logcatEvents) {
+      TestInfo testInfo,
+      AndroidLogcatMonitoringDecoratorSpec spec,
+      ImmutableList<LogcatEvent> logcatEvents) {
     if (logcatEvents.isEmpty()) {
       return;
     }
@@ -530,19 +667,51 @@ public class AndroidLogcatMonitoringDecorator extends LifecycleDecorator
     return builder.build();
   }
 
-  private void checkWifiStatus(String deviceId)
-      throws InterruptedException, MobileHarnessException {
-    var sdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(deviceId);
-    if (sdkVersion < 30) {
-      return;
+  private ImmutableList<DeviceEvent> checkWifiStatus(TestInfo testInfo, String deviceId)
+      throws InterruptedException {
+    try {
+      int sdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(deviceId);
+      if (sdkVersion < 30) {
+        return ImmutableList.of();
+      }
+      var wifiCheckEvents = ImmutableList.<DeviceEvent>builder();
+      var output = adb.runShell(deviceId, "cmd wifi status");
+      if (output != null && output.contains("Wifi is disabled")) {
+        wifiCheckEvents.add(new DeviceEvent("WIFI_DISABLED", "ADBWifi", output));
+      } else if (output != null && output.contains("Wifi is not connected")) {
+        wifiCheckEvents.add(new DeviceEvent("WIFI_NOT_CONNECTED", "ADBWifi", output));
+      }
+      return wifiCheckEvents.build();
+    } catch (MobileHarnessException e) {
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .withCause(e)
+          .log("Failed to check WiFi status on device %s.", deviceId);
+      return ImmutableList.of();
     }
-    var wifiCheckEvents = ImmutableList.<DeviceEvent>builder();
-    var output = adb.runShell(deviceId, "cmd wifi status");
-    if (output.contains("Wifi is disabled")) {
-      wifiCheckEvents.add(new DeviceEvent("WIFI_DISABLED", "ADBWifi", output));
-    } else if (output.contains("Wifi is not connected")) {
-      wifiCheckEvents.add(new DeviceEvent("WIFI_NOT_CONNECTED", "ADBWifi", output));
+  }
+
+  private Optional<LocalDateTime> queryDeviceStartTime(TestInfo testInfo, String deviceId)
+      throws InterruptedException {
+    try {
+      String rawOutput = adb.runShell(deviceId, DATE_COMMAND);
+      String timeOnDevice = rawOutput == null ? "" : rawOutput.trim();
+      LocalDateTime parsedTime = LocalDateTime.parse(timeOnDevice, DATE_TIME_FORMATTER);
+      testInfo.log().atInfo().alsoTo(logger).log("---- Device time: %s ----\n", parsedTime);
+      return Optional.of(parsedTime);
+    } catch (MobileHarnessException | DateTimeParseException e) {
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .withCause(e)
+          .log(
+              "Failed to query or parse device start time on %s; falling back to 'logcat -T 1'"
+                  + " and skipping dropbox extraction.",
+              deviceId);
+      return Optional.empty();
     }
-    initialWifiChecks = wifiCheckEvents.build();
   }
 }
