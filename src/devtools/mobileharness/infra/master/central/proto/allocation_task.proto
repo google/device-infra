@@ -160,6 +160,9 @@ message AllocationWorkflowContext {
 
     // Consecutive failed polls of otter_job_id that may succeed when retried.
     int32 retryable_poll_failures = 6;
+
+    // Failed attempts to release otter_job_id that may succeed when retried.
+    int32 retryable_release_failures = 7;
   }
 
   OmnilabContext omnilab_context = 1;
