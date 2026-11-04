@@ -71,7 +71,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import com.google.wireless.qa.mobileharness.shared.model.lab.LabLocator;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -357,7 +356,6 @@ public class ExecTestServiceImpl {
             .setName(testInfo.locator().getName())
             .setJob(convertJobInfo(testInfo.jobInfo()))
             .setStatus(testInfo.status().get())
-            .setResult(TestResult.valueOf(testResult.type().name()))
             .setResultType(testResult.type())
             .setCreateTime(testInfo.timing().getCreateTime().toEpochMilli())
             .setModifyTime(testInfo.timing().getModifyTime().toEpochMilli());
