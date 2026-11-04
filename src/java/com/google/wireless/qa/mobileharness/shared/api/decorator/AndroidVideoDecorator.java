@@ -126,7 +126,6 @@ public class AndroidVideoDecorator extends LifecycleDecorator
         recorder = screenrecord;
         usedVideoType = VideoOutput.VideoType.SCREENRECORD;
       }
-      // TODO: Implement VIDEOCAT.
       default -> {
         logger.atWarning().log(
             "Unsupported video type: %s, using STITCHED_SCREENSHOTS instead.", requestedType);
@@ -261,6 +260,9 @@ public class AndroidVideoDecorator extends LifecycleDecorator
    *   <li>Emulator: EMULATOR_CONSOLE.
    *   <li>Physical device with SDK >= 34: HD_SCREEN_RECORD (native screenrecord without time
    *       limit).
+   *   <li>Physical device with a supported 32-bit ARM SDK in [{@code
+   *       Videocat.MIN_SUPPORTED_SDK_VERSION}, {@code Videocat.MAX_SUPPORTED_SDK_VERSION}]:
+   *       VIDEOCAT.
    *   <li>Otherwise: STITCHED_SCREENSHOTS.
    * </ul>
    */

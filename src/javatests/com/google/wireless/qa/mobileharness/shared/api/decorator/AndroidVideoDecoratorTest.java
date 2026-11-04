@@ -174,10 +174,10 @@ public final class AndroidVideoDecoratorTest {
   }
 
   @Test
-  public void run_autoMode_realDeviceSdkBelow34_usesScreenshotRecorder() throws Exception {
+  public void run_autoMode_realDeviceWithoutVideoRecorder_usesScreenshotRecorder()
+      throws Exception {
     setUpDecorator(FakeAndroidRealDevice.class, AUTO_DETECT_SPEC);
-    when(systemSettingUtil.getDeviceSdkVersion(DEVICE_ID))
-        .thenReturn(Screenrecord.MIN_SDK_VERSION_FOR_UNLIMITED_RECORDING - 1);
+    when(systemSettingUtil.getDeviceSdkVersion(DEVICE_ID)).thenReturn(17);
 
     decorator.run(testInfo);
 
@@ -245,22 +245,6 @@ public final class AndroidVideoDecoratorTest {
     verify(screenrecord).start(DEVICE_ID, TEST_ID, genDir, HD_SCREEN_RECORD_SPEC, REMAINING_TIME);
     verify(screenrecord).stop();
     verifyNoInteractions(screenshotRecorder, emulatorConsoleRecorder, systemSettingUtil);
-  }
-
-  @Test
-  public void run_unsupportedVideoType_fallsBackToScreenshots() throws Exception {
-    // VIDEOCAT is not supported by this decorator yet, so it goes to the default branch.
-    AndroidVideoDecoratorSpec spec =
-        AndroidVideoDecoratorSpec.newBuilder()
-            .setVideocat(AndroidVideoDecoratorSpec.Videocat.getDefaultInstance())
-            .build();
-    setUpDecorator(FakeAndroidRealDevice.class, spec);
-
-    decorator.run(testInfo);
-
-    verify(screenshotRecorder).start(DEVICE_ID, TEST_ID, genDir, spec, REMAINING_TIME);
-    verify(screenshotRecorder).stop();
-    verifyNoInteractions(screenrecord, emulatorConsoleRecorder);
   }
 
   @Test
@@ -501,7 +485,11 @@ public final class AndroidVideoDecoratorTest {
    */
   private void setUpDecorator(Class<? extends Device> deviceClass, AndroidVideoDecoratorSpec spec)
       throws Exception {
-    useDevice(mockDevice(deviceClass));
+    setUpDecorator(mockDevice(deviceClass), spec);
+  }
+
+  private void setUpDecorator(Device device, AndroidVideoDecoratorSpec spec) throws Exception {
+    useDevice(device);
     when(jobInfo.combinedSpec(decorator, DEVICE_ID)).thenReturn(spec);
   }
 
