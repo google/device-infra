@@ -169,6 +169,7 @@ public final class DriverDecoratorMetadata {
     typeBuilder.put("AndroidCleanAppsDecorator", DecoratorType.SETUP_ONLY);
     typeBuilder.put("AndroidDesktopOtaUpdateDecorator", DecoratorType.SETUP_ONLY);
     typeBuilder.put("AndroidDeviceFeaturesCheckDecorator", DecoratorType.SETUP_ONLY);
+    typeBuilder.put("AndroidDisplayDensityDecorator", DecoratorType.SETUP_ONLY);
     typeBuilder.put("AndroidDumpSysDecorator", DecoratorType.TEARDOWN_ONLY);
     typeBuilder.put("AndroidFilePusherDecorator", DecoratorType.SETUP_ONLY);
     typeBuilder.put("AndroidInstallMainlineModulesDecorator", DecoratorType.SETUP_ONLY);

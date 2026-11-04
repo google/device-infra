@@ -76,6 +76,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_business_logic_skip_module_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_cdp_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_desktop_ota_update_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_display_density_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_display_device_info_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_dump_sys_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_emulator_video_decorator",
