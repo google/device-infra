@@ -729,7 +729,7 @@ public final class SessionResultHandlerUtilTest {
   }
 
   @Test
-  public void processResult_tradefedJobPassedWithoutResultFiles_doesNotInsertUnexecutedModules()
+  public void processResult_tradefedJobPassedWithoutResultFiles_insertsUnexecutedModules()
       throws Exception {
     flags.set("tmp_dir_root", folder.newFolder("tmp_dir_root_2").toString());
     Path resultDir = folder.newFolder("tf_pass_result_dir").toPath();
@@ -763,9 +763,26 @@ public final class SessionResultHandlerUtilTest {
         .mergeReports(reportListCaptor.capture(), eq(true), anyBoolean());
 
     List<Result> reportList = reportListCaptor.getValue();
+    assertThat(reportList).isNotEmpty();
     ImmutableList<Module> unexecutedModules =
         reportList.stream().flatMap(r -> r.getModuleInfoList().stream()).collect(toImmutableList());
-    assertThat(unexecutedModules).isEmpty();
+    assertThat(unexecutedModules)
+        .containsExactly(
+            Module.newBuilder()
+                .setName("CtsModule1")
+                .setAbi("arm64-v8a")
+                .setDone(false)
+                .setPassed(0)
+                .setTotalTests(0)
+                .build(),
+            Module.newBuilder()
+                .setName("CtsModule2")
+                .setAbi("arm64-v8a")
+                .setDone(false)
+                .setPassed(0)
+                .setTotalTests(0)
+                .build())
+        .inOrder();
   }
 
   @Test

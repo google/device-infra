@@ -343,8 +343,8 @@ public class SessionResultHandlerUtil {
               .orElse(Optional.empty());
       if (bundle.isPresent()) {
         tradefedResultBundlesBuilder.add(bundle.get());
-      } else if (test.resultWithCause().get().type() != TestResult.PASS) {
-        // If Tradefed failed without creating result files, insert assigned modules as unexecuted
+      } else {
+        // If Tradefed finished without creating result files, insert assigned modules as unexecuted
         // (done=false) so that subsequent retries can include them.
         unexecutedTradefedModulesBuilder.addAll(getUnexecutedTradefedModules(test));
       }
