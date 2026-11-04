@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.controller.device;
 
-import static com.google.common.collect.ImmutableMap.entriesToImmutableMap;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -52,6 +52,6 @@ public abstract class BaseDeviceStatusProvider implements DeviceStatusProvider {
       boolean realtimeDetect) throws InterruptedException {
     return getAllDeviceStatus(realtimeDetect).entrySet().stream()
         .filter(x -> duplicatedUuidCache.getIfPresent(x.getKey().getDeviceUuid()) == null)
-        .collect(entriesToImmutableMap());
+        .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
   }
 }

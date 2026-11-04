@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.lab.controller;
 
-import static com.google.common.collect.ImmutableMap.entriesToImmutableMap;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
@@ -308,7 +307,7 @@ public class JobManager {
   public Map<String, TestExecutionUnit> getTests() {
     return jobs.values().stream()
         .flatMap(job -> job.getAllTestExecutionUnits().entrySet().stream())
-        .collect(entriesToImmutableMap());
+        .collect(toImmutableMap(Entry::getKey, Entry::getValue));
   }
 
   /**
