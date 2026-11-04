@@ -116,6 +116,9 @@ public final class AtsCurationTest {
   public void keyPriority_isFleetKeyPriority() {
     assertThat(curation.keyPriority()).isSameInstanceAs(FleetKeyPriority.INSTANCE);
     assertThat(curation.keyPriority().devicePriority(DeviceKeys.LABEL)).isEqualTo(1);
+    assertThat(curation.keyPriority().devicePriority(DeviceKeys.BATTERY_LEVEL)).isEqualTo(1);
+    assertThat(curation.keyPriority().devicePriority(DeviceKeys.BATTERY_TEMPERATURE)).isEqualTo(1);
+    assertThat(curation.keyPriority().devicePriority(DeviceKeys.HINGE_ANGLE)).isEqualTo(1);
   }
 
   @Test

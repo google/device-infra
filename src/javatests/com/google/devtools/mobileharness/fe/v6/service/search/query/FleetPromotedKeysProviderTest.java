@@ -125,8 +125,42 @@ public final class FleetPromotedKeysProviderTest {
     FleetPromotedFilterKey model = filterKey(response, "dimension::model");
     assertThat(model.getMetadata().getIsPlural()).isFalse();
     assertThat(model.getMetadata().getCanUseAdvanced()).isTrue();
+    assertThat(model.getMetadata().getCanCompareInt()).isFalse();
     assertThat(model.getMetadata().getKeyDisplayName()).isEqualTo("Model");
     assertThat(model.getMetadata().getDescription()).isEmpty();
+  }
+
+  @Test
+  public void filterKeys_populatesCanCompareIntWhenKeyIsIntComparable() {
+    DeviceInfo sdkDevice =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("device-0"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .addType("android_real_device")
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(dimension("sdk_version", "34"))))
+            .build();
+    LabQueryResult sdkLab =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(labData("lab-a", "1.1.1.1", sdkDevice)))
+            .build();
+    FleetSnapshot sdkSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(sdkLab, BUILD_TIME);
+    DeviceCorpus sdkCorpus =
+        new DeviceCorpus(sdkSnapshot, new LazyPostings(sdkSnapshot.devices()), new AtsCuration());
+
+    FleetPromotedKeysResponse response = provider.getPromotedKeys(sdkCorpus, request());
+
+    assertThat(filterKey(response, DeviceKeys.SDK_VERSION.id()).getMetadata().getCanCompareInt())
+        .isTrue();
+    assertThat(filterKey(response, DeviceKeys.STATUS.id()).getMetadata().getCanCompareInt())
+        .isFalse();
   }
 
   @Test

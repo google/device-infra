@@ -53,6 +53,18 @@ public final class DeviceKeyRegistryTest {
     assertThat(registry.getKey("dimension::label").get().isOverlay()).isFalse();
     assertThat(registry.getKey("dimension::label").get().aliases()).containsExactly("device label");
     assertThat(registry.displayName("dimension::label")).hasValue("Label");
+    assertThat(registry.getKey("dimension::battery_level")).hasValue(DeviceKeys.BATTERY_LEVEL);
+    assertThat(registry.getKey("dimension::battery_temperature"))
+        .hasValue(DeviceKeys.BATTERY_TEMPERATURE);
+    assertThat(registry.getKey("dimension::hinge_angle")).hasValue(DeviceKeys.HINGE_ANGLE);
+    assertThat(DeviceKeys.BATTERY_LEVEL.isDimension()).isTrue();
+    assertThat(DeviceKeys.SDK_VERSION.isIntComparable()).isTrue();
+    assertThat(DeviceKeys.BATTERY_LEVEL.isIntComparable()).isTrue();
+    assertThat(DeviceKeys.BATTERY_TEMPERATURE.isIntComparable()).isTrue();
+    assertThat(DeviceKeys.HINGE_ANGLE.isIntComparable()).isTrue();
+    assertThat(DeviceKeys.MODEL.isIntComparable()).isFalse();
+    assertThat(DeviceKeys.VERSION.isIntComparable()).isFalse();
+    assertThat(registry.getKey("dimension::carrier").get().isIntComparable()).isFalse();
     assertThat(registry.getKey("device_field::version")).hasValue(DeviceKeys.VERSION);
     assertThat(registry.displayName("device_field::version")).hasValue("Version");
     // Standalone ATS exclusive key.
@@ -160,7 +172,10 @@ public final class DeviceKeyRegistryTest {
             "device_form",
             "device_class_name",
             "manufacturer",
-            "label");
+            "label",
+            "battery_level",
+            "battery_temperature",
+            "hinge_angle");
     // Quarantine is 1P-only, so OSS does not pull device_condition and never names "quarantined".
     assertThat(mask.getFieldMask().getPathsList()).doesNotContain("device_condition");
     assertThat(mask.getSupportedDimensionsMask().getDimensionNamesList())
@@ -196,6 +211,14 @@ public final class DeviceKeyRegistryTest {
             .build();
     DeviceInfoSource modelSource = DeviceKeys.MODEL.deviceInfoSources().get(0);
     assertThat(modelSource.extract(deviceInfo)).containsExactly("Pixel 8");
+  }
+
+  @Test
+  public void projectHostKey_preservesIsIntComparable() {
+    DeviceKeyDescriptor projectedDeviceCount =
+        DeviceKeys.projectHostKey(HostKeys.DEVICE_COUNT, KeyDisplay.of("Host Device Count"));
+    assertThat(projectedDeviceCount.isIntComparable()).isTrue();
+    assertThat(DeviceKeys.HOST_NAME.isIntComparable()).isFalse();
   }
 
   @Test

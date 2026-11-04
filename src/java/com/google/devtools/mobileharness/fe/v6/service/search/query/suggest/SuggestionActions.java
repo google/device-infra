@@ -27,10 +27,13 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetFilterC
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetNewChip;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetOpenPicker;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetViewExisting;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.IntComparison;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.IntComparisonOperator;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.NoValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.StartsWith;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
+import com.google.devtools.mobileharness.fe.v6.service.search.query.IntComparisonDisplays;
 import com.google.devtools.mobileharness.fe.v6.service.search.query.KeyVocabulary;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.KeyDescriptor;
 
@@ -131,25 +134,40 @@ final class SuggestionActions {
         .build();
   }
 
+  /** A complex integer comparison filter ({@code int_comparison}) on {@code keyId}. */
+  static Filter intComparisonFilter(String keyId, IntComparisonOperator operator, int value) {
+    return Filter.newBuilder()
+        .setKey(keyId)
+        .setComplex(
+            ComplexMatch.newBuilder()
+                .setIntComparison(IntComparison.newBuilder().setOperator(operator).setValue(value)))
+        .build();
+  }
+
   private static FleetFilterChipMetadata metadata(KeyVocabulary vocabulary, KeyDescriptor key) {
     return FleetFilterChipMetadata.newBuilder()
         .setKeyDisplayName(vocabulary.titleDisplayName(key))
         .setCanUseAdvanced(true)
         .setIsPlural(key.display().isPlural())
         .setDescription(key.display().description())
+        .setCanCompareInt(key.isIntComparable())
         .build();
   }
 
   /**
    * Compact condition text for the resulting chip pill of a filter built by {@link #valueFilter},
-   * {@link #appendValues}, {@link #appendNoValue}, {@link #noValueFilter}, or {@link
-   * #startsWithFilter}: a prefix filter reads as "starts with x", a single value shows itself,
-   * several collapse to their count, an exclude is prefixed with the not-equal sign, and a lone
-   * no-value filter reads as "empty" or "not empty".
+   * {@link #appendValues}, {@link #appendNoValue}, {@link #noValueFilter}, {@link
+   * #startsWithFilter}, or {@link #intComparisonFilter}: a prefix filter reads as "starts with x",
+   * an integer comparison reads as "> 20" or "≥ 26", a single value shows itself, several collapse
+   * to their count, an exclude is prefixed with the not-equal sign, and a lone no-value filter
+   * reads as "empty" or "not empty".
    */
   private static String pillCondition(FleetIndex index, Filter filter) {
     if (filter.getComplex().getKindCase() == ComplexMatch.KindCase.STARTS_WITH) {
       return "starts with " + filter.getComplex().getStartsWith().getValue();
+    }
+    if (filter.getComplex().getKindCase() == ComplexMatch.KindCase.INT_COMPARISON) {
+      return IntComparisonDisplays.intComparisonCondition(filter.getComplex().getIntComparison());
     }
     SimpleMatch simple = filter.getSimple();
     boolean negated = simple.getNegated();

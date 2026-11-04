@@ -53,6 +53,11 @@ public interface KeyDescriptor {
    */
   boolean isHostProperty();
 
+  /**
+   * Whether this key supports integer comparison ({@code >}, {@code >=}, {@code <}, {@code <=}).
+   */
+  boolean isIntComparable();
+
   /** The id without its namespace prefix, for example {@code "pool"}. */
   String bareName();
 }

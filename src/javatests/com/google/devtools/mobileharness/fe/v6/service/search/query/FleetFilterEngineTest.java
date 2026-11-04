@@ -35,6 +35,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.ComplexMatch
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.ContainsSubstring;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FilterValue;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.IntComparison;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.IntComparisonOperator;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.MatchesAtLeast;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.MatchesExactly;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.MatchesRegex;
@@ -219,6 +221,121 @@ public final class FleetFilterEngineTest {
         .containsExactly(0);
   }
 
+  @Test
+  public void intComparison_greaterThanAndGreaterThanOrEqual() {
+    DeviceCorpus intCorpus = intDeviceCorpus();
+
+    // device-0: battery_level=85, sdk_version=34
+    // device-1: battery_level=20, sdk_version=26
+    // device-2: battery_level="unknown", no sdk_version
+    assertThat(
+            engine.match(
+                intCorpus,
+                ImmutableList.of(
+                    intComparison(
+                        "dimension::battery_level",
+                        IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN,
+                        20))))
+        .containsExactly(0);
+    assertThat(
+            engine.match(
+                intCorpus,
+                ImmutableList.of(
+                    intComparison(
+                        "dimension::battery_level",
+                        IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL,
+                        20))))
+        .containsExactly(0, 1)
+        .inOrder();
+    assertThat(
+            engine.match(
+                intCorpus,
+                ImmutableList.of(
+                    intComparison(
+                        "dimension::sdk_version",
+                        IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL,
+                        26))))
+        .containsExactly(0, 1)
+        .inOrder();
+  }
+
+  @Test
+  public void intComparison_lessThanAndLessThanOrEqualWithNegativeValues() {
+    DeviceCorpus intCorpus = intDeviceCorpus();
+
+    // device-0: battery_temperature=31; device-1: battery_temperature=-1; device-2: missing.
+    assertThat(
+            engine.match(
+                intCorpus,
+                ImmutableList.of(
+                    intComparison(
+                        "dimension::battery_temperature",
+                        IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN,
+                        31))))
+        .containsExactly(1);
+    assertThat(
+            engine.match(
+                intCorpus,
+                ImmutableList.of(
+                    intComparison(
+                        "dimension::battery_temperature",
+                        IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN_OR_EQUAL,
+                        -1))))
+        .containsExactly(1);
+  }
+
+  @Test
+  public void intComparison_unsupportedKeyOrUnspecifiedOperator_matchesNothing() {
+    DeviceCorpus intCorpus = intDeviceCorpus();
+
+    // Non-integer-comparable key (dimension::label=100 on device-0) matches nothing.
+    assertThat(
+            engine.match(
+                intCorpus,
+                ImmutableList.of(
+                    intComparison(
+                        "dimension::label",
+                        IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN,
+                        50))))
+        .isEmpty();
+
+    // Unspecified operator matches nothing.
+    assertThat(
+            engine.match(
+                intCorpus,
+                ImmutableList.of(
+                    intComparison(
+                        "dimension::battery_level",
+                        IntComparisonOperator.INT_COMPARISON_OPERATOR_UNSPECIFIED,
+                        0))))
+        .isEmpty();
+  }
+
+  @Test
+  public void intComparison_hostCorpusMatchesDeviceCount() {
+    // lab1 has 2 devices (device-0, device-1); lab2 has 1 device (device-2).
+    HostCorpus hostCorpus = new HostCorpus(snapshot, LazyPostings.forHosts(snapshot.hosts()), null);
+
+    assertThat(
+            engine.match(
+                hostCorpus,
+                ImmutableList.of(
+                    intComparison(
+                        "host_field::device_count",
+                        IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN,
+                        1))))
+        .containsExactly(0);
+    assertThat(
+            engine.match(
+                hostCorpus,
+                ImmutableList.of(
+                    intComparison(
+                        "host_field::device_count",
+                        IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN_OR_EQUAL,
+                        1))))
+        .containsExactly(1);
+  }
+
   // --- Filter builders ---
 
   private static Filter simple(String key, boolean negated, String... values) {
@@ -284,6 +401,15 @@ public final class FleetFilterEngineTest {
     return Filter.newBuilder()
         .setKey(key)
         .setComplex(ComplexMatch.newBuilder().setMatchesAtLeast(match))
+        .build();
+  }
+
+  private static Filter intComparison(String key, IntComparisonOperator operator, int value) {
+    return Filter.newBuilder()
+        .setKey(key)
+        .setComplex(
+            ComplexMatch.newBuilder()
+                .setIntComparison(IntComparison.newBuilder().setOperator(operator).setValue(value)))
         .build();
   }
 
@@ -356,6 +482,61 @@ public final class FleetFilterEngineTest {
                     DeviceCompositeDimension.newBuilder()
                         .addSupportedDimension(dimension("os", "ios"))))
         .build();
+  }
+
+  private static DeviceCorpus intDeviceCorpus() {
+    LabQueryResult intFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab1",
+                            "1.1.1.1",
+                            DeviceInfo.newBuilder()
+                                .setDeviceLocator(DeviceLocator.newBuilder().setId("device-0"))
+                                .setDeviceStatus(DeviceStatus.IDLE)
+                                .setDeviceFeature(
+                                    DeviceFeature.newBuilder()
+                                        .setCompositeDimension(
+                                            DeviceCompositeDimension.newBuilder()
+                                                .addSupportedDimension(dimension("label", "100"))
+                                                .addSupportedDimension(
+                                                    dimension("battery_level", "85"))
+                                                .addSupportedDimension(
+                                                    dimension("battery_temperature", "31"))
+                                                .addSupportedDimension(
+                                                    dimension("sdk_version", "34"))))
+                                .build(),
+                            DeviceInfo.newBuilder()
+                                .setDeviceLocator(DeviceLocator.newBuilder().setId("device-1"))
+                                .setDeviceStatus(DeviceStatus.BUSY)
+                                .setDeviceFeature(
+                                    DeviceFeature.newBuilder()
+                                        .setCompositeDimension(
+                                            DeviceCompositeDimension.newBuilder()
+                                                .addSupportedDimension(
+                                                    dimension("battery_level", "20"))
+                                                .addSupportedDimension(
+                                                    dimension("battery_temperature", "-1"))
+                                                .addSupportedDimension(
+                                                    dimension("sdk_version", "26"))))
+                                .build(),
+                            DeviceInfo.newBuilder()
+                                .setDeviceLocator(DeviceLocator.newBuilder().setId("device-2"))
+                                .setDeviceStatus(DeviceStatus.IDLE)
+                                .setDeviceFeature(
+                                    DeviceFeature.newBuilder()
+                                        .setCompositeDimension(
+                                            DeviceCompositeDimension.newBuilder()
+                                                .addSupportedDimension(
+                                                    dimension("battery_level", "unknown"))))
+                                .build())))
+            .build();
+    FleetSnapshot intSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(intFleet, BUILD_TIME);
+    return new DeviceCorpus(intSnapshot, new LazyPostings(intSnapshot.devices()), null);
   }
 
   private static DeviceDimension dimension(String name, String value) {

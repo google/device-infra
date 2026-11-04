@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetResolve
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetResolvedGroupByChip;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValidFilterChip;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetValidGroupByChip;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.IntComparisonOperator;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.MatchesRegex;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
@@ -41,6 +42,7 @@ import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDe
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.KeyDescriptor;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -124,14 +126,14 @@ public final class FleetChipResolver {
                 FleetInvalidFilterChip.newBuilder().setReason("Unknown host filter key: " + keyId))
             .build();
       }
-      ValidationResult conditionValidation = validateCondition(filter);
+      HostKeyDescriptor key = hostKey.get();
+      ValidationResult conditionValidation = validateCondition(key, filter);
       if (!conditionValidation.isValid()) {
         return FleetResolvedFilterChip.newBuilder()
             .setInvalid(
                 FleetInvalidFilterChip.newBuilder().setReason(conditionValidation.errorMessage()))
             .build();
       }
-      HostKeyDescriptor key = hostKey.get();
       return FleetResolvedFilterChip.newBuilder()
           .setValid(
               FleetValidFilterChip.newBuilder()
@@ -148,14 +150,14 @@ public final class FleetChipResolver {
                     .setReason("Unknown device filter key: " + keyId))
             .build();
       }
-      ValidationResult conditionValidation = validateCondition(filter);
+      DeviceKeyDescriptor key = deviceKey.get();
+      ValidationResult conditionValidation = validateCondition(key, filter);
       if (!conditionValidation.isValid()) {
         return FleetResolvedFilterChip.newBuilder()
             .setInvalid(
                 FleetInvalidFilterChip.newBuilder().setReason(conditionValidation.errorMessage()))
             .build();
       }
-      DeviceKeyDescriptor key = deviceKey.get();
       return FleetResolvedFilterChip.newBuilder()
           .setValid(
               FleetValidFilterChip.newBuilder()
@@ -223,10 +225,10 @@ public final class FleetChipResolver {
     }
   }
 
-  private static ValidationResult validateCondition(Filter filter) {
+  private static ValidationResult validateCondition(KeyDescriptor key, Filter filter) {
     return switch (filter.getModeCase()) {
       case SIMPLE -> validateSimple(filter.getSimple());
-      case COMPLEX -> validateComplex(filter.getComplex());
+      case COMPLEX -> validateComplex(key, filter.getComplex());
       case MODE_NOT_SET -> ValidationResult.invalid("Filter condition is not set");
     };
   }
@@ -238,7 +240,7 @@ public final class FleetChipResolver {
     return ValidationResult.valid();
   }
 
-  private static ValidationResult validateComplex(ComplexMatch complex) {
+  private static ValidationResult validateComplex(KeyDescriptor key, ComplexMatch complex) {
     return switch (complex.getKindCase()) {
       case STARTS_WITH ->
           complex.getStartsWith().getValue().isEmpty()
@@ -269,6 +271,17 @@ public final class FleetChipResolver {
           complex.getMatchesAtLeast().getValuesList().isEmpty()
               ? ValidationResult.invalid("Matches-at-least condition must have at least one value")
               : ValidationResult.valid();
+      case INT_COMPARISON -> {
+        if (!key.isIntComparable()) {
+          yield ValidationResult.invalid(
+              "Integer comparison is not supported for filter key: " + key.id());
+        }
+        IntComparisonOperator operator = complex.getIntComparison().getOperator();
+        yield (operator == IntComparisonOperator.INT_COMPARISON_OPERATOR_UNSPECIFIED
+                || operator == IntComparisonOperator.UNRECOGNIZED)
+            ? ValidationResult.invalid("Integer comparison operator must be >, >=, <, or <=")
+            : ValidationResult.valid();
+      }
       case KIND_NOT_SET -> ValidationResult.invalid("Complex match kind is not set");
     };
   }
@@ -279,6 +292,7 @@ public final class FleetChipResolver {
         .setCanUseAdvanced(true)
         .setIsPlural(key.display().isPlural())
         .setDescription(key.display().description())
+        .setCanCompareInt(key.isIntComparable())
         .build();
   }
 
@@ -288,6 +302,7 @@ public final class FleetChipResolver {
         .setCanUseAdvanced(true)
         .setIsPlural(key.display().isPlural())
         .setDescription(key.display().description())
+        .setCanCompareInt(key.isIntComparable())
         .build();
   }
 
@@ -400,6 +415,8 @@ public final class FleetChipResolver {
       }
       case MATCHES_EXACTLY -> "is exactly " + setText(complex.getMatchesExactly().getValuesList());
       case MATCHES_AT_LEAST -> "has all of " + setText(complex.getMatchesAtLeast().getValuesList());
+      case INT_COMPARISON ->
+          IntComparisonDisplays.intComparisonCondition(complex.getIntComparison());
       case KIND_NOT_SET -> "";
     };
   }

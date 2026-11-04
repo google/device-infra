@@ -32,6 +32,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetChipRes
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetResolvedFilterChip;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetResolvedGroupByChip;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetTryCategory;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.IntComparison;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.IntComparisonOperator;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.MatchesExactly;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.MatchesRegex;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.NoValue;
@@ -150,6 +152,118 @@ public final class FleetChipResolverTest {
         resolver.resolve(request(exactly("dimension::model", "Pixel 8", "Galaxy")));
 
     assertThat(response.getFilterChips(0).getValid().getPillCondition()).isEqualTo("is exactly 2");
+  }
+
+  @Test
+  public void complexIntComparison_deviceKeysAndAllOperators_formatsPillConditionsAndMetadata() {
+    FleetChipResolverResponse deviceResponse =
+        resolver.resolve(
+            FleetChipResolverRequest.newBuilder()
+                .setEntity(SearchEntity.SEARCH_ENTITY_DEVICE)
+                .addFilters(
+                    intComparison(
+                        "dimension::battery_level",
+                        IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN,
+                        20))
+                .addFilters(
+                    intComparison(
+                        "dimension::sdk_version",
+                        IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL,
+                        26))
+                .addFilters(
+                    intComparison(
+                        "dimension::battery_temperature",
+                        IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN,
+                        38))
+                .addFilters(
+                    intComparison(
+                        "dimension::hinge_angle",
+                        IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN_OR_EQUAL,
+                        10))
+                .addFilters(simple("dimension::model", "Pixel 8"))
+                .build());
+
+    assertThat(deviceResponse.getFilterChips(0).getValid().getPillKey()).isEqualTo("Battery Level");
+    assertThat(deviceResponse.getFilterChips(0).getValid().getPillCondition()).isEqualTo("> 20");
+    assertThat(deviceResponse.getFilterChips(0).getValid().getMetadata().getCanCompareInt())
+        .isTrue();
+
+    assertThat(deviceResponse.getFilterChips(1).getValid().getPillKey()).isEqualTo("SDK Version");
+    assertThat(deviceResponse.getFilterChips(1).getValid().getPillCondition())
+        .isEqualTo("\u2265 26");
+    assertThat(deviceResponse.getFilterChips(1).getValid().getMetadata().getCanCompareInt())
+        .isTrue();
+
+    assertThat(deviceResponse.getFilterChips(2).getValid().getPillKey())
+        .isEqualTo("Battery Temperature");
+    assertThat(deviceResponse.getFilterChips(2).getValid().getPillCondition()).isEqualTo("< 38");
+    assertThat(deviceResponse.getFilterChips(2).getValid().getMetadata().getCanCompareInt())
+        .isTrue();
+
+    assertThat(deviceResponse.getFilterChips(3).getValid().getPillKey()).isEqualTo("Hinge Angle");
+    assertThat(deviceResponse.getFilterChips(3).getValid().getPillCondition())
+        .isEqualTo("\u2264 10");
+    assertThat(deviceResponse.getFilterChips(3).getValid().getMetadata().getCanCompareInt())
+        .isTrue();
+
+    assertThat(deviceResponse.getFilterChips(4).getValid().getMetadata().getCanCompareInt())
+        .isFalse();
+  }
+
+  @Test
+  public void complexIntComparison_hostDeviceCount_formatsPillConditionAndMetadata() {
+    FleetChipResolverResponse hostResponse =
+        resolver.resolve(
+            FleetChipResolverRequest.newBuilder()
+                .setEntity(SearchEntity.SEARCH_ENTITY_HOST)
+                .addFilters(
+                    intComparison(
+                        "host_field::device_count",
+                        IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL,
+                        1))
+                .addFilters(simple("host_field::host_name", "lab-a"))
+                .build());
+
+    assertThat(hostResponse.getFilterChips(0).getValid().getPillKey()).isEqualTo("Device Count");
+    assertThat(hostResponse.getFilterChips(0).getValid().getPillCondition()).isEqualTo("\u2265 1");
+    assertThat(hostResponse.getFilterChips(0).getValid().getMetadata().getCanCompareInt()).isTrue();
+    assertThat(hostResponse.getFilterChips(1).getValid().getMetadata().getCanCompareInt())
+        .isFalse();
+  }
+
+  @Test
+  public void complexIntComparison_unsupportedKeyOrUnspecifiedOperator_isInvalid() {
+    FleetChipResolverResponse response =
+        resolver.resolve(
+            FleetChipResolverRequest.newBuilder()
+                .setEntity(SearchEntity.SEARCH_ENTITY_DEVICE)
+                .addFilters(
+                    intComparison(
+                        "dimension::model",
+                        IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN,
+                        8))
+                .addFilters(
+                    intComparison(
+                        "dimension::battery_level",
+                        IntComparisonOperator.INT_COMPARISON_OPERATOR_UNSPECIFIED,
+                        20))
+                .build());
+
+    assertThat(response.getFilterChips(0).hasInvalid()).isTrue();
+    assertThat(response.getFilterChips(0).getInvalid().getReason())
+        .contains("Integer comparison is not supported for filter key: dimension::model");
+
+    assertThat(response.getFilterChips(1).hasInvalid()).isTrue();
+    assertThat(response.getFilterChips(1).getInvalid().getReason())
+        .contains("Integer comparison operator must be >, >=, <, or <=");
+  }
+
+  @Test
+  public void intComparisonDisplays_unspecifiedOperatorReturnsQuestionMark() {
+    assertThat(
+            IntComparisonDisplays.intComparisonOperatorSymbol(
+                IntComparisonOperator.INT_COMPARISON_OPERATOR_UNSPECIFIED))
+        .isEqualTo("?");
   }
 
   @Test
@@ -487,6 +601,15 @@ public final class FleetChipResolverTest {
         .setKey(key)
         .setComplex(
             ComplexMatch.newBuilder().setMatchesRegex(MatchesRegex.newBuilder().setValue(pattern)))
+        .build();
+  }
+
+  private static Filter intComparison(String key, IntComparisonOperator operator, int value) {
+    return Filter.newBuilder()
+        .setKey(key)
+        .setComplex(
+            ComplexMatch.newBuilder()
+                .setIntComparison(IntComparison.newBuilder().setOperator(operator).setValue(value)))
         .build();
   }
 

@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.IntComparisonOperator;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -42,9 +43,10 @@ import java.util.regex.Pattern;
  * <p>The suggestion spec numbers its patterns; the mapping is: {@link IntentPattern#EMPTINESS}
  * pattern 5, {@link IntentPattern#KEY_VALUE_NEGATED} pattern 6, {@link
  * IntentPattern#KEY_WITH_OPERATOR} pattern 1 (operator typed, value pending), {@link
- * IntentPattern#KEY_VALUE} pattern 1, {@link IntentPattern#NEGATED_VALUE} pattern 7, {@link
- * IntentPattern#VALUE_LIST} pattern 2, and {@link IntentPattern#SINGLE_TOKEN} patterns 3 and 4
- * together. Group-by is pattern 0.
+ * IntentPattern#KEY_VALUE} pattern 1, {@link IntentPattern#INT_COMPARISON} integer comparison on a
+ * named key, {@link IntentPattern#NEGATED_VALUE} pattern 7, {@link IntentPattern#VALUE_LIST}
+ * pattern 2, and {@link IntentPattern#SINGLE_TOKEN} patterns 3 and 4 together. Group-by is pattern
+ * 0.
  */
 public final class SuggestionIntentParser {
 
@@ -60,6 +62,10 @@ public final class SuggestionIntentParser {
     KEY_WITH_OPERATOR,
     /** {@code <key> is <value>}, {@code <key>: <value>}, {@code <key> = <value>}. */
     KEY_VALUE,
+    /**
+     * {@code <key> > <int>}, {@code <key> >= <int>}, {@code <key> < <int>}, {@code <key> <= <int>}.
+     */
+    INT_COMPARISON,
     /** {@code not <value>}: a value to exclude, key undetermined. */
     NEGATED_VALUE,
     /** {@code <value1>, <value2>, ...}: several values, key undetermined. */
@@ -71,8 +77,9 @@ public final class SuggestionIntentParser {
   /**
    * A classified input. Which fields carry meaning depends on the pattern: {@code key} for every
    * key-bearing pattern; {@code value} for {@code KEY_VALUE}, {@code KEY_VALUE_NEGATED}, {@code
-   * NEGATED_VALUE} and {@code VALUE_LIST} (the whole text); {@code isEmpty} for {@code EMPTINESS};
-   * {@code exclude} for {@code KEY_WITH_OPERATOR}; {@code values} for {@code VALUE_LIST}.
+   * INT_COMPARISON}, {@code NEGATED_VALUE} and {@code VALUE_LIST} (the whole text); {@code isEmpty}
+   * for {@code EMPTINESS}; {@code exclude} for {@code KEY_WITH_OPERATOR}; {@code values} for {@code
+   * VALUE_LIST}; {@code intOperator} and {@code intValue} for {@code INT_COMPARISON}.
    */
   public record Intent(
       IntentPattern pattern,
@@ -80,7 +87,27 @@ public final class SuggestionIntentParser {
       String value,
       boolean isEmpty,
       boolean exclude,
-      ImmutableList<String> values) {
+      ImmutableList<String> values,
+      IntComparisonOperator intOperator,
+      int intValue) {
+
+    public Intent(
+        IntentPattern pattern,
+        String key,
+        String value,
+        boolean isEmpty,
+        boolean exclude,
+        ImmutableList<String> values) {
+      this(
+          pattern,
+          key,
+          value,
+          isEmpty,
+          exclude,
+          values,
+          IntComparisonOperator.INT_COMPARISON_OPERATOR_UNSPECIFIED,
+          0);
+    }
 
     static Intent keyValue(String key, String value) {
       return new Intent(
@@ -95,6 +122,18 @@ public final class SuggestionIntentParser {
           false,
           true,
           ImmutableList.of());
+    }
+
+    static Intent intComparison(String key, IntComparisonOperator intOperator, int intValue) {
+      return new Intent(
+          IntentPattern.INT_COMPARISON,
+          key.trim(),
+          Integer.toString(intValue),
+          false,
+          false,
+          ImmutableList.of(),
+          intOperator,
+          intValue);
     }
 
     static Intent emptiness(String key, boolean isEmpty) {
@@ -129,6 +168,12 @@ public final class SuggestionIntentParser {
       "(?:is[ _]+not|isn't|are[ _]+not|aren't"
           + "|do(?:es)?[ _]+not[ _]+includes?|do(?:es)?n't[ _]+includes?)";
   private static final String POSITIVE_OPERATOR = "(?:is|are|includes?)";
+  // Key LHS token that permits an optional possessive explicit namespace prefix ("dimension:foo",
+  // "device dimension:foo", "host property:foo") while rejecting ':', '=', '<', '>', and '!' inside
+  // the key name itself; the possessive quantifier (?+) prevents backtracking onto the namespace
+  // colon as a key-value separator.
+  private static final String KEY_LHS =
+      "((?i:(?:(?:device[\\s_]+)?dimension|host[\\s_]*property)[\\s_:]+)?+[^:=<>!]+?)";
 
   private static final Pattern EMPTY_NO = Pattern.compile("^no[ _]+(.+)$");
   private static final Pattern EMPTY_HAS = Pattern.compile("^has[ _]+(.+)$");
@@ -148,10 +193,13 @@ public final class SuggestionIntentParser {
   private static final Pattern KEY_NEGATED_SYMBOL_ONLY = Pattern.compile("^(.+?)[ _]*!=\\s*$");
   private static final Pattern KEY_OPERATOR_ONLY =
       Pattern.compile("^(.+?)[ _]+" + POSITIVE_OPERATOR + "$", Pattern.CASE_INSENSITIVE);
-  private static final Pattern KEY_SYMBOL_ONLY = Pattern.compile("^(.+?)[ _]*[:=]\\s*$");
+  private static final Pattern KEY_SYMBOL_ONLY = Pattern.compile("^" + KEY_LHS + "[ _]*[:=]\\s*$");
   private static final Pattern KEY_VALUE =
       Pattern.compile("^(.+?)[ _]+" + POSITIVE_OPERATOR + "[ _]+(.+)$", Pattern.CASE_INSENSITIVE);
-  private static final Pattern KEY_VALUE_SYMBOL = Pattern.compile("^(.+?)[ _]*[:=][ _]*(.+)$");
+  private static final Pattern KEY_VALUE_SYMBOL =
+      Pattern.compile("^" + KEY_LHS + "[ _]*[:=][ _]*(.+)$");
+  private static final Pattern INT_COMPARISON =
+      Pattern.compile("^" + KEY_LHS + "\\s*(>=|<=|>|<)\\s*([-+]?\\d+)\\s*$");
   private static final Pattern NEGATED_VALUE = Pattern.compile("^not\\s+(.+)$");
 
   /**
@@ -227,6 +275,16 @@ public final class SuggestionIntentParser {
       return Intent.keyValue(m.group(1), m.group(2));
     }
 
+    m = INT_COMPARISON.matcher(query);
+    if (m.matches()) {
+      try {
+        int intValue = Integer.parseInt(m.group(3));
+        return Intent.intComparison(m.group(1), parseIntOperator(m.group(2)), intValue);
+      } catch (NumberFormatException ignored) {
+        // Out-of-range 32-bit integer falls through to the remaining patterns.
+      }
+    }
+
     m = NEGATED_VALUE.matcher(lower);
     if (m.matches()) {
       return Intent.negatedValue(m.group(1));
@@ -248,6 +306,16 @@ public final class SuggestionIntentParser {
         .map(pattern -> pattern.matcher(input))
         .filter(Matcher::matches)
         .findFirst();
+  }
+
+  private static IntComparisonOperator parseIntOperator(String symbol) {
+    return switch (symbol) {
+      case ">" -> IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN;
+      case ">=" -> IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL;
+      case "<" -> IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN;
+      case "<=" -> IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN_OR_EQUAL;
+      default -> IntComparisonOperator.INT_COMPARISON_OPERATOR_UNSPECIFIED;
+    };
   }
 
   private SuggestionIntentParser() {}

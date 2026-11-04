@@ -33,8 +33,9 @@ option java_outer_classname = "SearchFleetProto";
 // own single ATS controller.
 //
 // The filter model here is richer than TJS: it supports multi-value OR,
-// negation (is/is not), and five complex match modes (starts_with, contains,
-// regex, exactly, at_least). See search_tjs.proto for the simpler TJS model.
+// negation (is/is not), and six complex match modes (starts_with, contains,
+// regex, exactly, at_least, int_comparison). See search_tjs.proto for the
+// simpler TJS model.
 // =============================================================================
 
 // --- Enums ---
@@ -110,6 +111,7 @@ message ComplexMatch {
     MatchesRegex matches_regex = 3;
     MatchesExactly matches_exactly = 4;
     MatchesAtLeast matches_at_least = 5;
+    IntComparison int_comparison = 6;
   }
 }
 
@@ -139,6 +141,22 @@ message MatchesExactly {
 // Superset match: device's value set ⊇ this set. NOT negatable.
 message MatchesAtLeast {
   repeated string values = 1;
+}
+
+// Numeric comparison operator for integer-comparable filter keys.
+enum IntComparisonOperator {
+  INT_COMPARISON_OPERATOR_UNSPECIFIED = 0;
+  INT_COMPARISON_OPERATOR_GREATER_THAN = 1;
+  INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL = 2;
+  INT_COMPARISON_OPERATOR_LESS_THAN = 3;
+  INT_COMPARISON_OPERATOR_LESS_THAN_OR_EQUAL = 4;
+}
+
+// Integer comparison match (`>`, `>=`, `<`, `<=`). Only valid for filter keys
+// whose metadata has `can_compare_int = true`. NOT negatable.
+message IntComparison {
+  IntComparisonOperator operator = 1;
+  int32 value = 2;
 }
 
 // =============================================================================
@@ -460,6 +478,10 @@ message FleetFilterChipMetadata {
   // title and as a second line in the Add filter dialog. Empty for keys whose
   // meaning is clear from the name.
   string description = 4;
+
+  // Whether this key supports integer comparison (`>`, `>=`, `<`, `<=`) in the
+  // value picker's advanced matching mode and search-bar typeahead.
+  bool can_compare_int = 5;
 }
 
 // One-click apply: creates a new chip or updates an existing simple chip on the

@@ -289,7 +289,8 @@ public final class FleetFilterKeyCataloger {
                 .setKeyDisplayName(DeviceKeyDisplays.titleDisplayName(desc))
                 .setCanUseAdvanced(true)
                 .setIsPlural(desc.display().isPlural())
-                .setDescription(desc.display().description()))
+                .setDescription(desc.display().description())
+                .setCanCompareInt(desc.isIntComparable()))
         .setCoverage(KeyCatalogs.coverage(desc.isDimension(), deviceCount))
         .setApplied(applied)
         .build();
@@ -305,7 +306,8 @@ public final class FleetFilterKeyCataloger {
                 .setKeyDisplayName(HostKeyDisplays.titleDisplayName(desc))
                 .setCanUseAdvanced(true)
                 .setIsPlural(desc.display().isPlural())
-                .setDescription(desc.display().description()))
+                .setDescription(desc.display().description())
+                .setCanCompareInt(desc.isIntComparable()))
         .setCoverage(KeyCatalogs.coverage(desc.isHostProperty(), hostCount))
         .setApplied(applied)
         .build();

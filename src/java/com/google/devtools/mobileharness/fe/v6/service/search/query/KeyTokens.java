@@ -46,11 +46,11 @@ public final class KeyTokens {
 
   /** {@code dimension:<name>}, {@code dimension <name>}, {@code device__dimension: <name>}. */
   private static final Pattern DIMENSION_NAMESPACE =
-      Pattern.compile("^(?:device[\\s_]+)?dimension[\\s_:]+(.+)$");
+      Pattern.compile("^(?:device[\\s_]+)?dimension[\\s_:]+([^:=<>!]+)$");
 
   /** {@code host property:<name>}, {@code host_property <name>}, {@code hostproperty:<name>}. */
   private static final Pattern HOST_PROPERTY_NAMESPACE =
-      Pattern.compile("^host[\\s_]*property[\\s_:]+(.+)$");
+      Pattern.compile("^host[\\s_]*property[\\s_:]+([^:=<>!]+)$");
 
   /**
    * Either namespace prefix, with or without a key name yet ({@code "dimension:foo"}, {@code

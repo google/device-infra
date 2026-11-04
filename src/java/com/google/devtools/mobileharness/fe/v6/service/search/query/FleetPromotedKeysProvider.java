@@ -107,6 +107,7 @@ public final class FleetPromotedKeysProvider {
                       .setIsPlural(desc.display().isPlural())
                       .setCanUseAdvanced(true)
                       .setDescription(desc.display().description())
+                      .setCanCompareInt(desc.isIntComparable())
                       .build()));
       emitted++;
     }

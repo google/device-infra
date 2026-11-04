@@ -17,9 +17,11 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.query.suggest;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.IntComparisonDisplays.intComparisonOperatorSymbol;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.appendNoValue;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.appendValues;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.applyFilter;
+import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.intComparisonFilter;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.noValueFilter;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.openPicker;
 import static com.google.devtools.mobileharness.fe.v6.service.search.query.suggest.SuggestionActions.startsWithFilter;
@@ -42,6 +44,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FilterValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestion;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.IntComparisonOperator;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.TextSegment;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.KeyCount;
@@ -62,6 +65,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -179,6 +183,8 @@ public final class FleetSuggester {
           suggestKeyValue(context, intent.key(), intent.value(), /* exclude= */ false);
       case KEY_VALUE_NEGATED ->
           suggestKeyValue(context, intent.key(), intent.value(), /* exclude= */ true);
+      case INT_COMPARISON ->
+          suggestIntComparison(context, intent.key(), intent.intOperator(), intent.intValue());
       case EMPTINESS -> suggestEmptiness(context, intent.key(), intent.isEmpty());
       case KEY_WITH_OPERATOR -> suggestTopValuesOfKey(context, intent.key(), intent.exclude());
       case NEGATED_VALUE -> suggestValues(context, intent.value(), /* exclude= */ true);
@@ -281,6 +287,60 @@ public final class FleetSuggester {
       if (matched.isEmpty() && !value.isEmpty() && isColdLongTail(context, key)) {
         out.add(coldCondition(context, key, ImmutableList.of(rawValue.trim()), exclude));
       }
+    }
+    return out.build();
+  }
+
+  // ---- <key> (>|>=|<|<=) <int> ----
+
+  /**
+   * Integer comparison conditions for keys marked {@link KeyDescriptor#isIntComparable()}. Only
+   * indexed integer-comparable keys are offered, and only when at least one record in the active
+   * scope satisfies the comparison; when the key already carries an active chip, only the bare-key
+   * picker opener is offered.
+   */
+  private ImmutableList<SuggestionCandidate> suggestIntComparison(
+      SuggestionContext context, String keyToken, IntComparisonOperator operator, int targetValue) {
+    KeyVocabulary vocabulary = context.vocabulary();
+    FleetIndex index = context.index();
+    ImmutableList.Builder<SuggestionCandidate> out = ImmutableList.builder();
+    for (KeyDescriptor key : vocabulary.resolve(keyToken)) {
+      String keyId = key.id();
+      if (!key.isIntComparable() || !context.isIndexed(keyId)) {
+        continue;
+      }
+      if (context.isActiveKey(keyId)) {
+        out.add(pickerOpener(context, key, MatchTier.EXACT));
+        continue;
+      }
+      ImmutableList<String> matchingValues =
+          index.sortedValues(keyId).stream()
+              .filter(
+                  val -> {
+                    OptionalInt parsed = FleetFilterEngine.tryParseInt(val);
+                    return parsed.isPresent()
+                        && FleetFilterEngine.matchesIntComparison(
+                            parsed.getAsInt(), operator, targetValue);
+                  })
+              .collect(toImmutableList());
+      if (matchingValues.isEmpty()) {
+        continue;
+      }
+      int count = context.scopeUnionCount(keyId, matchingValues);
+      if (count <= 0) {
+        continue;
+      }
+      Filter filter = intComparisonFilter(keyId, operator, targetValue);
+      String operatorSymbol = intComparisonOperatorSymbol(operator);
+      FleetSuggestion.Builder proto =
+          FleetSuggestion.newBuilder()
+              .setLabel("Add filter")
+              .addAllMainText(
+                  segments(
+                      vocabulary.titleDisplayName(key) + " " + operatorSymbol + " ",
+                      Integer.toString(targetValue)))
+              .setApplyFilter(applyFilter(vocabulary, index, key, filter));
+      out.add(SuggestionCandidate.presetCondition(key, MatchTier.EXACT, proto, count, count));
     }
     return out.build();
   }

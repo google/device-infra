@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggest
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetSuggestionResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetUtilization;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.IntComparisonOperator;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.NoValue;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SearchEntity;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
@@ -2521,6 +2522,200 @@ public final class FleetSuggesterTest {
         suggester.suggest(corpus, request("status").toBuilder().setLimit(1).build());
     assertThat(response.getItemsCount()).isEqualTo(1);
     assertThat(response.getItems(0).getAddGroupBy().getKey()).isEqualTo("device_field::status");
+  }
+
+  @Test
+  public void intComparison_suggestsMatchingOperatorsAndCountsWithinScope() {
+    DeviceCorpus intCorpus = intComparisonCorpus();
+
+    FleetSuggestion batteryGt20 =
+        firstApplyFilter(
+            suggester.suggest(intCorpus, request("battery > 20")), "dimension::battery_level");
+    assertThat(batteryGt20.getLabel()).isEqualTo("Add filter");
+    assertThat(batteryGt20.getCount()).isEqualTo(2);
+    assertThat(batteryGt20.getMainTextList())
+        .containsExactly(
+            TextSegment.newBuilder().setText("Battery Level > ").setEmphasized(false).build(),
+            TextSegment.newBuilder().setText("20").setEmphasized(true).build())
+        .inOrder();
+    assertThat(batteryGt20.getApplyFilter().getPillKey()).isEqualTo("Battery Level");
+    assertThat(batteryGt20.getApplyFilter().getPillCondition()).isEqualTo("> 20");
+    assertThat(batteryGt20.getApplyFilter().getMetadata().getCanCompareInt()).isTrue();
+    assertThat(
+            batteryGt20
+                .getApplyFilter()
+                .getResultingFilter()
+                .getComplex()
+                .getIntComparison()
+                .getOperator())
+        .isEqualTo(IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN);
+    assertThat(
+            batteryGt20
+                .getApplyFilter()
+                .getResultingFilter()
+                .getComplex()
+                .getIntComparison()
+                .getValue())
+        .isEqualTo(20);
+
+    // Under status=IDLE, only device-0 (85) satisfies battery_level > 20.
+    FleetSuggestion batteryGt20Idle =
+        firstApplyFilter(
+            suggester.suggest(
+                intCorpus, request("battery_level > 20", simple("device_field::status", "IDLE"))),
+            "dimension::battery_level");
+    assertThat(batteryGt20Idle.getCount()).isEqualTo(1);
+
+    // >=, <, and <= operators across sdk_version, battery_temperature, and hinge_angle.
+    FleetSuggestion sdkGte26 =
+        firstApplyFilter(
+            suggester.suggest(intCorpus, request("sdk >= 26")), "dimension::sdk_version");
+    assertThat(sdkGte26.getCount()).isEqualTo(2);
+    assertThat(sdkGte26.getApplyFilter().getPillCondition()).isEqualTo("\u2265 26");
+
+    FleetSuggestion tempLt38 =
+        firstApplyFilter(
+            suggester.suggest(intCorpus, request("battery_temperature < 38")),
+            "dimension::battery_temperature");
+    assertThat(tempLt38.getCount()).isEqualTo(2);
+    assertThat(tempLt38.getApplyFilter().getPillCondition()).isEqualTo("< 38");
+
+    FleetSuggestion hingeLte10 =
+        firstApplyFilter(
+            suggester.suggest(intCorpus, request("hinge <= 10")), "dimension::hinge_angle");
+    assertThat(hingeLte10.getCount()).isEqualTo(1);
+    assertThat(hingeLte10.getApplyFilter().getPillCondition()).isEqualTo("\u2264 10");
+  }
+
+  @Test
+  public void intComparison_supportsUnspacedSignedAndKeyValueInputsWithComparisonCharacters() {
+    DeviceCorpus intCorpus = intComparisonCorpus();
+
+    // Unspaced operator: sdk>=26.
+    FleetSuggestion sdkUnspaced =
+        firstApplyFilter(
+            suggester.suggest(intCorpus, request("sdk>=26")), "dimension::sdk_version");
+    assertThat(sdkUnspaced.getApplyFilter().getPillCondition()).isEqualTo("\u2265 26");
+
+    // Signed negative and positive integers: <= -1 and > +50.
+    FleetSuggestion tempNegative =
+        firstApplyFilter(
+            suggester.suggest(intCorpus, request("battery_temperature <= -1")),
+            "dimension::battery_temperature");
+    assertThat(tempNegative.getCount()).isEqualTo(1);
+    assertThat(tempNegative.getApplyFilter().getPillCondition()).isEqualTo("\u2264 -1");
+
+    FleetSuggestion batteryPositiveSign =
+        firstApplyFilter(
+            suggester.suggest(intCorpus, request("battery > +50")), "dimension::battery_level");
+    assertThat(batteryPositiveSign.getCount()).isEqualTo(1);
+    assertThat(batteryPositiveSign.getApplyFilter().getPillCondition()).isEqualTo("> 50");
+
+    // A key-value query whose RHS value contains '<' is parsed as KEY_VALUE on the LHS key.
+    FleetSuggestion labelWithLt =
+        firstApplyFilter(suggester.suggest(intCorpus, request("label: v<2")), "dimension::label");
+    assertThat(labelWithLt.getApplyFilter().getPillCondition()).isEqualTo("v<2");
+
+    // Colon-namespaced key tokens ("dimension:sdk_version >= 26" and "dimension:model:") work
+    // across INT_COMPARISON and KEY_SYMBOL_ONLY.
+    FleetSuggestion namespacedSdk =
+        firstApplyFilter(
+            suggester.suggest(intCorpus, request("dimension:sdk_version >= 26")),
+            "dimension::sdk_version");
+    assertThat(namespacedSdk.getApplyFilter().getPillCondition()).isEqualTo("\u2265 26");
+
+    FleetSuggestion namespacedModel =
+        firstApplyFilter(
+            suggester.suggest(intCorpus, request("dimension:model:")), "dimension::model");
+    assertThat(namespacedModel.getApplyFilter().getPillKey()).isEqualTo("Model");
+  }
+
+  @Test
+  public void intComparison_activeKeyOffersModifyFilterPickerOpener() {
+    DeviceCorpus intCorpus = intComparisonCorpus();
+
+    FleetSuggestionResponse response =
+        suggester.suggest(
+            intCorpus, request("battery > 20", simple("dimension::battery_level", "85")));
+    assertThat(response.getItemsCount()).isEqualTo(1);
+    assertThat(response.getItems(0).getLabel()).isEqualTo("Modify filter");
+    assertThat(response.getItems(0).getOpenPicker().getKey()).isEqualTo("dimension::battery_level");
+    assertThat(response.getItems(0).getOpenPicker().hasViewExisting()).isTrue();
+  }
+
+  @Test
+  public void intComparison_skipsNonComparableKeysZeroMatchesAndMalformedInputs() {
+    DeviceCorpus intCorpus = intComparisonCorpus();
+
+    // Non-comparable key (dimension::model) yields nothing.
+    assertThat(suggester.suggest(intCorpus, request("model > 5")).getItemsList()).isEmpty();
+    // Threshold with 0 fleet-wide matches yields nothing.
+    assertThat(suggester.suggest(intCorpus, request("battery > 99")).getItemsList()).isEmpty();
+    // Threshold that matches fleet-wide (device-0 has 85) but has 0 matches within the active
+    // status=BUSY scope yields nothing.
+    assertThat(
+            suggester
+                .suggest(intCorpus, request("battery > 60", simple("device_field::status", "BUSY")))
+                .getItemsList())
+        .isEmpty();
+    // 32-bit overflow, non-integer RHS, and incomplete operator do not mint bogus dimension:: or
+    // host_property:: suggestions (both bare and colon-namespaced).
+    assertThat(suggester.suggest(intCorpus, request("battery >= 99999999999")).getItemsList())
+        .isEmpty();
+    assertThat(suggester.suggest(intCorpus, request("battery >= 38.5")).getItemsList()).isEmpty();
+    assertThat(suggester.suggest(intCorpus, request("battery >=")).getItemsList()).isEmpty();
+    assertThat(suggester.suggest(intCorpus, request("dimension:sdk_version >")).getItemsList())
+        .isEmpty();
+    assertThat(suggester.suggest(intCorpus, request("dimension:sdk_version >=")).getItemsList())
+        .isEmpty();
+    assertThat(
+            suggester
+                .suggest(intCorpus, request("dimension:sdk_version >= 99999999999"))
+                .getItemsList())
+        .isEmpty();
+    assertThat(
+            suggester.suggest(intCorpus, request("dimension:sdk_version >= 38.5")).getItemsList())
+        .isEmpty();
+    assertThat(suggester.suggest(intCorpus, request("host property:rack >=")).getItemsList())
+        .isEmpty();
+    assertThat(suggester.suggest(intCorpus, request("dimension:sdk_version !")).getItemsList())
+        .isEmpty();
+    assertThat(suggester.suggest(intCorpus, request("host property:rack !")).getItemsList())
+        .isEmpty();
+  }
+
+  private static DeviceCorpus intComparisonCorpus() {
+    ImmutableList<DeviceInfo> devices =
+        ImmutableList.of(
+            deviceWith(
+                "device-0",
+                DeviceStatus.IDLE,
+                dimension("battery_level", "85"),
+                dimension("battery_temperature", "31"),
+                dimension("sdk_version", "34"),
+                dimension("hinge_angle", "180"),
+                dimension("model", "8"),
+                dimension("label", "v<2")),
+            deviceWith(
+                "device-1",
+                DeviceStatus.BUSY,
+                dimension("battery_level", "45"),
+                dimension("battery_temperature", "39"),
+                dimension("sdk_version", "26"),
+                dimension("hinge_angle", "0"),
+                dimension("model", "7")),
+            deviceWith(
+                "device-2",
+                DeviceStatus.IDLE,
+                dimension("battery_level", "15"),
+                dimension("battery_temperature", "-1"),
+                dimension("sdk_version", "24")));
+    FleetSnapshot intSnapshot =
+        Guice.createInjector()
+            .getInstance(FleetIndexBuilder.class)
+            .build(labOf(devices), BUILD_TIME);
+    return new DeviceCorpus(
+        intSnapshot, new LazyPostings(intSnapshot.devices()), new AtsCuration());
   }
 
   @Test

@@ -75,6 +75,12 @@ java_library(
 )
 
 java_library(
+    name = "int_comparison_displays",
+    srcs = ["IntComparisonDisplays.java"],
+    deps = ["//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto"],
+)
+
+java_library(
     name = "device_corpus",
     srcs = ["DeviceCorpus.java"],
     deps = [
@@ -130,6 +136,7 @@ java_library(
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:postings",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
@@ -200,6 +207,7 @@ java_library(
         ":ats_curation",
         ":device_key_displays",
         ":host_key_displays",
+        ":int_comparison_displays",
         ":scenario_curation",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/errors",

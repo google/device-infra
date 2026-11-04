@@ -105,9 +105,16 @@ public final class DeviceKeys {
       dimensionKey("model", KeyDisplay.of("Model"), "device model");
   public static final DeviceKeyDescriptor OS = dimensionKey("os", KeyDisplay.of("OS"), "device os");
   public static final DeviceKeyDescriptor SDK_VERSION =
-      dimensionKey("sdk_version", KeyDisplay.of("SDK Version"), "sdk", "api level");
+      intComparableDimensionKey("sdk_version", KeyDisplay.of("SDK Version"), "sdk", "api level");
   public static final DeviceKeyDescriptor SOFTWARE_VERSION =
       dimensionKey("software_version", KeyDisplay.of("Software Version"));
+  public static final DeviceKeyDescriptor BATTERY_LEVEL =
+      intComparableDimensionKey("battery_level", KeyDisplay.of("Battery Level"), "battery");
+  public static final DeviceKeyDescriptor BATTERY_TEMPERATURE =
+      intComparableDimensionKey(
+          "battery_temperature", KeyDisplay.of("Battery Temperature"), "battery temp");
+  public static final DeviceKeyDescriptor HINGE_ANGLE =
+      intComparableDimensionKey("hinge_angle", KeyDisplay.of("Hinge Angle"), "hinge");
 
   /**
    * The device's single "version", as the device detail pages show it: the {@code release_version}
@@ -156,7 +163,10 @@ public final class DeviceKeys {
           DEVICE_FORM,
           DEVICE_CLASS_NAME,
           MANUFACTURER,
-          LABEL);
+          LABEL,
+          BATTERY_LEVEL,
+          BATTERY_TEMPERATURE,
+          HINGE_ANGLE);
 
   /**
    * Group 1 host keys projected into device search (cross-entity host attributes stamped onto each
@@ -197,13 +207,25 @@ public final class DeviceKeys {
    */
   static DeviceKeyDescriptor dimensionKey(
       String dimensionName, KeyDisplay display, String... aliases) {
+    return dimensionKeyBuilder(dimensionName, display, aliases).build();
+  }
+
+  /**
+   * Builds a built-in integer-comparable device key backed by a single named composite dimension.
+   */
+  static DeviceKeyDescriptor intComparableDimensionKey(
+      String dimensionName, KeyDisplay display, String... aliases) {
+    return dimensionKeyBuilder(dimensionName, display, aliases).setIsIntComparable(true).build();
+  }
+
+  private static DeviceKeyDescriptor.Builder dimensionKeyBuilder(
+      String dimensionName, KeyDisplay display, String... aliases) {
     return DeviceKeyDescriptor.builder()
         .setId(PREFIX_DIMENSION + dimensionName)
         .setDeviceInfoSource(DeviceInfoSource.dimension(dimensionName))
         .setDisplay(display)
         .setAliases(aliases)
-        .setIsDimension(true)
-        .build();
+        .setIsDimension(true);
   }
 
   /**
@@ -231,8 +253,9 @@ public final class DeviceKeys {
    * Projects a host key into device search: same id and lab sources, a device-search display name
    * and device-search aliases (the host key's own aliases are not inherited, because the same
    * attribute is named differently from a device row, for example {@code "host os"} rather than
-   * {@code "os"}). Preserves the host key's long-tail flag so a projected discovered host property
-   * stays long-tail.
+   * {@code "os"}). Preserves the host key's long-tail and integer-comparable flags so a projected
+   * discovered host property stays long-tail and a projected numeric host field stays
+   * integer-comparable.
    */
   static DeviceKeyDescriptor projectHostKey(
       HostKeyDescriptor host, KeyDisplay deviceDisplay, String... deviceAliases) {
@@ -244,6 +267,7 @@ public final class DeviceKeys {
         .setIsLongTail(host.isLongTail())
         .setIsHostProperty(host.isHostProperty())
         .setIsHostField(host.isHostField())
+        .setIsIntComparable(host.isIntComparable())
         .build();
   }
 

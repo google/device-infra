@@ -22,6 +22,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.ComplexMatch
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.ContainsSubstring;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.Filter;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.FilterValue;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.IntComparison;
+import com.google.devtools.mobileharness.fe.v6.service.proto.search.IntComparisonOperator;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.MatchesAtLeast;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.MatchesExactly;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.MatchesRegex;
@@ -29,9 +31,11 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.SimpleMatch;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.StartsWith;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.FleetIndex;
 import com.google.devtools.mobileharness.fe.v6.service.search.index.Postings;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.KeyDescriptor;
 import java.util.BitSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -121,6 +125,7 @@ public final class FleetFilterEngine {
       case MATCHES_REGEX -> matchRegex(corpus, keyId, complex.getMatchesRegex());
       case MATCHES_EXACTLY -> matchExactly(corpus, keyId, complex.getMatchesExactly());
       case MATCHES_AT_LEAST -> matchAtLeast(corpus, keyId, complex.getMatchesAtLeast());
+      case INT_COMPARISON -> matchIntComparison(corpus, keyId, complex.getIntComparison());
       case KIND_NOT_SET -> allRecords(corpus.recordCount());
     };
   }
@@ -209,6 +214,51 @@ public final class FleetFilterEngine {
    */
   private static BitSet matchAtLeast(SearchCorpus corpus, String keyId, MatchesAtLeast atLeast) {
     return intersectPostings(corpus.postings(), keyId, lowercased(atLeast.getValuesList()));
+  }
+
+  /**
+   * Integer comparison match ({@code >}, {@code >=}, {@code <}, {@code <=}) over the key's distinct
+   * values. Only keys marked {@link KeyDescriptor#isIntComparable()} match; non-integer values on
+   * the key are ignored. Not negatable.
+   */
+  private static BitSet matchIntComparison(
+      SearchCorpus corpus, String keyId, IntComparison intComparison) {
+    if (!corpus.vocabulary().describe(keyId).map(KeyDescriptor::isIntComparable).orElse(false)) {
+      return new BitSet();
+    }
+    IntComparisonOperator operator = intComparison.getOperator();
+    int target = intComparison.getValue();
+    FleetIndex index = corpus.index();
+    Postings postings = corpus.postings();
+    BitSet matched = new BitSet();
+    for (String value : index.sortedValues(keyId)) {
+      OptionalInt parsed = tryParseInt(value);
+      if (parsed.isPresent() && matchesIntComparison(parsed.getAsInt(), operator, target)) {
+        orInto(matched, postings.get(keyId, value));
+      }
+    }
+    return matched;
+  }
+
+  /** Parses {@code value} as a signed 32-bit decimal integer, or returns empty if invalid. */
+  public static OptionalInt tryParseInt(String value) {
+    try {
+      return OptionalInt.of(Integer.parseInt(value.trim()));
+    } catch (NumberFormatException e) {
+      return OptionalInt.empty();
+    }
+  }
+
+  /** Returns whether {@code candidate} satisfies {@code operator} against {@code target}. */
+  public static boolean matchesIntComparison(
+      int candidate, IntComparisonOperator operator, int target) {
+    return switch (operator) {
+      case INT_COMPARISON_OPERATOR_GREATER_THAN -> candidate > target;
+      case INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL -> candidate >= target;
+      case INT_COMPARISON_OPERATOR_LESS_THAN -> candidate < target;
+      case INT_COMPARISON_OPERATOR_LESS_THAN_OR_EQUAL -> candidate <= target;
+      case INT_COMPARISON_OPERATOR_UNSPECIFIED, UNRECOGNIZED -> false;
+    };
   }
 
   /** Records that lack the key entirely: all records minus those carrying any value for it. */

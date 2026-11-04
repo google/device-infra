@@ -161,6 +161,7 @@ public final class FleetFilterKeyCatalogerTest {
     assertThat(modelEntry.getCoverage().getShown().getCount()).isEqualTo(3);
     assertThat(modelEntry.getApplied()).isTrue();
     assertThat(modelEntry.getMetadata().getKeyDisplayName()).isEqualTo("Model");
+    assertThat(modelEntry.getMetadata().getCanCompareInt()).isFalse();
 
     FleetFilterKeyEntry locationEntry =
         entryFor(
@@ -288,8 +289,14 @@ public final class FleetFilterKeyCatalogerTest {
     FleetFilterKeyEntry connectivity =
         entryFor(section(browseResponse, "Built-in fields"), "host_field::connectivity");
     assertThat(connectivity.getMetadata().getKeyDisplayName()).isEqualTo("Lab Server Connectivity");
+    assertThat(connectivity.getMetadata().getCanCompareInt()).isFalse();
     assertThat(connectivity.getCoverage().getDisplayCase()).isEqualTo(DisplayCase.NOT_SHOWN);
     assertThat(connectivity.getApplied()).isFalse();
+
+    FleetFilterKeyEntry deviceCount =
+        entryFor(section(browseResponse, "Built-in fields"), "host_field::device_count");
+    assertThat(deviceCount.getMetadata().getKeyDisplayName()).isEqualTo("Device Count");
+    assertThat(deviceCount.getMetadata().getCanCompareInt()).isTrue();
 
     FleetFilterKeySection hostProperties = section(browseResponse, "Host properties");
     assertThat(keys(hostProperties))

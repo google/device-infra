@@ -94,6 +94,7 @@ public final class HostKeys {
           .setId(PREFIX_HOST_FIELD + "device_count")
           .setDisplay(KeyDisplay.of("Device Count"))
           .setAliases("devices")
+          .setIsIntComparable(true)
           .build();
 
   /** Standard Group 1 common host keys (present in every deployment). */

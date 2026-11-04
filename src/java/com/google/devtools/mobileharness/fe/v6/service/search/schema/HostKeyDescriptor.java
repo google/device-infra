@@ -61,6 +61,12 @@ public abstract class HostKeyDescriptor implements KeyDescriptor {
   @Override
   public abstract boolean isHostProperty();
 
+  /**
+   * Whether this key supports integer comparison ({@code >}, {@code >=}, {@code <}, {@code <=}).
+   */
+  @Override
+  public abstract boolean isIntComparable();
+
   /** Whether this descriptor represents a native host field. */
   public boolean isHostField() {
     return !isHostProperty();
@@ -79,7 +85,8 @@ public abstract class HostKeyDescriptor implements KeyDescriptor {
         .setLabInfoSources(ImmutableList.of())
         .setAliases(ImmutableSet.of())
         .setIsLongTail(false)
-        .setIsHostProperty(false);
+        .setIsHostProperty(false)
+        .setIsIntComparable(false);
   }
 
   /** Builder for {@link HostKeyDescriptor}. */
@@ -106,6 +113,8 @@ public abstract class HostKeyDescriptor implements KeyDescriptor {
     public abstract Builder setIsLongTail(boolean isLongTail);
 
     public abstract Builder setIsHostProperty(boolean isHostProperty);
+
+    public abstract Builder setIsIntComparable(boolean isIntComparable);
 
     public abstract HostKeyDescriptor build();
   }

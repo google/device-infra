@@ -153,6 +153,18 @@ public final class HostSuggesterTest {
 
     FleetSuggestion deviceCount = firstOpenPicker(response, "host_field::device_count");
     assertThat(deviceCount.getOpenPicker().getKey()).isEqualTo("host_field::device_count");
+    assertThat(deviceCount.getOpenPicker().getMetadata().getCanCompareInt()).isTrue();
+  }
+
+  @Test
+  public void deviceCountIntComparison_suggestsHostFilter() {
+    FleetSuggestionResponse response = suggester.suggest(corpus, request("devices >= 1"));
+
+    FleetSuggestion deviceCount = firstApplyFilter(response, "host_field::device_count");
+    assertThat(deviceCount.getCount()).isEqualTo(2);
+    assertThat(deviceCount.getApplyFilter().getPillKey()).isEqualTo("Device Count");
+    assertThat(deviceCount.getApplyFilter().getPillCondition()).isEqualTo("\u2265 1");
+    assertThat(deviceCount.getApplyFilter().getMetadata().getCanCompareInt()).isTrue();
   }
 
   @Test

@@ -42,6 +42,9 @@ public final class HostKeyRegistryTest {
     assertThat(registry.getKey("host_property::host_os")).isPresent();
     assertThat(registry.getKey("host_field::lab_server_version")).isPresent();
     assertThat(registry.getKey("host_field::device_count")).isPresent();
+    assertThat(HostKeys.DEVICE_COUNT.isIntComparable()).isTrue();
+    assertThat(HostKeys.HOST_NAME.isIntComparable()).isFalse();
+    assertThat(registry.getKey("host_property::rack").get().isIntComparable()).isFalse();
   }
 
   @Test

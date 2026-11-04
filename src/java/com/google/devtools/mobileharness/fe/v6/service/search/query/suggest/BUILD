@@ -23,7 +23,10 @@ package(
 java_library(
     name = "suggestion_intent_parser",
     srcs = ["SuggestionIntentParser.java"],
-    deps = ["@maven//:com_google_guava_guava"],
+    deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
 )
 
 # The search-bar suggestion pipeline: intent parsing, per-shape candidate generation, wording and
@@ -48,6 +51,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:postings",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:value_key_pair",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:fleet_filter_engine",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:int_comparison_displays",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:key_counts",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:key_vocabulary",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/query:search_corpus",
