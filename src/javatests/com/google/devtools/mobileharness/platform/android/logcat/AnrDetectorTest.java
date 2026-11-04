@@ -18,13 +18,14 @@ package com.google.devtools.mobileharness.platform.android.logcat;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
-import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashEvent;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashType;
+import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashedProcess;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.ProcessCategory;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -51,7 +52,9 @@ public final class AnrDetectorTest {
 
   private static final MonitoringConfig MONITORING_CONFIG =
       new MonitoringConfig(
-          ImmutableList.of("com.app.anr", "com.app.anr2"), ImmutableList.of(), ImmutableList.of());
+          ImmutableList.of("com.app.anr", "com.app.anr2"),
+          ImmutableList.of("com.error.anr"),
+          ImmutableList.of("com.ignored.anr"));
 
   @Mock TestInfo testInfo;
   @Mock Device device;
@@ -67,32 +70,146 @@ public final class AnrDetectorTest {
   }
 
   @Test
-  public void process_anrCrash_detectsCrashEvent() throws Exception {
+  public void process_anrCrash_detectsCrashEventsAndScansOncePerAnr() throws Exception {
     String crashLogPath = RunfilesUtil.getRunfilesLocation(TEST_DATA_PREFIX + ANR_LOG_FILE);
     List<String> lines = Files.readAllLines(Path.of(crashLogPath));
 
-    for (String line : lines) {
-      anrDetector.process(LogcatParser.parse(line).get());
-    }
+    processLines(lines);
 
     ImmutableList<LogcatEvent> events = anrDetector.getEvents();
     assertThat(events).hasSize(2);
 
     CrashEvent crashEvent1 = (CrashEvent) events.get(0);
-    assertThat(crashEvent1.process().name()).isEqualTo("com.app.anr");
-    assertThat(crashEvent1.process().pid()).isEqualTo(12345);
-    assertThat(crashEvent1.process().category()).isEqualTo(ProcessCategory.FAILURE);
-    assertThat(crashEvent1.process().type()).isEqualTo(CrashType.ANR);
+    assertThat(crashEvent1.process())
+        .isEqualTo(
+            new CrashedProcess("com.app.anr", 12345, ProcessCategory.FAILURE, CrashType.ANR));
     assertThat(crashEvent1.crashLogs()).contains("Reason: Test ANR reason 1");
 
     CrashEvent crashEvent2 = (CrashEvent) events.get(1);
-    assertThat(crashEvent2.process().name()).isEqualTo("com.app.anr2");
-    assertThat(crashEvent2.process().pid()).isEqualTo(67890);
-    assertThat(crashEvent2.process().category()).isEqualTo(ProcessCategory.FAILURE);
-    assertThat(crashEvent2.process().type()).isEqualTo(CrashType.ANR);
+    assertThat(crashEvent2.process())
+        .isEqualTo(
+            new CrashedProcess("com.app.anr2", 67890, ProcessCategory.FAILURE, CrashType.ANR));
     assertThat(crashEvent2.crashLogs()).contains("Reason: Test ANR reason 2");
-    verify(crashDialogDetector, atLeastOnce())
-        .scan(testInfo, device, MONITORING_CONFIG.reportAsFailurePackages());
+    verify(crashDialogDetector, times(2))
+        .scan(testInfo, device, MONITORING_CONFIG.dialogPackagesToIgnore());
+  }
+
+  @Test
+  public void process_ignoredPackageAnr_retainsEventWithoutDialogScan() {
+    processLines(
+        ImmutableList.of(
+            "10-16 10:00:00.100 100 101 E ActivityManager: ANR in com.ignored.anr",
+            "10-16 10:00:00.200 100 101 E ActivityManager: PID: 24680",
+            "10-16 10:00:00.300 100 101 E ActivityManager: Reason: Broadcast of Intent"));
+
+    ImmutableList<LogcatEvent> events = anrDetector.getEvents();
+    assertThat(events).hasSize(1);
+    CrashEvent crashEvent = (CrashEvent) events.get(0);
+    assertThat(crashEvent.process())
+        .isEqualTo(
+            new CrashedProcess("com.ignored.anr", 24680, ProcessCategory.IGNORED, CrashType.ANR));
+    assertThat(crashEvent.crashLogs())
+        .isEqualTo(
+            String.join(
+                System.lineSeparator(),
+                "ANR in com.ignored.anr",
+                "PID: 24680",
+                "Reason: Broadcast of Intent"));
+    verifyNoInteractions(crashDialogDetector);
+  }
+
+  @Test
+  public void process_repeatedAnrsForSamePackageAndPid_preservesBothInOrder() {
+    processLines(
+        ImmutableList.of(
+            "10-16 10:00:00.100 100 101 E ActivityManager: ANR in com.app.anr (com.app.anr/.Main)",
+            "10-16 10:00:00.200 100 101 E ActivityManager: PID: 12345",
+            "10-16 10:00:00.300 100 101 E ActivityManager: Reason: Input dispatching timed out 1",
+            "10-16 10:01:00.100 100 101 E ActivityManager: ANR in com.app.anr (com.app.anr/.Main)",
+            "10-16 10:01:00.200 100 101 E ActivityManager: PID: 12345",
+            "10-16 10:01:00.300 100 101 E ActivityManager: Reason: Input dispatching timed out 2"));
+
+    ImmutableList<LogcatEvent> events = anrDetector.getEvents();
+    assertThat(events).hasSize(2);
+    CrashEvent first = (CrashEvent) events.get(0);
+    CrashEvent second = (CrashEvent) events.get(1);
+    assertThat(first.process())
+        .isEqualTo(
+            new CrashedProcess("com.app.anr", 12345, ProcessCategory.FAILURE, CrashType.ANR));
+    assertThat(first.crashLogs()).contains("Reason: Input dispatching timed out 1");
+    assertThat(first.crashLogs()).doesNotContain("Reason: Input dispatching timed out 2");
+
+    assertThat(second.process())
+        .isEqualTo(
+            new CrashedProcess("com.app.anr", 12345, ProcessCategory.FAILURE, CrashType.ANR));
+    assertThat(second.crashLogs()).contains("Reason: Input dispatching timed out 2");
+    assertThat(second.crashLogs()).doesNotContain("Reason: Input dispatching timed out 1");
+
+    verify(crashDialogDetector, times(2))
+        .scan(testInfo, device, MONITORING_CONFIG.dialogPackagesToIgnore());
+  }
+
+  @Test
+  public void process_outOfSequenceReasonAndPidLines_ignoresStrayLinesWithoutCorruptingAnr() {
+    processLines(
+        ImmutableList.of(
+            "10-16 09:59:58.100 100 101 E ActivityManager: PID: 11111",
+            "10-16 09:59:59.100 100 101 E ActivityManager: Reason: Stray reason before ANR",
+            "10-16 10:00:00.100 100 101 E ActivityManager: ANR in com.app.anr",
+            "10-16 10:00:00.150 100 101 E ActivityManager: Reason: Out-of-order reason before PID",
+            "10-16 10:00:00.200 100 101 E ActivityManager: PID: 12345",
+            "10-16 10:00:00.250 100 101 E ActivityManager: PID: 99999",
+            "10-16 10:00:00.300 100 101 E ActivityManager: Reason: Valid ANR reason"));
+
+    ImmutableList<LogcatEvent> events = anrDetector.getEvents();
+    assertThat(events).hasSize(1);
+    CrashEvent crashEvent = (CrashEvent) events.get(0);
+    assertThat(crashEvent.process())
+        .isEqualTo(
+            new CrashedProcess("com.app.anr", 12345, ProcessCategory.FAILURE, CrashType.ANR));
+    assertThat(crashEvent.crashLogs())
+        .isEqualTo(
+            String.join(
+                System.lineSeparator(),
+                "ANR in com.app.anr",
+                "PID: 12345",
+                "Reason: Valid ANR reason"));
+    verify(crashDialogDetector, times(1))
+        .scan(testInfo, device, MONITORING_CONFIG.dialogPackagesToIgnore());
+  }
+
+  @Test
+  public void process_sequentialIgnoredThenErrorAnrOnSharedPid_emitsBothAndScansOnlyNonIgnored() {
+    processLines(
+        ImmutableList.of(
+            "10-16 10:00:00.100 100 101 E ActivityManager: ANR in com.ignored.anr",
+            "10-16 10:00:00.200 100 101 E ActivityManager: PID: 5555",
+            "10-16 10:00:00.300 100 101 E ActivityManager: Reason: Ignored ANR",
+            "10-16 10:01:00.100 100 101 E ActivityManager: ANR in com.error.anr",
+            "10-16 10:01:00.200 100 101 E ActivityManager: PID: 5555",
+            "10-16 10:01:00.300 100 101 E ActivityManager: Reason: Error ANR"));
+
+    ImmutableList<LogcatEvent> events = anrDetector.getEvents();
+    assertThat(events).hasSize(2);
+    assertThat(((CrashEvent) events.get(0)).process())
+        .isEqualTo(
+            new CrashedProcess("com.ignored.anr", 5555, ProcessCategory.IGNORED, CrashType.ANR));
+    assertThat(((CrashEvent) events.get(1)).process())
+        .isEqualTo(new CrashedProcess("com.error.anr", 5555, ProcessCategory.ERROR, CrashType.ANR));
+    verify(crashDialogDetector, times(1))
+        .scan(testInfo, device, MONITORING_CONFIG.dialogPackagesToIgnore());
+  }
+
+  @Test
+  public void process_overflowingPidInAnr_safelyIgnoredWithoutException() {
+    processLines(
+        ImmutableList.of(
+            "10-16 10:00:00.100 100 101 E ActivityManager: ANR in com.app.anr",
+            "10-16 10:00:00.200 100 101 E ActivityManager: PID: 99999999999",
+            "10-16 10:00:00.300 100 101 E ActivityManager: Reason: Overflow PID ANR"));
+
+    assertThat(anrDetector.getEvents()).isEmpty();
+    verifyNoInteractions(crashDialogDetector);
   }
 
   @Test
@@ -106,5 +223,11 @@ public final class AnrDetectorTest {
 
     assertThat(anrDetector.getEvents()).isEmpty();
     verifyNoInteractions(crashDialogDetector);
+  }
+
+  private void processLines(List<String> lines) {
+    for (String line : lines) {
+      LogcatParser.parse(line).ifPresent(anrDetector::process);
+    }
   }
 }
