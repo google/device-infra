@@ -42,7 +42,6 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.ser
 import com.google.devtools.mobileharness.infra.controller.device.DeviceManagementFilter;
 import com.google.devtools.mobileharness.infra.controller.device.proto.DeviceFilterSetting;
 import com.google.devtools.mobileharness.infra.monitoring.MonitorPipelineLauncher;
-import com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat;
 import com.google.devtools.mobileharness.shared.util.comm.relay.service.ServerUtils;
 import com.google.devtools.mobileharness.shared.util.comm.server.ClientAddressServerInterceptor;
 import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManager;
@@ -52,8 +51,6 @@ import com.google.devtools.mobileharness.shared.util.database.DatabaseConnection
 import com.google.devtools.mobileharness.shared.util.database.TablesLister;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
-import com.google.devtools.mobileharness.shared.version.Version;
-import com.google.devtools.mobileharness.shared.version.VersionUtil;
 import io.grpc.BindableService;
 import io.grpc.ServerBuilder;
 import java.time.Duration;
@@ -133,16 +130,6 @@ class OlcServerRunnerImpl implements OlcServerRunner {
 
   @Override
   public void runBasic(DeviceFilterSetting initialDeviceFilterSetting) {
-    // Logs version.
-    logger.atInfo().log(
-        "OLC version: lab-%s%s",
-        Version.LAB_VERSION,
-        VersionUtil.getBuildVersion()
-            .map(
-                buildVersion ->
-                    String.format(" %s", ProtoTextFormat.shortDebugString(buildVersion)))
-            .orElse(""));
-
     // Initializes ClientApi.
     clientApi.initializeSingleton();
 
