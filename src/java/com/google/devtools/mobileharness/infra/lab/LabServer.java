@@ -481,11 +481,14 @@ public class LabServer {
    */
   public static void initLogger() throws MobileHarnessException {
     LocalFileUtil localFileUtil = new LocalFileUtil();
+    boolean enableFileLog = Flags.enableLabServerFileLog.getNonNull();
     // Loggers should be initialized it only after parsing flags, in order to get the parameters to
     // initialize the log file handler.
     try {
-      localFileUtil.prepareDir(DirUtil.getDefaultLogDir());
-      localFileUtil.grantFileOrDirFullAccess(DirUtil.getDefaultLogDir());
+      if (enableFileLog) {
+        localFileUtil.prepareDir(DirUtil.getDefaultLogDir());
+        localFileUtil.grantFileOrDirFullAccess(DirUtil.getDefaultLogDir());
+      }
       // Prepares the lab server's temporary log directory.
       localFileUtil.prepareDir(DirCommon.getTempDirRoot());
       localFileUtil.grantFileOrDirFullAccess(DirCommon.getTempDirRoot());
@@ -493,7 +496,13 @@ public class LabServer {
       throw new MobileHarnessException(
           InfraErrorId.LAB_INIT_ENV_PREPARE_DIR_ERROR, "Failed to setup local file dirs!", e);
     }
-    MobileHarnessLogger.init(DirUtil.getDefaultLogDir());
+    if (enableFileLog) {
+      MobileHarnessLogger.init(DirUtil.getDefaultLogDir());
+    } else {
+      // Does not log to local files. Tagged file handlers (e.g., device logs) will not be created
+      // either because MobileHarnessLogger has no log file dir.
+      MobileHarnessLogger.init();
+    }
   }
 
   /**

@@ -71,6 +71,8 @@ import io.grpc.ManagedChannel;
 import io.grpc.Server;
 import io.grpc.netty.NettyServerBuilder;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
@@ -78,6 +80,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import org.junit.After;
 import org.junit.Before;
@@ -104,6 +107,9 @@ public class LabServerIntegrationTest {
       RunfilesUtil.getRunfilesLocation(
           "javatests/com/google/devtools/mobileharness/infra/lab/api_config.textproto");
 
+  /** Name of the lab server log dir under the public dir. See DirUtil.getDefaultLogDir(). */
+  private static final String LAB_SERVER_LOG_DIR_NAME = "mh_lab_log";
+
   private CountDownLatch labServerFoundDevice;
 
   private int masterPort;
@@ -111,6 +117,7 @@ public class LabServerIntegrationTest {
   private int labServerRpcPort;
   private int labServerSocketPort;
   private Command labServerCommand;
+  private Path labServerLogDirPath;
 
   private CommandProcess labServerProcess;
   private ManagedChannel labServerChannel;
@@ -136,6 +143,7 @@ public class LabServerIntegrationTest {
     labServerSocketPort = PortProber.pickUnusedPort();
 
     String labServerPublicDirPath = tmpFolder.newFolder("lab_server_public_dir").toString();
+    labServerLogDirPath = Path.of(labServerPublicDirPath, LAB_SERVER_LOG_DIR_NAME);
     String labServerTmpDirPath = tmpFolder.newFolder("lab_server_tmp_dir").toString();
 
     StringBuilder labServerStdout = stringBuilders.getOrCreate("lab_server_stdout");
@@ -222,13 +230,32 @@ public class LabServerIntegrationTest {
 
   @Test
   public void runLabServerLifecycle() throws Exception {
-    startServersAndWaitUntilReady();
+    startServersAndWaitUntilReady(/* extraLabServerFlags= */ ImmutableList.of());
 
     checkGetVersion();
 
     checkAllocateDevice();
 
     checkLabServerLog();
+
+    assertWithMessage("Lab server should write logs to local files by default")
+        .that(getLabServerLogFileNames())
+        .contains("log0.txt");
+  }
+
+  @Test
+  public void runLabServerLifecycle_fileLogDisabled() throws Exception {
+    startServersAndWaitUntilReady(
+        /* extraLabServerFlags= */ ImmutableList.of("--enable_lab_server_file_log=false"));
+
+    checkGetVersion();
+
+    checkLabServerLog();
+
+    assertWithMessage(
+            "Lab server should not write logs to local files if --enable_lab_server_file_log=false")
+        .that(getLabServerLogFileNames())
+        .isEmpty();
   }
 
   private void checkGetVersion() throws Exception {
@@ -311,7 +338,20 @@ public class LabServerIntegrationTest {
         .isEmpty();
   }
 
-  private void startServersAndWaitUntilReady()
+  /** Returns the names of all regular files under the lab server log dir (recursively). */
+  private ImmutableList<String> getLabServerLogFileNames() throws IOException {
+    if (!Files.isDirectory(labServerLogDirPath)) {
+      return ImmutableList.of();
+    }
+    try (Stream<Path> paths = Files.walk(labServerLogDirPath)) {
+      return paths
+          .filter(Files::isRegularFile)
+          .map(path -> path.getFileName().toString())
+          .collect(toImmutableList());
+    }
+  }
+
+  private void startServersAndWaitUntilReady(ImmutableList<String> extraLabServerFlags)
       throws MobileHarnessException, InterruptedException, IOException, ExecutionException {
     logger.atInfo().log("Starting AtsMode, port=%s", masterPort);
     atsMode.initialize(null);
@@ -320,8 +360,10 @@ public class LabServerIntegrationTest {
     workerServices.forEach(nettyServerBuilder::addService);
     masterServer = nettyServerBuilder.build().start();
 
-    logger.atInfo().log("Starting lab server, command=%s", labServerCommand);
-    labServerProcess = new CommandExecutor().start(labServerCommand);
+    // Lab server flags are at the end of the Java command, so extra flags can be appended.
+    Command command = labServerCommand.argsAppended(extraLabServerFlags);
+    logger.atInfo().log("Starting lab server, command=%s", command);
+    labServerProcess = new CommandExecutor().start(command);
 
     // Waits until lab server starts and detects devices successfully.
     try {

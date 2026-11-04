@@ -852,6 +852,14 @@ public class Flags {
   @FlagSpec(name = "enable_grpc_relay", help = "Whether to enable gRPC relay. Default is false.")
   public static final Flag<Boolean> enableGrpcRelay = Flag.value(false);
 
+  @FlagSpec(
+      name = "enable_lab_server_file_log",
+      help =
+          "Whether the lab server writes logs to local files (including the rotated main log files"
+              + " and the tagged log files like device logs) under its log dir. If false, logs"
+              + " are only written to other handlers like the console. Default is true.")
+  public static final Flag<Boolean> enableLabServerFileLog = Flag.value(true);
+
   @FlagSpec(name = "enable_master_syncer", help = "Whether to enable master syncer in lab.")
   public static final Flag<Boolean> enableMasterSyncer = Flag.value(true);
 
