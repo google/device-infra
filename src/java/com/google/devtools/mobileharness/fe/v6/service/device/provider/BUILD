@@ -26,8 +26,10 @@ java_library(
     name = "provider",
     srcs = [
         "CloudFileTransferStubProvider.java",
+        "DeviceEventsProvider.java",
         "DeviceOpsStubProvider.java",
         "DeviceTestHistoryProvider.java",
+        "NoOpDeviceEventsProvider.java",
         "NoOpDeviceOpsStubProvider.java",
         "NoOpDeviceTestHistoryProvider.java",
         "NoOpRunningTestInfoProvider.java",
