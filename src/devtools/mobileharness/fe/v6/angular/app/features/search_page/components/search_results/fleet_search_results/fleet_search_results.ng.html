@@ -293,12 +293,12 @@
       Quarantine
     </button>
     @if (entity === 'devices') {
-      <button class="rt-btn-text" (click)="bulkConfig.openWifiDialog()">
-        <mat-icon class="material-symbols-outlined">wifi</mat-icon>
-        Configure Wi-Fi
-      </button>
       @let dimConfig = bulkConfig.dimensionConfig();
       @if (dimConfig.enabled) {
+        <button class="rt-btn-text" (click)="bulkConfig.openWifiDialog()">
+          <mat-icon class="material-symbols-outlined">wifi</mat-icon>
+          Configure Wi-Fi
+        </button>
         <button
           class="rt-btn-text"
           [class.is-loading]="dimConfig.isLoading"

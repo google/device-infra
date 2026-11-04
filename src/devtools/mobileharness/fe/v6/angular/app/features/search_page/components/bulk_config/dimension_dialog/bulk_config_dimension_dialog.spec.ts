@@ -46,8 +46,6 @@ describe('BulkConfigDimensionDialog', () => {
       displayName: 'recovery',
       dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
     },
-    universe: 'google_1p',
-    fleet: 'internal',
   };
 
   const mockReviewDeviceConfigs: BatchGetDeviceDimensionConfigsResponse = {
@@ -161,14 +159,10 @@ describe('BulkConfigDimensionDialog', () => {
 
       expect(
         mockConfigService.getDimensionValueSuggestions,
-      ).toHaveBeenCalledWith(
-        jasmine.objectContaining({
-          dimensionName: 'recovery',
-          dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
-          universe: 'google_1p',
-          fleet: 'internal',
-        }),
-      );
+      ).toHaveBeenCalledWith({
+        dimensionName: 'recovery',
+        dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+      });
       expect(
         mockConfigService.batchGetDeviceDimensionConfigs,
       ).not.toHaveBeenCalled();
@@ -381,8 +375,6 @@ describe('BulkConfigDimensionDialog', () => {
         dimensionName: 'recovery',
         dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
         target: {valueList: {values: ['true']}},
-        universe: 'google_1p',
-        fleet: 'internal',
       });
       expect(component.wizard.viewMode()).toBe('success');
       expect(component.headline()).toBe('recovery updated');
@@ -594,8 +586,6 @@ describe('BulkConfigDimensionDialog', () => {
         {deviceId: 'device-2', hostName: 'host-2'},
       ],
       dimensionList: DimensionList.DIMENSION_LIST_REQUIRED,
-      universe: 'google_1p',
-      fleet: 'internal',
     };
 
     beforeEach(async () => {
