@@ -44,7 +44,6 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProt
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsResponse;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import io.grpc.stub.StreamObserver;
 import java.time.Duration;
 import java.util.Map;
@@ -160,9 +159,7 @@ public class LabInfoService extends LabInfoServiceGrpc.LabInfoServiceImplBase {
       result = cachedResult.get();
     } else {
       // Creates new result.
-      result =
-          createNewLabQueryResult(
-              query, labInfoProvider, Flags.enableGetLabInfoProjectionPushdown.getNonNull());
+      result = createNewLabQueryResult(query, labInfoProvider);
 
       // Updates cache.
       queryResultCacheByQuery.put(query, result);
