@@ -19,6 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.StepAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.base.LifecycleDecorator;
@@ -110,7 +111,7 @@ public class AndroidInstallAppsDecorator extends LifecycleDecorator
               "progress",
               progress));
     } catch (MobileHarnessException e) {
-      testInfo.warnings().addAndLog(e, logger);
+      testInfo.findings().addAndLog(Severity.WARNING, e, logger);
     }
   }
 

@@ -25,6 +25,7 @@ import com.google.common.base.Strings;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
@@ -312,7 +313,7 @@ public class AndroidLogCatDecorator extends LifecycleDecorator implements Androi
     try {
       isDeviceOnline = isDeviceOnline(deviceId);
     } catch (MobileHarnessException e) {
-      testInfo.warnings().addAndLog(e, logger);
+      testInfo.findings().addAndLog(Severity.WARNING, e, logger);
       return;
     }
 
@@ -320,8 +321,9 @@ public class AndroidLogCatDecorator extends LifecycleDecorator implements Androi
       // Only invokes the logcat command when the device is detected, otherwise the command will
       // wait for the device.
       testInfo
-          .warnings()
+          .findings()
           .addAndLog(
+              Severity.WARNING,
               new MobileHarnessException(
                   AndroidErrorId.ANDROID_LOGCAT_DECORATOR_DEVICE_NOT_FOUND,
                   String.format("Skip logcat because the device %s is disconnected", deviceId)),
@@ -336,8 +338,9 @@ public class AndroidLogCatDecorator extends LifecycleDecorator implements Androi
       rawLog = adbUtil.logCat(deviceId, options, filterSpecs);
     } catch (MobileHarnessException e) {
       testInfo
-          .warnings()
+          .findings()
           .addAndLog(
+              Severity.WARNING,
               new MobileHarnessException(
                   AndroidErrorId.ANDROID_LOGCAT_DECORATOR_LOGCAT_EXEC_ERROR,
                   String.format("Failed to dump logs via logcat from device %s", deviceId),
@@ -362,8 +365,9 @@ public class AndroidLogCatDecorator extends LifecycleDecorator implements Androi
             .log("Device %s logcat saved to %s", deviceId, logFilePath);
       } catch (MobileHarnessException writeToFileException) {
         testInfo
-            .warnings()
+            .findings()
             .addAndLog(
+                Severity.WARNING,
                 new MobileHarnessException(
                     AndroidErrorId.ANDROID_LOGCAT_DECORATOR_SAVE_LOG_FILE_TO_HOST_ERROR,
                     String.format(
@@ -428,8 +432,9 @@ public class AndroidLogCatDecorator extends LifecycleDecorator implements Androi
                       finalLogFileWriter.write(line + lineSeparator);
                     } catch (IOException e) {
                       testInfo
-                          .warnings()
+                          .findings()
                           .addAndLog(
+                              Severity.WARNING,
                               new MobileHarnessException(
                                   AndroidErrorId.ANDROID_LOGCAT_DECORATOR_FILE_WRITER_WRITE_ERROR,
                                   "Failed to write logcat to file",
@@ -467,8 +472,9 @@ public class AndroidLogCatDecorator extends LifecycleDecorator implements Androi
         logFileWriter.close();
       } catch (IOException e) {
         testInfo
-            .warnings()
+            .findings()
             .addAndLog(
+                Severity.WARNING,
                 new MobileHarnessException(
                     AndroidErrorId.ANDROID_LOGCAT_DECORATOR_CLOSE_FILE_WRITER_ERROR,
                     "Failed to close logcat file",

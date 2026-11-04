@@ -16,6 +16,8 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
+import static com.google.common.collect.Iterables.getOnlyElement;
+import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -28,9 +30,10 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Findings;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
-import com.google.devtools.mobileharness.api.model.job.out.Warnings;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.media.AndroidMediaUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -41,6 +44,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -70,9 +74,10 @@ public class AndroidScreenshotDecoratorTest {
   @Mock private Params params;
   @Mock private Result result;
   @Mock private ResultTypeWithCause resultTypeWithCause;
-  @Mock private Warnings warnings;
   @Mock private Log log;
   @Mock private Api api;
+
+  private final Findings findings = new Findings(new Log(new Timing()));
 
   @Before
   public void setUp() throws Exception {
@@ -82,7 +87,7 @@ public class AndroidScreenshotDecoratorTest {
     when(testInfo.resultWithCause()).thenReturn(result);
     when(result.get()).thenReturn(resultTypeWithCause);
     when(testInfo.log()).thenReturn(log);
-    when(testInfo.warnings()).thenReturn(warnings);
+    when(testInfo.findings()).thenReturn(findings);
     when(log.atInfo()).thenReturn(api);
     when(api.alsoTo(any(FluentLogger.class))).thenReturn(api);
     when(testInfo.jobInfo()).thenReturn(jobInfo);
@@ -120,6 +125,7 @@ public class AndroidScreenshotDecoratorTest {
             Mockito.matches(TEST_GEN_FILE_DIR + ".*\\.png"));
     verify(fileUtil).grantFileOrDirFullAccess(Mockito.matches(TEST_GEN_FILE_DIR + ".*\\.png"));
     verify(androidFileUtil).removeFiles(eq(DEVICE_ID), Mockito.matches(".*\\.png"));
+    assertThat(findings.isEmpty()).isTrue();
   }
 
   @Test
@@ -146,6 +152,11 @@ public class AndroidScreenshotDecoratorTest {
     verify(fileUtil, never())
         .grantFileOrDirFullAccess(Mockito.matches(TEST_GEN_FILE_DIR + ".*\\.png"));
     verify(androidFileUtil).removeFiles(eq(DEVICE_ID), Mockito.matches(".*\\.png"));
+    assertThat(findings.getAll()).hasSize(1);
+    assertThat(
+            getOnlyElement(findings.get(AndroidErrorId.ANDROID_MEDIA_UTIL_TAKE_SCREEN_SHOT_ERROR))
+                .getSeverity())
+        .isEqualTo(Severity.WARNING);
   }
 
   @Test
@@ -171,6 +182,9 @@ public class AndroidScreenshotDecoratorTest {
     verify(fileUtil, never())
         .grantFileOrDirFullAccess(Mockito.matches(TEST_GEN_FILE_DIR + ".*\\.png"));
     verify(androidFileUtil).removeFiles(eq(DEVICE_ID), Mockito.matches(".*\\.png"));
+    assertThat(findings.getAll()).hasSize(1);
+    assertThat(getOnlyElement(findings.get(BasicErrorId.LOCAL_DIR_CREATE_ERROR)).getSeverity())
+        .isEqualTo(Severity.WARNING);
   }
 
   @Test
@@ -202,6 +216,11 @@ public class AndroidScreenshotDecoratorTest {
     verify(fileUtil, never())
         .grantFileOrDirFullAccess(Mockito.matches(TEST_GEN_FILE_DIR + ".*\\.png"));
     verify(androidFileUtil).removeFiles(eq(DEVICE_ID), Mockito.matches(".*\\.png"));
+    assertThat(findings.getAll()).hasSize(1);
+    assertThat(
+            getOnlyElement(findings.get(AndroidErrorId.ANDROID_FILE_UTIL_PULL_FILE_ERROR))
+                .getSeverity())
+        .isEqualTo(Severity.WARNING);
   }
 
   @Test
@@ -235,5 +254,10 @@ public class AndroidScreenshotDecoratorTest {
             Mockito.matches(TEST_GEN_FILE_DIR + ".*\\.png"));
     verify(fileUtil).grantFileOrDirFullAccess(Mockito.matches(TEST_GEN_FILE_DIR + ".*\\.png"));
     verify(androidFileUtil).removeFiles(eq(DEVICE_ID), Mockito.matches(".*\\.png"));
+    assertThat(findings.getAll()).hasSize(1);
+    assertThat(
+            getOnlyElement(findings.get(BasicErrorId.LOCAL_FILE_GRANT_PERMISSION_ERROR))
+                .getSeverity())
+        .isEqualTo(Severity.WARNING);
   }
 }

@@ -20,6 +20,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -110,7 +111,7 @@ public class AndroidStartAppsDecorator extends SetupOnlyDecorator {
               .log("Start application: %s\n on device: %s", intent, deviceId);
           androidProcessUtil.startApplication(deviceId, intent);
         } catch (MobileHarnessException e) {
-          testInfo.warnings().addAndLog(e, logger);
+          testInfo.findings().addAndLog(Severity.SEVERE, e, logger);
           throw e;
         }
       }
@@ -141,7 +142,7 @@ public class AndroidStartAppsDecorator extends SetupOnlyDecorator {
               "progress",
               progress));
     } catch (MobileHarnessException e) {
-      testInfo.warnings().addAndLog(e, logger);
+      testInfo.findings().addAndLog(Severity.WARNING, e, logger);
     }
   }
 }

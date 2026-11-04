@@ -23,6 +23,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConnectionState;
@@ -136,7 +137,7 @@ public class AndroidAdbShellDecorator extends LifecycleDecorator
                   spec.getAdbShellIgnoreError(),
                   syncCommandTimeout));
         } catch (MobileHarnessException e) {
-          testInfo.warnings().addAndLog(e, logger);
+          testInfo.findings().addAndLog(Severity.WARNING, e, logger);
         }
       }
     } finally {
@@ -184,7 +185,7 @@ public class AndroidAdbShellDecorator extends LifecycleDecorator
         }
       } catch (MobileHarnessException e) {
         if (ignoreError) {
-          testInfo.warnings().addAndLog(e, logger);
+          testInfo.findings().addAndLog(Severity.WARNING, e, logger);
         } else {
           // This causes the test to fail.
           // Stop any running async commands before rethrowing exception.
@@ -222,7 +223,7 @@ public class AndroidAdbShellDecorator extends LifecycleDecorator
       waitForDeviceReady(serial, testInfo, ignoreError);
     } catch (MobileHarnessException e) {
       if (ignoreError) {
-        testInfo.warnings().addAndLog(e, logger);
+        testInfo.findings().addAndLog(Severity.WARNING, e, logger);
         // Added waitForDeviceReady here, as sometimes command runs successfully but due
         // to non-zero exit codes from the command it throws an error. To avoid this we
         // can make ignoreError=true.
@@ -250,7 +251,7 @@ public class AndroidAdbShellDecorator extends LifecycleDecorator
 
     } catch (MobileHarnessException e) {
       if (ignoreError) {
-        testInfo.warnings().addAndLog(e, logger);
+        testInfo.findings().addAndLog(Severity.WARNING, e, logger);
       } else {
         // This causes the test to fail.
         throw e;

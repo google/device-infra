@@ -19,6 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
@@ -151,8 +152,9 @@ public class AndroidPerfettoDecorator extends LifecycleDecorator {
               () -> {
                 testInfo.log().atInfo().alsoTo(logger).log("[perfetto onTimeout] ");
                 testInfo
-                    .warnings()
+                    .findings()
                     .addAndLog(
+                        Severity.WARNING,
                         new MobileHarnessException(
                             AndroidErrorId.ANDROID_PERFETTO_DECORATOR_SYNC_EXCEED_TIMEOUT_LIMIT,
                             "perfetto timeout"),
@@ -163,7 +165,7 @@ public class AndroidPerfettoDecorator extends LifecycleDecorator {
                       testInfo.log().atInfo().alsoTo(logger).log("[perfetto output] %s", line)));
       testInfo.log().atInfo().log("Perfetto finished: %s", consoleOutput);
     } catch (MobileHarnessException e) {
-      testInfo.warnings().addAndLog(e, logger);
+      testInfo.findings().addAndLog(Severity.WARNING, e, logger);
     }
   }
 
@@ -180,8 +182,9 @@ public class AndroidPerfettoDecorator extends LifecycleDecorator {
           } else {
             testInfo.log().atInfo().alsoTo(logger).log("[perfetto onError] %s", commandResult);
             testInfo
-                .warnings()
+                .findings()
                 .addAndLog(
+                    Severity.WARNING,
                     new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
                         AndroidErrorId.ANDROID_PERFETTO_DECORATOR_ASYNC_EXIT_WITH_ERRORS,
                         commandResult.toString()),
@@ -198,8 +201,9 @@ public class AndroidPerfettoDecorator extends LifecycleDecorator {
             () -> {
               testInfo.log().atInfo().alsoTo(logger).log("[perfetto onTimeout]");
               testInfo
-                  .warnings()
+                  .findings()
                   .addAndLog(
+                      Severity.WARNING,
                       new MobileHarnessException(
                           AndroidErrorId.ANDROID_PERFETTO_DECORATOR_ASYNC_EXCEED_TIMEOUT_LIMIT,
                           "perfetto timeout"),

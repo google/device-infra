@@ -16,13 +16,14 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
+import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -30,9 +31,10 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Findings;
 import com.google.devtools.mobileharness.api.model.job.out.Result;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
-import com.google.devtools.mobileharness.api.model.job.out.Warnings;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
@@ -43,18 +45,18 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
+import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidBugreportSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import java.time.Duration;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -73,16 +75,15 @@ public class AndroidBugreportDecoratorTest {
   @Mock private SystemStateManager systemStateManager;
   @Mock private LocalFileUtil fileUtil;
   @Mock private DeviceCache deviceCache;
-  @Mock private Warnings warnings;
   @Mock private Log log;
   @Mock private Log.Api api;
   @Mock private Params params;
   @Mock private Result result;
   @Mock private TestInfo rootTest;
 
-  @Captor private ArgumentCaptor<MobileHarnessException> mobileHarnessExceptionCaptor;
-
   private static final String DEVICE_ID = "3635AAC1B25C00EC";
+
+  private final Findings findings = new Findings(new Log(new Timing()));
 
   private AndroidBugreportDecorator androidBugreportDecorator;
 
@@ -96,7 +97,7 @@ public class AndroidBugreportDecoratorTest {
     when(log.atInfo()).thenReturn(api);
     when(api.alsoTo(any(FluentLogger.class))).thenReturn(api);
     when(testInfo.resultWithCause()).thenReturn(result);
-    when(testInfo.warnings()).thenReturn(warnings);
+    when(testInfo.findings()).thenReturn(findings);
     when(jobInfo.params()).thenReturn(params);
     when(jobInfo.params().getBool(anyString(), anyBoolean())).thenReturn(false);
     when(testInfo.getRootTest()).thenReturn(rootTest);
@@ -222,17 +223,65 @@ public class AndroidBugreportDecoratorTest {
                 TestResult.FAIL,
                 new MobileHarnessException(BasicErrorId.JOB_OR_TEST_RESULT_LEGACY_FAIL, "fake")));
     when(systemStateManager.isOnline(DEVICE_ID)).thenReturn(false);
-    when(testInfo.warnings().addAndLog(any(MobileHarnessException.class), any(FluentLogger.class)))
-        .thenReturn(warnings);
     when(testInfo.getGenFileDir()).thenReturn("/var/www/tmp");
 
     androidBugreportDecorator.run(testInfo);
 
     verify(androidAdbUtil, never()).bugreport(any(), any());
-    verify(warnings, times(1))
-        .addAndLog(mobileHarnessExceptionCaptor.capture(), any(FluentLogger.class));
-    assertThat(mobileHarnessExceptionCaptor.getValue().getErrorId())
-        .isEqualTo(AndroidErrorId.ANDROID_BUGREPORT_DECORATOR_DEVICE_NOT_FOUND);
+    assertThat(findings.getAll()).hasSize(1);
+    assertThat(
+            getOnlyElement(
+                    findings.get(AndroidErrorId.ANDROID_BUGREPORT_DECORATOR_DEVICE_NOT_FOUND))
+                .getSeverity())
+        .isEqualTo(Severity.WARNING);
+  }
+
+  @Test
+  public void dumpBugreportError_addsWarningFinding() throws Exception {
+    when(result.get())
+        .thenReturn(
+            ResultTypeWithCause.create(
+                TestResult.FAIL,
+                new MobileHarnessException(BasicErrorId.JOB_OR_TEST_RESULT_LEGACY_FAIL, "fake")));
+    when(systemStateManager.isOnline(DEVICE_ID)).thenReturn(true);
+    when(androidSystemSettingUtil.getDeviceSdkVersion(DEVICE_ID)).thenReturn(24);
+    String bugreportFilePath = PathUtil.join("/var/www/tmp", "bugreport.zip");
+    when(androidAdbUtil.bugreport(DEVICE_ID, bugreportFilePath))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "bugreport error"));
+    when(testInfo.getGenFileDir()).thenReturn("/var/www/tmp");
+
+    androidBugreportDecorator.run(testInfo);
+
+    assertThat(findings.getAll()).hasSize(1);
+    assertThat(
+            getOnlyElement(
+                    findings.get(AndroidErrorId.ANDROID_BUGREPORT_DECORATOR_DUMP_BUGREPORT_ERROR))
+                .getSeverity())
+        .isEqualTo(Severity.WARNING);
+  }
+
+  @Test
+  public void resetBatteryError_addsWarningFinding() throws Exception {
+    when(result.get()).thenReturn(ResultTypeWithCause.create(TestResult.PASS, null));
+    when(systemStateManager.isOnline(DEVICE_ID)).thenReturn(true);
+    when(jobInfo.params().getBool(AndroidBugreportSpec.PARAM_NO_AUTO_RESET, false))
+        .thenReturn(true);
+    doThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "reset battery error"))
+        .when(androidSystemSettingUtil)
+        .setBatteryStatsNoAutoReset(DEVICE_ID, /* enable= */ false);
+
+    androidBugreportDecorator.run(testInfo);
+
+    assertThat(findings.getAll()).hasSize(1);
+    assertThat(
+            getOnlyElement(
+                    findings.get(AndroidErrorId.ANDROID_BUGREPORT_DECORATOR_RESET_BATTERY_ERROR))
+                .getSeverity())
+        .isEqualTo(Severity.WARNING);
   }
 
   @Test

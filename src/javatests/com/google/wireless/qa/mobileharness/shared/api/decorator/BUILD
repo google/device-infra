@@ -103,6 +103,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_bugreport_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_dump_sys_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:cros_decorator_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:mobly_test_spec",

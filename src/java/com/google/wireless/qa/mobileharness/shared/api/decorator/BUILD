@@ -73,6 +73,7 @@ java_library(
     name = "android_adb_shell_decorator",
     srcs = ["AndroidAdbShellDecorator.java"],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:diagnostic_java_proto",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
@@ -191,6 +192,7 @@ java_library(
     name = "android_bugreport_decorator",
     srcs = ["AndroidBugreportDecorator.java"],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:diagnostic_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
@@ -439,6 +441,7 @@ java_library(
     name = "android_file_puller_decorator",
     srcs = ["AndroidFilePullerDecorator.java"],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:diagnostic_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
@@ -542,6 +545,7 @@ java_library(
     name = "android_install_apps_decorator",
     srcs = ["AndroidInstallAppsDecorator.java"],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:diagnostic_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
@@ -609,6 +613,7 @@ java_library(
     name = "android_logcat_decorator",
     srcs = ["AndroidLogCatDecorator.java"],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:diagnostic_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemstate",
@@ -753,6 +758,7 @@ java_library(
     name = "android_perfetto_decorator",
     srcs = ["AndroidPerfettoDecorator.java"],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:diagnostic_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
@@ -854,6 +860,7 @@ java_library(
     name = "android_start_apps_decorator",
     srcs = ["AndroidStartAppsDecorator.java"],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:diagnostic_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/process:android_process_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
@@ -1242,6 +1249,7 @@ java_library(
     name = "android_screenshot_decorator",
     srcs = ["AndroidScreenshotDecorator.java"],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:diagnostic_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",

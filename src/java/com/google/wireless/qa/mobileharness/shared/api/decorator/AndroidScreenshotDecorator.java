@@ -19,6 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.media.AndroidMediaUtil;
@@ -124,7 +125,7 @@ public class AndroidScreenshotDecorator extends TeardownOnlyDecorator {
         testInfo.log().atInfo().alsoTo(logger).log("%s", pullMsg);
         fileUtil.grantFileOrDirFullAccess(desFilePathOnHost);
       } catch (MobileHarnessException e) {
-        testInfo.warnings().addAndLog(e, logger);
+        testInfo.findings().addAndLog(Severity.WARNING, e, logger);
       } finally {
         // Always removes the files on the device.
         try {

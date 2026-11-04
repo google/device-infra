@@ -20,6 +20,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
@@ -167,7 +168,7 @@ public class AndroidBugreportDecorator extends LifecycleDecorator implements And
       }
       deleteBugreportOnDevice(testInfo);
     } catch (MobileHarnessException e) {
-      testInfo.warnings().addAndLog(e, logger);
+      testInfo.findings().addAndLog(Severity.WARNING, e, logger);
     }
     return bugreportFileName;
   }
@@ -223,8 +224,9 @@ public class AndroidBugreportDecorator extends LifecycleDecorator implements And
       } else if (!isDeviceOnline(deviceId)) {
         // Only invokes the bugreport command when the device is detected
         testInfo
-            .warnings()
+            .findings()
             .addAndLog(
+                Severity.WARNING,
                 new MobileHarnessException(
                     AndroidErrorId.ANDROID_BUGREPORT_DECORATOR_DEVICE_NOT_FOUND,
                     String.format(
@@ -245,8 +247,9 @@ public class AndroidBugreportDecorator extends LifecycleDecorator implements And
           }
         } catch (MobileHarnessException e) {
           testInfo
-              .warnings()
+              .findings()
               .addAndLog(
+                  Severity.WARNING,
                   new MobileHarnessException(
                       AndroidErrorId.ANDROID_BUGREPORT_DECORATOR_RESET_BATTERY_ERROR,
                       String.format("Failed to reset battery settings for device %s", deviceId),

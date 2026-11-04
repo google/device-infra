@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Diagnostic.Finding.Severity;
 import com.google.devtools.mobileharness.api.model.proto.Test;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
@@ -190,7 +191,7 @@ public class AndroidFilePullerDecorator extends LifecycleDecorator
           MobileHarnessException exception =
               new MobileHarnessException(
                   AndroidErrorId.ANDROID_FILE_PULLER_DECORATOR_OUTPUT_FILE_NOT_FOUND, noPathLog);
-          testInfo.warnings().addAndLog(exception, logger);
+          testInfo.findings().addAndLog(Severity.SEVERE, exception, logger);
           testInfo.resultWithCause().setNonPassing(Test.TestResult.FAIL, exception);
         }
         continue;
@@ -211,9 +212,12 @@ public class AndroidFilePullerDecorator extends LifecycleDecorator
                 AndroidErrorId.ANDROID_FILE_PULLER_DECORATOR_PULL_FILE_ERROR,
                 "Failed to pull file/dir from device directory [" + path + "]",
                 e);
+        boolean ignorePullingError = spec.getIgnorePullingExistFilesError();
         // Log the error message when failed to pull files.
-        testInfo.warnings().addAndLog(exception, logger);
-        if (!spec.getIgnorePullingExistFilesError()) {
+        testInfo
+            .findings()
+            .addAndLog(ignorePullingError ? Severity.WARNING : Severity.SEVERE, exception, logger);
+        if (!ignorePullingError) {
           testInfo.resultWithCause().setNonPassing(Test.TestResult.FAIL, exception);
           break;
         }
@@ -263,8 +267,9 @@ public class AndroidFilePullerDecorator extends LifecycleDecorator
             .withCause(e)
             .log("Failed to get property %s from device. Skipping file pull.", key);
         testInfo
-            .warnings()
+            .findings()
             .addAndLog(
+                Severity.WARNING,
                 new MobileHarnessException(
                     AndroidErrorId.ANDROID_ADB_UTIL_GET_DEVICE_PROPERTY_ERROR,
                     "Failed to check property " + key,
