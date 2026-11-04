@@ -20,6 +20,7 @@ package mobileharness.api.deviceconfig;
 
 import "google/protobuf/field_mask.proto";
 import "src/devtools/mobileharness/api/deviceconfig/proto/device.proto";
+import "src/devtools/mobileharness/api/deviceconfig/proto/global.proto";
 import "src/devtools/mobileharness/api/deviceconfig/proto/lab.proto";
 
 option features.field_presence = IMPLICIT;
@@ -43,16 +44,6 @@ message GetDeviceConfigsResponse {
   repeated DeviceConfig device_config = 1;
 }
 
-message GetLabConfigRequest {
-  // The host name of the lab server.
-  string lab_host = 1;
-}
-
-message GetLabConfigResponse {
-  // The configuration of the lab server.
-  LabConfig lab_config = 1;
-}
-
 message DeleteDeviceConfigsRequest {
   // The UUID of the devices to be deleted.
   repeated string device_uuid = 1;
@@ -62,13 +53,6 @@ message DeleteDeviceConfigsResponse {
   // The failed device UUID to error message mapping.
   map<string, string> error_message = 1;
 }
-
-message DeleteLabConfigRequest {
-  // The host name of the lab server.
-  string lab_host = 1;
-}
-
-message DeleteLabConfigResponse {}
 
 message UpdateDeviceConfigsRequest {
   // All locator and configuration of devices to be updated. The UUID of the
@@ -86,20 +70,6 @@ message UpdateDeviceConfigsResponse {
   map<string, string> error_message = 1;
 }
 
-message UpdateLabConfigRequest {
-  // The configuration of the lab to be updated.
-  LabConfig lab_config = 1;
-
-  // The client to update the config.
-  string client = 2;
-
-  // Mask of fields to update the LabConfig. If not set, all fields will be
-  // updated.
-  google.protobuf.FieldMask update_mask = 3;
-}
-
-message UpdateLabConfigResponse {}
-
 message CopyDeviceConfigsRequest {
   // The source UUID of the device whose configuration is going to be copied.
   string source_uuid = 1;
@@ -115,6 +85,37 @@ message CopyDeviceConfigsResponse {
   // The failed device UUID to error message mapping.
   map<string, string> error_message = 1;
 }
+
+message GetLabConfigRequest {
+  // The host name of the lab server.
+  string lab_host = 1;
+}
+
+message GetLabConfigResponse {
+  // The configuration of the lab server.
+  LabConfig lab_config = 1;
+}
+
+message DeleteLabConfigRequest {
+  // The host name of the lab server.
+  string lab_host = 1;
+}
+
+message DeleteLabConfigResponse {}
+
+message UpdateLabConfigRequest {
+  // The configuration of the lab to be updated.
+  LabConfig lab_config = 1;
+
+  // The client to update the config.
+  string client = 2;
+
+  // Mask of fields to update the LabConfig. If not set, all fields will be
+  // updated.
+  google.protobuf.FieldMask update_mask = 3;
+}
+
+message UpdateLabConfigResponse {}
 
 message CopyLabConfigsRequest {
   // The source host name of the lab whose configuration will be copied.
@@ -149,34 +150,59 @@ message UpdateLabConfigsResponse {
   map<string, string> error_message = 1;
 }
 
+message GetGlobalConfigRequest {}
+
+message GetGlobalConfigResponse {
+  // The global configuration.
+  GlobalConfig global_config = 1;
+}
+
+message DeleteGlobalConfigRequest {}
+
+message DeleteGlobalConfigResponse {}
+
+message UpdateGlobalConfigRequest {
+  // The global configuration to be updated.
+  GlobalConfig global_config = 1;
+
+  // The client to update the config.
+  string client = 2;
+
+  // Mask of fields to update the GlobalConfig. If not set, all fields will be
+  // updated.
+  google.protobuf.FieldMask update_mask = 3;
+}
+
+message UpdateGlobalConfigResponse {}
+
 // Stubby service for managing the DeviceConfig/LabConfig of Mobile Harness.
 service DeviceConfigService {
   // Gets a list of configurations of devices.
   rpc GetDeviceConfigs(GetDeviceConfigsRequest)
       returns (GetDeviceConfigsResponse) {}
 
-  // Gets the configuration of a lab.
-  rpc GetLabConfig(GetLabConfigRequest) returns (GetLabConfigResponse) {}
-
   // Deletes a list of configurations of devices.
   rpc DeleteDeviceConfigs(DeleteDeviceConfigsRequest)
       returns (DeleteDeviceConfigsResponse) {}
-
-  // Deletes the configuration of a lab.
-  rpc DeleteLabConfig(DeleteLabConfigRequest)
-      returns (DeleteLabConfigResponse) {}
 
   // Updates a list of configurations of devices.
   rpc UpdateDeviceConfigs(UpdateDeviceConfigsRequest)
       returns (UpdateDeviceConfigsResponse) {}
 
-  // Updates the configuration of a lab.
-  rpc UpdateLabConfig(UpdateLabConfigRequest)
-      returns (UpdateLabConfigResponse) {}
-
   // Copies the configuration of a device to multiple ones.
   rpc CopyDeviceConfigs(CopyDeviceConfigsRequest)
       returns (CopyDeviceConfigsResponse) {}
+
+  // Gets the configuration of a lab.
+  rpc GetLabConfig(GetLabConfigRequest) returns (GetLabConfigResponse) {}
+
+  // Deletes the configuration of a lab.
+  rpc DeleteLabConfig(DeleteLabConfigRequest)
+      returns (DeleteLabConfigResponse) {}
+
+  // Updates the configuration of a lab.
+  rpc UpdateLabConfig(UpdateLabConfigRequest)
+      returns (UpdateLabConfigResponse) {}
 
   // Copies the configuration of a lab to multiple ones.
   rpc CopyLabConfigs(CopyLabConfigsRequest) returns (CopyLabConfigsResponse) {}
@@ -184,4 +210,16 @@ service DeviceConfigService {
   // Updates a list of configurations of labs.
   rpc UpdateLabConfigs(UpdateLabConfigsRequest)
       returns (UpdateLabConfigsResponse) {}
+
+  // Gets the global configuration.
+  rpc GetGlobalConfig(GetGlobalConfigRequest)
+      returns (GetGlobalConfigResponse) {}
+
+  // Deletes the global configuration.
+  rpc DeleteGlobalConfig(DeleteGlobalConfigRequest)
+      returns (DeleteGlobalConfigResponse) {}
+
+  // Updates the global configuration.
+  rpc UpdateGlobalConfig(UpdateGlobalConfigRequest)
+      returns (UpdateGlobalConfigResponse) {}
 }
