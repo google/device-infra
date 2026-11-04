@@ -8,6 +8,19 @@ const SCENARIO_ERROR_PERMISSION_DENIED_DATA: MockDeviceScenario = {
   ...SCENARIO_IN_SERVICE_IDLE,
   id: 'android-permission-denied-01',
   scenarioName: '27. Error: Permission Denied (Demo)',
+  config: {
+    ...SCENARIO_IN_SERVICE_IDLE.config,
+    wifi: {
+      type: 'custom',
+      ssid: 'lab-guest-5g',
+      psk: '',
+      scanSsid: false,
+    },
+  },
+  configUpdateError: {
+    code: 'PERMISSION_DENIED',
+    message: 'Permission denied to update device config',
+  },
   overview: {
     ...SCENARIO_IN_SERVICE_IDLE.overview,
     id: 'android-permission-denied-01',
@@ -24,6 +37,19 @@ const SCENARIO_ERROR_LOGICAL_DATA: MockDeviceScenario = {
   ...SCENARIO_IN_SERVICE_IDLE,
   id: 'android-logical-error-01',
   scenarioName: '28. Error: Logical Action Failed (Demo)',
+  config: {
+    ...SCENARIO_IN_SERVICE_IDLE.config,
+    wifi: {
+      type: 'custom',
+      ssid: 'lab-guest-5g',
+      psk: '',
+      scanSsid: false,
+    },
+  },
+  configUpdateError: {
+    code: 'VALIDATION_ERROR',
+    message: 'Device offline or unreachable',
+  },
   overview: {
     ...SCENARIO_IN_SERVICE_IDLE.overview,
     id: 'android-logical-error-01',
@@ -40,6 +66,19 @@ const SCENARIO_ERROR_RPC_DATA: MockDeviceScenario = {
   ...SCENARIO_IN_SERVICE_IDLE,
   id: 'android-rpc-error-01',
   scenarioName: '29. Error: RPC Exception (Demo)',
+  config: {
+    ...SCENARIO_IN_SERVICE_IDLE.config,
+    wifi: {
+      type: 'custom',
+      ssid: 'lab-guest-5g',
+      psk: '',
+      scanSsid: false,
+    },
+  },
+  configUpdateError: {
+    code: 'UNKNOWN',
+    message: 'RPC error while updating device config',
+  },
   overview: {
     ...SCENARIO_IN_SERVICE_IDLE.overview,
     id: 'android-rpc-error-01',

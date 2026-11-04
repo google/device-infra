@@ -50,4 +50,14 @@ describe('getErrorMessage', () => {
   it('returns default for string input', () => {
     expect(getErrorMessage('some error')).toBe('An unknown error occurred.');
   });
+
+  it('unwraps Angular rxResource Error.cause containing an HttpErrorResponse payload', () => {
+    const wrapped = new Error(
+      "Resource returned an error that's not an Error instance: [object Object]. Check this error's .cause for the actual error.",
+    );
+    (wrapped as Error & {cause?: unknown}).cause = {
+      error: {error: {code: 503, message: 'Service down'}},
+    };
+    expect(getErrorMessage(wrapped)).toBe('Service down');
+  });
 });

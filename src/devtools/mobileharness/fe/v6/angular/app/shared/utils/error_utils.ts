@@ -17,7 +17,15 @@
  */
 export function getErrorMessage(err: unknown): string {
   if (err != null && typeof err === 'object') {
-    const httpErr = err as Record<string, unknown>;
+    const rawErr = err as Record<string, unknown>;
+    // Angular 20's rxResource/resource wraps non-Error objects (such as
+    // HttpErrorResponse) in an Error instance with the original error in `.cause`.
+    const httpErr =
+      rawErr['error'] == null &&
+      rawErr['cause'] != null &&
+      typeof rawErr['cause'] === 'object'
+        ? (rawErr['cause'] as Record<string, unknown>)
+        : rawErr;
 
     // Try the structured backend message first.
     const body = httpErr['error'];

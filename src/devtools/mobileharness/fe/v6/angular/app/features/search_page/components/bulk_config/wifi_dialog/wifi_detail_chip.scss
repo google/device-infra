@@ -1,0 +1,173 @@
+:host {
+  display: inline-flex;
+  max-width: 100%;
+}
+
+.bw-wifi-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  height: 26px;
+  padding: 0 10px;
+  margin-inline-start: 0;
+  border-radius: 8px;
+  background: #f8fafd;
+  border: 1px solid #cac4d0;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s;
+
+  &:hover {
+    background-color: #d3e3fd;
+    border-color: #0b57d0;
+
+    .bw-wifi-icon {
+      color: #0b57d0;
+    }
+
+    .bw-wifi-name {
+      color: #041e49;
+    }
+  }
+}
+
+.bw-wifi-icon {
+  font-size: 15px;
+  width: 15px;
+  height: 15px;
+  color: #49454f;
+  flex: none;
+}
+
+.bw-wifi-name {
+  font-weight: 500;
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+  color: #1f1f1f;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Rich Wi-Fi tooltip popup
+.bw-tip {
+  min-width: 260px;
+  max-width: 340px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #cac4d0;
+  box-shadow:
+    0 4px 8px 3px rgba(0, 0, 0, 0.15),
+    0 1px 3px rgba(0, 0, 0, 0.3);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: #1f1f1f;
+  box-sizing: border-box;
+
+  .bw-psk-eye,
+  .bw-copy {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: #49454f;
+    padding: 2px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.8;
+    transition:
+      background-color 0.15s,
+      opacity 0.15s;
+
+    &:hover {
+      color: #1f1f1f;
+      background: rgba(0, 0, 0, 0.08);
+      opacity: 1;
+    }
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  .bw-psk-dots {
+    font-family: 'Roboto Mono', monospace;
+    color: #1f1f1f;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.bw-tip-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bw-tip-icon {
+  font-size: 20px;
+  width: 20px;
+  height: 20px;
+  color: #0b57d0;
+  flex: none;
+}
+
+.bw-tip-ssid {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  color: #1f1f1f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bw-tip-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bw-tip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+}
+
+.bw-tip-k {
+  width: 68px;
+  flex: none;
+  color: #49454f;
+}
+
+.bw-tip-v {
+  color: #1f1f1f;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bw-tip-muted {
+  color: #49454f;
+  font-style: italic;
+}
+
+.bw-tip-hidden {
+  color: #0b57d0;
+  font-weight: 500;
+}

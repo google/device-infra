@@ -459,4 +459,53 @@ describe('TjsSearchStore', () => {
     store.openQuickFilter('name', 'Name');
     expect(store.isSuggestionsPanelOpen()).toBeTrue();
   });
+
+  it('builds initial ValuePicker state from enumPicker options, rawValues, tjsFilter, and pillCondition', () => {
+    // 1. No active chip with enumPicker options
+    store.openValuePicker(
+      'status',
+      null,
+      'Status',
+      {
+        key: 'status',
+        keyDisplayName: 'Status',
+        enumPicker: {
+          options: [
+            {value: 'RUNNING', label: 'Running'},
+            {value: 'DONE', label: ''},
+          ],
+        },
+      },
+      ['STAGED'],
+    );
+    expect(store.pickerState().values).toEqual([
+      {value: 'RUNNING', displayLabel: 'Running'},
+      {value: 'DONE', displayLabel: 'DONE'},
+    ]);
+    expect(Array.from(store.pickerState().selectedValues)).toEqual(['STAGED']);
+
+    // 2. Active chip with tjsFilter only (no rawValues)
+    store.resetSearchState(false);
+    store.addFilterChip({
+      key: 'user',
+      pillKey: 'User',
+      pillCondition: 'alice',
+      tjsFilter: {key: 'user', stringValue: {value: 'alice'}},
+    });
+    store.openValuePicker('user', null, 'User');
+    expect(Array.from(store.pickerState().selectedValues)).toEqual(['alice']);
+
+    // 3. Active chip with pillCondition only
+    store.resetSearchState(false);
+    store.addFilterChip({
+      key: 'name',
+      pillKey: 'Name',
+      pillCondition: 'foo, bar',
+    });
+    store.openValuePicker('name', null, 'Name');
+    expect(Array.from(store.pickerState().selectedValues)).toEqual([
+      'foo',
+      'bar',
+    ]);
+  });
 });

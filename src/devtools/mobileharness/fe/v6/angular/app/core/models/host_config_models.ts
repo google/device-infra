@@ -7,6 +7,7 @@ import {
   DeviceConfig,
   ConfigSection as DeviceConfigSection,
   DeviceConfigUiStatus,
+  UpdateError,
 } from './device_config_models';
 
 /**
@@ -127,10 +128,7 @@ export declare interface UnlockHostPropertiesRequest {
  */
 export declare interface UnlockHostPropertiesResponse {
   success: boolean;
-  error?: {
-    code: string;
-    message?: string;
-  };
+  error?: UpdateError;
 }
 
 /**
@@ -220,15 +218,7 @@ export declare interface UpdateHostConfigRequest {
  */
 export declare interface UpdateHostConfigResult {
   success: boolean;
-  error?: {
-    code:
-      | 'CODE_UNSPECIFIED'
-      | 'SELF_LOCKOUT_DETECTED'
-      | 'PERMISSION_DENIED'
-      | 'VALIDATION_ERROR'
-      | 'UNKNOWN';
-    message?: string;
-  };
+  error?: UpdateError;
 }
 
 /**

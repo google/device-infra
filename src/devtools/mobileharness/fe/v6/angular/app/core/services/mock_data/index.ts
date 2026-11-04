@@ -4,7 +4,7 @@
  * mock data arrays used by fake services throughout the application.
  */
 
-export {MOCK_DEVICE_SCENARIOS} from './devices';
+export {MOCK_DEVICE_SCENARIOS, MOCK_RECOMMENDED_WIFIS} from './devices';
 export * from './home';
 export {MOCK_HOST_SCENARIOS} from './hosts';
 export {MOCK_JOB_SCENARIOS} from './jobs';

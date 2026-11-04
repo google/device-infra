@@ -12,6 +12,11 @@ import {MatIconModule} from '@angular/material/icon';
 import {Column, FleetGroup, Row} from '../../../../../core/models/search';
 import {KeyDescriptionTooltipDirective} from '../../../../../shared/directives/key_description_tooltip/key_description_tooltip';
 import {GroupPageState} from '../../../models';
+import {
+  formatPaginationRange,
+  getDeviceTargetKey,
+  getRowsSelectionState,
+} from '../../../utils';
 import {SearchCellComponent} from '../common/search_cell/search_cell';
 import {SearchPaginationComponent} from '../common/search_pagination/search_pagination';
 
@@ -41,23 +46,25 @@ export class FleetGroupCardComponent {
     const total = util?.total || 0;
     if (!util || total <= 0) return null;
 
-    const calcPct = (v?: number) =>
-      Math.min(100, Math.max(0, Math.round((100 * (v || 0)) / total)));
-    const calcWidth = (v?: number) =>
-      Math.min(100, Math.max(0, (100 * (v || 0)) / total));
+    const toMetric = (v = 0) => {
+      const width = Math.min(100, Math.max(0, (100 * v) / total));
+      return {count: v, pct: Math.round(width), width};
+    };
+
+    const busy = toMetric(util.busy);
+    const idle = toMetric(util.idle);
+    const other = toMetric(util.other);
 
     return {
-      busyCount: util.busy || 0,
-      busyPct: calcPct(util.busy),
-      busyWidth: calcWidth(util.busy),
-
-      idleCount: util.idle || 0,
-      idlePct: calcPct(util.idle),
-      idleWidth: calcWidth(util.idle),
-
-      otherCount: util.other || 0,
-      otherPct: calcPct(util.other),
-      otherWidth: calcWidth(util.other),
+      busyCount: busy.count,
+      busyPct: busy.pct,
+      busyWidth: busy.width,
+      idleCount: idle.count,
+      idlePct: idle.pct,
+      idleWidth: idle.width,
+      otherCount: other.count,
+      otherPct: other.pct,
+      otherWidth: other.width,
     };
   });
 
@@ -76,39 +83,29 @@ export class FleetGroupCardComponent {
   /** Descriptions of the column keys that have one, shown as header tooltips. */
   readonly columnDescriptions = input<ReadonlyMap<string, string>>(new Map());
 
-  /** Currently selected row ID set. */
-  readonly selectedSet = input<Set<string>>(new Set());
+  /** Currently selected row ID collection. */
+  readonly selectedSet = input<
+    ReadonlySet<string> | ReadonlyMap<string, unknown>
+  >(new Set());
 
   /** Event emitted when user clicks group header button to toggle expansion. */
   readonly toggleGroup = output<string>();
 
-  /** Event emitted when user clicks select-all checkbox for a group's page. */
-  readonly toggleSelectGroupPage = output<Row[]>();
-
-  /** Event emitted when user clicks checkbox for an individual row inside group. */
-  readonly toggleSelectRow = output<string>();
+  /** Event emitted when user clicks select-all or individual row checkbox inside group. */
+  readonly toggleSelectRows = output<Row[]>();
 
   /** Event emitted when user requests inner page change (token passed). */
   readonly loadGroupPage = output<string | undefined>();
 
-  /** Whether the group is currently fetching row data (or state not yet initialized). */
-  readonly isLoading = computed<boolean>(() => {
-    const state = this.groupState();
-    return !state || !!state.loading;
+  /** Group rows with pre-computed composite tracking keys and selection state. */
+  readonly rowItems = computed(() => {
+    const rows = this.groupState()?.data?.rows ?? [];
+    const selected = this.selectedSet();
+    return rows.map((row) => {
+      const key = getDeviceTargetKey(row);
+      return {row, key, selected: selected.has(key)};
+    });
   });
-
-  /** Error message if group row fetch failed. */
-  readonly errorMessage = computed<string | undefined>(
-    () => this.groupState()?.error,
-  );
-
-  /** Group rows for the current expanded group page. */
-  readonly groupRows = computed<Row[]>(
-    () => this.groupState()?.data?.rows || [],
-  );
-
-  /** Whether the expanded group has rows to display. */
-  readonly hasGroupRows = computed<boolean>(() => this.groupRows().length > 0);
 
   /** Effective columns for the inner table (from state or default fallback). */
   readonly innerColumns = computed<Column[]>(() => {
@@ -116,40 +113,17 @@ export class FleetGroupCardComponent {
     return cols && cols.length > 0 ? cols : this.columns();
   });
 
-  /** Previous page token for inner pagination. */
-  readonly prevPageToken = computed<string | undefined>(
-    () => this.groupState()?.data?.prevPageToken,
+  /** Tri-state checkbox selection state ({all, some}) for the current group page. */
+  readonly selectionState = computed(() =>
+    getRowsSelectionState(
+      this.groupState()?.data?.rows ?? [],
+      this.selectedSet(),
+    ),
   );
-
-  /** Next page token for inner pagination. */
-  readonly nextPageToken = computed<string | undefined>(
-    () => this.groupState()?.data?.nextPageToken,
-  );
-
-  /** Whether all rows on the current group page are selected. */
-  readonly isGroupPageAllSelected = computed<boolean>(() => {
-    const rows = this.groupRows();
-    if (rows.length === 0) return false;
-    const selected = this.selectedSet();
-    return rows.every((r) => selected.has(r.id));
-  });
-
-  /** Whether some (but not all) rows on the current group page are selected. */
-  readonly isGroupPageSomeSelected = computed<boolean>(() => {
-    const rows = this.groupRows();
-    if (rows.length === 0) return false;
-    const selected = this.selectedSet();
-    const count = rows.filter((r) => selected.has(r.id)).length;
-    return count > 0 && count < rows.length;
-  });
 
   /** Formatted range text for the inner group pagination footer (e.g. "1–25 of 100"). */
   readonly innerRangeText = computed<string>(() => {
     const data = this.groupState()?.data;
-    if (!data) return '';
-    const start = (data.rangeStart || 0).toLocaleString();
-    const end = (data.rangeEnd || 0).toLocaleString();
-    const total = (data.total || 0).toLocaleString();
-    return `${start}–${end} of ${total}`;
+    return formatPaginationRange(data?.rangeStart, data?.rangeEnd, data?.total);
   });
 }

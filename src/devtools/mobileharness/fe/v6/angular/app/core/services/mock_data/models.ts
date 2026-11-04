@@ -2,7 +2,11 @@
  * @fileoverview Defines the interfaces for mock scenarios.
  */
 
-import {DeviceConfig} from '../../models/device_config_models';
+import {
+  DeviceConfig,
+  DeviceConfigUiStatus,
+  UpdateError,
+} from '../../models/device_config_models';
 import {DeviceOverview, TestbedConfig} from '../../models/device_overview';
 import {
   HealthinessStats,
@@ -36,6 +40,9 @@ export interface MockDeviceScenario extends BaseMockScenario {
   readonly id: string;
   readonly overview: DeviceOverview;
   config: DeviceConfig | null;
+  readonly isHostManaged?: boolean;
+  readonly configUiStatus?: Partial<DeviceConfigUiStatus>;
+  readonly configUpdateError?: UpdateError;
   readonly isQuarantined: boolean;
   readonly quarantineExpiry?: string;
   readonly healthinessStats?: HealthinessStats;

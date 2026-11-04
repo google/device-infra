@@ -18,6 +18,7 @@ import {
   FleetColumnDescriptor,
   FleetGroup,
   FleetPromotedKeysRequest,
+  FleetResolvedFilterChip,
   FleetResolvedGroupByChip,
   FleetSearchConfig,
   FleetSearchConfigRequest,
@@ -25,13 +26,15 @@ import {
   FleetSearchResults,
   FleetSuggestion,
   FleetSuggestionRequest,
+  FleetValidFilterChip,
   FleetValueListRequest,
   Row,
   TranslateArsenalSearchResponse,
 } from '../../../core/models/search';
 import {SnackBarService} from '../../../shared/services/snackbar_service';
+import {getErrorMessage} from '../../../shared/utils/error_utils';
 import {
-  AdvancedMatchMode,
+  createInitialValuePickerState,
   EntityType,
   FilterChip,
   FilterKeyMetadata,
@@ -60,9 +63,13 @@ import {
   extractAdvancedStateFromChip,
   extractComplexMatchInfo,
   extractFilterChipFromFleetSuggestion,
+  formatPaginationRange,
   getChipKey,
+  getDeviceTargetKey,
+  getRowsSelectionState,
   getStoredVisibleColumns,
   isChipNegated,
+  isRowSelected,
   isValuePickerSelectionEmpty,
   parseArsenalQueryParam,
   saveStoredVisibleColumns,
@@ -355,45 +362,35 @@ export class FleetSearchStore extends SearchPageStore {
   // 3. Table Columns, Selection, & View Configuration
   // ===========================================================================
 
-  /** Set of currently selected item (device/host) IDs across search results. */
-  readonly selectedItems = signal<Set<string>>(new Set());
+  /** Map of currently selected composite item keys (`deviceId@@hostName` or `deviceId`) to their search result Row. */
+  readonly selectedItems = signal<Map<string, Row>>(new Map());
 
   /** Clears the current selection state. */
   clearSelection() {
-    this.selectedItems.set(new Set());
+    this.selectedItems.set(new Map());
   }
 
-  /** Toggles individual row selection state. */
-  toggleSelectRow(id: string) {
-    const nextSet = new Set(this.selectedItems());
-    if (nextSet.has(id)) {
-      nextSet.delete(id);
-    } else {
-      nextSet.add(id);
-    }
-    this.selectedItems.set(nextSet);
-  }
-
-  /** Toggles selection for a list of rows (e.g. current flat page or an expanded group card page). */
-  toggleSelectRows(rows: Array<{id: string}> | undefined) {
+  /** Toggles selection for one or more rows (e.g. a single row, current flat page, or an expanded group card page). */
+  toggleSelectRows(rows: Row[] | undefined) {
     if (!rows || rows.length === 0) return;
-    const current = new Set(this.selectedItems());
-    const allSelected = rows.every((r) => current.has(r.id));
+    const nextMap = new Map(this.selectedItems());
+    const allSelected = rows.every((r) => isRowSelected(r, nextMap));
     if (allSelected) {
       rows.forEach((r) => {
-        current.delete(r.id);
+        nextMap.delete(getDeviceTargetKey(r));
       });
     } else {
       rows.forEach((r) => {
-        current.add(r.id);
+        nextMap.set(getDeviceTargetKey(r), r);
       });
     }
-    this.selectedItems.set(current);
+    this.selectedItems.set(nextMap);
   }
 
   /** Current column key used for table sorting, defaulting to the locked identity column from BFF. */
   readonly sortColumn = linkedSignal<string, string>({
-    source: () => this.lockedColumns()[0] ?? '',
+    source: () =>
+      this.searchConfig()?.columns?.defaults?.find((c) => c.locked)?.key ?? '',
     computation: (source) => source,
   });
 
@@ -453,11 +450,11 @@ export class FleetSearchStore extends SearchPageStore {
   /** Sets the visible table columns, persists them to localStorage, and updates table results if columns changed. */
   setVisibleColumns(columns: readonly FleetColumnDescriptor[]) {
     const descriptors = [...columns];
-    const defs = this.defaultColumns();
+    const defaults = this.searchConfig()?.columns?.defaults ?? [];
     const matchesDefaults =
-      defs.length > 0 &&
-      descriptors.length === defs.length &&
-      descriptors.every((d, idx) => d.key === defs[idx]);
+      defaults.length > 0 &&
+      descriptors.length === defaults.length &&
+      descriptors.every((d, idx) => d.key === defaults[idx].key);
 
     if (matchesDefaults) {
       this.resetVisibleColumns();
@@ -498,23 +495,9 @@ export class FleetSearchStore extends SearchPageStore {
     }
   }
 
-  /** Authoritative default column keys provided by BFF search config. */
-  readonly defaultColumns = computed<string[]>(() => {
-    return this.searchConfig()?.columns?.defaults?.map((c) => c.key) ?? [];
-  });
-
-  /** Authoritative locked identity column keys provided by BFF search config. */
-  readonly lockedColumns = computed<string[]>(() => {
-    return (
-      this.searchConfig()
-        ?.columns?.defaults?.filter((c) => c.locked)
-        .map((c) => c.key) ?? []
-    );
-  });
-
   /** Display columns to render in search results table. */
   override readonly displayColumns = computed<Column[]>(() => {
-    const cols = this.searchResource.value()?.flat?.columns;
+    const cols = this.searchResults()?.flat?.columns;
     if (cols && cols.length > 0) {
       return cols;
     }
@@ -546,10 +529,11 @@ export class FleetSearchStore extends SearchPageStore {
         descriptions.set(key, meta.description);
       }
     }
+    const results = this.searchResults();
     const liveDescriptors = [
       ...(this.searchConfig()?.columns?.defaults ?? []),
-      ...(this.searchResource.value()?.flat?.columns ?? []),
-      ...(this.searchResource.value()?.grouped?.groupByKeys ?? []),
+      ...(results?.flat?.columns ?? []),
+      ...(results?.grouped?.groupByKeys ?? []),
     ];
     for (const descriptor of liveDescriptors) {
       if (descriptor.description) {
@@ -602,9 +586,7 @@ export class FleetSearchStore extends SearchPageStore {
   });
 
   /** Grouped results object from the primary search resource. */
-  readonly groupedResults = computed(
-    () => this.searchResource.value()?.grouped,
-  );
+  readonly groupedResults = computed(() => this.searchResults()?.grouped);
 
   /** Groups array to render in grouped view accordion. */
   readonly groups = computed<FleetGroup[]>(() => {
@@ -613,7 +595,7 @@ export class FleetSearchStore extends SearchPageStore {
 
   /** Formats display label text for active group-by headers (e.g. "Model × Status"). */
   readonly groupKeysText = computed(() => {
-    const keys = this.searchResource.value()?.grouped?.groupByKeys || [];
+    const keys = this.searchResults()?.grouped?.groupByKeys || [];
     return keys.map((k: Column) => k.displayName || k.key).join(' × ');
   });
 
@@ -723,9 +705,13 @@ export class FleetSearchStore extends SearchPageStore {
           if (this.groupLoadSeq.get(groupId) !== seq) {
             return;
           }
+          const msg = getErrorMessage(err);
           this.updateGroupExpandState(groupId, {
             loading: false,
-            error: err?.message || 'Failed to load group rows.',
+            error:
+              msg !== 'An unknown error occurred.'
+                ? msg
+                : 'Failed to load group rows.',
           });
         },
       });
@@ -898,10 +884,21 @@ export class FleetSearchStore extends SearchPageStore {
       if (!req) {
         return of(null);
       }
-      return this.searchService
-        .searchFleet(req)
-        .pipe(catchError(() => of(null)));
+      return this.searchService.searchFleet(req);
     },
+  });
+
+  /** Safely resolved search results, guarded with `hasValue()` so reading in error state never throws `ResourceValueError`. */
+  private readonly searchResults = computed<FleetSearchResults | null>(() =>
+    this.searchResource.hasValue()
+      ? (this.searchResource.value() ?? null)
+      : null,
+  );
+
+  /** Human-readable error message when the primary search RPC fails. */
+  readonly searchError = computed<string | null>(() => {
+    const err = this.searchResource.error();
+    return err ? getErrorMessage(err) : null;
   });
 
   /** Whether a flat search is waiting for initial default columns or sort key from searchConfig before firing. */
@@ -925,25 +922,13 @@ export class FleetSearchStore extends SearchPageStore {
 
   /** Rows array to render in search results table. */
   override readonly rows = computed<Row[]>(() => {
-    return (this.searchResource.value()?.flat?.rows as Row[]) || [];
+    return (this.searchResults()?.flat?.rows as Row[]) || [];
   });
 
-  /** Checks whether all visible rows on current flat results page are selected. */
-  readonly isAllSelected = computed<boolean>(() => {
-    const rows = this.rows();
-    if (rows.length === 0) return false;
-    const selected = this.selectedItems();
-    return rows.every((r) => selected.has(r.id));
-  });
-
-  /** Checks whether some (but not all) visible rows on current flat results page are selected. */
-  readonly isSomeSelected = computed<boolean>(() => {
-    const rows = this.rows();
-    if (rows.length === 0) return false;
-    const selected = this.selectedItems();
-    const count = rows.filter((r) => selected.has(r.id)).length;
-    return count > 0 && count < rows.length;
-  });
+  /** Tri-state checkbox selection state ({all, some}) for the current flat results page. */
+  readonly selectionState = computed(() =>
+    getRowsSelectionState(this.rows(), this.selectedItems()),
+  );
 
   /** Determines whether a next page is available based on API nextPageToken. */
   override readonly hasNextPage = computed<boolean>(() => {
@@ -961,24 +946,15 @@ export class FleetSearchStore extends SearchPageStore {
   override readonly rangeText = computed<string>(() => {
     if (this.groupByKeys().length > 0) {
       const res = this.groupedResults();
-      if (!res) return '';
-      const start = res.rangeStart || 0;
-      const end = res.rangeEnd || 0;
-      const total = (res.totalGroups || 0).toLocaleString();
-      return `${start}–${end} of ${total} groups`;
+      return formatPaginationRange(
+        res?.rangeStart,
+        res?.rangeEnd,
+        res?.totalGroups,
+        ' groups',
+      );
     }
-    const res = this.searchResource.value()?.flat;
-    if (!res) return '';
-    const start = res.rangeStart || 0;
-    const end = res.rangeEnd || 0;
-    const total = res.total || 0;
-    if (start > 0 && end > 0 && total > 0) {
-      return `${start.toLocaleString()} – ${end.toLocaleString()} of ${total.toLocaleString()}`;
-    }
-    if (start > 0 && end > 0) {
-      return `showing ${start.toLocaleString()}–${end.toLocaleString()}`;
-    }
-    return '';
+    const res = this.searchResults()?.flat;
+    return formatPaginationRange(res?.rangeStart, res?.rangeEnd, res?.total);
   });
 
   /** Total matching count across flat or grouped search. */
@@ -986,7 +962,7 @@ export class FleetSearchStore extends SearchPageStore {
     return (
       (this.groupByKeys().length > 0
         ? this.groupedResults()?.totalItems
-        : this.searchResource.value()?.flat?.total) || 0
+        : this.searchResults()?.flat?.total) || 0
     );
   });
 
@@ -1015,7 +991,7 @@ export class FleetSearchStore extends SearchPageStore {
 
   /** Helper to extract next/prev page token from search results. */
   private getPaginationToken(type: 'next' | 'prev'): string | undefined {
-    const res = this.searchResource.value();
+    const res = this.searchResults();
     const isGrouped = this.groupByKeys().length > 0;
     if (type === 'next') {
       return isGrouped ? res?.grouped?.nextPageToken : res?.flat?.nextPageToken;
@@ -1074,19 +1050,15 @@ export class FleetSearchStore extends SearchPageStore {
           filterPairs,
           res.filterChips,
           (chip, resolved) => {
-            if (resolved.invalid?.reason) {
-              warnings.push(resolved.invalid.reason);
-            }
-            if (resolved.invalid || !resolved.valid) {
-              return null;
-            }
-            const valid = resolved.valid;
-            return {
-              ...chip,
-              pillKey: valid.pillKey || chip.pillKey,
-              pillCondition: valid.pillCondition || chip.pillCondition,
-              metadata: valid.metadata || chip.metadata,
-            };
+            const valid = this.unwrapValidFilterChip(resolved, warnings);
+            return valid
+              ? {
+                  ...chip,
+                  pillKey: valid.pillKey || chip.pillKey,
+                  pillCondition: valid.pillCondition || chip.pillCondition,
+                  metadata: valid.metadata || chip.metadata,
+                }
+              : null;
           },
         );
 
@@ -1148,19 +1120,14 @@ export class FleetSearchStore extends SearchPageStore {
 
     const filters = res.filters || [];
     const filterChips = res.filterChips || [];
-    const resolvedFilterChips: FilterChip[] = [];
     const warnings: string[] = [];
-    for (let i = 0; i < filters.length; i++) {
-      const fc = filterChips[i];
-      if (fc?.invalid?.reason) {
-        warnings.push(fc.invalid.reason);
+    const resolvedFilterChips = filters.reduce<FilterChip[]>((acc, f, i) => {
+      const valid = this.unwrapValidFilterChip(filterChips[i], warnings);
+      if (valid) {
+        acc.push(buildFilterChipFromResolved(f, valid));
       }
-      if (fc?.valid) {
-        resolvedFilterChips.push(
-          buildFilterChipFromResolved(filters[i], fc.valid),
-        );
-      }
-    }
+      return acc;
+    }, []);
 
     const resolvedGroupByChips = this.resolveGroupByChips(
       res.groupByKeys || [],
@@ -1181,6 +1148,24 @@ export class FleetSearchStore extends SearchPageStore {
     if (allChips.length > 0 || shouldBrowseAll) {
       this.executeSearch();
     }
+  }
+
+  /** Collects or shows a warning if the resolved filter chip is invalid and returns its valid payload. */
+  private unwrapValidFilterChip(
+    fc?: FleetResolvedFilterChip,
+    warnings?: string[],
+  ): FleetValidFilterChip | null {
+    if (fc?.invalid?.reason) {
+      if (warnings) {
+        warnings.push(fc.invalid.reason);
+      } else {
+        this.snackBarService.showWarning(fc.invalid.reason);
+      }
+    }
+    if (fc?.invalid || !fc?.valid) {
+      return null;
+    }
+    return fc.valid;
   }
 
   /** Scenario 6: Resolves group-by keys against backend-validated chips, dropping invalid keys with a warning. */
@@ -1262,53 +1247,37 @@ export class FleetSearchStore extends SearchPageStore {
     key: string,
     activeChip?: FilterChip,
     metadata?: FilterKeyMetadata,
-    stagedValues?: string[],
+    stagedValues: string[] = [],
   ): ValuePickerState {
-    let isAdv = false;
-    let advMode: AdvancedMatchMode = 'prefix';
-    let advText = '';
-    let advValues: string[] = [];
-    let isNegated = false;
-    let selectedVals = new Set<string>();
-
-    if (activeChip) {
-      const state = extractAdvancedStateFromChip(activeChip);
-      isAdv = state.isAdv;
-      if (isAdv) {
-        advMode = state.advMode;
-        advText = state.advText;
-        advValues = state.advValues;
-        isNegated = false;
-      } else {
-        isNegated = isChipNegated(activeChip);
-        if (activeChip.fleetFilter?.simple?.values) {
-          const vals = activeChip.fleetFilter.simple.values
-            .map((v) => v.value || (v.noValue ? EMPTY_FILTER_VALUE : ''))
-            .filter(Boolean);
-          selectedVals = new Set(vals);
-        } else if (activeChip.rawValues?.length) {
-          selectedVals = new Set(activeChip.rawValues);
-        }
-      }
+    const base = createInitialValuePickerState();
+    if (!activeChip) {
+      return {...base, selectedValues: new Set(stagedValues)};
     }
 
-    if (stagedValues && stagedValues.length > 0) {
-      for (const sv of stagedValues) {
-        selectedVals.add(sv);
-      }
+    const adv = extractAdvancedStateFromChip(activeChip);
+    if (adv.isAdv) {
+      return {
+        ...base,
+        selectedValues: new Set(stagedValues),
+        advanced: {
+          active: true,
+          mode: adv.advMode,
+          text: adv.advText,
+          values: adv.advValues,
+        },
+      };
     }
+
+    const chipValues = activeChip.fleetFilter?.simple?.values
+      ? activeChip.fleetFilter.simple.values
+          .map((v) => v.value || (v.noValue ? EMPTY_FILTER_VALUE : ''))
+          .filter(Boolean)
+      : (activeChip.rawValues ?? []);
 
     return {
-      loading: false,
-      values: [],
-      selectedValues: selectedVals,
-      negated: isNegated,
-      advanced: {
-        active: isAdv,
-        mode: advMode,
-        text: advText,
-        values: advValues,
-      },
+      ...base,
+      selectedValues: new Set([...chipValues, ...stagedValues]),
+      negated: isChipNegated(activeChip),
     };
   }
 
@@ -1352,22 +1321,15 @@ export class FleetSearchStore extends SearchPageStore {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res) => {
-          if (!res.filterChips || res.filterChips.length === 0) {
-            return;
-          }
-          for (const fc of res.filterChips) {
-            if (fc.invalid?.reason) {
-              this.snackBarService.showWarning(fc.invalid.reason);
-            }
-            if (fc.invalid || !fc.valid) {
-              continue;
-            }
+          for (const fc of res.filterChips ?? []) {
+            const valid = this.unwrapValidFilterChip(fc);
+            if (!valid) continue;
             this.addFilterChip({
               key,
-              pillKey: fc.valid.pillKey || displayTitle,
-              pillCondition: fc.valid.pillCondition,
+              pillKey: valid.pillKey || displayTitle,
+              pillCondition: valid.pillCondition,
               isGroupBy: false,
-              metadata: fc.valid.metadata || meta,
+              metadata: valid.metadata || meta,
               rawValues,
               negated: isNegated,
               complex: event.isAdvanced ? complex : undefined,

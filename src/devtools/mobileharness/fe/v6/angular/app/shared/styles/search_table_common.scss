@@ -366,6 +366,11 @@
       opacity: 0.4;
       margin-bottom: 12px;
       color: inherit;
+
+      &.rt-error-icon {
+        color: #b3261e;
+        opacity: 0.85;
+      }
     }
 
     .rt-empty-title {

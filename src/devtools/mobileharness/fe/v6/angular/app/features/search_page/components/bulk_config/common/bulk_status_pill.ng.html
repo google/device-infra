@@ -1,0 +1,16 @@
+@switch (status()) {
+  @case (DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY) {
+    <span
+      class="bw-status-pill bw-status-skip"
+      [title]="readOnlyReason() || 'Read-only'"
+    >
+      Read-only
+    </span>
+  }
+  @case (DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES) {
+    <span class="bw-status-pill bw-status-same">Already matches</span>
+  }
+  @default {
+    <span class="bw-status-pill bw-status-update">Will update</span>
+  }
+}

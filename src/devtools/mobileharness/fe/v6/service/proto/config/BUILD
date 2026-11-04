@@ -44,6 +44,7 @@ proto_library(
     srcs = ["config_service.proto"],
     deps = [
         ":config_resources_proto",
+        "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_proto",
         "@googleapis//google/api:annotations_proto",
     ],
 )

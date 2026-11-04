@@ -5,10 +5,16 @@ import {map} from 'rxjs/operators';
 
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
+  BatchGetDeviceWifiConfigsRequest,
+  BatchGetDeviceWifiConfigsResponse,
+  BatchUpdateDeviceWifiConfigsRequest,
+  BatchUpdateDeviceWifiConfigsResponse,
   CheckDeviceConfigPermissionResult,
   DeviceConfig,
   GetDeviceConfigResult,
   GetRecommendedWifiResponse,
+  GetWifiSuggestionsRequest,
+  GetWifiSuggestionsResponse,
   RecommendedWifi,
   UpdateDeviceConfigRequest,
   UpdateDeviceConfigResult,
@@ -94,6 +100,37 @@ export class HttpConfigService extends ConfigService {
         `${this.apiUrl}/configs/wifi/recommendations`,
       )
       .pipe(map((response) => response.recommendations || []));
+  }
+
+  override getWifiSuggestions(
+    request?: GetWifiSuggestionsRequest,
+  ): Observable<GetWifiSuggestionsResponse> {
+    const params = {
+      ...(request?.fleet && {fleet: request.fleet}),
+      ...(request?.universe && {universe: request.universe}),
+    };
+    return this.http.get<GetWifiSuggestionsResponse>(
+      `${this.apiUrl}/configs/wifi:suggestions`,
+      {params},
+    );
+  }
+
+  override batchGetDeviceWifiConfigs(
+    request: BatchGetDeviceWifiConfigsRequest,
+  ): Observable<BatchGetDeviceWifiConfigsResponse> {
+    return this.http.post<BatchGetDeviceWifiConfigsResponse>(
+      `${this.apiUrl}/devices:batchGetWifiConfigs`,
+      request,
+    );
+  }
+
+  override batchUpdateDeviceWifiConfigs(
+    request: BatchUpdateDeviceWifiConfigsRequest,
+  ): Observable<BatchUpdateDeviceWifiConfigsResponse> {
+    return this.http.post<BatchUpdateDeviceWifiConfigsResponse>(
+      `${this.apiUrl}/devices:batchUpdateWifiConfigs`,
+      request,
+    );
   }
 
   // ===== Host Config Methods =====

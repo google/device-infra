@@ -72,28 +72,28 @@
 
   <!-- Group Body (Expanded) -->
   @if (isGroupOpen) {
+    @let state = groupState();
+    @let data = state?.data;
+    @let items = rowItems();
     <div class="rt-group-body">
-      @if (isLoading()) {
+      @if (!state || state.loading) {
         <div class="rt-group-loading">Loading {{ currentEntity }}...</div>
-      } @else if (errorMessage(); as error) {
+      } @else if (state?.error; as error) {
         <div class="rt-group-empty rt-group-error-msg">
           {{ error }}
         </div>
-      } @else if (hasGroupRows()) {
+      } @else if (items.length > 0 && data) {
         @let groupCols = innerColumns();
-        @let rows = groupRows();
-        @let selected = selectedSet();
-        @let prevToken = prevPageToken();
-        @let nextToken = nextPageToken();
+        @let selState = selectionState();
         <div class="rt-group-scroll">
           <table class="rt-inner-table">
             <thead>
               <tr>
                 <th class="rt-check-cell">
                   <mat-checkbox
-                    [checked]="isGroupPageAllSelected()"
-                    [indeterminate]="isGroupPageSomeSelected()"
-                    (change)="toggleSelectGroupPage.emit(rows)"
+                    [checked]="selState.all"
+                    [indeterminate]="selState.some"
+                    (change)="toggleSelectRows.emit(data.rows ?? [])"
                   ></mat-checkbox>
                 </th>
                 @for (col of groupCols; track col.key) {
@@ -116,19 +116,18 @@
               </tr>
             </thead>
             <tbody>
-              @for (row of rows; track row.id) {
-                @let isRowSelected = selected.has(row.id);
-                <tr [class.selected-row]="isRowSelected">
+              @for (item of items; track item.key) {
+                <tr [class.selected-row]="item.selected">
                   <td class="rt-check-cell">
                     <mat-checkbox
-                      [checked]="isRowSelected"
-                      (change)="toggleSelectRow.emit(row.id)"
+                      [checked]="item.selected"
+                      (change)="toggleSelectRows.emit([item.row])"
                     ></mat-checkbox>
                   </td>
                   @for (col of groupCols; track col.key; let colIdx = $index) {
                     <td [class]="'col-' + col.key">
                       <app-search-cell
-                        [cell]="row.cells?.[colIdx]"
+                        [cell]="item.row.cells?.[colIdx]"
                         [column]="col"
                       ></app-search-cell>
                     </td>
@@ -143,10 +142,10 @@
         <app-search-pagination
           [compact]="true"
           [rangeText]="innerRangeText()"
-          [hasPrev]="!!prevToken"
-          [hasNext]="!!nextToken"
-          (prev)="loadGroupPage.emit(prevToken)"
-          (next)="loadGroupPage.emit(nextToken)"
+          [hasPrev]="!!data.prevPageToken"
+          [hasNext]="!!data.nextPageToken"
+          (prev)="loadGroupPage.emit(data.prevPageToken)"
+          (next)="loadGroupPage.emit(data.nextPageToken)"
         ></app-search-pagination>
       } @else {
         <div class="rt-group-empty">No {{ currentEntity }} in this group.</div>

@@ -1,0 +1,75 @@
+@let net = wifi();
+
+<span
+  class="bw-wifi-chip"
+  #chipOrigin="cdkOverlayOrigin"
+  cdkOverlayOrigin
+  (mouseenter)="open()"
+  (mouseleave)="scheduleClose()"
+>
+  <mat-icon class="bw-wifi-icon">wifi</mat-icon>
+  <span class="bw-wifi-name">{{ net.ssid }}</span>
+</span>
+
+@if (isOpen()) {
+  <ng-template
+    cdkConnectedOverlay
+    [cdkConnectedOverlayOrigin]="chipOrigin"
+    [cdkConnectedOverlayOpen]="true"
+    [cdkConnectedOverlayPositions]="tipPositions"
+    (detach)="close()"
+  >
+    <div
+      class="bw-tip"
+      (mouseenter)="cancelClose()"
+      (mouseleave)="scheduleClose()"
+    >
+      <div class="bw-tip-header">
+        <mat-icon class="bw-tip-icon">wifi</mat-icon>
+        <div class="bw-tip-ssid">{{ net.ssid }}</div>
+      </div>
+      <div class="bw-tip-rows">
+        <div class="bw-tip-row">
+          <span class="bw-tip-k">{{ net.psk ? 'Password' : 'Security' }}</span>
+          <span class="bw-tip-v">
+            @if (net.psk) {
+              @let revealed = showPsk();
+              @let copied = copiedPsk();
+              <span class="bw-psk-dots">{{ revealed ? net.psk : '••••••••••' }}</span>
+              <button
+                type="button"
+                class="bw-psk-eye"
+                (click)="togglePsk()"
+                [attr.aria-label]="revealed ? 'Hide password' : 'Show password'"
+                [title]="revealed ? 'Hide password' : 'Show password'"
+              >
+                <mat-icon>{{ revealed ? 'visibility' : 'visibility_off' }}</mat-icon>
+              </button>
+              <button
+                type="button"
+                class="bw-copy"
+                (click)="copyPsk()"
+                [attr.aria-label]="copied ? 'Copied' : 'Copy password'"
+                [title]="copied ? 'Copied' : 'Copy password'"
+              >
+                <mat-icon>{{ copied ? 'check' : 'content_copy' }}</mat-icon>
+              </button>
+            } @else {
+              <span class="bw-tip-muted">Open network (no password)</span>
+            }
+          </span>
+        </div>
+        <div class="bw-tip-row">
+          <span class="bw-tip-k">Visibility</span>
+          <span class="bw-tip-v">
+            @if (net.scanSsid) {
+              <span class="bw-tip-hidden">Hidden network</span>
+            } @else {
+              <span class="bw-tip-muted">Broadcast SSID (normal)</span>
+            }
+          </span>
+        </div>
+      </div>
+    </div>
+  </ng-template>
+}
