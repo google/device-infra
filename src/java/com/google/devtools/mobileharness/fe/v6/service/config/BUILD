@@ -35,6 +35,8 @@ java_library(
     deps = [
         ":config_service_logic",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:batch_get_host_wifi_configs_handler",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:batch_update_host_wifi_configs_handler",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:check_device_config_permission_handler",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:check_device_write_permission_handler",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/handlers:check_host_config_permission_handler",
