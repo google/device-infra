@@ -20,6 +20,8 @@ import {
   GetConfigurableDimensionsRequest,
   GetConfigurableDimensionsResponse,
   GetDeviceConfigResult,
+  GetDeviceConfigTemplateRequest,
+  GetDeviceConfigTemplateResponse,
   GetDimensionValueSuggestionsRequest,
   GetDimensionValueSuggestionsResponse,
   GetRecommendedWifiResponse,
@@ -28,8 +30,14 @@ import {
   RecommendedWifi,
   UpdateDeviceConfigRequest,
   UpdateDeviceConfigResult,
+  UpdateDeviceConfigTemplateRequest,
+  UpdateDeviceConfigTemplateResponse,
 } from '../../models/device_config_models';
 import {
+  BatchGetHostWifiConfigsRequest,
+  BatchGetHostWifiConfigsResponse,
+  BatchUpdateHostWifiConfigsRequest,
+  BatchUpdateHostWifiConfigsResponse,
   CheckHostConfigPermissionResult,
   GetHostConfigResult,
   GetHostDefaultDeviceConfigResponse,
@@ -251,6 +259,46 @@ export class HttpConfigService extends ConfigService {
     return this.http.post<UnlockHostPropertiesResponse>(
       `${this.apiUrl}/hosts/${hostName}/config:unlockHostProperties`,
       {hostName},
+    );
+  }
+
+  override batchGetHostWifiConfigs(
+    request: BatchGetHostWifiConfigsRequest,
+  ): Observable<BatchGetHostWifiConfigsResponse> {
+    return this.http.post<BatchGetHostWifiConfigsResponse>(
+      `${this.apiUrl}/hosts:batchGetWifiConfigs`,
+      request,
+    );
+  }
+
+  override batchUpdateHostWifiConfigs(
+    request: BatchUpdateHostWifiConfigsRequest,
+  ): Observable<BatchUpdateHostWifiConfigsResponse> {
+    return this.http.post<BatchUpdateHostWifiConfigsResponse>(
+      `${this.apiUrl}/hosts:batchUpdateWifiConfigs`,
+      request,
+    );
+  }
+
+  override getDeviceConfigTemplate(
+    request?: GetDeviceConfigTemplateRequest,
+  ): Observable<GetDeviceConfigTemplateResponse> {
+    let params = new HttpParams();
+    if (request?.universe) {
+      params = params.set('universe', request.universe);
+    }
+    return this.http.get<GetDeviceConfigTemplateResponse>(
+      `${this.apiUrl}/configs/deviceTemplate`,
+      {params},
+    );
+  }
+
+  override updateDeviceConfigTemplate(
+    request: UpdateDeviceConfigTemplateRequest,
+  ): Observable<UpdateDeviceConfigTemplateResponse> {
+    return this.http.post<UpdateDeviceConfigTemplateResponse>(
+      `${this.apiUrl}/configs/deviceTemplate:update`,
+      request,
     );
   }
 }

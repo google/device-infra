@@ -7,6 +7,8 @@ import {
   DeviceConfig,
   ConfigSection as DeviceConfigSection,
   DeviceConfigUiStatus,
+  DeviceWifi,
+  TargetDeviceWifi,
   UpdateError,
 } from './device_config_models';
 
@@ -232,4 +234,63 @@ export declare interface CheckHostConfigPermissionResult
  */
 export declare interface GetHostDefaultDeviceConfigResponse {
   deviceConfig: DeviceConfig | null;
+}
+
+/**
+ * Change classification for a selected host in a batch configuration dialog.
+ * Aligns with config_service.proto HostConfigChangeStatus.
+ */
+export enum HostConfigChangeStatus {
+  HOST_CONFIG_CHANGE_STATUS_UNSPECIFIED = 'HOST_CONFIG_CHANGE_STATUS_UNSPECIFIED',
+  HOST_CONFIG_CHANGE_STATUS_WRITABLE = 'HOST_CONFIG_CHANGE_STATUS_WRITABLE',
+  HOST_CONFIG_CHANGE_STATUS_WILL_UPDATE = 'HOST_CONFIG_CHANGE_STATUS_WILL_UPDATE',
+  HOST_CONFIG_CHANGE_STATUS_ALREADY_MATCHES = 'HOST_CONFIG_CHANGE_STATUS_ALREADY_MATCHES',
+  HOST_CONFIG_CHANGE_STATUS_READ_ONLY = 'HOST_CONFIG_CHANGE_STATUS_READ_ONLY',
+}
+
+/**
+ * Current Wi-Fi configuration and change status for a single selected host.
+ * Aligns with config_service.proto BatchGetHostWifiConfigsResponse.HostWifiConfigEntry.
+ */
+export declare interface HostWifiConfigEntry {
+  hostName: string;
+  currentWifi?: DeviceWifi;
+  status: HostConfigChangeStatus;
+  readOnlyReason?: string;
+}
+
+/**
+ * Request for BatchGetHostWifiConfigs.
+ * Aligns with config_service.proto BatchGetHostWifiConfigsRequest.
+ */
+export declare interface BatchGetHostWifiConfigsRequest {
+  hostNames: string[];
+  target?: TargetDeviceWifi;
+  universe?: string;
+}
+
+/**
+ * Response for BatchGetHostWifiConfigs.
+ * Aligns with config_service.proto BatchGetHostWifiConfigsResponse.
+ */
+export declare interface BatchGetHostWifiConfigsResponse {
+  entries?: HostWifiConfigEntry[];
+}
+
+/**
+ * Request for BatchUpdateHostWifiConfigs.
+ * Aligns with config_service.proto BatchUpdateHostWifiConfigsRequest.
+ */
+export declare interface BatchUpdateHostWifiConfigsRequest {
+  hostNames: string[];
+  target: TargetDeviceWifi;
+  universe?: string;
+}
+
+/**
+ * Response for BatchUpdateHostWifiConfigs.
+ * Aligns with config_service.proto BatchUpdateHostWifiConfigsResponse.
+ */
+export declare interface BatchUpdateHostWifiConfigsResponse {
+  errors?: Record<string, UpdateError>;
 }

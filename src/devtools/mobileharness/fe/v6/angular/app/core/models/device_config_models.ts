@@ -556,3 +556,50 @@ export declare interface BatchUpdateDeviceWifiConfigsResponse {
   errors?: Record<string, UpdateError>;
 }
 
+
+/**
+ * Controller-level device configuration template applied to newly connected
+ * unconfigured devices.
+ * Aligns with config_service.proto DeviceConfigTemplate.
+ */
+export declare interface DeviceConfigTemplate {
+  dimensions?: {
+    supported?: DeviceDimension[];
+    required?: DeviceDimension[];
+  };
+}
+
+/**
+ * Request for GetDeviceConfigTemplate.
+ * Aligns with config_service.proto GetDeviceConfigTemplateRequest.
+ */
+export declare interface GetDeviceConfigTemplateRequest {
+  universe?: string;
+}
+
+/**
+ * Response for GetDeviceConfigTemplate.
+ * Aligns with config_service.proto GetDeviceConfigTemplateResponse.
+ */
+export declare interface GetDeviceConfigTemplateResponse {
+  enabled?: boolean;
+  deviceConfigTemplate?: DeviceConfigTemplate;
+}
+
+/**
+ * Request for UpdateDeviceConfigTemplate.
+ * Aligns with config_service.proto UpdateDeviceConfigTemplateRequest.
+ */
+export declare interface UpdateDeviceConfigTemplateRequest {
+  deviceConfigTemplate: DeviceConfigTemplate;
+  universe?: string;
+}
+
+/**
+ * Response for UpdateDeviceConfigTemplate.
+ * Aligns with config_service.proto UpdateDeviceConfigTemplateResponse.
+ */
+export declare interface UpdateDeviceConfigTemplateResponse {
+  success: boolean;
+  error?: UpdateError;
+}

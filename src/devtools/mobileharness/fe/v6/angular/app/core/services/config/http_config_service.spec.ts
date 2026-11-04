@@ -18,12 +18,19 @@ import {
   DimensionList,
   GetConfigurableDimensionsResponse,
   GetDeviceConfigResult,
+  GetDeviceConfigTemplateResponse,
   GetDimensionValueSuggestionsResponse,
   GetWifiSuggestionsResponse,
   RecommendedWifi,
   UpdateDeviceConfigRequest,
+  UpdateDeviceConfigTemplateResponse,
 } from '../../models/device_config_models';
-import {UpdateHostConfigRequest} from '../../models/host_config_models';
+import {
+  BatchGetHostWifiConfigsResponse,
+  BatchUpdateHostWifiConfigsResponse,
+  HostConfigChangeStatus,
+  UpdateHostConfigRequest,
+} from '../../models/host_config_models';
 import {normalizeHostConfig} from '../../utils/host_config_utils';
 import {CONFIG_SERVICE} from './config_service';
 import {HttpConfigService} from './http_config_service';
@@ -527,6 +534,104 @@ describe('HttpConfigService', () => {
 
     const req = httpMock.expectOne(
       'http://testdomain.com/v6/devices:batchUpdateDimensionConfigs',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(mockRequest);
+    req.flush(mockResponse);
+  });
+
+  it('should call batchGetHostWifiConfigs via POST', () => {
+    const mockResponse: BatchGetHostWifiConfigsResponse = {
+      entries: [
+        {
+          hostName: 'ats-host-1',
+          currentWifi: {ssid: 'ats-lab-5g', psk: '', scanSsid: false},
+          status: HostConfigChangeStatus.HOST_CONFIG_CHANGE_STATUS_WILL_UPDATE,
+        },
+      ],
+    };
+    const mockRequest = {
+      hostNames: ['ats-host-1'],
+      target: {wifi: {ssid: 'new-lab-wifi', psk: 'secret', scanSsid: true}},
+    };
+
+    service.batchGetHostWifiConfigs(mockRequest).subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts:batchGetWifiConfigs',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(mockRequest);
+    req.flush(mockResponse);
+  });
+
+  it('should call batchUpdateHostWifiConfigs via POST', () => {
+    const mockResponse: BatchUpdateHostWifiConfigsResponse = {errors: {}};
+    const mockRequest = {
+      hostNames: ['ats-host-1'],
+      target: {clearWifi: {}},
+    };
+
+    service.batchUpdateHostWifiConfigs(mockRequest).subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts:batchUpdateWifiConfigs',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(mockRequest);
+    req.flush(mockResponse);
+  });
+
+  it('should call getDeviceConfigTemplate via GET with optional universe param', () => {
+    const mockResponse: GetDeviceConfigTemplateResponse = {
+      enabled: true,
+      deviceConfigTemplate: {
+        dimensions: {
+          supported: [{name: 'recovery', value: 'true'}],
+          required: [],
+        },
+      },
+    };
+
+    service.getDeviceConfigTemplate().subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/configs/deviceTemplate',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(mockResponse);
+
+    service.getDeviceConfigTemplate({universe: 'google_1p'}).subscribe();
+    const universeReq = httpMock.expectOne(
+      'http://testdomain.com/v6/configs/deviceTemplate?universe=google_1p',
+    );
+    expect(universeReq.request.method).toBe('GET');
+    universeReq.flush({enabled: false});
+  });
+
+  it('should call updateDeviceConfigTemplate via POST', () => {
+    const mockResponse: UpdateDeviceConfigTemplateResponse = {success: true};
+    const mockRequest = {
+      deviceConfigTemplate: {
+        dimensions: {
+          supported: [{name: 'pool', value: 'cts_pool'}],
+          required: [],
+        },
+      },
+    };
+
+    service.updateDeviceConfigTemplate(mockRequest).subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/configs/deviceTemplate:update',
     );
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(mockRequest);

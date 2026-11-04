@@ -10,6 +10,7 @@ import {
 } from '../../models/device_config_models';
 import {
   HostConfig,
+  HostConfigChangeStatus,
   HostConfigUiStatus,
   UpdateHostConfigRequest,
   UpdateHostConfigResult,
@@ -549,5 +550,61 @@ describe('FakeConfigService', () => {
             done();
           });
       });
+  });
+
+  it('should batch get and update host wifi configs', (done) => {
+    service
+      .batchGetHostWifiConfigs({
+        hostNames: ['host-basic-editable.example.com', 'missing-host'],
+      })
+      .subscribe((res) => {
+        expect(res.entries).toBeDefined();
+        expect(res.entries!.length).toBe(2);
+        expect(res.entries![0].status).toBe(
+          HostConfigChangeStatus.HOST_CONFIG_CHANGE_STATUS_WRITABLE,
+        );
+        expect(res.entries![1].status).toBe(
+          HostConfigChangeStatus.HOST_CONFIG_CHANGE_STATUS_READ_ONLY,
+        );
+
+        service
+          .batchUpdateHostWifiConfigs({
+            hostNames: ['host-basic-editable.example.com', 'missing-host'],
+            target: {wifi: {ssid: 'ats-wifi', psk: 'pw', scanSsid: false}},
+          })
+          .subscribe((updateRes) => {
+            expect(
+              updateRes.errors!['host-basic-editable.example.com'],
+            ).toBeUndefined();
+            expect(updateRes.errors!['missing-host']).toBeDefined();
+            done();
+          });
+      });
+  });
+
+  it('should get and update device config template in ATS mode', (done) => {
+    service.getDeviceConfigTemplate().subscribe((initial) => {
+      expect(initial.enabled).toBeTrue();
+      expect(initial.deviceConfigTemplate?.dimensions?.supported).toBeDefined();
+
+      service
+        .updateDeviceConfigTemplate({
+          deviceConfigTemplate: {
+            dimensions: {
+              supported: [{name: 'pool', value: 'ats_pool'}],
+              required: [],
+            },
+          },
+        })
+        .subscribe((updateRes) => {
+          expect(updateRes.success).toBeTrue();
+          service.getDeviceConfigTemplate().subscribe((after) => {
+            expect(after.deviceConfigTemplate?.dimensions?.supported).toEqual([
+              {name: 'pool', value: 'ats_pool'},
+            ]);
+            done();
+          });
+        });
+    });
   });
 });

@@ -39,6 +39,9 @@ export class BulkReviewTable<
   /** Device rows to render in the review table. */
   readonly rows = input.required<readonly TEntry[]>();
 
+  /** Header text for the leading entity identifier column. */
+  readonly entityHeader = input<string>('Device ID');
+
   /** Header text for the middle current-configuration column. */
   readonly currentHeader = input.required<string>();
 

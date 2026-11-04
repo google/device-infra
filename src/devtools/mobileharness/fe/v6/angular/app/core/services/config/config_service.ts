@@ -16,6 +16,8 @@ import {
   GetConfigurableDimensionsRequest,
   GetConfigurableDimensionsResponse,
   GetDeviceConfigResult,
+  GetDeviceConfigTemplateRequest,
+  GetDeviceConfigTemplateResponse,
   GetDimensionValueSuggestionsRequest,
   GetDimensionValueSuggestionsResponse,
   GetWifiSuggestionsRequest,
@@ -23,8 +25,14 @@ import {
   RecommendedWifi,
   UpdateDeviceConfigRequest,
   UpdateDeviceConfigResult,
+  UpdateDeviceConfigTemplateRequest,
+  UpdateDeviceConfigTemplateResponse,
 } from '../../models/device_config_models';
 import {
+  BatchGetHostWifiConfigsRequest,
+  BatchGetHostWifiConfigsResponse,
+  BatchUpdateHostWifiConfigsRequest,
+  BatchUpdateHostWifiConfigsResponse,
   CheckHostConfigPermissionResult,
   GetHostConfigResult,
   UnlockHostPropertiesResponse,
@@ -206,4 +214,36 @@ export abstract class ConfigService {
   abstract unlockHostProperties(
     hostName: string,
   ): Observable<UnlockHostPropertiesResponse>;
+
+  /**
+   * Retrieves current host-level default Wi-Fi configurations and change status
+   * for the selected hosts.
+   */
+  abstract batchGetHostWifiConfigs(
+    request: BatchGetHostWifiConfigsRequest,
+  ): Observable<BatchGetHostWifiConfigsResponse>;
+
+  /**
+   * Updates or clears the host-level default Wi-Fi configuration across the
+   * selected hosts.
+   */
+  abstract batchUpdateHostWifiConfigs(
+    request: BatchUpdateHostWifiConfigsRequest,
+  ): Observable<BatchUpdateHostWifiConfigsResponse>;
+
+  /**
+   * Retrieves the controller-level device configuration template applied when
+   * newly connected unconfigured devices first register.
+   */
+  abstract getDeviceConfigTemplate(
+    request?: GetDeviceConfigTemplateRequest,
+  ): Observable<GetDeviceConfigTemplateResponse>;
+
+  /**
+   * Updates the controller-level device configuration template applied when
+   * newly connected unconfigured devices first register.
+   */
+  abstract updateDeviceConfigTemplate(
+    request: UpdateDeviceConfigTemplateRequest,
+  ): Observable<UpdateDeviceConfigTemplateResponse>;
 }
