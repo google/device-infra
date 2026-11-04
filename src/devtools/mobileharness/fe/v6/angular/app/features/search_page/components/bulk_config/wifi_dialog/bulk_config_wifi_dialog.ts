@@ -246,14 +246,9 @@ export class BulkConfigWifiDialog {
     this.wizard.runStepTask(
       () =>
         forkJoin({
-          suggestions: this.configService.getWifiSuggestions({
-            universe: this.dialogData.universe,
-            fleet: this.dialogData.fleet,
-          }),
+          suggestions: this.configService.getWifiSuggestions(),
           currentConfigs: this.configService.batchGetDeviceWifiConfigs({
             devices: this.dialogData.devices,
-            universe: this.dialogData.universe,
-            fleet: this.dialogData.fleet,
           }),
         }),
       ({suggestions, currentConfigs}) => {
@@ -307,8 +302,6 @@ export class BulkConfigWifiDialog {
         this.configService.batchGetDeviceWifiConfigs({
           devices: this.dialogData.devices,
           target: this.targetDeviceWifi(),
-          universe: this.dialogData.universe,
-          fleet: this.dialogData.fleet,
         }),
       'Failed to check device Wi-Fi status',
     );
@@ -321,8 +314,6 @@ export class BulkConfigWifiDialog {
         this.configService.batchUpdateDeviceWifiConfigs({
           devices,
           target: this.targetDeviceWifi(),
-          universe: this.dialogData.universe,
-          fleet: this.dialogData.fleet,
         }),
       'Server error while applying Wi-Fi update',
     );

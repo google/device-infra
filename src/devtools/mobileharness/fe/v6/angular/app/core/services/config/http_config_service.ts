@@ -113,15 +113,10 @@ export class HttpConfigService extends ConfigService {
   }
 
   override getWifiSuggestions(
-    request?: GetWifiSuggestionsRequest,
+    _request?: GetWifiSuggestionsRequest,
   ): Observable<GetWifiSuggestionsResponse> {
-    const params = {
-      ...(request?.fleet && {fleet: request.fleet}),
-      ...(request?.universe && {universe: request.universe}),
-    };
     return this.http.get<GetWifiSuggestionsResponse>(
       `${this.apiUrl}/configs/wifi:suggestions`,
-      {params},
     );
   }
 
@@ -144,15 +139,10 @@ export class HttpConfigService extends ConfigService {
   }
 
   override getConfigurableDimensions(
-    request?: GetConfigurableDimensionsRequest,
+    _request?: GetConfigurableDimensionsRequest,
   ): Observable<GetConfigurableDimensionsResponse> {
-    const params = {
-      ...(request?.fleet && {fleet: request.fleet}),
-      ...(request?.universe && {universe: request.universe}),
-    };
     return this.http.get<GetConfigurableDimensionsResponse>(
       `${this.apiUrl}/configs/dimensions:configurable`,
-      {params},
     );
   }
 
@@ -168,15 +158,9 @@ export class HttpConfigService extends ConfigService {
   override getDimensionValueSuggestions(
     request: GetDimensionValueSuggestionsRequest,
   ): Observable<GetDimensionValueSuggestionsResponse> {
-    let params = new HttpParams()
+    const params = new HttpParams()
       .set('dimension_name', request.dimensionName)
       .set('dimension_list', request.dimensionList);
-    if (request.universe) {
-      params = params.set('universe', request.universe);
-    }
-    if (request.fleet) {
-      params = params.set('fleet', request.fleet);
-    }
     return this.http.get<GetDimensionValueSuggestionsResponse>(
       `${this.apiUrl}/configs/dimensions:valueSuggestions`,
       {params},

@@ -43,8 +43,6 @@ describe('BulkConfigWifiDialog', () => {
       {deviceId: 'device-2', hostName: 'host-2'},
       {deviceId: 'device-3', hostName: 'host-3'},
     ],
-    universe: 'google_1p',
-    fleet: 'FLEET_SELF',
   };
 
   const mockBatchDevicesResponse: BatchGetDeviceWifiConfigsResponse = {
@@ -170,14 +168,9 @@ describe('BulkConfigWifiDialog', () => {
   });
 
   it('should initialize and load Step 1 candidate suggestions and current device Wi-Fi configs', () => {
-    expect(mockConfigService.getWifiSuggestions).toHaveBeenCalledWith({
-      universe: 'google_1p',
-      fleet: 'FLEET_SELF',
-    });
+    expect(mockConfigService.getWifiSuggestions).toHaveBeenCalledWith();
     expect(mockConfigService.batchGetDeviceWifiConfigs).toHaveBeenCalledWith({
       devices: mockDialogData.devices,
-      universe: 'google_1p',
-      fleet: 'FLEET_SELF',
     });
     expect(component.wizard.viewMode()).toBe('network');
     expect(component.initialDeviceEntries().length).toBe(3);
@@ -190,8 +183,6 @@ describe('BulkConfigWifiDialog', () => {
     );
     expect(mockConfigService.batchGetDeviceWifiConfigs).toHaveBeenCalledWith({
       devices: mockDialogData.devices,
-      universe: 'google_1p',
-      fleet: 'FLEET_SELF',
     });
 
     component.updateTargetWifi({ssid: 'target-office-wifi'});
@@ -206,8 +197,6 @@ describe('BulkConfigWifiDialog', () => {
       target: jasmine.objectContaining({
         wifi: jasmine.objectContaining({ssid: 'target-office-wifi'}),
       }),
-      universe: 'google_1p',
-      fleet: 'FLEET_SELF',
     });
     expect(component.wizard.phase()).toBe('review');
     expect(component.wizard.viewMode()).toBe('review');
@@ -235,8 +224,6 @@ describe('BulkConfigWifiDialog', () => {
       target: jasmine.objectContaining({
         wifi: jasmine.objectContaining({ssid: 'lab-guest-5g'}),
       }),
-      universe: 'google_1p',
-      fleet: 'FLEET_SELF',
     });
     expect(component.wizard.reviewSummary().alreadyMatchCount).toBe(1);
     expect(component.wizard.reviewSummary().willUpdateCount).toBe(1);
@@ -502,8 +489,6 @@ describe('BulkConfigWifiDialog', () => {
             scanSsid: false,
           },
         },
-        universe: 'google_1p',
-        fleet: 'FLEET_SELF',
       },
     );
   });
@@ -630,8 +615,6 @@ describe('BulkConfigWifiDialog', () => {
             scanSsid: false,
           },
         },
-        universe: 'google_1p',
-        fleet: 'FLEET_SELF',
       },
     );
 
@@ -658,8 +641,6 @@ describe('BulkConfigWifiDialog', () => {
         target: {
           clearWifi: {},
         },
-        universe: 'google_1p',
-        fleet: 'FLEET_SELF',
       },
     );
 

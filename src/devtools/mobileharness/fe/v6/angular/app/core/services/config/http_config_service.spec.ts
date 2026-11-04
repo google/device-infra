@@ -228,44 +228,6 @@ describe('HttpConfigService', () => {
     req.flush(mockSuggestions);
   });
 
-  it('should retrieve wifi suggestions via GET with fleet and universe query params', () => {
-    const mockSuggestions: GetWifiSuggestionsResponse = {
-      candidateWifis: [],
-    };
-
-    service
-      .getWifiSuggestions({fleet: 'FLEET_SELF', universe: 'google_1p'})
-      .subscribe((res) => {
-        expect(res).toEqual(mockSuggestions);
-      });
-
-    const req = httpMock.expectOne(
-      'http://testdomain.com/v6/configs/wifi:suggestions?fleet=FLEET_SELF&universe=google_1p',
-    );
-    expect(req.request.method).toBe('GET');
-    req.flush(mockSuggestions);
-  });
-
-  it('should retrieve wifi suggestions via GET with universe-only param', () => {
-    service.getWifiSuggestions({universe: 'google_1p'}).subscribe();
-
-    const req = httpMock.expectOne(
-      'http://testdomain.com/v6/configs/wifi:suggestions?universe=google_1p',
-    );
-    expect(req.request.method).toBe('GET');
-    req.flush({candidateWifis: []});
-  });
-
-  it('should retrieve wifi suggestions via GET with fleet-only param', () => {
-    service.getWifiSuggestions({fleet: 'FLEET_SELF'}).subscribe();
-
-    const req = httpMock.expectOne(
-      'http://testdomain.com/v6/configs/wifi:suggestions?fleet=FLEET_SELF',
-    );
-    expect(req.request.method).toBe('GET');
-    req.flush({candidateWifis: []});
-  });
-
   it('should batch get device wifi configs via POST', () => {
     const mockResponse: BatchGetDeviceWifiConfigsResponse = {
       entries: [
@@ -280,8 +242,6 @@ describe('HttpConfigService', () => {
 
     const mockRequest: BatchGetDeviceWifiConfigsRequest = {
       devices: [{deviceId: 'dev-1', hostName: 'host-1'}],
-      fleet: 'FLEET_SELF',
-      universe: 'google_1p',
     };
 
     service.batchGetDeviceWifiConfigs(mockRequest).subscribe((res) => {
@@ -300,8 +260,6 @@ describe('HttpConfigService', () => {
     const mockRequest: BatchUpdateDeviceWifiConfigsRequest = {
       devices: [{deviceId: 'dev-1', hostName: 'host-1'}],
       target: {wifi: {ssid: 'wifi-1', psk: 'secret', scanSsid: false}},
-      fleet: 'FLEET_SELF',
-      universe: 'google_1p',
     };
 
     service.batchUpdateDeviceWifiConfigs(mockRequest).subscribe((res) => {
@@ -372,26 +330,6 @@ describe('HttpConfigService', () => {
     req.flush(mockResponse);
   });
 
-  it('should retrieve configurable dimensions via GET with fleet and universe query params', () => {
-    const mockResponse: GetConfigurableDimensionsResponse = {
-      enabled: true,
-      dimensions: [],
-      allowCustomDimensions: false,
-    };
-
-    service
-      .getConfigurableDimensions({fleet: 'FLEET_SELF', universe: 'google_1p'})
-      .subscribe((res) => {
-        expect(res).toEqual(mockResponse);
-      });
-
-    const req = httpMock.expectOne(
-      'http://testdomain.com/v6/configs/dimensions:configurable?fleet=FLEET_SELF&universe=google_1p',
-    );
-    expect(req.request.method).toBe('GET');
-    req.flush(mockResponse);
-  });
-
   it('should call batchGetConfigurableDimensionKeys via POST', () => {
     const mockResponse: BatchGetConfigurableDimensionKeysResponse = {
       candidateKeys: [
@@ -410,8 +348,6 @@ describe('HttpConfigService', () => {
         {deviceId: 'dev-2', hostName: 'host-2'},
       ],
       dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
-      fleet: 'FLEET_SELF',
-      universe: 'google_1p',
     };
 
     service.batchGetConfigurableDimensionKeys(mockRequest).subscribe((res) => {
@@ -435,36 +371,13 @@ describe('HttpConfigService', () => {
       .getDimensionValueSuggestions({
         dimensionName: 'recovery',
         dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
-        universe: 'google_1p',
-        fleet: 'FLEET_SELF',
       })
       .subscribe((res) => {
         expect(res).toEqual(mockResponse);
       });
 
     const req = httpMock.expectOne(
-      'http://testdomain.com/v6/configs/dimensions:valueSuggestions?dimension_name=recovery&dimension_list=DIMENSION_LIST_SUPPORTED&universe=google_1p&fleet=FLEET_SELF',
-    );
-    expect(req.request.method).toBe('GET');
-    req.flush(mockResponse);
-  });
-
-  it('should call getDimensionValueSuggestions via GET with minimal params', () => {
-    const mockResponse: GetDimensionValueSuggestionsResponse = {
-      candidateValues: [],
-    };
-
-    service
-      .getDimensionValueSuggestions({
-        dimensionName: 'recovery',
-        dimensionList: DimensionList.DIMENSION_LIST_REQUIRED,
-      })
-      .subscribe((res) => {
-        expect(res).toEqual(mockResponse);
-      });
-
-    const req = httpMock.expectOne(
-      'http://testdomain.com/v6/configs/dimensions:valueSuggestions?dimension_name=recovery&dimension_list=DIMENSION_LIST_REQUIRED',
+      'http://testdomain.com/v6/configs/dimensions:valueSuggestions?dimension_name=recovery&dimension_list=DIMENSION_LIST_SUPPORTED',
     );
     expect(req.request.method).toBe('GET');
     req.flush(mockResponse);
@@ -488,7 +401,6 @@ describe('HttpConfigService', () => {
       dimensionName: 'recovery',
       dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
       target: {valueList: {values: ['true']}},
-      fleet: 'FLEET_SELF',
     };
 
     service.batchGetDeviceDimensionConfigs(mockRequest).subscribe((res) => {
@@ -518,7 +430,6 @@ describe('HttpConfigService', () => {
       dimensionName: 'recovery',
       dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
       target: {valueList: {values: ['true']}},
-      fleet: 'FLEET_SELF',
     };
 
     service.batchUpdateDeviceDimensionConfigs(mockRequest).subscribe((res) => {

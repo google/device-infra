@@ -9,11 +9,10 @@ import {
   GetConfigurableDimensionsResponse,
 } from '../../../../core/models/device_config_models';
 import {CONFIG_SERVICE} from '../../../../core/services/config/config_service';
-import {EnvUniverseService} from '../../../../core/services/env_universe_service';
 import {getErrorMessage} from '../../../../shared/utils/error_utils';
 import {BulkConfigDialogData, BulkConfigDialogResult} from '../../models';
 import {FleetSearchStore} from '../../services/fleet_search_store';
-import {extractDeviceTarget, toFleetProto} from '../../utils';
+import {extractDeviceTarget} from '../../utils';
 import {BulkConfigDimensionDialog} from './dimension_dialog/bulk_config_dimension_dialog';
 import {BulkConfigWifiDialog} from './wifi_dialog/bulk_config_wifi_dialog';
 
@@ -25,40 +24,48 @@ export function useBulkConfigActions() {
   const store = inject(FleetSearchStore);
   const dialog = inject(MatDialog);
   const destroyRef = inject(DestroyRef);
-  const universe = inject(EnvUniverseService).getUniverseString();
   const configService = inject(CONFIG_SERVICE);
 
   /**
-   * Latches the active fleet once at least one device is selected, retaining
-   * the loaded dimension config across selection clear/re-select within the
-   * same fleet while invalidating when the fleet changes.
+   * Batch device configuration applies only to the deployment's own fleet
+   * (`google_1p` in 1P and the local fleet in OSS, both represented as
+   * `store.fleet() === 'internal'`). Partner ATS views (`'ats'`) hide bulk
+   * configuration actions.
    */
-  const activeFleet = linkedSignal<
-    {fleet: string; hasSelection: boolean},
-    string | undefined
-  >({
-    source: () => ({
-      fleet: toFleetProto(store.fleet()),
-      hasSelection:
-        store.entity() === 'devices' && store.selectedItems().size > 0,
-    }),
-    computation: ({fleet, hasSelection}, previous) =>
-      hasSelection || previous?.value === fleet ? fleet : undefined,
+  const isOwnFleet = computed(
+    () => store.entity() === 'devices' && store.fleet() === 'internal',
+  );
+
+  /**
+   * Latches once at least one device is selected on the deployment's own fleet,
+   * retaining the loaded dimension metadata across selection clear/re-select
+   * and tab switches.
+   */
+  const shouldLoadDimensions = linkedSignal<boolean, boolean>({
+    source: () => isOwnFleet() && store.selectedItems().size > 0,
+    computation: (active, previous) => active || Boolean(previous?.value),
   });
 
   const dimensionsResource = rxResource<
     GetConfigurableDimensionsResponse | null,
-    string | undefined
+    boolean
   >({
-    params: activeFleet,
-    stream: ({params: fleet}) =>
-      fleet
-        ? configService.getConfigurableDimensions({universe, fleet})
-        : of(null),
+    params: shouldLoadDimensions,
+    stream: ({params: shouldLoad}) =>
+      shouldLoad ? configService.getConfigurableDimensions() : of(null),
   });
 
-  /** Consolidated dimension configuration state for the active fleet. */
+  /** Consolidated dimension configuration state for the active view. */
   const dimensionConfig = computed(() => {
+    if (!isOwnFleet()) {
+      return {
+        isLoading: false,
+        error: null,
+        enabled: false,
+        dimensions: [],
+        allowCustom: false,
+      };
+    }
     const res = dimensionsResource.hasValue()
       ? dimensionsResource.value()
       : null;
@@ -82,7 +89,7 @@ export function useBulkConfigActions() {
     dialogComponent: Type<T>,
     extraData?: Partial<BulkConfigDialogData>,
   ): void => {
-    if (store.entity() !== 'devices') return;
+    if (!isOwnFleet()) return;
     const selected = Array.from(
       store.selectedItems().values(),
       extractDeviceTarget,
@@ -95,8 +102,6 @@ export function useBulkConfigActions() {
         data: {
           devices: selected,
           ...extraData,
-          universe,
-          fleet: toFleetProto(store.fleet()),
         },
       })
       .afterClosed()

@@ -299,10 +299,7 @@ export declare interface CandidateWifi {
  * Request for GetWifiSuggestions.
  * Aligns with config_service.proto GetWifiSuggestionsRequest.
  */
-export declare interface GetWifiSuggestionsRequest {
-  universe?: string;
-  fleet?: string;
-}
+export declare interface GetWifiSuggestionsRequest {}
 
 /**
  * Response for GetWifiSuggestions.
@@ -346,8 +343,6 @@ export declare interface DeviceWifiConfigEntry {
 export declare interface BatchGetDeviceWifiConfigsRequest {
   devices: DeviceTarget[];
   target?: TargetDeviceWifi;
-  universe?: string;
-  fleet?: string;
 }
 
 /**
@@ -385,10 +380,7 @@ export declare interface ConfigurableDimension {
  * Request for GetConfigurableDimensions.
  * Aligns with config_service.proto GetConfigurableDimensionsRequest.
  */
-export declare interface GetConfigurableDimensionsRequest {
-  universe?: string;
-  fleet?: string;
-}
+export declare interface GetConfigurableDimensionsRequest {}
 
 /**
  * Response for GetConfigurableDimensions.
@@ -417,8 +409,6 @@ export declare interface CandidateDimensionKey {
 export declare interface BatchGetConfigurableDimensionKeysRequest {
   devices: DeviceTarget[];
   dimensionList: DimensionList;
-  universe?: string;
-  fleet?: string;
 }
 
 /**
@@ -446,8 +436,6 @@ export declare interface CandidateDimensionValue {
 export declare interface GetDimensionValueSuggestionsRequest {
   dimensionName: string;
   dimensionList: DimensionList;
-  universe?: string;
-  fleet?: string;
 }
 
 /**
@@ -502,8 +490,6 @@ export declare interface BatchGetDeviceDimensionConfigsRequest {
   dimensionName: string;
   dimensionList: DimensionList;
   target?: TargetDimensionValues;
-  universe?: string;
-  fleet?: string;
 }
 
 /**
@@ -523,8 +509,6 @@ export declare interface BatchUpdateDeviceDimensionConfigsRequest {
   dimensionName: string;
   dimensionList: DimensionList;
   target: TargetDimensionValues;
-  universe?: string;
-  fleet?: string;
 }
 
 /**
@@ -542,8 +526,6 @@ export declare interface BatchUpdateDeviceDimensionConfigsResponse {
 export declare interface BatchUpdateDeviceWifiConfigsRequest {
   devices: DeviceTarget[];
   target: TargetDeviceWifi;
-  universe?: string;
-  fleet?: string;
 }
 
 /**

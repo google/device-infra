@@ -20,7 +20,6 @@ package devtools.mobileharness.fe.v6.service.proto.config;
 
 import "google/api/annotations.proto";
 import "src/devtools/mobileharness/fe/v6/service/proto/config/config_resources.proto";
-import "src/devtools/mobileharness/fe/v6/service/proto/search/search_fleet.proto";
 
 option java_package = "com.google.devtools.mobileharness.fe.v6.service.proto.config";
 option java_multiple_files = true;
@@ -424,17 +423,13 @@ message ConfigurableDimension {
 
 // Request for GetConfigurableDimensions.
 message GetConfigurableDimensionsRequest {
-  // The universe the devices belong to.
-  string universe = 1;
-
-  // Which fleet scope the operator is viewing on the search page.
-  search.Fleet fleet = 2;
+  reserved 1, 2;
+  reserved "universe", "fleet";
 }
 
 // Response for GetConfigurableDimensions.
 message GetConfigurableDimensionsResponse {
-  // Whether batch device configuration is supported for the requested
-  // environment and universe. False on internal Partner ATS fleets.
+  // Whether batch device configuration is enabled on this deployment.
   bool enabled = 1;
 
   // Curated dimensions available for batch configuration.
@@ -458,17 +453,14 @@ message DeviceTarget {
 
 // Request for BatchGetConfigurableDimensionKeys.
 message BatchGetConfigurableDimensionKeysRequest {
+  reserved 3, 4;
+  reserved "universe", "fleet";
+
   // Explicit devices selected by the operator.
   repeated DeviceTarget devices = 1;
 
   // Which dimension list in composite_dimension to inspect.
   DimensionList dimension_list = 2;
-
-  // The universe the devices belong to.
-  string universe = 3;
-
-  // Which fleet scope the operator is viewing on the search page.
-  search.Fleet fleet = 4;
 }
 
 // Response for BatchGetConfigurableDimensionKeys.
@@ -502,18 +494,15 @@ message BatchGetConfigurableDimensionKeysResponse {
 
 // Request for GetDimensionValueSuggestions.
 message GetDimensionValueSuggestionsRequest {
+  reserved 3, 4;
+  reserved "universe", "fleet";
+
   // Dimension name in DeviceConfig (e.g. "recovery", "skip_suw_app", "pool").
   string dimension_name = 1;
 
   // Which dimension list in composite_dimension to query candidate value-sets
   // from.
   DimensionList dimension_list = 2;
-
-  // The universe the devices belong to.
-  string universe = 3;
-
-  // Which fleet scope the operator is viewing on the search page.
-  search.Fleet fleet = 4;
 }
 
 // Response for GetDimensionValueSuggestions.
@@ -555,6 +544,9 @@ message TargetDimensionValues {
 
 // Request for BatchGetDeviceDimensionConfigs.
 message BatchGetDeviceDimensionConfigsRequest {
+  reserved 5, 6;
+  reserved "universe", "fleet";
+
   // Explicit devices selected by the operator.
   repeated DeviceTarget devices = 1;
 
@@ -570,12 +562,6 @@ message BatchGetDeviceDimensionConfigsRequest {
   // writable devices return DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE or
   // DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES.
   TargetDimensionValues target = 4;
-
-  // The universe the devices belong to.
-  string universe = 5;
-
-  // Which fleet scope the operator is viewing on the search page.
-  search.Fleet fleet = 6;
 }
 
 // Response for BatchGetDeviceDimensionConfigs.
@@ -601,6 +587,9 @@ message BatchGetDeviceDimensionConfigsResponse {
 
 // Request for BatchUpdateDeviceDimensionConfigs.
 message BatchUpdateDeviceDimensionConfigsRequest {
+  reserved 5, 6;
+  reserved "universe", "fleet";
+
   // Target devices to update (only the devices with WILL_UPDATE status).
   repeated DeviceTarget devices = 1;
 
@@ -614,12 +603,6 @@ message BatchUpdateDeviceDimensionConfigsRequest {
   // Target dimension value state to apply. Required; an unset target is
   // rejected with INVALID_ARGUMENT.
   TargetDimensionValues target = 4;
-
-  // The universe the devices belong to.
-  string universe = 5;
-
-  // Which fleet scope the operator is viewing on the search page.
-  search.Fleet fleet = 6;
 }
 
 // Response for BatchUpdateDeviceDimensionConfigs.
@@ -658,11 +641,8 @@ message TargetDeviceWifi {
 
 // Request for GetWifiSuggestions.
 message GetWifiSuggestionsRequest {
-  // The universe the devices belong to.
-  string universe = 1;
-
-  // Which fleet scope the operator is viewing on the search page.
-  search.Fleet fleet = 2;
+  reserved 1, 2;
+  reserved "universe", "fleet";
 }
 
 // Response for GetWifiSuggestions.
@@ -696,6 +676,9 @@ message GetWifiSuggestionsResponse {
 
 // Request for BatchGetDeviceWifiConfigs.
 message BatchGetDeviceWifiConfigsRequest {
+  reserved 3, 4;
+  reserved "universe", "fleet";
+
   // Explicit devices selected by the operator.
   repeated DeviceTarget devices = 1;
 
@@ -705,12 +688,6 @@ message BatchGetDeviceWifiConfigsRequest {
   // DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE or
   // DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES.
   TargetDeviceWifi target = 2;
-
-  // The universe the devices belong to.
-  string universe = 3;
-
-  // Which fleet scope the operator is viewing on the search page.
-  search.Fleet fleet = 4;
 }
 
 // Response for BatchGetDeviceWifiConfigs.
@@ -736,18 +713,15 @@ message BatchGetDeviceWifiConfigsResponse {
 
 // Request for BatchUpdateDeviceWifiConfigs.
 message BatchUpdateDeviceWifiConfigsRequest {
+  reserved 3, 4;
+  reserved "universe", "fleet";
+
   // Target devices to update (only the devices with WILL_UPDATE status).
   repeated DeviceTarget devices = 1;
 
   // Target Wi-Fi state to apply. Required; an unset target is rejected with
   // INVALID_ARGUMENT.
   TargetDeviceWifi target = 2;
-
-  // The universe the devices belong to.
-  string universe = 3;
-
-  // Which fleet scope the operator is viewing on the search page.
-  search.Fleet fleet = 4;
 }
 
 // Response for BatchUpdateDeviceWifiConfigs.
