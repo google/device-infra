@@ -25,8 +25,11 @@ export class SearchPaginationComponent {
     transform: (v) => !!v,
   });
 
-  /** Active page size count. When provided, the 'Rows per page' selector is shown. */
+  /** Active page size count. When provided, the page size selector is shown. */
   readonly pageSize = input<number | undefined>(undefined);
+
+  /** Label displayed before the page size selector. */
+  readonly pageSizeLabel = input<string>('Rows per page:');
 
   /** Available options for page size selection dropdown. */
   readonly pageSizeOptions = input<number[]>([10, 25, 50, 100]);

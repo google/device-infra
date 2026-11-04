@@ -39,6 +39,13 @@ mat-card.results-area.grouped-mode,
     flex-shrink: 0;
     flex-wrap: nowrap;
     overflow: hidden;
+
+    &.rt-toolbar-active {
+      background: #c2e7ff;
+      border-bottom: none;
+      border-radius: 12px;
+      padding: 8px 16px;
+    }
   }
 }
 

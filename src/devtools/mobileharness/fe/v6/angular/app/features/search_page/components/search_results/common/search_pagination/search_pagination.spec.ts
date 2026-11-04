@@ -13,6 +13,7 @@ import {SearchPaginationComponent} from './search_pagination';
       [hasPrev]="hasPrev"
       [hasNext]="hasNext"
       [pageSize]="pageSize"
+      [pageSizeLabel]="pageSizeLabel"
       [compact]="compact"
       (prev)="onPrev()"
       (next)="onNext()"
@@ -25,6 +26,7 @@ class TestHostComponent {
   hasPrev = false;
   hasNext = false;
   pageSize: number | undefined = undefined;
+  pageSizeLabel = 'Rows per page:';
   compact = false;
 
   prevClicked = false;
@@ -116,6 +118,15 @@ describe('SearchPaginationComponent', () => {
 
     const labelEl = fixture.nativeElement.querySelector('.rt-page-label');
     expect(labelEl?.textContent?.trim()).toBe('Rows per page:');
+  });
+
+  it('renders custom pageSizeLabel when provided', () => {
+    host.pageSize = 25;
+    host.pageSizeLabel = 'Groups per page:';
+    fixture.detectChanges();
+
+    const labelEl = fixture.nativeElement.querySelector('.rt-page-label');
+    expect(labelEl?.textContent?.trim()).toBe('Groups per page:');
   });
 
   it('hides page size dropdown when pageSize is undefined', () => {

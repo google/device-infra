@@ -407,9 +407,11 @@ export class FleetSearchStore extends SearchPageStore {
     }
   }
 
-  /** Updates page size, resets pagination, and clears row selection. */
+  /** Updates page size, resets pagination, and clears row selection and expanded groups. */
   override setPageSize(newSize: number) {
     super.setPageSize(newSize);
+    this.openGroupIds.set(new Set());
+    this.expandedGroupPages.set(new Map());
     this.clearSelection();
   }
 

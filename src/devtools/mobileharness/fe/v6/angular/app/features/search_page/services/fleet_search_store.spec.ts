@@ -1103,6 +1103,22 @@ describe('FleetSearchStore', () => {
       expect(store.pickerState().advanced.active).toBeTrue();
       expect(store.pickerState().advanced.text).toBe('^shared');
     });
+
+    it('resets pagination, selection, and expanded group states when setPageSize is called', async () => {
+      const store = await createStoreAt({});
+      store.toggleSelectRows([{id: 'dev-1'}]);
+      store.openGroupIds.set(new Set(['group-1']));
+      store.expandedGroupPages.set(new Map([['group-1', {loading: false}]]));
+
+      store.setPageSize(50);
+
+      expect(store.pageSize()).toBe(50);
+      expect(store.pageIndex()).toBe(0);
+      expect(store.pageToken()).toBe('');
+      expect(store.selectedItems().size).toBe(0);
+      expect(store.openGroupIds().size).toBe(0);
+      expect(store.expandedGroupPages().size).toBe(0);
+    });
   });
 
   it('applies advanced matching filter and updates correctly when value is changed', async () => {

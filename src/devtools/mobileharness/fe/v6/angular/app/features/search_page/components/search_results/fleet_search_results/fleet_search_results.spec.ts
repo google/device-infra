@@ -790,5 +790,45 @@ describe('FleetSearchResultsComponent', () => {
       expect(tb).toBeTruthy();
       expect(tb.textContent).toContain('by host');
     });
+
+    it('renders group pagination with "Groups per page:" label and delegates pageSizeChange to store', () => {
+      mockStore.groupByKeys.set(['host']);
+      mockStore.groups.set([{groupId: 'group-1', title: 'Host A'}]);
+      mockStore.pageSize.set(25);
+      fixture.detectChanges();
+
+      const pageLabelEl = fixture.nativeElement.querySelector('.rt-page-label');
+      expect(pageLabelEl?.textContent?.trim()).toBe('Groups per page:');
+
+      const paginationDebug = fixture.debugElement.query(
+        By.css('app-search-pagination'),
+      );
+      expect(paginationDebug.componentInstance.pageSize()).toBe(25);
+
+      paginationDebug.componentInstance.pageSizeChange.emit(50);
+      expect(mockStore.setPageSize).toHaveBeenCalledWith(50);
+    });
+
+    it('applies active selection toolbar background color in grouped mode matching flat view', () => {
+      mockStore.selectedItems.set(toSelectedMap(['dev-1']));
+      mockStore.groupByKeys.set([]);
+      fixture.detectChanges();
+
+      const flatToolbar = fixture.nativeElement.querySelector(
+        '.rt-toolbar.rt-toolbar-active',
+      ) as HTMLElement;
+      expect(flatToolbar).toBeTruthy();
+      const flatBg = getComputedStyle(flatToolbar).backgroundColor;
+
+      mockStore.groupByKeys.set(['host']);
+      mockStore.groups.set([{groupId: 'group-1', title: 'Host A'}]);
+      fixture.detectChanges();
+
+      const groupedToolbar = fixture.nativeElement.querySelector(
+        '.results-area.grouped-mode .rt-toolbar.rt-toolbar-active',
+      ) as HTMLElement;
+      expect(groupedToolbar).toBeTruthy();
+      expect(getComputedStyle(groupedToolbar).backgroundColor).toBe(flatBg);
+    });
   });
 });

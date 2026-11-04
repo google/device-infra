@@ -1,7 +1,7 @@
 <div class="rt-pagination" [class.compact]="compact()">
   <ng-content select="[paginationLeading]"></ng-content>
   @if (pageSize() !== undefined) {
-    <span class="rt-page-label">Rows per page:</span>
+    <span class="rt-page-label">{{ pageSizeLabel() }}</span>
     <mat-select
       [value]="pageSize()"
       (valueChange)="pageSizeChange.emit($event)"

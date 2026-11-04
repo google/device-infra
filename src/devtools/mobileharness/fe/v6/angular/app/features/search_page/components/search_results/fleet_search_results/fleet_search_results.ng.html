@@ -132,9 +132,12 @@
     <!-- Group Pagination Footer -->
     @if (groupedViewMode() === 'groups') {
       <app-search-pagination
+        [pageSize]="store.pageSize()"
+        pageSizeLabel="Groups per page:"
         [rangeText]="store.rangeText()"
         [hasPrev]="store.hasPrevPage()"
         [hasNext]="store.hasNextPage()"
+        (pageSizeChange)="store.setPageSize($event)"
         (prev)="store.prevPage()"
         (next)="store.nextPage()"
       >
