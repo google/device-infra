@@ -138,7 +138,12 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
       case ANONYMOUS:
         return request -> {};
       case NONE:
-        break;
+        throw new MobileHarnessException(
+            BasicErrorId.GCS_INVALID_PARAMS,
+            String.format(
+                "No GCS credential is available for bucket %s. Provide a credential file flag"
+                    + " for this bucket or configure Application Default Credentials.",
+                storageParams.bucketName));
     }
     throw new MobileHarnessException(
         BasicErrorId.GCS_INVALID_PARAMS,

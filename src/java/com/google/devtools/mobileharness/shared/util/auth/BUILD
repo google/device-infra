@@ -40,12 +40,8 @@ java_library(
     name = "credential_file_util",
     srcs = ["CredentialFileUtil.java"],
     deps = [
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/network",
-        "//src/java/com/google/devtools/mobileharness/shared/version",
     ],
 )

@@ -88,6 +88,10 @@ public final class GcsCredentialUtil {
       return GcsUtil.CredentialType.ofAppDefault();
     }
 
+    logger.atWarning().log(
+        "No GCS credential found. Provide the credential file flag for this bucket (e.g."
+            + " --file_transfer_cred_file or --gcs_resolver_credential_file) or configure"
+            + " Application Default Credentials.");
     return GcsUtil.CredentialType.ofNone();
   }
 
