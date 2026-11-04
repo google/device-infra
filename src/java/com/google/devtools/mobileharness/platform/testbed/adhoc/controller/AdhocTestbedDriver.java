@@ -56,7 +56,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.BiFunction;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
@@ -150,7 +149,7 @@ public class AdhocTestbedDriver extends BaseDriver {
     this.driverFactory = driverFactory;
     this.driverWrapper = driverWrapper;
     this.decoratorExtender = null;
-    this.subDrivers = ImmutableList.copyOf(createSubDrivers(devices));
+    this.subDrivers = createSubDrivers(devices);
     this.preDriverBarrier = new Barrier(devices.size());
 
     // Sets up TestbedDevice.
@@ -290,29 +289,28 @@ public class AdhocTestbedDriver extends BaseDriver {
                 "Sub test result[%s], sub test name[%s], sub test ID[%s]",
                 subTestResult, subTestInfo.locator().getName(), subTestInfo.locator().getId());
         switch (subTestResult) {
-          case FAIL:
+          case FAIL -> {
             hasFailTests = true;
             rootTestInfo.log().atInfo().alsoTo(logger).log("%s", errMsg);
-            break;
-          case ERROR:
+          }
+          case ERROR -> {
             errorTestsTotalCnt++;
             if (subTestInfo.resultWithCause().get().causeProto().isPresent()) {
               ErrorType errorType =
                   ErrorModelConverter.getCriticalErrorId(
                           subTestInfo.resultWithCause().get().causeProto().get())
                       .getType();
-              if (ErrorType.INFRA_ISSUE.equals(errorType)) {
+              if (errorType.equals(ErrorType.INFRA_ISSUE)) {
                 infraErrorTestsCnt++;
-              } else if (ErrorType.CUSTOMER_ISSUE.equals(errorType)) {
+              } else if (errorType.equals(ErrorType.CUSTOMER_ISSUE)) {
                 customerErrorTestsCnt++;
-              } else if (ErrorType.DEPENDENCY_ISSUE.equals(errorType)) {
+              } else if (errorType.equals(ErrorType.DEPENDENCY_ISSUE)) {
                 dependencyErrorTestsCnt++;
               }
             }
             rootTestInfo.log().atInfo().alsoTo(logger).log("%s", errMsg);
-            break;
-          default:
-            break;
+          }
+          default -> {}
         }
       }
 
@@ -333,14 +331,13 @@ public class AdhocTestbedDriver extends BaseDriver {
             .resultWithCause()
             .setNonPassing(
                 TestResult.ERROR,
-                new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-                    errorResultErrorId, "Test has >= 1 ERROR subtest(s)"));
+                new MobileHarnessException(errorResultErrorId, "Test has >= 1 ERROR subtest(s)"));
       } else if (hasFailTests) {
         rootTestInfo
             .resultWithCause()
             .setNonPassing(
                 TestResult.FAIL,
-                new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                new MobileHarnessException(
                     ExtErrorId.MOBLY_TESTBED_ADHOC_DRIVER_SUBTEST_WITH_FAIL_RESULT,
                     "Test has >= 1 FAIL subtest(s)"));
       }
@@ -373,15 +370,16 @@ public class AdhocTestbedDriver extends BaseDriver {
     }
   }
 
-  private List<Driver> createSubDrivers(List<Device> devices) throws MobileHarnessException {
+  private ImmutableList<Driver> createSubDrivers(List<Device> devices)
+      throws MobileHarnessException {
     List<Driver> subDriver = new ArrayList<>();
 
     // Creates the main driver and secondary drivers.
-    List<Driver> rawSubDrivers = createRawSubDrivers(devices);
+    ImmutableList<Driver> rawSubDrivers = createRawSubDrivers(devices);
 
     // Wraps them with two barriers.
-    List<Driver> synchronizedSubDrivers =
-        rawSubDrivers.stream().map(DriverBarrier::new).collect(Collectors.toList());
+    ImmutableList<Driver> synchronizedSubDrivers =
+        rawSubDrivers.stream().map(DriverBarrier::new).collect(toImmutableList());
 
     // Adds decorator stack to each sub driver.
     for (int i = 0; i < devices.size(); i++) {
@@ -395,11 +393,12 @@ public class AdhocTestbedDriver extends BaseDriver {
     return subDriver.stream().map(DecoratorBarrier::new).collect(toImmutableList());
   }
 
-  private List<Driver> createRawSubDrivers(List<Device> devices) throws MobileHarnessException {
+  private ImmutableList<Driver> createRawSubDrivers(List<Device> devices)
+      throws MobileHarnessException {
     return Stream.concat(
             Stream.of(createMainDriver(devices.get(0))),
             devices.stream().skip(1L).map(SecondaryDriver::new))
-        .collect(Collectors.toList());
+        .collect(toImmutableList());
   }
 
   private Driver createMainDriver(Device primaryDevice) throws MobileHarnessException {
@@ -435,8 +434,7 @@ public class AdhocTestbedDriver extends BaseDriver {
     // the combined TestbedDevice in order to perform setup and device management correctly.
     List<Device> allSubDevices = new ArrayList<>();
     for (Device device : devices) {
-      if (device instanceof CompositeDevice) {
-        CompositeDevice compositeDevice = (CompositeDevice) device;
+      if (device instanceof CompositeDevice compositeDevice) {
         allSubDevices.addAll(compositeDevice.getManagedDevices().asList());
       } else {
         allSubDevices.add(device);
