@@ -1,4 +1,4 @@
-import {DecimalPipe, NgTemplateOutlet} from '@angular/common';
+import {DecimalPipe, DOCUMENT, NgTemplateOutlet} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -20,11 +20,21 @@ import {MatTableModule} from '@angular/material/table';
 import {MatTooltipModule} from '@angular/material/tooltip';
 
 import {Column} from '../../../../../core/models/search';
+import {useCopyToClipboard} from '../../../../../shared/composables/copy';
 import {KeyDescriptionTooltipDirective} from '../../../../../shared/directives/key_description_tooltip/key_description_tooltip';
 import {TooltipIfTruncatedDirective} from '../../../../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
+import {SnackBarService} from '../../../../../shared/services/snackbar_service';
 import {ColumnSelectorDialogData, ColumnSelectorResult} from '../../../models';
 import {FleetSearchStore} from '../../../services/fleet_search_store';
-import {getDeviceTargetKey} from '../../../utils';
+import {
+  buildCsvString,
+  buildExportFileName,
+  buildTsvString,
+  getDeviceTargetKey,
+  getEntityNoun,
+  MAX_EXPORT_ROWS,
+  triggerCsvDownload,
+} from '../../../utils';
 import {useBulkConfigActions} from '../../bulk_config/bulk_config_actions';
 import {ColumnSelectorComponent} from '../common/column_selector/column_selector';
 import {DensityDropdownComponent} from '../common/density_dropdown/density_dropdown';
@@ -66,6 +76,27 @@ export class FleetSearchResultsComponent {
   readonly bulkConfig = useBulkConfigActions();
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly doc = inject(DOCUMENT);
+  private readonly snackBarService = inject(SnackBarService);
+  private readonly copyToClipboard = useCopyToClipboard();
+
+  /** Whether export is disabled because the number of selected items exceeds MAX_EXPORT_ROWS (5,000). */
+  readonly isExportDisabled = computed<boolean>(
+    () => this.store.selectedItems().size > MAX_EXPORT_ROWS,
+  );
+
+  /** Tooltip text shown on the Export trigger wrapper when the 5,000-item limit is exceeded. */
+  readonly exportDisabledTooltip = computed<string>(() => {
+    const noun = getEntityNoun(this.store.entity(), true);
+    return `Export is limited to ${MAX_EXPORT_ROWS.toLocaleString()} selected ${noun}`;
+  });
+
+  /** Dynamic menu item label for the selection toolbar's Download CSV action. */
+  readonly selectionExportLabel = computed<string>(() => {
+    const count = this.store.selectedItems().size;
+    const noun = getEntityNoun(this.store.entity(), count !== 1);
+    return `Download CSV (${count.toLocaleString()} selected ${noun})`;
+  });
 
   /** Flat table rows with pre-computed composite tracking keys and selection state. */
   readonly tableRows = computed(() => {
@@ -139,5 +170,38 @@ export class FleetSearchResultsComponent {
           this.store.setVisibleColumns(res.columns);
         }
       });
+  }
+
+  /**
+   * Directly exports the currently selected items (`store.selectedItems()`)
+   * using the displayed table columns (`store.displayColumns()`).
+   */
+  exportSelection(format: 'csv' | 'tsv'): void {
+    const selected = this.store.selectedItems();
+    const count = selected.size;
+    if (count === 0 || count > MAX_EXPORT_ROWS) return;
+
+    const rows = Array.from(selected.values());
+    const columns = this.store.displayColumns();
+    const entity = this.store.entity();
+    const fleet = this.store.fleet();
+    const noun = getEntityNoun(entity, count !== 1);
+    const colCount = columns.length;
+    const colNoun = colCount === 1 ? 'column' : 'columns';
+
+    if (format === 'csv') {
+      const csv = buildCsvString(columns, rows);
+      const fileName = buildExportFileName(entity, fleet);
+      triggerCsvDownload(csv, fileName, this.doc);
+      this.snackBarService.showSuccess(
+        `Exported ${count.toLocaleString()} ${noun} (${colCount} ${colNoun}) to ${fileName}`,
+      );
+      return;
+    }
+
+    this.copyToClipboard(
+      buildTsvString(columns, rows),
+      `Copied ${count.toLocaleString()} ${noun} (${colCount} ${colNoun}) to clipboard`,
+    );
   }
 }

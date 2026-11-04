@@ -18,6 +18,8 @@ import {
   ConfigService,
 } from '../../../../../core/services/config/config_service';
 import {EnvUniverseService} from '../../../../../core/services/env_universe_service';
+import {ClipboardService} from '../../../../../shared/services/clipboard_service';
+import {SnackBarService} from '../../../../../shared/services/snackbar_service';
 import {BulkConfigDialogResult, FleetScope} from '../../../models';
 import {FleetSearchStore} from '../../../services/fleet_search_store';
 import {BulkConfigDimensionDialog} from '../../bulk_config/dimension_dialog/bulk_config_dimension_dialog';
@@ -55,7 +57,12 @@ class MockFleetSearchStore {
   readonly groupedResults = signal<{
     totalItems?: number;
     totalGroups?: number;
+    groupByKeys?: Column[];
   } | null>(null);
+  readonly keyMetadataMap = signal<Map<string, {keyDisplayName?: string}>>(
+    new Map(),
+  );
+  readonly activeChips = signal<unknown[]>([]);
   readonly groupKeysText = signal<string>('');
   readonly groupSortActiveLabel = signal<string>('Count (High to Low)');
   readonly groupSortOptions = signal<Array<{label: string; value: string}>>([]);
@@ -105,6 +112,8 @@ describe('FleetSearchResultsComponent', () => {
   let mockDialog: jasmine.SpyObj<MatDialog>;
   let mockEnvUniverseService: jasmine.SpyObj<EnvUniverseService>;
   let mockConfigService: jasmine.SpyObj<ConfigService>;
+  let mockClipboardService: jasmine.SpyObj<ClipboardService>;
+  let mockSnackBarService: jasmine.SpyObj<SnackBarService>;
 
   beforeEach(async () => {
     mockStore = new MockFleetSearchStore();
@@ -129,6 +138,15 @@ describe('FleetSearchResultsComponent', () => {
         allowCustomDimensions: true,
       }),
     );
+    mockClipboardService = jasmine.createSpyObj<ClipboardService>(
+      'ClipboardService',
+      ['copyToClipboard'],
+    );
+    mockClipboardService.copyToClipboard.and.returnValue(true);
+    mockSnackBarService = jasmine.createSpyObj<SnackBarService>(
+      'SnackBarService',
+      ['showSuccess', 'showError'],
+    );
 
     await TestBed.configureTestingModule({
       imports: [FleetSearchResultsComponent],
@@ -138,6 +156,8 @@ describe('FleetSearchResultsComponent', () => {
         {provide: MatDialog, useValue: mockDialog},
         {provide: EnvUniverseService, useValue: mockEnvUniverseService},
         {provide: CONFIG_SERVICE, useValue: mockConfigService},
+        {provide: ClipboardService, useValue: mockClipboardService},
+        {provide: SnackBarService, useValue: mockSnackBarService},
       ],
     }).compileComponents();
 
@@ -829,6 +849,196 @@ describe('FleetSearchResultsComponent', () => {
       ) as HTMLElement;
       expect(groupedToolbar).toBeTruthy();
       expect(getComputedStyle(groupedToolbar).backgroundColor).toBe(flatBg);
+    });
+  });
+
+  describe('Zero-Dialog Bulk Export & Toolbar Cleanup', () => {
+    it('does not render a redundant more_vert overflow menu in unselected flat toolbar', () => {
+      mockStore.selectedItems.set(new Map());
+      mockStore.groupByKeys.set([]);
+      fixture.detectChanges();
+
+      const moreBtn = fixture.debugElement.query(
+        By.css('button[title="More options"]'),
+      );
+      expect(moreBtn).toBeNull();
+    });
+
+    it('renders active Export menu trigger for both devices and hosts when items are selected', () => {
+      mockStore.entity.set('devices');
+      mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
+      fixture.detectChanges();
+
+      let exportBtn = fixture.debugElement.query(
+        By.css('button[title="Export selected items"]'),
+      );
+      expect(exportBtn).toBeTruthy();
+      expect(exportBtn.nativeElement.disabled).toBeFalse();
+      expect(component.selectionExportLabel()).toBe(
+        'Download CSV (2 selected devices)',
+      );
+
+      mockStore.entity.set('hosts');
+      mockStore.selectedItems.set(new Map([['host-1', {id: 'host-1'}]]));
+      fixture.detectChanges();
+
+      exportBtn = fixture.debugElement.query(
+        By.css('button[title="Export selected items"]'),
+      );
+      expect(exportBtn).toBeTruthy();
+      expect(exportBtn.nativeElement.disabled).toBeFalse();
+      expect(component.selectionExportLabel()).toBe(
+        'Download CSV (1 selected host)',
+      );
+    });
+
+    it('exports selected rows as CSV directly from selectedItems', () => {
+      mockStore.entity.set('devices');
+      mockStore.fleet.set('internal');
+      mockStore.groupByKeys.set([]);
+      mockStore.displayColumns.set([
+        {key: 'field::uuid', displayName: 'Device ID'},
+        {key: 'status', displayName: 'Status'},
+      ]);
+      const row1: Row = {
+        id: 'dev-1',
+        cells: [
+          {
+            link: {
+              text: 'dev-1',
+              target: {device: {id: 'dev-1', hostName: 'host-for-dev-1'}},
+            },
+          },
+          {status: {text: 'IDLE'}},
+        ],
+      };
+      mockStore.selectedItems.set(new Map([['dev-1@@host-for-dev-1', row1]]));
+      fixture.detectChanges();
+
+      const clickSpy = spyOn(HTMLAnchorElement.prototype, 'click');
+      spyOn(URL, 'createObjectURL').and.returnValue('blob:mock');
+
+      component.exportSelection('csv');
+
+      expect(clickSpy).toHaveBeenCalled();
+      expect(mockSnackBarService.showSuccess).toHaveBeenCalledWith(
+        jasmine.stringMatching(
+          /^Exported 1 device \(2 columns\) to omnilab-devices-internal-\d{4}-\d{2}-\d{2}\.csv$/,
+        ),
+      );
+    });
+
+    it('copies selected rows as TSV to clipboard and shows success snackbar', async () => {
+      mockStore.entity.set('devices');
+      mockStore.groupByKeys.set([]);
+      mockStore.displayColumns.set([
+        {key: 'field::uuid', displayName: 'Device ID'},
+        {key: 'model', displayName: 'Model'},
+      ]);
+      const row1: Row = {
+        id: 'dev-1',
+        cells: [
+          {
+            link: {
+              text: 'dev-1',
+              target: {device: {id: 'dev-1', hostName: 'host-for-dev-1'}},
+            },
+          },
+          {text: {value: 'Pixel 9'}},
+        ],
+      };
+      mockStore.selectedItems.set(new Map([['dev-1@@host-for-dev-1', row1]]));
+      fixture.detectChanges();
+
+      component.exportSelection('tsv');
+
+      expect(mockClipboardService.copyToClipboard).toHaveBeenCalledWith(
+        'Device ID\tModel\ndev-1\tPixel 9',
+      );
+      expect(mockSnackBarService.showSuccess).toHaveBeenCalledWith(
+        'Copied 1 device (2 columns) to clipboard',
+      );
+    });
+
+    it('exports all selected rows across multiple pages using selectedItems', () => {
+      mockStore.entity.set('devices');
+      mockStore.fleet.set('internal');
+      mockStore.groupByKeys.set([]);
+      mockStore.displayColumns.set([
+        {key: 'field::uuid', displayName: 'Device ID'},
+        {key: 'status', displayName: 'Status'},
+      ]);
+
+      const page1Row: Row = {
+        id: 'dev-page-1',
+        cells: [
+          {
+            link: {
+              text: 'dev-page-1',
+              target: {device: {id: 'dev-page-1', hostName: 'host-1'}},
+            },
+          },
+          {status: {text: 'IDLE'}},
+        ],
+      };
+      const page2Row: Row = {
+        id: 'dev-page-2',
+        cells: [
+          {
+            link: {
+              text: 'dev-page-2',
+              target: {device: {id: 'dev-page-2', hostName: 'host-2'}},
+            },
+          },
+          {status: {text: 'BUSY'}},
+        ],
+      };
+
+      // Simulate user having selected page 1 row, navigated to page 2, and selected page 2 row
+      mockStore.rows.set([page2Row]);
+      mockStore.selectedItems.set(
+        new Map([
+          ['dev-page-1@@host-1', page1Row],
+          ['dev-page-2@@host-2', page2Row],
+        ]),
+      );
+
+      component.exportSelection('tsv');
+
+      expect(mockClipboardService.copyToClipboard).toHaveBeenCalledWith(
+        'Device ID\tStatus\ndev-page-1\tIDLE\ndev-page-2\tBUSY',
+      );
+      expect(mockSnackBarService.showSuccess).toHaveBeenCalledWith(
+        'Copied 2 devices (2 columns) to clipboard',
+      );
+    });
+
+    it('disables Export button and shows tooltip when more than 5,000 items are selected', () => {
+      mockStore.entity.set('devices');
+      const overLimitMap = new Map<string, Row>();
+      for (let i = 1; i <= 5001; i++) {
+        overLimitMap.set(`dev-${i}`, {id: `dev-${i}`});
+      }
+      mockStore.selectedItems.set(overLimitMap);
+      fixture.detectChanges();
+
+      expect(component.isExportDisabled()).toBeTrue();
+      expect(component.exportDisabledTooltip()).toBe(
+        'Export is limited to 5,000 selected devices',
+      );
+
+      const wrapper = fixture.debugElement.query(
+        By.css('.rt-export-trigger-wrapper'),
+      );
+      expect(wrapper).toBeTruthy();
+      const exportBtn = wrapper.query(By.css('button'));
+      expect(exportBtn.nativeElement.disabled).toBeTrue();
+      expect(exportBtn.nativeElement.title).toBe('');
+
+      const clickSpy = spyOn(HTMLAnchorElement.prototype, 'click');
+      component.exportSelection('csv');
+      expect(clickSpy).not.toHaveBeenCalled();
+      expect(mockSnackBarService.showSuccess).not.toHaveBeenCalled();
     });
   });
 });

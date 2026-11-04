@@ -176,23 +176,6 @@
           [density]="store.density()"
           (densityChange)="store.density.set($event)"
         ></app-density-dropdown>
-
-        <span class="rt-grow"></span>
-
-        <!-- More Options Menu -->
-        <button class="rt-icon-btn" [matMenuTriggerFor]="moreMenu" title="More options">
-          <mat-icon class="material-symbols-outlined">more_vert</mat-icon>
-        </button>
-        <mat-menu #moreMenu="matMenu" class="more-dropdown-menu">
-          <button mat-menu-item (click)="store.executeSearch()">
-            <mat-icon class="material-symbols-outlined">refresh</mat-icon>
-            <span>Refresh</span>
-          </button>
-          <button mat-menu-item [disabled]="true" title="Feature is under development">
-            <mat-icon class="material-symbols-outlined">download</mat-icon>
-            <span>Export</span>
-          </button>
-        </mat-menu>
       }
     </div>
 
@@ -386,10 +369,44 @@
       }
     }
 
-    <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
-      <mat-icon class="material-symbols-outlined">download</mat-icon>
-      Export
-    </button>
+    <span
+      class="rt-export-trigger-wrapper"
+      [matTooltip]="exportDisabledTooltip()"
+      [matTooltipDisabled]="!isExportDisabled()"
+    >
+      <button
+        type="button"
+        class="rt-btn-text"
+        [matMenuTriggerFor]="exportMenu"
+        [disabled]="isExportDisabled()"
+        [title]="isExportDisabled() ? '' : 'Export selected items'"
+      >
+        <mat-icon class="material-symbols-outlined">download</mat-icon>
+        Export
+        <mat-icon class="material-symbols-outlined rt-caret">arrow_drop_down</mat-icon>
+      </button>
+    </span>
+    <mat-menu
+      #exportMenu="matMenu"
+      class="export-dropdown-menu rt-menu rt-menu-no-check"
+    >
+      <button
+        mat-menu-item
+        class="rt-menu-item rt-menu-action"
+        (click)="exportSelection('csv')"
+      >
+        <mat-icon class="material-symbols-outlined rt-menu-icon">download</mat-icon>
+        <span class="rt-menu-label">{{ selectionExportLabel() }}</span>
+      </button>
+      <button
+        mat-menu-item
+        class="rt-menu-item rt-menu-action"
+        (click)="exportSelection('tsv')"
+      >
+        <mat-icon class="material-symbols-outlined rt-menu-icon">content_copy</mat-icon>
+        <span class="rt-menu-label">Copy table to clipboard</span>
+      </button>
+    </mat-menu>
     <span class="rt-grow"></span>
     <button class="rt-btn-text" (click)="store.clearSelection()">
       <mat-icon class="material-symbols-outlined">close</mat-icon>
