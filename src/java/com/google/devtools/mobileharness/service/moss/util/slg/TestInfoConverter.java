@@ -42,7 +42,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.RemoteFiles;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Status;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
-import java.util.stream.Collectors;
 
 /**
  * Utility class to convert a {@link TestInfo} to a {@link TestInfoProto} in forward and backward.
@@ -110,7 +109,7 @@ public final class TestInfoConverter {
               .map(
                   subTestInfoProto ->
                       TestInfoConverter.fromProto(resumeFiles, jobInfo, testInfo, subTestInfoProto))
-              .collect(Collectors.toList()));
+              .collect(toImmutableList()));
     }
     return testInfo;
   }
@@ -141,7 +140,7 @@ public final class TestInfoConverter {
         .addAllSubTestInfo(
             testInfo.subTests().getAll().values().stream()
                 .map(TestInfoConverter::toProto)
-                .collect(Collectors.toList()))
+                .collect(toImmutableList()))
         .setExtraInfo(TestExtraInfo.newBuilder().setUser(testInfo.jobInfo().jobUser().getRunAs()))
         .build();
   }

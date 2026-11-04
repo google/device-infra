@@ -46,7 +46,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.RemoteFiles;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Status;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /** Utility class to convert a {@link JobInfo} to a {@link JobInfoProto} in forward and backward. */
@@ -58,7 +57,7 @@ public final class JobInfoConverter {
    * Gets a {@link JobInfo} by the given {@link JobInfoProto} and the prefix to create local
    * directories.
    *
-   * @param jobDir the job root directory
+   * @param rootDir the job root directory
    */
   public static JobInfo fromProto(
       boolean resumeFiles, @Nullable String rootDir, JobInfoProto jobInfoProto) {
@@ -79,7 +78,6 @@ public final class JobInfoConverter {
         FilesConverter.fromProto(
             timing.toNewTiming(),
             resumeFiles ? jobInfoProto.getFiles() : FilesProto.getDefaultInstance());
-    ;
     ScopedSpecs scopedSpecs =
         JobInInternalFactory.createScopedSpecs(
             params, timing, jobScheduleUnitProto.getScopedSpecsJsonString());
@@ -135,7 +133,7 @@ public final class JobInfoConverter {
                   testInfoProto ->
                       TestInfoConverter.fromProto(
                           resumeFiles, jobInfo, /* parentTestInfo= */ null, testInfoProto))
-              .collect(Collectors.toList()));
+              .collect(toImmutableList()));
     }
     return jobInfo;
   }
@@ -177,7 +175,7 @@ public final class JobInfoConverter {
         .addAllTestInfo(
             jobInfo.tests().getAll().values().stream()
                 .map(TestInfoConverter::toProto)
-                .collect(Collectors.toList()))
+                .collect(toImmutableList()))
         .build();
   }
 }

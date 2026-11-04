@@ -27,7 +27,6 @@ import com.google.devtools.mobileharness.service.moss.proto.Slg.AllocationProto.
 import com.google.devtools.mobileharness.service.moss.proto.Slg.AllocationProto.DimensionMultiMap;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.AllocationInternalFactory;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Utility class to convert a {@link Allocation} to a {@link AllocationProto} in forward and
@@ -80,18 +79,19 @@ public final class AllocationConverter {
     deviceLocators.forEach(
         deviceLocator -> {
           Multimap<String, String> dimensions = allDevices.get(deviceLocator);
-          allocationProto.addDeviceLocator(deviceLocator.toNewDeviceLocator().toProto());
-          allocationProto.addDimensionMultiMap(
-              DimensionMultiMap.newBuilder()
-                  .addAllDimensionEntry(
-                      dimensions.asMap().entrySet().stream()
-                          .map(
-                              entry ->
-                                  DimensionEntry.newBuilder()
-                                      .setKey(entry.getKey())
-                                      .addAllValue(entry.getValue())
-                                      .build())
-                          .collect(Collectors.toList())));
+          allocationProto
+              .addDeviceLocator(deviceLocator.toNewDeviceLocator().toProto())
+              .addDimensionMultiMap(
+                  DimensionMultiMap.newBuilder()
+                      .addAllDimensionEntry(
+                          dimensions.asMap().entrySet().stream()
+                              .map(
+                                  entry ->
+                                      DimensionEntry.newBuilder()
+                                          .setKey(entry.getKey())
+                                          .addAllValue(entry.getValue())
+                                          .build())
+                              .collect(toImmutableList())));
         });
     return allocationProto.build();
   }

@@ -16,12 +16,13 @@
 
 package com.google.devtools.mobileharness.service.moss.util.slg;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.devtools.mobileharness.service.moss.proto.Slg.SubDeviceSpecsProto;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.JobInInternalFactory;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
-import java.util.stream.Collectors;
 
 /**
  * Utility class to convert a {@link SubDeviceSpecs} to a {@link SubDeviceSpecsProto} in forward and
@@ -44,7 +45,7 @@ final class SubDeviceSpecsConverter {
             .map(
                 subDeviceSpecProto ->
                     SubDeviceSpecConverter.fromProto(params, timing, subDeviceSpecProto))
-            .collect(Collectors.toList()),
+            .collect(toImmutableList()),
         subDeviceSpecsProto);
   }
 
@@ -54,7 +55,7 @@ final class SubDeviceSpecsConverter {
         .addAllSubDeviceSpecProto(
             subDeviceSpecs.getAllSubDevices().stream()
                 .map(SubDeviceSpecConverter::toProto)
-                .collect(Collectors.toList()))
+                .collect(toImmutableList()))
         .addAllSharedDimensionName(subDeviceSpecs.getSharedDimensionNames())
         .addAllLatestDeviceIdFromAllocation(subDeviceSpecs.getLatestDeviceIdsFromAllocation())
         .build();
