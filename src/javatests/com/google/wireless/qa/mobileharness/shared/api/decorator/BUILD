@@ -130,6 +130,7 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
+        "@maven//:com_google_testparameterinjector_test_parameter_injector",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
     ],
