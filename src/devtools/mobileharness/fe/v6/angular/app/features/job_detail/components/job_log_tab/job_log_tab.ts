@@ -50,7 +50,7 @@ export class JobLogTab {
       })
       .pipe(
         map((resp) => ({
-          offset: resp.nextOffset,
+          offset: Number(resp.nextOffset ?? 0),
           content: resp.logContent || '',
           isDone:
             resp.jobStatus === JobStatus.JOB_STATUS_DONE ||

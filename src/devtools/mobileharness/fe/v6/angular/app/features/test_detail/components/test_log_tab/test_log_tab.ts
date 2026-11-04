@@ -59,7 +59,7 @@ export class TestLogTab {
       })
       .pipe(
         map((resp) => ({
-          offset: resp.nextOffset,
+          offset: Number(resp.nextOffset ?? 0),
           content: resp.logContent || '',
           isDone:
             resp.testStatus === TestStatus.TEST_STATUS_DONE ||

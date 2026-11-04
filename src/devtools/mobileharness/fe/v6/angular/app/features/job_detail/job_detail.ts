@@ -160,7 +160,13 @@ export class JobDetail {
 
   readonly statusPillLabel = computed(() => {
     const job = this.job();
-    if (!job || !job.status) return 'UNKNOWN';
+    if (
+      !job ||
+      !job.status ||
+      job.status === JobStatus.JOB_STATUS_UNSPECIFIED
+    ) {
+      return 'UNKNOWN';
+    }
     return job.status.replace('JOB_STATUS_', '');
   });
 

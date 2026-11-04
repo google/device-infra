@@ -177,6 +177,28 @@ describe('BulkConfigDimensionDialog', () => {
       expect(component.wizard.viewMode()).toBe('values');
     });
 
+    it('normalizes omitted repeated values and counts in value suggestions', () => {
+      mockConfigService.getDimensionValueSuggestions.and.returnValue(
+        of({
+          candidateValues: [
+            {} as unknown as {values: string[]; deviceCount: number},
+            {values: ['pixel']} as unknown as {
+              values: string[];
+              deviceCount: number;
+            },
+          ],
+        }),
+      );
+      component.loadValuesStepData();
+      detectChanges();
+
+      expect(component.candidateValues()).toEqual([
+        {values: [], deviceCount: 0},
+        {values: ['pixel'], deviceCount: 0},
+      ]);
+      expect(document.body.textContent).toContain('Not set');
+    });
+
     it('does not display current value when there is only one device selected', () => {
       const singleDeviceFixture = TestBed.createComponent(
         MatTestDialogOpener.withComponent(BulkConfigDimensionDialog, {
@@ -692,6 +714,31 @@ describe('BulkConfigDimensionDialog', () => {
       expect(customComponent.customKey()).toBe('pool');
       expect(customComponent.filteredCandidateKeys().length).toBe(1);
       expect(customComponent.canProceedFromKeyStep()).toBeTrue();
+    });
+
+    it('normalizes omitted selectedDeviceCount and fleetDeviceCount in loadConfigurableDimensionKeys', () => {
+      mockConfigService.batchGetConfigurableDimensionKeys.and.returnValue(
+        of({
+          candidateKeys: [
+            {dimensionName: 'custom_key'} as unknown as {
+              dimensionName: string;
+              selectedDeviceCount: number;
+              fleetDeviceCount: number;
+            },
+          ],
+          systemDimensionNames: [],
+        }),
+      );
+      customComponent.loadConfigurableDimensionKeys();
+      detectChanges();
+
+      expect(customComponent.candidateKeys()).toEqual([
+        {
+          dimensionName: 'custom_key',
+          selectedDeviceCount: 0,
+          fleetDeviceCount: 0,
+        },
+      ]);
     });
   });
 });

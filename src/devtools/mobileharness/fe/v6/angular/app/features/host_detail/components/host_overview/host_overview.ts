@@ -600,7 +600,7 @@ export class HostOverviewPage {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (response) => {
-          this.deviceDataSource.data = response.deviceSummaries;
+          this.deviceDataSource.data = response.deviceSummaries ?? [];
           this.isDeviceLoading.set(false);
         },
         error: (err) => {

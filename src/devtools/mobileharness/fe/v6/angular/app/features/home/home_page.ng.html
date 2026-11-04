@@ -139,7 +139,7 @@
         <div class="stats-row ats-stats-row">
           <div class="stat-group stat-group-fixed">
             <span class="stat-label">Partner Labs</span>
-            <span class="stat-value">{{ pal.labCount | number }}</span>
+            <span class="stat-value">{{ (pal.labCount ?? 0) | number }}</span>
           </div>
 
           <a

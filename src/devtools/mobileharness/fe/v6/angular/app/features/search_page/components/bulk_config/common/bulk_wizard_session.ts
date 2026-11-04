@@ -211,7 +211,9 @@ export function useBulkWizardSession<
     runStepTask(
       requestSource,
       (res) => {
-        reviewEntries.set(res.entries ?? []);
+        reviewEntries.set(
+          (res.entries ?? []).map((e) => ({...e, deviceId: e.deviceId ?? ''})),
+        );
       },
       fallbackErrorMessage,
       'review' as TPhase,

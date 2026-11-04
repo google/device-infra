@@ -73,6 +73,21 @@ describe('JobLogTab Component', () => {
       expect(component.logLines()).toEqual(['Log Content 1', 'Log Content 2']);
       expect(component.cloudLogLink()).toBe('http://cloud-log-link');
       expect(component.logViewport()).toBeTruthy();
+
+      mockJobService.getJobLog.and.returnValue(
+        of({
+          logContent: '',
+          nextOffset: undefined as unknown as number,
+          jobStatus: JobStatus.JOB_STATUS_DONE,
+          logReset: false,
+          contentHash: 'hash-empty',
+        }),
+      );
+      let coercedOffset: number | undefined;
+      component.logStrategy(0, undefined).subscribe((res) => {
+        coercedOffset = res.offset;
+      });
+      expect(coercedOffset).toBe(0);
     });
   });
 
@@ -90,7 +105,7 @@ describe('JobLogTab Component', () => {
         if (calls === 1) {
           return of({
             logContent: 'Line 1\nLine 2\n',
-            nextOffset: 13,
+            nextOffset: '13' as unknown as number,
             jobStatus: JobStatus.JOB_STATUS_RUNNING,
             logReset: false,
             contentHash: 'hash-running-1',
@@ -98,7 +113,7 @@ describe('JobLogTab Component', () => {
         }
         return of({
           logContent: 'Line 3\nLine 4\n',
-          nextOffset: 27,
+          nextOffset: '27' as unknown as number,
           jobStatus: JobStatus.JOB_STATUS_RUNNING,
           logReset: false,
           contentHash: 'hash-running-2',
@@ -126,6 +141,11 @@ describe('JobLogTab Component', () => {
 
       tick(5000);
 
+      expect(runningMockJobService.getJobLog).toHaveBeenCalledWith({
+        jobId: 'job_running',
+        offset: 13,
+        contentHash: 'hash-running-1',
+      });
       expect(runningComponent.logLines()).toEqual([
         'Line 1',
         'Line 2',
