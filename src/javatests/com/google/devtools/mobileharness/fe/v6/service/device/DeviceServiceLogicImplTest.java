@@ -36,10 +36,13 @@ import com.google.devtools.mobileharness.fe.v6.service.device.handlers.LogcatAct
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.PrepareDeviceActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.ScreenshotActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.TestbedConfigBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.device.provider.DeviceEventsProvider;
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.DeviceTestHistoryProvider;
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.RunningTestInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceHeaderInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceEventsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceEventsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHeaderInfoRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetTestbedConfigRequest;
@@ -81,6 +84,7 @@ public final class DeviceServiceLogicImplTest {
   @Bind @Mock private LabInfoProvider labInfoProvider;
   @Bind @Mock private RunningTestInfoProvider runningTestInfoProvider;
   @Bind @Mock private DeviceTestHistoryProvider deviceTestHistoryProvider;
+  @Bind @Mock private DeviceEventsProvider deviceEventsProvider;
   @Bind @Mock private ConfigurationProvider configurationProvider;
   @Bind @Mock private TestbedConfigBuilder testbedConfigBuilder;
   @Bind @Mock private DeviceHeaderInfoBuilder deviceHeaderInfoBuilder;
@@ -192,5 +196,16 @@ public final class DeviceServiceLogicImplTest {
             ExecutionException.class,
             () -> deviceServiceLogicImpl.getDeviceOverview(request).get());
     assertThat(e).hasCauseThat().isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  public void getDeviceEvents_success() throws Exception {
+    GetDeviceEventsRequest request =
+        GetDeviceEventsRequest.newBuilder().setId("device").setWindowDays(90).build();
+    when(deviceEventsProvider.getDeviceEvents(any(), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(GetDeviceEventsResponse.getDefaultInstance()));
+
+    assertThat(deviceServiceLogicImpl.getDeviceEvents(request).get())
+        .isEqualTo(GetDeviceEventsResponse.getDefaultInstance());
   }
 }

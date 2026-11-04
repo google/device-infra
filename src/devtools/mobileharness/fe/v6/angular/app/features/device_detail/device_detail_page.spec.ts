@@ -188,4 +188,20 @@ describe('DeviceDetailPage Component', () => {
 
     expect(title.getTitle()).toBe('OmniLab Console');
   });
+
+  it('latches deviceEventsVisited when opening the Device Events tab and triggers refresh on it', () => {
+    const component = fixture.componentInstance;
+    expect(component.deviceEventsVisited()).toBeFalse();
+
+    component.setActiveTab('events');
+    expect(component.activeTab()).toBe('events');
+    expect(component.deviceEventsVisited()).toBeTrue();
+
+    let eventsRefreshed = false;
+    component.deviceEventsRefresh$.subscribe(() => {
+      eventsRefreshed = true;
+    });
+    component.triggerRefresh();
+    expect(eventsRefreshed).toBeTrue();
+  });
 });

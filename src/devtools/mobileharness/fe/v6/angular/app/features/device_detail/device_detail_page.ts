@@ -49,6 +49,7 @@ import {ClipboardService} from '../../shared/services/clipboard_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
 import {getErrorMessage} from '../../shared/utils/error_utils';
 import {DeviceActionBar} from './components/device_action_bar/device_action_bar';
+import {DeviceEventsTab} from './components/device_events_tab/device_events_tab';
 import {DeviceOverviewTab} from './components/device_overview_tab/device_overview_tab';
 import {HealthStatisticTab} from './components/health_statistic_tab/health_statistic_tab';
 import {TestHistoryTab} from './components/test_history_tab/test_history_tab';
@@ -74,6 +75,7 @@ declare interface DevicePageData {
     MatMenuModule,
     DeviceOverviewTab,
     DeviceActionBar,
+    DeviceEventsTab,
     HealthStatisticTab,
     TestHistoryTab,
     MatTooltipModule,
@@ -115,6 +117,8 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
   readonly testHistoryRefresh$ = new Subject<void>();
   /** Subject to trigger a refresh of the Health Statistics tab data. */
   readonly healthRefresh$ = new Subject<void>();
+  /** Subject to trigger a refresh of the Device Events tab data. */
+  readonly deviceEventsRefresh$ = new Subject<void>();
 
   /**
    * Triggers a refresh of the device data, refreshing the active tab (e.g., test history
@@ -125,18 +129,21 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
       this.testHistoryRefresh$.next();
     } else if (this.activeTab() === 'health') {
       this.healthRefresh$.next();
+    } else if (this.activeTab() === 'events') {
+      this.deviceEventsRefresh$.next();
     }
     // Always refresh the overview tab, so that the device status is up to date.
     this.overviewRefresh$.next();
   }
 
-  activeTab = signal<'overview' | 'test-history' | 'health' | 'record'>(
-    'overview',
-  );
+  activeTab = signal<
+    'overview' | 'test-history' | 'health' | 'events' | 'record'
+  >('overview');
   // Latches true the first time the Test History tab is opened. The tab is then
   // kept mounted (hidden when inactive) so switching away and back does not
   // recreate the component and refetch its data.
   readonly testHistoryVisited = signal(false);
+  readonly deviceEventsVisited = signal(false);
   readonly isGoogle1p = this.envUniverseService.isGoogle1P();
 
   ngOnInit() {
@@ -174,6 +181,7 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
     this.overviewRefresh$.complete();
     this.testHistoryRefresh$.complete();
     this.healthRefresh$.complete();
+    this.deviceEventsRefresh$.complete();
     this.destroyed.next();
     this.destroyed.complete();
     this.titleService.setTitle(formatPageTitle());
@@ -292,9 +300,13 @@ export class DeviceDetailPage implements OnInit, OnDestroy {
     shareReplay(1),
   );
 
-  setActiveTab(tab: 'overview' | 'test-history' | 'health' | 'record'): void {
+  setActiveTab(
+    tab: 'overview' | 'test-history' | 'health' | 'events' | 'record',
+  ): void {
     if (tab === 'test-history') {
       this.testHistoryVisited.set(true);
+    } else if (tab === 'events') {
+      this.deviceEventsVisited.set(true);
     }
     this.activeTab.set(tab);
   }

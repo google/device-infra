@@ -193,4 +193,14 @@ describe('HttpDeviceService', () => {
     expect(req.request.body).toEqual({'host_name': 'test-host'});
     req.flush(null);
   });
+
+  it('should get device events via GET to /events with host_name and window_days', () => {
+    service.getDeviceEvents('test-device', 'test-host', 90).subscribe();
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/devices/test-device/events?host_name=test-host&window_days=90',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush({changes: [], recoveryRecords: [], inventoryRecords: []});
+  });
 });

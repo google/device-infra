@@ -12,6 +12,7 @@ import {
   QuarantineInfo,
   TakeScreenshotResponse,
 } from '../../models/device_action';
+import {DeviceEventsResponse} from '../../models/device_events';
 import {
   DeviceOverviewPageData,
   GetDeviceOverviewRequest,
@@ -656,6 +657,102 @@ export class FakeDeviceService extends DeviceService {
     }
 
     return of({columns, rows, nextPageToken}).pipe(delay(1000));
+  }
+
+  /**
+   * Retrieves fake device events for local development and testing.
+   */
+  override getDeviceEvents(
+    id: string,
+    hostName: string,
+    windowDays = 90,
+  ): Observable<DeviceEventsResponse> {
+    const resolvedHost = hostName || 'slaas4-9-10-bcpc.blr.omnilab.in.goog';
+    const prevHost = 'slaas5-9-10-bcpc.blr.omnilab.in.goog';
+    return of({
+      changes: [
+        {
+          changeTime: '2026-10-18T16:50:00Z',
+          field: 'build',
+          fromValue: '14952565',
+          toValue: '16600061',
+          meta: 'API 36 to 37',
+        },
+        {
+          changeTime: '2026-10-18T02:10:00Z',
+          field: 'build',
+          fromValue: '16618200',
+          toValue: '14952565',
+          meta: 'API 38 to 36',
+        },
+        {
+          changeTime: '2026-10-16T09:15:00Z',
+          field: 'build',
+          fromValue: '16607409',
+          toValue: '16618200',
+          meta: 'API 37 to 38',
+        },
+        {
+          changeTime: '2026-10-14T23:42:00Z',
+          field: 'status',
+          fromValue: 'FAILED',
+          toValue: 'IDLE',
+          meta: '',
+        },
+        {
+          changeTime: '2026-10-14T13:17:00Z',
+          field: 'status',
+          fromValue: 'BUSY',
+          toValue: 'MISSING',
+          meta: 'Needs manual repair',
+        },
+        {
+          changeTime: '2026-10-13T18:27:00Z',
+          field: 'status',
+          fromValue: 'LAMEDUCK',
+          toValue: 'IDLE',
+          meta: '',
+        },
+        {
+          changeTime: '2026-10-13T16:22:00Z',
+          field: 'status',
+          fromValue: 'IDLE',
+          toValue: 'LAMEDUCK',
+          meta: '',
+        },
+        {
+          changeTime: '2026-07-22T06:15:00Z',
+          field: 'host',
+          fromValue: prevHost,
+          toValue: resolvedHost,
+          meta: '',
+        },
+      ],
+      recoveryRecords: [
+        {
+          createTime: '2026-10-14T23:35:00Z',
+          author: 'mgokul',
+          recoveryAction: 'Flashed Device',
+          offlineReason: 'Device Corrupt',
+          note: 'Reflashed to stable image',
+        },
+      ],
+      inventoryRecords: [
+        {
+          eventTime: '2026-10-13T12:10:15Z',
+          author: 'Omnilab Omnilab',
+          subject: 'Moved',
+          body: `Deployed to ${resolvedHost}`,
+        },
+        {
+          eventTime: '2026-10-05T09:44:09Z',
+          author: 'Omnilab Omnilab',
+          subject: 'Create Unit',
+          body: 'Mounted in cabinet Storage',
+        },
+      ],
+      hasOlderEvents: windowDays < 180,
+    }).pipe(delay(250));
   }
 
   // Future methods like listDevices, updateDeviceConfig, etc., would be added here.

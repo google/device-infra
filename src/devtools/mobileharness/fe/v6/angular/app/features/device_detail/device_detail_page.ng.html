@@ -131,6 +131,15 @@
                 <app-test-history-tab [deviceId]="device.id" [hostName]="device.host.name" [refreshTrigger$]="testHistoryRefresh$"></app-test-history-tab>
               </div>
             }
+            @if (isGoogle1p && deviceEventsVisited()) {
+              <div class="tab-content" [hidden]="activeTab() !== 'events'">
+                <app-device-events-tab
+                  [deviceId]="device.id"
+                  [hostName]="device.host.name"
+                  [refreshTrigger$]="deviceEventsRefresh$"
+                ></app-device-events-tab>
+              </div>
+            }
             @if (activeTab() === 'record') {
               <div class="tab-content">
                 <p class="placeholder-text">Device Record Content Here.</p>
