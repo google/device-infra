@@ -24,6 +24,7 @@ import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult.DetectionType;
@@ -200,6 +201,7 @@ public class LocalDeviceDispatch {
     previousResults = realtimeDispatchResults;
     mergedResults.mergeFrom(realtimeDispatchResults);
     Set<String> newIds = mergedResults.getDeviceControlIds(DispatchType.LIVE);
+    ImmutableSet<String> existingIds = ImmutableSet.copyOf(devices.keySet());
     for (Entry<String, Entry<LocalDeviceRunner, Future<?>>> device : devices.entrySet()) {
       String id = device.getKey();
       LocalDeviceRunner runner = device.getValue().getKey();
@@ -264,14 +266,13 @@ public class LocalDeviceDispatch {
 
       // Increases the device status counter.
       runner.updateStatusStat();
-
-      // If the newIds contains the current runner, removes it from the newIds, so we will not
-      // create new runner for it.
-      newIds.remove(id);
     }
 
     // Constructs new {@code LocalDeviceRunner} instance for new device.
     for (String newId : newIds) {
+      if (existingIds.contains(newId)) {
+        continue;
+      }
       // Removes the device IDs that are detectable by old detectors, to avoid
       // generating multiple test runner threads for the same device ID.
       LocalDeviceRunner deviceRunner = deviceManager.getLocalDeviceRunner(newId);

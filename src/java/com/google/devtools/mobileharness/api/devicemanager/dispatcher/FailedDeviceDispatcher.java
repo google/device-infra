@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.api.devicemanager.dispatcher;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult.DetectionType;
@@ -28,7 +30,6 @@ import com.google.devtools.mobileharness.infra.controller.device.DeviceInfoManag
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /** Dispatcher for FailedDevice type. */
 public class FailedDeviceDispatcher extends CacheableDispatcher {
@@ -62,7 +63,7 @@ public class FailedDeviceDispatcher extends CacheableDispatcher {
                             detectionType != DetectionType.FAILED
                                 && detectionType != DetectionType.MONITOR
                                 && detectionType != DetectionType.NO_OP))
-        .collect(Collectors.toMap(Entry::getKey, entry -> DispatchType.LIVE));
+        .collect(toImmutableMap(Entry::getKey, entry -> DispatchType.LIVE));
   }
 
   @Override

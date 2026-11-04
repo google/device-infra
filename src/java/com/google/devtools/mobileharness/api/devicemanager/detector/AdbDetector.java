@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
@@ -50,7 +49,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /** Detector for adb. */
@@ -115,7 +113,7 @@ public class AdbDetector implements Detector {
     if (adbUnsupportedReason.isEmpty()) {
       try {
         logger.atInfo().log("Ensure adb server is alive.");
-        ImmutableList<String> unused = adbInternalUtil.listDevices(/* timeout= */ null);
+        var unused = adbInternalUtil.listDevices(/* timeout= */ null);
       } catch (MobileHarnessException e) {
         logger.atInfo().withCause(e).log("Failed to check adb.");
       }
@@ -208,13 +206,14 @@ public class AdbDetector implements Detector {
   /** Connects/Disconnects the devices which needs to be connected/disconnected. */
   private boolean doesOverTcpDeviceChange(Map<String, DeviceState> ids)
       throws InterruptedException {
-    Set<String> connectedId =
-        ids.entrySet().stream()
-            .filter(entry -> entry.getValue().equals(DeviceState.DEVICE))
-            .map(Map.Entry::getKey)
-            .collect(Collectors.toSet());
     ImmutableSet<String> cachedDevices = getCachedDevices();
-    connectedId.addAll(cachedDevices);
+    ImmutableSet<String> connectedId =
+        Stream.concat(
+                ids.entrySet().stream()
+                    .filter(entry -> entry.getValue().equals(DeviceState.DEVICE))
+                    .map(Map.Entry::getKey),
+                cachedDevices.stream())
+            .collect(toImmutableSet());
 
     // Reads over tcp device id from api config.
     Set<String> newOverTcpIds = new HashSet<>(apiConfig.getOverTcpDeviceControlIds());

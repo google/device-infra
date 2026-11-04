@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.api.devicemanager.dispatcher;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult.DetectionType;
@@ -25,7 +27,6 @@ import com.google.devtools.mobileharness.api.devicemanager.dispatcher.model.Disp
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.util.DeviceIdGenerator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceId;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /** Dispatcher for NoOp device. */
 public class NoOpDeviceDispatcher implements Dispatcher {
@@ -45,7 +46,7 @@ public class NoOpDeviceDispatcher implements Dispatcher {
   public Map<String, DispatchType> dispatchDevices(
       DetectionResults detectionResults, DispatchResults dispatchResults) {
     return detectionResults.getByType(DetectionType.NO_OP).stream()
-        .collect(Collectors.toMap(DetectionResult::deviceControlId, v -> DispatchType.LIVE));
+        .collect(toImmutableMap(DetectionResult::deviceControlId, v -> DispatchType.LIVE));
   }
 
   @Override

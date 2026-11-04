@@ -16,12 +16,14 @@
 
 package com.google.devtools.mobileharness.api.devicemanager.detector.model;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult.DetectionType;
 import java.util.Collection;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /** A set that combines all detection results. */
@@ -66,25 +68,25 @@ public class DetectionResults implements Cloneable {
   }
 
   /** Returns all {@link DetectionResult}s with the specified detection type. */
-  public synchronized Collection<DetectionResult> getByType(DetectionType detectionType) {
+  public synchronized ImmutableList<DetectionResult> getByType(DetectionType detectionType) {
     return results.values().stream()
         .filter(detectorResult -> detectorResult.detectionType().equals(detectionType))
-        .collect(Collectors.toList());
+        .collect(toImmutableList());
   }
 
   /** Returns all the {@link DetectionResult}s with the specified detection type and detail. */
-  public synchronized Collection<DetectionResult> getByTypeAndDetail(
+  public synchronized ImmutableList<DetectionResult> getByTypeAndDetail(
       DetectionType detectionType, @Nullable Object detail) {
     return results.values().stream()
         .filter(
             detectorResult ->
                 detectorResult.detectionType().equals(detectionType)
                     && detectorResult.detectionDetail().equals(Optional.ofNullable(detail)))
-        .collect(Collectors.toList());
+        .collect(toImmutableList());
   }
 
   /** Returns all {@link DetectionResult}s with the specified device control id. */
-  public synchronized Collection<DetectionResult> getByDeviceControlId(String deviceControlId) {
-    return results.get(deviceControlId);
+  public synchronized ImmutableList<DetectionResult> getByDeviceControlId(String deviceControlId) {
+    return ImmutableList.copyOf(results.get(deviceControlId));
   }
 }

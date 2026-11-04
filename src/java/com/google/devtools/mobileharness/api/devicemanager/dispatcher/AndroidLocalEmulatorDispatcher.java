@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.api.devicemanager.dispatcher;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult.DetectionType;
@@ -27,7 +29,6 @@ import com.google.devtools.mobileharness.api.model.lab.DeviceId;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /** Dispatcher for Android local emulator devices. */
 public class AndroidLocalEmulatorDispatcher extends CacheableDispatcher {
@@ -50,7 +51,7 @@ public class AndroidLocalEmulatorDispatcher extends CacheableDispatcher {
         .filter(
             detectorResult ->
                 AndroidSystemSpecUtil.isAndroidEmulator(detectorResult.deviceControlId()))
-        .collect(Collectors.toMap(DetectionResult::deviceControlId, s -> DispatchType.LIVE));
+        .collect(toImmutableMap(DetectionResult::deviceControlId, s -> DispatchType.LIVE));
   }
 
   @Override

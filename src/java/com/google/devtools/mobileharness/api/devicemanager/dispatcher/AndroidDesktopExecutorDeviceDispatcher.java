@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.api.devicemanager.dispatcher;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult.DetectionType;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResults;
@@ -23,9 +25,7 @@ import com.google.devtools.mobileharness.api.devicemanager.dispatcher.model.Disp
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.model.DispatchResults;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.util.DeviceIdGenerator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceId;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /** Dispatcher for AndroidDesktopExecutor device. */
 public class AndroidDesktopExecutorDeviceDispatcher implements Dispatcher {
@@ -45,11 +45,8 @@ public class AndroidDesktopExecutorDeviceDispatcher implements Dispatcher {
       DetectionResults detectionResults, DispatchResults dispatchResults) {
     return detectionResults.getByType(DetectionType.ANDROID_DESKTOP_EXECUTOR).stream()
         .collect(
-            Collectors.toMap(
-                DetectionResult::deviceControlId,
-                unused -> DispatchType.LIVE,
-                (a, b) -> a,
-                HashMap::new));
+            toImmutableMap(
+                DetectionResult::deviceControlId, unused -> DispatchType.LIVE, (a, b) -> a));
   }
 
   @Override

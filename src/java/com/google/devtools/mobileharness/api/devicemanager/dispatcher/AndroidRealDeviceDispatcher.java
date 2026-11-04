@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.api.devicemanager.dispatcher;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Enums.FastbootDeviceState;
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Fastboot;
@@ -36,7 +37,6 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -84,17 +84,16 @@ public class AndroidRealDeviceDispatcher extends CacheableDispatcher {
   @Override
   public Map<String, DispatchType> dispatchLiveDevices(
       DetectionResults detectionResults, DispatchResults dispatchResults) {
-    Collection<DetectionResult> resultList =
-        detectionResults.getByTypeAndDetail(DetectionType.ADB, DeviceState.DEVICE);
+    ImmutableList.Builder<DetectionResult> results = ImmutableList.builder();
+    results.addAll(detectionResults.getByTypeAndDetail(DetectionType.ADB, DeviceState.DEVICE));
     if (!DeviceUtil.inSharedLab()) {
-      resultList.addAll(
-          detectionResults.getByTypeAndDetail(DetectionType.ADB, DeviceState.RECOVERY));
+      results.addAll(detectionResults.getByTypeAndDetail(DetectionType.ADB, DeviceState.RECOVERY));
     }
-    resultList.addAll(
+    results.addAll(
         detectionResults.getByTypeAndDetail(DetectionType.FASTBOOT, FastbootDeviceState.FASTBOOT));
 
     // Handle duplicate device IDs when collecting dispatch results(b/438644277).
-    return resultList.stream()
+    return results.build().stream()
         .collect(
             toImmutableMap(
                 DetectionResult::deviceControlId,

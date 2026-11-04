@@ -16,14 +16,16 @@
 
 package com.google.devtools.mobileharness.api.devicemanager.dispatcher.model;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.model.DispatchResult.DispatchType;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /** A set that combine all {@link DispatchResult}s. */
@@ -89,12 +91,12 @@ public class DispatchResults {
   /**
    * Returns all device control ids which dispatch type are in {@code dispatchTypes} of the results
    */
-  public synchronized Set<String> getDeviceControlIds(DispatchType... dispatchTypes) {
+  public synchronized ImmutableSet<String> getDeviceControlIds(DispatchType... dispatchTypes) {
     Set<DispatchType> types = new HashSet<>(Arrays.asList(dispatchTypes));
     return results.values().stream()
         .filter(dispatchResult -> types.contains(dispatchResult.dispatchType()))
         .map(result -> result.deviceId().controlId())
-        .collect(Collectors.toSet());
+        .collect(toImmutableSet());
   }
 
   /** Merges two {@link DispatchResults}. */

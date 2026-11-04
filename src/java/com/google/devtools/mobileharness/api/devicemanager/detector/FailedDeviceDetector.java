@@ -16,16 +16,17 @@
 
 package com.google.devtools.mobileharness.api.devicemanager.detector;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult.DetectionType;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.device.faileddevice.FailedDeviceTable;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * A Mobile Harness Detector for FailedDevice.
@@ -68,10 +69,10 @@ public class FailedDeviceDetector implements Detector {
    */
   @Override
   public List<DetectionResult> detectDevices() throws MobileHarnessException, InterruptedException {
-    List<DetectionResult> results =
+    ImmutableList<DetectionResult> results =
         failedDeviceTable.getFailedDeviceIds().stream()
             .map(id -> DetectionResult.of(id, DetectionType.FAILED))
-            .collect(Collectors.toList());
+            .collect(toImmutableList());
     logger.atInfo().atMostEvery(30, SECONDS).log("Detected FailedDevices: %s", results);
     return results;
   }

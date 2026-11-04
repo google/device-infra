@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.api.devicemanager.dispatcher;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult.DetectionType;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResults;
@@ -23,7 +25,6 @@ import com.google.devtools.mobileharness.api.devicemanager.dispatcher.model.Disp
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.model.DispatchResults;
 import com.google.devtools.mobileharness.api.model.lab.DeviceId;
 import java.util.Map;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /** Base class for dispatcher. */
@@ -49,8 +50,7 @@ public abstract class BaseDispatcher implements Dispatcher {
     return ((detectionDetail == null)
             ? detectionResults.getByType(detectionType)
             : detectionResults.getByTypeAndDetail(detectionType, detectionDetail))
-        .stream()
-            .collect(Collectors.toMap(DetectionResult::deviceControlId, v -> DispatchType.LIVE));
+        .stream().collect(toImmutableMap(DetectionResult::deviceControlId, v -> DispatchType.LIVE));
   }
 
   @Override
