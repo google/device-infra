@@ -1,13 +1,23 @@
 import {InjectionToken} from '@angular/core';
 import {Observable} from 'rxjs';
 import {
+  BatchGetConfigurableDimensionKeysRequest,
+  BatchGetConfigurableDimensionKeysResponse,
+  BatchGetDeviceDimensionConfigsRequest,
+  BatchGetDeviceDimensionConfigsResponse,
   BatchGetDeviceWifiConfigsRequest,
   BatchGetDeviceWifiConfigsResponse,
+  BatchUpdateDeviceDimensionConfigsRequest,
+  BatchUpdateDeviceDimensionConfigsResponse,
   BatchUpdateDeviceWifiConfigsRequest,
   BatchUpdateDeviceWifiConfigsResponse,
   CheckDeviceConfigPermissionResult,
   DeviceConfig,
+  GetConfigurableDimensionsRequest,
+  GetConfigurableDimensionsResponse,
   GetDeviceConfigResult,
+  GetDimensionValueSuggestionsRequest,
+  GetDimensionValueSuggestionsResponse,
   GetWifiSuggestionsRequest,
   GetWifiSuggestionsResponse,
   RecommendedWifi,
@@ -102,6 +112,52 @@ export abstract class ConfigService {
   abstract batchUpdateDeviceWifiConfigs(
     request: BatchUpdateDeviceWifiConfigsRequest,
   ): Observable<BatchUpdateDeviceWifiConfigsResponse>;
+
+  /**
+   * Retrieves dimensions available for batch configuration.
+   * @param request Optional request containing search query to filter dimensions.
+   * @return An Observable emitting the configurable dimensions response.
+   */
+  abstract getConfigurableDimensions(
+    request?: GetConfigurableDimensionsRequest,
+  ): Observable<GetConfigurableDimensionsResponse>;
+
+  /**
+   * Retrieves existing configurable dimension keys from DeviceConfig along with
+   * system-detected dimension blocklist.
+   * @param request The batch configurable dimension keys request.
+   * @return An Observable emitting candidate keys and system dimension names.
+   */
+  abstract batchGetConfigurableDimensionKeys(
+    request: BatchGetConfigurableDimensionKeysRequest,
+  ): Observable<BatchGetConfigurableDimensionKeysResponse>;
+
+  /**
+   * Retrieves fleet-wide candidate value-sets for a specific dimension target.
+   * @param request The dimension value suggestions request.
+   * @return An Observable emitting candidate value-sets.
+   */
+  abstract getDimensionValueSuggestions(
+    request: GetDimensionValueSuggestionsRequest,
+  ): Observable<GetDimensionValueSuggestionsResponse>;
+
+  /**
+   * Retrieves current values and writability for selected devices under a dimension target.
+   * @param request The batch get device dimension configs request.
+   * @return An Observable emitting per-device dimension configurations.
+   */
+  abstract batchGetDeviceDimensionConfigs(
+    request: BatchGetDeviceDimensionConfigsRequest,
+  ): Observable<BatchGetDeviceDimensionConfigsResponse>;
+
+  /**
+   * Replaces the value-set for a specific dimension target across selected devices.
+   * @param request The batch update device dimension configs request.
+   * @return An Observable emitting per-device update errors.
+   */
+  abstract batchUpdateDeviceDimensionConfigs(
+    request: BatchUpdateDeviceDimensionConfigsRequest,
+  ): Observable<BatchUpdateDeviceDimensionConfigsResponse>;
 
   // ===== Host Config Methods =====
 

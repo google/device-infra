@@ -5,13 +5,23 @@ import {map} from 'rxjs/operators';
 
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
+  BatchGetConfigurableDimensionKeysRequest,
+  BatchGetConfigurableDimensionKeysResponse,
+  BatchGetDeviceDimensionConfigsRequest,
+  BatchGetDeviceDimensionConfigsResponse,
   BatchGetDeviceWifiConfigsRequest,
   BatchGetDeviceWifiConfigsResponse,
+  BatchUpdateDeviceDimensionConfigsRequest,
+  BatchUpdateDeviceDimensionConfigsResponse,
   BatchUpdateDeviceWifiConfigsRequest,
   BatchUpdateDeviceWifiConfigsResponse,
   CheckDeviceConfigPermissionResult,
   DeviceConfig,
+  GetConfigurableDimensionsRequest,
+  GetConfigurableDimensionsResponse,
   GetDeviceConfigResult,
+  GetDimensionValueSuggestionsRequest,
+  GetDimensionValueSuggestionsResponse,
   GetRecommendedWifiResponse,
   GetWifiSuggestionsRequest,
   GetWifiSuggestionsResponse,
@@ -133,6 +143,63 @@ export class HttpConfigService extends ConfigService {
     );
   }
 
+  override getConfigurableDimensions(
+    request?: GetConfigurableDimensionsRequest,
+  ): Observable<GetConfigurableDimensionsResponse> {
+    const params = {
+      ...(request?.fleet && {fleet: request.fleet}),
+      ...(request?.universe && {universe: request.universe}),
+    };
+    return this.http.get<GetConfigurableDimensionsResponse>(
+      `${this.apiUrl}/configs/dimensions:configurable`,
+      {params},
+    );
+  }
+
+  override batchGetConfigurableDimensionKeys(
+    request: BatchGetConfigurableDimensionKeysRequest,
+  ): Observable<BatchGetConfigurableDimensionKeysResponse> {
+    return this.http.post<BatchGetConfigurableDimensionKeysResponse>(
+      `${this.apiUrl}/devices:batchGetConfigurableDimensionKeys`,
+      request,
+    );
+  }
+
+  override getDimensionValueSuggestions(
+    request: GetDimensionValueSuggestionsRequest,
+  ): Observable<GetDimensionValueSuggestionsResponse> {
+    let params = new HttpParams()
+      .set('dimension_name', request.dimensionName)
+      .set('dimension_list', request.dimensionList);
+    if (request.universe) {
+      params = params.set('universe', request.universe);
+    }
+    if (request.fleet) {
+      params = params.set('fleet', request.fleet);
+    }
+    return this.http.get<GetDimensionValueSuggestionsResponse>(
+      `${this.apiUrl}/configs/dimensions:valueSuggestions`,
+      {params},
+    );
+  }
+
+  override batchGetDeviceDimensionConfigs(
+    request: BatchGetDeviceDimensionConfigsRequest,
+  ): Observable<BatchGetDeviceDimensionConfigsResponse> {
+    return this.http.post<BatchGetDeviceDimensionConfigsResponse>(
+      `${this.apiUrl}/devices:batchGetDimensionConfigs`,
+      request,
+    );
+  }
+
+  override batchUpdateDeviceDimensionConfigs(
+    request: BatchUpdateDeviceDimensionConfigsRequest,
+  ): Observable<BatchUpdateDeviceDimensionConfigsResponse> {
+    return this.http.post<BatchUpdateDeviceDimensionConfigsResponse>(
+      `${this.apiUrl}/devices:batchUpdateDimensionConfigs`,
+      request,
+    );
+  }
   // ===== Host Config Methods =====
 
   override getHostDefaultDeviceConfig(

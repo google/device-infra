@@ -2,24 +2,40 @@ import {Injectable} from '@angular/core';
 import {Observable, of, throwError, timer} from 'rxjs';
 import {delay, switchMap} from 'rxjs/operators';
 import {
+  BatchGetConfigurableDimensionKeysRequest,
+  BatchGetConfigurableDimensionKeysResponse,
+  BatchGetDeviceDimensionConfigsRequest,
+  BatchGetDeviceDimensionConfigsResponse,
   BatchGetDeviceWifiConfigsRequest,
   BatchGetDeviceWifiConfigsResponse,
+  BatchUpdateDeviceDimensionConfigsRequest,
+  BatchUpdateDeviceDimensionConfigsResponse,
   BatchUpdateDeviceWifiConfigsRequest,
   BatchUpdateDeviceWifiConfigsResponse,
+  CandidateDimensionKey,
+  CandidateDimensionValue,
   CandidateWifi,
   CheckDeviceConfigPermissionResult,
   ConfigSection,
+  ConfigurableDimension,
   DeviceConfig,
   DeviceConfigChangeStatus,
   DeviceConfigUiStatus,
+  DeviceDimensionConfigEntry,
   DeviceTarget,
   DeviceWifi,
   DeviceWifiConfigEntry,
+  DimensionList,
+  GetConfigurableDimensionsRequest,
+  GetConfigurableDimensionsResponse,
   GetDeviceConfigResult,
+  GetDimensionValueSuggestionsRequest,
+  GetDimensionValueSuggestionsResponse,
   GetWifiSuggestionsRequest,
   GetWifiSuggestionsResponse,
   RecommendedWifi,
   TargetDeviceWifi,
+  TargetDimensionValues,
   UpdateDeviceConfigRequest,
   UpdateDeviceConfigResult,
   UpdateError,
@@ -412,6 +428,317 @@ export class FakeConfigService extends ConfigService {
     });
 
     return of({entries}).pipe(delay(500));
+  }
+
+  override getConfigurableDimensions(
+    request?: GetConfigurableDimensionsRequest,
+  ): Observable<GetConfigurableDimensionsResponse> {
+    const dimensions: ConfigurableDimension[] = [
+      {
+        dimensionName: 'recovery',
+        displayName: 'recovery',
+        dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+      },
+      {
+        dimensionName: 'skip_suw_app',
+        displayName: 'skip_suw_app',
+        dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+      },
+      {
+        dimensionName: 'pool',
+        displayName: 'pool',
+        dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+      },
+      {
+        dimensionName: 'persist_test_harness',
+        displayName: 'persist_test_harness',
+        dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+      },
+      {
+        dimensionName: 'sim_operator',
+        displayName: 'sim_operator',
+        dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+      },
+    ];
+
+    return of({
+      enabled: true,
+      dimensions,
+      allowCustomDimensions: true,
+    }).pipe(delay(200));
+  }
+
+  override batchGetConfigurableDimensionKeys(
+    request: BatchGetConfigurableDimensionKeysRequest,
+  ): Observable<BatchGetConfigurableDimensionKeysResponse> {
+    const candidateKeys: CandidateDimensionKey[] = [
+      {
+        dimensionName: 'recovery',
+        selectedDeviceCount: request.devices.length,
+        fleetDeviceCount: 8420,
+      },
+      {
+        dimensionName: 'skip_suw_app',
+        selectedDeviceCount: Math.floor(request.devices.length / 2),
+        fleetDeviceCount: 6150,
+      },
+      {
+        dimensionName: 'pool',
+        selectedDeviceCount: Math.floor(request.devices.length / 3),
+        fleetDeviceCount: 5280,
+      },
+      {
+        dimensionName: 'persist_test_harness',
+        selectedDeviceCount: 0,
+        fleetDeviceCount: 3110,
+      },
+      {
+        dimensionName: 'sim_operator',
+        selectedDeviceCount: 0,
+        fleetDeviceCount: 1940,
+      },
+    ];
+
+    const systemDimensionNames = [
+      'model',
+      'sdk_version',
+      'battery_level',
+      'device_form',
+      'cpu_architecture',
+      'hardware',
+      'wifi',
+      'sim_state',
+      'oem_unlock',
+      'host_name',
+      'status',
+      'run_target',
+      'uuid',
+      'id',
+      'ip',
+      'port',
+      'driver',
+      'type',
+    ];
+
+    return of({
+      candidateKeys,
+      systemDimensionNames,
+    }).pipe(delay(200));
+  }
+
+  override getDimensionValueSuggestions(
+    request: GetDimensionValueSuggestionsRequest,
+  ): Observable<GetDimensionValueSuggestionsResponse> {
+    let candidateValues: CandidateDimensionValue[] = [];
+    if (request.dimensionName === 'recovery') {
+      candidateValues = [
+        {values: ['true'], deviceCount: 5420},
+        {values: ['false'], deviceCount: 2100},
+        {values: [], deviceCount: 900},
+      ];
+    } else if (request.dimensionName === 'pool') {
+      candidateValues = [
+        {values: ['shared_pool'], deviceCount: 3800},
+        {values: ['dedicated_pool'], deviceCount: 1200},
+        {values: ['staging_pool'], deviceCount: 280},
+        {values: [], deviceCount: 150},
+      ];
+    } else {
+      candidateValues = [
+        {values: ['true'], deviceCount: 1500},
+        {values: ['false'], deviceCount: 800},
+        {values: [], deviceCount: 200},
+      ];
+    }
+
+    candidateValues.push(
+      {values: ['rpc-error'], deviceCount: 0},
+      {values: ['partial-error'], deviceCount: 0},
+    );
+
+    return of({candidateValues}).pipe(delay(200));
+  }
+
+  override batchGetDeviceDimensionConfigs(
+    request: BatchGetDeviceDimensionConfigsRequest,
+  ): Observable<BatchGetDeviceDimensionConfigsResponse> {
+    if (
+      request.target?.valueList?.values?.some((v) =>
+        v.toLowerCase().includes('step-error'),
+      )
+    ) {
+      return timer(500).pipe(
+        switchMap(() =>
+          throwError(() => ({
+            error: {
+              error: {
+                code: 503,
+                message:
+                  'UNAVAILABLE: Failed to query current device dimension configurations from LabServer.',
+              },
+            },
+          })),
+        ),
+      );
+    }
+    const entries: DeviceDimensionConfigEntry[] = request.devices.map(
+      (target, i) => {
+        const did = target.deviceId || '';
+        let values: string[] = [];
+        if (request.dimensionName === 'recovery') {
+          values = i % 2 === 0 ? ['true'] : ['false'];
+        } else if (request.dimensionName === 'pool') {
+          values =
+            i % 3 === 0
+              ? ['shared_pool']
+              : i % 3 === 1
+                ? ['dedicated_pool']
+                : [];
+        } else {
+          values = i % 2 === 0 ? ['val-1'] : [];
+        }
+
+        let writable = true;
+        let unwritableReason = '';
+        if (
+          !did ||
+          /^0+$/.test(did) ||
+          did.startsWith('Failed') ||
+          did.startsWith('Disconnected') ||
+          did.includes('unrecognizable') ||
+          did.includes('invalid')
+        ) {
+          writable = false;
+          unwritableReason = 'Unrecognizable or invalid device ID';
+        } else if (i % 7 === 1) {
+          writable = false;
+          unwritableReason =
+            'Managed by host shared config (update host config instead)';
+        } else if (i % 7 === 2) {
+          writable = false;
+          unwritableReason = 'Managed by Config Pusher';
+        } else if (i % 7 === 3) {
+          writable = false;
+          unwritableReason = 'No permission (not an authorized owner)';
+        }
+
+        let status =
+          DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_UNSPECIFIED;
+        if (!writable) {
+          status =
+            DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY;
+        } else if (!request.target) {
+          status =
+            DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WRITABLE;
+        } else {
+          const matches = this.isDimensionMatchingTarget(
+            values,
+            request.target,
+          );
+          status = matches
+            ? DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES
+            : DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE;
+        }
+
+        return {
+          deviceId: did,
+          ...(target.hostName ? {hostName: target.hostName} : {}),
+          values,
+          status,
+          ...(unwritableReason ? {readOnlyReason: unwritableReason} : {}),
+        };
+      },
+    );
+
+    return of({entries}).pipe(delay(300));
+  }
+
+  private isDimensionMatchingTarget(
+    currentValues: string[],
+    target: TargetDimensionValues,
+  ): boolean {
+    if (target.clearValues) {
+      return currentValues.length === 0;
+    }
+    const targetVals = target.valueList?.values || [];
+    if (currentValues.length !== targetVals.length) {
+      return false;
+    }
+    const sortedCurrent = Array.from(currentValues, (v) =>
+      v.toLowerCase(),
+    ).sort();
+    const sortedTarget = Array.from(targetVals, (v) => v.toLowerCase()).sort();
+    return sortedCurrent.every((v, i) => v === sortedTarget[i]);
+  }
+
+  override batchUpdateDeviceDimensionConfigs(
+    request: BatchUpdateDeviceDimensionConfigsRequest,
+  ): Observable<BatchUpdateDeviceDimensionConfigsResponse> {
+    const targetVals = (request.target.valueList?.values || []).map((v) =>
+      v.toLowerCase(),
+    );
+    if (
+      targetVals.some((v) => v.includes('rpc-error')) ||
+      request.dimensionName.toLowerCase().includes('rpc_error') ||
+      (request.devices.length > 0 &&
+        request.devices.every((d) => d.deviceId.includes('rpc-error')))
+    ) {
+      return timer(600).pipe(
+        switchMap(() =>
+          throwError(() => ({
+            error: {
+              error: {
+                code: 503,
+                message:
+                  'UNAVAILABLE: Lab config backend is temporarily unreachable while updating device dimensions.',
+              },
+            },
+          })),
+        ),
+      );
+    }
+
+    const errors: Record<string, UpdateError> = {};
+    if (
+      targetVals.some((v) => v.includes('partial-error')) &&
+      request.devices.length > 0
+    ) {
+      if (request.devices.length >= 4) {
+        errors[request.devices[0].deviceId] = {
+          code: 'UNKNOWN',
+          message: 'RPC error while updating device config on LabServer',
+        };
+        errors[request.devices[1].deviceId] = {
+          code: 'PERMISSION_DENIED',
+          message: 'Permission denied to update device config',
+        };
+        errors[request.devices[2].deviceId] = {
+          code: 'PERMISSION_DENIED',
+          message: 'Device locked by system policy on host',
+        };
+      } else {
+        errors[request.devices[0].deviceId] = {
+          code: 'PERMISSION_DENIED',
+          message: 'Device locked by system policy on host',
+        };
+      }
+    }
+    for (const target of request.devices) {
+      const did = target.deviceId;
+      if (errors[did]) continue;
+      const scenario = this.findDeviceScenario(target);
+      if (scenario?.configUpdateError) {
+        errors[did] = deepCopy(scenario.configUpdateError);
+        continue;
+      }
+      if (did.includes('fail') || did.includes('error')) {
+        errors[did] = {
+          code: 'VALIDATION_ERROR',
+          message: 'Device offline or unreachable',
+        };
+      }
+    }
+    return of({errors}).pipe(delay(800));
   }
 
   override batchUpdateDeviceWifiConfigs(

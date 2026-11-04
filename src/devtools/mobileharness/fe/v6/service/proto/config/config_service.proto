@@ -458,14 +458,17 @@ message DeviceTarget {
 
 // Request for BatchGetConfigurableDimensionKeys.
 message BatchGetConfigurableDimensionKeysRequest {
-  // Explicit device IDs selected by the operator.
-  repeated string device_ids = 1;
+  // Explicit devices selected by the operator.
+  repeated DeviceTarget devices = 1;
 
   // Which dimension list in composite_dimension to inspect.
   DimensionList dimension_list = 2;
 
   // The universe the devices belong to.
   string universe = 3;
+
+  // Which fleet scope the operator is viewing on the search page.
+  search.Fleet fleet = 4;
 }
 
 // Response for BatchGetConfigurableDimensionKeys.
@@ -476,7 +479,7 @@ message BatchGetConfigurableDimensionKeysResponse {
     // Dimension key name in DeviceConfig (e.g. "pool", "label", "cluster").
     string dimension_name = 1;
 
-    // Number of selected devices (from request.device_ids) that currently
+    // Number of selected devices (from request.devices) that currently
     // have this dimension_name configured in the target dimension_list.
     int32 selected_device_count = 2;
 
@@ -508,6 +511,9 @@ message GetDimensionValueSuggestionsRequest {
 
   // The universe the devices belong to.
   string universe = 3;
+
+  // Which fleet scope the operator is viewing on the search page.
+  search.Fleet fleet = 4;
 }
 
 // Response for GetDimensionValueSuggestions.
@@ -549,8 +555,8 @@ message TargetDimensionValues {
 
 // Request for BatchGetDeviceDimensionConfigs.
 message BatchGetDeviceDimensionConfigsRequest {
-  // Explicit device IDs selected by the operator.
-  repeated string device_ids = 1;
+  // Explicit devices selected by the operator.
+  repeated DeviceTarget devices = 1;
 
   // Dimension name being configured.
   string dimension_name = 2;
@@ -567,6 +573,9 @@ message BatchGetDeviceDimensionConfigsRequest {
 
   // The universe the devices belong to.
   string universe = 5;
+
+  // Which fleet scope the operator is viewing on the search page.
+  search.Fleet fleet = 6;
 }
 
 // Response for BatchGetDeviceDimensionConfigs.
@@ -583,6 +592,8 @@ message BatchGetDeviceDimensionConfigsResponse {
     // host-managed shared config, Config Pusher, no permission, or config
     // read error).
     string read_only_reason = 4;
+    // Host name of the lab the device connects to.
+    string host_name = 5;
   }
 
   repeated DeviceDimensionConfigEntry entries = 1;
@@ -590,8 +601,8 @@ message BatchGetDeviceDimensionConfigsResponse {
 
 // Request for BatchUpdateDeviceDimensionConfigs.
 message BatchUpdateDeviceDimensionConfigsRequest {
-  // Target device IDs to update (only the devices with WILL_UPDATE status).
-  repeated string device_ids = 1;
+  // Target devices to update (only the devices with WILL_UPDATE status).
+  repeated DeviceTarget devices = 1;
 
   // Dimension name in DeviceConfig (e.g. "recovery", "skip_suw_app", "pool").
   string dimension_name = 2;
@@ -606,6 +617,9 @@ message BatchUpdateDeviceDimensionConfigsRequest {
 
   // The universe the devices belong to.
   string universe = 5;
+
+  // Which fleet scope the operator is viewing on the search page.
+  search.Fleet fleet = 6;
 }
 
 // Response for BatchUpdateDeviceDimensionConfigs.
@@ -614,7 +628,6 @@ message BatchUpdateDeviceDimensionConfigsResponse {
   // Key is device_id. An empty map indicates all target devices succeeded.
   map<string, UpdateError> errors = 1;
 }
-
 // Default Wi-Fi network parameters on a device.
 // Unlike single-device WifiConfig in config_resources.proto, this message
 // carries no legacy UI "type" field.

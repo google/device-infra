@@ -6,13 +6,19 @@ import {
 import {TestBed} from '@angular/core/testing';
 import {APP_DATA, AppData} from '../../models/app_data';
 import {
+  BatchGetConfigurableDimensionKeysResponse,
+  BatchGetDeviceDimensionConfigsResponse,
   BatchGetDeviceWifiConfigsRequest,
   BatchGetDeviceWifiConfigsResponse,
+  BatchUpdateDeviceDimensionConfigsResponse,
   BatchUpdateDeviceWifiConfigsRequest,
   BatchUpdateDeviceWifiConfigsResponse,
   DeviceConfig,
   DeviceConfigChangeStatus,
+  DimensionList,
+  GetConfigurableDimensionsResponse,
   GetDeviceConfigResult,
+  GetDimensionValueSuggestionsResponse,
   GetWifiSuggestionsResponse,
   RecommendedWifi,
   UpdateDeviceConfigRequest,
@@ -337,6 +343,190 @@ describe('HttpConfigService', () => {
 
     const req = httpMock.expectOne(
       'http://testdomain.com/v6/devices:batchUpdateWifiConfigs',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(mockRequest);
+    req.flush(mockResponse);
+  });
+
+  it('should retrieve configurable dimensions via GET', () => {
+    const mockResponse: GetConfigurableDimensionsResponse = {
+      dimensions: [
+        {
+          dimensionName: 'recovery',
+          displayName: 'recovery',
+          dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+        },
+      ],
+      allowCustomDimensions: true,
+    };
+
+    service.getConfigurableDimensions().subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/configs/dimensions:configurable',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(mockResponse);
+  });
+
+  it('should retrieve configurable dimensions via GET with fleet and universe query params', () => {
+    const mockResponse: GetConfigurableDimensionsResponse = {
+      enabled: true,
+      dimensions: [],
+      allowCustomDimensions: false,
+    };
+
+    service
+      .getConfigurableDimensions({fleet: 'FLEET_SELF', universe: 'google_1p'})
+      .subscribe((res) => {
+        expect(res).toEqual(mockResponse);
+      });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/configs/dimensions:configurable?fleet=FLEET_SELF&universe=google_1p',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(mockResponse);
+  });
+
+  it('should call batchGetConfigurableDimensionKeys via POST', () => {
+    const mockResponse: BatchGetConfigurableDimensionKeysResponse = {
+      candidateKeys: [
+        {
+          dimensionName: 'recovery',
+          selectedDeviceCount: 2,
+          fleetDeviceCount: 8420,
+        },
+      ],
+      systemDimensionNames: ['model', 'sdk_version'],
+    };
+
+    const mockRequest = {
+      devices: [
+        {deviceId: 'dev-1', hostName: 'host-1'},
+        {deviceId: 'dev-2', hostName: 'host-2'},
+      ],
+      dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+      fleet: 'FLEET_SELF',
+      universe: 'google_1p',
+    };
+
+    service.batchGetConfigurableDimensionKeys(mockRequest).subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/devices:batchGetConfigurableDimensionKeys',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(mockRequest);
+    req.flush(mockResponse);
+  });
+
+  it('should call getDimensionValueSuggestions via GET with query params', () => {
+    const mockResponse: GetDimensionValueSuggestionsResponse = {
+      candidateValues: [{values: ['true'], deviceCount: 5420}],
+    };
+
+    service
+      .getDimensionValueSuggestions({
+        dimensionName: 'recovery',
+        dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+        universe: 'google_1p',
+        fleet: 'FLEET_SELF',
+      })
+      .subscribe((res) => {
+        expect(res).toEqual(mockResponse);
+      });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/configs/dimensions:valueSuggestions?dimension_name=recovery&dimension_list=DIMENSION_LIST_SUPPORTED&universe=google_1p&fleet=FLEET_SELF',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(mockResponse);
+  });
+
+  it('should call getDimensionValueSuggestions via GET with minimal params', () => {
+    const mockResponse: GetDimensionValueSuggestionsResponse = {
+      candidateValues: [],
+    };
+
+    service
+      .getDimensionValueSuggestions({
+        dimensionName: 'recovery',
+        dimensionList: DimensionList.DIMENSION_LIST_REQUIRED,
+      })
+      .subscribe((res) => {
+        expect(res).toEqual(mockResponse);
+      });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/configs/dimensions:valueSuggestions?dimension_name=recovery&dimension_list=DIMENSION_LIST_REQUIRED',
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(mockResponse);
+  });
+
+  it('should call batchGetDeviceDimensionConfigs via POST', () => {
+    const mockResponse: BatchGetDeviceDimensionConfigsResponse = {
+      entries: [
+        {
+          deviceId: 'dev-1',
+          hostName: 'host-1',
+          values: ['true'],
+          status:
+            DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES,
+        },
+      ],
+    };
+
+    const mockRequest = {
+      devices: [{deviceId: 'dev-1', hostName: 'host-1'}],
+      dimensionName: 'recovery',
+      dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+      target: {valueList: {values: ['true']}},
+      fleet: 'FLEET_SELF',
+    };
+
+    service.batchGetDeviceDimensionConfigs(mockRequest).subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/devices:batchGetDimensionConfigs',
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(mockRequest);
+    req.flush(mockResponse);
+  });
+
+  it('should call batchUpdateDeviceDimensionConfigs via POST', () => {
+    const mockResponse: BatchUpdateDeviceDimensionConfigsResponse = {
+      errors: {
+        'dev-2': {code: 'PERMISSION_DENIED', message: 'No write permission'},
+      },
+    };
+
+    const mockRequest = {
+      devices: [
+        {deviceId: 'dev-1', hostName: 'host-1'},
+        {deviceId: 'dev-2', hostName: 'host-2'},
+      ],
+      dimensionName: 'recovery',
+      dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+      target: {valueList: {values: ['true']}},
+      fleet: 'FLEET_SELF',
+    };
+
+    service.batchUpdateDeviceDimensionConfigs(mockRequest).subscribe((res) => {
+      expect(res).toEqual(mockResponse);
+    });
+
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/devices:batchUpdateDimensionConfigs',
     );
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(mockRequest);

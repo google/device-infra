@@ -4,13 +4,23 @@ import {MatDialog, MatDialogRef} from '@angular/material/dialog';
 import {By} from '@angular/platform-browser';
 import {provideNoopAnimations} from '@angular/platform-browser/animations';
 
-import {of} from 'rxjs';
+import {of, Subject, throwError} from 'rxjs';
 
+import {
+  ConfigurableDimension,
+  DimensionList,
+  GetConfigurableDimensionsResponse,
+} from '../../../../../core/models/device_config_models';
 import {Column, Row} from '../../../../../core/models/search';
 import {Fleet} from '../../../../../core/models/search_fleet';
+import {
+  CONFIG_SERVICE,
+  ConfigService,
+} from '../../../../../core/services/config/config_service';
 import {EnvUniverseService} from '../../../../../core/services/env_universe_service';
 import {BulkConfigDialogResult, FleetScope} from '../../../models';
 import {FleetSearchStore} from '../../../services/fleet_search_store';
+import {BulkConfigDimensionDialog} from '../../bulk_config/dimension_dialog/bulk_config_dimension_dialog';
 import {BulkConfigWifiDialog} from '../../bulk_config/wifi_dialog/bulk_config_wifi_dialog';
 import {FleetSearchResultsComponent} from './fleet_search_results';
 
@@ -94,6 +104,7 @@ describe('FleetSearchResultsComponent', () => {
   let mockStore: MockFleetSearchStore;
   let mockDialog: jasmine.SpyObj<MatDialog>;
   let mockEnvUniverseService: jasmine.SpyObj<EnvUniverseService>;
+  let mockConfigService: jasmine.SpyObj<ConfigService>;
 
   beforeEach(async () => {
     mockStore = new MockFleetSearchStore();
@@ -103,6 +114,21 @@ describe('FleetSearchResultsComponent', () => {
       ['getUniverseString'],
     );
     mockEnvUniverseService.getUniverseString.and.returnValue('google_1p');
+    mockConfigService = jasmine.createSpyObj<ConfigService>('ConfigService', [
+      'getConfigurableDimensions',
+    ]);
+    mockConfigService.getConfigurableDimensions.and.returnValue(
+      of({
+        dimensions: [
+          {
+            dimensionName: 'recovery',
+            displayName: 'recovery',
+            dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+          },
+        ],
+        allowCustomDimensions: true,
+      }),
+    );
 
     await TestBed.configureTestingModule({
       imports: [FleetSearchResultsComponent],
@@ -111,6 +137,7 @@ describe('FleetSearchResultsComponent', () => {
         {provide: FleetSearchStore, useValue: mockStore},
         {provide: MatDialog, useValue: mockDialog},
         {provide: EnvUniverseService, useValue: mockEnvUniverseService},
+        {provide: CONFIG_SERVICE, useValue: mockConfigService},
       ],
     }).compileComponents();
 
@@ -334,6 +361,7 @@ describe('FleetSearchResultsComponent', () => {
       );
 
       component.bulkConfig.openWifiDialog();
+      component.bulkConfig.openDimensionDialog('supported');
 
       expect(openSpy).not.toHaveBeenCalled();
     });
@@ -416,6 +444,225 @@ describe('FleetSearchResultsComponent', () => {
 
       expect(mockStore.clearSelection).not.toHaveBeenCalled();
       expect(mockStore.executeSearch).not.toHaveBeenCalled();
+    });
+
+    it('reactively pre-fetches configurable dimensions when devices are selected', async () => {
+      expect(
+        mockConfigService.getConfigurableDimensions,
+      ).not.toHaveBeenCalled();
+
+      mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(mockConfigService.getConfigurableDimensions).toHaveBeenCalledTimes(
+        1,
+      );
+      const dimConfig = component.bulkConfig.dimensionConfig();
+      expect(dimConfig.enabled).toBeTrue();
+      expect(dimConfig.dimensions.length).toBe(1);
+      expect(dimConfig.dimensions[0].dimensionName).toBe('recovery');
+      expect(dimConfig.allowCustom).toBeTrue();
+      expect(dimConfig.isLoading).toBeFalse();
+    });
+
+    it('keeps Configure Wi-Fi visible and hides Configuration button when GetConfigurableDimensionsResponse.enabled is false', async () => {
+      mockConfigService.getConfigurableDimensions.and.returnValue(
+        of({
+          enabled: false,
+          dimensions: [],
+          allowCustomDimensions: false,
+        }),
+      );
+
+      mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
+      mockStore.entity.set('devices');
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.bulkConfig.dimensionConfig().enabled).toBeFalse();
+      const buttons = fixture.debugElement.queryAll(
+        By.css('.rt-toolbar button'),
+      );
+      const buttonTexts = buttons.map((b) =>
+        b.nativeElement.textContent.trim(),
+      );
+      expect(buttonTexts.some((t) => t.includes('Configure Wi-Fi'))).toBeTrue();
+      expect(buttonTexts.some((t) => t.includes('Configuration'))).toBeFalse();
+    });
+
+    it('disables button and displays loading state during dimension loading', async () => {
+      const subject = new Subject<GetConfigurableDimensionsResponse>();
+      mockConfigService.getConfigurableDimensions.and.returnValue(subject);
+
+      mockStore.selectedItems.set(toSelectedMap(['dev-1']));
+      fixture.detectChanges();
+
+      expect(component.bulkConfig.dimensionConfig().isLoading).toBeTrue();
+      expect(mockConfigService.getConfigurableDimensions).toHaveBeenCalledTimes(
+        1,
+      );
+
+      // Updating selection while already loading for the same context does not re-trigger fetch
+      mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
+      fixture.detectChanges();
+      expect(mockConfigService.getConfigurableDimensions).toHaveBeenCalledTimes(
+        1,
+      );
+
+      subject.next({
+        enabled: true,
+        dimensions: [],
+        allowCustomDimensions: true,
+      });
+      subject.complete();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.bulkConfig.dimensionConfig().isLoading).toBeFalse();
+      expect(component.bulkConfig.dimensionConfig().allowCustom).toBeTrue();
+    });
+
+    it('does not re-fetch dimensions if already loaded for the same fleet, but invalidates and re-fetches when fleet changes', async () => {
+      mockStore.selectedItems.set(toSelectedMap(['dev-1']));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(mockConfigService.getConfigurableDimensions).toHaveBeenCalledTimes(
+        1,
+      );
+
+      mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(mockConfigService.getConfigurableDimensions).toHaveBeenCalledTimes(
+        1,
+      );
+
+      // Clearing selection and re-selecting in the same fleet does not re-fetch
+      mockStore.selectedItems.set(new Map());
+      fixture.detectChanges();
+      mockStore.selectedItems.set(toSelectedMap(['dev-2']));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(mockConfigService.getConfigurableDimensions).toHaveBeenCalledTimes(
+        1,
+      );
+
+      // Switching fleet invalidates cached dimensions and automatically re-fetches via effect
+      mockStore.fleet.set('ats');
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(mockConfigService.getConfigurableDimensions).toHaveBeenCalledTimes(
+        2,
+      );
+      expect(component.bulkConfig.dimensionConfig().dimensions.length).toBe(1);
+    });
+
+    it('exposes error state during dimension loading failure and reloads on retryDimensions()', async () => {
+      mockConfigService.getConfigurableDimensions.and.returnValue(
+        throwError(() => ({
+          error: {error: {message: 'Service down'}},
+        })),
+      );
+
+      mockStore.selectedItems.set(toSelectedMap(['dev-1']));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.bulkConfig.dimensionConfig().isLoading).toBeFalse();
+      expect(component.bulkConfig.dimensionConfig().error).toBe('Service down');
+      expect(component.bulkConfig.dimensionConfig().dimensions).toEqual([]);
+
+      mockConfigService.getConfigurableDimensions.and.returnValue(
+        of({
+          enabled: true,
+          dimensions: [
+            {
+              dimensionName: 'recovery',
+              displayName: 'recovery',
+              dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+            },
+          ],
+          allowCustomDimensions: true,
+        }),
+      );
+      component.bulkConfig.retryDimensions();
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.bulkConfig.dimensionConfig().error).toBeNull();
+      expect(component.bulkConfig.dimensionConfig().dimensions.length).toBe(1);
+    });
+
+    it('opens BulkConfigDimensionDialog with selected devices and dimension', () => {
+      mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
+      const openSpy = spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      ).and.returnValue({
+        afterClosed: () => of({updated: true}),
+      } as unknown as MatDialogRef<
+        BulkConfigDimensionDialog,
+        BulkConfigDialogResult
+      >);
+
+      const dim: ConfigurableDimension = {
+        dimensionName: 'recovery',
+        displayName: 'recovery',
+        dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+      };
+
+      component.bulkConfig.openDimensionDialog(dim);
+
+      expect(openSpy).toHaveBeenCalledWith(
+        BulkConfigDimensionDialog,
+        jasmine.objectContaining({
+          data: jasmine.objectContaining({
+            devices: [
+              {deviceId: 'dev-1', hostName: 'host-for-dev-1'},
+              {deviceId: 'dev-2', hostName: 'host-for-dev-2'},
+            ],
+            dimension: dim,
+          }),
+        }),
+      );
+      expect(mockStore.clearSelection).toHaveBeenCalled();
+      expect(mockStore.executeSearch).toHaveBeenCalled();
+    });
+
+    it('opens BulkConfigDimensionDialog with custom dimension list', () => {
+      mockStore.selectedItems.set(toSelectedMap(['dev-1']));
+      const openSpy = spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      ).and.returnValue({
+        afterClosed: () => of({updated: true}),
+      } as unknown as MatDialogRef<
+        BulkConfigDimensionDialog,
+        BulkConfigDialogResult
+      >);
+
+      component.bulkConfig.openDimensionDialog('supported');
+
+      expect(openSpy).toHaveBeenCalledWith(
+        BulkConfigDimensionDialog,
+        jasmine.objectContaining({
+          data: jasmine.objectContaining({
+            devices: [{deviceId: 'dev-1', hostName: 'host-for-dev-1'}],
+            dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+          }),
+        }),
+      );
+      expect(mockStore.clearSelection).toHaveBeenCalled();
+      expect(mockStore.executeSearch).toHaveBeenCalled();
     });
   });
 

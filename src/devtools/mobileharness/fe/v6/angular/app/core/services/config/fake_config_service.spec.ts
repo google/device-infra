@@ -4,6 +4,7 @@ import {
   DeviceConfig,
   DeviceConfigChangeStatus,
   DeviceConfigUiStatus,
+  DimensionList,
   UpdateDeviceConfigRequest,
   UpdateDeviceConfigResult,
 } from '../../models/device_config_models';
@@ -470,5 +471,83 @@ describe('FakeConfigService', () => {
       }
       done();
     });
+  });
+
+  it('should retrieve configurable dimensions', (done) => {
+    service.getConfigurableDimensions().subscribe((res) => {
+      expect(res).toBeDefined();
+      expect(res.dimensions.length).toBeGreaterThan(0);
+      expect(res.dimensions[0].dimensionName).toBe('recovery');
+      expect(res.dimensions[0].dimensionList).toBe(
+        DimensionList.DIMENSION_LIST_SUPPORTED,
+      );
+      expect(res.allowCustomDimensions).toBeTrue();
+      done();
+    });
+  });
+
+  it('should retrieve configurable dimension keys and system dimension names', (done) => {
+    service
+      .batchGetConfigurableDimensionKeys({
+        devices: [{deviceId: 'dev-1'}, {deviceId: 'dev-2'}],
+        dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+      })
+      .subscribe((res) => {
+        expect(res).toBeDefined();
+        expect(res.candidateKeys!.length).toBeGreaterThan(0);
+        expect(res.systemDimensionNames).toContain('model');
+        done();
+      });
+  });
+
+  it('should retrieve dimension value suggestions', (done) => {
+    service
+      .getDimensionValueSuggestions({
+        dimensionName: 'recovery',
+        dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+      })
+      .subscribe((res) => {
+        expect(res).toBeDefined();
+        expect(res.candidateValues!.length).toBeGreaterThan(0);
+        expect(res.candidateValues![0].values).toEqual(['true']);
+        done();
+      });
+  });
+
+  it('should retrieve device dimension configs and update them in batch', (done) => {
+    service
+      .batchGetDeviceDimensionConfigs({
+        devices: [
+          {deviceId: 'dev-1', hostName: 'host-1'},
+          {deviceId: 'FailedDevice-0', hostName: 'host-2'},
+        ],
+        dimensionName: 'recovery',
+        dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+        target: {valueList: {values: ['true']}},
+      })
+      .subscribe((res) => {
+        expect(res).toBeDefined();
+        expect(res.entries!.length).toBe(2);
+        expect(res.entries![0].hostName).toBe('host-1');
+        expect(res.entries![1].status).toBe(
+          DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
+        );
+        expect(res.entries![1].readOnlyReason).toContain(
+          'Unrecognizable or invalid device ID',
+        );
+
+        service
+          .batchUpdateDeviceDimensionConfigs({
+            devices: [{deviceId: 'dev-1'}, {deviceId: 'fail-device-2'}],
+            dimensionName: 'recovery',
+            dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+            target: {valueList: {values: ['true']}},
+          })
+          .subscribe((updateRes) => {
+            expect(updateRes.errors).toBeDefined();
+            expect(updateRes.errors!['fail-device-2']).toBeDefined();
+            done();
+          });
+      });
   });
 });

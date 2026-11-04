@@ -311,10 +311,76 @@
         <mat-icon class="material-symbols-outlined">wifi</mat-icon>
         Configure Wi-Fi
       </button>
-      <button class="rt-btn-text" [disabled]="true" title="Feature is under development">
-        <mat-icon class="material-symbols-outlined">tune</mat-icon>
-        Configuration
-      </button>
+      @let dimConfig = bulkConfig.dimensionConfig();
+      @if (dimConfig.enabled) {
+        <button
+          class="rt-btn-text"
+          [class.is-loading]="dimConfig.isLoading"
+          [matMenuTriggerFor]="configureMenu"
+          [disabled]="dimConfig.isLoading"
+          title="Configure device dimensions"
+        >
+          @if (dimConfig.isLoading) {
+            <mat-spinner diameter="16" class="shared-button-spinner"></mat-spinner>
+          } @else {
+            <mat-icon class="material-symbols-outlined">tune</mat-icon>
+          }
+          Configuration
+          <mat-icon class="material-symbols-outlined rt-caret">arrow_drop_down</mat-icon>
+        </button>
+        <mat-menu #configureMenu="matMenu" class="configure-dropdown-menu">
+          @if (dimConfig.error) {
+            <div class="configure-menu-error" role="alert">
+              <mat-icon class="material-symbols-outlined">error</mat-icon>
+              <div class="configure-menu-error-body">
+                <span class="configure-menu-error-title">Failed to load dimensions</span>
+                <span class="configure-menu-error-sub">{{ dimConfig.error }}</span>
+              </div>
+            </div>
+            <div class="configure-menu-footer">
+              <button
+                mat-menu-item
+                class="configure-menu-retry"
+                (click)="$event.stopPropagation(); bulkConfig.retryDimensions()"
+              >
+                <mat-icon class="material-symbols-outlined">refresh</mat-icon>
+                <span>Retry loading dimensions</span>
+              </button>
+            </div>
+          } @else {
+            <div class="configure-menu-items">
+              @for (dim of dimConfig.dimensions; track dim.dimensionName) {
+                <button mat-menu-item (click)="bulkConfig.openDimensionDialog(dim)">
+                  <span>{{ dim.displayName || dim.dimensionName }}</span>
+                </button>
+              } @empty {
+                @if (!dimConfig.allowCustom) {
+                  <div class="menu-empty-message">No dimensions available</div>
+                }
+              }
+            </div>
+            @if (dimConfig.allowCustom) {
+              <mat-divider></mat-divider>
+              <div class="configure-menu-footer">
+                <button
+                  mat-menu-item
+                  (click)="bulkConfig.openDimensionDialog('supported')"
+                >
+                  <mat-icon class="material-symbols-outlined">add</mat-icon>
+                  <span>Supported Dimension…</span>
+                </button>
+                <button
+                  mat-menu-item
+                  (click)="bulkConfig.openDimensionDialog('required')"
+                >
+                  <mat-icon class="material-symbols-outlined">add</mat-icon>
+                  <span>Required Dimension…</span>
+                </button>
+              </div>
+            }
+          }
+        </mat-menu>
+      }
     }
 
     <button class="rt-btn-text" [disabled]="true" title="Feature is under development">

@@ -359,6 +359,183 @@ export declare interface BatchGetDeviceWifiConfigsResponse {
 }
 
 /**
+ * Selects which dimension list in composite_dimension is read or updated.
+ * Aligns with config_service.proto DimensionList.
+ */
+export enum DimensionList {
+  DIMENSION_LIST_UNSPECIFIED = 'DIMENSION_LIST_UNSPECIFIED',
+  DIMENSION_LIST_SUPPORTED = 'DIMENSION_LIST_SUPPORTED',
+  DIMENSION_LIST_REQUIRED = 'DIMENSION_LIST_REQUIRED',
+}
+
+/**
+ * Metadata for a configurable dimension in the selection toolbar.
+ * Aligns with config_service.proto ConfigurableDimension.
+ */
+export declare interface ConfigurableDimension {
+  /** Dimension name in DeviceConfig (e.g. "recovery", "skip_suw_app", "pool"). */
+  dimensionName: string;
+  /** Exact label shown in toolbar menu and dialog header. */
+  displayName: string;
+  /** Which dimension list in composite_dimension this entry configures. */
+  dimensionList: DimensionList;
+}
+
+/**
+ * Request for GetConfigurableDimensions.
+ * Aligns with config_service.proto GetConfigurableDimensionsRequest.
+ */
+export declare interface GetConfigurableDimensionsRequest {
+  universe?: string;
+  fleet?: string;
+}
+
+/**
+ * Response for GetConfigurableDimensions.
+ * Aligns with config_service.proto GetConfigurableDimensionsResponse.
+ */
+export declare interface GetConfigurableDimensionsResponse {
+  enabled?: boolean;
+  dimensions: ConfigurableDimension[];
+  allowCustomDimensions: boolean;
+}
+
+/**
+ * A configurable dimension key present in DeviceConfig.
+ * Aligns with config_service.proto BatchGetConfigurableDimensionKeysResponse.CandidateDimensionKey.
+ */
+export declare interface CandidateDimensionKey {
+  dimensionName: string;
+  selectedDeviceCount: number;
+  fleetDeviceCount: number;
+}
+
+/**
+ * Request for BatchGetConfigurableDimensionKeys.
+ * Aligns with config_service.proto BatchGetConfigurableDimensionKeysRequest.
+ */
+export declare interface BatchGetConfigurableDimensionKeysRequest {
+  devices: DeviceTarget[];
+  dimensionList: DimensionList;
+  universe?: string;
+  fleet?: string;
+}
+
+/**
+ * Response for BatchGetConfigurableDimensionKeys.
+ * Aligns with config_service.proto BatchGetConfigurableDimensionKeysResponse.
+ */
+export declare interface BatchGetConfigurableDimensionKeysResponse {
+  candidateKeys?: CandidateDimensionKey[];
+  systemDimensionNames?: string[];
+}
+
+/**
+ * A distinct value-set available as a one-click suggestion.
+ * Aligns with config_service.proto GetDimensionValueSuggestionsResponse.CandidateDimensionValue.
+ */
+export declare interface CandidateDimensionValue {
+  values: string[];
+  deviceCount: number;
+}
+
+/**
+ * Request for GetDimensionValueSuggestions.
+ * Aligns with config_service.proto GetDimensionValueSuggestionsRequest.
+ */
+export declare interface GetDimensionValueSuggestionsRequest {
+  dimensionName: string;
+  dimensionList: DimensionList;
+  universe?: string;
+  fleet?: string;
+}
+
+/**
+ * Response for GetDimensionValueSuggestions.
+ * Aligns with config_service.proto GetDimensionValueSuggestionsResponse.
+ */
+export declare interface GetDimensionValueSuggestionsResponse {
+  candidateValues?: CandidateDimensionValue[];
+}
+
+/**
+ * Clears all entries for the target dimension key from composite_dimension.
+ * Aligns with config_service.proto ClearDimensionValues.
+ */
+export declare interface ClearDimensionValues {}
+
+/**
+ * A set of dimension values to assign to a dimension key.
+ * Aligns with config_service.proto DimensionValueList.
+ */
+export declare interface DimensionValueList {
+  values: string[];
+}
+
+/**
+ * Target dimension value state to preview or apply in a batch operation.
+ * Aligns with config_service.proto TargetDimensionValues.
+ */
+export declare interface TargetDimensionValues {
+  clearValues?: ClearDimensionValues;
+  valueList?: DimensionValueList;
+}
+
+/**
+ * Current value-set and change status for a single selected device.
+ * Aligns with config_service.proto BatchGetDeviceDimensionConfigsResponse.DeviceDimensionConfigEntry.
+ */
+export declare interface DeviceDimensionConfigEntry {
+  deviceId: string;
+  values?: string[];
+  status: DeviceConfigChangeStatus;
+  readOnlyReason?: string;
+  hostName?: string;
+}
+
+/**
+ * Request for BatchGetDeviceDimensionConfigs.
+ * Aligns with config_service.proto BatchGetDeviceDimensionConfigsRequest.
+ */
+export declare interface BatchGetDeviceDimensionConfigsRequest {
+  devices: DeviceTarget[];
+  dimensionName: string;
+  dimensionList: DimensionList;
+  target?: TargetDimensionValues;
+  universe?: string;
+  fleet?: string;
+}
+
+/**
+ * Response for BatchGetDeviceDimensionConfigs.
+ * Aligns with config_service.proto BatchGetDeviceDimensionConfigsResponse.
+ */
+export declare interface BatchGetDeviceDimensionConfigsResponse {
+  entries?: DeviceDimensionConfigEntry[];
+}
+
+/**
+ * Request for BatchUpdateDeviceDimensionConfigs.
+ * Aligns with config_service.proto BatchUpdateDeviceDimensionConfigsRequest.
+ */
+export declare interface BatchUpdateDeviceDimensionConfigsRequest {
+  devices: DeviceTarget[];
+  dimensionName: string;
+  dimensionList: DimensionList;
+  target: TargetDimensionValues;
+  universe?: string;
+  fleet?: string;
+}
+
+/**
+ * Response for BatchUpdateDeviceDimensionConfigs.
+ * Aligns with config_service.proto BatchUpdateDeviceDimensionConfigsResponse.
+ */
+export declare interface BatchUpdateDeviceDimensionConfigsResponse {
+  errors?: Record<string, UpdateError>;
+}
+
+/**
  * Request for BatchUpdateDeviceWifiConfigs.
  * Aligns with config_service.proto BatchUpdateDeviceWifiConfigsRequest.
  */

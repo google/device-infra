@@ -1,10 +1,16 @@
-import {DeviceTarget} from '../../../core/models/device_config_models';
+import {
+  ConfigurableDimension,
+  DeviceTarget,
+  DimensionList,
+} from '../../../core/models/device_config_models';
 
 /** Input data structure passed into bulk device configuration dialogs. */
 export interface BulkConfigDialogData {
   devices: DeviceTarget[];
   universe?: string;
   fleet?: string;
+  dimension?: ConfigurableDimension;
+  dimensionList?: DimensionList;
 }
 
 /** Standard result returned when a bulk device configuration dialog closes. */

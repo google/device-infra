@@ -1,0 +1,241 @@
+@use '../common/bulk_wizard';
+
+@include bulk_wizard.bulk-wizard-base;
+
+// --- Dimension-Specific Step 1 & Step 2 Styles ---
+.bd-band-actions {
+  margin-left: auto;
+}
+
+.bd-key-tf {
+  max-width: 520px;
+}
+
+.bw-tf.error {
+  border-bottom-color: #b3261e;
+
+  &:focus-within {
+    border-bottom: 2px solid #b3261e;
+  }
+
+  .bw-tf-label {
+    color: #b3261e;
+  }
+}
+
+.bd-key-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: #b3261e;
+
+  .error-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.bd-key-hint-msg {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: #49454f;
+
+  code {
+    font-family: 'Roboto Mono', monospace;
+    background: #e6e0e9;
+    padding: 1px 4px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+  }
+}
+
+// Unified M3 Chip input field
+.bd-chips {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 8px 12px;
+  background: #dde3ea;
+  border-radius: 4px 4px 0 0;
+  border-bottom: 1px solid #49454f;
+  cursor: text;
+  transition:
+    border-bottom-color 0.15s ease,
+    border-bottom-width 0.15s ease;
+
+  &:hover {
+    border-bottom-color: #1f1f1f;
+  }
+
+  &:focus-within {
+    border-bottom: 2px solid #0b57d0;
+    padding-bottom: 7px;
+  }
+}
+
+.bd-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  min-height: 32px;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 4px 6px 4px 12px;
+  border-radius: 8px;
+  background: #d3e3fd;
+  color: #041e49;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+
+  > span {
+    overflow-wrap: anywhere;
+  }
+}
+
+.bd-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 50%;
+  color: #041e49;
+  opacity: 0.75;
+  transition:
+    opacity 0.12s ease,
+    background 0.12s ease;
+
+  &:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.12);
+  }
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+  }
+}
+
+.bd-chip-input {
+  flex: 1;
+  min-width: 60px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 0.875rem;
+  color: #1f1f1f;
+
+  &::placeholder {
+    color: #49454f;
+    opacity: 0.7;
+  }
+}
+
+.bw-li.bd-agg-row {
+  cursor: default;
+
+  .bw-text-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+
+.bw-li-lead.new-key-lead {
+  color: #0b57d0;
+}
+
+.bd-agg-vals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.bd-pill {
+  display: inline-flex;
+  align-items: center;
+  box-sizing: border-box;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: #e1e3e1;
+  color: #1f1f1f;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.bd-pill-more,
+.bd-pill-action {
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  font-weight: 500;
+  flex-shrink: 0;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.bd-pill-more {
+  background: #d3e3fd;
+  color: #041e49;
+
+  &:hover {
+    background: #c2d7fc;
+  }
+}
+
+.bd-pill-action {
+  background: #eceef4;
+  color: #0b57d0;
+
+  &:hover {
+    background: #dde3ea;
+  }
+}
+
+.bd-muted {
+  color: #74777f;
+  font-style: italic;
+}
+
+// --- Dimension Review Value Cell Styles ---
+.bd-review-vals {
+  flex-wrap: nowrap;
+  align-items: center;
+
+  &:not(.is-expanded) .bd-pill:not(.bd-pill-more):not(.bd-pill-action) {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 1;
+
+    &:only-child {
+      max-width: 100%;
+    }
+  }
+
+  &.is-expanded {
+    flex-wrap: wrap;
+    padding: 6px 0;
+  }
+}
