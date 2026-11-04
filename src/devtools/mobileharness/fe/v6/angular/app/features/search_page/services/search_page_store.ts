@@ -34,6 +34,7 @@ import {
   TjsFilter,
   TjsSuggestion,
 } from '../../../core/models/search';
+import {EnvUniverseService} from '../../../core/services/env_universe_service';
 import {SEARCH_SERVICE} from '../../../core/services/search/search_service';
 import {
   createInitialValuePickerState,
@@ -65,8 +66,8 @@ import {
   normalizeKey,
   parseUrlChips,
   resolveEntityFromPathOrUrl,
+  resolveFleetScope,
   resolveInitialChips,
-  resolveInitialFleet,
   saveStoredAutoCollapseAfterApply,
   serializeFilterChip,
 } from '../utils';
@@ -95,6 +96,9 @@ export abstract class SearchPageStore {
 
   /** Router service for navigating and syncing filter states to the browser URL. */
   protected readonly router = inject(Router);
+
+  /** Environment helper; fleet scope switching only exists in the Google-internal build. */
+  protected readonly envUniverseService = inject(EnvUniverseService);
 
   // ===========================================================================
   // 2. Core Domain & Query Signals
@@ -146,8 +150,17 @@ export abstract class SearchPageStore {
     return isSearchRouteActive(this.currentUrl(), this.entity());
   });
 
+  /**
+   * Whether the fleet scope (Google internal vs. Partner ATS) can be switched.
+   * The OSS build runs a single local controller and always searches FLEET_SELF,
+   * so its fleet switcher is hidden and the `fleet` URL param is ignored.
+   */
+  readonly isFleetSwitchable = this.envUniverseService.isGoogleInternal();
+
   /** Fleet operational scope ('internal' vs 'ats'). */
-  readonly fleet = signal<FleetScope>(resolveInitialFleet(this.route));
+  readonly fleet = signal<FleetScope>(
+    resolveFleetScope(this.route.snapshot?.queryParams, this.isFleetSwitchable),
+  );
 
   /** Raw text input query string entered by the user in the search box. */
   readonly searchQuery = signal<string>('');
@@ -281,7 +294,9 @@ export abstract class SearchPageStore {
   });
 
   /** Determines whether the Fleet scope switcher (Internal vs ATS) should be displayed. */
-  readonly showScopeSwitcher = computed(() => !this.isTjs());
+  readonly showScopeSwitcher = computed(
+    () => !this.isTjs() && this.isFleetSwitchable,
+  );
 
   /** Placeholder text for the main search input box. */
   readonly searchPlaceholder = computed(() => `Search ${this.entity()}...`);
@@ -301,9 +316,25 @@ export abstract class SearchPageStore {
     this.searchQuery.set('');
   }
 
+  /**
+   * Whether the landing (launcher) view is disabled by the search config.
+   * The OSS single-controller BFF returns `landing.enabled=false` because its
+   * fleet is small enough to browse directly, so results are listed right away.
+   *
+   * Read presence-aware: proto3 JSON printers may omit a `false` (the internal
+   * ESF layer does, the OSS Envoy transcoder prints it), so the check is
+   * "landing config present and not enabled" rather than `=== false`. It stays
+   * `false` before the config has loaded and when it has no landing section.
+   */
+  readonly isLandingDisabled = computed<boolean>(() => {
+    const landing = this.searchConfig()?.landing;
+    return landing != null && landing.enabled !== true;
+  });
+
   /** Whether the search view is currently in its initial landing / empty guide state. */
   readonly isLandingState = computed<boolean>(() => {
     if (this.isTjs()) return false;
+    if (this.isLandingDisabled()) return false;
     return this.activeChips().length === 0 && !this.browseAll();
   });
 
@@ -611,9 +642,7 @@ export abstract class SearchPageStore {
           Boolean(qp?.[key]),
         );
         if (!this.isTjs() && !hasLegacyParams) {
-          const fleetParam = (qp?.['fleet'] || 'internal') as
-            | 'internal'
-            | 'ats';
+          const fleetParam = resolveFleetScope(qp, this.isFleetSwitchable);
           if (fleetParam !== this.fleet()) {
             this.fleet.set(fleetParam);
           }
@@ -646,9 +675,7 @@ export abstract class SearchPageStore {
       return;
     }
 
-    const fleetParam = ((params['fleet'] as string) || 'internal') as
-      | 'internal'
-      | 'ats';
+    const fleetParam = resolveFleetScope(params, this.isFleetSwitchable);
     if (fleetParam !== this.fleet()) {
       this.fleet.set(fleetParam);
     }

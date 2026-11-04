@@ -4,6 +4,10 @@ import {provideNoopAnimations} from '@angular/platform-browser/animations';
 
 import {PromotedFilterKeyItem, PromotedGroupByKeyItem} from '../../../models';
 import {SearchPageStore} from '../../../services/search_page_store';
+import {
+  getStoredFilterCollapsed,
+  saveStoredFilterCollapsed,
+} from '../../../utils/search_suggestions_utils';
 import {FilterPresets} from './filter_presets';
 
 class FakeSearchPageStore {
@@ -11,6 +15,7 @@ class FakeSearchPageStore {
   readonly isPromotedKeysLoading = signal<boolean>(false);
   readonly promotedFilterKeys = signal<PromotedFilterKeyItem[]>([]);
   readonly promotedGroupByKeys = signal<PromotedGroupByKeyItem[]>([]);
+  readonly entity = signal<string>('devices');
 
   openQuickFilter = jasmine.createSpy('openQuickFilter');
   openQuickGroupBy = jasmine.createSpy('openQuickGroupBy');
@@ -48,6 +53,7 @@ describe('FilterPresets', () => {
   ];
 
   beforeEach(async () => {
+    window.localStorage.clear();
     mockStore = new FakeSearchPageStore();
 
     await TestBed.configureTestingModule({
@@ -217,5 +223,45 @@ describe('FilterPresets', () => {
     expect(
       fixture.nativeElement.querySelector('.preset-filters-container'),
     ).not.toBeNull();
+  });
+
+  it('persists the collapsed state per entity and restores it in results mode', () => {
+    mockStore.isLandingState.set(false);
+    mockStore.promotedFilterKeys.set(sampleFilters);
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector(
+      '.preset-hide-btn',
+    ) as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(getStoredFilterCollapsed('devices')).toBeTrue();
+    expect(getStoredFilterCollapsed('hosts')).toBeNull();
+
+    // A fresh component for the same entity starts collapsed in results mode...
+    const other = TestBed.createComponent(FilterPresets);
+    other.detectChanges();
+    expect(other.componentInstance.isCollapsed()).toBeTrue();
+    expect(other.nativeElement.querySelector('.preset-show-pill')).not.toBeNull();
+
+    // ...and showing the panel again persists the new choice.
+    (other.nativeElement.querySelector(
+      '.preset-show-pill',
+    ) as HTMLButtonElement).click();
+    other.detectChanges();
+    expect(getStoredFilterCollapsed('devices')).toBeFalse();
+  });
+
+  it('still expands in landing state when the stored state is collapsed', () => {
+    saveStoredFilterCollapsed('devices', true);
+    mockStore.isLandingState.set(true);
+    mockStore.promotedFilterKeys.set(sampleFilters);
+    fixture.detectChanges();
+
+    expect(component.isCollapsed()).toBeFalse();
+
+    // Leaving the landing state applies the persisted choice.
+    mockStore.isLandingState.set(false);
+    fixture.detectChanges();
+    expect(component.isCollapsed()).toBeTrue();
   });
 });

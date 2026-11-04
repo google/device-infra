@@ -43,8 +43,8 @@ import {
   parseStrictInt32,
   parseUrlChips,
   resolveEntityFromPathOrUrl,
+  resolveFleetScope,
   resolveInitialChips,
-  resolveInitialFleet,
   serializeComplexCondition,
   serializeFilterChip,
   toFleetProto,
@@ -1562,30 +1562,21 @@ describe('search_filter_utils', () => {
     });
   });
 
-  describe('resolveInitialFleet', () => {
-    it('returns "ats" when fleet query param is "ats"', () => {
-      const mockRoute = {
-        snapshot: {
-          queryParams: {fleet: 'ats'},
-        },
-      } as unknown as ActivatedRoute;
-      expect(resolveInitialFleet(mockRoute)).toBe('ats');
+  describe('resolveFleetScope', () => {
+    it('returns "ats" when fleet switching is allowed and the fleet query param is "ats"', () => {
+      expect(resolveFleetScope({'fleet': 'ats'}, true)).toBe('ats');
     });
 
     it('defaults to "internal" when fleet query param is missing or other value', () => {
-      const mockRoute1 = {
-        snapshot: {
-          queryParams: {},
-        },
-      } as unknown as ActivatedRoute;
-      expect(resolveInitialFleet(mockRoute1)).toBe('internal');
+      expect(resolveFleetScope({}, true)).toBe('internal');
+      expect(resolveFleetScope({'fleet': 'other'}, true)).toBe('internal');
+      expect(resolveFleetScope(undefined, true)).toBe('internal');
+      expect(resolveFleetScope(null, true)).toBe('internal');
+    });
 
-      const mockRoute2 = {
-        snapshot: {
-          queryParams: {fleet: 'other'},
-        },
-      } as unknown as ActivatedRoute;
-      expect(resolveInitialFleet(mockRoute2)).toBe('internal');
+    it('ignores the fleet query param when fleet switching is NOT allowed (OSS build)', () => {
+      expect(resolveFleetScope({'fleet': 'ats'}, false)).toBe('internal');
+      expect(resolveFleetScope({}, false)).toBe('internal');
     });
   });
 

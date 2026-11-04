@@ -109,10 +109,20 @@ export class FleetSearchResultsComponent {
 
   readonly trackByRow = (_: number, item: {key: string}) => item.key;
 
-  /** Label representing the current fleet partition. */
-  readonly fleetLabel = computed<string>(() =>
-    this.store.fleet() === 'internal' ? 'Google Internal' : 'ATS Labs',
-  );
+  /**
+   * Label representing the current fleet partition. Empty when the build has a
+   * single fleet (OSS), as labeling the only fleet would be meaningless.
+   */
+  readonly fleetLabel = computed<string>(() => {
+    if (!this.store.isFleetSwitchable) return '';
+    return this.store.fleet() === 'internal' ? 'Google Internal' : 'ATS Labs';
+  });
+
+  /** Fleet suffix appended to the toolbar counts (e.g. " · Google Internal"), empty when there is no fleet label. */
+  readonly fleetLabelSuffix = computed<string>(() => {
+    const label = this.fleetLabel();
+    return label ? ` · ${label}` : '';
+  });
 
   /** Derived table columns array including the selection checkbox column. */
   readonly columnsToDisplay = computed<string[]>(() => {

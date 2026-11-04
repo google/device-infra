@@ -1,7 +1,14 @@
 import {FleetColumnDescriptor} from '../../../core/models/search';
+import {getErrorMessage} from '../../../shared/utils/error_utils';
 import {readStorage, removeStorage, writeStorage} from './search_storage_utils';
 
 const STORAGE_VISIBLE_PREFIX = 'mh_fe_v6_visible_columns_';
+
+/**
+ * Error message the BFF returns when a requested column key is not (or no
+ * longer) known, e.g. `Unknown device key: field::uuid`.
+ */
+const UNKNOWN_COLUMN_KEY_PATTERN = /Unknown (?:device|host) key: (\S+)/;
 
 /**
  * Retrieves custom visible table columns saved by the user from localStorage.
@@ -34,4 +41,18 @@ export function saveStoredVisibleColumns(
  */
 export function clearStoredVisibleColumns(entity: string, fleet: string): void {
   removeStorage(`${STORAGE_VISIBLE_PREFIX}${entity}_${fleet}`);
+}
+
+/**
+ * Returns the column key reported by an "Unknown device|host key" fleet search
+ * error, or null if the error is something else.
+ *
+ * The BFF rejects a search whose requested columns contain a key it does not
+ * know (typically a key saved to localStorage by an older UI version) with a
+ * message like `Unknown device key: field::uuid`. Works for both the OSS
+ * (`{code, message}`) and the internal (`{error: {message}}`) error bodies.
+ */
+export function getUnknownColumnKeyFromError(err: unknown): string | null {
+  const match = UNKNOWN_COLUMN_KEY_PATTERN.exec(getErrorMessage(err));
+  return match ? match[1] : null;
 }

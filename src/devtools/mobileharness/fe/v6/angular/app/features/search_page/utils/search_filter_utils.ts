@@ -931,10 +931,22 @@ export function resolveInitialChips(route: ActivatedRoute): FilterChip[] {
   return parseUrlChips(route.snapshot?.queryParams).initialChips;
 }
 
-/** Resolves initial fleet operational scope from ActivatedRoute snapshot query params. */
-export function resolveInitialFleet(route: ActivatedRoute): FleetScope {
-  const fleetParam = route.snapshot?.queryParams?.['fleet'];
-  return fleetParam === 'ats' ? 'ats' : 'internal';
+/**
+ * Resolves the fleet operational scope from URL query params.
+ *
+ * Input:
+ *   - params: Query params map (e.g. `ActivatedRoute.snapshot.queryParams`).
+ *   - fleetSwitchable: Whether the fleet scope can be switched in this build.
+ *     The OSS build only serves FLEET_SELF, so its `fleet` param is ignored.
+ * Output: 'ats' only when switching is allowed and the `fleet` param is 'ats',
+ *   otherwise 'internal'.
+ */
+export function resolveFleetScope(
+  params: Params | null | undefined,
+  fleetSwitchable: boolean,
+): FleetScope {
+  if (!fleetSwitchable) return 'internal';
+  return params?.['fleet'] === 'ats' ? 'ats' : 'internal';
 }
 
 /**

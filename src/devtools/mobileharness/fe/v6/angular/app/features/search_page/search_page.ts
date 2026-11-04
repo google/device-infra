@@ -46,6 +46,13 @@ export class SearchPage implements OnInit {
 
   private readonly searchBox = viewChild(SearchBox);
 
+  /**
+   * Whether the page runs embedded in the ATS host (the MTT UI2 iframe, OSS
+   * build only). Only used to scope the ATS-embedded layout tweaks; the
+   * standalone layout and the Google-internal embedded mode are untouched.
+   */
+  readonly isAtsEmbedded = this.urlService.isInAtsEmbeddedMode();
+
   /** Active view mode for the search page (landing loading, launcher, or results). */
   readonly pageViewMode = computed<
     'landing_loading' | 'landing_launcher' | 'fleet_results' | 'tjs_results'

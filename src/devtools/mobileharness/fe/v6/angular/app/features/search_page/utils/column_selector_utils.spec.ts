@@ -1,6 +1,7 @@
 import {
   clearStoredVisibleColumns,
   getStoredVisibleColumns,
+  getUnknownColumnKeyFromError,
   saveStoredVisibleColumns,
 } from './column_selector_utils';
 
@@ -44,6 +45,37 @@ describe('column_selector_utils', () => {
         'invalid-json-{',
       );
       expect(getStoredVisibleColumns('devices', 'internal')).toBeNull();
+    });
+  });
+
+  describe('getUnknownColumnKeyFromError', () => {
+    it('extracts the key from an OSS (Envoy) "Unknown device key" error body', () => {
+      expect(
+        getUnknownColumnKeyFromError({
+          status: 500,
+          error: {code: 13, message: 'Unknown device key: field::uuid', details: []},
+        }),
+      ).toBe('field::uuid');
+    });
+
+    it('extracts the key from an internal (ESF) "Unknown host key" error body', () => {
+      expect(
+        getUnknownColumnKeyFromError({
+          status: 500,
+          error: {error: {code: 500, message: 'Unknown host key: field::host_name'}},
+        }),
+      ).toBe('field::host_name');
+    });
+
+    it('returns null for other errors', () => {
+      expect(
+        getUnknownColumnKeyFromError({
+          status: 500,
+          error: {code: 13, message: 'Unknown filter key: foo'},
+        }),
+      ).toBeNull();
+      expect(getUnknownColumnKeyFromError(new Error('network down'))).toBeNull();
+      expect(getUnknownColumnKeyFromError(null)).toBeNull();
     });
   });
 });

@@ -51,6 +51,7 @@ function toSelectedMap(
 class MockFleetSearchStore {
   readonly groupByKeys = signal<string[]>([]);
   readonly fleet = signal<FleetScope>('internal');
+  isFleetSwitchable = true;
   readonly entity = signal<string>('devices');
   readonly isLoading = signal<boolean>(false);
   readonly selectedItems = signal<Map<string, Row>>(new Map());
@@ -792,6 +793,47 @@ describe('FleetSearchResultsComponent', () => {
 
       expect(openSpy).toHaveBeenCalled();
       expect(mockStore.clearSelection).toHaveBeenCalled();
+    });
+  });
+
+  describe('Fleet Label', () => {
+    it('renders the toolbar counts with the fleet suffix when the fleet is switchable (internal build)', () => {
+      mockStore.effectiveTotalCount.set(3);
+      mockStore.displayColumns.set([{key: 'id', displayName: 'Device ID'}]);
+      mockStore.rows.set([{id: 'dev-1', cells: [{text: {value: 'dev-1'}}]}]);
+      fixture.detectChanges();
+
+      expect(component.fleetLabel()).toBe('Google Internal');
+      expect(component.fleetLabelSuffix()).toBe(' · Google Internal');
+      expect(
+        fixture.nativeElement.querySelector('.rt-count').textContent.trim(),
+      ).toBe('3 devices · Google Internal');
+
+      mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
+      fixture.detectChanges();
+      expect(
+        fixture.nativeElement.querySelector('.rt-count').textContent.trim(),
+      ).toBe('2 selected · Google Internal');
+    });
+
+    it('omits the fleet label and suffix when the fleet is not switchable (OSS build)', () => {
+      mockStore.isFleetSwitchable = false;
+      mockStore.effectiveTotalCount.set(3);
+      mockStore.displayColumns.set([{key: 'id', displayName: 'Device ID'}]);
+      mockStore.rows.set([{id: 'dev-1', cells: [{text: {value: 'dev-1'}}]}]);
+      fixture.detectChanges();
+
+      expect(component.fleetLabel()).toBe('');
+      expect(component.fleetLabelSuffix()).toBe('');
+      expect(
+        fixture.nativeElement.querySelector('.rt-count').textContent.trim(),
+      ).toBe('3 devices');
+
+      mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
+      fixture.detectChanges();
+      expect(
+        fixture.nativeElement.querySelector('.rt-count').textContent.trim(),
+      ).toBe('2 selected');
     });
   });
 
