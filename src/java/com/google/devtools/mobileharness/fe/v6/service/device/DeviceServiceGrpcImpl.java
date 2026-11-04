@@ -20,6 +20,8 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.fe.v6.service.grpc.FeGrpcInvoker;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceOverviewPageData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceServiceGrpc;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceEventsRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceEventsResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceHealthinessStatsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceOverviewRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.GetDeviceRecoveryTaskStatsRequest;
@@ -104,6 +106,18 @@ public final class DeviceServiceGrpcImpl extends DeviceServiceGrpc.DeviceService
         executor,
         DeviceServiceGrpc.getServiceDescriptor(),
         DeviceServiceGrpc.getGetDeviceTestHistoryMethod());
+  }
+
+  @Override
+  public void getDeviceEvents(
+      GetDeviceEventsRequest request, StreamObserver<GetDeviceEventsResponse> responseObserver) {
+    FeGrpcInvoker.invokeAsync(
+        request,
+        responseObserver,
+        logic::getDeviceEvents,
+        executor,
+        DeviceServiceGrpc.getServiceDescriptor(),
+        DeviceServiceGrpc.getGetDeviceEventsMethod());
   }
 
   @Override
