@@ -38,8 +38,8 @@ message USB {
   //
   // The hostPort for "363005DC750400EC" is "11.4".
   string host_port = 2;
-  // Whether the usb address is managed by ADB.
-  bool adb_managed = 3 [deprecated = true];
+  reserved 3;  // Was adb_managed.
+  reserved "adb_managed";
   // Optional. The USB serial of the device. Some drivers can get the host_bus
   // and host_port from the serial.
   string serial = 4;
