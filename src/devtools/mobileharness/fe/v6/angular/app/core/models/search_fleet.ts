@@ -44,6 +44,7 @@ export declare interface ComplexMatch {
   matchesRegex?: MatchesRegex;
   matchesExactly?: MatchesExactly;
   matchesAtLeast?: MatchesAtLeast;
+  intComparison?: IntComparison;
 }
 
 /** Prefix match. */
@@ -71,6 +72,21 @@ export declare interface MatchesExactly {
 /** Superset match. */
 export declare interface MatchesAtLeast {
   values?: string[];
+}
+
+/** Comparison operator for integer filter matching (`ComplexMatch.int_comparison`). */
+export enum IntComparisonOperator {
+  INT_COMPARISON_OPERATOR_UNSPECIFIED = 'INT_COMPARISON_OPERATOR_UNSPECIFIED',
+  INT_COMPARISON_OPERATOR_GREATER_THAN = 'INT_COMPARISON_OPERATOR_GREATER_THAN',
+  INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL = 'INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL',
+  INT_COMPARISON_OPERATOR_LESS_THAN = 'INT_COMPARISON_OPERATOR_LESS_THAN',
+  INT_COMPARISON_OPERATOR_LESS_THAN_OR_EQUAL = 'INT_COMPARISON_OPERATOR_LESS_THAN_OR_EQUAL',
+}
+
+/** Integer comparison condition on an integer-comparable filter key. */
+export declare interface IntComparison {
+  operator?: IntComparisonOperator;
+  value?: number;
 }
 
 // =============================================================================
@@ -151,6 +167,8 @@ export declare interface FleetFilterChipMetadata {
   isPlural?: boolean;
   /** What the key's value means; absent when the name says it all. */
   description?: string;
+  /** Whether the key's values are integers that support `Compare integer` (`>`, `>=`, `<`, `<=`). */
+  canCompareInt?: boolean;
 }
 
 /** Sort for group headers. */

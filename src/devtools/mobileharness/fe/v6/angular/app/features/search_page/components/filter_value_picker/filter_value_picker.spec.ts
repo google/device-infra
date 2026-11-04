@@ -677,5 +677,55 @@ describe('FilterValuePicker', () => {
       fixture.detectChanges();
       expect(component.footerStatusText()).toBe('2 values added');
     });
+
+    it('computes status text, disables Apply on invalid integer, and dispatches intOp in compare_int mode', () => {
+      mockStore.pickerConfig.set({
+        key: 'dimension::battery_level',
+        title: 'Battery Level',
+        type: 'list',
+        canUseAdvanced: true,
+        canCompareInt: true,
+      });
+      mockStore.effectivePickerState.set({
+        ...createInitialValuePickerState(),
+        loading: false,
+        advanced: {
+          active: true,
+          mode: 'compare_int',
+          text: '',
+          values: [],
+          intOp: 'gte',
+        },
+      });
+      mockStore.showValuePicker.set(true);
+      fixture.detectChanges();
+
+      expect(component.intOp()).toBe('gte');
+      expect(component.footerStatusText()).toBe('No values added');
+      expect(component.isApplyDisabled()).toBeFalse();
+
+      component.advText.set('not_int');
+      fixture.detectChanges();
+      expect(component.footerStatusText()).toBe('Invalid integer');
+      expect(component.isApplyDisabled()).toBeTrue();
+      component.onApply();
+      expect(mockStore.applyValuePicker).not.toHaveBeenCalled();
+
+      component.advText.set('20');
+      component.intOp.set('lte');
+      fixture.detectChanges();
+      expect(component.footerStatusText()).toBe('1 value added');
+      expect(component.isApplyDisabled()).toBeFalse();
+
+      component.onApply();
+      expect(mockStore.applyValuePicker).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          isAdvanced: true,
+          advMode: 'compare_int',
+          advText: '20',
+          intOp: 'lte',
+        }),
+      );
+    });
   });
 });

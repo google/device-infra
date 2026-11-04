@@ -1240,6 +1240,7 @@ export class FleetSearchStore extends SearchPageStore {
       description:
         meta?.description || this.columnDescriptions().get(key) || undefined,
       canUseAdvanced: !!meta?.canUseAdvanced,
+      canCompareInt: !!meta?.canCompareInt,
       isPlural: !!meta?.isPlural,
     };
   }
@@ -1266,6 +1267,7 @@ export class FleetSearchStore extends SearchPageStore {
           mode: adv.advMode,
           text: adv.advText,
           values: adv.advValues,
+          intOp: adv.intOp,
         },
       };
     }

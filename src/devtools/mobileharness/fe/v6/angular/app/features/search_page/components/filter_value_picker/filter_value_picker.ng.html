@@ -99,9 +99,11 @@
       <!-- Body: Advanced vs Standard/Simple Modes -->
       @if (isAdvanced()) {
         <app-advanced-match-view
+          [canCompareInt]="!!config()?.canCompareInt"
           [(mode)]="advMode"
           [(text)]="advText"
           [(values)]="advValues"
+          [(intOp)]="intOp"
           (backToSimple)="onBackToSimple()"
           (apply)="onApply()"
         ></app-advanced-match-view>

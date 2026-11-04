@@ -1,5 +1,8 @@
+import {IntComparisonOperator} from '../../../core/models/search';
+
 /** Supported advanced matching mode keys. */
 export type AdvancedMatchMode =
+  | 'compare_int'
   | 'prefix'
   | 'substring'
   | 'not_substring'
@@ -7,6 +10,46 @@ export type AdvancedMatchMode =
   | 'not_regex'
   | 'exactly'
   | 'at_least';
+
+/** Scheme B operator token for the `compare_int` advanced matching mode. */
+export type IntComparisonOp = 'gt' | 'gte' | 'lt' | 'lte';
+
+/** Default operator token for the `Compare integer` advanced matching mode. */
+export const DEFAULT_INT_COMPARISON_OP: IntComparisonOp = 'gt';
+
+/** Operator definitions for the `Compare integer` advanced matching mode. */
+export const INT_COMPARISON_OPERATORS: ReadonlyArray<{
+  id: IntComparisonOp;
+  symbol: string;
+  title: string;
+  proto: IntComparisonOperator;
+}> = [
+  {
+    id: 'gt',
+    symbol: '>',
+    title: 'Greater than (>)',
+    proto: IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN,
+  },
+  {
+    id: 'gte',
+    symbol: '\u2265',
+    title: 'At least (\u2265)',
+    proto:
+      IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL,
+  },
+  {
+    id: 'lt',
+    symbol: '<',
+    title: 'Less than (<)',
+    proto: IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN,
+  },
+  {
+    id: 'lte',
+    symbol: '\u2264',
+    title: 'At most (\u2264)',
+    proto: IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN_OR_EQUAL,
+  },
+];
 
 /** Represents a selectable item in the value picker. */
 export interface PickerValueItem {
@@ -26,6 +69,7 @@ export interface ValuePickerApplyEvent {
   advMode?: AdvancedMatchMode;
   advText?: string;
   advValues?: string[];
+  intOp?: IntComparisonOp;
   rangeFrom?: string;
   rangeTo?: string;
   propName?: string;
@@ -40,6 +84,7 @@ export interface ValuePickerConfig {
   /** What the key's value means, shown as a tooltip next to the title; absent for most keys. */
   description?: string;
   canUseAdvanced?: boolean;
+  canCompareInt?: boolean;
   isPlural?: boolean;
   needsName?: boolean;
   namePlaceholder?: string;
@@ -57,6 +102,7 @@ export interface ValuePickerState {
     mode: AdvancedMatchMode;
     text: string;
     values: string[];
+    intOp?: IntComparisonOp;
   };
 }
 
@@ -72,6 +118,7 @@ export function createInitialValuePickerState(): ValuePickerState {
       mode: 'prefix',
       text: '',
       values: [],
+      intOp: DEFAULT_INT_COMPARISON_OP,
     },
   };
 }
@@ -116,6 +163,8 @@ export interface ApplyEventPayload {
   readonly advText?: string;
   /** Advanced mode values array. */
   readonly advValues?: readonly string[];
+  /** Operator token ('gt' | 'gte' | 'lt' | 'lte') for compare_int mode. */
+  readonly intOp?: IntComparisonOp;
   /** From date string for range mode. */
   readonly rangeFrom?: string;
   /** To date string for range mode. */
@@ -134,6 +183,11 @@ export const ADV_MODES_LIST: Array<{
   label: string;
   placeholder: string;
 }> = [
+  {
+    id: 'compare_int',
+    label: 'Compare integer',
+    placeholder: 'Enter an integer (e.g. 20)…',
+  },
   {id: 'prefix', label: 'Starts with', placeholder: 'Enter a prefix…'},
   {id: 'substring', label: 'Contains', placeholder: 'Enter text…'},
   {id: 'not_substring', label: 'Does not contain', placeholder: 'Enter text…'},

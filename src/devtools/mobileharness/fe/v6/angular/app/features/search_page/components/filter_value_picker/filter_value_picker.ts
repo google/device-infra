@@ -21,7 +21,13 @@ import {MatTooltipModule} from '@angular/material/tooltip';
 
 import {KeyDescriptionTooltipDirective} from '../../../../shared/directives/key_description_tooltip/key_description_tooltip';
 import {TooltipIfTruncatedDirective} from '../../../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
-import {AdvancedMatchMode, DateRangeState, PickerValueItem} from '../../models';
+import {
+  AdvancedMatchMode,
+  DateRangeState,
+  DEFAULT_INT_COMPARISON_OP,
+  IntComparisonOp,
+  PickerValueItem,
+} from '../../models';
 import {SearchPageStore} from '../../services/search_page_store';
 import {
   buildDisplayValues,
@@ -31,6 +37,7 @@ import {
   getPacificTimezoneName,
   isMultiModeAdvanced,
   parseDateRange,
+  parseStrictInt32,
 } from '../../utils';
 import {AdvancedMatchView} from './advanced_match_view/advanced_match_view';
 
@@ -126,7 +133,7 @@ export class FilterValuePicker {
   /** Flag indicating whether advanced match view is active. */
   readonly isAdvanced = linkedSignal(() => !!this.state().advanced?.active);
 
-  /** Advanced match mode ('prefix', 'suffix', 'contains', 'regex', etc.). */
+  /** Advanced match mode ('compare_int', 'prefix', 'substring', 'regex', etc.). */
   readonly advMode = linkedSignal<AdvancedMatchMode>(
     () => this.state().advanced?.mode || 'prefix',
   );
@@ -134,6 +141,10 @@ export class FilterValuePicker {
   readonly advText = linkedSignal(() => this.state().advanced?.text || '');
   /** Advanced mode array of value items. */
   readonly advValues = linkedSignal(() => this.state().advanced?.values || []);
+  /** Operator token ('gt' | 'gte' | 'lt' | 'lte') for compare_int mode. */
+  readonly intOp = linkedSignal<IntComparisonOp>(
+    () => this.state().advanced?.intOp || DEFAULT_INT_COMPARISON_OP,
+  );
 
   /** Parsed date range state object for date-range picker type. */
   readonly rangeState = linkedSignal<DateRangeState>(() =>
@@ -241,10 +252,17 @@ export class FilterValuePicker {
     () => this.config()?.type === 'list' && !this.isAdvanced(),
   );
 
-  /** Whether the Apply button should be disabled (e.g. key-value type requires both key and value). */
+  /** Whether the Apply button should be disabled (e.g. key-value type requires both key and value, or non-empty invalid integer). */
   readonly isApplyDisabled = computed<boolean>(() => {
     if (this.config()?.type === 'namedPair') {
       return !this.propName().trim() || !this.propVal().trim();
+    }
+    if (
+      this.isAdvanced() &&
+      this.advMode() === 'compare_int' &&
+      this.advText().trim().length > 0
+    ) {
+      return parseStrictInt32(this.advText()) === undefined;
     }
     return false;
   });
@@ -319,6 +337,13 @@ export class FilterValuePicker {
   /** Footer status summary text indicating selected/excluded count or advanced values count. */
   readonly footerStatusText = computed(() => {
     if (this.isAdvanced()) {
+      if (this.advMode() === 'compare_int') {
+        const raw = this.advText().trim();
+        if (!raw) return 'No values added';
+        return parseStrictInt32(raw) !== undefined
+          ? '1 value added'
+          : 'Invalid integer';
+      }
       const isMulti = isMultiModeAdvanced(this.advMode());
       if (!isMulti) {
         return this.advText().trim() ? '1 value added' : 'No values added';
@@ -433,6 +458,7 @@ export class FilterValuePicker {
       advMode: this.advMode(),
       advText: this.advText(),
       advValues: this.advValues(),
+      intOp: this.intOp(),
       rangeFrom: this.rangeFrom(),
       rangeTo: this.rangeTo(),
       propName: this.propName(),

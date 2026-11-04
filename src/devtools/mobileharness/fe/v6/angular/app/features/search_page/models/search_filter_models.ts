@@ -9,7 +9,7 @@ import {
   TimeRangePicker,
   TjsFilter,
 } from '../../../core/models/search';
-import {AdvancedMatchMode} from './filter_picker_models';
+import {AdvancedMatchMode, IntComparisonOp} from './filter_picker_models';
 
 /** Unified metadata descriptor for search filter keys. */
 export interface FilterKeyMetadata extends Partial<FleetFilterChipMetadata> {
@@ -33,6 +33,7 @@ export interface ComplexMatchInfo {
   mode: AdvancedMatchMode;
   values: string[];
   isNegated: boolean;
+  intOp?: IntComparisonOp;
 }
 
 /** Structure representing an active or staged filter chip. */

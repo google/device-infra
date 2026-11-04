@@ -5,6 +5,7 @@ import {
   Filter,
   Fleet,
   FleetSuggestion,
+  IntComparisonOperator,
   SearchEntity,
   TjsEntity,
   TjsFilter,
@@ -39,6 +40,7 @@ import {
   parseArsenalQueryParam,
   parseComplexCondition,
   parseQueryFilterParam,
+  parseStrictInt32,
   parseUrlChips,
   resolveEntityFromPathOrUrl,
   resolveInitialChips,
@@ -52,7 +54,58 @@ import {
 } from './search_filter_utils';
 
 describe('search_filter_utils', () => {
+  describe('parseStrictInt32', () => {
+    it('parses valid 32-bit signed integers and rejects invalid inputs', () => {
+      expect(parseStrictInt32('20')).toBe(20);
+      expect(parseStrictInt32(' -1 ')).toBe(-1);
+      expect(parseStrictInt32('+38')).toBe(38);
+      expect(parseStrictInt32('-0')).toBe(0);
+      expect(parseStrictInt32('2147483647')).toBe(2147483647);
+      expect(parseStrictInt32('-2147483648')).toBe(-2147483648);
+
+      expect(parseStrictInt32(undefined)).toBeUndefined();
+      expect(parseStrictInt32(null)).toBeUndefined();
+      expect(parseStrictInt32('')).toBeUndefined();
+      expect(parseStrictInt32('   ')).toBeUndefined();
+      expect(parseStrictInt32('20.5')).toBeUndefined();
+      expect(parseStrictInt32('1e3')).toBeUndefined();
+      expect(parseStrictInt32('20abc')).toBeUndefined();
+      expect(parseStrictInt32('2147483648')).toBeUndefined();
+      expect(parseStrictInt32('-2147483649')).toBeUndefined();
+    });
+  });
+
   describe('createComplexMatch', () => {
+    it('creates IntComparison for compare_int and Scheme B operator tokens', () => {
+      expect(createComplexMatch('compare_int', '20', false, 'gt')).toEqual({
+        intComparison: {
+          operator: IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN,
+          value: 20,
+        },
+      });
+      expect(createComplexMatch('compare_int', '26', false, 'gte')).toEqual({
+        intComparison: {
+          operator:
+            IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL,
+          value: 26,
+        },
+      });
+      expect(createComplexMatch('lt', '38')).toEqual({
+        intComparison: {
+          operator: IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN,
+          value: 38,
+        },
+      });
+      expect(createComplexMatch('lte', '-5')).toEqual({
+        intComparison: {
+          operator:
+            IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN_OR_EQUAL,
+          value: -5,
+        },
+      });
+      expect(createComplexMatch('compare_int', 'abc')).toBeUndefined();
+      expect(createComplexMatch('gt', '')).toBeUndefined();
+    });
     it('creates StartsWith for prefix mode (NOT negatable per search_fleet.proto)', () => {
       expect(createComplexMatch('prefix', 'Pixel', false)).toEqual({
         startsWith: {value: 'Pixel'},
@@ -146,6 +199,36 @@ describe('search_filter_utils', () => {
       });
       expect(parseComplexCondition('exactly~ , ')).toBeUndefined();
     });
+
+    it('parses gt~, gte~, lt~, and lte~ integer comparisons', () => {
+      expect(parseComplexCondition('gt~20')).toEqual({
+        intComparison: {
+          operator: IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN,
+          value: 20,
+        },
+      });
+      expect(parseComplexCondition('gte~26')).toEqual({
+        intComparison: {
+          operator:
+            IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL,
+          value: 26,
+        },
+      });
+      expect(parseComplexCondition('lt~38')).toEqual({
+        intComparison: {
+          operator: IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN,
+          value: 38,
+        },
+      });
+      expect(parseComplexCondition('lte~10')).toEqual({
+        intComparison: {
+          operator:
+            IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN_OR_EQUAL,
+          value: 10,
+        },
+      });
+      expect(parseComplexCondition('gt~not_an_int')).toBeUndefined();
+    });
   });
 
   describe('extractComplexMatchInfo', () => {
@@ -209,6 +292,45 @@ describe('search_filter_utils', () => {
         values: ['X'],
         isNegated: false,
       });
+    });
+
+    it('extracts intComparison match info', () => {
+      expect(
+        extractComplexMatchInfo({
+          intComparison: {
+            operator:
+              IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN_OR_EQUAL,
+            value: 32,
+          },
+        }),
+      ).toEqual({
+        mode: 'compare_int',
+        values: ['32'],
+        isNegated: false,
+        intOp: 'lte',
+      });
+      // Proto3 JSON omits scalar 0; missing value defaults to '0'.
+      expect(
+        extractComplexMatchInfo({
+          intComparison: {
+            operator:
+              IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN,
+          },
+        }),
+      ).toEqual({
+        mode: 'compare_int',
+        values: ['0'],
+        isNegated: false,
+        intOp: 'gt',
+      });
+      expect(
+        extractComplexMatchInfo({
+          intComparison: {
+            operator: IntComparisonOperator.INT_COMPARISON_OPERATOR_UNSPECIFIED,
+            value: 32,
+          },
+        }),
+      ).toBeUndefined();
     });
   });
   describe('isChipNegated', () => {
@@ -469,6 +591,32 @@ describe('search_filter_utils', () => {
       expect(
         serializeComplexCondition({matchesAtLeast: {values: ['X', 'Y']}}),
       ).toBe('atleast~X,Y');
+      expect(
+        serializeComplexCondition({
+          intComparison: {
+            operator:
+              IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN,
+            value: 20,
+          },
+        }),
+      ).toBe('gt~20');
+      expect(
+        serializeComplexCondition({
+          intComparison: {
+            operator:
+              IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN_OR_EQUAL,
+            value: 0,
+          },
+        }),
+      ).toBe('lte~0');
+      expect(
+        serializeComplexCondition({
+          intComparison: {
+            operator:
+              IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL,
+          },
+        }),
+      ).toBe('gte~0');
     });
 
     it('returns empty string when complex condition is empty or unhandled', () => {
@@ -702,6 +850,22 @@ describe('search_filter_utils', () => {
       const p5 = parseQueryFilterParam('tags~atleast~X,Y');
       expect(p5?.key).toBe('tags');
       expect(p5?.complex?.matchesAtLeast?.values).toEqual(['X', 'Y']);
+
+      const p6 = parseQueryFilterParam('dimension::battery_level~gt~20');
+      expect(p6?.key).toBe('dimension::battery_level');
+      expect(p6?.negated).toBeFalse();
+      expect(p6?.complex?.intComparison).toEqual({
+        operator: IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN,
+        value: 20,
+      });
+
+      const p7 = parseQueryFilterParam('!dimension::battery_level~gt~20');
+      expect(p7?.key).toBe('dimension::battery_level');
+      expect(p7?.negated).toBeFalse();
+      expect(p7?.complex?.intComparison).toEqual({
+        operator: IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN,
+        value: 20,
+      });
     });
 
     it('parses dash-prefix negated filter param', () => {
@@ -743,6 +907,39 @@ describe('search_filter_utils', () => {
       expect(chip).not.toBeNull();
       expect(chip?.key).toBe('status');
       expect(chip?.negated).toBeFalse();
+
+      const intZeroSuggestion: FleetSuggestion = {
+        applyFilter: {
+          pillKey: 'Hinge Angle',
+          pillCondition: '\u2265 0',
+          metadata: {
+            keyDisplayName: 'Hinge Angle',
+            canUseAdvanced: true,
+            canCompareInt: true,
+          },
+          resultingFilter: {
+            key: 'dimension::hinge_angle',
+            complex: {
+              intComparison: {
+                operator:
+                  IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL,
+              },
+            },
+          },
+        },
+      };
+      const intChip = extractFilterChipFromFleetSuggestion(intZeroSuggestion);
+      expect(intChip?.key).toBe('dimension::hinge_angle');
+      expect(intChip?.negated).toBeFalse();
+      expect(extractComplexMatchInfo(intChip?.complex)).toEqual({
+        mode: 'compare_int',
+        values: ['0'],
+        isNegated: false,
+        intOp: 'gte',
+      });
+      expect(serializeFilterChip(intChip!)).toBe(
+        'dimension::hinge_angle~gte~0',
+      );
     });
 
     it('extracts FilterChip from negated TjsSuggestion', () => {

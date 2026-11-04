@@ -5,7 +5,7 @@
   </button>
 
   <div class="vp-adv-modes">
-    @for (m of advModesList; track m.id) {
+    @for (m of visibleModes(); track m.id) {
       <label
         class="vp-adv-mode"
         [class.active]="mode() === m.id"
@@ -20,7 +20,39 @@
   </div>
 
   <div class="vp-adv-input">
-    @if (!isMultiMode()) {
+    @if (isCompareIntMode()) {
+      <div class="vp-adv-int-row">
+        <div
+          class="vp-adv-int-seg"
+          role="group"
+          aria-label="Comparison operator"
+        >
+          @for (op of intOperators; track op.id) {
+            <button
+              type="button"
+              class="vp-adv-int-op"
+              [class.active]="intOp() === op.id"
+              [title]="op.title"
+              [attr.aria-label]="op.title"
+              [attr.aria-pressed]="intOp() === op.id"
+              (click)="selectIntOp(op.id)"
+            >
+              {{ op.symbol }}
+            </button>
+          }
+        </div>
+        <input
+          type="text"
+          class="vp-adv-field vp-adv-int-field"
+          [class.invalid]="isInvalidInt()"
+          [attr.aria-invalid]="isInvalidInt()"
+          [placeholder]="placeholder()"
+          [ngModel]="text()"
+          (ngModelChange)="text.set($event)"
+          (keydown.enter)="apply.emit()"
+        />
+      </div>
+    } @else if (!isMultiMode()) {
       <input
         type="text"
         class="vp-adv-field"

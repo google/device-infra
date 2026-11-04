@@ -12,6 +12,7 @@ import {
   FleetSearchResults,
   FleetSuggestionResponse,
   FleetValueListResponse,
+  IntComparisonOperator,
   ResolveAllSiteQueryResponse,
   SearchEntity,
   TjsEntity,
@@ -451,6 +452,70 @@ describe('FakeSearchService', () => {
         });
     });
 
+    it('should format intComparison conditions (including omitted 0 value) and set canCompareInt metadata', (done) => {
+      service
+        .resolveFleetChips({
+          filters: [
+            {
+              key: 'dim::battery_level',
+              complex: {
+                intComparison: {
+                  operator:
+                    IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN,
+                  value: 20,
+                },
+              },
+            },
+            {
+              key: 'device_field::sdk_version',
+              complex: {
+                intComparison: {
+                  operator:
+                    IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL,
+                  value: 26,
+                },
+              },
+            },
+            {
+              key: 'dim::battery_temperature',
+              complex: {
+                intComparison: {
+                  operator:
+                    IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN,
+                  value: 38,
+                },
+              },
+            },
+            {
+              key: 'dim::hinge_angle',
+              complex: {
+                intComparison: {
+                  operator:
+                    IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN_OR_EQUAL,
+                },
+              },
+            },
+            {
+              key: 'dim::model',
+              simple: {values: [{value: 'Pixel 8'}]},
+            },
+          ],
+        })
+        .subscribe((res: FleetChipResolverResponse) => {
+          expect(res.filterChips?.map((c) => c.valid?.pillCondition)).toEqual([
+            '> 20',
+            '\u2265 26',
+            '< 38',
+            '\u2264 0',
+            'Pixel 8',
+          ]);
+          expect(
+            res.filterChips?.map((c) => c.valid?.metadata?.canCompareInt),
+          ).toEqual([true, true, true, true, false]);
+          done();
+        });
+    });
+
     it('should handle empty filters and groupByKeys', (done) => {
       service
         .resolveFleetChips({})
@@ -614,6 +679,12 @@ describe('FakeSearchService', () => {
           expect(res.sections).toBeDefined();
           expect(res.sections!.length).toBe(1);
           expect(res.sections![0].entries![0].key).toBe('dim::battery_level');
+          expect(
+            res.sections![0].entries![0].metadata?.canUseAdvanced,
+          ).toBeTrue();
+          expect(
+            res.sections![0].entries![0].metadata?.canCompareInt,
+          ).toBeTrue();
           done();
         });
     });

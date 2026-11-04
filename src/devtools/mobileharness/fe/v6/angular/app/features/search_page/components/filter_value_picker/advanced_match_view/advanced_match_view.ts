@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  input,
   model,
   output,
   signal,
@@ -9,9 +10,16 @@ import {
 import {FormsModule} from '@angular/forms';
 import {MatIconModule} from '@angular/material/icon';
 
-import {ADV_MODES_LIST, AdvancedMatchMode} from '../../../models';
+import {
+  ADV_MODES_LIST,
+  AdvancedMatchMode,
+  DEFAULT_INT_COMPARISON_OP,
+  INT_COMPARISON_OPERATORS,
+  IntComparisonOp,
+} from '../../../models';
+import {parseStrictInt32} from '../../../utils';
 
-/** Standalone sub-view handling prefix, regex, substring, and multi-chip matching modes. */
+/** Standalone sub-view handling integer comparison, prefix, regex, substring, and multi-chip matching modes. */
 @Component({
   selector: 'app-advanced-match-view',
   standalone: true,
@@ -21,15 +29,36 @@ import {ADV_MODES_LIST, AdvancedMatchMode} from '../../../models';
   imports: [FormsModule, MatIconModule],
 })
 export class AdvancedMatchView {
+  readonly canCompareInt = input<boolean>(false);
   readonly mode = model.required<AdvancedMatchMode>();
   readonly text = model.required<string>();
   readonly values = model.required<string[]>();
+  readonly intOp = model<IntComparisonOp>(DEFAULT_INT_COMPARISON_OP);
 
   readonly backToSimple = output<void>();
   readonly apply = output<void>();
 
   readonly inputVal = signal<string>('');
   readonly advModesList = ADV_MODES_LIST;
+  readonly intOperators = INT_COMPARISON_OPERATORS;
+
+  readonly visibleModes = computed(() =>
+    this.advModesList.filter(
+      (m) =>
+        m.id !== 'compare_int' ||
+        this.canCompareInt() ||
+        this.mode() === 'compare_int',
+    ),
+  );
+
+  readonly isCompareIntMode = computed(() => this.mode() === 'compare_int');
+
+  readonly isInvalidInt = computed(
+    () =>
+      this.isCompareIntMode() &&
+      this.text().trim().length > 0 &&
+      parseStrictInt32(this.text()) === undefined,
+  );
 
   readonly isMultiMode = computed(() => {
     const m = this.mode();
@@ -44,6 +73,10 @@ export class AdvancedMatchView {
     );
     return found?.placeholder || 'Enter value…';
   });
+
+  selectIntOp(op: IntComparisonOp) {
+    this.intOp.set(op);
+  }
 
   selectMode(newMode: AdvancedMatchMode) {
     const wasMulti = this.isMultiMode();

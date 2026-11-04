@@ -3,7 +3,7 @@ import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {By} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 
-import {AdvancedMatchMode} from '../../../models';
+import {AdvancedMatchMode, IntComparisonOp} from '../../../models';
 
 import {AdvancedMatchView} from './advanced_match_view';
 
@@ -12,18 +12,22 @@ import {AdvancedMatchView} from './advanced_match_view';
   imports: [AdvancedMatchView],
   template: `
     <app-advanced-match-view
+      [canCompareInt]="canCompareInt()"
       [(mode)]="mode"
       [(text)]="text"
       [(values)]="values"
+      [(intOp)]="intOp"
       (backToSimple)="onBackToSimple()"
       (apply)="onApply()"
     />
   `,
 })
 class TestHostComponent {
+  canCompareInt = signal<boolean>(false);
   mode = signal<AdvancedMatchMode>('prefix');
   text = signal<string>('test_prefix');
   values = signal<string[]>(['val1', 'val2']);
+  intOp = signal<IntComparisonOp>('gt');
 
   backToSimpleCalled = false;
   applyCalled = false;
@@ -267,5 +271,78 @@ describe('AdvancedMatchView', () => {
     expect(host.mode()).toBe('at_least');
     expect(host.values()).toEqual([]);
     expect(host.text()).toBe('some_text');
+  });
+
+  it('hides Compare integer mode when canCompareInt is false and shows it first when true', () => {
+    host.canCompareInt.set(false);
+    fixture.detectChanges();
+
+    let modes = fixture.debugElement.queryAll(By.css('.vp-adv-mode'));
+    expect(
+      modes.some((el) =>
+        el.nativeElement.textContent.includes('Compare integer'),
+      ),
+    ).toBeFalse();
+
+    host.canCompareInt.set(true);
+    fixture.detectChanges();
+
+    modes = fixture.debugElement.queryAll(By.css('.vp-adv-mode'));
+    expect(modes[0].nativeElement.textContent).toContain('Compare integer');
+
+    // Reopen fallback: when canCompareInt is false but mode is already 'compare_int',
+    // Compare integer remains visible until the user switches to another mode.
+    host.canCompareInt.set(false);
+    host.mode.set('compare_int');
+    fixture.detectChanges();
+
+    modes = fixture.debugElement.queryAll(By.css('.vp-adv-mode'));
+    expect(modes[0].nativeElement.textContent).toContain('Compare integer');
+
+    component.selectMode('prefix');
+    fixture.detectChanges();
+
+    modes = fixture.debugElement.queryAll(By.css('.vp-adv-mode'));
+    expect(
+      modes.some((el) =>
+        el.nativeElement.textContent.includes('Compare integer'),
+      ),
+    ).toBeFalse();
+  });
+
+  it('renders connected segmented operator and validates integer input in compare_int mode', () => {
+    host.canCompareInt.set(true);
+    host.mode.set('compare_int');
+    host.text.set('20');
+    fixture.detectChanges();
+
+    const opButtons = fixture.debugElement.queryAll(By.css('.vp-adv-int-op'));
+    expect(opButtons.length).toBe(4);
+    expect(opButtons[0].nativeElement.classList.contains('active')).toBeTrue();
+    expect(opButtons[0].nativeElement.getAttribute('aria-label')).toBe(
+      'Greater than (>)',
+    );
+
+    // Select '≤' ('lte')
+    opButtons[3].nativeElement.click();
+    fixture.detectChanges();
+    expect(host.intOp()).toBe('lte');
+    expect(opButtons[3].nativeElement.classList.contains('active')).toBeTrue();
+
+    const intInputDebug = fixture.debugElement.query(
+      By.css('.vp-adv-int-field'),
+    );
+    const intInput = intInputDebug.nativeElement as HTMLInputElement;
+    expect(intInput.classList.contains('invalid')).toBeFalse();
+    expect(intInput.getAttribute('aria-invalid')).toBe('false');
+
+    intInputDebug.triggerEventHandler('keydown.enter', new KeyboardEvent('keydown', {key: 'Enter'}));
+    expect(host.applyCalled).toBeTrue();
+
+    host.text.set('20.5');
+    fixture.detectChanges();
+    expect(component.isInvalidInt()).toBeTrue();
+    expect(intInput.classList.contains('invalid')).toBeTrue();
+    expect(intInput.getAttribute('aria-invalid')).toBe('true');
   });
 });

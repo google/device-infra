@@ -10,6 +10,7 @@ import {
   FleetSearchConfig,
   FleetSearchResults,
   FleetSuggestion,
+  IntComparisonOperator,
   SearchEntity,
   TranslateArsenalSearchResponse,
 } from '../../../core/models/search';
@@ -1174,6 +1175,65 @@ describe('FleetSearchStore', () => {
     expect(store.activeChips()[0].pillCondition).toBe('^Pixel 9');
     expect(store.activeChips()[0].complex).toEqual({
       startsWith: {value: 'Pixel 9'},
+    });
+  });
+
+  it('propagates canCompareInt to pickerConfig, applies compare_int filter, and restores intOp on reopen', async () => {
+    mockSearchService.resolveFleetChips.and.callFake(
+      (req: FleetChipResolverRequest) =>
+        of({
+          filterChips: (req.filters || []).map((f) => ({
+            valid: {
+              pillKey: 'Battery Level',
+              pillCondition: `\u2264 ${f.complex?.intComparison?.value}`,
+              metadata: {
+                keyDisplayName: 'Battery Level',
+                canUseAdvanced: true,
+                canCompareInt: true,
+              },
+            },
+          })),
+        }),
+    );
+
+    const store = await createStoreAt({});
+    store.openValuePicker('dimension::battery_level', null, 'Battery Level', {
+      keyDisplayName: 'Battery Level',
+      canUseAdvanced: true,
+      canCompareInt: true,
+    });
+    expect(store.pickerConfig()?.canCompareInt).toBeTrue();
+
+    store.applyValuePicker({
+      selected: [],
+      negate: false,
+      isAdvanced: true,
+      advMode: 'compare_int',
+      advText: '20',
+      intOp: 'lte',
+    });
+
+    expect(store.activeChips().length).toBe(1);
+    expect(store.activeChips()[0].pillCondition).toBe('\u2264 20');
+    expect(store.activeChips()[0].complex).toEqual({
+      intComparison: {
+        operator:
+          IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN_OR_EQUAL,
+        value: 20,
+      },
+    });
+    expect(store.serializedActiveFilters()).toEqual([
+      'dimension::battery_level~lte~20',
+    ]);
+
+    store.openValuePicker('dimension::battery_level');
+    expect(store.pickerConfig()?.canCompareInt).toBeTrue();
+    expect(store.effectivePickerState().advanced).toEqual({
+      active: true,
+      mode: 'compare_int',
+      text: '20',
+      values: [],
+      intOp: 'lte',
     });
   });
 

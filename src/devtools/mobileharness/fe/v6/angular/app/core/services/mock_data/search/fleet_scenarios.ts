@@ -534,7 +534,11 @@ export const MOCK_FLEET_FILTER_KEY_SECTIONS: FleetFilterKeySection[] = [
     entries: [
       {
         key: 'dim::battery_level',
-        metadata: {keyDisplayName: 'Battery Level'},
+        metadata: {
+          keyDisplayName: 'Battery Level',
+          canUseAdvanced: true,
+          canCompareInt: true,
+        },
         coverage: {shown: {count: 850}},
       },
       {

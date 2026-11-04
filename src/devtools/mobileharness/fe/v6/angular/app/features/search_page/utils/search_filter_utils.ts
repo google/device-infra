@@ -9,6 +9,7 @@ import {
   FleetGroupSort,
   FleetSuggestion,
   FleetValidFilterChip,
+  IntComparisonOperator,
   SearchEntity,
   TjsEntity,
   TjsFilter,
@@ -18,10 +19,13 @@ import {
 import {
   AdvancedMatchMode,
   ComplexMatchInfo,
+  DEFAULT_INT_COMPARISON_OP,
   EntityType,
   FilterChip,
   FilterPair,
   FleetScope,
+  INT_COMPARISON_OPERATORS,
+  IntComparisonOp,
   ParsedUrlQueryChips,
 } from '../models';
 
@@ -29,8 +33,32 @@ import {
 // ComplexMatch AST (Advanced Matching Parsing & Display)
 // ============================================================================
 
+/** Strict 32-bit signed integer pattern (no decimals, scientific notation, or trailing chars). */
+const STRICT_INT_REGEX = /^[-+]?\d+$/;
+const INT32_MIN = -2147483648;
+const INT32_MAX = 2147483647;
+
+/** Parses a string or number into a signed 32-bit integer, or undefined if invalid. */
+export function parseStrictInt32(
+  raw?: string | number | null,
+): number | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  const trimmed = String(raw).trim();
+  if (!trimmed || !STRICT_INT_REGEX.test(trimmed)) return undefined;
+  const parsed = Number(trimmed);
+  if (
+    !Number.isSafeInteger(parsed) ||
+    parsed < INT32_MIN ||
+    parsed > INT32_MAX
+  ) {
+    return undefined;
+  }
+  return parsed === 0 ? 0 : parsed;
+}
+
 /**
  * Factory to construct a Protobuf ComplexMatch AST strictly adhering to the search_fleet.proto contract:
+ * - IntComparison (compare_int / gt / gte / lt / lte): operator + 32-bit integer value, NOT negatable.
  * - StartsWith (starts/prefix): scalar string, NOT negatable (O(log n) prefix bisect index).
  * - ContainsSubstring (contains/substring): scalar string, negatable (bool negated).
  * - MatchesRegex (regex): scalar string, negatable (bool negated).
@@ -41,11 +69,34 @@ export function createComplexMatch(
   mode: AdvancedMatchMode | string,
   values: string | string[],
   negated = false,
+  intOp: IntComparisonOp = DEFAULT_INT_COMPARISON_OP,
 ): ComplexMatch | undefined {
   const valArray = Array.isArray(values) ? values : [values];
   const primaryVal = valArray[0]?.trim() || '';
 
   switch (mode) {
+    case 'compare_int':
+    case 'gt':
+    case 'gte':
+    case 'lt':
+    case 'lte': {
+      const parsedInt = parseStrictInt32(primaryVal);
+      if (parsedInt === undefined) return undefined;
+      const resolvedOp: IntComparisonOp =
+        mode === 'gt' || mode === 'gte' || mode === 'lt' || mode === 'lte'
+          ? mode
+          : intOp;
+      const opDef =
+        INT_COMPARISON_OPERATORS.find((op) => op.id === resolvedOp) ||
+        INT_COMPARISON_OPERATORS[0];
+      return {
+        intComparison: {
+          operator: opDef.proto,
+          value: parsedInt,
+        },
+      };
+    }
+
     case 'starts':
     case 'prefix':
       return primaryVal ? {startsWith: {value: primaryVal}} : undefined;
@@ -139,6 +190,27 @@ export function parseComplexCondition(
 }
 
 /**
+ * Validates and normalizes `complex.intComparison` (defaulting omitted proto3 scalar `value` to 0).
+ */
+function resolveIntComparison(
+  complex?: ComplexMatch,
+): {opDef: (typeof INT_COMPARISON_OPERATORS)[number]; value: number} | undefined {
+  const operator = complex?.intComparison?.operator;
+  if (
+    !operator ||
+    operator === IntComparisonOperator.INT_COMPARISON_OPERATOR_UNSPECIFIED
+  ) {
+    return undefined;
+  }
+  const opDef = INT_COMPARISON_OPERATORS.find((op) => op.proto === operator);
+  if (!opDef) return undefined;
+  return {
+    opDef,
+    value: complex.intComparison?.value ?? 0,
+  };
+}
+
+/**
  * Converts a Protobuf ComplexMatch payload into a strongly-typed ComplexMatchInfo View-Model
  * for UI display and ValuePicker state.
  * Strictly adheres to search_fleet.proto negation capabilities.
@@ -187,6 +259,16 @@ export function extractComplexMatchInfo(
       mode: 'at_least',
       values: complex.matchesAtLeast.values,
       isNegated: false,
+    };
+  }
+
+  const intCmp = resolveIntComparison(complex);
+  if (intCmp) {
+    return {
+      mode: 'compare_int',
+      values: [String(intCmp.value)],
+      isNegated: false,
+      intOp: intCmp.opDef.id,
     };
   }
 
@@ -254,6 +336,10 @@ export function serializeComplexCondition(complex?: ComplexMatch): string {
   }
   if (complex.matchesAtLeast?.values?.length) {
     return `atleast~${complex.matchesAtLeast.values.map(encodeURIComponent).join(',')}`;
+  }
+  const intCmp = resolveIntComparison(complex);
+  if (intCmp) {
+    return `${intCmp.opDef.id}~${intCmp.value}`;
   }
 
   return '';
@@ -353,7 +439,7 @@ export function parseQueryFilterParam(rawParam: string): FilterChip | null {
         pillKey: key,
         pillCondition: condition,
         rawValues: extractedValues.length > 0 ? extractedValues : undefined,
-        negated,
+        negated: Boolean(info?.isNegated),
         complex,
         fleetFilter: filter,
       };

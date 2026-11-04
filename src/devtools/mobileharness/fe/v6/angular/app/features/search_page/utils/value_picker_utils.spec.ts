@@ -1,3 +1,4 @@
+import {IntComparisonOperator} from '../../../core/models/search';
 import {FilterChip, PickerValueItem} from '../models';
 import {EMPTY_FILTER_VALUE} from './search_filter_utils';
 import {
@@ -443,6 +444,27 @@ describe('value_picker_utils', () => {
         advMode: 'prefix',
         advText: 'test_prefix',
         advValues: undefined,
+        intOp: undefined,
+      });
+    });
+
+    it('should construct advanced event for compare_int with intOp', () => {
+      const event = buildValuePickerApplyEvent({
+        isAdvanced: true,
+        negated: false,
+        selectedSet: new Set(),
+        advMode: 'compare_int',
+        advText: ' 26 ',
+        intOp: 'gte',
+      });
+      expect(event).toEqual({
+        selected: [],
+        negate: false,
+        isAdvanced: true,
+        advMode: 'compare_int',
+        advText: '26',
+        advValues: undefined,
+        intOp: 'gte',
       });
     });
 
@@ -462,6 +484,7 @@ describe('value_picker_utils', () => {
         advMode: 'exactly',
         advText: undefined,
         advValues: ['val1', 'val2'],
+        intOp: undefined,
       });
     });
 
@@ -563,6 +586,22 @@ describe('value_picker_utils', () => {
           advValues: ['X'],
         }),
       ).toEqual({matchesAtLeast: {values: ['X']}});
+
+      expect(
+        buildComplexMatchFromEvent({
+          selected: [],
+          negate: false,
+          isAdvanced: true,
+          advMode: 'compare_int',
+          advText: '38',
+          intOp: 'lt',
+        }),
+      ).toEqual({
+        intComparison: {
+          operator: IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN,
+          value: 38,
+        },
+      });
     });
 
     it('uses updated advText for single-mode even if advValues has stale values', () => {
@@ -604,6 +643,27 @@ describe('value_picker_utils', () => {
         advMode: 'prefix',
         advText: 'Pixel',
         advValues: [],
+        intOp: 'gt',
+      });
+    });
+
+    it('extracts advanced state for compare_int chip with intOp', () => {
+      const chip: FilterChip = {
+        pillKey: 'Battery Temperature',
+        pillCondition: '< 38',
+        complex: {
+          intComparison: {
+            operator: IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN,
+            value: 38,
+          },
+        },
+      };
+      expect(extractAdvancedStateFromChip(chip)).toEqual({
+        isAdv: true,
+        advMode: 'compare_int',
+        advText: '38',
+        advValues: [],
+        intOp: 'lt',
       });
     });
 
@@ -618,6 +678,7 @@ describe('value_picker_utils', () => {
         advMode: 'exactly',
         advText: '',
         advValues: ['A', 'B'],
+        intOp: 'gt',
       });
     });
 
@@ -631,6 +692,7 @@ describe('value_picker_utils', () => {
         advMode: 'substring',
         advText: '',
         advValues: [],
+        intOp: 'gt',
       });
     });
 
@@ -645,6 +707,7 @@ describe('value_picker_utils', () => {
         advMode: 'substring',
         advText: '',
         advValues: [],
+        intOp: 'gt',
       });
     });
   });
@@ -730,6 +793,36 @@ describe('value_picker_utils', () => {
           isAdvanced: true,
           advMode: 'prefix',
           advText: 'Pixel',
+        }),
+      ).toBeFalse();
+
+      expect(
+        isValuePickerSelectionEmpty({
+          selected: [],
+          negate: false,
+          isAdvanced: true,
+          advMode: 'compare_int',
+          advText: '',
+        }),
+      ).toBeTrue();
+
+      expect(
+        isValuePickerSelectionEmpty({
+          selected: [],
+          negate: false,
+          isAdvanced: true,
+          advMode: 'compare_int',
+          advText: 'not_an_int',
+        }),
+      ).toBeTrue();
+
+      expect(
+        isValuePickerSelectionEmpty({
+          selected: [],
+          negate: false,
+          isAdvanced: true,
+          advMode: 'compare_int',
+          advText: '20',
         }),
       ).toBeFalse();
     });

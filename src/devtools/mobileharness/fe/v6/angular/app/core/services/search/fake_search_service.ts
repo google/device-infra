@@ -30,6 +30,7 @@ import {
   FleetSuggestionResponse,
   FleetValueListRequest,
   FleetValueListResponse,
+  IntComparisonOperator,
   ResolveAllSiteQueryRequest,
   ResolveAllSiteQueryResponse,
   Row,
@@ -78,6 +79,22 @@ import {SearchService} from './search_service';
 
 /** Default user for fake data. */
 export const DEFAULT_FAKE_USER = 'qiupingf';
+
+const INT_COMPARABLE_CLEAN_KEYS = new Set([
+  'sdk_version',
+  'battery_level',
+  'battery_temperature',
+  'hinge_angle',
+  'device_count',
+]);
+
+function isIntComparableKey(key?: string): boolean {
+  if (!key) return false;
+  const cleanKey = (
+    key.includes('::') ? key.split('::')[1] : key
+  ).toLowerCase();
+  return INT_COMPARABLE_CLEAN_KEYS.has(cleanKey);
+}
 
 /** Mock implementation of SearchService for frontend testing & offline fallback. */
 @Injectable()
@@ -318,6 +335,7 @@ export class FakeSearchService extends SearchService {
               keyDisplayName: displayTitle,
               canUseAdvanced: true,
               isPlural: false,
+              canCompareInt: isIntComparableKey(f.key),
             },
           },
         };
@@ -363,6 +381,25 @@ export class FakeSearchService extends SearchService {
     }
     if (complex?.matchesAtLeast) {
       return (complex.matchesAtLeast.values || []).join(', ');
+    }
+    if (
+      complex?.intComparison?.operator &&
+      complex.intComparison.operator !==
+        IntComparisonOperator.INT_COMPARISON_OPERATOR_UNSPECIFIED
+    ) {
+      const val = complex.intComparison.value ?? 0;
+      switch (complex.intComparison.operator) {
+        case IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN:
+          return `> ${val}`;
+        case IntComparisonOperator.INT_COMPARISON_OPERATOR_GREATER_THAN_OR_EQUAL:
+          return `\u2265 ${val}`;
+        case IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN:
+          return `< ${val}`;
+        case IntComparisonOperator.INT_COMPARISON_OPERATOR_LESS_THAN_OR_EQUAL:
+          return `\u2264 ${val}`;
+        default:
+          break;
+      }
     }
     return f.key || '';
   }

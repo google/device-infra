@@ -4,8 +4,10 @@ import {
   AdvancedMatchMode,
   ApplyEventPayload,
   DateRangeState,
+  DEFAULT_INT_COMPARISON_OP,
   FilterChip,
   FilterSortOptions,
+  IntComparisonOp,
   PickerValueItem,
   ValuePickerApplyEvent,
 } from '../models';
@@ -14,6 +16,7 @@ import {
   EMPTY_FILTER_VALUE,
   extractComplexMatchInfo,
   normalizeKey,
+  parseStrictInt32,
 } from './search_filter_utils';
 
 /**
@@ -309,6 +312,10 @@ export function buildValuePickerApplyEvent(
       isAdvanced && isMulti && payload.advValues
         ? [...payload.advValues]
         : undefined,
+    intOp:
+      isAdvanced && payload.advMode === 'compare_int'
+        ? payload.intOp || DEFAULT_INT_COMPARISON_OP
+        : undefined,
   };
 }
 
@@ -323,6 +330,7 @@ export function extractAdvancedStateFromChip(chip: FilterChip): {
   advMode: AdvancedMatchMode;
   advText: string;
   advValues: string[];
+  intOp: IntComparisonOp;
 } {
   const info = extractComplexMatchInfo(chip.complex);
   if (info) {
@@ -332,6 +340,7 @@ export function extractAdvancedStateFromChip(chip: FilterChip): {
       advMode: info.mode,
       advText: isMulti ? '' : info.values.join(', '),
       advValues: isMulti ? info.values : [],
+      intOp: info.intOp || DEFAULT_INT_COMPARISON_OP,
     };
   }
   return {
@@ -339,6 +348,7 @@ export function extractAdvancedStateFromChip(chip: FilterChip): {
     advMode: 'substring',
     advText: '',
     advValues: [],
+    intOp: DEFAULT_INT_COMPARISON_OP,
   };
 }
 
@@ -359,7 +369,12 @@ export function buildComplexMatchFromEvent(
 
   const isNeg =
     event.advMode === 'not_substring' || event.advMode === 'not_regex';
-  return createComplexMatch(event.advMode, vals, isNeg);
+  return createComplexMatch(
+    event.advMode,
+    vals,
+    isNeg,
+    event.intOp || DEFAULT_INT_COMPARISON_OP,
+  );
 }
 
 /** Helper to check if a ValuePickerApplyEvent payload contains empty selection values. */
@@ -369,6 +384,9 @@ export function isValuePickerSelectionEmpty(
   if (event.isAdvanced) {
     if (isMultiModeAdvanced(event.advMode)) {
       return !event.advValues?.length;
+    }
+    if (event.advMode === 'compare_int') {
+      return parseStrictInt32(event.advText) === undefined;
     }
     return !event.advText?.trim();
   }
