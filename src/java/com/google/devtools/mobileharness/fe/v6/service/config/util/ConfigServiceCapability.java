@@ -90,38 +90,18 @@ public class ConfigServiceCapability {
     boolean isAts = environment.isAts();
 
     return HostConfigUiStatus.newBuilder()
-        .setHostAdmins(
-            PartStatus.newBuilder()
-                .setVisible(!isAts)
-                .setEditability(Editability.newBuilder().setEditable(!isAts).build())
-                .build())
-        .setDeviceConfigMode(
-            PartStatus.newBuilder()
-                .setVisible(true)
-                .setEditability(Editability.newBuilder().setEditable(true).build())
-                .build())
+        .setHostAdmins(visibleAndEditable(!isAts))
+        .setDeviceConfigMode(visibleAndEditable(!isAts))
         .setDeviceConfig(
             HostDeviceConfigUiStatus.newBuilder()
-                .setSectionStatus(
-                    PartStatus.newBuilder()
-                        .setVisible(true)
-                        .setEditability(Editability.newBuilder().setEditable(true).build())
-                        .build())
-                .setSubSections(calculateDeviceUiStatus())
+                .setSectionStatus(visibleAndEditable(true))
+                .setSubSections(calculateHostDeviceSubSectionsUiStatus(isAts))
                 .build())
         .setHostProperties(
             HostPropertiesUiStatus.newBuilder()
-                .setSectionStatus(
-                    PartStatus.newBuilder()
-                        .setVisible(!isAts)
-                        .setEditability(Editability.newBuilder().setEditable(!isAts).build())
-                        .build())
+                .setSectionStatus(visibleAndEditable(!isAts))
                 .build())
-        .setDeviceDiscovery(
-            PartStatus.newBuilder()
-                .setVisible(!isAts)
-                .setEditability(Editability.newBuilder().setEditable(!isAts).build())
-                .build())
+        .setDeviceDiscovery(visibleAndEditable(!isAts))
         .build();
   }
 
@@ -129,26 +109,26 @@ public class ConfigServiceCapability {
   public DeviceConfigUiStatus calculateDeviceUiStatus() {
     boolean isAts = environment.isAts();
     return DeviceConfigUiStatus.newBuilder()
-        .setPermissions(
-            PartStatus.newBuilder()
-                .setVisible(!isAts)
-                .setEditability(Editability.newBuilder().setEditable(!isAts).build())
-                .build())
-        .setWifi(
-            PartStatus.newBuilder()
-                .setVisible(true)
-                .setEditability(Editability.newBuilder().setEditable(true).build())
-                .build())
-        .setDimensions(
-            PartStatus.newBuilder()
-                .setVisible(true)
-                .setEditability(Editability.newBuilder().setEditable(true).build())
-                .build())
-        .setSettings(
-            PartStatus.newBuilder()
-                .setVisible(!isAts)
-                .setEditability(Editability.newBuilder().setEditable(!isAts).build())
-                .build())
+        .setPermissions(visibleAndEditable(!isAts))
+        .setWifi(visibleAndEditable(!isAts))
+        .setDimensions(visibleAndEditable(true))
+        .setSettings(visibleAndEditable(!isAts))
+        .build();
+  }
+
+  private static DeviceConfigUiStatus calculateHostDeviceSubSectionsUiStatus(boolean isAts) {
+    return DeviceConfigUiStatus.newBuilder()
+        .setPermissions(visibleAndEditable(!isAts))
+        .setWifi(visibleAndEditable(true))
+        .setDimensions(visibleAndEditable(!isAts))
+        .setSettings(visibleAndEditable(!isAts))
+        .build();
+  }
+
+  private static PartStatus visibleAndEditable(boolean enabled) {
+    return PartStatus.newBuilder()
+        .setVisible(enabled)
+        .setEditability(Editability.newBuilder().setEditable(enabled).build())
         .build();
   }
 }

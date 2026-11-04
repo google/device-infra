@@ -72,6 +72,11 @@ public final class GetHostDefaultDeviceConfigHandler {
           if (labConfig.hasDefaultDeviceConfig()) {
             builder.mergeFrom(ConfigConverter.toFeDeviceConfig(labConfig.getDefaultDeviceConfig()));
           }
+          if (!labConfig.getWifiConfig().getSsid().isEmpty()) {
+            builder.setWifi(ConfigConverter.toFeWifiConfig(labConfig.getWifiConfig()));
+          } else if (labConfig.hasWifiConfig() && !builder.hasWifi()) {
+            builder.setWifi(ConfigConverter.toFeWifiConfig(labConfig.getWifiConfig()));
+          }
           return GetHostDefaultDeviceConfigResponse.newBuilder()
               .setDeviceConfig(builder.build())
               .build();
