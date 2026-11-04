@@ -691,6 +691,73 @@ public final class UpdateHostConfigHandlerTest {
   }
 
   @Test
+  public void updateHostConfig_deviceConfig_stability_unsetFieldsClearExistingLimits()
+      throws Exception {
+    String hostName = "test_host";
+    LabConfig existingLabConfig =
+        LabConfig.newBuilder()
+            .setHostName(hostName)
+            .setDefaultDeviceConfig(
+                BasicDeviceConfig.newBuilder()
+                    .setMaxConsecutiveFail(Int32Value.of(5))
+                    .setMaxConsecutiveTest(Int32Value.of(10))
+                    .build())
+            .build();
+    when(configurationProvider.getLabConfig(eq(hostName), any(UniverseScope.class)))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingLabConfig))));
+
+    DeviceConfig feDeviceConfig =
+        DeviceConfig.newBuilder().setSettings(StabilitySettings.getDefaultInstance()).build();
+    HostConfig feConfig = HostConfig.newBuilder().setDeviceConfig(feDeviceConfig).build();
+    UpdateHostConfigRequest request =
+        UpdateHostConfigRequest.newBuilder()
+            .setHostName(hostName)
+            .setConfig(feConfig)
+            .setScope(createScope("device_config.settings"))
+            .build();
+
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
+
+    ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), any(UniverseScope.class));
+    assertThat(captor.getValue().getDefaultDeviceConfig().hasMaxConsecutiveFail()).isFalse();
+    assertThat(captor.getValue().getDefaultDeviceConfig().hasMaxConsecutiveTest()).isFalse();
+  }
+
+  @Test
+  public void updateHostConfig_deviceConfig_stability_zeroLimitsPreserved() throws Exception {
+    String hostName = "test_host";
+    DeviceConfig feDeviceConfig =
+        DeviceConfig.newBuilder()
+            .setSettings(
+                StabilitySettings.newBuilder()
+                    .setMaxConsecutiveFail(0)
+                    .setMaxConsecutiveTest(0)
+                    .build())
+            .build();
+    HostConfig feConfig = HostConfig.newBuilder().setDeviceConfig(feDeviceConfig).build();
+    UpdateHostConfigRequest request =
+        UpdateHostConfigRequest.newBuilder()
+            .setHostName(hostName)
+            .setConfig(feConfig)
+            .setScope(createScope("device_config.settings"))
+            .build();
+
+    updateHostConfigHandler.updateHostConfig(request, SELF_UNIVERSE, Optional.empty()).get();
+
+    ArgumentCaptor<LabConfig> captor = ArgumentCaptor.forClass(LabConfig.class);
+    verify(configurationProvider)
+        .updateLabConfig(eq(hostName), captor.capture(), any(UniverseScope.class));
+    assertThat(captor.getValue().getDefaultDeviceConfig().hasMaxConsecutiveFail()).isTrue();
+    assertThat(captor.getValue().getDefaultDeviceConfig().getMaxConsecutiveFail())
+        .isEqualTo(Int32Value.of(0));
+    assertThat(captor.getValue().getDefaultDeviceConfig().hasMaxConsecutiveTest()).isTrue();
+    assertThat(captor.getValue().getDefaultDeviceConfig().getMaxConsecutiveTest())
+        .isEqualTo(Int32Value.of(0));
+  }
+
+  @Test
   public void updateHostConfig_deviceConfig_all_nonAts_success() throws Exception {
     when(environment.isAts()).thenReturn(false);
     String hostName = "host";

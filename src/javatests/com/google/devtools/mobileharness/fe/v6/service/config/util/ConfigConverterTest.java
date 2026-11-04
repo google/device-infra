@@ -140,6 +140,61 @@ public final class ConfigConverterTest {
   }
 
   @Test
+  public void toFeDeviceConfig_unsetStabilitySettings_leavesFieldsUnset() {
+    DeviceConfig feConfig =
+        ConfigConverter.toFeDeviceConfig(BasicDeviceConfig.getDefaultInstance());
+
+    assertThat(feConfig.getSettings().hasMaxConsecutiveTest()).isFalse();
+    assertThat(feConfig.getSettings().hasMaxConsecutiveFail()).isFalse();
+  }
+
+  @Test
+  public void toFeDeviceConfig_zeroStabilitySettings_preservesZero() {
+    BasicDeviceConfig basicConfig =
+        BasicDeviceConfig.newBuilder()
+            .setMaxConsecutiveTest(Int32Value.of(0))
+            .setMaxConsecutiveFail(Int32Value.of(0))
+            .build();
+
+    DeviceConfig feConfig = ConfigConverter.toFeDeviceConfig(basicConfig);
+
+    assertThat(feConfig.getSettings().hasMaxConsecutiveTest()).isTrue();
+    assertThat(feConfig.getSettings().getMaxConsecutiveTest()).isEqualTo(0);
+    assertThat(feConfig.getSettings().hasMaxConsecutiveFail()).isTrue();
+    assertThat(feConfig.getSettings().getMaxConsecutiveFail()).isEqualTo(0);
+  }
+
+  @Test
+  public void toBasicDeviceConfig_unsetStabilitySettings_leavesFieldsUnset() {
+    DeviceConfig feConfig =
+        DeviceConfig.newBuilder().setSettings(StabilitySettings.getDefaultInstance()).build();
+
+    BasicDeviceConfig basicConfig = ConfigConverter.toBasicDeviceConfig(feConfig);
+
+    assertThat(basicConfig.hasMaxConsecutiveTest()).isFalse();
+    assertThat(basicConfig.hasMaxConsecutiveFail()).isFalse();
+  }
+
+  @Test
+  public void toBasicDeviceConfig_zeroStabilitySettings_preservesZero() {
+    DeviceConfig feConfig =
+        DeviceConfig.newBuilder()
+            .setSettings(
+                StabilitySettings.newBuilder()
+                    .setMaxConsecutiveTest(0)
+                    .setMaxConsecutiveFail(0)
+                    .build())
+            .build();
+
+    BasicDeviceConfig basicConfig = ConfigConverter.toBasicDeviceConfig(feConfig);
+
+    assertThat(basicConfig.hasMaxConsecutiveTest()).isTrue();
+    assertThat(basicConfig.getMaxConsecutiveTest()).isEqualTo(Int32Value.of(0));
+    assertThat(basicConfig.hasMaxConsecutiveFail()).isTrue();
+    assertThat(basicConfig.getMaxConsecutiveFail()).isEqualTo(Int32Value.of(0));
+  }
+
+  @Test
   public void toFeHostConfig_fullMappings() {
     LabConfig labConfig =
         LabConfig.newBuilder()

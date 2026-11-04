@@ -161,7 +161,7 @@ public final class SubDeviceInfoListFactoryTest {
   }
 
   @Test
-  public void create_withInvalidIntegerDimensions_usesDefaultValues() {
+  public void create_withInvalidIntegerDimensions_leavesFieldsUnset() {
     SubDeviceDimensions subDeviceDimensions =
         SubDeviceDimensions.newBuilder()
             .addSubDeviceDimension(
@@ -170,7 +170,9 @@ public final class SubDeviceInfoListFactoryTest {
                     .addDeviceDimension(
                         StrPair.newBuilder().setName("battery_level").setValue("not-an-int"))
                     .addDeviceDimension(
-                        StrPair.newBuilder().setName("wifi_rssi").setValue("invalid")))
+                        StrPair.newBuilder().setName("wifi_rssi").setValue("invalid"))
+                    .addDeviceDimension(
+                        StrPair.newBuilder().setName("internet").setValue("unknown")))
             .build();
     String encodedSubDeviceDimensions =
         Base64.getEncoder().encodeToString(subDeviceDimensions.toByteArray());
@@ -180,8 +182,36 @@ public final class SubDeviceInfoListFactoryTest {
     ImmutableList<SubDeviceInfo> result = subDeviceInfoListFactory.create(dimensions);
 
     assertThat(result).hasSize(1);
-    assertThat(result.get(0).getBatteryLevel()).isEqualTo(-1);
+    assertThat(result.get(0).hasBatteryLevel()).isFalse();
+    assertThat(result.get(0).hasNetwork()).isFalse();
+  }
+
+  @Test
+  public void create_withZeroBatteryAndWifiRssi_setsExplicitPresence() {
+    SubDeviceDimensions subDeviceDimensions =
+        SubDeviceDimensions.newBuilder()
+            .addSubDeviceDimension(
+                SubDeviceDimensions.SubDeviceDimension.newBuilder()
+                    .setDeviceId("sub_device_1")
+                    .addDeviceDimension(StrPair.newBuilder().setName("battery_level").setValue("0"))
+                    .addDeviceDimension(StrPair.newBuilder().setName("wifi_rssi").setValue("0"))
+                    .addDeviceDimension(StrPair.newBuilder().setName("internet").setValue("false")))
+            .build();
+    String encodedSubDeviceDimensions =
+        Base64.getEncoder().encodeToString(subDeviceDimensions.toByteArray());
+    ImmutableMap<String, String> dimensions =
+        ImmutableMap.of(TestbedDeviceSpec.SUBDEVICE_DIMENSIONS_KEY, encodedSubDeviceDimensions);
+
+    ImmutableList<SubDeviceInfo> result = subDeviceInfoListFactory.create(dimensions);
+
+    assertThat(result).hasSize(1);
+    assertThat(result.get(0).hasBatteryLevel()).isTrue();
+    assertThat(result.get(0).getBatteryLevel()).isEqualTo(0);
+    assertThat(result.get(0).hasNetwork()).isTrue();
+    assertThat(result.get(0).getNetwork().hasWifiRssi()).isTrue();
     assertThat(result.get(0).getNetwork().getWifiRssi()).isEqualTo(0);
+    assertThat(result.get(0).getNetwork().hasHasInternet()).isTrue();
+    assertThat(result.get(0).getNetwork().getHasInternet()).isFalse();
   }
 
   @Test
@@ -281,7 +311,7 @@ public final class SubDeviceInfoListFactoryTest {
 
     assertThat(result.get(0).hasNetwork()).isTrue();
     assertThat(result.get(0).getNetwork().getWifiRssi()).isEqualTo(-60);
-    assertThat(result.get(0).getNetwork().getHasInternet()).isFalse();
+    assertThat(result.get(0).getNetwork().hasHasInternet()).isFalse();
   }
 
   @Test
@@ -302,6 +332,6 @@ public final class SubDeviceInfoListFactoryTest {
 
     assertThat(result.get(0).hasNetwork()).isTrue();
     assertThat(result.get(0).getNetwork().getHasInternet()).isTrue();
-    assertThat(result.get(0).getNetwork().getWifiRssi()).isEqualTo(0);
+    assertThat(result.get(0).getNetwork().hasWifiRssi()).isFalse();
   }
 }

@@ -957,6 +957,11 @@ public final class GetDeviceOverviewHandlerTest {
                                 DeviceDimension.newBuilder()
                                     .setName("wifi_rssi")
                                     .setValue("bad_rssi")
+                                    .build())
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("internet")
+                                    .setValue("unknown")
                                     .build())))
             .build();
     mockDeviceInfo(malformedDevice);
@@ -968,7 +973,75 @@ public final class GetDeviceOverviewHandlerTest {
             .getOverview();
 
     assertThat(response.getBasicInfo().getBatteryLevel()).isEqualTo(-1);
+    assertThat(response.getBasicInfo().getNetwork().hasWifiRssi()).isFalse();
+    assertThat(response.getBasicInfo().getNetwork().hasHasInternet()).isFalse();
+  }
+
+  @Test
+  public void getDeviceOverview_networkDimensions_populatedWhenPresent() throws Exception {
+    DeviceInfo deviceWithNetwork =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceFeature(
+                DEFAULT_DEVICE_INFO.getDeviceFeature().toBuilder()
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("wifi_rssi")
+                                    .setValue("-55")
+                                    .build())
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("internet")
+                                    .setValue("false")
+                                    .build())))
+            .build();
+    mockDeviceInfo(deviceWithNetwork);
+
+    DeviceOverview response =
+        getDeviceOverviewHandler
+            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
+            .get()
+            .getOverview();
+
+    assertThat(response.getBasicInfo().getNetwork().hasWifiRssi()).isTrue();
+    assertThat(response.getBasicInfo().getNetwork().getWifiRssi()).isEqualTo(-55);
+    assertThat(response.getBasicInfo().getNetwork().hasHasInternet()).isTrue();
+    assertThat(response.getBasicInfo().getNetwork().getHasInternet()).isFalse();
+  }
+
+  @Test
+  public void getDeviceOverview_zeroBatteryAndWifiRssi_setsExplicitPresence() throws Exception {
+    DeviceInfo deviceWithZeroValues =
+        DEFAULT_DEVICE_INFO.toBuilder()
+            .setDeviceFeature(
+                DEFAULT_DEVICE_INFO.getDeviceFeature().toBuilder()
+                    .setCompositeDimension(
+                        DeviceCompositeDimension.newBuilder()
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("battery_level")
+                                    .setValue("0")
+                                    .build())
+                            .addSupportedDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("wifi_rssi")
+                                    .setValue("0")
+                                    .build())))
+            .build();
+    mockDeviceInfo(deviceWithZeroValues);
+
+    DeviceOverview response =
+        getDeviceOverviewHandler
+            .getDeviceOverview(DEFAULT_REQUEST, SELF_UNIVERSE)
+            .get()
+            .getOverview();
+
+    assertThat(response.getBasicInfo().hasBatteryLevel()).isTrue();
+    assertThat(response.getBasicInfo().getBatteryLevel()).isEqualTo(0);
+    assertThat(response.getBasicInfo().getNetwork().hasWifiRssi()).isTrue();
     assertThat(response.getBasicInfo().getNetwork().getWifiRssi()).isEqualTo(0);
+    assertThat(response.getBasicInfo().getNetwork().hasHasInternet()).isFalse();
   }
 
   @Test

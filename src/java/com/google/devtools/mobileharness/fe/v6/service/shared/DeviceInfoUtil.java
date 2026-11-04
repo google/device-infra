@@ -18,12 +18,14 @@ package com.google.devtools.mobileharness.fe.v6.service.shared;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 /** Utility for extracting information from {@link DeviceInfo}. */
@@ -42,6 +44,20 @@ public final class DeviceInfoUtil {
       return releaseVersion;
     }
     return dimensions.getOrDefault(Dimension.Name.SOFTWARE_VERSION.lowerCaseName(), "");
+  }
+
+  /**
+   * Parses a boolean dimension value, returning {@link Optional#empty()} when the value is neither
+   * {@link Dimension.Value#TRUE} nor {@link Dimension.Value#FALSE} (case-insensitive).
+   */
+  public static Optional<Boolean> parseBooleanDimension(String value) {
+    if (Ascii.equalsIgnoreCase(Dimension.Value.TRUE, value)) {
+      return Optional.of(true);
+    }
+    if (Ascii.equalsIgnoreCase(Dimension.Value.FALSE, value)) {
+      return Optional.of(false);
+    }
+    return Optional.empty();
   }
 
   /**

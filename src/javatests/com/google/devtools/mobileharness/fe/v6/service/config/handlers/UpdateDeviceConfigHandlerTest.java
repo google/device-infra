@@ -415,6 +415,109 @@ public final class UpdateDeviceConfigHandlerTest {
   }
 
   @Test
+  public void updateDeviceConfig_stabilitySection_unsetFieldsClearExistingLimits()
+      throws Exception {
+    String deviceId = "test_device";
+    String universe = "google_1p";
+    DeviceConfig feConfig =
+        DeviceConfig.newBuilder().setSettings(StabilitySettings.getDefaultInstance()).build();
+    UpdateDeviceConfigRequest request =
+        UpdateDeviceConfigRequest.newBuilder()
+            .setId(deviceId)
+            .setUniverse(universe)
+            .setConfig(feConfig)
+            .setSection(DeviceConfigSection.STABILITY)
+            .build();
+
+    Device.DeviceConfig existingConfig =
+        Device.DeviceConfig.newBuilder()
+            .setUuid(deviceId)
+            .setBasicConfig(
+                BasicDeviceConfig.newBuilder()
+                    .setMaxConsecutiveTest(Int32Value.of(10))
+                    .setMaxConsecutiveFail(Int32Value.of(5))
+                    .build())
+            .build();
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
+        .thenReturn(
+            immediateFuture(
+                DeviceData.create(
+                    DeviceInfo.getDefaultInstance(),
+                    existingConfig,
+                    ManagementMode.PER_DEVICE,
+                    Optional.empty(),
+                    Optional.of(existingConfig))));
+    when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
+    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
+        .thenReturn(immediateVoidFuture());
+
+    UpdateDeviceConfigResponse response =
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.empty())
+            .get();
+
+    assertThat(response.getSuccess()).isTrue();
+    ArgumentCaptor<Device.DeviceConfig> captor = ArgumentCaptor.forClass(Device.DeviceConfig.class);
+    verify(configurationProvider)
+        .updateDeviceConfig(eq(deviceId), captor.capture(), eq(SELF_UNIVERSE));
+    Device.DeviceConfig updatedConfig = captor.getValue();
+    assertThat(updatedConfig.getBasicConfig().hasMaxConsecutiveTest()).isFalse();
+    assertThat(updatedConfig.getBasicConfig().hasMaxConsecutiveFail()).isFalse();
+  }
+
+  @Test
+  public void updateDeviceConfig_stabilitySection_zeroLimitsPreserved() throws Exception {
+    String deviceId = "test_device";
+    String universe = "google_1p";
+    DeviceConfig feConfig =
+        DeviceConfig.newBuilder()
+            .setSettings(
+                StabilitySettings.newBuilder()
+                    .setMaxConsecutiveTest(0)
+                    .setMaxConsecutiveFail(0)
+                    .build())
+            .build();
+    UpdateDeviceConfigRequest request =
+        UpdateDeviceConfigRequest.newBuilder()
+            .setId(deviceId)
+            .setUniverse(universe)
+            .setConfig(feConfig)
+            .setSection(DeviceConfigSection.STABILITY)
+            .build();
+
+    Device.DeviceConfig existingConfig = Device.DeviceConfig.getDefaultInstance();
+    when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
+        .thenReturn(
+            immediateFuture(
+                DeviceData.create(
+                    DeviceInfo.getDefaultInstance(),
+                    existingConfig,
+                    ManagementMode.PER_DEVICE,
+                    Optional.empty(),
+                    Optional.of(existingConfig))));
+    when(configurationProvider.getDeviceConfig(deviceId, SELF_UNIVERSE))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
+    when(configurationProvider.updateDeviceConfig(eq(deviceId), any(), eq(SELF_UNIVERSE)))
+        .thenReturn(immediateVoidFuture());
+
+    UpdateDeviceConfigResponse response =
+        updateDeviceConfigHandler
+            .updateDeviceConfig(request, SELF_UNIVERSE, Optional.empty())
+            .get();
+
+    assertThat(response.getSuccess()).isTrue();
+    ArgumentCaptor<Device.DeviceConfig> captor = ArgumentCaptor.forClass(Device.DeviceConfig.class);
+    verify(configurationProvider)
+        .updateDeviceConfig(eq(deviceId), captor.capture(), eq(SELF_UNIVERSE));
+    Device.DeviceConfig updatedConfig = captor.getValue();
+    assertThat(updatedConfig.getBasicConfig().hasMaxConsecutiveTest()).isTrue();
+    assertThat(updatedConfig.getBasicConfig().getMaxConsecutiveTest()).isEqualTo(Int32Value.of(0));
+    assertThat(updatedConfig.getBasicConfig().hasMaxConsecutiveFail()).isTrue();
+    assertThat(updatedConfig.getBasicConfig().getMaxConsecutiveFail()).isEqualTo(Int32Value.of(0));
+  }
+
+  @Test
   public void updateDeviceConfig_dimensions_success() throws Exception {
     String deviceId = "test_device";
     String universe = "google_1p";
@@ -568,8 +671,10 @@ public final class UpdateDeviceConfigHandlerTest {
             .build();
 
     com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig existingConfig =
-        com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig
-            .getDefaultInstance();
+        com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig.newBuilder()
+            .setBasicConfig(
+                BasicDeviceConfig.newBuilder().setMaxConsecutiveFail(Int32Value.of(5)).build())
+            .build();
     when(deviceDataLoader.loadDeviceData(deviceId, SELF_UNIVERSE))
         .thenReturn(
             immediateFuture(
@@ -600,7 +705,9 @@ public final class UpdateDeviceConfigHandlerTest {
         captor.getValue();
     assertThat(updatedConfig.getBasicConfig().getOwnerList()).containsExactly("new_owner");
     assertThat(updatedConfig.getBasicConfig().getDefaultWifi().getSsid()).isEqualTo("new_ssid");
+    assertThat(updatedConfig.getBasicConfig().hasMaxConsecutiveTest()).isTrue();
     assertThat(updatedConfig.getBasicConfig().getMaxConsecutiveTest()).isEqualTo(Int32Value.of(20));
+    assertThat(updatedConfig.getBasicConfig().hasMaxConsecutiveFail()).isFalse();
   }
 
   @Test

@@ -37,7 +37,7 @@
         <div>
           <strong>Max Consecutive Failures:</strong>
           <div class="break-all">
-            {{ hostDefaultConfig().settings?.maxConsecutiveFail || 'N/A' }}
+            {{ hostDefaultConfig().settings?.maxConsecutiveFail ?? 'N/A' }}
           </div>
         </div>
       </div>

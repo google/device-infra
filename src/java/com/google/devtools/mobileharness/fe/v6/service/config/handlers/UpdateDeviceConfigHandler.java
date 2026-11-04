@@ -228,11 +228,7 @@ public final class UpdateDeviceConfigHandler {
       }
       case WIFI -> updateDefaultWifi(builder, incoming);
       case DIMENSIONS -> builder.setCompositeDimension(incoming.getCompositeDimension());
-      case STABILITY -> {
-        builder
-            .setMaxConsecutiveTest(incoming.getMaxConsecutiveTest())
-            .setMaxConsecutiveFail(incoming.getMaxConsecutiveFail());
-      }
+      case STABILITY -> updateStabilitySettings(builder, incoming);
       case ALL -> {
         if (environment.isAts()) {
           builder.setCompositeDimension(incoming.getCompositeDimension());
@@ -244,15 +240,28 @@ public final class UpdateDeviceConfigHandler {
               .addAllOwner(incoming.getOwnerList())
               .clearExecutor()
               .addAllExecutor(incoming.getExecutorList())
-              .setCompositeDimension(incoming.getCompositeDimension())
-              .setMaxConsecutiveTest(incoming.getMaxConsecutiveTest())
-              .setMaxConsecutiveFail(incoming.getMaxConsecutiveFail());
+              .setCompositeDimension(incoming.getCompositeDimension());
+          updateStabilitySettings(builder, incoming);
           updateDefaultWifi(builder, incoming);
         }
       }
       default -> {}
     }
     return builder.build();
+  }
+
+  private static void updateStabilitySettings(
+      BasicDeviceConfig.Builder builder, BasicDeviceConfig incoming) {
+    if (incoming.hasMaxConsecutiveTest()) {
+      builder.setMaxConsecutiveTest(incoming.getMaxConsecutiveTest());
+    } else {
+      builder.clearMaxConsecutiveTest();
+    }
+    if (incoming.hasMaxConsecutiveFail()) {
+      builder.setMaxConsecutiveFail(incoming.getMaxConsecutiveFail());
+    } else {
+      builder.clearMaxConsecutiveFail();
+    }
   }
 
   private static void updateDefaultWifi(

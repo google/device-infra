@@ -110,4 +110,18 @@ public final class DeviceInfoUtilTest {
     ImmutableMap<String, String> dimensions = ImmutableMap.of("other", "val");
     assertThat(DeviceInfoUtil.getVersion(dimensions)).isEmpty();
   }
+
+  @Test
+  public void parseBooleanDimension_trueAndFalseCaseInsensitive_returnsBoolean() {
+    assertThat(DeviceInfoUtil.parseBooleanDimension("true")).hasValue(true);
+    assertThat(DeviceInfoUtil.parseBooleanDimension("TRUE")).hasValue(true);
+    assertThat(DeviceInfoUtil.parseBooleanDimension("false")).hasValue(false);
+    assertThat(DeviceInfoUtil.parseBooleanDimension("False")).hasValue(false);
+  }
+
+  @Test
+  public void parseBooleanDimension_emptyOrUnrecognized_returnsEmpty() {
+    assertThat(DeviceInfoUtil.parseBooleanDimension("")).isEmpty();
+    assertThat(DeviceInfoUtil.parseBooleanDimension("unknown")).isEmpty();
+  }
 }

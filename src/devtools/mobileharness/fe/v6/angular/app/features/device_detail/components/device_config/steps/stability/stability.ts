@@ -43,13 +43,13 @@ export class Stability {
   readonly hostTooltipText = input<string>('');
 
   @Input()
-  settings: {maxConsecutiveFail: number; maxConsecutiveTest: number} = {
+  settings: {maxConsecutiveFail?: number; maxConsecutiveTest?: number} = {
     maxConsecutiveFail: 5,
     maxConsecutiveTest: 10000,
   };
   @Output()
   readonly settingsChange = new EventEmitter<{
-    maxConsecutiveFail: number;
-    maxConsecutiveTest: number;
+    maxConsecutiveFail?: number;
+    maxConsecutiveTest?: number;
   }>();
 }

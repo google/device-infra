@@ -380,6 +380,61 @@ describe('DeviceOverviewTab Component', () => {
     expect(component.getWifiQualityText(-105)).toEqual('Weak');
   });
 
+  it('renders internet status for true, false, and undefined hasInternet with wifiRssi', () => {
+    const cdr = fixture.debugElement
+      .query(By.directive(DeviceOverviewTab))
+      .injector.get(ChangeDetectorRef);
+
+    // hasInternet === true -> Internet access
+    component.device.basicInfo.network = {wifiRssi: -58, hasInternet: true};
+    cdr.markForCheck();
+    fixture.detectChanges();
+    let internetStatus = fixture.debugElement.query(By.css('.internet-status'));
+    expect(internetStatus.nativeElement.textContent).toContain(
+      'Internet access',
+    );
+    expect(
+      internetStatus
+        .query(By.css('.internet-icon'))
+        .nativeElement.textContent.trim(),
+    ).toBe('public');
+
+    // hasInternet === false -> No internet access
+    component.device.basicInfo.network = {wifiRssi: -58, hasInternet: false};
+    cdr.markForCheck();
+    fixture.detectChanges();
+    internetStatus = fixture.debugElement.query(By.css('.internet-status'));
+    expect(internetStatus.nativeElement.textContent).toContain(
+      'No internet access',
+    );
+    expect(
+      internetStatus
+        .query(By.css('.internet-icon'))
+        .nativeElement.textContent.trim(),
+    ).toBe('public_off');
+
+    // hasInternet === undefined with wifiRssi present -> Unknown without signal_wifi_off
+    component.device.basicInfo.network = {wifiRssi: -58};
+    cdr.markForCheck();
+    fixture.detectChanges();
+    internetStatus = fixture.debugElement.query(By.css('.internet-status'));
+    expect(internetStatus.nativeElement.textContent).toContain('Unknown');
+    expect(internetStatus.query(By.css('.internet-icon'))).toBeNull();
+
+    // Both wifiRssi and hasInternet undefined on an Android device -> Unknown with signal_wifi_off
+    component.device.isAndroid = true;
+    component.device.basicInfo.network = {};
+    cdr.markForCheck();
+    fixture.detectChanges();
+    internetStatus = fixture.debugElement.query(By.css('.internet-status'));
+    expect(internetStatus.nativeElement.textContent).toContain('Unknown');
+    expect(
+      internetStatus
+        .query(By.css('.internet-icon'))
+        .nativeElement.textContent.trim(),
+    ).toBe('signal_wifi_off');
+  });
+
   it('should load testbed config and disable button if empty', async () => {
     fixture.detectChanges();
     expect(component.testbedConfig()).toEqual({

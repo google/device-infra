@@ -154,9 +154,13 @@ public final class ConfigConverter {
 
     // Stability Settings
     if (feConfig.hasSettings()) {
-      builder
-          .setMaxConsecutiveTest(Int32Value.of(feConfig.getSettings().getMaxConsecutiveTest()))
-          .setMaxConsecutiveFail(Int32Value.of(feConfig.getSettings().getMaxConsecutiveFail()));
+      StabilitySettings settings = feConfig.getSettings();
+      if (settings.hasMaxConsecutiveTest()) {
+        builder.setMaxConsecutiveTest(Int32Value.of(settings.getMaxConsecutiveTest()));
+      }
+      if (settings.hasMaxConsecutiveFail()) {
+        builder.setMaxConsecutiveFail(Int32Value.of(settings.getMaxConsecutiveFail()));
+      }
     }
 
     return builder.build();

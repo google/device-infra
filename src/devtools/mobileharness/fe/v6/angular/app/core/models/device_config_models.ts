@@ -74,12 +74,12 @@ export declare interface StabilitySettings {
    * The maximum number of consecutive test failures on this device
    * before the device is rebooted.
    */
-  maxConsecutiveFail: number;
+  maxConsecutiveFail?: number;
   /**
    * The maximum number of tests (passed or failed) that can run on this device
    * between reboots.
    */
-  maxConsecutiveTest: number;
+  maxConsecutiveTest?: number;
 }
 
 /**

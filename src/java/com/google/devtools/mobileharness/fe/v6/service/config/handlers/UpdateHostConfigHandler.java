@@ -449,9 +449,7 @@ public final class UpdateHostConfigHandler {
     }
 
     if (!environment.isAts() && isPathInFieldMask("device_config.settings", mask)) {
-      builder
-          .setMaxConsecutiveTest(incoming.getMaxConsecutiveTest())
-          .setMaxConsecutiveFail(incoming.getMaxConsecutiveFail());
+      updateStabilitySettings(builder, incoming);
     }
 
     if (isPathInFieldMask("device_config.wifi", mask)) {
@@ -463,6 +461,20 @@ public final class UpdateHostConfigHandler {
     }
 
     return builder.build();
+  }
+
+  private static void updateStabilitySettings(
+      BasicDeviceConfig.Builder builder, BasicDeviceConfig incoming) {
+    if (incoming.hasMaxConsecutiveTest()) {
+      builder.setMaxConsecutiveTest(incoming.getMaxConsecutiveTest());
+    } else {
+      builder.clearMaxConsecutiveTest();
+    }
+    if (incoming.hasMaxConsecutiveFail()) {
+      builder.setMaxConsecutiveFail(incoming.getMaxConsecutiveFail());
+    } else {
+      builder.clearMaxConsecutiveFail();
+    }
   }
 
   private static void updateDefaultWifi(

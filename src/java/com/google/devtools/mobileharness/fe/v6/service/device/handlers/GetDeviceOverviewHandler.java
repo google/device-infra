@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.JdkFutureAdapters;
@@ -272,9 +273,8 @@ public final class GetDeviceOverviewHandler {
         .setForm(form)
         .setOs(allDimensions.getOrDefault("os", ""))
         .setHardware(allDimensions.getOrDefault("hardware", ""))
-        .setBuild(allDimensions.getOrDefault("build", ""));
-
-    basicInfo.setVersion(DeviceInfoUtil.getVersion(allDimensions));
+        .setBuild(allDimensions.getOrDefault("build", ""))
+        .setVersion(DeviceInfoUtil.getVersion(allDimensions));
 
     try {
       basicInfo.setBatteryLevel(
@@ -284,12 +284,12 @@ public final class GetDeviceOverviewHandler {
     }
 
     NetworkInfo.Builder network = NetworkInfo.newBuilder();
-    try {
-      network.setWifiRssi(Integer.parseInt(allDimensions.getOrDefault("wifi_rssi", "0")));
-    } catch (NumberFormatException e) {
-      network.setWifiRssi(0);
-    }
-    network.setHasInternet(Boolean.parseBoolean(allDimensions.getOrDefault("internet", "false")));
+    Optional.ofNullable(allDimensions.get("wifi_rssi"))
+        .map(Ints::tryParse)
+        .ifPresent(network::setWifiRssi);
+    Optional.ofNullable(allDimensions.get("internet"))
+        .flatMap(DeviceInfoUtil::parseBooleanDimension)
+        .ifPresent(network::setHasInternet);
 
     // Reference from V5: java/com/google/devtools/mobileharness/fe/v5/ui/table/basic_info_table.soy
 
