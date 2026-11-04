@@ -177,7 +177,28 @@
     </mat-sidenav-container>
   } @else {
     <!--Embedded mode, only show the routed content(main conent), and hide the toolbar, footer, and sidenav.-->
-    <div class="embedded-content">
+    <div class="embedded-content" [class.with-header-band]="showEmbeddedHeaderBand">
+      @if (showEmbeddedHeaderBand) {
+        <!--
+          Header band painted into the host page's header slot (see
+          UrlService.embeddedHeaderSlot): it hosts the docked search input so
+          that it shows up inside the host application's own header.
+        -->
+        <div
+          class="embedded-header-band"
+          [style.height.px]="embeddedHeaderSlot()?.height || 64"
+          [style.border-bottom-color]="embeddedHeaderSlot()?.borderColor || null"
+        >
+          <div
+            class="embedded-header-search-dock"
+            [class.active]="dockService.isDocked()"
+            [style.margin-left.px]="embeddedHeaderSlot()?.left || 0"
+            [style.width.px]="embeddedHeaderSlot()?.width || null"
+          >
+            <ng-template [cdkPortalOutlet]="dockService.activePortal()"></ng-template>
+          </div>
+        </div>
+      }
       <router-outlet></router-outlet>
     </div>
   }

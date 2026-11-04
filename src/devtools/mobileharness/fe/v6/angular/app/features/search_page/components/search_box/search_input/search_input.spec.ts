@@ -192,6 +192,14 @@ describe('SearchInput', () => {
     expect(mockStore.setFleet).toHaveBeenCalledWith('ats');
   });
 
+  it('should hide the scope switcher when the store disables it (e.g. OSS build)', () => {
+    mockStore.showScopeSwitcher.set(false);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.scope-switcher')).toBeNull();
+    expect(fixture.nativeElement.querySelectorAll('.scope-seg').length).toBe(0);
+  });
+
   it('should render single active chip inline when only 1 active chip is present', () => {
     mockStore.activeChips.set([
       {

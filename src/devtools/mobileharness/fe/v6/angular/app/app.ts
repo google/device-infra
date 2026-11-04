@@ -51,7 +51,7 @@ import {
 } from '@deviceinfra/app/core/models/app_data';
 import {CommonParamsService} from '@deviceinfra/app/core/services/common_params_service';
 import {UrlService} from '@deviceinfra/app/core/services/url_service';
-import {isHeaderJumpBarVisibleOnRoute} from '@deviceinfra/app/features/all_site_search/all_site_search_scope';
+import {ENTITY_SEARCH_PATHS, isHeaderJumpBarVisibleOnRoute} from '@deviceinfra/app/features/all_site_search/all_site_search_scope';
 import {HeaderJumpBar} from '@deviceinfra/app/features/all_site_search/components/header_jump_bar/header_jump_bar';
 import {HeaderSearchDockService} from '@deviceinfra/app/shared/services/header_search_dock_service';
 import {LoadingService} from '@deviceinfra/app/shared/services/loading_service';
@@ -110,6 +110,17 @@ export class App implements OnDestroy {
   isFakeData = false;
   showContent = true;
   isAssistantEnabled = false;
+  /**
+   * Whether the embedded header band is shown: when embedded in the ATS host
+   * (MTT UI2) on the entity search pages, the host lets the iframe paint into
+   * a slot of its own header, and this band hosts the docked search input
+   * there. Never shown in the Google-internal build (its embedded mode, e.g.
+   * Arsenal, has no such host slot).
+   */
+  showEmbeddedHeaderBand = false;
+  /** Header slot geometry provided by the host page (embedded mode only). */
+  readonly embeddedHeaderSlot = this.urlService.embeddedHeaderSlot;
+  private headerSlotRequested = false;
 
   get isStandaloneMode(): boolean {
     return !this.isEmbeddedMode;
@@ -217,6 +228,7 @@ export class App implements OnDestroy {
   }
 
   updateShowContent() {
+    this.updateEmbeddedHeaderBand();
     if (this.isFakeData) {
       this.showContent = true;
       this.cdr.markForCheck();
@@ -266,6 +278,26 @@ export class App implements OnDestroy {
   logout() {
     // TODO: Implement this.
     console.log('logout');
+  }
+
+  /**
+   * Recomputes whether the embedded header band is shown and, the first time
+   * it is needed, asks the host page for its header slot geometry.
+   *
+   * Explanation: The band only exists when embedded in the ATS host (OSS
+   * build) on the entity search routes (`/devices`, `/hosts`, ...); detail
+   * pages and the Google-internal embedded mode keep the plain embedded
+   * layout. The host answers the request with an `EMBEDDED_HEADER_SLOT`
+   * message and keeps sending updates when the slot moves or resizes.
+   */
+  private updateEmbeddedHeaderBand() {
+    this.showEmbeddedHeaderBand =
+      this.urlService.isInAtsEmbeddedMode() &&
+      ENTITY_SEARCH_PATHS.has(this.getCurrentRoutePath());
+    if (this.showEmbeddedHeaderBand && !this.headerSlotRequested) {
+      this.headerSlotRequested = true;
+      this.urlService.requestEmbeddedHeaderSlot();
+    }
   }
 
   ngOnDestroy() {
