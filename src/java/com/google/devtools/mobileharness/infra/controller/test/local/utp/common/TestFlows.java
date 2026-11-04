@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.controller.test.local.utp.common;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.devtools.mobileharness.api.model.job.in.Decorators;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.BasicFlowProto;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.BasicFlowProto.BasicFlow;
@@ -23,7 +25,6 @@ import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.B
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.BasicFlowProto.MobileHarnessDriver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
-import java.util.stream.Collectors;
 
 /**
  * Utility for generating {@linkplain
@@ -49,7 +50,7 @@ public class TestFlows {
                         MobileHarnessDecoratorStack.newBuilder()
                             .addAllDecoratorName(decorators)
                             .build())
-                .collect(Collectors.toList()))
+                .collect(toImmutableList()))
         .build();
   }
 
