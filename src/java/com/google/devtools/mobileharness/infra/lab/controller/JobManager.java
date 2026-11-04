@@ -16,6 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.lab.controller;
 
+import static com.google.common.collect.ImmutableMap.entriesToImmutableMap;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -23,7 +27,6 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
@@ -53,7 +56,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -167,9 +169,9 @@ public class JobManager {
       return Optional.ofNullable(tests.get(testId));
     }
 
-    private synchronized Map<String, TestExecutionUnit> getAllTestExecutionUnits() {
+    private synchronized ImmutableMap<String, TestExecutionUnit> getAllTestExecutionUnits() {
       return tests.entrySet().stream()
-          .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().getTestExecutionUnit()));
+          .collect(toImmutableMap(Entry::getKey, e -> e.getValue().getTestExecutionUnit()));
     }
 
     private synchronized ProxyTestRunner addTest(String testId, ProxyTestRunner testRunner) {
@@ -290,8 +292,7 @@ public class JobManager {
   /** Gets a &lt;job ID, JobExecutionUnit&gt; map. */
   public Map<String, JobExecutionUnit> getJobs() {
     return jobs.entrySet().stream()
-        .collect(
-            ImmutableMap.toImmutableMap(Entry::getKey, e -> e.getValue().getJobExecutionUnit()));
+        .collect(toImmutableMap(Entry::getKey, e -> e.getValue().getJobExecutionUnit()));
   }
 
   /**
@@ -307,7 +308,7 @@ public class JobManager {
   public Map<String, TestExecutionUnit> getTests() {
     return jobs.values().stream()
         .flatMap(job -> job.getAllTestExecutionUnits().entrySet().stream())
-        .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+        .collect(entriesToImmutableMap());
   }
 
   /**
@@ -399,9 +400,7 @@ public class JobManager {
       ListenableFuture<ResolveResult> resolveJobFileFuture =
           jobLabExecutionUnit.startResolveFile(resolveSource, resolveFileOperation);
       Futures.addCallback(
-          resolveJobFileFuture,
-          new ResolveJobFileFutureCallback(testLocator),
-          MoreExecutors.directExecutor());
+          resolveJobFileFuture, new ResolveJobFileFutureCallback(testLocator), directExecutor());
       resolveJobFileFutures.add(resolveJobFileFuture);
     }
     getJobLabExecutionUnit(testLocator.jobLocator().id())

@@ -16,12 +16,13 @@
 
 package com.google.devtools.mobileharness.infra.controller.device;
 
+import static com.google.common.collect.ImmutableMap.entriesToImmutableMap;
+
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import java.time.Duration;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /** Base implementation for {@link DeviceStatusProvider}. */
 public abstract class BaseDeviceStatusProvider implements DeviceStatusProvider {
@@ -51,6 +52,6 @@ public abstract class BaseDeviceStatusProvider implements DeviceStatusProvider {
       boolean realtimeDetect) throws InterruptedException {
     return getAllDeviceStatus(realtimeDetect).entrySet().stream()
         .filter(x -> duplicatedUuidCache.getIfPresent(x.getKey().getDeviceUuid()) == null)
-        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        .collect(entriesToImmutableMap());
   }
 }

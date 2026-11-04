@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
+import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.model.JobExecutionUnit;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionUnit;
@@ -52,7 +53,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import javax.annotation.concurrent.GuardedBy;
 
 /**
@@ -167,9 +167,9 @@ public class TestManager<T extends TestRunner> implements Runnable {
   public List<String> getRunningTestIds() {
     synchronized (testRunners) {
       return testRunners.values().stream()
-          .filter(testRunner -> testRunner.isRunning())
+          .filter(TestRunner::isRunning)
           .map(testRunner -> testRunner.getTestExecutionUnit().locator().id())
-          .collect(Collectors.toList());
+          .collect(toImmutableList());
     }
   }
 
@@ -199,10 +199,7 @@ public class TestManager<T extends TestRunner> implements Runnable {
       return false;
     } else {
       Function<Allocation, List<String>> deviceIdGetter =
-          alloc ->
-              alloc.getAllDevices().stream()
-                  .map(com.google.devtools.mobileharness.api.model.lab.DeviceLocator::id)
-                  .collect(Collectors.toList());
+          alloc -> alloc.getAllDevices().stream().map(DeviceLocator::id).collect(toImmutableList());
       if (!deviceIdGetter
           .apply(testRunner.getAllocation())
           .equals(deviceIdGetter.apply(allocation))) {
@@ -362,10 +359,10 @@ public class TestManager<T extends TestRunner> implements Runnable {
       logger.atInfo().log("Kill test %s (kill_count=%d)", testLocator.id(), killCount);
       if (killCount >= MAX_KILL_COUNT) {
         logAllStackTraces();
-        List<String> deviceIds =
+        ImmutableList<String> deviceIds =
             runner.getAllocation().getAllDevices().stream()
-                .map(com.google.devtools.mobileharness.api.model.lab.DeviceLocator::id)
-                .collect(Collectors.toList());
+                .map(DeviceLocator::id)
+                .collect(toImmutableList());
         killZombieProcesses(testLocator, deviceIds);
       }
       return killCount;

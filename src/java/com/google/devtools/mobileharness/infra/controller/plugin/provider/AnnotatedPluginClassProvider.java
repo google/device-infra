@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.controller.plugin.provider;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
@@ -26,9 +28,9 @@ import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin.Plug
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
 import io.github.classgraph.ClassInfo;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /** Provides plugin classes that have been annotated with the given {@link PluginType}s. */
@@ -42,7 +44,6 @@ public class AnnotatedPluginClassProvider implements PluginClassProvider {
   private final ImmutableSet<PluginType> pluginTypes;
 
   /**
-   * @param reflections The reflection object ot use when finding the classes.
    * @param pluginTypes The types of plugin to allow.
    */
   public AnnotatedPluginClassProvider(
@@ -69,7 +70,7 @@ public class AnnotatedPluginClassProvider implements PluginClassProvider {
                       log,
                       warnUnmatchedTypes,
                       pluginTypes))
-          .collect(Collectors.toSet());
+          .collect(toImmutableSet());
     } catch (IllegalArgumentException e) {
       throw new MobileHarnessException(
           BasicErrorId.PLUGIN_LOADER_FAILED_TO_LOAD_PLUGIN_CLASS, "Fail to load plugin class.", e);
@@ -95,7 +96,7 @@ public class AnnotatedPluginClassProvider implements PluginClassProvider {
                 aClass.getName(),
                 pluginTypes,
                 pluginType,
-                PluginType.UNSPECIFIED.equals(pluginType)
+                Objects.equals(pluginType, PluginType.UNSPECIFIED)
                     ? "forget to add PluginType to the @Plugin annotation like"
                         + " @Plugin(type = CLIENT) or @Plugin(type = LAB)?"
                     : "specify a wrong plugin jar? If the class is depended by other"

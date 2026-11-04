@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.controller.plugin.provider;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
@@ -27,7 +29,6 @@ import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
 import io.github.classgraph.ClassInfo;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /** Provides plugin module classes that have been annotated with the given {@link PluginType}s. */
@@ -39,7 +40,6 @@ public class AnnotatedPluginModuleClassProvider implements PluginModuleClassProv
   private final ImmutableSet<PluginType> pluginTypes;
 
   /**
-   * @param reflections The reflection object ot use when finding the classes.
    * @param pluginTypes The types of plugin to allow.
    */
   public AnnotatedPluginModuleClassProvider(
@@ -67,7 +67,7 @@ public class AnnotatedPluginModuleClassProvider implements PluginModuleClassProv
                       warnUnmatchedTypes,
                       pluginTypes))
           .<Class<? extends Module>>map(aClass -> aClass.asSubclass(Module.class))
-          .collect(Collectors.toSet());
+          .collect(toImmutableSet());
     } catch (IllegalArgumentException e) {
       throw new MobileHarnessException(
           BasicErrorId.PLUGIN_LOADER_FAILED_TO_LOAD_PLUGIN_MODULE_CLASS,

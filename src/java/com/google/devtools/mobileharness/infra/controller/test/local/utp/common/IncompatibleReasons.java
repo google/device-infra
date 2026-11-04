@@ -16,8 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.controller.test.local.utp.common;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
@@ -101,7 +101,7 @@ public class IncompatibleReasons {
             .map(
                 reason ->
                     IncompatibleReason.newBuilder().setConverterIncompatibleReason(reason).build())
-            .collect(toList()),
+            .collect(toImmutableList()),
         fatal);
   }
 
@@ -151,18 +151,14 @@ public class IncompatibleReasons {
     String formattedReason;
     @Nullable String context = null;
     switch (reason.getReasonCase()) {
-      case CONVERTER_INCOMPATIBLE_REASON:
-        formattedReason = reason.getConverterIncompatibleReason().name();
-        break;
-      case INFRA_COMPATIBLE_REASON:
-        formattedReason = reason.getInfraCompatibleReason().name();
-        break;
-      case CONVERTER_INFRA_INCOMPATIBLE_REASON:
+      case CONVERTER_INCOMPATIBLE_REASON ->
+          formattedReason = reason.getConverterIncompatibleReason().name();
+      case INFRA_COMPATIBLE_REASON -> formattedReason = reason.getInfraCompatibleReason().name();
+      case CONVERTER_INFRA_INCOMPATIBLE_REASON -> {
         formattedReason = reason.getConverterInfraIncompatibleReason().name();
         context = reason.getConverterNamePrefix();
-        break;
-      default:
-        formattedReason = "";
+      }
+      default -> formattedReason = "";
     }
     formattedReason = Ascii.toLowerCase(formattedReason);
     if (withContext && context != null) {
