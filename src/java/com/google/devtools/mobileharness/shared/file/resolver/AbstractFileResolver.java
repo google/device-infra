@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.shared.file.resolver;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.stream.Collectors.joining;
@@ -39,7 +40,6 @@ import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
@@ -224,7 +224,7 @@ public abstract class AbstractFileResolver implements FileResolver {
     if (successor != null) {
       return Stream.concat(
               resolveResults.stream(), successor.preBatchProcess(resolveSources).stream())
-          .collect(Collectors.toSet());
+          .collect(toImmutableSet());
     } else {
       return resolveResults;
     }
