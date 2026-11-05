@@ -21,12 +21,10 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.wireless.qa.mobileharness.shared.model.job.util.ResultUtil;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /** Android Instrumentation Output parser class */
@@ -196,8 +194,8 @@ public class AndroidInstrumentationParser {
             || statusCodeMatcher.group(1).equals(InstrumentStatusCode.IGNORED)
             || statusCodeMatcher.group(1).equals(InstrumentStatusCode.ASSUMPTION_FAILURE)) {
           // Mark it as success unless it was marked as a failure earlier
-          if (!TestResult.FAIL.equals(results.get(methodName))
-              && !TestResult.ERROR.equals(results.get(methodName))) {
+          if (!Objects.equals(results.get(methodName), TestResult.FAIL)
+              && !Objects.equals(results.get(methodName), TestResult.ERROR)) {
             results.put(methodName, TestResult.PASS);
           }
         } else if (statusCodeMatcher.group(1).equals(InstrumentStatusCode.FAILURE)) {
@@ -222,38 +220,24 @@ public class AndroidInstrumentationParser {
       }
     }
 
-    List<String> errors =
-        results.entrySet().stream()
-            .filter(entry -> entry.getValue().equals(TestResult.ERROR))
-            .map(Entry::getKey)
-            .collect(Collectors.toList());
-    List<String> failures =
-        results.entrySet().stream()
-            .filter(
-                entry ->
-                    entry.getValue().equals(TestResult.FAIL)
-                        || entry.getValue().equals(TestResult.UNKNOWN))
-            .map(Entry::getKey)
-            .collect(Collectors.toList());
-    List<String> passes =
-        results.entrySet().stream()
-            .filter(entry -> entry.getValue().equals(TestResult.PASS))
-            .map(Entry::getKey)
-            .collect(Collectors.toList());
+    boolean hasErrors = results.containsValue(TestResult.ERROR);
+    boolean hasFailures =
+        results.containsValue(TestResult.FAIL) || results.containsValue(TestResult.UNKNOWN);
+    boolean hasPasses = results.containsValue(TestResult.PASS);
 
     // Explicitly search for this pattern if test failure hasn't been detected by parsing
     // individual tests
     Matcher crashMatcher = INSTRUMENTATION_RESULT_ERROR_MESSAGE_PATTERN.matcher(output);
-    if (!errors.isEmpty()) {
+    if (hasErrors) {
       result = TestResult.ERROR;
-    } else if (!failures.isEmpty()) {
+    } else if (hasFailures) {
       result = TestResult.FAIL;
     } else if (crashMatcher.find()) {
       // If the outputmatcher above did not find an error or failure but we have an error message
       // in the output.
       errorMsg.append(crashMatcher.group(2));
       result = TestResult.FAIL;
-    } else if (!passes.isEmpty()) {
+    } else if (hasPasses) {
       // If we have no failures/errors mark it as pass
       result = TestResult.PASS;
     } else {
