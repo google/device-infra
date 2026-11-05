@@ -91,6 +91,7 @@ export class ReleaseDialog implements OnInit {
     'LATEST': 'Latest',
     'CURRENT': 'Current',
     'LATEST_AND_CURRENT': 'Latest and Current',
+    'VERSION_STATUS_UNSPECIFIED': 'N/A',
   };
 
   readonly hasSyncCommands = computed(() => {

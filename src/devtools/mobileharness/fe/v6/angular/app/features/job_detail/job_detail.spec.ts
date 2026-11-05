@@ -248,4 +248,48 @@ describe('JobDetail Component', () => {
       'Job job_456... - OmniLab Console',
     );
   }));
+
+  it('treats JOB_STATUS_UNSPECIFIED as UNKNOWN and filters out JOB_RESULT_UNSPECIFIED', fakeAsync(() => {
+    mockJobService.getJob.and.returnValue(
+      of({
+        job: {
+          ...mockJobData,
+          status: JobStatus.JOB_STATUS_UNSPECIFIED,
+          result: JobResult.JOB_RESULT_UNSPECIFIED,
+        },
+      }),
+    );
+
+    const unspecifiedFixture = TestBed.createComponent(JobDetail);
+    unspecifiedFixture.detectChanges();
+    tick();
+    unspecifiedFixture.detectChanges();
+
+    expect(unspecifiedFixture.componentInstance.statusPillLabel()).toBe(
+      'UNKNOWN',
+    );
+    expect(unspecifiedFixture.componentInstance.resultPillLabel()).toBeNull();
+
+    mockJobService.getJob.and.returnValue(
+      of({
+        job: {
+          ...mockJobData,
+          status: JobStatus.JOB_STATUS_DONE,
+          result: JobResult.JOB_RESULT_UNSPECIFIED,
+        },
+      }),
+    );
+
+    const doneUnspecifiedResultFixture = TestBed.createComponent(JobDetail);
+    doneUnspecifiedResultFixture.detectChanges();
+    tick();
+    doneUnspecifiedResultFixture.detectChanges();
+
+    expect(
+      doneUnspecifiedResultFixture.componentInstance.statusPillLabel(),
+    ).toBe('DONE');
+    expect(
+      doneUnspecifiedResultFixture.componentInstance.resultPillLabel(),
+    ).toBeNull();
+  }));
 });

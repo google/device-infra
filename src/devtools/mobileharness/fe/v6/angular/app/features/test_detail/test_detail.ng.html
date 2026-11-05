@@ -132,7 +132,7 @@
                               <div class="panel-section-title">Job Name</div>
                               <div class="panel-section-value font-sans">{{ job.name }}</div>
 
-                              @if (job.status) {
+                              @if (job.status && job.status !== 'JOB_STATUS_UNSPECIFIED') {
                                 <div class="panel-row-grid mt-2">
                                   <div class="panel-grid-item">
                                     <div class="panel-section-title">Status</div>
@@ -141,7 +141,7 @@
                                       [class.text-blue]="job.status === 'JOB_STATUS_RUNNING'"
                                     >{{ job.status.replace('JOB_STATUS_', '') | titlecase }}</div>
                                   </div>
-                                  @if (job.result) {
+                                  @if (job.result && job.result !== 'JOB_RESULT_UNSPECIFIED') {
                                     <div class="panel-grid-item">
                                       <div class="panel-section-title">Result</div>
                                       <div class="panel-section-value font-sans"

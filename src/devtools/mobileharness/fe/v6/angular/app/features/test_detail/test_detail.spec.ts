@@ -332,6 +332,62 @@ describe('TestDetail Component', () => {
     );
   }));
 
+  it('hides job status and result pills when status is JOB_STATUS_UNSPECIFIED and result is JOB_RESULT_UNSPECIFIED', fakeAsync(() => {
+    const baseScenario = MOCK_TEST_SCENARIOS[0];
+    mockTestService.getTest.and.returnValue(
+      of({
+        test: {
+          ...baseScenario.overview,
+          job: {
+            ...baseScenario.overview.job!,
+            status: JobStatus.JOB_STATUS_UNSPECIFIED,
+            result: JobResult.JOB_RESULT_UNSPECIFIED,
+          },
+        },
+        actions: baseScenario.actions,
+      }),
+    );
+
+    const unspecifiedJobFixture = TestBed.createComponent(TestDetail);
+    unspecifiedJobFixture.detectChanges();
+    tick();
+    unspecifiedJobFixture.detectChanges();
+
+    const compiled = unspecifiedJobFixture.nativeElement as HTMLElement;
+    const jobPanelText =
+      compiled.querySelector('.job-details-panel')?.textContent ?? '';
+    expect(jobPanelText).not.toContain('Unspecified');
+    expect(jobPanelText).not.toContain('JOB_STATUS_UNSPECIFIED');
+    expect(jobPanelText).not.toContain('JOB_RESULT_UNSPECIFIED');
+
+    mockTestService.getTest.and.returnValue(
+      of({
+        test: {
+          ...baseScenario.overview,
+          job: {
+            ...baseScenario.overview.job!,
+            status: JobStatus.JOB_STATUS_RUNNING,
+            result: JobResult.JOB_RESULT_UNSPECIFIED,
+          },
+        },
+        actions: baseScenario.actions,
+      }),
+    );
+
+    const runningUnspecifiedResultFixture = TestBed.createComponent(TestDetail);
+    runningUnspecifiedResultFixture.detectChanges();
+    tick();
+    runningUnspecifiedResultFixture.detectChanges();
+
+    const runningJobPanelText =
+      (
+        runningUnspecifiedResultFixture.nativeElement as HTMLElement
+      ).querySelector('.job-details-panel')?.textContent ?? '';
+    expect(runningJobPanelText).toContain('Running');
+    expect(runningJobPanelText).not.toContain('Unspecified');
+    expect(runningJobPanelText).not.toContain('JOB_RESULT_UNSPECIFIED');
+  }));
+
   it('renders TestTimelineTab lazily when timeline tab is selected and keeps it mounted across tab switches', async () => {
     const router = TestBed.inject(Router);
     const navSpy = spyOn(router, 'navigate').and.returnValue(
