@@ -1,5 +1,5 @@
 @let isGrouped = store.groupByKeys().length > 0;
-@let label = fleetLabel();
+@let fleetSuffix = fleetLabelSuffix();
 @let entity = store.entity();
 @let isLoading = store.isLoading();
 @let selectedItems = store.selectedItems();
@@ -16,13 +16,13 @@
     >
       @if (selectedItems.size > 0) {
         <span class="rt-count">
-          {{ selectedItems.size | number }} selected · {{ label }}
+          {{ selectedItems.size | number }} selected{{ fleetSuffix }}
         </span>
         <ng-container *ngTemplateOutlet="selectionActions"></ng-container>
       } @else {
         <span class="rt-count">
           {{ (store.groupedResults()?.totalItems || 0) | number }} {{ entity }} in
-          {{ (store.groupedResults()?.totalGroups || 0) | number }} groups · {{ label }}
+          {{ (store.groupedResults()?.totalGroups || 0) | number }} groups{{ fleetSuffix }}
         </span>
         <span class="rt-divider"></span>
         @if (store.groupKeysText()) {
@@ -155,12 +155,12 @@
     <div class="rt-toolbar" [class.rt-toolbar-active]="selectedItems.size > 0">
       @if (selectedItems.size > 0) {
         <span class="rt-count">
-          {{ selectedItems.size | number }} selected · {{ label }}
+          {{ selectedItems.size | number }} selected{{ fleetSuffix }}
         </span>
         <ng-container *ngTemplateOutlet="selectionActions"></ng-container>
       } @else {
         <span class="rt-count">
-          {{ totalCount | number }} {{ entity }} · {{ label }}
+          {{ totalCount | number }} {{ entity }}{{ fleetSuffix }}
         </span>
         <span class="rt-divider"></span>
 

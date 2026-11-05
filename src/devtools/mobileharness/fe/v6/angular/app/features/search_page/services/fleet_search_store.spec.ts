@@ -14,6 +14,7 @@ import {
   SearchEntity,
   TranslateArsenalSearchResponse,
 } from '../../../core/models/search';
+import {Environment} from '../../../core/services/environment';
 import {
   SEARCH_SERVICE,
   SearchService,
@@ -29,6 +30,7 @@ describe('FleetSearchStore', () => {
   let router: Router;
   let mockSearchService: jasmine.SpyObj<SearchService>;
   let mockSnackBarService: jasmine.SpyObj<SnackBarService>;
+  let mockEnvironment: jasmine.SpyObj<Environment>;
   let queryParams$: Subject<Record<string, unknown>>;
   let activatedRouteStub: {
     queryParams: typeof queryParams$;
@@ -69,6 +71,12 @@ describe('FleetSearchStore', () => {
       ['showError', 'showInfo', 'showWarning'],
     );
 
+    // Google-internal build by default; OSS tests flip this before the store is created.
+    mockEnvironment = jasmine.createSpyObj<Environment>('Environment', [
+      'isGoogleInternal',
+    ]);
+    mockEnvironment.isGoogleInternal.and.returnValue(true);
+
     TestBed.configureTestingModule({
       providers: [
         provideRouter([
@@ -77,6 +85,7 @@ describe('FleetSearchStore', () => {
         ]),
         {provide: SEARCH_SERVICE, useValue: mockSearchService},
         {provide: SnackBarService, useValue: mockSnackBarService},
+        {provide: Environment, useValue: mockEnvironment},
         {provide: ActivatedRoute, useValue: activatedRouteStub},
         FleetSearchStore,
       ],
@@ -155,6 +164,167 @@ describe('FleetSearchStore', () => {
 
     expect(store.fleet()).toBe('ats');
     expect(router.url).toContain('fleet=ats');
+  });
+
+  it('shows the fleet scope switcher in the Google-internal build', async () => {
+    const store = await createStoreAt({});
+
+    expect(store.isFleetSwitchable).toBeTrue();
+    expect(store.showScopeSwitcher()).toBeTrue();
+  });
+
+  describe('OSS build (single fleet, FLEET_SELF only)', () => {
+    beforeEach(() => {
+      mockEnvironment.isGoogleInternal.and.returnValue(false);
+    });
+
+    it('hides the fleet scope switcher', async () => {
+      const store = await createStoreAt({});
+
+      expect(store.isFleetSwitchable).toBeFalse();
+      expect(store.showScopeSwitcher()).toBeFalse();
+    });
+
+    it('ignores fleet=ats from the URL on page load and only loads the FLEET_SELF config', async () => {
+      const store = await createStoreAt({'fleet': 'ats'});
+
+      expect(store.fleet()).toBe('internal');
+      expect(mockSearchService.getFleetSearchConfig).toHaveBeenCalledWith(
+        jasmine.objectContaining({fleet: Fleet.FLEET_SELF}),
+      );
+      expect(mockSearchService.getFleetSearchConfig).not.toHaveBeenCalledWith(
+        jasmine.objectContaining({fleet: Fleet.FLEET_ATS}),
+      );
+    });
+
+    it('keeps the internal fleet when navigating to a URL carrying fleet=ats', async () => {
+      const store = await createStoreAt({});
+
+      activatedRouteStub.snapshot.queryParams = {'fleet': 'ats'};
+      await router.navigateByUrl('/devices?fleet=ats');
+      queryParams$.next({'fleet': 'ats'});
+      await flushAsync();
+
+      expect(store.fleet()).toBe('internal');
+    });
+  });
+
+  describe('landing page controlled by searchConfig.landing.enabled', () => {
+    const defaultColumns = [
+      {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+      {key: 'device_field::status', displayName: 'Status'},
+    ];
+    const statusChip = {
+      key: 'device_field::status',
+      pillKey: 'Status',
+      pillCondition: 'IDLE',
+      rawValues: ['IDLE'],
+      fleetFilter: {
+        key: 'device_field::status',
+        simple: {values: [{value: 'IDLE'}]},
+      },
+    };
+
+    it('stays on the landing page without searching when landing is enabled', async () => {
+      mockSearchService.getFleetSearchConfig.and.returnValue(
+        of({
+          columns: {defaults: defaultColumns},
+          landing: {enabled: true, browseAllCount: 5},
+        }),
+      );
+
+      const store = await createStoreAt({});
+
+      expect(store.isLandingDisabled()).toBeFalse();
+      expect(store.isLandingState()).toBeTrue();
+      expect(mockSearchService.searchFleet).not.toHaveBeenCalled();
+    });
+
+    it('treats an omitted `enabled` as disabled when a landing config is present (ESF omits proto3 defaults)', async () => {
+      // The OSS Envoy transcoder prints `"enabled": false`; the internal ESF
+      // layer omits the proto3 default, leaving `landing` without the key.
+      mockSearchService.getFleetSearchConfig.and.returnValue(
+        of({
+          columns: {defaults: defaultColumns},
+          landing: {browseAllCount: 5},
+        }),
+      );
+
+      const store = await createStoreAt({});
+
+      expect(store.isLandingDisabled()).toBeTrue();
+      expect(store.isLandingState()).toBeFalse();
+    });
+
+    it('keeps the landing page enabled while the config is loading or has no landing section', async () => {
+      mockSearchService.getFleetSearchConfig.and.returnValue(
+        of({columns: {defaults: defaultColumns}}),
+      );
+
+      const store = await createStoreAt({});
+
+      expect(store.isLandingDisabled()).toBeFalse();
+      expect(store.isLandingState()).toBeTrue();
+      expect(mockSearchService.searchFleet).not.toHaveBeenCalled();
+    });
+
+    it('skips the landing page and lists all items when landing is disabled (OSS)', async () => {
+      mockSearchService.getFleetSearchConfig.and.returnValue(
+        of({
+          columns: {defaults: defaultColumns},
+          landing: {enabled: false, browseAllCount: 5},
+        }),
+      );
+
+      const store = await createStoreAt({});
+
+      expect(store.isLandingDisabled()).toBeTrue();
+      expect(store.isLandingState()).toBeFalse();
+      expect(store.browseAll()).toBeFalse();
+      expect(mockSearchService.searchFleet).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          entity: SearchEntity.SEARCH_ENTITY_DEVICE,
+          fleet: Fleet.FLEET_SELF,
+          filters: undefined,
+          flat: jasmine.objectContaining({
+            columns: ['device_field::uuid', 'device_field::status'],
+          }),
+        }),
+      );
+    });
+
+    it('returns to the full list instead of the landing page when the last chip is removed or the state is reset', async () => {
+      mockSearchService.getFleetSearchConfig.and.returnValue(
+        of({
+          columns: {defaults: defaultColumns},
+          landing: {enabled: false, browseAllCount: 5},
+        }),
+      );
+      const store = await createStoreAt({});
+
+      store.addFilterChip(statusChip);
+      await flushAsync();
+      expect(store.isLandingState()).toBeFalse();
+      expect(mockSearchService.searchFleet.calls.mostRecent().args[0]).toEqual(
+        jasmine.objectContaining({filters: [statusChip.fleetFilter]}),
+      );
+
+      mockSearchService.searchFleet.calls.reset();
+      store.removeFilterChip(statusChip);
+      await flushAsync();
+      expect(store.activeChips()).toEqual([]);
+      expect(store.isLandingState()).toBeFalse();
+      expect(mockSearchService.searchFleet.calls.mostRecent().args[0]).toEqual(
+        jasmine.objectContaining({filters: undefined}),
+      );
+
+      store.addFilterChip(statusChip);
+      await flushAsync();
+      store.restoreDefaultState(false);
+      await flushAsync();
+      expect(store.activeChips()).toEqual([]);
+      expect(store.isLandingState()).toBeFalse();
+    });
   });
 
   it('updates an active chip in place and closes ValuePicker when selecting a Modify filter applyFilter suggestion', async () => {
