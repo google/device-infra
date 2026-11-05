@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /** Represents an allocation of devices for a test. */
@@ -103,7 +102,7 @@ public class Allocation implements Cloneable {
       com.google.devtools.mobileharness.api.model.allocation.Allocation newAllocation) {
     this(
         new TestLocator(newAllocation.getTest()),
-        newAllocation.getAllDevices().stream().map(DeviceLocator::new).collect(Collectors.toList()),
+        newAllocation.getAllDevices().stream().map(DeviceLocator::new).collect(toImmutableList()),
         Collections.nCopies(newAllocation.getAllDevices().size(), ImmutableMultimap.of()),
         newAllocation.getAllDeviceFeatures());
   }
@@ -211,10 +210,9 @@ public class Allocation implements Cloneable {
 
   @Override
   public boolean equals(Object other) {
-    if (!(other instanceof Allocation)) {
+    if (!(other instanceof Allocation otherAlloc)) {
       return false;
     }
-    Allocation otherAlloc = (Allocation) other;
     return Objects.equals(getTest(), otherAlloc.getTest())
         && Objects.equals(getAllDeviceLocators(), otherAlloc.getAllDeviceLocators())
         && Objects.equals(getAllDevices(), otherAlloc.getAllDevices());

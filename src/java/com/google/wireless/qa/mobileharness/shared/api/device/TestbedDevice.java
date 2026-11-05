@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.api.device;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -64,7 +65,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /** A generic testbed definition that can be composed of multiple devices. */
@@ -319,7 +319,7 @@ public class TestbedDevice extends BaseDevice implements CompositeDevice {
       applySerializedSubDeviceDimensions();
     }
     TestResult testResult = testInfo.resultWithCause().get().type();
-    if (TestResult.PASS.equals(testResult) || TestResult.SKIP.equals(testResult)) {
+    if (testResult.equals(TestResult.PASS) || TestResult.SKIP.equals(testResult)) {
       deviceConsecutiveFailWithoutRebootCount.set(0);
     } else {
       deviceConsecutiveFailWithoutRebootCount.incrementAndGet();
@@ -333,11 +333,10 @@ public class TestbedDevice extends BaseDevice implements CompositeDevice {
             rebootState.put(deviceId, postRunResult);
             return postRunResult;
           },
-          postRunTestOps -> {
-            return postRunTestOps.stream().anyMatch(PostTestDeviceOp.REBOOT::equals)
-                ? PostTestDeviceOp.REBOOT
-                : PostTestDeviceOp.NONE;
-          },
+          postRunTestOps ->
+              postRunTestOps.contains(PostTestDeviceOp.REBOOT)
+                  ? PostTestDeviceOp.REBOOT
+                  : PostTestDeviceOp.NONE,
           String.format("postRunTest(%s)", getTestInfoLogString(testInfo)));
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
@@ -477,10 +476,10 @@ public class TestbedDevice extends BaseDevice implements CompositeDevice {
       return;
     }
     forEachManagedDevice(
-        device -> {
-          device.updateDimension(
-              TestbedDeviceSpec.MH_DEVICE_TYPE_KEY, device.getDeviceTypes().toArray(new String[0]));
-        },
+        device ->
+            device.updateDimension(
+                TestbedDeviceSpec.MH_DEVICE_TYPE_KEY,
+                device.getDeviceTypes().toArray(new String[0])),
         "updateSubDeviceDeviceTypeDimension()");
   }
 
@@ -751,13 +750,12 @@ public class TestbedDevice extends BaseDevice implements CompositeDevice {
   private void applySerializedSubDeviceDimensions() {
     SubDeviceDimensions.Builder subDeviceDimensionsBuilder = SubDeviceDimensions.newBuilder();
     managedDevices.forEach(
-        managedDevice -> {
-          subDeviceDimensionsBuilder.addSubDeviceDimension(
-              SubDeviceDimensions.SubDeviceDimension.newBuilder()
-                  .setDeviceId(managedDevice.getDeviceId())
-                  .addAllDeviceDimension(managedDevice.getDimensions())
-                  .build());
-        });
+        managedDevice ->
+            subDeviceDimensionsBuilder.addSubDeviceDimension(
+                SubDeviceDimensions.SubDeviceDimension.newBuilder()
+                    .setDeviceId(managedDevice.getDeviceId())
+                    .addAllDeviceDimension(managedDevice.getDimensions())
+                    .build()));
     updateDimension(
         TestbedDeviceSpec.SUBDEVICE_DIMENSIONS_KEY,
         TestbedUtil.encodeSubDeviceDimensions(subDeviceDimensionsBuilder.build()));
@@ -855,7 +853,7 @@ public class TestbedDevice extends BaseDevice implements CompositeDevice {
     return ConcurrencyUtil.runInParallel(
         devices.stream()
             .map(device -> convertToSubTask(callable, device, methodName))
-            .collect(Collectors.toList()),
+            .collect(toImmutableList()),
         MoreExecutors.listeningDecorator(subdeviceExecutor),
         merger);
   }
@@ -867,7 +865,7 @@ public class TestbedDevice extends BaseDevice implements CompositeDevice {
           try {
             return callable.run(device);
           } catch (MobileHarnessException e) {
-            throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+            throw new MobileHarnessException(
                 ExtErrorId.MOBLY_TESTBED_SUBDEVICE_CALLABLE_ERROR, e.getMessage(), e);
           }
         },
