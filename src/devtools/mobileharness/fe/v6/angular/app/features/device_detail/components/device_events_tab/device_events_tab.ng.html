@@ -1,0 +1,406 @@
+<div class="de">
+  @if (!firstLoad()) {
+    @let sum = summary();
+    <section class="de-summary" data-role="summary-card" aria-label="Out of service summary">
+      <div class="de-summary-head">
+        <h3 class="de-summary-title">Last {{ sum.windowDays }} days</h3>
+        <div class="de-legend">
+          <span class="de-legend-item">
+            <span class="de-legend-swatch"></span>Out of service
+          </span>
+          @if (sum.hasLameduck) {
+            <span class="de-legend-item">
+              <span class="de-legend-swatch de-legend-swatch--maint"></span>Lameduck
+            </span>
+          }
+          @if (sum.hasRepairs) {
+            <span class="de-legend-item">
+              <span class="de-legend-tick"></span>Repair
+            </span>
+          }
+          @if (sum.hasMoves) {
+            <span class="de-legend-item">
+              <span class="de-legend-dot"></span>Moved
+            </span>
+          }
+        </div>
+      </div>
+
+      <div class="de-stats">
+        <div class="de-stat">
+          <div class="de-stat-label">Now</div>
+          <div class="de-stat-line">
+            <span
+              class="de-stat-value"
+              [class.de-stat-value--bad]="sum.nowTone === 'bad'"
+              [class.de-stat-value--good]="sum.nowTone === 'good'"
+            >
+              {{ sum.nowValue }}
+            </span>
+            @if (sum.nowSub) {
+              <span class="de-stat-sub">{{ sum.nowSub }}</span>
+            }
+          </div>
+        </div>
+
+        <div class="de-stat">
+          <div class="de-stat-label">Out of service</div>
+          <div class="de-stat-line">
+            <span class="de-stat-value">{{ sum.outageValue }}</span>
+            @if (sum.outageSub) {
+              <span class="de-stat-sub">{{ sum.outageSub }}</span>
+            }
+          </div>
+        </div>
+
+        <div class="de-stat">
+          <div class="de-stat-label">Repairs</div>
+          <div class="de-stat-line">
+            <span class="de-stat-value">{{ sum.repairValue }}</span>
+            @if (sum.repairSub) {
+              <span class="de-stat-sub">{{ sum.repairSub }}</span>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div
+        #timelineEl
+        class="de-timeline"
+        data-role="timeline"
+        (mouseleave)="hideInspect()"
+      >
+        @if (activeInspect(); as inspect) {
+          <div
+            class="de-inspect"
+            data-role="inspect"
+            [style.left.px]="inspect.leftPx"
+          >
+            <div class="de-inspect-head">
+              <div class="de-inspect-title-wrap">
+                <span class="de-inspect-dot de-inspect-dot--{{ inspect.kind }}"></span>
+                <span class="de-inspect-title">{{ inspect.title }}</span>
+              </div>
+              @if (inspect.badge) {
+                <span
+                  class="de-inspect-badge"
+                  [class.de-inspect-badge--outage]="inspect.kind === 'outage'"
+                >
+                  {{ inspect.badge }}
+                </span>
+              }
+            </div>
+            <div class="de-inspect-time">{{ inspect.time }}</div>
+            @if (inspect.sub) {
+              <div class="de-inspect-sub">{{ inspect.sub }}</div>
+            }
+          </div>
+        }
+
+        <div class="de-bar" role="img" [attr.aria-label]="sum.barAriaLabel">
+          @for (seg of sum.segments; track seg.eventId) {
+            <span
+              class="de-bar-seg"
+              [class.de-bar-seg--maint]="seg.isMaintenance"
+              [class.is-active]="activeInspect()?.eventId === seg.eventId"
+              [style.left.%]="seg.leftPct"
+              [style.width.%]="seg.widthPct"
+              [attr.data-event-id]="seg.eventId"
+              (mouseenter)="showSegmentInspect(seg, timelineEl)"
+              (click)="selectTimelineEvent(seg.eventId)"
+            ></span>
+          }
+        </div>
+
+        <div class="de-marks">
+          @for (mark of sum.marks; track mark.eventId) {
+            <span
+              class="de-mark"
+              [class.de-mark--move]="mark.isMove"
+              [class.is-active]="activeInspect()?.eventId === mark.eventId"
+              [style.left.%]="mark.leftPct"
+              [attr.data-event-id]="mark.eventId"
+              (mouseenter)="showMarkInspect(mark, timelineEl)"
+              (click)="selectTimelineEvent(mark.eventId)"
+            ></span>
+          }
+        </div>
+
+        <div class="de-axis">
+          @for (label of sum.axisLabels; track $index) {
+            <span
+              class="de-axis-label"
+              [class.de-axis-label--start]="label.position === 'start'"
+              [class.de-axis-label--end]="label.position === 'end'"
+              [style.left.%]="label.position === 'middle' ? label.leftPct : null"
+            >
+              {{ label.text }}
+            </span>
+          }
+        </div>
+      </div>
+    </section>
+  }
+
+  <div class="de-toolbar">
+    <div class="de-chips" role="group" aria-label="Filter events by category">
+      @for (cat of categories(); track cat.key) {
+        <button
+          type="button"
+          class="de-chip"
+          [attr.data-source]="cat.key"
+          [attr.aria-pressed]="cat.selected ? 'true' : 'false'"
+          [disabled]="cat.count === 0 && !cat.selected"
+          [title]="cat.description"
+          (click)="toggleCategory(cat.key)"
+        >
+          <span class="material-icons" data-role="chip-icon">
+            {{ cat.selected ? 'check' : cat.icon }}
+          </span>
+          <span>{{ cat.label }}</span>
+          <span class="de-chip-count" data-role="chip-count">{{ cat.count }}</span>
+        </button>
+      }
+      @if (selectedCategories().size > 0) {
+        <span class="de-clear-wrap" data-role="clear-filters">
+          <span class="de-clear-divider" aria-hidden="true"></span>
+          <button
+            type="button"
+            class="de-clear-btn"
+            data-action="clear-chips"
+            title="Clear selected category filters"
+            (click)="clearCategoryFilters()"
+          >
+            <span class="material-icons" aria-hidden="true">close</span>
+            <span>Clear</span>
+          </button>
+        </span>
+      }
+    </div>
+
+    <label class="de-search">
+      <span class="material-icons">search</span>
+      <input
+        type="text"
+        data-role="search"
+        placeholder="Search events, builds, or LDAP"
+        aria-label="Search events"
+        autocomplete="off"
+        [value]="query()"
+        (input)="onSearchInput($event)"
+      />
+      @if (query() !== '') {
+        <button
+          type="button"
+          class="de-icon-btn"
+          data-action="clear-search"
+          aria-label="Clear search"
+          (click)="clearSearch()"
+        >
+          <span class="material-icons">close</span>
+        </button>
+      }
+    </label>
+  </div>
+
+  <div class="de-card">
+    @if (loading()) {
+      <div class="de-progress" data-role="progress"></div>
+    }
+
+    <table
+      class="de-table"
+      data-role="table"
+      [class.is-loading]="loading() && displayRows().length > 0"
+    >
+      <colgroup>
+        <col class="de-col-date" />
+        <col class="de-col-time" />
+        <col class="de-col-event" />
+        <col />
+        <col class="de-col-by" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th colspan="2">Time (Pacific)</th>
+          <th>Event</th>
+          <th>Details</th>
+          <th>By</th>
+        </tr>
+      </thead>
+      <tbody data-role="rows">
+        @if (!firstLoad()) {
+          @for (item of displayRows(); track $index) {
+            @if (item.type === 'group') {
+              <tr
+                class="de-row de-row--day de-row--group"
+                [class.is-expanded]="item.expanded"
+                [attr.data-group-id]="item.row.id"
+                (click)="toggleGroup(item.row.id)"
+              >
+                <td class="de-date" colspan="2">{{ item.row.dateRangeLabel }}</td>
+                <td>
+                  <div class="de-event">
+                    <span class="material-icons" aria-hidden="true">system_update</span>
+                    <span class="de-event-label">
+                      {{ item.row.children.length }} build changes
+                    </span>
+                    <button
+                      type="button"
+                      class="de-expand-btn"
+                      data-action="toggle-group"
+                      [attr.aria-expanded]="item.expanded"
+                      [attr.aria-label]="
+                        (item.expanded ? 'Hide ' : 'Show ') +
+                        item.row.children.length +
+                        ' build changes'
+                      "
+                      [title]="
+                        (item.expanded ? 'Hide ' : 'Show ') +
+                        item.row.children.length +
+                        ' build changes'
+                      "
+                    >
+                      <span class="material-icons" aria-hidden="true">expand_more</span>
+                    </button>
+                  </div>
+                </td>
+                <td class="de-details">
+                  <div class="de-details-row">
+                    @for (part of item.row.chainParts; track $index) {
+                      @if (part.type === 'badge') {
+                        <span
+                          class="de-badge de-badge--{{ part.variant }}"
+                          [attr.title]="part.title || null"
+                        >{{ part.text }}</span>
+                      } @else {
+                        <span class="de-phrase">
+                          @for (run of part.runs; track $index; let last = $last) {
+                            <span
+                              class="de-{{ run.kind }}"
+                              [attr.title]="run.title || null"
+                            >{{ run.text }}</span>@if (!last) { }
+                          }
+                        </span>
+                      }
+                    }
+                  </div>
+                </td>
+                <td class="de-by"></td>
+              </tr>
+            } @else {
+              <tr
+                class="de-row"
+                [class.de-row--day]="item.type === 'event' && item.showDate"
+                [class.de-row--child]="item.type === 'child'"
+                [class.de-row--flash]="flashedEventId() === item.row.id"
+                [attr.data-row-event-id]="item.row.id"
+              >
+                <td class="de-date">{{ item.showDate ? item.dateLabel : '' }}</td>
+                <td class="de-time" [attr.title]="item.timeTooltip">
+                  {{ item.timeLabel }}
+                </td>
+                <td>
+                  <div
+                    class="de-event"
+                    [class.de-event--down]="item.row.tone === 'down'"
+                    [class.de-event--up]="item.row.tone === 'up'"
+                    [class.de-event--maint]="item.row.tone === 'maint'"
+                    [class.de-event--child]="item.type === 'child'"
+                  >
+                    @if (item.type !== 'child') {
+                      <span class="material-icons" aria-hidden="true">
+                        {{ item.row.icon }}
+                      </span>
+                    }
+                    <span class="de-event-label">{{ item.row.title }}</span>
+                  </div>
+                </td>
+                <td class="de-details">
+                  <div class="de-details-row">
+                    @for (part of item.row.parts; track $index) {
+                      @if (part.type === 'badge') {
+                        <span
+                          class="de-badge de-badge--{{ part.variant }}"
+                          [attr.title]="part.title || null"
+                        >{{ part.text }}</span>
+                      } @else {
+                        <span class="de-phrase">
+                          @for (run of part.runs; track $index; let last = $last) {
+                            <span
+                              class="de-{{ run.kind }}"
+                              [attr.title]="run.title || null"
+                            >{{ run.text }}</span>@if (!last) { }
+                          }
+                        </span>
+                      }
+                    }
+                  </div>
+                </td>
+                <td class="de-by">
+                  {{ item.type === 'child' ? '' : (item.row.actor ?? '') }}
+                </td>
+              </tr>
+            }
+          }
+        }
+      </tbody>
+    </table>
+
+    @if (firstLoad()) {
+      <div class="de-state" data-role="state">
+        <span class="material-icons">hourglass_empty</span>
+        <div class="de-state-title">Loading events</div>
+      </div>
+    } @else if (error()) {
+      <div class="de-state" data-role="state">
+        <span class="material-icons">error_outline</span>
+        <div class="de-state-title">{{ error() }}</div>
+      </div>
+    } @else if (displayRows().length === 0) {
+      <div class="de-state" data-role="state">
+        @if (filtersActive() && windowEvents().length > 0) {
+          <span class="material-icons">filter_alt_off</span>
+          <div class="de-state-title">No events match your filters</div>
+          <button
+            type="button"
+            class="de-text-btn"
+            data-action="clear-filters"
+            (click)="clearAllFilters()"
+          >
+            Clear filters
+          </button>
+        } @else {
+          <span class="material-icons">history</span>
+          <div class="de-state-title">No events since {{ sinceFormatted() }}</div>
+          @if (hasOlderEvents()) {
+            <div>Older events are available below.</div>
+          }
+        }
+      </div>
+    }
+
+    <div class="de-footer">
+      @if (windowEvents().length > 0) {
+        <span data-role="footer-summary">{{ footerSummary() }}</span>
+      }
+      <div class="de-footer-actions">
+        @if (hasOlderEvents()) {
+          <button
+            type="button"
+            class="de-text-btn"
+            data-action="load-older"
+            [disabled]="loading()"
+            (click)="loadOlderEvents()"
+          >
+            @if (loading() && !firstLoad()) {
+              Loading…
+            } @else {
+              <span class="material-icons">history</span>Load older events
+            }
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+</div>

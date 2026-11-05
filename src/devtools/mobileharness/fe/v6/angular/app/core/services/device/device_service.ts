@@ -8,6 +8,7 @@ import {
   QuarantineDeviceResponse,
   TakeScreenshotResponse,
 } from '../../models/device_action';
+import {DeviceEventsResponse} from '../../models/device_events';
 import {
   DeviceOverviewPageData,
   GetDeviceOverviewRequest,
@@ -167,4 +168,18 @@ export abstract class DeviceService {
     hostName: string,
     pageToken?: string,
   ): Observable<DeviceTestHistoryResponse>;
+
+  /**
+   * Retrieves historical events (status, build, host, recovery, and inventory) for a device.
+   *
+   * @param id The device ID.
+   * @param hostName The host name.
+   * @param windowDays Lookback window in days (defaults to 90 on the server).
+   * @return An Observable emitting the device events response.
+   */
+  abstract getDeviceEvents(
+    id: string,
+    hostName: string,
+    windowDays?: number,
+  ): Observable<DeviceEventsResponse>;
 }

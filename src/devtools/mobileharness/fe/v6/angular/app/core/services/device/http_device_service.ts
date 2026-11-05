@@ -11,6 +11,7 @@ import {
   QuarantineDeviceResponse,
   TakeScreenshotResponse,
 } from '../../models/device_action';
+import {DeviceEventsResponse} from '../../models/device_events';
 import {
   DeviceOverviewPageData,
   GetDeviceOverviewRequest,
@@ -284,5 +285,29 @@ export class HttpDeviceService extends DeviceService {
       `${this.apiUrl}/${id}/test-history`,
       options,
     );
+  }
+
+  /**
+   * Gets the historical events of a device.
+   * @param id The ID of the device.
+   * @param hostName The name of the host running the device.
+   * @param windowDays Optional lookback window in days.
+   * @return An Observable emitting the device events response.
+   */
+  override getDeviceEvents(
+    id: string,
+    hostName: string,
+    windowDays = 90,
+  ): Observable<DeviceEventsResponse> {
+    const params: {[key: string]: string} = {};
+    if (hostName) {
+      params['host_name'] = hostName;
+    }
+    if (windowDays > 0) {
+      params['window_days'] = String(windowDays);
+    }
+    return this.http.get<DeviceEventsResponse>(`${this.apiUrl}/${id}/events`, {
+      params,
+    });
   }
 }
