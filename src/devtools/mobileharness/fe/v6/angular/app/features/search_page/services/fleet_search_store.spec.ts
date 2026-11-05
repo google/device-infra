@@ -102,15 +102,17 @@ describe('FleetSearchStore', () => {
     TestBed.tick();
   }
 
-  /** Simulates a full page load / refresh of `/devices` with the given query params. */
+  /** Simulates a full page load / refresh of `/devices` (or `/hosts`) with the given query params. */
   async function createStoreAt(
     queryParams: Record<string, unknown>,
+    path: 'devices' | 'hosts' = 'devices',
   ): Promise<FleetSearchStore> {
+    activatedRouteStub.routeConfig.path = path;
     activatedRouteStub.snapshot.queryParams = queryParams;
     const search = new URLSearchParams(
       queryParams as Record<string, string>,
     ).toString();
-    await router.navigateByUrl(`/devices${search ? '?' + search : ''}`);
+    await router.navigateByUrl(`/${path}${search ? '?' + search : ''}`);
     const store = TestBed.inject(FleetSearchStore);
     queryParams$.next(queryParams);
     await flushAsync();
@@ -324,6 +326,151 @@ describe('FleetSearchStore', () => {
       await flushAsync();
       expect(store.activeChips()).toEqual([]);
       expect(store.isLandingState()).toBeFalse();
+    });
+  });
+
+  describe('recovery from saved columns the BFF no longer knows', () => {
+    const defaultColumns = [
+      {key: 'device_field::uuid', displayName: 'UUID', locked: true},
+      {key: 'device_field::status', displayName: 'Status'},
+    ];
+    const staleColumns = [
+      {key: 'field::uuid', displayName: 'Device ID / UUID', locked: true},
+      {key: 'dim::pool', displayName: 'Pool'},
+    ];
+    const rows = [{id: 'dev-1'}, {id: 'dev-2'}];
+
+    /** OSS-style error body of `POST /v6/fleet-search` for an unknown column key. */
+    function unknownKeyError(message: string): unknown {
+      return {status: 500, error: {code: 13, message, details: []}};
+    }
+
+    /** Fails the first `failures` searches with `error`, then returns `rows`. */
+    function failSearchesThenSucceed(failures: number, error: unknown) {
+      let calls = 0;
+      mockSearchService.searchFleet.and.callFake(() => {
+        calls++;
+        return calls <= failures
+          ? throwError(() => error)
+          : of({flat: {rows, rangeStart: 1, rangeEnd: 2, totalItems: 2}});
+      });
+    }
+
+    beforeEach(() => {
+      localStorage.clear();
+      mockSearchService.getFleetSearchConfig.and.returnValue(
+        of({
+          columns: {defaults: defaultColumns},
+          landing: {enabled: false, browseAllCount: 5},
+        }),
+      );
+    });
+
+    afterEach(() => {
+      localStorage.clear();
+    });
+
+    it('clears the saved device columns, warns and retries once with the default columns', async () => {
+      localStorage.setItem(
+        'mh_fe_v6_visible_columns_devices_internal',
+        JSON.stringify(staleColumns),
+      );
+      failSearchesThenSucceed(1, unknownKeyError('Unknown device key: field::uuid'));
+
+      const store = await createStoreAt({});
+      await flushAsync();
+
+      expect(mockSearchService.searchFleet).toHaveBeenCalledTimes(2);
+      expect(mockSearchService.searchFleet.calls.argsFor(0)[0]).toEqual(
+        jasmine.objectContaining({
+          flat: jasmine.objectContaining({columns: ['field::uuid', 'dim::pool']}),
+        }),
+      );
+      expect(mockSearchService.searchFleet.calls.argsFor(1)[0]).toEqual(
+        jasmine.objectContaining({
+          flat: jasmine.objectContaining({
+            columns: ['device_field::uuid', 'device_field::status'],
+          }),
+        }),
+      );
+      expect(
+        localStorage.getItem('mh_fe_v6_visible_columns_devices_internal'),
+      ).toBeNull();
+      expect(store.visibleColumnDescriptors()).toEqual(defaultColumns);
+      expect(store.rows()).toEqual(rows);
+      expect(mockSnackBarService.showWarning).toHaveBeenCalledOnceWith(
+        'Saved column "field::uuid" is no longer supported. Cleared your saved columns and retrying with the default columns…',
+      );
+    });
+
+    it('clears the saved host columns on /hosts', async () => {
+      localStorage.setItem(
+        'mh_fe_v6_visible_columns_hosts_internal',
+        JSON.stringify([{key: 'field::host_name', displayName: 'Host Name'}]),
+      );
+      failSearchesThenSucceed(
+        1,
+        unknownKeyError('Unknown host key: field::host_name'),
+      );
+
+      const store = await createStoreAt({}, 'hosts');
+      await flushAsync();
+
+      expect(store.entity()).toBe('hosts');
+      expect(mockSearchService.searchFleet).toHaveBeenCalledTimes(2);
+      expect(
+        localStorage.getItem('mh_fe_v6_visible_columns_hosts_internal'),
+      ).toBeNull();
+      expect(store.rows()).toEqual(rows);
+      expect(mockSnackBarService.showWarning).toHaveBeenCalledOnceWith(
+        jasmine.stringContaining('"field::host_name"'),
+      );
+    });
+
+    it('does not retry when the error does not name an unknown column key', async () => {
+      localStorage.setItem(
+        'mh_fe_v6_visible_columns_devices_internal',
+        JSON.stringify(staleColumns),
+      );
+      failSearchesThenSucceed(1, {status: 500, error: {code: 13, message: 'boom'}});
+
+      const store = await createStoreAt({});
+      await flushAsync();
+
+      expect(mockSearchService.searchFleet).toHaveBeenCalledTimes(1);
+      expect(
+        localStorage.getItem('mh_fe_v6_visible_columns_devices_internal'),
+      ).toBe(JSON.stringify(staleColumns));
+      expect(store.rows()).toEqual([]);
+      expect(mockSnackBarService.showWarning).not.toHaveBeenCalled();
+    });
+
+    it('does not retry when nothing is saved (the default columns were rejected)', async () => {
+      failSearchesThenSucceed(1, unknownKeyError('Unknown device key: device_field::uuid'));
+
+      await createStoreAt({});
+      await flushAsync();
+
+      expect(mockSearchService.searchFleet).toHaveBeenCalledTimes(1);
+      expect(mockSnackBarService.showWarning).not.toHaveBeenCalled();
+    });
+
+    it('retries at most once when the default columns are rejected as well', async () => {
+      localStorage.setItem(
+        'mh_fe_v6_visible_columns_devices_internal',
+        JSON.stringify(staleColumns),
+      );
+      failSearchesThenSucceed(5, unknownKeyError('Unknown device key: field::uuid'));
+
+      const store = await createStoreAt({});
+      await flushAsync();
+
+      expect(mockSearchService.searchFleet).toHaveBeenCalledTimes(2);
+      expect(
+        localStorage.getItem('mh_fe_v6_visible_columns_devices_internal'),
+      ).toBeNull();
+      expect(store.rows()).toEqual([]);
+      expect(mockSnackBarService.showWarning).toHaveBeenCalledTimes(1);
     });
   });
 

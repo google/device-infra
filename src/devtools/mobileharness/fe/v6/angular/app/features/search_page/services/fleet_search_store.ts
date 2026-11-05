@@ -6,7 +6,7 @@ import {
   signal,
 } from '@angular/core';
 import {rxResource, takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {EMPTY, Observable, of, Subject} from 'rxjs';
+import {EMPTY, Observable, Subject, of, throwError} from 'rxjs';
 import {catchError, map, switchMap} from 'rxjs/operators';
 
 import {
@@ -68,6 +68,7 @@ import {
   getDeviceTargetKey,
   getRowsSelectionState,
   getStoredVisibleColumns,
+  getUnknownColumnKeyFromError,
   isChipNegated,
   isRowSelected,
   isValuePickerSelectionEmpty,
@@ -886,7 +887,17 @@ export class FleetSearchStore extends SearchPageStore {
       if (!req) {
         return of(null);
       }
-      return this.searchService.searchFleet(req);
+      return this.searchService.searchFleet(req).pipe(
+        catchError((err: unknown) => {
+          // Resetting the columns changes the request params, which re-runs
+          // this resource once with the default columns. Any other error
+          // keeps propagating to the resource (see `searchError`).
+          if (this.recoverFromUnknownColumnKey(err)) {
+            return of(null);
+          }
+          return throwError(() => err);
+        }),
+      );
     },
   });
 
@@ -902,6 +913,41 @@ export class FleetSearchStore extends SearchPageStore {
     const err = this.searchResource.error();
     return err ? getErrorMessage(err) : null;
   });
+
+  /**
+   * Recovers from a search the BFF rejected because the saved visible columns
+   * contain a key it no longer knows ("Unknown device|host key: <key>", e.g. a
+   * key saved to localStorage by an older UI version): clears the saved
+   * columns of the current entity / fleet, falls back to the default columns
+   * and tells the user.
+   *
+   * @return Whether the saved columns were cleared.
+   *
+   * Explanation:
+   * Only saved columns can carry such keys (the column selector and the
+   * Arsenal translation only write keys known to the BFF), so when nothing is
+   * saved there is nothing to recover from. This also guarantees at most one
+   * retry: after the clear a second failure is left alone.
+   */
+  private recoverFromUnknownColumnKey(err: unknown): boolean {
+    const unknownKey = getUnknownColumnKeyFromError(err);
+    if (!unknownKey) {
+      return false;
+    }
+    const entity = this.entity();
+    const fleet = this.fleet();
+    if (!getStoredVisibleColumns(entity, fleet)) {
+      return false;
+    }
+    clearStoredVisibleColumns(entity, fleet);
+    this.visibleColumnDescriptors.set(
+      this.searchConfig()?.columns?.defaults ?? [],
+    );
+    this.snackBarService.showWarning(
+      `Saved column "${unknownKey}" is no longer supported. Cleared your saved columns and retrying with the default columns…`,
+    );
+    return true;
+  }
 
   /** Whether a flat search is waiting for initial default columns or sort key from searchConfig before firing. */
   private readonly isWaitingForInitialColumns = computed<boolean>(
