@@ -231,7 +231,8 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
   }
 
   @Override
-  protected boolean extraChecksForOnlineModeDevice() throws InterruptedException {
+  protected boolean extraChecksForOnlineModeDevice(boolean isNetworkChanged)
+      throws InterruptedException {
     // Do nothing by default
     return false;
   }

@@ -1005,7 +1005,7 @@ public abstract class AndroidRealDeviceDelegate {
             | checkIccids()
             | checkHingeAngle()
             | checkGmscoreSignature()
-            | extraChecksForOnlineModeDevice();
+            | extraChecksForOnlineModeDevice(isNetworkChanged);
     checkSuwAppDisabled();
     if (!Flags.skipNetwork.getNonNull()) {
       isDimensionChanged = isDimensionChanged | checkWifiRssi();
@@ -1104,8 +1104,14 @@ public abstract class AndroidRealDeviceDelegate {
    */
   protected abstract boolean onlyCheckNetworkWhenCheckOnlineModeDevice();
 
-  /** Returns {@code true} if any dimensions changed after the device checks. */
-  protected abstract boolean extraChecksForOnlineModeDevice() throws InterruptedException;
+  /**
+   * Returns {@code true} if any dimensions changed after the device checks.
+   *
+   * @param isNetworkChanged whether network-related dimensions changed during {@link
+   *     #checkNetwork()}
+   */
+  protected abstract boolean extraChecksForOnlineModeDevice(boolean isNetworkChanged)
+      throws InterruptedException;
 
   /**
    * Checks and updates the device's checkin group dimension.
