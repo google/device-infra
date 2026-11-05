@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.instrumentation.androidx.AndroidxDependencies;
 import com.google.devtools.mobileharness.platform.android.lightning.apkfile.ApkAnalyzer;
+import com.google.devtools.mobileharness.platform.android.lightning.apkfile.ApkAnalyzer.InstrumentationInfo;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
@@ -408,6 +409,10 @@ public class AndroidInstrumentationUtil {
     boolean useTestStorageService = instrumentationSetting.useTestStorageService();
     boolean enableCoverage = instrumentationSetting.enableCoverage();
     boolean useOrchestrator = instrumentationSetting.useOrchestrator();
+    boolean instrumentInPrivateComputeCore =
+        instrumentationSetting.instrumentInPrivateComputeCore()
+            && deviceSdkVersion != null
+            && deviceSdkVersion >= AndroidVersion.ANDROID_17.getStartSdkVersion();
     LineCallback instrumentationResultCallback =
         (lineCallbackFactory != null) ? lineCallbackFactory.get() : null;
 
@@ -467,6 +472,9 @@ public class AndroidInstrumentationUtil {
 
     final String testRunner;
     if (useOrchestrator) {
+      if (instrumentInPrivateComputeCore) {
+        command.append(" -e orchestratorInstrumentationArgs --instrument-in-pcc");
+      }
       command
           .append(" -e targetInstrumentation ")
           .append(packageName)
@@ -474,6 +482,9 @@ public class AndroidInstrumentationUtil {
           .append(runnerName);
       testRunner = "androidx.test.orchestrator/androidx.test.orchestrator.AndroidTestOrchestrator";
     } else {
+      if (instrumentInPrivateComputeCore) {
+        command.append(" --instrument-in-pcc");
+      }
       testRunner = packageName + "/" + runnerName;
     }
     command.append(" ").append(testRunner);
@@ -676,6 +687,87 @@ public class AndroidInstrumentationUtil {
           AndroidErrorId.ANDROID_INSTRUMENTATION_RUNNER_NOT_FOUND,
           "Instrumentation test runner not found",
           e);
+    }
+  }
+
+  /**
+   * Gets the target package name for the specified instrumentation runner from {@code
+   * AndroidManifest.xml} in the test APK.
+   */
+  public String getInstrumentationTargetPackage(
+      String testApkPath, String testPackageName, String runnerName)
+      throws MobileHarnessException, InterruptedException {
+    String fullRunnerName = runnerName.startsWith(".") ? testPackageName + runnerName : runnerName;
+    ImmutableList<InstrumentationInfo> instrumentations =
+        apkAnalyzer.parseInstrumentation(testApkPath, testPackageName);
+    for (InstrumentationInfo info : instrumentations) {
+      if (info.name().equals(fullRunnerName)) {
+        return info.targetPackage();
+      }
+    }
+    throw new MobileHarnessException(
+        AndroidErrorId.ANDROID_INSTRUMENTATION_TARGET_PACKAGE_NOT_FOUND,
+        String.format(
+            "Cannot find target package for instrumentation runner %s in test apk %s",
+            runnerName, testApkPath));
+  }
+
+  /**
+   * Configures the Private Compute Core sandbox for the given package.
+   *
+   * @param serial the device serial number
+   * @param targetPackage the target package name
+   * @param enableTrustInstrumentedClients whether to enable trust for instrumented clients that
+   *     communicate with the target package
+   */
+  public void configurePccSandbox(
+      String serial, String targetPackage, boolean enableTrustInstrumentedClients)
+      throws MobileHarnessException, InterruptedException {
+    try {
+      String addAllowedPkgCmd =
+          String.format("cmd pcc_sandbox add-allowed-package %s", targetPackage);
+      var unused = adb.runShellWithRetry(serial, addAllowedPkgCmd);
+      if (enableTrustInstrumentedClients) {
+        String enableTrustCmd =
+            String.format("cmd pcc_sandbox enable-trust-instrumented-clients %s", targetPackage);
+        unused = adb.runShellWithRetry(serial, enableTrustCmd);
+      }
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_INSTRUMENTATION_CONFIGURE_PCC_SANDBOX_ERROR,
+          String.format(
+              "Failed to configure Private Compute Core sandbox for package %s", targetPackage),
+          e);
+    }
+  }
+
+  /**
+   * Best-effort cleanup of the Private Compute Core sandbox on the device after running
+   * instrumentation.
+   */
+  public void cleanupPccSandbox(
+      String serial, String targetPackage, boolean disableTrustInstrumentedClients)
+      throws InterruptedException {
+    if (disableTrustInstrumentedClients) {
+      String disableTrustCmd =
+          String.format("cmd pcc_sandbox disable-trust-instrumented-clients %s", targetPackage);
+      try {
+        var unused = adb.runShell(serial, disableTrustCmd);
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to disable trust instrumented clients in Private Compute Core sandbox"
+                + " for package %s",
+            targetPackage);
+      }
+    }
+    String removeAllowedPkgCmd =
+        String.format("cmd pcc_sandbox remove-allowed-package %s", targetPackage);
+    try {
+      var unused = adb.runShell(serial, removeAllowedPkgCmd);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to remove allowed package from Private Compute Core sandbox for package %s",
+          targetPackage);
     }
   }
 
