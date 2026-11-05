@@ -191,12 +191,12 @@ export function getHealthSummaryChartData(
   ];
 
   return prepareColumnChartData(
-    stats.dailyStats,
+    stats.dailyStats ?? [],
     columns,
     (d, date) => [
       date,
-      d.healthinessSummary.inServicePercent ?? 0,
-      d.healthinessSummary.outOfServicePercent ?? 0,
+      d.healthinessSummary?.inServicePercent ?? 0,
+      d.healthinessSummary?.outOfServicePercent ?? 0,
     ],
     options,
   );
@@ -256,14 +256,16 @@ export function getHealthDetailChartData(
   });
 
   return prepareColumnChartData(
-    stats.dailyStats,
+    stats.dailyStats ?? [],
     columns,
     (d, date) => {
       const row: Array<Date | number> = [date];
       const breakdownMap: Record<string, number> = {};
       const addToMap = (items: Array<{category: string; percent?: number}>) => {
         for (const item of items) {
-          breakdownMap[item.category.toUpperCase()] = item.percent ?? 0;
+          if (item.category) {
+            breakdownMap[item.category.toUpperCase()] = item.percent ?? 0;
+          }
         }
       };
       addToMap(d.healthinessSummary?.inServiceBreakdown || []);
@@ -291,7 +293,7 @@ export function getTestResultChartData(
     dailyStats
       .flatMap((day) => day.categoryStats || [])
       .filter((stat) => stat.stats?.count && stat.stats.count > 0)
-      .map((stat) => stat.category),
+      .map((stat) => stat.category ?? 'TEST_RESULT_CATEGORY_UNSPECIFIED'),
   );
 
   const sortedCategories = (
@@ -325,7 +327,10 @@ export function getTestResultChartData(
     (d, date) => {
       const row: Array<Date | number | null | {v: number; f: string}> = [date];
       const statsMap = new Map(
-        (d.categoryStats || []).map((s) => [s.category, s.stats]),
+        (d.categoryStats || []).map((s) => [
+          s.category ?? 'TEST_RESULT_CATEGORY_UNSPECIFIED',
+          s.stats,
+        ]),
       );
 
       sortedCategories.forEach((cat) => {
@@ -392,7 +397,10 @@ export function getRecoveryTaskChartData(
     (d, date) => {
       const row: Array<Date | number | null | {v: number; f: string}> = [date];
       const statsMap = new Map(
-        (d.categoryStats || []).map((s) => [s.category, s.stats]),
+        (d.categoryStats || []).map((s) => [
+          s.category ?? 'RECOVERY_OUTCOME_CATEGORY_UNSPECIFIED',
+          s.stats,
+        ]),
       );
 
       sortedCategories.forEach((cat) => {
@@ -425,12 +433,12 @@ export function transformHealthStatsToTable(
   return [
     {
       label: 'In Service',
-      value: stats.inServicePercent,
+      value: stats.inServicePercent ?? 0,
       color: '#1e8e3e',
       type: 'summary' as const,
     },
     ...(stats.inServiceBreakdown || [])
-      .filter((item) => item.percent && item.percent > 0)
+      .filter((item) => item.category && item.percent && item.percent > 0)
       .map((item) => ({
         label: item.category.toUpperCase(),
         value: item.percent,
@@ -439,12 +447,12 @@ export function transformHealthStatsToTable(
       })),
     {
       label: 'Out of Service',
-      value: stats.outOfServicePercent,
+      value: stats.outOfServicePercent ?? 0,
       color: '#d93025',
       type: 'summary' as const,
     },
     ...(stats.outOfServiceBreakdown || [])
-      .filter((item) => item.percent && item.percent > 0)
+      .filter((item) => item.category && item.percent && item.percent > 0)
       .map((item) => ({
         label:
           item.category.toUpperCase() === 'OTHERS'
@@ -502,7 +510,7 @@ export function transformHealthStatsToCharts(
   ];
 
   allBreakdown.forEach((item) => {
-    if (item.percent && item.percent > 0) {
+    if (item.category && item.percent && item.percent > 0) {
       minorData.addRow([item.category.toUpperCase(), item.percent]);
       minorColors.push(getHealthColor(item.category));
     }
@@ -532,7 +540,7 @@ export function transformTestStatsToTable(
   // Total
   items.push({
     label: 'Total',
-    count: stats.totalCount,
+    count: stats.totalCount ?? 0,
     percent: 100,
     type: 'total' as const,
   });
@@ -544,20 +552,21 @@ export function transformTestStatsToTable(
     items.push({
       label: group.displayName,
       count: group.totalStats.count,
-      percent: group.totalStats.percent,
+      percent: group.totalStats.percent ?? 0,
       color,
       type: 'summary' as const,
     });
 
     (group.breakdownItems ?? [])
-      .filter((item) => item.stats.count && item.stats.count > 0)
+      .filter((item) => item.stats?.count && item.stats.count > 0)
       .forEach((item) => {
-        const label = getTestLabel(item.category);
+        const category = item.category ?? 'TEST_RESULT_CATEGORY_UNSPECIFIED';
+        const label = getTestLabel(category);
         items.push({
           label: label === 'OTHER' ? 'Others' : label,
           count: item.stats.count,
-          percent: item.stats.percent,
-          color: getTestColor(item.category),
+          percent: item.stats.percent ?? 0,
+          color: getTestColor(category),
           type: 'detail' as const,
         });
       });
@@ -639,13 +648,14 @@ export function transformTestStatsToCharts(
   ];
 
   allBreakdown.forEach((item) => {
-    if (item.stats.count && item.stats.count > 0) {
-      const label = getTestLabel(item.category);
+    if (item.stats?.count && item.stats.count > 0) {
+      const category = item.category ?? 'TEST_RESULT_CATEGORY_UNSPECIFIED';
+      const label = getTestLabel(category);
       minorData.addRow([
         label === 'OTHER' ? 'Others' : label,
         item.stats.count,
       ]);
-      minorColors.push(getTestColor(item.category));
+      minorColors.push(getTestColor(category));
     }
   });
 

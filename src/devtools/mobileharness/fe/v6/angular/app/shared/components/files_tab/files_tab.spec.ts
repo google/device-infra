@@ -167,4 +167,29 @@ describe('FilesTab Component', () => {
 
     expect(component.activeFile()).toBeNull();
   });
+
+  it('should format int64 sizes rendered as JSON strings', () => {
+    expect(component.formatBytes('0')).toBe('0 Bytes');
+    expect(component.formatBytes(0)).toBe('0 Bytes');
+    expect(component.formatBytes('2048')).toBe('2 KB');
+    expect(component.formatBytes(2 * 1024 ** 4)).toBe('2048 GB');
+    expect(component.formatBytes(undefined)).toBe('unknown size');
+    expect(component.formatBytes(null as unknown as undefined)).toBe(
+      'unknown size',
+    );
+    expect(component.formatBytes('')).toBe('unknown size');
+    expect(component.formatBytes('   ')).toBe('unknown size');
+    expect(component.formatBytes(-1)).toBe('unknown size');
+    expect(component.formatBytes('not a number')).toBe('unknown size');
+
+    expect(component.getFileMetaString('0')).toBe('0 Bytes');
+    expect(component.getFileMetaString(undefined)).toBe('0 Bytes');
+
+    component.selectFile({
+      path: 'huge.log',
+      size: String(20 * 1024 * 1024),
+      viewable: true,
+    });
+    expect(component.isFileTooLarge()).toBeTrue();
+  });
 });

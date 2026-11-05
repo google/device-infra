@@ -223,7 +223,16 @@ export declare interface BasicDeviceInfo {
   /** OS version, e.g., "14" for Android, "22.04" for Ubuntu. */
   version: string;
   /** Form factor of the device. */
-  form: 'physical' | 'virtual' | 'testbed' | 'unknown';
+  form:
+    | 'physical'
+    | 'virtual'
+    | 'testbed'
+    | 'unknown'
+    | 'PHYSICAL'
+    | 'VIRTUAL'
+    | 'TESTBED'
+    | 'UNKNOWN'
+    | 'FORM_UNSPECIFIED';
   /** Operating system, e.g., "Android", "Ubuntu Linux". */
   os: string;
   /** Battery level percentage (0-100), or null if not applicable. */

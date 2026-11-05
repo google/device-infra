@@ -215,6 +215,23 @@ describe('DeviceOverviewTab Component', () => {
     ]);
     // Drivers should remain filtered by previous search
     expect(component.filteredDrivers()).toEqual(['MoblyAospTest', 'MoblyTest']);
+
+    // Empty arrays (printed by Envoy) should render "None" instead of filter inputs
+    fixture.componentInstance.device = {
+      ...fixture.componentInstance.device,
+      capabilities: {
+        supportedDrivers: [],
+        supportedDecorators: [],
+      },
+    };
+    fixture.debugElement.injector.get(ChangeDetectorRef).markForCheck();
+    fixture.detectChanges();
+    expect(component.filteredDrivers()).toEqual([]);
+    expect(component.filteredDecorators()).toEqual([]);
+    const noDataEls = fixture.debugElement.queryAll(
+      By.css('#capabilities-content .no-data'),
+    );
+    expect(noDataEls.length).toBe(2);
   });
 
   it('should return IN_SERVICE_BUSY when device is busy', async () => {
@@ -464,26 +481,28 @@ describe('DeviceOverviewTab Component', () => {
   });
 
   it('should hide battery if device is a testbed', () => {
-    // Clear subDevices to simulate a standard physical device.
     const originalSubDevices = component.device.subDevices;
     expect(originalSubDevices?.length).toBe(2);
-
-    component.device.subDevices = undefined;
-    fixture.detectChanges();
-
-    let batteryEl = fixture.debugElement.query(By.css('dt[title="Battery"]'));
-    expect(batteryEl).toBeTruthy();
-
-    // Make it a testbed (has subDevices)
-    component.device.subDevices = [];
-
-    // Explicitly mark for check since component is OnPush
     const cdr = fixture.debugElement
       .query(By.directive(DeviceOverviewTab))
       .injector.get(ChangeDetectorRef);
+
+    // A standard device: sub_devices omitted (ESF) or printed empty (Envoy).
+    component.device.subDevices = undefined;
+    fixture.detectChanges();
+    let batteryEl = fixture.debugElement.query(By.css('dt[title="Battery"]'));
+    expect(batteryEl).toBeTruthy();
+
+    component.device.subDevices = [];
     cdr.markForCheck();
     fixture.detectChanges();
+    batteryEl = fixture.debugElement.query(By.css('dt[title="Battery"]'));
+    expect(batteryEl).toBeTruthy();
 
+    // A testbed: has sub-devices.
+    component.device.subDevices = originalSubDevices;
+    cdr.markForCheck();
+    fixture.detectChanges();
     batteryEl = fixture.debugElement.query(By.css('dt[title="Battery"]'));
     expect(batteryEl).toBeFalsy();
   });
@@ -496,5 +515,33 @@ describe('DeviceOverviewTab Component', () => {
     expect(versionInfo.nativeElement.getAttribute('aria-label')).toBe(
       DEVICE_VERSION_DESCRIPTION,
     );
+  });
+
+  it('treats FORM_UNSPECIFIED and UNKNOWN form as N/A on Android and hides Form on non-Android', () => {
+    const cdr = fixture.debugElement
+      .query(By.directive(DeviceOverviewTab))
+      .injector.get(ChangeDetectorRef);
+
+    for (const formValue of ['FORM_UNSPECIFIED', 'UNKNOWN'] as const) {
+      component.device.isAndroid = true;
+      component.device.basicInfo.form = formValue;
+      cdr.markForCheck();
+      fixture.detectChanges();
+      let formDt = fixture.debugElement.query(By.css('dt[title="Form"]'));
+      expect(formDt).not.toBeNull();
+      expect(formDt.nativeElement.nextElementSibling?.textContent?.trim()).toBe(
+        'N/A',
+      );
+      expect(
+        formDt.nativeElement.nextElementSibling?.getAttribute('title'),
+      ).toBe('N/A');
+
+      component.device.isAndroid = false;
+      component.device.basicInfo.form = formValue;
+      cdr.markForCheck();
+      fixture.detectChanges();
+      formDt = fixture.debugElement.query(By.css('dt[title="Form"]'));
+      expect(formDt).toBeNull();
+    }
   });
 });

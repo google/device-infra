@@ -105,7 +105,7 @@ export declare interface Troubleshooting {
 /** General file metadata structure inside a file explorer. */
 export declare interface FileInfo {
   path: string;
-  size?: number;
+  size?: number | string;
   // Whether the file can be previewed inline (small enough and not a known
   // binary type). Computed by the backend; the UI does not see the MIME type.
   viewable?: boolean;

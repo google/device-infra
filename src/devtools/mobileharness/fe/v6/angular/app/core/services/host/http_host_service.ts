@@ -137,9 +137,12 @@ export class HttpHostService extends HostService {
       )
       .pipe(
         map((response) => {
+          response.results = response.results ?? [];
           for (const res of response.results) {
             res.supportedProxyTypes =
               res.supportedProxyTypes?.map(toDeviceProxyType) ?? [];
+            res.runAsCandidates ??= [];
+            res.subDeviceResults ??= [];
           }
 
           if (response.sessionOptions) {
@@ -147,6 +150,7 @@ export class HttpHostService extends HostService {
               response.sessionOptions.commonProxyTypes?.map(
                 toDeviceProxyType,
               ) ?? [];
+            response.sessionOptions.commonRunAsCandidates ??= [];
           }
           return response;
         }),

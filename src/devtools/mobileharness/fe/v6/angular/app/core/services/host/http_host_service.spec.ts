@@ -260,4 +260,31 @@ describe('HttpHostService', () => {
     expect(req.request.method).toBe('POST');
     req.flush(mockResponse);
   });
+
+  it('should default omitted repeated fields to empty arrays in checkRemoteControlEligibility', () => {
+    service.checkRemoteControlEligibility('test-host', []).subscribe((res) => {
+      expect(res.results.length).toBe(1);
+      expect(res.results[0].supportedProxyTypes).toEqual([]);
+      expect(res.results[0].runAsCandidates).toEqual([]);
+      expect(res.results[0].subDeviceResults).toEqual([]);
+      expect(res.sessionOptions?.commonProxyTypes).toEqual([]);
+      expect(res.sessionOptions?.commonRunAsCandidates).toEqual([]);
+    });
+    const req = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts/test-host/checkRemoteControlEligibility',
+    );
+    expect(req.request.method).toBe('POST');
+    req.flush({
+      results: [{deviceId: 'dev-1', isEligible: true}],
+      sessionOptions: {maxDurationHours: 12},
+    });
+
+    service.checkRemoteControlEligibility('test-host', []).subscribe((res) => {
+      expect(res.results).toEqual([]);
+    });
+    const emptyReq = httpMock.expectOne(
+      'http://testdomain.com/v6/hosts/test-host/checkRemoteControlEligibility',
+    );
+    emptyReq.flush({});
+  });
 });

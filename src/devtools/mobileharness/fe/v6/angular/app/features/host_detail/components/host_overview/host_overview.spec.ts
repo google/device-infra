@@ -801,5 +801,11 @@ describe('HostOverview Component', () => {
     expect(versionIcons[1].getAttribute('aria-label')).toBe(
       DEVICE_VERSION_DESCRIPTION,
     );
+
+    const emptySubDevicesRow = {...testbedDevice, subDevices: []};
+    component.deviceDataSource.data = [emptySubDevicesRow];
+    component.expandedElement.set(emptySubDevicesRow);
+    fixture.detectChanges();
+    expect(compiled.querySelector('.sub-device-table')).toBeNull();
   });
 });

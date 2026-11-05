@@ -178,7 +178,7 @@ export class HostSettings implements OnInit {
           label: 'Permissions',
           visibility: () =>
             this.uiStatus().deviceConfig.sectionStatus.visible &&
-            this.uiStatus().deviceConfig.subSections.permissions?.visible ===
+            this.uiStatus().deviceConfig.subSections?.permissions?.visible ===
               true,
         },
         {
@@ -187,7 +187,7 @@ export class HostSettings implements OnInit {
           label: 'Wi-Fi',
           visibility: () =>
             this.uiStatus().deviceConfig.sectionStatus.visible &&
-            this.uiStatus().deviceConfig.subSections.wifi?.visible === true,
+            this.uiStatus().deviceConfig.subSections?.wifi?.visible === true,
         },
         {
           id: 'dimensions',
@@ -195,7 +195,7 @@ export class HostSettings implements OnInit {
           label: 'Dimensions',
           visibility: () =>
             this.uiStatus().deviceConfig.sectionStatus.visible &&
-            this.uiStatus().deviceConfig.subSections.dimensions?.visible ===
+            this.uiStatus().deviceConfig.subSections?.dimensions?.visible ===
               true,
         },
         {
@@ -204,7 +204,8 @@ export class HostSettings implements OnInit {
           label: 'Stability & Reboot',
           visibility: () =>
             this.uiStatus().deviceConfig.sectionStatus.visible &&
-            this.uiStatus().deviceConfig.subSections.settings?.visible === true,
+            this.uiStatus().deviceConfig.subSections?.settings?.visible ===
+              true,
         },
       ],
       visibility: () =>
@@ -368,48 +369,51 @@ export class HostSettings implements OnInit {
   });
 
   readonly permissionsUiStatus = computed(() => {
+    const subSection = this.uiStatus().deviceConfig.subSections?.permissions;
+    const visible = subSection?.visible === true;
     const parent = this.getDeviceConfigSectionEditability();
     if (!parent.editable) {
       return {
-        visible:
-          this.uiStatus().deviceConfig.subSections?.permissions?.visible ??
-          true,
+        visible,
         editability: {
           editable: false,
           reason: parent.reason,
         },
       };
     }
-    return this.getPermissionOverriddenStatus(
-      this.uiStatus().deviceConfig.subSections?.permissions,
-    );
+    return {
+      ...this.getPermissionOverriddenStatus(subSection),
+      visible,
+    };
   });
 
   readonly wifiUiStatus = computed(() => {
+    const subSection = this.uiStatus().deviceConfig.subSections?.wifi;
+    const visible = subSection?.visible === true;
     const parent = this.getDeviceConfigSectionEditability();
     if (!parent.editable) {
       return {
-        visible:
-          this.uiStatus().deviceConfig.subSections?.wifi?.visible ?? true,
+        visible,
         editability: {
           editable: false,
           reason: parent.reason,
         },
       };
     }
-    return this.getPermissionOverriddenStatus(
-      this.uiStatus().deviceConfig.subSections?.wifi,
-    );
+    return {
+      ...this.getPermissionOverriddenStatus(subSection),
+      visible,
+    };
   });
 
   readonly dimensionsUiStatus = computed(() => {
+    const subSection = this.uiStatus().deviceConfig.subSections?.dimensions;
+    const visible = subSection?.visible === true;
     const parent = this.getDeviceConfigSectionEditability();
     if (!parent.editable) {
       return {
         sectionStatus: {
-          visible:
-            this.uiStatus().deviceConfig.subSections?.dimensions?.visible ??
-            true,
+          visible,
           editability: {
             editable: false,
             reason: parent.reason,
@@ -418,27 +422,30 @@ export class HostSettings implements OnInit {
       };
     }
     return {
-      sectionStatus: this.getPermissionOverriddenStatus(
-        this.uiStatus().deviceConfig.subSections?.dimensions,
-      ),
+      sectionStatus: {
+        ...this.getPermissionOverriddenStatus(subSection),
+        visible,
+      },
     };
   });
 
   readonly settingsUiStatus = computed(() => {
+    const subSection = this.uiStatus().deviceConfig.subSections?.settings;
+    const visible = subSection?.visible === true;
     const parent = this.getDeviceConfigSectionEditability();
     if (!parent.editable) {
       return {
-        visible:
-          this.uiStatus().deviceConfig.subSections?.settings?.visible ?? true,
+        visible,
         editability: {
           editable: false,
           reason: parent.reason,
         },
       };
     }
-    return this.getPermissionOverriddenStatus(
-      this.uiStatus().deviceConfig.subSections?.settings,
-    );
+    return {
+      ...this.getPermissionOverriddenStatus(subSection),
+      visible,
+    };
   });
 
   readonly deviceDiscoveryUiStatus = computed(() => {

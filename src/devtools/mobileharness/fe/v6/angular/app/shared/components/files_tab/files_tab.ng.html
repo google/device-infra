@@ -114,12 +114,10 @@
                               tooltipIfTruncated
                         >{{ node.name }}</span>
                       </a>
-                      @if (getFileMetaString(node.size); as metaStr) {
-                        <span class="file-meta-subline">
-                          <span class="meta-sep">•</span>
-                          <span class="meta-text font-mono">{{ metaStr }}</span>
-                        </span>
-                      }
+                      <span class="file-meta-subline">
+                        <span class="meta-sep">•</span>
+                        <span class="meta-text font-mono">{{ getFileMetaString(node.size) }}</span>
+                      </span>
                     </div>
                   </div>
                 }
@@ -147,12 +145,10 @@
                             tooltipIfTruncated
                       >{{ file.path }}</span>
                     </a>
-                    @if (getFileMetaString(file.size); as metaStr) {
-                      <span class="file-meta-subline">
-                        <span class="meta-sep">•</span>
-                        <span class="meta-text font-mono">{{ metaStr }}</span>
-                      </span>
-                    }
+                    <span class="file-meta-subline">
+                      <span class="meta-sep">•</span>
+                      <span class="meta-text font-mono">{{ getFileMetaString(file.size) }}</span>
+                    </span>
                   </div>
                 </div>
               }

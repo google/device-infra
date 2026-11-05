@@ -382,4 +382,12 @@ describe('normalizeHostDebugInfoResponse', () => {
     );
     expect(output.results[0].command).toBe('Unknown Command 1');
   });
+
+  it('should default omitted results to empty array', () => {
+    const input = {
+      timestamp: '2026-04-03T08:00:00Z',
+    } as unknown as GetHostDebugInfoResponse;
+    const output = normalizeHostDebugInfoResponse(input);
+    expect(output.results).toEqual([]);
+  });
 });

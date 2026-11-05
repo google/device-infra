@@ -29,7 +29,7 @@ export interface FileNode {
   name: string;
   type: 'dir' | 'file';
   path: string; // unique hierarchical path, e.g. "google3/java/com"
-  size?: number;
+  size?: number | string;
   viewable?: boolean;
   depth: number;
   children: FileNode[];
@@ -110,7 +110,9 @@ export class FilesTab {
   readonly isFileTooLarge = computed(() => {
     const file = this.activeFile();
     if (!file) return false;
-    return !!file.size && file.size > this.MAX_PREVIEW_SIZE_BYTES;
+    return (
+      file.size !== undefined && Number(file.size) > this.MAX_PREVIEW_SIZE_BYTES
+    );
   });
 
   /**
@@ -307,12 +309,20 @@ export class FilesTab {
     this.activeFile.set(null);
   }
 
-  formatBytes(bytes?: number): string {
-    if (bytes === undefined || bytes === null) return 'unknown size';
+  formatBytes(size?: number | string): string {
+    if (size === null || (typeof size === 'string' && size.trim() === '')) {
+      return 'unknown size';
+    }
+    // Proto3 JSON renders int64 as a string.
+    const bytes = Number(size);
+    if (!Number.isFinite(bytes) || bytes < 0) return 'unknown size';
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const i = Math.min(
+      Math.floor(Math.log(bytes) / Math.log(k)),
+      sizes.length - 1,
+    );
     return `${Number((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   }
 
@@ -324,11 +334,8 @@ export class FilesTab {
     }, 2000);
   }
 
-  getFileMetaString(size?: number): string | null {
-    if (size !== undefined && size !== null) {
-      return this.formatBytes(size);
-    }
-    return null;
+  getFileMetaString(size?: number | string): string {
+    return this.formatBytes(size ?? 0);
   }
 
   getFileIcon(path: string): string {

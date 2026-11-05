@@ -85,7 +85,12 @@ describe('HostSettings Component', () => {
         deviceConfigMode: {visible: true, editability: {editable: true}},
         deviceConfig: {
           sectionStatus: {visible: true, editability: {editable: true}},
-          subSections: {},
+          subSections: {
+            permissions: {visible: true, editability: {editable: true}},
+            wifi: {visible: true, editability: {editable: true}},
+            dimensions: {visible: true, editability: {editable: true}},
+            settings: {visible: true, editability: {editable: true}},
+          },
         },
         hostProperties: {
           sectionStatus: {visible: true, editability: {editable: true}},
@@ -114,7 +119,12 @@ describe('HostSettings Component', () => {
       deviceConfigMode: {visible: true, editability: {editable: true}},
       deviceConfig: {
         sectionStatus: {visible: true, editability: {editable: true}},
-        subSections: {},
+        subSections: {
+          permissions: {visible: true, editability: {editable: true}},
+          wifi: {visible: true, editability: {editable: true}},
+          dimensions: {visible: true, editability: {editable: true}},
+          settings: {visible: true, editability: {editable: true}},
+        },
       },
       hostProperties: {
         sectionStatus: {visible: true, editability: {editable: true}},
@@ -273,6 +283,41 @@ describe('HostSettings Component', () => {
       comp.hostPropertiesUiStatus().sectionStatus.editability?.editable,
     ).toBe(false);
     expect(comp.hostPropertiesUiStatus().sectionStatus.visible).toBe(true);
+  });
+
+  it('should treat omitted subSections.<section>.visible as false and explicit true as true', () => {
+    setupDialogData();
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(HostSettings, {
+        data: dialogData,
+      }),
+    );
+    comp = dialogOpener.componentInstance.dialogRef.componentInstance;
+    TestBed.inject(ApplicationRef).tick();
+
+    comp.uiStatus.update((status) => ({
+      ...status,
+      deviceConfig: {
+        sectionStatus: {visible: true, editability: {editable: true}},
+        subSections: {
+          permissions: {editability: {editable: true}},
+          wifi: {visible: true, editability: {editable: true}},
+          dimensions: {},
+          settings: {visible: true, editability: {editable: true}},
+        },
+      },
+    }));
+
+    expect(comp.permissionsUiStatus().visible).toBeFalse();
+    expect(comp.wifiUiStatus().visible).toBeTrue();
+    expect(comp.dimensionsUiStatus().sectionStatus.visible).toBeFalse();
+    expect(comp.settingsUiStatus().visible).toBeTrue();
+
+    comp.saving.set(true);
+    expect(comp.permissionsUiStatus().visible).toBeFalse();
+    expect(comp.wifiUiStatus().visible).toBeTrue();
+    expect(comp.dimensionsUiStatus().sectionStatus.visible).toBeFalse();
+    expect(comp.settingsUiStatus().visible).toBeTrue();
   });
 
   it('should filter navList based on visibility', () => {
