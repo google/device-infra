@@ -96,9 +96,9 @@ enum AllocationExitStrategy {
 
 // Job settings.
 message JobSetting {
-  Timeout timeout = 1;    // Optional
-  Retry retry = 2;        // Optional
-  Priority priority = 3;  // Optional
+  Timeout timeout = 1;             // Optional
+  Retry retry = 2;                 // Optional
+  optional Priority priority = 3;  // Optional
 }
 
 message JobUser {
