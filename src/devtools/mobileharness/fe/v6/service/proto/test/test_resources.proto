@@ -50,6 +50,14 @@ message TestSummary {
   // The host the test ran on. Same type as TestDetail.host, so a row and the
   // detail page describe the host the same way.
   HostInfo host = 8;
+
+  // One-line summary of the test's result cause, built from MOSS
+  // `Result.TestDetail.result_cause` (a FlattenedExceptionDetail) as
+  // `ERROR_NAME: message` with whitespace collapsed, at most 300 characters.
+  // It is only the message when the error ID is UNKNOWN_ERROR_ID, and only the
+  // error name when there is no message. Set for any result, including SKIP and
+  // ABORT; empty when the test has no result cause.
+  string root_cause = 9;
 }
 
 // ---------- List wrapper types ----------
