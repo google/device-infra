@@ -23,6 +23,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestLogRequ
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestLogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestTimelineRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestTimelineResponse;
 import java.util.Optional;
 
 /** Logic interface for the Test Detail service. */
@@ -36,4 +38,7 @@ public interface TestServiceLogic {
 
   /** Gets the content of a test file. */
   ListenableFuture<GetTestFileResponse> getTestFile(GetTestFileRequest request);
+
+  /** Gets the execution timeline breakdown of a test (or sub-test). */
+  ListenableFuture<GetTestTimelineResponse> getTestTimeline(GetTestTimelineRequest request);
 }

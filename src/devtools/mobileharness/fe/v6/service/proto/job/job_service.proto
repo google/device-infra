@@ -67,6 +67,14 @@ service JobService {
       get: "/v6/jobs/{job_id}/file"
     };
   }
+
+  // Retrieves the execution timeline breakdown of a Job and its child test
+  // runs.
+  rpc GetJobTimeline(GetJobTimelineRequest) returns (GetJobTimelineResponse) {
+    option (google.api.http) = {
+      get: "/v6/jobs/{job_id}/timeline"
+    };
+  }
 }
 
 message GetJobRequest {
@@ -113,6 +121,14 @@ message GetJobFileRequest {
 
 message GetJobFileResponse {
   string content = 1;
+}
+
+message GetJobTimelineRequest {
+  string job_id = 1;
+}
+
+message GetJobTimelineResponse {
+  devtools.mobileharness.fe.v6.service.proto.common.TimeBreakdown timeline = 1;
 }
 
 message GetJobLogResponse {

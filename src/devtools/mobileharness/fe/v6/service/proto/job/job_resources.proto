@@ -126,9 +126,8 @@ message JobDetail {
   .devtools.mobileharness.fe.v6.service.proto.common.Troubleshooting
       troubleshooting = 11;
 
-  // Detailed timing breakdown.
-  .devtools.mobileharness.fe.v6.service.proto.common.TimeBreakdown
-      timing_breakdown = 12;
+  reserved 12;
+  reserved "timing_breakdown";
 
   // Files explorer resources.
   FileExplorer file_explorer = 13;

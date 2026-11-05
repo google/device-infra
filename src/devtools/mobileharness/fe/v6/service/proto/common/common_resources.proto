@@ -131,10 +131,243 @@ message ActionButtonState {
   bool is_ready = 4;
 }
 
-// Detailed timing breakdown for Gantt chart / timeline rendering.
+// Visual fill style shared by split bar segments, legend swatches, and bars.
+enum TimelineFill {
+  TIMELINE_FILL_UNSPECIFIED = 0;
+  TIMELINE_FILL_WAIT = 1;
+  TIMELINE_FILL_QUEUED = 2;
+  TIMELINE_FILL_SETUP = 3;
+  TIMELINE_FILL_RESOLVE = 4;
+  TIMELINE_FILL_TEST = 5;
+  TIMELINE_FILL_TEARDOWN = 6;
+  TIMELINE_FILL_OPAQUE = 7;
+  TIMELINE_FILL_UNRECORDED = 8;
+  TIMELINE_FILL_UNKNOWN = 9;
+  TIMELINE_FILL_MISSING = 10;
+}
+
+// Horizontal alignment for an axis tick label near the track edges.
+enum TimelineTickAlignment {
+  TIMELINE_TICK_ALIGNMENT_UNSPECIFIED = 0;
+  TIMELINE_TICK_ALIGNMENT_CENTER = 1;
+  TIMELINE_TICK_ALIGNMENT_START = 2;
+  TIMELINE_TICK_ALIGNMENT_END = 3;
+}
+
+// Outcome tone for result chips, end markers, and sub-test bars.
+enum TimelineResultTone {
+  TIMELINE_RESULT_TONE_UNSPECIFIED = 0;
+  TIMELINE_RESULT_TONE_PASS = 1;
+  TIMELINE_RESULT_TONE_FAIL = 2;
+  TIMELINE_RESULT_TONE_TIMEOUT = 3;
+  TIMELINE_RESULT_TONE_NEUTRAL = 4;
+}
+
+// One tick mark on the shared relative time axis.
+message TimelineAxisTick {
+  double left_percent = 1;
+  string label = 2;
+  TimelineTickAlignment alignment = 3;
+}
+
+// Shared relative time axis for all rows in a timeline table.
+message TimelineAxis {
+  // Gridline spacing as a percentage of the full track width.
+  double tick_step_percent = 1;
+  repeated TimelineAxisTick ticks = 2;
+}
+
+// Key/value fact row shown inside a timeline hover tooltip.
+message TimelineTooltipFact {
+  string label = 1;
+  string value = 2;
+}
+
+// One proportional segment of the top summary split bar and its legend entry.
+message TimelineSplitSegment {
+  // Links this segment and legend item to matching phase headers, step rows, or
+  // job bars during hover focus.
+  string focus_key = 1;
+  string label = 2;
+  TimelineFill fill = 3;
+  // Duration in milliseconds used as the CSS flex-grow weight.
+  double flex_weight = 4;
+  string duration_text = 5;
+  string share_text = 6;
+  repeated TimelineTooltipFact tooltip_facts = 7;
+  string tooltip_hint = 8;
+}
+
+// A positioned time interval bar on the shared axis, carrying exact timestamps
+// so the frontend can format wall-clock times in the viewer's local timezone.
+message TimelineIntervalBar {
+  google.protobuf.Timestamp start_time = 1;
+  google.protobuf.Timestamp end_time = 2;
+  double left_percent = 3;
+  double width_percent = 4;
+  string start_offset_text = 5;
+  string end_offset_text = 6;
+  string duration_text = 7;
+}
+
+// Nested sub-test timing row rendered under a test's driver row.
+message TestTimelineSubTestRow {
+  string name = 1;
+  TimelineResultTone result_tone = 2;
+  string result_label = 3;
+  string duration_text = 4;
+  TimelineIntervalBar bar = 5;
+  string tooltip_detail = 6;
+}
+
+// Direct child step row inside a collapsible test phase.
+message TestTimelineStepRow {
+  string label = 1;
+  // Secondary fact line under the label; empty when none applies.
+  string detail = 2;
+  string focus_key = 3;
+  // Shared identifier linking a decorator's setup and teardown rows on hover;
+  // empty for unpaired steps.
+  string pair_key = 4;
+  TimelineFill fill = 5;
+  string duration_text = 6;
+  string share_text = 7;
+  repeated TimelineIntervalBar bars = 8;
+  // True when a non-passing test stopped during this step.
+  bool is_ended_step = 9;
+  TimelineResultTone result_tone = 10;
+  string result_label = 11;
+  // Horizontal axis position (0 to 100) of the stopping end-mark when
+  // is_ended_step is true.
+  double end_mark_left_percent = 12;
+  string error_message = 13;
+  string full_error_message = 14;
+  string tooltip_hint = 15;
+  repeated TestTimelineSubTestRow sub_tests = 16;
+}
+
+// Collapsible phase header and its chronological child step rows.
+message TestTimelinePhase {
+  string phase_id = 1;
+  string focus_key = 2;
+  string label = 3;
+  TimelineFill fill = 4;
+  // Step count badge text (for example "4 steps"); empty when the phase has a
+  // single step.
+  string step_count_text = 5;
+  double bracket_left_percent = 6;
+  double bracket_width_percent = 7;
+  string duration_text = 8;
+  string share_text = 9;
+  repeated TestTimelineStepRow rows = 10;
+}
+
+// Phase-grouped step timeline for a single test execution.
+message TestTimeline {
+  repeated TestTimelinePhase phases = 1;
+}
+
+// One contiguous job state interval in the top Job activity row.
+message JobActivityBar {
+  string focus_key = 1;
+  string label = 2;
+  TimelineFill fill = 3;
+  TimelineIntervalBar interval = 4;
+  string share_text = 5;
+}
+
+// One bar inside the Job setup row (queued, preparing, or file resolving).
+message JobSetupBar {
+  string focus_key = 1;
+  string label = 2;
+  string detail = 3;
+  TimelineFill fill = 4;
+  // True when rendered as an inset sub-bar inside a parent bar (file resolving
+  // inside job pre-run).
+  bool is_inner = 5;
+  TimelineIntervalBar interval = 6;
+  string share_text = 7;
+}
+
+// Job-level queue and pre-run setup row before device allocation.
+message JobSetupRow {
+  string detail = 1;
+  string duration_text = 2;
+  repeated JobSetupBar bars = 3;
+}
+
+// Positioned bar segment inside a child test lane on the Job timeline.
+message JobLaneBar {
+  string focus_key = 1;
+  TimelineFill fill = 2;
+  double left_percent = 3;
+  double width_percent = 4;
+}
+
+// Recorded run duration for a child test lane.
+message JobLaneRunRecorded {
+  string duration_text = 1;
+}
+
+// Unrecorded run state for a child test lane ("Not started" or "Unknown").
+message JobLaneRunUnrecorded {
+  string reason = 1;
+}
+
+// Display value for the Ran column of a child test lane.
+message JobLaneRunCell {
+  oneof state {
+    JobLaneRunRecorded recorded = 1;
+    JobLaneRunUnrecorded unrecorded = 2;
+  }
+}
+
+// One child test run lane on the Job timeline.
+message JobTestLane {
+  string test_id = 1;
+  string display_name = 2;
+  string full_name = 3;
+  // True when MOSS returned a TestDetail record for this test; false when only
+  // the job's DEVICE_ALLOCATION entry exists.
+  bool has_record = 4;
+  // Disambiguation badge for repeated test names ("#1", "#2", or "Retry");
+  // empty for single runs.
+  string run_tag = 5;
+  repeated string device_ids = 6;
+  TimelineResultTone result_tone = 7;
+  string result_label = 8;
+  // Formatted pre-run wait duration (device allocation or pre-start wait);
+  // empty when no wait was recorded.
+  string waited_text = 9;
+  JobLaneRunCell ran_cell = 10;
+  repeated JobLaneBar bars = 11;
+  bool has_end_mark = 12;
+  double end_mark_left_percent = 13;
+  repeated TimelineTooltipFact tooltip_rows = 14;
+  string overhead_hint = 15;
+  string missing_record_hint = 16;
+}
+
+// State activity breakdown and per-test lanes for a job execution.
+message JobTimeline {
+  string total_duration_text = 1;
+  repeated JobActivityBar activity_bars = 2;
+  JobSetupRow job_setup = 3;
+  repeated JobTestLane lanes = 4;
+}
+
+// Pre-computed display model for the Test Detail and Job Detail Timeline tabs.
 message TimeBreakdown {
-  // TODO: Define the fields when implementing the timeline
-  // breakdown feature.
+  repeated string summary_lines = 1;
+  google.protobuf.Timestamp origin_time = 2;
+  google.protobuf.Timestamp finish_time = 3;
+  TimelineAxis axis = 4;
+  repeated TimelineSplitSegment split_segments = 5;
+
+  oneof content {
+    TestTimeline test_timeline = 6;
+    JobTimeline job_timeline = 7;
+  }
 }
 
 // Representing a single error with its trace.

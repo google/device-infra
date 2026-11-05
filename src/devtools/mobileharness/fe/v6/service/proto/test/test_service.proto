@@ -57,6 +57,17 @@ service TestService {
       get: "/v6/tests/{test_id}/file"
     };
   }
+
+  // Gets the execution timeline breakdown of a test (or sub-test) by its ID.
+  //
+  // Non-path fields (job_id, sub_test_id) are automatically mapped to query
+  // parameters by the gRPC-JSON transcoder.
+  rpc GetTestTimeline(GetTestTimelineRequest)
+      returns (GetTestTimelineResponse) {
+    option (google.api.http) = {
+      get: "/v6/tests/{test_id}/timeline"
+    };
+  }
 }
 
 message GetTestRequest {
@@ -163,4 +174,21 @@ message GetTestFileRequest {
 message GetTestFileResponse {
   // The retrieved file content.
   string content = 1;
+}
+
+message GetTestTimelineRequest {
+  // The ID of the root test whose timeline (or sub-test timeline) to retrieve.
+  string test_id = 1;
+
+  // Optional. If set, resolves this sub-test inside the root test (`test_id`)
+  // and builds the sub-test's timeline breakdown.
+  string sub_test_id = 2;
+
+  // The ID of the parent job (required by MOSS to locate the test and its
+  // device allocation wait stage).
+  string job_id = 3;
+}
+
+message GetTestTimelineResponse {
+  devtools.mobileharness.fe.v6.service.proto.common.TimeBreakdown timeline = 1;
 }

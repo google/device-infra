@@ -25,6 +25,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobLogReques
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobLogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobTimelineRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobTimelineResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.KillJobRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.KillJobResponse;
 import java.util.Optional;
@@ -55,5 +57,11 @@ public final class NoOpJobServiceLogic implements JobServiceLogic {
   public ListenableFuture<GetJobFileResponse> getJobFile(GetJobFileRequest request) {
     return immediateFailedFuture(
         new UnsupportedOperationException("JobService.GetJobFile is not available."));
+  }
+
+  @Override
+  public ListenableFuture<GetJobTimelineResponse> getJobTimeline(GetJobTimelineRequest request) {
+    return immediateFailedFuture(
+        new UnsupportedOperationException("JobService.GetJobTimeline is not available."));
   }
 }

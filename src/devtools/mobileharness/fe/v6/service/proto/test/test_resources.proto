@@ -146,7 +146,8 @@ message TestDetail {
   .devtools.mobileharness.fe.v6.service.proto.common.ExecutionDetails
       execution_details = 8;
 
-  reserved 9;
+  reserved 9, 13;
+  reserved "timing_breakdown";
 
   // Properties.
   map<string, string> properties = 10;
@@ -157,10 +158,6 @@ message TestDetail {
 
   // Sub / nested tests info.
   SubTestsInfo sub_tests_info = 12;
-
-  // Detailed execution phase timelines for Gantt rendering.
-  .devtools.mobileharness.fe.v6.service.proto.common.TimeBreakdown
-      timing_breakdown = 13;
 
   // Files explorer resources.
   FileExplorer file_explorer = 15;

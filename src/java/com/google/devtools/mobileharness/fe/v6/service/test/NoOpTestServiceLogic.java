@@ -25,6 +25,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestLogRequ
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestLogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestTimelineRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestTimelineResponse;
 import java.util.Optional;
 
 /** No-op implementation of {@link TestServiceLogic} used when no MOSS backend is available. */
@@ -47,5 +49,11 @@ public final class NoOpTestServiceLogic implements TestServiceLogic {
   public ListenableFuture<GetTestFileResponse> getTestFile(GetTestFileRequest request) {
     return immediateFailedFuture(
         new UnsupportedOperationException("TestService.GetTestFile is not available."));
+  }
+
+  @Override
+  public ListenableFuture<GetTestTimelineResponse> getTestTimeline(GetTestTimelineRequest request) {
+    return immediateFailedFuture(
+        new UnsupportedOperationException("TestService.GetTestTimeline is not available."));
   }
 }

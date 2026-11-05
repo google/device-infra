@@ -24,6 +24,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestLogRequ
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestLogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestTimelineRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.test.GetTestTimelineResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.test.TestServiceGrpc;
 import io.grpc.stub.StreamObserver;
 import java.util.Optional;
@@ -74,5 +76,17 @@ public final class TestServiceGrpcImpl extends TestServiceGrpc.TestServiceImplBa
         executor,
         TestServiceGrpc.getServiceDescriptor(),
         TestServiceGrpc.getGetTestFileMethod());
+  }
+
+  @Override
+  public void getTestTimeline(
+      GetTestTimelineRequest request, StreamObserver<GetTestTimelineResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::getTestTimeline,
+        executor,
+        TestServiceGrpc.getServiceDescriptor(),
+        TestServiceGrpc.getGetTestTimelineMethod());
   }
 }

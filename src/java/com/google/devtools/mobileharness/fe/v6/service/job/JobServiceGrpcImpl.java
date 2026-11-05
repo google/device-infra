@@ -24,6 +24,8 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobLogReques
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobLogResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobResponse;
+import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobTimelineRequest;
+import com.google.devtools.mobileharness.fe.v6.service.proto.job.GetJobTimelineResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.JobServiceGrpc;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.KillJobRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.job.KillJobResponse;
@@ -87,5 +89,17 @@ public final class JobServiceGrpcImpl extends JobServiceGrpc.JobServiceImplBase 
         executor,
         JobServiceGrpc.getServiceDescriptor(),
         JobServiceGrpc.getGetJobFileMethod());
+  }
+
+  @Override
+  public void getJobTimeline(
+      GetJobTimelineRequest request, StreamObserver<GetJobTimelineResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        logic::getJobTimeline,
+        executor,
+        JobServiceGrpc.getServiceDescriptor(),
+        JobServiceGrpc.getGetJobTimelineMethod());
   }
 }
