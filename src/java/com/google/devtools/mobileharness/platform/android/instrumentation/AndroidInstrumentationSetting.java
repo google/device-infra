@@ -49,7 +49,8 @@ public abstract class AndroidInstrumentationSetting {
         noIsolatedStorage,
         useTestStorageService,
         enableCoverage,
-        /* useOrchestrator= */ false);
+        /* useOrchestrator= */ false,
+        /* instrumentInPrivateComputeCore= */ false);
   }
 
   public static AndroidInstrumentationSetting create(
@@ -63,7 +64,8 @@ public abstract class AndroidInstrumentationSetting {
       boolean noIsolatedStorage,
       boolean useTestStorageService,
       boolean enableCoverage,
-      boolean useOrchestrator) {
+      boolean useOrchestrator,
+      boolean instrumentInPrivateComputeCore) {
     return new AutoValue_AndroidInstrumentationSetting(
         checkNotNull(packageName),
         checkNotNull(runnerName),
@@ -75,7 +77,8 @@ public abstract class AndroidInstrumentationSetting {
         noIsolatedStorage,
         useTestStorageService,
         enableCoverage,
-        useOrchestrator);
+        useOrchestrator,
+        instrumentInPrivateComputeCore);
   }
 
   /** The Android package name of the test package. */
@@ -115,4 +118,7 @@ public abstract class AndroidInstrumentationSetting {
 
   /** Whether to use orchestrator to run tests. */
   public abstract boolean useOrchestrator();
+
+  /** Whether to run instrumentation in the Private Compute Core sandbox. */
+  public abstract boolean instrumentInPrivateComputeCore();
 }
