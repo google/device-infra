@@ -72,7 +72,7 @@ public final class AndroidVideoDecoratorTest {
   private static final String DEVICE_ID = "localhost:12345";
   private static final String TEST_ID = "fake_test_id";
   private static final Duration REMAINING_TIME = Duration.ofMinutes(30);
-  private static final String SCREENSHOT_FILE = "screenshots/screenshot_00000001.png";
+  private static final String SCREENSHOT_FILE = "screenshots/screenshot_00000001.jpg";
   private static final String EMULATOR_VIDEO_FILE = "emulator_video_1.webm";
 
   private static final AndroidVideoDecoratorSpec DEFAULT_SPEC =
@@ -299,7 +299,7 @@ public final class AndroidVideoDecoratorTest {
 
     VideoOutput videoOutput = readVideoOutput();
     assertThat(videoOutput.getVideoType()).isEqualTo(VideoOutput.VideoType.STITCHED_SCREENSHOTS);
-    assertThat(videoOutput.getContainerFormat()).isEqualTo(VideoOutput.ContainerFormat.PNG);
+    assertThat(videoOutput.getContainerFormat()).isEqualTo(VideoOutput.ContainerFormat.JPEG);
     assertThat(videoOutput.getGeneratedFileNamesList()).containsExactly(SCREENSHOT_FILE);
   }
 
@@ -413,7 +413,7 @@ public final class AndroidVideoDecoratorTest {
     verify(screenrecord, never()).stop();
     VideoOutput videoOutput = readVideoOutput();
     assertThat(videoOutput.getVideoType()).isEqualTo(VideoOutput.VideoType.STITCHED_SCREENSHOTS);
-    assertThat(videoOutput.getContainerFormat()).isEqualTo(VideoOutput.ContainerFormat.PNG);
+    assertThat(videoOutput.getContainerFormat()).isEqualTo(VideoOutput.ContainerFormat.JPEG);
   }
 
   @Test
