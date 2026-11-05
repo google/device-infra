@@ -53,6 +53,7 @@ import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestIn
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.DeviceInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.command.parser.CommandLineParser;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetailOrBuilder;
@@ -998,14 +999,19 @@ final class NewMultiCommandRequestHandler {
       long failedModuleCount =
           (long) processResult.get().getSummary().getModulesTotal()
               - processResult.get().getSummary().getModulesDone();
+      // Sum total_tests across non-skipped modules rather than passed + failed from Summary, which
+      // omits non-pass/non-fail statuses (e.g., ASSUMPTION_FAILURE and IGNORED).
+      long totalTestCount =
+          processResult.get().getModuleInfoList().stream()
+              .filter(not(Module::getSkipped))
+              .mapToLong(Module::getTotalTests)
+              .sum();
       commandDetailBuilder
           .setPassedTestCount(processResult.get().getSummary().getPassed())
           .setFailedTestCount(processResult.get().getSummary().getFailed())
           .setTotalModuleCount(processResult.get().getSummary().getModulesTotal())
           .setFailedModuleCount(failedModuleCount)
-          .setTotalTestCount(
-              commandDetailBuilder.getPassedTestCount()
-                  + commandDetailBuilder.getFailedTestCount());
+          .setTotalTestCount(totalTestCount);
     }
     Path resultZip = outputDirPath.resolve(resultDirectoryName + ".zip");
     if (localFileUtil.isFileExist(resultZip)) {

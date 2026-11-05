@@ -49,6 +49,8 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUt
 import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
 import com.google.devtools.mobileharness.infra.ats.common.proto.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
@@ -1329,7 +1331,7 @@ public final class NewMultiCommandRequestHandlerTest {
                     .setModulesDone(1)
                     .build())
             .addModuleInfo(
-                ReportProto.Module.newBuilder().setName("module1").setFailedTests(0).build())
+                Module.newBuilder().setName("module1").setTotalTests(10).setFailedTests(0).build())
             .build();
     request = request.toBuilder().setRetryPreviousSessionId("prev_session_id").build();
     mockProcessResult(result);
@@ -1374,8 +1376,9 @@ public final class NewMultiCommandRequestHandlerTest {
                     .setModulesDone(0)
                     .build())
             .addModuleInfo(
-                ReportProto.Module.newBuilder()
+                Module.newBuilder()
                     .setName("module1")
+                    .setTotalTests(10)
                     .setFailedTests(5)
                     .setReason(ReportProto.Reason.newBuilder().setMsg("error message").build())
                     .build())
@@ -1395,6 +1398,47 @@ public final class NewMultiCommandRequestHandlerTest {
     String commandId =
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
     assertThat(commandDetail.getId()).isEqualTo(commandId);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
+  }
+
+  @Test
+  public void handleResultProcessing_totalTestCount_sumsNonSkippedModuleTotalTests()
+      throws Exception {
+    setUpPassingJobAndTestResults();
+    // Module total_tests (12 + 3 = 15) exceeds Summary passed + failed (8 + 2 = 10) due to
+    // non-pass/non-fail tests (e.g., ASSUMPTION_FAILURE, IGNORED).
+    ReportProto.Result result =
+        ReportProto.Result.newBuilder()
+            .setSummary(
+                Summary.newBuilder()
+                    .setPassed(8)
+                    .setFailed(2)
+                    .setModulesTotal(2)
+                    .setModulesDone(2)
+                    .build())
+            .addModuleInfo(
+                Module.newBuilder().setName("module1").setTotalTests(12).setFailedTests(2).build())
+            .addModuleInfo(
+                Module.newBuilder().setName("module2").setTotalTests(3).setFailedTests(0).build())
+            .addModuleInfo(
+                Module.newBuilder()
+                    .setName("skipped_module")
+                    .setSkipped(true)
+                    .setTotalTests(5)
+                    .build())
+            .build();
+
+    mockProcessResult(result);
+    HandleResultProcessingResult handleResultProcessingResult =
+        createJobAndHandleResultProcessing(request);
+
+    assertThat(handleResultProcessingResult.commandDetails()).hasSize(1);
+    CommandDetail commandDetail =
+        handleResultProcessingResult.commandDetails().values().iterator().next();
+    assertThat(commandDetail.getPassedTestCount()).isEqualTo(8);
+    assertThat(commandDetail.getFailedTestCount()).isEqualTo(2);
+    assertThat(commandDetail.getTotalTestCount()).isEqualTo(15);
+    assertThat(commandDetail.getFailedModuleCount()).isEqualTo(0);
     assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
   }
 
