@@ -70,6 +70,7 @@ public final class DeviceConfigServiceImpl {
   }
 
   public UpdateDeviceConfigsResponse updateDeviceConfigs(UpdateDeviceConfigsRequest request) {
+    UpdateDeviceConfigsResponse.Builder responseBuilder = UpdateDeviceConfigsResponse.newBuilder();
     for (DeviceLocatorConfigPair deviceLocatorConfigPair : request.getDeviceLocatorConfigList()) {
       String deviceUuid = deviceLocatorConfigPair.getDeviceLocator().getDeviceUuid();
       if (deviceUuid.isEmpty()) {
@@ -77,26 +78,42 @@ public final class DeviceConfigServiceImpl {
       }
 
       DeviceConfig deviceConfig = deviceLocatorConfigPair.getDeviceConfig();
+      if (deviceConfig.getUuid().isEmpty()) {
+        deviceConfig = deviceConfig.toBuilder().setUuid(deviceUuid).build();
+      } else if (!deviceConfig.getUuid().equals(deviceUuid)) {
+        String errorMessage =
+            String.format(
+                "DeviceLocator UUID %s does not match DeviceConfig UUID %s",
+                deviceUuid, deviceConfig.getUuid());
+        logger.atWarning().log("%s", errorMessage);
+        responseBuilder.putErrorMessage(deviceUuid, errorMessage);
+        continue;
+      }
       try {
         storageClient.upsertDeviceConfig(deviceConfig);
       } catch (MobileHarnessException e) {
         logger.atWarning().withCause(e).log(
             "Failed to update device config for device %s", deviceUuid);
+        responseBuilder.putErrorMessage(
+            deviceUuid, e.getMessage() != null ? e.getMessage() : e.getErrorId().name());
       }
     }
-    return UpdateDeviceConfigsResponse.getDefaultInstance();
+    return responseBuilder.build();
   }
 
   public DeleteDeviceConfigsResponse deleteDeviceConfigs(DeleteDeviceConfigsRequest request) {
+    DeleteDeviceConfigsResponse.Builder responseBuilder = DeleteDeviceConfigsResponse.newBuilder();
     for (String deviceUuid : request.getDeviceUuidList()) {
       try {
         storageClient.deleteDeviceConfig(deviceUuid);
       } catch (MobileHarnessException e) {
         logger.atWarning().withCause(e).log(
             "Failed to delete device config for device %s", deviceUuid);
+        responseBuilder.putErrorMessage(
+            deviceUuid, e.getMessage() != null ? e.getMessage() : e.getErrorId().name());
       }
     }
-    return DeleteDeviceConfigsResponse.getDefaultInstance();
+    return responseBuilder.build();
   }
 
   public GetLabConfigResponse getLabConfig(GetLabConfigRequest request) {
