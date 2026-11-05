@@ -46,10 +46,12 @@ import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import com.sun.management.OperatingSystemMXBean;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
+import java.lang.management.RuntimeMXBean;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -1404,6 +1406,24 @@ public class SystemUtil {
         .orElse(0L);
   }
 
+  /**
+   * Gets the start time of the current JVM process, or empty if it is unavailable.
+   *
+   * <p>It only reads a value cached by the JVM, so it does not block.
+   */
+  public Optional<Instant> getProcessStartTime() {
+    return getRuntimeMxBean().map(bean -> Instant.ofEpochMilli(bean.getStartTime()));
+  }
+
+  /**
+   * Gets the uptime of the current JVM process, or empty if it is unavailable.
+   *
+   * <p>It only reads values cached by the JVM, so it does not block.
+   */
+  public Optional<Duration> getProcessUptime() {
+    return getRuntimeMxBean().map(bean -> Duration.ofMillis(bean.getUptime()));
+  }
+
   private static Optional<OperatingSystemMXBean> getOperatingSystemMxBean() {
     try {
       return Optional.of((OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean());
@@ -1415,6 +1435,14 @@ public class SystemUtil {
   private static Optional<MemoryMXBean> getMemoryMxBean() {
     try {
       return Optional.of(ManagementFactory.getMemoryMXBean());
+    } catch (RuntimeException | Error e) {
+      return Optional.empty();
+    }
+  }
+
+  private static Optional<RuntimeMXBean> getRuntimeMxBean() {
+    try {
+      return Optional.of(ManagementFactory.getRuntimeMXBean());
     } catch (RuntimeException | Error e) {
       return Optional.empty();
     }
