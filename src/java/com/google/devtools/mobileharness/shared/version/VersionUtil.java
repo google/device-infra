@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.shared.version;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.io.CharStreams;
@@ -48,6 +49,42 @@ public class VersionUtil {
    */
   public static Optional<BuildVersion> getBuildVersion() {
     return BUILD_VERSION_SUPPLIER.get();
+  }
+
+  /**
+   * Returns a one-line version string of the lab version and the {@link BuildVersion} of the jar,
+   * like:
+   *
+   * <pre>{@code
+   * lab-4.268.0 cl/761411824 kokoro-1148 branch-main github-fece030c657cddecc2cf7a122aa1fc4976dfed9c
+   * }</pre>
+   *
+   * <p>Fields of {@link BuildVersion} which are not set (or the whole {@link BuildVersion} if it is
+   * absent) are omitted, e.g., "{@code lab-4.268.0}" for a jar built locally.
+   */
+  public static String getVersionString() {
+    return formatVersionString(Version.LAB_VERSION, getBuildVersion());
+  }
+
+  @VisibleForTesting
+  static String formatVersionString(Version labVersion, Optional<BuildVersion> buildVersion) {
+    StringBuilder result = new StringBuilder("lab-").append(labVersion);
+    buildVersion.ifPresent(
+        version -> {
+          if (version.getGoogleVersion() != 0L) {
+            result.append(" cl/").append(version.getGoogleVersion());
+          }
+          if (version.getKokoroBuild() != 0L) {
+            result.append(" kokoro-").append(version.getKokoroBuild());
+          }
+          if (!version.getGithubBranch().isEmpty()) {
+            result.append(" branch-").append(version.getGithubBranch());
+          }
+          if (!version.getGithubVersion().isEmpty()) {
+            result.append(" github-").append(version.getGithubVersion());
+          }
+        });
+    return result.toString();
   }
 
   private static Optional<BuildVersion> doGetBuildVersion() {

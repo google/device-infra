@@ -82,6 +82,7 @@ import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.Tokenizati
 import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager;
 import com.google.devtools.mobileharness.shared.util.system.ShutdownHookManager.Priority;
 import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter;
+import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter.Mode;
 import com.google.devtools.mobileharness.shared.util.system.SystemPropertiesUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
@@ -287,7 +288,7 @@ public class AtsConsole {
     // Logs flags.
     logger.atInfo().with(IMPORTANCE, DEBUG).log("ATS console ID: %s", clientId);
     logger.atInfo().with(IMPORTANCE, DEBUG).log("Flags: %s", deviceInfraServiceFlags.flags());
-    systemInfoPrinter.printSystemInfo(DEBUG);
+    systemInfoPrinter.printSystemInfo(DEBUG, Mode.FULL);
 
     // Prints version information.
     consoleUtil.printlnStdout(versionMessageUtil.getVersionMessage());
