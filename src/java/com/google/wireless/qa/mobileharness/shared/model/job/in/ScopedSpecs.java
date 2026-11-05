@@ -21,7 +21,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.job.in.Files.FileInfo;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -40,8 +39,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.spec.JobSpec;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
 
 /** Scoped specs. Users could store same tags with different values under different namespace. */
@@ -59,13 +56,6 @@ public class ScopedSpecs implements JobSpecWrapper {
    */
   private final Map<String, JsonObject> specs =
       Collections.synchronizedMap(new HashMap<String, JsonObject>());
-
-  /**
-   * Transient in-memory metadata of resolved files in {@link #specs}, keyed by {@link
-   * FileInfo#path()}. Omitted from JSON serialization, {@link #equals}, and {@link #hashCode}, and
-   * retained across namespace additions.
-   */
-  private final Map<String, FileInfo> fileInfos = new ConcurrentHashMap<>();
 
   /** The time records. */
   @Nullable private final Timing timing;
@@ -268,26 +258,6 @@ public class ScopedSpecs implements JobSpecWrapper {
       files.put(FILE_TAG_PREFIX + file, file);
     }
     return files;
-  }
-
-  /**
-   * Adds transient in-memory metadata of resolved files in this scoped specs, indexed by {@link
-   * FileInfo#path()}.
-   */
-  @CanIgnoreReturnValue
-  public ScopedSpecs addFileInfos(Iterable<FileInfo> fileInfos) {
-    for (FileInfo fileInfo : fileInfos) {
-      this.fileInfos.put(fileInfo.path(), fileInfo);
-    }
-    return this;
-  }
-
-  /**
-   * Gets transient in-memory metadata of a resolved file in this scoped specs by its path, if
-   * recorded.
-   */
-  public Optional<FileInfo> getFileInfo(String path) {
-    return Optional.ofNullable(fileInfos.get(path));
   }
 
   /** Deep copy json object {@code object}. */
