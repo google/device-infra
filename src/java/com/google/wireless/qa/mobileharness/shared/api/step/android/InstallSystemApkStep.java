@@ -22,6 +22,7 @@ import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
+import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConnectionState;
@@ -41,6 +42,9 @@ import java.util.List;
 public class InstallSystemApkStep {
 
   private final AndroidSystemStateUtil systemStateUtil;
+
+  /** Class to manage system state (e.g., root) of Android device with device cache handled. */
+  private final SystemStateManager systemStateManager;
 
   /** Class to configure system setting on Android device. */
   private final AndroidSystemSettingUtil systemSettingUtil;
@@ -89,8 +93,23 @@ public class InstallSystemApkStep {
     NONE,
   }
 
+  /** Creates an {@code InstallSystemApkStep} with default dependencies. */
+  public static InstallSystemApkStep create() {
+    return new InstallSystemApkStep(
+        new AndroidSystemStateUtil(),
+        new SystemStateManager(),
+        new AndroidSystemSettingUtil(),
+        new AndroidSystemSpecUtil(),
+        new AndroidFileUtil(),
+        new AndroidPackageManagerUtil(),
+        new AndroidProcessUtil(),
+        new Aapt(),
+        new AndroidUserUtil());
+  }
+
   public InstallSystemApkStep(
       AndroidSystemStateUtil systemStateUtil,
+      SystemStateManager systemStateManager,
       AndroidSystemSettingUtil systemSettingUtil,
       AndroidSystemSpecUtil systemSpectUtil,
       AndroidFileUtil fileUtil,
@@ -99,6 +118,7 @@ public class InstallSystemApkStep {
       Aapt aapt,
       AndroidUserUtil userUtil) {
     this.systemStateUtil = systemStateUtil;
+    this.systemStateManager = systemStateManager;
     this.systemSettingUtil = systemSettingUtil;
     this.systemSpecUtil = systemSpectUtil;
     this.fileUtil = fileUtil;
@@ -345,6 +365,19 @@ public class InstallSystemApkStep {
   @VisibleForTesting
   void disableCheckAndRemount(String deviceId, String deviceClassName)
       throws MobileHarnessException, InterruptedException {
+    // Both disabling dm-verity and remounting require adbd to run as root. adbd may be unrooted,
+    // e.g., if a previous test rebooted the device, so make sure it runs as root first.
+    if (!systemStateManager.becomeRoot(deviceId, deviceClassName)) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_INSTALL_SYSTEM_APK_BECOME_ROOT_ERROR,
+          String.format(
+              "Failed to make adbd run as root on device %s, which is required to disable"
+                  + " dm-verity and remount the system partition. Make sure the device is a"
+                  + " rootable userdebug device and the lab server doesn't set"
+                  + " --enable_root_device=false.",
+              deviceId));
+    }
+
     logger.atInfo().log("Disabling dm-verity checking.");
     // Disable verity.  This was added in Lollipop 5.1 (22).
     // No need to disable Goldfish emulator verity as they come with verity disabled(b/123670720)
