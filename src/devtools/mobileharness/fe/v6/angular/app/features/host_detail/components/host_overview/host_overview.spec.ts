@@ -721,6 +721,17 @@ describe('HostOverview Component', () => {
     expect(component.expandedElement()).toBeNull();
   });
 
+  it('defaults deviceDataSource.data to empty array when getHostDeviceSummaries omits deviceSummaries', () => {
+    spyOn(hostService, 'getHostDeviceSummaries').and.returnValue(
+      of({} as {deviceSummaries: DeviceSummary[]}),
+    );
+
+    component.loadDevices();
+
+    expect(component.deviceDataSource.data).toEqual([]);
+    expect(component.isDeviceLoading()).toBeFalse();
+  });
+
   it('renders Title Case headers and version-info icons with DEVICE_VERSION_DESCRIPTION in device and sub-device tables', () => {
     const testbedDevice = {
       id: 'testbed-1',

@@ -323,7 +323,13 @@ export class BulkConfigDimensionDialog {
           fleet: this.dialogData.fleet,
         }),
       (res) => {
-        this.candidateKeys.set(res.candidateKeys ?? []);
+        this.candidateKeys.set(
+          (res.candidateKeys ?? []).map((k) => ({
+            ...k,
+            selectedDeviceCount: k.selectedDeviceCount ?? 0,
+            fleetDeviceCount: k.fleetDeviceCount ?? 0,
+          })),
+        );
         this.systemDimensionNames.set(
           new Set(res.systemDimensionNames?.map((s) => s.toLowerCase())),
         );
@@ -395,7 +401,11 @@ export class BulkConfigDimensionDialog {
           fleet: this.dialogData.fleet,
         }),
       (suggestions) => {
-        const rows = [...(suggestions.candidateValues ?? [])];
+        const rows = (suggestions.candidateValues ?? []).map((s) => ({
+          ...s,
+          values: s.values ?? [],
+          deviceCount: s.deviceCount ?? 0,
+        }));
         rows.sort((a, b) => (b.deviceCount ?? 0) - (a.deviceCount ?? 0));
         this.candidateValues.set(rows);
       },

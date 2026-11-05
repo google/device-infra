@@ -30,10 +30,13 @@ export function extractDeviceTarget(
 export function getDeviceTargetKey(
   item: DeviceTarget | Pick<Row, 'id' | 'cells'>,
 ): string {
-  const target =
-    (item as DeviceTarget).deviceId !== undefined
-      ? (item as DeviceTarget)
-      : extractDeviceTarget(item as Pick<Row, 'id' | 'cells'>);
+  const target: DeviceTarget =
+    'id' in item || 'cells' in item
+      ? extractDeviceTarget(item as Pick<Row, 'id' | 'cells'>)
+      : {
+          ...(item as DeviceTarget),
+          deviceId: (item as DeviceTarget).deviceId ?? '',
+        };
   return target.hostName
     ? `${target.deviceId}@@${target.hostName}`
     : target.deviceId;
@@ -46,11 +49,11 @@ export function formatDeviceCount(count: number): string {
 
 /** Formats badge text indicating how many selected devices currently use a configuration. */
 export function formatCurrentSelectionBadge(
-  count: number,
+  count: number | undefined,
   totalSelected: number,
   prefix: 'Current on' | 'Configured on' = 'Current on',
 ): string | null {
-  if (count <= 0) return null;
+  if (!count || count <= 0) return null;
   if (count === totalSelected && totalSelected > 1) {
     return `${prefix} all ${totalSelected} selected`;
   }

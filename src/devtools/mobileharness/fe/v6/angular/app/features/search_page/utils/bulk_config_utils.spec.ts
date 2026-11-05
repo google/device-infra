@@ -77,6 +77,12 @@ describe('bulk_config_utils', () => {
       expect(getDeviceTargetKey(emptyIdRow)).toBe(
         '@@host-empty-uuid.example.com',
       );
+      expect(
+        getDeviceTargetKey({
+          deviceId: undefined as unknown as string,
+          hostName: 'host-empty-uuid.example.com',
+        }),
+      ).toBe('@@host-empty-uuid.example.com');
     });
   });
 
@@ -89,7 +95,8 @@ describe('bulk_config_utils', () => {
   });
 
   describe('formatCurrentSelectionBadge', () => {
-    it('returns null when count is 0 or negative', () => {
+    it('returns null when count is undefined, 0, or negative', () => {
+      expect(formatCurrentSelectionBadge(undefined, 3)).toBeNull();
       expect(formatCurrentSelectionBadge(0, 3)).toBeNull();
       expect(formatCurrentSelectionBadge(-1, 3)).toBeNull();
     });

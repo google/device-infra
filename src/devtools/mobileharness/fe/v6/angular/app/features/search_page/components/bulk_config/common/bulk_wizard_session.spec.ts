@@ -41,7 +41,7 @@ describe('useBulkWizardSession', () => {
               DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_ALREADY_MATCHES,
           },
           {
-            deviceId: 'd3',
+            deviceId: undefined as unknown as string,
             status:
               DeviceConfigChangeStatus.DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY,
           },
@@ -53,6 +53,7 @@ describe('useBulkWizardSession', () => {
     expect(session.phase()).toBe('review');
     expect(session.viewMode()).toBe('review');
     expect(session.stepError()).toBeNull();
+    expect(session.reviewEntries()[2].deviceId).toBe('');
     expect(session.reviewSummary().willUpdateCount).toBe(1);
     expect(session.reviewSummary().alreadyMatchCount).toBe(1);
     expect(session.reviewSummary().readOnlyCount).toBe(1);

@@ -14,15 +14,15 @@ import {
  */
 export function calcUtilizationMetrics(
   utilization?: DeviceUtilization,
-  totalDevices?: number,
+  totalDevices?: number | string,
 ): UtilizationMetrics {
   if (!utilization) {
     return EMPTY_UTILIZATION_METRICS;
   }
-  const busy = utilization.busy?.count ?? 0;
-  const idle = utilization.idle?.count ?? 0;
-  const others = utilization.others?.count ?? 0;
-  const effectiveTotal = totalDevices ?? busy + idle + others;
+  const busy = Number(utilization.busy?.count ?? 0);
+  const idle = Number(utilization.idle?.count ?? 0);
+  const others = Number(utilization.others?.count ?? 0);
+  const effectiveTotal = Number(totalDevices ?? busy + idle + others);
   if (effectiveTotal <= 0) {
     return EMPTY_UTILIZATION_METRICS;
   }

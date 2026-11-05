@@ -144,16 +144,33 @@ describe('TestLogTab Component', () => {
       mockTestService.getTestLog.and.returnValue(
         of({
           logContent: 'Sub-test finished line',
-          nextOffset: 39,
+          nextOffset: '39' as unknown as number,
           testStatus: TestStatus.TEST_STATUS_DONE,
           logReset: false,
           contentHash: 'hash-sub-done',
         }),
       );
+      let nextOffsetResult: number | undefined;
       subComponent.logStrategy(17, 'hash-sub').subscribe((res) => {
         isDoneResult = res.isDone;
+        nextOffsetResult = res.offset;
       });
       expect(isDoneResult).toBeTrue();
+      expect(nextOffsetResult).toBe(39);
+
+      mockTestService.getTestLog.and.returnValue(
+        of({
+          logContent: '',
+          nextOffset: undefined as unknown as number,
+          testStatus: TestStatus.TEST_STATUS_DONE,
+          logReset: false,
+          contentHash: 'hash-sub-empty',
+        }),
+      );
+      subComponent.logStrategy(0, undefined).subscribe((res) => {
+        nextOffsetResult = res.offset;
+      });
+      expect(nextOffsetResult).toBe(0);
     });
   });
 

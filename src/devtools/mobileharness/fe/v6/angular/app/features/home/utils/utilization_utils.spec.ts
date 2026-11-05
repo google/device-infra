@@ -58,6 +58,29 @@ describe('utilization_utils', () => {
       expect(metrics.othersPct).toBe(34);
       expect(metrics.busyPct + metrics.idlePct + metrics.othersPct).toBe(100);
     });
+
+    it('coerces proto3 int64 string counts (including "0") for sum and locale formatting', () => {
+      const mockUtil = {
+        busy: {count: '0'},
+        idle: {count: '1500'},
+        others: {count: '500'},
+      } as unknown as DeviceUtilization;
+      const metrics = calcUtilizationMetrics(mockUtil);
+
+      expect(metrics.busyPct).toBe(0);
+      expect(metrics.idlePct).toBe(75);
+      expect(metrics.othersPct).toBe(25);
+      expect(metrics.busyTooltip).toBe('0 (0%) devices are used by customers.');
+      expect(metrics.idleTooltip).toBe('1,500 (75%) devices are available.');
+      expect(metrics.othersTooltip).toBe(
+        '500 (25%) devices are out of service (e.g., in maintenance).',
+      );
+
+      const metricsWithStringTotal = calcUtilizationMetrics(mockUtil, '2000');
+      expect(metricsWithStringTotal.busyPct).toBe(0);
+      expect(metricsWithStringTotal.idlePct).toBe(75);
+      expect(metricsWithStringTotal.othersPct).toBe(25);
+    });
   });
 
   describe('getIdleLeftStyle', () => {
