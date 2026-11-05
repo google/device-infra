@@ -31,8 +31,10 @@ import com.google.devtools.mobileharness.fe.v6.service.device.handlers.OssTestbe
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.PrepareDeviceActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.ScreenshotActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.TestbedConfigBuilder;
+import com.google.devtools.mobileharness.fe.v6.service.device.provider.DeviceEventsProvider;
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.DeviceOpsStubProvider;
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.DeviceTestHistoryProvider;
+import com.google.devtools.mobileharness.fe.v6.service.device.provider.NoOpDeviceEventsProvider;
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.NoOpDeviceOpsStubProvider;
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.NoOpDeviceTestHistoryProvider;
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.NoOpRunningTestInfoProvider;
@@ -157,6 +159,7 @@ public final class OssStubsModule extends AbstractModule {
     bind(DeviceTestHistoryProvider.class)
         .to(NoOpDeviceTestHistoryProvider.class)
         .in(Singleton.class);
+    bind(DeviceEventsProvider.class).to(NoOpDeviceEventsProvider.class).in(Singleton.class);
     bind(RemoteControlUrlBuilder.class).to(NoOpRemoteControlUrlBuilder.class);
     bind(ScreenshotActionHelper.class).to(NoOpScreenshotActionHelper.class).in(Singleton.class);
     bind(PrepareDeviceActionHelper.class)
