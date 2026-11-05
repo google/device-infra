@@ -16,16 +16,12 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.util.version;
 
-import com.google.common.base.Strings;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.TestSuiteInfo;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfoProvider;
-import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.VersionUtil;
-import com.google.devtools.mobileharness.shared.version.proto.VersionProto.BuildVersion;
 import java.nio.file.Path;
-import java.util.Optional;
 import javax.inject.Inject;
 
 /** Utility for getting version information. */
@@ -58,39 +54,11 @@ public class VersionMessageUtil {
         TestSuiteInfoProvider.getTestSuiteInfo(xtsRootDir.toString(), xtsType);
     String buildNumber =
         versionParser.fetchVersion(testSuiteInfo).orElseGet(testSuiteInfo::getBuildNumber);
-    String labVersion = Version.LAB_VERSION.toString();
-
-    Optional<BuildVersion> buildVersion = VersionUtil.getBuildVersion();
     return String.format(
-        "Android %s %s (%s)\nOmniLab lab-%s%s%s%s%s",
+        "Android %s %s (%s)\nOmniLab %s",
         testSuiteInfo.getFullname(),
         testSuiteInfo.getVersion(),
         buildNumber,
-        labVersion,
-        buildVersion
-            .flatMap(
-                version ->
-                    version.getGoogleVersion() == 0L
-                        ? Optional.empty()
-                        : Optional.of(version.getGoogleVersion()))
-            .map(googleVersion -> String.format(" cl/%s", googleVersion))
-            .orElse(""),
-        buildVersion
-            .flatMap(
-                version ->
-                    version.getKokoroBuild() == 0L
-                        ? Optional.empty()
-                        : Optional.of(version.getKokoroBuild()))
-            .map(kokoroBuildNumber -> String.format(" kokoro-%s", kokoroBuildNumber))
-            .orElse(""),
-        buildVersion
-            .flatMap(version -> Optional.ofNullable(Strings.emptyToNull(version.getGithubBranch())))
-            .map(githubBranch -> String.format(" branch-%s", githubBranch))
-            .orElse(""),
-        buildVersion
-            .flatMap(
-                version -> Optional.ofNullable(Strings.emptyToNull(version.getGithubVersion())))
-            .map(githubVersion -> String.format(" github-%s", githubVersion))
-            .orElse(""));
+        VersionUtil.getVersionString());
   }
 }
