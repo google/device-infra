@@ -62,6 +62,17 @@ public abstract class DeviceInfoSource {
     return new DimensionSource(name);
   }
 
+  /**
+   * A value computed from several typed fields of {@code DeviceInfo}, named by their {@code
+   * DeviceInfoMask} paths. The paths drive the mask and the function reads the value, so every
+   * field the function reads must be among the paths: a field missing from them is absent from
+   * masked pulls, and the function then sees its default value.
+   */
+  public static DeviceInfoSource computed(
+      ImmutableList<String> protoPaths, Function<DeviceInfo, ImmutableList<String>> function) {
+    return new ComputedSource(protoPaths, function);
+  }
+
   private static final class FieldSource extends DeviceInfoSource {
     private final String protoPath;
     private final Function<DeviceInfo, ImmutableList<String>> getter;
@@ -136,6 +147,43 @@ public abstract class DeviceInfoSource {
     @Override
     public int hashCode() {
       return Objects.hashCode(name);
+    }
+  }
+
+  private static final class ComputedSource extends DeviceInfoSource {
+    private final ImmutableList<String> protoPaths;
+    private final Function<DeviceInfo, ImmutableList<String>> function;
+
+    ComputedSource(
+        ImmutableList<String> protoPaths, Function<DeviceInfo, ImmutableList<String>> function) {
+      this.protoPaths = protoPaths;
+      this.function = function;
+    }
+
+    @Override
+    public ImmutableList<String> maskFieldPaths() {
+      return protoPaths;
+    }
+
+    @Override
+    public ImmutableList<String> maskDimensionNames() {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public ImmutableList<String> extract(DeviceInfo deviceInfo) {
+      return function.apply(deviceInfo);
+    }
+
+    @Override
+    public boolean equals(Object other) {
+      return other instanceof ComputedSource that
+          && Objects.equals(this.protoPaths, that.protoPaths);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(protoPaths);
     }
   }
 }

@@ -37,6 +37,7 @@ public final class FleetKeyPriorityTest {
   @Test
   public void devicePriority_tier1AndWifiSsid_isTop() {
     assertThat(priority.devicePriority(DeviceKeys.STATUS)).isEqualTo(3);
+    assertThat(priority.devicePriority(DeviceKeys.HEALTH)).isEqualTo(3);
     assertThat(priority.devicePriority(DeviceKeys.UUID)).isEqualTo(3);
     assertThat(priority.devicePriority(AtsDeviceKeys.WIFI_SSID)).isEqualTo(3);
   }

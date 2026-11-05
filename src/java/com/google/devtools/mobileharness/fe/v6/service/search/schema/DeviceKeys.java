@@ -17,15 +17,16 @@
 package com.google.devtools.mobileharness.fe.v6.service.search.schema;
 
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.fe.v6.service.device.util.DeviceHealth;
 
 /**
  * Standard open-source device key descriptors for MobileHarness device search.
  *
- * <p>Contains Group 1 (Universal Common Device Keys: typed {@code DeviceInfo} fields and core
- * dimensions), the Group 1 host keys projected into device search, and Group 2 (Standalone ATS WiFi
- * SSID). Each device-native key declares its {@code GetLabInfo} device sources, which give both the
- * mask contribution and the raw extraction; WiFi SSID has no source because it is fed by
- * ConfigService.
+ * <p>Contains Group 1 (Universal Common Device Keys: typed {@code DeviceInfo} fields, the device
+ * health computed from them, and core dimensions), the Group 1 host keys projected into device
+ * search, and Group 2 (Standalone ATS WiFi SSID). Each device-native key declares its {@code
+ * GetLabInfo} device sources, which give both the mask contribution and the raw extraction; WiFi
+ * SSID has no source because it is fed by ConfigService.
  *
  * <p>This catalog depends on {@link HostKeys}: a host attribute shown in device search is a
  * projected key ({@link #projectHostKey}) that reuses the host key's id and lab sources, adding
@@ -65,6 +66,27 @@ public final class DeviceKeys {
                   "device_status", d -> ImmutableList.of(d.getDeviceStatus().name())))
           .setDisplay(KeyDisplay.of("Status"))
           .setAliases("device status")
+          .build();
+
+  /**
+   * The device's health title, for example {@code In Service (Idle)} or {@code Needs Manual
+   * Repair}, computed by {@link DeviceHealth} from the fields it names in {@link
+   * DeviceHealth#INPUT_FIELD_PATHS}. Unlike {@link #STATUS}, which is the scheduling state, it says
+   * whether the device can run tests: a device that needs manual repair can still be IDLE.
+   */
+  public static final DeviceKeyDescriptor HEALTH =
+      DeviceKeyDescriptor.builder()
+          .setId(PREFIX_DEVICE_FIELD + "health")
+          .setDeviceInfoSource(
+              DeviceInfoSource.computed(
+                  DeviceHealth.INPUT_FIELD_PATHS,
+                  d -> ImmutableList.of(DeviceHealth.of(d).title())))
+          .setDisplay(
+              KeyDisplay.of("Health")
+                  .withDescription(
+                      "Whether the device can run tests, as its device page shows it: In Service,"
+                          + " In Transition, Auto Recovery, Needs Manual Repair, or Quarantined."))
+          .setAliases("device health")
           .build();
 
   public static final DeviceKeyDescriptor TYPE =
@@ -152,6 +174,7 @@ public final class DeviceKeys {
       ImmutableList.of(
           UUID,
           STATUS,
+          HEALTH,
           TYPE,
           DRIVER,
           DECORATOR,

@@ -22,8 +22,12 @@ import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCondition;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Device.HealthCategory;
+import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask;
@@ -67,6 +71,10 @@ public final class DeviceKeyRegistryTest {
     assertThat(registry.getKey("dimension::carrier").get().isIntComparable()).isFalse();
     assertThat(registry.getKey("device_field::version")).hasValue(DeviceKeys.VERSION);
     assertThat(registry.displayName("device_field::version")).hasValue("Version");
+    assertThat(registry.getKey("device_field::health")).hasValue(DeviceKeys.HEALTH);
+    assertThat(registry.displayName("device_field::health")).hasValue("Health");
+    assertThat(DeviceKeys.HEALTH.isLongTail()).isFalse();
+    assertThat(DeviceKeys.HEALTH.isDimension()).isFalse();
     // Standalone ATS exclusive key.
     assertThat(registry.getKey("device_config::wifi_ssid")).isPresent();
     // Projected common host keys are usable in device search.
@@ -146,13 +154,14 @@ public final class DeviceKeyRegistryTest {
   public void description_isSetOnlyWhereTheValueNeedsExplaining() {
     assertThat(DeviceKeys.VERSION.display().description()).contains("release_version");
     assertThat(DeviceKeys.VERSION.display().description()).contains("software_version");
+    assertThat(DeviceKeys.HEALTH.display().description()).contains("can run tests");
     assertThat(DeviceKeys.SDK_VERSION.display().description()).isEmpty();
     assertThat(DeviceKeys.MODEL.display().description()).isEmpty();
     assertThat(registry.getKey("dimension::carrier").get().display().description()).isEmpty();
   }
 
   @Test
-  public void deriveDeviceInfoMask_unionsCommonSources_excludesOnePAndQuarantine() {
+  public void deriveDeviceInfoMask_unionsCommonSources_excludesOnePKeys() {
     DeviceInfoMask mask = registry.deriveDeviceInfoMask();
     assertThat(mask.getFieldMask().getPathsList())
         .containsAtLeast(
@@ -161,7 +170,10 @@ public final class DeviceKeyRegistryTest {
             "device_feature.type",
             "device_feature.driver",
             "device_feature.decorator",
-            "device_feature.composite_dimension");
+            "device_feature.composite_dimension",
+            // The health key reads the upstream category and the quarantined temp dimension.
+            "health_category",
+            "device_condition");
     assertThat(mask.getSupportedDimensionsMask().getDimensionNamesList())
         .containsAtLeast(
             "model",
@@ -176,10 +188,11 @@ public final class DeviceKeyRegistryTest {
             "battery_level",
             "battery_temperature",
             "hinge_angle");
-    // Quarantine is 1P-only, so OSS does not pull device_condition and never names "quarantined".
-    assertThat(mask.getFieldMask().getPathsList()).doesNotContain("device_condition");
+    // Quarantine is a temp dimension in device_condition, never a composite dimension name.
     assertThat(mask.getSupportedDimensionsMask().getDimensionNamesList())
         .doesNotContain("quarantined");
+    // 1P-only owner and executor fields are not pulled in OSS.
+    assertThat(mask.getFieldMask().getPathsList()).doesNotContain("device_feature.owner");
     // Host paths belong to the LabInfoMask.
     assertThat(mask.getFieldMask().getPathsList()).doesNotContain("lab_locator.host_name");
     assertMaskPathsExist(DeviceInfo.getDescriptor(), mask.getFieldMask());
@@ -211,6 +224,39 @@ public final class DeviceKeyRegistryTest {
             .build();
     DeviceInfoSource modelSource = DeviceKeys.MODEL.deviceInfoSources().get(0);
     assertThat(modelSource.extract(deviceInfo)).containsExactly("Pixel 8");
+  }
+
+  @Test
+  public void healthSource_extractsTheDeviceHealthTitleFromTheFieldsItMasks() {
+    DeviceInfoSource healthSource = DeviceKeys.HEALTH.deviceInfoSources().get(0);
+    DeviceInfo normalLookingIdle =
+        DeviceInfo.newBuilder()
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
+            .build();
+    DeviceInfo needsRepairUpstream =
+        normalLookingIdle.toBuilder()
+            .setHealthCategory(HealthCategory.HEALTH_CATEGORY_NEED_MANUAL_REPAIR)
+            .build();
+    DeviceInfo quarantinedIdle =
+        normalLookingIdle.toBuilder()
+            .setDeviceCondition(
+                DeviceCondition.newBuilder()
+                    .addTempDimension(
+                        TempDimension.newBuilder()
+                            .setDimension(
+                                DeviceDimension.newBuilder()
+                                    .setName("quarantined")
+                                    .setValue("true"))))
+            .build();
+
+    assertThat(healthSource.extract(normalLookingIdle)).containsExactly("In Service (Idle)");
+    assertThat(healthSource.extract(needsRepairUpstream)).containsExactly("Needs Manual Repair");
+    assertThat(healthSource.extract(quarantinedIdle)).containsExactly("Quarantined");
+    assertThat(healthSource.maskFieldPaths())
+        .containsExactly(
+            "device_status", "device_feature.type", "health_category", "device_condition");
+    assertThat(healthSource.maskDimensionNames()).isEmpty();
   }
 
   @Test

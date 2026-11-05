@@ -91,7 +91,11 @@ public final class FleetFilterKeyCatalogerTest {
     FleetFilterKeySection builtin = section(response, "Built-in fields");
     assertThat(builtin.getTotalAvailable()).isEqualTo(0);
     assertThat(keys(builtin))
-        .containsExactly("device_field::status", "device_field::type", "device_field::uuid")
+        .containsExactly(
+            "device_field::health",
+            "device_field::status",
+            "device_field::type",
+            "device_field::uuid")
         .inOrder();
 
     FleetFilterKeySection hostBuiltin = section(response, "Built-in fields from connected host");

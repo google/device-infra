@@ -63,6 +63,7 @@ java_library(
         ":device_info_source",
         ":host_keys",
         ":key_descriptor",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/util:device_health",
         "@maven//:com_google_guava_guava",
     ],
 )

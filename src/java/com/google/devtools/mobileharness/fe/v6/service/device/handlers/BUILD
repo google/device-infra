@@ -49,6 +49,7 @@ java_library(
         "//src/devtools/mobileharness/infra/master/rpc/proto:job_sync_service_java_proto",
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/provider",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/util:device_health",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:config_result",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/shared/providers:configuration_provider",

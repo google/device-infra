@@ -20,15 +20,13 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.joining;
 
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.HealthCategory;
-import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.RunningTestInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.device.provider.RunningTestInfoProvider.RunningTestInfo;
+import com.google.devtools.mobileharness.fe.v6.service.device.util.DeviceHealth;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.DeviceType;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo;
 import com.google.devtools.mobileharness.fe.v6.service.proto.device.HealthAndActivityInfo.CurrentTask;
@@ -39,7 +37,6 @@ import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Timestamps;
 import java.time.Duration;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
@@ -50,10 +47,12 @@ import javax.inject.Inject;
 /**
  * Builder for the {@link HealthAndActivityInfo} proto.
  *
- * <p>Classifies a device into one of the four standard health categories (In Service, In
- * Transition, Auto Recovery, Needs Manual Repair), plus a Quarantined special case. The category is
- * not exposed on the wire: it is surfaced to the frontend through the {@code title} text and a
- * presentation-only {@link UiState}, per the FE v6 BFF principle.
+ * <p>Renders the health that {@link DeviceHealth} classifies: one of the four standard health
+ * categories (In Service, In Transition, Auto Recovery, Needs Manual Repair), plus a Quarantined
+ * special case. The category is not exposed on the wire: it is surfaced to the frontend through the
+ * {@code title} text and a presentation-only {@link UiState}, per the FE v6 BFF principle. The
+ * title is {@link DeviceHealth#title()}, which is also the value of the {@code
+ * device_field::health} fleet search key, so the device page and fleet search always agree.
  *
  * <p>During the frontend/backend release transition the builder also dual-writes the transitional
  * {@code state} ({@link HealthState}) so a frontend on the other side of a skew window still
@@ -65,26 +64,6 @@ public final class HealthAndActivityBuilder {
 
   /** Timeout for the MOSS running-test lookup (best-effort, non-blocking for the page). */
   private static final Duration MOSS_LOOKUP_TIMEOUT = Duration.ofSeconds(5);
-
-  /** Device type substrings that indicate the device is in a bad state. Device-family-agnostic. */
-  private static final ImmutableSet<String> ABNORMAL_TYPE_KEYWORDS =
-      ImmutableSet.of(
-          "FAILED",
-          "ABNORMAL",
-          "DISCONNECTED",
-          "OFFLINE",
-          "UNAUTHORIZED",
-          "FASTBOOT",
-          "FASTBOOTDMODE");
-
-  /** Statuses in which the device is temporarily unavailable but expected to self-recover. */
-  private static final ImmutableSet<String> TRANSIT_STATUSES =
-      ImmutableSet.of(
-          DeviceStatus.INIT.name(),
-          DeviceStatus.PREPPING.name(),
-          DeviceStatus.LAMEDUCK.name(),
-          DeviceStatus.DIRTY.name(),
-          DeviceStatus.DYING.name());
 
   private final RunningTestInfoProvider runningTestInfoProvider;
 
@@ -101,14 +80,6 @@ public final class HealthAndActivityBuilder {
     String status = deviceInfo.getDeviceStatus().toString();
     List<String> types = deviceInfo.getDeviceFeature().getTypeList();
     Timestamp lastInServiceTime = deviceInfo.getDeviceCondition().getLastHealthyTime();
-    List<TempDimension> tempDimensions = deviceInfo.getDeviceCondition().getTempDimensionList();
-
-    boolean isQuarantined =
-        tempDimensions.stream()
-            .anyMatch(
-                dim ->
-                    dim.getDimension().getName().equals("quarantined")
-                        && dim.getDimension().getValue().toLowerCase(Locale.ROOT).equals("true"));
 
     ImmutableList<DeviceType> feDeviceTypes =
         types.stream()
@@ -116,7 +87,7 @@ public final class HealthAndActivityBuilder {
                 type ->
                     DeviceType.newBuilder()
                         .setType(type)
-                        .setIsAbnormal(isTypeAbnormal(type))
+                        .setIsAbnormal(DeviceHealth.isTypeAbnormal(type))
                         .build())
             .collect(toImmutableList());
     builder.addAllDeviceTypes(feDeviceTypes);
@@ -128,80 +99,67 @@ public final class HealthAndActivityBuilder {
       runningTest = lookUpRunningTest(deviceInfo);
     }
 
-    HealthCategory category =
-        resolveHealthCategory(deviceInfo, status, !types.isEmpty(), hasAbnormalTypes);
-
-    if (isQuarantined && status.equals(DeviceStatus.IDLE.name())) {
-      // Quarantine is an FE-detected special case: a healthy device manually withheld from tests.
-      // It bypasses the health category entirely.
-      builder
-          .setTitle("Quarantined")
-          .setSubtitle("Device is idle, but quarantined and unavailable for tests.")
-          .setUiState(UiState.BLOCKED)
-          .setState(HealthState.IDLE_BUT_QUARANTINED)
-          .setDiagnostics(
-              Diagnostics.newBuilder()
-                  .setDiagnosis("Device has been manually quarantined while in IDLE state.")
-                  .setExplanation(
-                      "Quarantined devices cannot be allocated for tests until they are"
-                          + " unquarantined, even if otherwise healthy."));
-    } else {
-      switch (category) {
-        case HEALTH_CATEGORY_IN_SERVICE -> {
-          if (status.equals(DeviceStatus.BUSY.name())) {
-            builder
-                .setTitle("In Service (Busy)")
-                .setSubtitle("The device is healthy and currently running a task.")
-                .setUiState(UiState.BUSY)
-                .setState(HealthState.IN_SERVICE_BUSY);
-          } else {
-            builder
-                .setTitle("In Service (Idle)")
-                .setSubtitle("The device is healthy and ready for new tasks.")
-                .setUiState(UiState.HEALTHY)
-                .setState(HealthState.IN_SERVICE_IDLE);
-          }
-        }
-        case HEALTH_CATEGORY_IN_TRANSITION ->
-            builder
-                .setTitle("In Transition (" + transitionDetail(status) + ")")
-                .setSubtitle(transitionSubtitle(status))
-                .setUiState(UiState.TRANSITIONING)
-                .setState(HealthState.OUT_OF_SERVICE_TEMP_MAINT)
-                .setDiagnostics(
-                    Diagnostics.newBuilder()
-                        .setDiagnosis("The device is in a transition state (" + status + ").")
-                        .setExplanation(transitionSubtitle(status)));
-        case HEALTH_CATEGORY_IN_AUTO_RECOVERY ->
-            builder
-                .setTitle("Auto Recovery")
-                .setSubtitle(
-                    "An automated recovery task is running; the device should return to service on"
-                        + " its own.")
-                .setUiState(UiState.RECOVERING)
-                .setState(HealthState.OUT_OF_SERVICE_RECOVERING)
-                .setDiagnostics(
-                    Diagnostics.newBuilder()
-                        .setDiagnosis("Device is running a recovery task.")
-                        .setExplanation(
-                            "An automated recovery task is running. If successful, the device will"
-                                + " return to service automatically. No immediate action is"
-                                + " required."));
-        case HEALTH_CATEGORY_NEED_MANUAL_REPAIR ->
-            builder
-                .setTitle("Needs Manual Repair")
-                .setSubtitle("The device is in an error state and requires attention.")
-                .setUiState(UiState.ERROR)
-                .setState(HealthState.OUT_OF_SERVICE_NEEDS_FIXING)
-                .setDiagnostics(
-                    buildNeedsRepairDiagnostics(status, feDeviceTypes, hasAbnormalTypes, types));
-        default ->
-            builder
-                .setTitle("Unknown")
-                .setSubtitle("The device's health could not be determined.")
-                .setUiState(UiState.UI_STATE_UNSPECIFIED)
-                .setState(HealthState.UNKNOWN);
-      }
+    DeviceHealth health = DeviceHealth.of(deviceInfo);
+    builder.setTitle(health.title());
+    switch (health.state()) {
+      case QUARANTINED ->
+          // Quarantine is an FE-detected special case: a healthy device manually withheld from
+          // tests. It bypasses the health category entirely.
+          builder
+              .setSubtitle("Device is idle, but quarantined and unavailable for tests.")
+              .setUiState(UiState.BLOCKED)
+              .setState(HealthState.IDLE_BUT_QUARANTINED)
+              .setDiagnostics(
+                  Diagnostics.newBuilder()
+                      .setDiagnosis("Device has been manually quarantined while in IDLE state.")
+                      .setExplanation(
+                          "Quarantined devices cannot be allocated for tests until they are"
+                              + " unquarantined, even if otherwise healthy."));
+      case IN_SERVICE_BUSY ->
+          builder
+              .setSubtitle("The device is healthy and currently running a task.")
+              .setUiState(UiState.BUSY)
+              .setState(HealthState.IN_SERVICE_BUSY);
+      case IN_SERVICE_IDLE ->
+          builder
+              .setSubtitle("The device is healthy and ready for new tasks.")
+              .setUiState(UiState.HEALTHY)
+              .setState(HealthState.IN_SERVICE_IDLE);
+      case IN_TRANSITION ->
+          builder
+              .setSubtitle(transitionSubtitle(status))
+              .setUiState(UiState.TRANSITIONING)
+              .setState(HealthState.OUT_OF_SERVICE_TEMP_MAINT)
+              .setDiagnostics(
+                  Diagnostics.newBuilder()
+                      .setDiagnosis("The device is in a transition state (" + status + ").")
+                      .setExplanation(transitionSubtitle(status)));
+      case AUTO_RECOVERY ->
+          builder
+              .setSubtitle(
+                  "An automated recovery task is running; the device should return to service on"
+                      + " its own.")
+              .setUiState(UiState.RECOVERING)
+              .setState(HealthState.OUT_OF_SERVICE_RECOVERING)
+              .setDiagnostics(
+                  Diagnostics.newBuilder()
+                      .setDiagnosis("Device is running a recovery task.")
+                      .setExplanation(
+                          "An automated recovery task is running. If successful, the device will"
+                              + " return to service automatically. No immediate action is"
+                              + " required."));
+      case NEEDS_MANUAL_REPAIR ->
+          builder
+              .setSubtitle("The device is in an error state and requires attention.")
+              .setUiState(UiState.ERROR)
+              .setState(HealthState.OUT_OF_SERVICE_NEEDS_FIXING)
+              .setDiagnostics(
+                  buildNeedsRepairDiagnostics(status, feDeviceTypes, hasAbnormalTypes, types));
+      case UNKNOWN ->
+          builder
+              .setSubtitle("The device's health could not be determined.")
+              .setUiState(UiState.UI_STATE_UNSPECIFIED)
+              .setState(HealthState.UNKNOWN);
     }
 
     builder.setDeviceStatus(
@@ -215,7 +173,7 @@ public final class HealthAndActivityBuilder {
     }
 
     if (status.equals(DeviceStatus.BUSY.name())) {
-      boolean isRecovering = category == HealthCategory.HEALTH_CATEGORY_IN_AUTO_RECOVERY;
+      boolean isRecovering = health.category() == HealthCategory.HEALTH_CATEGORY_IN_AUTO_RECOVERY;
       CurrentTask.Builder currentTask =
           CurrentTask.newBuilder().setType(isRecovering ? "Recovery Task" : "Test");
       runningTest.ifPresent(info -> currentTask.setTaskId(info.testId()).setJobId(info.jobId()));
@@ -223,68 +181,6 @@ public final class HealthAndActivityBuilder {
     }
 
     return builder.build();
-  }
-
-  /**
-   * Resolves the health category of the device.
-   *
-   * <p>Prefers upstream {@link HealthCategory} from {@link DeviceInfo} (populated by 1P Master
-   * GetLabInfo). If absent or unspecified (e.g. non-Android devices, ATS LabInfo), falls back to
-   * local {@link #computeCategory}.
-   */
-  private static HealthCategory resolveHealthCategory(
-      DeviceInfo deviceInfo, String status, boolean hasTypes, boolean hasAbnormalTypes) {
-    if (deviceInfo.hasHealthCategory()
-        && deviceInfo.getHealthCategory() != HealthCategory.HEALTH_CATEGORY_UNSPECIFIED) {
-      return deviceInfo.getHealthCategory();
-    }
-    return computeCategory(status, hasTypes, hasAbnormalTypes);
-  }
-
-  /**
-   * Classifies the device into a standard health category. Status- and type-driven only, so it
-   * applies uniformly to every device family (Android, iOS, emulator/virtual, testbed, misc).
-   *
-   * <p>TODO: Retire this method once calculateHealthCategory(status, type) is moved to a shared
-   * package and supports non-Android device families.
-   */
-  private static HealthCategory computeCategory(
-      String status, boolean hasTypes, boolean hasAbnormalTypes) {
-    boolean idleOrBusy =
-        status.equals(DeviceStatus.IDLE.name()) || status.equals(DeviceStatus.BUSY.name());
-    // A device with no detected type cannot be allocated, so it is only "In Service" when it has at
-    // least one (non-abnormal) type.
-    if (idleOrBusy && hasTypes && !hasAbnormalTypes) {
-      return HealthCategory.HEALTH_CATEGORY_IN_SERVICE;
-    }
-    if (TRANSIT_STATUSES.contains(status)) {
-      return HealthCategory.HEALTH_CATEGORY_IN_TRANSITION;
-    }
-    // BUSY + abnormal type = auto recovery. The upstream standard treats any BUSY device with
-    // unhealthy device types as being in automated recovery, without inspecting the running job.
-    if (status.equals(DeviceStatus.BUSY.name()) && hasAbnormalTypes) {
-      return HealthCategory.HEALTH_CATEGORY_IN_AUTO_RECOVERY;
-    }
-    // Not BUSY, or BUSY without abnormal types but missing types entirely.
-    // No detected type also needs a human: the device cannot be allocated.
-    if (status.equals(DeviceStatus.FAILED.name())
-        || status.equals(DeviceStatus.MISSING.name())
-        || hasAbnormalTypes
-        || !hasTypes) {
-      return HealthCategory.HEALTH_CATEGORY_NEED_MANUAL_REPAIR;
-    }
-    return HealthCategory.HEALTH_CATEGORY_UNSPECIFIED;
-  }
-
-  private static String transitionDetail(String status) {
-    return switch (status) {
-      case "INIT" -> "Initializing";
-      case "PREPPING" -> "Preparing";
-      case "LAMEDUCK" -> "Lameduck";
-      case "DIRTY" -> "Cleanup";
-      case "DYING" -> "Shutting Down";
-      default -> "Transitioning";
-    };
   }
 
   private static String transitionSubtitle(String status) {
@@ -378,15 +274,5 @@ public final class HealthAndActivityBuilder {
       logger.log(Level.WARNING, "Failed to look up running test for BUSY device " + deviceId, e);
     }
     return Optional.empty();
-  }
-
-  private static boolean isTypeAbnormal(String type) {
-    String upperType = Ascii.toUpperCase(type);
-    for (String keyword : ABNORMAL_TYPE_KEYWORDS) {
-      if (upperType.contains(keyword)) {
-        return true;
-      }
-    }
-    return false;
   }
 }

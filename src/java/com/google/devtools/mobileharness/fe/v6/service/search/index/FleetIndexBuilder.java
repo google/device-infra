@@ -312,6 +312,9 @@ public final class FleetIndexBuilder {
 
     values.put(DEVICE_FIELD_QUARANTINED, ImmutableList.of(isQuarantined(condition) ? "Yes" : "No"));
     addVersion(values, deviceInfo);
+    // The health title comes from the key's own source, the same DeviceHealth classification that
+    // the device detail page renders, so search and detail agree.
+    addCombinedSources(values, deviceInfo, DeviceKeys.HEALTH);
     for (DeviceKeyDescriptor derivedKey : derivedDeviceKeys) {
       addCombinedSources(values, deviceInfo, derivedKey);
     }

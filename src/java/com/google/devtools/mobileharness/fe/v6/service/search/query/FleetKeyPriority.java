@@ -41,6 +41,7 @@ public final class FleetKeyPriority implements ScenarioCuration.KeyPriority {
       ImmutableSet.of(
           DeviceKeys.UUID,
           DeviceKeys.STATUS,
+          DeviceKeys.HEALTH,
           DeviceKeys.TYPE,
           DeviceKeys.MODEL,
           DeviceKeys.OS,

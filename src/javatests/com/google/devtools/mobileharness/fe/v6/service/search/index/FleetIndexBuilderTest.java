@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Device.HealthCategory;
 import com.google.devtools.mobileharness.api.model.proto.Device.TempDimension;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
@@ -110,6 +111,17 @@ public final class FleetIndexBuilderTest {
     assertThat(snapshot.devices().get(2).values("device_field::quarantined"))
         .containsExactly("Yes");
     assertThat(snapshot.devices().get(0).values("device_field::quarantined")).containsExactly("No");
+    // Health is the device page title: device-2 is idle but quarantined.
+    assertThat(snapshot.devices().get(0).values("device_field::health"))
+        .containsExactly("In Service (Idle)");
+    assertThat(snapshot.devices().get(1).values("device_field::health"))
+        .containsExactly("In Service (Busy)");
+    assertThat(snapshot.devices().get(2).values("device_field::health"))
+        .containsExactly("Quarantined");
+    assertThat(index.valueCount("device_field::health", "in service (idle)")).isEqualTo(1);
+    assertThat(index.valueCount("device_field::health", "quarantined")).isEqualTo(1);
+    assertThat(index.valueDisplays("device_field::health"))
+        .containsEntry("in service (busy)", "In Service (Busy)");
 
     // Host records: device count and lab-server version derived from host_version.
     assertThat(snapshot.hosts().get(0).hostName()).isEqualTo("lab1");
@@ -155,6 +167,7 @@ public final class FleetIndexBuilderTest {
         .containsAtLeast(
             "device_field::uuid",
             "device_field::status",
+            "device_field::health",
             "device_field::owner",
             "device_field::type",
             "dimension::os",
@@ -743,6 +756,64 @@ public final class FleetIndexBuilderTest {
     assertThat(snapshot.devices().get(3).values()).doesNotContainKey("device_field::version");
     assertThat(snapshot.index().valueCount("device_field::version", "16")).isEqualTo(1);
     assertThat(snapshot.index().valueCount("device_field::version", "36")).isEqualTo(0);
+  }
+
+  @Test
+  public void build_health_prefersUpstreamCategoryAndFallsBackToStatusAndTypes() {
+    // Looks healthy by status and type, but Master reports that it needs manual repair.
+    DeviceInfo upstreamRepair =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("dev-upstream-repair"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
+            .setHealthCategory(HealthCategory.HEALTH_CATEGORY_NEED_MANUAL_REPAIR)
+            .build();
+    DeviceInfo noType =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("dev-no-type"))
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .build();
+    DeviceInfo cleaningUp =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("dev-dirty"))
+            .setDeviceStatus(DeviceStatus.DIRTY)
+            .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
+            .build();
+    DeviceInfo recovering =
+        DeviceInfo.newBuilder()
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("dev-recovering"))
+            .setDeviceStatus(DeviceStatus.BUSY)
+            .setDeviceFeature(DeviceFeature.newBuilder().addType("FailedAndroidDevice"))
+            .build();
+    LabQueryResult labResult =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab-health",
+                            "10.0.0.3",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            upstreamRepair,
+                            noType,
+                            cleaningUp,
+                            recovering)))
+            .build();
+
+    FleetSnapshot snapshot = builder.build(labResult, BUILD_TIME);
+
+    assertThat(snapshot.devices().get(0).values("device_field::health"))
+        .containsExactly("Needs Manual Repair");
+    assertThat(snapshot.devices().get(1).values("device_field::health"))
+        .containsExactly("Needs Manual Repair");
+    assertThat(snapshot.devices().get(2).values("device_field::health"))
+        .containsExactly("In Transition (Cleanup)");
+    assertThat(snapshot.devices().get(3).values("device_field::health"))
+        .containsExactly("Auto Recovery");
+    assertThat(snapshot.index().valueCount("device_field::health", "needs manual repair"))
+        .isEqualTo(2);
   }
 
   @Test
