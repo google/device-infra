@@ -9,6 +9,10 @@ import {MatIconModule} from '@angular/material/icon';
 
 import {PromotedFilterKeyItem, PromotedGroupByKeyItem} from '../../../models';
 import {SearchPageStore} from '../../../services/search_page_store';
+import {
+  getStoredFilterCollapsed,
+  saveStoredFilterCollapsed,
+} from '../../../utils/search_suggestions_utils';
 
 /**
  * Standalone component displaying promoted quick filter keys and group-by preset links below the primary search box.
@@ -27,12 +31,18 @@ export class FilterPresets {
 
   /**
    * Whether the suggested filter presets panel is collapsed into a single pill.
-   * Automatically expands when returning to the landing state.
+   * Automatically expands when returning to the landing state; in results mode
+   * it restores the state last chosen by the user for this entity (persisted in
+   * localStorage, separately for e.g. devices and hosts).
    */
   readonly isCollapsed = linkedSignal({
     source: this.store.isLandingState,
     computation: (isLanding, previous) =>
-      isLanding ? false : (previous?.value ?? false),
+      isLanding
+        ? false
+        : (getStoredFilterCollapsed(this.store.entity()) ??
+          previous?.value ??
+          false),
   });
 
   readonly hasPromotedFilters = computed(
@@ -47,9 +57,14 @@ export class FilterPresets {
     () => this.hasPromotedFilters() || this.hasPromotedGroups(),
   );
 
-  /** Toggles or sets the collapsed state of the preset filters bar. */
+  /**
+   * Toggles or sets the collapsed state of the preset filters bar and persists
+   * the user's choice for the current entity.
+   */
   toggleCollapsed(forceState?: boolean) {
-    this.isCollapsed.set(forceState ?? !this.isCollapsed());
+    const collapsed = forceState ?? !this.isCollapsed();
+    this.isCollapsed.set(collapsed);
+    saveStoredFilterCollapsed(this.store.entity(), collapsed);
   }
 
   /**

@@ -1,7 +1,8 @@
 import {DOCUMENT} from '@angular/common';
-import {Injectable, OnDestroy, inject} from '@angular/core';
+import {Injectable, OnDestroy, inject, signal} from '@angular/core';
 import {Observable, Subject, throwError} from 'rxjs';
 import {filter, map, take, tap, timeout} from 'rxjs/operators';
+import {EnvUniverseService} from './env_universe_service';
 
 /**
  * Interface for the message sent to the parent window.
@@ -51,13 +52,59 @@ export interface NavigateMessage {
 }
 
 /**
+ * Geometry of the host page's header slot, relative to the iframe, in which
+ * the embedded search input is rendered so that it appears inside the host
+ * application's own header.
+ */
+export interface EmbeddedHeaderSlot {
+  /** Left offset of the slot from the iframe's left edge, in px. */
+  left: number;
+  /** Width of the slot, in px. */
+  width: number;
+  /** Height of the host header band, in px. */
+  height: number;
+  /** CSS color of the host header's bottom border, if any. */
+  borderColor?: string;
+}
+
+/**
+ * Interface for the message received from the parent window describing the
+ * header slot geometry.
+ */
+export interface EmbeddedHeaderSlotMessage extends EmbeddedHeaderSlot {
+  type: 'EMBEDDED_HEADER_SLOT';
+}
+
+/**
+ * Interface for the message sent to the parent window to request the header
+ * slot geometry (e.g. right after bootstrap, before the parent had a chance to
+ * send it).
+ */
+export interface EmbeddedHeaderSlotRequest {
+  type: 'EMBEDDED_HEADER_SLOT_REQUEST';
+}
+
+/** Messages this app posts to the host window. */
+type HostMessage =
+  | ExternalUrlRequest
+  | NavigatedMessage
+  | SearchStateChangedMessage
+  | EmbeddedHeaderSlotRequest;
+
+/**
  * Service to handle URL generation and cross-window communication for navigation.
  */
 @Injectable({providedIn: 'root'})
 export class UrlService implements OnDestroy {
   private readonly isEmbeddedMode: boolean;
+  private readonly envUniverseService = inject(EnvUniverseService);
   private readonly responses$ = new Subject<ExternalUrlResponse>();
   readonly navigate$ = new Subject<string>();
+  /**
+   * Latest header slot geometry received from the parent window, or null when
+   * not embedded or not received yet.
+   */
+  readonly embeddedHeaderSlot = signal<EmbeddedHeaderSlot | null>(null);
   private readonly win: Window | null;
   private readonly messageListener = (event: MessageEvent) => {
     const data = event.data;
@@ -66,6 +113,10 @@ export class UrlService implements OnDestroy {
         this.responses$.next(data);
       } else if (data.type === 'NAVIGATE') {
         this.navigate$.next(data.url);
+      } else if (data.type === 'EMBEDDED_HEADER_SLOT') {
+        this.onEmbeddedHeaderSlotMessage(data);
+      } else {
+        console.error('Unknown message type:', data.type, data);
       }
     }
   };
@@ -134,11 +185,7 @@ export class UrlService implements OnDestroy {
     };
 
     // Sends a postMessage to the parent window to request the true external URL.
-    // We use the 'origin' query parameter to ensure the message is only received
-    // by the intended parent application.
-    const urlParams = new URLSearchParams(this.win.location.search);
-    const origin = urlParams.get('origin') || '*';
-    this.win.parent.postMessage(request, origin);
+    this.postMessageToHost(request);
 
     // Listens for a response from the parent window that matches our requestId.
     // We include a 5-second timeout to handle cases where the parent
@@ -199,9 +246,7 @@ export class UrlService implements OnDestroy {
       params,
     };
 
-    const urlParams = new URLSearchParams(this.win.location.search);
-    const origin = urlParams.get('origin') || '*';
-    this.win.parent.postMessage(message, origin);
+    this.postMessageToHost(message);
   }
 
   /**
@@ -219,8 +264,77 @@ export class UrlService implements OnDestroy {
       params,
     };
 
+    this.postMessageToHost(message);
+  }
+
+  /**
+   * Returns whether the application is embedded in the ATS (OSS) host, i.e.
+   * running in embedded mode in the OSS build. The Google-internal build also
+   * has an embedded mode (e.g. Arsenal), which must not get the ATS-specific
+   * host integration.
+   */
+  isInAtsEmbeddedMode(): boolean {
+    return this.isEmbeddedMode && this.envUniverseService.isAts();
+  }
+
+  /**
+   * Asks the host window for the geometry of its header slot.
+   *
+   * Explanation: When embedded in the ATS host (MTT UI2) the host lets the
+   * iframe paint into a slot of its own header, where the docked search input
+   * is rendered. The host answers with an `EMBEDDED_HEADER_SLOT` message (and
+   * re-sends it whenever the slot moves or resizes); the latest geometry is
+   * exposed through `embeddedHeaderSlot`. No-op outside ATS embedded mode.
+   */
+  requestEmbeddedHeaderSlot() {
+    if (!this.isInAtsEmbeddedMode() || !this.win) {
+      return;
+    }
+
+    const message: EmbeddedHeaderSlotRequest = {
+      type: 'EMBEDDED_HEADER_SLOT_REQUEST',
+    };
+
+    this.postMessageToHost(message);
+  }
+
+  /**
+   * Posts a message to the host (parent) window.
+   *
+   * Explanation: The 'origin' query parameter, set by the host when it embeds
+   * the app, ensures the message is only received by the intended host
+   * application; without it the message is posted to any origin.
+   */
+  private postMessageToHost(message: HostMessage) {
+    if (!this.win) {
+      return;
+    }
     const urlParams = new URLSearchParams(this.win.location.search);
     const origin = urlParams.get('origin') || '*';
     this.win.parent.postMessage(message, origin);
+  }
+
+  /**
+   * Stores the header slot geometry sent by the parent window, ignoring
+   * malformed messages.
+   */
+  private onEmbeddedHeaderSlotMessage(data: EmbeddedHeaderSlotMessage) {
+    const {left, width, height, borderColor} = data;
+    if (
+      !Number.isFinite(left) ||
+      !Number.isFinite(width) ||
+      !Number.isFinite(height) ||
+      width < 0 ||
+      height < 0
+    ) {
+      console.error('Ignoring invalid EMBEDDED_HEADER_SLOT message:', data);
+      return;
+    }
+    this.embeddedHeaderSlot.set({
+      left,
+      width,
+      height,
+      borderColor: typeof borderColor === 'string' ? borderColor : undefined,
+    });
   }
 }

@@ -39,6 +39,13 @@
     padding-top: 0.5rem;
     gap: 8px;
   }
+
+  // Embedded in the ATS host (MTT UI2, OSS build): the host renders its own
+  // footer right below the iframe, so give the results card the same margin at
+  // the bottom as on the other three sides instead of letting it touch the edge.
+  &.results-mode.ats-embedded {
+    padding-bottom: 1rem;
+  }
 }
 
 app-search-box {
