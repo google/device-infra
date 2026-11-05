@@ -238,7 +238,7 @@ public class XtsTradefedTestModuleResultsMonitor {
   private static class Invocation {
 
     private final ConcurrentHashMap<Long, ModuleProgress> threadModules = new ConcurrentHashMap<>();
-    private final List<ModuleProgress> completedModules = new CopyOnWriteArrayList<>();
+    private final List<ModuleInfo> completedModules = new CopyOnWriteArrayList<>();
 
     private Invocation() {}
 
@@ -251,7 +251,7 @@ public class XtsTradefedTestModuleResultsMonitor {
       ModuleProgress lastModule = threadModules.remove(currentThreadId());
       if (lastModule != null && lastModule.isRunning.get()) {
         lastModule.isRunning.set(false);
-        completedModules.add(lastModule);
+        completedModules.add(lastModule.toModuleInfo());
       }
     }
 
@@ -300,9 +300,7 @@ public class XtsTradefedTestModuleResultsMonitor {
       for (ModuleProgress module : threadModules.values()) {
         currentModules.add(module.toModuleInfo());
       }
-      for (ModuleProgress module : completedModules) {
-        currentModules.add(module.toModuleInfo());
-      }
+      currentModules.addAll(completedModules);
       return currentModules;
     }
 
