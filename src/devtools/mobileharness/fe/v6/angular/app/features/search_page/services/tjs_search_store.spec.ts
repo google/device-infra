@@ -8,7 +8,11 @@ import {
 } from '@angular/router';
 import {of, Subject} from 'rxjs';
 
-import {TjsSearchConfig, TjsSearchResponse} from '../../../core/models/search';
+import {
+  TjsResolveChipsResponse,
+  TjsSearchConfig,
+  TjsSearchResponse,
+} from '../../../core/models/search';
 import {
   SEARCH_SERVICE,
   SearchService,
@@ -507,5 +511,106 @@ describe('TjsSearchStore', () => {
       'foo',
       'bar',
     ]);
+  });
+
+  it('keeps isLoading true while initial searchConfig and searchTjs requests are in flight on cold entry', async () => {
+    const configSubject = new Subject<TjsSearchConfig>();
+    const searchSubject = new Subject<TjsSearchResponse>();
+    mockSearchService.getTjsSearchConfig.and.returnValue(
+      configSubject.asObservable(),
+    );
+    mockSearchService.searchTjs.and.returnValue(searchSubject.asObservable());
+    mockSearchService.searchTjs.calls.reset();
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([
+          {path: 'tests', component: DummyComponent},
+          {path: 'jobs', component: DummyComponent},
+        ]),
+        {provide: SEARCH_SERVICE, useValue: mockSearchService},
+        {provide: SnackBarService, useValue: mockSnackBarService},
+        {provide: ActivatedRoute, useValue: activatedRouteStub},
+        TjsSearchStore,
+      ],
+    });
+
+    router = TestBed.inject(Router);
+    await router.navigateByUrl('/tests');
+    const asyncStore = TestBed.inject(TjsSearchStore);
+    TestBed.tick();
+
+    // 1. Before getTjsSearchConfig resolves, default chips are not yet loaded,
+    //    but isLoading must be true.
+    expect(asyncStore.isConfigLoading()).toBeTrue();
+    expect(asyncStore.searchConfig()).toBeNull();
+    expect(asyncStore.entityLabel()).toBe('tests');
+    expect(asyncStore.hasActiveFilters()).toBeFalse();
+    expect(asyncStore.isLoading()).toBeTrue();
+    expect(mockSearchService.searchTjs).not.toHaveBeenCalled();
+
+    // Even after route.queryParams emits {} on asapScheduler before config resolves:
+    queryParams$.next({});
+    await flushAsync();
+    expect(asyncStore.isLoading()).toBeTrue();
+
+    // 2. When getTjsSearchConfig resolves, default chips populate and searchTjs fires;
+    //    isLoading remains true while searchTjs is in flight.
+    configSubject.next(mockConfig);
+    configSubject.complete();
+    await flushAsync();
+
+    expect(asyncStore.isConfigLoading()).toBeFalse();
+    expect(asyncStore.entityLabel()).toBe('Tests');
+    expect(asyncStore.hasActiveFilters()).toBeTrue();
+    expect(asyncStore.activeChips().length).toBe(1);
+    expect(asyncStore.activeChips()[0].key).toBe('user');
+    expect(mockSearchService.searchTjs).toHaveBeenCalledTimes(1);
+    expect(asyncStore.isLoading()).toBeTrue();
+
+    // 3. When searchTjs completes, isLoading becomes false and rows are populated.
+    searchSubject.next({
+      columns: [{key: 'id', displayName: 'Test ID'}],
+      rows: [{id: 'test-1', cells: [{text: {value: 'test-1'}}]}],
+    });
+    searchSubject.complete();
+    await flushAsync();
+
+    expect(asyncStore.isLoading()).toBeFalse();
+    expect(asyncStore.rows().length).toBe(1);
+
+    // 4. Clearing all filters does not fire searchTjs with empty filters and keeps isLoading false.
+    mockSearchService.searchTjs.calls.reset();
+    asyncStore.resetSearchState(false);
+    TestBed.tick();
+
+    expect(asyncStore.hasActiveFilters()).toBeFalse();
+    expect(asyncStore.isLoading()).toBeFalse();
+    expect(mockSearchService.searchTjs).not.toHaveBeenCalled();
+  });
+
+  it('keeps isLoading true while resolving URL chips when rows are empty', async () => {
+    const resolveSubject = new Subject<TjsResolveChipsResponse>();
+    mockSearchService.resolveTjsChips.and.returnValue(
+      resolveSubject.asObservable(),
+    );
+
+    activatedRouteStub.snapshot.queryParams = {'f': 'user~alice'};
+    queryParams$.next({'f': 'user~alice'});
+    await flushAsync();
+
+    expect(store.isResolvingChips()).toBeTrue();
+    expect(store.rows().length).toBe(0);
+    expect(store.isLoading()).toBeTrue();
+
+    resolveSubject.next({
+      chips: [{keyDisplayName: 'User', pillKey: 'User', pillCondition: 'alice'}],
+    });
+    resolveSubject.complete();
+    await flushAsync();
+
+    expect(store.isResolvingChips()).toBeFalse();
+    expect(store.isLoading()).toBeFalse();
   });
 });

@@ -1,10 +1,10 @@
 @let entity = store.entity();
-@let entityLabel = store.entityLabel();
+@let entityLabel = store.entityLabel() | titlecase;
 @let isLoading = store.isLoading();
 @let rows = store.rows();
 
 <mat-card class="results-area tjs-mode">
-  @if (!store.hasActiveFilters()) {
+  @if (!store.hasActiveFilters() && !isLoading) {
     <div class="rt-empty-state">
       <mat-icon class="material-symbols-outlined rt-empty-icon">inbox</mat-icon>
       <div class="rt-empty-title">Add a filter to search {{ entity }}.</div>

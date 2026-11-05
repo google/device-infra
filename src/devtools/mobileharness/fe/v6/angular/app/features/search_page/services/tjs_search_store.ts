@@ -287,15 +287,17 @@ export class TjsSearchStore extends SearchPageStore {
     params: () => {
       if (!this.isCurrentRouteActive()) return undefined;
 
-      // On clean page entry, wait for searchConfig to load and populate default chips
-      if (!this.hasUrlFilters() && !this.searchConfig?.()) {
+      // On clean page entry before searchConfig loads (or when all filters are cleared),
+      // effectiveFilters() is empty; skip firing searchTjs until active filters exist.
+      const filters = this.effectiveFilters();
+      if (filters.length === 0) {
         return undefined;
       }
 
       return {
         entity: this.entity(),
         pageToken: this.pageToken(),
-        filters: this.effectiveFilters(),
+        filters,
       };
     },
     stream: ({params: req}) => {
@@ -303,7 +305,7 @@ export class TjsSearchStore extends SearchPageStore {
 
       const tjsReq: TjsSearchRequest = {
         entity: toTjsEntityProto(req.entity),
-        filters: req.filters.length > 0 ? req.filters : undefined,
+        filters: req.filters,
         pageToken: req.pageToken || undefined,
       };
 
@@ -318,8 +320,13 @@ export class TjsSearchStore extends SearchPageStore {
     },
   });
 
-  /** Exposes loading status of primary TJS search resource. */
-  override readonly isLoading = computed(() => this.tjsResource.isLoading());
+  /** Exposes loading status of primary TJS search resource, initial config hydration, or URL chip resolution. */
+  override readonly isLoading = computed<boolean>(
+    () =>
+      this.tjsResource.isLoading() ||
+      (this.isConfigLoading() && !this.searchConfig()) ||
+      (this.isResolvingChips() && this.rows().length === 0),
+  );
 
   /** Columns to render in TJS search results table. */
   override readonly displayColumns = computed<Column[]>(() => {

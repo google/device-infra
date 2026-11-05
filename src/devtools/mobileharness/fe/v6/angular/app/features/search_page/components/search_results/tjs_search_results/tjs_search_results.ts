@@ -1,3 +1,4 @@
+import {TitleCasePipe} from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -23,6 +24,7 @@ import {SearchPaginationComponent} from '../common/search_pagination/search_pagi
   styleUrl: './tjs_search_results.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    TitleCasePipe,
     MatCardModule,
     MatIconModule,
     MatProgressBarModule,

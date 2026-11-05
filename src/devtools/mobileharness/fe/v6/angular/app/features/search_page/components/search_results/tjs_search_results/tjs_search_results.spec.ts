@@ -43,13 +43,30 @@ describe('TjsSearchResultsComponent', () => {
     component = fixture.componentInstance;
   });
 
-  it('renders "Add a filter to search [entity]" when no active filters', () => {
+  it('renders "Add a filter to search [entity]" when no active filters and not loading', () => {
     mockStore.hasActiveFilters.set(false);
+    mockStore.isLoading.set(false);
     fixture.detectChanges();
 
     const emptyEl = fixture.debugElement.query(By.css('.rt-empty-state'));
     expect(emptyEl).toBeTruthy();
     expect(emptyEl.nativeElement.textContent).toContain('Add a filter to search jobs.');
+  });
+
+  it('renders loading state instead of "Add a filter" when initial config is loading before default chips arrive', () => {
+    mockStore.hasActiveFilters.set(false);
+    mockStore.entityLabel.set('jobs');
+    mockStore.isLoading.set(true);
+    mockStore.rows.set([]);
+    fixture.detectChanges();
+
+    expect(component.viewMode()).toBe('loading_initial');
+    const progressEl = fixture.debugElement.query(By.css('.table-progress-bar'));
+    expect(progressEl).toBeTruthy();
+    const loadingEl = fixture.debugElement.query(By.css('.rt-empty-state'));
+    expect(loadingEl).toBeTruthy();
+    expect(loadingEl.nativeElement.textContent).toContain('Loading Jobs…');
+    expect(loadingEl.nativeElement.textContent).not.toContain('Add a filter to search jobs.');
   });
 
   it('renders loading state when active filters and loading initial page', () => {
