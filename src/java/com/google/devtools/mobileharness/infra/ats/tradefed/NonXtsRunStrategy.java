@@ -46,7 +46,6 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Predicate;
 
 /** An implementation of {@link TradefedRunStrategy} for non-XTS runs. */
@@ -256,22 +255,11 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
    * {@inheritDoc}
    *
    * <p>Tradefed {@code Console ... run commandAndExit} exits with 0 even if the invocation failed,
-   * so for a zero exit code the result is {@code ERROR} if the runtime info file written by the
-   * Tradefed invocation agent records a finished invocation with an error, and {@code PASS}
-   * otherwise.
+   * so this marks the test as {@code ERROR} when the runtime info file written by the Tradefed
+   * invocation agent records a finished invocation with an error.
    */
   @Override
-  public void setTestResult(TestInfo testInfo, Optional<Integer> tfExitCode)
-      throws MobileHarnessException {
-    if (tfExitCode.isEmpty() || tfExitCode.get() != 0) {
-      TradefedRunStrategy.super.setTestResult(testInfo, tfExitCode);
-      return;
-    }
-    TestResult currentResult = testInfo.resultWithCause().get().type();
-    if (currentResult != TestResult.UNKNOWN && currentResult != TestResult.PASS) {
-      return;
-    }
-
+  public void setTestResult(TestInfo testInfo) throws MobileHarnessException {
     ImmutableList<TradefedInvocation> failedInvocations =
         readFailedInvocations(
             Path.of(testInfo.getGenFileDir()).resolve(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_NAME),
@@ -294,10 +282,7 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
                   AndroidErrorId.XTS_TRADEFED_INVOCATION_ERROR,
                   "Tradefed invocation failed: " + failedInvocations.get(0).errorMessage(),
                   /* cause= */ null));
-      return;
     }
-
-    testInfo.resultWithCause().setPass();
   }
 
   /** Reads the finished Tradefed invocations that recorded an error message, if any. */

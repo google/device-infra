@@ -252,16 +252,14 @@ public class TradefedTest extends BaseDriver
         }
       }
 
-      Optional<Integer> tfExitCode = runTradefedCommand(testInfo, spec, workDir);
-
-      testInfo
-          .log()
-          .atInfo()
-          .alsoTo(logger)
-          .log(
-              "Finished running %s test. TF run command exit code: %s",
-              spec.getXtsType(), tfExitCode);
-      tradefedRunStrategy.setTestResult(testInfo, tfExitCode);
+      if (runTradefedCommand(testInfo, spec, workDir)) {
+        tradefedRunStrategy.setTestResult(testInfo);
+        // Default to PASS if the strategy did not record a failure (Result prevents overriding
+        // PASS with ERROR).
+        if (testInfo.resultWithCause().get().type().equals(TestResult.UNKNOWN)) {
+          testInfo.resultWithCause().setPass();
+        }
+      }
       addTestResultPropertiesToJob(workDir, xtsType, testInfo);
     } finally {
       handleDeviceErrorForProvisioning(testInfo);
@@ -440,9 +438,12 @@ public class TradefedTest extends BaseDriver
     }
   }
 
-  /** Returns the exit code of the TF process or empty if the process doesn't start. */
-  private Optional<Integer> runTradefedCommand(
-      TestInfo testInfo, TradefedTestDriverSpec spec, Path workDir)
+  /**
+   * Runs the Tradefed command and returns {@code true} if the process ran and exited normally (exit
+   * code 0). If the command fails or times out, records the corresponding non-passing result on
+   * {@code testInfo}.
+   */
+  private boolean runTradefedCommand(TestInfo testInfo, TradefedTestDriverSpec spec, Path workDir)
       throws MobileHarnessException, InterruptedException {
     ImmutableMap<String, String> env =
         tradefedRunStrategy.getEnvironment(workDir, spec, getDevice(), getEnvPath());
@@ -553,6 +554,7 @@ public class TradefedTest extends BaseDriver
             /* delay= */ 60,
             TimeUnit.SECONDS);
 
+    Optional<Integer> tfExitCode = Optional.empty();
     CommandProcess process = null;
     try (BufferedWriter outputFileWriter = Files.newBufferedWriter(tfOutputPath)) {
       synchronized (tfProcessLock) {
@@ -564,34 +566,44 @@ public class TradefedTest extends BaseDriver
               .log(
                   "Skip starting TF since it was cancelled: %s",
                   shortDebugString(xtsTradefedRunCancellation));
-          return Optional.empty();
+          testInfo
+              .resultWithCause()
+              .setNonPassing(
+                  TestResult.ERROR,
+                  MobileHarnessExceptionFactory.createUserFacingException(
+                      AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR,
+                      "Tradefed command didn't start",
+                      /* cause= */ null));
+        } else {
+          tfProcess =
+              cmdExecutor.start(
+                  Command.of(cmd)
+                      .extraEnv(env)
+                      .onStdout(
+                          new TradefedStdoutLineCallback(
+                              olcSessionClientId,
+                              commandOutputLogger,
+                              outputFileWriter,
+                              disableTfResultLog))
+                      .onExit(
+                          commandResult -> {
+                            synchronized (tfProcessLock) {
+                              tfProcess = null;
+                            }
+                          })
+                      .redirectStderr(true)
+                      .needStdoutInResult(false)
+                      .needStderrInResult(false)
+                      .timeout(getTradefedTimeout(testInfo)));
+          process = tfProcess;
+          long pid = process.getPid();
+          testInfo.log().atInfo().alsoTo(logger).log("TF started, pid=%s", pid);
         }
-        tfProcess =
-            cmdExecutor.start(
-                Command.of(cmd)
-                    .extraEnv(env)
-                    .onStdout(
-                        new TradefedStdoutLineCallback(
-                            olcSessionClientId,
-                            commandOutputLogger,
-                            outputFileWriter,
-                            disableTfResultLog))
-                    .onExit(
-                        commandResult -> {
-                          synchronized (tfProcessLock) {
-                            tfProcess = null;
-                          }
-                        })
-                    .redirectStderr(true)
-                    .needStdoutInResult(false)
-                    .needStderrInResult(false)
-                    .timeout(getTradefedTimeout(testInfo)));
-        process = tfProcess;
-        long pid = process.getPid();
-        testInfo.log().atInfo().alsoTo(logger).log("TF started, pid=%s", pid);
       }
 
-      return Optional.of(process.await().exitCode());
+      if (process != null) {
+        tfExitCode = Optional.of(process.await().exitCode());
+      }
     } catch (CommandStartException e) {
       throw new MobileHarnessException(
           AndroidErrorId.XTS_TRADEFED_START_COMMAND_ERROR,
@@ -603,6 +615,7 @@ public class TradefedTest extends BaseDriver
           "Failed to operate TF output file " + tfOutputPath,
           e);
     } catch (CommandFailureException e) {
+      tfExitCode = Optional.ofNullable(e.result()).map(CommandResult::exitCode);
       String message = e.getMessage();
       if (PROVISION_TRIGGER_ERROR_IDS.stream().anyMatch(message::contains)) {
         deviceErrorForProvisioningDetected.set(true);
@@ -615,8 +628,8 @@ public class TradefedTest extends BaseDriver
                   AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR,
                   "Failed to run Tradefed command: " + message,
                   e));
-      return Optional.ofNullable(e.result()).map(CommandResult::exitCode);
     } catch (CommandTimeoutException e) {
+      tfExitCode = Optional.ofNullable(e.result()).map(CommandResult::exitCode);
       testInfo
           .resultWithCause()
           .setNonPassing(
@@ -625,7 +638,6 @@ public class TradefedTest extends BaseDriver
                   AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_TIMEOUT,
                   "Tradefed run command timed out.",
                   e));
-      return Optional.ofNullable(e.result()).map(CommandResult::exitCode);
     } catch (InterruptedException e) {
       testInfo.log().atWarning().alsoTo(logger).log("Tradefed was interrupted.");
       throw e;
@@ -635,6 +647,15 @@ public class TradefedTest extends BaseDriver
         process.killAndThenKillForcibly(/* timeout= */ Duration.ofMinutes(1L));
       }
     }
+
+    testInfo
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log(
+            "Finished running %s test. TF run command exit code: %s",
+            spec.getXtsType(), tfExitCode);
+    return tfExitCode.filter(exitCode -> exitCode == 0).isPresent();
   }
 
   @VisibleForTesting

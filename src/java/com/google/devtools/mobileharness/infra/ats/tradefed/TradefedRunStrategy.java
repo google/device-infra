@@ -18,15 +18,11 @@ package com.google.devtools.mobileharness.infra.ats.tradefed;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
-import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.TradefedTestDriverSpec;
 import java.nio.file.Path;
-import java.util.Optional;
 import java.util.function.Predicate;
 
 /**
@@ -140,36 +136,9 @@ public interface TradefedRunStrategy {
   default void cleanUp(TestInfo testInfo) {}
 
   /**
-   * Sets the MH test result after the Tradefed process has exited.
+   * Sets the MH test result after the Tradefed process has exited normally.
    *
-   * <p>The default implementation only looks at the process exit code ({@code tfExitCode} is empty
-   * if the process didn't start): {@code ERROR} if the process didn't start or exited with a
-   * non-zero code, {@code PASS} otherwise.
+   * @param testInfo the test info
    */
-  default void setTestResult(TestInfo testInfo, Optional<Integer> tfExitCode)
-      throws MobileHarnessException {
-    if (tfExitCode.isEmpty()) {
-      testInfo
-          .resultWithCause()
-          .setNonPassing(
-              TestResult.ERROR,
-              MobileHarnessExceptionFactory.createUserFacingException(
-                  AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR,
-                  "Tradefed command didn't start",
-                  /* cause= */ null));
-      return;
-    }
-    if (tfExitCode.get() != 0) {
-      testInfo
-          .resultWithCause()
-          .setNonPassing(
-              TestResult.ERROR,
-              MobileHarnessExceptionFactory.createUserFacingException(
-                  AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR,
-                  "Non-zero Tradefed command exit code: " + tfExitCode.get(),
-                  /* cause= */ null));
-      return;
-    }
-    testInfo.resultWithCause().setPass();
-  }
+  default void setTestResult(TestInfo testInfo) throws MobileHarnessException {}
 }

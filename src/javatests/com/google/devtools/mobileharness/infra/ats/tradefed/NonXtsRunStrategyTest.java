@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.xts.constant.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo;
@@ -384,46 +383,12 @@ public final class NonXtsRunStrategyTest {
   }
 
   @Test
-  public void setTestResult_exitCodeEmpty_error() throws Exception {
-
-    nonXtsRunStrategy.setTestResult(testInfo, Optional.empty());
-
-    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.ERROR);
-    assertThat(getResultErrorId()).isEqualTo(AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR);
-    assertThat(getResultErrorMessage()).contains("Tradefed command didn't start");
-  }
-
-  @Test
-  public void setTestResult_exitCodeNonZero_error() throws Exception {
-
-    nonXtsRunStrategy.setTestResult(testInfo, Optional.of(1));
-
-    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.ERROR);
-    assertThat(getResultErrorId()).isEqualTo(AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR);
-    assertThat(getResultErrorMessage()).contains("Non-zero Tradefed command exit code: 1");
-  }
-
-  @Test
-  public void setTestResult_noRuntimeFiles_pass() throws Exception {
+  public void setTestResult_noRuntimeFiles_leavesResultUnchanged() throws Exception {
     when(localFileUtil.isFileExist(any(Path.class))).thenReturn(false);
 
-    nonXtsRunStrategy.setTestResult(testInfo, Optional.of(0));
+    nonXtsRunStrategy.setTestResult(testInfo);
 
-    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
-  }
-
-  @Test
-  public void setTestResult_resultAlreadySet_keepsExistingResult() throws Exception {
-    mockFailedInvocation("com.android.tradefed.build.BuildRetrievalError: no build");
-    testInfo
-        .resultWithCause()
-        .setNonPassing(
-            TestResult.TIMEOUT,
-            new MobileHarnessException(AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR, "timeout"));
-
-    nonXtsRunStrategy.setTestResult(testInfo, Optional.of(0));
-
-    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.TIMEOUT);
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.UNKNOWN);
   }
 
   @Test
@@ -432,7 +397,7 @@ public final class NonXtsRunStrategyTest {
         "com.android.tradefed.build.BuildRetrievalError: Failed to download build\n"
             + "\tat com.android.tradefed.build.FileDownloadCache.fetch(FileDownloadCache.java:1)");
 
-    nonXtsRunStrategy.setTestResult(testInfo, Optional.of(0));
+    nonXtsRunStrategy.setTestResult(testInfo);
 
     assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.ERROR);
     assertThat(getResultErrorId()).isEqualTo(AndroidErrorId.XTS_TRADEFED_INVOCATION_ERROR);
@@ -454,21 +419,21 @@ public final class NonXtsRunStrategyTest {
                     /* isRunning= */ false, ImmutableList.of("device1"), "done", "")),
             Instant.now()));
 
-    nonXtsRunStrategy.setTestResult(testInfo, Optional.of(0));
+    nonXtsRunStrategy.setTestResult(testInfo);
 
-    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.UNKNOWN);
   }
 
   @Test
-  public void setTestResult_runtimeInfoReadFails_pass() throws Exception {
+  public void setTestResult_runtimeInfoReadFails_leavesResultUnchanged() throws Exception {
     Path runtimeInfoPath = genFile(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_NAME);
     when(localFileUtil.isFileExist(runtimeInfoPath)).thenReturn(true);
     when(xtsTradefedRuntimeInfoFileUtil.readInfo(runtimeInfoPath, null))
         .thenThrow(new IOException("read error"));
 
-    nonXtsRunStrategy.setTestResult(testInfo, Optional.of(0));
+    nonXtsRunStrategy.setTestResult(testInfo);
 
-    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.UNKNOWN);
   }
 
   private Path genFile(String fileName) throws Exception {
