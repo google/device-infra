@@ -16,11 +16,15 @@
 
 package com.google.devtools.mobileharness.infra.controller.test.util.testlogcollector;
 
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
+
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.command.linecallback.CommandOutputLogger;
+import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter;
+import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter.Mode;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
@@ -46,6 +50,11 @@ public final class TestLogCollectorPlugin {
                 !Objects.equals(
                     logRecord.getSourceClassName(), CommandOutputLogger.class.getName()));
     logger.atInfo().log("Test log collector plugin started to collect logs.");
+
+    // Prints host/process context into the test log. The test log is shown in ATS UI and may be
+    // seen by others, so uses the REDACTED mode.
+    SystemInfoPrinter.getProcessInstance()
+        .ifPresent(systemInfoPrinter -> systemInfoPrinter.printSystemInfo(DEBUG, Mode.REDACTED));
   }
 
   @Subscribe

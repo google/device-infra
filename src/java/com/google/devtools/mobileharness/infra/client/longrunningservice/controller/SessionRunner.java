@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.getUnchecked;
 import static com.google.common.util.concurrent.Futures.whenAllComplete;
-import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugStringWithPrinter;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 
@@ -39,14 +39,14 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPersistenceStatus;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.util.VersionProtoUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.persistence.SessionPersistenceUtil;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.Subscriber;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
-import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter;
+import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter.Mode;
 import com.google.inject.assistedinject.Assisted;
 import com.google.protobuf.FieldMask;
 import com.google.protobuf.TextFormat.Printer;
@@ -94,7 +94,7 @@ public class SessionRunner implements Callable<Void> {
   private final SessionPluginLoader sessionPluginLoader;
   private final SessionPluginRunner sessionPluginRunner;
   private final ListeningExecutorService threadPool;
-  private final SystemUtil systemUtil;
+  private final SystemInfoPrinter systemInfoPrinter;
   private final LongevityTestHelper longevityTestHelper;
   private final SessionPersistenceStatus initialSessionPersistenceStatus;
   private final ImmutableList<String> toBeResumedJobIds;
@@ -123,7 +123,7 @@ public class SessionRunner implements Callable<Void> {
       SessionPluginLoader sessionPluginLoader,
       SessionPluginRunner sessionPluginRunner,
       ListeningExecutorService threadPool,
-      SystemUtil systemUtil,
+      SystemInfoPrinter systemInfoPrinter,
       SessionPersistenceUtil sessionPersistenceUtil,
       LongevityTestHelper longevityTestHelper) {
     this.sessionDetailHolder =
@@ -142,7 +142,7 @@ public class SessionRunner implements Callable<Void> {
     this.sessionPluginLoader = sessionPluginLoader;
     this.sessionPluginRunner = sessionPluginRunner;
     this.threadPool = threadPool;
-    this.systemUtil = systemUtil;
+    this.systemInfoPrinter = systemInfoPrinter;
     this.longevityTestHelper = longevityTestHelper;
   }
 
@@ -153,11 +153,12 @@ public class SessionRunner implements Callable<Void> {
 
     String sessionId = sessionDetailHolder.getSessionId();
 
-    logger.atInfo().log(
-        "Starting session runner %s, server_version=[%s], memory_info=[%s]",
-        sessionId,
-        shortDebugString(VersionProtoUtil.createGetVersionResponse()),
-        systemUtil.getMemoryInfo());
+    logger.atInfo().log("Starting session runner %s", sessionId);
+
+    // Prints host/process context into the session log. The session log is copied to the xTS
+    // result dir / ATS UI and may be seen by others, so uses the REDACTED mode. Uses DEBUG
+    // importance so it is not shown in ATS console.
+    systemInfoPrinter.printSystemInfo(DEBUG, Mode.REDACTED);
 
     // Loads session plugins.
     ImmutableList<SessionPlugin> sessionPlugins =

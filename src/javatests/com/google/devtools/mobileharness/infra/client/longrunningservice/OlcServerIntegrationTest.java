@@ -315,6 +315,7 @@ public class OlcServerIntegrationTest {
     // Checks the session log.
     String sessionLog = localFileUtil.readFile(sessionLogFile);
     assertThat(sessionLog).contains("Starting session runner " + sessionId.getId());
+    assertThat(sessionLog).contains("System info (mode=REDACTED):");
     assertThat(sessionLog).contains("Session finished, session_id=" + sessionId.getId());
   }
 

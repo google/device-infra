@@ -83,7 +83,6 @@ import com.google.devtools.mobileharness.shared.constant.hostmanagement.HostProp
 import com.google.devtools.mobileharness.shared.labinfo.DeviceTempRequiredDimensionManager;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.labinfo.LocalLabInfoProvider;
-import com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proxy.DualConduitProxyConfig;
 import com.google.devtools.mobileharness.shared.util.comm.dualconduit.proxy.ReverseProxiedServer;
@@ -97,6 +96,7 @@ import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHel
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter;
+import com.google.devtools.mobileharness.shared.util.system.SystemInfoPrinter.Mode;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.devtools.mobileharness.shared.version.Version;
@@ -194,7 +194,8 @@ public class LabServer {
 
   /** Initializes and runs lab server, and blocks until shutdown. */
   public void run() throws MobileHarnessException, InterruptedException {
-    systemInfoPrinter.printSystemInfo(DEBUG);
+    systemInfoPrinter.printSystemInfo(DEBUG, Mode.FULL);
+    systemInfoPrinter.registerAsProcessInstance();
     try {
 
       // Sets public general file directory to BaseDevice.
@@ -294,11 +295,6 @@ public class LabServer {
       }
 
       logger.atInfo().log("Lab server %s starts.", Version.LAB_VERSION);
-      logger.atInfo().log(
-          "Lab server starts with hostname: %s, version: %s, build version: [%s]",
-          hostName,
-          Version.LAB_VERSION,
-          VersionUtil.getBuildVersion().map(ProtoTextFormat::shortDebugString).orElse("n/a"));
 
       // Starts controllers. The file cleaner should be the first one to start.
       // TODO: Start fileCleaner.
