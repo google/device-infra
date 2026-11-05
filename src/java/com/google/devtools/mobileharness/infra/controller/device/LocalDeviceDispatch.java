@@ -41,6 +41,8 @@ import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
+import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceChangeEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceDownEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceUpEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.stat.DeviceStat;
@@ -261,6 +263,24 @@ public class LocalDeviceDispatch {
                   runner.getDevice().getClass().getSimpleName()));
         } else {
           logger.atInfo().log("Stopping runner thread of dead device %s(%s)", id, deadReason);
+        }
+      } else {
+        boolean isOfflineInCache = dispatchResult.dispatchType().equals(DispatchType.CACHE);
+        boolean isOfflineInCacheChanged =
+            isOfflineInCache
+                ? runner
+                    .getDevice()
+                    .updateDimension(Dimension.Name.OFFLINE_IN_CACHE, Dimension.Value.TRUE)
+                : runner.getDevice().updateDimension(Dimension.Name.OFFLINE_IN_CACHE);
+        if (isOfflineInCacheChanged) {
+          logger.atInfo().log(
+              "Device %s offline_in_cache status changed to %s, post LocalDeviceChangeEvent",
+              id, isOfflineInCache);
+          globalInternalBus.post(
+              new LocalDeviceChangeEvent(
+                  id,
+                  runner.getDevice().getDeviceUuid(),
+                  runner.getDevice().getClass().getSimpleName()));
         }
       }
 

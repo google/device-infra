@@ -103,6 +103,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/stat",
         "@maven//:com_google_code_findbugs_jsr305",
