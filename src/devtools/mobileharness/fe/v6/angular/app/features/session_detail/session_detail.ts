@@ -14,7 +14,7 @@ import {Observable, of} from 'rxjs';
 import {catchError, map} from 'rxjs/operators';
 
 import {APP_DATA, getLegacyFeUrl} from '../../core/models/app_data';
-import {SessionStatus} from '../../core/models/common_models';
+import {SessionResult, SessionStatus} from '../../core/models/common_models';
 import {SESSION_SERVICE} from '../../core/services/session/session_service';
 import {LegacyConsoleBanner} from '../../shared/components/legacy_console_banner/legacy_console_banner';
 import {useCopyToClipboard} from '../../shared/composables/copy';
@@ -122,13 +122,25 @@ export class SessionDetailPage {
 
   readonly statusPillLabel = computed(() => {
     const sessionVal = this.session();
-    if (!sessionVal || !sessionVal.status) return 'UNKNOWN';
+    if (
+      !sessionVal ||
+      !sessionVal.status ||
+      sessionVal.status === SessionStatus.SESSION_STATUS_UNSPECIFIED
+    ) {
+      return 'UNKNOWN';
+    }
     return sessionVal.status.replace('SESSION_STATUS_', '');
   });
 
   readonly resultPillLabel = computed(() => {
     const sessionVal = this.session();
-    if (!sessionVal || !sessionVal.result) return null;
+    if (
+      !sessionVal ||
+      !sessionVal.result ||
+      sessionVal.result === SessionResult.SESSION_RESULT_UNSPECIFIED
+    ) {
+      return null;
+    }
     return sessionVal.result.replace('SESSION_RESULT_', '');
   });
 
