@@ -1,112 +1,529 @@
-<div class="timeline-tab-card">
-  @let rows = stageRows();
-  @if (rows && rows.length > 0) {
-    <div class="timeline-container">
-      <div class="timeline-wrapper">
-          <!-- Visual gridlines behind the Gantt chart tracks -->
-          <div class="timeline-grid">
-            <div class="grid-line" style="left: 0%"></div>
-            <div class="grid-line" style="left: 25%"></div>
-            <div class="grid-line" style="left: 50%"></div>
-            <div class="grid-line" style="left: 75%"></div>
-            <div class="grid-line" style="left: 100%"></div>
-          </div>
+@let breakdown = timingBreakdown();
+@if (loading()) {
+  <div class="tl tl-card">
+    <div class="tl-empty">Loading timeline...</div>
+  </div>
+} @else if (errorMessage(); as error) {
+  <div class="tl tl-card">
+    <div class="tl-empty">{{ error }}</div>
+  </div>
+} @else if (!hasContent() || !breakdown) {
+  <div class="tl tl-card">
+    <div class="tl-empty">{{ emptyMessage() }}</div>
+  </div>
+} @else {
+  <div
+    class="tl tl-card"
+    [class.tl-focusing]="focusedKey() !== null"
+    (mousemove)="updatePointerPosition($event)"
+    (mouseleave)="clearAllHover()"
+  >
+    @if (headline()) {
+      <div class="tl-summary">
+        <p class="tl-headline">{{ headline() }}</p>
+        @if (subheadline()) {
+          <p class="tl-sub">{{ subheadline() }}</p>
+        }
+      </div>
+    }
 
-          <div class="rows-container" #rowsContainer>
-            @let totalSec = totalDuration();
-            @for (row of rows; track row.stageName) {
-              @let eventCount = row.rowCount;
-              <div class="stage-row" [style.height.px]="eventCount * 28 + 12">
-                <div class="stage-label">{{ row.stageName }}</div>
-                <div class="stage-track">
-                  @for (track of row.tracks; track track) {
-                    <div class="track-bg-line" [style.top.px]="track * 28 + 6"></div>
-                  }
-                  @for (
-                    event of row.events;
-                    track event.label + '_' + event.offset + '_' + $index
-                  ) {
-                    @let offsetPercent = (event.offset / totalSec) * 100;
-                    @let widthPercent = (event.duration / totalSec) * 100;
-                    @let topOffset = event.trackIndex * 28 + 6;
-                    <div class="timeline-bar tooltip-container"
-                         [class.pulse-animation]="event.inProgress"
-                         [class.has-tag]="!!event.label"
-                         [class.theme-blue]="theme() === 'blue'"
-                         [class.theme-green]="theme() === 'green'"
-                         [style.left.%]="offsetPercent"
-                         [style.width.%]="widthPercent"
-                         [style.top.px]="topOffset"
-                         (mouseenter)="showTooltip($event, event, row.stageName)"
-                         (mouseleave)="hideTooltip()">
-                      <span class="bar-text">
-                        {{ event.label ? event.label : row.stageName }}
-                      </span>
-                    </div>
-                  }
-                </div>
-              </div>
-            }
+    @let segments = breakdown.splitSegments ?? [];
+    @if (segments.length > 0) {
+      <div class="tl-split">
+        @for (seg of segments; track (seg.focusKey ?? '') + '_' + $index) {
+          <span
+            class="tl-split-seg tl-focusable"
+            [class]="fillClass(seg.fill)"
+            [class.tl-focus-match]="isFocused(seg.focusKey)"
+            [style.flex-grow]="seg.flexWeight && seg.flexWeight > 0 ? seg.flexWeight : 1"
+            (mouseenter)="enterSplitSegment($event, seg)"
+            (mouseleave)="leaveSplitSegment()"
+          ></span>
+        }
+      </div>
+      <div class="tl-legend">
+        @for (seg of segments; track (seg.focusKey ?? '') + '_' + $index) {
+          <span
+            class="tl-legend-item tl-legend-item--interactive tl-focusable"
+            [class.tl-focus-match]="isFocused(seg.focusKey)"
+            (mouseenter)="enterSplitSegment($event, seg)"
+            (mouseleave)="leaveSplitSegment()"
+          >
+            <span class="tl-swatch" [class]="fillClass(seg.fill)"></span>
+            <span>{{ seg.label }}</span>
+            <b>{{ seg.durationText }}</b>
+            <span class="tl-muted">{{ seg.shareText }}</span>
+          </span>
+        }
+      </div>
+    }
 
-            <!-- Single Shared Tooltip Panel -->
-            @if (hoveredEvent(); as hover) {
-              <div class="timeline-tooltip-panel"
-                   [class.placement-right]="hover.placement === 'right'"
-                   [class.placement-left]="hover.placement === 'left'"
-                   [style.top.px]="hover.top"
-                   [style.left.px]="hover.left">
-                <div class="panel-section">
-                  <div class="panel-title-upper">Stage Name</div>
-                  <div class="panel-value">{{ hover.rowName }}</div>
-                </div>
-                @if (hover.event.label) {
-                  <div class="panel-section">
-                    <div class="panel-title-upper">Context</div>
-                    <div class="panel-value">{{ hover.event.label }}</div>
-                  </div>
-                }
-                <div class="panel-row-grid">
-                  <div class="panel-grid-item">
-                    <div class="panel-title-upper">Duration</div>
-                    <div class="panel-value">{{ hover.event.duration | number:'1.2-2' }}s</div>
-                  </div>
-                  <div class="panel-grid-item">
-                    <div class="panel-title-upper">Time</div>
-                    <div class="panel-value">
-                      @if (hover.event.endTime) {
-                        {{ hover.event.startTime | date:'HH:mm:ss' }} - {{ hover.event.endTime | date:'HH:mm:ss z' }}
-                      } @else {
-                        {{ hover.event.startTime | date:'HH:mm:ss z' }} (In progress)
-                      }
-                    </div>
-                  </div>
-                </div>
-                <div class="panel-arrow"></div>
-              </div>
+    @let ticks = breakdown.axis?.ticks ?? [];
+
+    <!-- Test Timeline -->
+    @if (breakdown.testTimeline; as testTl) {
+      <div class="tl-table" role="region" aria-label="Test steps">
+        <div class="tl-grid tl-axis">
+          <div class="tl-axis-label">Step</div>
+          <div class="tl-axis-track">
+            @for (tick of ticks; track $index) {
+              <span
+                class="tl-tick"
+                [class]="tickAlignmentClass(tick.alignment)"
+                [style.left.%]="tick.leftPercent ?? 0"
+              >{{ tick.label }}</span>
             }
           </div>
-
-          <div class="timeline-scale">
-            <div class="scale-ticks">
-              @let ticks = timelineTicks();
-              @if (ticks.length === 5) {
-                <span class="scale-tick" style="left: 0%">{{ ticks[0] | date:'HH:mm:ss z' }}</span>
-                <span class="scale-tick" style="left: 25%">{{ ticks[1] | date:'HH:mm:ss z' }}</span>
-                <span class="scale-tick" style="left: 50%">{{ ticks[2] | date:'HH:mm:ss z' }}</span>
-                <span class="scale-tick" style="left: 75%">{{ ticks[3] | date:'HH:mm:ss z' }}</span>
-                <span class="scale-tick" style="left: 100%">{{ ticks[4] | date:'HH:mm:ss z' }}</span>
-              }
-            </div>
-          </div>
+          <div class="tl-num tl-axis-label">Duration</div>
+          <div class="tl-num tl-axis-label">Share</div>
         </div>
 
-        @if (timingBreakdown(); as breakdown) {
-          <div class="timeline-baseline">
-            * Baseline (0s) started at {{ breakdown.createTime | date:'yyyy-MM-dd HH:mm:ss' }}
+        @for (phase of testTl.phases ?? []; track (phase.phaseId || pIdx); let pIdx = $index) {
+          @let expanded = isPhaseExpanded(phase, pIdx);
+          <div
+            class="tl-grid tl-row tl-row--phase tl-row--group tl-focusable"
+            role="button"
+            tabindex="0"
+            [attr.aria-expanded]="expanded"
+            [class.tl-focus-match]="isFocused(phase.focusKey)"
+            (click)="togglePhase(phase, pIdx)"
+            (keydown.enter)="togglePhase(phase, pIdx)"
+            (keydown.space)="$event.preventDefault(); togglePhase(phase, pIdx)"
+          >
+            <div class="tl-label">
+              <mat-icon class="tl-chevron" aria-hidden="true">chevron_right</mat-icon>
+              <span class="tl-swatch" [class]="fillClass(phase.fill)"></span>
+              <span class="tl-phase-name">{{ phase.label }}</span>
+              @if (phase.stepCountText) {
+                <span class="tl-label-detail tl-inline">{{ phase.stepCountText }}</span>
+              }
+            </div>
+            <div class="tl-track" [style.background-size]="trackTickSize()">
+              <span
+                class="tl-bracket"
+                [style.left.%]="phase.bracketLeftPercent ?? 0"
+                [style.width.%]="phase.bracketWidthPercent ?? 0"
+              ></span>
+            </div>
+            <div class="tl-num"><b>{{ phase.durationText }}</b></div>
+            <div class="tl-num tl-muted">{{ phase.shareText }}</div>
+          </div>
+
+          @if (expanded) {
+            @for (row of phase.rows ?? []; track (row.label ?? '') + '_' + $index; let rIdx = $index) {
+              @let rowKey = (phase.phaseId || pIdx) + '-' + rIdx;
+              <div
+                class="tl-grid tl-row tl-focusable"
+                [class.tl-row--ended]="row.isEndedStep"
+                [class.tl-row--paired]="isPaired(row.pairKey)"
+                [class.tl-focus-match]="isFocused(row.focusKey)"
+                (mouseenter)="enterTestStepRow($event, row)"
+                (mouseleave)="leaveRowTooltip()"
+              >
+                <div class="tl-label tl-indent">
+                  <div class="tl-label-main">
+                    <span>{{ row.label }}</span>
+                    @if (row.isEndedStep && row.resultLabel) {
+                      <span
+                        class="tl-result"
+                        [class]="'tl-result tl-result--' + toneSuffix(row.resultTone)"
+                      >{{ row.resultLabel }}</span>
+                    }
+                  </div>
+                  @if (row.detail) {
+                    <div class="tl-label-detail">{{ row.detail }}</div>
+                  }
+                  @if (row.isEndedStep && row.errorMessage) {
+                    <div
+                      class="tl-error"
+                      [attr.title]="row.fullErrorMessage || row.errorMessage"
+                    >{{ row.errorMessage }}</div>
+                  }
+                </div>
+                <div class="tl-track" [style.background-size]="trackTickSize()">
+                  @for (bar of row.bars ?? []; track $index) {
+                    <span
+                      class="tl-bar"
+                      [class]="fillClass(row.fill)"
+                      [style.left.%]="bar.leftPercent ?? 0"
+                      [style.width.%]="bar.widthPercent ?? 0"
+                    ></span>
+                  }
+                  @if (row.isEndedStep) {
+                    <span
+                      class="tl-endmark"
+                      [class]="'tl-endmark tl-endmark--' + toneSuffix(row.resultTone)"
+                      [style.left.%]="row.endMarkLeftPercent ?? 0"
+                    ></span>
+                  }
+                </div>
+                <div class="tl-num">{{ row.durationText }}</div>
+                <div class="tl-num tl-muted">{{ row.shareText }}</div>
+              </div>
+
+              @let allSubTests = row.subTests ?? [];
+              @if (allSubTests.length > 0) {
+                @for (st of visibleSubTests(allSubTests, rowKey); track (st.name ?? '') + '_' + $index) {
+                  <div
+                    class="tl-grid tl-row tl-row--sub tl-focusable"
+                    [class.tl-focus-match]="isFocused('test')"
+                    (mouseenter)="enterSubTestRow($event, st)"
+                    (mouseleave)="leaveRowTooltip()"
+                  >
+                    <div class="tl-label tl-indent-2">
+                      <div class="tl-label-main">
+                        <span>{{ st.name }}</span>
+                        @if (st.resultLabel) {
+                          <span
+                            class="tl-result"
+                            [class]="'tl-result tl-result--' + toneSuffix(st.resultTone)"
+                          >{{ st.resultLabel }}</span>
+                        }
+                      </div>
+                    </div>
+                    <div class="tl-track" [style.background-size]="trackTickSize()">
+                      @if (st.bar; as stBar) {
+                        <span
+                          class="tl-bar"
+                          [class]="'tl-bar tl-fill-sub tl-fill-sub--' + toneSuffix(st.resultTone)"
+                          [style.left.%]="stBar.leftPercent ?? 0"
+                          [style.width.%]="stBar.widthPercent ?? 0"
+                        ></span>
+                      }
+                    </div>
+                    <div class="tl-num">{{ st.durationText }}</div>
+                    <div class="tl-num tl-muted"></div>
+                  </div>
+                }
+                @if (allSubTests.length > subTestCap) {
+                  @let subExpanded = isSubTestGroupExpanded(rowKey);
+                  <div
+                    class="tl-grid tl-row tl-row--group tl-focusable"
+                    role="button"
+                    tabindex="0"
+                    [attr.aria-expanded]="subExpanded"
+                    [class.tl-focus-match]="isFocused('test')"
+                    (click)="toggleSubTestGroup(rowKey)"
+                    (keydown.enter)="toggleSubTestGroup(rowKey)"
+                    (keydown.space)="$event.preventDefault(); toggleSubTestGroup(rowKey)"
+                  >
+                    <div class="tl-label tl-indent-2">
+                      <div class="tl-label-main">
+                        <mat-icon class="tl-chevron" aria-hidden="true">chevron_right</mat-icon>
+                        <span>
+                          {{
+                            subExpanded
+                              ? 'Show fewer sub-tests'
+                              : allSubTests.length - subTestCap + ' more sub-tests'
+                          }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="tl-track"></div>
+                    <div class="tl-num"></div>
+                    <div class="tl-num"></div>
+                  </div>
+                }
+              }
+            }
+          }
+        }
+      </div>
+
+      @if (originClockText()) {
+        <p class="tl-axis-note">Times are relative to {{ originClockText() }}.</p>
+      }
+    }
+
+    <!-- Job Timeline -->
+    @if (breakdown.jobTimeline; as jobTl) {
+      <div class="tl-table" role="region" aria-label="Job activity and test runs">
+        <div class="tl-grid tl-axis">
+          <div class="tl-axis-label"></div>
+          <div class="tl-axis-track">
+            @for (tick of ticks; track $index) {
+              <span
+                class="tl-tick"
+                [class]="tickAlignmentClass(tick.alignment)"
+                [style.left.%]="tick.leftPercent ?? 0"
+              >{{ tick.label }}</span>
+            }
+          </div>
+          <div class="tl-num tl-axis-label"></div>
+          <div class="tl-num tl-axis-label">Total</div>
+        </div>
+
+        <div class="tl-grid tl-row tl-row--phase">
+          <div class="tl-label"><span class="tl-phase-name">Job activity</span></div>
+          <div class="tl-track" [style.background-size]="trackTickSize()">
+            @for (bar of jobTl.activityBars ?? []; track $index) {
+              @if (bar.interval; as iv) {
+                <span
+                  class="tl-bar tl-bar--state tl-focusable"
+                  [class]="fillClass(bar.fill)"
+                  [class.tl-focus-match]="isFocused(bar.focusKey)"
+                  [style.left.%]="iv.leftPercent ?? 0"
+                  [style.width.%]="iv.widthPercent ?? 0"
+                  (mouseenter)="enterJobBar($event, bar)"
+                  (mouseleave)="leaveRowTooltip()"
+                ></span>
+              }
+            }
+          </div>
+          <div class="tl-num"></div>
+          <div class="tl-num"><b>{{ jobTl.totalDurationText }}</b></div>
+        </div>
+
+        @if (jobTl.jobSetup; as setupRow) {
+          <div class="tl-grid tl-row">
+            <div class="tl-label tl-indent">
+              <div class="tl-label-main">Job setup</div>
+              @if (setupRow.detail) {
+                <div class="tl-label-detail">{{ setupRow.detail }}</div>
+              }
+            </div>
+            <div class="tl-track" [style.background-size]="trackTickSize()">
+              @for (bar of setupRow.bars ?? []; track $index) {
+                @if (bar.interval; as iv) {
+                  <span
+                    class="tl-bar tl-focusable"
+                    [class]="fillClass(bar.fill)"
+                    [class.tl-bar--inner]="bar.isInner"
+                    [class.tl-focus-match]="isFocused(bar.focusKey)"
+                    [style.left.%]="iv.leftPercent ?? 0"
+                    [style.width.%]="iv.widthPercent ?? 0"
+                    (mouseenter)="enterJobBar($event, bar, bar.detail)"
+                    (mouseleave)="leaveRowTooltip()"
+                  ></span>
+                }
+              }
+            </div>
+            <div class="tl-num"></div>
+            <div class="tl-num">{{ setupRow.durationText }}</div>
+          </div>
+        }
+
+        <div class="tl-grid tl-row tl-row--phase">
+          <div class="tl-label">
+            <span class="tl-phase-name">Test runs</span>
+            <span class="tl-label-detail tl-inline">{{ (jobTl.lanes ?? []).length }}</span>
+          </div>
+          <div class="tl-track" [style.background-size]="trackTickSize()"></div>
+          <div class="tl-num tl-muted">Waited</div>
+          <div class="tl-num tl-muted">Ran</div>
+        </div>
+
+        @for (lane of visibleJobLanes(); track (lane.testId || $index)) {
+          @let devicesText = (lane.deviceIds ?? []).join(', ');
+          @if (lane.hasRecord && jobId() && lane.testId) {
+            <a
+              app-nav-link
+              class="tl-grid tl-row tl-row--lane"
+              [config]="{type: 'test', jobId: jobId(), testId: lane.testId}"
+              [customQueryParams]="{'tab': 'timeline'}"
+              queryParamsHandling="merge"
+              (mouseenter)="enterJobLane($event, lane)"
+              (mouseleave)="leaveRowTooltip()"
+            >
+              <div class="tl-label tl-indent">
+                <div class="tl-label-main tl-lane-line">
+                  <span
+                    class="tl-lane-name tl-ellipsis"
+                    [attr.title]="lane.fullName || lane.displayName || ''"
+                  >{{ lane.displayName }}</span>
+                  @if (lane.runTag) {
+                    <span class="tl-tag">{{ lane.runTag }}</span>
+                  }
+                </div>
+                <div class="tl-label-detail tl-lane-line">
+                  @if (devicesText) {
+                    <span class="tl-mono tl-ellipsis" [attr.title]="devicesText">{{ devicesText }}</span>
+                  }
+                  @if (lane.resultLabel) {
+                    <span
+                      class="tl-result"
+                      [class]="'tl-result tl-result--' + toneSuffix(lane.resultTone)"
+                    >{{ lane.resultLabel }}</span>
+                  }
+                </div>
+              </div>
+              <div class="tl-track" [style.background-size]="trackTickSize()">
+                @for (bar of lane.bars ?? []; track $index) {
+                  <span
+                    class="tl-bar tl-focusable"
+                    [class]="fillClass(bar.fill)"
+                    [class.tl-focus-match]="isFocused(bar.focusKey)"
+                    [style.left.%]="bar.leftPercent ?? 0"
+                    [style.width.%]="bar.widthPercent ?? 0"
+                  ></span>
+                }
+                @if (lane.hasEndMark) {
+                  <span
+                    class="tl-endmark tl-focusable"
+                    [class]="'tl-endmark tl-endmark--' + toneSuffix(lane.resultTone)"
+                    [class.tl-focus-match]="isFocused(laneEndMarkFocusKey(lane))"
+                    [style.left.%]="lane.endMarkLeftPercent ?? 0"
+                  ></span>
+                }
+              </div>
+              <div class="tl-num">{{ lane.waitedText }}</div>
+              <div class="tl-num">
+                @if (lane.ranCell?.recorded; as rec) {
+                  {{ rec.durationText }}
+                } @else if (lane.ranCell?.unrecorded; as unrec) {
+                  <span class="tl-muted">{{ unrec.reason }}</span>
+                }
+              </div>
+            </a>
+          } @else {
+            <div
+              class="tl-grid tl-row tl-row--lane"
+              (mouseenter)="enterJobLane($event, lane)"
+              (mouseleave)="leaveRowTooltip()"
+            >
+              <div class="tl-label tl-indent">
+                <div class="tl-label-main tl-lane-line">
+                  <span
+                    class="tl-lane-name tl-ellipsis"
+                    [attr.title]="lane.fullName || lane.displayName || ''"
+                  >{{ lane.displayName }}</span>
+                  @if (lane.runTag) {
+                    <span class="tl-tag">{{ lane.runTag }}</span>
+                  }
+                </div>
+                <div class="tl-label-detail tl-lane-line">
+                  @if (devicesText) {
+                    <span class="tl-mono tl-ellipsis" [attr.title]="devicesText">{{ devicesText }}</span>
+                  }
+                  @if (lane.hasRecord) {
+                    @if (lane.resultLabel) {
+                      <span
+                        class="tl-result"
+                        [class]="'tl-result tl-result--' + toneSuffix(lane.resultTone)"
+                      >{{ lane.resultLabel }}</span>
+                    }
+                  } @else {
+                    <span class="tl-muted">No test record in MOSS</span>
+                  }
+                </div>
+              </div>
+              <div class="tl-track" [style.background-size]="trackTickSize()">
+                @for (bar of lane.bars ?? []; track $index) {
+                  <span
+                    class="tl-bar tl-focusable"
+                    [class]="fillClass(bar.fill)"
+                    [class.tl-focus-match]="isFocused(bar.focusKey)"
+                    [style.left.%]="bar.leftPercent ?? 0"
+                    [style.width.%]="bar.widthPercent ?? 0"
+                  ></span>
+                }
+                @if (lane.hasEndMark) {
+                  <span
+                    class="tl-endmark tl-focusable"
+                    [class]="'tl-endmark tl-endmark--' + toneSuffix(lane.resultTone)"
+                    [class.tl-focus-match]="isFocused(laneEndMarkFocusKey(lane))"
+                    [style.left.%]="lane.endMarkLeftPercent ?? 0"
+                  ></span>
+                }
+              </div>
+              <div class="tl-num">{{ lane.waitedText }}</div>
+              <div class="tl-num">
+                @if (lane.ranCell?.recorded; as rec) {
+                  {{ rec.durationText }}
+                } @else if (lane.ranCell?.unrecorded; as unrec) {
+                  <span class="tl-muted">{{ unrec.reason }}</span>
+                }
+              </div>
+            </div>
+          }
+        }
+
+        @if (hiddenJobLaneCount() > 0) {
+          <div
+            class="tl-grid tl-row tl-row--group"
+            role="button"
+            tabindex="0"
+            [attr.aria-expanded]="showAllLanes()"
+            (click)="toggleShowAllLanes()"
+            (keydown.enter)="toggleShowAllLanes()"
+            (keydown.space)="$event.preventDefault(); toggleShowAllLanes()"
+          >
+            <div class="tl-label tl-indent">
+              <div class="tl-label-main">
+                <mat-icon class="tl-chevron" aria-hidden="true">chevron_right</mat-icon>
+                <span>
+                  {{
+                    showAllLanes()
+                      ? 'Show fewer test runs'
+                      : 'Show ' + hiddenJobLaneCount() + ' more test runs'
+                  }}
+                </span>
+              </div>
+            </div>
+            <div class="tl-track"></div>
+            <div class="tl-num"></div>
+            <div class="tl-num"></div>
           </div>
         }
       </div>
-  } @else {
-    <p class="no-data-text">No timeline data available.</p>
-  }
-</div>
+
+      <div class="tl-legend tl-legend--lanes">
+        <span class="tl-legend-item">
+          <span class="tl-swatch tl-fill-wait"></span>Waiting for a device
+        </span>
+        <span class="tl-legend-item">
+          <span class="tl-swatch tl-fill-setup"></span>Setup
+        </span>
+        <span class="tl-legend-item">
+          <span class="tl-swatch tl-fill-test"></span>Test run
+        </span>
+        <span class="tl-legend-item">
+          <span class="tl-swatch tl-fill-teardown"></span>Teardown
+        </span>
+        @if (hasOpaqueLaneBar()) {
+          <span class="tl-legend-item">
+            <span class="tl-swatch tl-fill-opaque"></span>Running
+          </span>
+        }
+        @if (hasMissingLaneBar()) {
+          <span class="tl-legend-item">
+            <span class="tl-swatch tl-fill-missing"></span>No test record
+          </span>
+        }
+      </div>
+
+      @if (originClockText()) {
+        <p class="tl-axis-note">
+          Times are relative to {{ originClockText() }}, when the job was created. Select a test run
+          to see its own timeline.
+        </p>
+      }
+    }
+
+    @if (activeTooltip(); as tip) {
+      <div
+        class="tl-tip"
+        role="tooltip"
+        [style.left.px]="tooltipPosition().left"
+        [style.top.px]="tooltipPosition().top"
+      >
+        <div class="tl-tip-title">{{ tip.title }}</div>
+        @if (tip.subtitle) {
+          <div class="tl-tip-muted">{{ tip.subtitle }}</div>
+        }
+        @for (row of tip.rows; track row.label + '_' + $index) {
+          <div class="tl-tip-row">
+            <span>{{ row.label }}</span>
+            <b>{{ row.value }}</b>
+            @if (row.muted) {
+              <span class="tl-tip-muted">{{ row.muted }}</span>
+            }
+          </div>
+        }
+        @for (hint of tip.hints; track $index) {
+          <div class="tl-tip-hint">{{ hint }}</div>
+        }
+      </div>
+    }
+  </div>
+}

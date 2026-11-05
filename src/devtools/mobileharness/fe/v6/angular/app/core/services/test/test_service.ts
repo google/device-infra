@@ -7,6 +7,8 @@ import {
   GetTestLogResponse,
   GetTestRequest,
   GetTestResponse,
+  GetTestTimelineRequest,
+  GetTestTimelineResponse,
 } from '../../models/test_overview';
 
 /**
@@ -22,6 +24,13 @@ export abstract class TestService {
    * Retrieves the detailed overview data for a specific test.
    */
   abstract getTest(request: GetTestRequest): Observable<GetTestResponse>;
+
+  /**
+   * Retrieves the execution timeline breakdown for a specific test or sub-test.
+   */
+  abstract getTestTimeline(
+    request: GetTestTimelineRequest,
+  ): Observable<GetTestTimelineResponse>;
 
   /**
    * Retrieves a chunk of logs for a specific test.

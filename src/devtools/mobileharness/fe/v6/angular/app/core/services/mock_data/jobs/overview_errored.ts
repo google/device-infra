@@ -51,12 +51,7 @@ export const SCENARIO_JOB_ERRORED: MockJobScenario = {
         ],
       },
     },
-    timingBreakdown: {
-      createTime: '2025-07-09T10:15:00Z',
-      startTime: '2025-07-09T10:15:05Z',
-      endTime: '2025-07-09T10:15:10Z',
-      stages: [],
-    },
+    timingBreakdown: {},
   },
   log: '[10:15:05] Job started\n[10:15:05] Initializing lab server connection...\n[10:15:10] ERROR: Lab server is offline, unable to allocate devices.\n[10:15:10] Job errored.',
   cloudLogLink:

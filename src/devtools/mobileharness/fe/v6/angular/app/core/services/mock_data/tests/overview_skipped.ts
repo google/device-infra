@@ -41,11 +41,7 @@ export const SCENARIO_TEST_SKIPPED: MockTestScenario = {
       actualUser: 'dafeni@example.com',
     },
     properties: {},
-    timingBreakdown: {
-      createTime: '2025-07-09T10:11:15Z',
-      endTime: '2025-07-09T10:11:16Z',
-      stages: [],
-    },
+    timingBreakdown: {},
   },
   log: 'Test skipped due to @Ignore annotation.',
   cloudLogLink:

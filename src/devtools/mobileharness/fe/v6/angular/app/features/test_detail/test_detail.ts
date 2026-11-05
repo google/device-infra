@@ -9,9 +9,9 @@ import {
 import {toSignal} from '@angular/core/rxjs-interop';
 import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
-import {ActivatedRoute, RouterModule} from '@angular/router';
+import {ActivatedRoute, Router, RouterModule} from '@angular/router';
 import {combineLatest, of} from 'rxjs';
-import {catchError, map} from 'rxjs/operators';
+import {catchError, distinctUntilChanged, map, tap} from 'rxjs/operators';
 
 import {NavLink} from '@deviceinfra/app/shared/components/nav_link/nav_link';
 import {useCopyToClipboard} from '@deviceinfra/app/shared/composables/copy';
@@ -26,6 +26,7 @@ import {
 } from '../../core/models/app_data';
 import {
   GetTestRequest,
+  TestOverviewData,
   TestResult,
   TestStatus,
 } from '../../core/models/test_overview';
@@ -33,6 +34,7 @@ import {TEST_SERVICE} from '../../core/services/test/test_service';
 import {ActionButton} from '../../shared/components/action_button/action_button';
 import {LegacyConsoleBanner} from '../../shared/components/legacy_console_banner/legacy_console_banner';
 import {TooltipIfTruncatedDirective} from '../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
+import {DetailTab, parseDetailTab} from '../../shared/utils/enum_utils';
 import {TestFilesTab} from './components/test_files_tab/test_files_tab';
 import {TestLogTab} from './components/test_log_tab/test_log_tab';
 import {TestOverviewTab} from './components/test_overview_tab/test_overview_tab';
@@ -74,6 +76,7 @@ const SHORT_ID_LENGTH = 8;
 })
 export class TestDetail {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly testService = inject(TEST_SERVICE);
   private readonly appData = inject(APP_DATA);
   protected readonly jobActions = useJobActions();
@@ -88,8 +91,13 @@ export class TestDetail {
     {initialValue: null},
   );
 
-  readonly activeTab = signal<'overview' | 'timeline' | 'log' | 'files'>(
-    'overview',
+  readonly activeTab = signal<DetailTab>('overview');
+  readonly timelineVisited = signal<boolean>(false);
+  private activeEntityKey: string | null = null;
+
+  private readonly requestedTab = toSignal(
+    this.route.queryParamMap.pipe(map((q) => parseDetailTab(q.get('tab')))),
+    {initialValue: null},
   );
 
   private readonly routeParams = toSignal(
@@ -102,6 +110,12 @@ export class TestDetail {
           undefined,
         jobId: params.get('jobId') || '',
       })),
+      distinctUntilChanged(
+        (a, b) =>
+          a.testId === b.testId &&
+          a.subTestId === b.subTestId &&
+          a.jobId === b.jobId,
+      ),
     ),
   );
 
@@ -120,7 +134,15 @@ export class TestDetail {
         : null;
     },
     stream: (params) => {
+      const entityKey = params
+        ? `${params.testId ?? ''}|${params.subTestId ?? ''}|${params.jobId}`
+        : '';
+      const isNewEntity = entityKey !== this.activeEntityKey;
+      if (isNewEntity) {
+        this.timelineVisited.set(false);
+      }
       if (!params || !params.testId) {
+        this.activeEntityKey = null;
         return of<TestPageData>({
           testOverviewData: null,
           error: 'No test ID provided in the route.',
@@ -138,6 +160,12 @@ export class TestDetail {
       const idForErrorLogging = subTestId || testId;
 
       return this.testService.getTest(request).pipe(
+        tap((response) => {
+          if (isNewEntity && response.test) {
+            this.activeEntityKey = entityKey;
+            this.applyInitialTab(response.test);
+          }
+        }),
         map(
           (response) =>
             ({
@@ -156,14 +184,6 @@ export class TestDetail {
         }),
       );
     },
-    onInitialLoad: (data) => {
-      if (data?.testOverviewData) {
-        const test = data.testOverviewData;
-        this.activeTab.set(
-          test.status === TestStatus.TEST_STATUS_RUNNING ? 'log' : 'overview',
-        );
-      }
-    },
   });
 
   readonly testResource = this.silentResourceResult.resource;
@@ -176,19 +196,27 @@ export class TestDetail {
   readonly test = this.testOverview;
   readonly errorMessage = computed(() => this.testPageData()?.error || null);
 
-  readonly jobId = computed(
-    () => this.testOverview()?.job?.id || this.testPageData()?.jobId || '',
-  );
+  readonly jobId = computed(() => {
+    const rp = this.routeParams();
+    const overview = this.testOverview();
+    const targetId = rp?.subTestId || rp?.testId;
+    const freshJobId =
+      overview && overview.id === targetId ? overview.job?.id : undefined;
+    return rp?.jobId || freshJobId || this.testPageData()?.jobId || '';
+  });
 
   readonly subTestId = computed(() => this.routeParams()?.subTestId);
 
-  readonly rootTestId = computed(
-    () =>
-      this.testOverview()?.subTestsInfo?.rootTestId ||
-      this.testId() ||
-      this.testOverview()?.id ||
-      '',
-  );
+  readonly rootTestId = computed(() => {
+    const rp = this.routeParams();
+    const overview = this.testOverview();
+    const targetId = rp?.subTestId || rp?.testId;
+    const freshRootId =
+      overview && overview.id === targetId
+        ? overview.subTestsInfo?.rootTestId
+        : undefined;
+    return freshRootId || rp?.testId || this.testId() || overview?.id || '';
+  });
 
   readonly isSubTest = computed(() => {
     const test = this.testOverview();
@@ -243,8 +271,32 @@ export class TestDetail {
       : TEST_RESULT_DISPLAY_MAP[result as keyof typeof TEST_RESULT_DISPLAY_MAP];
   });
 
-  setActiveTab(tab: 'overview' | 'timeline' | 'log' | 'files') {
+  private applyInitialTab(test: TestOverviewData) {
+    const tabFromUrl = this.requestedTab();
+    if (tabFromUrl && (tabFromUrl !== 'files' || Boolean(test.fileExplorer))) {
+      this.setActiveTab(tabFromUrl, false);
+    } else {
+      this.setActiveTab(
+        test.status === TestStatus.TEST_STATUS_RUNNING ? 'log' : 'overview',
+        Boolean(tabFromUrl),
+      );
+    }
+  }
+
+  setActiveTab(tab: DetailTab, syncUrl = true) {
+    if (tab === 'timeline') {
+      this.timelineVisited.set(true);
+    }
     this.activeTab.set(tab);
+    const targetParam = tab === 'overview' ? null : tab;
+    if (syncUrl && this.requestedTab() !== targetParam) {
+      void this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: {tab: targetParam},
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
   }
 
   onLogStreamCompleted() {

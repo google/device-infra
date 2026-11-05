@@ -38,12 +38,7 @@ export const SCENARIO_JOB_ABORTED: MockJobScenario = {
     properties: {
       'aborted_by': 'g3-ci-scheduler',
     },
-    timingBreakdown: {
-      createTime: '2025-07-09T12:00:00Z',
-      startTime: '2025-07-09T12:00:05Z',
-      endTime: '2025-07-09T12:02:00Z',
-      stages: [],
-    },
+    timingBreakdown: {},
   },
   log: '[12:00:05] Job started\n[12:01:00] Allocating devices...\n[12:02:00] ABORT: Cancelled by user or upstream scheduler.\n[12:02:00] Job aborted.',
   cloudLogLink:

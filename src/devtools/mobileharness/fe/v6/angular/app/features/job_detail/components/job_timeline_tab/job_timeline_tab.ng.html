@@ -1,4 +1,8 @@
 <app-timeline-chart
+  [jobId]="jobId()"
+  [loading]="loading()"
+  [errorMessage]="errorMessage()"
   [timingBreakdown]="timingBreakdown()"
-  theme="blue"
+  emptyMessage="No timing was recorded for this job."
 ></app-timeline-chart>
+

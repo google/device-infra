@@ -7,6 +7,8 @@ import {
   GetJobLogResponse,
   GetJobRequest,
   GetJobResponse,
+  GetJobTimelineRequest,
+  GetJobTimelineResponse,
   KillJobRequest,
   KillJobResponse,
 } from '../../models/job_overview';
@@ -20,6 +22,11 @@ export const JOB_SERVICE = new InjectionToken<JobService>('JobService');
 export abstract class JobService {
   /** Retrieves the detailed overview data for a specific job. */
   abstract getJob(request: GetJobRequest): Observable<GetJobResponse>;
+
+  /** Retrieves the execution timeline breakdown for a specific job. */
+  abstract getJobTimeline(
+    request: GetJobTimelineRequest,
+  ): Observable<GetJobTimelineResponse>;
 
   /** Retrieves a chunk of logs for a specific job. */
   abstract getJobLog(request: GetJobLogRequest): Observable<GetJobLogResponse>;

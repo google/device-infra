@@ -45,17 +45,111 @@ export const SCENARIO_TEST_FILES: MockTestScenario = {
       'dimension_rooted': 'false',
     },
     timingBreakdown: {
-      createTime: '2025-07-09T10:11:15Z',
-      startTime: '2025-07-09T10:11:15Z',
-      endTime: '2025-07-09T10:11:25Z',
-      stages: [
+      summaryLines: ['Passed in 10.0s: 4.0s setup, 6.0s test run.'],
+      originTime: '2025-07-09T10:11:15Z',
+      finishTime: '2025-07-09T10:11:25Z',
+      axis: {
+        tickStepPercent: 25,
+        ticks: [
+          {
+            leftPercent: 0,
+            label: '0s',
+            alignment: 'TIMELINE_TICK_ALIGNMENT_START',
+          },
+          {
+            leftPercent: 50,
+            label: '+5s',
+            alignment: 'TIMELINE_TICK_ALIGNMENT_CENTER',
+          },
+          {
+            leftPercent: 100,
+            label: '+10s',
+            alignment: 'TIMELINE_TICK_ALIGNMENT_END',
+          },
+        ],
+      },
+      splitSegments: [
         {
-          name: 'Run Test',
-          tag: 'client',
-          startTime: '2025-07-09T10:11:19Z',
-          endTime: '2025-07-09T10:11:25Z',
+          focusKey: 'setup',
+          label: 'Setup',
+          fill: 'TIMELINE_FILL_SETUP',
+          flexWeight: 4000,
+          durationText: '4.0s',
+          shareText: '40%',
+        },
+        {
+          focusKey: 'test',
+          label: 'Test run',
+          fill: 'TIMELINE_FILL_TEST',
+          flexWeight: 6000,
+          durationText: '6.0s',
+          shareText: '60%',
         },
       ],
+      testTimeline: {
+        phases: [
+          {
+            phaseId: 'setup',
+            focusKey: 'setup',
+            label: 'Setup',
+            fill: 'TIMELINE_FILL_SETUP',
+            bracketLeftPercent: 0,
+            bracketWidthPercent: 40,
+            durationText: '4.0s',
+            shareText: '40%',
+            rows: [
+              {
+                label: 'Sending files to the lab',
+                focusKey: 'setup',
+                fill: 'TIMELINE_FILL_SETUP',
+                durationText: '4.0s',
+                shareText: '40%',
+                bars: [
+                  {
+                    startTime: '2025-07-09T10:11:15Z',
+                    endTime: '2025-07-09T10:11:19Z',
+                    leftPercent: 0,
+                    widthPercent: 40,
+                    startOffsetText: '+0ms',
+                    endOffsetText: '+4.0s',
+                    durationText: '4.0s',
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            phaseId: 'test',
+            focusKey: 'test',
+            label: 'Test run',
+            fill: 'TIMELINE_FILL_TEST',
+            bracketLeftPercent: 40,
+            bracketWidthPercent: 60,
+            durationText: '6.0s',
+            shareText: '60%',
+            rows: [
+              {
+                label: 'TestWithFiles',
+                focusKey: 'test',
+                fill: 'TIMELINE_FILL_TEST',
+                durationText: '6.0s',
+                shareText: '60%',
+                bars: [
+                  {
+                    startTime: '2025-07-09T10:11:19Z',
+                    endTime: '2025-07-09T10:11:25Z',
+                    leftPercent: 40,
+                    widthPercent: 60,
+                    startOffsetText: '+4.0s',
+                    endOffsetText: '+10.0s',
+                    durationText: '6.0s',
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
     },
     fileExplorer: {
       cnsPath: '/cns-fake/lz-d/home/dafeng/mobileharness/experiments/run_1',

@@ -1,4 +1,7 @@
 <app-timeline-chart
+  [loading]="loading()"
+  [errorMessage]="errorMessage()"
   [timingBreakdown]="timingBreakdown()"
-  theme="green"
+  emptyMessage="No timing was recorded for this test."
 ></app-timeline-chart>
+

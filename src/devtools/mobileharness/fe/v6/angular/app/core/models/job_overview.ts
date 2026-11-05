@@ -87,7 +87,6 @@ export declare interface JobOverviewData {
   config: JobConfig;
   properties: Record<string, string>;
   troubleshooting?: Troubleshooting;
-  timingBreakdown?: TimeBreakdown;
   // File explorer resources.
   fileExplorer?: FileExplorer;
 }
@@ -104,6 +103,16 @@ export declare interface GetJobRequest {
 export declare interface GetJobResponse {
   job: JobOverviewData;
   actions?: JobActions;
+}
+
+/** Request structure for the getJobTimeline API. */
+export declare interface GetJobTimelineRequest {
+  jobId: string;
+}
+
+/** Response structure for the getJobTimeline API. */
+export declare interface GetJobTimelineResponse {
+  timeline?: TimeBreakdown;
 }
 
 /** Request structure for the getJobLog API. */

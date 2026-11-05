@@ -10,6 +10,8 @@ import {
   GetJobLogResponse,
   GetJobRequest,
   GetJobResponse,
+  GetJobTimelineRequest,
+  GetJobTimelineResponse,
   KillJobRequest,
   KillJobResponse,
 } from '../../models/job_overview';
@@ -28,6 +30,14 @@ export class HttpJobService extends JobService {
 
   override getJob(request: GetJobRequest): Observable<GetJobResponse> {
     return this.http.get<GetJobResponse>(`${this.apiUrl}/${request.jobId}`);
+  }
+
+  override getJobTimeline(
+    request: GetJobTimelineRequest,
+  ): Observable<GetJobTimelineResponse> {
+    return this.http.get<GetJobTimelineResponse>(
+      `${this.apiUrl}/${request.jobId}/timeline`,
+    );
   }
 
   override getJobLog(request: GetJobLogRequest): Observable<GetJobLogResponse> {

@@ -40,10 +40,7 @@ export const SCENARIO_TEST_SUSPENDED: MockTestScenario = {
       actualUser: 'mobileharness-ci-runner',
     },
     properties: {},
-    timingBreakdown: {
-      createTime: '2025-07-09T11:40:00Z',
-      stages: [],
-    },
+    timingBreakdown: {},
   },
   log: 'Test suspended. Waiting for device quota...',
   cloudLogLink:

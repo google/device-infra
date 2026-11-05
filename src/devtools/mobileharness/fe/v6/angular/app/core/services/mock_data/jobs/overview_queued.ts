@@ -46,10 +46,7 @@ export const SCENARIO_JOB_QUEUED: MockJobScenario = {
     properties: {
       'trigger': 'cron',
     },
-    timingBreakdown: {
-      createTime: '2025-07-10T03:00:00Z',
-      stages: [],
-    },
+    timingBreakdown: {},
   },
   log: 'Waiting in queue for device allocation...',
   cloudLogLink:

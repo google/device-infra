@@ -22,7 +22,11 @@ import {GetHostConfigResult} from '../../models/host_config_models';
 import {DeviceSummary, HostOverview} from '../../models/host_overview';
 import {JobActions, JobOverviewData} from '../../models/job_overview';
 import {SessionDetail} from '../../models/session_overview';
-import {TestActions, TestOverviewData} from '../../models/test_overview';
+import {
+  TestActions,
+  TestOverviewData,
+  TimeBreakdown,
+} from '../../models/test_overview';
 
 /**
  * Common base interface for all mock scenarios.
@@ -98,7 +102,9 @@ export interface MockDeviceScenarioWrapper {
  */
 export interface MockTestScenario extends BaseMockScenario {
   readonly id: string;
-  readonly overview: TestOverviewData;
+  readonly overview: TestOverviewData & {
+    readonly timingBreakdown?: TimeBreakdown;
+  };
   readonly log?: string;
   readonly cloudLogLink?: string;
   actions?: TestActions;
@@ -109,7 +115,9 @@ export interface MockTestScenario extends BaseMockScenario {
  */
 export interface MockJobScenario extends BaseMockScenario {
   readonly id: string;
-  readonly overview: JobOverviewData;
+  readonly overview: JobOverviewData & {
+    readonly timingBreakdown?: TimeBreakdown;
+  };
   readonly log?: string;
   readonly cloudLogLink?: string;
   readonly actions?: JobActions;

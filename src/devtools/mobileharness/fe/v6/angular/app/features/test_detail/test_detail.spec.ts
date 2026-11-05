@@ -10,10 +10,11 @@ import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {
   ActivatedRoute,
   ParamMap,
+  Router,
   convertToParamMap,
   provideRouter,
 } from '@angular/router';
-import {BehaviorSubject, of} from 'rxjs';
+import {BehaviorSubject, Subject, of} from 'rxjs';
 
 import {APP_DATA} from '../../core/models/app_data';
 import {
@@ -22,6 +23,7 @@ import {
   TestOverviewData,
   TestResult,
   TestStatus,
+  TimeBreakdown,
 } from '../../core/models/test_overview';
 import {JOB_SERVICE, JobService} from '../../core/services/job/job_service';
 import {MOCK_TEST_SCENARIOS} from '../../core/services/mock_data/tests';
@@ -31,6 +33,7 @@ import {LoadingService} from '../../shared/services/loading_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
 import {TestFilesTab} from './components/test_files_tab/test_files_tab';
 import {TestLogTab} from './components/test_log_tab/test_log_tab';
+import {TestTimelineTab} from './components/test_timeline_tab/test_timeline_tab';
 import {TestDetail} from './test_detail';
 
 describe('TestDetail Component', () => {
@@ -74,20 +77,56 @@ describe('TestDetail Component', () => {
       createTime: '2026-06-08T03:00:00Z',
     },
     properties: {},
-    timingBreakdown: {
-      createTime: '2026-06-08T03:00:00Z',
-      stages: [],
+  };
+
+  const mockTimingBreakdown: TimeBreakdown = {
+    summaryLines: ['Passed in 10.0s: 10.0s test run.'],
+    originTime: '2026-06-08T03:00:00Z',
+    finishTime: '2026-06-08T03:00:10Z',
+    testTimeline: {
+      phases: [
+        {
+          phaseId: 'test',
+          focusKey: 'test',
+          label: 'Test run',
+          fill: 'TIMELINE_FILL_TEST',
+          durationText: '10.0s',
+          shareText: '100%',
+          rows: [
+            {
+              label: 'NoOpDriver',
+              focusKey: 'test',
+              fill: 'TIMELINE_FILL_TEST',
+              durationText: '10.0s',
+              shareText: '100%',
+              bars: [
+                {
+                  startTime: '2026-06-08T03:00:00Z',
+                  endTime: '2026-06-08T03:00:10Z',
+                  leftPercent: 0,
+                  widthPercent: 100,
+                  durationText: '10.0s',
+                },
+              ],
+            },
+          ],
+        },
+      ],
     },
   };
 
   beforeEach(async () => {
     mockTestService = jasmine.createSpyObj('TestService', [
       'getTest',
+      'getTestTimeline',
       'getTestLog',
       'getTestFile',
     ]);
     mockJobService = jasmine.createSpyObj('JobService', ['killJob']);
     mockTestService.getTest.and.returnValue(of({test: mockOverviewData}));
+    mockTestService.getTestTimeline.and.returnValue(
+      of({timeline: mockTimingBreakdown}),
+    );
     mockTestService.getTestLog.and.returnValue(
       of({
         logContent: '',
@@ -293,21 +332,137 @@ describe('TestDetail Component', () => {
     );
   }));
 
-  it('renders timeline legacy link with redirect_to_v6=0', fakeAsync(() => {
+  it('renders TestTimelineTab lazily when timeline tab is selected and keeps it mounted across tab switches', async () => {
+    const router = TestBed.inject(Router);
+    const navSpy = spyOn(router, 'navigate').and.returnValue(
+      Promise.resolve(true),
+    );
     fixture.detectChanges();
-    tick();
+    await fixture.whenStable();
+    expect(mockTestService.getTestTimeline).not.toHaveBeenCalled();
+
     component.setActiveTab('timeline');
     fixture.detectChanges();
+    expect(navSpy).toHaveBeenCalledWith([], {
+      relativeTo: TestBed.inject(ActivatedRoute),
+      queryParams: {tab: 'timeline'},
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+    for (const block of await fixture.getDeferBlocks()) {
+      await block.render(DeferBlockState.Complete);
+    }
+    fixture.detectChanges();
 
-    const compiled = fixture.nativeElement as HTMLElement;
-    const timelineLink = compiled.querySelector(
-      '.under-development-text a',
-    ) as HTMLAnchorElement | null;
-    expect(timelineLink).not.toBeNull();
-    expect(timelineLink?.getAttribute('href')).toBe(
-      `${component.legacyFeUrl}/testdetailview/job_456/test_123?tab=2&redirect_to_v6=0`,
+    expect(mockTestService.getTestTimeline).toHaveBeenCalledTimes(1);
+    expect(mockTestService.getTestTimeline).toHaveBeenCalledWith({
+      testId: 'test_123',
+      jobId: 'job_456',
+    });
+    const timelineDebug = fixture.debugElement.query(
+      By.directive(TestTimelineTab),
     );
-  }));
+    const timelineTab = timelineDebug.componentInstance as TestTimelineTab;
+    const timelineWrapper = timelineDebug.parent!.nativeElement as HTMLElement;
+    expect(timelineWrapper.hidden).toBeFalse();
+    expect(timelineTab.timingBreakdown()).toEqual(mockTimingBreakdown);
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('Passed in 10.0s: 10.0s test run.');
+
+    queryParamMapSubject.next(convertToParamMap({'tab': 'timeline'}));
+    navSpy.calls.reset();
+    component.setActiveTab('overview');
+    fixture.detectChanges();
+    expect(timelineWrapper.hidden).toBeTrue();
+    expect(navSpy).toHaveBeenCalledWith([], {
+      relativeTo: TestBed.inject(ActivatedRoute),
+      queryParams: {tab: null},
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+
+    component.setActiveTab('timeline');
+    fixture.detectChanges();
+    expect(timelineWrapper.hidden).toBeFalse();
+    expect(mockTestService.getTestTimeline).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens timeline tab on initial load when ?tab=timeline is in query params and resets on test route change', async () => {
+    fixture.destroy();
+    const router = TestBed.inject(Router);
+    const navSpy = spyOn(router, 'navigate').and.returnValue(
+      Promise.resolve(true),
+    );
+    mockTestService.getTest.and.returnValue(
+      of({
+        test: {
+          ...mockOverviewData,
+          status: TestStatus.TEST_STATUS_RUNNING,
+        },
+      }),
+    );
+    queryParamMapSubject.next(convertToParamMap({'tab': 'timeline'}));
+    const tabFixture = TestBed.createComponent(TestDetail);
+    tabFixture.detectChanges();
+    await tabFixture.whenStable();
+    tabFixture.detectChanges();
+
+    expect(tabFixture.componentInstance.activeTab()).toBe('timeline');
+    expect(navSpy).not.toHaveBeenCalled();
+    for (const block of await tabFixture.getDeferBlocks()) {
+      await block.render(DeferBlockState.Complete);
+    }
+    tabFixture.detectChanges();
+    expect(
+      tabFixture.debugElement.query(By.directive(TestTimelineTab)),
+    ).not.toBeNull();
+
+    // reloadSilent() on the same test preserves activeTab and timelineVisited.
+    mockTestService.getTest.and.returnValue(
+      of({
+        test: {
+          ...mockOverviewData,
+          subTestsInfo: {rootTestId: 'stale_root'},
+        },
+      }),
+    );
+    tabFixture.componentInstance.onLogStreamCompleted();
+    tabFixture.detectChanges();
+    await tabFixture.whenStable();
+    tabFixture.detectChanges();
+    expect(tabFixture.componentInstance.activeTab()).toBe('timeline');
+    expect(tabFixture.componentInstance.timelineVisited()).toBeTrue();
+
+    // While a new route's getTest is in flight, jobId() and rootTestId() do not read stale overview fields.
+    const inFlight$ = new Subject<{test: TestOverviewData}>();
+    mockTestService.getTest.and.returnValue(inFlight$.asObservable());
+    queryParamMapSubject.next(convertToParamMap({'tab': 'files'}));
+    paramMapSubject.next(convertToParamMap({'id': 'test_running'}));
+    tabFixture.detectChanges();
+    expect(tabFixture.componentInstance.jobId()).toBe('');
+    expect(tabFixture.componentInstance.rootTestId()).toBe('test_running');
+
+    inFlight$.next({
+      test: {
+        ...mockOverviewData,
+        id: 'test_running',
+        status: TestStatus.TEST_STATUS_RUNNING,
+      },
+    });
+    inFlight$.complete();
+    tabFixture.detectChanges();
+    await tabFixture.whenStable();
+    tabFixture.detectChanges();
+
+    expect(tabFixture.componentInstance.timelineVisited()).toBeFalse();
+    expect(tabFixture.componentInstance.activeTab()).toBe('log');
+    expect(navSpy).toHaveBeenCalledWith([], {
+      relativeTo: TestBed.inject(ActivatedRoute),
+      queryParams: {tab: 'log'},
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  });
 
   it('supports sub-test route params, breadcrumb, Part of chips, legacy URL, child tabs, and silent reload', async () => {
     const subTestOverviewData: TestOverviewData = {
@@ -371,12 +526,17 @@ describe('TestDetail Component', () => {
 
     subComponent.setActiveTab('timeline');
     subFixture.detectChanges();
-    const timelineLink = compiled.querySelector(
-      '.under-development-text a',
-    ) as HTMLAnchorElement | null;
-    expect(timelineLink?.getAttribute('href')).toBe(
-      `${subComponent.legacyFeUrl}/testdetailview/job_456/root_test_12345678?sub_test=sub_test_abcdef1234&tab=2&redirect_to_v6=0`,
-    );
+    await subFixture.whenStable();
+    for (const block of await subFixture.getDeferBlocks()) {
+      await block.render(DeferBlockState.Complete);
+    }
+    subFixture.detectChanges();
+    const timelineTab = subFixture.debugElement.query(
+      By.directive(TestTimelineTab),
+    ).componentInstance as TestTimelineTab;
+    expect(timelineTab.testId()).toBe('root_test_12345678');
+    expect(timelineTab.subTestId()).toBe('sub_test_abcdef1234');
+    expect(timelineTab.timingBreakdown()).toEqual(mockTimingBreakdown);
 
     subComponent.setActiveTab('log');
     subFixture.detectChanges();

@@ -6,6 +6,8 @@ import {
   GetTestLogResponse,
   GetTestRequest,
   GetTestResponse,
+  GetTestTimelineRequest,
+  GetTestTimelineResponse,
   TestOverviewData,
   TestStatus,
 } from '../../models/test_overview';
@@ -70,8 +72,9 @@ export class FakeTestService extends TestService {
       }
     }
 
+    const {timingBreakdown: unusedTiming, ...restOverview} = scenario.overview;
     const overview: TestOverviewData = {
-      ...scenario.overview,
+      ...restOverview,
       status,
       properties: filteredProperties,
       executionDetails: execDetails
@@ -82,6 +85,24 @@ export class FakeTestService extends TestService {
         : undefined,
     };
     return of({test: overview, actions: scenario.actions}).pipe(delay(1000));
+  }
+
+  /**
+   * Retrieves the execution timeline breakdown for a specific test or sub-test from the mock dataset.
+   */
+  override getTestTimeline(
+    request: GetTestTimelineRequest,
+  ): Observable<GetTestTimelineResponse> {
+    const id = request.subTestId || request.testId;
+    const scenario = MOCK_TEST_SCENARIOS.find(
+      (s) => s.id === id || s.overview.id === id,
+    );
+    if (!scenario) {
+      return throwError(
+        () => new Error(`Test with ID '${id}' not found in mock data.`),
+      ).pipe(delay(300));
+    }
+    return of({timeline: scenario.overview.timingBreakdown}).pipe(delay(300));
   }
 
   /**

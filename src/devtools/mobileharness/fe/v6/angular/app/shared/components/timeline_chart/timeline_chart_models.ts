@@ -1,18 +1,14 @@
-/** Represents a parsed timeline event for UI display. */
-export interface TimelineEvent {
-  label: string;
-  duration: number;
-  offset: number;
-  inProgress: boolean;
-  trackIndex: number;
-  startTime: string;
-  endTime?: string;
+/** Single labeled row inside a timeline hover tooltip. */
+export interface TimelineTooltipRow {
+  readonly label: string;
+  readonly value: string;
+  readonly muted?: string;
 }
 
-/** Represents a row of timeline events grouped under the same logical stage name. */
-export interface StageRow {
-  stageName: string;
-  rowCount: number;
-  tracks: number[];
-  events: TimelineEvent[];
+/** Structured tooltip content displayed when hovering a timeline bar, row, or split segment. */
+export interface TimelineTooltipView {
+  readonly title: string;
+  readonly subtitle?: string;
+  readonly rows: readonly TimelineTooltipRow[];
+  readonly hints: readonly string[];
 }

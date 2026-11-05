@@ -30,3 +30,21 @@ export function toDeviceProxyType(value: unknown): DeviceProxyType {
       return DeviceProxyType.NONE;
   }
 }
+
+/** Tab identifiers shared by the Job Detail and Test Detail pages. */
+export type DetailTab = 'overview' | 'timeline' | 'log' | 'files';
+
+/** Parses a `tab` URL query parameter into a valid `DetailTab`, or `null` if unrecognized. */
+export function parseDetailTab(
+  value: string | null | undefined,
+): DetailTab | null {
+  if (
+    value === 'overview' ||
+    value === 'timeline' ||
+    value === 'log' ||
+    value === 'files'
+  ) {
+    return value;
+  }
+  return null;
+}

@@ -279,24 +279,20 @@
             </div>
           }
 
-          <!-- Timeline Tab -->
-          @if (activeTab() === 'timeline') {
-            <div class="tab-content">
-              <!-- TODO: Uncomment this and remove the under development section below when the feature is ready -->
-              <!--
+          <!-- Timeline Tab (kept mounted after first visit so tab switches do not refetch) -->
+          @if (timelineVisited() || activeTab() === 'timeline') {
+            <div class="tab-content" [hidden]="activeTab() !== 'timeline'">
               @defer {
                 <app-test-timeline-tab
-                  [timingBreakdown]="test.timingBreakdown"
+                  [testId]="rootTestId()"
+                  [subTestId]="subTestId()"
+                  [jobId]="jobId()"
+                  [status]="test.status"
+                  [result]="test.result"
                 ></app-test-timeline-tab>
               } @placeholder {
                 <div class="tab-loading-placeholder">Loading timeline...</div>
               }
-              -->
-              <div class="under-development-container">
-                <p class="under-development-text">
-                  This feature is currently under development in V6. Please view this timeline in the <a [href]="stayOnLegacyFe(legacyTestDetailUrl() + (isSubTest() ? '&tab=2' : '?tab=2'))" target="_blank">legacy page</a>.
-                </p>
-              </div>
             </div>
           }
 

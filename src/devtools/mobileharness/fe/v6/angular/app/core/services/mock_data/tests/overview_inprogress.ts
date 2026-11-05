@@ -53,19 +53,111 @@ export const SCENARIO_TEST_IN_PROGRESS: MockTestScenario = {
       'infra_version': 'v6.2.1',
     },
     timingBreakdown: {
-      createTime: '2025-07-09T11:30:10Z',
-      startTime: '2025-07-09T11:30:15Z',
-      stages: [
+      summaryLines: ['Running for 8.0s: 5.0s waiting to start, 3.0s setup.'],
+      originTime: '2025-07-09T11:30:10Z',
+      finishTime: '2025-07-09T11:30:18Z',
+      axis: {
+        tickStepPercent: 25,
+        ticks: [
+          {
+            leftPercent: 0,
+            label: '0s',
+            alignment: 'TIMELINE_TICK_ALIGNMENT_START',
+          },
+          {
+            leftPercent: 50,
+            label: '+4s',
+            alignment: 'TIMELINE_TICK_ALIGNMENT_CENTER',
+          },
+          {
+            leftPercent: 100,
+            label: '+8s',
+            alignment: 'TIMELINE_TICK_ALIGNMENT_END',
+          },
+        ],
+      },
+      splitSegments: [
         {
-          name: 'Pre-run Test',
-          startTime: '2025-07-09T11:30:15Z',
-          endTime: '2025-07-09T11:30:18Z',
+          focusKey: 'wait',
+          label: 'Waiting to start',
+          fill: 'TIMELINE_FILL_WAIT',
+          flexWeight: 5000,
+          durationText: '5.0s',
+          shareText: '63%',
         },
         {
-          name: 'Run Test:AndroidInstrumentation',
-          startTime: '2025-07-09T11:30:18Z',
+          focusKey: 'setup',
+          label: 'Setup',
+          fill: 'TIMELINE_FILL_SETUP',
+          flexWeight: 3000,
+          durationText: '3.0s',
+          shareText: '38%',
         },
       ],
+      testTimeline: {
+        phases: [
+          {
+            phaseId: 'wait',
+            focusKey: 'wait',
+            label: 'Waiting to start',
+            fill: 'TIMELINE_FILL_WAIT',
+            bracketLeftPercent: 0,
+            bracketWidthPercent: 62.5,
+            durationText: '5.0s',
+            shareText: '63%',
+            rows: [
+              {
+                label: 'Waiting for a device',
+                focusKey: 'wait',
+                fill: 'TIMELINE_FILL_WAIT',
+                durationText: '5.0s',
+                shareText: '63%',
+                bars: [
+                  {
+                    startTime: '2025-07-09T11:30:10Z',
+                    endTime: '2025-07-09T11:30:15Z',
+                    leftPercent: 0,
+                    widthPercent: 62.5,
+                    startOffsetText: '+0ms',
+                    endOffsetText: '+5.0s',
+                    durationText: '5.0s',
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            phaseId: 'setup',
+            focusKey: 'setup',
+            label: 'Setup',
+            fill: 'TIMELINE_FILL_SETUP',
+            bracketLeftPercent: 62.5,
+            bracketWidthPercent: 37.5,
+            durationText: '3.0s',
+            shareText: '38%',
+            rows: [
+              {
+                label: 'Preparing on the client',
+                focusKey: 'setup',
+                fill: 'TIMELINE_FILL_SETUP',
+                durationText: '3.0s',
+                shareText: '38%',
+                bars: [
+                  {
+                    startTime: '2025-07-09T11:30:15Z',
+                    endTime: '2025-07-09T11:30:18Z',
+                    leftPercent: 62.5,
+                    widthPercent: 37.5,
+                    startOffsetText: '+5.0s',
+                    endOffsetText: '+8.0s',
+                    durationText: '3.0s',
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
     },
   },
 };

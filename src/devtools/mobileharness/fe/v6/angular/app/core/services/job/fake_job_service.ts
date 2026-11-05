@@ -8,6 +8,8 @@ import {
   GetJobLogResponse,
   GetJobRequest,
   GetJobResponse,
+  GetJobTimelineRequest,
+  GetJobTimelineResponse,
   JobResult,
   JobStatus,
   KillJobRequest,
@@ -41,8 +43,9 @@ export class FakeJobService extends JobService {
           s.overview.id === 'b65cadd7-6ad6-440e-a3b7-bfe1948557e6'),
     );
     if (scenario) {
+      const {timingBreakdown: unusedTiming, ...restJob} = scenario.overview;
       return of({
-        job: scenario.overview,
+        job: restJob,
         actions: scenario.actions,
       }).pipe(delay(1000));
     } else {
@@ -50,6 +53,28 @@ export class FakeJobService extends JobService {
         () => new Error(`Job with ID '${id}' not found in mock data.`),
       ).pipe(delay(1000));
     }
+  }
+
+  /**
+   * Retrieves the execution timeline breakdown for a specific job from the mock dataset.
+   */
+  override getJobTimeline(
+    request: GetJobTimelineRequest,
+  ): Observable<GetJobTimelineResponse> {
+    const id = request.jobId;
+    const scenario = MOCK_JOB_SCENARIOS.find(
+      (s) =>
+        s.id === id ||
+        s.overview.id === id ||
+        (id === '1845eb94-459b-4028-a9b4-0f13558fdc61' &&
+          s.overview.id === 'b65cadd7-6ad6-440e-a3b7-bfe1948557e6'),
+    );
+    if (!scenario) {
+      return throwError(
+        () => new Error(`Job with ID '${id}' not found in mock data.`),
+      ).pipe(delay(300));
+    }
+    return of({timeline: scenario.overview.timingBreakdown}).pipe(delay(300));
   }
 
   /**

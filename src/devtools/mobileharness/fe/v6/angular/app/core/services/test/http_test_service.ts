@@ -10,6 +10,8 @@ import {
   GetTestLogResponse,
   GetTestRequest,
   GetTestResponse,
+  GetTestTimelineRequest,
+  GetTestTimelineResponse,
 } from '../../models/test_overview';
 import {TestService} from './test_service';
 
@@ -34,6 +36,21 @@ export class HttpTestService extends TestService {
     return this.http.get<GetTestResponse>(`${this.apiUrl}/${request.testId}`, {
       params,
     });
+  }
+
+  override getTestTimeline(
+    request: GetTestTimelineRequest,
+  ): Observable<GetTestTimelineResponse> {
+    const params: {[key: string]: string} = {
+      'job_id': request.jobId,
+    };
+    if (request.subTestId) {
+      params['sub_test_id'] = request.subTestId;
+    }
+    return this.http.get<GetTestTimelineResponse>(
+      `${this.apiUrl}/${request.testId}/timeline`,
+      {params},
+    );
   }
 
   override getTestLog(

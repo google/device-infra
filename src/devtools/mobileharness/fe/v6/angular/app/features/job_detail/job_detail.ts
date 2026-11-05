@@ -10,9 +10,9 @@ import {
 import {toSignal} from '@angular/core/rxjs-interop';
 import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
-import {ActivatedRoute, RouterModule} from '@angular/router';
+import {ActivatedRoute, Router, RouterModule} from '@angular/router';
 import {of} from 'rxjs';
-import {catchError, map} from 'rxjs/operators';
+import {catchError, map, tap} from 'rxjs/operators';
 import {JOB_ACTION_UI_CONFIG} from '../../core/constants/action_bar_config';
 import {
   APP_DATA,
@@ -33,6 +33,7 @@ import {useJobActions} from '../../shared/composables/job_actions';
 import {usePageTitle} from '../../shared/composables/page_title';
 import {useSilentResource} from '../../shared/composables/silent_resource';
 import {TooltipIfTruncatedDirective} from '../../shared/directives/tooltip_if_truncated/tooltip_if_truncated';
+import {DetailTab, parseDetailTab} from '../../shared/utils/enum_utils';
 import {JobFilesTab} from './components/job_files_tab/job_files_tab';
 import {JobLogTab} from './components/job_log_tab/job_log_tab';
 import {JobOverviewTab} from './components/job_overview_tab/job_overview_tab';
@@ -66,6 +67,7 @@ import {JobPageData} from './models/job_page_ui';
 })
 export class JobDetail {
   private readonly activatedRoute = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly jobService = inject(JOB_SERVICE);
   private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly appData = inject(APP_DATA);
@@ -82,8 +84,14 @@ export class JobDetail {
     {initialValue: null},
   );
 
-  readonly activeTab = signal<'overview' | 'timeline' | 'log' | 'files'>(
-    'overview',
+  readonly activeTab = signal<DetailTab>('overview');
+  readonly timelineVisited = signal<boolean>(false);
+  private activeJobId: string | null = null;
+  private readonly requestedTab = toSignal(
+    this.activatedRoute.queryParamMap.pipe(
+      map((q) => parseDetailTab(q.get('tab'))),
+    ),
+    {initialValue: null},
   );
   readonly copiedJobId = signal<boolean>(false);
   readonly copiedSessionId = signal<boolean>(false);
@@ -94,7 +102,12 @@ export class JobDetail {
   >({
     params: () => this.jobId(),
     stream: (jobId) => {
+      const isNewJob = jobId !== this.activeJobId;
+      if (isNewJob) {
+        this.timelineVisited.set(false);
+      }
       if (!jobId) {
+        this.activeJobId = null;
         return of<JobPageData>({
           jobOverviewData: null,
           error: 'No job ID provided in the route.',
@@ -104,6 +117,12 @@ export class JobDetail {
       const request: GetJobRequest = {jobId};
 
       return this.jobService.getJob(request).pipe(
+        tap((response) => {
+          if (isNewJob && response.job) {
+            this.activeJobId = jobId;
+            this.applyInitialTab(response.job);
+          }
+        }),
         map(
           (response) =>
             ({
@@ -119,14 +138,6 @@ export class JobDetail {
           });
         }),
       );
-    },
-    onInitialLoad: (data) => {
-      if (data?.jobOverviewData) {
-        const job = data.jobOverviewData;
-        this.activeTab.set(
-          job.status === JobStatus.JOB_STATUS_RUNNING ? 'log' : 'overview',
-        );
-      }
     },
   });
 
@@ -178,8 +189,32 @@ export class JobDetail {
 
   readonly killActionState = computed(() => this.actions()?.kill || null);
 
-  setActiveTab(tab: 'overview' | 'timeline' | 'log' | 'files') {
+  private applyInitialTab(job: JobOverviewData) {
+    const tabFromUrl = this.requestedTab();
+    if (tabFromUrl && (tabFromUrl !== 'files' || Boolean(job.fileExplorer))) {
+      this.setActiveTab(tabFromUrl, false);
+    } else {
+      this.setActiveTab(
+        job.status === JobStatus.JOB_STATUS_RUNNING ? 'log' : 'overview',
+        Boolean(tabFromUrl),
+      );
+    }
+  }
+
+  setActiveTab(tab: DetailTab, syncUrl = true) {
+    if (tab === 'timeline') {
+      this.timelineVisited.set(true);
+    }
     this.activeTab.set(tab);
+    const targetParam = tab === 'overview' ? null : tab;
+    if (syncUrl && this.requestedTab() !== targetParam) {
+      void this.router.navigate([], {
+        relativeTo: this.activatedRoute,
+        queryParams: {tab: targetParam},
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
   }
 
   onLogStreamCompleted() {
@@ -191,7 +226,7 @@ export class JobDetail {
 
   scrollToJobConfig(event: Event) {
     event.preventDefault();
-    this.activeTab.set('overview');
+    this.setActiveTab('overview');
     setTimeout(() => {
       const element =
         this.elementRef.nativeElement.querySelector('#overview-config');

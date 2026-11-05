@@ -93,7 +93,6 @@ export declare interface TestOverviewData {
   properties?: Record<string, string>;
   troubleshooting?: Troubleshooting;
   subTestsInfo?: SubTestsInfo;
-  timingBreakdown?: TimeBreakdown;
   fileExplorer?: FileExplorer;
 }
 /** Request structure for the getTest API. */
@@ -101,6 +100,16 @@ export declare interface GetTestRequest {
   testId: string;
   subTestId?: string;
   jobId: string;
+}
+/** Request structure for the getTestTimeline API. */
+export declare interface GetTestTimelineRequest {
+  testId: string;
+  subTestId?: string;
+  jobId: string;
+}
+/** Response structure for the getTestTimeline API. */
+export declare interface GetTestTimelineResponse {
+  timeline?: TimeBreakdown;
 }
 /** Request structure for the getTestLog API. */
 export declare interface GetTestLogRequest {
