@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.api.model.lab.in;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Multimaps.toMultimap;
 
 import com.google.common.collect.ListMultimap;
@@ -27,7 +28,6 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -103,7 +103,7 @@ class LocalConfigurableDimensions implements Dimensions {
           .reduce(Stream::concat)
           .orElseGet(Stream::empty)
           .distinct()
-          .collect(Collectors.toList());
+          .collect(toImmutableList());
     }
   }
 
