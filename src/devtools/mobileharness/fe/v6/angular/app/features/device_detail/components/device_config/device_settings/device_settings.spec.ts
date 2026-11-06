@@ -13,6 +13,7 @@ import {of, Subject} from 'rxjs';
 import {
   ConfigSection,
   type DeviceConfig,
+  DimensionList,
   type GetDeviceConfigResult,
   type StabilitySettings,
   type UpdateDeviceConfigResult,
@@ -23,6 +24,7 @@ import {DeviceConfigStateService} from '../../../../../core/services/config/devi
 import {FakeConfigService} from '../../../../../core/services/config/fake_config_service';
 import {DEVICE_SERVICE} from '../../../../../core/services/device/device_service';
 import {FakeDeviceService} from '../../../../../core/services/device/fake_device_service';
+import {Environment} from '../../../../../core/services/environment';
 import {SCENARIO_IN_SERVICE_IDLE} from '../../../../../core/services/mock_data/devices/01_in_service_idle';
 import {ConfirmDialog} from '../../../../../shared/components/confirm_dialog/confirm_dialog';
 
@@ -32,6 +34,7 @@ describe('Device Settings Component', () => {
   let fakeConfigService: FakeConfigService;
   let fakeDeviceConfigStateService: jasmine.SpyObj<DeviceConfigStateService>;
   let deviceConfigResponse: GetDeviceConfigResult;
+  let isGoogleInternalSpy: jasmine.Spy;
 
   beforeEach(async () => {
     fakeConfigService = new FakeConfigService();
@@ -76,6 +79,11 @@ describe('Device Settings Component', () => {
         },
       ],
     }).compileComponents();
+
+    isGoogleInternalSpy = spyOn(
+      TestBed.inject(Environment),
+      'isGoogleInternal',
+    ).and.returnValue(true);
   });
 
   it('should be created', () => {
@@ -1001,5 +1009,88 @@ describe('Device Settings Component', () => {
 
     expect(component.activeSection()).toBe(ConfigSection.PERMISSIONS); // Should not change
     expect(event.preventDefault).toHaveBeenCalled();
+  });
+
+  it('renders curated ATS dimensions without sidebar and commits pending draft on save in ATS', async () => {
+    isGoogleInternalSpy.and.returnValue(false);
+    fakeDeviceConfigStateService.getUiStatus.and.throwError('not cached yet');
+    spyOn(fakeConfigService, 'getConfigurableDimensions').and.returnValue(
+      of({
+        enabled: true,
+        dimensions: [
+          {
+            dimensionName: 'recovery',
+            displayName: 'recovery',
+            dimensionList: DimensionList.DIMENSION_LIST_SUPPORTED,
+          },
+          {
+            dimensionName: 'pool',
+            displayName: 'Required Dimension: pool',
+            dimensionList: DimensionList.DIMENSION_LIST_REQUIRED,
+          },
+        ],
+        allowCustomDimensions: false,
+      }),
+    );
+    spyOn(fakeConfigService, 'getDimensionValueSuggestions').and.returnValue(
+      of({candidateValues: []}),
+    );
+    const updateSpy = spyOn(
+      fakeConfigService,
+      'updateDeviceConfig',
+    ).and.returnValue(of({success: true}));
+
+    const dialogOpener = TestBed.createComponent(
+      MatTestDialogOpener.withComponent(DeviceSettings, {
+        data: {
+          deviceId: 'ats-device',
+          config: {
+            dimensions: {
+              supported: [{name: 'custom_tag', value: 'v1'}],
+              required: [],
+            },
+          } as DeviceConfig,
+        },
+      }),
+    );
+    dialogOpener.detectChanges();
+    await dialogOpener.whenStable();
+    dialogOpener.detectChanges();
+
+    const component =
+      dialogOpener.componentInstance.dialogRef.componentInstance;
+    component.hasPermission.set(true);
+    dialogOpener.detectChanges();
+
+    expect(component.activeSection()).toBe(ConfigSection.DIMENSIONS);
+    expect(document.querySelector('.nav-bar')).toBeNull();
+    expect(document.querySelector('app-ats-dimensions')).toBeTruthy();
+
+    const poolField = component
+      .atsDimensions!.dimensionFields()
+      .find((f) => f.dim.dimensionName === 'pool')!;
+    component.atsDimensions!.onDraftInput(poolField.fieldKey, 'cts-presubmit');
+    expect(component.isCategoryDirty(ConfigSection.DIMENSIONS)).toBeTrue();
+
+    const dialog = TestBed.inject(MatDialog);
+    const successDialogRefSpy = jasmine.createSpyObj('MatDialogRef', [
+      'afterClosed',
+    ]);
+    successDialogRefSpy.afterClosed.and.returnValue(of('primary'));
+    spyOn(dialog, 'open').and.returnValue(successDialogRefSpy);
+
+    component.save();
+    expect(updateSpy).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        id: 'ats-device',
+        section: ConfigSection.DIMENSIONS,
+        config: jasmine.objectContaining({
+          dimensions: {
+            supported: [{name: 'custom_tag', value: 'v1'}],
+            required: [{name: 'pool', value: 'cts-presubmit'}],
+          },
+        }),
+      }),
+    );
   });
 });
