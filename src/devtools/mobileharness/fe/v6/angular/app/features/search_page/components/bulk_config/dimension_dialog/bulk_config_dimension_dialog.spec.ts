@@ -172,12 +172,14 @@ describe('BulkConfigDimensionDialog', () => {
       expect(
         mockConfigService.batchGetDeviceDimensionConfigs,
       ).not.toHaveBeenCalled();
-      expect(component.candidateValues().length).toBe(3);
+      expect(component.candidateValues().length).toBe(2);
       expect(component.targetValues()).toEqual([]);
+      expect(component.isClearDimension()).toBeFalse();
+      expect(component.canGoNext()).toBeFalse();
       expect(component.wizard.viewMode()).toBe('values');
     });
 
-    it('normalizes omitted repeated values and counts in value suggestions', () => {
+    it('filters out empty value suggestions and normalizes omitted counts while pinning Not set row', () => {
       mockConfigService.getDimensionValueSuggestions.and.returnValue(
         of({
           candidateValues: [
@@ -193,10 +195,12 @@ describe('BulkConfigDimensionDialog', () => {
       detectChanges();
 
       expect(component.candidateValues()).toEqual([
-        {values: [], deviceCount: 0},
         {values: ['pixel'], deviceCount: 0},
       ]);
       expect(document.body.textContent).toContain('Not set');
+      expect(document.body.textContent).toContain(
+        'Removes recovery from the selected devices',
+      );
     });
 
     it('does not display current value when there is only one device selected', () => {
@@ -269,13 +273,17 @@ describe('BulkConfigDimensionDialog', () => {
       component.removeChip(0);
       expect(component.targetValues()).toEqual(['chip2valA', 'valB', 'valC']);
 
-      // Clear target
-      component.useValueSet([]);
+      // Clear typed chips (stays in value input mode, disables Next)
+      component.clearValues();
       expect(component.targetValues()).toEqual([]);
+      expect(component.isClearDimension()).toBeFalse();
+      expect(component.canGoNext()).toBeFalse();
 
       // Use value set
       component.useValueSet(['optA', 'optB']);
       expect(component.targetValues()).toEqual(['optA', 'optB']);
+      expect(component.isClearDimension()).toBeFalse();
+      expect(component.canGoNext()).toBeTrue();
       expect(component.chipPlaceholder()).toBe('Add another value');
     });
 
@@ -430,7 +438,7 @@ describe('BulkConfigDimensionDialog', () => {
       expect(component.successSupportText()).toBe(
         'Every updated device now uses this recovery value.',
       );
-      component.targetValues.set([]);
+      component.clearTargetDimension();
       expect(component.successSupportText()).toBe(
         'Removed recovery from every updated device.',
       );
@@ -493,17 +501,48 @@ describe('BulkConfigDimensionDialog', () => {
       expect(primaryBtn?.textContent?.trim()).toBe('Retry Apply');
     });
 
-    it('clears target values and sets targetDimensionValues to clearValues', () => {
-      component.targetValues.set(['true']);
+    it('switches between value input mode and Not set clear-banner mode', () => {
+      component.inputValue.set(' , "" ');
+      expect(component.canGoNext()).toBeFalse();
+
+      component.useValueSet(['true']);
+      detectChanges();
+      expect(component.isClearDimension()).toBeFalse();
+      expect(component.suggestionRows()[0].isActive).toBeTrue();
       expect(component.targetDimensionValues()).toEqual({
         valueList: {values: ['true']},
       });
+      expect(document.body.querySelector('.bd-chips')).not.toBeNull();
+      expect(document.body.querySelector('.bw-clear-banner')).toBeNull();
 
-      component.useValueSet([]);
+      component.clearTargetDimension();
+      detectChanges();
+      expect(component.isClearDimension()).toBeTrue();
+      expect(component.suggestionRows()[0].isActive).toBeFalse();
       expect(component.targetValues()).toEqual([]);
+      expect(component.canGoNext()).toBeTrue();
       expect(component.targetDimensionValues()).toEqual({
         clearValues: {},
       });
+      expect(document.body.querySelector('.bd-chips')).toBeNull();
+      const clearBanner = document.body.querySelector('.bw-clear-banner');
+      expect(clearBanner).not.toBeNull();
+      expect(clearBanner?.textContent).toContain('Not set');
+      expect(clearBanner?.textContent).toContain(
+        'Removes recovery from the selected devices',
+      );
+
+      const setValuesBtn = clearBanner?.querySelector(
+        '.bw-text-btn',
+      ) as HTMLButtonElement;
+      expect(setValuesBtn.textContent?.trim()).toBe('Set values instead');
+      setValuesBtn.click();
+      detectChanges();
+
+      expect(component.isClearDimension()).toBeFalse();
+      expect(component.canGoNext()).toBeFalse();
+      expect(document.body.querySelector('.bw-clear-banner')).toBeNull();
+      expect(document.body.querySelector('.bd-chips')).not.toBeNull();
     });
 
     it('closes with {updated: true} when some updates succeed and some fail', () => {
@@ -557,6 +596,7 @@ describe('BulkConfigDimensionDialog', () => {
     });
 
     it('returns to values phase on wizard.setPhase("values")', () => {
+      component.clearTargetDimension();
       component.goToReview();
       expect(component.wizard.phase()).toBe('review');
       component.wizard.setPhase('values');
@@ -597,7 +637,7 @@ describe('BulkConfigDimensionDialog', () => {
         'already have this recovery value',
       );
 
-      component.targetValues.set([]);
+      component.clearTargetDimension();
       expect(component.nothingToUpdateMessage()).toContain(
         'already have recovery unset',
       );
@@ -713,6 +753,7 @@ describe('BulkConfigDimensionDialog', () => {
       customComponent.pickKey('pool');
       expect(customComponent.customKey()).toBe('pool');
       expect(customComponent.filteredCandidateKeys().length).toBe(1);
+      expect(customComponent.filteredCandidateKeys()[0].isActive).toBeTrue();
       expect(customComponent.canProceedFromKeyStep()).toBeTrue();
     });
 

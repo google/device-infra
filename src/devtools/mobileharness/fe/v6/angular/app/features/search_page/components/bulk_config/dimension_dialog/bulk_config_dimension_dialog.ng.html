@@ -1,5 +1,6 @@
 @let mode = wizard.viewMode();
 @let target = targetValues();
+@let isClear = isClearDimension();
 @let summary = wizard.reviewSummary();
 @let dn = displayName();
 
@@ -84,7 +85,7 @@
                 <div
                   class="bw-li bd-agg-row"
                   role="listitem"
-                  [class.bw-li-active]="customKey() === k.dimensionName.toLowerCase()"
+                  [class.bw-li-active]="k.isActive"
                 >
                   <mat-icon class="bw-li-lead material-symbols-outlined">label</mat-icon>
                   <div class="bw-li-body">
@@ -122,67 +123,105 @@
             <div class="bw-apply-head">
               <h4 class="bw-apply-title">Value to apply</h4>
               <span class="bw-apply-sub">Applied to all {{ deviceLabel }}</span>
-              <button
-                type="button"
-                class="bw-text-btn bd-band-actions"
-                (click)="useValueSet([])"
-                [title]="'Clear the value, which removes ' + dn + ' from the devices'"
-              >
-                Clear values
-              </button>
+              @if (!isClear && target.length > 0) {
+                <button
+                  type="button"
+                  class="bw-text-btn bd-band-actions"
+                  (click)="clearValues()"
+                >
+                  Clear
+                </button>
+              }
             </div>
 
-            <div class="bw-apply-fields">
-              <div
-                class="bd-chips"
-                role="group"
-                aria-label="Target dimension values"
-                (click)="chipInput.focus()"
-              >
-                @for (v of target; track v; let i = $index) {
-                  <span class="bd-chip">
-                    <span>{{ v }}</span>
-                    <button
-                      type="button"
-                      class="bd-chip-remove"
-                      (click)="$event.stopPropagation(); removeChip(i)"
-                      [title]="'Remove ' + v"
-                      [attr.aria-label]="'Remove ' + v"
-                    >
-                      <mat-icon class="material-symbols-outlined">close</mat-icon>
-                    </button>
-                  </span>
-                }
-                <input
-                  #chipInput
-                  type="text"
-                  class="bd-chip-input"
-                  [placeholder]="chipPlaceholder()"
-                  [(ngModel)]="inputValue"
-                  (keydown)="onInputKeydown($event)"
-                  (paste)="onInputPaste($event)"
-                  (blur)="commitInput()"
-                  autocomplete="off"
-                />
+            @if (isClear) {
+              <div class="bw-clear-banner">
+                <div class="bw-clear-left">
+                  <mat-icon class="bw-clear-icon material-symbols-outlined">block</mat-icon>
+                  <div class="bw-clear-text">
+                    <span class="bw-clear-title">Not set</span>
+                    <span class="bw-clear-sub">Removes {{ dn }} from the selected devices</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  class="bw-text-btn"
+                  (click)="isClearDimension.set(false)"
+                >
+                  Set values instead
+                </button>
               </div>
-            </div>
+            } @else {
+              <div class="bw-apply-fields">
+                <div
+                  class="bd-chips"
+                  role="group"
+                  aria-label="Target dimension values"
+                  (click)="chipInput.focus()"
+                >
+                  @for (v of target; track v; let i = $index) {
+                    <span class="bd-chip">
+                      <span>{{ v }}</span>
+                      <button
+                        type="button"
+                        class="bd-chip-remove"
+                        (click)="$event.stopPropagation(); removeChip(i)"
+                        [title]="'Remove ' + v"
+                        [attr.aria-label]="'Remove ' + v"
+                      >
+                        <mat-icon class="material-symbols-outlined">close</mat-icon>
+                      </button>
+                    </span>
+                  }
+                  <input
+                    #chipInput
+                    type="text"
+                    class="bd-chip-input"
+                    [placeholder]="chipPlaceholder()"
+                    [(ngModel)]="inputValue"
+                    (keydown)="onInputKeydown($event)"
+                    (paste)="onInputPaste($event)"
+                    (blur)="commitInput()"
+                    autocomplete="off"
+                  />
+                </div>
+              </div>
+            }
           </div>
 
           <!-- Suggested values panel -->
           <div class="bw-panel">
             <div class="bw-panel-head">Suggested values</div>
             <div class="bw-panel-list" role="list">
-              @for (sug of candidateValues(); track (sug.values.join('::') || '__unset__')) {
-                <div class="bw-li bd-agg-row" role="listitem">
-                  <mat-icon class="bw-li-lead material-symbols-outlined">{{ sug.values.length === 0 ? 'block' : 'label' }}</mat-icon>
+              <div
+                class="bw-li bd-agg-row"
+                role="listitem"
+                [class.bw-li-active]="isClear"
+              >
+                <mat-icon class="bw-li-lead material-symbols-outlined">block</mat-icon>
+                <div class="bw-li-body">
+                  <span class="bw-li-headline">Not set</span>
+                  <span class="bw-li-support">Removes {{ dn }} from the selected devices</span>
+                </div>
+                <button
+                  type="button"
+                  class="bw-text-btn"
+                  (click)="clearTargetDimension()"
+                >
+                  Use this
+                </button>
+              </div>
+              @for (sug of suggestionRows(); track sug.trackKey) {
+                <div
+                  class="bw-li bd-agg-row"
+                  role="listitem"
+                  [class.bw-li-active]="sug.isActive"
+                >
+                  <mat-icon class="bw-li-lead material-symbols-outlined">label</mat-icon>
                   <div class="bw-li-body">
-                    @if (sug.values.length === 0) {
-                      <span class="bw-li-headline bd-muted">Not set</span>
-                    } @else {
-                      <ng-container
-                        *ngTemplateOutlet="pillList; context: {$implicit: sug.values}"
-                      />
-                    }
+                    <ng-container
+                      *ngTemplateOutlet="pillList; context: {$implicit: sug.values}"
+                    />
                     <span class="bw-li-support">{{ sug.deviceCount | number }} devices in fleet</span>
                   </div>
                   <button
@@ -193,8 +232,6 @@
                     Use this
                   </button>
                 </div>
-              } @empty {
-                <div class="bw-list-empty">No values found.</div>
               }
             </div>
           </div>
@@ -214,12 +251,12 @@
             </div>
           }
           <app-bulk-review-header-banner
-            [icon]="target.length === 0 ? 'block' : 'label'"
+            [icon]="isClear ? 'block' : 'label'"
             [subtitle]="'Target ' + dn"
             [summary]="summary"
             [nothingToUpdateMessage]="nothingToUpdateMessage()"
           >
-            @if (target.length === 0) {
+            @if (isClear) {
               <span class="bw-cell-unset">Clear dimension (remove {{ dn }})</span>
             } @else {
               <ng-container
@@ -275,9 +312,9 @@
           [successSupportText]="successSupportText()"
         >
           <div class="bw-new-card bw-success-card">
-            <div class="bw-new-label">{{ target.length === 0 ? 'Removed' : 'New value' }}</div>
-            @if (target.length === 0) {
-              <span class="bd-muted">Not set</span>
+            <div class="bw-new-label">{{ isClear ? 'Removed' : 'New value' }}</div>
+            @if (isClear) {
+              <span class="bw-cell-unset">Not set</span>
             } @else {
               <ng-container
                 *ngTemplateOutlet="pillList; context: {$implicit: target}"

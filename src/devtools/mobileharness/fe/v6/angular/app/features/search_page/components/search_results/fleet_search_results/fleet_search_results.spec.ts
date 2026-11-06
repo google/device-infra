@@ -685,6 +685,40 @@ describe('FleetSearchResultsComponent', () => {
       expect(mockStore.clearSelection).toHaveBeenCalled();
       expect(mockStore.executeSearch).toHaveBeenCalled();
     });
+
+    it('renders Custom Supported/Required Dimension menu items with label and label_important icons when allowCustom is true', async () => {
+      mockStore.selectedItems.set(toSelectedMap(['dev-1']));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const configBtn = fixture.debugElement.query(
+        By.css('button[title="Configure device dimensions"]'),
+      );
+      expect(configBtn).toBeTruthy();
+      configBtn.nativeElement.click();
+      fixture.detectChanges();
+
+      const footerButtons = Array.from(
+        document.querySelectorAll(
+          '.configure-menu-footer button[mat-menu-item]',
+        ),
+      );
+      expect(footerButtons.length).toBe(2);
+
+      const icons = footerButtons.map((btn) =>
+        btn.querySelector('mat-icon')?.textContent?.trim(),
+      );
+      const labels = footerButtons.map((btn) =>
+        btn.querySelector('span')?.textContent?.trim(),
+      );
+
+      expect(icons).toEqual(['label', 'label_important']);
+      expect(labels).toEqual([
+        'Custom Supported Dimension…',
+        'Custom Required Dimension…',
+      ]);
+    });
   });
 
   describe('Column Selector', () => {
