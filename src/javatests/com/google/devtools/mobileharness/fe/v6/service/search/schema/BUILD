@@ -27,6 +27,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:ats_host_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_info_source",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",

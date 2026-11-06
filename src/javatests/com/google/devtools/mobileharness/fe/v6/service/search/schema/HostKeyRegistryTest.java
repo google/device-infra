@@ -35,13 +35,15 @@ public final class HostKeyRegistryTest {
   private final AtsHostKeyRegistry registry = new AtsHostKeyRegistry();
 
   @Test
-  public void containsCommonHostKeys() {
+  public void containsCommonAndAtsHostKeys() {
     assertThat(registry.getKey("host_field::host_name")).isPresent();
     assertThat(registry.getKey("host_field::host_ip")).isPresent();
     assertThat(registry.getKey("host_field::connectivity")).isPresent();
     assertThat(registry.getKey("host_property::host_os")).isPresent();
     assertThat(registry.getKey("host_field::lab_server_version")).isPresent();
     assertThat(registry.getKey("host_field::device_count")).isPresent();
+    assertThat(registry.getKey("host_field::default_wifi")).hasValue(AtsHostKeys.DEFAULT_WIFI);
+    assertThat(registry.displayName("host_field::default_wifi")).hasValue("Default Wi-Fi");
     assertThat(HostKeys.DEVICE_COUNT.isIntComparable()).isTrue();
     assertThat(HostKeys.HOST_NAME.isIntComparable()).isFalse();
     assertThat(registry.getKey("host_property::rack").get().isIntComparable()).isFalse();

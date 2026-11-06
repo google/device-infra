@@ -16,16 +16,14 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.search.schema;
 
-import com.google.common.collect.ImmutableList;
-
 /**
  * Host-search key registry for the standalone ATS (OSS) deployment.
  *
- * <p>Holds only Group 1 (universal common host keys); standalone ATS adds no extra host keys.
+ * <p>Composes Group 1 (universal common host keys) with Group 2 (Standalone ATS Default Wi-Fi).
  */
 public final class AtsHostKeyRegistry extends HostKeyRegistry {
 
   public AtsHostKeyRegistry() {
-    super(ImmutableList.of());
+    super(AtsHostKeys.ATS_HOST_KEYS);
   }
 }

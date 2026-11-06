@@ -64,6 +64,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:dimension_catalog_store",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/refresh:fleet_snapshot_store",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:ats_device_keys",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:ats_host_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:device_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:host_keys",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/schema:key_descriptor",

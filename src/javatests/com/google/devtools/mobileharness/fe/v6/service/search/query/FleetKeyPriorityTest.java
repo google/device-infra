@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
@@ -61,10 +62,11 @@ public final class FleetKeyPriorityTest {
   }
 
   @Test
-  public void hostPriority_tier1_isTop() {
+  public void hostPriority_tier1AndDefaultWifi_isTop() {
     assertThat(priority.hostPriority(HostKeys.HOST_NAME)).isEqualTo(3);
     assertThat(priority.hostPriority(HostKeys.CONNECTIVITY)).isEqualTo(3);
     assertThat(priority.hostPriority(HostKeys.DEVICE_COUNT)).isEqualTo(3);
+    assertThat(priority.hostPriority(AtsHostKeys.DEFAULT_WIFI)).isEqualTo(3);
   }
 
   @Test
