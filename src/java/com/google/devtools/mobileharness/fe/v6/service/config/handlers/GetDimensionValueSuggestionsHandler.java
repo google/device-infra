@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.DeviceInfoMask.DimensionsMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Mask.LabInfoMask;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.Page;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.BatchDeviceConfigPolicy;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.BatchDeviceConfigUtil;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
@@ -50,7 +51,6 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDimension
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetDimensionValueSuggestionsResponse.CandidateDimensionValue;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
-import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.protobuf.FieldMask;
@@ -81,7 +81,7 @@ public final class GetDimensionValueSuggestionsHandler {
   private final LabInfoProvider labInfoProvider;
   private final ConfigurationProvider configurationProvider;
   private final ConfigServiceCapabilityFactory configServiceCapabilityFactory;
-  private final Environment environment;
+  private final BatchDeviceConfigPolicy policy;
   private final ListeningExecutorService executor;
 
   @Inject
@@ -89,12 +89,12 @@ public final class GetDimensionValueSuggestionsHandler {
       LabInfoProvider labInfoProvider,
       ConfigurationProvider configurationProvider,
       ConfigServiceCapabilityFactory configServiceCapabilityFactory,
-      Environment environment,
+      BatchDeviceConfigPolicy policy,
       ListeningExecutorService executor) {
     this.labInfoProvider = labInfoProvider;
     this.configurationProvider = configurationProvider;
     this.configServiceCapabilityFactory = configServiceCapabilityFactory;
-    this.environment = environment;
+    this.policy = policy;
     this.executor = executor;
   }
 
@@ -111,13 +111,12 @@ public final class GetDimensionValueSuggestionsHandler {
     String dimensionName = BatchDeviceConfigUtil.cleanDimensionName(request.getDimensionName());
     DimensionList dimensionList = request.getDimensionList();
     Optional<String> invalidReason =
-        BatchDeviceConfigUtil.checkDimensionTarget(
-            dimensionName, dimensionList, environment.isAts());
+        BatchDeviceConfigUtil.checkDimensionTarget(dimensionName, dimensionList, policy);
     if (invalidReason.isPresent()) {
       return immediateFailedFuture(FeServiceException.invalidArgument(invalidReason.get()));
     }
 
-    if (environment.isAts()) {
+    if (policy.discoverFleetDimensionsFromDeviceConfigs()) {
       return getSuggestionsFromDeviceConfigs(dimensionName, dimensionList);
     }
     return getSuggestionsFromLabInfo(dimensionName, dimensionList);

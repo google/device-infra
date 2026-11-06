@@ -18,15 +18,12 @@ package com.google.devtools.mobileharness.fe.v6.service.config.handlers;
 
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.BatchDeviceConfigPolicy;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
-import com.google.devtools.mobileharness.fe.v6.service.proto.config.ConfigurableDimension;
-import com.google.devtools.mobileharness.fe.v6.service.proto.config.DimensionList;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetConfigurableDimensionsRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetConfigurableDimensionsResponse;
-import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -36,55 +33,15 @@ import javax.inject.Singleton;
 public final class GetConfigurableDimensionsHandler {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final ImmutableList<ConfigurableDimension> ATS_CONFIGURABLE_DIMENSIONS =
-      ImmutableList.of(
-          ConfigurableDimension.newBuilder()
-              .setDimensionName("recovery")
-              .setDisplayName("recovery")
-              .setDimensionList(DimensionList.DIMENSION_LIST_SUPPORTED)
-              .build(),
-          ConfigurableDimension.newBuilder()
-              .setDimensionName("skip_suw_app")
-              .setDisplayName("skip_suw_app")
-              .setDimensionList(DimensionList.DIMENSION_LIST_SUPPORTED)
-              .build(),
-          ConfigurableDimension.newBuilder()
-              .setDimensionName("pool")
-              .setDisplayName("Required Dimension: pool")
-              .setDimensionList(DimensionList.DIMENSION_LIST_REQUIRED)
-              .build(),
-          ConfigurableDimension.newBuilder()
-              .setDimensionName("persist_test_harness")
-              .setDisplayName("Required Dimension: persist_test_harness")
-              .setDimensionList(DimensionList.DIMENSION_LIST_REQUIRED)
-              .build());
-
-  private static final ImmutableList<ConfigurableDimension> INTERNAL_CONFIGURABLE_DIMENSIONS =
-      ImmutableList.of(
-          ConfigurableDimension.newBuilder()
-              .setDimensionName("pool")
-              .setDisplayName("Required Dimension: pool")
-              .setDimensionList(DimensionList.DIMENSION_LIST_REQUIRED)
-              .build(),
-          ConfigurableDimension.newBuilder()
-              .setDimensionName("label")
-              .setDisplayName("label")
-              .setDimensionList(DimensionList.DIMENSION_LIST_SUPPORTED)
-              .build(),
-          ConfigurableDimension.newBuilder()
-              .setDimensionName("cluster")
-              .setDisplayName("cluster")
-              .setDimensionList(DimensionList.DIMENSION_LIST_SUPPORTED)
-              .build());
-
   private final ConfigServiceCapabilityFactory configServiceCapabilityFactory;
-  private final Environment environment;
+  private final BatchDeviceConfigPolicy policy;
 
   @Inject
   GetConfigurableDimensionsHandler(
-      ConfigServiceCapabilityFactory configServiceCapabilityFactory, Environment environment) {
+      ConfigServiceCapabilityFactory configServiceCapabilityFactory,
+      BatchDeviceConfigPolicy policy) {
     this.configServiceCapabilityFactory = configServiceCapabilityFactory;
-    this.environment = environment;
+    this.policy = policy;
   }
 
   public ListenableFuture<GetConfigurableDimensionsResponse> getConfigurableDimensions(
@@ -99,20 +56,11 @@ public final class GetConfigurableDimensionsHandler {
               .build());
     }
 
-    if (environment.isAts()) {
-      return immediateFuture(
-          GetConfigurableDimensionsResponse.newBuilder()
-              .setEnabled(true)
-              .addAllDimensions(ATS_CONFIGURABLE_DIMENSIONS)
-              .setAllowCustomDimensions(false)
-              .build());
-    }
-
     return immediateFuture(
         GetConfigurableDimensionsResponse.newBuilder()
             .setEnabled(true)
-            .addAllDimensions(INTERNAL_CONFIGURABLE_DIMENSIONS)
-            .setAllowCustomDimensions(true)
+            .addAllDimensions(policy.getCuratedDimensions())
+            .setAllowCustomDimensions(policy.allowCustomDimensions())
             .build());
   }
 }

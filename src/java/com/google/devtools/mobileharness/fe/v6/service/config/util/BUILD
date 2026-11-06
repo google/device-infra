@@ -75,14 +75,36 @@ java_library(
 )
 
 java_library(
+    name = "batch_device_config_policy",
+    srcs = ["BatchDeviceConfigPolicy.java"],
+    deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "batch_device_config_util",
     srcs = ["BatchDeviceConfigUtil.java"],
     deps = [
+        ":batch_device_config_policy",
         "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "oss_batch_device_config_policy",
+    srcs = ["OssBatchDeviceConfigPolicy.java"],
+    deps = [
+        ":batch_device_config_policy",
+        ":batch_device_config_util",
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )

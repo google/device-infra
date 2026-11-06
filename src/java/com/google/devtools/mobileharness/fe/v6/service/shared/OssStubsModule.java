@@ -20,9 +20,11 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.BatchDeviceConfigPolicy;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigPusherHelper;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.NoOpConfigPusherHelper;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.OssBatchDeviceConfigPolicy;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.LogcatActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.NoOpLogcatActionHelper;
 import com.google.devtools.mobileharness.fe.v6.service.device.handlers.NoOpPrepareDeviceActionHelper;
@@ -167,6 +169,7 @@ public final class OssStubsModule extends AbstractModule {
     bind(IamPermissionChecker.class).to(NoOpIamPermissionChecker.class).in(Singleton.class);
     bind(TestbedConfigBuilder.class).to(OssTestbedConfigBuilderImpl.class).in(Singleton.class);
     bind(ConfigPusherHelper.class).to(NoOpConfigPusherHelper.class).in(Singleton.class);
+    bind(BatchDeviceConfigPolicy.class).to(OssBatchDeviceConfigPolicy.class).in(Singleton.class);
   }
 
   private static final class NoOpGroupMembershipProvider implements GroupMembershipProvider {

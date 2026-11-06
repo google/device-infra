@@ -55,9 +55,11 @@ java_library(
     name = "oss_stubs",
     srcs = ["OssStubsModule.java"],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:batch_device_config_policy",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_pusher_helper",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_service_capability",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:no_op_config_pusher_helper",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:oss_batch_device_config_policy",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/handlers",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/handlers:logcat_action_helper",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/device/handlers:prepare_device_action_helper",

@@ -22,6 +22,22 @@ package(
 )
 
 java_library(
+    name = "fake_batch_device_config_policy",
+    testonly = 1,
+    srcs = ["FakeBatchDeviceConfigPolicy.java"],
+    visibility = [
+        "//src/javatests/com/google/devtools/mobileharness/fe/v6/service/config:__subpackages__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:batch_device_config_policy",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:batch_device_config_util",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:oss_batch_device_config_policy",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "util_tests",
     testonly = 1,
     srcs = [
@@ -30,6 +46,7 @@ java_library(
         "ConfigServiceCapabilityTest.java",
     ],
     deps = [
+        ":fake_batch_device_config_policy",
         "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
@@ -39,9 +56,11 @@ java_library(
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_resources_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/config:config_service_java_proto",
         "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:batch_device_config_policy",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:batch_device_config_util",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_converter",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_service_capability",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:oss_batch_device_config_policy",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags/core:testing",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",

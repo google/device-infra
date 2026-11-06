@@ -44,8 +44,10 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.FakeBatchFleet;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.BatchDeviceConfigPolicy;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigPusherHelper;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.FakeBatchDeviceConfigPolicy;
 import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.admin.WifiCredentialEntry;
 import com.google.devtools.mobileharness.fe.v6.service.proto.admin.WifiCredentialStore;
@@ -129,6 +131,9 @@ public final class ConfigServiceLogicImplTest {
   @Bind @Mock private WifiCredentialsStore wifiCredentialsStore;
   @Bind @Mock private ConfigPusherHelper configPusherHelper;
   @Bind @Mock private Environment environment;
+
+  @Bind
+  private final BatchDeviceConfigPolicy batchDeviceConfigPolicy = new FakeBatchDeviceConfigPolicy();
 
   private ConfigServiceLogicImpl configServiceLogicImpl;
 

@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.config.util;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDeviceConfig;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
@@ -28,14 +29,21 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
+import com.google.devtools.mobileharness.fe.v6.service.proto.config.ConfigurableDimension;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DimensionList;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
+import java.util.Locale;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public final class BatchDeviceConfigUtilTest {
+
+  private static final OssBatchDeviceConfigPolicy OSS_POLICY = new OssBatchDeviceConfigPolicy();
+
+  private static final BatchDeviceConfigPolicy CUSTOM_ALLOWING_POLICY =
+      new FakeBatchDeviceConfigPolicy();
 
   @Test
   public void cleanDimensionName_stripsDimPrefixAndTrims() {
@@ -46,61 +54,152 @@ public final class BatchDeviceConfigUtilTest {
   }
 
   @Test
+  public void ossBatchDeviceConfigPolicy_exposesAtsCurationAndSystemDimensions() {
+    assertThat(OSS_POLICY.allowCustomDimensions()).isFalse();
+    assertThat(OSS_POLICY.discoverFleetDimensionsFromDeviceConfigs()).isTrue();
+    assertThat(OSS_POLICY.getCuratedDimensions())
+        .containsExactly(
+            ConfigurableDimension.newBuilder()
+                .setDimensionName("recovery")
+                .setDisplayName("recovery")
+                .setDimensionList(DimensionList.DIMENSION_LIST_SUPPORTED)
+                .build(),
+            ConfigurableDimension.newBuilder()
+                .setDimensionName("skip_suw_app")
+                .setDisplayName("skip_suw_app")
+                .setDimensionList(DimensionList.DIMENSION_LIST_SUPPORTED)
+                .build(),
+            ConfigurableDimension.newBuilder()
+                .setDimensionName("pool")
+                .setDisplayName("Required Dimension: pool")
+                .setDimensionList(DimensionList.DIMENSION_LIST_REQUIRED)
+                .build(),
+            ConfigurableDimension.newBuilder()
+                .setDimensionName("persist_test_harness")
+                .setDisplayName("Required Dimension: persist_test_harness")
+                .setDimensionList(DimensionList.DIMENSION_LIST_REQUIRED)
+                .build())
+        .inOrder();
+    assertThat(OSS_POLICY.getDefaultConfigurableKeys(DimensionList.DIMENSION_LIST_SUPPORTED))
+        .containsExactly("recovery", "skip_suw_app");
+    assertThat(OSS_POLICY.getDefaultConfigurableKeys(DimensionList.DIMENSION_LIST_REQUIRED))
+        .containsExactly("pool", "persist_test_harness");
+    assertThat(OSS_POLICY.getDefaultConfigurableKeys(DimensionList.DIMENSION_LIST_UNSPECIFIED))
+        .isEmpty();
+    for (String name : OSS_POLICY.getSystemDetectedDimensionNames()) {
+      assertThat(name).isEqualTo(name.toLowerCase(Locale.ROOT));
+    }
+    assertThat(OSS_POLICY.getSortedSystemDetectedDimensionNames()).isInOrder();
+    assertThat(OSS_POLICY.getSortedSystemDetectedDimensionNames())
+        .hasSize(OSS_POLICY.getSystemDetectedDimensionNames().size());
+  }
+
+  @Test
   public void isValidConfigurableDimensionKey_checksCharactersAndSystemBlocklist() {
-    assertThat(BatchDeviceConfigUtil.isValidConfigurableDimensionKey("pool")).isTrue();
-    assertThat(BatchDeviceConfigUtil.isValidConfigurableDimensionKey("custom_key-1.0")).isTrue();
-    assertThat(BatchDeviceConfigUtil.isValidConfigurableDimensionKey("")).isFalse();
-    assertThat(BatchDeviceConfigUtil.isValidConfigurableDimensionKey("model")).isFalse();
-    assertThat(BatchDeviceConfigUtil.isValidConfigurableDimensionKey("sdk_version")).isFalse();
-    assertThat(BatchDeviceConfigUtil.isValidConfigurableDimensionKey("subdevice_dimensions"))
+    assertThat(
+            BatchDeviceConfigUtil.isValidConfigurableDimensionKey("pool", CUSTOM_ALLOWING_POLICY))
+        .isTrue();
+    assertThat(
+            BatchDeviceConfigUtil.isValidConfigurableDimensionKey(
+                "custom_key-1.0", CUSTOM_ALLOWING_POLICY))
+        .isTrue();
+    assertThat(BatchDeviceConfigUtil.isValidConfigurableDimensionKey("", CUSTOM_ALLOWING_POLICY))
         .isFalse();
-    assertThat(BatchDeviceConfigUtil.isValidConfigurableDimensionKey("UpperCase")).isFalse();
-    assertThat(BatchDeviceConfigUtil.isValidConfigurableDimensionKey("invalid space")).isFalse();
+    assertThat(
+            BatchDeviceConfigUtil.isValidConfigurableDimensionKey("model", CUSTOM_ALLOWING_POLICY))
+        .isFalse();
+    assertThat(
+            BatchDeviceConfigUtil.isValidConfigurableDimensionKey(
+                "sdk_version", CUSTOM_ALLOWING_POLICY))
+        .isFalse();
+    assertThat(
+            BatchDeviceConfigUtil.isValidConfigurableDimensionKey(
+                "subdevice_dimensions", CUSTOM_ALLOWING_POLICY))
+        .isFalse();
+    assertThat(
+            BatchDeviceConfigUtil.isValidConfigurableDimensionKey(
+                "UpperCase", CUSTOM_ALLOWING_POLICY))
+        .isFalse();
+    assertThat(
+            BatchDeviceConfigUtil.isValidConfigurableDimensionKey(
+                "invalid space", CUSTOM_ALLOWING_POLICY))
+        .isFalse();
   }
 
   @Test
   public void checkDimensionTarget_validatesNameAndDimensionList() {
     assertThat(
             BatchDeviceConfigUtil.checkDimensionTarget(
-                "pool", DimensionList.DIMENSION_LIST_REQUIRED, /* isAts= */ false))
+                "pool", DimensionList.DIMENSION_LIST_REQUIRED, CUSTOM_ALLOWING_POLICY))
         .isEmpty();
     assertThat(
             BatchDeviceConfigUtil.checkDimensionTarget(
-                "label", DimensionList.DIMENSION_LIST_SUPPORTED, /* isAts= */ false))
+                "label", DimensionList.DIMENSION_LIST_SUPPORTED, CUSTOM_ALLOWING_POLICY))
         .isEmpty();
     assertThat(
             BatchDeviceConfigUtil.checkDimensionTarget(
-                "", DimensionList.DIMENSION_LIST_REQUIRED, /* isAts= */ false))
+                "", DimensionList.DIMENSION_LIST_REQUIRED, CUSTOM_ALLOWING_POLICY))
         .hasValue("Dimension name must not be empty.");
     assertThat(
             BatchDeviceConfigUtil.checkDimensionTarget(
-                "model", DimensionList.DIMENSION_LIST_SUPPORTED, /* isAts= */ false))
+                "model", DimensionList.DIMENSION_LIST_SUPPORTED, CUSTOM_ALLOWING_POLICY))
         .hasValue(
             "\"model\" is automatically detected by OmniLab and cannot be configured manually.");
     assertThat(
             BatchDeviceConfigUtil.checkDimensionTarget(
-                "bad key", DimensionList.DIMENSION_LIST_SUPPORTED, /* isAts= */ false))
+                "bad key", DimensionList.DIMENSION_LIST_SUPPORTED, CUSTOM_ALLOWING_POLICY))
         .hasValue("Invalid dimension name: bad key");
     assertThat(
             BatchDeviceConfigUtil.checkDimensionTarget(
-                "pool", DimensionList.DIMENSION_LIST_UNSPECIFIED, /* isAts= */ false))
+                "pool", DimensionList.DIMENSION_LIST_UNSPECIFIED, CUSTOM_ALLOWING_POLICY))
         .hasValue("Dimension list must be DIMENSION_LIST_SUPPORTED or DIMENSION_LIST_REQUIRED.");
     assertThat(
             BatchDeviceConfigUtil.checkDimensionTarget(
-                "recovery", DimensionList.DIMENSION_LIST_SUPPORTED, /* isAts= */ true))
+                "recovery", DimensionList.DIMENSION_LIST_SUPPORTED, OSS_POLICY))
         .isEmpty();
     assertThat(
             BatchDeviceConfigUtil.checkDimensionTarget(
-                "pool", DimensionList.DIMENSION_LIST_REQUIRED, /* isAts= */ true))
+                "pool", DimensionList.DIMENSION_LIST_REQUIRED, OSS_POLICY))
         .isEmpty();
     assertThat(
             BatchDeviceConfigUtil.checkDimensionTarget(
-                "label", DimensionList.DIMENSION_LIST_SUPPORTED, /* isAts= */ true))
+                "label", DimensionList.DIMENSION_LIST_SUPPORTED, OSS_POLICY))
         .hasValue("Dimension \"label\" in DIMENSION_LIST_SUPPORTED is not configurable in ATS.");
     assertThat(
             BatchDeviceConfigUtil.checkDimensionTarget(
-                "pool", DimensionList.DIMENSION_LIST_SUPPORTED, /* isAts= */ true))
+                "pool", DimensionList.DIMENSION_LIST_SUPPORTED, OSS_POLICY))
         .hasValue("Dimension \"pool\" in DIMENSION_LIST_SUPPORTED is not configurable in ATS.");
+
+    BatchDeviceConfigPolicy defaultRestrictedPolicy =
+        new BatchDeviceConfigPolicy() {
+          @Override
+          public ImmutableList<ConfigurableDimension> getCuratedDimensions() {
+            return OSS_POLICY.getCuratedDimensions();
+          }
+
+          @Override
+          public boolean allowCustomDimensions() {
+            return false;
+          }
+
+          @Override
+          public boolean discoverFleetDimensionsFromDeviceConfigs() {
+            return true;
+          }
+
+          @Override
+          public ImmutableSet<String> getSystemDetectedDimensionNames() {
+            return BatchDeviceConfigUtil.COMMON_SYSTEM_DETECTED_DIMENSION_NAMES;
+          }
+        };
+    assertThat(
+            BatchDeviceConfigUtil.checkDimensionTarget(
+                "recovery", DimensionList.DIMENSION_LIST_SUPPORTED, defaultRestrictedPolicy))
+        .isEmpty();
+    assertThat(
+            BatchDeviceConfigUtil.checkDimensionTarget(
+                "label", DimensionList.DIMENSION_LIST_SUPPORTED, defaultRestrictedPolicy))
+        .hasValue("Dimension \"label\" in DIMENSION_LIST_SUPPORTED is not configurable.");
   }
 
   @Test

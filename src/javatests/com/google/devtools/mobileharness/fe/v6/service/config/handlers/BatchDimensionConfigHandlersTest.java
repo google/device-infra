@@ -47,8 +47,10 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.BatchDeviceConfigPolicy;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigPusherHelper;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.FakeBatchDeviceConfigPolicy;
 import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetConfigurableDimensionKeysRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetConfigurableDimensionKeysResponse;
@@ -116,6 +118,9 @@ public final class BatchDimensionConfigHandlersTest {
   @Bind @Mock private Environment environment;
   @Bind private final ListeningExecutorService executor = newDirectExecutorService();
 
+  private final FakeBatchDeviceConfigPolicy switchablePolicy = new FakeBatchDeviceConfigPolicy();
+  @Bind private final BatchDeviceConfigPolicy policy = switchablePolicy;
+
   @Inject private GetConfigurableDimensionsHandler getConfigurableDimensionsHandler;
 
   @Inject private BatchGetConfigurableDimensionKeysHandler batchGetConfigurableDimensionKeysHandler;
@@ -130,6 +135,7 @@ public final class BatchDimensionConfigHandlersTest {
   @Before
   public void setUp() {
     flags.set("fe_connect_to_config_server", "true");
+    switchablePolicy.useCustomAllowingPolicy();
     Guice.createInjector(
             BoundFieldModule.of(this),
             new FactoryModuleBuilder().build(ConfigServiceCapabilityFactory.class))
@@ -141,8 +147,14 @@ public final class BatchDimensionConfigHandlersTest {
             labInfoProvider, configurationProvider, iamPermissionChecker, SELF_UNIVERSE);
   }
 
+  private void enterAtsMode() {
+    when(environment.isGoogleInternal()).thenReturn(false);
+    when(environment.isAts()).thenReturn(true);
+    switchablePolicy.useOssPolicy();
+  }
+
   @Test
-  public void getConfigurableDimensions_internal1p_returnsCuratedAndAllowsCustom()
+  public void getConfigurableDimensions_customPolicy_returnsCuratedAndAllowsCustom()
       throws Exception {
     GetConfigurableDimensionsResponse response =
         getConfigurableDimensionsHandler
@@ -161,8 +173,7 @@ public final class BatchDimensionConfigHandlersTest {
 
   @Test
   public void getConfigurableDimensions_ats_returnsFourFixedAndDisallowsCustom() throws Exception {
-    when(environment.isGoogleInternal()).thenReturn(false);
-    when(environment.isAts()).thenReturn(true);
+    enterAtsMode();
 
     GetConfigurableDimensionsResponse response =
         getConfigurableDimensionsHandler
@@ -181,8 +192,7 @@ public final class BatchDimensionConfigHandlersTest {
   @Test
   public void getConfigurableDimensions_disabledConfigServerInAts_returnsEnabledFalse()
       throws Exception {
-    when(environment.isGoogleInternal()).thenReturn(false);
-    when(environment.isAts()).thenReturn(true);
+    enterAtsMode();
     flags.set("fe_connect_to_config_server", "false");
 
     GetConfigurableDimensionsResponse response =
@@ -197,6 +207,7 @@ public final class BatchDimensionConfigHandlersTest {
   @Test
   public void batchGetConfigurableDimensionKeys_internalSupported_usesGetAllDeviceDimensions()
       throws Exception {
+    switchablePolicy.addExtraSystemDetectedDimension("custom_blocked_dim");
     DeviceConfig dev1Config =
         DeviceConfig.newBuilder()
             .setUuid("dev1")
@@ -217,6 +228,8 @@ public final class BatchDimensionConfigHandlersTest {
     GetAllDeviceDimensionsResponse allDimensions =
         GetAllDeviceDimensionsResponse.newBuilder()
             .addDimensions(DeviceDimensionSummary.newBuilder().setName("model").setDeviceCount(100))
+            .addDimensions(
+                DeviceDimensionSummary.newBuilder().setName("custom_blocked_dim").setDeviceCount(9))
             .addDimensions(DeviceDimensionSummary.newBuilder().setName("pool").setDeviceCount(50))
             .addDimensions(DeviceDimensionSummary.newBuilder().setName("label").setDeviceCount(2))
             .addDimensions(
@@ -245,9 +258,11 @@ public final class BatchDimensionConfigHandlersTest {
             GetAllDeviceDimensionsRequest.getDefaultInstance(), SELF_UNIVERSE);
     verify(labInfoProvider, never()).getLabInfoAsync(any(), any());
 
-    // "pool" (curated required-only) and "dim::label" (invalid ':' key) are excluded from
-    // DIMENSION_LIST_SUPPORTED fleet counts without double-counting "label".
-    assertThat(response.getSystemDimensionNamesList()).contains("model");
+    // "pool" (curated required-only), "custom_blocked_dim" (policy system-detected), and
+    // "dim::label" (invalid ':' key) are excluded from DIMENSION_LIST_SUPPORTED fleet counts
+    // without double-counting "label".
+    assertThat(response.getSystemDimensionNamesList())
+        .containsAtLeast("model", "custom_blocked_dim");
     assertThat(response.getCandidateKeysList()).hasSize(3);
     assertThat(response.getCandidateKeys(0).getDimensionName()).isEqualTo("custom_team_tag");
     assertThat(response.getCandidateKeys(0).getSelectedDeviceCount()).isEqualTo(1);
@@ -296,8 +311,7 @@ public final class BatchDimensionConfigHandlersTest {
     // keys present in stored ATS DeviceConfigs)
     when(labInfoProvider.getLabInfoAsync(any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateFuture(GetLabInfoResponse.getDefaultInstance()));
-    when(environment.isGoogleInternal()).thenReturn(false);
-    when(environment.isAts()).thenReturn(true);
+    enterAtsMode();
     BatchGetConfigurableDimensionKeysResponse atsSupportedEmpty =
         batchGetConfigurableDimensionKeysHandler
             .batchGetConfigurableDimensionKeys(
@@ -537,8 +551,7 @@ public final class BatchDimensionConfigHandlersTest {
         .containsExactly("label");
 
     // 3. ATS mode with populated fleet and curated policy check
-    when(environment.isGoogleInternal()).thenReturn(false);
-    when(environment.isAts()).thenReturn(true);
+    enterAtsMode();
     GetLabInfoResponse atsLabInfo =
         GetLabInfoResponse.newBuilder()
             .setLabQueryResult(
@@ -802,8 +815,7 @@ public final class BatchDimensionConfigHandlersTest {
         .isEqualTo("No permission");
 
     // ATS allows empty username; duplicate targets collapse into one entry.
-    when(environment.isGoogleInternal()).thenReturn(false);
-    when(environment.isAts()).thenReturn(true);
+    enterAtsMode();
     BatchGetDeviceDimensionConfigsResponse clearResp =
         batchGetDeviceDimensionConfigsHandler
             .batchGetDeviceDimensionConfigs(
@@ -862,8 +874,7 @@ public final class BatchDimensionConfigHandlersTest {
             poolGetRequest().addAllDevices(tooManyTargets()).build(), Optional.of("user1")),
         "at most 1000 devices");
 
-    when(environment.isGoogleInternal()).thenReturn(false);
-    when(environment.isAts()).thenReturn(true);
+    enterAtsMode();
     assertInvalidArgument(
         batchGetDeviceDimensionConfigsHandler.batchGetDeviceDimensionConfigs(
             poolGetRequest("dev1")
@@ -1021,8 +1032,7 @@ public final class BatchDimensionConfigHandlersTest {
             Optional.of("user1")),
         "at most 1000 devices");
 
-    when(environment.isGoogleInternal()).thenReturn(false);
-    when(environment.isAts()).thenReturn(true);
+    enterAtsMode();
     assertInvalidArgument(
         batchUpdateDeviceDimensionConfigsHandler.batchUpdateDeviceDimensionConfigs(
             valid.toBuilder()
@@ -1096,8 +1106,7 @@ public final class BatchDimensionConfigHandlersTest {
         .isEqualTo("Backend unavailable");
 
     // Disabled config server in ATS rejects with FAILED_PRECONDITION.
-    when(environment.isGoogleInternal()).thenReturn(false);
-    when(environment.isAts()).thenReturn(true);
+    enterAtsMode();
     flags.set("fe_connect_to_config_server", "false");
     assertFailedPrecondition(
         batchUpdateDeviceDimensionConfigsHandler.batchUpdateDeviceDimensionConfigs(

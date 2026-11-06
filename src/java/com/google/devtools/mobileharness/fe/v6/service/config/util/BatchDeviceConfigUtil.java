@@ -32,9 +32,7 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-/**
- * Shared utility methods and system dimension constants for batch device configuration handlers.
- */
+/** Shared utility methods for batch device configuration handlers. */
 public final class BatchDeviceConfigUtil {
 
   private static final String DIM_PREFIX = "dim::";
@@ -44,28 +42,18 @@ public final class BatchDeviceConfigUtil {
   private static final Pattern VALID_DEVICE_UUID_PATTERN =
       Pattern.compile("^[a-zA-Z0-9._:()\\[\\]=+~!,;\\-]+$");
 
-  public static final ImmutableSet<String> ATS_CURATED_SUPPORTED_KEYS =
-      ImmutableSet.of("recovery", "skip_suw_app");
-  public static final ImmutableSet<String> ATS_CURATED_REQUIRED_KEYS =
-      ImmutableSet.of("pool", "persist_test_harness");
-
   /**
-   * OmniLab system-detected dimension names populated automatically by Lab Server detectors and
-   * system properties. Operators cannot configure these keys manually in DeviceConfig.
+   * Standard OmniLab system-detected dimension names populated automatically by Lab Server
+   * detectors and system properties.
    */
-  public static final ImmutableSet<String> SYSTEM_DETECTED_DIMENSION_NAMES =
+  public static final ImmutableSet<String> COMMON_SYSTEM_DETECTED_DIMENSION_NAMES =
       ImmutableSet.of(
           "abi",
           "abilist",
           "active_modem_count",
-          "agsa_version",
           "alert_lab_disk_usable_size",
           "allocation_key",
-          "ap_ar_ns",
-          "ap_ar_s",
           "api_level",
-          "ar_force_update",
-          "ar_update_allow",
           "architecture",
           "available_xcode_versions",
           "baseband_version",
@@ -83,20 +71,14 @@ public final class BatchDeviceConfigUtil {
           "build_type",
           "carrier_ids",
           "characteristics",
-          "china_model",
           "chrome_version",
-          "cloudrpc_failure",
           "codename",
           "color",
           "communication_type",
           "control_id",
           "cpu_architecture",
           "custom_profile",
-          "dab_broker_uri",
-          "dab_device_id",
           "ddr_size",
-          "ddr_type",
-          "ddr_vendor",
           "decorator",
           "device",
           "device_admin_locked",
@@ -108,9 +90,7 @@ public final class BatchDeviceConfigUtil {
           "device_name",
           "device_priority",
           "device_supports_container",
-          "device_supports_moreto",
           "devicetype",
-          "devkey_allow",
           "dial_app_url_suffix",
           "dial_rest_url_suffix",
           "disk_type",
@@ -125,10 +105,6 @@ public final class BatchDeviceConfigUtil {
           "free_external_storage_percentage",
           "free_internal_storage",
           "free_internal_storage_percentage",
-          "gcs_failure",
-          "gms_version",
-          "gmscore_signature",
-          "gservices_android_id",
           "gsm_operator_alpha",
           "hardware",
           "hardware_sku",
@@ -163,7 +139,6 @@ public final class BatchDeviceConfigUtil {
           "language",
           "launcher_1",
           "launcher_3",
-          "launcher_gel",
           "locale",
           "location_type",
           "mac_address",
@@ -177,26 +152,15 @@ public final class BatchDeviceConfigUtil {
           "monitored",
           "monsoon_id",
           "monsoon_status",
-          "moreto_lab_version",
-          "mtaas_device_checkin_group",
           "native_bridge",
           "network_address",
           "network_connection_stability",
           "network_ssid",
-          "nonsec_ar",
-          "nos_production",
           "num_cpus",
           "oem_unlock",
-          "omni_mode_usage",
           "os",
           "os_version_number",
           "owner",
-          "pat_connection_mode",
-          "pat_device_configured",
-          "pat_id",
-          "ping_google_stability",
-          "ping_time_avg_in_sec",
-          "ping_time_max_in_sec",
           "port",
           "power_switch_ip_address",
           "power_switch_mac_address",
@@ -209,8 +173,6 @@ public final class BatchDeviceConfigUtil {
           "provisioned_by",
           "quarantined",
           "radio_version",
-          "reachable_via_dial",
-          "reachable_via_ping",
           "reboot_to_recover",
           "recovery_status",
           "region",
@@ -219,15 +181,11 @@ public final class BatchDeviceConfigUtil {
           "revision",
           "rooted",
           "run_target",
-          "sbdp_allow",
-          "sbdp_ar_check",
-          "sbdp_ar_update",
           "screen_density",
           "screen_size",
           "screenshot_able",
           "sdk_full_version",
           "sdk_version",
-          "sec_ar",
           "secure_boot",
           "serial",
           "serial_responsive",
@@ -241,33 +199,23 @@ public final class BatchDeviceConfigUtil {
           "sim_state",
           "soc_id",
           "soc_model",
-          "soc_rev",
           "software_version",
           "status",
           "storage_capacity",
           "storage_lifetime_percentage",
-          "storage_vendor",
           "supervised",
           "supports_adhoc",
-          "supports_gmscore",
           "svelte_device",
-          "tenant_config_source_path",
           "total_memory",
           "tradefed_virtual_device_id",
           "type",
           "uuid",
           "uuid_volatile",
           "veritymode",
-          "whitelisted_proxy_ctl",
           "wifi",
           "wifi_rssi",
           "wifi_ssid",
-          "writable_external_storage",
-          "youtube_installed");
-
-  /** Sorted list of system-detected dimension names for proto responses. */
-  public static final ImmutableList<String> SORTED_SYSTEM_DETECTED_DIMENSION_NAMES =
-      ImmutableList.sortedCopyOf(SYSTEM_DETECTED_DIMENSION_NAMES);
+          "writable_external_storage");
 
   private BatchDeviceConfigUtil() {}
 
@@ -284,15 +232,17 @@ public final class BatchDeviceConfigUtil {
   }
 
   /** Returns true if the dimension name is reserved for OmniLab system-detected dimensions. */
-  public static boolean isSystemDetectedDimension(String dimensionName) {
-    return SYSTEM_DETECTED_DIMENSION_NAMES.contains(Ascii.toLowerCase(dimensionName));
+  public static boolean isSystemDetectedDimension(
+      String dimensionName, BatchDeviceConfigPolicy policy) {
+    return policy.getSystemDetectedDimensionNames().contains(Ascii.toLowerCase(dimensionName));
   }
 
   /** Returns true if the dimension name has valid characters and is not system-detected. */
-  public static boolean isValidConfigurableDimensionKey(String dimensionName) {
+  public static boolean isValidConfigurableDimensionKey(
+      String dimensionName, BatchDeviceConfigPolicy policy) {
     return !dimensionName.isEmpty()
         && VALID_DIMENSION_NAME_PATTERN.matcher(dimensionName).matches()
-        && !isSystemDetectedDimension(dimensionName)
+        && !isSystemDetectedDimension(dimensionName, policy)
         && !dimensionName.equals("subdevice_dimensions");
   }
 
@@ -311,24 +261,24 @@ public final class BatchDeviceConfigUtil {
   }
 
   /**
-   * Validates the {@code (dimensionName, dimensionList)} target of a batch dimension request,
-   * enforcing the curated ATS dimension policy when {@code isAts} is true.
+   * Validates the {@code (dimensionName, dimensionList)} target of a batch dimension request
+   * against character rules, system-detected dimensions, and deployment curation policy.
    *
    * @param dimensionName a name already normalized by {@link #cleanDimensionName}
    * @return the reason the target is invalid, or empty when it is valid
    */
   public static Optional<String> checkDimensionTarget(
-      String dimensionName, DimensionList dimensionList, boolean isAts) {
+      String dimensionName, DimensionList dimensionList, BatchDeviceConfigPolicy policy) {
     if (dimensionName.isEmpty()) {
       return Optional.of("Dimension name must not be empty.");
     }
-    if (isSystemDetectedDimension(dimensionName)) {
+    if (isSystemDetectedDimension(dimensionName, policy)) {
       return Optional.of(
           String.format(
               "\"%s\" is automatically detected by OmniLab and cannot be configured manually.",
               dimensionName));
     }
-    if (!isValidConfigurableDimensionKey(dimensionName)) {
+    if (!isValidConfigurableDimensionKey(dimensionName, policy)) {
       return Optional.of("Invalid dimension name: " + dimensionName);
     }
     if (dimensionList != DimensionList.DIMENSION_LIST_SUPPORTED
@@ -336,19 +286,7 @@ public final class BatchDeviceConfigUtil {
       return Optional.of(
           "Dimension list must be DIMENSION_LIST_SUPPORTED or DIMENSION_LIST_REQUIRED.");
     }
-    if (isAts) {
-      ImmutableSet<String> allowedKeys =
-          isRequiredDimensionList(dimensionList)
-              ? ATS_CURATED_REQUIRED_KEYS
-              : ATS_CURATED_SUPPORTED_KEYS;
-      if (!allowedKeys.contains(dimensionName)) {
-        return Optional.of(
-            String.format(
-                "Dimension \"%s\" in %s is not configurable in ATS.",
-                dimensionName, dimensionList));
-      }
-    }
-    return Optional.empty();
+    return policy.checkPolicyDimensionTarget(dimensionName, dimensionList);
   }
 
   /**

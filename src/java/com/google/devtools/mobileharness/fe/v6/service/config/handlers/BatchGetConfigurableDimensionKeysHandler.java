@@ -36,6 +36,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.BatchDeviceConfigPolicy;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.BatchDeviceConfigUtil;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
@@ -45,7 +46,6 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetConf
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DimensionList;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
-import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetAllDeviceDimensionsRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
@@ -64,15 +64,10 @@ import javax.inject.Singleton;
 public final class BatchGetConfigurableDimensionKeysHandler {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final ImmutableSet<String> INTERNAL_DEFAULT_REQUIRED_KEYS =
-      ImmutableSet.of("pool");
-  private static final ImmutableSet<String> INTERNAL_DEFAULT_SUPPORTED_KEYS =
-      ImmutableSet.of("label", "cluster");
-
   private final LabInfoProvider labInfoProvider;
   private final ConfigurationProvider configurationProvider;
   private final ConfigServiceCapabilityFactory configServiceCapabilityFactory;
-  private final Environment environment;
+  private final BatchDeviceConfigPolicy policy;
   private final ListeningExecutorService executor;
 
   @Inject
@@ -80,12 +75,12 @@ public final class BatchGetConfigurableDimensionKeysHandler {
       LabInfoProvider labInfoProvider,
       ConfigurationProvider configurationProvider,
       ConfigServiceCapabilityFactory configServiceCapabilityFactory,
-      Environment environment,
+      BatchDeviceConfigPolicy policy,
       ListeningExecutorService executor) {
     this.labInfoProvider = labInfoProvider;
     this.configurationProvider = configurationProvider;
     this.configServiceCapabilityFactory = configServiceCapabilityFactory;
-    this.environment = environment;
+    this.policy = policy;
     this.executor = executor;
   }
 
@@ -118,10 +113,10 @@ public final class BatchGetConfigurableDimensionKeysHandler {
         ImmutableSet.copyOf(
             BatchDeviceConfigHelper.extractDistinctValidDeviceUuids(request.getDevicesList()));
 
-    if (environment.isAts()) {
+    if (policy.discoverFleetDimensionsFromDeviceConfigs()) {
       return getKeysFromFleetDeviceConfigs(selectedIds, dimensionList);
     }
-    return getKeysForInternalFleet(selectedIds, dimensionList);
+    return getKeysFromLabInfo(selectedIds, dimensionList);
   }
 
   private ListenableFuture<BatchGetConfigurableDimensionKeysResponse> getKeysFromFleetDeviceConfigs(
@@ -139,7 +134,7 @@ public final class BatchGetConfigurableDimensionKeysHandler {
                   .collect(toImmutableList());
           if (allDeviceIds.isEmpty()) {
             return immediateFuture(
-                buildResponse(ImmutableMap.of(), ImmutableMap.of(), dimensionList, true));
+                buildResponse(ImmutableMap.of(), ImmutableMap.of(), dimensionList));
           }
           return Futures.transform(
               configurationProvider.getDeviceConfigs(allDeviceIds, UniverseScope.SELF),
@@ -152,14 +147,14 @@ public final class BatchGetConfigurableDimensionKeysHandler {
                         .collect(toImmutableList());
                 ImmutableMap<String, Integer> selectedCounts =
                     countDimensionKeysInConfigs(selectedConfigs, dimensionList);
-                return buildResponse(selectedCounts, fleetCounts, dimensionList, true);
+                return buildResponse(selectedCounts, fleetCounts, dimensionList);
               },
               executor);
         },
         executor);
   }
 
-  private ListenableFuture<BatchGetConfigurableDimensionKeysResponse> getKeysForInternalFleet(
+  private ListenableFuture<BatchGetConfigurableDimensionKeysResponse> getKeysFromLabInfo(
       ImmutableSet<String> selectedIds, DimensionList dimensionList) {
     ListenableFuture<List<DeviceConfig>> selectedConfigsFuture =
         selectedIds.isEmpty()
@@ -176,13 +171,13 @@ public final class BatchGetConfigurableDimensionKeysHandler {
                   countDimensionKeysInConfigs(
                       Futures.getDone(selectedConfigsFuture), dimensionList);
               ImmutableMap<String, Integer> fleetCounts = Futures.getDone(fleetCountsFuture);
-              return buildResponse(selectedCounts, fleetCounts, dimensionList, false);
+              return buildResponse(selectedCounts, fleetCounts, dimensionList);
             },
             executor);
   }
 
   /**
-   * Queries {@code LabInfoService.GetAllDeviceDimensions} so 1P key discovery runs in O(distinct
+   * Queries {@code LabInfoService.GetAllDeviceDimensions} so fleet key discovery runs in O(distinct
    * keys) rather than scanning every device via {@code GetLabInfo}. Because {@code
    * GetAllDeviceDimensions} aggregates dimension names across both {@code supported_dimension} and
    * {@code required_dimension}, non-curated custom keys report combined fleet counts while curated
@@ -190,10 +185,14 @@ public final class BatchGetConfigurableDimensionKeysHandler {
    */
   private ListenableFuture<ImmutableMap<String, Integer>> fetchDimensionFleetCounts(
       DimensionList dimensionList) {
-    ImmutableSet<String> excludedCuratedKeys =
+    DimensionList oppositeList =
         BatchDeviceConfigUtil.isRequiredDimensionList(dimensionList)
-            ? INTERNAL_DEFAULT_SUPPORTED_KEYS
-            : INTERNAL_DEFAULT_REQUIRED_KEYS;
+            ? DimensionList.DIMENSION_LIST_SUPPORTED
+            : DimensionList.DIMENSION_LIST_REQUIRED;
+    Set<String> excludedCuratedKeys =
+        Sets.difference(
+            policy.getDefaultConfigurableKeys(oppositeList),
+            policy.getDefaultConfigurableKeys(dimensionList));
     return Futures.transform(
         labInfoProvider.getAllDeviceDimensionsAsync(
             GetAllDeviceDimensionsRequest.getDefaultInstance(), UniverseScope.SELF),
@@ -202,7 +201,7 @@ public final class BatchGetConfigurableDimensionKeysHandler {
                 .filter(dim -> dim.getDeviceCount() > 0)
                 .filter(
                     dim ->
-                        BatchDeviceConfigUtil.isValidConfigurableDimensionKey(dim.getName())
+                        BatchDeviceConfigUtil.isValidConfigurableDimensionKey(dim.getName(), policy)
                             && !excludedCuratedKeys.contains(dim.getName()))
                 .collect(
                     toImmutableMap(
@@ -212,7 +211,7 @@ public final class BatchGetConfigurableDimensionKeysHandler {
         executor);
   }
 
-  private static ImmutableMap<String, Integer> countDimensionKeysInConfigs(
+  private ImmutableMap<String, Integer> countDimensionKeysInConfigs(
       List<DeviceConfig> configs, DimensionList dimensionList) {
     boolean isRequired = BatchDeviceConfigUtil.isRequiredDimensionList(dimensionList);
     Map<String, Long> counts =
@@ -234,30 +233,23 @@ public final class BatchGetConfigurableDimensionKeysHandler {
                 Map.Entry::getKey, e -> (int) Math.min(e.getValue(), Integer.MAX_VALUE)));
   }
 
-  private static Stream<String> extractValidKeys(List<DeviceDimension> dimensions) {
+  private Stream<String> extractValidKeys(List<DeviceDimension> dimensions) {
     return dimensions.stream()
         .filter(d -> !d.getValue().isEmpty())
         .map(DeviceDimension::getName)
-        .filter(BatchDeviceConfigUtil::isValidConfigurableDimensionKey)
+        .filter(name -> BatchDeviceConfigUtil.isValidConfigurableDimensionKey(name, policy))
         .distinct();
   }
 
-  private static BatchGetConfigurableDimensionKeysResponse buildResponse(
+  private BatchGetConfigurableDimensionKeysResponse buildResponse(
       ImmutableMap<String, Integer> selectedCounts,
       ImmutableMap<String, Integer> fleetCounts,
-      DimensionList dimensionList,
-      boolean isAts) {
-    boolean isRequired = BatchDeviceConfigUtil.isRequiredDimensionList(dimensionList);
-    ImmutableSet<String> defaultKeys =
-        isAts
-            ? (isRequired
-                ? BatchDeviceConfigUtil.ATS_CURATED_REQUIRED_KEYS
-                : BatchDeviceConfigUtil.ATS_CURATED_SUPPORTED_KEYS)
-            : (isRequired ? INTERNAL_DEFAULT_REQUIRED_KEYS : INTERNAL_DEFAULT_SUPPORTED_KEYS);
+      DimensionList dimensionList) {
+    ImmutableSet<String> defaultKeys = policy.getDefaultConfigurableKeys(dimensionList);
     Set<String> allKeys =
-        isAts
-            ? defaultKeys
-            : Sets.union(Sets.union(fleetCounts.keySet(), selectedCounts.keySet()), defaultKeys);
+        policy.allowCustomDimensions()
+            ? Sets.union(Sets.union(fleetCounts.keySet(), selectedCounts.keySet()), defaultKeys)
+            : defaultKeys;
 
     Comparator<CandidateDimensionKey> comparator =
         comparingInt(CandidateDimensionKey::getSelectedDeviceCount)
@@ -282,7 +274,7 @@ public final class BatchGetConfigurableDimensionKeysHandler {
 
     return BatchGetConfigurableDimensionKeysResponse.newBuilder()
         .addAllCandidateKeys(candidateKeys)
-        .addAllSystemDimensionNames(BatchDeviceConfigUtil.SORTED_SYSTEM_DETECTED_DIMENSION_NAMES)
+        .addAllSystemDimensionNames(policy.getSortedSystemDetectedDimensionNames())
         .build();
   }
 }

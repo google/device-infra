@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.fe.v6.service.config.handlers.BatchDeviceConfigHelper.DeviceEvaluation;
+import com.google.devtools.mobileharness.fe.v6.service.config.util.BatchDeviceConfigPolicy;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.BatchDeviceConfigUtil;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigServiceCapabilityFactory;
 import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
@@ -34,7 +35,6 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.BatchGetDevi
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DeviceConfigChangeStatus;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.DimensionList;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.TargetDimensionValues;
-import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -47,18 +47,18 @@ public final class BatchGetDeviceDimensionConfigsHandler {
 
   private final BatchDeviceConfigHelper batchDeviceConfigHelper;
   private final ConfigServiceCapabilityFactory configServiceCapabilityFactory;
-  private final Environment environment;
+  private final BatchDeviceConfigPolicy policy;
   private final ListeningExecutorService executor;
 
   @Inject
   BatchGetDeviceDimensionConfigsHandler(
       BatchDeviceConfigHelper batchDeviceConfigHelper,
       ConfigServiceCapabilityFactory configServiceCapabilityFactory,
-      Environment environment,
+      BatchDeviceConfigPolicy policy,
       ListeningExecutorService executor) {
     this.batchDeviceConfigHelper = batchDeviceConfigHelper;
     this.configServiceCapabilityFactory = configServiceCapabilityFactory;
-    this.environment = environment;
+    this.policy = policy;
     this.executor = executor;
   }
 
@@ -77,8 +77,7 @@ public final class BatchGetDeviceDimensionConfigsHandler {
     String dimensionName = BatchDeviceConfigUtil.cleanDimensionName(request.getDimensionName());
     DimensionList dimensionList = request.getDimensionList();
     Optional<String> invalidReason =
-        BatchDeviceConfigUtil.checkDimensionTarget(
-                dimensionName, dimensionList, environment.isAts())
+        BatchDeviceConfigUtil.checkDimensionTarget(dimensionName, dimensionList, policy)
             .or(() -> BatchDeviceConfigHelper.checkDeviceTargetCount(request.getDevicesList()))
             .or(() -> checkTargetValues(dimensionName, request.getTarget()));
     if (invalidReason.isPresent()) {
