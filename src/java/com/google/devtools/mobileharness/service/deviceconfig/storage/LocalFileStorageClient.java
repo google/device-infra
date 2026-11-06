@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.service.deviceconfig.storage;
 
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.GlobalConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -109,11 +110,50 @@ public final class LocalFileStorageClient implements StorageClient {
     }
   }
 
+  @Override
+  public Optional<GlobalConfig> getGlobalConfig() throws MobileHarnessException {
+    String path = getGlobalConfigPath();
+    if (!localFileUtil.isFileExist(path)) {
+      return Optional.empty();
+    }
+    try {
+      return Optional.of(TextFormat.parse(localFileUtil.readFile(path), GlobalConfig.class));
+    } catch (TextFormat.ParseException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.CONFIG_TEXT_PARSE_ERROR,
+          String.format("Failed to parse global config from file %s", path),
+          e);
+    }
+  }
+
+  @Override
+  public void upsertGlobalConfig(GlobalConfig globalConfig) throws MobileHarnessException {
+    String path = getGlobalConfigPath();
+    localFileUtil.writeToFile(path, TextFormat.printer().printToString(globalConfig));
+  }
+
+  @Override
+  public void deleteGlobalConfig() throws MobileHarnessException {
+    String path = getGlobalConfigPath();
+    try {
+      localFileUtil.removeFileOrDir(path);
+    } catch (InterruptedException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.LOCAL_FILE_OR_DIR_REMOVE_ERROR,
+          String.format("Failed to remove file %s", path),
+          e);
+    }
+  }
+
   private String getDeviceConfigPath(String deviceUuid) {
     return PathUtil.join(rootDir, "device", deviceUuid + ".textproto");
   }
 
   private String getLabConfigPath(String hostName) {
     return PathUtil.join(rootDir, "lab", hostName + ".textproto");
+  }
+
+  private String getGlobalConfigPath() {
+    return PathUtil.join(rootDir, "global", "global_config.textproto");
   }
 }

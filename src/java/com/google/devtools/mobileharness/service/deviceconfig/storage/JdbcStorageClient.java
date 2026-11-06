@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.service.deviceconfig.storage;
 
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.GlobalConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.database.DatabaseConnections;
@@ -35,8 +36,15 @@ public final class JdbcStorageClient implements StorageClient {
   private static final String LAB_CONFIG_KEY_COLUMN_NAME = "lab_host";
   private static final String LAB_CONFIG_VALUE_COLUMN_NAME = "lab_config";
 
+  private static final String GLOBAL_CONFIG_TABLE_NAME = "global_config_table";
+  private static final String GLOBAL_CONFIG_KEY_COLUMN_NAME = "global_config_id";
+  private static final String GLOBAL_CONFIG_VALUE_COLUMN_NAME = "global_config";
+
+  private static final String DEFAULT_GLOBAL_CONFIG_ID = "GLOBAL";
+
   private final StringBinaryProtoTable<DeviceConfig> deviceConfigTable;
   private final StringBinaryProtoTable<LabConfig> labConfigTable;
+  private final StringBinaryProtoTable<GlobalConfig> globalConfigTable;
 
   @Inject
   JdbcStorageClient(DatabaseConnections databaseConnections) {
@@ -54,6 +62,13 @@ public final class JdbcStorageClient implements StorageClient {
             LAB_CONFIG_TABLE_NAME,
             LAB_CONFIG_KEY_COLUMN_NAME,
             LAB_CONFIG_VALUE_COLUMN_NAME);
+    this.globalConfigTable =
+        new StringBinaryProtoTable<>(
+            databaseConnections,
+            GlobalConfig.parser(),
+            GLOBAL_CONFIG_TABLE_NAME,
+            GLOBAL_CONFIG_KEY_COLUMN_NAME,
+            GLOBAL_CONFIG_VALUE_COLUMN_NAME);
   }
 
   @Override
@@ -94,5 +109,24 @@ public final class JdbcStorageClient implements StorageClient {
   @Override
   public void deleteLabConfig(String labHost) throws MobileHarnessException {
     labConfigTable.delete(labHost);
+  }
+
+  @Override
+  public Optional<GlobalConfig> getGlobalConfig() throws MobileHarnessException {
+    return globalConfigTable.read().stream()
+        .filter(
+            globalConfig -> globalConfig.key().filter(DEFAULT_GLOBAL_CONFIG_ID::equals).isPresent())
+        .findFirst()
+        .flatMap(globalConfig -> globalConfig.value().map(m -> (GlobalConfig) m));
+  }
+
+  @Override
+  public void upsertGlobalConfig(GlobalConfig globalConfig) throws MobileHarnessException {
+    globalConfigTable.update(DEFAULT_GLOBAL_CONFIG_ID, globalConfig);
+  }
+
+  @Override
+  public void deleteGlobalConfig() throws MobileHarnessException {
+    globalConfigTable.delete(DEFAULT_GLOBAL_CONFIG_ID);
   }
 }

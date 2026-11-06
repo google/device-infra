@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.service.deviceconfig.storage;
 
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.GlobalConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import java.util.Optional;
@@ -67,4 +68,21 @@ public interface StorageClient {
    * @param hostName lab host name
    */
   void deleteLabConfig(String hostName) throws MobileHarnessException;
+
+  /**
+   * Gets the global config.
+   *
+   * @return an {@link Optional} containing the {@link GlobalConfig}, or empty if not found
+   */
+  Optional<GlobalConfig> getGlobalConfig() throws MobileHarnessException;
+
+  /**
+   * Upserts the global config.
+   *
+   * @param globalConfig the {@link GlobalConfig} to upsert
+   */
+  void upsertGlobalConfig(GlobalConfig globalConfig) throws MobileHarnessException;
+
+  /** Deletes the global config. */
+  void deleteGlobalConfig() throws MobileHarnessException;
 }
