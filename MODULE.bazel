@@ -172,6 +172,7 @@ use_repo(
     "com_github_envoyproxy_go_control_plane_envoy",
     "com_github_envoyproxy_go_control_plane_ratelimit",
     "com_github_golang_glog",
+    "com_github_google_go_cmp",
     "com_github_google_uuid",
     "com_github_hanwen_go_fuse_v2",
     "com_github_jotfs_fastcdc_go",
