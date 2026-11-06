@@ -15,7 +15,7 @@ import {
   BulkConfigDialogResult,
   BulkConfigReviewSummary,
 } from '../../../models';
-import {formatDeviceCount} from '../../../utils';
+import {formatEntityCount} from '../../../utils';
 
 function extractErrorMessage(err: unknown, fallback: string): string {
   const msg = getErrorMessage(err);
@@ -36,7 +36,10 @@ export function useBulkWizardSession<
     status?: DeviceConfigChangeStatus;
   },
   TPhase extends string = 'review',
->(initialPhase: TPhase = 'review' as TPhase) {
+>(
+  initialPhase: TPhase = 'review' as TPhase,
+  entityNoun: 'device' | 'host' = 'device',
+) {
   const destroyRef = inject(DestroyRef);
   const dialogRef =
     inject<MatDialogRef<unknown, BulkConfigDialogResult | undefined>>(
@@ -108,11 +111,11 @@ export function useBulkWizardSession<
     return {
       willUpdateRows,
       willUpdateCount,
-      willUpdateLabel: formatDeviceCount(willUpdateCount),
+      willUpdateLabel: formatEntityCount(willUpdateCount, entityNoun),
       alreadyMatchCount,
-      alreadyMatchLabel: formatDeviceCount(alreadyMatchCount),
+      alreadyMatchLabel: formatEntityCount(alreadyMatchCount, entityNoun),
       readOnlyCount,
-      readOnlyLabel: formatDeviceCount(readOnlyCount),
+      readOnlyLabel: formatEntityCount(readOnlyCount, entityNoun),
     };
   });
 

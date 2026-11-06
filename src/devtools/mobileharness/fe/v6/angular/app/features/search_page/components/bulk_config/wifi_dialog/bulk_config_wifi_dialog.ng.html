@@ -29,7 +29,9 @@
                   <mat-icon class="bw-clear-icon">wifi_off</mat-icon>
                   <div class="bw-clear-text">
                     <span class="bw-clear-title">No default Wi-Fi</span>
-                    <span class="bw-clear-sub">Removes the default Wi-Fi configuration from the selected devices</span>
+                    <span class="bw-clear-sub">
+                      Removes the default Wi-Fi configuration from the selected {{ entityPlural }}
+                    </span>
                   </div>
                 </div>
                 <button
@@ -194,8 +196,9 @@
 
           <app-bulk-review-table
             [rows]="wizard.reviewEntries()"
+            [entityHeader]="entityHeader"
             currentHeader="Current Wi-Fi"
-            ariaLabel="Device Wi-Fi change review table"
+            [ariaLabel]="(isHostMode ? 'Host' : 'Device') + ' Wi-Fi change review table'"
           >
             <ng-template #currentValueCell let-row>
               @if (row.currentWifi?.ssid) {
@@ -215,6 +218,8 @@
           [willUpdateCount]="summary.willUpdateCount"
           [applyErrors]="wizard.applyErrors()"
           [successSupportText]="successSupportText()"
+          [entityNoun]="entityNoun"
+          [entityHeader]="entityHeader"
         >
           <div class="bw-new-card bw-success-card">
             <div class="bw-new-label">{{ isClearWifi() ? 'Default Wi-Fi' : 'New Wi-Fi' }}</div>
@@ -223,7 +228,7 @@
               <span class="bw-success-card-ssid">{{ isClearWifi() ? 'No default Wi-Fi' : target.ssid }}</span>
             </div>
             @if (isClearWifi()) {
-              <div class="bw-success-card-detail">Default Wi-Fi removed from devices</div>
+              <div class="bw-success-card-detail">Default Wi-Fi removed from {{ entityPlural }}</div>
             } @else {
               <div class="bw-success-card-detail">{{ target.psk ? 'Password protected' : 'Open network' }}</div>
               @if (target.scanSsid) {

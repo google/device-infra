@@ -23,6 +23,7 @@ import {SnackBarService} from '../../../../../shared/services/snackbar_service';
 import {BulkConfigDialogResult, FleetScope} from '../../../models';
 import {FleetSearchStore} from '../../../services/fleet_search_store';
 import {BulkConfigDimensionDialog} from '../../bulk_config/dimension_dialog/bulk_config_dimension_dialog';
+import {DeviceConfigTemplateDialog} from '../../bulk_config/template_dialog/device_config_template_dialog';
 import {BulkConfigWifiDialog} from '../../bulk_config/wifi_dialog/bulk_config_wifi_dialog';
 import {FleetSearchResultsComponent} from './fleet_search_results';
 
@@ -121,9 +122,10 @@ describe('FleetSearchResultsComponent', () => {
     mockDialog = jasmine.createSpyObj<MatDialog>('MatDialog', ['open']);
     mockEnvUniverseService = jasmine.createSpyObj<EnvUniverseService>(
       'EnvUniverseService',
-      ['getUniverseString'],
+      ['getUniverseString', 'isAts'],
     );
     mockEnvUniverseService.getUniverseString.and.returnValue('google_1p');
+    mockEnvUniverseService.isAts.and.returnValue(false);
     mockConfigService = jasmine.createSpyObj<ConfigService>('ConfigService', [
       'getConfigurableDimensions',
     ]);
@@ -684,6 +686,79 @@ describe('FleetSearchResultsComponent', () => {
       );
       expect(mockStore.clearSelection).toHaveBeenCalled();
       expect(mockStore.executeSearch).toHaveBeenCalled();
+    });
+
+    it('gates ATS toolbar actions: hides device Wi-Fi, enables Device Config Template, and enables host Wi-Fi', () => {
+      mockEnvUniverseService.isAts.and.returnValue(true);
+      mockEnvUniverseService.getUniverseString.and.returnValue('');
+      const atsFixture = TestBed.createComponent(FleetSearchResultsComponent);
+      const atsComponent = atsFixture.componentInstance;
+
+      // 1. Unselected ATS Device Search exposes Device Config Template
+      mockStore.entity.set('devices');
+      mockStore.selectedItems.set(new Map());
+      atsFixture.detectChanges();
+
+      let texts = atsFixture.debugElement
+        .queryAll(By.css('.rt-toolbar button'))
+        .map((b) => b.nativeElement.textContent.trim());
+      expect(
+        texts.some((t) => t.includes('Device Config Template')),
+      ).toBeTrue();
+
+      const openSpy = spyOn(
+        (atsComponent as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      ).and.returnValue({
+        afterClosed: () => of({updated: true}),
+      } as unknown as MatDialogRef<unknown, BulkConfigDialogResult>);
+
+      atsComponent.bulkConfig.openTemplateDialog();
+      expect(openSpy).toHaveBeenCalledWith(
+        DeviceConfigTemplateDialog,
+        jasmine.objectContaining({
+          data: {universe: '', fleet: Fleet.FLEET_SELF},
+        }),
+      );
+      expect(mockStore.executeSearch).toHaveBeenCalledTimes(1);
+
+      // 2. Selected ATS Device Search hides Configure Wi-Fi while keeping Configuration
+      mockStore.selectedItems.set(toSelectedMap(['dev-1']));
+      atsFixture.detectChanges();
+      texts = atsFixture.debugElement
+        .queryAll(By.css('.rt-toolbar button'))
+        .map((b) => b.nativeElement.textContent.trim());
+      expect(texts.some((t) => t.includes('Configure Wi-Fi'))).toBeFalse();
+      expect(texts.some((t) => t.includes('Configuration'))).toBeTrue();
+
+      // 3. Selected ATS Host Search exposes Configure Wi-Fi and opens BulkConfigWifiDialog in host mode
+      mockStore.entity.set('hosts');
+      mockStore.selectedItems.set(
+        new Map([
+          ['ats-host-1', {id: 'ats-host-1', cells: []}],
+          ['ats-host-2', {id: 'ats-host-2', cells: []}],
+        ]),
+      );
+      atsFixture.detectChanges();
+      texts = atsFixture.debugElement
+        .queryAll(By.css('.rt-toolbar button'))
+        .map((b) => b.nativeElement.textContent.trim());
+      expect(texts.some((t) => t.includes('Configure Wi-Fi'))).toBeTrue();
+
+      atsComponent.bulkConfig.openHostWifiDialog();
+      expect(openSpy).toHaveBeenCalledWith(
+        BulkConfigWifiDialog,
+        jasmine.objectContaining({
+          data: {
+            devices: [],
+            hostNames: ['ats-host-1', 'ats-host-2'],
+            universe: '',
+            fleet: Fleet.FLEET_SELF,
+          },
+        }),
+      );
+      expect(mockStore.clearSelection).toHaveBeenCalled();
+      expect(mockStore.executeSearch).toHaveBeenCalledTimes(2);
     });
   });
 

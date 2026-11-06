@@ -4,13 +4,20 @@ import {
   DimensionList,
 } from '../../../core/models/device_config_models';
 
-/** Input data structure passed into bulk device configuration dialogs. */
+/** Input data structure passed into bulk device or host configuration dialogs. */
 export interface BulkConfigDialogData {
   devices: DeviceTarget[];
+  hostNames?: string[];
   universe?: string;
   fleet?: string;
   dimension?: ConfigurableDimension;
   dimensionList?: DimensionList;
+}
+
+/** Input data structure passed into DeviceConfigTemplateDialog. */
+export interface DeviceConfigTemplateDialogData {
+  universe?: string;
+  fleet?: string;
 }
 
 /** Standard result returned when a bulk device configuration dialog closes. */

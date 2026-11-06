@@ -20,6 +20,7 @@ import {
   ConfigurableDimension,
   DeviceConfig,
   DeviceConfigChangeStatus,
+  DeviceConfigTemplate,
   DeviceConfigUiStatus,
   DeviceDimensionConfigEntry,
   DeviceTarget,
@@ -29,6 +30,8 @@ import {
   GetConfigurableDimensionsRequest,
   GetConfigurableDimensionsResponse,
   GetDeviceConfigResult,
+  GetDeviceConfigTemplateRequest,
+  GetDeviceConfigTemplateResponse,
   GetDimensionValueSuggestionsRequest,
   GetDimensionValueSuggestionsResponse,
   GetWifiSuggestionsRequest,
@@ -38,12 +41,20 @@ import {
   TargetDimensionValues,
   UpdateDeviceConfigRequest,
   UpdateDeviceConfigResult,
+  UpdateDeviceConfigTemplateRequest,
+  UpdateDeviceConfigTemplateResponse,
   UpdateError,
   WifiConfig,
 } from '../../models/device_config_models';
 import {
+  BatchGetHostWifiConfigsRequest,
+  BatchGetHostWifiConfigsResponse,
+  BatchUpdateHostWifiConfigsRequest,
+  BatchUpdateHostWifiConfigsResponse,
   CheckHostConfigPermissionResult,
   GetHostConfigResult,
+  HostConfigChangeStatus,
+  HostWifiConfigEntry,
   UnlockHostPropertiesResponse,
   UpdateHostConfigRequest,
   UpdateHostConfigResult,
@@ -131,6 +142,15 @@ function getInvalidUserErrorMessage(hostName: string, paths: string[]): string {
 export class FakeConfigService extends ConfigService {
   private readonly mockDeviceScenarios: MockDeviceScenario[];
   private readonly mockHostScenarios: MockHostScenario[];
+  private mockDeviceConfigTemplate: DeviceConfigTemplate = {
+    dimensions: {
+      supported: [
+        {name: 'recovery', value: 'true'},
+        {name: 'skip_suw_app', value: 'disable'},
+      ],
+      required: [],
+    },
+  };
 
   constructor() {
     super();
@@ -1089,5 +1109,138 @@ export class FakeConfigService extends ConfigService {
     hostName: string,
   ): Observable<UnlockHostPropertiesResponse> {
     return of({success: true}).pipe(delay(1000));
+  }
+
+  override batchGetHostWifiConfigs(
+    request: BatchGetHostWifiConfigsRequest,
+  ): Observable<BatchGetHostWifiConfigsResponse> {
+    const entries: HostWifiConfigEntry[] = request.hostNames.map((hostName) => {
+      const scenario = this.mockHostScenarios.find(
+        (s) => s.hostName === hostName,
+      );
+      const {writable, unwritableReason} =
+        this.getHostWifiWritability(scenario);
+      const rawWifi = scenario?.hostConfigResult.hostConfig?.deviceConfig?.wifi;
+      const currentWifi = rawWifi?.ssid
+        ? {
+            ssid: rawWifi.ssid,
+            psk: rawWifi.psk || '',
+            scanSsid: Boolean(rawWifi.scanSsid),
+          }
+        : undefined;
+
+      let status = HostConfigChangeStatus.HOST_CONFIG_CHANGE_STATUS_UNSPECIFIED;
+      if (!writable) {
+        status = HostConfigChangeStatus.HOST_CONFIG_CHANGE_STATUS_READ_ONLY;
+      } else if (!request.target) {
+        status = HostConfigChangeStatus.HOST_CONFIG_CHANGE_STATUS_WRITABLE;
+      } else {
+        const matches = this.isWifiMatchingTarget(currentWifi, request.target);
+        status = matches
+          ? HostConfigChangeStatus.HOST_CONFIG_CHANGE_STATUS_ALREADY_MATCHES
+          : HostConfigChangeStatus.HOST_CONFIG_CHANGE_STATUS_WILL_UPDATE;
+      }
+
+      return {
+        hostName,
+        ...(currentWifi ? {currentWifi} : {}),
+        status,
+        ...(unwritableReason ? {readOnlyReason: unwritableReason} : {}),
+      };
+    });
+
+    return of({entries}).pipe(delay(300));
+  }
+
+  override batchUpdateHostWifiConfigs(
+    request: BatchUpdateHostWifiConfigsRequest,
+  ): Observable<BatchUpdateHostWifiConfigsResponse> {
+    const errors: Record<string, UpdateError> = {};
+    for (const hostName of request.hostNames) {
+      const scenario = this.mockHostScenarios.find(
+        (s) => s.hostName === hostName,
+      );
+      if (!scenario) {
+        errors[hostName] = {code: 'UNKNOWN', message: 'Host not found'};
+        continue;
+      }
+      const {writable, unwritableReason} =
+        this.getHostWifiWritability(scenario);
+      if (!writable) {
+        errors[hostName] = {
+          code: 'PERMISSION_DENIED',
+          message: unwritableReason || 'Host Wi-Fi config is not writable',
+        };
+        continue;
+      }
+      const nextWifi: WifiConfig = request.target.clearWifi
+        ? {type: 'none', ssid: '', psk: '', scanSsid: false}
+        : {
+            type: 'custom',
+            ssid: request.target.wifi?.ssid ?? '',
+            psk: request.target.wifi?.psk ?? '',
+            scanSsid: Boolean(request.target.wifi?.scanSsid),
+          };
+      const hostConfig = scenario.hostConfigResult.hostConfig;
+      if (hostConfig) {
+        hostConfig.deviceConfig = {
+          ...(hostConfig.deviceConfig ?? {}),
+          wifi: nextWifi,
+        };
+      }
+    }
+    return of({errors}).pipe(delay(500));
+  }
+
+  override getDeviceConfigTemplate(
+    request?: GetDeviceConfigTemplateRequest,
+  ): Observable<GetDeviceConfigTemplateResponse> {
+    const isInternal = Boolean(request?.universe);
+    return of({
+      enabled: !isInternal,
+      deviceConfigTemplate: deepCopy(this.mockDeviceConfigTemplate),
+    }).pipe(delay(200));
+  }
+
+  override updateDeviceConfigTemplate(
+    request: UpdateDeviceConfigTemplateRequest,
+  ): Observable<UpdateDeviceConfigTemplateResponse> {
+    if (request.universe) {
+      return of<UpdateDeviceConfigTemplateResponse>({
+        success: false,
+        error: {
+          code: 'PERMISSION_DENIED',
+          message:
+            'Controller-level device configuration template is only supported in ATS.',
+        },
+      }).pipe(delay(200));
+    }
+    this.mockDeviceConfigTemplate = deepCopy(request.deviceConfigTemplate);
+    return of({success: true}).pipe(delay(200));
+  }
+
+  private getHostWifiWritability(scenario?: MockHostScenario): {
+    writable: boolean;
+    unwritableReason?: string;
+  } {
+    if (!scenario) {
+      return {writable: false, unwritableReason: 'Host not found'};
+    }
+    const wifiStatus =
+      scenario.hostConfigResult.uiStatus?.deviceConfig?.subSections?.wifi;
+    if (wifiStatus?.visible === false) {
+      return {
+        writable: false,
+        unwritableReason: 'Host Wi-Fi configuration is not supported',
+      };
+    }
+    if (wifiStatus?.editability && !wifiStatus.editability.editable) {
+      return {
+        writable: false,
+        unwritableReason:
+          wifiStatus.editability.reason || 'Host Wi-Fi configuration is locked',
+      };
+    }
+    return {writable: true};
   }
 }

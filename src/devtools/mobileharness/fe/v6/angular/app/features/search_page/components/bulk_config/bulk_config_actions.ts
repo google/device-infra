@@ -11,22 +11,39 @@ import {
 import {CONFIG_SERVICE} from '../../../../core/services/config/config_service';
 import {EnvUniverseService} from '../../../../core/services/env_universe_service';
 import {getErrorMessage} from '../../../../shared/utils/error_utils';
-import {BulkConfigDialogData, BulkConfigDialogResult} from '../../models';
+import {
+  BulkConfigDialogData,
+  BulkConfigDialogResult,
+  DeviceConfigTemplateDialogData,
+} from '../../models';
 import {FleetSearchStore} from '../../services/fleet_search_store';
 import {extractDeviceTarget, toFleetProto} from '../../utils';
 import {BulkConfigDimensionDialog} from './dimension_dialog/bulk_config_dimension_dialog';
+import {DeviceConfigTemplateDialog} from './template_dialog/device_config_template_dialog';
 import {BulkConfigWifiDialog} from './wifi_dialog/bulk_config_wifi_dialog';
 
 /**
- * Composable encapsulating bulk device configuration menu state, reactive
- * dimension loading, and dialog orchestration in FleetSearchResultsComponent.
+ * Composable encapsulating bulk device and host configuration menu state,
+ * ATS controller template access, reactive dimension loading, and dialog
+ * orchestration in FleetSearchResultsComponent.
  */
 export function useBulkConfigActions() {
   const store = inject(FleetSearchStore);
   const dialog = inject(MatDialog);
   const destroyRef = inject(DestroyRef);
-  const universe = inject(EnvUniverseService).getUniverseString();
+  const envUniverse = inject(EnvUniverseService);
+  const universe = envUniverse.getUniverseString();
+  const isAts = Boolean(envUniverse.isAts?.());
   const configService = inject(CONFIG_SERVICE);
+
+  /** Device-level Wi-Fi is supported in Internal 1P and hidden in ATS. */
+  const canConfigureDeviceWifi = !isAts;
+
+  /** Host-level default Wi-Fi is configured from Host Search in ATS. */
+  const canConfigureHostWifi = isAts;
+
+  /** Controller-level Device Config Template is exposed on Device Search in ATS. */
+  const canEditDeviceConfigTemplate = isAts;
 
   /**
    * Latches the active fleet once at least one device is selected, retaining
@@ -109,9 +126,66 @@ export function useBulkConfigActions() {
       });
   };
 
-  /** Opens the Bulk Wi-Fi configuration dialog for currently selected devices. */
+  /** Opens the Bulk Wi-Fi configuration dialog for currently selected devices in 1P. */
   const openWifiDialog = (): void => {
+    if (!canConfigureDeviceWifi) return;
     openDialog(BulkConfigWifiDialog);
+  };
+
+  /** Opens the Bulk Wi-Fi configuration dialog for currently selected hosts in ATS. */
+  const openHostWifiDialog = (): void => {
+    if (!canConfigureHostWifi || store.entity() !== 'hosts') return;
+    const hostNames = Array.from(
+      store.selectedItems().values(),
+      (row) => row.id,
+    ).filter(Boolean);
+    if (hostNames.length === 0) return;
+
+    dialog
+      .open<BulkConfigWifiDialog, BulkConfigDialogData, BulkConfigDialogResult>(
+        BulkConfigWifiDialog,
+        {
+          autoFocus: false,
+          data: {
+            devices: [],
+            hostNames,
+            universe,
+            fleet: toFleetProto(store.fleet()),
+          },
+        },
+      )
+      .afterClosed()
+      .pipe(takeUntilDestroyed(destroyRef))
+      .subscribe((res?: BulkConfigDialogResult) => {
+        if (res?.updated) {
+          store.clearSelection();
+          store.executeSearch();
+        }
+      });
+  };
+
+  /** Opens the controller-level Device Config Template dialog on ATS Device Search. */
+  const openTemplateDialog = (): void => {
+    if (!canEditDeviceConfigTemplate || store.entity() !== 'devices') return;
+    dialog
+      .open<
+        DeviceConfigTemplateDialog,
+        DeviceConfigTemplateDialogData,
+        BulkConfigDialogResult
+      >(DeviceConfigTemplateDialog, {
+        autoFocus: false,
+        data: {
+          universe,
+          fleet: toFleetProto(store.fleet()),
+        },
+      })
+      .afterClosed()
+      .pipe(takeUntilDestroyed(destroyRef))
+      .subscribe((res?: BulkConfigDialogResult) => {
+        if (res?.updated) {
+          store.executeSearch();
+        }
+      });
   };
 
   /** Opens the Bulk Dimension configuration dialog for a curated dimension or custom dimension scope. */
@@ -132,9 +206,15 @@ export function useBulkConfigActions() {
   };
 
   return {
+    isAts,
+    canConfigureDeviceWifi,
+    canConfigureHostWifi,
+    canEditDeviceConfigTemplate,
     dimensionConfig,
     retryDimensions,
     openWifiDialog,
+    openHostWifiDialog,
+    openTemplateDialog,
     openDimensionDialog,
   };
 }

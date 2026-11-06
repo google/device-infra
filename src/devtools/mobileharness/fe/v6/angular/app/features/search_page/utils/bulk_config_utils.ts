@@ -42,22 +42,37 @@ export function getDeviceTargetKey(
     : target.deviceId;
 }
 
-/** Formats a device count with locale-aware grouping and pluralization (e.g. '1 device', '1,200 devices'). */
-export function formatDeviceCount(count: number): string {
-  return `${count.toLocaleString()} ${count === 1 ? 'device' : 'devices'}`;
+/** Formats an entity count with locale-aware grouping and pluralization (e.g. '1 device', '3 hosts'). */
+export function formatEntityCount(
+  count: number,
+  noun: 'device' | 'host' = 'device',
+): string {
+  const plural = noun === 'host' ? 'hosts' : 'devices';
+  return `${count.toLocaleString()} ${count === 1 ? noun : plural}`;
 }
 
-/** Formats badge text indicating how many selected devices currently use a configuration. */
+/** Formats a device count with locale-aware grouping and pluralization (e.g. '1 device', '1,200 devices'). */
+export function formatDeviceCount(count: number): string {
+  return formatEntityCount(count, 'device');
+}
+
+/** Formats a host count with locale-aware grouping and pluralization (e.g. '1 host', '12 hosts'). */
+export function formatHostCount(count: number): string {
+  return formatEntityCount(count, 'host');
+}
+
+/** Formats badge text indicating how many selected entities currently use a configuration. */
 export function formatCurrentSelectionBadge(
   count: number | undefined,
   totalSelected: number,
   prefix: 'Current on' | 'Configured on' = 'Current on',
+  noun: 'device' | 'host' = 'device',
 ): string | null {
   if (!count || count <= 0) return null;
   if (count === totalSelected && totalSelected > 1) {
     return `${prefix} all ${totalSelected} selected`;
   }
-  return `${prefix} ${formatDeviceCount(count)} selected`;
+  return `${prefix} ${formatEntityCount(count, noun)} selected`;
 }
 
 /** Formats the informational banner text when `willUpdateCount === 0` in the review step. */
@@ -66,29 +81,32 @@ export function formatNothingToUpdateMessage(
   totalCount: number,
   allMatchPhrase: string,
   targetLabel: string,
+  noun: 'device' | 'host' = 'device',
 ): string {
   const {alreadyMatchCount: same, readOnlyCount: skipped} = summary;
+  const plural = noun === 'host' ? 'hosts' : 'devices';
   if (same === totalCount) {
-    return `All ${formatDeviceCount(totalCount)} ${allMatchPhrase}. No update is needed.`;
+    return `All ${formatEntityCount(totalCount, noun)} ${allMatchPhrase}. No update is needed.`;
   }
   if (same > 0 && skipped > 0) {
-    return `${formatDeviceCount(same)} already match this ${targetLabel} and ${formatDeviceCount(skipped)} are read-only. No devices can be updated.`;
+    return `${formatEntityCount(same, noun)} already match this ${targetLabel} and ${formatEntityCount(skipped, noun)} are read-only. No ${plural} can be updated.`;
   }
-  return `All ${formatDeviceCount(totalCount)} are read-only and cannot be updated.`;
+  return `All ${formatEntityCount(totalCount, noun)} are read-only and cannot be updated.`;
 }
 
 /** Formats the supporting subtitle text displayed on the post-apply success screen. */
 export function formatSuccessSupportText(
   summary: {alreadyMatchCount: number; readOnlyCount: number},
   allUpdatedMessage: string,
+  noun: 'device' | 'host' = 'device',
 ): string {
   const {alreadyMatchCount: same, readOnlyCount: skipped} = summary;
   const extraNotes: string[] = [];
   if (same > 0) {
-    extraNotes.push(`${formatDeviceCount(same)} already matched`);
+    extraNotes.push(`${formatEntityCount(same, noun)} already matched`);
   }
   if (skipped > 0) {
-    extraNotes.push(`${formatDeviceCount(skipped)} read-only`);
+    extraNotes.push(`${formatEntityCount(skipped, noun)} read-only`);
   }
   if (extraNotes.length > 0) {
     return `${extraNotes.join('; ')}.`;

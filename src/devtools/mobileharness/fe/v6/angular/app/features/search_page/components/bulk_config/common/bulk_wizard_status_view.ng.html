@@ -33,7 +33,9 @@
           aria-label="Failed devices"
         >
           <ng-container matColumnDef="deviceId">
-            <th mat-header-cell *matHeaderCellDef scope="col">Device ID</th>
+            <th mat-header-cell *matHeaderCellDef scope="col">
+              {{ entityHeader() }}
+            </th>
             <td
               mat-cell
               *matCellDef="let err"

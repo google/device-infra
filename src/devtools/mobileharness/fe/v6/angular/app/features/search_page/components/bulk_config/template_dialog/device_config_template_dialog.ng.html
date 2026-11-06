@@ -1,0 +1,414 @@
+@let currentMode = mode();
+@let summary = reviewSummary();
+
+<app-dialog
+  [dialogTitle]="headline()"
+  [subtitle]="supportText()"
+  width="58rem"
+  height="48rem"
+  maxHeight="90vh"
+  footerType="normal"
+>
+  <div class="bw-body">
+    @switch (currentMode) {
+      @case ('template') {
+        <ng-container *ngTemplateOutlet="templateFormView" />
+      }
+      @case ('saving_template') {
+        <ng-container *ngTemplateOutlet="templateFormView" />
+      }
+      @case ('template_saved') {
+        <div class="dt-saved-view">
+          <div class="dt-saved-badge">
+            <mat-icon class="material-symbols-outlined">check</mat-icon>
+          </div>
+          <div class="dt-saved-headline">Device config template saved</div>
+          <div class="dt-saved-support">
+            Newly connected unconfigured devices on this controller will inherit these default dimensions. Existing devices keep their current configuration unless you apply this template to them.
+          </div>
+
+          <div class="bw-new-card bw-success-card dt-summary-card">
+            <div class="bw-new-label">Saved controller template</div>
+            @if (configuredTemplateDimensions().length === 0) {
+              <div class="dt-empty-template-note">
+                No default dimensions set (template cleared)
+              </div>
+            } @else {
+              <div class="dt-summary-rows">
+                @for (field of configuredTemplateDimensions(); track field.fieldKey) {
+                  <div class="dt-summary-row">
+                    <span class="dt-summary-key">{{ field.dim.displayName || field.dim.dimensionName }}</span>
+                    <div class="dt-pill-list">
+                      @for (val of field.values; track val) {
+                        <span class="dt-pill">{{ val }}</span>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+      @case ('review') {
+        <div class="bw-step2">
+          <app-bulk-review-header-banner
+            icon="tune"
+            subtitle="Controller template · Checked Will update devices will be updated"
+            [summary]="summary"
+            [nothingToUpdateMessage]="nothingToUpdateMessage()"
+          >
+            @if (configuredTemplateDimensions().length === 0) {
+              <span>Clear curated template dimensions</span>
+            } @else {
+              <span>
+                {{ configuredTemplateDimensions().length }}
+                {{ configuredTemplateDimensions().length === 1 ? 'dimension' : 'dimensions' }}
+                configured in template
+              </span>
+            }
+          </app-bulk-review-header-banner>
+
+          @if (reviewRows().length > 0) {
+            <div class="bw-table-section">
+              <div class="bw-table-container">
+                <table
+                  mat-table
+                  [dataSource]="reviewRows()"
+                  class="bw-table dt-review-table"
+                  aria-label="Existing controller devices template review table"
+                >
+                  <ng-container matColumnDef="select">
+                    <th mat-header-cell *matHeaderCellDef scope="col" class="dt-select-col">
+                      @let selState = reviewSelectionState();
+                      <mat-checkbox
+                        [checked]="selState.all"
+                        [indeterminate]="selState.some"
+                        [disabled]="selState.disabled"
+                        (change)="toggleSelectAllUpdatable()"
+                        aria-label="Select all updatable devices"
+                      ></mat-checkbox>
+                    </th>
+                    <td mat-cell *matCellDef="let row" class="dt-select-col">
+                      <mat-checkbox
+                        [checked]="isRowSelected(row)"
+                        [disabled]="row.status !== 'DEVICE_CONFIG_CHANGE_STATUS_WILL_UPDATE'"
+                        (change)="toggleRowSelection(row)"
+                        [attr.aria-label]="'Select ' + row.deviceId"
+                      ></mat-checkbox>
+                    </td>
+                  </ng-container>
+
+                  <ng-container matColumnDef="deviceId">
+                    <th mat-header-cell *matHeaderCellDef scope="col">Device ID</th>
+                    <td
+                      mat-cell
+                      *matCellDef="let row"
+                      [title]="row.hostName ? row.deviceId + ' (' + row.hostName + ')' : row.deviceId"
+                    >
+                      <div class="bw-device-cell">
+                        <span class="bw-li-mono">{{ row.deviceId }}</span>
+                        @if (row.hostName) {
+                          <span class="bw-device-host">{{ row.hostName }}</span>
+                        }
+                      </div>
+                    </td>
+                  </ng-container>
+
+                  <ng-container matColumnDef="changes">
+                    <th mat-header-cell *matHeaderCellDef scope="col">Dimension changes</th>
+                    <td mat-cell *matCellDef="let row">
+                      @if (row.changedDimensions.length === 0) {
+                        <span class="bw-cell-unset">
+                          {{ row.status === 'DEVICE_CONFIG_CHANGE_STATUS_READ_ONLY' ? (row.readOnlyReason || 'Read-only') : 'Already matches template' }}
+                        </span>
+                      } @else {
+                        <div class="dt-diff-list">
+                          @for (diff of row.changedDimensions; track diff.dimensionName) {
+                            <div class="dt-diff-item">
+                              <span class="dt-diff-key">{{ diff.displayName }}:</span>
+                              <span class="dt-diff-old">
+                                {{ diff.currentValues.length > 0 ? diff.currentValues.join(', ') : 'unset' }}
+                              </span>
+                              <span class="dt-diff-arrow">→</span>
+                              <span class="dt-diff-new">
+                                {{ diff.targetValues.length > 0 ? diff.targetValues.join(', ') : 'unset' }}
+                              </span>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </td>
+                  </ng-container>
+
+                  <ng-container matColumnDef="status">
+                    <th mat-header-cell *matHeaderCellDef scope="col">Status</th>
+                    <td mat-cell *matCellDef="let row">
+                      <app-bulk-status-pill
+                        [status]="row.status"
+                        [readOnlyReason]="row.readOnlyReason"
+                      />
+                    </td>
+                  </ng-container>
+
+                  <tr mat-header-row *matHeaderRowDef="reviewColumns; sticky: true"></tr>
+                  <tr mat-row *matRowDef="let row; columns: reviewColumns"></tr>
+                </table>
+              </div>
+            </div>
+          }
+        </div>
+      }
+      @default {
+        <app-bulk-wizard-status-view
+          [mode]="currentMode"
+          [message]="statusMessage()"
+          [willUpdateCount]="appliedDeviceCount()"
+          [applyErrors]="applyErrors()"
+          [successSupportText]="successSupportText()"
+        >
+          <div class="bw-new-card bw-success-card dt-summary-card">
+            <div class="bw-new-label">Applied template dimensions</div>
+            @if (configuredTemplateDimensions().length === 0) {
+              <div class="dt-empty-template-note">Curated template dimensions cleared</div>
+            } @else {
+              <div class="dt-summary-rows">
+                @for (field of configuredTemplateDimensions(); track field.fieldKey) {
+                  <div class="dt-summary-row">
+                    <span class="dt-summary-key">{{ field.dim.displayName || field.dim.dimensionName }}</span>
+                    <div class="dt-pill-list">
+                      @for (val of field.values; track val) {
+                        <span class="dt-pill">{{ val }}</span>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </app-bulk-wizard-status-view>
+      }
+    }
+  </div>
+
+  <!-- Step 1 Form Fragment -->
+  <ng-template #templateFormView>
+    <div class="dt-step1" [class.is-saving]="currentMode === 'saving_template'">
+      <div class="dt-nonretro-banner" role="note">
+        <mat-icon class="material-symbols-outlined dt-banner-icon">info</mat-icon>
+        <div class="dt-banner-content">
+          <div class="dt-banner-title">
+            Applies automatically only to newly connected unconfigured devices
+          </div>
+          <div class="dt-banner-desc">
+            Saving this template sets the default dimensions copied onto new devices when they first connect to this controller. Existing devices keep their current configuration unless you choose Save and apply to existing devices.
+          </div>
+        </div>
+      </div>
+
+      @if (saveError(); as err) {
+        <div class="dt-save-error" role="alert">
+          <mat-icon class="material-symbols-outlined">error</mat-icon>
+          <span>{{ err }}</span>
+        </div>
+      }
+
+      <div class="dt-fields-header">
+        <span class="dt-fields-title">Default dimensions</span>
+        @if (hasAnyTemplateValues()) {
+          <button
+            type="button"
+            class="bw-text-btn"
+            (click)="clearAllDimensions()"
+          >
+            Clear all
+          </button>
+        }
+      </div>
+
+      <div class="dt-fields-list">
+        @for (field of dimensionFields(); track field.fieldKey) {
+          <div class="dt-field-card">
+            <div class="dt-field-head">
+              <div class="dt-field-meta">
+                <span class="dt-field-name">{{ field.dim.displayName || field.dim.dimensionName }}</span>
+                <span class="dt-field-scope">{{ field.scopeLabel }}</span>
+              </div>
+              @if (field.values.length > 0) {
+                <button
+                  type="button"
+                  class="bw-text-btn dt-clear-btn"
+                  (click)="clearDimension(field.fieldKey)"
+                >
+                  Clear
+                </button>
+              }
+            </div>
+
+            <div
+              class="dt-chip-box"
+              role="group"
+              [attr.aria-label]="(field.dim.displayName || field.dim.dimensionName) + ' template values'"
+              (click)="dimInput.focus()"
+            >
+              @for (val of field.values; track val; let idx = $index) {
+                <span class="dt-chip">
+                  <span>{{ val }}</span>
+                  <button
+                    type="button"
+                    class="dt-chip-remove"
+                    (click)="$event.stopPropagation(); removeChip(field.fieldKey, idx)"
+                    [attr.aria-label]="'Remove ' + val"
+                  >
+                    <mat-icon class="material-symbols-outlined">close</mat-icon>
+                  </button>
+                </span>
+              }
+              <input
+                #dimInput
+                type="text"
+                class="dt-chip-input"
+                [placeholder]="field.values.length === 0 ? 'Not set in template (type a value and press Enter)' : 'Add another value'"
+                [ngModel]="field.draft"
+                (ngModelChange)="onDraftInput(field.fieldKey, $event)"
+                (keydown)="onChipKeydown(field.fieldKey, $event)"
+                (paste)="onChipPaste(field.fieldKey, $event)"
+                (blur)="commitDraft(field.fieldKey)"
+                autocomplete="off"
+              />
+            </div>
+
+            @if (field.suggestions.length > 0) {
+              <div class="dt-suggestions">
+                <span class="dt-suggestions-label">Suggestions:</span>
+                @for (sug of field.suggestions; track sug) {
+                  <button
+                    type="button"
+                    class="dt-suggestion-pill"
+                    (click)="addSuggestion(field.fieldKey, sug)"
+                  >
+                    + {{ sug }}
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </ng-template>
+
+  <!-- Footer Actions -->
+  <ng-template #actionsTemplate>
+    @switch (currentMode) {
+      @case ('template') {
+        <button
+          type="button"
+          class="dialog-button dialog-button-secondary"
+          (click)="close()"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="dialog-button dialog-button-secondary"
+          (click)="saveTemplateOnly()"
+        >
+          Save template
+        </button>
+        <button
+          type="button"
+          class="dialog-button dialog-button-primary"
+          (click)="saveAndReviewExistingDevices()"
+        >
+          Save and apply to existing devices…
+        </button>
+      }
+      @case ('saving_template') {
+        <button type="button" class="dialog-button dialog-button-secondary" disabled>
+          Cancel
+        </button>
+        <button type="button" class="dialog-button dialog-button-primary" disabled>
+          Saving…
+        </button>
+      }
+      @case ('template_saved') {
+        <button
+          type="button"
+          class="dialog-button dialog-button-secondary"
+          (click)="reviewExistingDevicesAfterSave()"
+        >
+          Apply to existing devices…
+        </button>
+        <button
+          type="button"
+          class="dialog-button dialog-button-primary"
+          (click)="close()"
+        >
+          Done
+        </button>
+      }
+      @case ('review') {
+        <button
+          type="button"
+          class="dialog-button dialog-button-secondary"
+          (click)="backToTemplate()"
+        >
+          Back to template
+        </button>
+        @if (summary.willUpdateCount === 0) {
+          <button
+            type="button"
+            class="dialog-button dialog-button-primary"
+            (click)="close()"
+          >
+            Done
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="dialog-button dialog-button-primary"
+            [disabled]="checkedWillUpdateRows().length === 0"
+            (click)="applyToSelectedDevices()"
+          >
+            Apply to {{ checkedWillUpdateLabel() }}
+          </button>
+        }
+      }
+      @case ('step_error') {
+        <button
+          type="button"
+          class="dialog-button dialog-button-secondary"
+          (click)="close()"
+        >
+          Close
+        </button>
+        <button
+          type="button"
+          class="dialog-button dialog-button-primary"
+          (click)="retryStep()"
+        >
+          Retry
+        </button>
+      }
+      @case ('success') {
+        <button
+          type="button"
+          class="dialog-button dialog-button-primary"
+          (click)="close()"
+        >
+          Done
+        </button>
+      }
+      @case ('errors') {
+        <button
+          type="button"
+          class="dialog-button dialog-button-primary"
+          (click)="close()"
+        >
+          Close
+        </button>
+      }
+    }
+  </ng-template>
+</app-dialog>

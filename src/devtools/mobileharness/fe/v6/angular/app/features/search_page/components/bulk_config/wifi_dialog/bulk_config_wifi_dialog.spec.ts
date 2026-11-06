@@ -15,6 +15,7 @@ import {
   DeviceConfigChangeStatus,
   GetWifiSuggestionsResponse,
 } from '../../../../../core/models/device_config_models';
+import {HostConfigChangeStatus} from '../../../../../core/models/host_config_models';
 import {
   CONFIG_SERVICE,
   ConfigService,
@@ -104,6 +105,8 @@ describe('BulkConfigWifiDialog', () => {
       'batchGetDeviceWifiConfigs',
       'getWifiSuggestions',
       'batchUpdateDeviceWifiConfigs',
+      'batchGetHostWifiConfigs',
+      'batchUpdateHostWifiConfigs',
     ]);
     mockConfigService.batchGetDeviceWifiConfigs.and.callFake((req) => {
       if (!req.target) {
@@ -1591,6 +1594,88 @@ describe('BulkConfigWifiDialog', () => {
       expect(component.wizard.reviewSummary().willUpdateCount).toBe(0);
       expect(component.wizard.reviewSummary().alreadyMatchCount).toBe(0);
       expect(component.wizard.reviewSummary().readOnlyCount).toBe(0);
+    });
+  });
+
+  describe('host mode', () => {
+    it('loads host Wi-Fi configs, previews review status, and applies host updates', () => {
+      mockConfigService.batchGetHostWifiConfigs.and.callFake((req) =>
+        of({
+          entries: [
+            {
+              hostName: 'ats-host-1',
+              currentWifi: {ssid: 'old-lab-wifi', psk: '', scanSsid: false},
+              status: req.target
+                ? HostConfigChangeStatus.HOST_CONFIG_CHANGE_STATUS_WILL_UPDATE
+                : HostConfigChangeStatus.HOST_CONFIG_CHANGE_STATUS_WRITABLE,
+            },
+            {
+              hostName: 'ats-host-2',
+              currentWifi: {
+                ssid: 'ats-target-wifi',
+                psk: 'pw',
+                scanSsid: false,
+              },
+              status: req.target
+                ? HostConfigChangeStatus.HOST_CONFIG_CHANGE_STATUS_ALREADY_MATCHES
+                : HostConfigChangeStatus.HOST_CONFIG_CHANGE_STATUS_WRITABLE,
+            },
+          ],
+        }),
+      );
+      mockConfigService.batchUpdateHostWifiConfigs.and.returnValue(
+        of({errors: {}}),
+      );
+
+      const hostFixture = TestBed.createComponent(
+        MatTestDialogOpener.withComponent(BulkConfigWifiDialog, {
+          data: {
+            devices: [],
+            hostNames: ['ats-host-1', 'ats-host-2'],
+            universe: '',
+            fleet: 'FLEET_SELF',
+          },
+        }),
+      );
+      const hostComponent =
+        hostFixture.componentInstance.dialogRef.componentInstance;
+      hostFixture.detectChanges();
+      appRef.tick();
+
+      expect(hostComponent.isHostMode).toBeTrue();
+      expect(hostComponent.headline()).toBe(
+        'Configure default Wi-Fi for 2 hosts',
+      );
+      expect(mockConfigService.batchGetHostWifiConfigs).toHaveBeenCalledWith({
+        hostNames: ['ats-host-1', 'ats-host-2'],
+        universe: '',
+      });
+
+      hostComponent.updateTargetWifi({ssid: 'ats-target-wifi', psk: 'pw'});
+      hostComponent.goToReview();
+      hostFixture.detectChanges();
+      appRef.tick();
+
+      expect(hostComponent.wizard.reviewSummary().willUpdateCount).toBe(1);
+      expect(hostComponent.wizard.reviewSummary().alreadyMatchCount).toBe(1);
+
+      hostComponent.apply();
+      hostFixture.detectChanges();
+      appRef.tick();
+
+      expect(mockConfigService.batchUpdateHostWifiConfigs).toHaveBeenCalledWith(
+        {
+          hostNames: ['ats-host-1'],
+          target: {
+            wifi: {ssid: 'ats-target-wifi', psk: 'pw', scanSsid: false},
+          },
+          universe: '',
+        },
+      );
+      expect(hostComponent.wizard.viewMode()).toBe('success');
+      expect(hostComponent.successSupportText()).toBe(
+        '1 host already matched.',
+      );
     });
   });
 });

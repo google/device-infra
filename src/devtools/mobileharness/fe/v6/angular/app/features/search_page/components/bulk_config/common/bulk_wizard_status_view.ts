@@ -9,7 +9,7 @@ import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatTableModule} from '@angular/material/table';
 
 import {BulkApplyError} from '../../../models';
-import {formatDeviceCount} from '../../../utils';
+import {formatEntityCount} from '../../../utils';
 
 /**
  * Shared presentational component for the loading, error, applying, success,
@@ -49,20 +49,27 @@ export class BulkWizardStatusView {
   /** Support subtitle rendered below the headline in `'success'` mode. */
   readonly successSupportText = input<string>('');
 
-  /** Formatted label for the total number of devices targeted for the update. */
+  /** Singular entity noun used to pluralize counts (`'device'` or `'host'`). */
+  readonly entityNoun = input<'device' | 'host'>('device');
+
+  /** Column header for the identifier column in the failure table. */
+  readonly entityHeader = input<string>('Device ID');
+
+  /** Formatted label for the total number of entities targeted for the update. */
   readonly willUpdateLabel = computed<string>(() =>
-    formatDeviceCount(this.willUpdateCount()),
+    formatEntityCount(this.willUpdateCount(), this.entityNoun()),
   );
 
-  /** Formatted label for the number of devices that succeeded when errors occurred. */
+  /** Formatted label for the number of entities that succeeded when errors occurred. */
   readonly applySuccessLabel = computed<string>(() =>
-    formatDeviceCount(
+    formatEntityCount(
       Math.max(0, this.willUpdateCount() - this.applyErrors().length),
+      this.entityNoun(),
     ),
   );
 
-  /** Formatted label for the number of devices that failed when errors occurred. */
+  /** Formatted label for the number of entities that failed when errors occurred. */
   readonly applyErrorLabel = computed<string>(() =>
-    formatDeviceCount(this.applyErrors().length),
+    formatEntityCount(this.applyErrors().length, this.entityNoun()),
   );
 }

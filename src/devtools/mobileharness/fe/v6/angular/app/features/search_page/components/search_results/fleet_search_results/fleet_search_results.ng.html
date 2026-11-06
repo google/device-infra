@@ -71,6 +71,18 @@
           <span class="rt-btn-label">Columns</span>
         </button>
 
+        @if (entity === 'devices' && bulkConfig.canEditDeviceConfigTemplate) {
+          <button
+            type="button"
+            class="rt-btn-text"
+            (click)="bulkConfig.openTemplateDialog()"
+            title="Configure default dimensions for newly connected devices"
+          >
+            <mat-icon class="material-symbols-outlined">tune</mat-icon>
+            <span class="rt-btn-label">Device Config Template</span>
+          </button>
+        }
+
 
         <span class="rt-grow"></span>
 
@@ -176,6 +188,17 @@
           [density]="store.density()"
           (densityChange)="store.density.set($event)"
         ></app-density-dropdown>
+        @if (entity === 'devices' && bulkConfig.canEditDeviceConfigTemplate) {
+          <button
+            type="button"
+            class="rt-btn-text"
+            (click)="bulkConfig.openTemplateDialog()"
+            title="Configure default dimensions for newly connected devices"
+          >
+            <mat-icon class="material-symbols-outlined">tune</mat-icon>
+            Device Config Template
+          </button>
+        }
       }
     </div>
 
@@ -293,10 +316,12 @@
       Quarantine
     </button>
     @if (entity === 'devices') {
-      <button class="rt-btn-text" (click)="bulkConfig.openWifiDialog()">
-        <mat-icon class="material-symbols-outlined">wifi</mat-icon>
-        Configure Wi-Fi
-      </button>
+      @if (bulkConfig.canConfigureDeviceWifi) {
+        <button class="rt-btn-text" (click)="bulkConfig.openWifiDialog()">
+          <mat-icon class="material-symbols-outlined">wifi</mat-icon>
+          Configure Wi-Fi
+        </button>
+      }
       @let dimConfig = bulkConfig.dimensionConfig();
       @if (dimConfig.enabled) {
         <button
@@ -367,6 +392,11 @@
           }
         </mat-menu>
       }
+    } @else if (entity === 'hosts' && bulkConfig.canConfigureHostWifi) {
+      <button class="rt-btn-text" (click)="bulkConfig.openHostWifiDialog()">
+        <mat-icon class="material-symbols-outlined">wifi</mat-icon>
+        Configure Wi-Fi
+      </button>
     }
 
     <span
