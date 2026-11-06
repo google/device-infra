@@ -181,22 +181,6 @@
   outline-offset: -1.5px;
 }
 
-.tl-fill-sub--pass {
-  background: #6dd58c;
-}
-
-.tl-fill-sub--fail {
-  background: #f2b8b5;
-}
-
-.tl-fill-sub--timeout {
-  background: #ffdf99;
-}
-
-.tl-fill-sub--neutral {
-  background: #c4c7c5;
-}
-
 .tl-table {
   margin-top: 20px;
 }
@@ -322,10 +306,6 @@ a.tl-row--lane:hover .tl-lane-name {
 
 .tl-indent {
   padding-left: 44px;
-}
-
-.tl-indent-2 {
-  padding-left: 60px;
 }
 
 .tl-phase-name {

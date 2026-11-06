@@ -117,8 +117,7 @@
           </div>
 
           @if (expanded) {
-            @for (row of phase.rows ?? []; track (row.label ?? '') + '_' + $index; let rIdx = $index) {
-              @let rowKey = (phase.phaseId || pIdx) + '-' + rIdx;
+            @for (row of phase.rows ?? []; track (row.label ?? '') + '_' + $index) {
               <div
                 class="tl-grid tl-row tl-focusable"
                 [class.tl-row--ended]="row.isEndedStep"
@@ -167,71 +166,6 @@
                 <div class="tl-num">{{ row.durationText }}</div>
                 <div class="tl-num tl-muted">{{ row.shareText }}</div>
               </div>
-
-              @let allSubTests = row.subTests ?? [];
-              @if (allSubTests.length > 0) {
-                @for (st of visibleSubTests(allSubTests, rowKey); track (st.name ?? '') + '_' + $index) {
-                  <div
-                    class="tl-grid tl-row tl-row--sub tl-focusable"
-                    [class.tl-focus-match]="isFocused('test')"
-                    (mouseenter)="enterSubTestRow($event, st)"
-                    (mouseleave)="leaveRowTooltip()"
-                  >
-                    <div class="tl-label tl-indent-2">
-                      <div class="tl-label-main">
-                        <span>{{ st.name }}</span>
-                        @if (st.resultLabel) {
-                          <span
-                            class="tl-result"
-                            [class]="'tl-result tl-result--' + toneSuffix(st.resultTone)"
-                          >{{ st.resultLabel }}</span>
-                        }
-                      </div>
-                    </div>
-                    <div class="tl-track" [style.background-size]="trackTickSize()">
-                      @if (st.bar; as stBar) {
-                        <span
-                          class="tl-bar"
-                          [class]="'tl-bar tl-fill-sub tl-fill-sub--' + toneSuffix(st.resultTone)"
-                          [style.left.%]="stBar.leftPercent ?? 0"
-                          [style.width.%]="stBar.widthPercent ?? 0"
-                        ></span>
-                      }
-                    </div>
-                    <div class="tl-num">{{ st.durationText }}</div>
-                    <div class="tl-num tl-muted"></div>
-                  </div>
-                }
-                @if (allSubTests.length > subTestCap) {
-                  @let subExpanded = isSubTestGroupExpanded(rowKey);
-                  <div
-                    class="tl-grid tl-row tl-row--group tl-focusable"
-                    role="button"
-                    tabindex="0"
-                    [attr.aria-expanded]="subExpanded"
-                    [class.tl-focus-match]="isFocused('test')"
-                    (click)="toggleSubTestGroup(rowKey)"
-                    (keydown.enter)="toggleSubTestGroup(rowKey)"
-                    (keydown.space)="$event.preventDefault(); toggleSubTestGroup(rowKey)"
-                  >
-                    <div class="tl-label tl-indent-2">
-                      <div class="tl-label-main">
-                        <mat-icon class="tl-chevron" aria-hidden="true">chevron_right</mat-icon>
-                        <span>
-                          {{
-                            subExpanded
-                              ? 'Show fewer sub-tests'
-                              : allSubTests.length - subTestCap + ' more sub-tests'
-                          }}
-                        </span>
-                      </div>
-                    </div>
-                    <div class="tl-track"></div>
-                    <div class="tl-num"></div>
-                    <div class="tl-num"></div>
-                  </div>
-                }
-              }
             }
           }
         }

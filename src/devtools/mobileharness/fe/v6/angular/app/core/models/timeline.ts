@@ -24,7 +24,7 @@ export type TimelineTickAlignment =
   | 'TIMELINE_TICK_ALIGNMENT_START'
   | 'TIMELINE_TICK_ALIGNMENT_END';
 
-/** Outcome tone for result chips, end markers, and sub-test bars. */
+/** Outcome tone for result chips and end markers. */
 export type TimelineResultTone =
   | 'TIMELINE_RESULT_TONE_UNSPECIFIED'
   | 'TIMELINE_RESULT_TONE_PASS'
@@ -74,16 +74,6 @@ export declare interface TimelineIntervalBar {
   readonly durationText?: string;
 }
 
-/** Nested sub-test timing row rendered under a test's driver row. */
-export declare interface TestTimelineSubTestRow {
-  readonly name?: string;
-  readonly resultTone?: TimelineResultTone;
-  readonly resultLabel?: string;
-  readonly durationText?: string;
-  readonly bar?: TimelineIntervalBar;
-  readonly tooltipDetail?: string;
-}
-
 /** Direct child step row inside a collapsible test phase. */
 export declare interface TestTimelineStepRow {
   readonly label?: string;
@@ -101,7 +91,6 @@ export declare interface TestTimelineStepRow {
   readonly errorMessage?: string;
   readonly fullErrorMessage?: string;
   readonly tooltipHint?: string;
-  readonly subTests?: TestTimelineSubTestRow[];
 }
 
 /** Collapsible phase header and its chronological child step rows. */
