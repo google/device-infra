@@ -21,17 +21,21 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDeviceConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.fe.v6.service.proto.admin.WifiCredentialEntry;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiRequest;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetRecommendedWifiResponse;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.RecommendedWifi;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.WifiCredentialsStore;
@@ -39,8 +43,9 @@ import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -80,7 +85,7 @@ public final class GetRecommendedWifiHandler {
         return immediateFuture(GetRecommendedWifiResponse.getDefaultInstance());
       }
     } else {
-      return getRecommendedWifiFromDeviceConfigs(universe);
+      return getRecommendedWifiFromFleetConfigs(universe);
     }
   }
 
@@ -109,64 +114,130 @@ public final class GetRecommendedWifiHandler {
         directExecutor());
   }
 
-  /** Scenario 3: Aggregates Wi-Fi credentials from individual device configurations. */
-  private ListenableFuture<GetRecommendedWifiResponse> getRecommendedWifiFromDeviceConfigs(
+  /** Scenario 3: Aggregates Wi-Fi credentials from host and device configurations in ATS. */
+  private ListenableFuture<GetRecommendedWifiResponse> getRecommendedWifiFromFleetConfigs(
       UniverseScope universeScope) {
-    GetLabInfoRequest request = GetLabInfoRequest.getDefaultInstance();
     ListenableFuture<GetLabInfoResponse> labInfoFuture =
-        labInfoProvider.getLabInfoAsync(request, universeScope);
+        labInfoProvider.getLabInfoAsync(GetLabInfoRequest.getDefaultInstance(), universeScope);
 
     return Futures.transformAsync(
         labInfoFuture,
-        labInfoResponse -> {
-          List<String> deviceIds = extractDeviceIds(labInfoResponse);
-          return fetchAndAggregateWifi(deviceIds, universeScope);
-        },
+        labInfoResponse ->
+            fetchAndAggregateWifi(
+                extractHostNames(labInfoResponse),
+                extractDeviceIds(labInfoResponse),
+                universeScope),
         executor);
   }
 
-  private List<String> extractDeviceIds(GetLabInfoResponse response) {
-    List<String> deviceIds = new ArrayList<>();
-    if (response.getLabQueryResult().hasLabView()) {
-      for (LabData labData : response.getLabQueryResult().getLabView().getLabDataList()) {
-        for (DeviceInfo deviceInfo : labData.getDeviceList().getDeviceInfoList()) {
-          if (deviceInfo.hasDeviceLocator()) {
-            deviceIds.add(deviceInfo.getDeviceLocator().getId());
-          }
-        }
-      }
+  private static ImmutableList<String> extractHostNames(GetLabInfoResponse response) {
+    if (!response.getLabQueryResult().hasLabView()) {
+      return ImmutableList.of();
     }
-    return deviceIds;
+    return response.getLabQueryResult().getLabView().getLabDataList().stream()
+        .map(labData -> labData.getLabInfo().getLabLocator().getHostName())
+        .filter(hostName -> !hostName.isEmpty())
+        .distinct()
+        .collect(toImmutableList());
+  }
+
+  private static ImmutableList<String> extractDeviceIds(GetLabInfoResponse response) {
+    if (!response.getLabQueryResult().hasLabView()) {
+      return ImmutableList.of();
+    }
+    return response.getLabQueryResult().getLabView().getLabDataList().stream()
+        .flatMap(labData -> labData.getDeviceList().getDeviceInfoList().stream())
+        .filter(DeviceInfo::hasDeviceLocator)
+        .map(deviceInfo -> deviceInfo.getDeviceLocator().getId())
+        .filter(deviceId -> !deviceId.isEmpty())
+        .distinct()
+        .collect(toImmutableList());
   }
 
   private ListenableFuture<GetRecommendedWifiResponse> fetchAndAggregateWifi(
-      List<String> deviceIds, UniverseScope universeScope) {
-    if (deviceIds.isEmpty()) {
+      ImmutableList<String> hostNames,
+      ImmutableList<String> deviceIds,
+      UniverseScope universeScope) {
+    if (hostNames.isEmpty() && deviceIds.isEmpty()) {
       return immediateFuture(GetRecommendedWifiResponse.getDefaultInstance());
     }
-    ListenableFuture<List<DeviceConfig>> configsFuture =
-        configurationProvider.getDeviceConfigs(deviceIds, universeScope);
-    return Futures.transform(
-        configsFuture,
-        configs -> {
-          ImmutableList<RecommendedWifi> recommendations =
-              configs.stream()
-                  .filter(config -> config.getBasicConfig().hasDefaultWifi())
-                  .map(config -> config.getBasicConfig().getDefaultWifi())
-                  .filter(wifi -> !wifi.getSsid().isEmpty())
-                  .distinct()
-                  .map(
-                      wifi ->
-                          RecommendedWifi.newBuilder()
-                              .setSsid(wifi.getSsid())
-                              .setPsk(wifi.getPsk())
-                              .build())
-                  .collect(toImmutableList());
 
-          return GetRecommendedWifiResponse.newBuilder()
-              .addAllRecommendations(recommendations)
-              .build();
-        },
-        executor);
+    ListenableFuture<List<ConfigResult<LabConfig>>> labConfigsFuture =
+        hostNames.isEmpty()
+            ? immediateFuture(ImmutableList.of())
+            : Futures.allAsList(
+                hostNames.stream()
+                    .map(
+                        hostName ->
+                            Futures.catching(
+                                configurationProvider.getLabConfig(hostName, universeScope),
+                                Throwable.class,
+                                e -> {
+                                  logger.atWarning().withCause(e).log(
+                                      "Failed to fetch LabConfig for host %s; skipping Wi-Fi"
+                                          + " recommendations.",
+                                      hostName);
+                                  return ConfigResult.<LabConfig>unavailable();
+                                },
+                                executor))
+                    .collect(toImmutableList()));
+
+    ListenableFuture<List<DeviceConfig>> deviceConfigsFuture =
+        deviceIds.isEmpty()
+            ? immediateFuture(ImmutableList.of())
+            : Futures.catching(
+                configurationProvider.getDeviceConfigs(deviceIds, universeScope),
+                Throwable.class,
+                e -> {
+                  logger.atWarning().withCause(e).log(
+                      "Failed to fetch DeviceConfigs; skipping device Wi-Fi recommendations.");
+                  return ImmutableList.of();
+                },
+                executor);
+
+    return Futures.whenAllSucceed(labConfigsFuture, deviceConfigsFuture)
+        .call(
+            () ->
+                aggregateRecommendations(
+                    Futures.getDone(labConfigsFuture), Futures.getDone(deviceConfigsFuture)),
+            executor);
+  }
+
+  // BasicDeviceConfig.default_wifi is read as a fallback for legacy host and device configs.
+  @SuppressWarnings("deprecation")
+  private static GetRecommendedWifiResponse aggregateRecommendations(
+      List<ConfigResult<LabConfig>> labConfigResults, List<DeviceConfig> deviceConfigs) {
+    ImmutableList<LabConfig> labConfigs =
+        labConfigResults.stream()
+            .map(ConfigResult::config)
+            .flatMap(Optional::stream)
+            .collect(toImmutableList());
+
+    Stream<WifiConfig> hostWifiConfigs =
+        labConfigs.stream().filter(LabConfig::hasWifiConfig).map(LabConfig::getWifiConfig);
+    Stream<WifiConfig> legacyHostDefaultWifis =
+        labConfigs.stream()
+            .map(LabConfig::getDefaultDeviceConfig)
+            .filter(BasicDeviceConfig::hasDefaultWifi)
+            .map(BasicDeviceConfig::getDefaultWifi);
+    Stream<WifiConfig> legacyDeviceWifis =
+        deviceConfigs.stream()
+            .map(DeviceConfig::getBasicConfig)
+            .filter(BasicDeviceConfig::hasDefaultWifi)
+            .map(BasicDeviceConfig::getDefaultWifi);
+
+    ImmutableList<RecommendedWifi> recommendations =
+        Streams.concat(hostWifiConfigs, legacyHostDefaultWifis, legacyDeviceWifis)
+            .filter(wifi -> !wifi.getSsid().isEmpty())
+            .map(
+                wifi ->
+                    RecommendedWifi.newBuilder()
+                        .setSsid(wifi.getSsid())
+                        .setPsk(wifi.getPsk())
+                        .build())
+            .distinct()
+            .collect(toImmutableList());
+
+    return GetRecommendedWifiResponse.newBuilder().addAllRecommendations(recommendations).build();
   }
 }
