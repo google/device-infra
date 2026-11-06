@@ -378,6 +378,7 @@ public abstract class AndroidRealDeviceDelegate {
               "Device %s has dimension %s with value true, reboot device to normal mode later",
               deviceId, Ascii.toLowerCase(Dimension.Name.REBOOT_TO_RECOVER.name())));
     } else {
+      device.addSupportedDeviceType(AndroidRealDeviceConstants.ANDROID_FASTBOOT_DEVICE);
       device.addSupportedDriver(AndroidRealDeviceConstants.NO_OP_DRIVER);
       device.addSupportedDriver(AndroidRealDeviceConstants.MOBLY_TEST_DRIVER);
       device.addSupportedDriver(AndroidRealDeviceConstants.MOBLY_AOSP_TEST_DRIVER);
@@ -541,6 +542,7 @@ public abstract class AndroidRealDeviceDelegate {
     }
 
     boolean isOverTcpDevice = DeviceUtil.isOverTcpDevice(deviceId);
+    disableDsuIfRunning(isOverTcpDevice);
     cacheDevice(deviceId, AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
 
     // Set the property to the device. Will check the value of this property after resetting to
@@ -584,6 +586,47 @@ public abstract class AndroidRealDeviceDelegate {
       androidAdbUtil.setProperty(deviceId, RESET_PROPERTY_LABEL, "", /* ignoreError= */ true);
     }
     logger.atInfo().log("Device %s reset is done", deviceId);
+  }
+
+  private void disableDsuIfRunning(boolean isOverTcpDevice)
+      throws MobileHarnessException, InterruptedException {
+    String dsuRunning =
+        Strings.nullToEmpty(
+                androidAdbUtil.getProperty(deviceId, ImmutableList.of("ro.gsid.image_running")))
+            .trim();
+    if (!dsuRunning.equals("1") && !Ascii.equalsIgnoreCase(dsuRunning, "true")) {
+      return;
+    }
+    logger.atInfo().log(
+        "Device %s is running in DSU mode (ro.gsid.image_running=%s). Disabling DSU and rebooting"
+            + " to stock image before factory reset.",
+        deviceId, dsuRunning);
+    Duration deviceReadyTimeout = Duration.ofMinutes(5);
+    cacheDevice(deviceId, AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
+    try {
+      try {
+        String unused = adb.runShellWithRetry(deviceId, "gsi_tool disable");
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to disable DSU via gsi_tool on device %s; continuing with wipe/reboot.",
+            deviceId);
+      }
+      try {
+        String unused = adb.runShellWithRetry(deviceId, "gsi_tool wipe");
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to wipe DSU via gsi_tool on device %s; continuing with reboot.", deviceId);
+      }
+      systemStateUtil.reboot(deviceId);
+      if (isOverTcpDevice) {
+        systemStateUtil.waitForOverTcpDeviceConnection(deviceId, deviceReadyTimeout);
+      } else {
+        systemStateUtil.waitForState(deviceId, DeviceConnectionState.DEVICE, deviceReadyTimeout);
+      }
+      systemStateUtil.waitUntilReady(deviceId, deviceReadyTimeout);
+    } finally {
+      invalidateCacheDevice(deviceId);
+    }
   }
 
   /**
@@ -899,6 +942,7 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   private void configureRecoveryDevice() throws MobileHarnessException, InterruptedException {
+    device.addSupportedDeviceType(AndroidRealDeviceConstants.ANDROID_RECOVERY_DEVICE);
     device.addSupportedDriver(AndroidRealDeviceConstants.NO_OP_DRIVER);
     androidDeviceHelper.updateAndroidPropertyDimensions(device);
   }
