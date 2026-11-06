@@ -39,6 +39,41 @@
   color: #444746;
 }
 
+.tl-live-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: #5f6368;
+}
+
+.tl-live-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #1e8e3e;
+  animation: tl-live-pulse 2s ease-in-out infinite;
+}
+
+@keyframes tl-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tl-live-dot {
+    animation: none;
+  }
+}
+
 .tl-split {
   display: flex;
   gap: 2px;

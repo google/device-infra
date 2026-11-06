@@ -58,6 +58,7 @@ export const SCENARIO_JOB_IN_PROGRESS: MockJobScenario = {
       ],
       originTime: '2025-07-09T11:30:00Z',
       finishTime: '2025-07-09T11:30:20Z',
+      live: true,
       axis: {
         tickStepPercent: 25,
         ticks: [

@@ -322,6 +322,14 @@ export class TestDetail {
     }
   }
 
+  /** Reloads the test once its live timeline reports that it is over. */
+  onTimelineFinished() {
+    const test = this.testOverview();
+    if (test && test.status !== TestStatus.TEST_STATUS_DONE) {
+      this.silentResourceResult.reloadSilent();
+    }
+  }
+
   readonly killActionState = computed(
     () => this.testPageData()?.actions?.killJob || null,
   );

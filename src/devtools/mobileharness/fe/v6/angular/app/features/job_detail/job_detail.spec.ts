@@ -149,6 +149,7 @@ describe('JobDetail Component', () => {
     const timelineTab = timelineDebug.componentInstance as JobTimelineTab;
     const timelineWrapper = timelineDebug.parent!.nativeElement as HTMLElement;
     expect(timelineWrapper.hidden).toBeFalse();
+    expect(timelineTab.active()).toBeTrue();
     expect(timelineTab.jobId()).toBe('job_456');
     expect(timelineTab.timingBreakdown()).toEqual(mockJobTimeline);
     const compiled = fixture.nativeElement as HTMLElement;
@@ -161,6 +162,7 @@ describe('JobDetail Component', () => {
     component.setActiveTab('overview');
     fixture.detectChanges();
     expect(timelineWrapper.hidden).toBeTrue();
+    expect(timelineTab.active()).toBeFalse();
     expect(navSpy).toHaveBeenCalledWith([], {
       relativeTo: TestBed.inject(ActivatedRoute),
       queryParams: {tab: null},
@@ -171,7 +173,14 @@ describe('JobDetail Component', () => {
     component.setActiveTab('timeline');
     fixture.detectChanges();
     expect(timelineWrapper.hidden).toBeFalse();
+    expect(timelineTab.active()).toBeTrue();
     expect(mockJobService.getJobTimeline).toHaveBeenCalledTimes(1);
+
+    // onTimelineFinished() does not reload when the job is already DONE.
+    mockJobService.getJob.calls.reset();
+    timelineTab.finished.emit();
+    fixture.detectChanges();
+    expect(mockJobService.getJob).not.toHaveBeenCalled();
   });
 
   it('opens timeline tab on initial load when ?tab=timeline is in query params and resets on job route change', async () => {
@@ -204,12 +213,32 @@ describe('JobDetail Component', () => {
       tabFixture.debugElement.query(By.directive(JobTimelineTab)),
     ).not.toBeNull();
 
-    // reloadSilent() on the same job preserves activeTab and timelineVisited.
-    mockJobService.getJob.and.returnValue(of({job: mockJobData}));
+    // reloadSilent() on the same job preserves activeTab and timelineVisited; onLogStreamCompleted() reloads while RUNNING and onTimelineFinished() reloads while not DONE (including ASSIGNED).
+    mockJobService.getJob.calls.reset();
+    mockJobService.getJob.and.returnValue(
+      of({
+        job: {
+          ...mockJobData,
+          status: JobStatus.JOB_STATUS_ASSIGNED,
+        },
+      }),
+    );
     tabFixture.componentInstance.onLogStreamCompleted();
     tabFixture.detectChanges();
     await tabFixture.whenStable();
     tabFixture.detectChanges();
+    expect(mockJobService.getJob).toHaveBeenCalledTimes(1);
+    expect(tabFixture.componentInstance.job()?.status).toBe(
+      JobStatus.JOB_STATUS_ASSIGNED,
+    );
+
+    mockJobService.getJob.calls.reset();
+    mockJobService.getJob.and.returnValue(of({job: mockJobData}));
+    tabFixture.componentInstance.onTimelineFinished();
+    tabFixture.detectChanges();
+    await tabFixture.whenStable();
+    tabFixture.detectChanges();
+    expect(mockJobService.getJob).toHaveBeenCalledTimes(1);
     expect(tabFixture.componentInstance.activeTab()).toBe('timeline');
     expect(tabFixture.componentInstance.timelineVisited()).toBeTrue();
 

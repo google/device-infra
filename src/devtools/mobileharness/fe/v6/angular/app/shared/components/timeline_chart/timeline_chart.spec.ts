@@ -22,6 +22,7 @@ import {TimelineChart} from './timeline_chart';
       [loading]="loading()"
       [errorMessage]="errorMessage()"
       [emptyMessage]="emptyMessage()"
+      [liveNote]="liveNote()"
     ></app-timeline-chart>
   `,
 })
@@ -31,6 +32,7 @@ class TestHostComponent {
   readonly loading = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
   readonly emptyMessage = signal<string>('No timing was recorded.');
+  readonly liveNote = signal<string>('');
 }
 
 describe('TimelineChart Component', () => {
@@ -445,14 +447,31 @@ describe('TimelineChart Component', () => {
     fixture.detectChanges();
     expect(component.collapsedPhaseIds().size).toBe(1);
 
-    // Updating timingBreakdown resets linkedSignal UI states.
-    host.timingBreakdown.set({...mockTestBreakdown});
+    // Updating timingBreakdown with a live poll for the same entity preserves collapsed/expanded state while resetting hover state.
+    host.liveNote.set('Updates every 30 seconds while the test runs.');
+    host.timingBreakdown.set({
+      ...mockTestBreakdown,
+      summaryLines: [],
+    });
     fixture.detectChanges();
-    expect(component.collapsedPhaseIds().size).toBe(0);
-    expect(component.expandedSubTestRowKeys().size).toBe(0);
+    expect(el.querySelector('.tl-headline')).toBeNull();
+    expect(el.querySelector('.tl-live-note')?.textContent?.trim()).toBe(
+      'Updates every 30 seconds while the test runs.',
+    );
+    expect(component.collapsedPhaseIds().size).toBe(1);
+    expect(component.expandedSubTestRowKeys().size).toBe(1);
     expect(component.pairedKey()).toBeNull();
     expect(component.focusedKey()).toBeNull();
     expect(component.activeTooltip()).toBeNull();
+
+    // Switching to a different entity (different originTime) resets collapsed/expanded state.
+    host.timingBreakdown.set({
+      ...mockTestBreakdown,
+      originTime: '2026-06-08T04:00:00Z',
+    });
+    fixture.detectChanges();
+    expect(component.collapsedPhaseIds().size).toBe(0);
+    expect(component.expandedSubTestRowKeys().size).toBe(0);
   });
 
   it('renders job timeline with Job setup inner bar, linked and unrecorded lanes, tooltips, and 40-lane cap toggle', () => {

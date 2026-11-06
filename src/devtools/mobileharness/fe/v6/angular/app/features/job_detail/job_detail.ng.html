@@ -301,6 +301,8 @@
                   <app-job-timeline-tab
                     [jobId]="job.id"
                     [status]="job.status"
+                    [active]="activeTab() === 'timeline'"
+                    (finished)="onTimelineFinished()"
                   ></app-job-timeline-tab>
                 } @placeholder {
                   <div class="tab-loading-placeholder">Loading timeline...</div>

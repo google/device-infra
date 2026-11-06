@@ -65,6 +65,7 @@ export const SCENARIO_JOB_ASSIGNED: MockJobScenario = {
       summaryLines: ['Assigned after 12.0s: 10.0s queued, 2.0s preparing.'],
       originTime: '2025-07-15T09:00:00Z',
       finishTime: '2025-07-15T09:00:12Z',
+      live: true,
       axis: {
         tickStepPercent: 25,
         ticks: [

@@ -211,4 +211,10 @@ export declare interface TimeBreakdown {
   readonly splitSegments?: TimelineSplitSegment[];
   readonly testTimeline?: TestTimeline;
   readonly jobTimeline?: JobTimeline;
+  /**
+   * Whether the test or job is still running. Its timeline then runs up to the
+   * time the response was built and keeps changing, so it is fetched again
+   * until this is false.
+   */
+  readonly live?: boolean;
 }

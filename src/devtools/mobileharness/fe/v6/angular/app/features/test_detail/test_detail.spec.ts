@@ -421,6 +421,7 @@ describe('TestDetail Component', () => {
     const timelineTab = timelineDebug.componentInstance as TestTimelineTab;
     const timelineWrapper = timelineDebug.parent!.nativeElement as HTMLElement;
     expect(timelineWrapper.hidden).toBeFalse();
+    expect(timelineTab.active()).toBeTrue();
     expect(timelineTab.timingBreakdown()).toEqual(mockTimingBreakdown);
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Passed in 10.0s: 10.0s test run.');
@@ -430,6 +431,7 @@ describe('TestDetail Component', () => {
     component.setActiveTab('overview');
     fixture.detectChanges();
     expect(timelineWrapper.hidden).toBeTrue();
+    expect(timelineTab.active()).toBeFalse();
     expect(navSpy).toHaveBeenCalledWith([], {
       relativeTo: TestBed.inject(ActivatedRoute),
       queryParams: {tab: null},
@@ -440,7 +442,14 @@ describe('TestDetail Component', () => {
     component.setActiveTab('timeline');
     fixture.detectChanges();
     expect(timelineWrapper.hidden).toBeFalse();
+    expect(timelineTab.active()).toBeTrue();
     expect(mockTestService.getTestTimeline).toHaveBeenCalledTimes(1);
+
+    // onTimelineFinished() does not reload when the test is already DONE.
+    mockTestService.getTest.calls.reset();
+    timelineTab.finished.emit();
+    fixture.detectChanges();
+    expect(mockTestService.getTest).not.toHaveBeenCalled();
   });
 
   it('opens timeline tab on initial load when ?tab=timeline is in query params and resets on test route change', async () => {
@@ -791,5 +800,59 @@ describe('TestDetail Component', () => {
       queryParamsHandling: 'merge',
       replaceUrl: true,
     });
+  });
+
+  it('passes active to TestTimelineTab and reloads silently on onTimelineFinished() only while not DONE', async () => {
+    fixture.destroy();
+    mockTestService.getTest.and.returnValue(
+      of({
+        test: {
+          ...mockOverviewData,
+          status: TestStatus.TEST_STATUS_ASSIGNED,
+        },
+      }),
+    );
+    queryParamMapSubject.next(convertToParamMap({'tab': 'timeline'}));
+    const tabFixture = TestBed.createComponent(TestDetail);
+    tabFixture.detectChanges();
+    await tabFixture.whenStable();
+    tabFixture.detectChanges();
+    for (const block of await tabFixture.getDeferBlocks()) {
+      await block.render(DeferBlockState.Complete);
+    }
+    tabFixture.detectChanges();
+
+    const timelineTab = tabFixture.debugElement.query(
+      By.directive(TestTimelineTab),
+    ).componentInstance as TestTimelineTab;
+    expect(timelineTab.active()).toBeTrue();
+
+    tabFixture.componentInstance.setActiveTab('overview');
+    tabFixture.detectChanges();
+    expect(timelineTab.active()).toBeFalse();
+
+    mockTestService.getTest.calls.reset();
+    tabFixture.componentInstance.onTimelineFinished();
+    tabFixture.detectChanges();
+    await tabFixture.whenStable();
+    expect(mockTestService.getTest).toHaveBeenCalledTimes(1);
+
+    mockTestService.getTest.and.returnValue(
+      of({
+        test: {
+          ...mockOverviewData,
+          status: TestStatus.TEST_STATUS_DONE,
+        },
+      }),
+    );
+    tabFixture.componentInstance.onTimelineFinished();
+    tabFixture.detectChanges();
+    await tabFixture.whenStable();
+
+    mockTestService.getTest.calls.reset();
+    tabFixture.componentInstance.onTimelineFinished();
+    tabFixture.detectChanges();
+    await tabFixture.whenStable();
+    expect(mockTestService.getTest).not.toHaveBeenCalled();
   });
 });

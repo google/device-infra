@@ -230,6 +230,14 @@ export class JobDetail {
     }
   }
 
+  /** Reloads the job once its live timeline reports that it is over. */
+  onTimelineFinished() {
+    const job = this.job();
+    if (job && job.status !== JobStatus.JOB_STATUS_DONE) {
+      this.silentResourceResult.reloadSilent();
+    }
+  }
+
   scrollToJobConfig(event: Event) {
     event.preventDefault();
     this.setActiveTab('overview');

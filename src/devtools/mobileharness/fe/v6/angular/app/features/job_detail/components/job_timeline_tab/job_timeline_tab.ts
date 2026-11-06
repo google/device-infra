@@ -5,6 +5,7 @@ import {
   DestroyRef,
   inject,
   input,
+  output,
   signal,
 } from '@angular/core';
 import {takeUntilDestroyed, toObservable} from '@angular/core/rxjs-interop';
@@ -13,8 +14,13 @@ import {catchError, map, switchMap} from 'rxjs/operators';
 import {TimeBreakdown} from '../../../../core/models/job_overview';
 import {JOB_SERVICE} from '../../../../core/services/job/job_service';
 import {TimelineChart} from '../../../../shared/components/timeline_chart/timeline_chart';
+import {useLiveRefresh} from '../../../../shared/composables/live_refresh';
 
-/** Component for rendering the job timeline tab content. */
+/**
+ * Component for rendering the job timeline tab content. While the job runs, it
+ * fetches the timeline again every refresh interval for as long as the tab is
+ * `active`, and emits `finished` once the timeline says the job is over.
+ */
 @Component({
   selector: 'app-job-timeline-tab',
   standalone: true,
@@ -26,6 +32,10 @@ import {TimelineChart} from '../../../../shared/components/timeline_chart/timeli
 export class JobTimelineTab {
   readonly jobId = input<string>('');
   readonly status = input<string | undefined>(undefined);
+  /** Whether the tab is showing; a hidden tab does not refresh. */
+  readonly active = input<boolean>(true);
+  /** Emitted when a live timeline comes back final, once the job is over. */
+  readonly finished = output<void>();
 
   private readonly jobService = inject(JOB_SERVICE);
   private readonly destroyRef = inject(DestroyRef);
@@ -34,11 +44,22 @@ export class JobTimelineTab {
   readonly errorMessage = signal<string | null>(null);
   readonly timingBreakdown = signal<TimeBreakdown | undefined>(undefined);
 
+  private readonly liveRefresh = useLiveRefresh(
+    computed(() => Boolean(this.timingBreakdown()?.live)),
+    this.active,
+    'job',
+  );
+  private readonly refreshes = this.liveRefresh.refreshes;
+
+  /** Tells the reader that a live timeline keeps itself current. */
+  readonly liveNote = this.liveRefresh.liveNote;
+
   private loadedJobId = '';
 
   private readonly fetchTrigger = computed(() => ({
     jobId: this.jobId(),
     status: this.status(),
+    refreshes: this.refreshes(),
   }));
 
   constructor() {
@@ -52,8 +73,11 @@ export class JobTimelineTab {
             this.loading.set(false);
             return of(undefined);
           }
-          const isSameJob =
-            jobId === this.loadedJobId && this.timingBreakdown() !== undefined;
+          const current = this.timingBreakdown();
+          const isSameJob = jobId === this.loadedJobId && current !== undefined;
+          if (isSameJob && !current.live && Boolean(current.jobTimeline)) {
+            return of(current);
+          }
           if (!isSameJob) {
             this.timingBreakdown.set(undefined);
             this.loading.set(true);
@@ -61,6 +85,7 @@ export class JobTimelineTab {
           return this.jobService.getJobTimeline({jobId}).pipe(
             map((resp) => {
               this.loadedJobId = jobId;
+              this.liveRefresh.markRefreshed();
               return resp.timeline;
             }),
             catchError((err) => {
@@ -76,8 +101,12 @@ export class JobTimelineTab {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((timeline) => {
+        const wasLive = Boolean(this.timingBreakdown()?.live);
         this.timingBreakdown.set(timeline);
         this.loading.set(false);
+        if (wasLive && timeline && !timeline.live) {
+          this.finished.emit();
+        }
       });
   }
 }

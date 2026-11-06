@@ -56,6 +56,7 @@ export const SCENARIO_TEST_IN_PROGRESS: MockTestScenario = {
       summaryLines: ['Running for 8.0s: 5.0s waiting to start, 3.0s setup.'],
       originTime: '2025-07-09T11:30:10Z',
       finishTime: '2025-07-09T11:30:18Z',
+      live: true,
       axis: {
         tickStepPercent: 25,
         ticks: [

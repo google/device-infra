@@ -18,11 +18,18 @@
     (mousemove)="updatePointerPosition($event)"
     (mouseleave)="clearAllHover()"
   >
-    @if (headline()) {
+    @if (headline() || liveNote()) {
       <div class="tl-summary">
-        <p class="tl-headline">{{ headline() }}</p>
+        @if (headline()) {
+          <p class="tl-headline">{{ headline() }}</p>
+        }
         @if (subheadline()) {
           <p class="tl-sub">{{ subheadline() }}</p>
+        }
+        @if (liveNote()) {
+          <p class="tl-live-note">
+            <span class="tl-live-dot" aria-hidden="true"></span>{{ liveNote() }}
+          </p>
         }
       </div>
     }

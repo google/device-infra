@@ -58,8 +58,20 @@ export class TimelineChart {
   readonly loading = input<boolean>(false);
   readonly errorMessage = input<string | null>(null);
   readonly emptyMessage = input<string>('No timing was recorded.');
+  /** Says how a live timeline keeps itself current; empty when it is final. */
+  readonly liveNote = input<string>('');
 
   readonly subTestCap = SUBTEST_VISIBLE_CAP;
+
+  /** Identifies the test or job being shown so live polls keep open rows expanded. */
+  private readonly timelineIdentity = computed<string>(() => {
+    const breakdown = this.timingBreakdown();
+    if (!breakdown) {
+      return '';
+    }
+    const kind = breakdown.jobTimeline ? 'job' : 'test';
+    return `${kind}|${this.jobId()}|${breakdown.originTime ?? ''}`;
+  });
 
   readonly focusedKey = linkedSignal<string | null>(() => {
     this.timingBreakdown();
@@ -72,17 +84,17 @@ export class TimelineChart {
   });
 
   readonly collapsedPhaseIds = linkedSignal<ReadonlySet<string>>(() => {
-    this.timingBreakdown();
+    this.timelineIdentity();
     return new Set<string>();
   });
 
   readonly expandedSubTestRowKeys = linkedSignal<ReadonlySet<string>>(() => {
-    this.timingBreakdown();
+    this.timelineIdentity();
     return new Set<string>();
   });
 
   readonly showAllLanes = linkedSignal<boolean>(() => {
-    this.timingBreakdown();
+    this.timelineIdentity();
     return false;
   });
 
