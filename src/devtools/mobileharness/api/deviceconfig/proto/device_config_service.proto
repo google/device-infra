@@ -210,16 +210,4 @@ service DeviceConfigService {
   // Updates a list of configurations of labs.
   rpc UpdateLabConfigs(UpdateLabConfigsRequest)
       returns (UpdateLabConfigsResponse) {}
-
-  // Gets the global configuration.
-  rpc GetGlobalConfig(GetGlobalConfigRequest)
-      returns (GetGlobalConfigResponse) {}
-
-  // Deletes the global configuration.
-  rpc DeleteGlobalConfig(DeleteGlobalConfigRequest)
-      returns (DeleteGlobalConfigResponse) {}
-
-  // Updates the global configuration.
-  rpc UpdateGlobalConfig(UpdateGlobalConfigRequest)
-      returns (UpdateGlobalConfigResponse) {}
 }
