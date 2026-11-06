@@ -1,6 +1,7 @@
 import {
   CdkVirtualScrollViewport,
   ScrollingModule,
+  VIRTUAL_SCROLL_STRATEGY,
 } from '@angular/cdk/scrolling';
 import {CommonModule} from '@angular/common';
 import {
@@ -21,6 +22,8 @@ import {MatIconModule} from '@angular/material/icon';
 import {MatTooltipModule} from '@angular/material/tooltip';
 import {EMPTY, Observable, timer} from 'rxjs';
 import {catchError, concatMap, expand, finalize} from 'rxjs/operators';
+
+import {VariableHeightVirtualScrollStrategy} from './variable_height_scroll_strategy';
 
 /** Result interface for a chunk of streaming log output. */
 export interface LogChunkResult {
@@ -47,6 +50,16 @@ const POLLING_INTERVAL_MS = 5000;
   templateUrl: './streaming_log_viewer.ng.html',
   styleUrl: './streaming_log_viewer.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // Provide one isolated strategy instance per viewer component and bind it to
+  // CDK's `VIRTUAL_SCROLL_STRATEGY` token so `<cdk-virtual-scroll-viewport>`
+  // delegates range/offset calculations to `VariableHeightVirtualScrollStrategy`.
+  providers: [
+    VariableHeightVirtualScrollStrategy,
+    {
+      provide: VIRTUAL_SCROLL_STRATEGY,
+      useExisting: VariableHeightVirtualScrollStrategy,
+    },
+  ],
 })
 export class StreamingLogViewerComponent implements OnInit {
   /** The unique entity ID (session, job, test, etc.). */
@@ -69,6 +82,7 @@ export class StreamingLogViewerComponent implements OnInit {
   readonly streamCompleted = output<void>();
 
   private readonly destroyRef = inject(DestroyRef);
+  private readonly scrollStrategy = inject(VariableHeightVirtualScrollStrategy);
 
   readonly logLines = signal<string[]>(['Loading logs...']);
   private trailingBuffer = '';
@@ -81,6 +95,12 @@ export class StreamingLogViewerComponent implements OnInit {
     if (isSpecialMsg) {
       return 20;
     }
+    // Prefer the scroll strategy's prefix-sum height (which incorporates real
+    // DOM `offsetHeight` measurements) once it is tracking the current `lines`.
+    const strategyHeight = this.scrollStrategy.totalContentHeight();
+    if (this.scrollStrategy.isTrackingLines(lines) && strategyHeight > 0) {
+      return Math.min(552, Math.max(100, strategyHeight));
+    }
     let totalVisualRows = 0;
     for (const line of lines) {
       totalVisualRows += Math.max(1, Math.ceil(line.length / 80));
@@ -92,7 +112,9 @@ export class StreamingLogViewerComponent implements OnInit {
 
   constructor() {
     effect(() => {
-      this.logLines();
+      // Sync updated log chunks into the variable-height strategy before
+      // adjusting the viewport scroll position.
+      this.scrollStrategy.setLines(this.logLines());
       this.scrollToPosition();
     });
   }
