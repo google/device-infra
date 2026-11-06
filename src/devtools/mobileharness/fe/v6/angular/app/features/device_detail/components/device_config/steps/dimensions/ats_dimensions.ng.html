@@ -1,0 +1,103 @@
+<div class="ats-dim-wrapper">
+  <div class="ats-dim-header">
+    <div>
+      <h3 class="ats-dim-heading">Scheduling Dimensions</h3>
+      <p class="ats-dim-subtitle">
+        Configure the curated ATS scheduling dimensions for this device. Press Enter or comma to add multiple values.
+      </p>
+    </div>
+    @if (hasAnyAssignedValues() && isEditable()) {
+      <button
+        type="button"
+        class="ats-clear-btn"
+        (click)="clearAllDimensions()"
+      >
+        Clear all
+      </button>
+    }
+  </div>
+
+  <div class="ats-dim-grid">
+    @for (field of dimensionFields(); track field.fieldKey) {
+      <div class="ats-dim-card">
+        <div class="ats-dim-card-head">
+          <div class="ats-dim-meta">
+            <span class="ats-dim-name">{{ field.dim.dimensionName }}</span>
+            <span
+              class="ats-dim-badge"
+              [class.is-required]="field.isRequired"
+              [class.is-supported]="!field.isRequired"
+            >
+              {{ field.scopeLabel }}
+            </span>
+          </div>
+          @if (field.values.length > 0 && isEditable()) {
+            <button
+              type="button"
+              class="ats-clear-btn"
+              (click)="clearDimension(field.fieldKey)"
+              [attr.aria-label]="'Clear ' + field.dim.dimensionName"
+            >
+              Clear
+            </button>
+          }
+        </div>
+
+        @if (field.description) {
+          <p class="ats-dim-desc">{{ field.description }}</p>
+        }
+
+        <div
+          class="ats-chip-box"
+          [class.is-disabled]="!isEditable()"
+          role="group"
+          [attr.aria-label]="field.dim.dimensionName + ' dimension values'"
+        >
+          @for (val of field.values; track val; let idx = $index) {
+            <span class="ats-chip">
+              <span>{{ val }}</span>
+              @if (isEditable()) {
+                <button
+                  type="button"
+                  class="ats-chip-remove"
+                  (click)="removeChip(field.fieldKey, idx)"
+                  [attr.aria-label]="'Remove ' + val"
+                >
+                  <mat-icon>close</mat-icon>
+                </button>
+              }
+            </span>
+          }
+          <input
+            type="text"
+            class="ats-chip-input"
+            [disabled]="!isEditable()"
+            [placeholder]="field.values.length === 0 ? 'Not set (type a value and press Enter)' : 'Add another value'"
+            [attr.aria-label]="field.dim.dimensionName + ' value input'"
+            [ngModel]="field.draft"
+            (ngModelChange)="onDraftInput(field.fieldKey, $event)"
+            (keydown)="onChipKeydown(field.fieldKey, $event)"
+            (paste)="onChipPaste(field.fieldKey, $event)"
+            (blur)="commitDraft(field.fieldKey)"
+            autocomplete="off"
+          />
+        </div>
+
+        @if (field.suggestions.length > 0 && isEditable()) {
+          <div class="ats-suggestions">
+            <span class="ats-suggestions-label">Suggestions:</span>
+            @for (sug of field.suggestions; track sug) {
+              <button
+                type="button"
+                class="ats-suggestion-pill"
+                (click)="addSuggestion(field.fieldKey, sug)"
+              >
+                + {{ sug }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

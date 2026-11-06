@@ -1,7 +1,7 @@
 @if (configResult$ | async; as configResult) {
   @if (configResult.isHostManaged) {
     <app-host-managed [deviceId]="data.deviceId" [hostName]="data.hostName" [hostIp]="data.hostIp"></app-host-managed>
-  } @else if (!configResult.deviceConfig) {
+  } @else if (!configResult.deviceConfig && !isAts) {
     <app-device-empty
       [deviceId]="data.deviceId"
       [hostName]="data.hostName"
@@ -14,7 +14,7 @@
       [deviceId]="data.deviceId"
       [universe]="data.universe || ''"
       [hostName]="data.hostName"
-      [config]="configResult.deviceConfig"
+      [config]="configResult.deviceConfig || {}"
     ></app-device-settings>
   }
 }

@@ -1,36 +1,41 @@
 <app-dialog
   dialogTitle="Device Configuration"
   [subtitle]="`Editing configuration for <strong class='font-medium text-gray-700'>` + deviceId() + `</strong>`"
-  height="90vh"
-  width="72rem"
+  [height]="isAts ? '42rem' : '90vh'"
+  [width]="isAts ? '56rem' : '72rem'"
+  maxHeight="90vh"
   footerType="none"
 >
-  <ng-content header-button>
-    <button matIconButton [matMenuTriggerFor]="menu" [disabled]="saving()">
-      <mat-icon>more_vert</mat-icon>
-    </button>
-    <mat-menu #menu="matMenu">
-      <button mat-menu-item (click)="reset()" [disabled]="!hasPermission()">
-        <mat-icon>delete_sweep</mat-icon>
-        <span class="config-menu-text">Clear All & Start Over</span>
+  @if (!isAts) {
+    <ng-content header-button>
+      <button matIconButton [matMenuTriggerFor]="menu" [disabled]="saving()">
+        <mat-icon>more_vert</mat-icon>
       </button>
-    </mat-menu>
-  </ng-content>
+      <mat-menu #menu="matMenu">
+        <button mat-menu-item (click)="reset()" [disabled]="!hasPermission()">
+          <mat-icon>delete_sweep</mat-icon>
+          <span class="config-menu-text">Clear All & Start Over</span>
+        </button>
+      </mat-menu>
+    </ng-content>
+  }
 
   <div class="configuration-content">
-    <nav class="nav-bar" [class.disabled]="saving()">
-      @for (nav of navList; track nav.id) {
-        <a
-          href="#{{ nav.id }}"
-          class="nav-item"
-          [class.active]="nav.id === activeSection()"
-          (click)="setActiveSection($event, nav.id)"
-        >
-          <span class="material-icons">{{ nav.icon }}</span>
-          <span>{{ nav.label }}</span>
-        </a>
-      }
-    </nav>
+    @if (!isAts) {
+      <nav class="nav-bar" [class.disabled]="saving()">
+        @for (nav of navList; track nav.id) {
+          <a
+            href="#{{ nav.id }}"
+            class="nav-item"
+            [class.active]="nav.id === activeSection()"
+            (click)="setActiveSection($event, nav.id)"
+          >
+            <span class="material-icons">{{ nav.icon }}</span>
+            <span>{{ nav.label }}</span>
+          </a>
+        }
+      </nav>
+    }
     <main class="configuration-content-main">
       <div class="main-container">
         @switch (activeSection()) {
@@ -52,13 +57,22 @@
             ></app-wifi>
           }
           @case (ConfigSection.DIMENSIONS) {
-            <app-dimensions
-              workflow="settings"
-              [dimensions]="newConfig().dimensions!"
-              (dimensionsChange)="updateDimensions($event)"
-              (hasError)="hasError = $event"
-              [uiStatus]="{sectionStatus: uiStatus.dimensions}"
-            ></app-dimensions>
+            @if (isAts) {
+              <app-ats-dimensions
+                [dimensions]="newConfig().dimensions!"
+                [universe]="universe()"
+                [uiStatus]="uiStatus.dimensions"
+                (dimensionsChange)="updateDimensions($event)"
+              ></app-ats-dimensions>
+            } @else {
+              <app-dimensions
+                workflow="settings"
+                [dimensions]="newConfig().dimensions!"
+                (dimensionsChange)="updateDimensions($event)"
+                (hasError)="hasError = $event"
+                [uiStatus]="{sectionStatus: uiStatus.dimensions}"
+              ></app-dimensions>
+            }
           }
           @case (ConfigSection.STABILITY) {
             <app-stability
@@ -72,6 +86,7 @@
 
       <app-footer
         [param]="{deviceId: deviceId(), hostName: ''}"
+        [grantedMessage]="isAts ? 'Device dimension configuration is unlocked on this controller.' : undefined"
         class="main-footer"
         (onPermissionChange)="handlePermissionChange($event)"
       >

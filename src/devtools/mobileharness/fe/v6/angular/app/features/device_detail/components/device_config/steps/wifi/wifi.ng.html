@@ -59,7 +59,8 @@
                     matInput
                     id="wifi-ssid"
                     type="text"
-                    [(ngModel)]="wifi.ssid"
+                    [ngModel]="wifi.ssid"
+                    (ngModelChange)="onSsidChange($event)"
                     [disabled]="!(uiStatus().editability?.editable ?? false)"
                     placeholder="Enter SSID..."
                   />
@@ -84,7 +85,8 @@
                     matInput
                     id="wifi-psk"
                     [type]="passwordVisible() ? 'text' : 'password'"
-                    [(ngModel)]="wifi.psk"
+                    [ngModel]="wifi.psk"
+                    (ngModelChange)="onPskChange($event)"
                     [disabled]="!(uiStatus().editability?.editable ?? false)"
                     placeholder="Leave empty for open networks"
                   />
@@ -130,8 +132,8 @@
         <div class="wifi-rec-col" [class.visible]="showRecommendations()">
           <div class="wifi-rec-card">
             <div class="wifi-rec-header">
-              <span class="rec-title">SELECT NETWORK</span>
-              <button mat-icon-button (click)="toggleRecommendations()">
+              <span class="rec-title">Select network</span>
+              <button mat-icon-button (click)="toggleRecommendations()" aria-label="Close network list">
                 <mat-icon>close</mat-icon>
               </button>
             </div>
