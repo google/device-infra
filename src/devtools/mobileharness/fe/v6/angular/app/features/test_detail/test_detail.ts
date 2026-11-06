@@ -218,11 +218,16 @@ export class TestDetail {
     return freshRootId || rp?.testId || this.testId() || overview?.id || '';
   });
 
-  readonly isSubTest = computed(() => {
-    const test = this.testOverview();
-    const rootId = this.rootTestId();
+  readonly isSubTest = computed(() =>
+    this.isSubTestOverview(this.testOverview()),
+  );
+
+  private isSubTestOverview(
+    test: TestOverviewData | null | undefined,
+  ): boolean {
+    const rootId = test?.subTestsInfo?.rootTestId;
     return Boolean(this.subTestId() || (test && rootId && rootId !== test.id));
-  });
+  }
 
   /** Shortens an id for the breadcrumb; the full id is in the tooltip. */
   shortId(id: string): string {
@@ -273,7 +278,11 @@ export class TestDetail {
 
   private applyInitialTab(test: TestOverviewData) {
     const tabFromUrl = this.requestedTab();
-    if (tabFromUrl && (tabFromUrl !== 'files' || Boolean(test.fileExplorer))) {
+    if (
+      tabFromUrl &&
+      (tabFromUrl !== 'files' || Boolean(test.fileExplorer)) &&
+      (tabFromUrl !== 'timeline' || !this.isSubTestOverview(test))
+    ) {
       this.setActiveTab(tabFromUrl, false);
     } else {
       this.setActiveTab(
@@ -285,6 +294,9 @@ export class TestDetail {
 
   setActiveTab(tab: DetailTab, syncUrl = true) {
     if (tab === 'timeline') {
+      if (this.isSubTest()) {
+        return;
+      }
       this.timelineVisited.set(true);
     }
     this.activeTab.set(tab);

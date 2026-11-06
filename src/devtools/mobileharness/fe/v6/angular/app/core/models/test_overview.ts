@@ -104,7 +104,6 @@ export declare interface GetTestRequest {
 /** Request structure for the getTestTimeline API. */
 export declare interface GetTestTimelineRequest {
   testId: string;
-  subTestId?: string;
   jobId: string;
 }
 /** Response structure for the getTestTimeline API. */

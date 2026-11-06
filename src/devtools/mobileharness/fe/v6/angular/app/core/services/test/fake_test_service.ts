@@ -88,18 +88,18 @@ export class FakeTestService extends TestService {
   }
 
   /**
-   * Retrieves the execution timeline breakdown for a specific test or sub-test from the mock dataset.
+   * Retrieves the execution timeline breakdown for a specific test from the mock dataset.
    */
   override getTestTimeline(
     request: GetTestTimelineRequest,
   ): Observable<GetTestTimelineResponse> {
-    const id = request.subTestId || request.testId;
     const scenario = MOCK_TEST_SCENARIOS.find(
-      (s) => s.id === id || s.overview.id === id,
+      (s) => s.id === request.testId || s.overview.id === request.testId,
     );
     if (!scenario) {
       return throwError(
-        () => new Error(`Test with ID '${id}' not found in mock data.`),
+        () =>
+          new Error(`Test with ID '${request.testId}' not found in mock data.`),
       ).pipe(delay(300));
     }
     return of({timeline: scenario.overview.timingBreakdown}).pipe(delay(300));

@@ -252,7 +252,9 @@
         <div class="tabs-container">
           <nav class="tabs-nav">
             <button (click)="setActiveTab('overview')" [class.active]="activeTab() === 'overview'" class="tab-link">Overview</button>
-            <button (click)="setActiveTab('timeline')" [class.active]="activeTab() === 'timeline'" class="tab-link">Timeline</button>
+            @if (!isSubTest()) {
+              <button (click)="setActiveTab('timeline')" [class.active]="activeTab() === 'timeline'" class="tab-link">Timeline</button>
+            }
             <button (click)="setActiveTab('log')" [class.active]="activeTab() === 'log'" class="tab-link">
               <span class="tab-link-content">
                 <span>Test Log</span>
@@ -279,16 +281,14 @@
             </div>
           }
 
-          <!-- Timeline Tab (kept mounted after first visit so tab switches do not refetch) -->
-          @if (timelineVisited() || activeTab() === 'timeline') {
+          <!-- Timeline Tab (root tests only; kept mounted after first visit so tab switches do not refetch) -->
+          @if (!isSubTest() && (timelineVisited() || activeTab() === 'timeline')) {
             <div class="tab-content" [hidden]="activeTab() !== 'timeline'">
               @defer {
                 <app-test-timeline-tab
                   [testId]="rootTestId()"
-                  [subTestId]="subTestId()"
                   [jobId]="jobId()"
                   [status]="test.status"
-                  [result]="test.result"
                 ></app-test-timeline-tab>
               } @placeholder {
                 <div class="tab-loading-placeholder">Loading timeline...</div>

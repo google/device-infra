@@ -28,10 +28,8 @@ import {TimelineChart} from '../../../../shared/components/timeline_chart/timeli
 })
 export class TestTimelineTab {
   readonly testId = input<string>('');
-  readonly subTestId = input<string | undefined>(undefined);
   readonly jobId = input<string>('');
   readonly status = input<string | undefined>(undefined);
-  readonly result = input<string | undefined>(undefined);
 
   private readonly testService = inject(TEST_SERVICE);
   private readonly destroyRef = inject(DestroyRef);
@@ -45,19 +43,15 @@ export class TestTimelineTab {
   private readonly fetchTrigger = computed<{
     request: GetTestTimelineRequest;
     status: string | undefined;
-    result: string | undefined;
   } | null>(() => {
     const testId = this.testId();
     if (!testId) return null;
-    const subTestId = this.subTestId();
     return {
       request: {
         testId,
-        ...(subTestId ? {subTestId} : {}),
         jobId: this.jobId(),
       },
       status: this.status(),
-      result: this.result(),
     };
   });
 
@@ -73,7 +67,7 @@ export class TestTimelineTab {
             return of(undefined);
           }
           const params = trigger.request;
-          const entityKey = `${params.testId}|${params.subTestId || ''}|${params.jobId || ''}`;
+          const entityKey = `${params.testId}|${params.jobId || ''}`;
           const isSameEntity =
             entityKey === this.loadedEntityKey &&
             this.timingBreakdown() !== undefined;

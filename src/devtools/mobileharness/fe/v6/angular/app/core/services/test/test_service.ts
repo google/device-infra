@@ -26,7 +26,7 @@ export abstract class TestService {
   abstract getTest(request: GetTestRequest): Observable<GetTestResponse>;
 
   /**
-   * Retrieves the execution timeline breakdown for a specific test or sub-test.
+   * Retrieves the execution timeline breakdown for a specific test.
    */
   abstract getTestTimeline(
     request: GetTestTimelineRequest,

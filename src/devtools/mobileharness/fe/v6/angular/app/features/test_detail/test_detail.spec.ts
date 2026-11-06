@@ -473,12 +473,12 @@ describe('TestDetail Component', () => {
       tabFixture.debugElement.query(By.directive(TestTimelineTab)),
     ).not.toBeNull();
 
-    // reloadSilent() on the same test preserves activeTab and timelineVisited.
+    // reloadSilent() on the same root test preserves activeTab, timelineVisited, and the mounted TestTimelineTab.
     mockTestService.getTest.and.returnValue(
       of({
         test: {
           ...mockOverviewData,
-          subTestsInfo: {rootTestId: 'stale_root'},
+          subTestsInfo: {rootTestId: 'test_123'},
         },
       }),
     );
@@ -488,6 +488,9 @@ describe('TestDetail Component', () => {
     tabFixture.detectChanges();
     expect(tabFixture.componentInstance.activeTab()).toBe('timeline');
     expect(tabFixture.componentInstance.timelineVisited()).toBeTrue();
+    expect(
+      tabFixture.debugElement.query(By.directive(TestTimelineTab)),
+    ).not.toBeNull();
 
     // While a new route's getTest is in flight, jobId() and rootTestId() do not read stale overview fields.
     const inFlight$ = new Subject<{test: TestOverviewData}>();
@@ -534,12 +537,19 @@ describe('TestDetail Component', () => {
         files: [],
       },
     };
+    const router = TestBed.inject(Router);
+    const navSpy = spyOn(router, 'navigate').and.returnValue(
+      Promise.resolve(true),
+    );
     mockTestService.getTest.and.returnValue(of({test: subTestOverviewData}));
     paramMapSubject.next(
       convertToParamMap({'id': 'root_test_12345678', 'jobId': 'job_456'}),
     );
     queryParamMapSubject.next(
-      convertToParamMap({'sub_test_id': 'sub_test_abcdef1234'}),
+      convertToParamMap({
+        'sub_test_id': 'sub_test_abcdef1234',
+        'tab': 'timeline',
+      }),
     );
 
     const subFixture = TestBed.createComponent(TestDetail);
@@ -556,6 +566,13 @@ describe('TestDetail Component', () => {
     expect(subComponent.rootTestId()).toBe('root_test_12345678');
     expect(subComponent.subTestId()).toBe('sub_test_abcdef1234');
     expect(subComponent.isSubTest()).toBeTrue();
+    expect(subComponent.activeTab()).toBe('overview');
+    expect(navSpy).toHaveBeenCalledWith([], {
+      relativeTo: TestBed.inject(ActivatedRoute),
+      queryParams: {tab: null},
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
     expect(subComponent.shortId('root_test_12345678')).toBe('root_tes…');
     expect(subComponent.shortId('short')).toBe('short');
     expect(subComponent.legacyTestDetailUrl()).toBe(
@@ -580,19 +597,20 @@ describe('TestDetail Component', () => {
       'Result: Pass',
     );
 
+    const tabLabels = Array.from(
+      compiled.querySelectorAll('.tabs-nav .tab-link'),
+    ).map((el) => el.textContent?.trim());
+    expect(tabLabels).toEqual(['Overview', 'Test Log', 'Files']);
+
     subComponent.setActiveTab('timeline');
     subFixture.detectChanges();
     await subFixture.whenStable();
-    for (const block of await subFixture.getDeferBlocks()) {
-      await block.render(DeferBlockState.Complete);
-    }
-    subFixture.detectChanges();
-    const timelineTab = subFixture.debugElement.query(
-      By.directive(TestTimelineTab),
-    ).componentInstance as TestTimelineTab;
-    expect(timelineTab.testId()).toBe('root_test_12345678');
-    expect(timelineTab.subTestId()).toBe('sub_test_abcdef1234');
-    expect(timelineTab.timingBreakdown()).toEqual(mockTimingBreakdown);
+    expect(subComponent.activeTab()).toBe('overview');
+    expect(subComponent.timelineVisited()).toBeFalse();
+    expect(
+      subFixture.debugElement.query(By.directive(TestTimelineTab)),
+    ).toBeNull();
+    expect(mockTestService.getTestTimeline).not.toHaveBeenCalled();
 
     subComponent.setActiveTab('log');
     subFixture.detectChanges();
@@ -686,5 +704,92 @@ describe('TestDetail Component', () => {
     await doneSubFixture.whenStable();
     doneSubFixture.detectChanges();
     expect(mockTestService.getTest).not.toHaveBeenCalled();
+
+    // Navigating from a root test with Timeline open to a sub-test identified via subTestsInfo.rootTestId !== test.id (without sub_test_id) resets timelineVisited, unmounts TestTimelineTab, and falls back to 'log' when RUNNING and 'overview' when DONE.
+    fixture.destroy();
+    subFixture.destroy();
+    suspendedSubFixture.destroy();
+    doneSubFixture.destroy();
+    mockTestService.getTest.and.returnValue(
+      of({
+        test: {
+          ...mockOverviewData,
+          id: 'root_test_12345678',
+          subTestsInfo: {rootTestId: 'root_test_12345678'},
+        },
+      }),
+    );
+    paramMapSubject.next(
+      convertToParamMap({'id': 'root_test_12345678', 'jobId': 'job_456'}),
+    );
+    queryParamMapSubject.next(convertToParamMap({'tab': 'timeline'}));
+    const rootToSubFixture = TestBed.createComponent(TestDetail);
+    const rootToSubComponent = rootToSubFixture.componentInstance;
+    rootToSubFixture.detectChanges();
+    await rootToSubFixture.whenStable();
+    rootToSubFixture.detectChanges();
+    for (const block of await rootToSubFixture.getDeferBlocks()) {
+      await block.render(DeferBlockState.Complete);
+    }
+    rootToSubFixture.detectChanges();
+    expect(rootToSubComponent.isSubTest()).toBeFalse();
+    expect(rootToSubComponent.activeTab()).toBe('timeline');
+    expect(rootToSubComponent.timelineVisited()).toBeTrue();
+    expect(
+      rootToSubFixture.debugElement.query(By.directive(TestTimelineTab)),
+    ).not.toBeNull();
+
+    navSpy.calls.reset();
+    mockTestService.getTest.and.returnValue(
+      of({
+        test: {
+          ...subTestOverviewData,
+          status: TestStatus.TEST_STATUS_RUNNING,
+        },
+      }),
+    );
+    paramMapSubject.next(
+      convertToParamMap({'id': 'sub_test_abcdef1234', 'jobId': 'job_456'}),
+    );
+    rootToSubFixture.detectChanges();
+    await rootToSubFixture.whenStable();
+    rootToSubFixture.detectChanges();
+    expect(rootToSubComponent.isSubTest()).toBeTrue();
+    expect(rootToSubComponent.timelineVisited()).toBeFalse();
+    expect(rootToSubComponent.activeTab()).toBe('log');
+    expect(
+      rootToSubFixture.debugElement.query(By.directive(TestTimelineTab)),
+    ).toBeNull();
+    expect(navSpy).toHaveBeenCalledWith([], {
+      relativeTo: TestBed.inject(ActivatedRoute),
+      queryParams: {tab: 'log'},
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+
+    navSpy.calls.reset();
+    mockTestService.getTest.and.returnValue(
+      of({
+        test: {
+          ...subTestOverviewData,
+          id: 'sub_test_done',
+          status: TestStatus.TEST_STATUS_DONE,
+        },
+      }),
+    );
+    paramMapSubject.next(
+      convertToParamMap({'id': 'sub_test_done', 'jobId': 'job_456'}),
+    );
+    rootToSubFixture.detectChanges();
+    await rootToSubFixture.whenStable();
+    rootToSubFixture.detectChanges();
+    expect(rootToSubComponent.isSubTest()).toBeTrue();
+    expect(rootToSubComponent.activeTab()).toBe('overview');
+    expect(navSpy).toHaveBeenCalledWith([], {
+      relativeTo: TestBed.inject(ActivatedRoute),
+      queryParams: {tab: null},
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   });
 });

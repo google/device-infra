@@ -58,10 +58,10 @@ service TestService {
     };
   }
 
-  // Gets the execution timeline breakdown of a test (or sub-test) by its ID.
+  // Gets the execution timeline breakdown of a test by its ID.
   //
-  // Non-path fields (job_id, sub_test_id) are automatically mapped to query
-  // parameters by the gRPC-JSON transcoder.
+  // Non-path fields (job_id) are automatically mapped to query parameters by
+  // the gRPC-JSON transcoder.
   rpc GetTestTimeline(GetTestTimelineRequest)
       returns (GetTestTimelineResponse) {
     option (google.api.http) = {
@@ -177,12 +177,11 @@ message GetTestFileResponse {
 }
 
 message GetTestTimelineRequest {
-  // The ID of the root test whose timeline (or sub-test timeline) to retrieve.
-  string test_id = 1;
+  reserved 2;
+  reserved "sub_test_id";
 
-  // Optional. If set, resolves this sub-test inside the root test (`test_id`)
-  // and builds the sub-test's timeline breakdown.
-  string sub_test_id = 2;
+  // The ID of the test whose timeline to retrieve.
+  string test_id = 1;
 
   // The ID of the parent job (required by MOSS to locate the test and its
   // device allocation wait stage).

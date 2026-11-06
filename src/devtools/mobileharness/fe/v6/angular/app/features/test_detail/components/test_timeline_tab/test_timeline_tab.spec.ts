@@ -22,14 +22,12 @@ import {TestTimelineTab} from './test_timeline_tab';
   standalone: true,
   imports: [TestTimelineTab],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<app-test-timeline-tab [testId]="testId()" [subTestId]="subTestId()" [jobId]="jobId()" [status]="status()" [result]="result()"></app-test-timeline-tab>`,
+  template: `<app-test-timeline-tab [testId]="testId()" [jobId]="jobId()" [status]="status()"></app-test-timeline-tab>`,
 })
 class TestHostComponent {
   readonly testId = signal<string>('test_123');
-  readonly subTestId = signal<string | undefined>(undefined);
   readonly jobId = signal<string>('job_456');
   readonly status = signal<string | undefined>('TEST_STATUS_RUNNING');
-  readonly result = signal<string | undefined>('TEST_RESULT_UNSPECIFIED');
 }
 
 describe('TestTimelineTab Component', () => {
@@ -79,7 +77,7 @@ describe('TestTimelineTab Component', () => {
     expect(component.loading()).toBeFalse();
   });
 
-  it('includes subTestId and refetches when subTestId or status changes', () => {
+  it('refetches when testId or status changes and preserves loaded timeline across transient refresh errors', () => {
     const populated: TimeBreakdown = {
       summaryLines: ['Ran for 12s.'],
       testTimeline: {
@@ -96,23 +94,22 @@ describe('TestTimelineTab Component', () => {
         ],
       },
     };
-    const subTestLoad$ = new Subject<{timeline?: TimeBreakdown}>();
+    const nextTestLoad$ = new Subject<{timeline?: TimeBreakdown}>();
     mockTestService.getTestTimeline.and.returnValue(
-      subTestLoad$.asObservable(),
+      nextTestLoad$.asObservable(),
     );
 
-    host.subTestId.set('sub_99');
+    host.testId.set('test_99');
     fixture.detectChanges();
     expect(mockTestService.getTestTimeline).toHaveBeenCalledWith({
-      testId: 'test_123',
-      subTestId: 'sub_99',
+      testId: 'test_99',
       jobId: 'job_456',
     });
     expect(component.loading()).toBeTrue();
     expect(component.timingBreakdown()).toBeUndefined();
 
-    subTestLoad$.next({timeline: populated});
-    subTestLoad$.complete();
+    nextTestLoad$.next({timeline: populated});
+    nextTestLoad$.complete();
     fixture.detectChanges();
     expect(component.loading()).toBeFalse();
     expect(component.timingBreakdown()).toEqual(populated);
@@ -123,7 +120,7 @@ describe('TestTimelineTab Component', () => {
     mockTestService.getTestTimeline.and.returnValue(
       statusRefresh$.asObservable(),
     );
-    host.status.set('TEST_STATUS_NEW');
+    host.status.set('TEST_STATUS_DONE');
     fixture.detectChanges();
     expect(mockTestService.getTestTimeline).toHaveBeenCalledTimes(3);
     expect(component.loading()).toBeFalse();
@@ -132,11 +129,10 @@ describe('TestTimelineTab Component', () => {
     statusRefresh$.complete();
     fixture.detectChanges();
 
-    // Sub-test completion updates result while status stays NEW; verify refetch and error preservation.
     mockTestService.getTestTimeline.and.returnValue(
       throwError(() => new Error('Transient error')),
     );
-    host.result.set('TEST_RESULT_PASS');
+    host.status.set('TEST_STATUS_SUSPENDED');
     fixture.detectChanges();
     expect(mockTestService.getTestTimeline).toHaveBeenCalledTimes(4);
     expect(component.timingBreakdown()).toEqual(populated);
@@ -179,13 +175,12 @@ describe('HttpTestService.getTestTimeline', () => {
     httpMock.verify();
   });
 
-  it('sends GET /v6/tests/{testId}/timeline with job_id and optional sub_test_id', () => {
+  it('sends GET /v6/tests/{testId}/timeline with job_id', () => {
     let responseTimeline: TimeBreakdown | undefined;
     service
       .getTestTimeline({
         testId: 'test_123',
         jobId: 'job_456',
-        subTestId: 'sub_1',
       })
       .subscribe((resp) => {
         responseTimeline = resp.timeline;
@@ -194,26 +189,10 @@ describe('HttpTestService.getTestTimeline', () => {
     const req = httpMock.expectOne(
       (r) =>
         r.url === 'http://bff/v6/tests/test_123/timeline' &&
-        r.params.get('job_id') === 'job_456' &&
-        r.params.get('sub_test_id') === 'sub_1',
+        r.params.get('job_id') === 'job_456',
     );
     expect(req.request.method).toBe('GET');
     req.flush({timeline: {summaryLines: ['Ran for 5.0s.']}});
     expect(responseTimeline?.summaryLines).toEqual(['Ran for 5.0s.']);
-
-    service
-      .getTestTimeline({
-        testId: 'test_123',
-        jobId: 'job_456',
-      })
-      .subscribe();
-    const reqNoSub = httpMock.expectOne(
-      (r) =>
-        r.url === 'http://bff/v6/tests/test_123/timeline' &&
-        r.params.get('job_id') === 'job_456' &&
-        !r.params.has('sub_test_id'),
-    );
-    expect(reqNoSub.request.method).toBe('GET');
-    reqNoSub.flush({timeline: {}});
   });
 });
