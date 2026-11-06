@@ -26,6 +26,8 @@ filegroup(
     name = "device_config_sql",
     srcs = [
         "device_config_table.sql",
+        # TODO: remove this lab_config_table.sql, since we plan to define all the tables in
+        # device_config_table.sql
         "lab_config_table.sql",
     ],
     visibility = [
