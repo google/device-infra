@@ -101,6 +101,7 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/sdktool/adb:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/systemspec:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/systemstate:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/shared/usmf:__subpackages__",
     ],

@@ -67,6 +67,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/constant",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemspec",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemstate:gsi_tool",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemstate:system_state_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/user:android_user_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",

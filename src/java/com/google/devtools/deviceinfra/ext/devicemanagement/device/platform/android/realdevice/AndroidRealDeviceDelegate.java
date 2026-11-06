@@ -85,6 +85,7 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.BatteryS
 import com.google.devtools.mobileharness.platform.android.systemsetting.PostSettingDeviceOp;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
+import com.google.devtools.mobileharness.platform.android.systemstate.GsiTool;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserInfo;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
@@ -172,6 +173,7 @@ public abstract class AndroidRealDeviceDelegate {
   protected final Fastboot fastboot;
   private final LocalFileUtil fileUtil;
   private final AndroidDeviceHelper androidDeviceHelper;
+  private final GsiTool gsiTool;
   private final MtaasToolsInstantiator mtaasToolsInstantiator;
   private final TelephonyHelper telephonyHelper;
 
@@ -277,6 +279,8 @@ public abstract class AndroidRealDeviceDelegate {
     device.setProperty(
         AndroidRealDeviceConstants.PROPERTY_NAME_REBOOT_TO_STATE, DeviceState.DEVICE.name());
     this.androidDeviceHelper = new AndroidDeviceHelper(androidAdbUtil);
+    this.gsiTool =
+        new GsiTool(androidAdbInternalUtil, androidAdbUtil, adb, systemStateUtil, fastboot);
   }
 
   /**
@@ -338,11 +342,7 @@ public abstract class AndroidRealDeviceDelegate {
 
         fastboot.reboot(deviceId);
         // Wait for device ready.
-        systemStateUtil.waitForState(
-            deviceId,
-            DeviceConnectionState.DEVICE,
-            AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
-        systemStateUtil.waitUntilReady(deviceId);
+        waitForDeviceReady(AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
         logger.atInfo().log("Reboot the wiped device %s successfully.", deviceId);
 
         // Become root
@@ -352,12 +352,7 @@ public abstract class AndroidRealDeviceDelegate {
         // Disable setup wizard and reboot device if needed.
         if (systemSettingUtil.disableSetupWizard(deviceId) == PostSettingDeviceOp.REBOOT) {
           logger.atInfo().log("Device %s will reboot after skip setup wizard", deviceId);
-          systemStateUtil.reboot(deviceId);
-          systemStateUtil.waitForState(
-              deviceId,
-              DeviceConnectionState.DEVICE,
-              AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
-          systemStateUtil.waitUntilReady(deviceId);
+          rebootAndWaitForReady(AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
         }
         logger.atInfo().log("Disable setup wizard and reboot device %s successfully.", deviceId);
       } catch (MobileHarnessException e) {
@@ -378,6 +373,7 @@ public abstract class AndroidRealDeviceDelegate {
               "Device %s has dimension %s with value true, reboot device to normal mode later",
               deviceId, Ascii.toLowerCase(Dimension.Name.REBOOT_TO_RECOVER.name())));
     } else {
+      device.addSupportedDeviceType(AndroidRealDeviceConstants.ANDROID_FASTBOOT_DEVICE);
       device.addSupportedDriver(AndroidRealDeviceConstants.NO_OP_DRIVER);
       device.addSupportedDriver(AndroidRealDeviceConstants.MOBLY_TEST_DRIVER);
       device.addSupportedDriver(AndroidRealDeviceConstants.MOBLY_AOSP_TEST_DRIVER);
@@ -486,6 +482,9 @@ public abstract class AndroidRealDeviceDelegate {
     validateDeviceOnceReady(deviceId, device.getClass().getSimpleName());
     androidDeviceDelegate.setUp(isRooted(), extraDimensionsForSetUpDevice());
 
+    // Indicates the device is online.
+    device.addSupportedDeviceType(AndroidRealDeviceConstants.ANDROID_ONLINE_DEVICE);
+
     addRealDeviceBasicDimensionsAndProperties();
     addRealDeviceBasicSupportedDriversDecorators();
     addExtraRealDeviceBasicSupportedDriversDecorators();
@@ -546,11 +545,11 @@ public abstract class AndroidRealDeviceDelegate {
 
     boolean isOverTcpDevice = DeviceUtil.isOverTcpDevice(deviceId);
     cacheDevice(deviceId, AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
-
-    // Set the property to the device. Will check the value of this property after resetting to
-    // ensure the reset is successful.
-    androidAdbUtil.setProperty(deviceId, RESET_PROPERTY_LABEL, "true", /* ignoreError= */ false);
     try {
+      gsiTool.disableDsuIfRunning(deviceId, isOverTcpDevice);
+      // Set the property to the device. Will check the value of this property after resetting to
+      // ensure the reset is successful.
+      androidAdbUtil.setProperty(deviceId, RESET_PROPERTY_LABEL, "true", /* ignoreError= */ false);
       logger.atInfo().log("Start to factory reset device %s via test harness", deviceId);
       androidFrpUtil.factoryResetViaTestHarnessWithFrpClear(
           device.info(), /* waitTime= */ null, /* log= */ null);
@@ -566,7 +565,7 @@ public abstract class AndroidRealDeviceDelegate {
     try {
       // `adb wait-for-device` exits with error code when using a proxied device. Therefore, we wait
       // for the device ready by using `systemStateUtil.waitUntilReady` instead.
-      if (!DeviceUtil.isOverTcpDevice(deviceId)) {
+      if (!isOverTcpDevice) {
         systemStateUtil.waitForState(deviceId, DeviceConnectionState.DEVICE, deviceReadyTimeout);
       }
       systemStateUtil.waitUntilReady(deviceId, deviceReadyTimeout);
@@ -589,6 +588,18 @@ public abstract class AndroidRealDeviceDelegate {
     }
     mtaasToolsInstantiator.resetAdbIfNecessary(device);
     logger.atInfo().log("Device %s reset is done", deviceId);
+  }
+
+  private void rebootAndWaitForReady(Duration waitForStateTimeout)
+      throws MobileHarnessException, InterruptedException {
+    systemStateUtil.reboot(deviceId);
+    waitForDeviceReady(waitForStateTimeout);
+  }
+
+  private void waitForDeviceReady(Duration waitForStateTimeout)
+      throws MobileHarnessException, InterruptedException {
+    systemStateUtil.waitForState(deviceId, DeviceConnectionState.DEVICE, waitForStateTimeout);
+    systemStateUtil.waitUntilReady(deviceId);
   }
 
   /**
@@ -875,12 +886,7 @@ public abstract class AndroidRealDeviceDelegate {
           deviceId,
           AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT.plus(
               Constants.DEFAULT_ADB_COMMAND_TIMEOUT));
-      systemStateUtil.reboot(deviceId);
-      systemStateUtil.waitForState(
-          deviceId,
-          DeviceConnectionState.DEVICE,
-          AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
-      systemStateUtil.waitUntilReady(deviceId);
+      rebootAndWaitForReady(AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
     } catch (MobileHarnessException e) {
       logger.atWarning().log("Failed to reboot the recovery device %s", deviceId);
       // If the device is still on recovery mode, update its configuration
@@ -904,6 +910,7 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   private void configureRecoveryDevice() throws MobileHarnessException, InterruptedException {
+    device.addSupportedDeviceType(AndroidRealDeviceConstants.ANDROID_RECOVERY_DEVICE);
     device.addSupportedDriver(AndroidRealDeviceConstants.NO_OP_DRIVER);
     androidDeviceHelper.updateAndroidPropertyDimensions(device);
   }
