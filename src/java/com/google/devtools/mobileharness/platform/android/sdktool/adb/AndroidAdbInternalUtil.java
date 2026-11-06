@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.sdktool.adb;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -39,7 +40,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /**
@@ -262,7 +262,7 @@ public class AndroidAdbInternalUtil {
     return getDeviceSerialsAsMap(timeout).entrySet().stream()
         .filter(entry -> (deviceState == null || entry.getValue().equals(deviceState)))
         .map(Map.Entry::getKey)
-        .collect(Collectors.toSet());
+        .collect(toImmutableSet());
   }
 
   /**
@@ -370,7 +370,7 @@ public class AndroidAdbInternalUtil {
     }
     return allIds.stream()
         .filter(((Predicate<String>) AndroidEmulatorIds::isAndroidEmulator).negate())
-        .collect(Collectors.toSet());
+        .collect(toImmutableSet());
   }
 
   /**
