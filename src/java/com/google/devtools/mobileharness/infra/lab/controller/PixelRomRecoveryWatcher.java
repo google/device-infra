@@ -145,7 +145,7 @@ public class PixelRomRecoveryWatcher implements Runnable {
         }
         case "mbu" -> {
           logger.atInfo().log("P26 ROM recovery device detected: %s", serial);
-          recoverDevice(serial, "malibu");
+          recoverDevice(serial, "mbu");
         }
         case "laj" -> {
           logger.atInfo().log("P27 ROM recovery device detected: %s", serial);
