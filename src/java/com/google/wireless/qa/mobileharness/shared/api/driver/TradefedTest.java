@@ -555,6 +555,9 @@ public class TradefedTest extends BaseDriver
             TimeUnit.SECONDS);
 
     Optional<Integer> tfExitCode = Optional.empty();
+    Duration invocationStartTimeout = Flags.xtsTfInvocationStartTimeout.getNonNull();
+    AtomicBoolean invocationStartTimedOut = new AtomicBoolean(false);
+    ScheduledFuture<?> invocationStartChecker = null;
     CommandProcess process = null;
     try (BufferedWriter outputFileWriter = Files.newBufferedWriter(tfOutputPath)) {
       synchronized (tfProcessLock) {
@@ -598,11 +601,32 @@ public class TradefedTest extends BaseDriver
           process = tfProcess;
           long pid = process.getPid();
           testInfo.log().atInfo().alsoTo(logger).log("TF started, pid=%s", pid);
+          // Fail fast if Tradefed hangs waiting for device allocation (e.g. when a cached device
+          // goes offline) and never starts an invocation.
+          if (Flags.enableXtsTradefedInvocationAgent.getNonNull()
+              && invocationStartTimeout.compareTo(Duration.ZERO) > 0) {
+            invocationStartChecker =
+                scheduledThreadPool.schedule(
+                    threadRenaming(
+                        () ->
+                            checkTradefedInvocationStarted(
+                                testInfo,
+                                runtimeInfoFilePath,
+                                invocationStartTimeout,
+                                invocationStartTimedOut),
+                        () -> "tf-invocation-start-checker-" + testInfo.locator().getId()),
+                    invocationStartTimeout.toNanos(),
+                    TimeUnit.NANOSECONDS);
+          }
         }
       }
 
       if (process != null) {
         tfExitCode = Optional.of(process.await().exitCode());
+        if (invocationStartTimedOut.get()) {
+          // The Tradefed process may exit with 0 after being killed on timeout.
+          setInvocationStartTimeoutResult(testInfo, invocationStartTimeout, /* cause= */ null);
+        }
       }
     } catch (CommandStartException e) {
       throw new MobileHarnessException(
@@ -616,18 +640,24 @@ public class TradefedTest extends BaseDriver
           e);
     } catch (CommandFailureException e) {
       tfExitCode = Optional.ofNullable(e.result()).map(CommandResult::exitCode);
-      String message = e.getMessage();
-      if (PROVISION_TRIGGER_ERROR_IDS.stream().anyMatch(message::contains)) {
-        deviceErrorForProvisioningDetected.set(true);
+      if (invocationStartTimedOut.get()) {
+        // Report the invocation-start timeout rather than a generic command failure when the
+        // process was killed by the timeout check.
+        setInvocationStartTimeoutResult(testInfo, invocationStartTimeout, e);
+      } else {
+        String message = e.getMessage();
+        if (PROVISION_TRIGGER_ERROR_IDS.stream().anyMatch(message::contains)) {
+          deviceErrorForProvisioningDetected.set(true);
+        }
+        testInfo
+            .resultWithCause()
+            .setNonPassing(
+                TestResult.ERROR,
+                MobileHarnessExceptionFactory.createUserFacingException(
+                    AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR,
+                    "Failed to run Tradefed command: " + message,
+                    e));
       }
-      testInfo
-          .resultWithCause()
-          .setNonPassing(
-              TestResult.ERROR,
-              MobileHarnessExceptionFactory.createUserFacingException(
-                  AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR,
-                  "Failed to run Tradefed command: " + message,
-                  e));
     } catch (CommandTimeoutException e) {
       tfExitCode = Optional.ofNullable(e.result()).map(CommandResult::exitCode);
       testInfo
@@ -642,6 +672,9 @@ public class TradefedTest extends BaseDriver
       testInfo.log().atWarning().alsoTo(logger).log("Tradefed was interrupted.");
       throw e;
     } finally {
+      if (invocationStartChecker != null) {
+        invocationStartChecker.cancel(/* mayInterruptIfRunning= */ false);
+      }
       periodicModuleResultsChecker.cancel(/* mayInterruptIfRunning= */ false);
       if (process != null && process.isAlive()) {
         process.killAndThenKillForcibly(/* timeout= */ Duration.ofMinutes(1L));
@@ -655,7 +688,68 @@ public class TradefedTest extends BaseDriver
         .log(
             "Finished running %s test. TF run command exit code: %s",
             spec.getXtsType(), tfExitCode);
-    return tfExitCode.filter(exitCode -> exitCode == 0).isPresent();
+    return !invocationStartTimedOut.get()
+        && tfExitCode.filter(exitCode -> exitCode == 0).isPresent();
+  }
+
+  /** Checks whether Tradefed has started an invocation and kills the Tradefed process if not. */
+  private void checkTradefedInvocationStarted(
+      TestInfo testInfo,
+      Path runtimeInfoFilePath,
+      Duration invocationStartTimeout,
+      AtomicBoolean invocationStartTimedOut) {
+    // The Tradefed invocation agent creates the runtime info file once an invocation starts and
+    // keeps it on disk through the end of the run.
+    if (localFileUtil.isFileExist(runtimeInfoFilePath)) {
+      return;
+    }
+    CommandProcess processToKill;
+    synchronized (tfProcessLock) {
+      // Re-check under tfProcessLock to avoid racing with cancellation, natural process exit, or an
+      // invocation starting right as the timeout fires.
+      if (xtsTradefedRunCancellation != null
+          || tfProcess == null
+          || !tfProcess.isAlive()
+          || localFileUtil.isFileExist(runtimeInfoFilePath)) {
+        return;
+      }
+      invocationStartTimedOut.set(true);
+      processToKill = tfProcess;
+    }
+    testInfo
+        .log()
+        .atWarning()
+        .alsoTo(logger)
+        .log(
+            "Tradefed did not start any invocation within %s (requested devices: %s). Killing TF"
+                + " process.",
+            invocationStartTimeout, getDeviceIds());
+    try {
+      processToKill.killAndThenKillForcibly(/* timeout= */ Duration.ofMinutes(1L));
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      logger.atWarning().withCause(e).log(
+          "Interrupted while killing TF process after invocation start timeout");
+    } catch (RuntimeException | Error e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to kill TF process after invocation start timeout");
+    }
+  }
+
+  /** Sets {@link TestResult#TIMEOUT} when Tradefed fails to start any invocation in time. */
+  private void setInvocationStartTimeoutResult(
+      TestInfo testInfo, Duration invocationStartTimeout, @Nullable CommandFailureException cause) {
+    testInfo
+        .resultWithCause()
+        .setNonPassing(
+            TestResult.TIMEOUT,
+            MobileHarnessExceptionFactory.createUserFacingException(
+                AndroidErrorId.XTS_TRADEFED_INVOCATION_START_TIMEOUT,
+                String.format(
+                    "Tradefed did not start any invocation within %s (requested devices: %s)."
+                        + " Some devices may be offline or unavailable.",
+                    invocationStartTimeout, getDeviceIds()),
+                cause));
   }
 
   @VisibleForTesting

@@ -1703,6 +1703,14 @@ public class Flags {
     return Strings.nullToEmpty(System.getenv("HOME")) + "/xts_server";
   }
 
+  @FlagSpec(
+      name = "xts_tf_invocation_start_timeout",
+      help =
+          "Timeout for Tradefed to start an invocation after the Tradefed process starts. If"
+              + " non-positive, the check is disabled. Default is 10m.")
+  public static final Flag<Duration> xtsTfInvocationStartTimeout =
+      DurationFlag.value(Duration.ofMinutes(10L));
+
   @FlagSpec(name = "xts_tf_xmx", help = "-Xmx of TF of TradefedTest. Default is \"24g\".")
   public static final Flag<String> xtsTfXmx = Flag.value("24g");
 
