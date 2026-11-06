@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeyDescriptor;
@@ -93,7 +94,7 @@ public final class FleetKeyPriority implements ScenarioCuration.KeyPriority {
 
   @Override
   public int hostPriority(HostKeyDescriptor key) {
-    if (COMMON_HOST_KEY_TIER1.contains(key)) {
+    if (key.equals(AtsHostKeys.DEFAULT_WIFI) || COMMON_HOST_KEY_TIER1.contains(key)) {
       return 3;
     }
     if (COMMON_HOST_KEY_TIER2.contains(key)) {

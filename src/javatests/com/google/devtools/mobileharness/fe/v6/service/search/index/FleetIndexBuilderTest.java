@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceLis
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceInfoSource;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
@@ -920,6 +921,45 @@ public final class FleetIndexBuilderTest {
         .isEqualTo(2);
     assertThat(snapshot.index().keyStats("device_field::raw_owner_or_executor").hasMissing(3))
         .isTrue();
+  }
+
+  @Test
+  public void build_indexesAtsHostDefaultWifiOnlyOnHostAndNotProjectedOntoDevices() {
+    LabQueryResult labResult =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "ats-host-1",
+                            "10.0.0.1",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            device0())))
+            .build();
+    CoreFleetRawData raw =
+        CoreFleetRawData.builder()
+            .setLabData(labResult)
+            .setHostEnrichments(
+                ImmutableMap.of(
+                    "ats-host-1",
+                    HostEnrichment.builder()
+                        .setHostFields(
+                            ImmutableMap.of(
+                                AtsHostKeys.DEFAULT_WIFI.id(), ImmutableList.of("PartnerNet-5G")))
+                        .build()))
+            .setDeviceEnrichments(ImmutableMap.of("device-0", deviceEnrichment("PartnerNet-5G")))
+            .build();
+
+    FleetSnapshot snapshot = builder.build(raw, BUILD_TIME);
+
+    assertThat(snapshot.hosts().get(0).values(AtsHostKeys.DEFAULT_WIFI.id()))
+        .containsExactly("PartnerNet-5G");
+    assertThat(snapshot.hostIndex().valueCount(AtsHostKeys.DEFAULT_WIFI.id(), "partnernet-5g"))
+        .isEqualTo(1);
+    assertThat(snapshot.devices().get(0).values(AtsHostKeys.DEFAULT_WIFI.id())).isEmpty();
+    assertThat(snapshot.index().keyIds()).doesNotContain(AtsHostKeys.DEFAULT_WIFI.id());
   }
 
   private static LabData labData(
