@@ -37,6 +37,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.fe.v6.service.host.util.HostConnectivityStatuses;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
@@ -325,8 +326,9 @@ public final class FleetIndexBuilder {
     // Host attributes projected onto device.
     for (Map.Entry<String, ImmutableList<String>> entry : host.values().entrySet()) {
       String keyId = entry.getKey();
-      // device_count is host-only and deliberately not projected to device.
-      if (keyId.equals(HostKeys.DEVICE_COUNT.id())) {
+      // device_count and ATS host default_wifi are host-only; devices carry
+      // AtsDeviceKeys.WIFI_SSID.
+      if (keyId.equals(HostKeys.DEVICE_COUNT.id()) || keyId.equals(AtsHostKeys.DEFAULT_WIFI.id())) {
         continue;
       }
       values.put(keyId, entry.getValue());

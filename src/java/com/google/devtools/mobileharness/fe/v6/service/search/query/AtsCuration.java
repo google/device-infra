@@ -22,6 +22,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.search.FleetTryCate
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeyRegistry;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyDescriptor;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeyRegistry;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
@@ -117,7 +118,8 @@ public final class AtsCuration implements ScenarioCuration {
 
   @Override
   public ImmutableList<HostKeyDescriptor> hostFilterByRow() {
-    return ImmutableList.of(HostKeys.HOST_NAME, HostKeys.CONNECTIVITY, HostKeys.DEVICE_COUNT);
+    return ImmutableList.of(
+        HostKeys.HOST_NAME, HostKeys.CONNECTIVITY, HostKeys.DEVICE_COUNT, AtsHostKeys.DEFAULT_WIFI);
   }
 
   @Override
@@ -127,13 +129,18 @@ public final class AtsCuration implements ScenarioCuration {
 
   @Override
   public ImmutableList<HostKeyDescriptor> hostGroupByCandidates() {
-    return ImmutableList.of(HostKeys.HOST_NAME, HostKeys.CONNECTIVITY, HostKeys.DEVICE_COUNT);
+    return ImmutableList.of(
+        HostKeys.HOST_NAME, HostKeys.CONNECTIVITY, HostKeys.DEVICE_COUNT, AtsHostKeys.DEFAULT_WIFI);
   }
 
   @Override
   public ImmutableList<HostKeyDescriptor> hostDefaultColumns() {
     return ImmutableList.of(
-        HostKeys.HOST_NAME, HostKeys.CONNECTIVITY, HostKeys.DEVICE_COUNT, HostKeys.HOST_OS);
+        HostKeys.HOST_NAME,
+        HostKeys.CONNECTIVITY,
+        HostKeys.DEVICE_COUNT,
+        HostKeys.HOST_OS,
+        AtsHostKeys.DEFAULT_WIFI);
   }
 
   @Override
@@ -144,7 +151,8 @@ public final class AtsCuration implements ScenarioCuration {
         HostKeys.DEVICE_COUNT,
         HostKeys.HOST_OS,
         HostKeys.LAB_SERVER_VERSION,
-        HostKeys.HOST_IP);
+        HostKeys.HOST_IP,
+        AtsHostKeys.DEFAULT_WIFI);
   }
 
   @Override
