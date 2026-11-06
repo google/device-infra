@@ -7,8 +7,6 @@ import {
 /** Input data structure passed into bulk device configuration dialogs. */
 export interface BulkConfigDialogData {
   devices: DeviceTarget[];
-  universe?: string;
-  fleet?: string;
   dimension?: ConfigurableDimension;
   dimensionList?: DimensionList;
 }

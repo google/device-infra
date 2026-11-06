@@ -12,12 +12,10 @@ import {
   GetConfigurableDimensionsResponse,
 } from '../../../../../core/models/device_config_models';
 import {Column, Row} from '../../../../../core/models/search';
-import {Fleet} from '../../../../../core/models/search_fleet';
 import {
   CONFIG_SERVICE,
   ConfigService,
 } from '../../../../../core/services/config/config_service';
-import {EnvUniverseService} from '../../../../../core/services/env_universe_service';
 import {ClipboardService} from '../../../../../shared/services/clipboard_service';
 import {SnackBarService} from '../../../../../shared/services/snackbar_service';
 import {BulkConfigDialogResult, FleetScope} from '../../../models';
@@ -111,7 +109,6 @@ describe('FleetSearchResultsComponent', () => {
   let fixture: ComponentFixture<FleetSearchResultsComponent>;
   let mockStore: MockFleetSearchStore;
   let mockDialog: jasmine.SpyObj<MatDialog>;
-  let mockEnvUniverseService: jasmine.SpyObj<EnvUniverseService>;
   let mockConfigService: jasmine.SpyObj<ConfigService>;
   let mockClipboardService: jasmine.SpyObj<ClipboardService>;
   let mockSnackBarService: jasmine.SpyObj<SnackBarService>;
@@ -119,16 +116,12 @@ describe('FleetSearchResultsComponent', () => {
   beforeEach(async () => {
     mockStore = new MockFleetSearchStore();
     mockDialog = jasmine.createSpyObj<MatDialog>('MatDialog', ['open']);
-    mockEnvUniverseService = jasmine.createSpyObj<EnvUniverseService>(
-      'EnvUniverseService',
-      ['getUniverseString'],
-    );
-    mockEnvUniverseService.getUniverseString.and.returnValue('google_1p');
     mockConfigService = jasmine.createSpyObj<ConfigService>('ConfigService', [
       'getConfigurableDimensions',
     ]);
     mockConfigService.getConfigurableDimensions.and.returnValue(
       of({
+        enabled: true,
         dimensions: [
           {
             dimensionName: 'recovery',
@@ -155,7 +148,6 @@ describe('FleetSearchResultsComponent', () => {
         provideNoopAnimations(),
         {provide: FleetSearchStore, useValue: mockStore},
         {provide: MatDialog, useValue: mockDialog},
-        {provide: EnvUniverseService, useValue: mockEnvUniverseService},
         {provide: CONFIG_SERVICE, useValue: mockConfigService},
         {provide: ClipboardService, useValue: mockClipboardService},
         {provide: SnackBarService, useValue: mockSnackBarService},
@@ -387,8 +379,11 @@ describe('FleetSearchResultsComponent', () => {
       expect(openSpy).not.toHaveBeenCalled();
     });
 
-    it('opens BulkConfigWifiDialog with selected devices and clears selection on update', () => {
+    it('opens BulkConfigWifiDialog with selected devices and clears selection on update', async () => {
       mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
       const openSpy = spyOn(
         (component as unknown as {dialog: MatDialog}).dialog,
         'open',
@@ -410,8 +405,6 @@ describe('FleetSearchResultsComponent', () => {
               {deviceId: 'dev-1', hostName: 'host-for-dev-1'},
               {deviceId: 'dev-2', hostName: 'host-for-dev-2'},
             ],
-            universe: 'google_1p',
-            fleet: Fleet.FLEET_SELF,
           },
         }),
       );
@@ -431,8 +424,11 @@ describe('FleetSearchResultsComponent', () => {
       expect(openSpy).not.toHaveBeenCalled();
     });
 
-    it('does not clear selection or re-execute search when dialog is closed without update', () => {
+    it('does not clear selection or re-execute search when dialog is closed without update', async () => {
       mockStore.selectedItems.set(toSelectedMap(['dev-1']));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
       spyOn(
         (component as unknown as {dialog: MatDialog}).dialog,
         'open',
@@ -449,8 +445,11 @@ describe('FleetSearchResultsComponent', () => {
       expect(mockStore.executeSearch).not.toHaveBeenCalled();
     });
 
-    it('does not clear selection or re-execute search when dialog returns updated: false', () => {
+    it('does not clear selection or re-execute search when dialog returns updated: false', async () => {
       mockStore.selectedItems.set(toSelectedMap(['dev-1']));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
       spyOn(
         (component as unknown as {dialog: MatDialog}).dialog,
         'open',
@@ -488,7 +487,7 @@ describe('FleetSearchResultsComponent', () => {
       expect(dimConfig.isLoading).toBeFalse();
     });
 
-    it('keeps Configure Wi-Fi visible and hides Configuration button when GetConfigurableDimensionsResponse.enabled is false', async () => {
+    it('hides Configure Wi-Fi and Configuration buttons when GetConfigurableDimensionsResponse.enabled is false', async () => {
       mockConfigService.getConfigurableDimensions.and.returnValue(
         of({
           enabled: false,
@@ -510,8 +509,78 @@ describe('FleetSearchResultsComponent', () => {
       const buttonTexts = buttons.map((b) =>
         b.nativeElement.textContent.trim(),
       );
-      expect(buttonTexts.some((t) => t.includes('Configure Wi-Fi'))).toBeTrue();
+      expect(
+        buttonTexts.some((t) => t.includes('Configure Wi-Fi')),
+      ).toBeFalse();
       expect(buttonTexts.some((t) => t.includes('Configuration'))).toBeFalse();
+    });
+
+    it('hides Configure Wi-Fi and Configuration buttons when GetConfigurableDimensionsResponse.enabled is omitted', async () => {
+      mockConfigService.getConfigurableDimensions.and.returnValue(
+        of({
+          dimensions: [],
+          allowCustomDimensions: false,
+        }),
+      );
+
+      mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
+      mockStore.entity.set('devices');
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.bulkConfig.dimensionConfig().enabled).toBeFalse();
+      const buttons = fixture.debugElement.queryAll(
+        By.css('.rt-toolbar button'),
+      );
+      const buttonTexts = buttons.map((b) =>
+        b.nativeElement.textContent.trim(),
+      );
+      expect(
+        buttonTexts.some((t) => t.includes('Configure Wi-Fi')),
+      ).toBeFalse();
+      expect(buttonTexts.some((t) => t.includes('Configuration'))).toBeFalse();
+
+      const openSpy = spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      );
+      component.bulkConfig.openWifiDialog();
+      component.bulkConfig.openDimensionDialog('supported');
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    it('hides Configure Wi-Fi and Configuration buttons without fetching on Partner ATS fleet', async () => {
+      mockStore.fleet.set('ats');
+      mockStore.entity.set('devices');
+      mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(
+        mockConfigService.getConfigurableDimensions,
+      ).not.toHaveBeenCalled();
+      expect(component.bulkConfig.dimensionConfig().enabled).toBeFalse();
+
+      const buttons = fixture.debugElement.queryAll(
+        By.css('.rt-toolbar button'),
+      );
+      const buttonTexts = buttons.map((b) =>
+        b.nativeElement.textContent.trim(),
+      );
+      expect(
+        buttonTexts.some((t) => t.includes('Configure Wi-Fi')),
+      ).toBeFalse();
+      expect(buttonTexts.some((t) => t.includes('Configuration'))).toBeFalse();
+
+      const openSpy = spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      );
+      component.bulkConfig.openWifiDialog();
+      component.bulkConfig.openDimensionDialog('supported');
+      expect(openSpy).not.toHaveBeenCalled();
     });
 
     it('disables button and displays loading state during dimension loading', async () => {
@@ -525,6 +594,25 @@ describe('FleetSearchResultsComponent', () => {
       expect(mockConfigService.getConfigurableDimensions).toHaveBeenCalledTimes(
         1,
       );
+
+      const loadingButtons = fixture.debugElement.queryAll(
+        By.css('.rt-toolbar button'),
+      );
+      const wifiBtnLoading = loadingButtons.find((b) =>
+        b.nativeElement.textContent.includes('Configure Wi-Fi'),
+      );
+      const configBtnLoading = loadingButtons.find((b) =>
+        b.nativeElement.textContent.includes('Configuration'),
+      );
+      expect(wifiBtnLoading?.nativeElement.disabled).toBeTrue();
+      expect(configBtnLoading?.nativeElement.disabled).toBeTrue();
+
+      const openSpy = spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      );
+      component.bulkConfig.openWifiDialog();
+      expect(openSpy).not.toHaveBeenCalled();
 
       // Updating selection while already loading for the same context does not re-trigger fetch
       mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
@@ -544,9 +632,20 @@ describe('FleetSearchResultsComponent', () => {
 
       expect(component.bulkConfig.dimensionConfig().isLoading).toBeFalse();
       expect(component.bulkConfig.dimensionConfig().allowCustom).toBeTrue();
+      const loadedButtons = fixture.debugElement.queryAll(
+        By.css('.rt-toolbar button'),
+      );
+      const wifiBtnLoaded = loadedButtons.find((b) =>
+        b.nativeElement.textContent.includes('Configure Wi-Fi'),
+      );
+      const configBtnLoaded = loadedButtons.find((b) =>
+        b.nativeElement.textContent.includes('Configuration'),
+      );
+      expect(wifiBtnLoaded?.nativeElement.disabled).toBeFalse();
+      expect(configBtnLoaded?.nativeElement.disabled).toBeFalse();
     });
 
-    it('does not re-fetch dimensions if already loaded for the same fleet, but invalidates and re-fetches when fleet changes', async () => {
+    it('retains loaded dimensions across selection changes and tab switches without re-fetching', async () => {
       mockStore.selectedItems.set(toSelectedMap(['dev-1']));
       fixture.detectChanges();
       await fixture.whenStable();
@@ -563,7 +662,7 @@ describe('FleetSearchResultsComponent', () => {
         1,
       );
 
-      // Clearing selection and re-selecting in the same fleet does not re-fetch
+      // Clearing selection and re-selecting on own fleet does not re-fetch
       mockStore.selectedItems.set(new Map());
       fixture.detectChanges();
       mockStore.selectedItems.set(toSelectedMap(['dev-2']));
@@ -574,14 +673,25 @@ describe('FleetSearchResultsComponent', () => {
         1,
       );
 
-      // Switching fleet invalidates cached dimensions and automatically re-fetches via effect
+      // Switching to Partner ATS fleet hides bulk config without calling backend again
       mockStore.fleet.set('ats');
       fixture.detectChanges();
       await fixture.whenStable();
       fixture.detectChanges();
       expect(mockConfigService.getConfigurableDimensions).toHaveBeenCalledTimes(
-        2,
+        1,
       );
+      expect(component.bulkConfig.dimensionConfig().enabled).toBeFalse();
+
+      // Returning to own fleet restores cached dimensions without re-fetching
+      mockStore.fleet.set('internal');
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
+      expect(mockConfigService.getConfigurableDimensions).toHaveBeenCalledTimes(
+        1,
+      );
+      expect(component.bulkConfig.dimensionConfig().enabled).toBeTrue();
       expect(component.bulkConfig.dimensionConfig().dimensions.length).toBe(1);
     });
 
@@ -600,6 +710,19 @@ describe('FleetSearchResultsComponent', () => {
       expect(component.bulkConfig.dimensionConfig().isLoading).toBeFalse();
       expect(component.bulkConfig.dimensionConfig().error).toBe('Service down');
       expect(component.bulkConfig.dimensionConfig().dimensions).toEqual([]);
+      const errorButtons = fixture.debugElement.queryAll(
+        By.css('.rt-toolbar button'),
+      );
+      const wifiBtnError = errorButtons.find((b) =>
+        b.nativeElement.textContent.includes('Configure Wi-Fi'),
+      );
+      expect(wifiBtnError?.nativeElement.disabled).toBeTrue();
+      const openSpy = spyOn(
+        (component as unknown as {dialog: MatDialog}).dialog,
+        'open',
+      );
+      component.bulkConfig.openWifiDialog();
+      expect(openSpy).not.toHaveBeenCalled();
 
       mockConfigService.getConfigurableDimensions.and.returnValue(
         of({
@@ -623,8 +746,11 @@ describe('FleetSearchResultsComponent', () => {
       expect(component.bulkConfig.dimensionConfig().dimensions.length).toBe(1);
     });
 
-    it('opens BulkConfigDimensionDialog with selected devices and dimension', () => {
+    it('opens BulkConfigDimensionDialog with selected devices and dimension', async () => {
       mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
       const openSpy = spyOn(
         (component as unknown as {dialog: MatDialog}).dialog,
         'open',
@@ -659,8 +785,11 @@ describe('FleetSearchResultsComponent', () => {
       expect(mockStore.executeSearch).toHaveBeenCalled();
     });
 
-    it('opens BulkConfigDimensionDialog with custom dimension list', () => {
+    it('opens BulkConfigDimensionDialog with custom dimension list', async () => {
       mockStore.selectedItems.set(toSelectedMap(['dev-1']));
+      fixture.detectChanges();
+      await fixture.whenStable();
+      fixture.detectChanges();
       const openSpy = spyOn(
         (component as unknown as {dialog: MatDialog}).dialog,
         'open',
@@ -767,9 +896,11 @@ describe('FleetSearchResultsComponent', () => {
       expect(openSpy).toHaveBeenCalled();
     });
 
-    it('clicks Configure Wi-Fi button in selection toolbar and opens dialog', () => {
+    it('clicks Configure Wi-Fi button in selection toolbar and opens dialog', async () => {
       mockStore.selectedItems.set(toSelectedMap(['dev-1', 'dev-2']));
       mockStore.entity.set('devices');
+      fixture.detectChanges();
+      await fixture.whenStable();
       fixture.detectChanges();
 
       const openSpy = spyOn(

@@ -319,8 +319,6 @@ export class BulkConfigDimensionDialog {
         this.configService.batchGetConfigurableDimensionKeys({
           devices: this.dialogData.devices,
           dimensionList: this.dimensionList,
-          universe: this.dialogData.universe,
-          fleet: this.dialogData.fleet,
         }),
       (res) => {
         this.candidateKeys.set(
@@ -397,8 +395,6 @@ export class BulkConfigDimensionDialog {
         this.configService.getDimensionValueSuggestions({
           dimensionName: this.dimensionKey(),
           dimensionList: this.dimensionList,
-          universe: this.dialogData.universe,
-          fleet: this.dialogData.fleet,
         }),
       (suggestions) => {
         const rows = (suggestions.candidateValues ?? []).map((s) => ({
@@ -511,8 +507,6 @@ export class BulkConfigDimensionDialog {
           dimensionName: this.dimensionKey(),
           dimensionList: this.dimensionList,
           target: this.targetDimensionValues(),
-          universe: this.dialogData.universe,
-          fleet: this.dialogData.fleet,
         }),
       'Failed to check device dimension status',
       'Checking device dimension configurations…',
@@ -544,8 +538,6 @@ export class BulkConfigDimensionDialog {
           dimensionName: this.dimensionKey(),
           dimensionList: this.dimensionList,
           target: this.targetDimensionValues(),
-          universe: this.dialogData.universe,
-          fleet: this.dialogData.fleet,
         }),
       'Server error while applying dimension update',
     );
