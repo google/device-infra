@@ -368,6 +368,11 @@ message TimeBreakdown {
     TestTimeline test_timeline = 6;
     JobTimeline job_timeline = 7;
   }
+
+  // Whether the test or job is still running. Its timeline then runs up to the
+  // time the response was built and keeps changing, so the client fetches it
+  // again until this is false.
+  bool live = 8;
 }
 
 // Representing a single error with its trace.
