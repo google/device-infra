@@ -145,6 +145,8 @@ public final class DeviceHealthTest {
             DeviceHealth.of(device(DeviceStatus.IDLE, "AndroidRealDevice", "DisconnectedDevice"))
                 .state())
         .isEqualTo(State.NEEDS_MANUAL_REPAIR);
+    assertThat(DeviceHealth.of(device(DeviceStatus.IDLE, "AndroidRecoveryDevice")).state())
+        .isEqualTo(State.NEEDS_MANUAL_REPAIR);
     assertThat(DeviceHealth.of(device(DeviceStatus.IDLE)).title()).isEqualTo("Needs Manual Repair");
     assertThat(DeviceHealth.of(device(DeviceStatus.BUSY)).state())
         .isEqualTo(State.NEEDS_MANUAL_REPAIR);
@@ -173,6 +175,7 @@ public final class DeviceHealthTest {
     assertThat(DeviceHealth.isTypeAbnormal("DisconnectedDevice")).isTrue();
     assertThat(DeviceHealth.isTypeAbnormal("failedAndroidDevice")).isTrue();
     assertThat(DeviceHealth.isTypeAbnormal("AndroidFastbootDevice")).isTrue();
+    assertThat(DeviceHealth.isTypeAbnormal("AndroidRecoveryDevice")).isTrue();
     assertThat(DeviceHealth.isTypeAbnormal("AndroidRealDevice")).isFalse();
   }
 
