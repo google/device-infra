@@ -4,11 +4,7 @@ import {By} from '@angular/platform-browser';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
 
-import {
-  JobTestLane,
-  TestTimelineSubTestRow,
-  TimeBreakdown,
-} from '../../../core/models/timeline';
+import {JobTestLane, TimeBreakdown} from '../../../core/models/timeline';
 import {TimelineChart} from './timeline_chart';
 
 @Component({
@@ -228,24 +224,6 @@ describe('TimelineChart Component', () => {
                   durationText: '18.0s',
                 },
               ],
-              subTests: Array.from(
-                {length: 14},
-                (_, idx): TestTimelineSubTestRow => ({
-                  name: `case_${idx + 1}`,
-                  resultTone:
-                    idx === 13
-                      ? 'TIMELINE_RESULT_TONE_FAIL'
-                      : 'TIMELINE_RESULT_TONE_PASS',
-                  resultLabel: idx === 13 ? 'Fail' : 'Pass',
-                  durationText: '1.0s',
-                  bar: {
-                    startTime: '2026-06-08T03:00:16Z',
-                    endTime: '2026-06-08T03:00:17Z',
-                    leftPercent: 40 + idx * 2,
-                    widthPercent: 2,
-                  },
-                }),
-              ),
             },
           ],
         },
@@ -323,7 +301,7 @@ describe('TimelineChart Component', () => {
     );
   });
 
-  it('renders test timeline summary, split bar, ended step error, and multi-bar and sub-test tooltips', () => {
+  it('renders test timeline summary, split bar, ended step error, and multi-bar tooltips', () => {
     host.timingBreakdown.set(mockTestBreakdown);
     fixture.detectChanges();
 
@@ -359,7 +337,7 @@ describe('TimelineChart Component', () => {
     // Hovering a multi-bar step row renders Part 1 and Part 2 tooltip rows and clamps near viewport edge.
     const stepRows = Array.from(
       el.querySelectorAll(
-        '.tl-table .tl-row:not(.tl-row--phase):not(.tl-row--sub):not(.tl-row--group)',
+        '.tl-table .tl-row:not(.tl-row--phase):not(.tl-row--group)',
       ),
     ) as HTMLElement[];
     const multiBarRow = stepRows.find((r) =>
@@ -374,22 +352,12 @@ describe('TimelineChart Component', () => {
     expect(tipText).toContain('Part 2');
     expect(tipText).toContain('Transfers test artifacts to the lab.');
 
-    // Hovering a sub-test row opens the sub-test tooltip.
-    const firstSubTestRow = el.querySelector('.tl-row--sub') as HTMLElement;
-    firstSubTestRow.dispatchEvent(
-      new MouseEvent('mouseenter', {clientX: 150, clientY: 180}),
-    );
-    fixture.detectChanges();
-    expect(el.querySelector('.tl-tip .tl-tip-title')?.textContent).toBe(
-      'case_1',
-    );
-
-    firstSubTestRow.dispatchEvent(new MouseEvent('mouseleave'));
+    multiBarRow.dispatchEvent(new MouseEvent('mouseleave'));
     fixture.detectChanges();
     expect(el.querySelector('.tl-tip')).toBeNull();
   });
 
-  it('supports collapsible phases, decorator pairing, sub-test cap, keyboard toggling, and linkedSignal resets', () => {
+  it('supports collapsible phases, decorator pairing, keyboard toggling, and linkedSignal resets', () => {
     host.timingBreakdown.set(mockTestBreakdown);
     fixture.detectChanges();
 
@@ -398,7 +366,7 @@ describe('TimelineChart Component', () => {
     // Hovering a decorator setup row pairs with its teardown counterpart via pairKey.
     const stepRows = Array.from(
       el.querySelectorAll(
-        '.tl-table .tl-row:not(.tl-row--phase):not(.tl-row--sub):not(.tl-row--group)',
+        '.tl-table .tl-row:not(.tl-row--phase):not(.tl-row--group)',
       ),
     ) as HTMLElement[];
     const decoratorSetupRow = stepRows.find((r) =>
@@ -409,24 +377,6 @@ describe('TimelineChart Component', () => {
     );
     fixture.detectChanges();
     expect(el.querySelectorAll('.tl-row--paired').length).toBe(2);
-
-    // Sub-test cap shows 12 initially, then expands to all 14 on Enter keydown and collapses on Space.
-    expect(el.querySelectorAll('.tl-row--sub').length).toBe(12);
-    const subToggle = Array.from(
-      el.querySelectorAll('.tl-row--group:not(.tl-row--phase)'),
-    )[0] as HTMLElement;
-    expect(subToggle.textContent).toContain('2 more sub-tests');
-    subToggle.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter'}));
-    fixture.detectChanges();
-    expect(el.querySelectorAll('.tl-row--sub').length).toBe(14);
-    expect(subToggle.textContent).toContain('Show fewer sub-tests');
-
-    subToggle.dispatchEvent(new KeyboardEvent('keydown', {key: ' '}));
-    fixture.detectChanges();
-    expect(el.querySelectorAll('.tl-row--sub').length).toBe(12);
-    subToggle.click();
-    fixture.detectChanges();
-    expect(component.expandedSubTestRowKeys().size).toBe(1);
 
     // Phase header toggles via click, Enter, and Space.
     const setupPhaseHeader = el.querySelectorAll(
@@ -459,7 +409,6 @@ describe('TimelineChart Component', () => {
       'Updates every 30 seconds while the test runs.',
     );
     expect(component.collapsedPhaseIds().size).toBe(1);
-    expect(component.expandedSubTestRowKeys().size).toBe(1);
     expect(component.pairedKey()).toBeNull();
     expect(component.focusedKey()).toBeNull();
     expect(component.activeTooltip()).toBeNull();
@@ -471,7 +420,6 @@ describe('TimelineChart Component', () => {
     });
     fixture.detectChanges();
     expect(component.collapsedPhaseIds().size).toBe(0);
-    expect(component.expandedSubTestRowKeys().size).toBe(0);
   });
 
   it('renders job timeline with Job setup inner bar, linked and unrecorded lanes, tooltips, and 40-lane cap toggle', () => {
