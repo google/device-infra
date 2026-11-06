@@ -16,11 +16,16 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.shared.providers;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.Futures.immediateVoidFuture;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.FluentFuture;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -37,6 +42,7 @@ import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.DeviceConfigStub;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import javax.inject.Inject;
 
@@ -114,6 +120,7 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
   }
 
   private static final String CLIENT = "mobileharness-fe";
+  static final int MAX_UPDATE_BATCH_SIZE = 100;
 
   @Override
   public ListenableFuture<Void> updateDeviceConfig(
@@ -150,6 +157,65 @@ public class ConfigurationProviderImpl implements ConfigurationProvider {
           return null;
         },
         executor);
+  }
+
+  @Override
+  public ListenableFuture<Map<String, String>> updateDeviceConfigs(
+      Map<String, DeviceConfig> deviceConfigs, UniverseScope universe) {
+    if (deviceConfigs.isEmpty()
+        || !configServiceCapabilityFactory.create(universe).isConfigServiceAvailable()) {
+      return immediateFuture(ImmutableMap.of());
+    }
+    List<List<Map.Entry<String, DeviceConfig>>> chunks =
+        Lists.partition(ImmutableList.copyOf(deviceConfigs.entrySet()), MAX_UPDATE_BATCH_SIZE);
+    ListenableFuture<ImmutableMap<String, String>> result = immediateFuture(ImmutableMap.of());
+    for (List<Map.Entry<String, DeviceConfig>> chunk : chunks) {
+      result =
+          Futures.transformAsync(
+              result,
+              accumulatedErrors ->
+                  Futures.transform(
+                      updateDeviceConfigsChunk(chunk),
+                      chunkErrors ->
+                          ImmutableMap.<String, String>builder()
+                              .putAll(accumulatedErrors)
+                              .putAll(chunkErrors)
+                              .buildKeepingLast(),
+                      directExecutor()),
+              executor);
+    }
+    return Futures.transform(result, map -> map, directExecutor());
+  }
+
+  private ListenableFuture<Map<String, String>> updateDeviceConfigsChunk(
+      List<Map.Entry<String, DeviceConfig>> chunk) {
+    UpdateDeviceConfigsRequest.Builder requestBuilder =
+        UpdateDeviceConfigsRequest.newBuilder().setClient(CLIENT);
+    for (Map.Entry<String, DeviceConfig> entry : chunk) {
+      requestBuilder.addDeviceLocatorConfig(
+          DeviceLocatorConfigPair.newBuilder()
+              .setDeviceLocator(DeviceLocator.newBuilder().setDeviceUuid(entry.getKey()))
+              .setDeviceConfig(entry.getValue()));
+    }
+    return FluentFuture.from(
+            deviceConfigStub.updateDeviceConfigsAsync(
+                requestBuilder.build(), useClientRpcAuthority))
+        .transform(response -> response.getErrorMessageMap(), executor)
+        .catching(
+            Throwable.class,
+            t -> {
+              logger.atWarning().withCause(t).log(
+                  "Failed to update device config chunk of %d devices", chunk.size());
+              String message =
+                  t.getMessage() != null && !t.getMessage().isEmpty()
+                      ? t.getMessage()
+                      : "Failed to update device configuration.";
+              return chunk.stream()
+                  .collect(
+                      toImmutableMap(
+                          Map.Entry::getKey, entry -> message, (first, second) -> first));
+            },
+            executor);
   }
 
   @Override

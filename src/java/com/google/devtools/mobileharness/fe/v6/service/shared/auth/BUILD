@@ -24,6 +24,7 @@ java_library(
     name = "auth",
     srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/config/util:config_util",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/util",

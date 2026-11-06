@@ -247,7 +247,11 @@ public class DeviceDataLoader {
         executor);
   }
 
-  private static boolean isHostManaged(LabConfig labConfig) {
+  /**
+   * Returns whether {@code labConfig} manages all devices of its host through the host's default
+   * device config.
+   */
+  public static boolean isHostManaged(LabConfig labConfig) {
     return labConfig.getHostProperties().getHostPropertyList().stream()
         .anyMatch(p -> p.getKey().equals("device_config_mode") && p.getValue().equals("host"));
   }

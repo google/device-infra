@@ -17,14 +17,17 @@
 package com.google.devtools.mobileharness.fe.v6.service.shared.providers;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.DeviceConfigServiceProto.GetDeviceConfigsResponse;
@@ -39,6 +42,8 @@ import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigService
 import com.google.devtools.mobileharness.fe.v6.service.util.Environment;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import com.google.devtools.mobileharness.service.deviceconfig.rpc.stub.DeviceConfigStub;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import org.junit.Before;
 import org.junit.Rule;
@@ -90,8 +95,7 @@ public final class ConfigurationProviderImplTest {
         configurationProvider.getDeviceConfig("device_id", UNIVERSE).get();
 
     assertThat(result.isAvailable()).isTrue();
-    assertThat(result.config()).isPresent();
-    assertThat(result.config().get()).isEqualTo(deviceConfig);
+    assertThat(result.config()).hasValue(deviceConfig);
   }
 
   @Test
@@ -106,8 +110,7 @@ public final class ConfigurationProviderImplTest {
         configurationProvider.getLabConfig("host_name", UNIVERSE).get();
 
     assertThat(result.isAvailable()).isTrue();
-    assertThat(result.config()).isPresent();
-    assertThat(result.config().get()).isEqualTo(labConfig);
+    assertThat(result.config()).hasValue(labConfig);
   }
 
   @Test
@@ -215,5 +218,125 @@ public final class ConfigurationProviderImplTest {
     assertThat(thrown).hasCauseThat().isInstanceOf(IllegalStateException.class);
     assertThat(thrown).hasCauseThat().hasMessageThat().contains(deviceId);
     assertThat(thrown).hasCauseThat().hasMessageThat().contains("invalid owner: bad_user");
+  }
+
+  @Test
+  public void updateDeviceConfigs_returnsErrorMessageMap() throws Exception {
+    DeviceConfig config1 = DeviceConfig.newBuilder().setUuid("dev1").build();
+    DeviceConfig config2 = DeviceConfig.newBuilder().setUuid("dev2").build();
+    UpdateDeviceConfigsResponse response =
+        UpdateDeviceConfigsResponse.newBuilder().putErrorMessage("dev2", "failed to save").build();
+    when(deviceConfigStub.updateDeviceConfigsAsync(any(), eq(false)))
+        .thenReturn(immediateFuture(response));
+
+    Map<String, String> errors =
+        configurationProvider
+            .updateDeviceConfigs(ImmutableMap.of("dev1", config1, "dev2", config2), UNIVERSE)
+            .get();
+
+    assertThat(errors).containsExactly("dev2", "failed to save");
+    ArgumentCaptor<UpdateDeviceConfigsRequest> captor =
+        ArgumentCaptor.forClass(UpdateDeviceConfigsRequest.class);
+    verify(deviceConfigStub).updateDeviceConfigsAsync(captor.capture(), eq(false));
+    assertThat(captor.getValue().getDeviceLocatorConfigList()).hasSize(2);
+    assertThat(captor.getValue().getClient()).isEqualTo("mobileharness-fe");
+  }
+
+  @Test
+  public void updateDeviceConfigs_emptyOrUnavailable_returnsEmptyMap() throws Exception {
+    assertThat(configurationProvider.updateDeviceConfigs(ImmutableMap.of(), UNIVERSE).get())
+        .isEmpty();
+
+    when(configServiceCapability.isConfigServiceAvailable()).thenReturn(false);
+    DeviceConfig config1 = DeviceConfig.newBuilder().setUuid("dev1").build();
+    assertThat(
+            configurationProvider
+                .updateDeviceConfigs(ImmutableMap.of("dev1", config1), UNIVERSE)
+                .get())
+        .isEmpty();
+  }
+
+  @Test
+  public void googleInternalWrites_propagateClientRpcAuthorityAndChunkLargeBatches()
+      throws Exception {
+    when(environment.isGoogleInternal()).thenReturn(true);
+    ConfigurationProviderImpl internalProvider =
+        new ConfigurationProviderImpl(
+            deviceConfigStub, executor, configServiceCapabilityFactory, environment);
+
+    int totalDevices = ConfigurationProviderImpl.MAX_UPDATE_BATCH_SIZE + 5;
+    Map<String, DeviceConfig> largeBatch = new LinkedHashMap<>();
+    for (int i = 0; i < totalDevices; i++) {
+      String id = "dev" + i;
+      largeBatch.put(id, DeviceConfig.newBuilder().setUuid(id).build());
+    }
+    when(deviceConfigStub.updateDeviceConfigsAsync(any(), eq(true)))
+        .thenAnswer(
+            invocation -> {
+              UpdateDeviceConfigsRequest req = invocation.getArgument(0);
+              UpdateDeviceConfigsResponse.Builder builder =
+                  UpdateDeviceConfigsResponse.newBuilder();
+              if (req.getDeviceLocatorConfigCount() == 5) {
+                builder.putErrorMessage("dev104", "second chunk failure");
+              }
+              return immediateFuture(builder.build());
+            });
+    when(deviceConfigStub.updateLabConfigAsync(any(), eq(true)))
+        .thenReturn(immediateFuture(UpdateLabConfigResponse.getDefaultInstance()));
+
+    Map<String, String> errors = internalProvider.updateDeviceConfigs(largeBatch, UNIVERSE).get();
+    internalProvider.updateLabConfig("host1", LabConfig.getDefaultInstance(), UNIVERSE).get();
+
+    assertThat(errors).containsExactly("dev104", "second chunk failure");
+    ArgumentCaptor<UpdateDeviceConfigsRequest> captor =
+        ArgumentCaptor.forClass(UpdateDeviceConfigsRequest.class);
+    verify(deviceConfigStub, times(2)).updateDeviceConfigsAsync(captor.capture(), eq(true));
+    assertThat(captor.getAllValues().get(0).getDeviceLocatorConfigCount())
+        .isEqualTo(ConfigurationProviderImpl.MAX_UPDATE_BATCH_SIZE);
+    assertThat(captor.getAllValues().get(1).getDeviceLocatorConfigCount()).isEqualTo(5);
+    verify(deviceConfigStub).updateLabConfigAsync(any(), eq(true));
+  }
+
+  @Test
+  public void updateDeviceConfigs_chunkRpcFailure_preservesEarlierAndContinuesLaterChunks()
+      throws Exception {
+    int chunkSize = ConfigurationProviderImpl.MAX_UPDATE_BATCH_SIZE;
+    int totalDevices = 2 * chunkSize + 3;
+    Map<String, DeviceConfig> largeBatch = new LinkedHashMap<>();
+    for (int i = 0; i < totalDevices; i++) {
+      String id = "dev" + i;
+      largeBatch.put(id, DeviceConfig.newBuilder().setUuid(id).build());
+    }
+    when(deviceConfigStub.updateDeviceConfigsAsync(any(), eq(false)))
+        .thenAnswer(
+            invocation -> {
+              UpdateDeviceConfigsRequest req = invocation.getArgument(0);
+              String firstUuid = req.getDeviceLocatorConfig(0).getDeviceLocator().getDeviceUuid();
+              if (firstUuid.equals("dev" + chunkSize)) {
+                return immediateFailedFuture(new RuntimeException("chunk 2 deadline exceeded"));
+              }
+              if (firstUuid.equals("dev0")) {
+                return immediateFuture(
+                    UpdateDeviceConfigsResponse.newBuilder()
+                        .putErrorMessage("dev0", "chunk 1 validation error")
+                        .build());
+              }
+              return immediateFuture(
+                  UpdateDeviceConfigsResponse.newBuilder()
+                      .putErrorMessage("dev" + (2 * chunkSize + 2), "chunk 3 storage error")
+                      .build());
+            });
+
+    Map<String, String> errors =
+        configurationProvider.updateDeviceConfigs(largeBatch, UNIVERSE).get();
+
+    verify(deviceConfigStub, times(3)).updateDeviceConfigsAsync(any(), eq(false));
+    Map<String, String> expectedErrors = new LinkedHashMap<>();
+    expectedErrors.put("dev0", "chunk 1 validation error");
+    for (int i = chunkSize; i < 2 * chunkSize; i++) {
+      expectedErrors.put("dev" + i, "chunk 2 deadline exceeded");
+    }
+    expectedErrors.put("dev" + (2 * chunkSize + 2), "chunk 3 storage error");
+    assertThat(errors).containsExactlyEntriesIn(expectedErrors);
   }
 }

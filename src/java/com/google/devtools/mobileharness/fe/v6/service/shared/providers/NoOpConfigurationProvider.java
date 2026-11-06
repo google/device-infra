@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceCon
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
 import java.util.List;
+import java.util.Map;
 
 /** No-op implementation of {@link ConfigurationProvider}. */
 public class NoOpConfigurationProvider implements ConfigurationProvider {
@@ -50,6 +51,13 @@ public class NoOpConfigurationProvider implements ConfigurationProvider {
   @Override
   public ListenableFuture<Void> updateDeviceConfig(
       String deviceId, DeviceConfig deviceConfig, UniverseScope universe) {
+    return immediateFailedFuture(
+        new UnsupportedOperationException("NoOpConfigurationProvider does not support updates"));
+  }
+
+  @Override
+  public ListenableFuture<Map<String, String>> updateDeviceConfigs(
+      Map<String, DeviceConfig> deviceConfigs, UniverseScope universe) {
     return immediateFailedFuture(
         new UnsupportedOperationException("NoOpConfigurationProvider does not support updates"));
   }
