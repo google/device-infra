@@ -39,9 +39,11 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.fe.v6.service.config.util.ConfigPusherHelper;
@@ -62,6 +64,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.config.GetWifiSugge
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.TargetDeviceWifi;
 import com.google.devtools.mobileharness.fe.v6.service.proto.config.UpdateError;
 import com.google.devtools.mobileharness.fe.v6.service.shared.auth.IamPermissionChecker;
+import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigResult;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.ConfigurationProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.LabInfoProvider;
 import com.google.devtools.mobileharness.fe.v6.service.shared.providers.WifiCredentialsStore;
@@ -91,6 +94,8 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
+// Tests 1P device-level BasicDeviceConfig.default_wifi alongside ATS LabConfig.wifi_config.
+@SuppressWarnings("deprecation")
 @RunWith(JUnit4.class)
 public final class BatchWifiConfigHandlersTest {
 
@@ -261,6 +266,108 @@ public final class BatchWifiConfigHandlersTest {
     assertThat(response.getCandidateWifis(3).getWifi().getPsk()).isEqualTo("pskB");
     assertThat(response.getCandidateWifis(3).getWifi().getScanSsid()).isTrue();
     assertThat(response.getCandidateWifis(3).getFleetInUse().getDeviceCount()).isEqualTo(1);
+  }
+
+  @Test
+  public void getWifiSuggestions_ats_aggregatesHostWifiConfigsIncludingZeroDeviceHosts()
+      throws Exception {
+    when(environment.isGoogleInternal()).thenReturn(false);
+    when(environment.isAts()).thenReturn(true);
+
+    GetLabInfoResponse labInfoResponse =
+        GetLabInfoResponse.newBuilder()
+            .setLabQueryResult(
+                LabQueryResult.newBuilder()
+                    .setLabView(
+                        LabView.newBuilder()
+                            .addLabData(
+                                LabData.newBuilder()
+                                    .setLabInfo(
+                                        LabInfo.newBuilder()
+                                            .setLabLocator(
+                                                LabLocator.newBuilder().setHostName("host-1")))
+                                    .setDeviceList(
+                                        DeviceList.newBuilder()
+                                            .addDeviceInfo(
+                                                DeviceInfo.newBuilder()
+                                                    .setDeviceLocator(
+                                                        DeviceLocator.newBuilder().setId("dev1")))
+                                            .addDeviceInfo(
+                                                DeviceInfo.newBuilder()
+                                                    .setDeviceLocator(
+                                                        DeviceLocator.newBuilder().setId("dev2")))))
+                            .addLabData(
+                                LabData.newBuilder()
+                                    .setLabInfo(
+                                        LabInfo.newBuilder()
+                                            .setLabLocator(
+                                                LabLocator.newBuilder().setHostName("host-empty"))))
+                            .addLabData(
+                                LabData.newBuilder()
+                                    .setLabInfo(
+                                        LabInfo.newBuilder()
+                                            .setLabLocator(
+                                                LabLocator.newBuilder().setHostName("host-fail")))
+                                    .setDeviceList(
+                                        DeviceList.newBuilder()
+                                            .addDeviceInfo(
+                                                DeviceInfo.newBuilder()
+                                                    .setDeviceLocator(
+                                                        DeviceLocator.newBuilder()
+                                                            .setId("dev3")))))))
+            .build();
+    when(labInfoProvider.getLabInfoAsync(any(), eq(SELF_UNIVERSE)))
+        .thenReturn(immediateFuture(labInfoResponse));
+
+    LabConfig host1Config =
+        LabConfig.newBuilder()
+            .setHostName("host-1")
+            .setWifiConfig(
+                WifiConfig.newBuilder().setSsid("HostWifiA").setPsk("pskA").setScanSsid(true))
+            .build();
+    LabConfig emptyHostConfig =
+        LabConfig.newBuilder()
+            .setHostName("host-empty")
+            .setWifiConfig(WifiConfig.newBuilder().setSsid("ZeroDevWifi").setPsk("pskZero"))
+            .build();
+    when(configurationProvider.getLabConfig("host-1", SELF_UNIVERSE))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(host1Config))));
+    when(configurationProvider.getLabConfig("host-empty", SELF_UNIVERSE))
+        .thenReturn(immediateFuture(ConfigResult.available(Optional.of(emptyHostConfig))));
+    when(configurationProvider.getLabConfig("host-fail", SELF_UNIVERSE))
+        .thenReturn(immediateFailedFuture(new RuntimeException("RPC failed")));
+
+    DeviceConfig staleDev1 =
+        DeviceConfig.newBuilder()
+            .setUuid("dev1")
+            .setBasicConfig(
+                BasicDeviceConfig.newBuilder()
+                    .setDefaultWifi(WifiConfig.newBuilder().setSsid("StaleDevWifi").setPsk("old")))
+            .build();
+    DeviceConfig fallbackDev3 =
+        DeviceConfig.newBuilder()
+            .setUuid("dev3")
+            .setBasicConfig(
+                BasicDeviceConfig.newBuilder()
+                    .setDefaultWifi(
+                        WifiConfig.newBuilder().setSsid("FallbackWifi").setPsk("pskFallback")))
+            .build();
+    when(configurationProvider.getDeviceConfigs(any(), eq(SELF_UNIVERSE)))
+        .thenReturn(immediateFuture(ImmutableList.of(staleDev1, fallbackDev3)));
+
+    GetWifiSuggestionsResponse response =
+        getWifiSuggestionsHandler
+            .getWifiSuggestions(GetWifiSuggestionsRequest.getDefaultInstance())
+            .get();
+
+    assertThat(response.getCandidateWifisList()).hasSize(3);
+    assertThat(response.getCandidateWifis(0).getWifi().getSsid()).isEqualTo("HostWifiA");
+    assertThat(response.getCandidateWifis(0).getWifi().getScanSsid()).isTrue();
+    assertThat(response.getCandidateWifis(0).getFleetInUse().getDeviceCount()).isEqualTo(2);
+    assertThat(response.getCandidateWifis(1).getWifi().getSsid()).isEqualTo("FallbackWifi");
+    assertThat(response.getCandidateWifis(1).getFleetInUse().getDeviceCount()).isEqualTo(1);
+    assertThat(response.getCandidateWifis(2).getWifi().getSsid()).isEqualTo("ZeroDevWifi");
+    assertThat(response.getCandidateWifis(2).getFleetInUse().getDeviceCount()).isEqualTo(0);
   }
 
   @Test
