@@ -283,7 +283,8 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
   }
 
   private static boolean isUsingMaster(JobInfo job) {
-    return job.properties().getOptional(Job.MASTER_SPEC).orElse("").contains("master");
+    String masterSpec = job.properties().getOptional(Job.MASTER_SPEC).orElse("");
+    return masterSpec.contains("master");
   }
 
   private static boolean isUsingProdMaster(JobInfo job) {
