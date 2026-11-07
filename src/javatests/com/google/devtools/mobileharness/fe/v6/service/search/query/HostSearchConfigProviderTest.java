@@ -81,7 +81,8 @@ public final class HostSearchConfigProviderTest {
             "host_field::host_name",
             "host_field::connectivity",
             "host_field::device_count",
-            "host_property::host_os")
+            "host_property::host_os",
+            "host_field::default_wifi")
         .inOrder();
 
     // The host name is the host identifier column, so it is locked; every other column is

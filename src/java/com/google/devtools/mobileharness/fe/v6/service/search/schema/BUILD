@@ -89,6 +89,16 @@ java_library(
 )
 
 java_library(
+    name = "ats_host_keys",
+    srcs = ["AtsHostKeys.java"],
+    deps = [
+        ":host_keys",
+        ":key_descriptor",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "key_registry",
     srcs = [
         "AtsDeviceKeyRegistry.java",
@@ -98,6 +108,7 @@ java_library(
     ],
     deps = [
         ":ats_device_keys",
+        ":ats_host_keys",
         ":device_info_source",
         ":device_keys",
         ":host_keys",

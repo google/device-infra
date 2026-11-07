@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsDeviceKeys;
+import com.google.devtools.mobileharness.fe.v6.service.search.schema.AtsHostKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.DeviceKeys;
 import com.google.devtools.mobileharness.fe.v6.service.search.schema.HostKeys;
 import org.junit.Test;
@@ -82,7 +83,11 @@ public final class AtsCurationTest {
   @Test
   public void hostFilterByRow_isAtsList() {
     assertThat(curation.hostFilterByRow())
-        .containsExactly(HostKeys.HOST_NAME, HostKeys.CONNECTIVITY, HostKeys.DEVICE_COUNT)
+        .containsExactly(
+            HostKeys.HOST_NAME,
+            HostKeys.CONNECTIVITY,
+            HostKeys.DEVICE_COUNT,
+            AtsHostKeys.DEFAULT_WIFI)
         .inOrder();
   }
 
@@ -92,10 +97,25 @@ public final class AtsCurationTest {
   }
 
   @Test
+  public void hostGroupByCandidates_isAtsList() {
+    assertThat(curation.hostGroupByCandidates())
+        .containsExactly(
+            HostKeys.HOST_NAME,
+            HostKeys.CONNECTIVITY,
+            HostKeys.DEVICE_COUNT,
+            AtsHostKeys.DEFAULT_WIFI)
+        .inOrder();
+  }
+
+  @Test
   public void hostDefaultColumns_isAtsList() {
     assertThat(curation.hostDefaultColumns())
         .containsExactly(
-            HostKeys.HOST_NAME, HostKeys.CONNECTIVITY, HostKeys.DEVICE_COUNT, HostKeys.HOST_OS)
+            HostKeys.HOST_NAME,
+            HostKeys.CONNECTIVITY,
+            HostKeys.DEVICE_COUNT,
+            HostKeys.HOST_OS,
+            AtsHostKeys.DEFAULT_WIFI)
         .inOrder();
   }
 
@@ -108,7 +128,8 @@ public final class AtsCurationTest {
             HostKeys.DEVICE_COUNT,
             HostKeys.HOST_OS,
             HostKeys.LAB_SERVER_VERSION,
-            HostKeys.HOST_IP)
+            HostKeys.HOST_IP,
+            AtsHostKeys.DEFAULT_WIFI)
         .inOrder();
   }
 
