@@ -143,6 +143,7 @@ public class AndroidRealDeviceConstants {
   public static final ImmutableList<String> FEATURES_KEYWORDS =
       ImmutableList.<String>builder()
           .addAll(GMSCORE_FEATURES_PATTERNS)
+          .add("AMATI_EXPERIENCE")
           .add("PIXEL_EXPERIENCE")
           .add("android\\.hardware\\.nfc$")
           .add("android\\.hardware\\.sensor\\.hinge_angle$")
