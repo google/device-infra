@@ -28,7 +28,10 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/parser:xml_parser",
+        "//src/java/com/google/devtools/mobileharness/platform/android/shared/constant:splitters",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )

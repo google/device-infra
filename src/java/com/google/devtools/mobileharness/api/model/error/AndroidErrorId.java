@@ -1030,6 +1030,9 @@ public enum AndroidErrorId implements ErrorId {
   ANDROID_BUNDLETOOL_EXTRACT_PACKAGE_NAME_IO_ERROR(150_904, ErrorType.INFRA_ISSUE),
   ANDROID_BUNDLETOOL_EXTRACT_PACKAGE_NAME_PARSING_ERROR(150_905, ErrorType.CUSTOMER_ISSUE),
 
+  // ApkAnalyzer: 151_001 ~ 151_050
+  ANDROID_APK_ANALYZER_INVALID_INSTRUMENTATION_METADATA(151_001, ErrorType.CUSTOMER_ISSUE),
+
   // ***********************************************************************************************
   // Other Variant Android Platforms: 170_001 ~ 200_000
   // ***********************************************************************************************
