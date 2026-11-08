@@ -16,6 +16,9 @@
 
 package com.google.devtools.mobileharness.fe.v6.service.device.handlers;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.stream.Collectors.joining;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
@@ -26,9 +29,7 @@ import com.google.devtools.mobileharness.fe.v6.service.proto.device.FlashButtonP
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureManagerFactory;
 import com.google.devtools.mobileharness.fe.v6.service.util.FeatureReadiness;
 import com.google.devtools.mobileharness.fe.v6.service.util.UniverseScope;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.stream.Collectors;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -145,8 +146,7 @@ public class FlashButtonBuilder {
    * Formats a list of required dimensions into a comma-separated string of {@code key=value} pairs.
    *
    * <p>If duplicate dimension names exist, it keeps the first one (first come first serve) to avoid
-   * conflicting parameters in the flash command. Uses {@link LinkedHashMap} to maintain insertion
-   * order for predictable output.
+   * conflicting parameters in the flash command. Preserves insertion order for predictable output.
    *
    * <p>Refer to MHFE V5 implementation in:
    * java/com/google/devtools/mobileharness/fe/v5/ui/devicecontrol/remote_control_controller.js:flashDevice
@@ -154,14 +154,13 @@ public class FlashButtonBuilder {
   private static String getRequiredDimensions(List<DeviceDimension> dimensions) {
     return dimensions.stream()
         .collect(
-            Collectors.toMap(
+            toImmutableMap(
                 DeviceDimension::getName,
                 DeviceDimension::getValue,
-                (v1, v2) -> v1, // keep first (deduplication)
-                LinkedHashMap::new))
+                (v1, v2) -> v1)) // keep first (deduplication)
         .entrySet()
         .stream()
         .map(e -> e.getKey() + "=" + e.getValue())
-        .collect(Collectors.joining(","));
+        .collect(joining(","));
   }
 }
