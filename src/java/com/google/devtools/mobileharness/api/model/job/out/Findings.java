@@ -35,7 +35,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.logging.Level;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /**
@@ -238,7 +237,7 @@ public class Findings {
   }
 
   /** Returns all findings with the given severity. */
-  public ImmutableList<Finding> getAll(Severity severity) {
+  public List<Finding> getAll(Severity severity) {
     return findings.stream()
         .filter(finding -> finding.getSeverity().equals(severity))
         .collect(toImmutableList());
@@ -250,7 +249,7 @@ public class Findings {
         .filter(
             finding ->
                 ErrorIdComparator.equal(finding.getDetail().getSummary().getErrorId(), errorId))
-        .collect(Collectors.toList());
+        .collect(toImmutableList());
   }
 
   /** Cleans up all findings. */
