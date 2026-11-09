@@ -260,8 +260,7 @@ public abstract class RetryStrategy implements Serializable {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-      if (obj instanceof Immediate) {
-        Immediate that = (Immediate) obj;
+      if (obj instanceof Immediate that) {
         return numAttempts == that.numAttempts;
       }
       return false;
@@ -322,8 +321,7 @@ public abstract class RetryStrategy implements Serializable {
 
     @Override
     public boolean equals(Object o) {
-      if (o instanceof ExponentialBackoff) {
-        ExponentialBackoff other = (ExponentialBackoff) o;
+      if (o instanceof ExponentialBackoff other) {
         return firstDelay.equals(other.firstDelay)
             && multiplier == other.multiplier
             && numAttempts == other.numAttempts;
@@ -382,8 +380,7 @@ public abstract class RetryStrategy implements Serializable {
 
     @Override
     public boolean equals(@Nullable Object o) {
-      if (o instanceof RetryStrategyWithRandomWaitAndTimeout) {
-        RetryStrategyWithRandomWaitAndTimeout other = (RetryStrategyWithRandomWaitAndTimeout) o;
+      if (o instanceof RetryStrategyWithRandomWaitAndTimeout other) {
         return retryStrategy.equals(other.retryStrategy)
             && randomnessFactor == other.randomnessFactor;
       }
@@ -437,8 +434,7 @@ public abstract class RetryStrategy implements Serializable {
 
     @Override
     public boolean equals(@Nullable Object o) {
-      if (o instanceof Timed) {
-        Timed that = (Timed) o;
+      if (o instanceof Timed that) {
         return this.delay.equals(that.delay) && this.totalRetryTime.equals(that.totalRetryTime);
       }
       return false;
@@ -484,8 +480,7 @@ public abstract class RetryStrategy implements Serializable {
 
     @Override
     public boolean equals(@Nullable Object o) {
-      if (o instanceof ChainedRetryStrategy) {
-        ChainedRetryStrategy other = (ChainedRetryStrategy) o;
+      if (o instanceof ChainedRetryStrategy other) {
         return firstRetryStrategy.equals(other.firstRetryStrategy)
             && secondRetryStrategy.equals(other.secondRetryStrategy);
       }

@@ -69,8 +69,7 @@ public final class RetryExceptionHandlers {
 
     @Override
     public boolean equals(Object obj) {
-      if (obj instanceof ExceptionLogger) {
-        ExceptionLogger o = (ExceptionLogger) obj;
+      if (obj instanceof ExceptionLogger o) {
         return level.equals(o.level);
       }
       return false;

@@ -59,8 +59,8 @@ public class TestSuiteNode extends TestNode {
     for (TestNode node : children) {
       if (node.isTestCase()) {
         numTests++;
-      } else if (node instanceof TestSuiteNode) {
-        numTests += ((TestSuiteNode) node).getNumTests();
+      } else if (node instanceof TestSuiteNode testSuiteNode) {
+        numTests += testSuiteNode.getNumTests();
       }
     }
 

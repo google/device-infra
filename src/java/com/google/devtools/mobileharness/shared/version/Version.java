@@ -101,8 +101,8 @@ public final class Version implements Comparable<Version> {
     if (other == null) {
       return false;
     }
-    if (other instanceof Version) {
-      return this.compareTo((Version) other) == 0;
+    if (other instanceof Version version) {
+      return this.compareTo(version) == 0;
     } else {
       return this.toString().equals(other.toString());
     }
