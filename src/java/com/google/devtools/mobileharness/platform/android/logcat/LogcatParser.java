@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.android.logcat;
 
+import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -31,7 +32,7 @@ public final class LogcatParser {
   private static final Pattern LOGCAT_THREADTIME_PATTERN =
       Pattern.compile(
           // timestamp
-          "^(?<month>\\d{2})-(?<day>\\d{2}) (?<time>\\d{2}:\\d{2}:\\d{2}.\\d{3})\\s+"
+          "^(?<month>\\d{2})-(?<day>\\d{2}) (?<time>\\d{2}:\\d{2}:\\d{2}\\.\\d{3})\\s+"
               +
               // pid tid log_level
               "(?<pid>\\d+)\\s+(?<tid>\\d+)\\s+(?<level>[VDIWEFS])\\s"
@@ -45,29 +46,33 @@ public final class LogcatParser {
   private LogcatParser() {}
 
   public static Optional<LogcatLine> parse(String line) {
-
     Matcher matcher = LOGCAT_THREADTIME_PATTERN.matcher(line);
     if (!matcher.matches()) {
       return Optional.empty();
     }
-    LocalDate date =
-        LocalDate.of(
-            LocalDate.now(ZoneId.systemDefault()).getYear(),
-            Integer.parseInt(matcher.group("month")),
-            Integer.parseInt(matcher.group("day")));
-    LocalTime time = LocalTime.parse(matcher.group("time"), TIME_FORMATTER);
-    LocalDateTime dateTime = time.atDate(date);
+    try {
+      LocalDate date =
+          LocalDate.of(
+              LocalDate.now(ZoneId.systemDefault()).getYear(),
+              Integer.parseInt(matcher.group("month")),
+              Integer.parseInt(matcher.group("day")));
+      LocalTime time = LocalTime.parse(matcher.group("time"), TIME_FORMATTER);
+      LocalDateTime dateTime = time.atDate(date);
+      int pid = Integer.parseInt(matcher.group("pid"));
+      int tid = Integer.parseInt(matcher.group("tid"));
+      Level level = Level.from(matcher.group("level"));
 
-    Level level = Level.from(matcher.group("level"));
-
-    return Optional.of(
-        new LogcatLine(
-            dateTime,
-            level,
-            matcher.group("tag").trim(), /* Tags are padded with spaces if tag length < 8 */
-            Integer.parseInt(matcher.group("pid")),
-            Integer.parseInt(matcher.group("tid")),
-            matcher.group("message")));
+      return Optional.of(
+          new LogcatLine(
+              dateTime,
+              level,
+              matcher.group("tag").trim(), /* Tags are padded with spaces if tag length < 8 */
+              pid,
+              tid,
+              matcher.group("message")));
+    } catch (DateTimeException | NumberFormatException e) {
+      return Optional.empty();
+    }
   }
 
   /** Log levels indicated in each logcat line. */

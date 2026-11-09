@@ -16,7 +16,11 @@
 
 package com.google.devtools.mobileharness.platform.android.logcat;
 
+import static java.util.concurrent.TimeUnit.MINUTES;
+
 import com.google.common.collect.ImmutableList;
+import com.google.common.flogger.FluentLogger;
+import com.google.common.flogger.LogPerBucketingStrategy;
 import com.google.devtools.mobileharness.platform.android.logcat.LogcatParser.LogcatLine;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import java.util.ArrayList;
@@ -25,6 +29,8 @@ import java.util.Optional;
 
 /** Proxy class to parse logcat lines and pass them to registered line processors. */
 public class LogcatLineProxy implements LineCallback {
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   private final List<LineProcessor> lineProcessors = new ArrayList<>();
   private final List<String> unparsedLines = new ArrayList<>();
 
@@ -37,8 +43,18 @@ public class LogcatLineProxy implements LineCallback {
       unparsedLines.add(line);
       return Response.empty();
     }
+    LogcatLine parsedLine = logLine.get();
     for (LineProcessor processor : lineProcessors) {
-      processor.process(logLine.get());
+      try {
+        processor.process(parsedLine);
+      } catch (RuntimeException e) {
+        logger
+            .atWarning()
+            .per(processor, LogPerBucketingStrategy.byClass())
+            .atMostEvery(1, MINUTES)
+            .withCause(e)
+            .log("%s failed while processing logcat line.", processor.getClass().getSimpleName());
+      }
     }
     return Response.empty();
   }
@@ -50,11 +66,16 @@ public class LogcatLineProxy implements LineCallback {
 
   /** Get logcat events from all the registered line processors. */
   public ImmutableList<LogcatEvent> getLogcatEventsFromProcessors() {
-    ImmutableList.Builder<LogcatEvent> crashEvents = ImmutableList.builder();
+    ImmutableList.Builder<LogcatEvent> events = ImmutableList.builder();
     for (LineProcessor processor : lineProcessors) {
-      crashEvents.addAll(processor.getEvents());
+      try {
+        events.addAll(processor.getEvents());
+      } catch (RuntimeException e) {
+        logger.atWarning().withCause(e).log(
+            "%s failed while retrieving detected events.", processor.getClass().getSimpleName());
+      }
     }
-    return crashEvents.build();
+    return events.build();
   }
 
   /** Return all the unparsed logcat lines. */

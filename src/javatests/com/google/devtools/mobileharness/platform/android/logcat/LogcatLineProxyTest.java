@@ -21,6 +21,7 @@ import static com.google.devtools.mobileharness.platform.android.logcat.LogcatEv
 import static com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.CrashType.NATIVE;
 import static com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.ProcessCategory.FAILURE;
 import static com.google.devtools.mobileharness.platform.android.logcat.LogcatEvent.ProcessCategory.IGNORED;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -47,7 +48,7 @@ public final class LogcatLineProxyTest {
   private LogcatLineProxy logcatLineProxy;
 
   @Before
-  public void setUp() throws Exception {
+  public void setUp() {
     logcatLineProxy = new LogcatLineProxy();
   }
 
@@ -103,5 +104,33 @@ public final class LogcatLineProxyTest {
 
     assertThat(logcatLineProxy.getUnparsedLines())
         .containsExactly(unparsableLine1, unparsableLine2);
+  }
+
+  @Test
+  public void onLine_processorThrows_stillInvokesRemainingProcessors() {
+    String line = "10-13 12:54:02.123  1234  5678 I ActivityManager: Healthy message";
+    LogcatLine parsedLine = LogcatParser.parse(line).get();
+    doThrow(new IllegalStateException("process boom")).when(mockLineProcessor1).process(parsedLine);
+
+    logcatLineProxy.addLineProcessor(mockLineProcessor1);
+    logcatLineProxy.addLineProcessor(mockLineProcessor2);
+
+    var unused = logcatLineProxy.onLine(line);
+
+    verify(mockLineProcessor2).process(parsedLine);
+  }
+
+  @Test
+  public void getLogcatEventsFromProcessors_processorThrows_returnsRemainingEvents() {
+    var expectedEvent =
+        new CrashEvent(
+            new CrashedProcess("com.healthy.app", 1234, FAILURE, ANDROID_RUNTIME), "healthy log");
+    when(mockLineProcessor1.getEvents()).thenThrow(new IllegalStateException("getEvents boom"));
+    when(mockLineProcessor2.getEvents()).thenReturn(ImmutableList.of(expectedEvent));
+
+    logcatLineProxy.addLineProcessor(mockLineProcessor1);
+    logcatLineProxy.addLineProcessor(mockLineProcessor2);
+
+    assertThat(logcatLineProxy.getLogcatEventsFromProcessors()).containsExactly(expectedEvent);
   }
 }

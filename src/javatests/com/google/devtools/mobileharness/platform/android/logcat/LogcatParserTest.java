@@ -95,9 +95,42 @@ public final class LogcatParserTest {
   }
 
   @Test
-  public void testParse_invalidLine_returnsNull() {
+  public void parse_invalidLine_returnsEmpty() {
     assertThat(LogcatParser.parse("This is not a valid logcat line")).isEmpty();
     assertThat(LogcatParser.parse("10-13 12:54:02.123  1234  I Tag: Msg")).isEmpty(); // missing tid
+  }
+
+  @Test
+  public void parse_nonDotMillisecondSeparator_returnsEmpty() {
+    assertThat(LogcatParser.parse("10-13 12:54:02X123  1234  5678 I ActivityManager: Some message"))
+        .isEmpty();
+  }
+
+  @Test
+  public void parse_invalidDateAndTimeDigits_returnsEmptyWithoutThrowing() {
+    assertThat(
+            LogcatParser.parse("13-45 12:54:02.123  1234  5678 I ActivityManager: Invalid month"))
+        .isEmpty();
+    assertThat(LogcatParser.parse("00-10 12:54:02.123  1234  5678 I ActivityManager: Zero month"))
+        .isEmpty();
+    assertThat(LogcatParser.parse("10-00 12:54:02.123  1234  5678 I ActivityManager: Zero day"))
+        .isEmpty();
+    assertThat(LogcatParser.parse("02-30 12:54:02.123  1234  5678 I ActivityManager: Feb 30"))
+        .isEmpty();
+    assertThat(LogcatParser.parse("10-13 25:61:99.000  1234  5678 I ActivityManager: Invalid time"))
+        .isEmpty();
+  }
+
+  @Test
+  public void parse_overflowingPidAndTid_returnsEmptyWithoutThrowing() {
+    assertThat(
+            LogcatParser.parse(
+                "10-13 12:54:02.123  99999999999  5678 I ActivityManager: Overflow pid"))
+        .isEmpty();
+    assertThat(
+            LogcatParser.parse(
+                "10-13 12:54:02.123  1234  99999999999 I ActivityManager: Overflow tid"))
+        .isEmpty();
   }
 
   @Test
