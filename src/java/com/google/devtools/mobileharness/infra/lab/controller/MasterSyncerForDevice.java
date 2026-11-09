@@ -177,6 +177,10 @@ public class MasterSyncerForDevice implements Runnable, ApiConfigListener {
       ExceptionDetail exceptionDetail = event.getDeviceError();
       DeviceWithStatusInfo deviceAndStatusInfo =
           deviceStatusProvider.getDeviceAndStatusInfo(deviceId);
+      if (deviceAndStatusInfo == null) {
+        logger.atInfo().log("Device %s was removed; skipping error update.", deviceId);
+        return;
+      }
       DeviceStatusInfo updatedDeviceStatusInfo =
           DeviceStatusInfo.newBuilder()
               .setDeviceStatusWithTimestamp(
