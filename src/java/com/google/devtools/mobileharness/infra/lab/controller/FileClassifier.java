@@ -115,8 +115,8 @@ public class FileClassifier implements FileCallback {
 
     @Override
     public boolean equals(Object object) {
-      return object instanceof CopyFileHandler
-          && ((CopyFileHandler) object).targetFileOrDirPath.equals(targetFileOrDirPath);
+      return object instanceof CopyFileHandler copyFileHandler
+          && copyFileHandler.targetFileOrDirPath.equals(targetFileOrDirPath);
     }
 
     @Override

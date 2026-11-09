@@ -248,16 +248,16 @@ public class LogManager<D> {
   }
 
   private LogProto.LogRecord generateLogRecord(Object logRecord) {
-    if (logRecord instanceof LogProto.LogRecord) {
-      return (LogProto.LogRecord) logRecord;
+    if (logRecord instanceof LogProto.LogRecord protoLogRecord) {
+      return protoLogRecord;
     }
 
     LogRecord record;
     LogImportanceScope importanceScope;
     String clientId;
     String formattedLogRecord;
-    if (logRecord instanceof LogRecord) {
-      record = (LogRecord) logRecord;
+    if (logRecord instanceof LogRecord javaLogRecord) {
+      record = javaLogRecord;
       importanceScope = null;
       clientId = null;
       formattedLogRecord = null;

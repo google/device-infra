@@ -197,10 +197,9 @@ public class ByteArrayList {
   /** {@inheritDoc} */
   @Override
   public boolean equals(Object other) {
-    if (!(other instanceof ByteArrayList)) {
+    if (!(other instanceof ByteArrayList otherList)) {
       return false;
     }
-    ByteArrayList otherList = (ByteArrayList) other;
 
     if (otherList.size() != size()) {
       return false;

@@ -90,8 +90,7 @@ class CommandFileParser {
 
     @Override
     public boolean equals(Object o) {
-      if (o instanceof CommandLine) {
-        CommandLine otherLine = (CommandLine) o;
+      if (o instanceof CommandLine otherLine) {
         return super.equals(o)
             && Objects.equals(otherLine.getFile(), file)
             && otherLine.getLineNumber() == lineNumber;

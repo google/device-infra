@@ -169,13 +169,12 @@ public class MoblyReportParser {
       int failedTestsInModule = 0;
       MoblyTestEntry testEntry = null;
       for (MoblyYamlDocEntry moblyDocEntry : moblyDocEntries) {
-        if (moblyDocEntry instanceof MoblyTestEntry) {
-          testEntry = (MoblyTestEntry) moblyDocEntry;
+        if (moblyDocEntry instanceof MoblyTestEntry moblyTestEntry) {
+          testEntry = moblyTestEntry;
           runtime +=
               max(testEntry.getEndTime().orElse(0L) - testEntry.getBeginTime().orElse(0L), 0L);
           testEntriesMapBuilder.put(testEntry.getTestClass(), testEntry);
-        } else if (moblyDocEntry instanceof MoblySummaryEntry) {
-          MoblySummaryEntry summaryEntry = (MoblySummaryEntry) moblyDocEntry;
+        } else if (moblyDocEntry instanceof MoblySummaryEntry summaryEntry) {
           moduleBuilder
               .setDone(true)
               .setTotalTests(summaryEntry.requested())

@@ -101,8 +101,8 @@ public class AtsFileServerUploaderPlugin {
     } catch (URISyntaxException e) {
       logger.atWarning().withCause(e).log("Invalid url address %s in file server.", destination);
     } catch (CommandException e) {
-      if (e instanceof CommandFailureException) {
-        CommandResult result = ((CommandFailureException) e).result();
+      if (e instanceof CommandFailureException commandFailureException) {
+        CommandResult result = commandFailureException.result();
         logger.atWarning().log(
             "Logs of failed ATS file uploader: STDOUT: %s\nSTDERR: %s",
             result.stdout(), result.stderr());

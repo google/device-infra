@@ -221,8 +221,8 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
     @Override
     public void onError(Throwable error) {
       doOnCompleted();
-      if (error instanceof StatusRuntimeException) {
-        if (((StatusRuntimeException) error).getStatus().getCode().equals(Code.CANCELLED)) {
+      if (error instanceof StatusRuntimeException statusRuntimeException) {
+        if (statusRuntimeException.getStatus().getCode().equals(Code.CANCELLED)) {
           return;
         }
       }

@@ -1447,11 +1447,8 @@ public class JobRunner implements Runnable {
     }
 
     if (hasErrorTests) {
-      if (jobError instanceof MobileHarnessException
-          && ((MobileHarnessException) jobError)
-              .getErrorId()
-              .type()
-              .equals(ErrorType.INFRA_ISSUE)) {
+      if (jobError instanceof MobileHarnessException mobileHarnessException
+          && mobileHarnessException.getErrorId().type().equals(ErrorType.INFRA_ISSUE)) {
         ResultInternalUtil.setNonPassing(
             jobInfo.resultWithCause(),
             Test.TestResult.ERROR,
@@ -1506,11 +1503,11 @@ public class JobRunner implements Runnable {
               InfraErrorId.CLIENT_JR_JOB_HAS_ALLOC_FAIL_TEST, "Job has >= 1 SUSPENDED test(s)."),
           /* logStackTrace= */ false);
     } else if (hasNotStartedTests) {
-      if (jobError instanceof MobileHarnessException) {
+      if (jobError instanceof MobileHarnessException mobileHarnessException) {
         ResultInternalUtil.setNonPassing(
             jobInfo.resultWithCause(),
             Test.TestResult.ERROR,
-            (MobileHarnessException) jobError,
+            mobileHarnessException,
             /* logStackTrace= */ false);
       } else {
         ResultInternalUtil.setNonPassing(

@@ -123,8 +123,8 @@ public class ServerLogPrinter {
 
     @Override
     public void onError(Throwable e) {
-      if (e instanceof StatusRuntimeException
-          && NORMAL_CODES.contains(((StatusRuntimeException) e).getStatus().getCode())) {
+      if (e instanceof StatusRuntimeException statusRuntimeException
+          && NORMAL_CODES.contains(statusRuntimeException.getStatus().getCode())) {
         logger.atInfo().with(IMPORTANCE, IMPORTANT).log("Stop getting from server since it stops");
       } else {
         logger
