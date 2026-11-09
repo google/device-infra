@@ -44,6 +44,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkfile:apk_analyzer",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemstate",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/constant:splitters",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",

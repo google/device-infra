@@ -111,6 +111,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemsetting",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemstate",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:android_package_manager_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",

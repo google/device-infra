@@ -54,6 +54,7 @@ import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller
 import com.google.devtools.mobileharness.platform.android.lightning.systemsetting.SystemSettingManager;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -460,7 +461,8 @@ public class AndroidInstrumentation extends BaseDriver
               job.params()
                   .getBool(AndroidInstrumentationDriverSpec.PARAM_USE_TEST_STORAGE_SERVICE, true),
               job.params().getBool(AndroidInstrumentationDriverSpec.PARAM_ENABLE_COVERAGE, false),
-              job.params().getBool(AndroidInstrumentationDriverSpec.PARAM_USE_ORCHESTRATOR, false)),
+              job.params().getBool(AndroidInstrumentationDriverSpec.PARAM_USE_ORCHESTRATOR, false),
+              /* instrumentInPrivateComputeCore= */ false),
           Duration.ofMillis(testTimeoutMs));
     } catch (MobileHarnessException e) {
       if (e.getErrorId() == AndroidErrorId.ANDROID_INSTRUMENTATION_COMMAND_EXEC_TIMEOUT) {
@@ -512,333 +514,367 @@ public class AndroidInstrumentation extends BaseDriver
 
     StringBuilder logFilenames = new StringBuilder();
 
-    for (int optionMapIdx = 0; optionMapIdx < optionMaps.size(); optionMapIdx++) {
-      Map<String, String> optionMap = optionMaps.get(optionMapIdx);
-      if (optionMap == SKIPPED_OPTION_MAP) {
-        // Skips this run.
-        properties.add(
-            AndroidInstrumentationDriverSpec.PROPERTY_RESULT + "_" + optionMapIdx,
-            AndroidInstrumentationDriverSpec.SKIPPED_OPTION_STR);
-        continue;
+    boolean enablePcc =
+        deviceSdkVersion != null
+            && deviceSdkVersion >= AndroidVersion.ANDROID_17.getStartSdkVersion()
+            && job.params()
+                .getBool(
+                    AndroidInstrumentationDriverSpec.PARAM_INSTRUMENT_IN_PRIVATE_COMPUTE_CORE,
+                    false);
+    String targetPackage = "";
+    boolean selfInstrumentingPcc = false;
+
+    try {
+      if (enablePcc) {
+        targetPackage =
+            androidInstrumentationUtil.getInstrumentationTargetPackage(
+                getTestApk(testInfo), testPackageName, runnerName);
+        selfInstrumentingPcc = targetPackage.equals(testPackageName);
+        androidInstrumentationUtil.configurePccSandbox(
+            deviceId, targetPackage, /* enableTrustInstrumentedClients= */ !selfInstrumentingPcc);
       }
 
-      // Run adb shell commands before running instrument.
-      if (hasSequentialOptionMaps) {
-        String beforeIterShellCmd =
-            job.params()
-                .get(
-                    AndroidInstrumentationDriverSpec.PARAM_ITER_ADB_SHELL_BEFORE_INSTRUMENTATION
-                        + "_"
-                        + optionMapIdx);
-        if (beforeIterShellCmd != null) {
-          try {
-            String beforeTestOutput =
-                adb.runShell(
-                    deviceId, beforeIterShellCmd, /* timeout= */ null, /* lineCallback= */ null);
-            testInfo
-                .log()
-                .atInfo()
-                .alsoTo(logger)
-                .log("Run [adb shell %s]:%n%s%n", beforeIterShellCmd, beforeTestOutput);
-          } catch (MobileHarnessException e) {
-            throw new MobileHarnessException(
-                AndroidErrorId.ANDROID_INSTRUMENTATION_ADB_COMMAND_ERROR,
-                format("Failed to execute ADB command before test: %s", beforeIterShellCmd),
-                e);
-          }
-        }
-      }
-
-      Supplier<LineCallback> lineCallbackFactory = null;
-      TestSuiteResult.Builder testSuiteResultBuilder = null;
-      AmInstrumentationParser amInstrumentationParser = null;
-      if (showRawResults) {
-        testSuiteResultBuilder = TestSuiteResult.newBuilder();
-
-        // This builder is final so it can be captured by the lambda.
-        final TestSuiteResult.Builder finalBuilder = testSuiteResultBuilder;
-        amInstrumentationParser =
-            new AmInstrumentationParser(
-                ImmutableSet.of(new AmInstrumentationResultBuilder(finalBuilder)),
-                () -> TestTimeTrackerKt.TestTimeTracker(Instant::now));
-        final AmInstrumentationParser finalParser = amInstrumentationParser;
-
-        // Create the factory that provides new LineCallback instances.
-        lineCallbackFactory =
-            () -> {
-              // For each new callback, clear the builder to reset the state.
-              finalBuilder.clear();
-              return new LineCallback() {
-                @Override
-                public LineCallback.Response onLine(String line) {
-                  finalParser.parse(line);
-                  return LineCallback.Response.empty();
-                }
-              };
-            };
-      }
-
-      // Actually run the instrument.
-      long testTimeoutMs = testInfo.timer().remainingTimeJava().toMillis();
-      if (instrumentTimeoutMs != null) {
-        testTimeoutMs = Math.min(testTimeoutMs, instrumentTimeoutMs);
-      }
-      String message =
-          String.format(
-              "%nStart instrumentation: %n"
-                  + " - test target: %s%n - timeout: %d ms%n - options: %s",
-              testTarget, testTimeoutMs, StrUtil.DEFAULT_MAP_JOINER.join(optionMap));
-      testInfo.log().atInfo().alsoTo(logger).log("%s", message);
-      Instant instrumentationStartTime = clock.instant();
-      testInfo
-          .properties()
-          .add(
-              ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS,
-              Long.toString(instrumentationStartTime.toEpochMilli()));
-
-      String output;
-      MobileHarnessException mhException = null;
-      try {
-        output =
-            androidInstrumentationUtil.instrument(
-                deviceId,
-                deviceSdkVersion,
-                AndroidInstrumentationSetting.create(
-                    testPackageName,
-                    runnerName,
-                    testTarget,
-                    optionMap,
-                    /* async= */ false,
-                    showRawResults,
-                    job.params()
-                        .getBool(AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, false),
-                    noIsolatedStorage,
-                    job.params()
-                        .getBool(
-                            AndroidInstrumentationDriverSpec.PARAM_USE_TEST_STORAGE_SERVICE, true),
-                    job.params()
-                        .getBool(AndroidInstrumentationDriverSpec.PARAM_ENABLE_COVERAGE, false),
-                    job.params()
-                        .getBool(AndroidInstrumentationDriverSpec.PARAM_USE_ORCHESTRATOR, false)),
-                Duration.ofMillis(testTimeoutMs),
-                lineCallbackFactory);
-      } catch (MobileHarnessException e) {
-        testInfo
-            .log()
-            .atInfo()
-            .alsoTo(logger)
-            .withCause(e)
-            .log("MobileHarnessException captured during instrumentation test");
-        mhException = e;
-        output = e.getMessage();
-      }
-      if (amInstrumentationParser != null) {
-        amInstrumentationParser.done();
-      }
-
-      testInfo
-          .properties()
-          .add(
-              ANDROID_INSTRUMENTATION_TEST_END_EPOCH_MS,
-              Long.toString(clock.instant().toEpochMilli()));
-      testInfo.log().atInfo().alsoTo(logger).log("Finish instrumentation: %s", output);
-      // Also log to file.
-      String instrumentLogFileName =
-          "instrument" + (hasSequentialOptionMaps ? "_" + optionMapIdx : "") + ".log";
-      try {
-        fileUtil.writeToFile(
-            PathUtil.join(testInfo.getGenFileDir(), instrumentLogFileName), output);
-        logFilenames.append(instrumentLogFileName).append(";");
-      } catch (MobileHarnessException e) {
-        testInfo
-            .warnings()
-            .addAndLog(
-                new MobileHarnessException(
-                    AndroidErrorId.ANDROID_INSTRUMENTATION_WRITE_FILE_ERROR, e.getMessage()),
-                logger);
-      }
-
-      if (testSuiteResultBuilder != null) {
-        TestSuiteResult testSuiteResult = testSuiteResultBuilder.build();
-        fileUtil.writeToFile(
-            PathUtil.join(testInfo.getGenFileDir(), "instrument_test_result.textproto"),
-            testSuiteResult.toString());
-        fileUtil.writeToFile(
-            PathUtil.join(testInfo.getGenFileDir(), "instrument_test_result.pb"),
-            testSuiteResult.toByteArray());
-        generateJunitXml(testSuiteResult, testInfo, instrumentationStartTime);
-      }
-
-      // Checks the result.
-      boolean useAndroidInstrumentationParser =
-          job.params()
-              .getBool(
-                  AndroidInstrumentationDriverSpec.PARAM_USE_ANDROIDINSTRUMENTATION_PARSER, true);
-      TestResult result;
-      StringBuilder errorMsg = new StringBuilder();
-
-      if (useAndroidInstrumentationParser) {
-        AndroidInstrumentationParser parser = new AndroidInstrumentationParser();
-        result =
-            parser.parseOutput(
-                output,
-                errorMsg,
-                mhException,
-                job.params().getBool(PARAM_FAIL_IF_NO_TESTS_RAN, false));
-      } else {
-        String filePathOnDevice =
-            job.params().get(AndroidInstrumentationDriverSpec.PARAM_GTEST_XML_FILE_ON_DEVICE);
-        if (filePathOnDevice == null) {
-          // TODO: Move this check to AndroidInstrumentationJobValidator class.
-          throw new MobileHarnessException(
-              AndroidErrorId.ANDROID_INSTRUMENTATION_GTEST_XML_FILE_ON_DEVICE_NOT_SET,
-              "Param gtest_xml_file_on_device is not set."
-                  + " This is required when using gtest XML parser.");
-        }
-        AndroidInstrumentationUtil.GtestResult gtestResult =
-            androidInstrumentationUtil.processGtestResult(
-                deviceId, testInfo, filePathOnDevice, mhException);
-        result = gtestResult.testResult();
-        errorMsg.append(gtestResult.errorMessage());
-      }
-      if (job.params().getBool(AndroidInstrumentationDriverSpec.PARAM_FAIL_ON_ALL_SKIPPED, false)
-          && result == TestResult.PASS
-          && testSuiteResultBuilder != null) {
-        TestSuiteResult testSuiteResult = testSuiteResultBuilder.build();
-        if (testSuiteResult.getTestResultList().stream()
-            .allMatch(testResult -> testResult.getTestStatus() == TestStatus.IGNORED)) {
-          logger.atInfo().log(
-              "All tests were ignored or assumption failures, assigning FAIL result.");
-          result = TestResult.FAIL;
-          errorMsg.append("All tests were ignored or assumption failures.");
-          if (testSuiteResult.getTestResultList().isEmpty()) {
-            // No test cases ran at all, e.g., an empty shard of uniform sharding. Retrying won't
-            // change the result, so halt further retries. This is consistent with the legacy FTL
-            // behavior of not rerunning steps that have zero test cases.
-            testInfo
-                .log()
-                .atInfo()
-                .alsoTo(logger)
-                .log("No test cases ran. Halt retries of this test since retry won't help.");
-            properties.add(Test.HALT_RETRY, "true");
-          }
-        }
-      }
-
-      switch (result) {
-        case PASS:
-          hasPass = true;
-          break;
-        case FAIL:
-          hasFail = true;
-          failResultCause =
-              new MobileHarnessException(
-                  AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_FAILED,
-                  "Instrumentation failures: "
-                      + errorMsg
-                      + "\nThis usually indicates validation errors of the test app, or "
-                      + "bugs of the app under test. You should be able to reproduce it with "
-                      + "\"adb shell am instrument ...\" with your local devices, without "
-                      + "Mobile Harness.",
-                  mhException);
-          break;
-        case ERROR:
-          hasError = true;
-          if (systemStateManager.isOnline(deviceId)) {
-            errorResultCause =
-                new MobileHarnessException(
-                    AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_ERROR,
-                    "Instrumentation start/finish unexpectedly: " + errorMsg,
-                    mhException);
-          } else {
-            errorResultCause =
-                new MobileHarnessException(
-                    AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_DEVICE_OFFLINE,
-                    "Device is offline, instrumentation start/finish unexpectedly: " + errorMsg,
-                    mhException);
-          }
-
-          break;
-        case TIMEOUT:
-          MobileHarnessException timeoutCause =
-              new MobileHarnessException(
-                  AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_TIMEOUT,
-                  String.format(
-                      "Instrumentation timeout [please try to increase test_timeout_sec"
-                          + ", or instrument_timeout_sec if it has been set.]:%n%s",
-                      errorMsg),
-                  mhException);
-          testInfo.resultWithCause().setNonPassing(TestResult.TIMEOUT, timeoutCause);
-          throw timeoutCause;
-        default:
-          MobileHarnessException errorCause =
-              new MobileHarnessException(
-                  AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_RESULT_NOT_FOUND,
-                  "Unexpected Test Result Found",
-                  mhException);
-          testInfo.resultWithCause().setNonPassing(TestResult.ERROR, errorCause);
-          throw errorCause;
-      }
-
-      // Extra adb shell commands or clean up after instrument.
-      if (hasSequentialOptionMaps) {
-        String afterTestShellCmd =
-            job.params()
-                .get(
-                    AndroidInstrumentationDriverSpec.PARAM_ITER_ADB_SHELL_AFTER_INSTRUMENTATION
-                        + "_"
-                        + optionMapIdx);
-        if (afterTestShellCmd != null) {
-          try {
-            String afterTestOutput =
-                adb.runShell(
-                    deviceId, afterTestShellCmd, /* timeout= */ null, /* lineCallback= */ null);
-            testInfo
-                .log()
-                .atInfo()
-                .alsoTo(logger)
-                .log("Run [adb shell %s]:%n%s%n", afterTestShellCmd, afterTestOutput);
-          } catch (MobileHarnessException e) {
-            // Only log the failure after the main test finished.
-            testInfo
-                .warnings()
-                .addAndLog(
-                    new MobileHarnessException(
-                        AndroidErrorId.ANDROID_INSTRUMENTATION_ADB_COMMAND_ERROR,
-                        String.format(
-                            "Failed to execute ADB command after test: %s", afterTestShellCmd),
-                        e),
-                    logger);
-          }
-        }
-
-        // Set result property.
-        if (result != null) {
+      for (int optionMapIdx = 0; optionMapIdx < optionMaps.size(); optionMapIdx++) {
+        Map<String, String> optionMap = optionMaps.get(optionMapIdx);
+        if (optionMap == SKIPPED_OPTION_MAP) {
+          // Skips this run.
           properties.add(
-              AndroidInstrumentationDriverSpec.PROPERTY_RESULT + "_" + optionMapIdx, result.name());
+              AndroidInstrumentationDriverSpec.PROPERTY_RESULT + "_" + optionMapIdx,
+              AndroidInstrumentationDriverSpec.SKIPPED_OPTION_STR);
+          continue;
         }
-        try {
-          // Cleanup.
-          if (iterClearBuild) {
-            for (String buildPackageName : buildPackageNames) {
-              androidPackageManagerUtil.clearPackage(deviceId, buildPackageName);
+
+        // Run adb shell commands before running instrument.
+        if (hasSequentialOptionMaps) {
+          String beforeIterShellCmd =
+              job.params()
+                  .get(
+                      AndroidInstrumentationDriverSpec.PARAM_ITER_ADB_SHELL_BEFORE_INSTRUMENTATION
+                          + "_"
+                          + optionMapIdx);
+          if (beforeIterShellCmd != null) {
+            try {
+              String beforeTestOutput =
+                  adb.runShell(
+                      deviceId, beforeIterShellCmd, /* timeout= */ null, /* lineCallback= */ null);
               testInfo
                   .log()
                   .atInfo()
                   .alsoTo(logger)
-                  .log("%nClear build package %s", buildPackageName);
+                  .log("Run [adb shell %s]:%n%s%n", beforeIterShellCmd, beforeTestOutput);
+            } catch (MobileHarnessException e) {
+              throw new MobileHarnessException(
+                  AndroidErrorId.ANDROID_INSTRUMENTATION_ADB_COMMAND_ERROR,
+                  format("Failed to execute ADB command before test: %s", beforeIterShellCmd),
+                  e);
             }
           }
-          if (iterClearTest) {
-            androidPackageManagerUtil.clearPackage(deviceId, testPackageName);
-            testInfo.log().atInfo().alsoTo(logger).log("%nClear test package %s", testPackageName);
-          }
-        } catch (MobileHarnessException e) {
-          throw new MobileHarnessException(
-              AndroidErrorId.ANDROID_INSTRUMENTATION_CLEAR_PACKAGE_ERROR,
-              "Failed to clear package with exception raised",
-              e);
         }
+
+        Supplier<LineCallback> lineCallbackFactory = null;
+        TestSuiteResult.Builder testSuiteResultBuilder = null;
+        AmInstrumentationParser amInstrumentationParser = null;
+        if (showRawResults) {
+          testSuiteResultBuilder = TestSuiteResult.newBuilder();
+
+          // This builder is final so it can be captured by the lambda.
+          final TestSuiteResult.Builder finalBuilder = testSuiteResultBuilder;
+          amInstrumentationParser =
+              new AmInstrumentationParser(
+                  ImmutableSet.of(new AmInstrumentationResultBuilder(finalBuilder)),
+                  () -> TestTimeTrackerKt.TestTimeTracker(Instant::now));
+          final AmInstrumentationParser finalParser = amInstrumentationParser;
+
+          // Create the factory that provides new LineCallback instances.
+          lineCallbackFactory =
+              () -> {
+                // For each new callback, clear the builder to reset the state.
+                finalBuilder.clear();
+                return new LineCallback() {
+                  @Override
+                  public LineCallback.Response onLine(String line) {
+                    finalParser.parse(line);
+                    return LineCallback.Response.empty();
+                  }
+                };
+              };
+        }
+
+        // Actually run the instrument.
+        long testTimeoutMs = testInfo.timer().remainingTimeJava().toMillis();
+        if (instrumentTimeoutMs != null) {
+          testTimeoutMs = Math.min(testTimeoutMs, instrumentTimeoutMs);
+        }
+        String message =
+            String.format(
+                "%nStart instrumentation: %n"
+                    + " - test target: %s%n - timeout: %d ms%n - options: %s",
+                testTarget, testTimeoutMs, StrUtil.DEFAULT_MAP_JOINER.join(optionMap));
+        testInfo.log().atInfo().alsoTo(logger).log("%s", message);
+        Instant instrumentationStartTime = clock.instant();
+        testInfo
+            .properties()
+            .add(
+                ANDROID_INSTRUMENTATION_TEST_START_EPOCH_MS,
+                Long.toString(instrumentationStartTime.toEpochMilli()));
+
+        String output;
+        MobileHarnessException mhException = null;
+        try {
+          output =
+              androidInstrumentationUtil.instrument(
+                  deviceId,
+                  deviceSdkVersion,
+                  AndroidInstrumentationSetting.create(
+                      testPackageName,
+                      runnerName,
+                      testTarget,
+                      optionMap,
+                      /* async= */ false,
+                      showRawResults,
+                      job.params()
+                          .getBool(
+                              AndroidInstrumentationDriverSpec.PARAM_PREFIX_ANDROID_TEST, false),
+                      noIsolatedStorage,
+                      job.params()
+                          .getBool(
+                              AndroidInstrumentationDriverSpec.PARAM_USE_TEST_STORAGE_SERVICE,
+                              true),
+                      job.params()
+                          .getBool(AndroidInstrumentationDriverSpec.PARAM_ENABLE_COVERAGE, false),
+                      job.params()
+                          .getBool(AndroidInstrumentationDriverSpec.PARAM_USE_ORCHESTRATOR, false),
+                      selfInstrumentingPcc),
+                  Duration.ofMillis(testTimeoutMs),
+                  lineCallbackFactory);
+        } catch (MobileHarnessException e) {
+          testInfo
+              .log()
+              .atInfo()
+              .alsoTo(logger)
+              .withCause(e)
+              .log("MobileHarnessException captured during instrumentation test");
+          mhException = e;
+          output = e.getMessage();
+        }
+        if (amInstrumentationParser != null) {
+          amInstrumentationParser.done();
+        }
+
+        testInfo
+            .properties()
+            .add(
+                ANDROID_INSTRUMENTATION_TEST_END_EPOCH_MS,
+                Long.toString(clock.instant().toEpochMilli()));
+        testInfo.log().atInfo().alsoTo(logger).log("Finish instrumentation: %s", output);
+        // Also log to file.
+        String instrumentLogFileName =
+            "instrument" + (hasSequentialOptionMaps ? "_" + optionMapIdx : "") + ".log";
+        try {
+          fileUtil.writeToFile(
+              PathUtil.join(testInfo.getGenFileDir(), instrumentLogFileName), output);
+          logFilenames.append(instrumentLogFileName).append(";");
+        } catch (MobileHarnessException e) {
+          testInfo
+              .warnings()
+              .addAndLog(
+                  new MobileHarnessException(
+                      AndroidErrorId.ANDROID_INSTRUMENTATION_WRITE_FILE_ERROR, e.getMessage()),
+                  logger);
+        }
+
+        if (testSuiteResultBuilder != null) {
+          TestSuiteResult testSuiteResult = testSuiteResultBuilder.build();
+          fileUtil.writeToFile(
+              PathUtil.join(testInfo.getGenFileDir(), "instrument_test_result.textproto"),
+              testSuiteResult.toString());
+          fileUtil.writeToFile(
+              PathUtil.join(testInfo.getGenFileDir(), "instrument_test_result.pb"),
+              testSuiteResult.toByteArray());
+          generateJunitXml(testSuiteResult, testInfo, instrumentationStartTime);
+        }
+
+        // Checks the result.
+        boolean useAndroidInstrumentationParser =
+            job.params()
+                .getBool(
+                    AndroidInstrumentationDriverSpec.PARAM_USE_ANDROIDINSTRUMENTATION_PARSER, true);
+        TestResult result;
+        StringBuilder errorMsg = new StringBuilder();
+
+        if (useAndroidInstrumentationParser) {
+          AndroidInstrumentationParser parser = new AndroidInstrumentationParser();
+          result =
+              parser.parseOutput(
+                  output,
+                  errorMsg,
+                  mhException,
+                  job.params().getBool(PARAM_FAIL_IF_NO_TESTS_RAN, false));
+        } else {
+          String filePathOnDevice =
+              job.params().get(AndroidInstrumentationDriverSpec.PARAM_GTEST_XML_FILE_ON_DEVICE);
+          if (filePathOnDevice == null) {
+            // TODO: Move this check to AndroidInstrumentationJobValidator class.
+            throw new MobileHarnessException(
+                AndroidErrorId.ANDROID_INSTRUMENTATION_GTEST_XML_FILE_ON_DEVICE_NOT_SET,
+                "Param gtest_xml_file_on_device is not set."
+                    + " This is required when using gtest XML parser.");
+          }
+          AndroidInstrumentationUtil.GtestResult gtestResult =
+              androidInstrumentationUtil.processGtestResult(
+                  deviceId, testInfo, filePathOnDevice, mhException);
+          result = gtestResult.testResult();
+          errorMsg.append(gtestResult.errorMessage());
+        }
+        if (job.params().getBool(AndroidInstrumentationDriverSpec.PARAM_FAIL_ON_ALL_SKIPPED, false)
+            && result == TestResult.PASS
+            && testSuiteResultBuilder != null) {
+          TestSuiteResult testSuiteResult = testSuiteResultBuilder.build();
+          if (testSuiteResult.getTestResultList().stream()
+              .allMatch(testResult -> testResult.getTestStatus() == TestStatus.IGNORED)) {
+            logger.atInfo().log(
+                "All tests were ignored or assumption failures, assigning FAIL result.");
+            result = TestResult.FAIL;
+            errorMsg.append("All tests were ignored or assumption failures.");
+            if (testSuiteResult.getTestResultList().isEmpty()) {
+              // No test cases ran at all, e.g., an empty shard of uniform sharding. Retrying won't
+              // change the result, so halt further retries. This is consistent with the legacy FTL
+              // behavior of not rerunning steps that have zero test cases.
+              testInfo
+                  .log()
+                  .atInfo()
+                  .alsoTo(logger)
+                  .log("No test cases ran. Halt retries of this test since retry won't help.");
+              properties.add(Test.HALT_RETRY, "true");
+            }
+          }
+        }
+
+        switch (result) {
+          case PASS:
+            hasPass = true;
+            break;
+          case FAIL:
+            hasFail = true;
+            failResultCause =
+                new MobileHarnessException(
+                    AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_FAILED,
+                    "Instrumentation failures: "
+                        + errorMsg
+                        + "\nThis usually indicates validation errors of the test app, or "
+                        + "bugs of the app under test. You should be able to reproduce it with "
+                        + "\"adb shell am instrument ...\" with your local devices, without "
+                        + "Mobile Harness.",
+                    mhException);
+            break;
+          case ERROR:
+            hasError = true;
+            if (systemStateManager.isOnline(deviceId)) {
+              errorResultCause =
+                  new MobileHarnessException(
+                      AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_ERROR,
+                      "Instrumentation start/finish unexpectedly: " + errorMsg,
+                      mhException);
+            } else {
+              errorResultCause =
+                  new MobileHarnessException(
+                      AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_DEVICE_OFFLINE,
+                      "Device is offline, instrumentation start/finish unexpectedly: " + errorMsg,
+                      mhException);
+            }
+
+            break;
+          case TIMEOUT:
+            MobileHarnessException timeoutCause =
+                new MobileHarnessException(
+                    AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_TIMEOUT,
+                    String.format(
+                        "Instrumentation timeout [please try to increase test_timeout_sec"
+                            + ", or instrument_timeout_sec if it has been set.]:%n%s",
+                        errorMsg),
+                    mhException);
+            testInfo.resultWithCause().setNonPassing(TestResult.TIMEOUT, timeoutCause);
+            throw timeoutCause;
+          default:
+            MobileHarnessException errorCause =
+                new MobileHarnessException(
+                    AndroidErrorId.ANDROID_INSTRUMENTATION_TEST_RESULT_NOT_FOUND,
+                    "Unexpected Test Result Found",
+                    mhException);
+            testInfo.resultWithCause().setNonPassing(TestResult.ERROR, errorCause);
+            throw errorCause;
+        }
+
+        // Extra adb shell commands or clean up after instrument.
+        if (hasSequentialOptionMaps) {
+          String afterTestShellCmd =
+              job.params()
+                  .get(
+                      AndroidInstrumentationDriverSpec.PARAM_ITER_ADB_SHELL_AFTER_INSTRUMENTATION
+                          + "_"
+                          + optionMapIdx);
+          if (afterTestShellCmd != null) {
+            try {
+              String afterTestOutput =
+                  adb.runShell(
+                      deviceId, afterTestShellCmd, /* timeout= */ null, /* lineCallback= */ null);
+              testInfo
+                  .log()
+                  .atInfo()
+                  .alsoTo(logger)
+                  .log("Run [adb shell %s]:%n%s%n", afterTestShellCmd, afterTestOutput);
+            } catch (MobileHarnessException e) {
+              // Only log the failure after the main test finished.
+              testInfo
+                  .warnings()
+                  .addAndLog(
+                      new MobileHarnessException(
+                          AndroidErrorId.ANDROID_INSTRUMENTATION_ADB_COMMAND_ERROR,
+                          String.format(
+                              "Failed to execute ADB command after test: %s", afterTestShellCmd),
+                          e),
+                      logger);
+            }
+          }
+
+          // Set result property.
+          if (result != null) {
+            properties.add(
+                AndroidInstrumentationDriverSpec.PROPERTY_RESULT + "_" + optionMapIdx,
+                result.name());
+          }
+          try {
+            // Cleanup.
+            if (iterClearBuild) {
+              for (String buildPackageName : buildPackageNames) {
+                androidPackageManagerUtil.clearPackage(deviceId, buildPackageName);
+                testInfo
+                    .log()
+                    .atInfo()
+                    .alsoTo(logger)
+                    .log("%nClear build package %s", buildPackageName);
+              }
+            }
+            if (iterClearTest) {
+              androidPackageManagerUtil.clearPackage(deviceId, testPackageName);
+              testInfo
+                  .log()
+                  .atInfo()
+                  .alsoTo(logger)
+                  .log("%nClear test package %s", testPackageName);
+            }
+          } catch (MobileHarnessException e) {
+            throw new MobileHarnessException(
+                AndroidErrorId.ANDROID_INSTRUMENTATION_CLEAR_PACKAGE_ERROR,
+                "Failed to clear package with exception raised",
+                e);
+          }
+        }
+      }
+    } finally {
+      if (enablePcc) {
+        androidInstrumentationUtil.cleanupPccSandbox(
+            deviceId, targetPackage, /* disableTrustInstrumentedClients= */ !selfInstrumentingPcc);
       }
     }
 

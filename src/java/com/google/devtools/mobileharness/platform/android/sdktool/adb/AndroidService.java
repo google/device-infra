@@ -20,7 +20,8 @@ package com.google.devtools.mobileharness.platform.android.sdktool.adb;
 public enum AndroidService {
   // Run "adb shell cmd -l" to get available service name.
   APPOPS("appops"),
-  PACKAGE("package");
+  PACKAGE("package"),
+  PCC_SANDBOX("pcc_sandbox");
 
   private final String serviceName;
 

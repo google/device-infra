@@ -91,7 +91,9 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentMatchers;
+import org.mockito.InOrder;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
@@ -671,6 +673,17 @@ public class AndroidInstrumentationTest {
   private void mockRunTestBasicSteps(
       String testName, String options, boolean parseResultToMethod, boolean noIsolatedStorage)
       throws Exception {
+    mockRunTestBasicSteps(
+        testName, options, parseResultToMethod, noIsolatedStorage, DEFAULT_SDK_VERSION);
+  }
+
+  private void mockRunTestBasicSteps(
+      String testName,
+      String options,
+      boolean parseResultToMethod,
+      boolean noIsolatedStorage,
+      int sdkVersion)
+      throws Exception {
     when(installApkStep.installBuildApks(device, testInfo))
         .thenReturn(Arrays.asList(BUILD_PACKAGES));
 
@@ -708,8 +721,7 @@ public class AndroidInstrumentationTest {
     jobInfo.params().add(AndroidInstrumentationDriverSpec.PARAM_ASYNC, "false");
 
     when(aapt.getApkPackageName(TEST_APK_PATH)).thenReturn(TEST_PACKAGE);
-    when(androidInstrumentationUtil.cleanTestStorageOnDevice(
-            testInfo, DEVICE_ID, DEFAULT_SDK_VERSION))
+    when(androidInstrumentationUtil.cleanTestStorageOnDevice(testInfo, DEVICE_ID, sdkVersion))
         .thenReturn(Optional.of(EXTERNAL_STORAGE));
 
     // Removes google test dir on device.
@@ -1211,6 +1223,123 @@ public class AndroidInstrumentationTest {
     assertThat(testInfo.properties().get(AndroidInstrumentationDriverSpec.PROPERTY_OPTIONS + "_0"))
         .isEqualTo("class=" + unescapedClassOption);
     verify(fileUtil).writeToFile(hostTestFilePath, expectedFileContent);
+  }
+
+  @Test
+  public void run_instrumentInPrivateComputeCore_selfInstrumenting_sdk37_pass() throws Exception {
+    int sdkVersion = 37;
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(sdkVersion);
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false, sdkVersion);
+    jobInfo
+        .params()
+        .add(AndroidInstrumentationDriverSpec.PARAM_INSTRUMENT_IN_PRIVATE_COMPUTE_CORE, "true");
+    when(androidInstrumentationUtil.getInstrumentationTargetPackage(
+            TEST_APK_PATH, TEST_PACKAGE, RUNNER))
+        .thenReturn(TEST_PACKAGE);
+    AndroidInstrumentationSetting setting =
+        AndroidInstrumentationSetting.create(
+            TEST_PACKAGE,
+            RUNNER,
+            TEST_NAME,
+            OPTION_MAP,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true,
+            /* enableCoverage= */ false,
+            /* useOrchestrator= */ false,
+            /* instrumentInPrivateComputeCore= */ true);
+    when(androidInstrumentationUtil.instrument(DEVICE_ID, sdkVersion, setting, TEST_TIMEOUT, null))
+        .thenReturn("OK (1 test)");
+
+    driver.run(testInfo);
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    InOrder inOrder = Mockito.inOrder(androidInstrumentationUtil);
+    inOrder
+        .verify(androidInstrumentationUtil)
+        .configurePccSandbox(DEVICE_ID, TEST_PACKAGE, /* enableTrustInstrumentedClients= */ false);
+    inOrder
+        .verify(androidInstrumentationUtil)
+        .instrument(DEVICE_ID, sdkVersion, setting, TEST_TIMEOUT, null);
+    inOrder
+        .verify(androidInstrumentationUtil)
+        .cleanupPccSandbox(DEVICE_ID, TEST_PACKAGE, /* disableTrustInstrumentedClients= */ false);
+  }
+
+  @Test
+  public void run_instrumentInPrivateComputeCore_separateTargetPackage_sdk37_pass()
+      throws Exception {
+    int sdkVersion = 37;
+    String targetPackage = "com.google.spinner";
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(sdkVersion);
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false, sdkVersion);
+    jobInfo
+        .params()
+        .add(AndroidInstrumentationDriverSpec.PARAM_INSTRUMENT_IN_PRIVATE_COMPUTE_CORE, "true");
+    when(androidInstrumentationUtil.getInstrumentationTargetPackage(
+            TEST_APK_PATH, TEST_PACKAGE, RUNNER))
+        .thenReturn(targetPackage);
+    AndroidInstrumentationSetting setting =
+        AndroidInstrumentationSetting.create(
+            TEST_PACKAGE,
+            RUNNER,
+            TEST_NAME,
+            OPTION_MAP,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true,
+            /* enableCoverage= */ false,
+            /* useOrchestrator= */ false,
+            /* instrumentInPrivateComputeCore= */ false);
+    when(androidInstrumentationUtil.instrument(DEVICE_ID, sdkVersion, setting, TEST_TIMEOUT, null))
+        .thenReturn("OK (1 test)");
+
+    driver.run(testInfo);
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    InOrder inOrder = Mockito.inOrder(androidInstrumentationUtil);
+    inOrder
+        .verify(androidInstrumentationUtil)
+        .configurePccSandbox(DEVICE_ID, targetPackage, /* enableTrustInstrumentedClients= */ true);
+    inOrder
+        .verify(androidInstrumentationUtil)
+        .instrument(DEVICE_ID, sdkVersion, setting, TEST_TIMEOUT, null);
+    inOrder
+        .verify(androidInstrumentationUtil)
+        .cleanupPccSandbox(DEVICE_ID, targetPackage, /* disableTrustInstrumentedClients= */ true);
+  }
+
+  @Test
+  public void run_instrumentInPrivateComputeCore_sdk36_noOp() throws Exception {
+    int sdkVersion = 36;
+    when(systemSettingManager.getDeviceSdkVersion(device)).thenReturn(sdkVersion);
+    mockRunTestBasicSteps(TEST_NAME, OPTIONS, false, false, sdkVersion);
+    jobInfo
+        .params()
+        .add(AndroidInstrumentationDriverSpec.PARAM_INSTRUMENT_IN_PRIVATE_COMPUTE_CORE, "true");
+    AndroidInstrumentationSetting setting =
+        mockInstrumentSetting(
+            TEST_NAME,
+            OPTION_MAP,
+            /* async= */ false,
+            /* showRawResults= */ false,
+            /* prefixAndroidTest= */ false,
+            /* noIsolatedStorage= */ false,
+            /* useTestStorageService= */ true);
+    when(androidInstrumentationUtil.instrument(DEVICE_ID, sdkVersion, setting, TEST_TIMEOUT, null))
+        .thenReturn("OK (1 test)");
+
+    driver.run(testInfo);
+
+    assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
+    verify(androidInstrumentationUtil, never())
+        .getInstrumentationTargetPackage(any(), any(), any());
+    verify(androidInstrumentationUtil, never()).configurePccSandbox(any(), any(), anyBoolean());
+    verify(androidInstrumentationUtil, never()).cleanupPccSandbox(any(), any(), anyBoolean());
   }
 
   private AndroidInstrumentationSetting mockInstrumentSetting(

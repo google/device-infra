@@ -38,9 +38,12 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.instrumentation.androidx.AndroidxDependencies;
 import com.google.devtools.mobileharness.platform.android.lightning.apkfile.ApkAnalyzer;
+import com.google.devtools.mobileharness.platform.android.lightning.apkfile.ApkAnalyzer.InstrumentationInfo;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstaller;
 import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidService;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
 import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
@@ -260,6 +263,8 @@ public class AndroidInstrumentationUtil {
   /** Android SDK ADB command line tools executor. */
   private final Adb adb;
 
+  private final AndroidAdbUtil adbUtil;
+
   /** Android File utility class to manage file on device. */
   private final AndroidFileUtil androidFileUtil;
 
@@ -295,6 +300,7 @@ public class AndroidInstrumentationUtil {
   public AndroidInstrumentationUtil() {
     this(
         new Adb(),
+        new AndroidAdbUtil(),
         new CommandExecutor(),
         Clock.systemUTC(),
         new LocalFileUtil(),
@@ -314,6 +320,7 @@ public class AndroidInstrumentationUtil {
   @VisibleForTesting
   protected AndroidInstrumentationUtil(
       Adb adb,
+      AndroidAdbUtil adbUtil,
       CommandExecutor commandExecutor,
       Clock clock,
       LocalFileUtil localFileUtil,
@@ -328,6 +335,7 @@ public class AndroidInstrumentationUtil {
       Sleeper sleeper,
       AndroidxDependencies androidxDependencies) {
     this.adb = adb;
+    this.adbUtil = adbUtil;
     this.commandExecutor = commandExecutor;
     this.clock = clock;
     this.localFileUtil = localFileUtil;
@@ -408,6 +416,10 @@ public class AndroidInstrumentationUtil {
     boolean useTestStorageService = instrumentationSetting.useTestStorageService();
     boolean enableCoverage = instrumentationSetting.enableCoverage();
     boolean useOrchestrator = instrumentationSetting.useOrchestrator();
+    boolean instrumentInPrivateComputeCore =
+        instrumentationSetting.instrumentInPrivateComputeCore()
+            && deviceSdkVersion != null
+            && deviceSdkVersion >= AndroidVersion.ANDROID_17.getStartSdkVersion();
     LineCallback instrumentationResultCallback =
         (lineCallbackFactory != null) ? lineCallbackFactory.get() : null;
 
@@ -467,6 +479,9 @@ public class AndroidInstrumentationUtil {
 
     final String testRunner;
     if (useOrchestrator) {
+      if (instrumentInPrivateComputeCore) {
+        command.append(" -e orchestratorInstrumentationArgs --instrument-in-pcc");
+      }
       command
           .append(" -e targetInstrumentation ")
           .append(packageName)
@@ -474,6 +489,9 @@ public class AndroidInstrumentationUtil {
           .append(runnerName);
       testRunner = "androidx.test.orchestrator/androidx.test.orchestrator.AndroidTestOrchestrator";
     } else {
+      if (instrumentInPrivateComputeCore) {
+        command.append(" --instrument-in-pcc");
+      }
       testRunner = packageName + "/" + runnerName;
     }
     command.append(" ").append(testRunner);
@@ -676,6 +694,97 @@ public class AndroidInstrumentationUtil {
           AndroidErrorId.ANDROID_INSTRUMENTATION_RUNNER_NOT_FOUND,
           "Instrumentation test runner not found",
           e);
+    }
+  }
+
+  /**
+   * Gets the target package name for the specified instrumentation runner from {@code
+   * AndroidManifest.xml} in the test APK.
+   */
+  public String getInstrumentationTargetPackage(
+      String testApkPath, String testPackageName, String runnerName)
+      throws MobileHarnessException, InterruptedException {
+    String fullRunnerName = runnerName.startsWith(".") ? testPackageName + runnerName : runnerName;
+    ImmutableList<InstrumentationInfo> instrumentations =
+        apkAnalyzer.parseInstrumentation(testApkPath, testPackageName);
+    for (InstrumentationInfo info : instrumentations) {
+      if (info.name().equals(fullRunnerName)) {
+        return info.targetPackage();
+      }
+    }
+    throw new MobileHarnessException(
+        AndroidErrorId.ANDROID_INSTRUMENTATION_TARGET_PACKAGE_NOT_FOUND,
+        String.format(
+            "Cannot find target package for instrumentation runner %s in test apk %s",
+            runnerName, testApkPath));
+  }
+
+  /**
+   * Configures the Private Compute Core sandbox for the given package.
+   *
+   * @param serial the device serial number
+   * @param targetPackage the target package name
+   * @param enableTrustInstrumentedClients whether to enable trust for instrumented clients that
+   *     communicate with the target package
+   */
+  public void configurePccSandbox(
+      String serial, String targetPackage, boolean enableTrustInstrumentedClients)
+      throws MobileHarnessException, InterruptedException {
+    String escapedTargetPackage = ShellUtils.shellEscape(targetPackage);
+    try {
+      var unused =
+          adbUtil.cmd(
+              serial,
+              AndroidService.PCC_SANDBOX,
+              new String[] {"add-allowed-package", escapedTargetPackage});
+      if (enableTrustInstrumentedClients) {
+        unused =
+            adbUtil.cmd(
+                serial,
+                AndroidService.PCC_SANDBOX,
+                new String[] {"enable-trust-instrumented-clients", escapedTargetPackage});
+      }
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_INSTRUMENTATION_CONFIGURE_PCC_SANDBOX_ERROR,
+          String.format(
+              "Failed to configure Private Compute Core sandbox for package %s", targetPackage),
+          e);
+    }
+  }
+
+  /**
+   * Best-effort cleanup of the Private Compute Core sandbox on the device after running
+   * instrumentation.
+   */
+  public void cleanupPccSandbox(
+      String serial, String targetPackage, boolean disableTrustInstrumentedClients)
+      throws InterruptedException {
+    String escapedTargetPackage = ShellUtils.shellEscape(targetPackage);
+    if (disableTrustInstrumentedClients) {
+      try {
+        var unused =
+            adbUtil.cmd(
+                serial,
+                AndroidService.PCC_SANDBOX,
+                new String[] {"disable-trust-instrumented-clients", escapedTargetPackage});
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to disable trust instrumented clients in Private Compute Core sandbox"
+                + " for package %s",
+            targetPackage);
+      }
+    }
+    try {
+      var unused =
+          adbUtil.cmd(
+              serial,
+              AndroidService.PCC_SANDBOX,
+              new String[] {"remove-allowed-package", escapedTargetPackage});
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to remove allowed package from Private Compute Core sandbox for package %s",
+          targetPackage);
     }
   }
 

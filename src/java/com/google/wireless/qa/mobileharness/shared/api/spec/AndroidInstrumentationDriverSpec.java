@@ -307,6 +307,14 @@ public interface AndroidInstrumentationDriverSpec {
               + " false.")
   String PARAM_MOCK_LOCATION = "mock_location";
 
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Whether to run the instrumentation test in the Private Compute Core sandbox. Supported"
+              + " on Android 17+ devices. Ignored on lower Android versions. By default, this is"
+              + " false.")
+  String PARAM_INSTRUMENT_IN_PRIVATE_COMPUTE_CORE = "instrument_in_private_compute_core";
+
   /** Resource path of the Android basic_services.apk which is needed for reading test_args. */
   String BASIC_SERVICE_APK_PATH =
       "/com/google/android/apps/common/testing/services/basic_services.apk";

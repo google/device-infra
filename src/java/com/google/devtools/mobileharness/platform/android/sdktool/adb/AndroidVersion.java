@@ -52,7 +52,8 @@ public enum AndroidVersion {
   ANDROID_13("T", 33, 33),
   ANDROID_14("U", 34, 34),
   ANDROID_15("V", 35, 35),
-  ANDROID_16("B", 36, 36);
+  ANDROID_16("B", 36, 36),
+  ANDROID_17("C", 37, 37);
 
   private final String codeNameInitial;
   private final Range<Integer> sdkRange;
