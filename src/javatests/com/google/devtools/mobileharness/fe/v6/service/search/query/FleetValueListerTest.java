@@ -220,6 +220,112 @@ public final class FleetValueListerTest {
     assertThat(FleetValueLister.extractOverlayKeys(registry, request)).hasSize(1);
   }
 
+  @Test
+  public void countedKey_equalFilteredCounts_tieBreaksNumerically() {
+    LabQueryResult tempFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab1",
+                            "1.1.1.1",
+                            deviceWithTemp("dev-0", "9"),
+                            deviceWithTemp("dev-1", "38"),
+                            deviceWithTemp("dev-2", "-1"),
+                            deviceWithTemp("dev-3", "25"))))
+            .build();
+    FleetSnapshot tempSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(tempFleet, BUILD_TIME);
+    DeviceCorpus tempCorpus =
+        new DeviceCorpus(tempSnapshot, new LazyPostings(tempSnapshot.devices()), null);
+
+    FleetValueListResponse response =
+        lister.listValues(tempCorpus, "dimension::battery_temperature", ImmutableList.of());
+
+    assertThat(valuesOf(response.getCounted())).containsExactly("-1", "9", "25", "38").inOrder();
+  }
+
+  @Test
+  public void countedKey_equalFilteredCounts_selectsVersionOrDecimalModePerKey() {
+    LabQueryResult mixedFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab1",
+                            "1.1.1.1",
+                            deviceWithDimension("dev-0", "software_version", "17.10"),
+                            deviceWithDimension("dev-1", "software_version", "0.10"),
+                            deviceWithDimension("dev-2", "software_version", "17.4"),
+                            deviceWithDimension("dev-3", "software_version", "0.9"),
+                            deviceWithDimension("dev-4", "voltage", "1.5"),
+                            deviceWithDimension("dev-5", "voltage", "-1.25"),
+                            deviceWithDimension("dev-6", "voltage", "1.25"),
+                            deviceWithDimension("dev-7", "voltage", "-1.5"))))
+            .build();
+    FleetSnapshot mixedSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(mixedFleet, BUILD_TIME);
+    DeviceCorpus mixedCorpus =
+        new DeviceCorpus(mixedSnapshot, new LazyPostings(mixedSnapshot.devices()), null);
+
+    FleetValueListResponse versionResponse =
+        lister.listValues(mixedCorpus, "dimension::software_version", ImmutableList.of());
+    assertThat(valuesOf(versionResponse.getCounted()))
+        .containsExactly("0.9", "0.10", "17.4", "17.10")
+        .inOrder();
+
+    FleetValueListResponse voltageResponse =
+        lister.listValues(mixedCorpus, "dimension::voltage", ImmutableList.of());
+    assertThat(valuesOf(voltageResponse.getCounted()))
+        .containsExactly("-1.5", "-1.25", "1.25", "1.5")
+        .inOrder();
+  }
+
+  @Test
+  public void identifierHexKeys_returnPlainListInLexicographicalOrder() {
+    LabQueryResult hexFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(1)
+                    .addLabData(
+                        labData(
+                            "lab1",
+                            "1.1.1.1",
+                            deviceWithDimension("1aef0001", "mac_address", "1a:00:00:00:00:01"),
+                            deviceWithDimension("09ef0001", "mac_address", "09:00:00:00:00:01"),
+                            deviceWithDimension("10ef0001", "mac_address", "10:00:00:00:00:01"),
+                            deviceWithDimension("0aef0001", "mac_address", "0a:00:00:00:00:01"))))
+            .build();
+    FleetSnapshot hexSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(hexFleet, BUILD_TIME);
+    DeviceCorpus hexCorpus =
+        new DeviceCorpus(hexSnapshot, new LazyPostings(hexSnapshot.devices()), null);
+
+    FleetValueListResponse uuidResponse =
+        lister.listValues(hexCorpus, "device_field::uuid", ImmutableList.of());
+    assertThat(
+            uuidResponse.getPlain().getValuesList().stream()
+                .map(FleetPlainValue::getValue)
+                .collect(toImmutableList()))
+        .containsExactly("09ef0001", "0aef0001", "10ef0001", "1aef0001")
+        .inOrder();
+
+    FleetValueListResponse macResponse =
+        lister.listValues(hexCorpus, "dimension::mac_address", ImmutableList.of());
+    assertThat(
+            macResponse.getPlain().getValuesList().stream()
+                .map(FleetPlainValue::getValue)
+                .collect(toImmutableList()))
+        .containsExactly(
+            "09:00:00:00:00:01", "0a:00:00:00:00:01", "10:00:00:00:00:01", "1a:00:00:00:00:01")
+        .inOrder();
+  }
+
   // --- Helpers ---
 
   private static ImmutableList<String> valuesOf(FleetCountedValueList list) {
@@ -319,5 +425,21 @@ public final class FleetValueListerTest {
 
   private static DeviceDimension dimension(String name, String value) {
     return DeviceDimension.newBuilder().setName(name).setValue(value).build();
+  }
+
+  private static DeviceInfo deviceWithTemp(String id, String temp) {
+    return deviceWithDimension(id, "battery_temperature", temp);
+  }
+
+  private static DeviceInfo deviceWithDimension(String id, String name, String value) {
+    return DeviceInfo.newBuilder()
+        .setDeviceLocator(DeviceLocator.newBuilder().setId(id))
+        .setDeviceStatus(DeviceStatus.IDLE)
+        .setDeviceFeature(
+            DeviceFeature.newBuilder()
+                .setCompositeDimension(
+                    DeviceCompositeDimension.newBuilder()
+                        .addSupportedDimension(dimension(name, value))))
+        .build();
   }
 }

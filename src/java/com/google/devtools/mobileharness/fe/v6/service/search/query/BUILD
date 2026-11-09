@@ -174,10 +174,21 @@ java_library(
 )
 
 java_library(
+    name = "fleet_sort_comparator",
+    srcs = ["FleetSortComparator.java"],
+    deps = [
+        ":search_corpus",
+        "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "fleet_flat_searcher",
     srcs = ["FleetFlatSearcher.java"],
     deps = [
         ":fleet_filter_engine",
+        ":fleet_sort_comparator",
         ":search_corpus",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_common_java_proto",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
@@ -190,6 +201,7 @@ java_library(
     srcs = ["FleetValueLister.java"],
     deps = [
         ":fleet_filter_engine",
+        ":fleet_sort_comparator",
         ":search_corpus",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",
@@ -457,6 +469,7 @@ java_library(
     deps = [
         ":fleet_filter_engine",
         ":fleet_flat_searcher",
+        ":fleet_sort_comparator",
         ":search_corpus",
         "//src/devtools/mobileharness/fe/v6/service/proto/search:search_fleet_java_proto",
         "//src/java/com/google/devtools/mobileharness/fe/v6/service/search/index:fleet_index",

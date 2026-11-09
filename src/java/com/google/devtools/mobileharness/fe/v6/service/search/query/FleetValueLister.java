@@ -106,8 +106,6 @@ public final class FleetValueLister {
       BitSet filteredSet,
       boolean knownKey,
       Postings postings) {
-    // Collect in the index's ascending value order so equal filtered counts stay value-ascending
-    // after the stable sort below.
     List<FleetCountedValue> entries = new ArrayList<>();
     for (String value : values) {
       String display = displayFor(index, keyId, value);
@@ -119,7 +117,11 @@ public final class FleetValueLister {
               .setTotal(index.valueCount(keyId, value))
               .build());
     }
-    entries.sort(Comparator.comparingInt(FleetCountedValue::getFiltered).reversed());
+    FleetSortComparator valueComparator = FleetSortComparator.forKey(corpus, keyId);
+    entries.sort(
+        Comparator.comparingInt(FleetCountedValue::getFiltered)
+            .reversed()
+            .thenComparing(FleetCountedValue::getDisplayLabel, valueComparator));
 
     FleetCountedValueList.Builder builder =
         FleetCountedValueList.newBuilder().addAllValues(entries);

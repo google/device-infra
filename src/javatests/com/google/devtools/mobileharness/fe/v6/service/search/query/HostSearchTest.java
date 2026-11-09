@@ -237,7 +237,7 @@ public final class HostSearchTest {
   }
 
   @Test
-  public void flat_sortsByHostPropertyCaseInsensitivelyAndMissingFirst() {
+  public void flat_sortsByHostPropertyCaseInsensitivelyAndMissingLast() {
     LabQueryResult rackFleet =
         LabQueryResult.newBuilder()
             .setLabView(
@@ -279,7 +279,7 @@ public final class HostSearchTest {
             columns,
             FleetColumnSort.newBuilder().setKey("host_property::rack").setAscending(true).build(),
             FleetPageRequest.getDefaultInstance());
-    assertThat(rowIds(ascending)).containsExactly("lab-c", "lab-b", "lab-a").inOrder();
+    assertThat(rowIds(ascending)).containsExactly("lab-b", "lab-a", "lab-c").inOrder();
 
     FleetFlatResults descending =
         flatSearcher.searchFlat(
@@ -289,6 +289,76 @@ public final class HostSearchTest {
             FleetColumnSort.newBuilder().setKey("host_property::rack").setAscending(false).build(),
             FleetPageRequest.getDefaultInstance());
     assertThat(rowIds(descending)).containsExactly("lab-a", "lab-b", "lab-c").inOrder();
+  }
+
+  @Test
+  public void flat_sortsByDeviceCountNumerically() {
+    LabQueryResult countFleet =
+        LabQueryResult.newBuilder()
+            .setLabView(
+                LabQueryResult.LabView.newBuilder()
+                    .setLabTotalCount(4)
+                    .addLabData(
+                        hostLab(
+                            "lab-nine",
+                            "1.1.1.1",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            9))
+                    .addLabData(
+                        hostLab(
+                            "lab-twelve",
+                            "2.2.2.2",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            12))
+                    .addLabData(
+                        hostLab(
+                            "lab-zero",
+                            "3.3.3.3",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            0))
+                    .addLabData(
+                        hostLab(
+                            "lab-two",
+                            "4.4.4.4",
+                            LabStatus.LAB_RUNNING,
+                            HostProperties.getDefaultInstance(),
+                            2)))
+            .build();
+    FleetSnapshot countSnapshot =
+        Guice.createInjector().getInstance(FleetIndexBuilder.class).build(countFleet, BUILD_TIME);
+    HostCorpus countCorpus =
+        new HostCorpus(countSnapshot, LazyPostings.forHosts(countSnapshot.hosts()), null);
+
+    FleetFlatResults ascending =
+        flatSearcher.searchFlat(
+            countCorpus,
+            ImmutableList.of(),
+            COLUMNS,
+            FleetColumnSort.newBuilder()
+                .setKey("host_field::device_count")
+                .setAscending(true)
+                .build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(rowIds(ascending))
+        .containsExactly("lab-zero", "lab-two", "lab-nine", "lab-twelve")
+        .inOrder();
+
+    FleetFlatResults descending =
+        flatSearcher.searchFlat(
+            countCorpus,
+            ImmutableList.of(),
+            COLUMNS,
+            FleetColumnSort.newBuilder()
+                .setKey("host_field::device_count")
+                .setAscending(false)
+                .build(),
+            FleetPageRequest.getDefaultInstance());
+    assertThat(rowIds(descending))
+        .containsExactly("lab-twelve", "lab-nine", "lab-two", "lab-zero")
+        .inOrder();
   }
 
   @Test
