@@ -31,7 +31,9 @@ public final class DeviceConstants {
           "AndroidRecoveryDevice",
           "AndroidUnauthorizedDevice",
           "DisconnectedDevice",
-          "FailedDevice");
+          "FailedDevice",
+          "FuchsiaOfflineDevice",
+          "FuchsiaRecoveringDevice");
 
   public static final ImmutableSet<DeviceStatus> HEALTHY_STATUS =
       ImmutableSet.of(DeviceStatus.IDLE, DeviceStatus.BUSY, DeviceStatus.LAMEDUCK);
