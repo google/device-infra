@@ -298,6 +298,7 @@ export class FilterValuePicker {
       sortBy: this.sortBy(),
       sortAsc: this.sortAsc(),
       isPlain: this.isPlain(),
+      key: this.config()?.key,
       isLoading: !!this.state().loading,
     }),
   );
@@ -316,6 +317,9 @@ export class FilterValuePicker {
       this.selectedSet(),
       this.searchQuery(),
       !!this.state().loading,
+      20,
+      this.isPlain(),
+      this.config()?.key,
     ),
   );
 
