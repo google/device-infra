@@ -105,7 +105,7 @@ public enum BasicErrorId implements ErrorId {
   // ***********************************************************************************************
   // Util: 30_001 ~ 35_000,
   // ***********************************************************************************************
-  // File: 30_001 ~ 30_500
+  // Local file: 30_001 ~ 30_300 (see LOCAL_FILE_MIN_CODE / LOCAL_FILE_MAX_CODE)
   LOCAL_FILE_OR_DIR_NOT_FOUND(30_001, ErrorType.UNDETERMINED),
   LOCAL_FILE_OR_DIR_COPY_ERROR(30_002, ErrorType.UNDETERMINED),
   LOCAL_FILE_OR_DIR_REMOVE_ERROR(30_003, ErrorType.UNDETERMINED),
@@ -163,6 +163,8 @@ public enum BasicErrorId implements ErrorId {
   LOCAL_DIR_LIST_FILE_OR_DIRS_ERROR(30_212, ErrorType.UNDETERMINED),
   LOCAL_MOUNT_ZIP_TO_DIR_ERROR(30_213, ErrorType.UNDETERMINED),
   LOCAL_UNMOUNT_DIR_ERROR(30_214, ErrorType.UNDETERMINED),
+
+  // Remote file & checksum: 30_301 ~ 30_500
 
   FILE_CHECKSUM_ERROR(30_490, ErrorType.UNDETERMINED),
 
@@ -543,6 +545,11 @@ public enum BasicErrorId implements ErrorId {
 
   public static final int MIN_CODE = 20_001;
   public static final int MAX_CODE = 40_000;
+
+  /** Inclusive code bounds of the local file and directory {@code LOCAL_*} errors above. */
+  public static final int LOCAL_FILE_MIN_CODE = 30_001;
+
+  public static final int LOCAL_FILE_MAX_CODE = 30_300;
 
   private final int code;
   private final ErrorType type;
