@@ -53,8 +53,8 @@ public class SystemSettingManager {
   public int getDeviceSdkVersion(Device device)
       throws MobileHarnessException, InterruptedException {
     Integer deviceSdkVersion = null;
-    if (device instanceof AndroidDevice) {
-      deviceSdkVersion = ((AndroidDevice) device).getSdkVersion();
+    if (device instanceof AndroidDevice androidDevice) {
+      deviceSdkVersion = androidDevice.getSdkVersion();
     }
     if (deviceSdkVersion == null) {
       deviceSdkVersion = systemSettingUtil.getDeviceSdkVersion(device.getDeviceId());

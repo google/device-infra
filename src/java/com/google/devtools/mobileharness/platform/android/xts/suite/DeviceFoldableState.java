@@ -50,10 +50,9 @@ public class DeviceFoldableState implements Comparable<DeviceFoldableState> {
     if (this == obj) {
       return true;
     }
-    if (!(obj instanceof DeviceFoldableState)) {
+    if (!(obj instanceof DeviceFoldableState other)) {
       return false;
     }
-    DeviceFoldableState other = (DeviceFoldableState) obj;
     if (identifier != other.identifier) {
       return false;
     }

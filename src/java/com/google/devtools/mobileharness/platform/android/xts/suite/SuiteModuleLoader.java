@@ -147,9 +147,9 @@ public class SuiteModuleLoader {
               forcedModuleParameter, /* withOptional= */ allowOptionalParameterizedModules);
       forcedModuleParameterHandlerClasses = new HashSet<>();
       for (IModuleParameterHandler parameter : moduleParameters.values()) {
-        if (parameter instanceof FoldableExpandingHandler) {
+        if (parameter instanceof FoldableExpandingHandler foldableExpandingHandler) {
           for (IModuleParameterHandler fParam :
-              ((FoldableExpandingHandler) parameter).expandHandler(foldableStates)) {
+              foldableExpandingHandler.expandHandler(foldableStates)) {
             forcedModuleParameterHandlerClasses.add(fParam.getClass());
           }
         } else {

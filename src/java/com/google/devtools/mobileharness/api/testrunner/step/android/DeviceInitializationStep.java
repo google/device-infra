@@ -259,8 +259,7 @@ public class DeviceInitializationStep {
 
   private void updateDevicePropertiesAndDimensions(Device device)
       throws MobileHarnessException, InterruptedException {
-    if (device instanceof AndroidDevice) {
-      AndroidDevice androidDevice = ((AndroidDevice) device);
+    if (device instanceof AndroidDevice androidDevice) {
       logger.atInfo().log(
           "Updating Android device %s properties and dimensions if needed.", device.getDeviceId());
       androidDeviceHelper.updateAndroidPropertyDimensions(androidDevice);
