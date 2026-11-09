@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.platform.android.xts.runtime;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.stream.Collectors.toMap;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedTestModuleResults.ModuleInfo;
@@ -29,6 +28,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,7 +37,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 
 /**
  * A monitor that runs in a Tradefed invocation agent, collects test module execution progress, and
@@ -190,14 +189,13 @@ public class XtsTradefedTestModuleResultsMonitor {
     }
 
     // Merge module info from all invocations/shards.
-    Map<String, ModuleInfo> mergedModules =
-        runningInvocations.values().stream()
-            .flatMap(invocation -> invocation.getModules().stream())
-            .collect(
-                toMap(
-                    /* keyMapper= */ ModuleInfo::id,
-                    /* valueMapper= */ Function.identity(),
-                    /* mergeFunction= */ XtsTradefedTestModuleResultsMonitor::mergeModuleInfo));
+    Map<String, ModuleInfo> mergedModules = new HashMap<>();
+    for (Invocation invocation : runningInvocations.values()) {
+      for (ModuleInfo module : invocation.getModules()) {
+        mergedModules.merge(
+            module.id(), module, XtsTradefedTestModuleResultsMonitor::mergeModuleInfo);
+      }
+    }
 
     XtsTradefedTestModuleResults moduleResults = new XtsTradefedTestModuleResults(mergedModules);
 

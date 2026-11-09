@@ -21,7 +21,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toMap;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -45,7 +44,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Optional;
 
 /**
@@ -127,10 +125,10 @@ public abstract class DeviceConfigManager implements Runnable {
     logger.atFine().log("There are %s devices in device id map", activeDeviceUuids.size());
 
     // Map from UUID to Control ID for all local devices with UUID.
-    Map<String, String> deviceUuidToControlDeviceIdMap =
-        deviceIdManager.getUuidToDeviceIdMap().entrySet().stream()
-            .filter(uuid -> activeDeviceUuids.contains(uuid.getKey()))
-            .collect(toMap(Entry::getKey, e -> e.getValue().controlId()));
+    Map<String, String> deviceUuidToControlDeviceIdMap = new HashMap<>();
+    deviceIdManager.getUuidToDeviceIdMap().entrySet().stream()
+        .filter(uuid -> activeDeviceUuids.contains(uuid.getKey()))
+        .forEach(e -> deviceUuidToControlDeviceIdMap.put(e.getKey(), e.getValue().controlId()));
     apiConfig.getTestbedUuidList().stream()
         .filter(uuid -> !deviceUuidToControlDeviceIdMap.containsKey(uuid))
         .forEach(uuid -> deviceUuidToControlDeviceIdMap.put(uuid, uuid));
@@ -180,7 +178,7 @@ public abstract class DeviceConfigManager implements Runnable {
         logger.atInfo().log(
             "Update local device configs: %s.",
             deviceConfigsNeedToUpdateToLocal.entrySet().stream()
-                .map(entry -> String.format("%s: %s", entry.getKey(), entry.getValue()))
+                .map(e -> String.format("%s: %s", e.getKey(), e.getValue()))
                 .collect(joining(", ")));
         apiConfig.setDeviceConfigs(deviceConfigsNeedToUpdateToLocal);
         onDeviceConfigUpdatedToLocal();
@@ -189,8 +187,8 @@ public abstract class DeviceConfigManager implements Runnable {
         storeDeviceConfigs(deviceConfigsNeedToStore);
       }
     } finally {
-      for (Map.Entry<String, String> device : deviceUuidToControlDeviceIdMap.entrySet()) {
-        apiConfig.setDeviceConfigSynced(device.getValue());
+      for (String deviceValue : deviceUuidToControlDeviceIdMap.values()) {
+        apiConfig.setDeviceConfigSynced(deviceValue);
       }
     }
   }
@@ -245,10 +243,9 @@ public abstract class DeviceConfigManager implements Runnable {
     labConfig.getHostProperties().getHostPropertyList().stream()
         .filter(property -> property.getKey().equals("host_group"))
         .forEach(
-            property -> {
-              LabDimensionManager.getInstance()
-                  .getSupportedLocalDimensions()
-                  .add(property.getKey(), property.getValue());
-            });
+            property ->
+                LabDimensionManager.getInstance()
+                    .getSupportedLocalDimensions()
+                    .add(property.getKey(), property.getValue()));
   }
 }

@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toMap;
 
 import com.android.tradefed.metrics.proto.MetricMeasurement.Metric;
 import com.android.tradefed.result.proto.TestRecordProto.ChildReference;
@@ -201,11 +200,12 @@ public class CompatibilityReportMerger {
             .setModulesTotal(modulesTotalInSummary)
             .build();
 
-    Result.Builder res = Result.newBuilder();
-    res.setBuild(getNewBuildInfo(reports))
-        .setSummary(summary)
-        .addAllModuleInfo(mergedModuleList)
-        .addAllAttribute(getNewResultAttrs(reports));
+    Result.Builder res =
+        Result.newBuilder()
+            .setBuild(getNewBuildInfo(reports))
+            .setSummary(summary)
+            .addAllModuleInfo(mergedModuleList)
+            .addAllAttribute(getNewResultAttrs(reports));
 
     if (!runs.build().isEmpty()) {
       res.setRunHistory(RunHistory.newBuilder().addAllRun(runs.build()));
@@ -391,14 +391,10 @@ public class CompatibilityReportMerger {
     reports.forEach(
         report -> {
           List<Attribute> resultAttrsList = report.getAttributeList();
-          LinkedHashMap<String, String> attrsMap =
-              resultAttrsList.stream()
-                  .collect(
-                      toMap(
-                          Attribute::getKey,
-                          Attribute::getValue,
-                          (e1, e2) -> e1,
-                          LinkedHashMap::new));
+          Map<String, String> attrsMap = new LinkedHashMap<>();
+          for (Attribute attr : resultAttrsList) {
+            attrsMap.putIfAbsent(attr.getKey(), attr.getValue());
+          }
 
           for (Attribute attr : resultAttrsList) {
             newAttrs.putIfAbsent(attr.getKey(), attr.getValue());

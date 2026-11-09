@@ -28,8 +28,6 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutur
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.getUnchecked;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.function.Function.identity;
-import static java.util.stream.Collectors.toMap;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
@@ -213,14 +211,10 @@ public class ProxyDeviceManager {
         Params params) {
       this.jobLocator = jobLocator;
       this.deviceRequirements = deviceRequirements;
-      this.tests =
-          testLocators.stream()
-              .collect(
-                  toMap(
-                      identity(),
-                      testLocator -> new Test(testLocator, deviceRequirements, jobSetting, params),
-                      (a, b) -> a,
-                      HashMap::new));
+      this.tests = new HashMap<>();
+      for (TestLocator testLocator : testLocators) {
+        this.tests.put(testLocator, new Test(testLocator, deviceRequirements, jobSetting, params));
+      }
     }
 
     private ListenableFuture<ProxyDevices> getTest(TestLocator testLocator) {
