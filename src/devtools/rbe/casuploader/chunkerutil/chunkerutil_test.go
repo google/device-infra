@@ -480,7 +480,8 @@ func TestCreateIndexFile_MissingDir(t *testing.T) {
 }
 
 // TestCreateIndexFile_NoChunksDir checks that failing to write the backup
-// copy of the index in the chunks dir does not fail the upload.
+// copy of the index in the chunks dir does not fail the upload, and that the
+// resulting empty index restores zero files.
 func TestCreateIndexFile_NoChunksDir(t *testing.T) {
 	dir := t.TempDir()
 	if err := CreateIndexFile(dir, nil); err != nil {
@@ -488,6 +489,10 @@ func TestCreateIndexFile_NoChunksDir(t *testing.T) {
 	}
 	if !exists(t, filepath.Join(dir, ChunksIndexFileName)) {
 		t.Error("CreateIndexFile did not write the index")
+	}
+	restored, err := RestoreFilesTo(dir, t.TempDir(), tmpNameFor("run1"))
+	if err != nil || len(restored) != 0 {
+		t.Errorf("RestoreFilesTo on empty index = %v, %v, want [], nil", restored, err)
 	}
 }
 
@@ -837,4 +842,214 @@ func TestRestore_RejectsNonLocalPaths(t *testing.T) {
 			})
 		}
 	}
+}
+
+// forceRestoreConcurrency makes restoreEntries use n workers for the rest of
+// the test, whatever the number of CPUs.
+func forceRestoreConcurrency(t *testing.T, n int) {
+	t.Helper()
+	orig := restoreConcurrency
+	restoreConcurrency = func() int { return n }
+	t.Cleanup(func() { restoreConcurrency = orig })
+}
+
+// TestRestoreFilesTo_ParallelOrderAndCleanup restores a batch of single-chunk
+// and multi-chunk entries with several workers, checking that:
+//   - tmpName is called sequentially in index order,
+//   - the returned Restored slice preserves index order even though
+//     multi-chunk entries are scheduled first, and
+//   - a failure mid-batch removes every temporary file restored by concurrent
+//     workers.
+func TestRestoreFilesTo_ParallelOrderAndCleanup(t *testing.T) {
+	const numFiles = 64
+	modTime := time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)
+	forceRestoreConcurrency(t, 8)
+
+	t.Run("preserves index order", func(t *testing.T) {
+		srcDir := t.TempDir()
+		dstDir := t.TempDir()
+		chunksDir := filepath.Join(srcDir, ChunksDirName)
+
+		var index []ChunksIndex
+		var wantContents []string
+		for i := range numFiles {
+			relPath := filepath.Join(fmt.Sprintf("dir_%d", i%4), fmt.Sprintf("file_%02d.bin", i))
+			var chunks []chunker.ChunkInfo
+			var content strings.Builder
+			// Give later entries more chunks so the worker scheduler reorders
+			// them ahead of earlier single-chunk entries.
+			numChunks := 1 + (i % 5)
+			for c := range numChunks {
+				part := fmt.Sprintf("file-%d-chunk-%d;", i, c)
+				sha := writeChunk(t, chunksDir, part)
+				chunks = append(chunks, chunker.ChunkInfo{SHA256: sha, Offset: int64(content.Len())})
+				content.WriteString(part)
+			}
+			index = append(index, ChunksIndex{
+				Path:    relPath,
+				ModTime: modTime,
+				Mode:    0644,
+				Chunks:  chunks,
+			})
+			wantContents = append(wantContents, content.String())
+		}
+		if err := CreateIndexFile(srcDir, index); err != nil {
+			t.Fatalf("CreateIndexFile failed: %v", err)
+		}
+
+		// Mutate an unsynchronized slice inside tmpName to verify that
+		// RestoreFilesTo invokes tmpName sequentially on the caller goroutine
+		// (checked under -race / gotsan).
+		var callbackPaths []string
+		baseTmp := tmpNameFor("run1")
+		tmpName := func(path string) string {
+			callbackPaths = append(callbackPaths, path)
+			return baseTmp(path)
+		}
+
+		restored, err := RestoreFilesTo(srcDir, dstDir, tmpName)
+		if err != nil {
+			t.Fatalf("RestoreFilesTo failed: %v", err)
+		}
+		if len(callbackPaths) != numFiles {
+			t.Fatalf("tmpName called %d times, want %d", len(callbackPaths), numFiles)
+		}
+		if len(restored) != numFiles {
+			t.Fatalf("RestoreFilesTo returned %d entries, want %d", len(restored), numFiles)
+		}
+		for i, entry := range index {
+			wantFinal := filepath.Join(dstDir, entry.Path)
+			wantTmp := baseTmp(wantFinal)
+			if callbackPaths[i] != wantFinal {
+				t.Errorf("callbackPaths[%d] = %q, want %q", i, callbackPaths[i], wantFinal)
+			}
+			if restored[i].Path != wantFinal || restored[i].TmpPath != wantTmp {
+				t.Errorf("restored[%d] = %+v, want {TmpPath: %q, Path: %q}", i, restored[i], wantTmp, wantFinal)
+			}
+			got, err := os.ReadFile(wantTmp)
+			if err != nil {
+				t.Fatalf("Failed to read restored[%d] (%s): %v", i, wantTmp, err)
+			}
+			if string(got) != wantContents[i] {
+				t.Errorf("restored[%d] content = %q, want %q", i, got, wantContents[i])
+			}
+		}
+	})
+
+	t.Run("cleans up all concurrent workers on failure", func(t *testing.T) {
+		srcDir := t.TempDir()
+		dstDir := t.TempDir()
+		chunksDir := filepath.Join(srcDir, ChunksDirName)
+
+		var index []ChunksIndex
+		for i := range numFiles {
+			part := fmt.Sprintf("content-%d", i)
+			sha := writeChunk(t, chunksDir, part)
+			if i == numFiles/2 {
+				sha = strings.Repeat("0", 64) // missing chunk
+			}
+			index = append(index, ChunksIndex{
+				Path:    filepath.Join(fmt.Sprintf("dir_%d", i%4), fmt.Sprintf("file_%02d.bin", i)),
+				ModTime: modTime,
+				Mode:    0644,
+				Chunks:  []chunker.ChunkInfo{{SHA256: sha, Offset: 0}},
+			})
+		}
+		if err := CreateIndexFile(srcDir, index); err != nil {
+			t.Fatalf("CreateIndexFile failed: %v", err)
+		}
+
+		restored, err := RestoreFilesTo(srcDir, dstDir, tmpNameFor("run1"))
+		if err == nil {
+			t.Fatal("RestoreFilesTo succeeded with a missing chunk, want an error")
+		}
+		if restored != nil {
+			t.Errorf("RestoreFilesTo returned %v on error, want nil", restored)
+		}
+		if got := listFiles(t, dstDir); len(got) != 0 {
+			t.Errorf("Files left in dstDir after failed parallel restore = %v, want none", got)
+		}
+	})
+}
+
+// TestRestore_DuplicatePathsRestoreLastEntry restores an index with several
+// entries for the same path using several workers. Only the last entry for
+// each path is restored, as when entries were restored one at a time, and
+// RestoreFilesTo returns it once.
+func TestRestore_DuplicatePathsRestoreLastEntry(t *testing.T) {
+	forceRestoreConcurrency(t, 8)
+	modTime := time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)
+	newIndex := func(t *testing.T, srcDir string) {
+		t.Helper()
+		chunksDir := filepath.Join(srcDir, ChunksDirName)
+		entry := func(path, content string) ChunksIndex {
+			return ChunksIndex{
+				Path:    path,
+				ModTime: modTime,
+				Mode:    0644,
+				Chunks:  []chunker.ChunkInfo{{SHA256: writeChunk(t, chunksDir, content), Offset: 0}},
+			}
+		}
+		index := []ChunksIndex{
+			entry("dup.bin", "first"),
+			entry("other.bin", "other"),
+			entry(filepath.Join("d", "..", "dup.bin"), "second"),
+			entry("dup.bin", "last"),
+		}
+		if err := CreateIndexFile(srcDir, index); err != nil {
+			t.Fatalf("CreateIndexFile failed: %v", err)
+		}
+	}
+	wantContent := map[string]string{"dup.bin": "last", "other.bin": "other"}
+
+	t.Run("RestoreFiles", func(t *testing.T) {
+		srcDir := t.TempDir()
+		dstDir := t.TempDir()
+		newIndex(t, srcDir)
+		if err := RestoreFiles(srcDir, dstDir, true); err != nil {
+			t.Fatalf("RestoreFiles failed: %v", err)
+		}
+		for name, want := range wantContent {
+			got, err := os.ReadFile(filepath.Join(dstDir, name))
+			if err != nil {
+				t.Fatalf("Failed to read %s: %v", name, err)
+			}
+			if string(got) != want {
+				t.Errorf("%s content = %q, want %q", name, got, want)
+			}
+		}
+	})
+
+	t.Run("RestoreFilesTo", func(t *testing.T) {
+		srcDir := t.TempDir()
+		dstDir := t.TempDir()
+		newIndex(t, srcDir)
+		tmpName := tmpNameFor("run1")
+		restored, err := RestoreFilesTo(srcDir, dstDir, tmpName)
+		if err != nil {
+			t.Fatalf("RestoreFilesTo failed: %v", err)
+		}
+		var want []Restored
+		for _, name := range []string{"other.bin", "dup.bin"} {
+			final := filepath.Join(dstDir, name)
+			want = append(want, Restored{TmpPath: tmpName(final), Path: final})
+		}
+		if len(restored) != len(want) {
+			t.Fatalf("RestoreFilesTo returned %+v, want %+v", restored, want)
+		}
+		for i := range want {
+			if restored[i] != want[i] {
+				t.Errorf("restored[%d] = %+v, want %+v", i, restored[i], want[i])
+			}
+		}
+		for _, r := range restored {
+			got, err := os.ReadFile(r.TmpPath)
+			if err != nil {
+				t.Fatalf("Failed to read %s: %v", r.TmpPath, err)
+			}
+			if w := wantContent[filepath.Base(r.Path)]; string(got) != w {
+				t.Errorf("%s content = %q, want %q", r.TmpPath, got, w)
+			}
+		}
+	})
 }

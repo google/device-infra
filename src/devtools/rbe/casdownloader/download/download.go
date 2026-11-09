@@ -1167,11 +1167,16 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 				return err
 			}
 			start = time.Now()
+			madeDirs := make(map[string]bool)
 			restored, err := restoreFilesTo(d.Dir, d.Dir, func(final string) string {
 				// Create the parent here, so that a failed attempt removes
 				// it; RestoreFilesTo would otherwise create it untracked. If
-				// this fails, so does the restore, with the reason.
-				s.mkdirAll(filepath.Dir(final))
+				// this fails, so does the restore, with the reason. Each
+				// directory is only recorded once it was made, so a failure
+				// is retried for the next file in it.
+				if dir := filepath.Dir(final); !madeDirs[dir] && s.mkdirAll(dir) == nil {
+					madeDirs[dir] = true
+				}
 				return s.tmpName(final)
 			})
 			if err != nil {

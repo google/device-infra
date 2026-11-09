@@ -2,6 +2,7 @@
 package chunkerutil
 
 import (
+	"cmp"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -9,6 +10,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+	"slices"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	log "github.com/golang/glog"
@@ -136,7 +141,8 @@ type Restored struct {
 // chunks or the index. It returns nothing if srcDir has no chunks index.
 //
 // Every path in the index must be local, as defined by filepath.IsLocal, or
-// nothing is restored.
+// nothing is restored. If several entries have the same path, only the last
+// is restored and returned.
 func RestoreFilesTo(srcDir, dstDir string, tmpName func(path string) string) ([]Restored, error) {
 	chunksIndexEntries, found, err := readChunksIndex(srcDir)
 	if err != nil || !found {
@@ -180,9 +186,26 @@ func readChunksIndex(dir string) (entries []ChunksIndex, found bool, err error) 
 	return entries, true, nil
 }
 
+// maxRestoreConcurrency caps the number of files restoreEntries restores in
+// parallel. File restoration is dominated by per-file metadata syscalls
+// (open, chmod, utimensat, close) rather than copy_file_range bandwidth, so
+// moderate concurrency overlaps syscall latency without exhausting file
+// descriptors.
+const maxRestoreConcurrency = 16
+
+// restoreConcurrency returns the number of files restoreEntries restores in
+// parallel. It is a variable so that tests can force concurrency on machines
+// with a single CPU.
+var restoreConcurrency = func() int {
+	return max(1, min(runtime.NumCPU(), maxRestoreConcurrency))
+}
+
 // restoreEntries restores each of chunksIndexEntries to tmpName(path), or to
 // path if tmpName is nil, where path is its final path under dstDir. It
 // returns the files restored so far, including when it fails.
+//
+// If several entries restore to the same path, only the last is restored, as
+// it was the one left in place when entries were restored one at a time.
 func restoreEntries(srcDir, dstDir string, chunksIndexEntries []ChunksIndex, tmpName func(string) string) ([]Restored, error) {
 	// Check every path before restoring anything, so a bad index leaves no
 	// files behind. A path that is absolute or climbs out with ".." would
@@ -193,42 +216,125 @@ func restoreEntries(srcDir, dstDir string, chunksIndexEntries []ChunksIndex, tmp
 		}
 	}
 
-	chunksDir := filepath.Join(srcDir, ChunksDirName)
-	restored := make([]Restored, 0, len(chunksIndexEntries))
-	for _, chunksIndex := range chunksIndexEntries {
+	// Find the last entry for each final path. Entries restored in parallel
+	// to the same path would race on it.
+	last := make(map[string]int, len(chunksIndexEntries))
+	for i, chunksIndex := range chunksIndexEntries {
+		last[filepath.Join(dstDir, chunksIndex.Path)] = i
+	}
+	if dups := len(chunksIndexEntries) - len(last); dups > 0 {
+		log.Warningf("chunk index has %d entries for paths that a later entry also restores; restoring only the last entry for each path", dups)
+	}
+
+	// Resolve target paths sequentially on the caller's goroutine so tmpName
+	// callbacks (such as casdownloader's staging directory tracker) do not
+	// need to synchronize concurrent calls.
+	targets := make([]Restored, len(chunksIndexEntries))
+	order := make([]int, 0, len(last))
+	for i, chunksIndex := range chunksIndexEntries {
 		finalPath := filepath.Join(dstDir, chunksIndex.Path)
+		if last[finalPath] != i {
+			continue
+		}
 		dstPath := finalPath
 		if tmpName != nil {
 			dstPath = tmpName(finalPath)
 		}
+		targets[i] = Restored{TmpPath: dstPath, Path: finalPath}
+		order = append(order, i)
+	}
+	// Start multi-chunk files first so a large image does not begin last and
+	// become a tail straggler.
+	slices.SortStableFunc(order, func(a, b int) int {
+		return cmp.Compare(len(chunksIndexEntries[b].Chunks), len(chunksIndexEntries[a].Chunks))
+	})
+
+	chunksDir := filepath.Join(srcDir, ChunksDirName)
+	restoredMask := make([]bool, len(chunksIndexEntries))
+
+	restoreOne := func(i int) error {
+		chunksIndex := chunksIndexEntries[i]
+		dstPath := targets[i].TmpPath
 		if chunksIndex.ModTime.IsZero() { // for backward compatibility
 			// Nothing is applied to the restored file afterwards, so it may
 			// share an inode with its chunk.
 			if err := chunker.RestoreFile(dstPath, chunksDir, chunksIndex.Chunks); err != nil {
-				return restored, err
+				return err
 			}
-			restored = append(restored, Restored{TmpPath: dstPath, Path: finalPath})
-			continue
+			restoredMask[i] = true
+			return nil
 		}
 		// The mode and times below must land on a private inode. A hard link
 		// to the chunk would share it with the chunk, which casdownloader
 		// links into its shared cache, so the chmod and chtimes would rewrite
 		// the cached blob's mode for every user and backdate its mtime so the
 		// evictor drops it early.
-		if err := chunker.RestoreFileCopy(dstPath, chunksDir, chunksIndex.Chunks); err != nil {
-			return restored, err
+		restoreCopy := chunker.RestoreFileCopy
+		if tmpName != nil {
+			// tmpName names a path nobody else reads, so the file may be
+			// written there directly rather than through another temporary
+			// file and rename.
+			restoreCopy = chunker.RestorePrivateFileCopy
 		}
-		restored = append(restored, Restored{TmpPath: dstPath, Path: finalPath})
+		if err := restoreCopy(dstPath, chunksDir, chunksIndex.Chunks); err != nil {
+			return err
+		}
+		restoredMask[i] = true
 		// Set the times while the file is still writable: once a read-only
 		// mode is applied, utimensat can fail on some filesystems, e.g. NFS.
 		if err := chtimes(dstPath, chunksIndex.ModTime, chunksIndex.ModTime); err != nil {
-			return restored, fmt.Errorf("failed to set times of restored file %s: %w", dstPath, err)
+			return fmt.Errorf("failed to set times of restored file %s: %w", dstPath, err)
 		}
 		if err := chmod(dstPath, chunksIndex.Mode); err != nil {
-			return restored, fmt.Errorf("failed to set mode of restored file %s: %w", dstPath, err)
+			return fmt.Errorf("failed to set mode of restored file %s: %w", dstPath, err)
+		}
+		return nil
+	}
+
+	workers := min(restoreConcurrency(), len(order))
+	var (
+		wg       sync.WaitGroup
+		mu       sync.Mutex
+		firstErr error
+		nextIdx  atomic.Int64
+	)
+	nextIdx.Store(-1)
+
+	for range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				k := int(nextIdx.Add(1))
+				if k >= len(order) {
+					return
+				}
+				mu.Lock()
+				failed := firstErr != nil
+				mu.Unlock()
+				if failed {
+					return
+				}
+				if err := restoreOne(order[k]); err != nil {
+					mu.Lock()
+					if firstErr == nil {
+						firstErr = err
+					}
+					mu.Unlock()
+					return
+				}
+			}
+		}()
+	}
+	wg.Wait()
+
+	restored := make([]Restored, 0, len(order))
+	for i, ok := range restoredMask {
+		if ok {
+			restored = append(restored, targets[i])
 		}
 	}
-	return restored, nil
+	return restored, firstErr
 }
 
 // FindChunksIndex returns the path of ChunksIndex file in the dir.

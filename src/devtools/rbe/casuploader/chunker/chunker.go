@@ -101,51 +101,85 @@ const restoredFileMode = 0644
 // Whatever was at path before is replaced, never modified in place, and path
 // never holds a partially restored file.
 func RestoreFile(path string, chunksDir string, chunks []ChunkInfo) error {
-	return restoreFile(path, chunksDir, chunks, true)
+	return restoreFile(path, chunksDir, chunks, true, false)
 }
 
 // RestoreFileCopy is like RestoreFile, but always writes an independent copy,
 // so the restored file shares no inode with any chunk and is safe to modify.
 func RestoreFileCopy(path string, chunksDir string, chunks []ChunkInfo) error {
-	return restoreFile(path, chunksDir, chunks, false)
+	return restoreFile(path, chunksDir, chunks, false, false)
 }
 
-func restoreFile(path string, chunksDir string, chunks []ChunkInfo, allowLink bool) error {
-	err := os.MkdirAll(filepath.Dir(path), 0755) // Standard permissions
-	if err != nil {
-		return fmt.Errorf("error creating directories: %w", err)
-	}
+// RestorePrivateFileCopy is like RestoreFileCopy, but for a path that is
+// private to the caller, such as a run-unique staging name, which nothing
+// else reads until the caller moves it into place.
+//
+// If nothing is at path yet, the file is written there directly, saving the
+// temporary sibling and rename that RestoreFileCopy uses. A failed restore
+// removes it, but a crash part way can leave a partial file at path, so path
+// must never be a name that others read. If something is already at path, it
+// is replaced as RestoreFileCopy does.
+func RestorePrivateFileCopy(path string, chunksDir string, chunks []ChunkInfo) error {
+	return restoreFile(path, chunksDir, chunks, false, true)
+}
 
+func restoreFile(path string, chunksDir string, chunks []ChunkInfo, allowLink, private bool) error {
 	if allowLink && len(chunks) == 1 {
 		// Hard link the file if there is only one chunk. If linking fails,
 		// fall back to copying the data.
-		if linkFile(filepath.Join(chunksDir, chunks[0].SHA256), path) == nil {
+		src := filepath.Join(chunksDir, chunks[0].SHA256)
+		err := linkFile(src, path)
+		if errors.Is(err, os.ErrNotExist) {
+			if mkdirErr := os.MkdirAll(filepath.Dir(path), 0755); mkdirErr != nil {
+				return fmt.Errorf("error creating directories: %w", mkdirErr)
+			}
+			err = linkFile(src, path)
+		}
+		if err == nil {
 			return nil
 		}
 	}
 
-	// Restore into a temporary sibling and rename it into place. Opening path
-	// itself with O_TRUNC would truncate whatever inode is there, which may be
-	// shared with a cached blob, and would leave a partial file behind if the
-	// restore failed part way.
+	// Restore into a temporary sibling and rename it into place, so path never
+	// holds a partially restored file. Opening path itself with O_TRUNC would
+	// also truncate whatever inode is there, which may be shared with a cached
+	// blob. A private path that is not in use yet (for example, a staging
+	// temporary name from RestoreFilesTo) is instead created directly with
+	// O_EXCL, saving the extra temporary file and rename.
 	dir, base := filepath.Dir(path), filepath.Base(path)
-	tmp, err := os.CreateTemp(dir, "."+base+".restore.*")
+	openDst := func() (*os.File, bool, error) {
+		if private {
+			f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, restoredFileMode)
+			if !errors.Is(err, os.ErrExist) {
+				return f, false, err
+			}
+		}
+		f, err := os.CreateTemp(dir, "."+base+".restore.*")
+		return f, true, err
+	}
+	dst, needRename, err := openDst()
+	if errors.Is(err, os.ErrNotExist) {
+		if mkdirErr := os.MkdirAll(dir, 0755); mkdirErr != nil {
+			return fmt.Errorf("error creating directories: %w", mkdirErr)
+		}
+		dst, needRename, err = openDst()
+	}
 	if err != nil {
 		return fmt.Errorf("error creating file: %w", err)
 	}
-	tmpName := tmp.Name()
+	dstName := dst.Name()
 	committed := false
 	defer func() {
 		if !committed {
-			tmp.Close()
-			os.Remove(tmpName)
+			dst.Close()
+			os.Remove(dstName)
 		}
 	}()
 
-	// CreateTemp creates the file 0600. Chmod on the descriptor is not
-	// filtered through the umask.
-	if err := tmp.Chmod(restoredFileMode); err != nil {
-		return fmt.Errorf("failed to set mode on %s: %w", tmpName, err)
+	// CreateTemp creates the file 0600, and OpenFile filters its mode through
+	// the umask. Chmod on the descriptor is not filtered through the umask.
+	if err := dst.Chmod(restoredFileMode); err != nil {
+		return fmt.Errorf("failed to set mode on %s: %w", dstName, err)
 	}
 
 	// Restore the file by appending chunks.
@@ -154,7 +188,7 @@ func restoreFile(path string, chunksDir string, chunks []ChunkInfo, allowLink bo
 		if err != nil {
 			return fmt.Errorf("failed to open chunk file: %v", err)
 		}
-		_, copyErr := io.Copy(tmp, chunkFile)
+		_, copyErr := io.Copy(dst, chunkFile)
 		closeErr := chunkFile.Close()
 		if copyErr != nil {
 			return fmt.Errorf("failed to append chunk to artifact: %w", copyErr)
@@ -164,11 +198,13 @@ func restoreFile(path string, chunksDir string, chunks []ChunkInfo, allowLink bo
 		}
 	}
 
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("failed to close restored file %s: %w", tmpName, err)
+	if err := dst.Close(); err != nil {
+		return fmt.Errorf("failed to close restored file %s: %w", dstName, err)
 	}
-	if err := os.Rename(tmpName, path); err != nil {
-		return fmt.Errorf("failed to move restored file into place at %s: %w", path, err)
+	if needRename {
+		if err := os.Rename(dstName, path); err != nil {
+			return fmt.Errorf("failed to move restored file into place at %s: %w", path, err)
+		}
 	}
 	committed = true
 	return nil

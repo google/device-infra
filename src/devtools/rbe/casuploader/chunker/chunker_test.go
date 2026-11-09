@@ -144,6 +144,8 @@ func TestRestoreFile_ReplacesExistingWithoutWritingThroughIt(t *testing.T) {
 		{"RestoreFile/multi", RestoreFile, []string{"new ", "content"}},
 		{"RestoreFileCopy/single", RestoreFileCopy, []string{"new content"}},
 		{"RestoreFileCopy/multi", RestoreFileCopy, []string{"new ", "content"}},
+		{"RestorePrivateFileCopy/single", RestorePrivateFileCopy, []string{"new content"}},
+		{"RestorePrivateFileCopy/multi", RestorePrivateFileCopy, []string{"new ", "content"}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -228,6 +230,8 @@ func TestRestoreFile_MissingChunkLeavesExistingFile(t *testing.T) {
 		{"RestoreFile/multi", RestoreFile, []string{"first ", "second"}},
 		{"RestoreFileCopy/single", RestoreFileCopy, []string{"only"}},
 		{"RestoreFileCopy/multi", RestoreFileCopy, []string{"first ", "second"}},
+		{"RestorePrivateFileCopy/single", RestorePrivateFileCopy, []string{"only"}},
+		{"RestorePrivateFileCopy/multi", RestorePrivateFileCopy, []string{"first ", "second"}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -277,24 +281,25 @@ func TestRestoreFile_RelinkSameChunk(t *testing.T) {
 	chunksDir := filepath.Join(tempDir, "chunks")
 	chunks := writeChunks(t, chunksDir, "only chunk")
 
+	chunkInfo, err := os.Stat(filepath.Join(chunksDir, chunks[0].SHA256))
+	if err != nil {
+		t.Fatalf("Failed to stat chunk: %v", err)
+	}
+
 	restoredPath := filepath.Join(tempDir, "out", "restored")
 	for i := 0; i < 2; i++ {
 		if err := RestoreFile(restoredPath, chunksDir, chunks); err != nil {
 			t.Fatalf("RestoreFile #%d failed: %v", i+1, err)
 		}
+		restoredInfo, err := os.Stat(restoredPath)
+		if err != nil {
+			t.Fatalf("RestoreFile #%d: failed to stat restored file: %v", i+1, err)
+		}
+		if !os.SameFile(restoredInfo, chunkInfo) {
+			t.Errorf("RestoreFile #%d: restored file is not a link to the chunk, want a hard link", i+1)
+		}
 	}
 
-	restoredInfo, err := os.Stat(restoredPath)
-	if err != nil {
-		t.Fatalf("Failed to stat restored file: %v", err)
-	}
-	chunkInfo, err := os.Stat(filepath.Join(chunksDir, chunks[0].SHA256))
-	if err != nil {
-		t.Fatalf("Failed to stat chunk: %v", err)
-	}
-	if !os.SameFile(restoredInfo, chunkInfo) {
-		t.Error("Restored file is not a link to the chunk, want a hard link")
-	}
 	entries, err := os.ReadDir(filepath.Dir(restoredPath))
 	if err != nil {
 		t.Fatalf("Failed to read output dir: %v", err)
@@ -369,13 +374,14 @@ func randomBytes(size int, seed int64) []byte {
 	return data
 }
 
-// restoreFuncs lists both restore entry points, for tests that cover each.
+// restoreFuncs lists the restore entry points, for tests that cover each.
 var restoreFuncs = []struct {
 	name    string
 	restore func(string, string, []ChunkInfo) error
 }{
 	{"RestoreFile", RestoreFile},
 	{"RestoreFileCopy", RestoreFileCopy},
+	{"RestorePrivateFileCopy", RestorePrivateFileCopy},
 }
 
 // TestChunkFile_RoundTrip chunks files around the 1 KiB average, 256 B
@@ -687,6 +693,40 @@ func TestRestoreFile_ReadOnlyDirLeavesExistingFile(t *testing.T) {
 				}
 				if string(got) != oldContent {
 					t.Errorf("Existing file content = %q after failed restore, want it unchanged as %q", got, oldContent)
+				}
+			})
+		}
+	}
+}
+
+// TestRestoreFile_MissingChunkRemovesNewFile restores into a path that does
+// not exist yet (which RestorePrivateFileCopy writes directly with
+// O_CREATE|O_EXCL rather than through a temporary sibling) when a chunk is
+// missing, and verifies that nothing is left in the output directory.
+func TestRestoreFile_MissingChunkRemovesNewFile(t *testing.T) {
+	for _, r := range restoreFuncs {
+		for _, l := range chunkLayouts {
+			t.Run(r.name+"/"+l.name, func(t *testing.T) {
+				tempDir := t.TempDir()
+				chunksDir := filepath.Join(tempDir, "chunks")
+				chunks := writeChunks(t, chunksDir, l.chunks...)
+				last := chunks[len(chunks)-1]
+				if err := os.Remove(filepath.Join(chunksDir, last.SHA256)); err != nil {
+					t.Fatalf("Failed to remove chunk: %v", err)
+				}
+
+				outDir := filepath.Join(tempDir, "out")
+				restoredPath := filepath.Join(outDir, "restored")
+				if err := r.restore(restoredPath, chunksDir, chunks); err == nil {
+					t.Fatal("Restore succeeded with a missing chunk, want an error")
+				}
+
+				entries, err := os.ReadDir(outDir)
+				if err != nil {
+					t.Fatalf("Failed to read output dir: %v", err)
+				}
+				if len(entries) != 0 {
+					t.Errorf("Output dir has %d entries after failed restore of a new file, want 0", len(entries))
 				}
 			})
 		}
