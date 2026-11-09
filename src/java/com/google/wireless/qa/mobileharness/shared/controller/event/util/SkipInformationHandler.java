@@ -92,16 +92,16 @@ public final class SkipInformationHandler {
       }
 
       ErrorId errorId =
-          context().exception() instanceof SkipJobException
-              ? ((SkipJobException) context().exception()).errorId()
+          context().exception() instanceof SkipJobException skipJobException
+              ? skipJobException.errorId()
               : ((SkipTestException) context().exception()).errorId();
       Throwable cause = context().exception().getCause();
       while (cause != null) {
         if (errorId.type() != ErrorType.UNCLASSIFIED && errorId.type() != ErrorType.UNDETERMINED) {
           return errorId;
         }
-        if (cause instanceof MobileHarnessException) {
-          errorId = ((MobileHarnessException) cause).getErrorId();
+        if (cause instanceof MobileHarnessException mobileHarnessException) {
+          errorId = mobileHarnessException.getErrorId();
         }
         cause = cause.getCause();
       }
@@ -110,10 +110,10 @@ public final class SkipInformationHandler {
 
     @Memoized
     TestResult getTestResult() {
-      if (context().exception() instanceof SkipJobException) {
-        return ((SkipJobException) context().exception()).jobResult();
-      } else if (context().exception() instanceof SkipTestException) {
-        return ((SkipTestException) context().exception()).testResult();
+      if (context().exception() instanceof SkipJobException skipJobException) {
+        return skipJobException.jobResult();
+      } else if (context().exception() instanceof SkipTestException skipTestException) {
+        return skipTestException.testResult();
       } else {
         return TestResult.FAIL;
       }
@@ -195,12 +195,12 @@ public final class SkipInformationHandler {
 
   private static ErrorId getResultCauseExceptionErrorId(Throwable exception, boolean isSkipJob) {
     if (isSkipJob) {
-      return exception instanceof SkipJobException
-          ? ((SkipJobException) exception).errorId()
+      return exception instanceof SkipJobException skipJobException
+          ? skipJobException.errorId()
           : BasicErrorId.USER_PLUGIN_SKIP_JOB_BY_INTERRUPTED_EXCEPTION;
     } else {
-      return exception instanceof SkipTestException
-          ? ((SkipTestException) exception).errorId()
+      return exception instanceof SkipTestException skipTestException
+          ? skipTestException.errorId()
           : BasicErrorId.USER_PLUGIN_SKIP_TEST_BY_INTERRUPTED_EXCEPTION;
     }
   }
@@ -285,7 +285,7 @@ public final class SkipInformationHandler {
         .min(
             Comparator.comparing(SkipInformation::getTestResult, new TestResultComparator())
                 .thenComparing(SkipInformation::errorType, ErrorTypeComparator.getInstance())
-                .thenComparing(SkipInformation::errorCode))
+                .thenComparingInt(SkipInformation::errorCode))
         .orElseThrow(IllegalArgumentException::new);
   }
 }

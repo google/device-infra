@@ -46,8 +46,8 @@ public final class CompositeDeviceUtil {
       DeviceCache.getInstance()
           .cache(device.getDeviceId(), device.getClass().getSimpleName(), cacheTimeout);
     }
-    if (device instanceof CompositeDevice) {
-      for (Device subDevice : ((CompositeDevice) device).getManagedDevices()) {
+    if (device instanceof CompositeDevice compositeDevice) {
+      for (Device subDevice : compositeDevice.getManagedDevices()) {
         DeviceCache.getInstance()
             .cache(subDevice.getDeviceId(), subDevice.getClass().getSimpleName(), cacheTimeout);
       }
@@ -61,18 +61,15 @@ public final class CompositeDeviceUtil {
    */
   public static void uncacheTestbed(Device device) {
     DeviceCache.getInstance().invalidateCache(device.getDeviceId());
-    if (device instanceof CompositeDevice) {
-      for (Device subDevice : ((CompositeDevice) device).getManagedDevices()) {
+    if (device instanceof CompositeDevice compositeDevice) {
+      for (Device subDevice : compositeDevice.getManagedDevices()) {
         DeviceCache.getInstance().invalidateCache(subDevice.getDeviceId());
       }
     }
   }
 
   private static boolean isAdhocTestbedDevice(Device device) {
-    if (!(device instanceof TestbedDevice)) {
-      return false;
-    }
-    TestbedDevice testbedDevice = (TestbedDevice) device;
-    return testbedDevice.getConfig() instanceof AdhocTestbedConfig;
+    return device instanceof TestbedDevice testbedDevice
+        && testbedDevice.getConfig() instanceof AdhocTestbedConfig;
   }
 }

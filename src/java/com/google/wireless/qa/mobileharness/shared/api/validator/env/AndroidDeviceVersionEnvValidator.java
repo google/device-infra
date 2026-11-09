@@ -34,8 +34,8 @@ public abstract class AndroidDeviceVersionEnvValidator implements EnvValidator {
   @Override
   public void validate(Device device) throws MobileHarnessException, InterruptedException {
     checkNotNull(device);
-    if (device instanceof AndroidDevice) {
-      Integer sdkVersion = ((AndroidDevice) device).getSdkVersion();
+    if (device instanceof AndroidDevice androidDevice) {
+      Integer sdkVersion = androidDevice.getSdkVersion();
       if (sdkVersion != null && sdkVersion < minDeviceSdkVersion) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_DEVICE_VERSION_ENV_VALIDATOR_VERSION_TOO_LOW,

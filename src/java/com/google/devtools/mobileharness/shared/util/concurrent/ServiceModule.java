@@ -155,7 +155,7 @@ public class ServiceModule extends AbstractModule {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-      return obj instanceof SingleServiceModule && ((SingleServiceModule) obj).key.equals(key);
+      return obj instanceof SingleServiceModule other && other.key.equals(key);
     }
 
     @Override

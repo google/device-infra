@@ -254,8 +254,8 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
           httpSourcePath, output);
       return;
     } catch (CommandException e) {
-      if (e instanceof CommandFailureException) {
-        CommandResult result = ((CommandFailureException) e).result();
+      if (e instanceof CommandFailureException commandFailureException) {
+        CommandResult result = commandFailureException.result();
         logger.atWarning().log(
             "Logs of failed ats file downloader: STDOUT: %s\nSTDERR: %s",
             result.stdout(), result.stderr());

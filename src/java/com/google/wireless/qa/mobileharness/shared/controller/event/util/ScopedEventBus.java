@@ -77,14 +77,14 @@ public class ScopedEventBus<S extends Enum<S>> {
         EventBus eventBus = inScope(scope);
         events.forEach(
             event -> {
-              if (event instanceof InjectionEvent) {
-                ((InjectionEvent) event).enter();
+              if (event instanceof InjectionEvent injectionEvent) {
+                injectionEvent.enter();
               }
 
               eventBus.post(event);
 
-              if (event instanceof InjectionEvent) {
-                ((InjectionEvent) event).leave();
+              if (event instanceof InjectionEvent injectionEvent) {
+                injectionEvent.leave();
               }
             });
       }

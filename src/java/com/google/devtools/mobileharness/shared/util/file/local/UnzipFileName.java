@@ -59,8 +59,7 @@ public class UnzipFileName {
     if (this == o) {
       return true;
     }
-    if (o instanceof UnzipFileName) {
-      UnzipFileName that = (UnzipFileName) o;
+    if (o instanceof UnzipFileName that) {
       return arg.equals(that.arg);
     }
     return false;
