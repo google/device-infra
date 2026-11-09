@@ -522,10 +522,10 @@ public class AndroidInstrumentationUtil {
       }
     } catch (MobileHarnessException e) {
       AndroidErrorId newId;
-      if (AndroidErrorId.ANDROID_ADB_SYNC_CMD_START_ERROR.equals(e.getErrorId())
-          || AndroidErrorId.ANDROID_ADB_ASYNC_CMD_START_ERROR.equals(e.getErrorId())) {
+      if (e.getErrorId() == AndroidErrorId.ANDROID_ADB_SYNC_CMD_START_ERROR
+          || e.getErrorId() == AndroidErrorId.ANDROID_ADB_ASYNC_CMD_START_ERROR) {
         newId = AndroidErrorId.ANDROID_INSTRUMENTATION_COMMAND_START_ERROR;
-      } else if (AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_TIMEOUT.equals(e.getErrorId())) {
+      } else if (e.getErrorId() == AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_TIMEOUT) {
         newId = AndroidErrorId.ANDROID_INSTRUMENTATION_COMMAND_EXEC_TIMEOUT;
       } else if (e.getMessage() != null
           && e.getMessage().contains("does not have a signature matching the target")) {
@@ -1970,7 +1970,7 @@ public class AndroidInstrumentationUtil {
       logger.atInfo().log(
           "App operation mode for %s on device %s is: %s",
           APP_OP_MANAGE_EXTERNAL_STORAGE, deviceId, appOperationMode);
-      if (!AppOperationMode.ALLOW.equals(appOperationMode.orElse(null))) {
+      if (appOperationMode.orElse(null) != AppOperationMode.ALLOW) {
         settingUtil.setPackageOperationMode(
             deviceId, packageName, APP_OP_MANAGE_EXTERNAL_STORAGE, AppOperationMode.ALLOW);
       }

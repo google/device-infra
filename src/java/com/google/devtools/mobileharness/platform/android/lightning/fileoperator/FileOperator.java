@@ -285,7 +285,7 @@ public class FileOperator {
             logger, log, "Removed file/dir [%s] in device %s", fileOrDirPath, deviceId);
       }
     } catch (MobileHarnessException e) {
-      if (AndroidErrorId.ANDROID_FILE_UTIL_REMOVE_FILE_INVALID_ARGUMENT.equals(e.getErrorId())) {
+      if (e.getErrorId() == AndroidErrorId.ANDROID_FILE_UTIL_REMOVE_FILE_INVALID_ARGUMENT) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_FILE_OPERATOR_REMOVE_FILE_INVALID_ARGUMENT, e.getMessage(), e);
       }
@@ -375,7 +375,7 @@ public class FileOperator {
 
     String parentDir = PathUtil.dirname(fileOrDirPath);
     parentDirs.add(parentDir);
-    while (!"/".equals(parentDir)) {
+    while (!parentDir.equals("/")) {
       parentDir = PathUtil.dirname(parentDir);
       parentDirs.add(parentDir);
     }

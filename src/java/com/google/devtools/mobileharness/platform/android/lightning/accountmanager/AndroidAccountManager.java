@@ -148,8 +148,7 @@ public class AndroidAccountManager {
     int maxAttempts = accountArgs.maxAttempts().orElse(DEFAULT_ADD_ACCOUNT_ATTEMPTS);
     boolean ignoreLoginError = accountArgs.ignoreLoginError().orElse(false);
 
-    if (AccountCredentialType.LOGIN_SCOPED_TOKEN.equals(
-        accountArgs.accountSetting().credentialType())) {
+    if (accountArgs.accountSetting().credentialType() == AccountCredentialType.LOGIN_SCOPED_TOKEN) {
       boolean deviceIsRooted = false;
       try {
         deviceIsRooted = systemStateManager.becomeRoot(device);
@@ -175,7 +174,7 @@ public class AndroidAccountManager {
     } catch (MobileHarnessException e) {
       MobileHarnessException newException =
           new MobileHarnessException(
-              AndroidErrorId.ANDROID_ACCOUNT_MNGR_UTIL_WRONG_PASSWORD.equals(e.getErrorId())
+              e.getErrorId() == AndroidErrorId.ANDROID_ACCOUNT_MNGR_UTIL_WRONG_PASSWORD
                   ? AndroidErrorId.ANDROID_ACCOUNT_MANAGER_ACCOUNT_WRONG_PASSWORD
                   : AndroidErrorId.ANDROID_ACCOUNT_MANAGER_ADD_ACCOUNT_ERROR,
               String.format(
@@ -337,8 +336,8 @@ public class AndroidAccountManager {
         return;
       }
       ErrorId errorId = AndroidErrorId.ANDROID_ACCOUNT_MANAGER_APK_INSTALL_ERROR;
-      if (AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_INSUFFICIENT_STORAGE.equals(
-          e.getErrorId())) {
+      if (e.getErrorId()
+          == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_INSUFFICIENT_STORAGE) {
         errorId = AndroidErrorId.ANDROID_ACCOUNT_MANAGER_APK_INSTALL_INSUFFICIENT_STORAGE;
       }
       throw new MobileHarnessException(errorId, e.getMessage(), e);

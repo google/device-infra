@@ -297,7 +297,7 @@ public class AndroidSwitchLanguageDecorator extends LifecycleDecorator
       } catch (MobileHarnessException e) {
         // "pm grant" may failed to find the package even it has already installed on device.
         // uninstall the apk and try again. See b/110907264 for more detail.
-        if (AndroidErrorId.ANDROID_PKG_MNGR_UTIL_GRANT_PERMISSION_ERROR.equals(e.getErrorId())
+        if (e.getErrorId() == AndroidErrorId.ANDROID_PKG_MNGR_UTIL_GRANT_PERMISSION_ERROR
             && e.getMessage().contains(LOG_UNKNOWN_PACKAGE)
             && i < MAX_ATTEMPTS) {
           testInfo

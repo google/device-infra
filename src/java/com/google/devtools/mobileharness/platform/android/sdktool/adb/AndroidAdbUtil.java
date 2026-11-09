@@ -1443,7 +1443,7 @@ public class AndroidAdbUtil {
     try {
       String unused = adb.run(serial, new String[] {ADB_ARG_LOGCAT}, timeout, outputCallback);
     } catch (MobileHarnessException e) {
-      if (!AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_TIMEOUT.equals(e.getErrorId())) {
+      if (e.getErrorId() != AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_TIMEOUT) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_ADB_UTIL_DUMP_LOG_ERROR, e.getMessage(), e);
       }

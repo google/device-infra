@@ -120,10 +120,10 @@ public class NativeBinUtil {
     try {
       commandResult = adb.run(cmd);
     } catch (MobileHarnessException e) {
-      if (AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_TIMEOUT.equals(e.getErrorId())) {
+      if (e.getErrorId() == AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_TIMEOUT) {
         throw new MobileHarnessException(
             AndroidErrorId.NATIVE_BIN_UTIL_RUN_NATIVE_BIN_TIMEOUT, e.getMessage(), e);
-      } else if (AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE.equals(e.getErrorId())) {
+      } else if (e.getErrorId() == AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE) {
         throw new MobileHarnessException(
             AndroidErrorId.NATIVE_BIN_UTIL_RUN_NATIVE_BIN_FAILURE, e.getMessage(), e);
       }
