@@ -526,6 +526,7 @@ export abstract class SearchPageStore {
   protected abstract resolveChipsFromBackend(
     parsedFilters: FilterChip[],
     groupByKeys: string[],
+    source?: string,
   ): Observable<FilterChip[]>;
 
   /** Subclass hook to construct ValuePicker configuration for a filter key. */
@@ -565,6 +566,8 @@ export abstract class SearchPageStore {
   private readonly resolveFiltersSubject = new Subject<{
     parsedFilters: FilterChip[];
     gbKeys: string[];
+    source?: string;
+    baseKey?: string;
   } | null>();
 
   /** Cancels any in-flight backend chip resolution request. */
@@ -594,22 +597,50 @@ export abstract class SearchPageStore {
           if (!req) {
             return EMPTY;
           }
-          const {parsedFilters, gbKeys} = req;
-          if (parsedFilters.length === 0 && gbKeys.length === 0) {
-            return of([]);
+          const {parsedFilters, gbKeys, source, baseKey} = req;
+          const hasChipsToResolve =
+            parsedFilters.length > 0 || gbKeys.length > 0;
+          if (!hasChipsToResolve && !source) {
+            return of({
+              chips: [] as FilterChip[],
+              updateChips: false,
+              stripSource: false,
+              baseKey,
+            });
           }
-          return this.resolveChipsFromBackend(parsedFilters, gbKeys).pipe(
-            map((resolvedChips) => resolvedChips || []),
-            catchError(() => of([])),
+          return this.resolveChipsFromBackend(
+            parsedFilters,
+            gbKeys,
+            source,
+          ).pipe(
+            map((resolvedChips) => ({
+              chips: resolvedChips || [],
+              updateChips: hasChipsToResolve,
+              stripSource: Boolean(source),
+              baseKey,
+            })),
+            catchError(() =>
+              of({
+                chips: [] as FilterChip[],
+                updateChips: hasChipsToResolve,
+                stripSource: false,
+                baseKey,
+              }),
+            ),
           );
         }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (updatedChips) => {
+        next: ({chips, updateChips, stripSource, baseKey}) => {
           // Scenario 1 & 5: Clear or update activeChips directly with backend resolved result
-          this.activeChips.set(updatedChips || []);
+          if (updateChips) {
+            this.activeChips.set(chips);
+          }
           this.isResolvingChips.set(false);
+          if (stripSource) {
+            this.stripSourceQueryParam(baseKey);
+          }
         },
       });
 
@@ -647,7 +678,13 @@ export abstract class SearchPageStore {
             this.fleet.set(fleetParam);
           }
         }
-        if (qp?.['f'] || qp?.['gb'] || qp?.['q'] || hasLegacyParams) {
+        if (
+          qp?.['f'] ||
+          qp?.['gb'] ||
+          qp?.['q'] ||
+          qp?.['src'] ||
+          hasLegacyParams
+        ) {
           this.syncFromQueryParams(qp);
           return;
         }
@@ -686,10 +723,13 @@ export abstract class SearchPageStore {
     const gbParam = (params['gb'] as string) || '';
     const gbKeys = gbParam.split(',').filter(Boolean);
     const qParam = ((params['q'] as string) || '').trim();
+    const srcParam =
+      typeof params['src'] === 'string' ? params['src'].trim() : '';
 
-    const incomingKey = qParam
+    const baseKey = qParam
       ? `${buildUrlParamKey(fParams, gbKeys, fleetParam)}|q:${qParam}`
       : buildUrlParamKey(fParams, gbKeys, fleetParam);
+    const incomingKey = srcParam ? `${baseKey}|src:${srcParam}` : baseKey;
     if (incomingKey === this.lastSyncedUrlKey) {
       return;
     }
@@ -703,6 +743,14 @@ export abstract class SearchPageStore {
         this.searchQuery.set(qParam);
         this.showSuggestions.set(true);
         this.focusInputTrigger.set(true);
+      }
+      if (srcParam) {
+        this.resolveFiltersSubject.next({
+          parsedFilters: [],
+          gbKeys: [],
+          source: srcParam,
+          baseKey,
+        });
       }
       return;
     }
@@ -720,7 +768,12 @@ export abstract class SearchPageStore {
 
     // Asynchronously enhance chips with rich backend metadata
     this.isResolvingChips.set(true);
-    this.resolveFiltersSubject.next({parsedFilters, gbKeys});
+    this.resolveFiltersSubject.next({
+      parsedFilters,
+      gbKeys,
+      source: srcParam || undefined,
+      baseKey,
+    });
   }
 
   // ===========================================================================
@@ -753,6 +806,7 @@ export abstract class SearchPageStore {
       'gb': groupBys.length > 0 ? groupBys.join(',') : null,
       'fleet': fleet !== 'internal' ? fleet : null,
       'q': null,
+      'src': null,
     };
     for (const key of this.getLegacyQueryParamKeys()) {
       queryParams[key] = null;
@@ -765,6 +819,26 @@ export abstract class SearchPageStore {
         queryParams,
         queryParamsHandling: 'merge',
         replaceUrl,
+      })
+      .then(() => {
+        setTimeout(() => {
+          this.isInternalUrlSync = false;
+        }, 0);
+      });
+  }
+
+  /** Strips only the transient `src` query parameter from the browser URL in-place. */
+  private stripSourceQueryParam(baseKey?: string) {
+    if (baseKey !== undefined) {
+      this.lastSyncedUrlKey = baseKey;
+    }
+    this.isInternalUrlSync = true;
+    this.router
+      .navigate([], {
+        relativeTo: this.route,
+        queryParams: {'src': null},
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
       })
       .then(() => {
         setTimeout(() => {

@@ -6,7 +6,7 @@ import {
   signal,
 } from '@angular/core';
 import {rxResource, takeUntilDestroyed} from '@angular/core/rxjs-interop';
-import {EMPTY, Observable, Subject, of, throwError} from 'rxjs';
+import {EMPTY, Observable, of, Subject, throwError} from 'rxjs';
 import {catchError, map, switchMap} from 'rxjs/operators';
 
 import {
@@ -1073,6 +1073,7 @@ export class FleetSearchStore extends SearchPageStore {
   protected override resolveChipsFromBackend(
     parsedFilters: FilterChip[],
     groupByKeys: string[],
+    source?: string,
   ): Observable<FilterChip[]> {
     const filterPairs: Array<FilterPair<Filter>> = [];
     for (const chip of parsedFilters) {
@@ -1088,6 +1089,7 @@ export class FleetSearchStore extends SearchPageStore {
       groupByKeys: groupByKeys.length > 0 ? groupByKeys : undefined,
       entity: toSearchEntityProto(this.entity()),
       fleet: toFleetProto(this.fleet()),
+      source: source || undefined,
     };
 
     return this.searchService.resolveFleetChips(req).pipe(
@@ -1121,8 +1123,6 @@ export class FleetSearchStore extends SearchPageStore {
 
         return [...updatedFilterChips, ...updatedGroupByChips];
       }),
-      // TODO: Uniformly handle backend RPC error / 500 / offline display in search UI.
-      catchError(() => of([])),
     );
   }
 

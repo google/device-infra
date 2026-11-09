@@ -18,7 +18,9 @@ package com.google.devtools.mobileharness.fe.v6.service.search.query;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.fe.v6.service.errors.FeServiceException;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.ComplexMatch;
 import com.google.devtools.mobileharness.fe.v6.service.proto.search.ContainsSubstring;
@@ -63,6 +65,9 @@ import javax.inject.Singleton;
 @Singleton
 public final class FleetChipResolver {
 
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  private static final int MAX_LOGGED_SOURCE_LENGTH = 64;
+
   private final Map<Fleet, ScenarioCuration> curations;
 
   @Inject
@@ -95,6 +100,17 @@ public final class FleetChipResolver {
     HostKeyRegistry hostKeyRegistry = curation.hostKeyRegistry();
 
     SearchEntity entity = request.getEntity();
+    String source = request.getSource().trim();
+    if (!source.isEmpty()) {
+      logger.atInfo().log(
+          "Resolving fleet chips from URL source=%s (entity=%s, fleet=%s, filters=%d,"
+              + " group_by=%d)",
+          Ascii.truncate(source, MAX_LOGGED_SOURCE_LENGTH, "..."),
+          entity,
+          fleet,
+          request.getFiltersCount(),
+          request.getGroupByKeysCount());
+    }
     FleetChipResolverResponse.Builder response = FleetChipResolverResponse.newBuilder();
     for (Filter filter : request.getFiltersList()) {
       response.addFilterChips(resolveFilter(entity, deviceKeyRegistry, hostKeyRegistry, filter));

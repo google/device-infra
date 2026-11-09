@@ -557,6 +557,10 @@ message FleetChipResolverRequest {
 
   // Which fleet scope (Internal 1P vs ATS / Partner ATS).
   Fleet fleet = 4;
+
+  // Optional entry source tag from the URL `src` query parameter (e.g.
+  // "alloc_diag") for deep-link attribution on initial URL chip resolution.
+  string source = 5;
 }
 
 // Response with resolved pill text and validation status for each chip.
