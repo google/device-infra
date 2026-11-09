@@ -33,8 +33,10 @@ import com.google.api.services.storage.Storage;
 import com.google.api.services.storage.model.ComposeRequest;
 import com.google.api.services.storage.model.ComposeRequest.SourceObjects;
 import com.google.api.services.storage.model.Objects;
+import com.google.api.services.storage.model.RewriteResponse;
 import com.google.api.services.storage.model.StorageObject;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
@@ -56,8 +58,11 @@ import java.net.UnknownHostException;
 import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.net.ssl.SSLException;
@@ -384,6 +389,105 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
   }
 
   @Override
+  public RenewResult renewIfOlderThan(Path gcsFile, Duration threshold)
+      throws MobileHarnessException, InterruptedException {
+    Optional<StorageObject> liveOpt = getMetadata(GcsApiObject.create(gcsFile));
+    if (liveOpt.isEmpty()) {
+      return RenewResult.MISSING;
+    }
+    StorageObject live = liveOpt.get();
+    if (!isOlderThan(Instant.ofEpochMilli(live.getTimeCreated().getValue()), threshold)) {
+      return RenewResult.FRESH;
+    }
+    long generation = requireGeneration(gcsFile, live.getGeneration());
+    return rewriteInPlace(gcsFile, live, generation);
+  }
+
+  private RenewResult rewriteInPlace(Path gcsFile, StorageObject live, long generation)
+      throws MobileHarnessException, InterruptedException {
+    String objectName = gcsFile.toString();
+    String actionInfo =
+        String.format(
+            "rewrite Google Cloud Storage file onto itself: gs://%s/%s#%s",
+            storageParams.bucketName, gcsFile, generation);
+    return retryIfMeetQuotaOrNetworkIssue(
+        () -> {
+          try {
+            Map<String, String> metadata = new HashMap<>();
+            if (live.getMetadata() != null) {
+              // Keys are case-insensitive, so drop the stamp of an earlier renewal in any case.
+              live.getMetadata()
+                  .forEach(
+                      (key, value) -> {
+                        if (!Ascii.equalsIgnoreCase(key, RENEWED_AT_METADATA_KEY)) {
+                          metadata.put(key, value);
+                        }
+                      });
+            }
+            metadata.put(RENEWED_AT_METADATA_KEY, currentTime().toString());
+            // The destination metadata replaces the source's, so copy what readers rely on. The
+            // same storage class keeps the rewrite metadata-only.
+            StorageObject content =
+                new StorageObject()
+                    .setContentType(live.getContentType())
+                    .setContentEncoding(live.getContentEncoding())
+                    .setCacheControl(live.getCacheControl())
+                    .setContentDisposition(live.getContentDisposition())
+                    .setContentLanguage(live.getContentLanguage())
+                    .setStorageClass(live.getStorageClass())
+                    .setMetadata(metadata);
+            String rewriteToken = null;
+            RewriteResponse response;
+            int calls = 0;
+            do {
+              if (calls++ == MAX_REWRITE_CALLS) {
+                throw new MobileHarnessException(
+                    BasicErrorId.GCS_REWRITE_FILE_ERROR,
+                    String.format(
+                        "Failed to %s: not done after %d calls", actionInfo, MAX_REWRITE_CALLS));
+              }
+              Storage.Objects.Rewrite rewrite =
+                  client
+                      .objects()
+                      .rewrite(
+                          storageParams.bucketName,
+                          objectName,
+                          storageParams.bucketName,
+                          objectName,
+                          content)
+                      .setIfSourceGenerationMatch(generation)
+                      .setIfGenerationMatch(generation);
+              if (rewriteToken != null) {
+                rewrite.setRewriteToken(rewriteToken);
+              }
+              response = rewrite.execute();
+              rewriteToken = response.getRewriteToken();
+            } while (response.getDone() == null || !response.getDone());
+            return RenewResult.RENEWED;
+          } catch (IOException e) {
+            if (isObjectNoFound(e)) {
+              return RenewResult.MISSING;
+            }
+            if (isPreconditionFailed(e)) {
+              return RenewResult.LOST_RACE;
+            }
+            if (isPermissionDenied(e)) {
+              String guidance = "Please ensure you have permission to access the GCS bucket.";
+              throw new MobileHarnessException(
+                  BasicErrorId.GCS_PERMISSION_DENIED,
+                  String.format(
+                      "Permission denied when rewriting GCS file: gs://%s/%s. %s",
+                      storageParams.bucketName, gcsFile, guidance),
+                  e);
+            }
+            throw new MobileHarnessException(
+                BasicErrorId.GCS_REWRITE_FILE_ERROR, "Failed to " + actionInfo, e);
+          }
+        },
+        actionInfo);
+  }
+
+  @Override
   public void deleteCloudFile(String targetFilePath) throws MobileHarnessException {
     try {
       client.objects().delete(storageParams.bucketName, targetFilePath).execute();
@@ -432,6 +536,12 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
   private static boolean isObjectNoFound(IOException e) {
     Optional<Integer> errorCode = getGcsServerErrorCode(e);
     return errorCode.isPresent() && errorCode.get().equals(HttpStatusCodes.STATUS_CODE_NOT_FOUND);
+  }
+
+  private static boolean isPreconditionFailed(IOException e) {
+    Optional<Integer> errorCode = getGcsServerErrorCode(e);
+    return errorCode.isPresent()
+        && errorCode.get().equals(HttpStatusCodes.STATUS_CODE_PRECONDITION_FAILED);
   }
 
   private static boolean isPermissionDenied(IOException e) {

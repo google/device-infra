@@ -58,6 +58,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import javax.annotation.Nullable;
 
 /** Utility class for operating with files using Google Cloud Storage. */
 public abstract class GcsUtil {
@@ -75,6 +76,30 @@ public abstract class GcsUtil {
 
   /** Output signal when lab server has no space left. */
   protected static final String OUTPUT_NO_SPACE = "No space left on device";
+
+  /**
+   * Custom metadata key that {@link #renewIfOlderThan} stamps with the rewrite time, so every
+   * renewal changes the metadata of the object and the rewrite never asks GCS for a no-op copy.
+   */
+  protected static final String RENEWED_AT_METADATA_KEY = "mh_renewed_at";
+
+  /** Most rewrite calls {@link #renewIfOlderThan} makes for one object before giving up. */
+  protected static final int MAX_REWRITE_CALLS = 100;
+
+  /** What {@link #renewIfOlderThan} did to an object. */
+  public enum RenewResult {
+    /** The object is not older than the threshold and was left untouched. */
+    FRESH,
+    /** The object was rewritten onto itself, so its lifecycle age restarts. */
+    RENEWED,
+    /**
+     * Another writer replaced the generation read first, which renews the object as well, so it was
+     * left untouched.
+     */
+    LOST_RACE,
+    /** No such object. */
+    MISSING,
+  }
 
   /** Thread pool for uploading/downloading GSC file in parellel. */
   protected static final class Holder {
@@ -992,6 +1017,40 @@ public abstract class GcsUtil {
    */
   protected abstract Optional<StorageObject> getMetadata(GcsApiObject gcsFile)
       throws MobileHarnessException, InterruptedException;
+
+  /**
+   * Rewrites {@code gcsFile} onto itself if it is older than {@code threshold}, which restarts the
+   * age that bucket lifecycle rules count from. The rewrite stays on the server and copies only
+   * metadata when the bucket and the storage class do not change.
+   *
+   * <p>A retry after a lost reply reports {@link RenewResult#LOST_RACE} for the rewrite the first
+   * attempt made, so the object is renewed then as well.
+   *
+   * @param gcsFile name of the object in the bucket of this util
+   * @param threshold the age the object has to exceed to be rewritten
+   * @throws MobileHarnessException if the metadata read or the rewrite fails, or is not done after
+   *     {@link #MAX_REWRITE_CALLS} calls
+   */
+  public abstract RenewResult renewIfOlderThan(Path gcsFile, Duration threshold)
+      throws MobileHarnessException, InterruptedException;
+
+  /** Returns whether an object created at {@code createdTime} is older than {@code threshold}. */
+  protected final boolean isOlderThan(Instant createdTime, Duration threshold) {
+    return Duration.between(createdTime, currentTime()).compareTo(threshold) > 0;
+  }
+
+  /** Returns {@code generation}, or throws if the object metadata carried no generation. */
+  protected final long requireGeneration(Path gcsFile, @Nullable Long generation)
+      throws MobileHarnessException {
+    if (generation == null) {
+      throw new MobileHarnessException(
+          BasicErrorId.GCS_REWRITE_FILE_ERROR,
+          String.format(
+              "GCS file gs://%s/%s has no generation to rewrite",
+              storageParams.bucketName, gcsFile));
+    }
+    return generation;
+  }
 
   /**
    * Runs {@code func} with retry if it failed on Quota or Network issue.

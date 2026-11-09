@@ -620,4 +620,10 @@ public class GcsFileManager {
   public boolean isCompressed(Path gcsFile) throws MobileHarnessException, InterruptedException {
     return gcsUtil.isCompressed(gcsFile);
   }
+
+  /** See {@link GcsUtil#renewIfOlderThan}. */
+  public GcsUtil.RenewResult renewIfOlderThan(Path gcsFile, Duration threshold)
+      throws MobileHarnessException, InterruptedException {
+    return gcsUtil.renewIfOlderThan(gcsFile, threshold);
+  }
 }
