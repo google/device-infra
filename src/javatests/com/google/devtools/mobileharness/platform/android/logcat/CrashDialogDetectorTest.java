@@ -19,11 +19,14 @@ package com.google.devtools.mobileharness.platform.android.logcat;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -52,10 +55,12 @@ public final class CrashDialogDetectorTest {
   private static final String TEST_DATA_PREFIX =
       "javatests/com/google/devtools/mobileharness/platform/android/logcat/testdata/";
   private static final String DEVICE_ID = "device_id";
+  private static final Duration ONE_SECOND = Duration.ofSeconds(1);
 
   @Mock private TestInfo testInfo;
   @Mock private Device device;
   @Mock private Adb adb;
+  @Mock private Sleeper sleeper;
 
   private CrashDialogDetector detector;
 
@@ -64,7 +69,7 @@ public final class CrashDialogDetectorTest {
     when(device.getDeviceId()).thenReturn(DEVICE_ID);
     when(testInfo.log()).thenReturn(new Log(new Timing()));
 
-    detector = new CrashDialogDetector(adb, Sleeper.noOpSleeper());
+    detector = new CrashDialogDetector(adb, sleeper);
   }
 
   @Test
@@ -141,9 +146,81 @@ public final class CrashDialogDetectorTest {
 
     assertThat(detector.crashDialogPackageName()).isEmpty();
     assertThat(detector.crashDialogScreenshot()).isEmpty();
+    verify(adb, times(5))
+        .runShell(
+            eq(DEVICE_ID), eq("dumpsys window"), any(Duration.class), any(LineCallback.class));
+    verify(sleeper, times(4)).sleep(ONE_SECOND);
   }
 
-  private static class DumpsysWindowCmdAnswer implements Answer<Void> {
+  @Test
+  public void scan_transientDumpsysFailure_retriesAndRecovers() throws Exception {
+    ImmutableList<String> crashLines =
+        ImmutableList.of(
+            "WINDOW MANAGER WINDOWS (dumpsys window windows)",
+            "  mCurrentFocus=Window{3b8f918 u0 Application Error: com.example.app}");
+
+    when(adb.runShell(
+            eq(DEVICE_ID), eq("dumpsys window"), any(Duration.class), any(LineCallback.class)))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Transient error"))
+        .thenAnswer(new DumpsysWindowCmdAnswer(crashLines));
+
+    detector.scan(testInfo, device, ImmutableList.of());
+
+    assertThat(detector.crashDialogPackageName()).hasValue("com.example.app");
+    assertThat(detector.crashDialogScreenshot())
+        .hasValue("/data/local/tmp/crash-dialog-com_example_app.png");
+    verify(adb, times(2))
+        .runShell(
+            eq(DEVICE_ID), eq("dumpsys window"), any(Duration.class), any(LineCallback.class));
+  }
+
+  @Test
+  public void scan_screencapThrowsException_preservesDialogPackage() throws Exception {
+    ImmutableList<String> crashLines =
+        ImmutableList.of("  mCurrentFocus=Window{3b8f918 u0 Application Error: com.example.app}");
+
+    when(adb.runShell(
+            eq(DEVICE_ID), eq("dumpsys window"), any(Duration.class), any(LineCallback.class)))
+        .thenAnswer(new DumpsysWindowCmdAnswer(crashLines));
+    when(adb.runShell(
+            eq(DEVICE_ID),
+            eq("screencap -p /data/local/tmp/crash-dialog-com_example_app.png"),
+            any(Duration.class)))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Screencap failed"));
+
+    detector.scan(testInfo, device, ImmutableList.of());
+
+    assertThat(detector.crashDialogPackageName()).hasValue("com.example.app");
+    assertThat(detector.crashDialogScreenshot()).isEmpty();
+  }
+
+  @Test
+  public void scan_ignoredDialogThenNonIgnoredDialog_detectsSecondDialog() throws Exception {
+    ImmutableList<String> ignoredDialogLines =
+        ImmutableList.of("  mCurrentFocus=Window{3b8f918 u0 Application Error: com.ignored.app}");
+    ImmutableList<String> targetDialogLines =
+        ImmutableList.of(
+            "  mCurrentFocus=Window{3b8f918 u0 Application Not Responding: com.target.app}");
+
+    when(adb.runShell(
+            eq(DEVICE_ID), eq("dumpsys window"), any(Duration.class), any(LineCallback.class)))
+        .thenAnswer(new DumpsysWindowCmdAnswer(ignoredDialogLines))
+        .thenAnswer(new DumpsysWindowCmdAnswer(targetDialogLines));
+
+    detector.scan(testInfo, device, ImmutableList.of("com.ignored.app"));
+    assertThat(detector.crashDialogPackageName()).isEmpty();
+
+    detector.scan(testInfo, device, ImmutableList.of("com.ignored.app"));
+    assertThat(detector.crashDialogPackageName()).hasValue("com.target.app");
+    assertThat(detector.crashDialogScreenshot())
+        .hasValue("/data/local/tmp/crash-dialog-com_target_app.png");
+  }
+
+  private static class DumpsysWindowCmdAnswer implements Answer<String> {
     private final List<String> lines;
 
     DumpsysWindowCmdAnswer(List<String> lines) {
@@ -151,12 +228,15 @@ public final class CrashDialogDetectorTest {
     }
 
     @Override
-    public Void answer(InvocationOnMock invocation) {
+    public String answer(InvocationOnMock invocation) {
       LineCallback callback = invocation.getArgument(3);
       for (String line : lines) {
-        callback.onLine(line);
+        LineCallback.Response response = callback.onLine(line);
+        if (response.getStopReadingOutput() || response.getStop()) {
+          break;
+        }
       }
-      return null;
+      return "";
     }
   }
 }

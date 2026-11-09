@@ -28,6 +28,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
 
@@ -38,6 +39,7 @@ public class CrashDialogDetector {
   private static final Duration CMD_TIMEOUT = Duration.ofSeconds(10);
   private static final int MAX_ATTEMPTS = 5;
   private static final Duration RETRY_SLEEP_SECS = Duration.ofSeconds(1);
+  private static final Duration RENDER_DELAY = Duration.ofSeconds(1);
 
   // Dump the current window details of the device.
   private static final String DUMPSYS_WINDOW_CMD = "dumpsys window";
@@ -51,7 +53,10 @@ public class CrashDialogDetector {
   private static final Pattern ANR_DIALOG_PATTERN =
       Pattern.compile("^mCurrentFocus=Window\\{.+ .+ Application Not Responding: (.+)}");
 
+  private record DetectedDialog(String packageName, Optional<String> screenshotPath) {}
+
   private final AtomicBoolean running = new AtomicBoolean(false);
+  private final AtomicReference<DetectedDialog> detectedDialog = new AtomicReference<>();
   private final Adb adb;
 
   private final Sleeper sleeper;
@@ -61,9 +66,6 @@ public class CrashDialogDetector {
     this.adb = adb;
     this.sleeper = sleeper;
   }
-
-  private Optional<String> screenshotPath = Optional.empty();
-  private Optional<String> packageName = Optional.empty();
 
   /** Check if a crash dialog appears on the screen. */
   void scan(TestInfo testInfo, Device device, List<String> packagesToIgnore) {
@@ -76,53 +78,78 @@ public class CrashDialogDetector {
         .alsoTo(logger)
         .log("----------------- Starting crash dialog detection --------------------");
     try {
-      packageName = getCrashDialog(device);
-      if (packageName.isEmpty()) {
-        running.set(false);
+      Optional<String> candidatePackage = getCrashDialog(testInfo, device);
+      if (candidatePackage.isEmpty()) {
         return;
       }
-      testInfo.log().atWarning().alsoTo(logger).log("Crash dialog detected: %s", packageName);
-      if (packagesToIgnore.contains(packageName.get())) {
-        // Reset internal state.
-        running.set(false);
-        packageName = Optional.empty();
+      String pkgName = candidatePackage.get();
+      testInfo.log().atWarning().alsoTo(logger).log("Crash dialog detected: %s", pkgName);
+      if (packagesToIgnore.contains(pkgName)) {
         return;
       }
+      // Record the dialog before the render delay so an interrupted sleep or failed screencap still
+      // reports the dialog package.
+      detectedDialog.set(new DetectedDialog(pkgName, Optional.empty()));
       // Small delay to ensure the dialog is fully rendered.
-      sleeper.sleep(Duration.ofSeconds(1));
-      screenshotPath = Optional.of(generateScreenshot(device, packageName.get()));
+      sleeper.sleep(RENDER_DELAY);
+      String deviceScreenshotPath = generateScreenshot(device, pkgName);
+      detectedDialog.set(new DetectedDialog(pkgName, Optional.of(deviceScreenshotPath)));
     } catch (MobileHarnessException | InterruptedException e) {
       if (MoreThrowables.isInterruption(e)) {
         Thread.currentThread().interrupt();
       }
-      testInfo.log().atWarning().alsoTo(logger).log("Error scanning for crash dialog: %s", e);
+      testInfo
+          .log()
+          .atWarning()
+          .alsoTo(logger)
+          .withCause(e)
+          .log("Error scanning for crash dialog.");
+    } finally {
+      // Once a non-ignored dialog is recorded, keep `running` set so the first dialog wins.
+      if (detectedDialog.get() == null) {
+        running.set(false);
+      }
     }
   }
 
   /** Get the path of the crash dialog screenshot. */
   public Optional<String> crashDialogScreenshot() {
-    return screenshotPath;
+    DetectedDialog dialog = detectedDialog.get();
+    return dialog == null ? Optional.empty() : dialog.screenshotPath();
   }
 
   /** Get the packageName/process causing the crash dialog. */
   public Optional<String> crashDialogPackageName() {
-    return packageName;
+    return Optional.ofNullable(detectedDialog.get()).map(DetectedDialog::packageName);
   }
 
   /**
-   * Scans the current UI windows [MAX_ATTEMPTS] times at intervals of [RETRY_DELAY_MS] to look for
-   * the crash dialog.
+   * Scans the current UI windows {@link #MAX_ATTEMPTS} times at intervals of {@link
+   * #RETRY_SLEEP_SECS} to look for the crash dialog.
    */
-  private Optional<String> getCrashDialog(Device device)
-      throws InterruptedException, MobileHarnessException {
-    for (var i = 0; i < MAX_ATTEMPTS; i++) {
+  private Optional<String> getCrashDialog(TestInfo testInfo, Device device)
+      throws InterruptedException {
+    for (var attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
       var lineCallback = new DumpsysWindowLineCallback();
-      var unused =
-          adb.runShell(device.getDeviceId(), DUMPSYS_WINDOW_CMD, CMD_TIMEOUT, lineCallback);
-      if (lineCallback.packageName.isPresent()) {
-        return lineCallback.packageName;
+      try {
+        var unused =
+            adb.runShell(device.getDeviceId(), DUMPSYS_WINDOW_CMD, CMD_TIMEOUT, lineCallback);
+        if (lineCallback.packageName.isPresent()) {
+          return lineCallback.packageName;
+        }
+      } catch (MobileHarnessException e) {
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .withCause(e)
+            .log(
+                "Error running '%s' on attempt %d/%d.",
+                DUMPSYS_WINDOW_CMD, attempt + 1, MAX_ATTEMPTS);
       }
-      sleeper.sleep(RETRY_SLEEP_SECS);
+      if (attempt < MAX_ATTEMPTS - 1) {
+        sleeper.sleep(RETRY_SLEEP_SECS);
+      }
     }
     return Optional.empty();
   }
@@ -141,15 +168,16 @@ public class CrashDialogDetector {
     @Override
     public Response onLine(String line) {
       var trimmedLine = line.trim();
-      if (trimmedLine.matches(CURRENT_FOCUS_DIALOG_PATTERN.pattern())) {
+      if (CURRENT_FOCUS_DIALOG_PATTERN.matcher(trimmedLine).matches()) {
         var crashMatcher = CRASH_DIALOG_PATTERN.matcher(trimmedLine);
         if (crashMatcher.matches()) {
           packageName = Optional.of(crashMatcher.group(1));
-          return Response.empty();
+          return Response.stopReadingOutput();
         }
         var anrMatcher = ANR_DIALOG_PATTERN.matcher(trimmedLine);
         if (anrMatcher.matches()) {
           packageName = Optional.of(anrMatcher.group(1));
+          return Response.stopReadingOutput();
         }
       }
       return Response.empty();
