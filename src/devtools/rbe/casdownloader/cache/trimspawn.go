@@ -44,8 +44,11 @@ func capCheckInterval(d time.Duration) time.Duration {
 // logPath, and returns once it has started. Tests replace it.
 type trimSpawner func(args []string, logPath string) error
 
-// spawnSelf is the trimSpawner downloads use: it starts this binary again.
-func spawnSelf(args []string, logPath string) error {
+// SpawnSelfDetached starts this binary again with args, as a process of its
+// own that outlives this one, with its stderr going to logPath, truncated
+// first, and returns once it has started. See startDetached. It is the
+// trimSpawner downloads use, and how a download starts a chunk trash removal.
+func SpawnSelfDetached(args []string, logPath string) error {
 	exe, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("failed to find this binary: %w", err)
@@ -76,7 +79,7 @@ func startDetached(path string, args []string, logPath string) (pid int, reaped 
 	// writing over the winner's from offset zero.
 	logFile, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC|os.O_APPEND, 0644)
 	if err != nil {
-		return 0, nil, fmt.Errorf("failed to open %s for the trim's log: %w", logPath, err)
+		return 0, nil, fmt.Errorf("failed to open %s for the detached process's log: %w", logPath, err)
 	}
 	// The child has its own copy of the descriptor once started.
 	defer logFile.Close()
@@ -92,7 +95,7 @@ func startDetached(path string, args []string, logPath string) (pid int, reaped 
 	go func() {
 		defer close(done)
 		if err := cmd.Wait(); err != nil {
-			log.Warningf("The detached trim (pid %d) failed: %v. See %s.", cmd.Process.Pid, err, logPath)
+			log.Warningf("The detached process (pid %d) failed: %v. See %s.", cmd.Process.Pid, err, logPath)
 		}
 	}()
 	return cmd.Process.Pid, done, nil
@@ -324,7 +327,7 @@ func tryStartTrim(opts Options, root, why string) trimStart {
 
 	spawn := opts.spawn
 	if spawn == nil {
-		spawn = spawnSelf
+		spawn = SpawnSelfDetached
 	}
 	args := trimArgs(opts)
 	logPath := filepath.Join(root, trimLogName)

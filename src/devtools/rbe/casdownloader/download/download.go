@@ -69,9 +69,21 @@ type DownloadJob struct {
 	// than chunk data, is already in Dir, rather than replace it. Either way,
 	// what is in Dir is left alone if the download fails before it commits.
 	DisableOverwrite bool
-	MinDownloadMbps  int64
-	DownloadTimeout  time.Duration
-	CASProxyStatus   string
+	// ChunkTrashDir, if set, is a directory named ChunkTrashDirName that a
+	// chunked artifact's chunk data is moved into, with a single rename, once
+	// its files have been restored, rather than removed from Dir an unlink at
+	// a time before the download can commit. It must be on Dir's filesystem
+	// for the rename to work; if it fails, the chunk data is removed in place.
+	ChunkTrashDir string
+	// StartChunkTrashRemoval starts removing everything in ChunkTrashDir,
+	// such as with RemoveChunkTrash, without waiting for it to finish. It is
+	// called once the download has committed. If it is nil or fails, the
+	// chunk data the download moved to ChunkTrashDir is removed before
+	// DoDownload returns.
+	StartChunkTrashRemoval func(trashDir string) error
+	MinDownloadMbps        int64
+	DownloadTimeout        time.Duration
+	CASProxyStatus         string
 	// UseProxy reports whether Client is pointed at a casproxy rather than at
 	// CAS remote. It decides which side of the WAN the bytes this job had to
 	// fetch are attributed to, so it must agree with the address Client dialed.
@@ -131,21 +143,36 @@ func (d *DownloadJob) RemoteFailed() bool {
 // Hot/total, and casproxy's, as seen by this client, is
 // ProxyHot/(ProxyHot+ProxyCold).
 type Stats struct {
-	SizeHot             int64  `json:"size_hot"`
-	SizeDedup           int64  `json:"size_dedup"`
-	SizeProxyHot        int64  `json:"size_proxy_hot"`
-	SizeProxyCold       int64  `json:"size_proxy_cold"`
-	SizeCold            int64  `json:"size_cold"`
-	CountHot            int    `json:"count_hot"`
-	CountDedup          int    `json:"count_dedup"`
-	CountProxyHot       int    `json:"count_proxy_hot"`
-	CountProxyCold      int    `json:"count_proxy_cold"`
-	CountCold           int    `json:"count_cold"`
-	E2ETimeMS           int64  `json:"e2e_time_ms"`
-	DirRetrieveTimeMS   int64  `json:"dir_retrieve_time_ms"`
-	DirPrepareTimeMS    int64  `json:"dir_prepare_time_ms"`
-	FileDownloadTimeMS  int64  `json:"file_download_time_ms"`
-	ChunkRestoreTimeMS  int64  `json:"chunk_restore_time_ms"`
+	SizeHot            int64 `json:"size_hot"`
+	SizeDedup          int64 `json:"size_dedup"`
+	SizeProxyHot       int64 `json:"size_proxy_hot"`
+	SizeProxyCold      int64 `json:"size_proxy_cold"`
+	SizeCold           int64 `json:"size_cold"`
+	CountHot           int   `json:"count_hot"`
+	CountDedup         int   `json:"count_dedup"`
+	CountProxyHot      int   `json:"count_proxy_hot"`
+	CountProxyCold     int   `json:"count_proxy_cold"`
+	CountCold          int   `json:"count_cold"`
+	E2ETimeMS          int64 `json:"e2e_time_ms"`
+	DirRetrieveTimeMS  int64 `json:"dir_retrieve_time_ms"`
+	DirPrepareTimeMS   int64 `json:"dir_prepare_time_ms"`
+	FileDownloadTimeMS int64 `json:"file_download_time_ms"`
+	ChunkRestoreTimeMS int64 `json:"chunk_restore_time_ms"`
+	// ChunkCleanupTimeMS is the time spent taking a chunked artifact's chunk
+	// data out of Dir once its files were restored: moving it to
+	// ChunkTrashDir and starting its removal, or else removing it.
+	ChunkCleanupTimeMS int64 `json:"chunk_cleanup_time_ms"`
+	// ChunkTrashBacklog is how many entries were in ChunkTrashDir before this
+	// download moved its chunk data there, and ChunkTrashOldestAgeS how long
+	// ago the oldest of them was written: what earlier runs' removals have
+	// left behind. Normally zero, or one entry a removal still in progress
+	// is working on; a count that grows run over run, or an age of hours,
+	// means an entry removals keep failing on. See ChunkTrashBacklog. Zero
+	// without a ChunkTrashDir or for an artifact that is not chunked.
+	ChunkTrashBacklog    int   `json:"chunk_trash_backlog"`
+	ChunkTrashOldestAgeS int64 `json:"chunk_trash_oldest_age_s"`
+	// CommitTimeMS is the time spent moving the downloaded files into place.
+	CommitTimeMS        int64  `json:"commit_time_ms"`
 	CacheLockWaitTimeMS int64  `json:"cache_lock_wait_time_ms"`
 	DownloadError       string `json:"download_error,omitempty"`
 	Notes               string `json:"notes,omitempty"`
@@ -987,16 +1014,16 @@ func (d *DownloadJob) DoDownload(ctx context.Context) error {
 	err := d.doDownloadInternal(ctx)
 	d.DownloadStats.E2ETimeMS = time.Since(start).Milliseconds()
 
-	// We check the context state before the library error.
-	// If the context is done, it is a timeout (or cancel), regardless of the returned err.
+	// We check the context state before the library error. Once the download
+	// has committed (err == nil), a cancellation or timeout during
+	// post-commit cleanup does not undo it.
 	if errors.Is(ctx.Err(), context.Canceled) {
-		// Cancelled by the caller, as on a signal, rather than timed out. A
-		// cancellation after the download committed does not undo it.
+		// Cancelled by the caller, as on a signal, rather than timed out.
 		if err != nil {
 			d.DownloadStats.DownloadError = fmt.Sprintf("CANCELLED: %v", context.Cause(ctx))
 			err = fmt.Errorf("download cancelled: %w", context.Cause(ctx))
 		}
-	} else if ctx.Err() != nil {
+	} else if err != nil && ctx.Err() != nil {
 		d.DownloadStats.DownloadError = fmt.Sprintf("TIMED_OUT: download-timeout=%v", d.DownloadTimeout)
 		err = context.DeadlineExceeded
 	} else if errors.Is(err, context.DeadlineExceeded) {
@@ -1201,11 +1228,26 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 			cache.HandleOutOfSpace(d.Cache, err)
 			return err
 		}
-		// The chunk data has served its purpose. Remove it before
+		// The chunk data has served its purpose. Take it out of Dir before
 		// committing, so that failing to leaves Dir untouched.
-		if err := s.deleteChunkData(); err != nil {
+		cleanupStart := time.Now()
+		if d.ChunkTrashDir != "" && s.chunksClaimed {
+			// What earlier runs left in the trash, before this one adds to it.
+			count, oldest, err := ChunkTrashBacklog(d.ChunkTrashDir)
+			if err != nil {
+				log.WarningContextf(ctx, "Could not measure the chunk trash backlog in %s: %v", d.ChunkTrashDir, err)
+			} else {
+				d.DownloadStats.ChunkTrashBacklog = count
+				d.DownloadStats.ChunkTrashOldestAgeS = int64(oldest.Seconds())
+				if count > 0 {
+					log.InfoContextf(ctx, "%d entries left in %s by earlier runs, the oldest %s old", count, d.ChunkTrashDir, oldest.Truncate(time.Second))
+				}
+			}
+		}
+		if err := s.discardChunkData(d.ChunkTrashDir); err != nil {
 			return err
 		}
+		d.DownloadStats.ChunkCleanupTimeMS = time.Since(cleanupStart).Milliseconds()
 	}
 
 	// The local steps above do not all watch ctx, so a cancelled attempt can
@@ -1214,14 +1256,39 @@ func (d *DownloadJob) doDownloadInternal(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+	commitStart := time.Now()
 	err = s.commit()
+	d.DownloadStats.CommitTimeMS = time.Since(commitStart).Milliseconds()
 	// Noted even if commit failed part way: what it replaced is gone.
 	d.noteReplaced(s.replaced)
 	if err != nil {
 		return err
 	}
 	committed = true
+	if s.trashed != "" {
+		cleanupStart := time.Now()
+		d.removeChunkTrash(s.trashed)
+		d.DownloadStats.ChunkCleanupTimeMS += time.Since(cleanupStart).Milliseconds()
+	}
 	return nil
+}
+
+// removeChunkTrash removes trashed, the chunk data this download moved into
+// ChunkTrashDir: in the background through StartChunkTrashRemoval if it can,
+// and otherwise now. The download has committed by then, so a failure is only
+// logged; whatever is left is removed by the next background removal.
+func (d *DownloadJob) removeChunkTrash(trashed string) {
+	if d.StartChunkTrashRemoval != nil {
+		err := d.StartChunkTrashRemoval(d.ChunkTrashDir)
+		if err == nil {
+			log.Infof("Removing the chunk data moved to %s in the background", trashed)
+			return
+		}
+		log.Warningf("Failed to start removing the chunk data moved to %s in the background; removing it now: %v", trashed, err)
+	}
+	if err := removeAllTrashEntry(trashed); err != nil {
+		log.Warningf("Failed to remove the chunk data moved to %s: %v", trashed, err)
+	}
 }
 
 // restoreFilesTo is chunkerutil.RestoreFilesTo. It is a variable so that tests

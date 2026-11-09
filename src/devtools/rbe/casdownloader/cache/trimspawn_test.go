@@ -572,9 +572,9 @@ func waitForLog(t *testing.T, path, want string) (string, bool) {
 	}
 }
 
-// spawnSelf, the spawner downloads use, starts this very binary, detached,
-// with the args it is given and its stderr in the log.
-func TestSpawnSelf_StartsThisBinaryDetached(t *testing.T) {
+// SpawnSelfDetached, the spawner downloads use, starts this very binary,
+// detached, with the args it is given and its stderr in the log.
+func TestSpawnSelfDetached_StartsThisBinaryDetached(t *testing.T) {
 	if os.Getenv(spawnRealGuardEnv) != "" {
 		t.Skip("started by another test")
 	}
@@ -582,8 +582,8 @@ func TestSpawnSelf_StartsThisBinaryDetached(t *testing.T) {
 	t.Setenv(detachedHelperEnv, "report")
 	logPath := filepath.Join(t.TempDir(), ".trim.log")
 
-	if err := spawnSelf(helperArgs, logPath); err != nil {
-		t.Fatalf("spawnSelf failed: %v", err)
+	if err := SpawnSelfDetached(helperArgs, logPath); err != nil {
+		t.Fatalf("SpawnSelfDetached failed: %v", err)
 	}
 	want := "detached-helper: stdin-null=true stdout-null=true own-group=true"
 	if got, ok := waitForLog(t, logPath, want); !ok {

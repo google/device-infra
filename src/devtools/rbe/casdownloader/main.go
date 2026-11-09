@@ -121,6 +121,10 @@ var (
 	trimMaxDuration = flag.Duration("trim-max-duration", cache.DefaultTrimMaxDuration,
 		"With -trim-only, the longest the pass may run. It stops where it is when the time is up, which is safe. 0 means no limit.")
 
+	// Flag for removing chunk data in a process of its own.
+	removeChunkTrash = flag.String("remove-chunk-trash", "",
+		"Internal. Instead of downloading, remove everything in this directory, a "+download.ChunkTrashDirName+" directory in -cache-dir that downloads move the chunk data of chunked artifacts into, and exit. A download starts this in the background once it has committed.")
+
 	// Flags for RBE CAS configurations
 	casInstance    = flag.String("cas-instance", "", "RBE instance")
 	casAddr        = flag.String("cas-addr", "remotebuildexecution.googleapis.com:443", "RBE server addr")
@@ -400,6 +404,16 @@ func runMain() int {
 		return 0
 	}
 
+	// Background chunk-trash removal has no staging state in -dir to roll back
+	// on SIGTERM, and is not a casdownloader download run for Streamz metrics.
+	if *removeChunkTrash != "" {
+		if err := download.RemoveChunkTrash(*removeChunkTrash); err != nil {
+			log.Errorf("casdownloader chunk trash removal failed: %v", err)
+			return 1
+		}
+		return 0
+	}
+
 	// Initialize unified metrics collection.
 	if *enableStreamz {
 		var opts []monitoring.Option
@@ -567,6 +581,15 @@ func run(ctx context.Context) error {
 		Tracker:          tracker,
 		Notes:            jobNotes,
 	}
+	if !*disableCache && *cacheDir != "" && *useHardlink {
+		// Chunk data is linked from the cache, so the cache directory is on
+		// its filesystem, where moving it out of -dir is a single rename.
+		// checkFlags clears -use-hardlink when the two are on different
+		// filesystems; the rename would then fail with EXDEV on every
+		// download, so the chunk data is removed in place instead.
+		d.ChunkTrashDir = filepath.Join(*cacheDir, download.ChunkTrashDirName)
+		d.StartChunkTrashRemoval = startChunkTrashRemoval
+	}
 	reportMemoryStats()
 
 	start := time.Now()
@@ -704,6 +727,21 @@ func runTrim(ctx context.Context) error {
 		}
 		return errors.New("-cache-dir must be specified with -trim-only")
 	}
+	// Empty leftover chunk trash first, so that hardlinks in .chunk-trash do
+	// not pin cached chunk blobs (st.Nlink > 1) against eviction. Without
+	// waiting: a removal already in progress is doing that unpinning, and a
+	// trim started for free space should not queue behind it.
+	trashDir := filepath.Join(*cacheDir, download.ChunkTrashDirName)
+	if count, oldest, err := download.ChunkTrashBacklog(trashDir); err != nil {
+		log.WarningContextf(ctx, "Could not measure the chunk trash backlog in %s: %v", trashDir, err)
+	} else if count > 0 {
+		log.InfoContextf(ctx, "%d entries in %s, the oldest %s old.", count, trashDir, oldest.Truncate(time.Second))
+	}
+	if err := download.TryRemoveChunkTrash(trashDir); errors.Is(err, download.ErrChunkTrashBusy) {
+		log.InfoContextf(ctx, "Another process is already emptying %s; trimming without waiting for it.", trashDir)
+	} else if err != nil {
+		log.WarningContextf(ctx, "Failed to empty %s before trimming: %v", trashDir, err)
+	}
 	res, err := cache.Trim(ctx, cache.TrimOptions{
 		Dir:             *cacheDir,
 		MinFreeSpace:    *cacheMinFreeSpace,
@@ -717,6 +755,25 @@ func runTrim(ctx context.Context) error {
 		monitoring.RecordTrim(cache.TrimMonitoringStats(res))
 	}
 	return err
+}
+
+// startChunkTrashRemoval starts `casdownloader -remove-chunk-trash=trashDir`
+// as a process of its own, which outlives this one, logging to trashDir.log.
+// It is a download's StartChunkTrashRemoval.
+//
+// Like a trim, it is not started if another process is already emptying the
+// trash: that one picks up what this download moved there if it arrives
+// before its last pass, and the next download or trim sweeps anything left.
+// Starting one anyway would only queue a process on the lock and truncate the
+// running removal's log.
+func startChunkTrashRemoval(trashDir string) error {
+	if busy, err := download.ChunkTrashRemovalInProgress(trashDir); err != nil {
+		log.Warningf("Could not check whether %s is being emptied: %v. Starting a removal anyway.", trashDir, err)
+	} else if busy {
+		log.Infof("Another process is already emptying %s; not starting another removal.", trashDir)
+		return nil
+	}
+	return cache.SpawnSelfDetached([]string{"-remove-chunk-trash=" + trashDir}, trashDir+".log")
 }
 
 // evictorOverrides collects the eviction tuning flags the caller actually

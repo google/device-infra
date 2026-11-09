@@ -54,6 +54,9 @@ type staging struct {
 	createdDirs []string
 	// chunksClaimed is set once this attempt has created Dir/_chunks.
 	chunksClaimed bool
+	// trashed is where discardChunkData moved Dir/_chunks, in the job's
+	// ChunkTrashDir, if it did.
+	trashed string
 	// disableOverwrite makes commit fail on a final path that is taken,
 	// rather than replace what is there.
 	disableOverwrite bool
@@ -174,6 +177,44 @@ func (s *staging) deleteChunkData() error {
 	return chunkerutil.DeleteChunkFilesAndIndex(s.dir)
 }
 
+// discardChunkData takes the chunk data this attempt claimed out of Dir, once
+// the files have been restored from it.
+//
+// Removing Dir/_chunks takes an unlink per chunk, which on a large artifact
+// can take longer than restoring the files from it. With trashDir, it is
+// instead moved into trashDir with a single rename, for the caller to remove
+// once the download has committed. Without trashDir, or if the move fails, as
+// it does across filesystems, it is removed in place.
+func (s *staging) discardChunkData(trashDir string) error {
+	if !s.chunksClaimed {
+		return nil
+	}
+	if trashDir != "" {
+		if err := s.moveChunksTo(trashDir); err != nil {
+			log.Warningf("Failed to move the chunk data to %s; removing it in place: %v", trashDir, err)
+		}
+	}
+	// After a move, this only removes the legacy root index, if any.
+	return s.deleteChunkData()
+}
+
+// moveChunksTo moves Dir/_chunks into trashDir, under this attempt's run ID,
+// and records where it went.
+func (s *staging) moveChunksTo(trashDir string) error {
+	if filepath.Base(trashDir) != ChunkTrashDirName {
+		return fmt.Errorf("chunk trash directory %s must be named %s", trashDir, ChunkTrashDirName)
+	}
+	if err := os.MkdirAll(trashDir, 0o700); err != nil {
+		return err
+	}
+	trashed := filepath.Join(trashDir, s.runID)
+	if err := os.Rename(filepath.Join(s.dir, chunkerutil.ChunksDirName), trashed); err != nil {
+		return err
+	}
+	s.trashed = trashed
+	return nil
+}
+
 // existsError is the error for a final path that is already taken when
 // overwriting is disabled.
 func existsError(final string) error {
@@ -268,6 +309,11 @@ func (s *staging) abort() {
 	}
 	if err := s.deleteChunkData(); err != nil {
 		log.Errorf("failed to remove chunk data: %v", err)
+	}
+	if s.trashed != "" {
+		if err := removeAllTrashEntry(s.trashed); err != nil {
+			log.Errorf("failed to remove chunk data moved to %s: %v", s.trashed, err)
+		}
 	}
 	// Children were recorded after their parents. A directory that is not
 	// empty, because something else has written into it, stays.

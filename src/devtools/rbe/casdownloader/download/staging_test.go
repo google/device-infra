@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -637,4 +638,202 @@ func TestMaterializeDuplicate_CopiesWhenModesDiffer(t *testing.T) {
 	if err := materializeDuplicate(dst, src); err == nil {
 		t.Error("materializeDuplicate over an existing file succeeded, want an error")
 	}
+}
+
+// TestDoDownload_ChunkTrash downloads a chunked artifact with a ChunkTrashDir.
+// The chunk data is moved there before commit, and its removal is started
+// after commit, or done at once if it cannot be started. If the move fails,
+// the chunk data is removed in place, and if the download fails after the
+// move, the moved chunk data is removed with the rest of the attempt.
+func TestDoDownload_ChunkTrash(t *testing.T) {
+	modTime := time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)
+	newJob := func(t *testing.T) *DownloadJob {
+		t.Helper()
+		tree := chunkedArtifact(t, modTime, map[string][]string{
+			"a.img": {"single chunk"},
+			"b.img": {"first ", "second"},
+		})
+		job := newTreeJob(t, tree)
+		job.ChunkTrashDir = filepath.Join(t.TempDir(), ChunkTrashDirName)
+		return job
+	}
+	trashEntries := func(t *testing.T, trashDir string) []string {
+		t.Helper()
+		entries, err := os.ReadDir(trashDir)
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		var names []string
+		for _, e := range entries {
+			names = append(names, e.Name())
+		}
+		return names
+	}
+	checkRestored := func(t *testing.T, job *DownloadJob) {
+		t.Helper()
+		for path, want := range map[string]string{"a.img": "single chunk", "b.img": "first second"} {
+			if got := readFile(t, filepath.Join(job.Dir, path)); got != want {
+				t.Errorf("%s = %q, want %q", path, got, want)
+			}
+		}
+		if exists(t, filepath.Join(job.Dir, "_chunks")) {
+			t.Error("_chunks was left behind in Dir")
+		}
+		assertNoTmpFiles(t, job.Dir)
+	}
+
+	t.Run("removal started in the background", func(t *testing.T) {
+		job := newJob(t)
+		var started []string
+		job.StartChunkTrashRemoval = func(trashDir string) error {
+			started = append(started, trashDir)
+			// The chunk data is in the trash, out of Dir, by the time the
+			// removal is started, and the files are already in place.
+			if got := trashEntries(t, trashDir); len(got) != 1 {
+				t.Errorf("Trash holds %v when its removal starts, want one entry", got)
+			}
+			if !exists(t, filepath.Join(job.Dir, "b.img")) {
+				t.Error("b.img is not in place when the trash removal starts")
+			}
+			return nil
+		}
+		if err := job.DoDownload(context.Background()); err != nil {
+			t.Fatalf("DoDownload failed: %v", err)
+		}
+		if len(started) != 1 || started[0] != job.ChunkTrashDir {
+			t.Errorf("StartChunkTrashRemoval called with %v, want [%s]", started, job.ChunkTrashDir)
+		}
+		checkRestored(t, job)
+		// Left for the background removal, which this test does not run.
+		if got := trashEntries(t, job.ChunkTrashDir); len(got) != 1 {
+			t.Errorf("Trash holds %v after DoDownload, want the one entry left for the background removal", got)
+		}
+	})
+
+	t.Run("removed now if the removal cannot start", func(t *testing.T) {
+		job := newJob(t)
+		job.StartChunkTrashRemoval = func(string) error { return errors.New("no process for you") }
+		if err := job.DoDownload(context.Background()); err != nil {
+			t.Fatalf("DoDownload failed: %v", err)
+		}
+		checkRestored(t, job)
+		if got := trashEntries(t, job.ChunkTrashDir); len(got) != 0 {
+			t.Errorf("Trash holds %v after DoDownload, want it emptied", got)
+		}
+	})
+
+	t.Run("removed now without a removal hook", func(t *testing.T) {
+		job := newJob(t)
+		if err := job.DoDownload(context.Background()); err != nil {
+			t.Fatalf("DoDownload failed: %v", err)
+		}
+		checkRestored(t, job)
+		if got := trashEntries(t, job.ChunkTrashDir); len(got) != 0 {
+			t.Errorf("Trash holds %v after DoDownload, want it emptied", got)
+		}
+	})
+
+	t.Run("removed in place if the move fails", func(t *testing.T) {
+		job := newJob(t)
+		// A file where the trash directory's parent should be.
+		blocker := filepath.Dir(job.ChunkTrashDir)
+		if err := os.RemoveAll(blocker); err != nil {
+			t.Fatal(err)
+		}
+		writeFile(t, blocker, "not a directory", 0o600)
+		job.StartChunkTrashRemoval = func(string) error {
+			t.Error("StartChunkTrashRemoval called, want nothing moved to the trash")
+			return nil
+		}
+		if err := job.DoDownload(context.Background()); err != nil {
+			t.Fatalf("DoDownload failed: %v", err)
+		}
+		checkRestored(t, job)
+	})
+
+	t.Run("removed in place if ChunkTrashDir is not named .chunk-trash", func(t *testing.T) {
+		job := newJob(t)
+		misnamed := filepath.Join(t.TempDir(), "other-trash-name")
+		job.ChunkTrashDir = misnamed
+		job.StartChunkTrashRemoval = func(string) error {
+			t.Error("StartChunkTrashRemoval called for a misnamed ChunkTrashDir")
+			return nil
+		}
+		if err := job.DoDownload(context.Background()); err != nil {
+			t.Fatalf("DoDownload failed: %v", err)
+		}
+		checkRestored(t, job)
+		if exists(t, misnamed) {
+			t.Errorf("misnamed ChunkTrashDir %s was created", misnamed)
+		}
+	})
+
+	t.Run("post-commit DownloadTimeout during synchronous trash removal does not fail download", func(t *testing.T) {
+		job := newJob(t)
+		// Generous enough for the download to commit on a loaded worker; the
+		// hook then sleeps past the deadline, however long committing took.
+		job.DownloadTimeout = 2 * time.Second
+		deadline := time.Now().Add(job.DownloadTimeout)
+		job.StartChunkTrashRemoval = func(string) error {
+			time.Sleep(time.Until(deadline) + 100*time.Millisecond)
+			return errors.New("spawn failed after deadline")
+		}
+		if err := job.DoDownload(context.Background()); err != nil {
+			t.Fatalf("DoDownload failed after commit: %v", err)
+		}
+		if job.DownloadStats.DownloadError != "" {
+			t.Errorf("DownloadError = %q, want empty after committed download", job.DownloadStats.DownloadError)
+		}
+		checkRestored(t, job)
+		if got := trashEntries(t, job.ChunkTrashDir); len(got) != 0 {
+			t.Errorf("Trash holds %v after DoDownload, want it emptied", got)
+		}
+	})
+
+	t.Run("reports the backlog earlier runs left", func(t *testing.T) {
+		job := newJob(t)
+		// Two entries left by earlier runs, one of them two hours old.
+		for _, name := range []string{"old-run", "recent-run"} {
+			if err := os.MkdirAll(filepath.Join(job.ChunkTrashDir, name), 0o700); err != nil {
+				t.Fatal(err)
+			}
+		}
+		old := time.Now().Add(-2 * time.Hour)
+		if err := os.Chtimes(filepath.Join(job.ChunkTrashDir, "old-run"), old, old); err != nil {
+			t.Fatal(err)
+		}
+		job.StartChunkTrashRemoval = func(string) error { return nil }
+		if err := job.DoDownload(context.Background()); err != nil {
+			t.Fatalf("DoDownload failed: %v", err)
+		}
+		if got := job.DownloadStats.ChunkTrashBacklog; got != 2 {
+			t.Errorf("ChunkTrashBacklog = %d, want 2 (this run's own entry is not counted)", got)
+		}
+		if got := job.DownloadStats.ChunkTrashOldestAgeS; got < 2*3600-60 || got > 2*3600+60 {
+			t.Errorf("ChunkTrashOldestAgeS = %d, want about 7200", got)
+		}
+	})
+
+	t.Run("moved chunk data removed when commit fails", func(t *testing.T) {
+		job := newJob(t)
+		// A directory at b.img's path makes commit fail after the move.
+		writeFile(t, filepath.Join(job.Dir, "b.img", "keep"), "keep", 0o600)
+		job.StartChunkTrashRemoval = func(string) error {
+			t.Error("StartChunkTrashRemoval called after a failed commit")
+			return nil
+		}
+		if err := job.DoDownload(context.Background()); err == nil {
+			t.Fatal("DoDownload over a directory succeeded")
+		}
+		if got := trashEntries(t, job.ChunkTrashDir); len(got) != 0 {
+			t.Errorf("Trash holds %v after a failed download, want it emptied", got)
+		}
+		if exists(t, filepath.Join(job.Dir, "_chunks")) {
+			t.Error("_chunks was left behind in Dir after a failed download")
+		}
+		assertNoTmpFiles(t, job.Dir)
+	})
 }

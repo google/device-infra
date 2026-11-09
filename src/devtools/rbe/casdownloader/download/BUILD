@@ -26,6 +26,7 @@ go_library(
         "download.go",
         "staging.go",
         "tracker.go",
+        "trash.go",
     ],
     importpath = "github.com/google/device-infra/src/devtools/rbe/casdownloader/download",
     deps = [
@@ -79,5 +80,11 @@ go_test(
 go_test(
     name = "addnote_test",
     srcs = ["addnote_test.go"],
+    embed = [":download"],
+)
+
+go_test(
+    name = "trash_test",
+    srcs = ["trash_test.go"],
     embed = [":download"],
 )
