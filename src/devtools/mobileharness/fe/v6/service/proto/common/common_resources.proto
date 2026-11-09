@@ -154,7 +154,7 @@ enum TimelineTickAlignment {
   TIMELINE_TICK_ALIGNMENT_END = 3;
 }
 
-// Outcome tone for result chips, end markers, and sub-test bars.
+// Outcome tone for result chips and end markers.
 enum TimelineResultTone {
   TIMELINE_RESULT_TONE_UNSPECIFIED = 0;
   TIMELINE_RESULT_TONE_PASS = 1;
@@ -210,18 +210,11 @@ message TimelineIntervalBar {
   string duration_text = 7;
 }
 
-// Nested sub-test timing row rendered under a test's driver row.
-message TestTimelineSubTestRow {
-  string name = 1;
-  TimelineResultTone result_tone = 2;
-  string result_label = 3;
-  string duration_text = 4;
-  TimelineIntervalBar bar = 5;
-  string tooltip_detail = 6;
-}
-
 // Direct child step row inside a collapsible test phase.
 message TestTimelineStepRow {
+  reserved 16;
+  reserved "sub_tests";
+
   string label = 1;
   // Secondary fact line under the label; empty when none applies.
   string detail = 2;
@@ -243,7 +236,6 @@ message TestTimelineStepRow {
   string error_message = 13;
   string full_error_message = 14;
   string tooltip_hint = 15;
-  repeated TestTimelineSubTestRow sub_tests = 16;
 }
 
 // Collapsible phase header and its chronological child step rows.

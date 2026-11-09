@@ -13,7 +13,6 @@ import {
   JobTestLane,
   TestTimelinePhase,
   TestTimelineStepRow,
-  TestTimelineSubTestRow,
   TimeBreakdown,
   TimelineFill,
   TimelineIntervalBar,
@@ -23,9 +22,6 @@ import {
 } from '../../../core/models/timeline';
 import {NavLink} from '../nav_link/nav_link';
 import {TimelineTooltipRow, TimelineTooltipView} from './timeline_chart_models';
-
-/** Maximum sub-tests shown inline under a driver row before an expand toggle. */
-const SUBTEST_VISIBLE_CAP = 12;
 
 /** Maximum child test lanes shown initially on a Job timeline before "Show more". */
 const JOB_LANE_VISIBLE_CAP = 40;
@@ -61,8 +57,6 @@ export class TimelineChart {
   /** Says how a live timeline keeps itself current; empty when it is final. */
   readonly liveNote = input<string>('');
 
-  readonly subTestCap = SUBTEST_VISIBLE_CAP;
-
   /** Identifies the test or job being shown so live polls keep open rows expanded. */
   private readonly timelineIdentity = computed<string>(() => {
     const breakdown = this.timingBreakdown();
@@ -84,11 +78,6 @@ export class TimelineChart {
   });
 
   readonly collapsedPhaseIds = linkedSignal<ReadonlySet<string>>(() => {
-    this.timelineIdentity();
-    return new Set<string>();
-  });
-
-  readonly expandedSubTestRowKeys = linkedSignal<ReadonlySet<string>>(() => {
     this.timelineIdentity();
     return new Set<string>();
   });
@@ -227,32 +216,6 @@ export class TimelineChart {
     this.collapsedPhaseIds.set(next);
   }
 
-  visibleSubTests(
-    subTests: readonly TestTimelineSubTestRow[] | undefined,
-    rowKey: string,
-  ): readonly TestTimelineSubTestRow[] {
-    if (!subTests?.length) {
-      return [];
-    }
-    return this.expandedSubTestRowKeys().has(rowKey)
-      ? subTests
-      : subTests.slice(0, SUBTEST_VISIBLE_CAP);
-  }
-
-  isSubTestGroupExpanded(rowKey: string): boolean {
-    return this.expandedSubTestRowKeys().has(rowKey);
-  }
-
-  toggleSubTestGroup(rowKey: string): void {
-    const next = new Set(this.expandedSubTestRowKeys());
-    if (next.has(rowKey)) {
-      next.delete(rowKey);
-    } else {
-      next.add(rowKey);
-    }
-    this.expandedSubTestRowKeys.set(next);
-  }
-
   toggleShowAllLanes(): void {
     this.showAllLanes.update((open) => !open);
   }
@@ -328,24 +291,6 @@ export class TimelineChart {
       subtitle: row.detail || undefined,
       rows,
       hints: row.tooltipHint ? [row.tooltipHint] : [],
-    });
-    this.updatePointerPosition(event);
-  }
-
-  enterSubTestRow(event: MouseEvent, subTest: TestTimelineSubTestRow): void {
-    this.pairedKey.set(null);
-    const rows: TimelineTooltipRow[] = [
-      {
-        label: 'Duration',
-        value: subTest.durationText ?? '',
-      },
-      ...(subTest.bar ? intervalTooltipRows(subTest.bar) : []),
-    ];
-    this.activeTooltip.set({
-      title: subTest.name ?? '',
-      subtitle: subTest.tooltipDetail || undefined,
-      rows,
-      hints: [],
     });
     this.updatePointerPosition(event);
   }
