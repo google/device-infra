@@ -443,7 +443,7 @@ public class AndroidFileUtil {
     // At this point, it's sure target file/dir a symbolic link file/dir
     Optional<FileType> symlinkFileOrDirType =
         getSymlinkFileOrDirType(serial, sdkVersion, targetPath);
-    if (symlinkFileOrDirType.isEmpty() || FileType.UNKNOWN.equals(symlinkFileOrDirType.get())) {
+    if (symlinkFileOrDirType.isEmpty() || symlinkFileOrDirType.get() == FileType.UNKNOWN) {
       return Optional.of(fileInfoBuilder.setSymlinkType(FileType.UNKNOWN).build());
     } else {
       return Optional.of(fileInfoBuilder.setSymlinkType(symlinkFileOrDirType.get()).build());
@@ -552,7 +552,7 @@ public class AndroidFileUtil {
     Long freeSizeBytes = null;
     List<String> items =
         Splitter.onPattern("\\s+").trimResults().omitEmptyStrings().splitToList(output);
-    if (items.size() > 1 && STRING_FILESYSTEM.equals(items.get(0))) {
+    if (items.size() > 1 && items.get(0).equals(STRING_FILESYSTEM)) {
       try {
         if (items.size() == 10) {
           // The output is like before N:
@@ -603,9 +603,9 @@ public class AndroidFileUtil {
       // Try the best to decide if target dir exists
       return isFileOrDirExisted(serial, dirPath);
     }
-    return FileType.DIR.equals(fileInfo.get().type().orElse(null))
-        || (FileType.SYMLINK.equals(fileInfo.get().type().orElse(null))
-            && FileType.DIR.equals(fileInfo.get().symlinkType().orElse(null)));
+    return fileInfo.get().type().orElse(null) == FileType.DIR
+        || (fileInfo.get().type().orElse(null) == FileType.SYMLINK
+            && fileInfo.get().symlinkType().orElse(null) == FileType.DIR);
   }
 
   /**
@@ -625,9 +625,9 @@ public class AndroidFileUtil {
       // Try the best to decide if target file exists
       return isFileOrDirExisted(serial, filePath);
     }
-    return FileType.FILE.equals(fileInfo.get().type().orElse(null))
-        || (FileType.SYMLINK.equals(fileInfo.get().type().orElse(null))
-            && FileType.FILE.equals(fileInfo.get().symlinkType().orElse(null)));
+    return fileInfo.get().type().orElse(null) == FileType.FILE
+        || (fileInfo.get().type().orElse(null) == FileType.SYMLINK
+            && fileInfo.get().symlinkType().orElse(null) == FileType.FILE);
   }
 
   /**

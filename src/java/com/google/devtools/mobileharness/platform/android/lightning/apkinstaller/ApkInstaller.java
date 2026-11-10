@@ -460,7 +460,7 @@ public class ApkInstaller {
       return packageName;
     }
 
-    boolean isGms = PackageConstants.PACKAGE_NAME_GMS.equals(packageName);
+    boolean isGms = packageName.equals(PackageConstants.PACKAGE_NAME_GMS);
     if (isGms) {
       String apkVersionName = aapt.getApkVersionName(firstApkFile);
       if (!installArgs.skipGmsCompatCheck().orElse(false)) {
@@ -755,7 +755,7 @@ public class ApkInstaller {
   private static UtilArgs buildUtilArgs(String deviceId, String userId, int deviceSdkVersion) {
     UtilArgs.Builder utilArgsBuilder =
         UtilArgs.builder().setSerial(deviceId).setSdkVersion(deviceSdkVersion);
-    return MULTI_USER_DEFAULT_ID.equals(userId)
+    return userId.equals(MULTI_USER_DEFAULT_ID)
         ? utilArgsBuilder.build()
         : utilArgsBuilder.setUserId(userId).build();
   }

@@ -614,7 +614,7 @@ public final class JobInfoCreator {
   public static JobConfig updateDeviceList(JobConfig mhJobConfig, String genDirPath)
       throws MobileHarnessException, InterruptedException {
     for (FileConfig fileConfig : mhJobConfig.getFiles().getContentList()) {
-      if (TAG_DEVICE_SPEC.equals(fileConfig.getTag())) {
+      if (fileConfig.getTag().equals(TAG_DEVICE_SPEC)) {
         DeviceSpec deviceSpecFromFile =
             loadDeviceSpecFromFile(
                 fileConfig.getPath(0),

@@ -16,6 +16,8 @@
 
 package com.google.wireless.qa.mobileharness.shared.model.lab;
 
+import java.util.Objects;
+
 /** For locating a local, or remote device. */
 public class DeviceLocator {
 
@@ -54,7 +56,7 @@ public class DeviceLocator {
    * <p>Returns {@code id} for local devices, or {@code id@ip} for remote devices.
    */
   public String getUniversalId() {
-    if (LabLocator.LOCALHOST.equals(labLocator)) {
+    if (Objects.equals(labLocator, LabLocator.LOCALHOST)) {
       return serial;
     } else {
       return serial + "@" + labLocator.getIp();
@@ -85,7 +87,7 @@ public class DeviceLocator {
 
   @Override
   public String toString() {
-    if (LabLocator.LOCALHOST.equals(labLocator)) {
+    if (Objects.equals(labLocator, LabLocator.LOCALHOST)) {
       return serial;
     } else {
       return serial + "@" + labLocator;

@@ -76,7 +76,7 @@ public class JsonSubDeviceInfo extends BaseSubDeviceInfo {
     if (jsonObject.has(ID_KEY)) {
       id = jsonObject.get(ID_KEY).toString();
     } else {
-      if (!MISC_TESTBED_SUBDEVICE_CLASS.equals(typeName)) {
+      if (!typeName.equals(MISC_TESTBED_SUBDEVICE_CLASS)) {
         throw new MobileHarnessException(
             ExtErrorId.TESTBED_PARSING_ID_NOT_EXIST_ERROR,
             "Device requires an id field.\n" + jsonObject);

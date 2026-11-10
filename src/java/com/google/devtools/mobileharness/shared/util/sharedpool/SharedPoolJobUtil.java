@@ -29,6 +29,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import java.time.Duration;
+import java.util.Objects;
 
 /** Utils for MH shared pool */
 public final class SharedPoolJobUtil {
@@ -45,11 +46,11 @@ public final class SharedPoolJobUtil {
 
   public static boolean isUsingSharedPool(JobScheduleUnit job) {
     // Still use dimensions here, since M&M only support one device for now
-    return Value.POOL_SHARED.equals(job.dimensions().get(Name.POOL));
+    return Objects.equals(job.dimensions().get(Name.POOL), Value.POOL_SHARED);
   }
 
   public static boolean isUsingSharedPool(Dimensions dimensions) {
-    return Value.POOL_SHARED.equals(dimensions.get(Name.POOL).orElse(null));
+    return Objects.equals(dimensions.get(Name.POOL).orElse(null), Value.POOL_SHARED);
   }
 
   /** Returns whether if {@code jobConfig} is using shared pool. */
@@ -57,10 +58,11 @@ public final class SharedPoolJobUtil {
     return jobConfig.getDevice().getSubDeviceSpecList().stream()
         .anyMatch(
             spec ->
-                Value.POOL_SHARED.equals(
+                Objects.equals(
                     spec.getDimensions()
                         .getContentMap()
-                        .get(Ascii.toLowerCase(Name.POOL.toString()))));
+                        .get(Ascii.toLowerCase(Name.POOL.toString())),
+                    Value.POOL_SHARED));
   }
 
   /** Returns whether a gateway {@code jobConfig} is using shared pool. */

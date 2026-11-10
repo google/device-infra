@@ -163,7 +163,7 @@ public class PluginCreator implements AutoCloseable {
       @Nullable LogCollector<?> log,
       Module... systemModules) {
     checkArgument(
-        !PluginType.UNSPECIFIED.equals(pluginType),
+        pluginType != PluginType.UNSPECIFIED,
         "Plugin type should not be %s",
         PluginType.UNSPECIFIED);
     this.jarUris = jarPaths.stream().map(File::new).map(File::toURI).collect(toImmutableList());

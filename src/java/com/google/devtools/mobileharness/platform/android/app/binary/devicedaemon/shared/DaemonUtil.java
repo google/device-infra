@@ -26,6 +26,7 @@ import android.view.Window;
 import android.view.WindowManager.LayoutParams;
 import android.widget.TextView;
 import androidx.annotation.Nullable;
+import java.util.Objects;
 
 /** Mobile Harness device daemon util class. */
 public class DaemonUtil {
@@ -152,7 +153,7 @@ public class DaemonUtil {
     } else {
       String ssidFromWifiMgr = getSsidFromWifiManager(wifiMgr);
       String ssid =
-          UNKNOWN_SSID.equals(ssidFromWifiMgr) && !isStringNullOrEmpty(explicitSsid)
+          Objects.equals(ssidFromWifiMgr, UNKNOWN_SSID) && !isStringNullOrEmpty(explicitSsid)
               ? explicitSsid
               : ssidFromWifiMgr;
       Log.i(TAG, String.format("Setting SSID with value [%s]", ssid));

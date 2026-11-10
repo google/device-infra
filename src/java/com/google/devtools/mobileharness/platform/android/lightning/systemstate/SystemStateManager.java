@@ -148,7 +148,7 @@ public class SystemStateManager {
       return systemStateUtil.isOxygenDeviceOnline(serial);
     }
     DeviceState deviceState = adbInternalUtil.getDeviceSerialsAsMap().getOrDefault(serial, null);
-    if (DeviceState.DEVICE.equals(deviceState)) {
+    if (deviceState == DeviceState.DEVICE) {
       return true;
     } else if (logDeviceStateIfNotOnline) {
       logger.atWarning().log(

@@ -217,7 +217,7 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
   private void onTestMessage(TestMessageEvent event) {
     TestInfo testInfo = event.getTest();
     Map<String, String> message = event.getMessage();
-    if (MESSAGE_NAMESPACE.equals(message.get("namespace"))) {
+    if (Objects.equals(message.get("namespace"), MESSAGE_NAMESPACE)) {
       if (Objects.equals(message.get("type"), "wake_up")) {
         wakeupFuture.set(WakeupReason.RECEIVE_MESSAGE);
       } else if (Objects.equals(message.get("type"), "extend_lease")) {
