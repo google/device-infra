@@ -181,8 +181,6 @@ java_library(
 java_library(
     name = "lab_server_launcher",
     srcs = ["LabServerLauncher.java"],
-    resources = [
-    ],
     deps = [
         ":lab_server",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
