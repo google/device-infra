@@ -19,6 +19,7 @@ import {
   TestOverviewData,
   TestSummary,
 } from '../../../../core/models/test_overview';
+import {isHttpUrl} from '../../../../core/utils/url_utils';
 import {AccordionItem} from '../../../../shared/components/accordion_item/accordion_item';
 import {InfoCard} from '../../../../shared/components/info_card/info_card';
 import {
@@ -110,6 +111,8 @@ export class TestOverviewTab {
   readonly propertiesSearchTerm = this.propertiesFilter.searchTerm;
   readonly hasProperties = this.propertiesFilter.hasData;
   readonly filteredProperties = this.propertiesFilter.filteredData;
+  /** Whether a property value is an http(s) URL to render as a link. */
+  readonly isHttpUrl = isHttpUrl;
 
   readonly overviewNavList = computed((): NavItem[] => {
     const troubleshooting = this.test().troubleshooting;

@@ -110,6 +110,42 @@ describe('JobOverviewTab Component', () => {
     ]);
   });
 
+  it('should render http(s) property values as links and other values as text', () => {
+    const antsUrl = 'https://ci.example.com/builds/tests/view?invocationId=I01';
+    const mhfeUrl = 'http://mobileharness-fe/jobdetailview/job_12345';
+    const linkJob: JobOverviewData = {
+      ...mockJob,
+      properties: {
+        'ants_link': antsUrl,
+        'job_link_in_mhfe': mhfeUrl,
+        'run_as': 'android-hammock',
+      },
+    };
+    fixture.componentInstance.job = linkJob;
+    fixture.detectChanges();
+
+    const rows = fixture.debugElement.queryAll(
+      By.css('#overview-properties .data-block-row'),
+    );
+    expect(rows.length).toBe(3);
+
+    const antsLink = rows[0].query(By.css('dd a.property-link'));
+    expect(antsLink).toBeTruthy();
+    expect(antsLink.nativeElement.getAttribute('href')).toBe(antsUrl);
+    expect(antsLink.nativeElement.getAttribute('target')).toBe('_blank');
+    expect(antsLink.nativeElement.getAttribute('rel')).toContain('noopener');
+    expect(antsLink.nativeElement.textContent.trim()).toBe(antsUrl);
+
+    const mhfeLink = rows[1].query(By.css('dd a.property-link'));
+    expect(mhfeLink).toBeTruthy();
+    expect(mhfeLink.nativeElement.getAttribute('href')).toBe(mhfeUrl);
+
+    expect(rows[2].query(By.css('dd a'))).toBeNull();
+    expect(rows[2].query(By.css('dd')).nativeElement.textContent.trim()).toBe(
+      'android-hammock',
+    );
+  });
+
   it('should calculate timestamp info map correctly', () => {
     const map = component.timestampInfoMap();
     expect(map['createTime'].displayValue).not.toBe('N/A');

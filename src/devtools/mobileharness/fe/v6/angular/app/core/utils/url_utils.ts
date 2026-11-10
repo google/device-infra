@@ -61,3 +61,24 @@ export function buildQueryString(
   const str = searchParams.toString();
   return str ? `?${str}` : '';
 }
+
+/**
+ * Matches a value that is, in its entirety, a single absolute http(s) URL
+ * (e.g. "http://sponge2/<id>"). The scheme is matched case-insensitively and
+ * no whitespace is allowed, so free text that merely contains a URL does not
+ * match.
+ */
+const HTTP_URL_PATTERN = /^https?:\/\/\S+$/i;
+
+/**
+ * Returns whether the given value is a single absolute http(s) URL that can be
+ * rendered as a clickable link (e.g. test/job property values such as
+ * `ab_sponge_link`).
+ *
+ * Only `http://` and `https://` are accepted. Other schemes, file-system paths,
+ * short links and text that only contains a URL are treated as plain text.
+ */
+export function isHttpUrl(value: string | null | undefined): boolean {
+  if (!value) return false;
+  return HTTP_URL_PATTERN.test(value.trim());
+}

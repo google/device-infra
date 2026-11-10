@@ -20,6 +20,7 @@ import {
   getTestSummaryDevicesList,
   TestSummary,
 } from '../../../../core/models/test_overview';
+import {isHttpUrl} from '../../../../core/utils/url_utils';
 import {AccordionItem} from '../../../../shared/components/accordion_item/accordion_item';
 import {InfoCard} from '../../../../shared/components/info_card/info_card';
 import {
@@ -92,6 +93,8 @@ export class JobOverviewTab {
   readonly hasProperties = this.propertiesFilter.hasData;
   readonly filteredProperties: Signal<Array<FilterEntry<string>>> =
     this.propertiesFilter.filteredData;
+  /** Whether a property value is an http(s) URL to render as a link. */
+  readonly isHttpUrl = isHttpUrl;
   readonly timestampKeys = STANDARD_TIMESTAMP_KEYS;
   private readonly executionDetails = computed(
     () => this.job().executionDetails,

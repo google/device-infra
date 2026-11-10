@@ -1,7 +1,11 @@
 import {TestBed} from '@angular/core/testing';
 import {ActivatedRoute, convertToParamMap} from '@angular/router';
 
-import {buildQueryString, navigateWithPreservedParams} from './url_utils';
+import {
+  buildQueryString,
+  isHttpUrl,
+  navigateWithPreservedParams,
+} from './url_utils';
 
 describe('url_utils', () => {
   describe('navigateWithPreservedParams', () => {
@@ -64,6 +68,54 @@ describe('url_utils', () => {
       });
 
       expect(queryString).toBe('');
+    });
+  });
+
+  describe('isHttpUrl', () => {
+    it('accepts values that are a single http or https URL', () => {
+      expect(
+        isHttpUrl('http://sponge2/00c8c57f-8e3a-4164-b6fa-8d7744108794'),
+      ).toBeTrue();
+      expect(
+        isHttpUrl(
+          'https://ci.example.com/builds/tests/view?invocationId=I0190',
+        ),
+      ).toBeTrue();
+      expect(
+        isHttpUrl('http://mobileharness-fe/testdetailview/job-1/test-1'),
+      ).toBeTrue();
+    });
+
+    it('matches the scheme case-insensitively', () => {
+      expect(isHttpUrl('HTTP://sponge2/abc')).toBeTrue();
+      expect(isHttpUrl('Https://example.com')).toBeTrue();
+    });
+
+    it('ignores surrounding whitespace', () => {
+      expect(isHttpUrl('  http://sponge2/abc\n')).toBeTrue();
+    });
+
+    it('rejects empty and missing values', () => {
+      expect(isHttpUrl('')).toBeFalse();
+      expect(isHttpUrl('   ')).toBeFalse();
+      expect(isHttpUrl(null)).toBeFalse();
+      expect(isHttpUrl(undefined)).toBeFalse();
+    });
+
+    it('rejects text that only contains or resembles a URL', () => {
+      expect(isHttpUrl('see http://sponge2/abc for details')).toBeFalse();
+      expect(isHttpUrl('http://sponge2/abc and more')).toBeFalse();
+      expect(isHttpUrl('httpd_enabled')).toBeFalse();
+      expect(isHttpUrl('use_https_only=true')).toBeFalse();
+      expect(isHttpUrl('http://')).toBeFalse();
+    });
+
+    it('rejects non-http schemes, short links and file paths', () => {
+      expect(isHttpUrl('ftp://host/file')).toBeFalse();
+      expect(isHttpUrl('javascript:alert(1)')).toBeFalse();
+      expect(isHttpUrl('go/omnilab')).toBeFalse();
+      expect(isHttpUrl('/tmp/mh_lab_gen_files/test_1/file.txt')).toBeFalse();
+      expect(isHttpUrl('www.example.com')).toBeFalse();
     });
   });
 });

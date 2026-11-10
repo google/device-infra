@@ -126,6 +126,43 @@ describe('TestOverviewTab Component', () => {
     ]);
   });
 
+  it('should render http(s) property values as links and other values as text', () => {
+    const spongeUrl = 'http://sponge2/00c8c57f-8e3a-4164-b6fa-8d7744108794';
+    const antsUrl = 'https://ci.example.com/builds/tests/view?invocationId=I01';
+    const genFileDir = '/tmp/mh_lab_gen_files/test_1';
+    const linkTest: TestOverviewData = {
+      ...mockTest,
+      properties: {
+        'ab_sponge_link': spongeUrl,
+        'ants_link': antsUrl,
+        'lab_test_gen_file_dir': genFileDir,
+      },
+    };
+    fixture.componentInstance.test = linkTest;
+    fixture.detectChanges();
+
+    const rows = fixture.debugElement.queryAll(
+      By.css('#overview-properties .data-block-row'),
+    );
+    expect(rows.length).toBe(3);
+
+    const spongeLink = rows[0].query(By.css('dd a.property-link'));
+    expect(spongeLink).toBeTruthy();
+    expect(spongeLink.nativeElement.getAttribute('href')).toBe(spongeUrl);
+    expect(spongeLink.nativeElement.getAttribute('target')).toBe('_blank');
+    expect(spongeLink.nativeElement.getAttribute('rel')).toContain('noopener');
+    expect(spongeLink.nativeElement.textContent.trim()).toBe(spongeUrl);
+
+    const antsLink = rows[1].query(By.css('dd a.property-link'));
+    expect(antsLink).toBeTruthy();
+    expect(antsLink.nativeElement.getAttribute('href')).toBe(antsUrl);
+
+    expect(rows[2].query(By.css('dd a'))).toBeNull();
+    expect(rows[2].query(By.css('dd')).nativeElement.textContent.trim()).toBe(
+      genFileDir,
+    );
+  });
+
   it('should show warning details card and list in nav if warnings are present', () => {
     const warningTest: TestOverviewData = {
       ...mockTest,

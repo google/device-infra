@@ -429,7 +429,13 @@
               @for (prop of filteredProps; track prop.key) {
                 <div class="data-block-row contents">
                   <dt>{{ prop.key }}</dt>
-                  <dd>{{ prop.value }}</dd>
+                  <dd>
+                    @if (isHttpUrl(prop.value)) {
+                      <a [href]="prop.value" target="_blank" rel="noopener noreferrer" class="property-link">{{ prop.value }}</a>
+                    } @else {
+                      <span>{{ prop.value }}</span>
+                    }
+                  </dd>
                 </div>
               }
             </dl>

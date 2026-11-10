@@ -131,6 +131,16 @@
   dd {
     color: #3c4043;
   }
+
+  // Property values that are URLs (e.g. ab_sponge_link) render as links.
+  dd a.property-link {
+    color: #1a73e8;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
 }
 
 .type-chip {
