@@ -156,6 +156,16 @@ describe('App Component', () => {
         'OmniLab Console',
       );
     });
+
+    it('should render current year in footer', () => {
+      const footer: HTMLElement =
+        standaloneFixture.nativeElement.querySelector('footer');
+      expect(footer).toBeTruthy();
+      expect(footer.querySelector('.version-info')).toBeNull();
+      expect(
+        footer.querySelector('.copy-right-info')?.textContent?.trim(),
+      ).toBe(`© ${new Date().getFullYear()} Google`);
+    });
   });
 
   describe('isNavActive', () => {

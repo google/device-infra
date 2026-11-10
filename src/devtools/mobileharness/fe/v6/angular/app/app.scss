@@ -642,7 +642,7 @@ app-root {
     margin: 10px 20px 4px;
     display: flex;
     flex-wrap: nowrap;
-    place-content: center space-between;
+    place-content: center flex-end;
     align-items: center;
   }
 }
