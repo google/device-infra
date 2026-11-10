@@ -348,16 +348,19 @@ describe('App Component', () => {
       expect(params['universe']).toBeUndefined();
     });
 
-    it('should include enable_assistant when assistant feature is enabled', () => {
+    it('should not add enable_assistant when on, and preserve enable_assistant=false when in the URL', () => {
       component.isAssistantEnabled = true;
-      const params = component.getPreservedQueryParams();
-      expect(params['enable_assistant']).toBe('true');
-    });
+      expect(
+        component.getPreservedQueryParams()['enable_assistant'],
+      ).toBeUndefined();
 
-    it('should not include enable_assistant when assistant feature is disabled', () => {
-      component.isAssistantEnabled = false;
-      const params = component.getPreservedQueryParams();
-      expect(params['enable_assistant']).toBeUndefined();
+      mockActivatedRoute.snapshot = {
+        queryParams: {'enable_assistant': 'false'},
+        queryParamMap: convertToParamMap({'enable_assistant': 'false'}),
+      } as unknown as ActivatedRoute['snapshot'];
+      expect(component.getPreservedQueryParams()['enable_assistant']).toBe(
+        'false',
+      );
     });
   });
 });
