@@ -166,10 +166,9 @@ public class CommandResult {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof CommandResult)) {
+    if (!(o instanceof CommandResult that)) {
       return false;
     }
-    CommandResult that = (CommandResult) o;
     return exitCode == that.exitCode && stdout.equals(that.stdout) && stderr.equals(that.stderr);
   }
 

@@ -1110,10 +1110,9 @@ public abstract class Command {
     if (o == this) {
       return true;
     }
-    if (!(o instanceof Command)) {
+    if (!(o instanceof Command other)) {
       return false;
     }
-    Command other = (Command) o;
     return getExecutable().equals(other.getExecutable())
         && getArguments().equals(other.getArguments());
   }
