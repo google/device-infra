@@ -874,6 +874,13 @@ public class Flags {
   public static final Flag<Boolean> enableMoblyResultstoreUpload = Flag.value(false);
 
   @FlagSpec(
+      name = "enable_olc_publisher_dda_device_filter",
+      help =
+          "Whether the Wrangler agent only publishes devices that support the \"dda\" Omni mode"
+              + " usage (and the labs hosting them) to Wrangler. Default is true.")
+  public static final Flag<Boolean> enableOlcPublisherDdaDeviceFilter = Flag.value(true);
+
+  @FlagSpec(
       name = "enable_olc_publisher_extended_device_info",
       help = "Whether to enable extended device info in OLC publisher.")
   public static final Flag<Boolean> enableOlcPublisherExtendedDeviceInfo = Flag.value(false);
