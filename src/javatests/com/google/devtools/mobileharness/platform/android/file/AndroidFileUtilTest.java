@@ -1307,7 +1307,7 @@ public final class AndroidFileUtilTest {
 
   @Test
   public void remountSdk36Emulator() throws Exception {
-    when(adb.run(eq(SERIAL), aryEq(new String[] {"shell", "remount", "/"})))
+    when(adb.run(eq(SERIAL), aryEq(new String[] {"shell", "remount"})))
         .thenReturn("")
         .thenThrow(
             new MobileHarnessException(
@@ -1318,7 +1318,7 @@ public final class AndroidFileUtilTest {
 
     assertThat(androidFileUtil.remount(SERIAL)).isTrue();
 
-    verify(adb).run(eq(SERIAL), aryEq(new String[] {"shell", "remount", "/"}));
+    verify(adb).run(eq(SERIAL), aryEq(new String[] {"shell", "remount"}));
     assertThat(
             assertThrows(MobileHarnessException.class, () -> androidFileUtil.remount(SERIAL))
                 .getErrorId())
