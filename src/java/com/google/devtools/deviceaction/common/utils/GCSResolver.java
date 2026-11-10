@@ -51,8 +51,7 @@ class GCSResolver extends SimpleResolver {
   private final LoadingCache<String, GCSUtil> storageCache;
 
   @Inject
-  @SuppressWarnings("UnnecessarilyVisible")
-  public GCSResolver(
+  GCSResolver(
       LocalFileUtil localFileUtil,
       @GCSCredential File serviceAccountKey,
       @GenFileDirRoot File rootDir) {

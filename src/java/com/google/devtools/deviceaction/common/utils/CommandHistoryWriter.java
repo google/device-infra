@@ -58,8 +58,7 @@ public class CommandHistoryWriter implements CommandRecorderListener {
   private final LocalFileUtil localFileUtil;
 
   @Inject
-  @SuppressWarnings("UnnecessarilyVisible")
-  public CommandHistoryWriter(ResourceHelper helper, LocalFileUtil localFileUtil)
+  CommandHistoryWriter(ResourceHelper helper, LocalFileUtil localFileUtil)
       throws DeviceActionException {
     this(helper.getGenFileDir(), localFileUtil);
   }
