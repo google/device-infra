@@ -22,6 +22,11 @@ import {
 } from '../../../../core/models/test_overview';
 import {isHttpUrl} from '../../../../core/utils/url_utils';
 import {AccordionItem} from '../../../../shared/components/accordion_item/accordion_item';
+import {
+  DiagnoseInAssistant,
+  executionDiagnosePrompt,
+  namedExecutionSubject,
+} from '../../../../shared/components/diagnose_in_assistant/diagnose_in_assistant';
 import {InfoCard} from '../../../../shared/components/info_card/info_card';
 import {
   MasterDetailLayout,
@@ -59,6 +64,7 @@ import {
     MatTooltipModule,
     RouterModule,
     InfoCard,
+    DiagnoseInAssistant,
     MasterDetailLayout,
     AccordionItem,
     NavLink,
@@ -99,6 +105,14 @@ export class JobOverviewTab {
   private readonly executionDetails = computed(
     () => this.job().executionDetails,
   );
+  readonly diagnosePrompt = computed(() => {
+    const j = this.job();
+    return executionDiagnosePrompt(
+      namedExecutionSubject('job', j.id, j.name),
+      j.status,
+      j.result,
+    );
+  });
   readonly overviewNavList = computed(() => {
     const job = this.job();
     const list: NavItem[] = [];

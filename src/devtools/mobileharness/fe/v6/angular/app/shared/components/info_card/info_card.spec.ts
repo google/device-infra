@@ -1,8 +1,20 @@
+import {Component} from '@angular/core';
 import {ComponentFixture, TestBed} from '@angular/core/testing';
 import {NoopAnimationsModule} from '@angular/platform-browser/animations';
 import {provideRouter} from '@angular/router';
 
 import {InfoCard} from './info_card';
+
+@Component({
+  standalone: true,
+  imports: [InfoCard],
+  template: `
+    <app-info-card cardTitle="Error Details">
+      <span titleAction class="projected-title-action">Action</span>
+    </app-info-card>
+  `,
+})
+class TitleActionHost {}
 
 describe('InfoCard Component', () => {
   let component: InfoCard;
@@ -54,5 +66,15 @@ describe('InfoCard Component', () => {
     fixture.componentRef.setInput('collapsible', false);
     fixture.debugElement.nativeElement.querySelector('.panel-header').click();
     expect(component.expanded()).toBeTrue();
+  });
+
+  it('projects titleAction inside title-container', () => {
+    const hostFixture = TestBed.createComponent(TitleActionHost);
+    hostFixture.detectChanges();
+
+    const action = hostFixture.nativeElement.querySelector(
+      '.title-container .projected-title-action',
+    );
+    expect(action?.textContent).toBe('Action');
   });
 });

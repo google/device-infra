@@ -1,0 +1,23 @@
+@if (visible()) {
+  <a
+    class="diagnose-chip"
+    [routerLink]="['/assistant']"
+    [queryParams]="assistantQueryParams()"
+    target="_blank"
+    rel="noopener"
+    title="Opens the Assistant in a new tab"
+    (click)="onChipClick($event)"
+  >
+    <span
+      class="material-symbols-outlined diagnose-chip-icon"
+      aria-hidden="true"
+      >smart_toy</span
+    >
+    <span>Diagnose in Assistant</span>
+    <span
+      class="material-symbols-outlined diagnose-chip-trail"
+      aria-hidden="true"
+      >open_in_new</span
+    >
+  </a>
+}

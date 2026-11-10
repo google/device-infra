@@ -3,6 +3,9 @@
   @let errors = job().troubleshooting?.resultCause?.error;
   @if (errors && errors.length > 0) {
     <app-info-card id="overview-error" cardTitle="Error Details" icon="error_outline" [collapsible]="false" class="error-info-card">
+      @if (diagnosePrompt(); as prompt) {
+        <app-diagnose-in-assistant titleAction [prompt]="prompt" />
+      }
       @if (errors.length > 1) {
         <span operations class="count-badge error-count-badge">{{ errors.length }} errors</span>
       }

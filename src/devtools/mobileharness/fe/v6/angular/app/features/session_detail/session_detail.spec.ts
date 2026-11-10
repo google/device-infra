@@ -19,6 +19,7 @@ import {
   SESSION_SERVICE,
   SessionService,
 } from '../../core/services/session/session_service';
+import {IS_ASSISTANT_ENABLED} from '../../shared/components/diagnose_in_assistant/diagnose_in_assistant';
 import {ClipboardService} from '../../shared/services/clipboard_service';
 import {LoadingService} from '../../shared/services/loading_service';
 import {SnackBarService} from '../../shared/services/snackbar_service';
@@ -75,6 +76,7 @@ describe('SessionDetailPage Component', () => {
           },
         },
         {provide: APP_DATA, useValue: {applicationId: 'arsenal'}},
+        {provide: IS_ASSISTANT_ENABLED, useValue: () => true},
       ],
     }).compileComponents();
 
@@ -97,5 +99,33 @@ describe('SessionDetailPage Component', () => {
     expect(
       compiled.querySelector('.status-indicator')?.textContent,
     ).not.toContain('Result:');
+  }));
+
+  it('shows Diagnose in Assistant in Error Details when the session fails', fakeAsync(() => {
+    mockSessionService.getSession.and.returnValue(
+      of({
+        session: {
+          id: 'session_12345678',
+          name: 'Example session',
+          status: SessionStatus.SESSION_STATUS_DONE,
+          result: SessionResult.SESSION_RESULT_FAIL,
+          troubleshooting: {
+            resultCause: {error: [{message: 'Session job failed'}]},
+          },
+        },
+      }),
+    );
+    const failedFixture = TestBed.createComponent(SessionDetailPage);
+    failedFixture.detectChanges();
+    tick();
+    failedFixture.detectChanges();
+
+    const chip = (failedFixture.nativeElement as HTMLElement).querySelector(
+      '#overview-error .title-container a.diagnose-chip',
+    ) as HTMLAnchorElement;
+    expect(chip).not.toBeNull();
+    expect(chip.getAttribute('href')).toContain(
+      'q=Why%20did%20session%20session_12345678%20fail%3F',
+    );
   }));
 });

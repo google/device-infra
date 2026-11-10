@@ -28,9 +28,14 @@
             </mat-icon>
           </div>
           <div [class]="'health-details ' + healthUI.borderColorClass">
-            <h3 [class]="'health-title ' + healthUI.iconColorClass">
-              {{ device.healthAndActivity.title }}
-            </h3>
+            <div class="health-title-row">
+              <h3 [class]="'health-title ' + healthUI.iconColorClass">
+                {{ device.healthAndActivity.title }}
+              </h3>
+              @if (!isInService(device.healthAndActivity)) {
+                <app-diagnose-in-assistant [prompt]="getDiagnosePrompt()" />
+              }
+            </div>
             <p class="health-subtitle">{{ device.healthAndActivity.subtitle }}</p>
             @if (!isInService(device.healthAndActivity)) {
               <div class="last-in-service">

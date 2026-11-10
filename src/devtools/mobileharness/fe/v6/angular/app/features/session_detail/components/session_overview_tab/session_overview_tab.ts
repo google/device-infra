@@ -22,6 +22,10 @@ import {
   SessionJob,
 } from '../../../../core/models/session_overview';
 import {AccordionItem} from '../../../../shared/components/accordion_item/accordion_item';
+import {
+  DiagnoseInAssistant,
+  executionDiagnosePrompt,
+} from '../../../../shared/components/diagnose_in_assistant/diagnose_in_assistant';
 import {InfoCard} from '../../../../shared/components/info_card/info_card';
 import {
   MasterDetailLayout,
@@ -57,6 +61,7 @@ import {dateUtils} from '../../../../shared/utils/date_utils';
     MatTooltipModule,
     RouterModule,
     InfoCard,
+    DiagnoseInAssistant,
     MasterDetailLayout,
     AccordionItem,
   ],
@@ -95,6 +100,11 @@ export class SessionOverviewTab {
     this.executionDetails,
     this.timestampKeys,
   );
+
+  readonly diagnosePrompt = computed(() => {
+    const s = this.session();
+    return executionDiagnosePrompt(`session ${s.id}`, s.status, s.result);
+  });
 
   readonly overviewNavList = computed(() => {
     const session = this.session();

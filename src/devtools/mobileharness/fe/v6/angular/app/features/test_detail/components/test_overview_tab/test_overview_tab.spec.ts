@@ -17,6 +17,7 @@ import {
   TestStatus,
 } from '../../../../core/models/test_overview';
 import {AccordionItem} from '../../../../shared/components/accordion_item/accordion_item';
+import {IS_ASSISTANT_ENABLED} from '../../../../shared/components/diagnose_in_assistant/diagnose_in_assistant';
 import {NavLink} from '../../../../shared/components/nav_link/nav_link';
 import {getTestSummaryResultBadge} from '../../../../shared/composables/status_badge';
 import {ClipboardService} from '../../../../shared/services/clipboard_service';
@@ -77,7 +78,10 @@ describe('TestOverviewTab Component', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [TestOverviewTab, TestHostComponent, NoopAnimationsModule],
-      providers: [provideRouter([])],
+      providers: [
+        provideRouter([]),
+        {provide: IS_ASSISTANT_ENABLED, useValue: () => true},
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TestHostComponent);
@@ -603,4 +607,61 @@ describe('TestOverviewTab Component', () => {
     component.copyTestId('sub_02');
     expect(component.copiedTestIds()['sub_02']).toBeUndefined();
   }));
+
+  it('shows Diagnose in Assistant in Error Details only when finished with a failing result', () => {
+    const runningFixture = TestBed.createComponent(TestHostComponent);
+    runningFixture.componentInstance.test = {
+      ...mockTest,
+      status: TestStatus.TEST_STATUS_RUNNING,
+      result: TestResult.TEST_RESULT_FAIL,
+      troubleshooting: {
+        resultCause: {error: [{message: 'Crash'}]},
+      },
+    };
+    runningFixture.detectChanges();
+    expect(
+      runningFixture.nativeElement.querySelector(
+        '#overview-error a.diagnose-chip',
+      ),
+    ).toBeNull();
+
+    const failedFixture = TestBed.createComponent(TestHostComponent);
+    failedFixture.componentInstance.test = {
+      ...mockTest,
+      status: TestStatus.TEST_STATUS_DONE,
+      result: TestResult.TEST_RESULT_FAIL,
+      troubleshooting: {
+        resultCause: {error: [{message: 'Crash'}]},
+      },
+    };
+    failedFixture.detectChanges();
+    const chip = failedFixture.nativeElement.querySelector(
+      '#overview-error .title-container a.diagnose-chip',
+    ) as HTMLAnchorElement;
+    expect(chip).not.toBeNull();
+    expect(chip.getAttribute('href')).toContain(
+      'q=Why%20did%20test%20test_123%20(Example%20test%20execution)%20fail%3F',
+    );
+
+    const subTestFixture = TestBed.createComponent(TestHostComponent);
+    subTestFixture.componentInstance.test = {
+      ...mockTest,
+      id: 'sub_01',
+      name: 'SubTestCase1',
+      status: TestStatus.TEST_STATUS_NEW,
+      result: TestResult.TEST_RESULT_FAIL,
+      subTestsInfo: {rootTestId: 'test_123'},
+      troubleshooting: {
+        resultCause: {error: [{message: 'Sub-test failed'}]},
+      },
+    };
+    subTestFixture.detectChanges();
+    const subChip = subTestFixture.nativeElement.querySelector(
+      '#overview-error .title-container a.diagnose-chip',
+    ) as HTMLAnchorElement;
+    expect(subChip).not.toBeNull();
+    expect(subChip.getAttribute('href')).toContain(
+      'q=Why%20did%20test%20sub_01%20(SubTestCase1)%20fail%3F',
+    );
+  });
 });

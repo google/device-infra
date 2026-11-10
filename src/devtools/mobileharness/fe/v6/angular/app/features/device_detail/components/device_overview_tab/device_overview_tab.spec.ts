@@ -13,6 +13,7 @@ import {DEVICE_VERSION_DESCRIPTION} from '../../../../core/constants/device_vers
 import {DeviceOverview} from '../../../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 
+import {IS_ASSISTANT_ENABLED} from '../../../../shared/components/diagnose_in_assistant/diagnose_in_assistant';
 import {DeviceActionService} from '../../../../shared/services/device_action_service';
 import {RemoteControlService} from '../../../../shared/services/remote_control_service';
 import {DeviceOverviewTab} from './device_overview_tab';
@@ -145,6 +146,10 @@ describe('DeviceOverviewTab Component', () => {
         {
           provide: RemoteControlService,
           useValue: {},
+        },
+        {
+          provide: IS_ASSISTANT_ENABLED,
+          useValue: () => true,
         },
       ],
     }).compileComponents();
@@ -543,5 +548,33 @@ describe('DeviceOverviewTab Component', () => {
       formDt = fixture.debugElement.query(By.css('dt[title="Form"]'));
       expect(formDt).toBeNull();
     }
+  });
+
+  it('shows Diagnose in Assistant after the state headline only when out of service', () => {
+    expect(
+      fixture.nativeElement.querySelector('.health-title-row a.diagnose-chip'),
+    ).toBeNull();
+
+    fixture.componentInstance.device = {
+      ...mockDevice,
+      healthAndActivity: {
+        ...mockDevice.healthAndActivity,
+        state: 'IDLE_BUT_QUARANTINED',
+        uiState: 'BLOCKED',
+        title: 'Quarantined',
+        deviceStatus: {status: 'IDLE', isCritical: false},
+      },
+    };
+    const cdr = fixture.debugElement.injector.get(ChangeDetectorRef);
+    cdr.markForCheck();
+    fixture.detectChanges();
+
+    const chip = fixture.nativeElement.querySelector(
+      '.health-title-row a.diagnose-chip',
+    ) as HTMLAnchorElement;
+    expect(chip).not.toBeNull();
+    expect(chip.getAttribute('href')).toContain(
+      'q=Why%20is%20device%201234567890%20on%20host-a-1.prod.example.com%20quarantined%20and%20unavailable%20for%20tests%3F',
+    );
   });
 });

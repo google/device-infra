@@ -1,0 +1,72 @@
+@use '../../styles/typography';
+
+:host {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+:host:empty {
+  display: none;
+}
+
+// Google Material 3 outlined assist chip: 32px high, 8px corners, 18px
+// outlined `smart_toy` robot in primary blue, 14px label, and a 16px
+// `open_in_new` trailing icon because it opens a new tab.
+.diagnose-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #c4c7c5;
+  border-radius: 8px;
+  background-color: transparent;
+  color: #1f1f1f;
+  font-family: typography.$labconsole-font;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  letter-spacing: 0.00625rem;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+
+  &:hover {
+    background-color: rgba(31, 31, 31, 0.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #0b57d0;
+    outline-offset: 2px;
+  }
+}
+
+.diagnose-chip-icon {
+  width: 18px;
+  height: 18px;
+  color: #0b57d0;
+  font-size: 18px;
+  line-height: 18px;
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 20;
+}
+
+.diagnose-chip-trail {
+  width: 16px;
+  height: 16px;
+  color: #444746;
+  font-size: 16px;
+  line-height: 16px;
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 20;
+}

@@ -17,10 +17,16 @@ import {RouterModule} from '@angular/router';
 import {
   getTestSummaryDevicesList,
   TestOverviewData,
+  TestStatus,
   TestSummary,
 } from '../../../../core/models/test_overview';
 import {isHttpUrl} from '../../../../core/utils/url_utils';
 import {AccordionItem} from '../../../../shared/components/accordion_item/accordion_item';
+import {
+  DiagnoseInAssistant,
+  executionDiagnosePrompt,
+  namedExecutionSubject,
+} from '../../../../shared/components/diagnose_in_assistant/diagnose_in_assistant';
 import {InfoCard} from '../../../../shared/components/info_card/info_card';
 import {
   MasterDetailLayout,
@@ -70,6 +76,7 @@ const NAV_ITEM_PROPERTIES: NavItem = {
     MatTooltipModule,
     RouterModule,
     AccordionItem,
+    DiagnoseInAssistant,
     InfoCard,
     MasterDetailLayout,
     NavLink,
@@ -100,6 +107,17 @@ export class TestOverviewTab {
   readonly rootTestId = computed(
     () => this.test().subTestsInfo?.rootTestId || this.test().id,
   );
+
+  readonly diagnosePrompt = computed(() => {
+    const t = this.test();
+    const status =
+      this.rootTestId() !== t.id ? TestStatus.TEST_STATUS_DONE : t.status;
+    return executionDiagnosePrompt(
+      namedExecutionSubject('test', t.id, t.name),
+      status,
+      t.result,
+    );
+  });
 
   readonly subTestsList = computed(
     () => this.test().subTestsInfo?.subTests?.test ?? [],

@@ -5,6 +5,7 @@
       <mat-icon class="header-icon">{{ icon() }}</mat-icon>
     }
     <span>{{ cardTitle() }}</span>
+    <ng-content select="[titleAction]"></ng-content>
   </span>
   <div class="header-right">
     <ng-content select="[operations]"></ng-content>

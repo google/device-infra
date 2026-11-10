@@ -101,6 +101,13 @@
   }
 }
 
+.health-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+}
+
 .health-title {
   font-size: 1.25rem;
   font-weight: 700;

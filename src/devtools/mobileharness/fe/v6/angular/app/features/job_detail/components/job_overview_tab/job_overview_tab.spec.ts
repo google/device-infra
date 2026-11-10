@@ -11,6 +11,7 @@ import {
   TestResult,
   TestStatus,
 } from '../../../../core/models/job_overview';
+import {IS_ASSISTANT_ENABLED} from '../../../../shared/components/diagnose_in_assistant/diagnose_in_assistant';
 import {JobOverviewTab} from './job_overview_tab';
 
 @Component({
@@ -86,7 +87,10 @@ describe('JobOverviewTab Component', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [JobOverviewTab, TestHostComponent, NoopAnimationsModule],
-      providers: [provideRouter([])],
+      providers: [
+        provideRouter([]),
+        {provide: IS_ASSISTANT_ENABLED, useValue: () => true},
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(TestHostComponent);
@@ -173,5 +177,26 @@ describe('JobOverviewTab Component', () => {
     const badge = component.getTestResultBadge(test);
     expect(badge?.text).toBe('Pass');
     expect(component.getTestStartTime(test)).not.toBe('N/A');
+  });
+
+  it('shows Diagnose in Assistant in Error Details when finished with an error result', () => {
+    const failedFixture = TestBed.createComponent(TestHostComponent);
+    failedFixture.componentInstance.job = {
+      ...mockJob,
+      status: JobStatus.JOB_STATUS_DONE,
+      result: JobResult.JOB_RESULT_ERROR,
+      troubleshooting: {
+        resultCause: {error: [{message: 'Allocation failed'}]},
+      },
+    };
+    failedFixture.detectChanges();
+
+    const chip = failedFixture.nativeElement.querySelector(
+      '#overview-error .title-container a.diagnose-chip',
+    ) as HTMLAnchorElement;
+    expect(chip).not.toBeNull();
+    expect(chip.getAttribute('href')).toContain(
+      'q=Why%20did%20job%20job_12345%20(Sample%20Job%20Execution)%20end%20with%20an%20error%3F',
+    );
   });
 });

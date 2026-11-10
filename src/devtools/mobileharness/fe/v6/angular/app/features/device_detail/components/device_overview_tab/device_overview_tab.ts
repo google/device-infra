@@ -36,6 +36,10 @@ import {
 } from '../../../../core/models/device_overview';
 import {DEVICE_SERVICE} from '../../../../core/services/device/device_service';
 import {Environment} from '../../../../core/services/environment';
+import {
+  deviceDiagnosePrompt,
+  DiagnoseInAssistant,
+} from '../../../../shared/components/diagnose_in_assistant/diagnose_in_assistant';
 import {InfoCard} from '../../../../shared/components/info_card/info_card';
 import {
   MasterDetailLayout,
@@ -80,6 +84,7 @@ interface DimensionItem {
     MatTooltipModule,
     FormsModule,
     MasterDetailLayout,
+    DiagnoseInAssistant,
     InfoCard,
     KeyDescriptionTooltipDirective,
   ],
@@ -323,6 +328,10 @@ export class DeviceOverviewTab implements OnInit, OnDestroy, OnChanges {
     return (
       health.state === 'IN_SERVICE_IDLE' || health.state === 'IN_SERVICE_BUSY'
     );
+  }
+
+  getDiagnosePrompt(): string {
+    return deviceDiagnosePrompt(this.device);
   }
 
   // Map UiState (presentation intent) to UI properties.
