@@ -311,10 +311,10 @@ public class ScopedSpecs implements JobSpecWrapper {
 
   @Override
   public boolean equals(Object other) {
-    if (!(other instanceof ScopedSpecs)) {
+    if (!(other instanceof ScopedSpecs otherSpecs)) {
       return false;
     }
-    return ((ScopedSpecs) other).asJsonObject().equals(asJsonObject());
+    return otherSpecs.asJsonObject().equals(asJsonObject());
   }
 
   @Override

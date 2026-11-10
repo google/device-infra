@@ -88,10 +88,10 @@ public abstract class BaseSubDeviceInfo implements SubDeviceInfo {
   public final boolean equals(Object other) {
     if (this == other) {
       return true;
-    } else if (!(other instanceof SubDeviceInfo)) {
+    }
+    if (!(other instanceof SubDeviceInfo otherDevice)) {
       return false;
     }
-    SubDeviceInfo otherDevice = (SubDeviceInfo) other;
     return getId().equals(otherDevice.getId())
         && getDeviceType().equals(otherDevice.getDeviceType())
         && getDeviceAliasType().equals(otherDevice.getDeviceAliasType())

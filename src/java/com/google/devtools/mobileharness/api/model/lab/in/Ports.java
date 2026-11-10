@@ -87,10 +87,9 @@ public class Ports {
     if (this == obj) {
       return true;
     }
-    if (!(obj instanceof Ports)) {
+    if (!(obj instanceof Ports that)) {
       return false;
     }
-    Ports that = (Ports) obj;
     return getAll().equals(that.getAll());
   }
 

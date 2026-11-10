@@ -95,10 +95,10 @@ public abstract class BaseTestbedConfig implements TestbedConfig {
   public final boolean equals(Object other) {
     if (this == other) {
       return true;
-    } else if (!(other instanceof TestbedConfig)) {
+    }
+    if (!(other instanceof TestbedConfig otherConfig)) {
       return false;
     }
-    TestbedConfig otherConfig = (TestbedConfig) other;
     return getName().equals(otherConfig.getName())
         && getDimensions().equals(otherConfig.getDimensions())
         && getRequiredDimensions().equals(otherConfig.getRequiredDimensions())

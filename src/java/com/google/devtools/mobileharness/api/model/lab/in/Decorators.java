@@ -129,10 +129,9 @@ public class Decorators {
     if (this == obj) {
       return true;
     }
-    if (!(obj instanceof Decorators)) {
+    if (!(obj instanceof Decorators that)) {
       return false;
     }
-    Decorators that = (Decorators) obj;
     Set<String> decoratorsCopy;
     Set<String> thatDecoratorsCopy2;
     synchronized (lock) {

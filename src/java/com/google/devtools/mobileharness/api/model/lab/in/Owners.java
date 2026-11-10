@@ -82,10 +82,9 @@ public class Owners {
     if (this == obj) {
       return true;
     }
-    if (!(obj instanceof Owners)) {
+    if (!(obj instanceof Owners that)) {
       return false;
     }
-    Owners that = (Owners) obj;
     return owners.equals(that.owners);
   }
 

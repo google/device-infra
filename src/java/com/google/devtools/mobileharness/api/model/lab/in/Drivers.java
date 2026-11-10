@@ -121,10 +121,9 @@ public class Drivers {
     if (this == obj) {
       return true;
     }
-    if (!(obj instanceof Drivers)) {
+    if (!(obj instanceof Drivers that)) {
       return false;
     }
-    Drivers that = (Drivers) obj;
     Set<String> driversCopy;
     Set<String> thatDriversCopy;
     synchronized (lock) {

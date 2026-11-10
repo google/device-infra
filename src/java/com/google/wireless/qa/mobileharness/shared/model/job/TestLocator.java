@@ -68,10 +68,9 @@ public class TestLocator {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof TestLocator)) {
+    if (!(o instanceof TestLocator that)) {
       return false;
     }
-    TestLocator that = (TestLocator) o;
     return Objects.equals(id, that.id)
         && Objects.equals(name, that.name)
         && Objects.equals(jobLocator, that.jobLocator);

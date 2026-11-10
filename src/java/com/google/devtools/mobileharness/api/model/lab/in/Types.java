@@ -121,10 +121,9 @@ public class Types {
     if (this == obj) {
       return true;
     }
-    if (!(obj instanceof Types)) {
+    if (!(obj instanceof Types that)) {
       return false;
     }
-    Types that = (Types) obj;
     Set<String> typesCopy;
     Set<String> thatTypesCopy;
     synchronized (lock) {
