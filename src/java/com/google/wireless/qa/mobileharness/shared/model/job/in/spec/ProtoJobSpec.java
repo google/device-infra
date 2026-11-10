@@ -19,9 +19,13 @@ package com.google.wireless.qa.mobileharness.shared.model.job.in.spec;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.in.Files.FileInfo;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.Message;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.JobSpec;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 /**
@@ -37,6 +41,13 @@ public class ProtoJobSpec implements JobSpecWrapper {
 
   /** JobSpec to wrapper. */
   private JobSpec jobSpec;
+
+  /**
+   * Transient in-memory metadata of resolved files in {@link #jobSpec}, keyed by {@link
+   * FileInfo#path()}. Omitted from serialization and cleared when {@link #setProto} replaces {@link
+   * #jobSpec}.
+   */
+  private final Map<String, FileInfo> fileInfos = new ConcurrentHashMap<>();
 
   /** Helper of handling {@link #jobSpec}. */
   private final Supplier<JobSpecHelper> jobSpecHelper;
@@ -99,11 +110,32 @@ public class ProtoJobSpec implements JobSpecWrapper {
     return jobSpec;
   }
 
-  /** Sets wrapped protobuf. */
+  /** Sets wrapped protobuf and clears any previously recorded file metadata. */
   @CanIgnoreReturnValue
   public ProtoJobSpec setProto(JobSpec jobSpec) {
     this.jobSpec = jobSpec;
+    this.fileInfos.clear();
     return this;
+  }
+
+  /**
+   * Adds transient in-memory metadata of resolved files in {@link #jobSpec}, indexed by {@link
+   * FileInfo#path()}.
+   */
+  @CanIgnoreReturnValue
+  public ProtoJobSpec addFileInfos(Iterable<FileInfo> fileInfos) {
+    for (FileInfo fileInfo : fileInfos) {
+      this.fileInfos.put(fileInfo.path(), fileInfo);
+    }
+    return this;
+  }
+
+  /**
+   * Gets transient in-memory metadata of a resolved file in {@link #jobSpec} by its path, if
+   * recorded.
+   */
+  public Optional<FileInfo> getFileInfo(String path) {
+    return Optional.ofNullable(fileInfos.get(path));
   }
 
   @Override
