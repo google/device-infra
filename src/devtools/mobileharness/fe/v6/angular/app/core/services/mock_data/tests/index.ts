@@ -4,6 +4,11 @@ import {SCENARIO_TEST_ERROR} from './overview_error';
 import {SCENARIO_TEST_FAILED} from './overview_failed';
 import {SCENARIO_TEST_FILES} from './overview_files';
 import {SCENARIO_TEST_IN_PROGRESS} from './overview_inprogress';
+import {
+  SCENARIO_TEST_LIVE_RESET_DEMO,
+  SCENARIO_TEST_LIVE_WRAP_DEMO,
+  SCENARIO_TEST_SINGLE_LINE_RESIZE_DEMO,
+} from './overview_live_log_demo';
 import {SCENARIO_TEST_LONG_NAME} from './overview_longname';
 import {SCENARIO_TEST_MULTIPLE_ERRORS_WARNINGS} from './overview_multiple_errors_warnings';
 import {SCENARIO_TEST_PASSED} from './overview_passed';
@@ -73,6 +78,9 @@ const RAW_MOCK_TEST_SCENARIOS: MockTestScenario[] = [
   SCENARIO_TEST_TIMEOUT,
   SCENARIO_TEST_SKIPPED,
   SCENARIO_TEST_SUSPENDED,
+  SCENARIO_TEST_LIVE_WRAP_DEMO,
+  SCENARIO_TEST_LIVE_RESET_DEMO,
+  SCENARIO_TEST_SINGLE_LINE_RESIZE_DEMO,
   createClonedTestScenario(SCENARIO_TEST_PASSED, {
     id: 'test-id-for-1-hit-1',
     scenarioName: 'All-Site 1-Hit Test #1 (Passed)',

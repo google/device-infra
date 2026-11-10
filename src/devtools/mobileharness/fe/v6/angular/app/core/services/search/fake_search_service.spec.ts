@@ -787,7 +787,7 @@ describe('FakeSearchService', () => {
         })
         .subscribe((res: TjsSearchResponse) => {
           expect(res.rows).toBeDefined();
-          expect(res.rows!.length).toBe(3);
+          expect(res.rows!.length).toBe(6);
           for (const row of res.rows!) {
             expect(row.cells?.[2]?.text?.value).toBe('qiupingf');
           }
@@ -803,7 +803,7 @@ describe('FakeSearchService', () => {
         })
         .subscribe((res: TjsSearchResponse) => {
           expect(res.rows).toBeDefined();
-          expect(res.rows!.length).toBe(2);
+          expect(res.rows!.length).toBe(3);
           for (const row of res.rows!) {
             expect(row.cells?.[2]?.text?.value).toBe('qiupingf');
           }
@@ -846,7 +846,7 @@ describe('FakeSearchService', () => {
         .searchTjs({entity: TjsEntity.TJS_ENTITY_JOB})
         .subscribe((res: TjsSearchResponse) => {
           expect(res.rows).toBeDefined();
-          expect(res.rows!.length).toBe(3);
+          expect(res.rows!.length).toBe(4);
           done();
         });
     });
@@ -862,7 +862,7 @@ describe('FakeSearchService', () => {
         })
         .subscribe((res: TjsSearchResponse) => {
           expect(res.rows).toBeDefined();
-          expect(res.rows!.length).toBe(1);
+          expect(res.rows!.length).toBe(2);
           expect(res.rows![0].cells?.[2]?.text?.value).toBe('qiupingf');
           expect(res.rows![0].cells?.[3]?.status?.text).toBe('RUNNING');
           done();
@@ -948,7 +948,7 @@ describe('FakeSearchService', () => {
         })
         .subscribe((res: TjsSearchResponse) => {
           expect(res.rows).toBeDefined();
-          expect(res.rows!.length).toBe(3);
+          expect(res.rows!.length).toBe(4);
           done();
         });
     });
@@ -966,7 +966,7 @@ describe('FakeSearchService', () => {
         })
         .subscribe((res: TjsSearchResponse) => {
           expect(res.rows).toBeDefined();
-          expect(res.rows!.length).toBe(3);
+          expect(res.rows!.length).toBe(6);
           done();
         });
     });
@@ -1187,7 +1187,7 @@ describe('FakeSearchService', () => {
         })
         .subscribe((res: TjsSearchResponse) => {
           expect(res.rows).toBeDefined();
-          expect(res.rows!.length).toBe(3);
+          expect(res.rows!.length).toBe(6);
           for (const row of res.rows!) {
             expect(row.cells?.[2]?.text?.value).toBe('custom_user');
           }

@@ -98,6 +98,16 @@ export interface MockDeviceScenarioWrapper {
 }
 
 /**
+ * Scripted streaming log chunk for simulating live 5-second log polling,
+ * partial-line growth, and `reset: true` events in `?fake_data=true` mode.
+ */
+export interface MockLogChunk {
+  readonly content: string;
+  readonly logReset?: boolean;
+  readonly isDone?: boolean;
+}
+
+/**
  * Defines the data set for a mock test scenario.
  */
 export interface MockTestScenario extends BaseMockScenario {
@@ -106,6 +116,7 @@ export interface MockTestScenario extends BaseMockScenario {
     readonly timingBreakdown?: TimeBreakdown;
   };
   readonly log?: string;
+  readonly logChunks?: readonly MockLogChunk[];
   readonly cloudLogLink?: string;
   actions?: TestActions;
 }
@@ -119,6 +130,7 @@ export interface MockJobScenario extends BaseMockScenario {
     readonly timingBreakdown?: TimeBreakdown;
   };
   readonly log?: string;
+  readonly logChunks?: readonly MockLogChunk[];
   readonly cloudLogLink?: string;
   readonly actions?: JobActions;
 }

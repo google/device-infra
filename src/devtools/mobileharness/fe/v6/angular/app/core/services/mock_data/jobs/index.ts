@@ -5,6 +5,7 @@ import {SCENARIO_JOB_ASSIGNED} from './overview_assigned';
 import {SCENARIO_JOB_ERRORED} from './overview_errored';
 import {SCENARIO_JOB_FAILED} from './overview_failed';
 import {SCENARIO_JOB_IN_PROGRESS} from './overview_inprogress';
+import {SCENARIO_JOB_LIVE_LOG_DEMO} from './overview_live_log_demo';
 import {SCENARIO_JOB_MANY_TESTS} from './overview_many_tests';
 import {SCENARIO_JOB_MULTI_DEVICE} from './overview_multi_device';
 import {SCENARIO_JOB_MULTIPLE_DECORATORS} from './overview_multiple_decorators';
@@ -50,6 +51,7 @@ const RAW_MOCK_JOB_SCENARIOS: MockJobScenario[] = [
   SCENARIO_JOB_ABORTED,
   SCENARIO_JOB_QUEUED,
   SCENARIO_JOB_ASSIGNED,
+  SCENARIO_JOB_LIVE_LOG_DEMO,
   createClonedJobScenario(SCENARIO_JOB_PASSED, {
     id: 'job-id-for-1-hit-1',
     scenarioName: 'All-Site 1-Hit Job #1 (Passed)',

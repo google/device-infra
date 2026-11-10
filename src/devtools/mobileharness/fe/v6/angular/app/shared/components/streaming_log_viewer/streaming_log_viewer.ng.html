@@ -10,7 +10,9 @@
   </div>
   <div class="log-divider"></div>
   <div class="log-viewer-container">
-    <cdk-virtual-scroll-viewport itemSize="20" [minBufferPx]="400" [maxBufferPx]="800" class="log-viewer-viewport" [style.height.px]="viewportHeight()" #logViewport>
+    <!-- Intentionally omit `itemSize` so Angular CDK uses our component-provided
+         `VariableHeightVirtualScrollStrategy` instead of `FixedSizeVirtualScrollStrategy`. -->
+    <cdk-virtual-scroll-viewport class="log-viewer-viewport" [style.height.px]="viewportHeight()" #logViewport>
       <div *cdkVirtualFor="let line of logLines(); trackBy: trackByIndex" class="log-line">{{ line }}</div>
     </cdk-virtual-scroll-viewport>
     @if (isFetching() && hasLoadedLogs()) {

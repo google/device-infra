@@ -95,6 +95,30 @@ export class FakeJobService extends JobService {
         () => new Error(`Job with ID '${id}' not found in mock data.`),
       );
     }
+    if (scenario.logChunks && scenario.logChunks.length > 0) {
+      const prevStep = request.contentHash?.startsWith('chunk-')
+        ? Number(request.contentHash.slice('chunk-'.length))
+        : -1;
+      const stepIdx = Math.min(
+        Number.isFinite(prevStep) ? prevStep + 1 : 0,
+        scenario.logChunks.length - 1,
+      );
+      const entry = scenario.logChunks[stepIdx];
+      const isLastChunk =
+        Boolean(entry.isDone) || stepIdx >= scenario.logChunks.length - 1;
+      const nextOffset = entry.logReset
+        ? entry.content.length
+        : offset + entry.content.length;
+      return of({
+        logContent: entry.content,
+        nextOffset,
+        jobStatus: isLastChunk
+          ? JobStatus.JOB_STATUS_DONE
+          : JobStatus.JOB_STATUS_RUNNING,
+        logReset: Boolean(entry.logReset),
+        contentHash: `chunk-${stepIdx}`,
+      }).pipe(delay(500));
+    }
     const fullLog = scenario.log || '';
     const slice = fullLog.substring(offset);
     const nextOffset = offset + slice.length;

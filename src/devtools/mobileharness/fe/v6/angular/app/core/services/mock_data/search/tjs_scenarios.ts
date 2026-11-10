@@ -261,6 +261,123 @@ export const MOCK_TJS_SEARCH_RESPONSE_TEST: TjsSearchResponse = {
   ],
   rows: [
     {
+      id: 'test-live-wrap-demo',
+      cells: [
+        {
+          link: {
+            text: 'test-live-wrap-demo',
+            target: {
+              test: {
+                testId: 'test-live-wrap-demo',
+                jobId: 'job-live-log-demo',
+              },
+            },
+          },
+        },
+        {
+          text: {
+            value:
+              'com.example.mobileharness.LiveWrappedScrollTest#testContinuousWrappedAndStayAtBottom',
+          },
+        },
+        {text: {value: 'qiupingf'}},
+        {text: {value: 'qiupingf'}},
+        {status: {text: 'RUNNING', indicator: Indicator.INDICATOR_ACTIVE}},
+        {status: {text: 'UNKNOWN', indicator: Indicator.INDICATOR_NEUTRAL}},
+        {text: {value: '1785826210000'}},
+        {text: {value: '15000'}},
+        {text: {value: 'host-for-1-hit-1.example.com'}},
+        {
+          multiLink: {
+            entries: [
+              {
+                text: '18261FDF6003KC',
+                target: {device: {id: '18261FDF6003KC'}},
+              },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'test-live-reset-demo',
+      cells: [
+        {
+          link: {
+            text: 'test-live-reset-demo',
+            target: {
+              test: {
+                testId: 'test-live-reset-demo',
+                jobId: 'job-live-log-demo',
+              },
+            },
+          },
+        },
+        {
+          text: {
+            value:
+              'com.example.mobileharness.LiveWrappedScrollTest#testResetWithSameBanner',
+          },
+        },
+        {text: {value: 'qiupingf'}},
+        {text: {value: 'qiupingf'}},
+        {status: {text: 'RUNNING', indicator: Indicator.INDICATOR_ACTIVE}},
+        {status: {text: 'UNKNOWN', indicator: Indicator.INDICATOR_NEUTRAL}},
+        {text: {value: '1785826209000'}},
+        {text: {value: '8000'}},
+        {text: {value: 'host-for-1-hit-1.example.com'}},
+        {
+          multiLink: {
+            entries: [
+              {
+                text: '18261FDF6003KC',
+                target: {device: {id: '18261FDF6003KC'}},
+              },
+            ],
+          },
+        },
+      ],
+    },
+    {
+      id: 'test-single-line-resize-demo',
+      cells: [
+        {
+          link: {
+            text: 'test-single-line-resize-demo',
+            target: {
+              test: {
+                testId: 'test-single-line-resize-demo',
+                jobId: 'job-live-log-demo',
+              },
+            },
+          },
+        },
+        {
+          text: {
+            value:
+              'com.example.mobileharness.LiveWrappedScrollTest#testSingleLineJsonResize',
+          },
+        },
+        {text: {value: 'qiupingf'}},
+        {text: {value: 'qiupingf'}},
+        {status: {text: 'DONE', indicator: Indicator.INDICATOR_OK}},
+        {status: {text: 'PASS', indicator: Indicator.INDICATOR_OK}},
+        {text: {value: '1785826208000'}},
+        {text: {value: '9000'}},
+        {text: {value: 'host-for-1-hit-1.example.com'}},
+        {
+          multiLink: {
+            entries: [
+              {
+                text: '18261FDF6003KC',
+                target: {device: {id: '18261FDF6003KC'}},
+              },
+            ],
+          },
+        },
+      ],
+    },
+    {
       id: 'baf01a94-f625-4d65-9f3d-938d30e5f6f8',
       cells: [
         {
@@ -407,6 +524,22 @@ export const MOCK_TJS_SEARCH_RESPONSE_JOB: TjsSearchResponse = {
     {key: 'duration', displayName: 'Duration'},
   ],
   rows: [
+    {
+      id: 'job-live-log-demo',
+      cells: [
+        {
+          link: {
+            text: 'job-live-log-demo',
+            target: {job: {jobId: 'job-live-log-demo'}},
+          },
+        },
+        {text: {value: 'live_wrapped_log_verification_suite'}},
+        {text: {value: 'qiupingf'}},
+        {status: {text: 'RUNNING', indicator: Indicator.INDICATOR_ACTIVE}},
+        {text: {value: '1785826210000'}},
+        {text: {value: '15000'}},
+      ],
+    },
     {
       id: 'job_1',
       cells: [

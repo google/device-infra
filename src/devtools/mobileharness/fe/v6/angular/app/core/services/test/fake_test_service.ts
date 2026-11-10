@@ -122,6 +122,37 @@ export class FakeTestService extends TestService {
       ).pipe(delay(300));
     }
 
+    if (scenario.logChunks && scenario.logChunks.length > 0) {
+      const prevStep = request.contentHash?.startsWith('chunk-')
+        ? Number(request.contentHash.slice('chunk-'.length))
+        : -1;
+      const stepIdx = Math.min(
+        Number.isFinite(prevStep) ? prevStep + 1 : 0,
+        scenario.logChunks.length - 1,
+      );
+      if (stepIdx === 0) {
+        this.completedRunningTests.delete(scenario.id);
+      }
+      const entry = scenario.logChunks[stepIdx];
+      const isLastChunk =
+        Boolean(entry.isDone) || stepIdx >= scenario.logChunks.length - 1;
+      if (isLastChunk) {
+        this.completedRunningTests.add(scenario.id);
+      }
+      const nextOffset = entry.logReset
+        ? entry.content.length
+        : numOffset + entry.content.length;
+      return of({
+        logContent: entry.content,
+        nextOffset,
+        testStatus: isLastChunk
+          ? TestStatus.TEST_STATUS_DONE
+          : TestStatus.TEST_STATUS_RUNNING,
+        logReset: Boolean(entry.logReset),
+        contentHash: `chunk-${stepIdx}`,
+      }).pipe(delay(300));
+    }
+
     const fullLog = scenario.log || '';
     const status = scenario.overview.status;
 
