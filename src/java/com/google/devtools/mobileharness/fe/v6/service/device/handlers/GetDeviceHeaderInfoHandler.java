@@ -125,12 +125,10 @@ public final class GetDeviceHeaderInfoHandler {
 
   private boolean isHostConfigUsed(Optional<LabConfig> labConfigOpt) {
     return labConfigOpt
-        .map(
-            labConfig ->
-                labConfig.getHostProperties().getHostPropertyList().stream()
-                    .anyMatch(
-                        p ->
-                            p.getKey().equals("device_config_mode") && p.getValue().equals("host")))
+        .map(labConfig ->
+            labConfig.getHostProperties().getHostPropertyList().stream()
+                .anyMatch(
+                    p -> p.getKey().equals("device_config_mode") && p.getValue().equals("host")))
         .orElse(false);
   }
 }

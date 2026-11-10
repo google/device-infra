@@ -164,13 +164,12 @@ public class MoblyAospTestSetupUtil {
       return moblyPkg;
     } else {
       return resolveBin(moblyUnzipDir, venvPath, testPath)
-          .orElseThrow(
-              () ->
-                  new MobileHarnessException(
-                      ExtErrorId.MOBLY_AOSP_RESOLVE_TEST_PATH_ERROR,
-                      String.format(
-                          "The specified test file %s does not exist in the given test package.",
-                          testPath)));
+          .orElseThrow(() ->
+              new MobileHarnessException(
+                  ExtErrorId.MOBLY_AOSP_RESOLVE_TEST_PATH_ERROR,
+                  String.format(
+                      "The specified test file %s does not exist in the given test package.",
+                      testPath)));
     }
   }
 
@@ -250,11 +249,10 @@ public class MoblyAospTestSetupUtil {
       ImmutableList<String> testCases =
           Splitter.on(" ")
               .splitToStream(testCaseSelector)
-              .map(
-                  testName ->
-                      !isMoblySuite && testName.contains(".")
-                          ? Splitter.on(".").splitToList(testName).get(1)
-                          : testName)
+              .map(testName ->
+                  !isMoblySuite && testName.contains(".")
+                      ? Splitter.on(".").splitToList(testName).get(1)
+                      : testName)
               .collect(toImmutableList());
 
       logger.atInfo().log("Selected test cases: %s", testCases);

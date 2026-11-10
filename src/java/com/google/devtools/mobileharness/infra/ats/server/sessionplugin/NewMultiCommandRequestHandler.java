@@ -398,14 +398,13 @@ final class NewMultiCommandRequestHandler {
         DeviceList.newBuilder()
             .addAllSubDeviceSpec(
                 deviceSerials.stream()
-                    .map(
-                        deviceSerial ->
-                            SubDeviceSpec.newBuilder()
-                                .setType("AndroidDevice")
-                                .setDimensions(
-                                    StringMap.newBuilder()
-                                        .putContent(Name.UUID.lowerCaseName(), deviceSerial))
-                                .build())
+                    .map(deviceSerial ->
+                        SubDeviceSpec.newBuilder()
+                            .setType("AndroidDevice")
+                            .setDimensions(
+                                StringMap.newBuilder()
+                                    .putContent(Name.UUID.lowerCaseName(), deviceSerial))
+                            .build())
                     .collect(toImmutableList()))
             .build();
 
@@ -1101,10 +1100,9 @@ final class NewMultiCommandRequestHandler {
         .setTotalModuleCount(jobs.size())
         .setFailedModuleCount(
             jobs.stream()
-                .filter(
-                    jobInfo ->
-                        jobInfo.resultWithCause().get().type() != TestResult.PASS
-                            && jobInfo.resultWithCause().get().type() != TestResult.SKIP)
+                .filter(jobInfo ->
+                    jobInfo.resultWithCause().get().type() != TestResult.PASS
+                        && jobInfo.resultWithCause().get().type() != TestResult.SKIP)
                 .count())
         .setTotalTestCount(passedTestCount + failedTestCount);
   }
@@ -1199,18 +1197,17 @@ final class NewMultiCommandRequestHandler {
 
       allFiles.stream()
           .filter(file -> file.getName().equals(OUTPUT_MANIFEST_FILE_NAME))
-          .forEach(
-              file -> {
-                try {
-                  localFileUtil.removeFileOrDir(file.getAbsolutePath());
-                } catch (MobileHarnessException | InterruptedException e) {
-                  logger.atWarning().withCause(e).log(
-                      "Failed to remove existing output manifest file: %s", file.getAbsolutePath());
-                  if (MoreThrowables.isInterruption(e)) {
-                    Thread.currentThread().interrupt();
-                  }
-                }
-              });
+          .forEach(file -> {
+            try {
+              localFileUtil.removeFileOrDir(file.getAbsolutePath());
+            } catch (MobileHarnessException | InterruptedException e) {
+              logger.atWarning().withCause(e).log(
+                  "Failed to remove existing output manifest file: %s", file.getAbsolutePath());
+              if (MoreThrowables.isInterruption(e)) {
+                Thread.currentThread().interrupt();
+              }
+            }
+          });
 
       ImmutableList<String> relativePaths =
           allFiles.stream()
@@ -1230,10 +1227,9 @@ final class NewMultiCommandRequestHandler {
     ImmutableList<TestInfo> failedTests =
         jobs.stream()
             .flatMap(jobInfo -> jobInfo.tests().getAll().values().stream())
-            .filter(
-                testInfo ->
-                    testInfo.resultWithCause().get().type() != TestResult.PASS
-                        && testInfo.resultWithCause().get().type() != TestResult.SKIP)
+            .filter(testInfo ->
+                testInfo.resultWithCause().get().type() != TestResult.PASS
+                    && testInfo.resultWithCause().get().type() != TestResult.SKIP)
             .collect(toImmutableList());
     if (!failedTests.isEmpty()) {
       TestInfo failedTest = failedTests.get(0);
@@ -1254,10 +1250,9 @@ final class NewMultiCommandRequestHandler {
   private Optional<String> getFailedJobErrorMessage(ImmutableList<JobInfo> jobs) {
     ImmutableList<JobInfo> failedJobs =
         jobs.stream()
-            .filter(
-                jobInfo ->
-                    jobInfo.resultWithCause().get().type() != TestResult.PASS
-                        && jobInfo.resultWithCause().get().type() != TestResult.SKIP)
+            .filter(jobInfo ->
+                jobInfo.resultWithCause().get().type() != TestResult.PASS
+                    && jobInfo.resultWithCause().get().type() != TestResult.SKIP)
             .collect(toImmutableList());
     if (!failedJobs.isEmpty()) {
       JobInfo failedJob = failedJobs.get(0);
@@ -1363,9 +1358,8 @@ final class NewMultiCommandRequestHandler {
       NewMultiCommandRequest request, CommandDetailOrBuilder commandDetail) {
     if (!commandDetail.getDeviceSerialsList().isEmpty()
         && commandDetail.getDeviceSerialsList().stream()
-            .allMatch(
-                serial ->
-                    CLOUD_ORCHESTRATOR_JIT_EMULATOR_SERIAL_PATTERN.matcher(serial).matches())) {
+            .allMatch(serial ->
+                CLOUD_ORCHESTRATOR_JIT_EMULATOR_SERIAL_PATTERN.matcher(serial).matches())) {
       return true;
     }
     return request.getTestResourcesList().stream()

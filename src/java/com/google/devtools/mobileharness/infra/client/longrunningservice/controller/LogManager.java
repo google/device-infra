@@ -212,9 +212,8 @@ public class LogManager<D> {
   private class LogHandler extends Handler {
 
     private LogHandler() {
-      setFilter(
-          logRecord ->
-              !Objects.equals(logRecord.getSourceClassName(), CommandOutputLogger.class.getName()));
+      setFilter(logRecord ->
+          !Objects.equals(logRecord.getSourceClassName(), CommandOutputLogger.class.getName()));
     }
 
     @Override

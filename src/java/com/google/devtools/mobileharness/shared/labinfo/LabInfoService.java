@@ -121,12 +121,11 @@ public class LabInfoService extends LabInfoServiceGrpc.LabInfoServiceImplBase {
         .addAllDimensions(
             dimensionDeviceCounts.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
-                .map(
-                    entry ->
-                        DeviceDimensionSummary.newBuilder()
-                            .setName(entry.getKey())
-                            .setDeviceCount(entry.getValue())
-                            .build())
+                .map(entry ->
+                    DeviceDimensionSummary.newBuilder()
+                        .setName(entry.getKey())
+                        .setDeviceCount(entry.getValue())
+                        .build())
                 .toList())
         .build();
   }

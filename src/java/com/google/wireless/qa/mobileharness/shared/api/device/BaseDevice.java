@@ -153,11 +153,10 @@ public abstract class BaseDevice implements Device {
         apiConfig,
         validatorFactory,
         Optional.ofNullable(deviceInfoOverride.get())
-            .orElseGet(
-                () ->
-                    managedDeviceInfo
-                        ? DeviceInfoManager.getInstance().getOrCreate(deviceId, apiConfig)
-                        : LiteDeviceInfoFactory.create(deviceId)));
+            .orElseGet(() ->
+                managedDeviceInfo
+                    ? DeviceInfoManager.getInstance().getOrCreate(deviceId, apiConfig)
+                    : LiteDeviceInfoFactory.create(deviceId)));
   }
 
   @VisibleForTesting
@@ -246,18 +245,16 @@ public abstract class BaseDevice implements Device {
   @Override
   public ImmutableSet<StrPair> getDimensions() {
     return info().dimensions().supported().getAll().entries().stream()
-        .map(
-            entry ->
-                StrPair.newBuilder().setName(entry.getKey()).setValue(entry.getValue()).build())
+        .map(entry ->
+            StrPair.newBuilder().setName(entry.getKey()).setValue(entry.getValue()).build())
         .collect(toImmutableSet());
   }
 
   @Override
   public ImmutableSet<StrPair> getRequiredDimensions() {
     return info().dimensions().required().getAll().entries().stream()
-        .map(
-            entry ->
-                StrPair.newBuilder().setName(entry.getKey()).setValue(entry.getValue()).build())
+        .map(entry ->
+            StrPair.newBuilder().setName(entry.getKey()).setValue(entry.getValue()).build())
         .collect(toImmutableSet());
   }
 

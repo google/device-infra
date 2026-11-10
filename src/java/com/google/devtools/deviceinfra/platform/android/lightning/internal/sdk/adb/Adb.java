@@ -119,11 +119,10 @@ public class Adb {
   private Adb(Supplier<AdbParam> adbParamSupplier, CommandExecutor commandExecutor) {
     this(
         adbParamSupplier,
-        Suppliers.memoize(
-            () -> {
-              commandExecutor.setBaseEnvironment(adbParamSupplier.get().getCmdBaseEnvVarsMap());
-              return commandExecutor;
-            }));
+        Suppliers.memoize(() -> {
+          commandExecutor.setBaseEnvironment(adbParamSupplier.get().getCmdBaseEnvVarsMap());
+          return commandExecutor;
+        }));
   }
 
   @VisibleForTesting
@@ -611,7 +610,7 @@ public class Adb {
     String commandStr = String.join(" ", command);
 
     Consumer<CommandResult> exitCallback =
-        (commandResult) -> {
+        commandResult -> {
           int exitCode = commandResult.exitCode();
           if (successExitCodes.contains(exitCode)) {
             logger.atInfo().log(

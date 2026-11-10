@@ -110,10 +110,9 @@ public class BundletoolUtil {
       LocalFileUtil localFileUtil)
       throws DeviceActionException {
     this.bundletoolJarPath =
-        bundletoolJar.orElseThrow(
-            () ->
-                new DeviceActionException(
-                    "MISSING_FILE", ErrorType.CUSTOMER_ISSUE, "Bundletool jar not exist."));
+        bundletoolJar.orElseThrow(() ->
+            new DeviceActionException(
+                "MISSING_FILE", ErrorType.CUSTOMER_ISSUE, "Bundletool jar not exist."));
     this.aaptPath = aaptFile;
     this.adbPath = adbFile;
     this.javaBinPath = javaBinPath;

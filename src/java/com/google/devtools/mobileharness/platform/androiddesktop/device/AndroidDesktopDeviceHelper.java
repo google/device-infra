@@ -457,16 +457,15 @@ public class AndroidDesktopDeviceHelper {
                 "label-board",
                 "label-model",
                 "label-sku"));
-    dimensions.forEach(
-        (key, value) -> {
-          if (allowlist.contains(key)
-              && key != null
-              && !key.isEmpty()
-              && value != null
-              && !value.isEmpty()) {
-            propertiesToPropagate.put(key, value);
-          }
-        });
+    dimensions.forEach((key, value) -> {
+      if (allowlist.contains(key)
+          && key != null
+          && !key.isEmpty()
+          && value != null
+          && !value.isEmpty()) {
+        propertiesToPropagate.put(key, value);
+      }
+    });
     // Propagate "dut_name" property explicitly if provided
     String dutName = dimensions.get("dut_name");
     if (dutName != null && !dutName.isEmpty()) {

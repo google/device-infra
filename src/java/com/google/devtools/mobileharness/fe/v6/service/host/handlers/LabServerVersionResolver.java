@@ -83,10 +83,9 @@ public class LabServerVersionResolver {
               Optional<String> currentVersionOpt =
                   HostVersionUtil.resolveCurrentVersion(labInfoOpt, hostReleaseInfoOpt);
 
-              return currentVersionOpt.orElseThrow(
-                  () ->
-                      new IllegalStateException(
-                          "Failed to resolve current lab server version for host: " + hostName));
+              return currentVersionOpt.orElseThrow(() ->
+                  new IllegalStateException(
+                      "Failed to resolve current lab server version for host: " + hostName));
             },
             executor);
   }

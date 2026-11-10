@@ -390,11 +390,10 @@ public class LabServer {
                 channel,
                 ServerType.LAB_SERVER.toLowerCaseName(),
                 DualConduitProxyConfig.of(instanceId, dconHostname, dconReverseConduitCount))
-            .startWithTeardown(
-                () -> {
-                  logger.atInfo().log("Closing DualConduit channel for LabServer");
-                  ChannelFactory.shutdown(channel, Duration.ofSeconds(5));
-                });
+            .startWithTeardown(() -> {
+              logger.atInfo().log("Closing DualConduit channel for LabServer");
+              ChannelFactory.shutdown(channel, Duration.ofSeconds(5));
+            });
       } else {
         localGrpcServer.start();
       }
@@ -620,16 +619,15 @@ public class LabServer {
 
     // Add ATS GitHub version to host properties. Only ATS labs have this property.
     VersionUtil.getBuildVersion()
-        .ifPresent(
-            version -> {
-              if (version.hasGithubVersion()) {
-                hostProperties.addHostProperty(
-                    HostProperty.newBuilder()
-                        .setKey(Ascii.toLowerCase(HostPropertyKey.GITHUB_VERSION.name()))
-                        .setValue(version.getGithubVersion())
-                        .build());
-              }
-            });
+        .ifPresent(version -> {
+          if (version.hasGithubVersion()) {
+            hostProperties.addHostProperty(
+                HostProperty.newBuilder()
+                    .setKey(Ascii.toLowerCase(HostPropertyKey.GITHUB_VERSION.name()))
+                    .setValue(version.getGithubVersion())
+                    .build());
+          }
+        });
 
     return hostProperties.build();
   }
@@ -656,7 +654,7 @@ public class LabServer {
 
   /** Test services created by lab server. */
   @AutoValue
-  @VisibleForTesting()
+  @VisibleForTesting
   public abstract static class TestServices {
 
     public abstract ProxyTestManager testManager();

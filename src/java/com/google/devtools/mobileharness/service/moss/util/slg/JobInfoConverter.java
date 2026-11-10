@@ -129,10 +129,9 @@ public final class JobInfoConverter {
       JobHelper.addTests(
           jobInfo.tests(),
           jobInfoProto.getTestInfoList().stream()
-              .map(
-                  testInfoProto ->
-                      TestInfoConverter.fromProto(
-                          resumeFiles, jobInfo, /* parentTestInfo= */ null, testInfoProto))
+              .map(testInfoProto ->
+                  TestInfoConverter.fromProto(
+                      resumeFiles, jobInfo, /* parentTestInfo= */ null, testInfoProto))
               .collect(toImmutableList()));
     }
     return jobInfo;

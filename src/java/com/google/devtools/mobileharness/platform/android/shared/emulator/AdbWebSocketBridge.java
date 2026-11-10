@@ -101,19 +101,18 @@ public class AdbWebSocketBridge {
 
   @VisibleForTesting
   static final Supplier<OkHttpClient> SHARED_CLIENT =
-      Suppliers.memoize(
-          () -> {
-            Dispatcher dispatcher = new Dispatcher();
-            dispatcher.setMaxRequests(500);
-            dispatcher.setMaxRequestsPerHost(500);
-            return new OkHttpClient.Builder()
-                .dispatcher(dispatcher)
-                .pingInterval(DEFAULT_PING_INTERVAL)
-                .connectTimeout(Duration.ofSeconds(10))
-                .readTimeout(Duration.ZERO)
-                .writeTimeout(Duration.ofSeconds(30))
-                .build();
-          });
+      Suppliers.memoize(() -> {
+        Dispatcher dispatcher = new Dispatcher();
+        dispatcher.setMaxRequests(500);
+        dispatcher.setMaxRequestsPerHost(500);
+        return new OkHttpClient.Builder()
+            .dispatcher(dispatcher)
+            .pingInterval(DEFAULT_PING_INTERVAL)
+            .connectTimeout(Duration.ofSeconds(10))
+            .readTimeout(Duration.ZERO)
+            .writeTimeout(Duration.ofSeconds(30))
+            .build();
+      });
 
   private final String webSocketUrl;
   private final String token;
@@ -142,11 +141,10 @@ public class AdbWebSocketBridge {
   /** Starts the bridge in the background. */
   public void start() {
     logFailure(
-        executor.submit(
-            () -> {
-              run();
-              return null;
-            }),
+        executor.submit(() -> {
+          run();
+          return null;
+        }),
         Level.SEVERE,
         "Bridge background loop failed");
   }
@@ -388,21 +386,20 @@ public class AdbWebSocketBridge {
       Socket tcpSocket, WebSocket ws, AtomicBoolean closed, CountDownLatch latch) {
     logger.atInfo().log("Starting TCP to WebSocket pump for TCP socket: %s", tcpSocket);
     logFailure(
-        executor.submit(
-            () -> {
-              String terminationReason = "TCP closed";
-              try (InputStream in = tcpSocket.getInputStream()) {
-                terminationReason = pumpTcpToWs(in, ws, closed);
-              } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                terminationReason = "TCP pump interrupted";
-              } catch (IOException e) {
-                // Expected on session close
-                terminationReason = "TCP read error: " + e.getMessage();
-              } finally {
-                terminateSession(ws, tcpSocket, closed, terminationReason, latch);
-              }
-            }),
+        executor.submit(() -> {
+          String terminationReason = "TCP closed";
+          try (InputStream in = tcpSocket.getInputStream()) {
+            terminationReason = pumpTcpToWs(in, ws, closed);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            terminationReason = "TCP pump interrupted";
+          } catch (IOException e) {
+            // Expected on session close
+            terminationReason = "TCP read error: " + e.getMessage();
+          } finally {
+            terminateSession(ws, tcpSocket, closed, terminationReason, latch);
+          }
+        }),
         Level.SEVERE,
         "TCP to WebSocket pump fatal error");
   }

@@ -64,10 +64,9 @@ class RemoteControlButtonBuilder {
     if (deviceInfo.getDeviceFeature().getTypeList().contains("TestbedDevice")) {
       hasCommSub =
           subDeviceInfoListFactory.create(dimensions).stream()
-              .anyMatch(
-                  sub ->
-                      sub.getDimensionsList().stream()
-                          .anyMatch(d -> d.getName().equals("communication_type")));
+              .anyMatch(sub ->
+                  sub.getDimensionsList().stream()
+                      .anyMatch(d -> d.getName().equals("communication_type")));
     }
 
     RemoteControlEligibilityContext context =

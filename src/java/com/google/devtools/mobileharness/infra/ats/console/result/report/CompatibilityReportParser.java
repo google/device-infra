@@ -312,12 +312,8 @@ public class CompatibilityReportParser {
     // Appends the rest of attributes
     attributeMap.entrySet().stream()
         .sorted(comparingByKey())
-        .map(
-            attr ->
-                Attribute.newBuilder()
-                    .setKey(attr.getKey())
-                    .setValue(attr.getValue().trim())
-                    .build())
+        .map(attr ->
+            Attribute.newBuilder().setKey(attr.getKey()).setValue(attr.getValue().trim()).build())
         .forEach(attributes::add);
 
     context.resultBuilder.addAllAttribute(attributes.build());
@@ -350,18 +346,16 @@ public class CompatibilityReportParser {
         attributeMap.entrySet().stream()
             .filter(e -> e.getKey().startsWith("build_"))
             .sorted(comparingByKey())
-            .map(
-                attr ->
-                    Attribute.newBuilder().setKey(attr.getKey()).setValue(attr.getValue()).build())
+            .map(attr ->
+                Attribute.newBuilder().setKey(attr.getKey()).setValue(attr.getValue()).build())
             .collect(toImmutableList());
 
     ImmutableList<Attribute> nonBuildAttributes =
         attributeMap.entrySet().stream()
             .filter(e -> !e.getKey().startsWith("build_"))
             .sorted(comparingByKey())
-            .map(
-                attr ->
-                    Attribute.newBuilder().setKey(attr.getKey()).setValue(attr.getValue()).build())
+            .map(attr ->
+                Attribute.newBuilder().setKey(attr.getKey()).setValue(attr.getValue()).build())
             .collect(toImmutableList());
 
     build.addAllAttribute(nonBuildAttributes).addAllAttribute(buildAttributes);

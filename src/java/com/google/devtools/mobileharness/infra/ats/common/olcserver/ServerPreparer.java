@@ -227,10 +227,9 @@ public class ServerPreparer {
               Optional<String> processWorkingDir =
                   systemUtil.getProcessWorkingDirectory(existingServerVersion.getProcessId());
               // Records the server information.
-              processWorkingDir.ifPresent(
-                  dir ->
-                      serverHeapDumpFileDetector.setOlcServerInfo(
-                          existingServerVersion.getProcessId(), dir));
+              processWorkingDir.ifPresent(dir ->
+                  serverHeapDumpFileDetector.setOlcServerInfo(
+                      existingServerVersion.getProcessId(), dir));
             }
             return;
           }
@@ -547,18 +546,17 @@ public class ServerPreparer {
               Stream.concat(
                       Stream.of(UNFINISHED_SESSIONS_TABLE_HEADER),
                       killServerFailure.getUnfinishedSessionsList().stream()
-                          .map(
-                              sessionDetail ->
-                                  ImmutableList.of(
-                                      sessionDetail.getSessionId().getId(),
-                                      sessionDetail.getSessionConfig().getSessionName(),
-                                      sessionDetail.getSessionStatus().name(),
-                                      TimeUtils.toJavaInstant(
-                                              sessionDetail
-                                                  .getSessionOutput()
-                                                  .getSessionTimingInfo()
-                                                  .getSessionSubmittedTime())
-                                          .toString())))
+                          .map(sessionDetail ->
+                              ImmutableList.of(
+                                  sessionDetail.getSessionId().getId(),
+                                  sessionDetail.getSessionConfig().getSessionName(),
+                                  sessionDetail.getSessionStatus().name(),
+                                  TimeUtils.toJavaInstant(
+                                          sessionDetail
+                                              .getSessionOutput()
+                                              .getSessionTimingInfo()
+                                              .getSessionSubmittedTime())
+                                      .toString())))
                   .collect(toImmutableList())));
     }
     if (killServerFailure.getAliveClientsCount() > 0) {
@@ -619,11 +617,10 @@ public class ServerPreparer {
       }
       logger.atInfo().with(IMPORTANCE, DEBUG).log("Locked file [%s]", LOCK_FILE_PATH);
 
-      return Optional.of(
-          () -> {
-            closeFile(finalFile);
-            logger.atInfo().with(IMPORTANCE, DEBUG).log("Released file lock [%s]", LOCK_FILE_PATH);
-          });
+      return Optional.of(() -> {
+        closeFile(finalFile);
+        logger.atInfo().with(IMPORTANCE, DEBUG).log("Released file lock [%s]", LOCK_FILE_PATH);
+      });
     } catch (MobileHarnessException | IOException e) {
       logger
           .atWarning()

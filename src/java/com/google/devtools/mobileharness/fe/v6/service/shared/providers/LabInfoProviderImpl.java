@@ -55,12 +55,11 @@ public class LabInfoProviderImpl implements LabInfoProvider {
     if (universe instanceof UniverseScope.RoutedUniverse routed) {
       return routedUniverseLabInfoStubFactory
           .getLabInfoStub(routed.atsControllerId())
-          .orElseThrow(
-              () ->
-                  new IllegalStateException(
-                      String.format(
-                          "No LabInfo stub available for routed universe '%s'",
-                          routed.atsControllerId())));
+          .orElseThrow(() ->
+              new IllegalStateException(
+                  String.format(
+                      "No LabInfo stub available for routed universe '%s'",
+                      routed.atsControllerId())));
     }
     return defaultLabInfoStub;
   }

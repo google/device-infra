@@ -588,12 +588,11 @@ public class TradefedTest extends BaseDriver
                               commandOutputLogger,
                               outputFileWriter,
                               disableTfResultLog))
-                      .onExit(
-                          commandResult -> {
-                            synchronized (tfProcessLock) {
-                              tfProcess = null;
-                            }
-                          })
+                      .onExit(commandResult -> {
+                        synchronized (tfProcessLock) {
+                          tfProcess = null;
+                        }
+                      })
                       .redirectStderr(true)
                       .needStdoutInResult(false)
                       .needStderrInResult(false)
@@ -1073,10 +1072,9 @@ public class TradefedTest extends BaseDriver
         && Flags.noopJitEmulator.getNonNull()) {
       logger.atInfo().log("Adding TF-based virtual device name to Tradefed run command");
       getDeviceIds()
-          .forEach(
-              serial ->
-                  tradefedRunCommand.add(
-                      "-s", AndroidJitEmulatorUtil.getVirtualDeviceNameInTradefed(serial)));
+          .forEach(serial ->
+              tradefedRunCommand.add(
+                  "-s", AndroidJitEmulatorUtil.getVirtualDeviceNameInTradefed(serial)));
     } else {
       getDeviceIds().forEach(serial -> tradefedRunCommand.add("-s", serial));
     }

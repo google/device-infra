@@ -79,11 +79,10 @@ public class DeviceFlashLockManager {
       }
 
       // Return autocloseable lambda that safely releases both
-      return Optional.of(
-          () -> {
-            flashingDevices.remove(deviceId);
-            rwLock.readLock().unlock();
-          });
+      return Optional.of(() -> {
+        flashingDevices.remove(deviceId);
+        rwLock.readLock().unlock();
+      });
     } finally {
       // This finally block is primarily a safeguard, the main unlock logic is in the lambda.
     }

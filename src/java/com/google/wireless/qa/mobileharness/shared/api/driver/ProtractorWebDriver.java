@@ -88,11 +88,10 @@ public class ProtractorWebDriver extends BaseWebTestDriver {
     getSeleniumAddress(testInfo)
         .ifPresent(address -> commandList.add("--seleniumAddress=" + address));
     getDebuggerAddress(testInfo)
-        .ifPresent(
-            address -> {
-              commandList.add("--params.debuggerAddress=" + address);
-              commandList.add("--capabilities.chromeOptions.debuggerAddress=" + address);
-            });
+        .ifPresent(address -> {
+          commandList.add("--params.debuggerAddress=" + address);
+          commandList.add("--capabilities.chromeOptions.debuggerAddress=" + address);
+        });
     getBaseUrl(testInfo).ifPresent(url -> commandList.add("--params.baseUrl=" + url));
 
     String specs = testInfo.jobInfo().params().get(PARAM_SPECS, null);

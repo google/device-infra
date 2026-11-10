@@ -69,13 +69,12 @@ public class ErrorModelConverter {
 
   private static StackTraceElement[] getStackTrace(ExceptionProto.ExceptionSummary summary) {
     return summary.getStackTrace().getElementList().stream()
-        .map(
-            stackTraceElement ->
-                new StackTraceElement(
-                    stackTraceElement.getClassName(),
-                    stackTraceElement.getMethodName(),
-                    stackTraceElement.getFileName(),
-                    stackTraceElement.getLineNumber()))
+        .map(stackTraceElement ->
+            new StackTraceElement(
+                stackTraceElement.getClassName(),
+                stackTraceElement.getMethodName(),
+                stackTraceElement.getFileName(),
+                stackTraceElement.getLineNumber()))
         .collect(toImmutableList())
         .toArray(new StackTraceElement[summary.getStackTrace().getElementCount()]);
   }

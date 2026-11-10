@@ -175,12 +175,11 @@ public class LabResponseProtoGenerator {
         bufferedMessages.isEmpty()
             ? ImmutableList.of()
             : bufferedMessages.stream()
-                .map(
-                    message ->
-                        TestMessage.newBuilder()
-                            .putAllMessageContent(message.message())
-                            .addAllSubTestIdChain(message.subTestIdChain())
-                            .build())
+                .map(message ->
+                    TestMessage.newBuilder()
+                        .putAllMessageContent(message.message())
+                        .addAllSubTestIdChain(message.subTestIdChain())
+                        .build())
                 .collect(toImmutableList());
     logger.atInfo().log(
         "Creating GetTestStatusResponse for Test %s: status=%s, result=%s,"

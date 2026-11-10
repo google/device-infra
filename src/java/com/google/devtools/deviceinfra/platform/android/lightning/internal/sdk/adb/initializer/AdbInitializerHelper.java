@@ -145,15 +145,14 @@ public final class AdbInitializerHelper {
     if (managedAdbServer && ifKillAdbServer) {
       Runtime.getRuntime()
           .addShutdownHook(
-              new Thread(
-                  () -> {
-                    try {
-                      killAdbServer(adbPath, commandExecutor, systemUtil);
-                    } catch (Throwable e) {
-                      logger.atInfo().log(
-                          "Failed to stop ADB server: %s", MoreThrowables.shortDebugString(e));
-                    }
-                  }));
+              new Thread(() -> {
+                try {
+                  killAdbServer(adbPath, commandExecutor, systemUtil);
+                } catch (Throwable e) {
+                  logger.atInfo().log(
+                      "Failed to stop ADB server: %s", MoreThrowables.shortDebugString(e));
+                }
+              }));
     }
   }
 

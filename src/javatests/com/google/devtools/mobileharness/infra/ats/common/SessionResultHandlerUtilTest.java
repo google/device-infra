@@ -377,13 +377,12 @@ public final class SessionResultHandlerUtilTest {
     Configuration.Builder builder =
         Configuration.newBuilder()
             .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule(moduleName));
-    failureLevel.ifPresent(
-        level ->
-            builder.setConfigDescriptor(
-                ConfigurationDescriptor.newBuilder()
-                    .putMetadata(
-                        "failure_level",
-                        ConfigurationDescriptorMetadata.newBuilder().addValue(level).build())));
+    failureLevel.ifPresent(level ->
+        builder.setConfigDescriptor(
+            ConfigurationDescriptor.newBuilder()
+                .putMetadata(
+                    "failure_level",
+                    ConfigurationDescriptorMetadata.newBuilder().addValue(level).build())));
     return builder.build();
   }
 

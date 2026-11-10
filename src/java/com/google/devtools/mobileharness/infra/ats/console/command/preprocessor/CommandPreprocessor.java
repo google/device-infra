@@ -171,15 +171,11 @@ public class CommandPreprocessor {
     ImmutableList<String> extraArgs = tokens.subList(3, tokens.size());
     commandsBuilder.addAll(
         commandsFromFile.stream()
-            .map(
-                command -> {
-                  ImmutableList.Builder<String> modifiedTokens =
-                      ImmutableList.<String>builder()
-                          .add(firstToken)
-                          .addAll(command)
-                          .addAll(extraArgs);
-                  return modifiedTokens.build();
-                })
+            .map(command -> {
+              ImmutableList.Builder<String> modifiedTokens =
+                  ImmutableList.<String>builder().add(firstToken).addAll(command).addAll(extraArgs);
+              return modifiedTokens.build();
+            })
             .collect(toImmutableList()));
     if (exitAfterRun) {
       commandsBuilder.add(EXIT_COMMAND);

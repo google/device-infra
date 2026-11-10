@@ -73,23 +73,21 @@ public final class ConfigConverter {
           DeviceConfig.Dimensions.newBuilder()
               .addAllSupported(
                   basicConfig.getCompositeDimension().getSupportedDimensionList().stream()
-                      .map(
-                          d ->
-                              com.google.devtools.mobileharness.fe.v6.service.proto.common
-                                  .DeviceDimension.newBuilder()
-                                  .setName(d.getName())
-                                  .setValue(d.getValue())
-                                  .build())
+                      .map(d ->
+                          com.google.devtools.mobileharness.fe.v6.service.proto.common
+                              .DeviceDimension.newBuilder()
+                              .setName(d.getName())
+                              .setValue(d.getValue())
+                              .build())
                       .collect(toImmutableList()))
               .addAllRequired(
                   basicConfig.getCompositeDimension().getRequiredDimensionList().stream()
-                      .map(
-                          d ->
-                              com.google.devtools.mobileharness.fe.v6.service.proto.common
-                                  .DeviceDimension.newBuilder()
-                                  .setName(d.getName())
-                                  .setValue(d.getValue())
-                                  .build())
+                      .map(d ->
+                          com.google.devtools.mobileharness.fe.v6.service.proto.common
+                              .DeviceDimension.newBuilder()
+                              .setName(d.getName())
+                              .setValue(d.getValue())
+                              .build())
                       .collect(toImmutableList()))
               .build());
     }
@@ -132,21 +130,19 @@ public final class ConfigConverter {
           DeviceCompositeDimension.newBuilder()
               .addAllSupportedDimension(
                   feConfig.getDimensions().getSupportedList().stream()
-                      .map(
-                          d ->
-                              DeviceDimension.newBuilder()
-                                  .setName(d.getName())
-                                  .setValue(d.getValue())
-                                  .build())
+                      .map(d ->
+                          DeviceDimension.newBuilder()
+                              .setName(d.getName())
+                              .setValue(d.getValue())
+                              .build())
                       .collect(toImmutableList()))
               .addAllRequiredDimension(
                   feConfig.getDimensions().getRequiredList().stream()
-                      .map(
-                          d ->
-                              DeviceDimension.newBuilder()
-                                  .setName(d.getName())
-                                  .setValue(d.getValue())
-                                  .build())
+                      .map(d ->
+                          DeviceDimension.newBuilder()
+                              .setName(d.getName())
+                              .setValue(d.getValue())
+                              .build())
                       .collect(toImmutableList()))
               .build();
       builder.setCompositeDimension(dimension);
@@ -206,14 +202,13 @@ public final class ConfigConverter {
             .addAllOverTcpIps(labConfig.getOverTcpIpList())
             .addAllOverSshDevices(
                 labConfig.getOverSshList().stream()
-                    .map(
-                        d ->
-                            DeviceDiscoverySettings.OverSshDevice.newBuilder()
-                                .setIpAddress(d.getIpAddress())
-                                .setUsername(d.getUsername())
-                                .setPassword(d.getPassword())
-                                .setSshDeviceType(d.getSshDeviceType())
-                                .build())
+                    .map(d ->
+                        DeviceDiscoverySettings.OverSshDevice.newBuilder()
+                            .setIpAddress(d.getIpAddress())
+                            .setUsername(d.getUsername())
+                            .setPassword(d.getPassword())
+                            .setSshDeviceType(d.getSshDeviceType())
+                            .build())
                     .collect(toImmutableList()));
     if (labConfig.hasDetectorSpecs()) {
       discoveryBuilder.addAllManekiSpecs(toFeManekiSpecs(labConfig.getDetectorSpecs()));
@@ -227,67 +222,57 @@ public final class ConfigConverter {
       ManekiDetectorSpecs maneki = detectorSpecs.getManekiDetectorSpecs();
       maneki
           .getManekiAndroidDeviceDiscoverySpecList()
-          .forEach(
-              s ->
-                  feSpecs.add(
-                      ManekiSpec.newBuilder()
-                          .setType("android")
-                          .setMacAddress(s.getMacAddress())
-                          .build()));
+          .forEach(s ->
+              feSpecs.add(
+                  ManekiSpec.newBuilder()
+                      .setType("android")
+                      .setMacAddress(s.getMacAddress())
+                      .build()));
       maneki
           .getManekiRokuDeviceDiscoverySpecList()
-          .forEach(
-              s ->
-                  feSpecs.add(
-                      ManekiSpec.newBuilder()
-                          .setType("roku")
-                          .setMacAddress(s.getMacAddress())
-                          .build()));
+          .forEach(s ->
+              feSpecs.add(
+                  ManekiSpec.newBuilder()
+                      .setType("roku")
+                      .setMacAddress(s.getMacAddress())
+                      .build()));
       maneki
           .getManekiRdkDeviceDiscoverySpecList()
-          .forEach(
-              s ->
-                  feSpecs.add(
-                      ManekiSpec.newBuilder()
-                          .setType("rdk")
-                          .setMacAddress(s.getMacAddress())
-                          .build()));
+          .forEach(s ->
+              feSpecs.add(
+                  ManekiSpec.newBuilder().setType("rdk").setMacAddress(s.getMacAddress()).build()));
       maneki
           .getManekiRaspberryPiDeviceDiscoverySpecList()
-          .forEach(
-              s ->
-                  feSpecs.add(
-                      ManekiSpec.newBuilder()
-                          .setType("raspberry_pi")
-                          .setMacAddress(s.getMacAddress())
-                          .build()));
+          .forEach(s ->
+              feSpecs.add(
+                  ManekiSpec.newBuilder()
+                      .setType("raspberry_pi")
+                      .setMacAddress(s.getMacAddress())
+                      .build()));
       maneki
           .getManekiPs4DeviceDiscoverySpecList()
-          .forEach(
-              s ->
-                  feSpecs.add(
-                      ManekiSpec.newBuilder()
-                          .setType("ps4")
-                          .setMacAddress(s.getWinMacAddress())
-                          .build()));
+          .forEach(s ->
+              feSpecs.add(
+                  ManekiSpec.newBuilder()
+                      .setType("ps4")
+                      .setMacAddress(s.getWinMacAddress())
+                      .build()));
       maneki
           .getManekiPs5DeviceDiscoverySpecList()
-          .forEach(
-              s ->
-                  feSpecs.add(
-                      ManekiSpec.newBuilder()
-                          .setType("ps5")
-                          .setMacAddress(s.getWinMacAddress())
-                          .build()));
+          .forEach(s ->
+              feSpecs.add(
+                  ManekiSpec.newBuilder()
+                      .setType("ps5")
+                      .setMacAddress(s.getWinMacAddress())
+                      .build()));
       maneki
           .getManekiGenericDeviceDiscoverySpecList()
-          .forEach(
-              s ->
-                  feSpecs.add(
-                      ManekiSpec.newBuilder()
-                          .setType("generic")
-                          .setMacAddress(s.getMacAddress())
-                          .build()));
+          .forEach(s ->
+              feSpecs.add(
+                  ManekiSpec.newBuilder()
+                      .setType("generic")
+                      .setMacAddress(s.getMacAddress())
+                      .build()));
     }
     return feSpecs.build();
   }

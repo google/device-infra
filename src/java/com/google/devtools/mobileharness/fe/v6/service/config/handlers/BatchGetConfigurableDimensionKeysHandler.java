@@ -199,10 +199,9 @@ public final class BatchGetConfigurableDimensionKeysHandler {
         response ->
             response.getDimensionsList().stream()
                 .filter(dim -> dim.getDeviceCount() > 0)
-                .filter(
-                    dim ->
-                        BatchDeviceConfigUtil.isValidConfigurableDimensionKey(dim.getName(), policy)
-                            && !excludedCuratedKeys.contains(dim.getName()))
+                .filter(dim ->
+                    BatchDeviceConfigUtil.isValidConfigurableDimensionKey(dim.getName(), policy)
+                        && !excludedCuratedKeys.contains(dim.getName()))
                 .collect(
                     toImmutableMap(
                         dim -> dim.getName(),
@@ -216,16 +215,14 @@ public final class BatchGetConfigurableDimensionKeysHandler {
     boolean isRequired = BatchDeviceConfigUtil.isRequiredDimensionList(dimensionList);
     Map<String, Long> counts =
         configs.stream()
-            .flatMap(
-                config -> {
-                  DeviceCompositeDimension composite =
-                      config.getBasicConfig().getCompositeDimension();
-                  List<DeviceDimension> entries =
-                      isRequired
-                          ? composite.getRequiredDimensionList()
-                          : composite.getSupportedDimensionList();
-                  return extractValidKeys(entries);
-                })
+            .flatMap(config -> {
+              DeviceCompositeDimension composite = config.getBasicConfig().getCompositeDimension();
+              List<DeviceDimension> entries =
+                  isRequired
+                      ? composite.getRequiredDimensionList()
+                      : composite.getSupportedDimensionList();
+              return extractValidKeys(entries);
+            })
             .collect(groupingBy(identity(), counting()));
     return counts.entrySet().stream()
         .collect(
@@ -259,16 +256,15 @@ public final class BatchGetConfigurableDimensionKeysHandler {
 
     ImmutableList<CandidateDimensionKey> candidateKeys =
         allKeys.stream()
-            .map(
-                key -> {
-                  int selectedCount = selectedCounts.getOrDefault(key, 0);
-                  int fleetCount = Math.max(fleetCounts.getOrDefault(key, 0), selectedCount);
-                  return CandidateDimensionKey.newBuilder()
-                      .setDimensionName(key)
-                      .setSelectedDeviceCount(selectedCount)
-                      .setFleetDeviceCount(fleetCount)
-                      .build();
-                })
+            .map(key -> {
+              int selectedCount = selectedCounts.getOrDefault(key, 0);
+              int fleetCount = Math.max(fleetCounts.getOrDefault(key, 0), selectedCount);
+              return CandidateDimensionKey.newBuilder()
+                  .setDimensionName(key)
+                  .setSelectedDeviceCount(selectedCount)
+                  .setFleetDeviceCount(fleetCount)
+                  .build();
+            })
             .sorted(comparator)
             .collect(toImmutableList());
 

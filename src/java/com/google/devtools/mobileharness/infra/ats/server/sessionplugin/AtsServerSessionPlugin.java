@@ -393,16 +393,15 @@ final class AtsServerSessionPlugin {
         requestDetail.getTestModuleResultsList().forEach(r -> currentResults.put(r.getName(), r));
 
         testModuleResults.runningModules().values().stream()
-            .map(
-                module ->
-                    TestModuleResult.newBuilder()
-                        .setName(module.id())
-                        .setComplete(!module.isRunning())
-                        .setDurationMs(module.duration().toMillis())
-                        .setPassedTests(module.testsPassed())
-                        .setFailedTests(module.testsFailed())
-                        .setTotalTests(module.testsExpected())
-                        .build())
+            .map(module ->
+                TestModuleResult.newBuilder()
+                    .setName(module.id())
+                    .setComplete(!module.isRunning())
+                    .setDurationMs(module.duration().toMillis())
+                    .setPassedTests(module.testsPassed())
+                    .setFailedTests(module.testsFailed())
+                    .setTotalTests(module.testsExpected())
+                    .build())
             .forEach(r -> currentResults.put(r.getName(), r));
 
         requestDetail.clearTestModuleResults().addAllTestModuleResults(currentResults.values());
@@ -491,22 +490,21 @@ final class AtsServerSessionPlugin {
         .ifPresent(errorMessage -> appendErrorMessage(requestDetail, errorMessage));
     prepareResult
         .commandDetail()
-        .ifPresent(
-            commandDetail -> {
-              String commandId = commandDetail.getId();
-              // During onSessionStarting(), requestDetail only holds a placeholder CommandDetail
-              // (without originalCommandInfo), which should be replaced with the full CommandDetail
-              // from prepareResult. Conversely, when prepareSessionRequestInfo() is called lazily
-              // during onJobEnded() on a resumed session, requestDetail already has the persisted
-              // CommandDetail (with originalCommandInfo), so skip overwriting it to preserve its
-              // original start and create timestamps.
-              if (prepareResult.state().equals(RequestState.RUNNING)
-                  && requestDetail.containsCommandDetails(commandId)
-                  && requestDetail.getCommandDetailsMap().get(commandId).hasOriginalCommandInfo()) {
-                return;
-              }
-              requestDetail.putCommandDetails(commandId, commandDetail);
-            });
+        .ifPresent(commandDetail -> {
+          String commandId = commandDetail.getId();
+          // During onSessionStarting(), requestDetail only holds a placeholder CommandDetail
+          // (without originalCommandInfo), which should be replaced with the full CommandDetail
+          // from prepareResult. Conversely, when prepareSessionRequestInfo() is called lazily
+          // during onJobEnded() on a resumed session, requestDetail already has the persisted
+          // CommandDetail (with originalCommandInfo), so skip overwriting it to preserve its
+          // original start and create timestamps.
+          if (prepareResult.state().equals(RequestState.RUNNING)
+              && requestDetail.containsCommandDetails(commandId)
+              && requestDetail.getCommandDetailsMap().get(commandId).hasOriginalCommandInfo()) {
+            return;
+          }
+          requestDetail.putCommandDetails(commandId, commandDetail);
+        });
   }
 
   @GuardedBy("sessionLock")
@@ -693,10 +691,8 @@ final class AtsServerSessionPlugin {
     return !commandDetailsMap.isEmpty()
         && hasSessionCompleted(commandDetailsMap)
         && commandDetailsMap.values().stream()
-            .anyMatch(
-                commandDetail ->
-                    commandDetail.getFailedTestCount() > 0
-                        || commandDetail.getFailedModuleCount() > 0);
+            .anyMatch(commandDetail ->
+                commandDetail.getFailedTestCount() > 0 || commandDetail.getFailedModuleCount() > 0);
   }
 
   private static void appendErrorMessage(RequestDetail.Builder requestDetail, String newMessage) {

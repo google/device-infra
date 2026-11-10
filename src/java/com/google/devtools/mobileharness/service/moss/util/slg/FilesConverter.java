@@ -42,9 +42,8 @@ final class FilesConverter {
     FilesProto.Builder filesProto = FilesProto.newBuilder();
     files
         .getAll()
-        .forEach(
-            (tag, location) ->
-                filesProto.addFile(FileProto.newBuilder().setTag(tag).setLocation(location)));
+        .forEach((tag, location) ->
+            filesProto.addFile(FileProto.newBuilder().setTag(tag).setLocation(location)));
 
     return filesProto.build();
   }

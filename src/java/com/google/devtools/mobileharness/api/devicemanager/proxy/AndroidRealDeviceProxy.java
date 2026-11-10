@@ -127,17 +127,14 @@ public class AndroidRealDeviceProxy implements DeviceProxy {
     subDeviceSpec
         .decorators()
         .getAll()
-        .forEach(
-            decorator ->
-                dimensions.addDimensions(
-                    Dimension.newBuilder().setName("decorator").setValue(decorator).build()));
+        .forEach(decorator ->
+            dimensions.addDimensions(
+                Dimension.newBuilder().setName("decorator").setValue(decorator).build()));
     subDeviceSpec
         .dimensions()
         .getAll()
-        .forEach(
-            (key, value) ->
-                dimensions.addDimensions(
-                    Dimension.newBuilder().setName(key).setValue(value).build()));
+        .forEach((key, value) ->
+            dimensions.addDimensions(Dimension.newBuilder().setName(key).setValue(value).build()));
     return DeviceSpecification.newBuilder()
         .setUnknownDevice(UnknownDevice.getDefaultInstance())
         .setLegacyDimensions(dimensions)

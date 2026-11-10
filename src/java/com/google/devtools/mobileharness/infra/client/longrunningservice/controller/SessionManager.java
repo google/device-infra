@@ -346,38 +346,35 @@ public class SessionManager {
                   sessionStatusFilter.test(SessionStatus.SESSION_SUBMITTED)
                       ? pendingSessions.values().stream()
                           .map(PendingSession::sessionDetail)
-                          .filter(
-                              sessionDetail ->
-                                  testSession(
-                                      sessionConfigFilter.orElse(null),
-                                      sessionOutputFilter.orElse(null),
-                                      sessionDetail::getSessionConfig,
-                                      sessionDetail::getSessionOutput))
+                          .filter(sessionDetail ->
+                              testSession(
+                                  sessionConfigFilter.orElse(null),
+                                  sessionOutputFilter.orElse(null),
+                                  sessionDetail::getSessionConfig,
+                                  sessionDetail::getSessionOutput))
                       : Stream.empty(),
                   sessionStatusFilter.test(SessionStatus.SESSION_RUNNING)
                       ? runningSessions.values().stream()
                           .map(RunningSession::sessionRunner)
-                          .filter(
-                              sessionRunner ->
-                                  testSession(
-                                      sessionConfigFilter.orElse(null),
-                                      sessionOutputFilter.orElse(null),
-                                      sessionRunner::getSessionConfig,
-                                      () ->
-                                          sessionRunner
-                                              .getSession(/* fieldMask= */ null)
-                                              .getSessionOutput()))
+                          .filter(sessionRunner ->
+                              testSession(
+                                  sessionConfigFilter.orElse(null),
+                                  sessionOutputFilter.orElse(null),
+                                  sessionRunner::getSessionConfig,
+                                  () ->
+                                      sessionRunner
+                                          .getSession(/* fieldMask= */ null)
+                                          .getSessionOutput()))
                           .map(sessionRunner -> sessionRunner.getSession(fieldMask))
                       : Stream.empty(),
                   sessionStatusFilter.test(SessionStatus.SESSION_FINISHED)
                       ? archivedSessions.values().stream()
-                          .filter(
-                              sessionDetail ->
-                                  testSession(
-                                      sessionConfigFilter.orElse(null),
-                                      sessionOutputFilter.orElse(null),
-                                      sessionDetail::getSessionConfig,
-                                      sessionDetail::getSessionOutput))
+                          .filter(sessionDetail ->
+                              testSession(
+                                  sessionConfigFilter.orElse(null),
+                                  sessionOutputFilter.orElse(null),
+                                  sessionDetail::getSessionConfig,
+                                  sessionDetail::getSessionOutput))
                       : Stream.empty())
               .collect(toImmutableList());
     }
@@ -511,19 +508,18 @@ public class SessionManager {
     // Creates session runners.
     ImmutableList<RunningSession> newRunningSessions =
         newSessions.stream()
-            .map(
-                pendingSession ->
-                    RunningSession.of(
-                        sessionRunnerFactory.create(
-                            pendingSession.sessionDetail().toBuilder()
-                                .setSessionStatus(SessionStatus.SESSION_RUNNING)
-                                .build(),
-                            pendingSession.initialSessionPersistenceStatus(),
-                            pendingSession.toBeResumedJobIds(),
-                            pendingSession.sessionSubscribers().getSessionDetailListener(),
-                            ImmutableList.copyOf(pendingSession.cachedSessionNotifications())),
-                        pendingSession.finalResultFuture(),
-                        pendingSession.sessionSubscribers()))
+            .map(pendingSession ->
+                RunningSession.of(
+                    sessionRunnerFactory.create(
+                        pendingSession.sessionDetail().toBuilder()
+                            .setSessionStatus(SessionStatus.SESSION_RUNNING)
+                            .build(),
+                        pendingSession.initialSessionPersistenceStatus(),
+                        pendingSession.toBeResumedJobIds(),
+                        pendingSession.sessionSubscribers().getSessionDetailListener(),
+                        ImmutableList.copyOf(pendingSession.cachedSessionNotifications())),
+                    pendingSession.finalResultFuture(),
+                    pendingSession.sessionSubscribers()))
             .collect(toImmutableList());
 
     // Starts session runners.
@@ -745,11 +741,10 @@ public class SessionManager {
             sessionConfig -> {
               Map<String, String> sessionConfigProperties = sessionConfig.getSessionPropertyMap();
               return includedSessionConfigProperties.entrySet().stream()
-                  .allMatch(
-                      includedSessionConfigProperty ->
-                          Objects.equals(
-                              sessionConfigProperties.get(includedSessionConfigProperty.getKey()),
-                              includedSessionConfigProperty.getValue()));
+                  .allMatch(includedSessionConfigProperty ->
+                      Objects.equals(
+                          sessionConfigProperties.get(includedSessionConfigProperty.getKey()),
+                          includedSessionConfigProperty.getValue()));
             };
       }
 
@@ -786,10 +781,9 @@ public class SessionManager {
             sessionOutput -> {
               Map<String, String> sessionOutputProperties = sessionOutput.getSessionPropertyMap();
               return includedSessionProperties.entrySet().stream()
-                  .allMatch(
-                      property ->
-                          Objects.equals(
-                              sessionOutputProperties.get(property.getKey()), property.getValue()));
+                  .allMatch(property ->
+                      Objects.equals(
+                          sessionOutputProperties.get(property.getKey()), property.getValue()));
             };
       }
 
@@ -1093,11 +1087,10 @@ public class SessionManager {
 
   public static Optional<FieldMask> getSessionDetailFieldMask(GetSessionRequest request) {
     return Optional.ofNullable(request.hasFieldMask() ? request.getFieldMask() : null)
-        .flatMap(
-            getSessionResponseFieldMask ->
-                FieldMaskUtils.subFieldMask(
-                    getSessionResponseFieldMask,
-                    GetSessionResponse.getDescriptor()
-                        .findFieldByNumber(GetSessionResponse.SESSION_DETAIL_FIELD_NUMBER)));
+        .flatMap(getSessionResponseFieldMask ->
+            FieldMaskUtils.subFieldMask(
+                getSessionResponseFieldMask,
+                GetSessionResponse.getDescriptor()
+                    .findFieldByNumber(GetSessionResponse.SESSION_DETAIL_FIELD_NUMBER)));
   }
 }

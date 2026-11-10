@@ -98,11 +98,10 @@ public class CloudOrchestratorClient {
   public CloudOrchestratorClient(String serviceUrl, String version, String zone) {
     this.rootEndpoint = buildRootEndpoint(serviceUrl, version, zone);
     this.requestFactory =
-        HTTP_TRANSPORT.createRequestFactory(
-            request -> {
-              request.setParser(JSON_FACTORY.createJsonObjectParser());
-              request.setReadTimeout((int) WAIT_OPERATION_MAX_TIMEOUT.toMillis());
-            });
+        HTTP_TRANSPORT.createRequestFactory(request -> {
+          request.setParser(JSON_FACTORY.createJsonObjectParser());
+          request.setReadTimeout((int) WAIT_OPERATION_MAX_TIMEOUT.toMillis());
+        });
   }
 
   public void setSessionCookie(String sessionCookie) {

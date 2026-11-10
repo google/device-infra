@@ -214,10 +214,9 @@ public final class CheckRemoteControlEligibilityHandler {
     if (device.getDeviceFeature().getTypeList().contains("TestbedDevice")) {
       hasCommSub =
           subDeviceInfoListFactory.create(dimensions).stream()
-              .anyMatch(
-                  sub ->
-                      sub.getDimensionsList().stream()
-                          .anyMatch(d -> d.getName().equals("communication_type")));
+              .anyMatch(sub ->
+                  sub.getDimensionsList().stream()
+                      .anyMatch(d -> d.getName().equals("communication_type")));
     }
 
     ImmutableList<String> ownersAndExecutors =
@@ -251,13 +250,12 @@ public final class CheckRemoteControlEligibilityHandler {
             ImmutableList<ListenableFuture<DeviceEligibilityResult.SubDeviceEligibilityResult>>
                 subFutures =
                     subDeviceInfoListFactory.create(dimensions).stream()
-                        .map(
-                            sub ->
-                                Futures.transform(
-                                    remoteControlEligibilityChecker.checkEligibility(
-                                        buildSubDeviceContext(device, sub, false, username)),
-                                    res -> mapToSubDeviceProto(sub.getId(), res),
-                                    executor))
+                        .map(sub ->
+                            Futures.transform(
+                                remoteControlEligibilityChecker.checkEligibility(
+                                    buildSubDeviceContext(device, sub, false, username)),
+                                res -> mapToSubDeviceProto(sub.getId(), res),
+                                executor))
                         .collect(toImmutableList());
             return Futures.transform(
                 Futures.allAsList(subFutures),
@@ -350,11 +348,10 @@ public final class CheckRemoteControlEligibilityHandler {
     // if any device is ineligible with permission denied, still return a ready response.
     boolean anyIneligible =
         results.stream()
-            .anyMatch(
-                r ->
-                    !r.getIsEligible()
-                        && r.getIneligibilityReason().getCode()
-                            != IneligibilityReasonCode.PERMISSION_DENIED);
+            .anyMatch(r ->
+                !r.getIsEligible()
+                    && r.getIneligibilityReason().getCode()
+                        != IneligibilityReasonCode.PERMISSION_DENIED);
     if (anyIneligible) {
       return responseBuilder.setStatus(EligibilityStatus.BLOCK_DEVICES_INELIGIBLE).build();
     }
@@ -362,10 +359,8 @@ public final class CheckRemoteControlEligibilityHandler {
     // If all devices are permission denied, return a permission denied response.
     boolean allPermissionDenied =
         results.stream()
-            .allMatch(
-                r ->
-                    r.getIneligibilityReason().getCode()
-                        == IneligibilityReasonCode.PERMISSION_DENIED);
+            .allMatch(r ->
+                r.getIneligibilityReason().getCode() == IneligibilityReasonCode.PERMISSION_DENIED);
     if (allPermissionDenied) {
       return responseBuilder.setStatus(EligibilityStatus.BLOCK_ALL_PERMISSION_DENIED).build();
     }

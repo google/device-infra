@@ -171,21 +171,20 @@ public class SlateDriver extends BaseDriver implements SpecConfigable<SlateDrive
               .workDir(workDir)
               .extraEnv(envVars.buildOrThrow())
               .onStdout(
-                  LineCallback.does(
-                      line -> {
-                        testInfo.log().atInfo().alsoTo(logger).log("Slate Output: %s", line);
-                        try {
-                          writer.write(line);
-                          writer.newLine();
-                          writer.flush();
-                        } catch (IOException e) {
-                          testInfo
-                              .log()
-                              .atWarning()
-                              .alsoTo(logger)
-                              .log("Failed to write to log file: %s", e.getMessage());
-                        }
-                      }));
+                  LineCallback.does(line -> {
+                    testInfo.log().atInfo().alsoTo(logger).log("Slate Output: %s", line);
+                    try {
+                      writer.write(line);
+                      writer.newLine();
+                      writer.flush();
+                    } catch (IOException e) {
+                      testInfo
+                          .log()
+                          .atWarning()
+                          .alsoTo(logger)
+                          .log("Failed to write to log file: %s", e.getMessage());
+                    }
+                  }));
 
       testInfo.log().atInfo().alsoTo(logger).log("SlateDriver: Executing command: %s", command);
 

@@ -479,14 +479,13 @@ public final class JobInfoCreator {
   static List<String> putApksUnderTestInFront(List<String> files) {
     List<String> buildApks = new ArrayList<>();
     List<String> extraApks = new ArrayList<>();
-    files.forEach(
-        file -> {
-          if (isExtraApk(file)) {
-            extraApks.add(file);
-          } else {
-            buildApks.add(file);
-          }
-        });
+    files.forEach(file -> {
+      if (isExtraApk(file)) {
+        extraApks.add(file);
+      } else {
+        buildApks.add(file);
+      }
+    });
 
     // Puts build apks in front of extra apks.
     files.clear();
@@ -567,12 +566,11 @@ public final class JobInfoCreator {
     logger.atInfo().log("Add %s to tests", sysLogDecoratorName);
     updatedDecorators.add(sysLogDecoratorName);
     type.getDecoratorList()
-        .forEach(
-            decorator -> {
-              if (!decorator.equals(sysLogDecoratorName)) {
-                updatedDecorators.add(decorator);
-              }
-            });
+        .forEach(decorator -> {
+          if (!decorator.equals(sysLogDecoratorName)) {
+            updatedDecorators.add(decorator);
+          }
+        });
     return type.toBuilder().clearDecorator().addAllDecorator(updatedDecorators).build();
   }
 

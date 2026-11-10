@@ -127,18 +127,21 @@ export class App implements OnDestroy {
    * Output: boolean (`true` on Home, `/search`, and Detail pages; `false` on Entity Search pages).
    * Explanation:
    *   Shown in standalone mode on all routes except the 5 Entity Search pages
-   *   (`/devices`, `/hosts`, `/tests`, `/jobs`, `/sessions`).
+   *   (`/devices`, `/hosts`, `/tests`, `/jobs`, `/sessions`) and routes whose
+   *   data sets `hideHeaderJumpBar` because the page has its own box for IDs.
    */
   isShowHeaderJumpBar(): boolean {
     return (
       this.isStandaloneMode &&
-      isHeaderJumpBarVisibleOnRoute(this.getCurrentRoutePath())
+      isHeaderJumpBarVisibleOnRoute(this.getCurrentRoutePath()) &&
+      !this.getCurrentRouteData()['hideHeaderJumpBar']
     );
   }
 
   isNavActive(
     section:
       | 'home'
+      | 'summary'
       | 'devices'
       | 'hosts'
       | 'tests'
@@ -151,6 +154,8 @@ export class App implements OnDestroy {
     switch (section) {
       case 'home':
         return path === 'home' || !path;
+      case 'summary':
+        return path === 'summary';
       case 'devices':
         return path.startsWith('devices');
       case 'hosts':
@@ -189,6 +194,15 @@ export class App implements OnDestroy {
       route = route.firstChild;
     }
     return route.routeConfig?.path || '';
+  }
+
+  /** Returns the static and resolved data of the innermost active route. */
+  getCurrentRouteData(): Readonly<Record<string, unknown>> {
+    let route = this.router.routerState.snapshot.root;
+    while (route.firstChild) {
+      route = route.firstChild;
+    }
+    return route.data ?? {};
   }
 
   constructor() {
@@ -235,6 +249,7 @@ export class App implements OnDestroy {
     if (
       !path ||
       path === 'home' ||
+      path === 'summary' ||
       path === 'search' ||
       path === 'devices' ||
       path === 'hosts' ||

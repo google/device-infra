@@ -92,11 +92,8 @@ public class AtsServerSessionUtil {
     for (DeviceInfo deviceInfo : queryResult.getDeviceInfoList()) {
       String labHostName =
           deviceInfo.getDimensionList().stream()
-              .filter(
-                  dimension ->
-                      dimension
-                          .getName()
-                          .equals(Ascii.toLowerCase(Dimension.Name.HOST_NAME.name())))
+              .filter(dimension ->
+                  dimension.getName().equals(Ascii.toLowerCase(Dimension.Name.HOST_NAME.name())))
               .findFirst()
               .map(DeviceQuery.Dimension::getValue)
               .orElse("");

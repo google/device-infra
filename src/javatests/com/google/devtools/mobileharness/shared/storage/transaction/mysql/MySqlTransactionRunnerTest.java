@@ -248,12 +248,11 @@ public final class MySqlTransactionRunnerTest {
     MobileHarnessException exception =
         new MobileHarnessException(BasicErrorId.DATABASE_TABLE_READ_ERROR, "Worker failed");
     when(worker.doWork(any()))
-        .thenAnswer(
-            invocation -> {
-              MySqlTransactionContext context = invocation.getArgument(0);
-              context.attemptLog().append("Some log message");
-              throw exception;
-            });
+        .thenAnswer(invocation -> {
+          MySqlTransactionContext context = invocation.getArgument(0);
+          context.attemptLog().append("Some log message");
+          throw exception;
+        });
 
     MobileHarnessException thrown =
         assertThrows(

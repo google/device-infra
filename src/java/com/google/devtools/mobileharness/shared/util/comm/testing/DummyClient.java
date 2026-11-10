@@ -118,37 +118,36 @@ public final class DummyClient {
       StreamObserver<DummyRequest> requestObserver,
       Collection<DummyRequest> requests,
       @Nullable ResponseObserver responseObserver) {
-    asyncRequestExecutor.execute(
-        () -> {
-          try {
-            int toSend = requests.size();
-            for (DummyRequest request : requests) {
-              requestObserver.onNext(request);
-              if (responseObserver == null) {
-                logger.atInfo().log("Waiting for some seconds beforing sending next request.");
-                Thread.sleep(500);
-              } else {
-                toSend--;
-                // Allow at most 10 attempts to wait for the response to be received.
-                int waitAttempts = 10;
-                while (waitAttempts-- > 0 && responseObserver.countResponseToWait() > toSend) {
-                  logger.atInfo().log("Waiting for response to be received.");
-                  Thread.sleep(100);
-                }
-                if (responseObserver.countResponseToWait() == 0) {
-                  break;
-                }
-              }
+    asyncRequestExecutor.execute(() -> {
+      try {
+        int toSend = requests.size();
+        for (DummyRequest request : requests) {
+          requestObserver.onNext(request);
+          if (responseObserver == null) {
+            logger.atInfo().log("Waiting for some seconds beforing sending next request.");
+            Thread.sleep(500);
+          } else {
+            toSend--;
+            // Allow at most 10 attempts to wait for the response to be received.
+            int waitAttempts = 10;
+            while (waitAttempts-- > 0 && responseObserver.countResponseToWait() > toSend) {
+              logger.atInfo().log("Waiting for response to be received.");
+              Thread.sleep(100);
             }
-            requestObserver.onCompleted();
-          } catch (RuntimeException e) {
-            logger.atWarning().withCause(e).log("Failed to send async request.");
-            requestObserver.onError(e);
-          } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            logger.atWarning().withCause(e).log("Interrupted while sending async request!");
-            requestObserver.onError(e);
+            if (responseObserver.countResponseToWait() == 0) {
+              break;
+            }
           }
-        });
+        }
+        requestObserver.onCompleted();
+      } catch (RuntimeException e) {
+        logger.atWarning().withCause(e).log("Failed to send async request.");
+        requestObserver.onError(e);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        logger.atWarning().withCause(e).log("Interrupted while sending async request!");
+        requestObserver.onError(e);
+      }
+    });
   }
 }

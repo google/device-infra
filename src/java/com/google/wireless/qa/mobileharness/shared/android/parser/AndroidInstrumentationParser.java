@@ -229,10 +229,9 @@ public class AndroidInstrumentationParser {
             .collect(Collectors.toList());
     List<String> failures =
         results.entrySet().stream()
-            .filter(
-                entry ->
-                    entry.getValue().equals(TestResult.FAIL)
-                        || entry.getValue().equals(TestResult.UNKNOWN))
+            .filter(entry ->
+                entry.getValue().equals(TestResult.FAIL)
+                    || entry.getValue().equals(TestResult.UNKNOWN))
             .map(Entry::getKey)
             .collect(Collectors.toList());
     List<String> passes =

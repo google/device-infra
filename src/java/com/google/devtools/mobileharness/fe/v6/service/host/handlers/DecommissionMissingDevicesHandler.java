@@ -70,12 +70,11 @@ public final class DecommissionMissingDevicesHandler {
         RemoveMissingDevicesRequest.newBuilder()
             .addAllRemoveMissingDeviceRequest(
                 request.getDeviceIdsList().stream()
-                    .map(
-                        deviceId ->
-                            RemoveMissingDeviceRequest.newBuilder()
-                                .setDeviceUuid(deviceId)
-                                .setLabHostName(request.getHostName())
-                                .build())
+                    .map(deviceId ->
+                        RemoveMissingDeviceRequest.newBuilder()
+                            .setDeviceUuid(deviceId)
+                            .setLabHostName(request.getHostName())
+                            .build())
                     .collect(toImmutableList()))
             .build();
 

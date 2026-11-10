@@ -41,10 +41,8 @@ public class DeviceManagerDrainHandler implements DrainHandler {
       // Note here we only check if device is not busy.
       hasDrained =
           deviceManager.getAllDeviceStatus(false).entrySet().stream()
-              .noneMatch(
-                  x ->
-                      (x.getValue().getDeviceStatusWithTimestamp().getStatus()
-                          == DeviceStatus.BUSY));
+              .noneMatch(x ->
+                  (x.getValue().getDeviceStatusWithTimestamp().getStatus() == DeviceStatus.BUSY));
     } catch (InterruptedException ie) {
       logger.atInfo().log("Ignored interrupted exception when check device status.");
     }

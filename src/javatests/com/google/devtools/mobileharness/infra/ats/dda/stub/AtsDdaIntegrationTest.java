@@ -355,21 +355,19 @@ public class AtsDdaIntegrationTest {
                             "--tmp_dir_root=" + tmpFolder.newFolder("olc_server_tmp_dir")),
                         ImmutableList.of()))
             .onStdout(
-                does(
-                    stdout -> {
-                      System.out.printf("olc_server_stdout %s\n", stdout);
-                      olcServerStdout.append(stdout).append('\n');
-                    }))
+                does(stdout -> {
+                  System.out.printf("olc_server_stdout %s\n", stdout);
+                  olcServerStdout.append(stdout).append('\n');
+                }))
             .onStderr(
-                does(
-                    stderr -> {
-                      System.err.printf("olc_server_stderr %s\n", stderr);
-                      olcServerStderr.append(stderr).append('\n');
+                does(stderr -> {
+                  System.err.printf("olc_server_stderr %s\n", stderr);
+                  olcServerStderr.append(stderr).append('\n');
 
-                      if (stderr.contains("Sign up lab") && stderr.contains("AndroidRealDevice-")) {
-                        olcServerAllRemoteDevicesFound.countDown();
-                      }
-                    }))
+                  if (stderr.contains("Sign up lab") && stderr.contains("AndroidRealDevice-")) {
+                    olcServerAllRemoteDevicesFound.countDown();
+                  }
+                }))
             .successfulStartCondition(line -> line.contains(SERVER_STARTED_SIGNAL))
             .redirectStderr(false)
             .needStdoutInResult(false)
@@ -426,29 +424,27 @@ public class AtsDdaIntegrationTest {
                                 + BuiltinFlags.ATS_LAB_SERVER_TYPE_PROPERTY_KEY
                                 + "=omni-public-testing")))
             .onStdout(
-                does(
-                    stdout -> {
-                      System.out.printf("lab_server_stdout %s\n", stdout);
-                      labServerStdout.append(stdout).append('\n');
-                    }))
+                does(stdout -> {
+                  System.out.printf("lab_server_stdout %s\n", stdout);
+                  labServerStdout.append(stdout).append('\n');
+                }))
             .onStderr(
-                does(
-                    stderr -> {
-                      System.err.printf("lab_server_stderr %s\n", stderr);
-                      labServerStderr.append(stderr).append('\n');
+                does(stderr -> {
+                  System.err.printf("lab_server_stderr %s\n", stderr);
+                  labServerStderr.append(stderr).append('\n');
 
-                      if (stderr.contains("New device AndroidRealDevice-")) {
-                        labServerAllLocalDevicesFound.countDown();
-                      } else if (stderr.contains("Sleep for ")) {
-                        driverStarted.countDown();
-                      } else if (stderr.contains("Wake up from sleep")) {
-                        if (stderr.contains("reason=RECEIVE_MESSAGE")) {
-                          driverCancelled.countDown();
-                        } else if (stderr.contains("reason=LEASE_EXPIRE")) {
-                          driverLeaseExpired.countDown();
-                        }
-                      }
-                    }))
+                  if (stderr.contains("New device AndroidRealDevice-")) {
+                    labServerAllLocalDevicesFound.countDown();
+                  } else if (stderr.contains("Sleep for ")) {
+                    driverStarted.countDown();
+                  } else if (stderr.contains("Wake up from sleep")) {
+                    if (stderr.contains("reason=RECEIVE_MESSAGE")) {
+                      driverCancelled.countDown();
+                    } else if (stderr.contains("reason=LEASE_EXPIRE")) {
+                      driverLeaseExpired.countDown();
+                    }
+                  }
+                }))
             .successfulStartCondition(line -> line.contains("Lab server successfully started"))
             .redirectStderr(false)
             .needStdoutInResult(false)

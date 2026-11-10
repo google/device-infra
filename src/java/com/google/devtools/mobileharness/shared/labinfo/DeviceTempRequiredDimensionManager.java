@@ -195,22 +195,20 @@ public class DeviceTempRequiredDimensionManager {
     Instant now = instantSource.instant();
     Map<DeviceKey, DeviceTempRequiredDimensions> removed = new HashMap<>();
 
-    allDimensions.forEach(
-        (deviceKey, tempDimensions) -> {
-          if (now.isAfter(tempDimensions.expireTime())) {
-            if (allDimensions.remove(deviceKey, tempDimensions)) {
-              removed.put(deviceKey, tempDimensions);
-            }
-          }
-        });
+    allDimensions.forEach((deviceKey, tempDimensions) -> {
+      if (now.isAfter(tempDimensions.expireTime())) {
+        if (allDimensions.remove(deviceKey, tempDimensions)) {
+          removed.put(deviceKey, tempDimensions);
+        }
+      }
+    });
 
-    removed.forEach(
-        (deviceKey, tempDimensions) -> {
-          logger.atInfo().log(
-              "Removed expired temp required dimensions (periodic) for device %s: %s",
-              deviceKey, tempDimensions);
-          notifyListener(deviceKey, "periodic-expire");
-        });
+    removed.forEach((deviceKey, tempDimensions) -> {
+      logger.atInfo().log(
+          "Removed expired temp required dimensions (periodic) for device %s: %s",
+          deviceKey, tempDimensions);
+      notifyListener(deviceKey, "periodic-expire");
+    });
   }
 
   private void notifyListener(DeviceKey deviceKey, String reason) {

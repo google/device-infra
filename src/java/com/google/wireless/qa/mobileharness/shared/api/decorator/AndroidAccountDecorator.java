@@ -154,14 +154,13 @@ public class AndroidAccountDecorator extends LifecycleDecorator
     boolean hasSubDeviceSpec =
         testInfo.jobInfo().subDeviceSpecs().getAllSubDevices().stream()
             .map(SubDeviceSpec::scopedSpecs)
-            .map(
-                scopedSpecs -> {
-                  try {
-                    return scopedSpecs.getSpec(AndroidAccountDecoratorSpec.class);
-                  } catch (MobileHarnessException e) {
-                    return null;
-                  }
-                })
+            .map(scopedSpecs -> {
+              try {
+                return scopedSpecs.getSpec(AndroidAccountDecoratorSpec.class);
+              } catch (MobileHarnessException e) {
+                return null;
+              }
+            })
             .filter(Objects::nonNull)
             .map(AndroidAccountDecoratorSpec::getEmails)
             .anyMatch(emails -> !isNullOrEmpty(emails));
@@ -553,26 +552,25 @@ public class AndroidAccountDecorator extends LifecycleDecorator
 
     try {
       return IntStream.range(0, emails.size())
-          .mapToObj(
-              i -> {
-                String email = emails.get(i);
-                String credential = passwords.get(i);
-                AccountCredentialType credentialType =
-                    credentialTypes.size() == 1 ? credentialTypes.get(0) : credentialTypes.get(i);
-                AndroidGoogleAccountType accountType =
-                    accountTypes.size() == 1 ? accountTypes.get(0) : accountTypes.get(i);
-                return AddAccountArgs.builder()
-                    .setAccountSetting(
-                        AndroidAccountSetting.builder()
-                            .setEmail(email)
-                            .setPassword(credential)
-                            .setCredentialType(credentialType)
-                            .setAccountType(accountType)
-                            .setAutoSync(autoSync)
-                            .build())
-                    .setMaxAttempts(ATTEMPTS)
-                    .build();
-              })
+          .mapToObj(i -> {
+            String email = emails.get(i);
+            String credential = passwords.get(i);
+            AccountCredentialType credentialType =
+                credentialTypes.size() == 1 ? credentialTypes.get(0) : credentialTypes.get(i);
+            AndroidGoogleAccountType accountType =
+                accountTypes.size() == 1 ? accountTypes.get(0) : accountTypes.get(i);
+            return AddAccountArgs.builder()
+                .setAccountSetting(
+                    AndroidAccountSetting.builder()
+                        .setEmail(email)
+                        .setPassword(credential)
+                        .setCredentialType(credentialType)
+                        .setAccountType(accountType)
+                        .setAutoSync(autoSync)
+                        .build())
+                .setMaxAttempts(ATTEMPTS)
+                .build();
+          })
           .collect(toImmutableList());
     } catch (IndexOutOfBoundsException e) {
       throw new MobileHarnessException(

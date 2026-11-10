@@ -895,17 +895,16 @@ public final class ServerJobCreatorTest {
         .thenReturn(JobConfig.newBuilder().setName("job_name").build());
     when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
     when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any(), any()))
-        .thenAnswer(
-            invocation -> {
-              JobInfo jobInfo = mock(JobInfo.class);
-              when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
-              TestInfos testInfos = mock(TestInfos.class);
-              TestInfo testInfo = mock(TestInfo.class);
-              when(testInfo.properties()).thenReturn(new Properties(new Timing()));
-              when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
-              when(jobInfo.tests()).thenReturn(testInfos);
-              return jobInfo;
-            });
+        .thenAnswer(invocation -> {
+          JobInfo jobInfo = mock(JobInfo.class);
+          when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+          TestInfos testInfos = mock(TestInfos.class);
+          TestInfo testInfo = mock(TestInfo.class);
+          when(testInfo.properties()).thenReturn(new Properties(new Timing()));
+          when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
+          when(jobInfo.tests()).thenReturn(testInfos);
+          return jobInfo;
+        });
     when(sessionRequestHandlerUtil.getFilteredTradefedModules(any(), any()))
         .thenReturn(ImmutableList.of());
 
@@ -948,12 +947,11 @@ public final class ServerJobCreatorTest {
         .thenReturn(JobConfig.newBuilder().setName("job_name").build());
     when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
     when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any(), any()))
-        .thenAnswer(
-            invocation -> {
-              JobInfo jobInfo = mock(JobInfo.class);
-              when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
-              return jobInfo;
-            });
+        .thenAnswer(invocation -> {
+          JobInfo jobInfo = mock(JobInfo.class);
+          when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+          return jobInfo;
+        });
     when(sessionRequestHandlerUtil.getFilteredTradefedModules(any(), any()))
         .thenReturn(ImmutableList.of("CtsWidgetTestCases29"));
 
@@ -985,17 +983,16 @@ public final class ServerJobCreatorTest {
         .thenReturn(JobConfig.newBuilder().setName("job_name").build());
     when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
     when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any(), any()))
-        .thenAnswer(
-            invocation -> {
-              JobInfo jobInfo = mock(JobInfo.class);
-              when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
-              TestInfos testInfos = mock(TestInfos.class);
-              TestInfo testInfo = mock(TestInfo.class);
-              when(testInfo.properties()).thenReturn(new Properties(new Timing()));
-              when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
-              when(jobInfo.tests()).thenReturn(testInfos);
-              return jobInfo;
-            });
+        .thenAnswer(invocation -> {
+          JobInfo jobInfo = mock(JobInfo.class);
+          when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+          TestInfos testInfos = mock(TestInfos.class);
+          TestInfo testInfo = mock(TestInfo.class);
+          when(testInfo.properties()).thenReturn(new Properties(new Timing()));
+          when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
+          when(jobInfo.tests()).thenReturn(testInfos);
+          return jobInfo;
+        });
     when(sessionRequestHandlerUtil.getFilteredTradefedModules(any(), any()))
         .thenReturn(ImmutableList.of("mcts-module"));
 
@@ -1027,17 +1024,16 @@ public final class ServerJobCreatorTest {
         .thenReturn(JobConfig.newBuilder().setName("job_name").build());
     when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
     when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any(), any()))
-        .thenAnswer(
-            invocation -> {
-              JobInfo jobInfo = mock(JobInfo.class);
-              when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
-              TestInfos testInfos = mock(TestInfos.class);
-              TestInfo testInfo = mock(TestInfo.class);
-              when(testInfo.properties()).thenReturn(new Properties(new Timing()));
-              when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
-              when(jobInfo.tests()).thenReturn(testInfos);
-              return jobInfo;
-            });
+        .thenAnswer(invocation -> {
+          JobInfo jobInfo = mock(JobInfo.class);
+          when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+          TestInfos testInfos = mock(TestInfos.class);
+          TestInfo testInfo = mock(TestInfo.class);
+          when(testInfo.properties()).thenReturn(new Properties(new Timing()));
+          when(testInfos.getAll()).thenReturn(ImmutableListMultimap.of("test_id", testInfo));
+          when(jobInfo.tests()).thenReturn(testInfos);
+          return jobInfo;
+        });
     when(sessionRequestHandlerUtil.getFilteredTradefedModules(any(), any()))
         .thenReturn(ImmutableList.of("static-module", "mcts-module"));
 
@@ -1076,12 +1072,11 @@ public final class ServerJobCreatorTest {
     when(sessionRequestHandlerUtil.initializeJobConfig(any(), any(), any(), any()))
         .thenReturn(JobConfig.newBuilder().setName("job_name").build());
     when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any(), any()))
-        .thenAnswer(
-            invocation -> {
-              JobInfo jobInfo = mock(JobInfo.class);
-              when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
-              return jobInfo;
-            });
+        .thenAnswer(invocation -> {
+          JobInfo jobInfo = mock(JobInfo.class);
+          when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+          return jobInfo;
+        });
     when(sessionRequestHandlerUtil.getFilteredTradefedModules(any(), any()))
         .thenReturn(ImmutableList.of());
 
@@ -1154,12 +1149,11 @@ public final class ServerJobCreatorTest {
     when(sessionRequestHandlerUtil.initializeJobConfig(any(), any(), any(), any()))
         .thenReturn(JobConfig.newBuilder().setName("job_name").build());
     when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any(), any()))
-        .thenAnswer(
-            invocation -> {
-              JobInfo jobInfo = mock(JobInfo.class);
-              when(jobInfo.properties()).thenReturn(jobProperties);
-              return jobInfo;
-            });
+        .thenAnswer(invocation -> {
+          JobInfo jobInfo = mock(JobInfo.class);
+          when(jobInfo.properties()).thenReturn(jobProperties);
+          return jobInfo;
+        });
     when(sessionRequestHandlerUtil.getFilteredTradefedModules(any(), any()))
         .thenReturn(ImmutableList.of());
 

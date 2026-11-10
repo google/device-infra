@@ -114,7 +114,7 @@ public final class AndroidTestLoopTestTest {
             .build();
     jobInfo.scopedSpecs().add("AndroidTestLoopTestSpec", spec);
 
-    setupInstrumentation((lineCallback) -> lineCallback.onLine("INSTRUMENTATION_CODE: -1"));
+    setupInstrumentation(lineCallback -> lineCallback.onLine("INSTRUMENTATION_CODE: -1"));
 
     driver.run(testInfo);
 
@@ -181,7 +181,7 @@ public final class AndroidTestLoopTestTest {
             .build();
     jobInfo.scopedSpecs().add("AndroidTestLoopTestSpec", spec);
 
-    setupInstrumentation((lineCallback) -> lineCallback.onLine("INSTRUMENTATION_CODE: 0"));
+    setupInstrumentation(lineCallback -> lineCallback.onLine("INSTRUMENTATION_CODE: 0"));
 
     driver.run(testInfo);
 
@@ -202,12 +202,11 @@ public final class AndroidTestLoopTestTest {
             .build();
     jobInfo.scopedSpecs().add("AndroidTestLoopTestSpec", spec);
 
-    setupInstrumentation(
-        (lineCallback) -> {
-          lineCallback.onLine(
-              "onError: commandError=false message=INSTRUMENTATION_ABORTED: System has crashed.");
-          lineCallback.onLine("INSTRUMENTATION_ABORTED: System has crashed.");
-        });
+    setupInstrumentation(lineCallback -> {
+      lineCallback.onLine(
+          "onError: commandError=false message=INSTRUMENTATION_ABORTED: System has crashed.");
+      lineCallback.onLine("INSTRUMENTATION_ABORTED: System has crashed.");
+    });
 
     driver.run(testInfo);
 
@@ -228,13 +227,12 @@ public final class AndroidTestLoopTestTest {
             .build();
     jobInfo.scopedSpecs().add("AndroidTestLoopTestSpec", spec);
 
-    setupInstrumentation(
-        (lineCallback) -> {
-          lineCallback.onLine("INSTRUMENTATION_CODE: -1");
-          // Advance the fake ticker by 10 seconds during the first scenario, leaving 0 seconds
-          // remaining. The test should abort before running scenario 2.
-          fakeTicker.advance(Duration.ofSeconds(10));
-        });
+    setupInstrumentation(lineCallback -> {
+      lineCallback.onLine("INSTRUMENTATION_CODE: -1");
+      // Advance the fake ticker by 10 seconds during the first scenario, leaving 0 seconds
+      // remaining. The test should abort before running scenario 2.
+      fakeTicker.advance(Duration.ofSeconds(10));
+    });
 
     driver.run(testInfo);
 
@@ -253,7 +251,7 @@ public final class AndroidTestLoopTestTest {
 
     when(resUtil.getExternalResourceFile(anyString()))
         .thenReturn(Optional.of("/path/to/external.apk"));
-    setupInstrumentation((lineCallback) -> lineCallback.onLine("INSTRUMENTATION_CODE: -1"));
+    setupInstrumentation(lineCallback -> lineCallback.onLine("INSTRUMENTATION_CODE: -1"));
 
     driver.run(testInfo);
 
@@ -272,11 +270,10 @@ public final class AndroidTestLoopTestTest {
   private void setupInstrumentation(Consumer<LineCallback> instrumentationConsumer)
       throws Exception {
     when(instrumentationUtil.instrument(any(), any(), any(), any(), any()))
-        .thenAnswer(
-            invocation -> {
-              Supplier<LineCallback> supplier = invocation.getArgument(4);
-              instrumentationConsumer.accept(supplier.get());
-              return "";
-            });
+        .thenAnswer(invocation -> {
+          Supplier<LineCallback> supplier = invocation.getArgument(4);
+          instrumentationConsumer.accept(supplier.get());
+          return "";
+        });
   }
 }

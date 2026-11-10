@@ -75,18 +75,17 @@ public class ScopedEventBus<S extends Enum<S>> {
     try {
       for (S scope : scopes) {
         EventBus eventBus = inScope(scope);
-        events.forEach(
-            event -> {
-              if (event instanceof InjectionEvent injectionEvent) {
-                injectionEvent.enter();
-              }
+        events.forEach(event -> {
+          if (event instanceof InjectionEvent injectionEvent) {
+            injectionEvent.enter();
+          }
 
-              eventBus.post(event);
+          eventBus.post(event);
 
-              if (event instanceof InjectionEvent injectionEvent) {
-                injectionEvent.leave();
-              }
-            });
+          if (event instanceof InjectionEvent injectionEvent) {
+            injectionEvent.leave();
+          }
+        });
       }
     } catch (NullPointerException e) {
       new SystemUtil().exit(ExitCode.Shared.CODING_ERROR, e);

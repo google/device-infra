@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.platform.android.overtcp;
 
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;

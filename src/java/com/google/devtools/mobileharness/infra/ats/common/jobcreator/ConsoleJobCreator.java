@@ -195,14 +195,13 @@ public class ConsoleJobCreator extends XtsJobCreator {
             XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType),
             previousSessionIndex,
             previousSessionResultDirName)
-        .orElseThrow(
-            () ->
-                new MobileHarnessException(
-                    InfraErrorId.ATSC_RUN_RETRY_COMMAND_PREV_SESSION_MISS_RESULT_FILES,
-                    String.format(
-                        "Session %s misses test-record proto files and the test_result.xml file,"
-                            + " not able to retry it",
-                        previousSessionIndex)));
+        .orElseThrow(() ->
+            new MobileHarnessException(
+                InfraErrorId.ATSC_RUN_RETRY_COMMAND_PREV_SESSION_MISS_RESULT_FILES,
+                String.format(
+                    "Session %s misses test-record proto files and the test_result.xml file,"
+                        + " not able to retry it",
+                    previousSessionIndex)));
   }
 
   @Override

@@ -148,10 +148,9 @@ final class AllDetectorsAndDispatchers {
     for (Class<? extends Dispatcher> dispatcherClass : dispatcherClasses) {
       dispatcherManager
           .getAllDispatchersInOrder()
-          .forEach(
-              existingDispatcher ->
-                  dispatcherManager.addDependency(
-                      existingDispatcher.getSimpleName(), dispatcherClass.getSimpleName()));
+          .forEach(existingDispatcher ->
+              dispatcherManager.addDependency(
+                  existingDispatcher.getSimpleName(), dispatcherClass.getSimpleName()));
     }
     for (Class<? extends Dispatcher> dispatcherClass : dispatcherClasses) {
       dispatcherManager.add(dispatcherClass);

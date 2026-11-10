@@ -182,13 +182,12 @@ public class TestInfos {
    */
   @CanIgnoreReturnValue
   synchronized TestInfos addAll(List<TestInfo> testInfos) {
-    testInfos.forEach(
-        testInfo -> {
-          TestLocator testLocator = testInfo.locator();
-          String testId = testLocator.getId();
-          testsById.put(testId, testInfo);
-          testsByName.put(testLocator.getName(), testInfo);
-        });
+    testInfos.forEach(testInfo -> {
+      TestLocator testLocator = testInfo.locator();
+      String testId = testLocator.getId();
+      testsById.put(testId, testInfo);
+      testsByName.put(testLocator.getName(), testInfo);
+    });
     return this;
   }
 

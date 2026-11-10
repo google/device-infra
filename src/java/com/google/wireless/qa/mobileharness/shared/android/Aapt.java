@@ -232,11 +232,10 @@ public class Aapt {
     return instrumentationEntryAttrs.stream()
         .filter(attr -> XMLTREE_INSTRUMENTATION_TARGET_PKG_PATTERN.matcher(attr).find())
         .findFirst()
-        .map(
-            attr -> {
-              Matcher matcher = XMLTREE_INSTRUMENTATION_TARGET_PKG_PATTERN.matcher(attr);
-              return matcher.find() ? matcher.group(1) : "";
-            });
+        .map(attr -> {
+          Matcher matcher = XMLTREE_INSTRUMENTATION_TARGET_PKG_PATTERN.matcher(attr);
+          return matcher.find() ? matcher.group(1) : "";
+        });
   }
 
   /**
@@ -251,11 +250,10 @@ public class Aapt {
     if (launchableActivity.isEmpty()) {
       launchableActivity = getApkLaunchableActivityNameWithXmlTree(apkPath);
     }
-    return launchableActivity.orElseThrow(
-        () ->
-            new MobileHarnessException(
-                AndroidErrorId.ANDROID_AAPT_GET_LAUNCHABLE_ACTIVITY_NAME_ERROR,
-                "Fail to find the launchable-activity name of " + apkPath));
+    return launchableActivity.orElseThrow(() ->
+        new MobileHarnessException(
+            AndroidErrorId.ANDROID_AAPT_GET_LAUNCHABLE_ACTIVITY_NAME_ERROR,
+            "Fail to find the launchable-activity name of " + apkPath));
   }
 
   /** Gets the version code of the given apk. */

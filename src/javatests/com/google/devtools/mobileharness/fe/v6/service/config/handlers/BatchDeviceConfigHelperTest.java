@@ -101,36 +101,29 @@ public final class BatchDeviceConfigHelperTest {
     int deviceCount = BatchDeviceConfigHelper.MAX_CONCURRENT_CALLS + 4;
     ImmutableList<DeviceTarget> targets =
         IntStream.range(0, deviceCount)
-            .mapToObj(
-                i ->
-                    DeviceTarget.newBuilder()
-                        .setDeviceId("dev" + i)
-                        .setHostName("host" + i)
-                        .build())
+            .mapToObj(i ->
+                DeviceTarget.newBuilder().setDeviceId("dev" + i).setHostName("host" + i).build())
             .collect(toImmutableList());
-    targets.forEach(
-        target ->
-            fleet.addDevice(
-                target.getDeviceId(),
-                target.getHostName(),
-                Optional.of(DeviceConfig.newBuilder().setUuid(target.getDeviceId()).build())));
+    targets.forEach(target ->
+        fleet.addDevice(
+            target.getDeviceId(),
+            target.getHostName(),
+            Optional.of(DeviceConfig.newBuilder().setUuid(target.getDeviceId()).build())));
     Map<String, SettableFuture<ConfigResult<LabConfig>>> pendingLabConfigs = new LinkedHashMap<>();
     when(configurationProvider.getLabConfig(anyString(), eq(SELF_UNIVERSE)))
-        .thenAnswer(
-            invocation -> {
-              SettableFuture<ConfigResult<LabConfig>> future = SettableFuture.create();
-              pendingLabConfigs.put(invocation.getArgument(0), future);
-              return future;
-            });
+        .thenAnswer(invocation -> {
+          SettableFuture<ConfigResult<LabConfig>> future = SettableFuture.create();
+          pendingLabConfigs.put(invocation.getArgument(0), future);
+          return future;
+        });
     Map<String, SettableFuture<Boolean>> pendingChecks = new LinkedHashMap<>();
     when(iamPermissionChecker.canConfigDevice(
             anyString(), any(DeviceConfig.class), eq(SELF_UNIVERSE)))
-        .thenAnswer(
-            invocation -> {
-              SettableFuture<Boolean> check = SettableFuture.create();
-              pendingChecks.put(invocation.getArgument(0), check);
-              return check;
-            });
+        .thenAnswer(invocation -> {
+          SettableFuture<Boolean> check = SettableFuture.create();
+          pendingChecks.put(invocation.getArgument(0), check);
+          return check;
+        });
 
     ListenableFuture<ImmutableList<DeviceEvaluation>> result =
         helper.evaluateDevices(targets, Optional.of("user1"));

@@ -119,14 +119,13 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
     // Get credential
     HttpRequestInitializer credential = getCredential(storageParams);
     return new Storage.Builder(new NetHttpTransport(), GsonFactory.getDefaultInstance(), credential)
-        .setHttpRequestInitializer(
-            request -> {
-              // Timeout should be large enough to fit bad network conditions. b/79751793,
-              // b/80438442, b/80443729.
-              credential.initialize(request);
-              request.setConnectTimeout((int) HTTP_CONNECT_TIMEOUT.toMillis());
-              request.setReadTimeout((int) HTTP_READ_TIMEOUT.toMillis());
-            })
+        .setHttpRequestInitializer(request -> {
+          // Timeout should be large enough to fit bad network conditions. b/79751793,
+          // b/80438442, b/80443729.
+          credential.initialize(request);
+          request.setConnectTimeout((int) HTTP_CONNECT_TIMEOUT.toMillis());
+          request.setReadTimeout((int) HTTP_READ_TIMEOUT.toMillis());
+        })
         .setApplicationName(storageParams.applicationName)
         .build();
   }
@@ -417,12 +416,11 @@ public class ApiaryBasedGcsUtil extends GcsUtil {
             if (live.getMetadata() != null) {
               // Keys are case-insensitive, so drop the stamp of an earlier renewal in any case.
               live.getMetadata()
-                  .forEach(
-                      (key, value) -> {
-                        if (!Ascii.equalsIgnoreCase(key, RENEWED_AT_METADATA_KEY)) {
-                          metadata.put(key, value);
-                        }
-                      });
+                  .forEach((key, value) -> {
+                    if (!Ascii.equalsIgnoreCase(key, RENEWED_AT_METADATA_KEY)) {
+                      metadata.put(key, value);
+                    }
+                  });
             }
             metadata.put(RENEWED_AT_METADATA_KEY, currentTime().toString());
             // The destination metadata replaces the source's, so copy what readers rely on. The

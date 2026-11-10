@@ -296,10 +296,9 @@ public class ProtoHelper {
             if (!fieldDescriptor.isRepeated()) {
               options
                   .getOnlyValue(name)
-                  .ifPresent(
-                      v ->
-                          builder.setField(
-                              fieldDescriptor, TimeUtils.toProtoDuration(Duration.parse(v))));
+                  .ifPresent(v ->
+                      builder.setField(
+                          fieldDescriptor, TimeUtils.toProtoDuration(Duration.parse(v))));
             }
           }
         }
@@ -313,10 +312,9 @@ public class ProtoHelper {
   private static String getUuid(Options options) throws DeviceActionException {
     return options
         .getOnlyValue(SERIAL_KEY)
-        .orElseThrow(
-            () ->
-                new DeviceActionException(
-                    "ID_NOT_FOUND", ErrorType.CUSTOMER_ISSUE, "Missing option for serial."));
+        .orElseThrow(() ->
+            new DeviceActionException(
+                "ID_NOT_FOUND", ErrorType.CUSTOMER_ISSUE, "Missing option for serial."));
   }
 
   private static ExtensionRegistry getExtensionRegistry(Command cmd) throws DeviceActionException {

@@ -101,11 +101,10 @@ public class ServerJobCreator extends XtsJobCreator {
               ? urlForWorkerResolve(sessionRequestInfo)
               : Optional.empty();
       findAndroidXtsZip =
-          findAndroidXtsZip.or(
-              () ->
-                  sessionRequestInfo.hasAndroidXtsZip()
-                      ? Optional.of(sessionRequestInfo.getAndroidXtsZip())
-                      : Optional.empty());
+          findAndroidXtsZip.or(() ->
+              sessionRequestInfo.hasAndroidXtsZip()
+                  ? Optional.of(sessionRequestInfo.getAndroidXtsZip())
+                  : Optional.empty());
       findAndroidXtsZip.ifPresent(url -> driverParams.put("android_xts_zip", url));
     }
     if (sessionRequestInfo.hasRemoteRunnerFilePathPrefix()
@@ -261,12 +260,11 @@ public class ServerJobCreator extends XtsJobCreator {
       throws MobileHarnessException {
     return previousResultLoader
         .getPrevSessionResultFilesBundle(retryResultDir)
-        .orElseThrow(
-            () ->
-                new MobileHarnessException(
-                    InfraErrorId.ATS_SERVER_RUN_RETRY_COMMAND_PREV_SESSION_MISS_RESULT_FILES,
-                    "Previous session misses test-record proto files and the test_result.xml file,"
-                        + " not able to retry it"));
+        .orElseThrow(() ->
+            new MobileHarnessException(
+                InfraErrorId.ATS_SERVER_RUN_RETRY_COMMAND_PREV_SESSION_MISS_RESULT_FILES,
+                "Previous session misses test-record proto files and the test_result.xml file,"
+                    + " not able to retry it"));
   }
 
   private ImmutableList<String> toAtsServerPaths(
@@ -280,11 +278,10 @@ public class ServerJobCreator extends XtsJobCreator {
     return paths.stream()
         .map(Path::toAbsolutePath)
         .map(Path::toString)
-        .map(
-            path ->
-                PathUtil.join(
-                    remoteRunnerFilePathPrefix,
-                    PathUtil.makeRelative(Flags.atsStoragePath.getNonNull(), path)))
+        .map(path ->
+            PathUtil.join(
+                remoteRunnerFilePathPrefix,
+                PathUtil.makeRelative(Flags.atsStoragePath.getNonNull(), path)))
         .collect(toImmutableList());
   }
 
@@ -317,10 +314,9 @@ public class ServerJobCreator extends XtsJobCreator {
       TestEnvironment testEnvironment = sessionRequestInfo.getAtsServerTestEnvironment();
       ImmutableList<DeviceActionConfigObject> resultReporters =
           testEnvironment.getDeviceActionConfigObjectsList().stream()
-              .filter(
-                  deviceActionConfigObject ->
-                      deviceActionConfigObject.getType()
-                          == DeviceActionConfigObject.DeviceActionConfigObjectType.RESULT_REPORTER)
+              .filter(deviceActionConfigObject ->
+                  deviceActionConfigObject.getType()
+                      == DeviceActionConfigObject.DeviceActionConfigObjectType.RESULT_REPORTER)
               .collect(toImmutableList());
       TestEnvironment updatedTestEnvironment =
           testEnvironment.toBuilder()

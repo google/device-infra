@@ -200,7 +200,7 @@ public class VerifierResultHelper {
       List<Path> reportLogs =
           localFileUtil.listFilesOrDirs(
               resultDir.toAbsolutePath(),
-              (file) -> REPORT_LOGS.contains(file.getFileName().toString()));
+              file -> REPORT_LOGS.contains(file.getFileName().toString()));
       for (Path reportLog : reportLogs) {
         if (reportLog.toFile().isFile()) {
           reportLogFilesBuilder.add(reportLog);

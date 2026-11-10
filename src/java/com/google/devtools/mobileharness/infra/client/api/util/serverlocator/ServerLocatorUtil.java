@@ -60,11 +60,8 @@ public final class ServerLocatorUtil {
       return jobInfo
           .params()
           .getOptional(JobInfo.PARAM_MASTER_LOCAL_GRPC_TARGET)
-          .map(
-              s ->
-                  ServerLocator.newBuilder()
-                      .setGrpcServerLocator(parseGrpcServerLocator(s))
-                      .build());
+          .map(s ->
+              ServerLocator.newBuilder().setGrpcServerLocator(parseGrpcServerLocator(s)).build());
     }
   }
 

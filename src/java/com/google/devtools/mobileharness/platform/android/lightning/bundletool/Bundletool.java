@@ -61,21 +61,19 @@ public class Bundletool {
 
   /** Singleton supplier of the unpacked bundletool path. */
   private static final Supplier<Path> UNPACKED_BUNDLETOOL_PATH_SUPPLIER =
-      Suppliers.memoize(
-          () -> {
-            logger.atInfo().log("Initializing bundetool %s", shortDebugCurrentStackTrace(0L));
-            ResUtil resUtil = new ResUtil();
-            try {
-              Optional<String> externalFile =
-                  resUtil.getExternalResourceFile(BUNDLETOOL_RESOURCE_PATH);
-              if (externalFile.isPresent()) {
-                return Path.of(externalFile.get());
-              }
-              return Path.of(resUtil.getResourceFile(Bundletool.class, BUNDLETOOL_RESOURCE_PATH));
-            } catch (MobileHarnessException e) {
-              throw new IllegalStateException("Failed to initialize bundletool.", e);
-            }
-          });
+      Suppliers.memoize(() -> {
+        logger.atInfo().log("Initializing bundetool %s", shortDebugCurrentStackTrace(0L));
+        ResUtil resUtil = new ResUtil();
+        try {
+          Optional<String> externalFile = resUtil.getExternalResourceFile(BUNDLETOOL_RESOURCE_PATH);
+          if (externalFile.isPresent()) {
+            return Path.of(externalFile.get());
+          }
+          return Path.of(resUtil.getResourceFile(Bundletool.class, BUNDLETOOL_RESOURCE_PATH));
+        } catch (MobileHarnessException e) {
+          throw new IllegalStateException("Failed to initialize bundletool.", e);
+        }
+      });
 
   private final SystemUtil systemUtil;
   private final Adb adb;

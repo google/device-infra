@@ -61,13 +61,11 @@ public class AllocatedDeviceProvider implements DeviceProvider {
             .filter(d -> d.getName().equals("device_class_name"))
             .findFirst()
             .map(DeviceDimension::getValue)
-            .orElseThrow(
-                () ->
-                    new MobileHarnessException(
-                        InfraErrorId.LAB_DEVICE_PROVIDER_GET_DEVICE_ERROR,
-                        String.format(
-                            "Dimension 'device_class_name' missing from DeviceFeature:\n%s",
-                            feature)));
+            .orElseThrow(() ->
+                new MobileHarnessException(
+                    InfraErrorId.LAB_DEVICE_PROVIDER_GET_DEVICE_ERROR,
+                    String.format(
+                        "Dimension 'device_class_name' missing from DeviceFeature:\n%s", feature)));
     Class<? extends Device> deviceClass = ClassUtil.getDeviceClass(deviceClassName);
     DeviceInfo isolatedInfo = LiteDeviceInfoFactory.create(deviceId);
     feature

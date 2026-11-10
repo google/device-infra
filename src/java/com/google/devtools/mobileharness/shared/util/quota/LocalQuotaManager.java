@@ -55,28 +55,25 @@ class LocalQuotaManager extends QuotaManager {
 
   @Keep
   LocalQuotaManager() {
-    this(
-        () ->
-            ImmutableMap.of(
-                QuotaKey.ADB_PUSH_LARGE_FILE,
-                Flags.maxConcurrentAdbPushLargeFile.getNonNull(),
-                QuotaKey.UNZIP_LARGE_FILE,
-                Flags.maxConcurrentUnzipLargeFile.getNonNull(),
-                QuotaKey.FASTBOOT_FLASH_DEVICE,
-                Flags.maxConcurrentFlashDevice.getNonNull(),
-                QuotaKey.TF_CONTAINER_INSTANCE,
-                1));
+    this(() ->
+        ImmutableMap.of(
+            QuotaKey.ADB_PUSH_LARGE_FILE,
+            Flags.maxConcurrentAdbPushLargeFile.getNonNull(),
+            QuotaKey.UNZIP_LARGE_FILE,
+            Flags.maxConcurrentUnzipLargeFile.getNonNull(),
+            QuotaKey.FASTBOOT_FLASH_DEVICE,
+            Flags.maxConcurrentFlashDevice.getNonNull(),
+            QuotaKey.TF_CONTAINER_INSTANCE,
+            1));
   }
 
   @VisibleForTesting
   LocalQuotaManager(Supplier<Map<QuotaKey, Integer>> quotasSupplier) {
     this.semaphoresSupplier =
-        Suppliers.memoize(
-            () ->
-                quotasSupplier.get().entrySet().stream()
-                    .collect(
-                        ImmutableMap.toImmutableMap(
-                            Entry::getKey, e -> new Semaphore(e.getValue()))));
+        Suppliers.memoize(() ->
+            quotasSupplier.get().entrySet().stream()
+                .collect(
+                    ImmutableMap.toImmutableMap(Entry::getKey, e -> new Semaphore(e.getValue()))));
   }
 
   @Override

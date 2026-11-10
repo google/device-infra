@@ -104,16 +104,15 @@ public final class DeviceInfoLookupHelper {
         .getDeviceInfoList()
         .stream()
         .findFirst()
-        .orElseThrow(
-            () ->
-                new RuntimeException(
-                    "Device not found: "
-                        + deviceId
-                        + " in universe: "
-                        // TODO: Add a toString() method to UniverseScope to avoid this
-                        // pattern.
-                        + (universe instanceof UniverseScope.RoutedUniverse routed
-                            ? routed.atsControllerId()
-                            : "self")));
+        .orElseThrow(() ->
+            new RuntimeException(
+                "Device not found: "
+                    + deviceId
+                    + " in universe: "
+                    // TODO: Add a toString() method to UniverseScope to avoid this
+                    // pattern.
+                    + (universe instanceof UniverseScope.RoutedUniverse routed
+                        ? routed.atsControllerId()
+                        : "self")));
   }
 }

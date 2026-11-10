@@ -65,10 +65,8 @@ public class DeviceInfo extends DeviceScheduleUnit {
                     .orElseThrow(
                         () -> new IllegalArgumentException("Device info does not include host IP")),
                 getDimensionValue(deviceInfo, Name.HOST_NAME)
-                    .orElseThrow(
-                        () ->
-                            new IllegalArgumentException(
-                                "Device info does not include host name")))),
+                    .orElseThrow(() ->
+                        new IllegalArgumentException("Device info does not include host name")))),
         DeviceStatus.valueOf(Ascii.toUpperCase(deviceInfo.getStatus())),
         deviceInfo.getDeviceErrorFromLabList());
     types().addAll(deviceInfo.getTypeList());
@@ -78,10 +76,9 @@ public class DeviceInfo extends DeviceScheduleUnit {
     executors().addAll(deviceInfo.getExecutorList());
     deviceInfo
         .getDimensionList()
-        .forEach(
-            dimension ->
-                (dimension.getRequired() ? dimensions().required() : dimensions().supported())
-                    .add(dimension.getName(), dimension.getValue()));
+        .forEach(dimension ->
+            (dimension.getRequired() ? dimensions().required() : dimensions().supported())
+                .add(dimension.getName(), dimension.getValue()));
   }
 
   /** Device status. */

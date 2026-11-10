@@ -36,40 +36,35 @@ public class DeviceInfoFilter implements Predicate<DeviceInfo> {
   @Override
   public boolean test(DeviceInfo deviceInfo) {
     return deviceQueryFilter.getOwnerRegexList().stream()
-            .allMatch(
-                ownerRegex ->
-                    matchAttribute(
-                        ownerRegex,
-                        deviceInfo.getOwnerList().isEmpty()
-                                && deviceInfo.getExecutorList().isEmpty()
-                            ? Stream.of("public")
-                            // TODO: we should consider a better support for query with
-                            // executor.
-                            : Stream.concat(
-                                deviceInfo.getOwnerList().stream(),
-                                deviceInfo.getExecutorList().stream())))
+            .allMatch(ownerRegex ->
+                matchAttribute(
+                    ownerRegex,
+                    deviceInfo.getOwnerList().isEmpty() && deviceInfo.getExecutorList().isEmpty()
+                        ? Stream.of("public")
+                        // TODO: we should consider a better support for query with
+                        // executor.
+                        : Stream.concat(
+                            deviceInfo.getOwnerList().stream(),
+                            deviceInfo.getExecutorList().stream())))
         && deviceQueryFilter.getTypeRegexList().stream()
             .allMatch(typeRegex -> matchAttribute(typeRegex, deviceInfo.getTypeList().stream()))
         && deviceQueryFilter.getDriverRegexList().stream()
             .allMatch(
                 driverRegex -> matchAttribute(driverRegex, deviceInfo.getDriverList().stream()))
         && deviceQueryFilter.getDecoratorRegexList().stream()
-            .allMatch(
-                decoratorRegex ->
-                    matchAttribute(decoratorRegex, deviceInfo.getDecoratorList().stream()))
+            .allMatch(decoratorRegex ->
+                matchAttribute(decoratorRegex, deviceInfo.getDecoratorList().stream()))
         && (deviceQueryFilter.getStatusList().isEmpty()
             || deviceQueryFilter.getStatusList().stream()
                 .anyMatch(status -> Ascii.equalsIgnoreCase(status, deviceInfo.getStatus())))
         && deviceQueryFilter.getDimensionFilterList().stream()
-            .allMatch(
-                dimensionFilter ->
-                    matchAttribute(
-                        dimensionFilter.getValueRegex(),
-                        deviceInfo.getDimensionList().stream()
-                            .filter(
-                                deviceDimension ->
-                                    deviceDimension.getName().equals(dimensionFilter.getName()))
-                            .map(Dimension::getValue)));
+            .allMatch(dimensionFilter ->
+                matchAttribute(
+                    dimensionFilter.getValueRegex(),
+                    deviceInfo.getDimensionList().stream()
+                        .filter(deviceDimension ->
+                            deviceDimension.getName().equals(dimensionFilter.getName()))
+                        .map(Dimension::getValue)));
   }
 
   private static boolean matchAttribute(String attributeRegex, Stream<String> attributes) {

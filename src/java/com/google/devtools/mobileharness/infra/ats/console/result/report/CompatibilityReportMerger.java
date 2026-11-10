@@ -109,10 +109,9 @@ public class CompatibilityReportMerger {
       throws MobileHarnessException, InterruptedException {
     return mergeResultBundles(
             reportXmlFiles.stream()
-                .map(
-                    reportXmlFile ->
-                        TradefedResultBundle.of(
-                            reportXmlFile, Optional.empty(), /* modules= */ ImmutableList.of()))
+                .map(reportXmlFile ->
+                    TradefedResultBundle.of(
+                        reportXmlFile, Optional.empty(), /* modules= */ ImmutableList.of()))
                 .collect(toImmutableList()),
             skipDeviceInfo)
         .report();
@@ -341,11 +340,9 @@ public class CompatibilityReportMerger {
     logger.atInfo().log("Found %d duplicated test cases: %s", tests.size(), tests.get(0).getName());
     Optional<Test> passTest =
         tests.stream()
-            .filter(
-                test ->
-                    test.getResult()
-                        .equals(
-                            TestStatus.convertToTestStatusCompatibilityString(TestStatus.PASSED)))
+            .filter(test ->
+                test.getResult()
+                    .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.PASSED)))
             .findFirst();
     if (passTest.isPresent()) {
       return passTest;
@@ -388,40 +385,38 @@ public class CompatibilityReportMerger {
     LinkedHashSet<String> deviceSerials = new LinkedHashSet<>();
     LinkedHashMap<String, String> newAttrs =
         new LinkedHashMap<>(); // Use LinkedHashMap to keep entry order
-    reports.forEach(
-        report -> {
-          List<Attribute> resultAttrsList = report.getAttributeList();
-          Map<String, String> attrsMap = new LinkedHashMap<>();
-          for (Attribute attr : resultAttrsList) {
-            attrsMap.putIfAbsent(attr.getKey(), attr.getValue());
-          }
+    reports.forEach(report -> {
+      List<Attribute> resultAttrsList = report.getAttributeList();
+      Map<String, String> attrsMap = new LinkedHashMap<>();
+      for (Attribute attr : resultAttrsList) {
+        attrsMap.putIfAbsent(attr.getKey(), attr.getValue());
+      }
 
-          for (Attribute attr : resultAttrsList) {
-            newAttrs.putIfAbsent(attr.getKey(), attr.getValue());
-            if (Objects.equals(attr.getKey(), XmlConstants.START_TIME_ATTR)) {
-              Long currentStartTime = Longs.tryParse(attr.getValue().trim());
-              if ((startTime.get() == null && currentStartTime != null)
-                  || (currentStartTime != null && currentStartTime < startTime.get())) {
-                startTime.set(currentStartTime);
-                startTimeDisplay.set(
-                    attrsMap.getOrDefault(XmlConstants.START_DISPLAY_TIME_ATTR, ""));
-              }
-            } else if (Objects.equals(attr.getKey(), XmlConstants.END_TIME_ATTR)) {
-              Long currentEndTime = Longs.tryParse(attr.getValue().trim());
-              if ((endTime.get() == null && currentEndTime != null)
-                  || (currentEndTime != null && currentEndTime > endTime.get())) {
-                endTime.set(currentEndTime);
-                endTimeDisplay.set(attrsMap.getOrDefault(XmlConstants.END_DISPLAY_TIME_ATTR, ""));
-              }
-            } else if (Objects.equals(attr.getKey(), XmlConstants.DEVICES_ATTR)) {
-              deviceSerials.addAll(
-                  Splitter.on(',')
-                      .omitEmptyStrings()
-                      .trimResults()
-                      .splitToList(attr.getValue().trim()));
-            }
+      for (Attribute attr : resultAttrsList) {
+        newAttrs.putIfAbsent(attr.getKey(), attr.getValue());
+        if (Objects.equals(attr.getKey(), XmlConstants.START_TIME_ATTR)) {
+          Long currentStartTime = Longs.tryParse(attr.getValue().trim());
+          if ((startTime.get() == null && currentStartTime != null)
+              || (currentStartTime != null && currentStartTime < startTime.get())) {
+            startTime.set(currentStartTime);
+            startTimeDisplay.set(attrsMap.getOrDefault(XmlConstants.START_DISPLAY_TIME_ATTR, ""));
           }
-        });
+        } else if (Objects.equals(attr.getKey(), XmlConstants.END_TIME_ATTR)) {
+          Long currentEndTime = Longs.tryParse(attr.getValue().trim());
+          if ((endTime.get() == null && currentEndTime != null)
+              || (currentEndTime != null && currentEndTime > endTime.get())) {
+            endTime.set(currentEndTime);
+            endTimeDisplay.set(attrsMap.getOrDefault(XmlConstants.END_DISPLAY_TIME_ATTR, ""));
+          }
+        } else if (Objects.equals(attr.getKey(), XmlConstants.DEVICES_ATTR)) {
+          deviceSerials.addAll(
+              Splitter.on(',')
+                  .omitEmptyStrings()
+                  .trimResults()
+                  .splitToList(attr.getValue().trim()));
+        }
+      }
+    });
     // Now update values for attributes start, end, start_display, end_display, command_line_args,
     // and devices.
     newAttrs.put(
@@ -451,12 +446,11 @@ public class CompatibilityReportMerger {
             .orElse(BuildInfo.getDefaultInstance());
     ImmutableList<Attribute> attrs =
         buildInfo.getAttributeList().stream()
-            .filter(
-                attr ->
-                    attr.getKey().startsWith("build_")
-                        || attr.getKey().startsWith("csr_")
-                        || attr.getKey().endsWith(".root_of_trust.verified_boot_hash")
-                        || EXTRA_BUILD_INFO_ATTR_TO_KEPT.contains(attr.getKey()))
+            .filter(attr ->
+                attr.getKey().startsWith("build_")
+                    || attr.getKey().startsWith("csr_")
+                    || attr.getKey().endsWith(".root_of_trust.verified_boot_hash")
+                    || EXTRA_BUILD_INFO_ATTR_TO_KEPT.contains(attr.getKey()))
             .collect(toImmutableList());
 
     return buildInfo.toBuilder().clearAttribute().addAllAttribute(attrs).build();
@@ -549,11 +543,10 @@ public class CompatibilityReportMerger {
     logger.atInfo().log(
         "Start to parse result bundle files:\n - %s",
         resultBundles.stream()
-            .map(
-                bundle ->
-                    String.format(
-                        "Test result XML: %s, Test record file: %s",
-                        bundle.xmlReportFile(), bundle.testRecordFile()))
+            .map(bundle ->
+                String.format(
+                    "Test result XML: %s, Test record file: %s",
+                    bundle.xmlReportFile(), bundle.testRecordFile()))
             .collect(joining(",\n - ")));
     resultBundles.forEach(bundle -> parseReportFutures.add(parseResultBundleAsync(bundle)));
     return Futures.allAsList(parseReportFutures);
@@ -615,15 +608,14 @@ public class CompatibilityReportMerger {
     return result.toBuilder()
         .addAllModuleInfo(
             modules.stream()
-                .map(
-                    module ->
-                        Module.newBuilder()
-                            .setName(module.name())
-                            .setAbi(module.abi())
-                            .setDone(false)
-                            .setPassed(0)
-                            .setTotalTests(0)
-                            .build())
+                .map(module ->
+                    Module.newBuilder()
+                        .setName(module.name())
+                        .setAbi(module.abi())
+                        .setDone(false)
+                        .setPassed(0)
+                        .setTotalTests(0)
+                        .build())
                 .collect(toImmutableList()))
         .build();
   }
@@ -691,14 +683,11 @@ public class CompatibilityReportMerger {
         .collect(Collectors.groupingBy(TestRecord::getTestRecordId))
         .entrySet()
         .stream()
-        .filter(
-            entry ->
-                entry.getValue().stream()
-                    .allMatch(
-                        moduleRecord ->
-                            // Module is skipped if all test records has no children and no failure.
-                            moduleRecord.getChildrenList().isEmpty()
-                                && !moduleRecord.hasDebugInfo()))
+        .filter(entry ->
+            entry.getValue().stream()
+                .allMatch(moduleRecord ->
+                    // Module is skipped if all test records has no children and no failure.
+                    moduleRecord.getChildrenList().isEmpty() && !moduleRecord.hasDebugInfo()))
         .map(Map.Entry::getKey)
         .collect(toImmutableSet());
   }

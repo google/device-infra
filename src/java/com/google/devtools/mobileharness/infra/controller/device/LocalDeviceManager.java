@@ -151,67 +151,64 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
     // Starts multiple threads for each detector.
     ListeningExecutorService detectorThreadPool =
         ThreadPools.createStandardThreadPool("detector-thread-pool");
-    detectors.forEach(
-        detector -> {
-          String detectorName = detector.getClass().getSimpleName();
-          logFailure(
-              detectorThreadPool.submit(
-                  threadRenaming(
-                      () -> {
-                        Duration detectDeviceInterval =
-                            Duration.ofSeconds(Flags.detectDeviceIntervalSec.getNonNull());
-                        // Use the detector's detection interval if specified, otherwise, use the
-                        // global interval instead.
-                        Optional<Duration> detectionIntervalPerDetector =
-                            detector.getDetectionInterval();
-                        if (detectionIntervalPerDetector.isPresent()) {
-                          detectDeviceInterval = detectionIntervalPerDetector.get();
+    detectors.forEach(detector -> {
+      String detectorName = detector.getClass().getSimpleName();
+      logFailure(
+          detectorThreadPool.submit(
+              threadRenaming(
+                  () -> {
+                    Duration detectDeviceInterval =
+                        Duration.ofSeconds(Flags.detectDeviceIntervalSec.getNonNull());
+                    // Use the detector's detection interval if specified, otherwise, use the
+                    // global interval instead.
+                    Optional<Duration> detectionIntervalPerDetector =
+                        detector.getDetectionInterval();
+                    if (detectionIntervalPerDetector.isPresent()) {
+                      detectDeviceInterval = detectionIntervalPerDetector.get();
+                    }
+                    while (!Thread.currentThread().isInterrupted()) {
+                      try {
+                        Sleeper.defaultSleeper().sleep(detectDeviceInterval);
+                        detectionResultCache.put(detectorName, detector.detectDevices());
+                        deviceDetectionConsecutiveFailureRounds.put(detectorName, 0);
+                      } catch (MobileHarnessException e) {
+                        int consecutiveFailureRounds =
+                            deviceDetectionConsecutiveFailureRounds.getOrDefault(detectorName, 0)
+                                + 1;
+                        deviceDetectionConsecutiveFailureRounds.put(
+                            detectorName, consecutiveFailureRounds);
+                        if (consecutiveFailureRounds
+                                % MAX_DEVICE_DETECTION_CONSECUTIVE_FAILURE_ROUNDS
+                            == 0) {
+                          detectionResultCache.remove(detectorName);
+                          logger.atSevere().withCause(e).log(
+                              "The %s failed to detect device for %s consecutive rounds",
+                              detectorName, consecutiveFailureRounds);
+                        } else {
+                          logger.atSevere().atMostEvery(1, MINUTES).withCause(e).log(
+                              "The %s failed to detect devices", detectorName);
                         }
-                        while (!Thread.currentThread().isInterrupted()) {
-                          try {
-                            Sleeper.defaultSleeper().sleep(detectDeviceInterval);
-                            detectionResultCache.put(detectorName, detector.detectDevices());
-                            deviceDetectionConsecutiveFailureRounds.put(detectorName, 0);
-                          } catch (MobileHarnessException e) {
-                            int consecutiveFailureRounds =
-                                deviceDetectionConsecutiveFailureRounds.getOrDefault(
-                                        detectorName, 0)
-                                    + 1;
-                            deviceDetectionConsecutiveFailureRounds.put(
-                                detectorName, consecutiveFailureRounds);
-                            if (consecutiveFailureRounds
-                                    % MAX_DEVICE_DETECTION_CONSECUTIVE_FAILURE_ROUNDS
-                                == 0) {
-                              detectionResultCache.remove(detectorName);
-                              logger.atSevere().withCause(e).log(
-                                  "The %s failed to detect device for %s consecutive rounds",
-                                  detectorName, consecutiveFailureRounds);
-                            } else {
-                              logger.atSevere().atMostEvery(1, MINUTES).withCause(e).log(
-                                  "The %s failed to detect devices", detectorName);
-                            }
-                          } catch (InterruptedException e) {
-                            logger.atInfo().log("Interrupted: %s", e.getMessage());
-                            break;
-                          } catch (
-                              @SuppressWarnings("CatchingUnchecked")
-                              RuntimeException e) {
-                            // Catches all exception to make sure this detector thread won't
-                            // be stopped.
-                            // Otherwise, no device can be detected.
-                            logger.atSevere().withCause(e).log("FATAL ERROR");
-                            if (!keepGoing) {
-                              break;
-                            }
-                          }
+                      } catch (InterruptedException e) {
+                        logger.atInfo().log("Interrupted: %s", e.getMessage());
+                        break;
+                      } catch (
+                          @SuppressWarnings("CatchingUnchecked")
+                          RuntimeException e) {
+                        // Catches all exception to make sure this detector thread won't
+                        // be stopped.
+                        // Otherwise, no device can be detected.
+                        logger.atSevere().withCause(e).log("FATAL ERROR");
+                        if (!keepGoing) {
+                          break;
                         }
-                        logger.atWarning().log(
-                            "Current thread for %s is interrupted.", detectorName);
-                      },
-                      () -> "detector-thread-" + detectorName)),
-              Level.SEVERE,
-              "Fatal error in detector");
-        });
+                      }
+                    }
+                    logger.atWarning().log("Current thread for %s is interrupted.", detectorName);
+                  },
+                  () -> "detector-thread-" + detectorName)),
+          Level.SEVERE,
+          "Fatal error in detector");
+    });
     while (!Thread.currentThread().isInterrupted()) {
       try {
         Sleeper.defaultSleeper().sleep(Flags.dispatchDeviceInterval.getNonNull());
@@ -353,20 +350,18 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
     // This will only impact device status report back to Master.
     deviceStatusMap
         .entrySet()
-        .forEach(
-            entry -> {
-              if (entry.getValue().getDeviceStatusWithTimestamp().getStatus()
-                  == DeviceStatus.IDLE) {
-                entry.setValue(
-                    DeviceStatusInfo.newBuilder()
-                        .setDeviceStatusWithTimestamp(
-                            DeviceStatusWithTimestamp.newBuilder(
-                                    entry.getValue().getDeviceStatusWithTimestamp())
-                                .setStatus(DeviceStatus.LAMEDUCK)
-                                .build())
-                        .build());
-              }
-            });
+        .forEach(entry -> {
+          if (entry.getValue().getDeviceStatusWithTimestamp().getStatus() == DeviceStatus.IDLE) {
+            entry.setValue(
+                DeviceStatusInfo.newBuilder()
+                    .setDeviceStatusWithTimestamp(
+                        DeviceStatusWithTimestamp.newBuilder(
+                                entry.getValue().getDeviceStatusWithTimestamp())
+                            .setStatus(DeviceStatus.LAMEDUCK)
+                            .build())
+                    .build());
+          }
+        });
     return deviceStatusMap;
   }
 

@@ -30,12 +30,11 @@ public final class HostVersionUtil {
   public static Optional<String> resolveCurrentVersion(
       Optional<LabInfo> labInfoOpt, Optional<HostReleaseInfo> hostReleaseInfoOpt) {
     Optional<String> propertyVersionOpt =
-        labInfoOpt.flatMap(
-            labInfo ->
-                labInfo.getLabServerFeature().getHostProperties().getHostPropertyList().stream()
-                    .filter(p -> p.getKey().equals("host_version"))
-                    .map(HostProperty::getValue)
-                    .findFirst());
+        labInfoOpt.flatMap(labInfo ->
+            labInfo.getLabServerFeature().getHostProperties().getHostPropertyList().stream()
+                .filter(p -> p.getKey().equals("host_version"))
+                .map(HostProperty::getValue)
+                .findFirst());
 
     if (propertyVersionOpt.isPresent()) {
       return propertyVersionOpt;

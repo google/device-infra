@@ -125,11 +125,10 @@ public final class OtaSideloaderTest {
   public void sideload_acquireQuotaTimeout(@TestParameter boolean autoReboot) throws Exception {
     // 1000 millis < 1500 millis < timeout (1000) + 1000 millis
     when(mockManager.acquire(any(), anyInt()))
-        .thenAnswer(
-            invocation -> {
-              Thread.sleep(1500);
-              return lease;
-            });
+        .thenAnswer(invocation -> {
+          Thread.sleep(1500);
+          return lease;
+        });
 
     DeviceActionException t =
         assertThrows(
@@ -145,11 +144,10 @@ public final class OtaSideloaderTest {
       throws Exception {
     // 2000 millis > timeout (500) + 1000 millis
     when(mockManager.acquire(any(), anyInt()))
-        .thenAnswer(
-            invocation -> {
-              Thread.sleep(2000);
-              return lease;
-            });
+        .thenAnswer(invocation -> {
+          Thread.sleep(2000);
+          return lease;
+        });
 
     DeviceActionException t =
         assertThrows(

@@ -225,11 +225,10 @@ public class RetryReportMerger {
               .clearModuleInfo()
               .addAllModuleInfo(
                   moduleBuildersFromPrevSession.stream()
-                      .map(
-                          moduleBuilder -> {
-                            markTestsInModuleCached(moduleBuilder);
-                            return moduleBuilder.build();
-                          })
+                      .map(moduleBuilder -> {
+                        markTestsInModuleCached(moduleBuilder);
+                        return moduleBuilder.build();
+                      })
                       .collect(toImmutableList()));
       addRunHistoryForRetry(mergedResult, previousResult);
       return mergedResult.build();
@@ -381,24 +380,21 @@ public class RetryReportMerger {
   private void markTestsInModuleCached(Module.Builder moduleBuilder) {
     moduleBuilder
         .getTestCaseBuilderList()
-        .forEach(
-            testCaseBuilder ->
-                testCaseBuilder
-                    .getTestBuilderList()
-                    .forEach(
-                        testBuilder -> {
-                          boolean isCached =
-                              testBuilder.getMetricList().stream()
-                                  .anyMatch(
-                                      metric ->
-                                          metric.getKey().equals(XmlConstants.METRIC_CACHED_KEY));
-                          if (!isCached) {
-                            testBuilder.addMetric(
-                                Metric.newBuilder()
-                                    .setKey(XmlConstants.METRIC_CACHED_KEY)
-                                    .setContent("true"));
-                          }
-                        }));
+        .forEach(testCaseBuilder ->
+            testCaseBuilder
+                .getTestBuilderList()
+                .forEach(testBuilder -> {
+                  boolean isCached =
+                      testBuilder.getMetricList().stream()
+                          .anyMatch(
+                              metric -> metric.getKey().equals(XmlConstants.METRIC_CACHED_KEY));
+                  if (!isCached) {
+                    testBuilder.addMetric(
+                        Metric.newBuilder()
+                            .setKey(XmlConstants.METRIC_CACHED_KEY)
+                            .setContent("true"));
+                  }
+                }));
   }
 
   private Module doMergeModule(
@@ -454,14 +450,13 @@ public class RetryReportMerger {
 
     if (Flags.xtsRetryReportMergerParallelTestCaseMerge.getNonNull()) {
       moduleFromPrevSession.getTestCaseList().parallelStream()
-          .map(
-              testCaseFromPrevSession ->
-                  createMergedTestCase(
-                      moduleId,
-                      testCaseFromPrevSession,
-                      testCasesFromRetry,
-                      excludedTestCaseNamesAndTestNamesInRetry.getOrDefault(
-                          testCaseFromPrevSession.getName(), ImmutableSet.of())))
+          .map(testCaseFromPrevSession ->
+              createMergedTestCase(
+                  moduleId,
+                  testCaseFromPrevSession,
+                  testCasesFromRetry,
+                  excludedTestCaseNamesAndTestNamesInRetry.getOrDefault(
+                      testCaseFromPrevSession.getName(), ImmutableSet.of())))
           .forEachOrdered(mergedModuleBuilder::addTestCase);
     } else {
       for (TestCase testCaseFromPrevSession : moduleFromPrevSession.getTestCaseList()) {
@@ -531,18 +526,15 @@ public class RetryReportMerger {
       TestCase.Builder testCaseBuilder = testCaseFromPrevSession.toBuilder();
       testCaseBuilder
           .getTestBuilderList()
-          .forEach(
-              testBuilder -> {
-                boolean isCached =
-                    testBuilder.getMetricList().stream()
-                        .anyMatch(metric -> metric.getKey().equals(XmlConstants.METRIC_CACHED_KEY));
-                if (!isCached) {
-                  testBuilder.addMetric(
-                      Metric.newBuilder()
-                          .setKey(XmlConstants.METRIC_CACHED_KEY)
-                          .setContent("true"));
-                }
-              });
+          .forEach(testBuilder -> {
+            boolean isCached =
+                testBuilder.getMetricList().stream()
+                    .anyMatch(metric -> metric.getKey().equals(XmlConstants.METRIC_CACHED_KEY));
+            if (!isCached) {
+              testBuilder.addMetric(
+                  Metric.newBuilder().setKey(XmlConstants.METRIC_CACHED_KEY).setContent("true"));
+            }
+          });
       return testCaseBuilder.build();
     }
 
@@ -661,9 +653,8 @@ public class RetryReportMerger {
         .forEach(attr -> mergedAttributes.put(attr.getKey(), attr.getValue()));
 
     mergedBuild.clearAttribute();
-    mergedAttributes.forEach(
-        (key, value) ->
-            mergedBuild.addAttribute(Attribute.newBuilder().setKey(key).setValue(value).build()));
+    mergedAttributes.forEach((key, value) ->
+        mergedBuild.addAttribute(Attribute.newBuilder().setKey(key).setValue(value).build()));
 
     return mergedBuild.build();
   }

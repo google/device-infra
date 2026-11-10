@@ -226,10 +226,8 @@ class ListCommand implements Callable<Integer> {
     return planConfigInfosByConfigName.entrySet().stream()
         .sorted(comparingByKey())
         .map(Entry::getValue)
-        .map(
-            planConfigInfo ->
-                String.format(
-                    "\n  %s: %s", planConfigInfo.configName(), planConfigInfo.description()))
+        .map(planConfigInfo ->
+            String.format("\n  %s: %s", planConfigInfo.configName(), planConfigInfo.description()))
         .collect(joining("", "Available plans include:", ""));
   }
 }

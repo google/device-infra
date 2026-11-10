@@ -41,23 +41,21 @@ public class DeviceInfoUtil {
         .addAllDecorator(deviceFeature.getDecoratorList())
         .addAllDimension(
             deviceFeature.getCompositeDimension().getSupportedDimensionList().stream()
-                .map(
-                    dimension ->
-                        Dimension.newBuilder()
-                            .setRequired(false)
-                            .setName(dimension.getName())
-                            .setValue(dimension.getValue())
-                            .build())
+                .map(dimension ->
+                    Dimension.newBuilder()
+                        .setRequired(false)
+                        .setName(dimension.getName())
+                        .setValue(dimension.getValue())
+                        .build())
                 .collect(toImmutableList()))
         .addAllDimension(
             deviceFeature.getCompositeDimension().getRequiredDimensionList().stream()
-                .map(
-                    dimension ->
-                        Dimension.newBuilder()
-                            .setRequired(true)
-                            .setName(dimension.getName())
-                            .setValue(dimension.getValue())
-                            .build())
+                .map(dimension ->
+                    Dimension.newBuilder()
+                        .setRequired(true)
+                        .setName(dimension.getName())
+                        .setValue(dimension.getValue())
+                        .build())
                 .collect(toImmutableList()))
         .setJobId(testInfo.jobInfo().locator().getId())
         .setJobName(testInfo.jobInfo().locator().getName())

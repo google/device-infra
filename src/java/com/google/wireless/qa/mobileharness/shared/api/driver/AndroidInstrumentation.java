@@ -1009,21 +1009,20 @@ public class AndroidInstrumentation extends BaseDriver
       }
       optionMap
           .entrySet()
-          .removeIf(
-              entry -> {
-                String key = entry.getKey();
-                if (TEST_TARGET_KEYS.contains(key) || TEST_FILTER_KEYS.contains(key)) {
-                  testInfo
-                      .log()
-                      .atInfo()
-                      .alsoTo(logger)
-                      .log(
-                          "Removed test target/filter key %s (value = %s) from option map.",
-                          key, entry.getValue());
-                  return true;
-                }
-                return false;
-              });
+          .removeIf(entry -> {
+            String key = entry.getKey();
+            if (TEST_TARGET_KEYS.contains(key) || TEST_FILTER_KEYS.contains(key)) {
+              testInfo
+                  .log()
+                  .atInfo()
+                  .alsoTo(logger)
+                  .log(
+                      "Removed test target/filter key %s (value = %s) from option map.",
+                      key, entry.getValue());
+              return true;
+            }
+            return false;
+          });
     }
   }
 

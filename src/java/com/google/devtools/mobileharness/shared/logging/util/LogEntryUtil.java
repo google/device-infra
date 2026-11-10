@@ -104,18 +104,17 @@ public class LogEntryUtil {
     Tags tags = LogDataExtractor.getTags(logRecord);
     if (tags != null) {
       tags.asMap()
-          .forEach(
-              (key, values) -> {
-                String stringValue =
-                    Joiner.on('|')
-                        .join(
-                            values.stream()
-                                .filter(value -> value instanceof String)
-                                .collect(toImmutableList()));
-                if (!Strings.isNullOrEmpty(stringValue)) {
-                  labels.put(key, stringValue);
-                }
-              });
+          .forEach((key, values) -> {
+            String stringValue =
+                Joiner.on('|')
+                    .join(
+                        values.stream()
+                            .filter(value -> value instanceof String)
+                            .collect(toImmutableList()));
+            if (!Strings.isNullOrEmpty(stringValue)) {
+              labels.put(key, stringValue);
+            }
+          });
     }
     labels.put(LABEL_HOST_NAME, LazyInitializer.HOST_NAME);
     if (logEnvironment != LogEnvironment.UNKNOWN) {

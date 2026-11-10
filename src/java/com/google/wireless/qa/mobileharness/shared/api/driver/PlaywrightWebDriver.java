@@ -70,24 +70,22 @@ public class PlaywrightWebDriver extends BaseWebTestDriver {
   protected void populateEnvironment(TestInfo testInfo, Map<String, String> extraEnv)
       throws MobileHarnessException {
     getDebuggerAddress(testInfo)
-        .ifPresent(
-            address -> {
-              // Playwright expects ws:// scheme for CDP WebSocket connection
-              String wsEndpoint = "ws://" + address;
-              extraEnv.put("PLAYWRIGHT_WS_ENDPOINT", wsEndpoint);
-              testInfo
-                  .log()
-                  .atInfo()
-                  .alsoTo(logger)
-                  .log("Set PLAYWRIGHT_WS_ENDPOINT to %s", wsEndpoint);
-            });
+        .ifPresent(address -> {
+          // Playwright expects ws:// scheme for CDP WebSocket connection
+          String wsEndpoint = "ws://" + address;
+          extraEnv.put("PLAYWRIGHT_WS_ENDPOINT", wsEndpoint);
+          testInfo
+              .log()
+              .atInfo()
+              .alsoTo(logger)
+              .log("Set PLAYWRIGHT_WS_ENDPOINT to %s", wsEndpoint);
+        });
 
     getBaseUrl(testInfo)
-        .ifPresent(
-            url -> {
-              extraEnv.put("BASE_URL", url);
-              testInfo.log().atInfo().alsoTo(logger).log("Set BASE_URL to %s", url);
-            });
+        .ifPresent(url -> {
+          extraEnv.put("BASE_URL", url);
+          testInfo.log().atInfo().alsoTo(logger).log("Set BASE_URL to %s", url);
+        });
   }
 
   @Override

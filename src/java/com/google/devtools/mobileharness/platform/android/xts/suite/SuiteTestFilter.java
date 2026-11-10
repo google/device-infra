@@ -61,7 +61,6 @@ public abstract class SuiteTestFilter {
         String testName = "";
         if (tokens.size() > 2) {
           testName = String.join(" ", tokens.subList(2, tokens.size()));
-          ;
         }
         return create(filterString, abi, moduleName, testName.isEmpty() ? null : testName);
       } else {

@@ -62,13 +62,11 @@ public class AtsMasterUtil {
           InfraErrorId.OLCS_QUERY_DEVICE_ERROR, "Failed to query device", e);
     }
     return queryResult.getDeviceInfoList().stream()
-        .filter(
-            deviceInfo ->
-                deviceInfo.getTypeList().stream()
-                    .anyMatch(deviceType -> deviceType.startsWith("Android")))
-        .filter(
-            deviceInfo ->
-                !Ascii.equalsIgnoreCase(deviceInfo.getStatus(), Device.DeviceStatus.MISSING.name()))
+        .filter(deviceInfo ->
+            deviceInfo.getTypeList().stream()
+                .anyMatch(deviceType -> deviceType.startsWith("Android")))
+        .filter(deviceInfo ->
+            !Ascii.equalsIgnoreCase(deviceInfo.getStatus(), Device.DeviceStatus.MISSING.name()))
         .collect(toImmutableList());
   }
 }

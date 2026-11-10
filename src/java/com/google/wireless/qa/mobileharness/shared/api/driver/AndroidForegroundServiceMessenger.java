@@ -271,19 +271,18 @@ public class AndroidForegroundServiceMessenger extends BaseDriver
     if (event.getMessage().get("namespace").equals("client_message")) {
       eventExecutor.execute(() -> handleClientMessage(testInfo, event));
     } else if (event.getMessage().get("namespace").equals("client_file_copy")) {
-      eventExecutor.execute(
-          () -> {
-            try {
-              handleClientFileCopy(testInfo, event);
-            } catch (InterruptedException e) {
-              testInfo
-                  .log()
-                  .atInfo()
-                  .alsoTo(logger)
-                  .log("Interrupted while handling file copy. Exiting the Driver.");
-              closeSilently(event.getTest(), clientSocket);
-            }
-          });
+      eventExecutor.execute(() -> {
+        try {
+          handleClientFileCopy(testInfo, event);
+        } catch (InterruptedException e) {
+          testInfo
+              .log()
+              .atInfo()
+              .alsoTo(logger)
+              .log("Interrupted while handling file copy. Exiting the Driver.");
+          closeSilently(event.getTest(), clientSocket);
+        }
+      });
     } else if (event.getMessage().get("namespace").equals("client_ping")) {
       testInfo
           .log()

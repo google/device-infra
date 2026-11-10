@@ -328,13 +328,12 @@ public final class FleetGroupByKeyCataloger {
       Function<T, String> displayName) {
     ImmutableList<CandidateEntry> entries =
         descriptors.stream()
-            .map(
-                desc ->
-                    new CandidateEntry(
-                        desc.id(),
-                        displayName.apply(desc),
-                        desc.display().description(),
-                        showCoverage.test(desc)))
+            .map(desc ->
+                new CandidateEntry(
+                    desc.id(),
+                    displayName.apply(desc),
+                    desc.display().description(),
+                    showCoverage.test(desc)))
             .collect(toImmutableList());
     return new CandidateSection(heading, entries, limit, total, counted);
   }

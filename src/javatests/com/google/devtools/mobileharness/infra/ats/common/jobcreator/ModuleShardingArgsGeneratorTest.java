@@ -216,22 +216,20 @@ public final class ModuleShardingArgsGeneratorTest {
       int finalIndex = index;
       assertThat(
               shardingArgs.stream()
-                  .filter(
-                      arg ->
-                          arg.contains(String.format("-m %s", shardModule))
-                              && arg.contains(
-                                  String.format("--shard-index %s", String.valueOf(finalIndex)))))
+                  .filter(arg ->
+                      arg.contains(String.format("-m %s", shardModule))
+                          && arg.contains(
+                              String.format("--shard-index %s", String.valueOf(finalIndex)))))
           .hasSize(1);
     }
     for (int index = 0; index < LARGE_MODULE_SHARDS; index++) {
       int finalIndex = index;
       assertThat(
               shardingArgs.stream()
-                  .filter(
-                      arg ->
-                          arg.contains(String.format("-m %s", largeModule))
-                              && arg.contains(
-                                  String.format("--shard-index %s", String.valueOf(finalIndex)))))
+                  .filter(arg ->
+                      arg.contains(String.format("-m %s", largeModule))
+                          && arg.contains(
+                              String.format("--shard-index %s", String.valueOf(finalIndex)))))
           .hasSize(1);
     }
     assertThat(shardingArgs.stream().filter(arg -> arg.contains("-m local_module"))).hasSize(1);

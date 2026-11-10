@@ -35,10 +35,9 @@ public class AaptUtil {
     this(
         resourceHelper
             .getAapt()
-            .orElseThrow(
-                () ->
-                    new DeviceActionException(
-                        "RESOURCE_NOT_FOUND", ErrorType.DEPENDENCY_ISSUE, "Failed to get aapt")));
+            .orElseThrow(() ->
+                new DeviceActionException(
+                    "RESOURCE_NOT_FOUND", ErrorType.DEPENDENCY_ISSUE, "Failed to get aapt")));
   }
 
   AaptUtil(Aapt aapt) {

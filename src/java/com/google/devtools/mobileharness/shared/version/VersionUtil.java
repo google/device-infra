@@ -69,36 +69,34 @@ public class VersionUtil {
   @VisibleForTesting
   static String formatVersionString(Version labVersion, Optional<BuildVersion> buildVersion) {
     StringBuilder result = new StringBuilder("lab-").append(labVersion);
-    buildVersion.ifPresent(
-        version -> {
-          if (version.getGoogleVersion() != 0L) {
-            result.append(" cl/").append(version.getGoogleVersion());
-          }
-          if (version.getKokoroBuild() != 0L) {
-            result.append(" kokoro-").append(version.getKokoroBuild());
-          }
-          if (!version.getGithubBranch().isEmpty()) {
-            result.append(" branch-").append(version.getGithubBranch());
-          }
-          if (!version.getGithubVersion().isEmpty()) {
-            result.append(" github-").append(version.getGithubVersion());
-          }
-        });
+    buildVersion.ifPresent(version -> {
+      if (version.getGoogleVersion() != 0L) {
+        result.append(" cl/").append(version.getGoogleVersion());
+      }
+      if (version.getKokoroBuild() != 0L) {
+        result.append(" kokoro-").append(version.getKokoroBuild());
+      }
+      if (!version.getGithubBranch().isEmpty()) {
+        result.append(" branch-").append(version.getGithubBranch());
+      }
+      if (!version.getGithubVersion().isEmpty()) {
+        result.append(" github-").append(version.getGithubVersion());
+      }
+    });
     return result.toString();
   }
 
   private static Optional<BuildVersion> doGetBuildVersion() {
     return readResource(BUILD_VERSION_RESOURCE_FILE_PATH)
-        .flatMap(
-            textproto -> {
-              try {
-                return Optional.of(ProtoTextFormat.parse(textproto, BuildVersion.class));
-              } catch (ParseException e) {
-                logger.atWarning().withCause(e).log(
-                    "Failed to parse BuildVersion textproto [%s]", textproto);
-                return Optional.empty();
-              }
-            });
+        .flatMap(textproto -> {
+          try {
+            return Optional.of(ProtoTextFormat.parse(textproto, BuildVersion.class));
+          } catch (ParseException e) {
+            logger.atWarning().withCause(e).log(
+                "Failed to parse BuildVersion textproto [%s]", textproto);
+            return Optional.empty();
+          }
+        });
   }
 
   private static Optional<String> readResource(String resourcePath) {

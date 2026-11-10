@@ -44,20 +44,18 @@ public class NetworkUtilTest {
   public void getInetAddress_notLookbackOrLinkLocal() throws Exception {
     networkUtil
         .getInetAddresses()
-        .forEach(
-            addr -> {
-              assertThat(addr.isLoopbackAddress()).isFalse();
-              assertThat(addr.isLinkLocalAddress()).isFalse();
-            });
+        .forEach(addr -> {
+          assertThat(addr.isLoopbackAddress()).isFalse();
+          assertThat(addr.isLinkLocalAddress()).isFalse();
+        });
   }
 
   @Test
   public void getInetAddress_withFilter() throws Exception {
     networkUtil
         .getInetAddresses()
-        .forEach(
-            addr ->
-                assertThat(addr instanceof Inet4Address || addr instanceof Inet6Address).isTrue());
+        .forEach(addr ->
+            assertThat(addr instanceof Inet4Address || addr instanceof Inet6Address).isTrue());
     networkUtil
         .getInetAddresses(addr -> addr instanceof Inet4Address)
         .forEach(addr -> assertThat(addr instanceof Inet4Address).isTrue());

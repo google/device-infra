@@ -158,13 +158,12 @@ public class ConsoleUtil {
   private class LogHandler extends Handler {
 
     private LogHandler() {
-      setFilter(
-          record ->
-              !HIDDEN_LOGGER_NAMES.contains(record.getLoggerName())
-                  && LogRecordImportance.getLogRecordImportance(
-                              record, LogImportanceScope.getCurrentScope())
-                          .value()
-                      >= minLogRecordImportance);
+      setFilter(record ->
+          !HIDDEN_LOGGER_NAMES.contains(record.getLoggerName())
+              && LogRecordImportance.getLogRecordImportance(
+                          record, LogImportanceScope.getCurrentScope())
+                      .value()
+                  >= minLogRecordImportance);
     }
 
     @Override

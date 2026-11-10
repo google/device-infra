@@ -128,6 +128,5 @@ public abstract class ScreenRecordArgs {
           !args.size().isPresent() || SIZE_PATTERN.matcher(args.size().get()).matches());
       return args;
     }
-    ;
   }
 }

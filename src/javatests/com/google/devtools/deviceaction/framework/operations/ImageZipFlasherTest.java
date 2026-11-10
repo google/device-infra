@@ -96,11 +96,10 @@ public final class ImageZipFlasherTest {
   @Test
   public void flashDevice_success() throws Exception {
     when(executor.exec(any(Command.class)))
-        .thenAnswer(
-            invocation -> {
-              Thread.sleep(1000);
-              return SUCCESS;
-            });
+        .thenAnswer(invocation -> {
+          Thread.sleep(1000);
+          return SUCCESS;
+        });
 
     flasher.flashDevice(zipFile, "script", Duration.ofSeconds(2));
 
@@ -110,11 +109,10 @@ public final class ImageZipFlasherTest {
   @Test
   public void flashDevice_fail() throws Exception {
     when(executor.exec(any(Command.class)))
-        .thenAnswer(
-            invocation -> {
-              Thread.sleep(1000);
-              return FAILURE;
-            });
+        .thenAnswer(invocation -> {
+          Thread.sleep(1000);
+          return FAILURE;
+        });
 
     DeviceActionException t =
         assertThrows(
@@ -128,11 +126,10 @@ public final class ImageZipFlasherTest {
   public void flashDevice_acquireQuotaTimeout() throws Exception {
     // 200 millis < 500 millis < timeout (500) + 200 millis
     when(mockManager.acquire(any(), anyInt()))
-        .thenAnswer(
-            invocation -> {
-              Thread.sleep(500);
-              return lease;
-            });
+        .thenAnswer(invocation -> {
+          Thread.sleep(500);
+          return lease;
+        });
 
     DeviceActionException t =
         assertThrows(
@@ -147,11 +144,10 @@ public final class ImageZipFlasherTest {
   public void flashDevice_acquireQuotaLongerThanTotalTimeout() throws Exception {
     // 1000 millis > timeout (500) + 200 millis
     when(mockManager.acquire(any(), anyInt()))
-        .thenAnswer(
-            invocation -> {
-              Thread.sleep(1000);
-              return lease;
-            });
+        .thenAnswer(invocation -> {
+          Thread.sleep(1000);
+          return lease;
+        });
 
     DeviceActionException t =
         assertThrows(

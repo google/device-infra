@@ -104,16 +104,15 @@ public class DispatchResults {
     // TODO: temporal solution, we should use the topological order to handle it.
     others
         .getAll()
-        .forEach(
-            dispatchResult -> {
-              if (!results.containsKey(dispatchResult.deviceId().controlId())
-                  || dispatchResult.dispatchType().equals(DispatchType.SUB_DEVICE)
-                  || results
-                      .get(dispatchResult.deviceId().controlId())
-                      .dispatchType()
-                      .equals(DispatchType.ONLY_FILTER)) {
-                results.put(dispatchResult.deviceId().controlId(), dispatchResult);
-              }
-            });
+        .forEach(dispatchResult -> {
+          if (!results.containsKey(dispatchResult.deviceId().controlId())
+              || dispatchResult.dispatchType().equals(DispatchType.SUB_DEVICE)
+              || results
+                  .get(dispatchResult.deviceId().controlId())
+                  .dispatchType()
+                  .equals(DispatchType.ONLY_FILTER)) {
+            results.put(dispatchResult.deviceId().controlId(), dispatchResult);
+          }
+        });
   }
 }

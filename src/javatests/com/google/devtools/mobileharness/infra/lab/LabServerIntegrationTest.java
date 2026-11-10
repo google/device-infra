@@ -190,21 +190,19 @@ public class LabServerIntegrationTest {
                         ImmutableList.of(
                             "-D" + BuiltinFlags.ATS_LAB_SERVER_TYPE_PROPERTY_KEY + "=on-prem")))
             .onStdout(
-                does(
-                    stdout -> {
-                      System.out.printf("lab_server_stdout %s\n", stdout);
-                      labServerStdout.append(stdout).append('\n');
-                    }))
+                does(stdout -> {
+                  System.out.printf("lab_server_stdout %s\n", stdout);
+                  labServerStdout.append(stdout).append('\n');
+                }))
             .onStderr(
-                does(
-                    stderr -> {
-                      System.err.printf("lab_server_stderr %s\n", stderr);
-                      labServerStderr.append(stderr).append('\n');
+                does(stderr -> {
+                  System.err.printf("lab_server_stderr %s\n", stderr);
+                  labServerStderr.append(stderr).append('\n');
 
-                      if (stderr.contains("New device HT8420M00155")) {
-                        labServerFoundDevice.countDown();
-                      }
-                    }))
+                  if (stderr.contains("New device HT8420M00155")) {
+                    labServerFoundDevice.countDown();
+                  }
+                }))
             .successfulStartCondition(line -> line.contains("Lab server successfully started"))
             .redirectStderr(false)
             .needStdoutInResult(false)

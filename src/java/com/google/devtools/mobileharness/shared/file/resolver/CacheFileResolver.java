@@ -77,9 +77,9 @@ public class CacheFileResolver extends AbstractFileResolver {
     super(executorService);
     this.localFileUtil = localFileUtil;
     this.instantSource = instantSource;
-    this.localCache = new LocalCache(executorService, instantSource, (key) -> super.resolve(key));
+    this.localCache = new LocalCache(executorService, instantSource, key -> super.resolve(key));
     this.persistentResolvedFileCache =
-        PersistentResolvedFileCache.create((key) -> super.resolve(key));
+        PersistentResolvedFileCache.create(key -> super.resolve(key));
   }
 
   @VisibleForTesting
@@ -91,7 +91,7 @@ public class CacheFileResolver extends AbstractFileResolver {
     super(executorService);
     this.localFileUtil = localFileUtil;
     this.instantSource = instantSource;
-    this.localCache = new LocalCache(executorService, instantSource, (key) -> super.resolve(key));
+    this.localCache = new LocalCache(executorService, instantSource, key -> super.resolve(key));
     this.persistentResolvedFileCache = persistentResolvedFileCache;
   }
 

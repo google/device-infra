@@ -1830,10 +1830,9 @@ public class AndroidInstrumentationUtil {
     }
     try {
       return Optional.of(hostFolder.resolve(childName).normalize())
-          .filter(
-              path ->
-                  childName.chars().noneMatch(Character::isISOControl)
-                      && hostFolder.equals(path.getParent()));
+          .filter(path ->
+              childName.chars().noneMatch(Character::isISOControl)
+                  && hostFolder.equals(path.getParent()));
     } catch (InvalidPathException e) {
       return Optional.empty();
     }

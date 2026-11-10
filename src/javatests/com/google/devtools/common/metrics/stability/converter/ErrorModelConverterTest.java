@@ -173,16 +173,14 @@ public class ErrorModelConverterTest {
         .setClassName(DeserializedException.class.getName());
     expectedExceptionDetail
         .getSuppressedBuilderList()
-        .forEach(
-            suppressed ->
-                suppressed
-                    .getSummaryBuilder()
-                    .setMessage(
-                        String.format(
-                            "%s [%s]",
-                            suppressed.getSummary().getMessage(), "InterruptedException"))
-                    .getClassTypeBuilder()
-                    .setClassName(DeserializedException.class.getName()));
+        .forEach(suppressed ->
+            suppressed
+                .getSummaryBuilder()
+                .setMessage(
+                    String.format(
+                        "%s [%s]", suppressed.getSummary().getMessage(), "InterruptedException"))
+                .getClassTypeBuilder()
+                .setClassName(DeserializedException.class.getName()));
 
     assertThat(
             ErrorModelConverter.toExceptionDetail(

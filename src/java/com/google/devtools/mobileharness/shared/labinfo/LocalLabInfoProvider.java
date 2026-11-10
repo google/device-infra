@@ -103,10 +103,9 @@ public class LocalLabInfoProvider implements LabInfoProvider {
     Optional<DeviceTempRequiredDimensions> tempDimensions =
         deviceMask.keepsDeviceCondition() || deviceMask.keepsRequiredDimensions()
             ? Optional.ofNullable(tempRequiredDimensionManager)
-                .flatMap(
-                    manager ->
-                        manager.getDimensions(
-                            new DeviceKey(LabLocator.LOCALHOST.hostName(), device.getDeviceUuid())))
+                .flatMap(manager ->
+                    manager.getDimensions(
+                        new DeviceKey(LabLocator.LOCALHOST.hostName(), device.getDeviceUuid())))
             : Optional.empty();
     return deviceMask
         .newMaskedDeviceInfoBuilder()
@@ -129,40 +128,35 @@ public class LocalLabInfoProvider implements LabInfoProvider {
 
   private static Optional<DeviceCondition> toDeviceCondition(
       Optional<DeviceTempRequiredDimensions> tempDimensions) {
-    return tempDimensions.map(
-        dimensions -> {
-          DeviceCondition.Builder conditionBuilder = DeviceCondition.newBuilder();
-          dimensions
-              .dimensions()
-              .forEach(
-                  (name, value) ->
-                      conditionBuilder.addTempDimension(
-                          TempDimension.newBuilder()
-                              .setDimension(
-                                  DeviceDimension.newBuilder().setName(name).setValue(value))
-                              .setExpireTimestampMs(dimensions.expireTime().toEpochMilli())
-                              .setRequired(true)));
-          return conditionBuilder.build();
-        });
+    return tempDimensions.map(dimensions -> {
+      DeviceCondition.Builder conditionBuilder = DeviceCondition.newBuilder();
+      dimensions
+          .dimensions()
+          .forEach((name, value) ->
+              conditionBuilder.addTempDimension(
+                  TempDimension.newBuilder()
+                      .setDimension(DeviceDimension.newBuilder().setName(name).setValue(value))
+                      .setExpireTimestampMs(dimensions.expireTime().toEpochMilli())
+                      .setRequired(true)));
+      return conditionBuilder.build();
+    });
   }
 
   private static DeviceFeature toDeviceFeature(
       Device device, Optional<DeviceTempRequiredDimensions> tempDimensions) {
     DeviceFeature fullFeature = device.toFeature();
     return tempDimensions
-        .map(
-            dimensions -> {
-              DeviceFeature.Builder featureBuilder = fullFeature.toBuilder();
-              dimensions
-                  .dimensions()
-                  .forEach(
-                      (name, value) ->
-                          featureBuilder
-                              .getCompositeDimensionBuilder()
-                              .addRequiredDimension(
-                                  DeviceDimension.newBuilder().setName(name).setValue(value)));
-              return featureBuilder.build();
-            })
+        .map(dimensions -> {
+          DeviceFeature.Builder featureBuilder = fullFeature.toBuilder();
+          dimensions
+              .dimensions()
+              .forEach((name, value) ->
+                  featureBuilder
+                      .getCompositeDimensionBuilder()
+                      .addRequiredDimension(
+                          DeviceDimension.newBuilder().setName(name).setValue(value)));
+          return featureBuilder.build();
+        })
         .orElse(fullFeature);
   }
 }

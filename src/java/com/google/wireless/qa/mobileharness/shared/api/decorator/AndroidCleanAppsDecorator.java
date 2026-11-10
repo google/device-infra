@@ -165,9 +165,8 @@ public class AndroidCleanAppsDecorator extends SetupOnlyDecorator implements And
           .jobInfo()
           .properties()
           .getOptional(AndroidCleanAppsSpec.PROPERTY_EXTRA_PKGS_TO_KEEP)
-          .ifPresent(
-              extraPackagesToKeep ->
-                  packagesToKeep.addAll(PACKAGE_NAME_SPLITTER.splitToList(extraPackagesToKeep)));
+          .ifPresent(extraPackagesToKeep ->
+              packagesToKeep.addAll(PACKAGE_NAME_SPLITTER.splitToList(extraPackagesToKeep)));
 
       removeThirdPartyApps(packagesToKeep, testInfo);
 

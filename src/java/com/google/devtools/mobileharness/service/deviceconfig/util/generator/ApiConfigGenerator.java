@@ -68,12 +68,11 @@ public final class ApiConfigGenerator {
     Set<String> overTcpIds = new HashSet<>(labConfig.getOverTcpIpList());
     apiConfig.addAllDeviceConfig(
         deviceConfigs.stream()
-            .map(
-                deviceConfig ->
-                    generateDeviceConfig(
-                        deviceConfig.deviceControlId(),
-                        deviceConfig.deviceConfig(),
-                        overTcpIds.contains(deviceConfig.deviceControlId())))
+            .map(deviceConfig ->
+                generateDeviceConfig(
+                    deviceConfig.deviceControlId(),
+                    deviceConfig.deviceConfig(),
+                    overTcpIds.contains(deviceConfig.deviceControlId())))
             .collect(toImmutableList()));
     if (defaultDeviceConfig.hasDefaultWifi()) {
       Config.WifiConfig.Builder wifiConfig = Config.WifiConfig.newBuilder();

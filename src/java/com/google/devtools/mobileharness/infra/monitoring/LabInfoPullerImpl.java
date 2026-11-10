@@ -84,12 +84,10 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
           "lab_server_version",
           getProperty(hostPropertyList, Ascii.toLowerCase(HostPropertyKey.HOST_VERSION.name())));
       hostPropertyList.stream()
-          .filter(
-              property ->
-                  !Ascii.equalsIgnoreCase(property.getKey(), HostPropertyKey.HOST_VERSION.name()))
-          .forEach(
-              property ->
-                  addAttribute(hostEntry, property.getKey(), Optional.of(property.getValue())));
+          .filter(property ->
+              !Ascii.equalsIgnoreCase(property.getKey(), HostPropertyKey.HOST_VERSION.name()))
+          .forEach(property ->
+              addAttribute(hostEntry, property.getKey(), Optional.of(property.getValue())));
       record.setHostEntry(hostEntry.build());
       for (DeviceInfo deviceInfo : labData.getDeviceList().getDeviceInfoList()) {
 
@@ -124,10 +122,9 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
 
         Stream<String> modelValues =
             dimensionList.stream()
-                .filter(
-                    dimension ->
-                        Ascii.equalsIgnoreCase(
-                            dimension.getName(), Ascii.toLowerCase(Dimension.Name.MODEL.name())))
+                .filter(dimension ->
+                    Ascii.equalsIgnoreCase(
+                        dimension.getName(), Ascii.toLowerCase(Dimension.Name.MODEL.name())))
                 .map(DeviceDimension::getValue);
         // For iOS real devices, model values contain two types: human readable model name
         // (e.g. "iPhone 11 Pro"), and model ID (e.g. "iphone12,3"). We prefer the human readable
@@ -140,19 +137,14 @@ public final class LabInfoPullerImpl implements DataPuller<MonitoredRecord> {
                 : modelValues.findFirst()); // Only one model is expected at MonitoredRecord.
 
         dimensionList.stream()
-            .filter(
-                dimension ->
-                    !RESERVED_DIMENSION_NAMES.contains(Ascii.toLowerCase(dimension.getName())))
-            .forEach(
-                dimension ->
-                    addAttribute(
-                        deviceEntry, dimension.getName(), Optional.of(dimension.getValue())));
+            .filter(dimension ->
+                !RESERVED_DIMENSION_NAMES.contains(Ascii.toLowerCase(dimension.getName())))
+            .forEach(dimension ->
+                addAttribute(deviceEntry, dimension.getName(), Optional.of(dimension.getValue())));
         deviceProperties
             .getPropertyList()
-            .forEach(
-                property ->
-                    addAttribute(
-                        deviceEntry, property.getName(), Optional.of(property.getValue())));
+            .forEach(property ->
+                addAttribute(deviceEntry, property.getName(), Optional.of(property.getValue())));
 
         if (deviceInfo.hasHealthCategory()
             && deviceInfo.getHealthCategory() != HealthCategory.HEALTH_CATEGORY_UNSPECIFIED) {

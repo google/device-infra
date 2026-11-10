@@ -303,14 +303,12 @@ public final class RunCommand implements Callable<Integer> {
       runCommand.setBusinessLogicUrl(options.businessLogicUrl);
     }
     runCommand.setIgnoreBusinessLogicFailure(options.ignoreBusinessLogicFailure);
-    moduleMetadataIncludeFilters.forEach(
-        (key, value) ->
-            runCommand.addModuleMetadataIncludeFilter(
-                ModuleMetadataFilterEntry.newBuilder().setKey(key).setValue(value)));
-    moduleMetadataExcludeFilters.forEach(
-        (key, value) ->
-            runCommand.addModuleMetadataExcludeFilter(
-                ModuleMetadataFilterEntry.newBuilder().setKey(key).setValue(value)));
+    moduleMetadataIncludeFilters.forEach((key, value) ->
+        runCommand.addModuleMetadataIncludeFilter(
+            ModuleMetadataFilterEntry.newBuilder().setKey(key).setValue(value)));
+    moduleMetadataExcludeFilters.forEach((key, value) ->
+        runCommand.addModuleMetadataExcludeFilter(
+            ModuleMetadataFilterEntry.newBuilder().setKey(key).setValue(value)));
     options.isSkipDeviceInfo().ifPresent(runCommand::setSkipDeviceInfo);
     if (options.shardCount > 0) {
       runCommand.setShardCount(options.shardCount);

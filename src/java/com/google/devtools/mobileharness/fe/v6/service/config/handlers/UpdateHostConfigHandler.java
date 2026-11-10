@@ -419,14 +419,13 @@ public final class UpdateHostConfigHandler {
         .clearOverSsh()
         .addAllOverSsh(
             discovery.getOverSshDevicesList().stream()
-                .map(
-                    d ->
-                        OverSshDevice.newBuilder()
-                            .setIpAddress(d.getIpAddress())
-                            .setUsername(d.getUsername())
-                            .setPassword(d.getPassword())
-                            .setSshDeviceType(d.getSshDeviceType())
-                            .build())
+                .map(d ->
+                    OverSshDevice.newBuilder()
+                        .setIpAddress(d.getIpAddress())
+                        .setUsername(d.getUsername())
+                        .setPassword(d.getPassword())
+                        .setSshDeviceType(d.getSshDeviceType())
+                        .build())
                 .collect(toImmutableList()));
     if (discovery.getManekiSpecsList().isEmpty()) {
       builder.clearDetectorSpecs();

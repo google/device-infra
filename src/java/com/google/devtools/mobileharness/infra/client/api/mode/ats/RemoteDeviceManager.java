@@ -654,12 +654,11 @@ class RemoteDeviceManager implements LabInfoProvider {
   private void addOlcGithubVersion() {
     VersionUtil.getBuildVersion()
         .filter(BuildVersion::hasGithubVersion)
-        .map(
-            version ->
-                HostProperty.newBuilder()
-                    .setKey(OLC_GITHUB_VERSION_PROPERTY_KEY)
-                    .setValue(version.getGithubVersion())
-                    .build())
+        .map(version ->
+            HostProperty.newBuilder()
+                .setKey(OLC_GITHUB_VERSION_PROPERTY_KEY)
+                .setValue(version.getGithubVersion())
+                .build())
         .ifPresentOrElse(
             hostProperty -> {
               additionalHostProperties.add(hostProperty);
@@ -1072,24 +1071,19 @@ class RemoteDeviceManager implements LabInfoProvider {
           .setMaskedDeviceCondition(
               tempDimensions,
               dimensionsOpt ->
-                  dimensionsOpt.map(
-                      dimensions -> {
-                        DeviceCondition.Builder conditionBuilder = DeviceCondition.newBuilder();
-                        dimensions
-                            .dimensions()
-                            .forEach(
-                                (name, value) ->
-                                    conditionBuilder.addTempDimension(
-                                        TempDimension.newBuilder()
-                                            .setDimension(
-                                                DeviceDimension.newBuilder()
-                                                    .setName(name)
-                                                    .setValue(value))
-                                            .setExpireTimestampMs(
-                                                dimensions.expireTime().toEpochMilli())
-                                            .setRequired(true)));
-                        return conditionBuilder.build();
-                      }))
+                  dimensionsOpt.map(dimensions -> {
+                    DeviceCondition.Builder conditionBuilder = DeviceCondition.newBuilder();
+                    dimensions
+                        .dimensions()
+                        .forEach((name, value) ->
+                            conditionBuilder.addTempDimension(
+                                TempDimension.newBuilder()
+                                    .setDimension(
+                                        DeviceDimension.newBuilder().setName(name).setValue(value))
+                                    .setExpireTimestampMs(dimensions.expireTime().toEpochMilli())
+                                    .setRequired(true)));
+                    return conditionBuilder.build();
+                  }))
           .setMaskedDeviceFeature(
               this,
               deviceData ->
@@ -1114,20 +1108,18 @@ class RemoteDeviceManager implements LabInfoProvider {
               .addAllDimension(
                   Stream.concat(
                           data.dimensions().supported().getAll().entries().stream()
-                              .map(
-                                  entry ->
-                                      Dimension.newBuilder()
-                                          .setName(entry.getKey())
-                                          .setValue(entry.getValue())
-                                          .build()),
+                              .map(entry ->
+                                  Dimension.newBuilder()
+                                      .setName(entry.getKey())
+                                      .setValue(entry.getValue())
+                                      .build()),
                           data.dimensions().required().getAll().entries().stream()
-                              .map(
-                                  entry ->
-                                      Dimension.newBuilder()
-                                          .setRequired(true)
-                                          .setName(entry.getKey())
-                                          .setValue(entry.getValue())
-                                          .build()))
+                              .map(entry ->
+                                  Dimension.newBuilder()
+                                      .setRequired(true)
+                                      .setName(entry.getKey())
+                                      .setValue(entry.getValue())
+                                      .build()))
                       .collect(toImmutableList()));
 
       if (statusFromLab.equals(DeviceStatus.BUSY) && latestAllocationFromScheduler != null) {
@@ -1245,14 +1237,13 @@ class RemoteDeviceManager implements LabInfoProvider {
                               deviceData.dataFromLab.dimensions().required().getIgnoreCase(key));
                   deviceTempRequiredDimensionManager
                       .getDimensions(deviceData.dtrdmDeviceKey)
-                      .ifPresent(
-                          dimensions ->
-                              values.addAll(
-                                  valuesOfKeyIgnoreCase(
-                                      dimensions.dimensions().entries(),
-                                      Map.Entry::getKey,
-                                      Map.Entry::getValue,
-                                      key)));
+                      .ifPresent(dimensions ->
+                          values.addAll(
+                              valuesOfKeyIgnoreCase(
+                                  dimensions.dimensions().entries(),
+                                  Map.Entry::getKey,
+                                  Map.Entry::getValue,
+                                  key)));
                   return values.build();
                 });
         default -> deviceData -> true;

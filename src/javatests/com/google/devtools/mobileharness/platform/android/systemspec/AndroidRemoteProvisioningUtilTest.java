@@ -80,17 +80,16 @@ public final class AndroidRemoteProvisioningUtilTest {
     byte[] dummyCsrBytes = new byte[] {1, 2, 3};
     String dummyCsrBase64 = Base64.getEncoder().encodeToString(dummyCsrBytes);
     when(adb.run(any(Command.class)))
-        .thenAnswer(
-            invocation -> {
-              Command cmd = invocation.getArgument(0);
-              String cmdStr = String.join(" ", cmd.getCommand());
-              if (cmdStr.contains("remote_provisioning list")) {
-                return FakeCommandResult.of("avf\nkeymint", "", 0);
-              } else if (cmdStr.contains("remote_provisioning csr")) {
-                return FakeCommandResult.of(dummyCsrBase64, "", 0);
-              }
-              return FakeCommandResult.of("", "", 0);
-            });
+        .thenAnswer(invocation -> {
+          Command cmd = invocation.getArgument(0);
+          String cmdStr = String.join(" ", cmd.getCommand());
+          if (cmdStr.contains("remote_provisioning list")) {
+            return FakeCommandResult.of("avf\nkeymint", "", 0);
+          } else if (cmdStr.contains("remote_provisioning csr")) {
+            return FakeCommandResult.of(dummyCsrBase64, "", 0);
+          }
+          return FakeCommandResult.of("", "", 0);
+        });
 
     Map<String, byte[]> result = util.getInstanceNameToCsr(deviceId);
 
@@ -114,17 +113,16 @@ public final class AndroidRemoteProvisioningUtilTest {
     byte[] dummyCsrBytes = new byte[] {1, 2, 3};
     String dummyCsrBase64 = Base64.getEncoder().encodeToString(dummyCsrBytes);
     when(adb.run(any(Command.class)))
-        .thenAnswer(
-            invocation -> {
-              Command cmd = invocation.getArgument(0);
-              String cmdStr = String.join(" ", cmd.getCommand());
-              if (cmdStr.contains("remote_provisioning list")) {
-                return FakeCommandResult.of("avf\nkeymint", "", 0);
-              } else if (cmdStr.contains("remote_provisioning csr")) {
-                return FakeCommandResult.of(dummyCsrBase64, "", 0);
-              }
-              return FakeCommandResult.of("", "", 0);
-            });
+        .thenAnswer(invocation -> {
+          Command cmd = invocation.getArgument(0);
+          String cmdStr = String.join(" ", cmd.getCommand());
+          if (cmdStr.contains("remote_provisioning list")) {
+            return FakeCommandResult.of("avf\nkeymint", "", 0);
+          } else if (cmdStr.contains("remote_provisioning csr")) {
+            return FakeCommandResult.of(dummyCsrBase64, "", 0);
+          }
+          return FakeCommandResult.of("", "", 0);
+        });
 
     Map<String, byte[]> result = util.getInstanceNameToCsr(deviceId);
 
@@ -142,17 +140,16 @@ public final class AndroidRemoteProvisioningUtilTest {
     byte[] dummyCsrBytes = new byte[] {1, 2, 3};
     String dummyCsrBase64 = Base64.getEncoder().encodeToString(dummyCsrBytes);
     when(adb.run(any(Command.class)))
-        .thenAnswer(
-            invocation -> {
-              Command cmd = invocation.getArgument(0);
-              String cmdStr = String.join(" ", cmd.getCommand());
-              if (cmdStr.contains("remote_provisioning list")) {
-                return FakeCommandResult.of("keymint", "", 0);
-              } else if (cmdStr.contains("remote_provisioning csr")) {
-                return FakeCommandResult.of(dummyCsrBase64, "", 0);
-              }
-              return FakeCommandResult.of("", "", 0);
-            });
+        .thenAnswer(invocation -> {
+          Command cmd = invocation.getArgument(0);
+          String cmdStr = String.join(" ", cmd.getCommand());
+          if (cmdStr.contains("remote_provisioning list")) {
+            return FakeCommandResult.of("keymint", "", 0);
+          } else if (cmdStr.contains("remote_provisioning csr")) {
+            return FakeCommandResult.of(dummyCsrBase64, "", 0);
+          }
+          return FakeCommandResult.of("", "", 0);
+        });
 
     doThrow(
             new MobileHarnessException(
@@ -290,17 +287,16 @@ public final class AndroidRemoteProvisioningUtilTest {
     byte[] dummyCsrBytes = new byte[] {1, 2, 3};
     String dummyCsrBase64 = Base64.getEncoder().encodeToString(dummyCsrBytes);
     when(adb.run(any(Command.class)))
-        .thenAnswer(
-            invocation -> {
-              Command cmd = invocation.getArgument(0);
-              String cmdStr = String.join(" ", cmd.getCommand());
-              if (cmdStr.contains("remote_provisioning list")) {
-                return FakeCommandResult.of("avf", "", 0);
-              } else if (cmdStr.contains("remote_provisioning csr")) {
-                return FakeCommandResult.of(dummyCsrBase64, "", 0);
-              }
-              return FakeCommandResult.of("", "", 0);
-            });
+        .thenAnswer(invocation -> {
+          Command cmd = invocation.getArgument(0);
+          String cmdStr = String.join(" ", cmd.getCommand());
+          if (cmdStr.contains("remote_provisioning list")) {
+            return FakeCommandResult.of("avf", "", 0);
+          } else if (cmdStr.contains("remote_provisioning csr")) {
+            return FakeCommandResult.of(dummyCsrBase64, "", 0);
+          }
+          return FakeCommandResult.of("", "", 0);
+        });
 
     // Test false values (avf should be skipped)
     for (String val :

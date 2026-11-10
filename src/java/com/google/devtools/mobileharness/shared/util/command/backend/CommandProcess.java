@@ -60,29 +60,27 @@ public abstract class CommandProcess {
     result = new AtomicResult(command, this::killHook);
     stdinSourceOpener = new Opener<>(command.stdinSource()::openStream);
     stdoutSinkOpener =
-        new Opener<>(
-            () -> {
-              switch (command.stdoutSink().kind()) {
-                case PROCESS_OUT:
-                  return stdoutStream;
-                case PROCESS_ERR:
-                  return stderrStream;
-                default:
-                  return command.stdoutSink().openStream();
-              }
-            });
+        new Opener<>(() -> {
+          switch (command.stdoutSink().kind()) {
+            case PROCESS_OUT:
+              return stdoutStream;
+            case PROCESS_ERR:
+              return stderrStream;
+            default:
+              return command.stdoutSink().openStream();
+          }
+        });
     stderrSinkOpener =
-        new Opener<>(
-            () -> {
-              switch (command.stderrSink().kind()) {
-                case PROCESS_OUT:
-                  return stdoutStream;
-                case PROCESS_ERR:
-                  return stderrStream;
-                default:
-                  return command.stderrSink().openStream();
-              }
-            });
+        new Opener<>(() -> {
+          switch (command.stderrSink().kind()) {
+            case PROCESS_OUT:
+              return stdoutStream;
+            case PROCESS_ERR:
+              return stderrStream;
+            default:
+              return command.stderrSink().openStream();
+          }
+        });
   }
 
   /** The command that started this process. */

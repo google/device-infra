@@ -62,14 +62,13 @@ public class AnnotatedPluginClassProvider implements PluginClassProvider {
     try {
       return classInfos.stream()
           .map(classInfo -> classInfo.loadClass(/* ignoreExceptions= */ false))
-          .filter(
-              aClass ->
-                  checkPluginType(
-                      aClass,
-                      clazz -> clazz.getDeclaredAnnotation(Plugin.class).type(),
-                      log,
-                      warnUnmatchedTypes,
-                      pluginTypes))
+          .filter(aClass ->
+              checkPluginType(
+                  aClass,
+                  clazz -> clazz.getDeclaredAnnotation(Plugin.class).type(),
+                  log,
+                  warnUnmatchedTypes,
+                  pluginTypes))
           .collect(toImmutableSet());
     } catch (IllegalArgumentException e) {
       throw new MobileHarnessException(

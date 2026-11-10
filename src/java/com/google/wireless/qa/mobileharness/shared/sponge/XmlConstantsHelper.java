@@ -16,7 +16,6 @@
 
 package com.google.wireless.qa.mobileharness.shared.sponge;
 
-
 /** Utility class for XML constants. */
 public final class XmlConstantsHelper {
 

@@ -584,13 +584,12 @@ public class TestbedDevice extends BaseDevice implements CompositeDevice {
 
     getConfig().getDimensions().entries().stream()
         .filter(dimension -> !NOT_OVERRIDE_DIMENSIONS.contains(dimension.getKey()))
-        .forEach(
-            dimension ->
-                sharedDeviceAndConfigDimensions.add(
-                    StrPair.newBuilder()
-                        .setName(dimension.getKey())
-                        .setValue(dimension.getValue())
-                        .build()));
+        .forEach(dimension ->
+            sharedDeviceAndConfigDimensions.add(
+                StrPair.newBuilder()
+                    .setName(dimension.getKey())
+                    .setValue(dimension.getValue())
+                    .build()));
 
     return sharedDeviceAndConfigDimensions.stream()
         .filter(dimension -> !NOT_OVERRIDE_DIMENSIONS.contains(dimension.getName()))
@@ -669,10 +668,9 @@ public class TestbedDevice extends BaseDevice implements CompositeDevice {
     // Remove dimensions from previous config and shared device dimensions that are not in the new
     // config and shared device dimensions.
     getDimensions().stream()
-        .filter(
-            dimension ->
-                !NOT_OVERRIDE_DIMENSIONS.contains(dimension.getName())
-                    && !newDimensions.containsKey(dimension.getName()))
+        .filter(dimension ->
+            !NOT_OVERRIDE_DIMENSIONS.contains(dimension.getName())
+                && !newDimensions.containsKey(dimension.getName()))
         .forEach(dimension -> removeDimension(dimension.getName()));
 
     // Apply config and shared device dimensions to testbed device dimensions.
@@ -750,14 +748,13 @@ public class TestbedDevice extends BaseDevice implements CompositeDevice {
    */
   private void applySerializedSubDeviceDimensions() {
     SubDeviceDimensions.Builder subDeviceDimensionsBuilder = SubDeviceDimensions.newBuilder();
-    managedDevices.forEach(
-        managedDevice -> {
-          subDeviceDimensionsBuilder.addSubDeviceDimension(
-              SubDeviceDimensions.SubDeviceDimension.newBuilder()
-                  .setDeviceId(managedDevice.getDeviceId())
-                  .addAllDeviceDimension(managedDevice.getDimensions())
-                  .build());
-        });
+    managedDevices.forEach(managedDevice -> {
+      subDeviceDimensionsBuilder.addSubDeviceDimension(
+          SubDeviceDimensions.SubDeviceDimension.newBuilder()
+              .setDeviceId(managedDevice.getDeviceId())
+              .addAllDeviceDimension(managedDevice.getDimensions())
+              .build());
+    });
     updateDimension(
         TestbedDeviceSpec.SUBDEVICE_DIMENSIONS_KEY,
         TestbedUtil.encodeSubDeviceDimensions(subDeviceDimensionsBuilder.build()));

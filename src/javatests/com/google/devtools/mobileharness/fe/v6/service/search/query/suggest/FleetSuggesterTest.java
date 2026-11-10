@@ -183,19 +183,17 @@ public final class FleetSuggesterTest {
         suggester.suggest(corpus, request("device-", simple("device_field::uuid", "device-0")));
     assertThat(
             withUuidChip.getItemsList().stream()
-                .noneMatch(
-                    item ->
-                        item.hasApplyFilter()
-                            && item.getApplyFilter().getResultingFilter().hasComplex()))
+                .noneMatch(item ->
+                    item.hasApplyFilter()
+                        && item.getApplyFilter().getResultingFilter().hasComplex()))
         .isTrue();
 
     FleetSuggestionResponse negated = suggester.suggest(corpus, request("not device-"));
     assertThat(
             negated.getItemsList().stream()
-                .noneMatch(
-                    item ->
-                        item.hasApplyFilter()
-                            && item.getApplyFilter().getResultingFilter().hasComplex()))
+                .noneMatch(item ->
+                    item.hasApplyFilter()
+                        && item.getApplyFilter().getResultingFilter().hasComplex()))
         .isTrue();
   }
 
@@ -212,13 +210,12 @@ public final class FleetSuggesterTest {
     assertThat(uuid.getCount()).isEqualTo(1);
     assertThat(
             response.getItemsList().stream()
-                .filter(
-                    item ->
-                        item.hasApplyFilter()
-                            && item.getApplyFilter()
-                                .getResultingFilter()
-                                .getKey()
-                                .equals("device_field::uuid")))
+                .filter(item ->
+                    item.hasApplyFilter()
+                        && item.getApplyFilter()
+                            .getResultingFilter()
+                            .getKey()
+                            .equals("device_field::uuid")))
         .hasSize(1);
 
     // When an exact ID also shares a prefix with other IDs ("device-1" and "device-10".."device-19"
@@ -232,13 +229,12 @@ public final class FleetSuggesterTest {
     FleetSuggestionResponse prefixAndExact = suggester.suggest(manyCorpus, request("device-1"));
     ImmutableList<FleetSuggestion> uuidSuggestions =
         prefixAndExact.getItemsList().stream()
-            .filter(
-                item ->
-                    item.hasApplyFilter()
-                        && item.getApplyFilter()
-                            .getResultingFilter()
-                            .getKey()
-                            .equals("device_field::uuid"))
+            .filter(item ->
+                item.hasApplyFilter()
+                    && item.getApplyFilter()
+                        .getResultingFilter()
+                        .getKey()
+                        .equals("device_field::uuid"))
             .collect(toImmutableList());
     assertThat(uuidSuggestions).hasSize(2);
     assertThat(uuidSuggestions.get(0).getCount()).isEqualTo(1);
@@ -271,13 +267,12 @@ public final class FleetSuggesterTest {
         suggester.suggest(manyCorpus, request("device-1", simple("dimension::pool", "pool-1")));
     ImmutableList<FleetSuggestion> onlyExactUuidSuggestions =
         onlyExactInScope.getItemsList().stream()
-            .filter(
-                item ->
-                    item.hasApplyFilter()
-                        && item.getApplyFilter()
-                            .getResultingFilter()
-                            .getKey()
-                            .equals("device_field::uuid"))
+            .filter(item ->
+                item.hasApplyFilter()
+                    && item.getApplyFilter()
+                        .getResultingFilter()
+                        .getKey()
+                        .equals("device_field::uuid"))
             .collect(toImmutableList());
     assertThat(onlyExactUuidSuggestions).hasSize(1);
     assertThat(onlyExactUuidSuggestions.get(0).getCount()).isEqualTo(1);
@@ -301,13 +296,12 @@ public final class FleetSuggesterTest {
         suggester.suggest(manyCorpus, request("device-1", simple("dimension::pool", "pool-50")));
     assertThat(
             noneInScope.getItemsList().stream()
-                .noneMatch(
-                    item ->
-                        item.hasApplyFilter()
-                            && item.getApplyFilter()
-                                .getResultingFilter()
-                                .getKey()
-                                .equals("device_field::uuid")))
+                .noneMatch(item ->
+                    item.hasApplyFilter()
+                        && item.getApplyFilter()
+                            .getResultingFilter()
+                            .getKey()
+                            .equals("device_field::uuid")))
         .isTrue();
   }
 
@@ -358,14 +352,13 @@ public final class FleetSuggesterTest {
 
     FleetSuggestion iccidsCollapsed =
         suggester.suggest(tracking, request("8901-")).getItemsList().stream()
-            .filter(
-                item ->
-                    item.hasApplyFilter()
-                        && item.getApplyFilter()
-                            .getResultingFilter()
-                            .getKey()
-                            .equals("dimension::iccids")
-                        && item.getApplyFilter().getResultingFilter().hasComplex())
+            .filter(item ->
+                item.hasApplyFilter()
+                    && item.getApplyFilter()
+                        .getResultingFilter()
+                        .getKey()
+                        .equals("dimension::iccids")
+                    && item.getApplyFilter().getResultingFilter().hasComplex())
             .findFirst()
             .orElseThrow();
     assertThat(iccidsCollapsed.getCount()).isEqualTo(1);
@@ -379,13 +372,12 @@ public final class FleetSuggesterTest {
     FleetSuggestionResponse exactIccid = suggester.suggest(tracking, request("8901-a"));
     ImmutableList<FleetSuggestion> iccidSuggestions =
         exactIccid.getItemsList().stream()
-            .filter(
-                item ->
-                    item.hasApplyFilter()
-                        && item.getApplyFilter()
-                            .getResultingFilter()
-                            .getKey()
-                            .equals("dimension::iccids"))
+            .filter(item ->
+                item.hasApplyFilter()
+                    && item.getApplyFilter()
+                        .getResultingFilter()
+                        .getKey()
+                        .equals("dimension::iccids"))
             .collect(toImmutableList());
     assertThat(iccidSuggestions).hasSize(1);
     assertThat(iccidSuggestions.get(0).getCount()).isEqualTo(1);
@@ -400,13 +392,12 @@ public final class FleetSuggesterTest {
         suggester.suggest(tracking, request("tb-alpha", simple("device_field::status", "IDLE")));
     ImmutableList<FleetSuggestion> testbedSuggestions =
         sharedTestbedExact.getItemsList().stream()
-            .filter(
-                item ->
-                    item.hasApplyFilter()
-                        && item.getApplyFilter()
-                            .getResultingFilter()
-                            .getKey()
-                            .equals("dimension::testbed_name"))
+            .filter(item ->
+                item.hasApplyFilter()
+                    && item.getApplyFilter()
+                        .getResultingFilter()
+                        .getKey()
+                        .equals("dimension::testbed_name"))
             .collect(toImmutableList());
     assertThat(testbedSuggestions).hasSize(1);
     assertThat(testbedSuggestions.get(0).getCount()).isEqualTo(2);
@@ -1445,13 +1436,8 @@ public final class FleetSuggesterTest {
     assertThat(modelIs.getItemsCount()).isEqualTo(4);
     assertThat(
             modelIs.getItemsList().subList(0, 3).stream()
-                .map(
-                    item ->
-                        item.getApplyFilter()
-                            .getResultingFilter()
-                            .getSimple()
-                            .getValues(0)
-                            .getValue()))
+                .map(item ->
+                    item.getApplyFilter().getResultingFilter().getSimple().getValues(0).getValue()))
         .containsExactly("pixel", "iphone", "nexus")
         .inOrder();
     assertThat(modelIs.getItems(0).getCount()).isEqualTo(2);

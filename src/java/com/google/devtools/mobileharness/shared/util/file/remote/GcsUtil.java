@@ -488,26 +488,25 @@ public abstract class GcsUtil {
       shards.add(localFileShard);
 
       results.add(
-          Holder.copyFileToLocalThreadpool.submit(
-              () -> {
-                try {
-                  copyFileToLocal(gcsFile, localFileShard, from, size);
-                } catch (InterruptedException e) {
-                  // Restore the interrupt flag because throwing InterruptedException clears it,
-                  // which would cause the cleanup check in the finally block to fail.
-                  Thread.currentThread().interrupt();
-                  throw e;
-                } finally {
-                  // Even if the blocking I/O in copyFileToLocal ignores the interrupt and finishes
-                  // the download, the thread's interrupt flag will still be set by
-                  // future.cancel(true).
-                  // We check the flag here to delete the orphaned shard if the task was cancelled.
-                  if (Thread.currentThread().isInterrupted()) {
-                    tryRemoveFile(localFileShard);
-                  }
-                }
-                return null;
-              }));
+          Holder.copyFileToLocalThreadpool.submit(() -> {
+            try {
+              copyFileToLocal(gcsFile, localFileShard, from, size);
+            } catch (InterruptedException e) {
+              // Restore the interrupt flag because throwing InterruptedException clears it,
+              // which would cause the cleanup check in the finally block to fail.
+              Thread.currentThread().interrupt();
+              throw e;
+            } finally {
+              // Even if the blocking I/O in copyFileToLocal ignores the interrupt and finishes
+              // the download, the thread's interrupt flag will still be set by
+              // future.cancel(true).
+              // We check the flag here to delete the orphaned shard if the task was cancelled.
+              if (Thread.currentThread().isInterrupted()) {
+                tryRemoveFile(localFileShard);
+              }
+            }
+            return null;
+          }));
     }
 
     ListenableFuture<?> future = Futures.whenAllSucceed(results).call(() -> null, directExecutor());
@@ -561,13 +560,11 @@ public abstract class GcsUtil {
   public long getGcsFileSize(Path gcsFile) throws MobileHarnessException, InterruptedException {
     StorageObject metadata =
         getMetadata(GcsApiObject.create(gcsFile))
-            .orElseThrow(
-                () ->
-                    new MobileHarnessException(
-                        BasicErrorId.GCS_NO_METADATA,
-                        String.format(
-                            "GCS file gs://%s/%s doesn't exist.",
-                            storageParams.bucketName, gcsFile)));
+            .orElseThrow(() ->
+                new MobileHarnessException(
+                    BasicErrorId.GCS_NO_METADATA,
+                    String.format(
+                        "GCS file gs://%s/%s doesn't exist.", storageParams.bucketName, gcsFile)));
     return metadata.getSize().longValue();
   }
 
@@ -914,11 +911,10 @@ public abstract class GcsUtil {
       gcsShards.add(gcsShard);
 
       results.add(
-          Holder.copyFileToCloudThreadpool.submit(
-              () -> {
-                partialCopyFileToCloud(localFile, from, size, gcsShard);
-                return null;
-              }));
+          Holder.copyFileToCloudThreadpool.submit(() -> {
+            partialCopyFileToCloud(localFile, from, size, gcsShard);
+            return null;
+          }));
     }
 
     ListenableFuture<?> future = Futures.whenAllSucceed(results).call(() -> null, directExecutor());
@@ -1004,10 +1000,8 @@ public abstract class GcsUtil {
   public Optional<Duration> getAge(Path gcsFile)
       throws MobileHarnessException, InterruptedException {
     return getMetadata(GcsApiObject.create(gcsFile))
-        .map(
-            m ->
-                Duration.between(
-                    Instant.ofEpochMilli(m.getTimeCreated().getValue()), Instant.now()));
+        .map(m ->
+            Duration.between(Instant.ofEpochMilli(m.getTimeCreated().getValue()), Instant.now()));
   }
 
   /**

@@ -62,16 +62,15 @@ public final class JdbcBasedSessionPersistenceUtil implements SessionPersistence
     ImmutableList<StringBinaryProtoOrError> result = table.read();
 
     return result.stream()
-        .map(
-            element -> {
-              if (element.error().isPresent()) {
-                return SessionPersistenceDataOrError.of(/* data= */ null, element.error().get());
-              } else {
-                return SessionPersistenceDataOrError.of(
-                    /* data= */ (SessionPersistenceData) element.value().orElseThrow(),
-                    /* error= */ null);
-              }
-            })
+        .map(element -> {
+          if (element.error().isPresent()) {
+            return SessionPersistenceDataOrError.of(/* data= */ null, element.error().get());
+          } else {
+            return SessionPersistenceDataOrError.of(
+                /* data= */ (SessionPersistenceData) element.value().orElseThrow(),
+                /* error= */ null);
+          }
+        })
         .collect(toImmutableList());
   }
 }

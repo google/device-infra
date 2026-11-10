@@ -398,22 +398,21 @@ public class SessionResultHandlerUtil {
                       jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_ABI_PROP),
                       jobInfo.properties().get(SessionHandlerHelper.XTS_MODULE_PARAMETER_PROP));
               if (!isPrecondition) {
-                nonTradefedTestResult.ifPresent(
-                    res ->
-                        moblyReportInfos.add(
-                            MoblyReportInfo.of(
-                                res.moduleName(),
-                                res.moduleAbi().orElse(null),
-                                res.moduleParameter().orElse(null),
-                                res.testSummaryFile(),
-                                res.resultAttributesFile(),
-                                res.deviceBuildFingerprint(),
-                                res.buildAttributesFile(),
-                                res.moduleResultFile(),
-                                jobInfo
-                                    .params()
-                                    .getOptional(
-                                        MoblyReportInfo.MOBLY_TEST_ENTRY_CONVERTER_CLASS_PARAM))));
+                nonTradefedTestResult.ifPresent(res ->
+                    moblyReportInfos.add(
+                        MoblyReportInfo.of(
+                            res.moduleName(),
+                            res.moduleAbi().orElse(null),
+                            res.moduleParameter().orElse(null),
+                            res.testSummaryFile(),
+                            res.resultAttributesFile(),
+                            res.deviceBuildFingerprint(),
+                            res.buildAttributesFile(),
+                            res.moduleResultFile(),
+                            jobInfo
+                                .params()
+                                .getOptional(
+                                    MoblyReportInfo.MOBLY_TEST_ENTRY_CONVERTER_CLASS_PARAM))));
               }
               return null;
             },
@@ -860,20 +859,18 @@ public class SessionResultHandlerUtil {
         localFileUtil.listFilePaths(tmpTestResultDir, /* recursively= */ true);
     Path testResultXmlFile =
         testResultFiles.stream()
-            .filter(
-                file ->
-                    file.getFileName()
-                        .toString()
-                        .equals(SessionHandlerHelper.TEST_RESULT_XML_FILE_NAME))
+            .filter(file ->
+                file.getFileName()
+                    .toString()
+                    .equals(SessionHandlerHelper.TEST_RESULT_XML_FILE_NAME))
             .findFirst()
             .orElse(null);
     Optional<Path> testRecordFile =
         testResultFiles.stream()
-            .filter(
-                file ->
-                    file.getFileName()
-                        .toString()
-                        .equals(SessionHandlerHelper.TEST_RECORD_PROTOBUFFER_FILE_NAME))
+            .filter(file ->
+                file.getFileName()
+                    .toString()
+                    .equals(SessionHandlerHelper.TEST_RECORD_PROTOBUFFER_FILE_NAME))
             .findFirst();
     // Retrieve the list of filtered (by include/exclude filters, the given module names, or
     // subplan) expanded module names (e.g. `arm64-v8a CtsBatteryHealthTestCases`) for the Tradefed
@@ -887,10 +884,9 @@ public class SessionResultHandlerUtil {
     }
 
     return Optional.ofNullable(testResultXmlFile)
-        .map(
-            resultXmlFile ->
-                TradefedResultBundle.of(
-                    resultXmlFile, testRecordFile, filteredExpandedTradefedModules));
+        .map(resultXmlFile ->
+            TradefedResultBundle.of(
+                resultXmlFile, testRecordFile, filteredExpandedTradefedModules));
   }
 
   /**
@@ -899,15 +895,14 @@ public class SessionResultHandlerUtil {
    */
   private static ImmutableList<Module> getUnexecutedTradefedModules(TestInfo test) {
     return getTradefedModules(test).stream()
-        .map(
-            module ->
-                Module.newBuilder()
-                    .setAbi(module.abi())
-                    .setName(module.name())
-                    .setDone(false)
-                    .setPassed(0)
-                    .setTotalTests(0)
-                    .build())
+        .map(module ->
+            Module.newBuilder()
+                .setAbi(module.abi())
+                .setName(module.name())
+                .setDone(false)
+                .setPassed(0)
+                .setTotalTests(0)
+                .build())
         .collect(toImmutableList());
   }
 
@@ -1490,19 +1485,17 @@ public class SessionResultHandlerUtil {
   private String getNonTfModuleLogPath(List<JobInfo> jobInfos) {
     ImmutableMap<String, String> failedNonTfTestLogDirs =
         jobInfos.stream()
-            .filter(
-                jobInfo ->
-                    jobInfo.resultWithCause().get().type() == TestResult.FAIL
-                        && jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)
-                        && jobInfo.properties().has(SessionHandlerHelper.XTS_MODULE_NAME_PROP))
+            .filter(jobInfo ->
+                jobInfo.resultWithCause().get().type() == TestResult.FAIL
+                    && jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)
+                    && jobInfo.properties().has(SessionHandlerHelper.XTS_MODULE_NAME_PROP))
             .flatMap(jobInfo -> jobInfo.tests().getAll().values().stream())
-            .filter(
-                testInfo ->
-                    testInfo.properties().has(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY)
-                        && localFileUtil.isDirExist(
-                            testInfo
-                                .properties()
-                                .get(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY)))
+            .filter(testInfo ->
+                testInfo.properties().has(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY)
+                    && localFileUtil.isDirExist(
+                        testInfo
+                            .properties()
+                            .get(XtsConstants.XTS_FINAL_TEST_LOG_DIR_PROPERTY_KEY)))
             .collect(
                 toImmutableMap(
                     testInfo -> getExpandedNonTfModuleId(testInfo.jobInfo()),

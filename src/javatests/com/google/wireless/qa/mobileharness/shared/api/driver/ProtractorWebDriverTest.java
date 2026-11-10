@@ -163,11 +163,10 @@ public class ProtractorWebDriverTest {
 
     // Setup command execution to write output XML file
     when(cmdExecutor.run(any(Command.class)))
-        .thenAnswer(
-            invocation -> {
-              writeDummyJUnitXml(genFileDir, "company.spec.ts", "basic test", /* failed= */ false);
-              return "Protractor logs";
-            });
+        .thenAnswer(invocation -> {
+          writeDummyJUnitXml(genFileDir, "company.spec.ts", "basic test", /* failed= */ false);
+          return "Protractor logs";
+        });
 
     driver.run(testInfo);
 
@@ -217,11 +216,10 @@ public class ProtractorWebDriverTest {
     when(subTestResult.get()).thenReturn(passResult);
 
     when(cmdExecutor.run(any(Command.class)))
-        .thenAnswer(
-            invocation -> {
-              writeDummyJUnitXml(genFileDir, "company.spec.ts", "basic test", /* failed= */ false);
-              return "Protractor logs";
-            });
+        .thenAnswer(invocation -> {
+          writeDummyJUnitXml(genFileDir, "company.spec.ts", "basic test", /* failed= */ false);
+          return "Protractor logs";
+        });
 
     driver.run(testInfo);
 
@@ -259,11 +257,10 @@ public class ProtractorWebDriverTest {
     // Setup CommandExecutor to throw CommandException, but write a failed XML file
     CommandException commandException = Mockito.mock(CommandException.class);
     when(cmdExecutor.run(any(Command.class)))
-        .thenAnswer(
-            invocation -> {
-              writeDummyJUnitXml(genFileDir, "company.spec.ts", "failed test", /* failed= */ true);
-              throw commandException;
-            });
+        .thenAnswer(invocation -> {
+          writeDummyJUnitXml(genFileDir, "company.spec.ts", "failed test", /* failed= */ true);
+          throw commandException;
+        });
 
     driver.run(testInfo);
 
@@ -295,12 +292,10 @@ public class ProtractorWebDriverTest {
     // Setup CommandExecutor to throw InterruptedException, but write a partial XML file before
     // exiting
     when(cmdExecutor.run(any(Command.class)))
-        .thenAnswer(
-            invocation -> {
-              writeDummyJUnitXml(
-                  genFileDir, "company.spec.ts", "partial test", /* failed= */ false);
-              throw new InterruptedException("Thread interrupted!");
-            });
+        .thenAnswer(invocation -> {
+          writeDummyJUnitXml(genFileDir, "company.spec.ts", "partial test", /* failed= */ false);
+          throw new InterruptedException("Thread interrupted!");
+        });
 
     assertThrows(InterruptedException.class, () -> driver.run(testInfo));
 

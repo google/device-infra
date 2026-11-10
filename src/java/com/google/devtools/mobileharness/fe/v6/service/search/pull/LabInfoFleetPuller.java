@@ -258,10 +258,8 @@ public final class LabInfoFleetPuller {
   private static ImmutableMap<String, ImmutableList<String>> extractDimensionValues(
       ImmutableList<DeviceInfo> devices, String dimName) {
     return devices.stream()
-        .map(
-            deviceInfo ->
-                Map.entry(
-                    deviceInfo.getDeviceLocator().getId(), dimensionValues(deviceInfo, dimName)))
+        .map(deviceInfo ->
+            Map.entry(deviceInfo.getDeviceLocator().getId(), dimensionValues(deviceInfo, dimName)))
         .filter(entry -> !entry.getValue().isEmpty())
         .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue, (first, second) -> second));
   }
@@ -279,11 +277,10 @@ public final class LabInfoFleetPuller {
         response -> {
           ImmutableMap<String, Integer> result =
               response.getDimensionsList().stream()
-                  .filter(
-                      dim ->
-                          !dim.getName().isEmpty()
-                              && dim.getDeviceCount() > 0
-                              && !EXCLUDED_DIMENSIONS.contains(dim.getName()))
+                  .filter(dim ->
+                      !dim.getName().isEmpty()
+                          && dim.getDeviceCount() > 0
+                          && !EXCLUDED_DIMENSIONS.contains(dim.getName()))
                   .collect(
                       toImmutableMap(
                           DeviceDimensionSummary::getName,

@@ -98,17 +98,15 @@ public class TradefedConfigGenerator {
     if (deviceCount > 1) {
       ImmutableSet<DeviceActionConfigObject> deviceActionResultReporters =
           testEnvironment.getDeviceActionConfigObjectsList().stream()
-              .filter(
-                  deviceActionConfigObject ->
-                      deviceActionConfigObject.getType()
-                          == DeviceActionConfigObject.DeviceActionConfigObjectType.RESULT_REPORTER)
+              .filter(deviceActionConfigObject ->
+                  deviceActionConfigObject.getType()
+                      == DeviceActionConfigObject.DeviceActionConfigObjectType.RESULT_REPORTER)
               .collect(toImmutableSet());
       ImmutableList<DeviceActionConfigObject> remainingDeviceActionConfigObjects =
           testEnvironment.getDeviceActionConfigObjectsList().stream()
-              .filter(
-                  deviceActionConfigObject ->
-                      deviceActionConfigObject.getType()
-                          != DeviceActionConfigObject.DeviceActionConfigObjectType.RESULT_REPORTER)
+              .filter(deviceActionConfigObject ->
+                  deviceActionConfigObject.getType()
+                      != DeviceActionConfigObject.DeviceActionConfigObjectType.RESULT_REPORTER)
               .collect(toImmutableList());
       for (int i = 0; i < deviceCount; i++) {
         serializer.startTag(NULL_NS, DEVICE_TAG);

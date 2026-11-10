@@ -62,16 +62,15 @@ public class JdbcAllocationPersistenceUtil implements AllocationPersistenceUtil 
     ImmutableList<StringBinaryProtoOrError> result = table.read();
 
     return result.stream()
-        .map(
-            element -> {
-              if (element.error().isPresent()) {
-                return AllocationOrError.of(/* allocation= */ null, element.error().get());
-              } else {
-                AllocationProto allocationProto = (AllocationProto) element.value().orElseThrow();
-                Allocation allocation = AllocationConverter.toNewAllocation(allocationProto);
-                return AllocationOrError.of(/* allocation= */ allocation, /* error= */ null);
-              }
-            })
+        .map(element -> {
+          if (element.error().isPresent()) {
+            return AllocationOrError.of(/* allocation= */ null, element.error().get());
+          } else {
+            AllocationProto allocationProto = (AllocationProto) element.value().orElseThrow();
+            Allocation allocation = AllocationConverter.toNewAllocation(allocationProto);
+            return AllocationOrError.of(/* allocation= */ allocation, /* error= */ null);
+          }
+        })
         .collect(toImmutableList());
   }
 }

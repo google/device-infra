@@ -67,14 +67,13 @@ public class DynamicConfigHandler {
   private static List<String> updateValues(
       List<String> values, Map<String, String> valueReplacementMap) {
     List<String> updatedValues = new ArrayList<>();
-    values.forEach(
-        v -> {
-          String updatedValue = v;
-          for (Map.Entry<String, String> entry : valueReplacementMap.entrySet()) {
-            updatedValue = updatedValue.replace(entry.getKey(), entry.getValue());
-          }
-          updatedValues.add(updatedValue);
-        });
+    values.forEach(v -> {
+      String updatedValue = v;
+      for (Map.Entry<String, String> entry : valueReplacementMap.entrySet()) {
+        updatedValue = updatedValue.replace(entry.getKey(), entry.getValue());
+      }
+      updatedValues.add(updatedValue);
+    });
     return updatedValues;
   }
 

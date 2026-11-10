@@ -134,12 +134,11 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
   protected Optional<Checksum> computeChecksum(ResolveSource resolveSource)
       throws MobileHarnessException, InterruptedException {
     return getFileSha256(getSourcePath(resolveSource.path()))
-        .map(
-            sha256 ->
-                Checksum.newBuilder()
-                    .setAlgorithm(Algorithm.ATS_FILE_SERVER_SHA256)
-                    .setData(ByteString.copyFrom(Base64.getDecoder().decode(sha256)))
-                    .build());
+        .map(sha256 ->
+            Checksum.newBuilder()
+                .setAlgorithm(Algorithm.ATS_FILE_SERVER_SHA256)
+                .setData(ByteString.copyFrom(Base64.getDecoder().decode(sha256)))
+                .build());
   }
 
   private Optional<String> getFileSha256(String sourcePath) throws InterruptedException {

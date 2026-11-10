@@ -243,10 +243,9 @@ public final class FleetFilterKeyCataloger {
     }
     descriptors.stream()
         .limit(limit > 0 ? limit : Long.MAX_VALUE)
-        .map(
-            desc ->
-                deviceEntry(
-                    desc, deviceCounts.getOrDefault(desc.id(), 0), appliedKeys.contains(desc.id())))
+        .map(desc ->
+            deviceEntry(
+                desc, deviceCounts.getOrDefault(desc.id(), 0), appliedKeys.contains(desc.id())))
         .forEach(section::addEntries);
     response.addSections(section);
   }
@@ -268,10 +267,8 @@ public final class FleetFilterKeyCataloger {
     }
     descriptors.stream()
         .limit(limit > 0 ? limit : Long.MAX_VALUE)
-        .map(
-            desc ->
-                hostEntry(
-                    desc, hostCounts.getOrDefault(desc.id(), 0), appliedKeys.contains(desc.id())))
+        .map(desc ->
+            hostEntry(desc, hostCounts.getOrDefault(desc.id(), 0), appliedKeys.contains(desc.id())))
         .forEach(section::addEntries);
     response.addSections(section);
   }

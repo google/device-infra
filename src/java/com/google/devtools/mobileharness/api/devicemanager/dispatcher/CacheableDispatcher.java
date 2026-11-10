@@ -58,12 +58,10 @@ public abstract class CacheableDispatcher implements Dispatcher {
     // live results: id0(live), id1(only_filter), id2(sub_device)
     // cache results: id0(cache), id1(cache), id2(cache)
     // merge results: id0(live), id1(cache), id2(sub_device)
-    cachedIds.forEach(
-        id ->
-            dispatchIds.compute(
-                id,
-                (k, v) ->
-                    (v == null || v.equals(DispatchType.ONLY_FILTER)) ? DispatchType.CACHE : v));
+    cachedIds.forEach(id ->
+        dispatchIds.compute(
+            id,
+            (k, v) -> (v == null || v.equals(DispatchType.ONLY_FILTER)) ? DispatchType.CACHE : v));
     return dispatchIds;
   }
 

@@ -579,26 +579,25 @@ public class CrossOverAndroidDesktopProvisionDecoratorTest {
 
     List<Path> downloadedRootDirs = new ArrayList<>();
     when(commandExecutor.exec(any(Command.class)))
-        .thenAnswer(
-            invocation -> {
-              Command cmd = invocation.getArgument(0);
-              ImmutableList<String> cmdArgs = cmd.getCommand();
-              int rootIdx = cmdArgs.indexOf("-root");
-              if (rootIdx != -1 && rootIdx + 1 < cmdArgs.size()) {
-                Path rootPath = Path.of(cmdArgs.get(rootIdx + 1));
-                downloadedRootDirs.add(rootPath);
-                String pkg = cmdArgs.get(2);
-                String binName =
-                    pkg.equals(CrosDecoratorSpec.FOIL_PROVISION_PACKAGE)
-                        ? "foil-provision"
-                        : "dt-converter";
-                Path bin = rootPath.resolve(binName);
-                if (!Files.exists(bin)) {
-                  Files.createFile(bin);
-                }
-              }
-              return versionResult;
-            });
+        .thenAnswer(invocation -> {
+          Command cmd = invocation.getArgument(0);
+          ImmutableList<String> cmdArgs = cmd.getCommand();
+          int rootIdx = cmdArgs.indexOf("-root");
+          if (rootIdx != -1 && rootIdx + 1 < cmdArgs.size()) {
+            Path rootPath = Path.of(cmdArgs.get(rootIdx + 1));
+            downloadedRootDirs.add(rootPath);
+            String pkg = cmdArgs.get(2);
+            String binName =
+                pkg.equals(CrosDecoratorSpec.FOIL_PROVISION_PACKAGE)
+                    ? "foil-provision"
+                    : "dt-converter";
+            Path bin = rootPath.resolve(binName);
+            if (!Files.exists(bin)) {
+              Files.createFile(bin);
+            }
+          }
+          return versionResult;
+        });
 
     // First resolution downloads packages and records temp dirs.
     decorator.resolveFoilProvisionPath(testInfo);

@@ -64,11 +64,10 @@ public class LocalFileBasedDeviceConfigManager extends DeviceConfigManager {
         deviceLocators.stream().map(DeviceLocator::getDeviceUuid).collect(toImmutableSet());
     Optional<LabDeviceConfig> result = apiConfigFileProcessor.readConfigFile();
     return result
-        .map(
-            labDeviceConfig ->
-                labDeviceConfig.getDeviceConfigList().stream()
-                    .filter(config -> deviceUuids.contains(config.getUuid()))
-                    .collect(toImmutableList()))
+        .map(labDeviceConfig ->
+            labDeviceConfig.getDeviceConfigList().stream()
+                .filter(config -> deviceUuids.contains(config.getUuid()))
+                .collect(toImmutableList()))
         .orElseGet(ImmutableList::of);
   }
 

@@ -124,7 +124,7 @@ public class TradefedInvocationAgent {
 
   private static class TradefedTestInvocationInvokeMethodInterceptor {
 
-    @Advice.OnMethodEnter()
+    @Advice.OnMethodEnter
     public static void onEnter(
         @Advice.This Object testInvocation,
         @Advice.Argument(value = 0) Object invocationContext,
@@ -188,7 +188,7 @@ public class TradefedInvocationAgent {
   }
 
   private static class TradefedCollectingTestListenerInvocationFailedMethodInterceptor {
-    @Advice.OnMethodEnter()
+    @Advice.OnMethodEnter
     public static void onEnter(@Advice.Argument(value = 0) Object exception) {
       XtsTradefedRuntimeInfoMonitor.getInstance().onInvocationFailed((Throwable) exception);
     }

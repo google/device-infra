@@ -100,22 +100,18 @@ public final class RetryResultHelper {
     // were ran.
     if (!prevResultIncludeFilters.isEmpty()
         && prevResultIncludeFilters.stream()
-            .anyMatch(
-                filter ->
-                    filter.matchModule(
-                            module.getName(), module.getAbi(), /* moduleParameter= */ null)
-                        && filter.testName().isPresent())) {
+            .anyMatch(filter ->
+                filter.matchModule(module.getName(), module.getAbi(), /* moduleParameter= */ null)
+                    && filter.testName().isPresent())) {
       return false;
     }
     // User passed in exclude-filter matches a test in the module, so only part of the module tests
     // were ran.
     if (!prevResultExcludeFilters.isEmpty()
         && prevResultExcludeFilters.stream()
-            .anyMatch(
-                filter ->
-                    filter.matchModule(
-                            module.getName(), module.getAbi(), /* moduleParameter= */ null)
-                        && filter.testName().isPresent())) {
+            .anyMatch(filter ->
+                filter.matchModule(module.getName(), module.getAbi(), /* moduleParameter= */ null)
+                    && filter.testName().isPresent())) {
       return false;
     }
 

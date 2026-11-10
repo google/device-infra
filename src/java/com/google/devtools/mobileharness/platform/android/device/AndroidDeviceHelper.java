@@ -284,14 +284,13 @@ public class AndroidDeviceHelper {
       Class<? extends Annotation> annotation) {
     return stream(AndroidProperty.class.getFields())
         .filter(field -> field.isAnnotationPresent(annotation))
-        .map(
-            field -> {
-              try {
-                return (AndroidProperty) field.get(null);
-              } catch (IllegalAccessException e) {
-                throw new AssertionError(e);
-              }
-            })
+        .map(field -> {
+          try {
+            return (AndroidProperty) field.get(null);
+          } catch (IllegalAccessException e) {
+            throw new AssertionError(e);
+          }
+        })
         .collect(toImmutableSet());
   }
 }

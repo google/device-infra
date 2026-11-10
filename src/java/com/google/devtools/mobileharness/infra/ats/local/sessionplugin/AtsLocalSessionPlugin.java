@@ -86,8 +86,7 @@ public class AtsLocalSessionPlugin {
   @Subscribe
   public void onSessionEnded(SessionEndedEvent event) {
     sessionInfo.setSessionPluginOutput(
-        (oldOutput) -> getPluginOutput(sessionInfo.getAllJobs()),
-        AtsLocalSessionPluginOutput.class);
+        oldOutput -> getPluginOutput(sessionInfo.getAllJobs()), AtsLocalSessionPluginOutput.class);
   }
 
   public void addJob() throws MobileHarnessException, InterruptedException {

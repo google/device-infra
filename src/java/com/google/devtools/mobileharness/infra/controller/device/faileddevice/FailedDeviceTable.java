@@ -126,13 +126,12 @@ public class FailedDeviceTable {
       }
       return failedDevices.entrySet().stream()
           .filter(entry -> entry.getValue().failedCount() >= maxInitFailuresBeforeFail)
-          .filter(
-              entry ->
-                  entry
-                      .getValue()
-                      .lastFailedTime()
-                      .plus(TIME_TO_STAY_FAILED)
-                      .isAfter(Clock.systemUTC().instant()))
+          .filter(entry ->
+              entry
+                  .getValue()
+                  .lastFailedTime()
+                  .plus(TIME_TO_STAY_FAILED)
+                  .isAfter(Clock.systemUTC().instant()))
           .map(Map.Entry::getKey)
           .collect(toImmutableSet());
     }

@@ -70,42 +70,39 @@ public class DeviceDetailsRetriever {
           .getDeviceSerialsByState(DeviceState.DEVICE, /* timeout= */ null)
           .stream()
           .filter(deviceManagementFilter::isAllowed)
-          .map(
-              deviceId -> {
-                DeviceDetails.Builder deviceDetails = DeviceDetails.builder().setId(deviceId);
-                if (!sessionRequestInfo.getProductTypesList().isEmpty()) {
-                  Optional<String> productType = getDeviceProductType(deviceId);
-                  productType.ifPresent(deviceDetails::setProductType);
-                  Optional<String> productVariant = getDeviceProductVariant(deviceId);
-                  productVariant.ifPresent(deviceDetails::setProductVariant);
-                }
-                if (sessionRequestInfo.hasMaxSdkLevel() || sessionRequestInfo.hasMinSdkLevel()) {
-                  Optional<Integer> sdkVersion = getDeviceSdkVersion(deviceId);
-                  sdkVersion.ifPresent(deviceDetails::setSdkVersion);
-                }
-                if (sessionRequestInfo.hasMaxBatteryLevel()
-                    || sessionRequestInfo.hasMinBatteryLevel()) {
-                  Optional<Integer> batteryLevel = getDeviceBatteryLevel(deviceId);
-                  batteryLevel.ifPresent(deviceDetails::setBatteryLevel);
-                }
-                if (sessionRequestInfo.hasMaxBatteryTemperature()) {
-                  Optional<Integer> batteryTemperature = getDeviceBatteryTemperature(deviceId);
-                  batteryTemperature.ifPresent(deviceDetails::setBatteryTemperature);
-                }
-                ImmutableMap.Builder<String, String> collectedDeviceProperties =
-                    ImmutableMap.builder();
-                sessionRequestInfo
-                    .getDevicePropertiesMap()
-                    .keySet()
-                    .forEach(
-                        propName -> {
-                          Optional<String> propertyValue = getDeviceProperty(deviceId, propName);
-                          propertyValue.ifPresent(s -> collectedDeviceProperties.put(propName, s));
-                        });
-                return deviceDetails
-                    .setDeviceProperties(collectedDeviceProperties.buildOrThrow())
-                    .build();
-              })
+          .map(deviceId -> {
+            DeviceDetails.Builder deviceDetails = DeviceDetails.builder().setId(deviceId);
+            if (!sessionRequestInfo.getProductTypesList().isEmpty()) {
+              Optional<String> productType = getDeviceProductType(deviceId);
+              productType.ifPresent(deviceDetails::setProductType);
+              Optional<String> productVariant = getDeviceProductVariant(deviceId);
+              productVariant.ifPresent(deviceDetails::setProductVariant);
+            }
+            if (sessionRequestInfo.hasMaxSdkLevel() || sessionRequestInfo.hasMinSdkLevel()) {
+              Optional<Integer> sdkVersion = getDeviceSdkVersion(deviceId);
+              sdkVersion.ifPresent(deviceDetails::setSdkVersion);
+            }
+            if (sessionRequestInfo.hasMaxBatteryLevel()
+                || sessionRequestInfo.hasMinBatteryLevel()) {
+              Optional<Integer> batteryLevel = getDeviceBatteryLevel(deviceId);
+              batteryLevel.ifPresent(deviceDetails::setBatteryLevel);
+            }
+            if (sessionRequestInfo.hasMaxBatteryTemperature()) {
+              Optional<Integer> batteryTemperature = getDeviceBatteryTemperature(deviceId);
+              batteryTemperature.ifPresent(deviceDetails::setBatteryTemperature);
+            }
+            ImmutableMap.Builder<String, String> collectedDeviceProperties = ImmutableMap.builder();
+            sessionRequestInfo
+                .getDevicePropertiesMap()
+                .keySet()
+                .forEach(propName -> {
+                  Optional<String> propertyValue = getDeviceProperty(deviceId, propName);
+                  propertyValue.ifPresent(s -> collectedDeviceProperties.put(propName, s));
+                });
+            return deviceDetails
+                .setDeviceProperties(collectedDeviceProperties.buildOrThrow())
+                .build();
+          })
           .collect(toImmutableMap(DeviceDetails::id, identity()));
     } else {
       return ImmutableMap.of();

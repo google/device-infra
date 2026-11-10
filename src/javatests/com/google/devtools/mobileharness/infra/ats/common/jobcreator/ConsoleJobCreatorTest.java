@@ -336,19 +336,18 @@ public final class ConsoleJobCreatorTest {
                 "static_module", "arg1",
                 "mcts_module", "arg2"));
     when(sessionRequestHandlerUtil.createXtsTradefedTestJob(eq(sessionRequestInfo), any()))
-        .thenAnswer(
-            invocation -> {
-              TradefedJobInfo tradefedJobInfo = invocation.getArgument(1);
-              JobInfo jobInfo = mock(JobInfo.class);
-              when(jobInfo.locator())
-                  .thenReturn(
-                      new JobLocator(
-                          tradefedJobInfo.jobConfig().getName(),
-                          tradefedJobInfo.jobConfig().getName()));
-              when(jobInfo.params()).thenReturn(new Params(new Timing()));
-              when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
-              return jobInfo;
-            });
+        .thenAnswer(invocation -> {
+          TradefedJobInfo tradefedJobInfo = invocation.getArgument(1);
+          JobInfo jobInfo = mock(JobInfo.class);
+          when(jobInfo.locator())
+              .thenReturn(
+                  new JobLocator(
+                      tradefedJobInfo.jobConfig().getName(),
+                      tradefedJobInfo.jobConfig().getName()));
+          when(jobInfo.params()).thenReturn(new Params(new Timing()));
+          when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+          return jobInfo;
+        });
 
     ImmutableList<JobInfo> jobInfos =
         jobCreator.createXtsTradefedTestJob(sessionRequestInfo, ImmutableSet.of("mcts_module"));
@@ -444,19 +443,18 @@ public final class ConsoleJobCreatorTest {
         .thenReturn(JobConfig.newBuilder().setName("mock_job").build());
     when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
     when(sessionRequestHandlerUtil.createXtsTradefedTestJob(eq(sessionRequestInfo), any()))
-        .thenAnswer(
-            invocation -> {
-              TradefedJobInfo tradefedJobInfo = invocation.getArgument(1);
-              JobInfo jobInfo = mock(JobInfo.class);
-              when(jobInfo.locator())
-                  .thenReturn(
-                      new JobLocator(
-                          tradefedJobInfo.jobConfig().getName(),
-                          tradefedJobInfo.jobConfig().getName()));
-              when(jobInfo.params()).thenReturn(new Params(new Timing()));
-              when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
-              return jobInfo;
-            });
+        .thenAnswer(invocation -> {
+          TradefedJobInfo tradefedJobInfo = invocation.getArgument(1);
+          JobInfo jobInfo = mock(JobInfo.class);
+          when(jobInfo.locator())
+              .thenReturn(
+                  new JobLocator(
+                      tradefedJobInfo.jobConfig().getName(),
+                      tradefedJobInfo.jobConfig().getName()));
+          when(jobInfo.params()).thenReturn(new Params(new Timing()));
+          when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+          return jobInfo;
+        });
 
     ImmutableList<JobInfo> jobInfos =
         jobCreator.createXtsTradefedTestJob(
@@ -490,19 +488,18 @@ public final class ConsoleJobCreatorTest {
         .thenReturn(JobConfig.newBuilder().setName("mock_job").build());
     when(sessionRequestHandlerUtil.createJobGenDir(any())).thenReturn(Path.of("/tmp/gen"));
     when(sessionRequestHandlerUtil.createXtsTradefedTestJob(eq(sessionRequestInfo), any()))
-        .thenAnswer(
-            invocation -> {
-              TradefedJobInfo tradefedJobInfo = invocation.getArgument(1);
-              JobInfo jobInfo = mock(JobInfo.class);
-              when(jobInfo.locator())
-                  .thenReturn(
-                      new JobLocator(
-                          tradefedJobInfo.jobConfig().getName(),
-                          tradefedJobInfo.jobConfig().getName()));
-              when(jobInfo.params()).thenReturn(new Params(new Timing()));
-              when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
-              return jobInfo;
-            });
+        .thenAnswer(invocation -> {
+          TradefedJobInfo tradefedJobInfo = invocation.getArgument(1);
+          JobInfo jobInfo = mock(JobInfo.class);
+          when(jobInfo.locator())
+              .thenReturn(
+                  new JobLocator(
+                      tradefedJobInfo.jobConfig().getName(),
+                      tradefedJobInfo.jobConfig().getName()));
+          when(jobInfo.params()).thenReturn(new Params(new Timing()));
+          when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+          return jobInfo;
+        });
   }
 
   @Test
@@ -1697,13 +1694,12 @@ public final class ConsoleJobCreatorTest {
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any(), any(), any()))
         .thenReturn(JobConfig.newBuilder().setName("mock_job").build());
     when(sessionRequestHandlerUtil.createXtsTradefedTestJob(eq(sessionRequestInfo), any()))
-        .thenAnswer(
-            invocation -> {
-              JobInfo jobInfo = mock(JobInfo.class);
-              when(jobInfo.params()).thenReturn(new Params(new Timing()));
-              when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
-              return jobInfo;
-            });
+        .thenAnswer(invocation -> {
+          JobInfo jobInfo = mock(JobInfo.class);
+          when(jobInfo.params()).thenReturn(new Params(new Timing()));
+          when(jobInfo.properties()).thenReturn(new Properties(new Timing()));
+          return jobInfo;
+        });
 
     ImmutableList<JobInfo> jobInfos = jobCreator.createXtsTradefedTestJob(sessionRequestInfo);
 

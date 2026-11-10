@@ -265,15 +265,14 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
             Path.of(testInfo.getGenFileDir()).resolve(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_NAME),
             testInfo);
     if (!failedInvocations.isEmpty()) {
-      failedInvocations.forEach(
-          invocation ->
-              testInfo
-                  .log()
-                  .atWarning()
-                  .alsoTo(logger)
-                  .log(
-                      "Tradefed invocation on %s failed:%n%s",
-                      invocation.deviceIds(), invocation.errorMessage()));
+      failedInvocations.forEach(invocation ->
+          testInfo
+              .log()
+              .atWarning()
+              .alsoTo(logger)
+              .log(
+                  "Tradefed invocation on %s failed:%n%s",
+                  invocation.deviceIds(), invocation.errorMessage()));
       testInfo
           .resultWithCause()
           .setNonPassing(
@@ -294,12 +293,11 @@ public final class NonXtsRunStrategy implements TradefedRunStrategy {
     try {
       return xtsTradefedRuntimeInfoFileUtil
           .readInfo(runtimeInfoFilePath, /* lastModifiedTime= */ null)
-          .map(
-              fileDetail ->
-                  fileDetail.runtimeInfo().invocations().stream()
-                      .filter(invocation -> !invocation.isRunning())
-                      .filter(invocation -> !isNullOrEmpty(invocation.errorMessage()))
-                      .collect(toImmutableList()))
+          .map(fileDetail ->
+              fileDetail.runtimeInfo().invocations().stream()
+                  .filter(invocation -> !invocation.isRunning())
+                  .filter(invocation -> !isNullOrEmpty(invocation.errorMessage()))
+                  .collect(toImmutableList()))
           .orElse(ImmutableList.of());
     } catch (IOException | RuntimeException e) {
       testInfo

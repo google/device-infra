@@ -179,10 +179,9 @@ public class NetUtil {
       List<InetAddress> ips = new ArrayList<>();
       interfaces
           .get()
-          .forEach(
-              networkInterfaceInfo -> {
-                ips.addAll(networkInterfaceInfo.ips());
-              });
+          .forEach(networkInterfaceInfo -> {
+            ips.addAll(networkInterfaceInfo.ips());
+          });
       // Could return site local address if it is the only one address in system.
       if (ips.size() == 1) {
         return Optional.of(InetAddresses.toAddrString(ips.get(0)));

@@ -171,17 +171,16 @@ public class ConcurrencyUtil {
     List<Throwable> failuresInOrder = Collections.synchronizedList(new ArrayList<>());
     ImmutableList<Callable<V>> callables =
         tasks.stream()
-            .map(
-                task ->
-                    threadRenaming(
-                        () -> {
-                          // Adds the log tag.
-                          MobileHarnessLogTag.addTag(task.logTagName(), task.logTagValue());
+            .map(task ->
+                threadRenaming(
+                    () -> {
+                      // Adds the log tag.
+                      MobileHarnessLogTag.addTag(task.logTagName(), task.logTagValue());
 
-                          // Runs the actual sub task.
-                          return task.callable().call();
-                        },
-                        task::threadName))
+                      // Runs the actual sub task.
+                      return task.callable().call();
+                    },
+                    task::threadName))
             .collect(toImmutableList());
     List<TaskExecution<V>> startedExecutions = new ArrayList<>(callables.size());
     try {
@@ -358,22 +357,21 @@ public class ConcurrencyUtil {
         List<Throwable> failuresInOrder) {
       this.failuresInOrder = failuresInOrder;
       this.future =
-          executorService.submit(
-              () -> {
-                if (!onStart()) {
-                  throw new InterruptedException("Sub task cancelled before starting");
-                }
-                try {
-                  return callable.call();
-                } catch (Exception | Error e) {
-                  // Records the failure here rather than reading it from the future later, because
-                  // the future may not be done yet right after onFinish() is called.
-                  onFailure(e);
-                  throw e;
-                } finally {
-                  onFinish();
-                }
-              });
+          executorService.submit(() -> {
+            if (!onStart()) {
+              throw new InterruptedException("Sub task cancelled before starting");
+            }
+            try {
+              return callable.call();
+            } catch (Exception | Error e) {
+              // Records the failure here rather than reading it from the future later, because
+              // the future may not be done yet right after onFinish() is called.
+              onFailure(e);
+              throw e;
+            } finally {
+              onFinish();
+            }
+          });
     }
 
     private ListenableFuture<V> future() {

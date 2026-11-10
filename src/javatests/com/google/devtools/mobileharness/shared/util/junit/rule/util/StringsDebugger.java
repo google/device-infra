@@ -31,18 +31,17 @@ public class StringsDebugger {
       Exception exception =
           new IllegalStateException(
               strings.entrySet().stream()
-                  .map(
-                      entry ->
-                          String.format(
-                              "\n"
-                                  + "==============================\n"
-                                  + "begin of %s\n"
-                                  + "==============================\n"
-                                  + "%s\n"
-                                  + "==============================\n"
-                                  + "end of %s\n"
-                                  + "==============================\n",
-                              entry.getKey(), entry.getValue(), entry.getKey()))
+                  .map(entry ->
+                      String.format(
+                          "\n"
+                              + "==============================\n"
+                              + "begin of %s\n"
+                              + "==============================\n"
+                              + "%s\n"
+                              + "==============================\n"
+                              + "end of %s\n"
+                              + "==============================\n",
+                          entry.getKey(), entry.getValue(), entry.getKey()))
                   .collect(joining()));
       exception.setStackTrace(new StackTraceElement[0]);
       testFailure.addSuppressed(exception);

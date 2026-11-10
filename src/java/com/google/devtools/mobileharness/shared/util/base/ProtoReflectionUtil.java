@@ -32,10 +32,8 @@ public final class ProtoReflectionUtil {
   public static boolean isGeneratedClass(Class<? extends Message> protoClazz) {
     return Message.class.isAssignableFrom(protoClazz)
         && stream(protoClazz.getMethods())
-            .anyMatch(
-                method ->
-                    method.getName().equals("getDefaultInstance")
-                        && method.getParameterCount() == 0);
+            .anyMatch(method ->
+                method.getName().equals("getDefaultInstance") && method.getParameterCount() == 0);
   }
 
   /** Gets the default instance of the given Protobuf message class. */

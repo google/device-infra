@@ -219,12 +219,8 @@ public interface Dimensions {
   /** Converts the dimensions to protos. */
   default List<DeviceDimension> toProtos() {
     return getAll().entries().stream()
-        .map(
-            entry ->
-                DeviceDimension.newBuilder()
-                    .setName(entry.getKey())
-                    .setValue(entry.getValue())
-                    .build())
+        .map(entry ->
+            DeviceDimension.newBuilder().setName(entry.getKey()).setValue(entry.getValue()).build())
         .collect(toImmutableList());
   }
 }

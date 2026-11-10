@@ -378,17 +378,16 @@ public final class FlagsManager {
       String normalizedText =
           ENTRY_SPLITTER
               .splitToStream(text)
-              .map(
-                  entry -> {
-                    int separatorIndex = entry.indexOf(KEY_VALUE_SEPARATOR);
-                    if (separatorIndex == -1) {
-                      throw new ParameterException(
-                          commandSpec.commandLine(), "Invalid map entry syntax: " + entry);
-                    }
-                    return entry.substring(0, separatorIndex).trim()
-                        + KEY_VALUE_SEPARATOR
-                        + entry.substring(separatorIndex + 1).trim();
-                  })
+              .map(entry -> {
+                int separatorIndex = entry.indexOf(KEY_VALUE_SEPARATOR);
+                if (separatorIndex == -1) {
+                  throw new ParameterException(
+                      commandSpec.commandLine(), "Invalid map entry syntax: " + entry);
+                }
+                return entry.substring(0, separatorIndex).trim()
+                    + KEY_VALUE_SEPARATOR
+                    + entry.substring(separatorIndex + 1).trim();
+              })
               .collect(joining(ENTRY_SEPARATOR));
       args.push(normalizedText);
 

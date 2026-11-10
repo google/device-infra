@@ -167,13 +167,9 @@ public class ErrorModelConverter {
     if (throwable instanceof MetadataProvider metadataProvider) {
       var metadata = metadataProvider.getMetadata();
       if (metadata != null) {
-        metadata.forEach(
-            (key, value) ->
-                result.addMetadata(
-                    ExceptionSummary.MetadataEntry.newBuilder()
-                        .setKey(key)
-                        .setValue(value)
-                        .build()));
+        metadata.forEach((key, value) ->
+            result.addMetadata(
+                ExceptionSummary.MetadataEntry.newBuilder().setKey(key).setValue(value).build()));
       }
     }
     return result.build();
@@ -198,13 +194,12 @@ public class ErrorModelConverter {
   public static StackTrace toStackTraceProto(Stream<StackTraceElement> stackTraceElements) {
     StackTrace.Builder result = StackTrace.newBuilder();
     stackTraceElements
-        .map(
-            element ->
-                ExceptionProto.StackTraceElement.newBuilder()
-                    .setClassName(element.getClassName())
-                    .setMethodName(element.getMethodName())
-                    .setFileName(nullToEmpty(element.getFileName()))
-                    .setLineNumber(element.getLineNumber()))
+        .map(element ->
+            ExceptionProto.StackTraceElement.newBuilder()
+                .setClassName(element.getClassName())
+                .setMethodName(element.getMethodName())
+                .setFileName(nullToEmpty(element.getFileName()))
+                .setLineNumber(element.getLineNumber()))
         .forEach(result::addElement);
     return result.build();
   }

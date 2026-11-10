@@ -936,11 +936,10 @@ public class LocalFileUtil {
     return Splitter.on('\n')
         .splitToStream(zipInfoOutput)
         .map(line -> line.trim().split("\\s+"))
-        .anyMatch(
-            parts ->
-                parts.length > 4
-                    && (parts[0].startsWith("-") || parts[0].startsWith("d"))
-                    && (parts[4].startsWith("B") || parts[4].startsWith("T")));
+        .anyMatch(parts ->
+            parts.length > 4
+                && (parts[0].startsWith("-") || parts[0].startsWith("d"))
+                && (parts[4].startsWith("B") || parts[4].startsWith("T")));
   }
 
   /**
@@ -1129,7 +1128,7 @@ public class LocalFileUtil {
       throws MobileHarnessException {
     return listFilesOrDirs(
         dirPath,
-        (pathname) -> pathname.isDirectory() && (dirFilter == null || dirFilter.accept(pathname)));
+        pathname -> pathname.isDirectory() && (dirFilter == null || dirFilter.accept(pathname)));
   }
 
   /**
@@ -2411,17 +2410,12 @@ public class LocalFileUtil {
         arguments.addAll(
             files.stream()
                 .sorted()
-                .map(
-                    file ->
-                        keepLocalSourceRootBaseName
-                            ? PathUtil.join(
-                                PathUtil.basename(sourceDirPath),
-                                absSourceDirPath
-                                    .relativize(Path.of(file).toAbsolutePath())
-                                    .toString())
-                            : absSourceDirPath
-                                .relativize(Path.of(file).toAbsolutePath())
-                                .toString())
+                .map(file ->
+                    keepLocalSourceRootBaseName
+                        ? PathUtil.join(
+                            PathUtil.basename(sourceDirPath),
+                            absSourceDirPath.relativize(Path.of(file).toAbsolutePath()).toString())
+                        : absSourceDirPath.relativize(Path.of(file).toAbsolutePath()).toString())
                 .collect(toImmutableList()));
       } else {
         arguments.add(keepLocalSourceRootBaseName ? PathUtil.basename(sourceDirPath) : ".");

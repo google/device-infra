@@ -109,12 +109,11 @@ public final class GoogleAccountDecoratorUtil {
                   emails.size(), lsts.size(), obfuscatedGaiaIds.size()));
         } else {
           IntStream.range(0, emails.size())
-              .forEach(
-                  index ->
-                      testAccountsLstAndObfuscatedGaiaIdMap.put(
-                          emails.get(index),
-                          LstAndObfuscatedGaiaId.create(
-                              lsts.get(index), obfuscatedGaiaIds.get(index))));
+              .forEach(index ->
+                  testAccountsLstAndObfuscatedGaiaIdMap.put(
+                      emails.get(index),
+                      LstAndObfuscatedGaiaId.create(
+                          lsts.get(index), obfuscatedGaiaIds.get(index))));
         }
       } else {
         GoogleAccountDecoratorUtil.logAndUpdateTestInfoPropertiesOnErrors(

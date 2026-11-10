@@ -122,11 +122,10 @@ public class SystemVendorReusePlugin {
         .properties()
         .getOptional(Job.SESSION_ID)
         .filter(id -> !id.isEmpty())
-        .orElseThrow(
-            () ->
-                new MobileHarnessException(
-                    AndroidErrorId.SYSTEM_VENDOR_REUSE_PLUGIN_PROPERTY_NOT_FOUND,
-                    String.format("Job property %s is not set or empty.", Job.SESSION_ID)));
+        .orElseThrow(() ->
+            new MobileHarnessException(
+                AndroidErrorId.SYSTEM_VENDOR_REUSE_PLUGIN_PROPERTY_NOT_FOUND,
+                String.format("Job property %s is not set or empty.", Job.SESSION_ID)));
   }
 
   private String getSubPlanFilePath(TestInfo testInfo) throws MobileHarnessException {
@@ -135,12 +134,10 @@ public class SystemVendorReusePlugin {
         .properties()
         .getOptional(Job.SVR_SUBPLAN_FILE_PATH)
         .filter(path -> !path.isEmpty())
-        .orElseThrow(
-            () ->
-                new MobileHarnessException(
-                    AndroidErrorId.SYSTEM_VENDOR_REUSE_PLUGIN_PROPERTY_NOT_FOUND,
-                    String.format(
-                        "Job property %s is not set or empty.", Job.SVR_SUBPLAN_FILE_PATH)));
+        .orElseThrow(() ->
+            new MobileHarnessException(
+                AndroidErrorId.SYSTEM_VENDOR_REUSE_PLUGIN_PROPERTY_NOT_FOUND,
+                String.format("Job property %s is not set or empty.", Job.SVR_SUBPLAN_FILE_PATH)));
   }
 
   /** Fetches candidate module names to include in the SVR (System-Vendor Reuse) subplan. */

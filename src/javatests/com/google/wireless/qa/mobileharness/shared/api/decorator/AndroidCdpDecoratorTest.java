@@ -150,14 +150,13 @@ public class AndroidCdpDecoratorTest {
     // Mock getProcessId to fail twice, then succeed
     AtomicInteger attempts = new AtomicInteger(0);
     when(processUtil.getProcessId(any(UtilArgs.class), eq(PACKAGE_NAME)))
-        .thenAnswer(
-            invocation -> {
-              int attempt = attempts.incrementAndGet();
-              if (attempt < 3) {
-                return ""; // not started yet
-              }
-              return "12345"; // PID
-            });
+        .thenAnswer(invocation -> {
+          int attempt = attempts.incrementAndGet();
+          if (attempt < 3) {
+            return ""; // not started yet
+          }
+          return "12345"; // PID
+        });
 
     // Mock socket readiness to succeed instantly
     when(adb.runShell(eq(DEVICE_ID), anyString(), any(Duration.class)))
@@ -206,14 +205,13 @@ public class AndroidCdpDecoratorTest {
     // Mock adb runShell for socket check to return empty twice, then succeed
     AtomicInteger attempts = new AtomicInteger(0);
     when(adb.runShell(eq(DEVICE_ID), anyString(), any(Duration.class)))
-        .thenAnswer(
-            invocation -> {
-              int attempt = attempts.incrementAndGet();
-              if (attempt < 3) {
-                return ""; // socket not ready
-              }
-              return "chrome_devtools_remote";
-            });
+        .thenAnswer(invocation -> {
+          int attempt = attempts.incrementAndGet();
+          if (attempt < 3) {
+            return ""; // socket not ready
+          }
+          return "chrome_devtools_remote";
+        });
 
     decorator.setUp(setupContext);
 
@@ -722,20 +720,19 @@ public class AndroidCdpDecoratorTest {
     int port = serverSocket.getLocalPort();
 
     Thread serverThread =
-        new Thread(
-            () -> {
-              try (Socket socket = serverSocket.accept()) {
-                // auto-closes
-              } catch (IOException e) {
-                // ignore
-              } finally {
-                try {
-                  serverSocket.close();
-                } catch (IOException e) {
-                  // ignore
-                }
-              }
-            });
+        new Thread(() -> {
+          try (Socket socket = serverSocket.accept()) {
+            // auto-closes
+          } catch (IOException e) {
+            // ignore
+          } finally {
+            try {
+              serverSocket.close();
+            } catch (IOException e) {
+              // ignore
+            }
+          }
+        });
     serverThread.start();
 
     try {
@@ -821,21 +818,20 @@ public class AndroidCdpDecoratorTest {
             any(Integer.class),
             anyString(),
             eq("/data/local/tmp/webview-command-line")))
-        .thenAnswer(
-            invocation -> {
-              File[] files = tempDir.listFiles();
-              if (files != null) {
-                for (File f : files) {
-                  if (f.getName().startsWith("chrome_flags_") && f.getName().endsWith(".txt")) {
-                    f.delete();
-                    f.mkdir();
-                    new File(f, "dummy").createNewFile();
-                    break;
-                  }
-                }
+        .thenAnswer(invocation -> {
+          File[] files = tempDir.listFiles();
+          if (files != null) {
+            for (File f : files) {
+              if (f.getName().startsWith("chrome_flags_") && f.getName().endsWith(".txt")) {
+                f.delete();
+                f.mkdir();
+                new File(f, "dummy").createNewFile();
+                break;
               }
-              return "";
-            });
+            }
+          }
+          return "";
+        });
 
     try {
       decorator.setUp(setupContext);

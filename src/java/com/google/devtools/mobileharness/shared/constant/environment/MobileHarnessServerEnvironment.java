@@ -16,8 +16,6 @@
 
 package com.google.devtools.mobileharness.shared.constant.environment;
 
-
-
 /**
  * Enum for the existing Mobile Harness environments.
  *

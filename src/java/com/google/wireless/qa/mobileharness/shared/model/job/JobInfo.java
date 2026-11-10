@@ -352,14 +352,13 @@ public class JobInfo extends JobScheduleUnit {
     this.spec = new ProtoJobSpec(jobSpec);
     this.tests = new TestInfos(this);
     this.jobExecutionUnitSupplier =
-        Suppliers.memoize(
-            () ->
-                JobExecutionUnit.create(
-                    locator().toNewJobLocator(),
-                    type().getDriver(),
-                    setting().getNewTimeout(),
-                    timing().toNewTiming(),
-                    setting().dirs()));
+        Suppliers.memoize(() ->
+            JobExecutionUnit.create(
+                locator().toNewJobLocator(),
+                type().getDriver(),
+                setting().getNewTimeout(),
+                timing().toNewTiming(),
+                setting().dirs()));
   }
 
   /** Creates a Mobile Harness job, which contains a set of tests. */
@@ -389,9 +388,8 @@ public class JobInfo extends JobScheduleUnit {
             timing(),
             setting()
                 .getRemoteFileDir()
-                .map(
-                    remoteFileDir ->
-                        PathUtil.join(remoteFileDir, "j_" + locator().getId(), "runfiles")));
+                .map(remoteFileDir ->
+                    PathUtil.join(remoteFileDir, "j_" + locator().getId(), "runfiles")));
     status = new Status(timing());
     result = new Result(timing().toNewTiming(), params().toNewParams());
     log = new Log(timing());
@@ -402,14 +400,13 @@ public class JobInfo extends JobScheduleUnit {
     tests = new TestInfos(this);
 
     this.jobExecutionUnitSupplier =
-        Suppliers.memoize(
-            () ->
-                JobExecutionUnit.create(
-                    locator().toNewJobLocator(),
-                    type().getDriver(),
-                    setting().getNewTimeout(),
-                    timing().toNewTiming(),
-                    setting().dirs()));
+        Suppliers.memoize(() ->
+            JobExecutionUnit.create(
+                locator().toNewJobLocator(),
+                type().getDriver(),
+                setting().getNewTimeout(),
+                timing().toNewTiming(),
+                setting().dirs()));
   }
 
   /** Create a builder for creating {@link JobInfo} instances. */

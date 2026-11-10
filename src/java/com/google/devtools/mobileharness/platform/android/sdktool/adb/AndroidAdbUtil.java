@@ -989,7 +989,7 @@ public class AndroidAdbUtil {
 
     ImmutableSet<Integer> successExitCodes = cmd.getSuccessExitCodes();
     Consumer<CommandResult> exitCallback =
-        (commandResult) -> {
+        commandResult -> {
           int exitCode = commandResult.exitCode();
           if (successExitCodes.contains(exitCode)) {
             logger.atInfo().log("Finished and stopped async logcat with device %s", serial);

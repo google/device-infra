@@ -76,23 +76,21 @@ public final class AllocationConverter {
             com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator,
             Multimap<String, String>>
         allDevices = allocation.getAllDevices();
-    deviceLocators.forEach(
-        deviceLocator -> {
-          Multimap<String, String> dimensions = allDevices.get(deviceLocator);
-          allocationProto
-              .addDeviceLocator(deviceLocator.toNewDeviceLocator().toProto())
-              .addDimensionMultiMap(
-                  DimensionMultiMap.newBuilder()
-                      .addAllDimensionEntry(
-                          dimensions.asMap().entrySet().stream()
-                              .map(
-                                  entry ->
-                                      DimensionEntry.newBuilder()
-                                          .setKey(entry.getKey())
-                                          .addAllValue(entry.getValue())
-                                          .build())
-                              .collect(toImmutableList())));
-        });
+    deviceLocators.forEach(deviceLocator -> {
+      Multimap<String, String> dimensions = allDevices.get(deviceLocator);
+      allocationProto
+          .addDeviceLocator(deviceLocator.toNewDeviceLocator().toProto())
+          .addDimensionMultiMap(
+              DimensionMultiMap.newBuilder()
+                  .addAllDimensionEntry(
+                      dimensions.asMap().entrySet().stream()
+                          .map(entry ->
+                              DimensionEntry.newBuilder()
+                                  .setKey(entry.getKey())
+                                  .addAllValue(entry.getValue())
+                                  .build())
+                          .collect(toImmutableList())));
+    });
     return allocationProto.build();
   }
 }

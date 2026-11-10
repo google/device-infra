@@ -331,17 +331,16 @@ public class JobRunner implements Runnable {
       case FAIL_FAST_NO_IDLE:
         deviceQueryFilters =
             jobInfo.subDeviceSpecs().getAllSubDevices().stream()
-                .map(
-                    subDeviceSpec ->
-                        DeviceFilter.getFilter(
-                            jobInfo,
-                            ImmutableList.of(
-                                FilterType.ACCESS,
-                                FilterType.DRIVER,
-                                FilterType.DECORATOR,
-                                FilterType.DIMENSION,
-                                FilterType.STATUS),
-                            subDeviceSpec))
+                .map(subDeviceSpec ->
+                    DeviceFilter.getFilter(
+                        jobInfo,
+                        ImmutableList.of(
+                            FilterType.ACCESS,
+                            FilterType.DRIVER,
+                            FilterType.DECORATOR,
+                            FilterType.DIMENSION,
+                            FilterType.STATUS),
+                        subDeviceSpec))
                 .collect(toImmutableList());
         startQueryDeviceLatency =
             execMode.getClass().getSimpleName().equals("LocalMode")
@@ -353,16 +352,15 @@ public class JobRunner implements Runnable {
       case FAIL_FAST_NO_MATCH:
         deviceQueryFilters =
             jobInfo.subDeviceSpecs().getAllSubDevices().stream()
-                .map(
-                    subDeviceSpec ->
-                        DeviceFilter.getFilter(
-                            jobInfo,
-                            ImmutableList.of(
-                                FilterType.ACCESS,
-                                FilterType.DRIVER,
-                                FilterType.DECORATOR,
-                                FilterType.DIMENSION),
-                            subDeviceSpec))
+                .map(subDeviceSpec ->
+                    DeviceFilter.getFilter(
+                        jobInfo,
+                        ImmutableList.of(
+                            FilterType.ACCESS,
+                            FilterType.DRIVER,
+                            FilterType.DECORATOR,
+                            FilterType.DIMENSION),
+                        subDeviceSpec))
                 .collect(toImmutableList());
         startQueryDeviceLatency =
             execMode.getClass().getSimpleName().equals("LocalMode")
@@ -374,16 +372,15 @@ public class JobRunner implements Runnable {
       default:
         deviceQueryFilters =
             jobInfo.subDeviceSpecs().getAllSubDevices().stream()
-                .map(
-                    subDeviceSpec ->
-                        DeviceFilter.getFilter(
-                            jobInfo,
-                            ImmutableList.of(
-                                FilterType.ACCESS,
-                                FilterType.DRIVER,
-                                FilterType.DECORATOR,
-                                FilterType.DIMENSION),
-                            subDeviceSpec))
+                .map(subDeviceSpec ->
+                    DeviceFilter.getFilter(
+                        jobInfo,
+                        ImmutableList.of(
+                            FilterType.ACCESS,
+                            FilterType.DRIVER,
+                            FilterType.DECORATOR,
+                            FilterType.DIMENSION),
+                        subDeviceSpec))
                 .collect(toImmutableList());
         startQueryDeviceLatency = NORMAL_START_QUERY_DEVICE_LATENCY;
         queryDeviceInterval = NORMAL_QUERY_DEVICE_INTERVAL;
@@ -563,15 +560,11 @@ public class JobRunner implements Runnable {
           jobInfo.resultWithCause(), Test.TestResult.ABORT, e, /* logStackTrace= */ false);
       jobInfo.tests().getAll().values().stream()
           .filter(testInfo -> testInfo.status().get() != TestStatus.DONE)
-          .forEach(
-              testInfo -> {
-                testInfo.status().set(TestStatus.DONE);
-                ResultInternalUtil.setNonPassing(
-                    testInfo.resultWithCause(),
-                    Test.TestResult.ABORT,
-                    e,
-                    /* logStackTrace= */ false);
-              });
+          .forEach(testInfo -> {
+            testInfo.status().set(TestStatus.DONE);
+            ResultInternalUtil.setNonPassing(
+                testInfo.resultWithCause(), Test.TestResult.ABORT, e, /* logStackTrace= */ false);
+          });
     } catch (MobileHarnessException e) {
       jobError = e;
       jobInfo.findings().addAndLog(Severity.SEVERE, e, logger);
@@ -1239,13 +1232,11 @@ public class JobRunner implements Runnable {
 
     if (ClientAllocErrorUtil.isJobAllocError(jobInfo)) {
       if (jobInfo.tests().getAll().values().stream()
-          .allMatch(
-              testInfo ->
-                  testInfo.findings().getAll().stream()
-                      .anyMatch(
-                          finding ->
-                              finding.getDetail().getSummary().getErrorId().getCode()
-                                  == InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR.code()))) {
+          .allMatch(testInfo ->
+              testInfo.findings().getAll().stream()
+                  .anyMatch(finding ->
+                      finding.getDetail().getSummary().getErrorId().getCode()
+                          == InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR.code()))) {
         errorId = InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR;
         errorMsg += " due to Mobile Harness infra issues";
       }
@@ -1299,15 +1290,11 @@ public class JobRunner implements Runnable {
       // result.
       jobInfo.tests().getAll().values().stream()
           .filter(testInfo -> testInfo.status().get() == TestStatus.NEW)
-          .forEach(
-              testInfo -> {
-                testInfo.status().set(TestStatus.DONE);
-                ResultInternalUtil.setNonPassing(
-                    testInfo.resultWithCause(),
-                    Test.TestResult.ABORT,
-                    e,
-                    /* logStackTrace= */ false);
-              });
+          .forEach(testInfo -> {
+            testInfo.status().set(TestStatus.DONE);
+            ResultInternalUtil.setNonPassing(
+                testInfo.resultWithCause(), Test.TestResult.ABORT, e, /* logStackTrace= */ false);
+          });
       return;
     }
     boolean hasErrorTests = false;
@@ -1543,16 +1530,14 @@ public class JobRunner implements Runnable {
   @VisibleForTesting
   static String getRegexWarning(JobInfo jobInfo) {
     return jobInfo.dimensions().getAll().entrySet().stream()
-        .filter(
-            dimension ->
-                dimension.getValue().matches(".*[*\\[\\]|].*")
-                    && !dimension.getValue().startsWith("regex:"))
-        .map(
-            dimension ->
-                String.format(
-                    "Dimension %s's value %s may be a regex. If it's a regex,"
-                        + " please add regex: before the value.",
-                    dimension.getKey(), dimension.getValue()))
+        .filter(dimension ->
+            dimension.getValue().matches(".*[*\\[\\]|].*")
+                && !dimension.getValue().startsWith("regex:"))
+        .map(dimension ->
+            String.format(
+                "Dimension %s's value %s may be a regex. If it's a regex,"
+                    + " please add regex: before the value.",
+                dimension.getKey(), dimension.getValue()))
         .collect(joining("\n"));
   }
 
@@ -1818,9 +1803,8 @@ public class JobRunner implements Runnable {
           (queryIndex, queryResult) ->
               queryResult
                   .getDeviceInfoList()
-                  .forEach(
-                      deviceInfo ->
-                          suitableDevices.put(String.valueOf(queryIndex), deviceInfo.getId())));
+                  .forEach(deviceInfo ->
+                      suitableDevices.put(String.valueOf(queryIndex), deviceInfo.getId())));
 
       // Calculates maximum cardinality bipartite graph matching.
       ImmutableBiMap<String, String> matchingResult =

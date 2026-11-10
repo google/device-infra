@@ -286,14 +286,13 @@ public class PrepareTestServiceImpl {
 
     ImmutableList<ResolveSource> resolveSources =
         jobFiles.stream()
-            .map(
-                jobFile ->
-                    ResolveSource.create(
-                        jobFile.getFile(),
-                        jobFile.getTag(),
-                        ImmutableMap.copyOf(jobFile.getResolvingParameterMap()),
-                        runFileDir,
-                        tmpFileDir))
+            .map(jobFile ->
+                ResolveSource.create(
+                    jobFile.getFile(),
+                    jobFile.getTag(),
+                    ImmutableMap.copyOf(jobFile.getResolvingParameterMap()),
+                    runFileDir,
+                    tmpFileDir))
             .collect(toImmutableList());
     jobManager.startResolveJobFiles(
         testLocator,

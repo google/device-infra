@@ -104,16 +104,14 @@ public class TestCommandHistorySaver {
     List<CommandRecord> testCommands =
         saveAllHistory
             ? commandHistory.getAllCommands()
-            : commandHistory.searchCommands(
-                commandRecord ->
-                    commandRecord.threadName().contains(testInfo.locator().getId())
-                        || (commandRecord.startTime().isAfter(testInfo.timing().getStartTime())
-                            && commandRecord.command().stream()
-                                .anyMatch(
-                                    command ->
-                                        allocation.getAllDevices().stream()
-                                            .map(DeviceLocator::id)
-                                            .anyMatch(command::contains))));
+            : commandHistory.searchCommands(commandRecord ->
+                commandRecord.threadName().contains(testInfo.locator().getId())
+                    || (commandRecord.startTime().isAfter(testInfo.timing().getStartTime())
+                        && commandRecord.command().stream()
+                            .anyMatch(command ->
+                                allocation.getAllDevices().stream()
+                                    .map(DeviceLocator::id)
+                                    .anyMatch(command::contains))));
     ImmutableList<String> result =
         testCommands.stream()
             .map(TestCommandHistorySaver::formatCommandRecord)

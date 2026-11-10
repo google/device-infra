@@ -120,15 +120,14 @@ class DeviceQuerierImpl implements DeviceQuerier {
         .collect(groupingBy(deviceInfo -> getDimensionValue(deviceInfo, Name.HOST_NAME).orElse("")))
         .entrySet()
         .stream()
-        .map(
-            entry ->
-                LabQueryResult.create(
-                    entry.getKey(),
-                    entry.getValue().stream()
-                        .flatMap(deviceInfo -> getDimensionValue(deviceInfo, Name.HOST_IP).stream())
-                        .findFirst()
-                        .orElse(""),
-                    DeviceQueryResult.newBuilder().addAllDeviceInfo(entry.getValue()).build()))
+        .map(entry ->
+            LabQueryResult.create(
+                entry.getKey(),
+                entry.getValue().stream()
+                    .flatMap(deviceInfo -> getDimensionValue(deviceInfo, Name.HOST_IP).stream())
+                    .findFirst()
+                    .orElse(""),
+                DeviceQueryResult.newBuilder().addAllDeviceInfo(entry.getValue()).build()))
         .collect(toImmutableList());
   }
 

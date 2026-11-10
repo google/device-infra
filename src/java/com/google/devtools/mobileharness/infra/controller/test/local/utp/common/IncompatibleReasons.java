@@ -98,9 +98,8 @@ public class IncompatibleReasons {
     addIncompatibleReasons(
         converterNamePrefix,
         reasons.stream()
-            .map(
-                reason ->
-                    IncompatibleReason.newBuilder().setConverterIncompatibleReason(reason).build())
+            .map(reason ->
+                IncompatibleReason.newBuilder().setConverterIncompatibleReason(reason).build())
             .collect(toImmutableList()),
         fatal);
   }
@@ -115,12 +114,11 @@ public class IncompatibleReasons {
             formatReasons(overallReasons, /* withContext= */ true));
       }
 
-      converterReasons.forEach(
-          (converterNamePrefix, reasons) ->
-              result.put(
-                  Ascii.toLowerCase(Test.PREFIX_HYBRID_UTP_DETAILED_INCOMPATIBLE_REASON)
-                      + converterNamePrefix,
-                  formatReasons(reasons, /* withContext= */ false)));
+      converterReasons.forEach((converterNamePrefix, reasons) ->
+          result.put(
+              Ascii.toLowerCase(Test.PREFIX_HYBRID_UTP_DETAILED_INCOMPATIBLE_REASON)
+                  + converterNamePrefix,
+              formatReasons(reasons, /* withContext= */ false)));
     }
     testProperties.addAll(result);
   }

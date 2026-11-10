@@ -159,13 +159,12 @@ public final class DeviceInfoCollectorDecoratorTest {
             any(AndroidInstrumentationSetting.class),
             any(Duration.class),
             callbackCaptor.capture()))
-        .thenAnswer(
-            invocation -> {
-              Supplier<LineCallback> supplier = callbackCaptor.getValue();
-              LineCallback callback = supplier.get();
-              callback.onLine("INSTRUMENTATION_CODE: -1");
-              return "instrumentation output";
-            });
+        .thenAnswer(invocation -> {
+          Supplier<LineCallback> supplier = callbackCaptor.getValue();
+          LineCallback callback = supplier.get();
+          callback.onLine("INSTRUMENTATION_CODE: -1");
+          return "instrumentation output";
+        });
 
     setupDecorator.setUp(SetupContext.create(testInfo));
 

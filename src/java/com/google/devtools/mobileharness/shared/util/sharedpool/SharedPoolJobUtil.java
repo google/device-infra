@@ -56,22 +56,18 @@ public final class SharedPoolJobUtil {
   /** Returns whether if {@code jobConfig} is using shared pool. */
   public static boolean isUsingSharedPool(JobConfig jobConfig) {
     return jobConfig.getDevice().getSubDeviceSpecList().stream()
-        .anyMatch(
-            spec ->
-                Objects.equals(
-                    spec.getDimensions()
-                        .getContentMap()
-                        .get(Ascii.toLowerCase(Name.POOL.toString())),
-                    Value.POOL_SHARED));
+        .anyMatch(spec ->
+            Objects.equals(
+                spec.getDimensions().getContentMap().get(Ascii.toLowerCase(Name.POOL.toString())),
+                Value.POOL_SHARED));
   }
 
   /** Returns whether a gateway {@code jobConfig} is using shared pool. */
   public static boolean isUsingSharedPool(Setting.JobConfig jobConfig) {
     return jobConfig.getDimensionList().stream()
-        .anyMatch(
-            dimension ->
-                dimension.getName().equals(Ascii.toLowerCase(Name.POOL.toString()))
-                    && dimension.getValue().equals(Value.POOL_SHARED));
+        .anyMatch(dimension ->
+            dimension.getName().equals(Ascii.toLowerCase(Name.POOL.toString()))
+                && dimension.getValue().equals(Value.POOL_SHARED));
   }
 
   /** Returns whether {@code job} is using performance pool. */
@@ -95,20 +91,18 @@ public final class SharedPoolJobUtil {
   /** Returns whether {@code jobConfig} is using default performance pool. */
   public static boolean isUsingDefaultPerformancePool(JobConfig jobConfig) {
     return jobConfig.getDevice().getSubDeviceSpecList().stream()
-        .anyMatch(
-            spec ->
-                spec.getDimensions().getContentMap().get("performance_pool") != null
-                    && Value.DEFAULT_PERFORMANCE_POOL_SHARED.equals(
-                        spec.getDimensions().getContentMap().get("performance_pool")));
+        .anyMatch(spec ->
+            spec.getDimensions().getContentMap().get("performance_pool") != null
+                && Value.DEFAULT_PERFORMANCE_POOL_SHARED.equals(
+                    spec.getDimensions().getContentMap().get("performance_pool")));
   }
 
   /** Returns whether a gateway {@code jobConfig} is using default performance pool. */
   public static boolean isUsingDefaultPerformancePool(Setting.JobConfig jobConfig) {
     return jobConfig.getDimensionList().stream()
-        .anyMatch(
-            dimension ->
-                dimension.getName().equals(Ascii.toLowerCase(Name.PERFORMANCE_POOL.toString()))
-                    && dimension.getValue().equals(Value.DEFAULT_PERFORMANCE_POOL_SHARED));
+        .anyMatch(dimension ->
+            dimension.getName().equals(Ascii.toLowerCase(Name.PERFORMANCE_POOL.toString()))
+                && dimension.getValue().equals(Value.DEFAULT_PERFORMANCE_POOL_SHARED));
   }
 
   /** Returns whether {@code job} is user performance pool in shared pool. */

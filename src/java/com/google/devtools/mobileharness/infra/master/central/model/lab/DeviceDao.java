@@ -92,32 +92,29 @@ public abstract class DeviceDao {
             // Ignores the subdeviced_dimension since is too large and we don't use is for
             // allocation.
             .filter(dimension -> !dimension.getName().equals("subdevice_dimensions"))
-            .map(
-                dimension ->
-                    Dimension.newBuilder()
-                        .setName(dimension.getName())
-                        .setValue(dimension.getValue())
-                        .build())
+            .map(dimension ->
+                Dimension.newBuilder()
+                    .setName(dimension.getName())
+                    .setValue(dimension.getValue())
+                    .build())
             .collect(toImmutableList()));
     deviceInfoBuilder.addAllDimension(
         deviceFeature.getCompositeDimension().getRequiredDimensionList().stream()
-            .map(
-                dimension ->
-                    Dimension.newBuilder()
-                        .setRequired(true)
-                        .setName(dimension.getName())
-                        .setValue(dimension.getValue())
-                        .build())
+            .map(dimension ->
+                Dimension.newBuilder()
+                    .setRequired(true)
+                    .setName(dimension.getName())
+                    .setValue(dimension.getValue())
+                    .build())
             .collect(toImmutableList()));
     deviceInfoBuilder.addAllDimension(
         deviceCondition.getTempDimensionList().stream()
-            .map(
-                dimension ->
-                    Dimension.newBuilder()
-                        .setRequired(dimension.getRequired())
-                        .setName(dimension.getDimension().getName())
-                        .setValue(dimension.getDimension().getValue())
-                        .build())
+            .map(dimension ->
+                Dimension.newBuilder()
+                    .setRequired(dimension.getRequired())
+                    .setName(dimension.getDimension().getName())
+                    .setValue(dimension.getDimension().getValue())
+                    .build())
             .collect(toImmutableList()));
     return deviceInfoBuilder.build();
   }

@@ -62,9 +62,8 @@ public class SessionErrorUtil {
             .collect(toImmutableList());
     ImmutableList<DeserializedException> otherSessionPluginErrors =
         sessionPluginErrorsPartitionedByLabel.get(false).stream()
-            .map(
-                otherSessionPluginError ->
-                    toDeserializedException(otherSessionPluginError.getError()))
+            .map(otherSessionPluginError ->
+                toDeserializedException(otherSessionPluginError.getError()))
             .collect(toImmutableList());
 
     // Sorts session errors.

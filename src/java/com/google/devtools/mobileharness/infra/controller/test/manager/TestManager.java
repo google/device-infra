@@ -313,11 +313,9 @@ public class TestManager<T extends TestRunner> implements Runnable {
    */
   T getTestRunnerNonEmpty(String testId) throws MobileHarnessException {
     return getTestRunner(testId)
-        .orElseThrow(
-            () ->
-                createExceptionWithoutStackTrace(
-                    InfraErrorId.TM_TEST_NOT_FOUND,
-                    String.format("Test [%s] is not found", testId)));
+        .orElseThrow(() ->
+            createExceptionWithoutStackTrace(
+                InfraErrorId.TM_TEST_NOT_FOUND, String.format("Test [%s] is not found", testId)));
   }
 
   /** Returns a snapshot of all current test runners. */

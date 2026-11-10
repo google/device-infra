@@ -98,15 +98,14 @@ public class TestMessageManager {
   public void sendMessageToTest(TestMessageInfo testMessageInfo) throws MobileHarnessException {
     TestMessagePoster testMessagePoster =
         getTestMessagePosterByTestId(testMessageInfo.rootTestId())
-            .orElseThrow(
-                () ->
-                    new MobileHarnessException(
-                        InfraErrorId.TR_SEND_TEST_MESSAGE_TEST_NOT_FOUND,
-                        String.format(
-                            "[%s] is not a test ID of a running MH top-level test so message %s"
-                                + " can't be posted to it. Is it a sub-test ID or had the test"
-                                + " not started or already ended when sending the message?",
-                            testMessageInfo.rootTestId(), testMessageInfo.message())));
+            .orElseThrow(() ->
+                new MobileHarnessException(
+                    InfraErrorId.TR_SEND_TEST_MESSAGE_TEST_NOT_FOUND,
+                    String.format(
+                        "[%s] is not a test ID of a running MH top-level test so message %s"
+                            + " can't be posted to it. Is it a sub-test ID or had the test"
+                            + " not started or already ended when sending the message?",
+                        testMessageInfo.rootTestId(), testMessageInfo.message())));
     sendMessageToTest(testMessagePoster, testMessageInfo);
   }
 

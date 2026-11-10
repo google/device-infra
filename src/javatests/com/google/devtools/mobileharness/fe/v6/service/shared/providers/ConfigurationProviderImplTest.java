@@ -271,16 +271,14 @@ public final class ConfigurationProviderImplTest {
       largeBatch.put(id, DeviceConfig.newBuilder().setUuid(id).build());
     }
     when(deviceConfigStub.updateDeviceConfigsAsync(any(), eq(true)))
-        .thenAnswer(
-            invocation -> {
-              UpdateDeviceConfigsRequest req = invocation.getArgument(0);
-              UpdateDeviceConfigsResponse.Builder builder =
-                  UpdateDeviceConfigsResponse.newBuilder();
-              if (req.getDeviceLocatorConfigCount() == 5) {
-                builder.putErrorMessage("dev104", "second chunk failure");
-              }
-              return immediateFuture(builder.build());
-            });
+        .thenAnswer(invocation -> {
+          UpdateDeviceConfigsRequest req = invocation.getArgument(0);
+          UpdateDeviceConfigsResponse.Builder builder = UpdateDeviceConfigsResponse.newBuilder();
+          if (req.getDeviceLocatorConfigCount() == 5) {
+            builder.putErrorMessage("dev104", "second chunk failure");
+          }
+          return immediateFuture(builder.build());
+        });
     when(deviceConfigStub.updateLabConfigAsync(any(), eq(true)))
         .thenReturn(immediateFuture(UpdateLabConfigResponse.getDefaultInstance()));
 
@@ -308,24 +306,23 @@ public final class ConfigurationProviderImplTest {
       largeBatch.put(id, DeviceConfig.newBuilder().setUuid(id).build());
     }
     when(deviceConfigStub.updateDeviceConfigsAsync(any(), eq(false)))
-        .thenAnswer(
-            invocation -> {
-              UpdateDeviceConfigsRequest req = invocation.getArgument(0);
-              String firstUuid = req.getDeviceLocatorConfig(0).getDeviceLocator().getDeviceUuid();
-              if (firstUuid.equals("dev" + chunkSize)) {
-                return immediateFailedFuture(new RuntimeException("chunk 2 deadline exceeded"));
-              }
-              if (firstUuid.equals("dev0")) {
-                return immediateFuture(
-                    UpdateDeviceConfigsResponse.newBuilder()
-                        .putErrorMessage("dev0", "chunk 1 validation error")
-                        .build());
-              }
-              return immediateFuture(
-                  UpdateDeviceConfigsResponse.newBuilder()
-                      .putErrorMessage("dev" + (2 * chunkSize + 2), "chunk 3 storage error")
-                      .build());
-            });
+        .thenAnswer(invocation -> {
+          UpdateDeviceConfigsRequest req = invocation.getArgument(0);
+          String firstUuid = req.getDeviceLocatorConfig(0).getDeviceLocator().getDeviceUuid();
+          if (firstUuid.equals("dev" + chunkSize)) {
+            return immediateFailedFuture(new RuntimeException("chunk 2 deadline exceeded"));
+          }
+          if (firstUuid.equals("dev0")) {
+            return immediateFuture(
+                UpdateDeviceConfigsResponse.newBuilder()
+                    .putErrorMessage("dev0", "chunk 1 validation error")
+                    .build());
+          }
+          return immediateFuture(
+              UpdateDeviceConfigsResponse.newBuilder()
+                  .putErrorMessage("dev" + (2 * chunkSize + 2), "chunk 3 storage error")
+                  .build());
+        });
 
     Map<String, String> errors =
         configurationProvider.updateDeviceConfigs(largeBatch, UNIVERSE).get();

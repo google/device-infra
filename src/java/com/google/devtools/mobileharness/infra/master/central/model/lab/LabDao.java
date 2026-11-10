@@ -60,13 +60,12 @@ public abstract class LabDao {
     // The device info may not have the pool=shared dimension when wrangler return bad data.
     // If that is the first device we check on the lab, it could wrongly identify the lab as
     // satellite lab.
-    isSharedPool.getAndUpdate(
-        prev -> {
-          if (prev != null && prev) {
-            return true;
-          }
-          return DeviceConditionUtil.isSharedPoolDevice(device);
-        });
+    isSharedPool.getAndUpdate(prev -> {
+      if (prev != null && prev) {
+        return true;
+      }
+      return DeviceConditionUtil.isSharedPoolDevice(device);
+    });
     return Optional.ofNullable(devices.put(device.locator().id(), device));
   }
 

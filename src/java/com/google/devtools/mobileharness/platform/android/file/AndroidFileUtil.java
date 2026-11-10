@@ -397,17 +397,16 @@ public class AndroidFileUtil {
 
     Optional<String> matchTargetLine =
         Splitters.LINE_SPLITTER.trimResults().omitEmptyStrings().splitToList(output).stream()
-            .filter(
-                line -> {
-                  Matcher matcher = ADB_SHELL_LIST_DETAILS_PATTERN.matcher(line);
-                  if (!matcher.find()) {
-                    return false;
-                  }
-                  String fileOrDirName = matcher.group("fileOrDirName");
-                  return fileOrDirName != null
-                      && (targetBasename.equals(fileOrDirName)
-                          || fileOrDirName.startsWith(targetBasename + " ->")); // symlink
-                })
+            .filter(line -> {
+              Matcher matcher = ADB_SHELL_LIST_DETAILS_PATTERN.matcher(line);
+              if (!matcher.find()) {
+                return false;
+              }
+              String fileOrDirName = matcher.group("fileOrDirName");
+              return fileOrDirName != null
+                  && (targetBasename.equals(fileOrDirName)
+                      || fileOrDirName.startsWith(targetBasename + " ->")); // symlink
+            })
             .findFirst();
     if (matchTargetLine.isEmpty()) {
       logger.atInfo().log(
@@ -1327,15 +1326,14 @@ public class AndroidFileUtil {
       String lsOutput, String fileOrDirName, Pattern pattern, String fileOrDirGroupNameInPattern) {
     Optional<String> matchTargetLine =
         Splitters.LINE_SPLITTER.trimResults().omitEmptyStrings().splitToList(lsOutput).stream()
-            .filter(
-                line -> {
-                  Matcher matcher = pattern.matcher(line);
-                  if (!matcher.find()) {
-                    return false;
-                  }
-                  String fileOrDirNameGroup = matcher.group(fileOrDirGroupNameInPattern);
-                  return fileOrDirName.equals(fileOrDirNameGroup);
-                })
+            .filter(line -> {
+              Matcher matcher = pattern.matcher(line);
+              if (!matcher.find()) {
+                return false;
+              }
+              String fileOrDirNameGroup = matcher.group(fileOrDirGroupNameInPattern);
+              return fileOrDirName.equals(fileOrDirNameGroup);
+            })
             .findFirst();
     return matchTargetLine;
   }

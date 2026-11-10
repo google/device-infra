@@ -117,11 +117,10 @@ public class PluginOutputPrinter {
       AtsSessionPluginConfigOutput pluginConfigOutput) {
     return pluginConfigOutput
         .output()
-        .flatMap(
-            pluginOutput ->
-                pluginOutput.hasRunCommandState()
-                    ? Optional.of(pluginOutput.getRunCommandState())
-                    : Optional.empty())
+        .flatMap(pluginOutput ->
+            pluginOutput.hasRunCommandState()
+                ? Optional.of(pluginOutput.getRunCommandState())
+                : Optional.empty())
         .orElse(pluginConfigOutput.config().getRunCommand().getInitialState());
   }
 
@@ -139,12 +138,11 @@ public class PluginOutputPrinter {
         .sorted(
             comparing(Invocation::getCommandId, new NaturalSortOrderComparator())
                 .thenComparing(invocation -> toJavaInstant(invocation.getStartTime())))
-        .map(
-            invocation ->
-                String.format(
-                    "invocation %s: [%s]",
-                    invocation.getCommandId(),
-                    String.join(", ", runCommandState.getSeparatedCommandLineArgsList())))
+        .map(invocation ->
+            String.format(
+                "invocation %s: [%s]",
+                invocation.getCommandId(),
+                String.join(", ", runCommandState.getSeparatedCommandLineArgsList())))
         .collect(joining("\n"));
   }
 

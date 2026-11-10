@@ -83,21 +83,18 @@ public final class FleetRefreshExecutorsTest {
 
     ImmutableSet<String> observedThreads =
         refreshExecutor
-            .submit(
-                () -> {
-                  Thread caller = Thread.currentThread();
-                  assertThat(caller.getUncaughtExceptionHandler())
-                      .isNotInstanceOf(ThreadGroup.class);
-                  return Collections.nCopies(64, "fleet-search-refresh-worker-").parallelStream()
-                      .map(
-                          expectedPrefix -> {
-                            Thread current = Thread.currentThread();
-                            assertThat(current.isDaemon()).isTrue();
-                            assertThat(current.getName()).startsWith(expectedPrefix);
-                            return current.getName();
-                          })
-                      .collect(toImmutableSet());
-                })
+            .submit(() -> {
+              Thread caller = Thread.currentThread();
+              assertThat(caller.getUncaughtExceptionHandler()).isNotInstanceOf(ThreadGroup.class);
+              return Collections.nCopies(64, "fleet-search-refresh-worker-").parallelStream()
+                  .map(expectedPrefix -> {
+                    Thread current = Thread.currentThread();
+                    assertThat(current.isDaemon()).isTrue();
+                    assertThat(current.getName()).startsWith(expectedPrefix);
+                    return current.getName();
+                  })
+                  .collect(toImmutableSet());
+            })
             .get();
 
     assertThat(observedThreads).isNotEmpty();
@@ -224,11 +221,10 @@ public final class FleetRefreshExecutorsTest {
 
           @Override
           public void execute(Runnable command) {
-            delegate.execute(
-                () -> {
-                  beforeExecute.run();
-                  command.run();
-                });
+            delegate.execute(() -> {
+              beforeExecute.run();
+              command.run();
+            });
           }
         });
   }

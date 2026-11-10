@@ -115,11 +115,10 @@ public class MobileHarnessAgent {
         .disableClassFormatChanges()
         .ignore(none(), not(isBootstrapClassLoader()))
         .type(named("java.lang.ProcessBuilder"))
-        .transform(
-            (builder, typeDescription, classLoader, module, protectionDomain) ->
-                builder.visit(
-                    Advice.to(ProcessBuilderInterceptor.class)
-                        .on(named("start").and(takesNoArguments()))))
+        .transform((builder, typeDescription, classLoader, module, protectionDomain) ->
+            builder.visit(
+                Advice.to(ProcessBuilderInterceptor.class)
+                    .on(named("start").and(takesNoArguments()))))
         .installOn(inst);
   }
 

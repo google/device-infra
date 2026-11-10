@@ -50,9 +50,8 @@ public class DeviceRequirements {
     jobFeatureProto
         .getDeviceRequirements()
         .getDeviceRequirementList()
-        .forEach(
-            deviceRequirementProto ->
-                devices.add(DeviceRequirement.fromProto(deviceRequirementProto)));
+        .forEach(deviceRequirementProto ->
+            devices.add(DeviceRequirement.fromProto(deviceRequirementProto)));
   }
 
   /**

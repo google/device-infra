@@ -108,16 +108,15 @@ public final class UnlockHostPropertiesHandlerTest {
     when(configurationProvider.updateLabConfig(eq(hostName), any(), eq(SELF_UNIVERSE)))
         .thenReturn(immediateVoidFuture());
     when(configPusherHelper.unlockHostProperties(any(LabConfig.Builder.class)))
-        .thenAnswer(
-            invocation -> {
-              LabConfig.Builder builder = invocation.getArgument(0);
-              builder.setHostProperties(
-                  HostProperties.newBuilder()
-                      .addHostProperty(
-                          HostProperty.newBuilder().setKey("other_key").setValue("other_val"))
-                      .build());
-              return true;
-            });
+        .thenAnswer(invocation -> {
+          LabConfig.Builder builder = invocation.getArgument(0);
+          builder.setHostProperties(
+              HostProperties.newBuilder()
+                  .addHostProperty(
+                      HostProperty.newBuilder().setKey("other_key").setValue("other_val"))
+                  .build());
+          return true;
+        });
 
     UnlockHostPropertiesRequest request =
         UnlockHostPropertiesRequest.newBuilder().setHostName(hostName).setUniverse("self").build();

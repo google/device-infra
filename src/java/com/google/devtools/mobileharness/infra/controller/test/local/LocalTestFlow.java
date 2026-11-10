@@ -418,19 +418,18 @@ public class LocalTestFlow {
     // Starts all devices' preRunTest().
     ConcurrencyUtil.runInParallel(
         devices.stream()
-            .map(
-                device ->
-                    SubTask.<Void>of(
-                        () -> {
-                          runDevicePreRunTest(testInfo, device);
-                          return null;
-                        },
-                        "test-runner-"
-                            + testInfo.locator().getId()
-                            + "-sub-device-"
-                            + device.getDeviceId(),
-                        MobileHarnessLogTag.SUB_DEVICE_ID,
-                        device.getDeviceId()))
+            .map(device ->
+                SubTask.<Void>of(
+                    () -> {
+                      runDevicePreRunTest(testInfo, device);
+                      return null;
+                    },
+                    "test-runner-"
+                        + testInfo.locator().getId()
+                        + "-sub-device-"
+                        + device.getDeviceId(),
+                    MobileHarnessLogTag.SUB_DEVICE_ID,
+                    device.getDeviceId()))
             .collect(toImmutableList()),
         testThreadPool,
         /* resultMerger= */ results -> null);
@@ -471,16 +470,15 @@ public class LocalTestFlow {
     // Starts all devices' postRunTest().
     return ConcurrencyUtil.runInParallel(
         devices.stream()
-            .map(
-                device ->
-                    SubTask.of(
-                        () -> runDevicePostRunTest(testInfo, device),
-                        "test-runner-"
-                            + testInfo.locator().getId()
-                            + "-sub-device-"
-                            + device.getDeviceId(),
-                        MobileHarnessLogTag.SUB_DEVICE_ID,
-                        device.getDeviceId()))
+            .map(device ->
+                SubTask.of(
+                    () -> runDevicePostRunTest(testInfo, device),
+                    "test-runner-"
+                        + testInfo.locator().getId()
+                        + "-sub-device-"
+                        + device.getDeviceId(),
+                    MobileHarnessLogTag.SUB_DEVICE_ID,
+                    device.getDeviceId()))
             .collect(toImmutableList()),
         testThreadPool,
         results ->
@@ -552,20 +550,15 @@ public class LocalTestFlow {
         devices.stream().map(Device::getDeviceId).collect(toImmutableList());
     String deviceInfoString =
         IntStream.range(0, devices.size())
-            .mapToObj(
-                i ->
-                    "\n   + Device"
-                        + (devices.size() == 1 ? "" : "-" + (i + 1))
-                        + ": "
-                        + devices.get(i).getDeviceId()
-                        + devices.get(i).getDimensions().stream()
-                            .map(
-                                dimension ->
-                                    "\n       - "
-                                        + dimension.getName()
-                                        + " = "
-                                        + dimension.getValue())
-                            .collect(joining()))
+            .mapToObj(i ->
+                "\n   + Device"
+                    + (devices.size() == 1 ? "" : "-" + (i + 1))
+                    + ": "
+                    + devices.get(i).getDeviceId()
+                    + devices.get(i).getDimensions().stream()
+                        .map(dimension ->
+                            "\n       - " + dimension.getName() + " = " + dimension.getValue())
+                        .collect(joining()))
             .collect(joining());
 
     testInfo

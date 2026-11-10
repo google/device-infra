@@ -84,10 +84,9 @@ class AndroidInstrumentationTestRetryProcessor {
     }
     ImmutableList<TestCase> failedOrErrorTestCases =
         testSuiteResult.get().getTestResultList().stream()
-            .filter(
-                testResult ->
-                    testResult.getTestStatus() == TestStatus.FAILED
-                        || testResult.getTestStatus() == TestStatus.ERROR)
+            .filter(testResult ->
+                testResult.getTestStatus() == TestStatus.FAILED
+                    || testResult.getTestStatus() == TestStatus.ERROR)
             .map(TestResult::getTestCase)
             .collect(toImmutableList());
     if (failedOrErrorTestCases.isEmpty()) {
@@ -97,13 +96,10 @@ class AndroidInstrumentationTestRetryProcessor {
     }
     String failedOrErrorTestTargets =
         failedOrErrorTestCases.stream()
-            .map(
-                testCase ->
-                    String.format(
-                        "%s.%s#%s",
-                        testCase.getTestPackage(),
-                        testCase.getTestClass(),
-                        testCase.getTestMethod()))
+            .map(testCase ->
+                String.format(
+                    "%s.%s#%s",
+                    testCase.getTestPackage(), testCase.getTestClass(), testCase.getTestMethod()))
             .collect(joining(","));
     return ImmutableMap.of(
         Ascii.toLowerCase(

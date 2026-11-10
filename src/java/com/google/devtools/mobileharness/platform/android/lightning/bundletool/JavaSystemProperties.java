@@ -51,25 +51,24 @@ public record JavaSystemProperties(ImmutableList<String> jvmFlags) {
       String tmpDir =
           javaTmpDir
               .map(Path::toString)
-              .orElseGet(
-                  () -> {
-                    // Tier 2: fall back to the lab server's persistent NVMe temp dir
-                    String labTmpDir = Flags.tmpDirRoot.get();
-                    if (labTmpDir != null && !labTmpDir.isEmpty()) {
-                      File labTmpDirFile = new File(labTmpDir);
-                      if (labTmpDirFile.exists() && labTmpDirFile.isDirectory()) {
-                        logger.atInfo().log("Bundletool falls back to lab temp dir %s", labTmpDir);
-                        return labTmpDir;
-                      } else {
-                        logger.atInfo().log(
-                            "Lab temp dir %s does not exist or is not a directory", labTmpDir);
-                      }
-                    }
-                    // Tier 3: last resort fallback (e.g., for local workstation execution)
+              .orElseGet(() -> {
+                // Tier 2: fall back to the lab server's persistent NVMe temp dir
+                String labTmpDir = Flags.tmpDirRoot.get();
+                if (labTmpDir != null && !labTmpDir.isEmpty()) {
+                  File labTmpDirFile = new File(labTmpDir);
+                  if (labTmpDirFile.exists() && labTmpDirFile.isDirectory()) {
+                    logger.atInfo().log("Bundletool falls back to lab temp dir %s", labTmpDir);
+                    return labTmpDir;
+                  } else {
                     logger.atInfo().log(
-                        "Bundletool falls back to system temp dir %s", JAVA_IO_TMPDIR.value());
-                    return JAVA_IO_TMPDIR.value();
-                  });
+                        "Lab temp dir %s does not exist or is not a directory", labTmpDir);
+                  }
+                }
+                // Tier 3: last resort fallback (e.g., for local workstation execution)
+                logger.atInfo().log(
+                    "Bundletool falls back to system temp dir %s", JAVA_IO_TMPDIR.value());
+                return JAVA_IO_TMPDIR.value();
+              });
       ImmutableList<String> jvmFlags =
           ImmutableList.of(String.format("-Djava.io.tmpdir=%s", tmpDir));
       logger.atInfo().log("Bundletool is going to use temp dir %s", tmpDir);

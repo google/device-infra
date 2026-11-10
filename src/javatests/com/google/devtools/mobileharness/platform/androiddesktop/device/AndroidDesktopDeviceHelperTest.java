@@ -83,10 +83,9 @@ public class AndroidDesktopDeviceHelperTest {
     // THEN
     verify(mockCommandExecutor)
         .exec(
-            argThat(
-                command ->
-                    command.getCommand().get(1).equals("internal-print-bot-info")
-                        && command.getCommand().contains(HOST_NAME)));
+            argThat(command ->
+                command.getCommand().get(1).equals("internal-print-bot-info")
+                    && command.getCommand().contains(HOST_NAME)));
     verify(mockBaseDevice).updateDimension("label-pool", "foo");
     verify(mockBaseDevice).updateDimension("label-servo_state", "WORKING");
     verify(mockBaseDevice).updateDimension("state_a", "VALUE_A");
@@ -243,12 +242,11 @@ public class AndroidDesktopDeviceHelperTest {
 
     verify(mockCommandExecutor)
         .exec(
-            argThat(
-                command ->
-                    command.getCommand().get(1).equals("update")
-                        && command.getCommand().contains("dut-state")
-                        && command.getCommand().contains("needs_repair")
-                        && command.getCommand().contains(HOST_NAME)));
+            argThat(command ->
+                command.getCommand().get(1).equals("update")
+                    && command.getCommand().contains("dut-state")
+                    && command.getCommand().contains("needs_repair")
+                    && command.getCommand().contains(HOST_NAME)));
   }
 
   @Test
@@ -278,13 +276,12 @@ public class AndroidDesktopDeviceHelperTest {
 
     verify(mockCommandExecutor)
         .exec(
-            argThat(
-                command ->
-                    command.getCommand().get(1).equals("update")
-                        && command.getCommand().contains("dut-state")
-                        && command.getCommand().contains("needs_repair")
-                        && command.getCommand().contains(HOST_NAME)
-                        && command.getCommand().contains("-provision")));
+            argThat(command ->
+                command.getCommand().get(1).equals("update")
+                    && command.getCommand().contains("dut-state")
+                    && command.getCommand().contains("needs_repair")
+                    && command.getCommand().contains(HOST_NAME)
+                    && command.getCommand().contains("-provision")));
   }
 
   @Test
@@ -302,13 +299,12 @@ public class AndroidDesktopDeviceHelperTest {
 
     verify(mockCommandExecutor)
         .exec(
-            argThat(
-                command ->
-                    command.getCommand().get(1).equals("update")
-                        && command.getCommand().contains("dut-state")
-                        && command.getCommand().contains("needs_repair")
-                        && command.getCommand().contains(HOST_NAME)
-                        && command.getCommand().contains("-reimage")));
+            argThat(command ->
+                command.getCommand().get(1).equals("update")
+                    && command.getCommand().contains("dut-state")
+                    && command.getCommand().contains("needs_repair")
+                    && command.getCommand().contains(HOST_NAME)
+                    && command.getCommand().contains("-reimage")));
   }
 
   @Test
@@ -326,13 +322,12 @@ public class AndroidDesktopDeviceHelperTest {
 
     verify(mockCommandExecutor)
         .exec(
-            argThat(
-                command ->
-                    command.getCommand().get(1).equals("update")
-                        && command.getCommand().contains("dut-state")
-                        && command.getCommand().contains("needs_repair")
-                        && command.getCommand().contains(HOST_NAME)
-                        && command.getCommand().contains("-usbkey")));
+            argThat(command ->
+                command.getCommand().get(1).equals("update")
+                    && command.getCommand().contains("dut-state")
+                    && command.getCommand().contains("needs_repair")
+                    && command.getCommand().contains(HOST_NAME)
+                    && command.getCommand().contains("-usbkey")));
   }
 
   @Test
@@ -350,13 +345,12 @@ public class AndroidDesktopDeviceHelperTest {
 
     verify(mockCommandExecutor)
         .exec(
-            argThat(
-                command ->
-                    command.getCommand().get(1).equals("update")
-                        && command.getCommand().contains("dut-state")
-                        && command.getCommand().contains("needs_repair")
-                        && command.getCommand().contains(HOST_NAME)
-                        && command.getCommand().contains("-clear-repair-requests")));
+            argThat(command ->
+                command.getCommand().get(1).equals("update")
+                    && command.getCommand().contains("dut-state")
+                    && command.getCommand().contains("needs_repair")
+                    && command.getCommand().contains(HOST_NAME)
+                    && command.getCommand().contains("-clear-repair-requests")));
   }
 
   @Test
@@ -542,9 +536,8 @@ public class AndroidDesktopDeviceHelperTest {
 
     verify(mockCommandExecutor)
         .exec(
-            argThat(
-                command ->
-                    command.getCommand().get(1).equals("internal-print-bot-info")
-                        && command.getCommand().contains("[2001:db8::1]")));
+            argThat(command ->
+                command.getCommand().get(1).equals("internal-print-bot-info")
+                    && command.getCommand().contains("[2001:db8::1]")));
   }
 }

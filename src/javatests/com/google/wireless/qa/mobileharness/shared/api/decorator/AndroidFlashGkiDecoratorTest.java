@@ -231,12 +231,11 @@ public final class AndroidFlashGkiDecoratorTest {
     when(mockAndroidAdbUtil.getProperty(TEST_REMOTE_PROXY_DEVICE_ID, AndroidProperty.SERIAL))
         .thenReturn(TEST_DEVICE_ID);
     when(mockCommandExecutor.exec(
-            Mockito.argThat(
-                command ->
-                    command != null
-                        && command.getExecutable().equals("pontis")
-                        && command.getArguments().size() == 1
-                        && command.getArguments().get(0).equals("trackdevices"))))
+            Mockito.argThat(command ->
+                command != null
+                    && command.getExecutable().equals("pontis")
+                    && command.getArguments().size() == 1
+                    && command.getArguments().get(0).equals("trackdevices"))))
         .thenAnswer(
             new Answer<CommandResult>() {
               @Override

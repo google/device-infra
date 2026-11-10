@@ -134,15 +134,13 @@ public final class MaskUtils {
       DeviceInfoTrimmer trimmer = DeviceInfoTrimmer.of(mask.getDeviceInfoMask());
       labViewBuilder
           .getLabDataBuilderList()
-          .forEach(
-              labDataBuilder -> {
-                // If LabData doesn't have DeviceList, it means the LabData doesn't have any
-                // devices and we don't need to trim it.
-                if (labDataBuilder.hasDeviceList()) {
-                  labDataBuilder.setDeviceList(
-                      trimmer.trimDeviceList(labDataBuilder.getDeviceList()));
-                }
-              });
+          .forEach(labDataBuilder -> {
+            // If LabData doesn't have DeviceList, it means the LabData doesn't have any
+            // devices and we don't need to trim it.
+            if (labDataBuilder.hasDeviceList()) {
+              labDataBuilder.setDeviceList(trimmer.trimDeviceList(labDataBuilder.getDeviceList()));
+            }
+          });
     }
   }
 

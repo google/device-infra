@@ -216,24 +216,22 @@ public class ApkPreconditionCheckDecorator extends SetupOnlyDecorator
     // Check individual failures first to get details.
     ImmutableList<TestResult> failedTests =
         testSuiteResult.getTestResultList().stream()
-            .filter(
-                r ->
-                    r.getTestStatus() == TestStatus.FAILED || r.getTestStatus() == TestStatus.ERROR)
+            .filter(r ->
+                r.getTestStatus() == TestStatus.FAILED || r.getTestStatus() == TestStatus.ERROR)
             .collect(toImmutableList());
 
     if (!failedTests.isEmpty()) {
       String failureDetails =
           failedTests.stream()
-              .map(
-                  r ->
-                      String.format(
-                          "%s%s.%s: %s",
-                          r.getTestCase().getTestPackage().isEmpty()
-                              ? ""
-                              : r.getTestCase().getTestPackage() + ".",
-                          r.getTestCase().getTestClass(),
-                          r.getTestCase().getTestMethod(),
-                          r.hasError() ? r.getError().getErrorMessage() : "unknown"))
+              .map(r ->
+                  String.format(
+                      "%s%s.%s: %s",
+                      r.getTestCase().getTestPackage().isEmpty()
+                          ? ""
+                          : r.getTestCase().getTestPackage() + ".",
+                      r.getTestCase().getTestClass(),
+                      r.getTestCase().getTestMethod(),
+                      r.hasError() ? r.getError().getErrorMessage() : "unknown"))
               .collect(joining("\n"));
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_APK_PRECONDITION_CHECK_DECORATOR_TEST_FAILURE,

@@ -48,9 +48,8 @@ public class AndroidLocalEmulatorDispatcher extends CacheableDispatcher {
   public Map<String, DispatchType> dispatchLiveDevices(
       DetectionResults detectionResults, DispatchResults dispatchResults) {
     return detectionResults.getByTypeAndDetail(DetectionType.ADB, DeviceState.DEVICE).stream()
-        .filter(
-            detectorResult ->
-                AndroidSystemSpecUtil.isAndroidEmulator(detectorResult.deviceControlId()))
+        .filter(detectorResult ->
+            AndroidSystemSpecUtil.isAndroidEmulator(detectorResult.deviceControlId()))
         .collect(toImmutableMap(DetectionResult::deviceControlId, s -> DispatchType.LIVE));
   }
 

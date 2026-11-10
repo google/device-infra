@@ -735,46 +735,44 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
           Command.of(commandArgs)
               .extraEnv(env)
               .onStdout(
-                  LineCallback.does(
-                      line -> {
-                        // Adds the line to LogRecorder so that in ATS console the stdout/stderr of
-                        // the Mobly process can be shown in picocli terminal. In other cases, this
-                        // method does nothing since LogRecorder is not enabled.
-                        //
-                        // The OLC client ID of the record is not specified here because it is hard
-                        // to get it in this driver, but it should be safe because nowadays we
-                        // almost only run ATS console in embedded mode.
-                        LogRecorder.getInstance()
-                            .addLogRecord(
-                                LogRecord.newBuilder()
-                                    .setFormattedLogRecord(line + "\n")
-                                    .setSourceType(SourceType.MOBLY)
-                                    .setImportance(Importance.MOBLY.value())
-                                    .build());
+                  LineCallback.does(line -> {
+                    // Adds the line to LogRecorder so that in ATS console the stdout/stderr of
+                    // the Mobly process can be shown in picocli terminal. In other cases, this
+                    // method does nothing since LogRecorder is not enabled.
+                    //
+                    // The OLC client ID of the record is not specified here because it is hard
+                    // to get it in this driver, but it should be safe because nowadays we
+                    // almost only run ATS console in embedded mode.
+                    LogRecorder.getInstance()
+                        .addLogRecord(
+                            LogRecord.newBuilder()
+                                .setFormattedLogRecord(line + "\n")
+                                .setSourceType(SourceType.MOBLY)
+                                .setImportance(Importance.MOBLY.value())
+                                .build());
 
-                        testInfo.log().atInfo().alsoTo(logger).log("[Mobly] %s", line);
-                        try {
-                          writer.write(line + "\n");
-                        } catch (IOException e) {
-                          throw new LineCallbackException(
-                              "Failed to write",
-                              e,
-                              /* killCommand= */ false, /* stopReadingOutput */
-                              true);
-                        }
-                      }))
-              .onExit(
-                  unusedResult -> {
+                    testInfo.log().atInfo().alsoTo(logger).log("[Mobly] %s", line);
                     try {
-                      writer.close();
+                      writer.write(line + "\n");
                     } catch (IOException e) {
-                      testInfo
-                          .log()
-                          .atWarning()
-                          .alsoTo(logger)
-                          .log("Unable to close writer for %s", RAW_MOBLY_LOG_ALL_IN_ONE);
+                      throw new LineCallbackException(
+                          "Failed to write",
+                          e,
+                          /* killCommand= */ false, /* stopReadingOutput */
+                          true);
                     }
-                  })
+                  }))
+              .onExit(unusedResult -> {
+                try {
+                  writer.close();
+                } catch (IOException e) {
+                  testInfo
+                      .log()
+                      .atWarning()
+                      .alsoTo(logger)
+                      .log("Unable to close writer for %s", RAW_MOBLY_LOG_ALL_IN_ONE);
+                }
+              })
               .needStdoutInResult(false)
               .needStderrInResult(false)
               .redirectStderr(true)

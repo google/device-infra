@@ -41,10 +41,9 @@ public class ThreadFactoryUtil {
     return new ThreadFactoryBuilder()
         .setNameFormat(threadNamePrefix + "-%d")
         .setDaemon(daemon)
-        .setUncaughtExceptionHandler(
-            (thread, throwable) ->
-                logger.atSevere().withCause(throwable).log(
-                    "Uncaught exception from thread [%s]", thread.getName()))
+        .setUncaughtExceptionHandler((thread, throwable) ->
+            logger.atSevere().withCause(throwable).log(
+                "Uncaught exception from thread [%s]", thread.getName()))
         .build();
   }
 

@@ -46,10 +46,9 @@ class QuarantineButtonBuilder {
 
     boolean isQuarantined =
         deviceInfo.getDeviceCondition().getTempDimensionList().stream()
-            .anyMatch(
-                dim ->
-                    dim.getDimension().getName().equals("quarantined")
-                        && Ascii.equalsIgnoreCase(dim.getDimension().getValue(), "true"));
+            .anyMatch(dim ->
+                dim.getDimension().getName().equals("quarantined")
+                    && Ascii.equalsIgnoreCase(dim.getDimension().getValue(), "true"));
 
     String tooltip =
         isQuarantined

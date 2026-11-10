@@ -138,39 +138,38 @@ public final class GetHostDeviceSummariesHandler {
     if (isTestbed) {
       deviceSummaryBuilder.addAllSubDevices(
           subDeviceInfoListFactory.create(dimensions).stream()
-              .map(
-                  subDeviceInfo -> {
-                    RemoteControlEligibilityContext context =
-                        RemoteControlEligibilityContext.builder()
-                            .setIsMultipleSelection(false)
-                            .setIsSubDevice(true)
-                            .setDeviceStatus(deviceInfo.getDeviceStatus())
-                            .setDrivers(
-                                ImmutableSet.copyOf(deviceInfo.getDeviceFeature().getDriverList()))
-                            .setTypes(
-                                subDeviceInfo.getTypesList().stream()
-                                    .map(DeviceType::getType)
-                                    .collect(toImmutableSet()))
-                            .setDimensions(
-                                subDeviceInfo.getDimensionsList().stream()
-                                    .collect(
-                                        toImmutableMap(
-                                            DeviceDimension::getName,
-                                            DeviceDimension::getValue,
-                                            (v1, v2) -> v1)))
-                            .build();
+              .map(subDeviceInfo -> {
+                RemoteControlEligibilityContext context =
+                    RemoteControlEligibilityContext.builder()
+                        .setIsMultipleSelection(false)
+                        .setIsSubDevice(true)
+                        .setDeviceStatus(deviceInfo.getDeviceStatus())
+                        .setDrivers(
+                            ImmutableSet.copyOf(deviceInfo.getDeviceFeature().getDriverList()))
+                        .setTypes(
+                            subDeviceInfo.getTypesList().stream()
+                                .map(DeviceType::getType)
+                                .collect(toImmutableSet()))
+                        .setDimensions(
+                            subDeviceInfo.getDimensionsList().stream()
+                                .collect(
+                                    toImmutableMap(
+                                        DeviceDimension::getName,
+                                        DeviceDimension::getValue,
+                                        (v1, v2) -> v1)))
+                        .build();
 
-                    RemoteControlEligibilityResult result =
-                        remoteControlEligibilityChecker.checkTechnicalEligibility(context);
+                RemoteControlEligibilityResult result =
+                    remoteControlEligibilityChecker.checkTechnicalEligibility(context);
 
-                    RemoteControlInfo remoteControlInfo =
-                        RemoteControlInfo.newBuilder()
-                            .setIsSupported(result.isEligible())
-                            .setUnsupportedReason(result.reasonMessage().orElse(""))
-                            .build();
+                RemoteControlInfo remoteControlInfo =
+                    RemoteControlInfo.newBuilder()
+                        .setIsSupported(result.isEligible())
+                        .setUnsupportedReason(result.reasonMessage().orElse(""))
+                        .build();
 
-                    return subDeviceInfo.toBuilder().setRemoteControl(remoteControlInfo).build();
-                  })
+                return subDeviceInfo.toBuilder().setRemoteControl(remoteControlInfo).build();
+              })
               .collect(toImmutableList()));
     }
 

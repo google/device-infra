@@ -49,10 +49,9 @@ public class DeviceHeaderInfoBuilder {
       UniverseScope universe) {
     Optional<TempDimension> quarantineDim =
         deviceInfo.getDeviceCondition().getTempDimensionList().stream()
-            .filter(
-                dim ->
-                    dim.getDimension().getName().equals("quarantined")
-                        && Ascii.equalsIgnoreCase(dim.getDimension().getValue(), "true"))
+            .filter(dim ->
+                dim.getDimension().getName().equals("quarantined")
+                    && Ascii.equalsIgnoreCase(dim.getDimension().getValue(), "true"))
             .findFirst();
 
     QuarantineInfo.Builder quarantineInfoBuilder = QuarantineInfo.newBuilder();

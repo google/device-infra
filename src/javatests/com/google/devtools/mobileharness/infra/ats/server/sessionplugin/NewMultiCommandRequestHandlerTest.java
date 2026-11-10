@@ -263,12 +263,11 @@ public final class NewMultiCommandRequestHandlerTest {
                 SubDeviceSpec.getDefaultInstance(), SubDeviceSpec.getDefaultInstance()));
     when(sessionRequestHandlerUtil.getHostIp(any())).thenReturn("127.0.0.1");
     when(atsServerSessionUtil.replacePathForRemoteRunner(anyString()))
-        .thenAnswer(
-            invocation -> {
-              String path = invocation.getArgument(0, String.class);
-              return "ats-file-server::"
-                  + (path.startsWith("/data/") ? path.substring("/data".length()) : path);
-            });
+        .thenAnswer(invocation -> {
+          String path = invocation.getArgument(0, String.class);
+          return "ats-file-server::"
+              + (path.startsWith("/data/") ? path.substring("/data".length()) : path);
+        });
     doCallRealMethod().when(atsServerSessionUtil).insertAdditionalTestResource(any(), any());
   }
 
@@ -1214,10 +1213,9 @@ public final class NewMultiCommandRequestHandlerTest {
     MobileHarnessException restoreException =
         new MobileHarnessException(BasicErrorId.COMMAND_EXEC_FAIL, "restore failed");
     when(commandExecutor.run(restoreChunkedTestCasesCommand(xtsRootDir)))
-        .thenAnswer(
-            invocation -> {
-              throw restoreException;
-            });
+        .thenAnswer(invocation -> {
+          throw restoreException;
+        });
 
     PrepareSessionRequestResult prepareResult =
         newMultiCommandRequestHandler.prepareSessionRequestInfo(request, sessionInfo);

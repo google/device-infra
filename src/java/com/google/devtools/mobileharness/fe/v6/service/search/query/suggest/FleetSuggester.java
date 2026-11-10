@@ -236,10 +236,9 @@ public final class FleetSuggester {
     }
     Set<String> appliedKeys = new HashSet<>(appliedGroupBys);
     return keyMatches.stream()
-        .flatMap(
-            match ->
-                groupByCandidate(context, match.key(), match.tier(), appliedKeys, /* count= */ true)
-                    .stream())
+        .flatMap(match ->
+            groupByCandidate(context, match.key(), match.tier(), appliedKeys, /* count= */ true)
+                .stream())
         .limit(1)
         .collect(toImmutableList());
   }
@@ -315,13 +314,12 @@ public final class FleetSuggester {
       }
       ImmutableList<String> matchingValues =
           index.sortedValues(keyId).stream()
-              .filter(
-                  val -> {
-                    OptionalInt parsed = FleetFilterEngine.tryParseInt(val);
-                    return parsed.isPresent()
-                        && FleetFilterEngine.matchesIntComparison(
-                            parsed.getAsInt(), operator, targetValue);
-                  })
+              .filter(val -> {
+                OptionalInt parsed = FleetFilterEngine.tryParseInt(val);
+                return parsed.isPresent()
+                    && FleetFilterEngine.matchesIntComparison(
+                        parsed.getAsInt(), operator, targetValue);
+              })
               .collect(toImmutableList());
       if (matchingValues.isEmpty()) {
         continue;
@@ -448,19 +446,16 @@ public final class FleetSuggester {
       SuggestionContext context, String keyToken, boolean exclude) {
     KeyVocabulary vocabulary = context.vocabulary();
     return resolveOrMint(vocabulary, keyToken).stream()
-        .filter(
-            key ->
-                context.isIndexed(key.id())
-                    || vocabulary.isColdCapable(key)
-                    || context.isActiveKey(key.id()))
-        .flatMap(
-            key ->
-                Stream.concat(
-                    topValues(context, key.id(), KEY_VALUES_PER_KEY).stream()
-                        .flatMap(
-                            value ->
-                                condition(context, key, value, MatchTier.EXACT, exclude).stream()),
-                    Stream.of(pickerOpener(context, key, MatchTier.EXACT))))
+        .filter(key ->
+            context.isIndexed(key.id())
+                || vocabulary.isColdCapable(key)
+                || context.isActiveKey(key.id()))
+        .flatMap(key ->
+            Stream.concat(
+                topValues(context, key.id(), KEY_VALUES_PER_KEY).stream()
+                    .flatMap(
+                        value -> condition(context, key, value, MatchTier.EXACT, exclude).stream()),
+                Stream.of(pickerOpener(context, key, MatchTier.EXACT))))
         .collect(toImmutableList());
   }
 
@@ -496,11 +491,10 @@ public final class FleetSuggester {
                 Comparator.comparingInt(vocabulary::priority)
                     .reversed()
                     .thenComparing(
-                        Comparator.comparingInt(
-                                (KeyDescriptor key) ->
-                                    distinctValues.stream()
-                                        .mapToInt(v -> index.valueCount(key.id(), v))
-                                        .sum())
+                        Comparator.comparingInt((KeyDescriptor key) ->
+                                distinctValues.stream()
+                                    .mapToInt(v -> index.valueCount(key.id(), v))
+                                    .sum())
                             .reversed())
                     .thenComparing(KeyDescriptor::id))
             .collect(toImmutableList());

@@ -635,14 +635,13 @@ public class AndroidSystemSpecUtil {
                 .filter(deviceWords -> serial.equals(deviceWords[0]))
                 .map(deviceWords -> deviceWords[2])
                 .findFirst()
-                .orElseThrow(
-                    () ->
-                        new MobileHarnessException(
-                            AndroidErrorId.ANDROID_SYSTEM_SPEC_USB_LOCATOR_SERIAL_NOT_FOUND,
-                            String.format(
-                                "Failed to get USB locator because "
-                                    + "[%s] is not found by adb devices",
-                                serial)));
+                .orElseThrow(() ->
+                    new MobileHarnessException(
+                        AndroidErrorId.ANDROID_SYSTEM_SPEC_USB_LOCATOR_SERIAL_NOT_FOUND,
+                        String.format(
+                            "Failed to get USB locator because "
+                                + "[%s] is not found by adb devices",
+                            serial)));
       } catch (ArrayIndexOutOfBoundsException e) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_SYSTEM_SPEC_USB_LOCATOR_ADB_INVALID_LINE,

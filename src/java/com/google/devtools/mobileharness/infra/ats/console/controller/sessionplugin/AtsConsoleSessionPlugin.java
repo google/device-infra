@@ -336,28 +336,27 @@ public class AtsConsoleSessionPlugin {
 
     synchronized (runningTestsLock) {
       AtomicReference<Invocations> testInvocations = new AtomicReference<>();
-      setRunCommandState(
-          oldState -> {
-            String testId = testInfo.locator().getId();
-            logger
-                .atInfo()
-                .with(IMPORTANCE, IMPORTANT)
-                .log(
-                    "Command [%s]'s invocation [%s] allocated devices [%s].",
-                    oldState.getCommandId(), testId, String.join(", ", deviceSerials));
-            Timestamp now = toProtoTimestamp(Instant.now());
-            testInvocations.set(
-                Invocations.newBuilder()
-                    .setStartTime(now)
-                    .addInvocation(
-                        Invocation.newBuilder()
-                            .setCommandId(oldState.getCommandId())
-                            .setStartTime(now)
-                            .addAllDeviceId(deviceSerials)
-                            .setStateSummary(config.getRunCommand().getTestPlan()))
-                    .build());
-            return oldState.toBuilder().putRunningInvocation(testId, testInvocations.get()).build();
-          });
+      setRunCommandState(oldState -> {
+        String testId = testInfo.locator().getId();
+        logger
+            .atInfo()
+            .with(IMPORTANCE, IMPORTANT)
+            .log(
+                "Command [%s]'s invocation [%s] allocated devices [%s].",
+                oldState.getCommandId(), testId, String.join(", ", deviceSerials));
+        Timestamp now = toProtoTimestamp(Instant.now());
+        testInvocations.set(
+            Invocations.newBuilder()
+                .setStartTime(now)
+                .addInvocation(
+                    Invocation.newBuilder()
+                        .setCommandId(oldState.getCommandId())
+                        .setStartTime(now)
+                        .addAllDeviceId(deviceSerials)
+                        .setStateSummary(config.getRunCommand().getTestPlan()))
+                .build());
+        return oldState.toBuilder().putRunningInvocation(testId, testInvocations.get()).build();
+      });
 
       if (tfTest) {
         runningTradefedTests.put(
@@ -406,22 +405,20 @@ public class AtsConsoleSessionPlugin {
     synchronized (runningTestsLock) {
       runningTradefedTests.remove(testInfo.locator().getId());
 
-      setRunCommandState(
-          oldState -> {
-            String testId = testInfo.locator().getId();
-            logger
-                .atInfo()
-                .with(IMPORTANCE, IMPORTANT)
-                .log("Command [%s]'s invocations completed.", oldState.getCommandId());
-            return oldState.toBuilder()
-                .setTotalExecutionTime(
-                    toProtoDuration(
-                        toJavaDuration(oldState.getTotalExecutionTime())
-                            .plus(
-                                Duration.between(testInfo.timing().getStartTime(), Instant.now()))))
-                .removeRunningInvocation(testId)
-                .build();
-          });
+      setRunCommandState(oldState -> {
+        String testId = testInfo.locator().getId();
+        logger
+            .atInfo()
+            .with(IMPORTANCE, IMPORTANT)
+            .log("Command [%s]'s invocations completed.", oldState.getCommandId());
+        return oldState.toBuilder()
+            .setTotalExecutionTime(
+                toProtoDuration(
+                    toJavaDuration(oldState.getTotalExecutionTime())
+                        .plus(Duration.between(testInfo.timing().getStartTime(), Instant.now()))))
+            .removeRunningInvocation(testId)
+            .build();
+      });
     }
 
     ResultTypeWithCause resultTypeWithCause = testInfo.resultWithCause().get();
@@ -484,26 +481,25 @@ public class AtsConsoleSessionPlugin {
     // Writes to RunCommandState.
     if (!updatedTests.isEmpty()) {
       synchronized (runningTestsLock) {
-        setRunCommandState(
-            oldState -> {
-              RunCommandState.Builder result = oldState.toBuilder();
-              for (RunningTradefedTest updatedTest : updatedTests) {
-                String testId = updatedTest.testInfo.locator().getId();
+        setRunCommandState(oldState -> {
+          RunCommandState.Builder result = oldState.toBuilder();
+          for (RunningTradefedTest updatedTest : updatedTests) {
+            String testId = updatedTest.testInfo.locator().getId();
 
-                // Checks if the test still exists.
-                if (oldState.containsRunningInvocation(testId)) {
-                  Invocations invocations = updatedTest.invocations;
-                  logger
-                      .atInfo()
-                      .with(IMPORTANCE, IMPORTANT)
-                      .log(
-                          "Updated invocation info of test [%s]: %s",
-                          testId, shortDebugString(invocations));
-                  result.putRunningInvocation(testId, invocations);
-                }
-              }
-              return result.build();
-            });
+            // Checks if the test still exists.
+            if (oldState.containsRunningInvocation(testId)) {
+              Invocations invocations = updatedTest.invocations;
+              logger
+                  .atInfo()
+                  .with(IMPORTANCE, IMPORTANT)
+                  .log(
+                      "Updated invocation info of test [%s]: %s",
+                      testId, shortDebugString(invocations));
+              result.putRunningInvocation(testId, invocations);
+            }
+          }
+          return result.build();
+        });
       }
     }
   }
@@ -620,13 +616,12 @@ public class AtsConsoleSessionPlugin {
           .addAllInvocation(
               runtimeInfo.invocations().stream()
                   .filter(TradefedInvocation::isRunning)
-                  .map(
-                      invocation ->
-                          initialFirstInvocation.toBuilder()
-                              .clearDeviceId()
-                              .addAllDeviceId(invocation.deviceIds())
-                              .setStateSummary(invocation.status())
-                              .build())
+                  .map(invocation ->
+                      initialFirstInvocation.toBuilder()
+                          .clearDeviceId()
+                          .addAllDeviceId(invocation.deviceIds())
+                          .setStateSummary(invocation.status())
+                          .build())
                   .collect(toImmutableList()))
           .build();
     }

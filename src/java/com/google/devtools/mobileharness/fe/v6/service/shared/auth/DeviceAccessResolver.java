@@ -165,15 +165,14 @@ public class DeviceAccessResolver {
     return Futures.transform(
         Futures.allAsList(
             uniqueCandidates.stream()
-                .map(
-                    candidate ->
-                        candidate.equals(username)
-                            ? immediateFuture(username)
-                            : Futures.transform(
-                                groupMembershipProvider.isMemberOfAny(
-                                    username, ImmutableList.of(candidate)),
-                                isMember -> isMember ? candidate : null,
-                                directExecutor()))
+                .map(candidate ->
+                    candidate.equals(username)
+                        ? immediateFuture(username)
+                        : Futures.transform(
+                            groupMembershipProvider.isMemberOfAny(
+                                username, ImmutableList.of(candidate)),
+                            isMember -> isMember ? candidate : null,
+                            directExecutor()))
                 .collect(toImmutableList())),
         results -> results.stream().filter(Objects::nonNull).collect(toImmutableList()),
         executor);

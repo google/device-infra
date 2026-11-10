@@ -158,22 +158,18 @@ public class GlobalTestbedLoader implements TestbedLoader {
         new ImmutableSetMultimap.Builder<>();
     testbedConfigs
         .values()
-        .forEach(
-            config ->
-                config
-                    .getDevices()
-                    .keySet()
-                    .forEach(
-                        subDeviceKey -> deviceLookupBuilder.put(subDeviceKey, config.getName())));
+        .forEach(config ->
+            config
+                .getDevices()
+                .keySet()
+                .forEach(subDeviceKey -> deviceLookupBuilder.put(subDeviceKey, config.getName())));
     ImmutableSetMultimap<SubDeviceKey, String> deviceToTestbedLookup = deviceLookupBuilder.build();
     return testbedConfigs.entrySet().stream()
-        .filter(
-            entry ->
-                entry.getValue().getDevices().keySet().stream()
-                    .allMatch(
-                        subDeviceKey ->
-                            checkSubDeviceKey(
-                                subDeviceKey, deviceToTestbedLookup, entry.getValue().getName())))
+        .filter(entry ->
+            entry.getValue().getDevices().keySet().stream()
+                .allMatch(subDeviceKey ->
+                    checkSubDeviceKey(
+                        subDeviceKey, deviceToTestbedLookup, entry.getValue().getName())))
         .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue));
   }
 

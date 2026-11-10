@@ -121,54 +121,53 @@ public final class FleetIndexBuilder {
 
     List<HostDevices> hostDevices =
         labDataList.parallelStream()
-            .map(
-                labData -> {
-                  LabInfo labInfo = labData.getLabInfo();
-                  LabLocator locator = labInfo.getLabLocator();
-                  String hostName = locator.getHostName();
-                  String hostIp = locator.getIp();
-                  if (hostIp.isEmpty() && locator.hasMasterDetectedIp()) {
-                    hostIp = locator.getMasterDetectedIp();
-                  }
-                  ImmutableMap<String, String> hostProperties = extractHostProperties(labInfo);
-                  Optional<HostEnrichment> hostEnrichment =
-                      Optional.ofNullable(raw.hostEnrichments().get(hostName));
+            .map(labData -> {
+              LabInfo labInfo = labData.getLabInfo();
+              LabLocator locator = labInfo.getLabLocator();
+              String hostName = locator.getHostName();
+              String hostIp = locator.getIp();
+              if (hostIp.isEmpty() && locator.hasMasterDetectedIp()) {
+                hostIp = locator.getMasterDetectedIp();
+              }
+              ImmutableMap<String, String> hostProperties = extractHostProperties(labInfo);
+              Optional<HostEnrichment> hostEnrichment =
+                  Optional.ofNullable(raw.hostEnrichments().get(hostName));
 
-                  String hostOs = hostProperties.getOrDefault("host_os", "Unknown");
-                  String hostConnectivity =
-                      HostConnectivityStatuses.create(Optional.of(labInfo)).getTitle();
+              String hostOs = hostProperties.getOrDefault("host_os", "Unknown");
+              String hostConnectivity =
+                  HostConnectivityStatuses.create(Optional.of(labInfo)).getTitle();
 
-                  DeviceList deviceList = labData.getDeviceList();
-                  HostRecord hostRecord =
-                      buildHostRecord(
-                          hostName,
-                          hostIp,
-                          hostProperties,
-                          deviceList,
-                          hostOs,
-                          hostConnectivity,
-                          hostEnrichment);
-                  Accumulator hostAccum =
-                      hostAccumulatorsByThread.computeIfAbsent(
-                          Thread.currentThread(), t -> new Accumulator());
-                  indexHost(hostAccum, hostRecord);
+              DeviceList deviceList = labData.getDeviceList();
+              HostRecord hostRecord =
+                  buildHostRecord(
+                      hostName,
+                      hostIp,
+                      hostProperties,
+                      deviceList,
+                      hostOs,
+                      hostConnectivity,
+                      hostEnrichment);
+              Accumulator hostAccum =
+                  hostAccumulatorsByThread.computeIfAbsent(
+                      Thread.currentThread(), t -> new Accumulator());
+              indexHost(hostAccum, hostRecord);
 
-                  Accumulator accum =
-                      accumulatorsByThread.computeIfAbsent(
-                          Thread.currentThread(), t -> new Accumulator());
-                  List<DeviceRecord> devices = new ArrayList<>();
-                  for (DeviceInfo deviceInfo : deviceList.getDeviceInfoList()) {
-                    String deviceId = deviceInfo.getDeviceLocator().getId();
-                    Optional<DeviceEnrichment> deviceEnrichment =
-                        Optional.ofNullable(raw.deviceEnrichments().get(deviceId));
-                    DeviceRecord record =
-                        buildDeviceRecord(
-                            deviceInfo, hostRecord, deviceEnrichment, raw.derivedDeviceKeys());
-                    devices.add(record);
-                    indexDevice(accum, record);
-                  }
-                  return new HostDevices(hostRecord, devices);
-                })
+              Accumulator accum =
+                  accumulatorsByThread.computeIfAbsent(
+                      Thread.currentThread(), t -> new Accumulator());
+              List<DeviceRecord> devices = new ArrayList<>();
+              for (DeviceInfo deviceInfo : deviceList.getDeviceInfoList()) {
+                String deviceId = deviceInfo.getDeviceLocator().getId();
+                Optional<DeviceEnrichment> deviceEnrichment =
+                    Optional.ofNullable(raw.deviceEnrichments().get(deviceId));
+                DeviceRecord record =
+                    buildDeviceRecord(
+                        deviceInfo, hostRecord, deviceEnrichment, raw.derivedDeviceKeys());
+                devices.add(record);
+                indexDevice(accum, record);
+              }
+              return new HostDevices(hostRecord, devices);
+            })
             .toList();
 
     List<DeviceRecord> allDevices = new ArrayList<>();
@@ -348,12 +347,11 @@ public final class FleetIndexBuilder {
   private static void addVersion(
       ImmutableMap.Builder<String, ImmutableList<String>> valuesBuilder, DeviceInfo deviceInfo) {
     DeviceKeys.VERSION.deviceInfoSources().stream()
-        .map(
-            source ->
-                source.extract(deviceInfo).stream()
-                    .filter(v -> !v.isEmpty())
-                    .distinct()
-                    .collect(toImmutableList()))
+        .map(source ->
+            source.extract(deviceInfo).stream()
+                .filter(v -> !v.isEmpty())
+                .distinct()
+                .collect(toImmutableList()))
         .filter(versions -> !versions.isEmpty())
         .findFirst()
         .ifPresent(versions -> valuesBuilder.put(DeviceKeys.VERSION.id(), versions));
@@ -594,46 +592,44 @@ public final class FleetIndexBuilder {
       // TODO: Consider switching to a sequential loop over keyList if the number
       // of indexed keys remains small.
       keyList.parallelStream()
-          .forEach(
-              keyId -> {
-                Set<String> values = distinctValues.get(keyId);
-                if (values != null) {
-                  List<String> valueList = new ArrayList<>(values);
-                  Collections.sort(valueList);
-                  sortedMap.put(keyId, ImmutableList.copyOf(valueList));
-                }
-                Map<String, Integer> keyCounts = valueCounts.get(keyId);
-                if (keyCounts != null) {
-                  countsMap.put(keyId, ImmutableMap.copyOf(keyCounts));
-                }
-                Map<String, String> keyDisplays = valueDisplays.get(keyId);
-                if (keyDisplays != null) {
-                  displaysMap.put(keyId, ImmutableMap.copyOf(keyDisplays));
-                }
-                int entities = entityCounts.getOrDefault(keyId, 0);
-                if (entities > 0) {
-                  Set<ImmutableSet<String>> multis = multiCombinations.get(keyId);
-                  int combinations =
-                      multis == null
-                          ? (values != null ? values.size() : 0)
-                          : singleCombinations.getOrDefault(keyId, ImmutableSet.of()).size()
-                              + multis.size();
-                  statsMap.put(keyId, new KeyStats(entities, combinations, multis != null));
-                }
-              });
+          .forEach(keyId -> {
+            Set<String> values = distinctValues.get(keyId);
+            if (values != null) {
+              List<String> valueList = new ArrayList<>(values);
+              Collections.sort(valueList);
+              sortedMap.put(keyId, ImmutableList.copyOf(valueList));
+            }
+            Map<String, Integer> keyCounts = valueCounts.get(keyId);
+            if (keyCounts != null) {
+              countsMap.put(keyId, ImmutableMap.copyOf(keyCounts));
+            }
+            Map<String, String> keyDisplays = valueDisplays.get(keyId);
+            if (keyDisplays != null) {
+              displaysMap.put(keyId, ImmutableMap.copyOf(keyDisplays));
+            }
+            int entities = entityCounts.getOrDefault(keyId, 0);
+            if (entities > 0) {
+              Set<ImmutableSet<String>> multis = multiCombinations.get(keyId);
+              int combinations =
+                  multis == null
+                      ? (values != null ? values.size() : 0)
+                      : singleCombinations.getOrDefault(keyId, ImmutableSet.of()).size()
+                          + multis.size();
+              statsMap.put(keyId, new KeyStats(entities, combinations, multis != null));
+            }
+          });
 
       // Build semanticGlobalSorted (parallel collect + sort).
       List<ValueKeyPair> semanticPairs =
           keyList.parallelStream()
               .filter(keyId -> !IDENTIFIER_KEYS.contains(keyId))
-              .flatMap(
-                  keyId -> {
-                    Set<String> values = distinctValues.get(keyId);
-                    if (values == null) {
-                      return Stream.empty();
-                    }
-                    return values.stream().map(v -> new ValueKeyPair(v, keyId));
-                  })
+              .flatMap(keyId -> {
+                Set<String> values = distinctValues.get(keyId);
+                if (values == null) {
+                  return Stream.empty();
+                }
+                return values.stream().map(v -> new ValueKeyPair(v, keyId));
+              })
               .sorted()
               .toList();
 

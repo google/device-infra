@@ -423,27 +423,26 @@ public class AndroidLogCatDecorator extends LifecycleDecorator implements Androi
               options,
               filterSpecs,
               testInfo.timer().remainingTimeJava(),
-              LineCallback.stopWhen(
-                  line -> {
-                    try {
-                      // Keep line separator consistent with actual adb command output.
-                      String lineSeparator =
-                          sdkVersion < AndroidVersion.NOUGAT.getStartSdkVersion() ? "\r\n" : "\n";
-                      finalLogFileWriter.write(line + lineSeparator);
-                    } catch (IOException e) {
-                      testInfo
-                          .findings()
-                          .addAndLog(
-                              Severity.WARNING,
-                              new MobileHarnessException(
-                                  AndroidErrorId.ANDROID_LOGCAT_DECORATOR_FILE_WRITER_WRITE_ERROR,
-                                  "Failed to write logcat to file",
-                                  e),
-                              logger);
-                      return true;
-                    }
-                    return false;
-                  }));
+              LineCallback.stopWhen(line -> {
+                try {
+                  // Keep line separator consistent with actual adb command output.
+                  String lineSeparator =
+                      sdkVersion < AndroidVersion.NOUGAT.getStartSdkVersion() ? "\r\n" : "\n";
+                  finalLogFileWriter.write(line + lineSeparator);
+                } catch (IOException e) {
+                  testInfo
+                      .findings()
+                      .addAndLog(
+                          Severity.WARNING,
+                          new MobileHarnessException(
+                              AndroidErrorId.ANDROID_LOGCAT_DECORATOR_FILE_WRITER_WRITE_ERROR,
+                              "Failed to write logcat to file",
+                              e),
+                          logger);
+                  return true;
+                }
+                return false;
+              }));
     } else {
       testInfo.log().atInfo().alsoTo(logger).log("Start async logcat for device %s", deviceId);
       commandProcess =

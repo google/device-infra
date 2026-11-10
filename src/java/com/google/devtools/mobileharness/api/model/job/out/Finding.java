@@ -81,10 +81,9 @@ public class Finding implements MetadataProvider {
     // Sorts by key so that the resulting proto is deterministic, since equals()/hashCode() compare
     // the proto and repeated fields are order-sensitive.
     ImmutableSortedMap.copyOf(metadata)
-        .forEach(
-            (key, value) ->
-                summaryBuilder.addMetadata(
-                    ExceptionSummary.MetadataEntry.newBuilder().setKey(key).setValue(value)));
+        .forEach((key, value) ->
+            summaryBuilder.addMetadata(
+                ExceptionSummary.MetadataEntry.newBuilder().setKey(key).setValue(value)));
     return exceptionDetailBuilder.build();
   }
 

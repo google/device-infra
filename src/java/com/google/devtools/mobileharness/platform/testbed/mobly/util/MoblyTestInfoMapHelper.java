@@ -541,10 +541,8 @@ public class MoblyTestInfoMapHelper {
           .subTests()
           .getAll()
           .values()
-          .forEach(
-              subTestInfo ->
-                  addUserDataPropertyEntry(
-                      subTestInfo, spongeProperty, testName, optionalTestClass));
+          .forEach(subTestInfo ->
+              addUserDataPropertyEntry(subTestInfo, spongeProperty, testName, optionalTestClass));
     }
   }
 

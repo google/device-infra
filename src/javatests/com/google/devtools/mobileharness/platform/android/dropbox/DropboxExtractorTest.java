@@ -74,15 +74,13 @@ public class DropboxExtractorTest {
             eq("dumpsys dropbox --print data_app_crash"),
             any(Duration.class),
             any(LineCallback.class)))
-        .thenAnswer(
-            invocation -> {
-              DropboxParser parser = invocation.getArgument(3);
-              DROPBOX_APP_CRASH_OUTPUT.forEach(
-                  line -> {
-                    var unused = parser.onLine(line);
-                  });
-              return "";
-            });
+        .thenAnswer(invocation -> {
+          DropboxParser parser = invocation.getArgument(3);
+          DROPBOX_APP_CRASH_OUTPUT.forEach(line -> {
+            var unused = parser.onLine(line);
+          });
+          return "";
+        });
   }
 
   @Test
@@ -126,15 +124,13 @@ public class DropboxExtractorTest {
             eq("dumpsys dropbox --print SYSTEM_TOMBSTONE"),
             any(Duration.class),
             any(LineCallback.class)))
-        .thenAnswer(
-            invocation -> {
-              DropboxParser parser = invocation.getArgument(3);
-              DROPBOX_TOMBSTONE_OUTPUT.forEach(
-                  line -> {
-                    var unused = parser.onLine(line);
-                  });
-              return "";
-            });
+        .thenAnswer(invocation -> {
+          DropboxParser parser = invocation.getArgument(3);
+          DROPBOX_TOMBSTONE_OUTPUT.forEach(line -> {
+            var unused = parser.onLine(line);
+          });
+          return "";
+        });
 
     dropboxExtractor.extract(
         "device_id",

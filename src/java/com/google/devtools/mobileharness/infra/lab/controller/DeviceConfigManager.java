@@ -242,10 +242,9 @@ public abstract class DeviceConfigManager implements Runnable {
     logger.atFine().log("Update host_group to lab dimensions.");
     labConfig.getHostProperties().getHostPropertyList().stream()
         .filter(property -> property.getKey().equals("host_group"))
-        .forEach(
-            property ->
-                LabDimensionManager.getInstance()
-                    .getSupportedLocalDimensions()
-                    .add(property.getKey(), property.getValue()));
+        .forEach(property ->
+            LabDimensionManager.getInstance()
+                .getSupportedLocalDimensions()
+                .add(property.getKey(), property.getValue()));
   }
 }

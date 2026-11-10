@@ -71,12 +71,11 @@ public class NoOpDeviceDetector implements Detector {
     String deviceIdPrefix = noOpDeviceType.isEmpty() ? "NoOpDevice" : noOpDeviceType;
 
     return IntStream.range(0, Flags.noOpDeviceNum.getNonNull())
-        .mapToObj(
-            offset ->
-                DetectionResult.of(
-                    String.format(
-                        "%s-%d", deviceIdPrefix, Flags.noOpDeviceStartIndex.getNonNull() + offset),
-                    DetectionType.NO_OP))
+        .mapToObj(offset ->
+            DetectionResult.of(
+                String.format(
+                    "%s-%d", deviceIdPrefix, Flags.noOpDeviceStartIndex.getNonNull() + offset),
+                DetectionType.NO_OP))
         .collect(toImmutableList());
   }
 }

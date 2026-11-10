@@ -236,29 +236,26 @@ public class LabSyncHelper {
       DeviceCompositeDimension.Builder compositeDimension = DeviceCompositeDimension.newBuilder();
       device
           .getDimensions()
-          .forEach(
-              dimension ->
-                  compositeDimension.addSupportedDimension(
-                      DeviceDimension.newBuilder()
-                          .setName(dimension.getName())
-                          .setValue(dimension.getValue())
-                          .build()));
+          .forEach(dimension ->
+              compositeDimension.addSupportedDimension(
+                  DeviceDimension.newBuilder()
+                      .setName(dimension.getName())
+                      .setValue(dimension.getValue())
+                      .build()));
       device
           .getRequiredDimensions()
-          .forEach(
-              dimension ->
-                  compositeDimension.addRequiredDimension(
-                      DeviceDimension.newBuilder()
-                          .setName(dimension.getName())
-                          .setValue(dimension.getValue())
-                          .build()));
+          .forEach(dimension ->
+              compositeDimension.addRequiredDimension(
+                  DeviceDimension.newBuilder()
+                      .setName(dimension.getName())
+                      .setValue(dimension.getValue())
+                      .build()));
       DeviceProperties.Builder properties = DeviceProperties.newBuilder();
       device
           .getProperties()
-          .forEach(
-              (key, value) ->
-                  properties.addProperty(
-                      DeviceProperty.newBuilder().setName(key).setValue(value).build()));
+          .forEach((key, value) ->
+              properties.addProperty(
+                  DeviceProperty.newBuilder().setName(key).setValue(value).build()));
 
       SignUpLabRequest.Device.Builder deviceSummary =
           SignUpLabRequest.Device.newBuilder()

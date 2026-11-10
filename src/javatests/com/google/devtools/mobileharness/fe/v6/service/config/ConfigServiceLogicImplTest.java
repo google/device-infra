@@ -171,12 +171,11 @@ public final class ConfigServiceLogicImplTest {
     when(configurationProvider.getLabConfig(eq("host"), any(UniverseScope.class)))
         .thenReturn(immediateFuture(ConfigResult.available(Optional.of(existingConfig))));
     when(configPusherHelper.unlockHostProperties(any(LabConfig.Builder.class)))
-        .thenAnswer(
-            invocation -> {
-              LabConfig.Builder builder = invocation.getArgument(0);
-              builder.setHostName("host-modified"); // simulate modification
-              return true;
-            });
+        .thenAnswer(invocation -> {
+          LabConfig.Builder builder = invocation.getArgument(0);
+          builder.setHostName("host-modified"); // simulate modification
+          return true;
+        });
     when(configurationProvider.updateLabConfig(
             eq("host"), any(LabConfig.class), any(UniverseScope.class)))
         .thenReturn(immediateVoidFuture());

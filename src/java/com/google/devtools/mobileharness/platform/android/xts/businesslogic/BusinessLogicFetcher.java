@@ -148,11 +148,10 @@ public class BusinessLogicFetcher {
     }
     String queryString =
         params.entries().stream()
-            .map(
-                entry ->
-                    URLEncoder.encode(entry.getKey(), UTF_8)
-                        + "="
-                        + URLEncoder.encode(entry.getValue(), UTF_8))
+            .map(entry ->
+                URLEncoder.encode(entry.getKey(), UTF_8)
+                    + "="
+                    + URLEncoder.encode(entry.getValue(), UTF_8))
             .collect(joining("&"));
 
     String separator = baseUrl.contains("?") ? "&" : "?";

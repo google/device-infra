@@ -211,12 +211,11 @@ public final class UsmfBinary {
     try (Stream<Path> streamList = Files.list(logsDir)) {
       ImmutableList<Path> logFiles =
           streamList
-              .filter(
-                  path -> {
-                    String fileName = path.getFileName().toString();
-                    return fileName.startsWith(HISTORY_FILE_PREFIX)
-                        && fileName.endsWith(JSON_FILE_EXTENSION);
-                  })
+              .filter(path -> {
+                String fileName = path.getFileName().toString();
+                return fileName.startsWith(HISTORY_FILE_PREFIX)
+                    && fileName.endsWith(JSON_FILE_EXTENSION);
+              })
               .collect(toImmutableList());
       List<CommandInvocation> result = new ArrayList<>(logFiles.size());
       for (Path path : logFiles) {

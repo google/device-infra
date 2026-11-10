@@ -179,6 +179,11 @@ describe('App Component', () => {
 
       routeSpy.and.returnValue('home');
       expect(component.isNavActive('home')).toBeTrue();
+      expect(component.isNavActive('summary')).toBeFalse();
+
+      routeSpy.and.returnValue('summary');
+      expect(component.isNavActive('summary')).toBeTrue();
+      expect(component.isNavActive('home')).toBeFalse();
 
       routeSpy.and.returnValue('devices');
       expect(component.isNavActive('devices')).toBeTrue();
@@ -237,9 +242,41 @@ describe('App Component', () => {
       component.updateShowContent();
       expect(component.showContent).toBeTrue();
     });
+
+    it('should set showContent=true when route path is summary', () => {
+      const router = TestBed.inject(Router);
+      component.isFakeData = false;
+      component.showContent = false;
+      spyOnProperty(router, 'routerState', 'get').and.returnValue({
+        snapshot: {
+          root: {
+            firstChild: {
+              firstChild: null,
+              routeConfig: {path: 'summary'},
+              params: {},
+            },
+          },
+        },
+      } as unknown as Router['routerState']);
+
+      component.updateShowContent();
+      expect(component.showContent).toBeTrue();
+    });
   });
 
   describe('isShowHeaderJumpBar', () => {
+    it('should return false on a route whose data hides the jump bar', () => {
+      component.isEmbeddedMode = false;
+      spyOn(component, 'getCurrentRoutePath').and.returnValue('home');
+      const dataSpy = spyOn(component, 'getCurrentRouteData');
+
+      dataSpy.and.returnValue({'hideHeaderJumpBar': true});
+      expect(component.isShowHeaderJumpBar()).toBeFalse();
+
+      dataSpy.and.returnValue({});
+      expect(component.isShowHeaderJumpBar()).toBeTrue();
+    });
+
     it('should return false in embedded mode regardless of route', () => {
       component.isEmbeddedMode = true;
       spyOn(component, 'getCurrentRoutePath').and.returnValue('home');

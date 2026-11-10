@@ -43,12 +43,11 @@ public class DaemonActivity extends DaemonBaseActivity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     findViewById(resId.getDeviceId())
-        .setOnClickListener(
-            deviceIdView -> {
-              String msg = ((TextView) deviceIdView).getText().toString();
-              msg += "\nSwipe right, or tap outside dialogBox, to dismiss";
-              new AlertDialog.Builder(this).setTitle("Device ID").setMessage(msg).create().show();
-            });
+        .setOnClickListener(deviceIdView -> {
+          String msg = ((TextView) deviceIdView).getText().toString();
+          msg += "\nSwipe right, or tap outside dialogBox, to dismiss";
+          new AlertDialog.Builder(this).setTitle("Device ID").setMessage(msg).create().show();
+        });
   }
 
   @Override

@@ -45,11 +45,10 @@ public class TestFlows {
             testInfo.jobInfo().subDeviceSpecs().getAllSubDevices().stream()
                 .map(SubDeviceSpec::decorators)
                 .map(Decorators::getAll)
-                .map(
-                    decorators ->
-                        MobileHarnessDecoratorStack.newBuilder()
-                            .addAllDecoratorName(decorators)
-                            .build())
+                .map(decorators ->
+                    MobileHarnessDecoratorStack.newBuilder()
+                        .addAllDecoratorName(decorators)
+                        .build())
                 .collect(toImmutableList()))
         .build();
   }

@@ -49,10 +49,9 @@ class ScreenshotButtonBuilder {
 
     boolean isScreenshotSupported =
         deviceInfo.getDeviceFeature().getCompositeDimension().getSupportedDimensionList().stream()
-            .anyMatch(
-                dimension ->
-                    dimension.getName().equals("screenshot_able")
-                        && Ascii.equalsIgnoreCase(dimension.getValue(), "true"));
+            .anyMatch(dimension ->
+                dimension.getName().equals("screenshot_able")
+                    && Ascii.equalsIgnoreCase(dimension.getValue(), "true"));
 
     boolean isReady = featureReadiness.isDeviceScreenshotReady();
     if (!isDeviceMissing && isScreenshotSupported) {

@@ -191,12 +191,11 @@ public final class BatchDeviceConfigHelper {
    */
   public static ImmutableList<DeviceTarget> distinctTargets(List<DeviceTarget> devices) {
     return devices.stream()
-        .map(
-            target ->
-                DeviceTarget.newBuilder()
-                    .setDeviceId(target.getDeviceId())
-                    .setHostName(target.getHostName().trim())
-                    .build())
+        .map(target ->
+            DeviceTarget.newBuilder()
+                .setDeviceId(target.getDeviceId())
+                .setHostName(target.getHostName().trim())
+                .build())
         .distinct()
         .collect(toImmutableList());
   }
@@ -313,14 +312,13 @@ public final class BatchDeviceConfigHelper {
                 ImmutableMap.copyOf(configsToUpdate), UniverseScope.SELF))
         .transform(
             backendErrors -> {
-              backendErrors.forEach(
-                  (deviceId, errMsg) ->
-                      errors.put(
-                          deviceId,
-                          UpdateError.newBuilder()
-                              .setCode(UpdateError.Code.UNKNOWN)
-                              .setMessage(isNullOrEmpty(errMsg) ? defaultErrorMessage : errMsg)
-                              .build()));
+              backendErrors.forEach((deviceId, errMsg) ->
+                  errors.put(
+                      deviceId,
+                      UpdateError.newBuilder()
+                          .setCode(UpdateError.Code.UNKNOWN)
+                          .setMessage(isNullOrEmpty(errMsg) ? defaultErrorMessage : errMsg)
+                          .build()));
               return ImmutableMap.copyOf(errors);
             },
             executor)
@@ -398,11 +396,10 @@ public final class BatchDeviceConfigHelper {
         .getDeviceInfoList()
         .stream()
         .filter(DeviceInfo::hasDeviceLocator)
-        .map(
-            info ->
-                new LabDevice(
-                    info.getDeviceLocator().getId(),
-                    info.getDeviceLocator().getLabLocator().getHostName()))
+        .map(info ->
+            new LabDevice(
+                info.getDeviceLocator().getId(),
+                info.getDeviceLocator().getLabLocator().getHostName()))
         .collect(toImmutableList());
   }
 
@@ -462,14 +459,13 @@ public final class BatchDeviceConfigHelper {
                   .boxed()
                   .collect(toImmutableMap(distinctHosts::get, labConfigs::get));
           return IntStream.range(0, targets.size())
-              .mapToObj(
-                  i ->
-                      resolveDevice(
-                          targets.get(i),
-                          matchedByTarget.get(i),
-                          allLabDevices,
-                          labConfigByHost,
-                          deviceConfigs))
+              .mapToObj(i ->
+                  resolveDevice(
+                      targets.get(i),
+                      matchedByTarget.get(i),
+                      allLabDevices,
+                      labConfigByHost,
+                      deviceConfigs))
               .collect(toImmutableList());
         },
         executor);
@@ -483,10 +479,9 @@ public final class BatchDeviceConfigHelper {
     }
     String requestedHost = target.getHostName();
     return labDevices.stream()
-        .filter(
-            labDevice ->
-                labDevice.deviceId().equals(deviceId)
-                    && (requestedHost.isEmpty() || labDevice.hostName().equals(requestedHost)))
+        .filter(labDevice ->
+            labDevice.deviceId().equals(deviceId)
+                && (requestedHost.isEmpty() || labDevice.hostName().equals(requestedHost)))
         .findFirst();
   }
 
@@ -680,15 +675,14 @@ public final class BatchDeviceConfigHelper {
   private static ImmutableList<LoadedDevice> readOnlyForAll(
       ImmutableList<DeviceTarget> targets, String reason, UpdateError.Code code) {
     return targets.stream()
-        .map(
-            target ->
-                LoadedDevice.readOnly(
-                    DeviceEvaluation.createReadOnly(
-                        target.getDeviceId(),
-                        target.getHostName(),
-                        DeviceConfig.getDefaultInstance(),
-                        reason,
-                        code)))
+        .map(target ->
+            LoadedDevice.readOnly(
+                DeviceEvaluation.createReadOnly(
+                    target.getDeviceId(),
+                    target.getHostName(),
+                    DeviceConfig.getDefaultInstance(),
+                    reason,
+                    code)))
         .collect(toImmutableList());
   }
 

@@ -84,9 +84,8 @@ public class AndroidRuntimeCrashDetector implements LineProcessor {
       return;
     }
     detectedCrashEvents.put(line.pid(), crashedProcess.get());
-    executorService.execute(
-        () ->
-            crashDialogDetector.scan(testInfo, device, monitoringConfig.reportAsFailurePackages()));
+    executorService.execute(() ->
+        crashDialogDetector.scan(testInfo, device, monitoringConfig.reportAsFailurePackages()));
   }
 
   private Optional<CrashedProcess> processArtLines(List<String> lines) {
@@ -112,12 +111,11 @@ public class AndroidRuntimeCrashDetector implements LineProcessor {
   @Override
   public ImmutableList<LogcatEvent> getEvents() {
     return detectedCrashEvents.values().stream()
-        .map(
-            process ->
-                new CrashEvent(
-                    process,
-                    Joiner.on(System.lineSeparator())
-                        .join(androidRuntimeLinesToPid.get(process.pid()))))
+        .map(process ->
+            new CrashEvent(
+                process,
+                Joiner.on(System.lineSeparator())
+                    .join(androidRuntimeLinesToPid.get(process.pid()))))
         .collect(toImmutableList());
   }
 }

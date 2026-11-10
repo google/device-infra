@@ -58,14 +58,13 @@ public class AnnotatedPluginModuleClassProvider implements PluginModuleClassProv
     try {
       return classInfos.stream()
           .map(classInfo -> classInfo.loadClass(/* ignoreExceptions= */ false))
-          .filter(
-              aClass ->
-                  AnnotatedPluginClassProvider.checkPluginType(
-                      aClass,
-                      clazz -> clazz.getDeclaredAnnotation(PluginModule.class).type(),
-                      log,
-                      warnUnmatchedTypes,
-                      pluginTypes))
+          .filter(aClass ->
+              AnnotatedPluginClassProvider.checkPluginType(
+                  aClass,
+                  clazz -> clazz.getDeclaredAnnotation(PluginModule.class).type(),
+                  log,
+                  warnUnmatchedTypes,
+                  pluginTypes))
           .<Class<? extends Module>>map(aClass -> aClass.asSubclass(Module.class))
           .collect(toImmutableSet());
     } catch (IllegalArgumentException e) {

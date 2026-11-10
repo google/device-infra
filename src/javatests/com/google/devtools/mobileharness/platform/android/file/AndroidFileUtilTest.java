@@ -229,14 +229,12 @@ public final class AndroidFileUtilTest {
             eq(AndroidFileUtil.DEFAULT_LS_COMMAND_TIMEOUT),
             any(LineCallback.class)))
         .thenReturn("-rw-rw-rw- root     root            0 2019-07-17 23:47 test_file")
-        .thenAnswer(
-            invocation -> {
-              LineCallback callback = invocation.getArgument(3, LineCallback.class);
-              callback.onLine(String.format("ls: //%s: No such file or directory", fileParentDir));
-              throw new MobileHarnessException(
-                  AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE,
-                  "Failed to execute command");
-            });
+        .thenAnswer(invocation -> {
+          LineCallback callback = invocation.getArgument(3, LineCallback.class);
+          callback.onLine(String.format("ls: //%s: No such file or directory", fileParentDir));
+          throw new MobileHarnessException(
+              AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Failed to execute command");
+        });
 
     assertThat(androidFileUtil.getFileInfo(SERIAL, sdkVersion, filePath, /* followSymlink= */ true))
         .hasValue(
@@ -641,15 +639,12 @@ public final class AndroidFileUtilTest {
             any(LineCallback.class)))
         .thenReturn("drwxrwx--x root   root    2019-07-18 15:16 " + fileOrDirBasename)
         .thenReturn("-rwxrwx--x root   root    2019-07-18 15:16 " + fileOrDirBasename)
-        .thenAnswer(
-            invocation -> {
-              LineCallback callback = (LineCallback) invocation.getArguments()[3];
-              callback.onLine(
-                  String.format("ls: //%s: No such file or directory", fileOrDirBasename));
-              throw new MobileHarnessException(
-                  AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE,
-                  "Failed to execute command");
-            });
+        .thenAnswer(invocation -> {
+          LineCallback callback = (LineCallback) invocation.getArguments()[3];
+          callback.onLine(String.format("ls: //%s: No such file or directory", fileOrDirBasename));
+          throw new MobileHarnessException(
+              AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Failed to execute command");
+        });
 
     assertThat(androidFileUtil.isDirExist(SERIAL, sdkVersion, fileOrDirPath)).isTrue();
     assertThat(androidFileUtil.isDirExist(SERIAL, sdkVersion, fileOrDirPath)).isFalse();
@@ -747,15 +742,12 @@ public final class AndroidFileUtilTest {
             any(LineCallback.class)))
         .thenReturn("drwxrwx--x root   root    2019-07-18 15:16 " + fileOrDirBasename)
         .thenReturn("-rwxrwx--x root   root    2019-07-18 15:16 " + fileOrDirBasename)
-        .thenAnswer(
-            invocation -> {
-              LineCallback callback = (LineCallback) invocation.getArguments()[3];
-              callback.onLine(
-                  String.format("ls: //%s: No such file or directory", fileOrDirBasename));
-              throw new MobileHarnessException(
-                  AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE,
-                  "Failed to execute command");
-            });
+        .thenAnswer(invocation -> {
+          LineCallback callback = (LineCallback) invocation.getArguments()[3];
+          callback.onLine(String.format("ls: //%s: No such file or directory", fileOrDirBasename));
+          throw new MobileHarnessException(
+              AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Failed to execute command");
+        });
 
     assertThat(androidFileUtil.isFileExist(SERIAL, sdkVersion, fileOrDirPath)).isFalse();
     assertThat(androidFileUtil.isFileExist(SERIAL, sdkVersion, fileOrDirPath)).isTrue();

@@ -120,12 +120,11 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
     this.warnings = warnings;
     this.findings = findings;
     testExecutionUnitSupplier =
-        Suppliers.memoize(
-            () ->
-                new TestExecutionUnit(
-                    locator().toNewTestLocator(),
-                    timing().toNewTiming(),
-                    jobInfo().toJobExecutionUnit()));
+        Suppliers.memoize(() ->
+            new TestExecutionUnit(
+                locator().toNewTestLocator(),
+                timing().toNewTiming(),
+                jobInfo().toJobExecutionUnit()));
   }
 
   /** Creates a TestInfo. */
@@ -151,24 +150,22 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
             jobInfo
                 .setting()
                 .getRemoteFileDir()
-                .map(
-                    remoteFileDir ->
-                        PathUtil.join(
-                            remoteFileDir,
-                            "j_" + jobInfo.locator().getId(),
-                            "test_" + locator().getId())));
+                .map(remoteFileDir ->
+                    PathUtil.join(
+                        remoteFileDir,
+                        "j_" + jobInfo.locator().getId(),
+                        "test_" + locator().getId())));
     findings = new Findings(log);
     warnings = new Warnings(timing().toNewTiming(), findings);
     properties = new Properties(timing());
     result = new Result(timing().toNewTiming(), jobInfo.params().toNewParams());
     status = new Status(timing());
     testExecutionUnitSupplier =
-        Suppliers.memoize(
-            () ->
-                new TestExecutionUnit(
-                    locator().toNewTestLocator(),
-                    timing().toNewTiming(),
-                    jobInfo().toJobExecutionUnit()));
+        Suppliers.memoize(() ->
+            new TestExecutionUnit(
+                locator().toNewTestLocator(),
+                timing().toNewTiming(),
+                jobInfo().toJobExecutionUnit()));
   }
 
   /**

@@ -49,20 +49,17 @@ public class FailedDeviceDispatcher extends CacheableDispatcher {
   public Map<String, DispatchType> dispatchLiveDevices(
       DetectionResults detectionResults, DispatchResults dispatchResults) {
     return detectionResults.getAll().asMap().entrySet().stream()
-        .filter(
-            entry ->
-                entry.getValue().stream()
-                    .map(DetectionResult::detectionType)
-                    .anyMatch(DetectionType.FAILED::equals))
-        .filter(
-            entry ->
-                entry.getValue().stream()
-                    .map(DetectionResult::detectionType)
-                    .anyMatch(
-                        detectionType ->
-                            detectionType != DetectionType.FAILED
-                                && detectionType != DetectionType.MONITOR
-                                && detectionType != DetectionType.NO_OP))
+        .filter(entry ->
+            entry.getValue().stream()
+                .map(DetectionResult::detectionType)
+                .anyMatch(DetectionType.FAILED::equals))
+        .filter(entry ->
+            entry.getValue().stream()
+                .map(DetectionResult::detectionType)
+                .anyMatch(detectionType ->
+                    detectionType != DetectionType.FAILED
+                        && detectionType != DetectionType.MONITOR
+                        && detectionType != DetectionType.NO_OP))
         .collect(toImmutableMap(Entry::getKey, entry -> DispatchType.LIVE));
   }
 

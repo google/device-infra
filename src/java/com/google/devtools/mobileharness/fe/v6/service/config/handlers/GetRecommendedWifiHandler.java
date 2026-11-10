@@ -155,12 +155,11 @@ public final class GetRecommendedWifiHandler {
                   .map(config -> config.getBasicConfig().getDefaultWifi())
                   .filter(wifi -> !wifi.getSsid().isEmpty())
                   .distinct()
-                  .map(
-                      wifi ->
-                          RecommendedWifi.newBuilder()
-                              .setSsid(wifi.getSsid())
-                              .setPsk(wifi.getPsk())
-                              .build())
+                  .map(wifi ->
+                      RecommendedWifi.newBuilder()
+                          .setSsid(wifi.getSsid())
+                          .setPsk(wifi.getPsk())
+                          .build())
                   .collect(toImmutableList());
 
           return GetRecommendedWifiResponse.newBuilder()

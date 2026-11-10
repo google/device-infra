@@ -257,14 +257,12 @@ public class SessionRequestHandlerUtil {
     }
 
     return availableDevices.stream()
-        .map(
-            deviceDetails ->
-                SubDeviceSpec.newBuilder()
-                    .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
-                    .setDimensions(
-                        StringMap.newBuilder()
-                            .putContent(Name.ID.lowerCaseName(), deviceDetails.id()))
-                    .build())
+        .map(deviceDetails ->
+            SubDeviceSpec.newBuilder()
+                .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
+                .setDimensions(
+                    StringMap.newBuilder().putContent(Name.ID.lowerCaseName(), deviceDetails.id()))
+                .build())
         .collect(toImmutableList());
   }
 
@@ -315,17 +313,14 @@ public class SessionRequestHandlerUtil {
         // different hosts, and UUID is hostname:6520 which is unique.
         ImmutableSet<String> availableDeviceUuids =
             allOnlineAndroidDevices.stream()
-                .filter(
-                    deviceInfo ->
-                        Ascii.equalsIgnoreCase(deviceInfo.getStatus(), DeviceStatus.IDLE.name()))
-                .map(
-                    deviceInfo ->
-                        deviceInfo.getDimensionList().stream()
-                            .filter(
-                                dimension ->
-                                    dimension.getName().equals(Ascii.toLowerCase(Name.UUID.name())))
-                            .findFirst()
-                            .map(DeviceQuery.Dimension::getValue))
+                .filter(deviceInfo ->
+                    Ascii.equalsIgnoreCase(deviceInfo.getStatus(), DeviceStatus.IDLE.name()))
+                .map(deviceInfo ->
+                    deviceInfo.getDimensionList().stream()
+                        .filter(dimension ->
+                            dimension.getName().equals(Ascii.toLowerCase(Name.UUID.name())))
+                        .findFirst()
+                        .map(DeviceQuery.Dimension::getValue))
                 .filter(Optional::isPresent)
                 .map(Optional::get)
                 .collect(toImmutableSet());
@@ -343,15 +338,14 @@ public class SessionRequestHandlerUtil {
         deviceSerials = onlineDeviceSerials.stream();
       }
       return deviceSerials
-          .map(
-              deviceSerial ->
-                  SubDeviceSpec.newBuilder()
-                      .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
-                      .setDimensions(
-                          StringMap.newBuilder()
-                              .putContent(Name.UUID.lowerCaseName(), deviceSerial)
-                              .putAllContent(extraDimensions))
-                      .build())
+          .map(deviceSerial ->
+              SubDeviceSpec.newBuilder()
+                  .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
+                  .setDimensions(
+                      StringMap.newBuilder()
+                          .putContent(Name.UUID.lowerCaseName(), deviceSerial)
+                          .putAllContent(extraDimensions))
+                  .build())
           .collect(toImmutableList());
     }
   }
@@ -382,11 +376,9 @@ public class SessionRequestHandlerUtil {
     while (!missingSerials.isEmpty() && attempt < GET_DEVICE_FOR_ATS_SERVER_MAX_RETRY_ATTEMPTS) {
       ImmutableSet<String> onlineDeviceIds =
           atsMasterUtil.queryAndroidDevicesFromMaster().stream()
-              .filter(
-                  deviceInfo ->
-                      Ascii.equalsIgnoreCase(deviceInfo.getStatus(), DeviceStatus.BUSY.name())
-                          || Ascii.equalsIgnoreCase(
-                              deviceInfo.getStatus(), DeviceStatus.IDLE.name()))
+              .filter(deviceInfo ->
+                  Ascii.equalsIgnoreCase(deviceInfo.getStatus(), DeviceStatus.BUSY.name())
+                      || Ascii.equalsIgnoreCase(deviceInfo.getStatus(), DeviceStatus.IDLE.name()))
               .map(
                   com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo
                       ::getId)
@@ -531,10 +523,9 @@ public class SessionRequestHandlerUtil {
 
   private static ImmutableListMultimap<String, String> getModuleMetadata(Configuration config) {
     return config.getConfigDescriptor().getMetadataMap().values().stream()
-        .flatMap(
-            metadata ->
-                metadata.getValueList().stream()
-                    .map(value -> Maps.immutableEntry(metadata.getKey(), value)))
+        .flatMap(metadata ->
+            metadata.getValueList().stream()
+                .map(value -> Maps.immutableEntry(metadata.getKey(), value)))
         .collect(toImmutableListMultimap(Entry::getKey, Entry::getValue));
   }
 
@@ -562,9 +553,8 @@ public class SessionRequestHandlerUtil {
         ImmutableMultimap.builder();
     sessionRequestInfo
         .getModuleMetadataIncludeFiltersMap()
-        .forEach(
-            (key, filterValues) ->
-                moduleMetadataIncludeFiltersBuilder.putAll(key, filterValues.getValuesList()));
+        .forEach((key, filterValues) ->
+            moduleMetadataIncludeFiltersBuilder.putAll(key, filterValues.getValuesList()));
     return moduleMetadataIncludeFiltersBuilder
         .putAll(testPlanFilter.moduleMetadataIncludeFilters())
         .build();
@@ -576,9 +566,8 @@ public class SessionRequestHandlerUtil {
         ImmutableMultimap.builder();
     sessionRequestInfo
         .getModuleMetadataExcludeFiltersMap()
-        .forEach(
-            (key, filterValues) ->
-                moduleMetadataExcludeFiltersBuilder.putAll(key, filterValues.getValuesList()));
+        .forEach((key, filterValues) ->
+            moduleMetadataExcludeFiltersBuilder.putAll(key, filterValues.getValuesList()));
     return moduleMetadataExcludeFiltersBuilder
         .putAll(testPlanFilter.moduleMetadataExcludeFilters())
         .build();
@@ -635,12 +624,11 @@ public class SessionRequestHandlerUtil {
 
     ImmutableSet<String> localTfModules =
         getLocalTradefedConfigs(sessionRequestInfo).values().stream()
-            .filter(
-                config ->
-                    filterModuleByConfigMetadata(
-                        getModuleMetadata(config),
-                        moduleMetadataIncludeFilters,
-                        moduleMetadataExcludeFilters))
+            .filter(config ->
+                filterModuleByConfigMetadata(
+                    getModuleMetadata(config),
+                    moduleMetadataIncludeFilters,
+                    moduleMetadataExcludeFilters))
             .map(config -> config.getMetadata().getXtsModule())
             .collect(toImmutableSet());
     ImmutableSet<String> mctsModules =
@@ -774,12 +762,11 @@ public class SessionRequestHandlerUtil {
           FileConfigList.newBuilder()
               .addAllContent(
                   jobFiles.asMap().entrySet().stream()
-                      .map(
-                          entry ->
-                              FileConfig.newBuilder()
-                                  .setTag(entry.getKey())
-                                  .addAllPath(entry.getValue())
-                                  .build())
+                      .map(entry ->
+                          FileConfig.newBuilder()
+                              .setTag(entry.getKey())
+                              .addAllPath(entry.getValue())
+                              .build())
                       .collect(toImmutableList())));
     }
     JobConfig jobConfig = jobConfigBuilder.build();
@@ -857,22 +844,17 @@ public class SessionRequestHandlerUtil {
     Optional<com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo>
         queryDeviceInfo =
             atsMasterUtil.queryAndroidDevicesFromMaster().stream()
-                .filter(
-                    deviceInfo ->
-                        Ascii.equalsIgnoreCase(deviceInfo.getStatus(), DeviceStatus.BUSY.name())
-                            || Ascii.equalsIgnoreCase(
-                                deviceInfo.getStatus(),
-                                DeviceStatus.IDLE.name())) // in healthy state.
-                .filter(
-                    deviceInfo -> {
-                      if (sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
-                        return true;
-                      } else {
-                        return sessionRequestInfo
-                            .getDeviceSerialsList()
-                            .contains(deviceInfo.getId());
-                      }
-                    })
+                .filter(deviceInfo ->
+                    Ascii.equalsIgnoreCase(deviceInfo.getStatus(), DeviceStatus.BUSY.name())
+                        || Ascii.equalsIgnoreCase(
+                            deviceInfo.getStatus(), DeviceStatus.IDLE.name())) // in healthy state.
+                .filter(deviceInfo -> {
+                  if (sessionRequestInfo.getDeviceSerialsList().isEmpty()) {
+                    return true;
+                  } else {
+                    return sessionRequestInfo.getDeviceSerialsList().contains(deviceInfo.getId());
+                  }
+                })
                 .findFirst();
     if (queryDeviceInfo.isEmpty()) {
       logger
@@ -887,21 +869,17 @@ public class SessionRequestHandlerUtil {
             .setDeviceId(queryDeviceInfo.get().getId())
             .setSupportedAbiList(
                 queryDeviceInfo.get().getDimensionList().stream()
-                    .filter(
-                        dimension ->
-                            dimension
-                                .getName()
-                                .equals(Ascii.toLowerCase(AndroidProperty.ABILIST.name())))
+                    .filter(dimension ->
+                        dimension
+                            .getName()
+                            .equals(Ascii.toLowerCase(AndroidProperty.ABILIST.name())))
                     .map(DeviceQuery.Dimension::getValue)
                     .findFirst()
                     .orElse(""))
             .setSupportedAbi(
                 queryDeviceInfo.get().getDimensionList().stream()
-                    .filter(
-                        dimension ->
-                            dimension
-                                .getName()
-                                .equals(Ascii.toLowerCase(AndroidProperty.ABI.name())))
+                    .filter(dimension ->
+                        dimension.getName().equals(Ascii.toLowerCase(AndroidProperty.ABI.name())))
                     .map(DeviceQuery.Dimension::getValue)
                     .findFirst()
                     .orElse(""))
@@ -997,13 +975,12 @@ public class SessionRequestHandlerUtil {
     } else {
       includeFilters =
           subPlan.getNonTfIncludeFiltersMultimap().entries().stream()
-              .map(
-                  e ->
-                      SuiteTestFilter.create(
-                          e.getKey()
-                              + (e.getValue().equals(SubPlan.ALL_TESTS_IN_MODULE)
-                                  ? ""
-                                  : " " + e.getValue())))
+              .map(e ->
+                  SuiteTestFilter.create(
+                      e.getKey()
+                          + (e.getValue().equals(SubPlan.ALL_TESTS_IN_MODULE)
+                              ? ""
+                              : " " + e.getValue())))
               .collect(toImmutableList());
       logger.atInfo().log("Include filters for Non-TF retry/subplan run: %s", includeFilters);
     }
@@ -1019,12 +996,11 @@ public class SessionRequestHandlerUtil {
     if (subPlan != null) {
       ImmutableList<SuiteTestFilter> subplanExcludeFilters =
           subPlan.getNonTfExcludeFiltersMultimap().entries().stream()
-              .map(
-                  e ->
-                      e.getKey()
-                          + (e.getValue().equals(SubPlan.ALL_TESTS_IN_MODULE)
-                              ? ""
-                              : " " + e.getValue()))
+              .map(e ->
+                  e.getKey()
+                      + (e.getValue().equals(SubPlan.ALL_TESTS_IN_MODULE)
+                          ? ""
+                          : " " + e.getValue()))
               .map(SuiteTestFilter::create)
               .collect(toImmutableList());
       excludeFilters =
@@ -1111,17 +1087,15 @@ public class SessionRequestHandlerUtil {
         // Handles exclude-filter.
         Map<String, Collection<String>> excludeTestCaseMap = new HashMap<>();
         if (excludeFilters.stream()
-            .filter(
-                excludeFilter ->
-                    excludeFilter.matchModule(originalModuleName, moduleAbi, moduleParameter))
-            .anyMatch(
-                excludeFilter -> {
-                  if (excludeFilter.testName().isPresent()) {
-                    parseExcludeTestNames(excludeFilter.testName().get(), excludeTestCaseMap);
-                    return false;
-                  }
-                  return true;
-                })) {
+            .filter(excludeFilter ->
+                excludeFilter.matchModule(originalModuleName, moduleAbi, moduleParameter))
+            .anyMatch(excludeFilter -> {
+              if (excludeFilter.testName().isPresent()) {
+                parseExcludeTestNames(excludeFilter.testName().get(), excludeTestCaseMap);
+                return false;
+              }
+              return true;
+            })) {
           // Excludes the whole module.
           continue;
         }
@@ -1248,29 +1222,26 @@ public class SessionRequestHandlerUtil {
 
         if (sessionRequestInfo.getEnableTokenSharding()) {
           getSimCardTypeDimensionValue(moduleMetadata)
-              .ifPresent(
-                  simCardTypeDimensionValue ->
-                      jobInfo
-                          .subDeviceSpecs()
-                          .getAllSubDevices()
-                          .forEach(
-                              subDeviceSpec ->
-                                  subDeviceSpec
-                                      .deviceRequirement()
-                                      .dimensions()
-                                      .add(Name.SIM_CARD_TYPE, simCardTypeDimensionValue)));
+              .ifPresent(simCardTypeDimensionValue ->
+                  jobInfo
+                      .subDeviceSpecs()
+                      .getAllSubDevices()
+                      .forEach(subDeviceSpec ->
+                          subDeviceSpec
+                              .deviceRequirement()
+                              .dimensions()
+                              .add(Name.SIM_CARD_TYPE, simCardTypeDimensionValue)));
         }
 
         if (deviceSerialsDimensionValue != null) {
           jobInfo
               .subDeviceSpecs()
               .getAllSubDevices()
-              .forEach(
-                  subDeviceSpec ->
-                      subDeviceSpec
-                          .deviceRequirement()
-                          .dimensions()
-                          .add(Name.ID, deviceSerialsDimensionValue));
+              .forEach(subDeviceSpec ->
+                  subDeviceSpec
+                      .deviceRequirement()
+                      .dimensions()
+                      .add(Name.ID, deviceSerialsDimensionValue));
         }
         addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
         extraJobProperties.forEach((key, value) -> jobInfo.properties().add(key, value));

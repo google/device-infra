@@ -180,9 +180,8 @@ public final class MaskUtilsTest {
     expectedResult
         .getLabViewBuilder()
         .getLabDataBuilderList()
-        .forEach(
-            labDataBuilder ->
-                labDataBuilder.getLabInfoBuilder().clearLabServerSetting().clearLabServerFeature());
+        .forEach(labDataBuilder ->
+            labDataBuilder.getLabInfoBuilder().clearLabServerSetting().clearLabServerFeature());
 
     MaskUtils.trimLabQueryResult(resultToTrim, mask);
     assertThat(resultToTrim.build()).isEqualTo(expectedResult.build());
@@ -323,18 +322,16 @@ public final class MaskUtilsTest {
         .getGroupedDevicesBuilder()
         .getDeviceGroupResultBuilder()
         .getDeviceGroupBuilderList()
-        .forEach(
-            deviceGroupBuilder ->
-                deviceGroupBuilder
-                    .getGroupedDevicesBuilder()
-                    .getDeviceListBuilder()
-                    .getDeviceInfoBuilderList()
-                    .forEach(
-                        deviceInfoBuilder ->
-                            deviceInfoBuilder
-                                .clearDeviceFeature()
-                                .getDeviceLocatorBuilder()
-                                .clearLabLocator()));
+        .forEach(deviceGroupBuilder ->
+            deviceGroupBuilder
+                .getGroupedDevicesBuilder()
+                .getDeviceListBuilder()
+                .getDeviceInfoBuilderList()
+                .forEach(deviceInfoBuilder ->
+                    deviceInfoBuilder
+                        .clearDeviceFeature()
+                        .getDeviceLocatorBuilder()
+                        .clearLabLocator()));
 
     MaskUtils.trimLabQueryResult(resultToTrim, mask);
     assertThat(resultToTrim.build()).isEqualTo(expectedResult.build());
@@ -358,12 +355,8 @@ public final class MaskUtilsTest {
         .getGroupedDevicesBuilder()
         .getDeviceGroupResultBuilder()
         .getDeviceGroupBuilderList()
-        .forEach(
-            deviceGroupBuilder ->
-                deviceGroupBuilder
-                    .getGroupedDevicesBuilder()
-                    .getDeviceListBuilder()
-                    .clearDeviceInfo());
+        .forEach(deviceGroupBuilder ->
+            deviceGroupBuilder.getGroupedDevicesBuilder().getDeviceListBuilder().clearDeviceInfo());
 
     MaskUtils.trimLabQueryResult(resultToTrim, mask);
     assertThat(resultToTrim.build()).isEqualTo(expectedResult.build());
@@ -404,9 +397,8 @@ public final class MaskUtilsTest {
         .getGroupedDevicesBuilder()
         .getDeviceListBuilder()
         .getDeviceInfoBuilderList()
-        .forEach(
-            deviceInfoBuilder ->
-                deviceInfoBuilder.clearDeviceFeature().getDeviceLocatorBuilder().clearLabLocator());
+        .forEach(deviceInfoBuilder ->
+            deviceInfoBuilder.clearDeviceFeature().getDeviceLocatorBuilder().clearLabLocator());
 
     MaskUtils.trimLabQueryResult(resultToTrim, mask);
     assertThat(resultToTrim.build()).isEqualTo(expectedResult.build());

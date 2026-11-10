@@ -170,19 +170,18 @@ public class AtsConsole {
 
     // Creates OLC server module for embedded mode.
     createOlcServerModuleFactory()
-        .ifPresent(
-            olcServerModuleFactory -> {
-              Instant serverStartTime = Instant.now();
-              Module olcServerModule =
-                  olcServerModuleFactory.create(
-                      Flags.enableAtsMode.getNonNull(),
-                      serverStartTime,
-                      /* enableCloudPubsubMonitoring= */ false,
-                      /* enableDatabase= */ false,
-                      /* enableGrpcRelay= */ false);
-              modules.add(olcServerModule);
-              modules.add(new OlcServerGrpcInProcessChannelModule());
-            });
+        .ifPresent(olcServerModuleFactory -> {
+          Instant serverStartTime = Instant.now();
+          Module olcServerModule =
+              olcServerModuleFactory.create(
+                  Flags.enableAtsMode.getNonNull(),
+                  serverStartTime,
+                  /* enableCloudPubsubMonitoring= */ false,
+                  /* enableDatabase= */ false,
+                  /* enableGrpcRelay= */ false);
+          modules.add(olcServerModule);
+          modules.add(new OlcServerGrpcInProcessChannelModule());
+        });
 
     // Creates Guice injector.
     Injector injector = Guice.createInjector(modules);

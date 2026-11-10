@@ -145,10 +145,9 @@ public class ListCommandTest {
             BoundFieldModule.of(this));
     injector.injectMembers(this);
     commandLine = new CommandLine(RootCommand.class, new GuiceFactory(injector));
-    commandLine.setExecutionExceptionHandler(
-        (exception, commandLineToUse, parseResult) -> {
-          throw exception;
-        });
+    commandLine.setExecutionExceptionHandler((exception, commandLineToUse, parseResult) -> {
+      throw exception;
+    });
 
     realLocalFileUtil.copyFileOrDir(TEST_CTS_CONFIG_DIR, xtsRootDirPath);
   }

@@ -99,11 +99,10 @@ public abstract class CacheableTestMessageHandler extends MobileHarnessAutoClose
       cachedTestMessages = ImmutableList.copyOf(this.cachedTestMessages);
       this.cachedTestMessages.clear();
     }
-    cachedTestMessages.forEach(
-        testMessageInfo -> {
-          logger.atInfo().log("Handle cached test message %s", testMessageInfo);
-          handleTestMessage(testMessageInfo);
-        });
+    cachedTestMessages.forEach(testMessageInfo -> {
+      logger.atInfo().log("Handle cached test message %s", testMessageInfo);
+      handleTestMessage(testMessageInfo);
+    });
     logger.atFine().log("All cached test messages have been handled");
   }
 }

@@ -52,12 +52,11 @@ public final class AliasManagerTest {
     ImmutableMap<String, String> systemProperties = ImmutableMap.of("XTS_ROOT", xtsRootDirPath);
 
     Injector injector =
-        Guice.createInjector(
-            binder ->
-                binder
-                    .bind(new TypeLiteral<ImmutableMap<String, String>>() {})
-                    .annotatedWith(SystemProperties.class)
-                    .toInstance(systemProperties));
+        Guice.createInjector(binder ->
+            binder
+                .bind(new TypeLiteral<ImmutableMap<String, String>>() {})
+                .annotatedWith(SystemProperties.class)
+                .toInstance(systemProperties));
 
     localFileUtil = injector.getInstance(LocalFileUtil.class);
     localFileUtil.writeToFile(

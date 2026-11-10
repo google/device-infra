@@ -314,10 +314,9 @@ public class AndroidPackageManagerUtil {
               serial,
               command,
               CLEAR_PACKAGE_TIMEOUT,
-              LineCallback.stopWhen(
-                  line ->
-                      // Stops the command when we got enough signal. See b/20650828.
-                      line.contains(OUTPUT_SUCCESS) || line.contains(OUTPUT_FAILED)));
+              LineCallback.stopWhen(line ->
+                  // Stops the command when we got enough signal. See b/20650828.
+                  line.contains(OUTPUT_SUCCESS) || line.contains(OUTPUT_FAILED)));
     } catch (MobileHarnessException e) {
       exception = e;
     }

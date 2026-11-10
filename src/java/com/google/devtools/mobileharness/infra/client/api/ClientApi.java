@@ -107,16 +107,15 @@ public class ClientApi {
     }
 
     clientHostnameSupplier =
-        Suppliers.memoize(
-            () -> {
-              try {
-                // This may take seconds.
-                return networkUtil.getLocalHostName();
-              } catch (MobileHarnessException e) {
-                logger.atWarning().withCause(e).log("Failed to get local hostname");
-                return "unknown";
-              }
-            });
+        Suppliers.memoize(() -> {
+          try {
+            // This may take seconds.
+            return networkUtil.getLocalHostName();
+          } catch (MobileHarnessException e) {
+            logger.atWarning().withCause(e).log("Failed to get local hostname");
+            return "unknown";
+          }
+        });
   }
 
   /**

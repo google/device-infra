@@ -164,11 +164,9 @@ public class MoblyYamlParser {
             if (!hasSetupClassError
                 && !rootTestEntries.isEmpty()
                 && rootTestEntries.stream()
-                    .allMatch(
-                        e ->
-                            e.getResult() == MoblyResult.SKIP
-                                && !parentSignatureToChild.containsKey(
-                                    e.getSignature().orElse("")))) {
+                    .allMatch(e ->
+                        e.getResult() == MoblyResult.SKIP
+                            && !parentSignatureToChild.containsKey(e.getSignature().orElse("")))) {
               // When setup_class/pre_run fails and synthetic stage records are retired, all test
               // cases in the class are recorded as SKIP and TestClassInfo carries the class error.
               ImmutableList<MoblyTestEntry> updatedRootEntries =
@@ -436,23 +434,21 @@ public class MoblyYamlParser {
         @SuppressWarnings("unchecked") // snakeyaml only supports this return value atm
         Map<String, Object> extraErrorObj = (Map<String, Object>) extraErrors;
         if (!extraErrorObj.isEmpty()) {
-          extraErrorObj.forEach(
-              (k, v) -> {
-                @SuppressWarnings("unchecked") // snakeyaml only supports this return value atm
-                Map<String, Object> valMap = (Map<String, Object>) v;
-                builder.addExtraError(buildExtraError(valMap));
-              });
+          extraErrorObj.forEach((k, v) -> {
+            @SuppressWarnings("unchecked") // snakeyaml only supports this return value atm
+            Map<String, Object> valMap = (Map<String, Object>) v;
+            builder.addExtraError(buildExtraError(valMap));
+          });
         }
       } else if (extraErrors instanceof List) {
         @SuppressWarnings("unchecked") // snakeyaml only supports this return value atm
         List<Object> extraErrorArray = (List<Object>) extraErrors;
         if (!extraErrorArray.isEmpty()) {
-          extraErrorArray.forEach(
-              elem -> {
-                @SuppressWarnings("unchecked") // snakeyaml only supports this return value atm
-                Map<String, Object> valMap = (Map<String, Object>) elem;
-                builder.addExtraError(buildExtraError(valMap));
-              });
+          extraErrorArray.forEach(elem -> {
+            @SuppressWarnings("unchecked") // snakeyaml only supports this return value atm
+            Map<String, Object> valMap = (Map<String, Object>) elem;
+            builder.addExtraError(buildExtraError(valMap));
+          });
         }
       } else {
         // If unrecognized format, log bug
@@ -563,10 +559,9 @@ public class MoblyYamlParser {
         if (classInfo.hasClassError()) {
           boolean classHasFailingTestEntry =
               testEntries.stream()
-                  .anyMatch(
-                      entry ->
-                          entry.getTestClass().equals(classInfo.getTestClass())
-                              && isFailure(entry.getResult()));
+                  .anyMatch(entry ->
+                      entry.getTestClass().equals(classInfo.getTestClass())
+                          && isFailure(entry.getResult()));
           if (!classHasFailingTestEntry) {
             errorTestCount++;
           }

@@ -173,13 +173,12 @@ public class InstallApkStep implements InstallApkStepConstants {
 
     coordinator
         .getFirstPackageName()
-        .ifPresent(
-            packageName -> {
-              if (testInfo.properties().get(ApkInfo.MAIN_PACKAGE_NAME) == null) {
-                testInfo.properties().add(ApkInfo.MAIN_PACKAGE_NAME, packageName);
-                testInfo.properties().add(AppInfo.AUT_ID, packageName);
-              }
-            });
+        .ifPresent(packageName -> {
+          if (testInfo.properties().get(ApkInfo.MAIN_PACKAGE_NAME) == null) {
+            testInfo.properties().add(ApkInfo.MAIN_PACKAGE_NAME, packageName);
+            testInfo.properties().add(AppInfo.AUT_ID, packageName);
+          }
+        });
 
     // Install GMS if provided in inputs. GMS Core is installed first because it creates
     // new permissions. APKs that define permissions must precede the APKs that use them.

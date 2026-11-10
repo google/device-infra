@@ -114,17 +114,16 @@ public class TelephonyHelper {
     this.androidInstrumentationUtil = androidInstrumentationUtil;
     this.apkInstaller = apkInstaller;
     this.apkPathSupplier =
-        Suppliers.memoize(
-            () -> {
-              try {
-                return resUtil.getResourceFile(TelephonyHelper.class, TELEPHONY_UTIL_APK_RES_PATH);
-              } catch (MobileHarnessException e) {
-                logger.atWarning().withCause(e).log(
-                    "Failed to get the telephony util apk resource file at %s",
-                    TELEPHONY_UTIL_APK_RES_PATH);
-                return null;
-              }
-            });
+        Suppliers.memoize(() -> {
+          try {
+            return resUtil.getResourceFile(TelephonyHelper.class, TELEPHONY_UTIL_APK_RES_PATH);
+          } catch (MobileHarnessException e) {
+            logger.atWarning().withCause(e).log(
+                "Failed to get the telephony util apk resource file at %s",
+                TELEPHONY_UTIL_APK_RES_PATH);
+            return null;
+          }
+        });
   }
 
   /** Updates the SIM card type dimension based on the device's SIM card information. */

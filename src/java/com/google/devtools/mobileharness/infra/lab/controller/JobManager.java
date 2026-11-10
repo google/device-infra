@@ -317,11 +317,10 @@ public class JobManager {
   public TestExecutionUnit getTest(String jobId, String testId) throws MobileHarnessException {
     return getJobLabExecutionUnit(jobId)
         .getTestExecutionUnit(testId)
-        .orElseThrow(
-            () ->
-                new MobileHarnessException(
-                    InfraErrorId.LAB_JM_TEST_NOT_FOUND,
-                    String.format("Test %s does not exist", testId)));
+        .orElseThrow(() ->
+            new MobileHarnessException(
+                InfraErrorId.LAB_JM_TEST_NOT_FOUND,
+                String.format("Test %s does not exist", testId)));
   }
 
   /**
@@ -404,10 +403,9 @@ public class JobManager {
     }
     getJobLabExecutionUnit(testLocator.jobLocator().id())
         .getTestLabExecutionUnit(testLocator.id())
-        .ifPresent(
-            testLabExecutionUnit ->
-                testLabExecutionUnit.resolveAllJobFilesFuture =
-                    Futures.allAsList(resolveJobFileFutures));
+        .ifPresent(testLabExecutionUnit ->
+            testLabExecutionUnit.resolveAllJobFilesFuture =
+                Futures.allAsList(resolveJobFileFutures));
   }
 
   /** The callback to process the completed future of ResolveJobFile. */
@@ -449,14 +447,12 @@ public class JobManager {
       String jobId, String testId) throws MobileHarnessException {
     return getJobLabExecutionUnit(jobId)
         .getTestLabExecutionUnit(testId)
-        .map(
-            testLabExecutionUnit ->
-                Optional.ofNullable(testLabExecutionUnit.resolveAllJobFilesFuture))
-        .orElseThrow(
-            () ->
-                new MobileHarnessException(
-                    InfraErrorId.LAB_JM_TEST_NOT_FOUND,
-                    String.format("Test %s does not exist", testId)));
+        .map(testLabExecutionUnit ->
+            Optional.ofNullable(testLabExecutionUnit.resolveAllJobFilesFuture))
+        .orElseThrow(() ->
+            new MobileHarnessException(
+                InfraErrorId.LAB_JM_TEST_NOT_FOUND,
+                String.format("Test %s does not exist", testId)));
   }
 
   /**

@@ -127,11 +127,10 @@ public class MtaasToolsInstantiator {
     String apkPath =
         MTAAS_TOOLS_APK_PATH
             .get()
-            .orElseThrow(
-                () ->
-                    new MobileHarnessException(
-                        AndroidErrorId.ANDROID_MTAAS_TOOLS_APK_NOT_FOUND,
-                        "Failed to get mtaas tools apk path"));
+            .orElseThrow(() ->
+                new MobileHarnessException(
+                    AndroidErrorId.ANDROID_MTAAS_TOOLS_APK_NOT_FOUND,
+                    "Failed to get mtaas tools apk path"));
     apkInstaller.installApkIfNotExist(
         device,
         ApkInstallArgs.builder().addApkPaths(apkPath).setGrantPermissions(true).build(),
@@ -269,16 +268,14 @@ public class MtaasToolsInstantiator {
     ResUtil resUtil = new ResUtil();
     return resUtil
         .getExternalResourceFile(MTAAS_TOOLS_APK_RES_PATH)
-        .or(
-            () -> {
-              try {
-                return Optional.of(
-                    resUtil.getResourceFile(
-                        MtaasToolsInstantiator.class, MTAAS_TOOLS_APK_RES_PATH));
-              } catch (MobileHarnessException e) {
-                logger.atWarning().withCause(e).log("Failed to get mtaas tools apk path");
-                return Optional.empty();
-              }
-            });
+        .or(() -> {
+          try {
+            return Optional.of(
+                resUtil.getResourceFile(MtaasToolsInstantiator.class, MTAAS_TOOLS_APK_RES_PATH));
+          } catch (MobileHarnessException e) {
+            logger.atWarning().withCause(e).log("Failed to get mtaas tools apk path");
+            return Optional.empty();
+          }
+        });
   }
 }

@@ -295,11 +295,10 @@ public class DefaultRetryStrategy implements RetryStrategy {
     Optional<ExceptionDetail> cause = testInfo.resultWithCause().get().causeProto();
     return cause
             .map(ErrorModelConverter::getCriticalErrorId)
-            .map(
-                errorId ->
-                    Ascii.equalsIgnoreCase(
-                        errorId.getName(),
-                        InfraErrorId.TR_TEST_DRAIN_TIMEOUT_AND_FORCE_CLEAN_UP.name()))
+            .map(errorId ->
+                Ascii.equalsIgnoreCase(
+                    errorId.getName(),
+                    InfraErrorId.TR_TEST_DRAIN_TIMEOUT_AND_FORCE_CLEAN_UP.name()))
             .orElse(false)
         && testInfo.properties().getLong(Test._DRAIN_TIMEOUT_RETRY_ATTEMPTS).orElse(0L)
             < MAX_RETRY_ATTEMPTS_FOR_DRAIN_TIMEOUT;

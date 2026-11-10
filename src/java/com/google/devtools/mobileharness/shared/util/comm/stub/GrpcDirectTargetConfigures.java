@@ -67,10 +67,9 @@ public final class GrpcDirectTargetConfigures {
       Function<Channel, I> stubCreator, StubConfiguration stubConfiguration) {
     if (stubConfiguration.getDirectTarget().hasRelayDestination()) {
       stubCreator =
-          stubCreator.compose(
-              c ->
-                  ClientCreator.createChannel(
-                      c, stubConfiguration.getDirectTarget().getRelayDestination()));
+          stubCreator.compose(c ->
+              ClientCreator.createChannel(
+                  c, stubConfiguration.getDirectTarget().getRelayDestination()));
     }
     return createStub(stubConfiguration.getDirectTarget().getServerSpec(), stubCreator);
   }

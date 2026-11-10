@@ -186,12 +186,11 @@ public final class StrPairUtil {
   public static ImmutableList<StrPair> convertFromDeviceDimension(
       Collection<DeviceDimension> deviceDimensions) {
     return deviceDimensions.stream()
-        .map(
-            deviceDimension ->
-                StrPair.newBuilder()
-                    .setName(deviceDimension.getName())
-                    .setValue(deviceDimension.getValue())
-                    .build())
+        .map(deviceDimension ->
+            StrPair.newBuilder()
+                .setName(deviceDimension.getName())
+                .setValue(deviceDimension.getValue())
+                .build())
         .collect(toImmutableList());
   }
 
@@ -204,12 +203,11 @@ public final class StrPairUtil {
   public static ImmutableList<DeviceDimension> convertToDeviceDimension(
       Collection<StrPair> strPairs) {
     return strPairs.stream()
-        .map(
-            strPair ->
-                DeviceDimension.newBuilder()
-                    .setName(strPair.getName())
-                    .setValue(strPair.getValue())
-                    .build())
+        .map(strPair ->
+            DeviceDimension.newBuilder()
+                .setName(strPair.getName())
+                .setValue(strPair.getValue())
+                .build())
         .collect(toImmutableList());
   }
 

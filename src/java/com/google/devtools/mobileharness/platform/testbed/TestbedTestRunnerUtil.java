@@ -54,33 +54,32 @@ public final class TestbedTestRunnerUtil {
   private static ListenableFuture<Void> startSubDeviceStack(
       ListeningExecutorService executor, final SubDeviceDecoratorStack stack) {
     return executor.submit(
-        new TestContextCallable<Void>(
-            () -> {
-              TestInfo testInfo = stack.testInfo();
-              testInfo.status().set(TestStatus.RUNNING);
-              Driver driver = stack.decoratorStack();
-              try {
-                logger.atInfo().log(
-                    "Starting decorator stack on device %s", driver.getDevice().getDeviceId());
-                driver.run(testInfo);
-                if (testInfo.resultWithCause().get().type() != TestResult.UNKNOWN
-                    && !stack.syncer().isReadyToSync()) {
-                  throw new MobileHarnessException(
-                      ExtErrorId.TESTBED_DEVICE_DECORATOR_SETUP_ERROR,
-                      "Failure occurred in decorator setup on device "
-                          + driver.getDevice().getDeviceId());
-                }
-                return null;
-              } catch (MobileHarnessException | InterruptedException e) {
-                // Something failed; immediately release the main thread to handle the exception.
-                logger.atSevere().log(
-                    "Exception found in setting up device %s; cancelling: %s",
-                    driver.getDevice().getDeviceId(), e.getMessage());
-                Exception finalException = e;
-                stack.syncer().preSyncError(finalException);
-                throw finalException;
-              }
-            }));
+        new TestContextCallable<Void>(() -> {
+          TestInfo testInfo = stack.testInfo();
+          testInfo.status().set(TestStatus.RUNNING);
+          Driver driver = stack.decoratorStack();
+          try {
+            logger.atInfo().log(
+                "Starting decorator stack on device %s", driver.getDevice().getDeviceId());
+            driver.run(testInfo);
+            if (testInfo.resultWithCause().get().type() != TestResult.UNKNOWN
+                && !stack.syncer().isReadyToSync()) {
+              throw new MobileHarnessException(
+                  ExtErrorId.TESTBED_DEVICE_DECORATOR_SETUP_ERROR,
+                  "Failure occurred in decorator setup on device "
+                      + driver.getDevice().getDeviceId());
+            }
+            return null;
+          } catch (MobileHarnessException | InterruptedException e) {
+            // Something failed; immediately release the main thread to handle the exception.
+            logger.atSevere().log(
+                "Exception found in setting up device %s; cancelling: %s",
+                driver.getDevice().getDeviceId(), e.getMessage());
+            Exception finalException = e;
+            stack.syncer().preSyncError(finalException);
+            throw finalException;
+          }
+        }));
   }
 
   private static void waitForBringup(Collection<SubDeviceDecoratorStack> stacks) throws Exception {

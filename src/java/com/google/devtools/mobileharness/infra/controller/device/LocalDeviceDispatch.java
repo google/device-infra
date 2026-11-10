@@ -328,13 +328,12 @@ public class LocalDeviceDispatch {
     if (isChanged) {
       String dispatchResultLogStr =
           mergedResults.getAll().stream()
-              .map(
-                  dispatchResult ->
-                      String.format(
-                          "%s-%s-%s",
-                          dispatchResult.deviceId().controlId(),
-                          dispatchResult.deviceType().getSimpleName(),
-                          dispatchResult.dispatchType().name()))
+              .map(dispatchResult ->
+                  String.format(
+                      "%s-%s-%s",
+                      dispatchResult.deviceId().controlId(),
+                      dispatchResult.deviceType().getSimpleName(),
+                      dispatchResult.dispatchType().name()))
               .collect(joining(", "));
       logger.atInfo().log(
           "Current runner count: %d, new round dispatch result: %s",
@@ -459,50 +458,44 @@ public class LocalDeviceDispatch {
       try {
         Map<String, DispatchType> realtimeIds =
             dispatcher.dispatchDevices(detectionResults, dispatchResults);
-        realtimeIds.forEach(
-            (deviceControlId, dispatchType) -> {
-              // Usually, we need to remove the device from detection results to avoid the later
-              // consuming, but testbed device is special, we need to retain it to help we filter
-              // out the sub device.
-              if (!dispatcher.getClass().getSimpleName().equals("FailedDeviceDispatcher")
-                  || detectionResults.getByDeviceControlId(deviceControlId).stream()
-                      .noneMatch(
-                          detectionResult ->
-                              detectionResult
-                                  .detectionType()
-                                  .equals(DetectionType.STATIC_TESTBED))) {
-                detectionResults.remove(deviceControlId);
-              }
+        realtimeIds.forEach((deviceControlId, dispatchType) -> {
+          // Usually, we need to remove the device from detection results to avoid the later
+          // consuming, but testbed device is special, we need to retain it to help we filter
+          // out the sub device.
+          if (!dispatcher.getClass().getSimpleName().equals("FailedDeviceDispatcher")
+              || detectionResults.getByDeviceControlId(deviceControlId).stream()
+                  .noneMatch(detectionResult ->
+                      detectionResult.detectionType().equals(DetectionType.STATIC_TESTBED))) {
+            detectionResults.remove(deviceControlId);
+          }
 
-              if (dispatchType.equals(DispatchType.SUB_DEVICE)) {
-                // If the device dispatch as sub device by this dispatcher, force update the
-                // dispatch type since it has been  marked as other types by other dispatchers.
-                dispatchResults.forceUpdateDispatchType(deviceControlId, DispatchType.SUB_DEVICE);
-              } else {
-                try {
-                  Optional<DeviceId> deviceId =
-                      deviceIdManager.getDeviceIdFromControlId(deviceControlId);
-                  if (deviceId.isEmpty()) {
-                    // Abnormal status, the device is not created from device manager, will ignore.
-                    if (dispatchType.equals(DispatchType.CACHE)) {
-                      return;
-                    }
-                    deviceId = Optional.of(dispatcher.generateDeviceId(deviceControlId));
-                  }
-                  // Override the id map every time, since disconnected device and other device may
-                  // share the same uuid.
-                  deviceIdManager.add(deviceId.get());
-                  dispatchResults.addIfNotExist(
-                      DispatchResult.of(
-                          deviceId.get(),
-                          dispatchType,
-                          dispatcherToDevice.get(dispatcher.getClass())));
-                } catch (MobileHarnessException e) {
-                  logger.atWarning().withCause(e).log(
-                      "Failed to get uuid for device: %s", deviceControlId);
+          if (dispatchType.equals(DispatchType.SUB_DEVICE)) {
+            // If the device dispatch as sub device by this dispatcher, force update the
+            // dispatch type since it has been  marked as other types by other dispatchers.
+            dispatchResults.forceUpdateDispatchType(deviceControlId, DispatchType.SUB_DEVICE);
+          } else {
+            try {
+              Optional<DeviceId> deviceId =
+                  deviceIdManager.getDeviceIdFromControlId(deviceControlId);
+              if (deviceId.isEmpty()) {
+                // Abnormal status, the device is not created from device manager, will ignore.
+                if (dispatchType.equals(DispatchType.CACHE)) {
+                  return;
                 }
+                deviceId = Optional.of(dispatcher.generateDeviceId(deviceControlId));
               }
-            });
+              // Override the id map every time, since disconnected device and other device may
+              // share the same uuid.
+              deviceIdManager.add(deviceId.get());
+              dispatchResults.addIfNotExist(
+                  DispatchResult.of(
+                      deviceId.get(), dispatchType, dispatcherToDevice.get(dispatcher.getClass())));
+            } catch (MobileHarnessException e) {
+              logger.atWarning().withCause(e).log(
+                  "Failed to get uuid for device: %s", deviceControlId);
+            }
+          }
+        });
       } catch (MobileHarnessException e) {
         logger.atWarning().log("Failed to dispatch devices: %s", e.getMessage());
       }

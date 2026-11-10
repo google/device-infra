@@ -211,12 +211,10 @@ public class AndroidAtsDynamicConfigPusherSetupOnlyDecorator extends SetupOnlyDe
     return files.stream()
         .filter(file -> file.getName().equals(fileName))
         .findFirst()
-        .orElseThrow(
-            () ->
-                new MobileHarnessException(
-                    AndroidErrorId
-                        .ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_LOCAL_CONFIG_NOT_FOUND,
-                    String.format("Config file %s not found.", fileName)));
+        .orElseThrow(() ->
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ATS_DYNAMIC_CONFIG_PUSHER_DECORATOR_LOCAL_CONFIG_NOT_FOUND,
+                String.format("Config file %s not found.", fileName)));
   }
 
   @Nullable

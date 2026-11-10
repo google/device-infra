@@ -317,11 +317,10 @@ public class AndroidSystemStateUtil {
                     CHECK_ROOT_TIMEOUT,
                     // Galaxy Note 2 and HTC M8 can hang here even we've gotten such output.
                     // So stops the command once we got what we want.
-                    LineCallback.stopWhen(
-                        line ->
-                            line.contains(OUTPUT_NOT_ROOTED)
-                                || line.contains(OUTPUT_BECAME_ROOTED)
-                                || line.contains(OUTPUT_IS_ROOTED)))
+                    LineCallback.stopWhen(line ->
+                        line.contains(OUTPUT_NOT_ROOTED)
+                            || line.contains(OUTPUT_BECAME_ROOTED)
+                            || line.contains(OUTPUT_IS_ROOTED)))
                 .trim();
       } catch (MobileHarnessException e) {
         // If timed out(e.g. Galaxy Note 2) or failed, we consider this device has no root access.
@@ -643,12 +642,10 @@ public class AndroidSystemStateUtil {
     try {
       String output = getStateCallable.call();
       return DeviceConnectionState.of(output)
-          .orElseThrow(
-              () ->
-                  new MobileHarnessException(
-                      AndroidErrorId.ANDROID_SYSTEM_STATE_GET_STATE_ERROR,
-                      format(
-                          "Unexpected output of adb get-state for device %s: %s", serial, output)));
+          .orElseThrow(() ->
+              new MobileHarnessException(
+                  AndroidErrorId.ANDROID_SYSTEM_STATE_GET_STATE_ERROR,
+                  format("Unexpected output of adb get-state for device %s: %s", serial, output)));
     } catch (RetryException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_SYSTEM_STATE_GET_STATE_ERROR, e.getMessage(), e);

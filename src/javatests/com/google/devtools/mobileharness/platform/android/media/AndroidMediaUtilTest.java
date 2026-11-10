@@ -271,14 +271,13 @@ public final class AndroidMediaUtilTest {
     verify(adbUtil)
         .content(
             any(UtilArgs.class),
-            argThat(
-                contentArgs ->
-                    contentArgs.equals(
-                        AndroidContent.builder()
-                            .setCommand(AndroidContent.Command.INSERT)
-                            .setUri(AndroidMediaUtil.ANDROID_CONTENT_PROVIDER_SETTING)
-                            .setOtherArgument("--bind name:s:user_rotation --bind value:i:0")
-                            .build())));
+            argThat(contentArgs ->
+                contentArgs.equals(
+                    AndroidContent.builder()
+                        .setCommand(AndroidContent.Command.INSERT)
+                        .setUri(AndroidMediaUtil.ANDROID_CONTENT_PROVIDER_SETTING)
+                        .setOtherArgument("--bind name:s:user_rotation --bind value:i:0")
+                        .build())));
   }
 
   @Test
@@ -293,14 +292,13 @@ public final class AndroidMediaUtilTest {
     verify(adbUtil)
         .content(
             any(UtilArgs.class),
-            argThat(
-                contentArgs ->
-                    contentArgs.equals(
-                        AndroidContent.builder()
-                            .setCommand(AndroidContent.Command.INSERT)
-                            .setUri(AndroidMediaUtil.ANDROID_CONTENT_PROVIDER_SETTING)
-                            .setOtherArgument("--bind name:s:user_rotation --bind value:i:1")
-                            .build())));
+            argThat(contentArgs ->
+                contentArgs.equals(
+                    AndroidContent.builder()
+                        .setCommand(AndroidContent.Command.INSERT)
+                        .setUri(AndroidMediaUtil.ANDROID_CONTENT_PROVIDER_SETTING)
+                        .setOtherArgument("--bind name:s:user_rotation --bind value:i:1")
+                        .build())));
   }
 
   @Test

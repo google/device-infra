@@ -107,12 +107,11 @@ public class TestExecutionUnit extends TestScheduleUnit {
       return testExpireTimeCalculationStrategy.getTestExpireTime(
           timing()
               .getStartTime()
-              .orElseThrow(
-                  () ->
-                      new MobileHarnessException(
-                          BasicErrorId.TEST_GET_EXPIRE_TIME_ERROR_BEFORE_START,
-                          "Failed to calculate the test expire time because the test has not"
-                              + " started. Please set its status from NEW to any other status.")),
+              .orElseThrow(() ->
+                  new MobileHarnessException(
+                      BasicErrorId.TEST_GET_EXPIRE_TIME_ERROR_BEFORE_START,
+                      "Failed to calculate the test expire time because the test has not"
+                          + " started. Please set its status from NEW to any other status.")),
           job.timeout());
     }
   }

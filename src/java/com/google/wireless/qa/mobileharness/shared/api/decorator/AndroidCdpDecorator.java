@@ -663,13 +663,8 @@ public class AndroidCdpDecorator extends LifecycleDecorator {
               Command.of(chromedriverPath, "--port=" + chromedriverPort)
                   .redirectStderr(true)
                   .onStdout(
-                      LineCallback.does(
-                          line ->
-                              testInfo
-                                  .log()
-                                  .atInfo()
-                                  .alsoTo(logger)
-                                  .log("[ChromeDriver] %s", line))));
+                      LineCallback.does(line ->
+                          testInfo.log().atInfo().alsoTo(logger).log("[ChromeDriver] %s", line))));
     } catch (CommandException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_CDP_CHROMEDRIVER_ERROR, "Failed to start ChromeDriver.", e);

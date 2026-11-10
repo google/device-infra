@@ -158,9 +158,8 @@ public abstract class BaseWebTestDriver extends BaseDriver {
                   LineCallback.does(
                       line -> testInfo.log().atInfo().alsoTo(logger).log("%s %s", logPrefix, line)))
               .onStderr(
-                  LineCallback.does(
-                      line ->
-                          testInfo.log().atWarning().alsoTo(logger).log("%s %s", logPrefix, line)));
+                  LineCallback.does(line ->
+                      testInfo.log().atWarning().alsoTo(logger).log("%s %s", logPrefix, line)));
       cmdExecutor.run(command);
     } catch (CommandException e) {
       testInfo

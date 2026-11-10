@@ -160,9 +160,8 @@ public class AndroidPerfettoDecorator extends LifecycleDecorator {
                             "perfetto timeout"),
                         logger);
               },
-              LineCallback.does(
-                  line ->
-                      testInfo.log().atInfo().alsoTo(logger).log("[perfetto output] %s", line)));
+              LineCallback.does(line ->
+                  testInfo.log().atInfo().alsoTo(logger).log("[perfetto output] %s", line)));
       testInfo.log().atInfo().log("Perfetto finished: %s", consoleOutput);
     } catch (MobileHarnessException e) {
       testInfo.findings().addAndLog(Severity.WARNING, e, logger);

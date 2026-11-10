@@ -227,12 +227,11 @@ public final class HostTypes {
 
   private static String getHostProperty(Optional<LabInfo> labInfoOpt, String key) {
     return labInfoOpt
-        .flatMap(
-            labInfo ->
-                labInfo.getLabServerFeature().getHostProperties().getHostPropertyList().stream()
-                    .filter(hp -> hp.getKey().equals(key))
-                    .map(HostProperty::getValue)
-                    .findFirst())
+        .flatMap(labInfo ->
+            labInfo.getLabServerFeature().getHostProperties().getHostPropertyList().stream()
+                .filter(hp -> hp.getKey().equals(key))
+                .map(HostProperty::getValue)
+                .findFirst())
         .map(Ascii::toLowerCase)
         .orElse("");
   }

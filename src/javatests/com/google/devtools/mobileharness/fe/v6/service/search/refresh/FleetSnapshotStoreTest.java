@@ -213,29 +213,26 @@ public final class FleetSnapshotStoreTest {
     AtomicBoolean writerDone = new AtomicBoolean(false);
     try {
       Future<?> writer =
-          executor.submit(
-              () -> {
-                startLatch.await();
-                for (int i = 0; i < 2_000; i++) {
-                  store.publish(
-                      Fleet.FLEET_SELF, (i % 2 == 0) ? oneDeviceSnapshot : twoDeviceSnapshot);
-                }
-                writerDone.set(true);
-                return null;
-              });
+          executor.submit(() -> {
+            startLatch.await();
+            for (int i = 0; i < 2_000; i++) {
+              store.publish(Fleet.FLEET_SELF, (i % 2 == 0) ? oneDeviceSnapshot : twoDeviceSnapshot);
+            }
+            writerDone.set(true);
+            return null;
+          });
 
       List<Future<?>> readers = new ArrayList<>();
       for (int r = 0; r < readerThreads; r++) {
         readers.add(
-            executor.submit(
-                () -> {
-                  startLatch.await();
-                  while (!writerDone.get() && !Thread.currentThread().isInterrupted()) {
-                    assertBundleOrdinalsMatchRecords(store.getBundle(Fleet.FLEET_SELF));
-                  }
-                  assertBundleOrdinalsMatchRecords(store.getBundle(Fleet.FLEET_SELF));
-                  return null;
-                }));
+            executor.submit(() -> {
+              startLatch.await();
+              while (!writerDone.get() && !Thread.currentThread().isInterrupted()) {
+                assertBundleOrdinalsMatchRecords(store.getBundle(Fleet.FLEET_SELF));
+              }
+              assertBundleOrdinalsMatchRecords(store.getBundle(Fleet.FLEET_SELF));
+              return null;
+            }));
       }
 
       startLatch.countDown();

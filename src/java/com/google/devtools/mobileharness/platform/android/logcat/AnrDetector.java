@@ -105,10 +105,8 @@ public class AnrDetector implements LineProcessor {
         return;
       }
       detectedAnrEvents.put(crashedProcess.get(), ImmutableList.copyOf(anrLines));
-      executorService.execute(
-          () ->
-              crashDialogDetector.scan(
-                  testInfo, device, monitoringConfig.reportAsFailurePackages()));
+      executorService.execute(() ->
+          crashDialogDetector.scan(testInfo, device, monitoringConfig.reportAsFailurePackages()));
       anrLines.clear();
     }
   }
@@ -130,10 +128,9 @@ public class AnrDetector implements LineProcessor {
   @Override
   public ImmutableList<LogcatEvent> getEvents() {
     return detectedAnrEvents.entrySet().stream()
-        .map(
-            event ->
-                new CrashEvent(
-                    event.getKey(), Joiner.on(System.lineSeparator()).join(event.getValue())))
+        .map(event ->
+            new CrashEvent(
+                event.getKey(), Joiner.on(System.lineSeparator()).join(event.getValue())))
         .collect(toImmutableList());
   }
 }

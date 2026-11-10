@@ -65,10 +65,9 @@ class PrepareButtonBuilder {
 
     boolean isFusionDevice =
         deviceInfo.getDeviceFeature().getCompositeDimension().getSupportedDimensionList().stream()
-            .anyMatch(
-                dimension ->
-                    dimension.getName().equals("dm_type")
-                        && Ascii.equalsIgnoreCase(dimension.getValue(), "fusion"));
+            .anyMatch(dimension ->
+                dimension.getName().equals("dm_type")
+                    && Ascii.equalsIgnoreCase(dimension.getValue(), "fusion"));
 
     boolean isReady = featureReadiness.isPrepareDeviceReady();
     if (!isDeviceMissing && isFusionDevice) {

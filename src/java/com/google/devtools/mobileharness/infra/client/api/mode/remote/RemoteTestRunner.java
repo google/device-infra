@@ -325,10 +325,9 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     }
 
     waitUntilTestEngineAndLabResolvedFilesReadyTask =
-        threadPool.submit(
-            () ->
-                waitUntilTestEngineAndLabResolvedFilesReady(
-                    createTestResponse.getGetTestEngineStatusResponse(), testInfo));
+        threadPool.submit(() ->
+            waitUntilTestEngineAndLabResolvedFilesReady(
+                createTestResponse.getGetTestEngineStatusResponse(), testInfo));
 
     return createTestResponse.getDeviceFeatureList();
   }
@@ -706,9 +705,8 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     }
     return allFiles.stream()
         .filter(entry -> !resolveInClient(entry.getValue(), jobInfo.params()))
-        .map(
-            entry ->
-                LabResolveFiles.createResolveFileItem(entry.getKey(), entry.getValue(), jobInfo))
+        .map(entry ->
+            LabResolveFiles.createResolveFileItem(entry.getKey(), entry.getValue(), jobInfo))
         .collect(toImmutableList());
   }
 
@@ -1125,15 +1123,14 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
             .get(JobInfo.PARAM_CONTAINER_MODE_PREFERENCE)
             .filter(((Predicate<String>) String::isEmpty).negate())
             .map(String::toUpperCase)
-            .flatMap(
-                paramValue -> {
-                  Optional<ContainerModePreference> parsedResult =
-                      Enums.getIfPresent(ContainerModePreference.class, paramValue).toJavaUtil();
-                  if (parsedResult.isEmpty()) {
-                    logger.atWarning().log("Unrecognized ContainerModePreference [%s]", paramValue);
-                  }
-                  return parsedResult;
-                });
+            .flatMap(paramValue -> {
+              Optional<ContainerModePreference> parsedResult =
+                  Enums.getIfPresent(ContainerModePreference.class, paramValue).toJavaUtil();
+              if (parsedResult.isEmpty()) {
+                logger.atWarning().log("Unrecognized ContainerModePreference [%s]", paramValue);
+              }
+              return parsedResult;
+            });
     if (preferenceFromParam.isPresent() && isMandatory(preferenceFromParam.get())) {
       return preferenceFromParam.get();
     }

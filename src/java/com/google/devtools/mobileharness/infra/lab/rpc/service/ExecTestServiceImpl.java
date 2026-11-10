@@ -200,19 +200,18 @@ public class ExecTestServiceImpl {
     LabLocator labLocator =
         devices.stream()
             .findFirst()
-            .map(
-                device ->
-                    new LabLocator(
-                        device
-                            .info()
-                            .dimensions()
-                            .supported()
-                            .getFirst(Name.HOST_IP, LabLocator.LOCALHOST.getIp()),
-                        device
-                            .info()
-                            .dimensions()
-                            .supported()
-                            .getFirst(Name.HOST_NAME, LabLocator.LOCALHOST.getHostName())))
+            .map(device ->
+                new LabLocator(
+                    device
+                        .info()
+                        .dimensions()
+                        .supported()
+                        .getFirst(Name.HOST_IP, LabLocator.LOCALHOST.getIp()),
+                    device
+                        .info()
+                        .dimensions()
+                        .supported()
+                        .getFirst(Name.HOST_NAME, LabLocator.LOCALHOST.getHostName())))
             .orElse(LabLocator.LOCALHOST);
     Allocation allocation =
         new Allocation(

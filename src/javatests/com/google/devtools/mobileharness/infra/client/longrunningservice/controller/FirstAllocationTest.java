@@ -86,15 +86,13 @@ public final class FirstAllocationTest {
   @Before
   public void setUp() throws Exception {
     when(execMode.createTestRunner(any(), any(), any()))
-        .thenAnswer(
-            invocation -> {
-              DirectTestRunnerSetting setting = invocation.getArgument(0);
-              TestInfo testInfo = setting.testInfo();
-              DirectTestRunner mockTestRunner = mock(DirectTestRunner.class);
-              when(mockTestRunner.getTestExecutionUnit())
-                  .thenReturn(testInfo.toTestExecutionUnit());
-              return mockTestRunner;
-            });
+        .thenAnswer(invocation -> {
+          DirectTestRunnerSetting setting = invocation.getArgument(0);
+          TestInfo testInfo = setting.testInfo();
+          DirectTestRunner mockTestRunner = mock(DirectTestRunner.class);
+          when(mockTestRunner.getTestExecutionUnit()).thenReturn(testInfo.toTestExecutionUnit());
+          return mockTestRunner;
+        });
 
     Guice.createInjector(new ClientApiModule(), BoundFieldModule.of(this)).injectMembers(this);
 
@@ -126,33 +124,30 @@ public final class FirstAllocationTest {
     Stopwatch stopwatch = Stopwatch.createStarted();
     Set<String> allocatedJobIds = new HashSet<>();
     when(execMode.createDeviceAllocator(any(JobInfo.class), any(EventBus.class)))
-        .thenAnswer(
-            invocation -> {
-              JobInfo jobInfo = invocation.getArgument(0);
-              String jobId = jobInfo.locator().getId();
-              TestInfo testInfo = jobInfo.tests().getAll().values().iterator().next();
-              TestLocator testLocator = testInfo.locator();
-              DeviceLocator deviceLocator =
-                  new DeviceLocator("fake_device_id", new LabLocator("fake_host", "fake_lab"));
-              Allocation allocation =
-                  new Allocation(testLocator, deviceLocator, ImmutableMultimap.of());
+        .thenAnswer(invocation -> {
+          JobInfo jobInfo = invocation.getArgument(0);
+          String jobId = jobInfo.locator().getId();
+          TestInfo testInfo = jobInfo.tests().getAll().values().iterator().next();
+          TestLocator testLocator = testInfo.locator();
+          DeviceLocator deviceLocator =
+              new DeviceLocator("fake_device_id", new LabLocator("fake_host", "fake_lab"));
+          Allocation allocation =
+              new Allocation(testLocator, deviceLocator, ImmutableMultimap.of());
 
-              DeviceAllocator mockDeviceAllocator = mock(DeviceAllocator.class);
-              when(mockDeviceAllocator.pollAllocations())
-                  .thenAnswer(
-                      inv -> {
-                        if (stopwatch.elapsed().compareTo(Duration.ofMillis(1200)) < 0) {
-                          return ImmutableList.of();
-                        } else if (!allocatedJobIds.contains(jobId)) {
-                          allocatedJobIds.add(jobId);
-                          return ImmutableList.of(
-                              new AllocationWithStats(allocation.toNewAllocation()));
-                        } else {
-                          return ImmutableList.of();
-                        }
-                      });
-              return mockDeviceAllocator;
-            });
+          DeviceAllocator mockDeviceAllocator = mock(DeviceAllocator.class);
+          when(mockDeviceAllocator.pollAllocations())
+              .thenAnswer(inv -> {
+                if (stopwatch.elapsed().compareTo(Duration.ofMillis(1200)) < 0) {
+                  return ImmutableList.of();
+                } else if (!allocatedJobIds.contains(jobId)) {
+                  allocatedJobIds.add(jobId);
+                  return ImmutableList.of(new AllocationWithStats(allocation.toNewAllocation()));
+                } else {
+                  return ImmutableList.of();
+                }
+              });
+          return mockDeviceAllocator;
+        });
 
     // Act and assert
     Callable<Void> sessionJobCallable =
@@ -172,15 +167,12 @@ public final class FirstAllocationTest {
     await()
         .atMost(Duration.ofSeconds(10))
         .pollInterval(Duration.ofMillis(300))
-        .untilAsserted(
-            () -> {
-              assertThat(
-                      realJob1.properties().getBoolean(Job.HAS_ASSOCIATED_ALLOCATION).orElse(false))
-                  .isTrue();
-              assertThat(
-                      realJob2.properties().getBoolean(Job.HAS_ASSOCIATED_ALLOCATION).orElse(false))
-                  .isTrue();
-            });
+        .untilAsserted(() -> {
+          assertThat(realJob1.properties().getBoolean(Job.HAS_ASSOCIATED_ALLOCATION).orElse(false))
+              .isTrue();
+          assertThat(realJob2.properties().getBoolean(Job.HAS_ASSOCIATED_ALLOCATION).orElse(false))
+              .isTrue();
+        });
     assertThat(realJob3.properties().getBoolean(Job.HAS_ASSOCIATED_ALLOCATION).orElse(false))
         .isFalse();
 
@@ -189,12 +181,10 @@ public final class FirstAllocationTest {
     await()
         .atMost(Duration.ofSeconds(10))
         .pollInterval(Duration.ofMillis(300))
-        .untilAsserted(
-            () -> {
-              assertThat(
-                      realJob3.properties().getBoolean(Job.HAS_ASSOCIATED_ALLOCATION).orElse(false))
-                  .isTrue();
-            });
+        .untilAsserted(() -> {
+          assertThat(realJob3.properties().getBoolean(Job.HAS_ASSOCIATED_ALLOCATION).orElse(false))
+              .isTrue();
+        });
 
     // Since sessionJobFuture contains a while(true) loop, and in this case it will never done.
     sessionJobFuture.cancel(true);

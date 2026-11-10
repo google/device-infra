@@ -189,9 +189,8 @@ public final class AndroidRealDeviceProxyTest {
             .addDimensions(Dimension.newBuilder().setName("decorator").setValue(DECORATOR))
             .addDimensions(Dimension.newBuilder().setName("model").setValue(MODEL))
             .addDimensions(Dimension.newBuilder().setName("sdk_version").setValue(SDK_VERSION));
-    extraDimensions.forEach(
-        (key, value) ->
-            dimensionsBuilder.addDimensions(Dimension.newBuilder().setName(key).setValue(value)));
+    extraDimensions.forEach((key, value) ->
+        dimensionsBuilder.addDimensions(Dimension.newBuilder().setName(key).setValue(value)));
     return DeviceSpecification.newBuilder()
         .setUnknownDevice(UnknownDevice.getDefaultInstance())
         .setLegacyDimensions(dimensionsBuilder)

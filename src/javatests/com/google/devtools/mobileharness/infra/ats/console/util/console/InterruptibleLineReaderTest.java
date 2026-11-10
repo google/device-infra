@@ -62,15 +62,14 @@ public class InterruptibleLineReaderTest {
   public void setUp() throws Exception {
     when(commandHelper.getXtsType()).thenReturn("cts");
     when(lineReader.readLine(anyString()))
-        .then(
-            invocation -> {
-              try {
-                Thread.currentThread().join();
-              } catch (InterruptedException e) {
-                throw new UserInterruptException("Interrupted");
-              }
-              throw new AssertionError("Should not reach here");
-            });
+        .then(invocation -> {
+          try {
+            Thread.currentThread().join();
+          } catch (InterruptedException e) {
+            throw new UserInterruptException("Interrupted");
+          }
+          throw new AssertionError("Should not reach here");
+        });
 
     Guice.createInjector(
             new CommonModule(ImmutableList.of(), ImmutableMap.of(), ImmutableMap.of()),

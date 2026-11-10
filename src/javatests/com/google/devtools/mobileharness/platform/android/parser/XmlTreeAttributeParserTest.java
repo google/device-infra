@@ -105,13 +105,12 @@ public class XmlTreeAttributeParserTest {
                 XmlTreeAttributeParser.AttributeHandler.newBuilder()
                     .setElementType("activity")
                     .setAttributePattern(XMLTREE_ACTIVITY_NAME_PATTERN)
-                    .setOnMatch(
-                        m -> {
-                          String activityName = m.group("name").trim();
-                          if (!activityName.startsWith("o.")) {
-                            builder.add(activityName);
-                          }
-                        })
+                    .setOnMatch(m -> {
+                      String activityName = m.group("name").trim();
+                      if (!activityName.startsWith("o.")) {
+                        builder.add(activityName);
+                      }
+                    })
                     .build())
             .build();
 
@@ -185,13 +184,12 @@ public class XmlTreeAttributeParserTest {
                 XmlTreeAttributeParser.AttributeHandler.newBuilder()
                     .setElementType("activity")
                     .setAttributePattern(XMLTREE_ACTIVITY_NAME_PATTERN)
-                    .setOnMatch(
-                        m -> {
-                          String activityName = m.group("name").trim();
-                          if (!activityName.startsWith("o.")) {
-                            builder.add(activityName);
-                          }
-                        })
+                    .setOnMatch(m -> {
+                      String activityName = m.group("name").trim();
+                      if (!activityName.startsWith("o.")) {
+                        builder.add(activityName);
+                      }
+                    })
                     .build())
             .build();
 
@@ -266,13 +264,12 @@ public class XmlTreeAttributeParserTest {
                 XmlTreeAttributeParser.AttributeHandler.newBuilder()
                     .setElementType("service")
                     .setAttributePattern(XMLTREE_ACTIVITY_NAME_PATTERN)
-                    .setOnMatch(
-                        m -> {
-                          String activityName = m.group("name").trim();
-                          if (!activityName.startsWith("o.")) {
-                            builder.add(activityName);
-                          }
-                        })
+                    .setOnMatch(m -> {
+                      String activityName = m.group("name").trim();
+                      if (!activityName.startsWith("o.")) {
+                        builder.add(activityName);
+                      }
+                    })
                     .build())
             .build();
 
@@ -348,25 +345,23 @@ public class XmlTreeAttributeParserTest {
                 XmlTreeAttributeParser.AttributeHandler.newBuilder()
                     .setElementType("service")
                     .setAttributePattern(XMLTREE_ACTIVITY_NAME_PATTERN)
-                    .setOnMatch(
-                        m -> {
-                          String activityName = m.group("name").trim();
-                          if (!activityName.startsWith("o.")) {
-                            servicesBuilder.add(activityName);
-                          }
-                        })
+                    .setOnMatch(m -> {
+                      String activityName = m.group("name").trim();
+                      if (!activityName.startsWith("o.")) {
+                        servicesBuilder.add(activityName);
+                      }
+                    })
                     .build())
             .addHandler(
                 XmlTreeAttributeParser.AttributeHandler.newBuilder()
                     .setElementType("activity")
                     .setAttributePattern(XMLTREE_ACTIVITY_NAME_PATTERN)
-                    .setOnMatch(
-                        m -> {
-                          String activityName = m.group("name").trim();
-                          if (!activityName.startsWith("o.")) {
-                            activitiesBuilder.add(activityName);
-                          }
-                        })
+                    .setOnMatch(m -> {
+                      String activityName = m.group("name").trim();
+                      if (!activityName.startsWith("o.")) {
+                        activitiesBuilder.add(activityName);
+                      }
+                    })
                     .build())
             .build();
 
@@ -409,13 +404,12 @@ public class XmlTreeAttributeParserTest {
                 XmlTreeAttributeParser.AttributeHandler.newBuilder()
                     .setElementType("activity")
                     .setAttributePattern(XMLTREE_ACTIVITY_NAME_PATTERN)
-                    .setOnMatch(
-                        m -> {
-                          String activityName = m.group("name").trim();
-                          if (!activityName.startsWith("o.")) {
-                            builder.add(activityName);
-                          }
-                        })
+                    .setOnMatch(m -> {
+                      String activityName = m.group("name").trim();
+                      if (!activityName.startsWith("o.")) {
+                        builder.add(activityName);
+                      }
+                    })
                     .build())
             .build();
 
@@ -456,13 +450,12 @@ public class XmlTreeAttributeParserTest {
                 XmlTreeAttributeParser.AttributeHandler.newBuilder()
                     .setElementType("activity")
                     .setAttributePattern(XMLTREE_ACTIVITY_NAME_PATTERN)
-                    .setOnMatch(
-                        m -> {
-                          String activityName = m.group("name").trim();
-                          if (!activityName.startsWith("o.")) {
-                            builder.add(activityName);
-                          }
-                        })
+                    .setOnMatch(m -> {
+                      String activityName = m.group("name").trim();
+                      if (!activityName.startsWith("o.")) {
+                        builder.add(activityName);
+                      }
+                    })
                     .build())
             .build();
 

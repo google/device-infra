@@ -145,25 +145,21 @@ class TradefedCommandArgsBuilder {
   private Stream<String> getMetadataFilters() {
     Stream<String> includeMetadata =
         sessionRequestInfo.getModuleMetadataIncludeFiltersMap().entrySet().stream()
-            .flatMap(
-                entry ->
-                    entry.getValue().getValuesList().stream()
-                        .map(
-                            value ->
-                                String.format(
-                                    "--module-metadata-include-filter \"%s\" \"%s\"",
-                                    entry.getKey(), value)));
+            .flatMap(entry ->
+                entry.getValue().getValuesList().stream()
+                    .map(value ->
+                        String.format(
+                            "--module-metadata-include-filter \"%s\" \"%s\"",
+                            entry.getKey(), value)));
 
     Stream<String> excludeMetadata =
         sessionRequestInfo.getModuleMetadataExcludeFiltersMap().entrySet().stream()
-            .flatMap(
-                entry ->
-                    entry.getValue().getValuesList().stream()
-                        .map(
-                            value ->
-                                String.format(
-                                    "--module-metadata-exclude-filter \"%s\" \"%s\"",
-                                    entry.getKey(), value)));
+            .flatMap(entry ->
+                entry.getValue().getValuesList().stream()
+                    .map(value ->
+                        String.format(
+                            "--module-metadata-exclude-filter \"%s\" \"%s\"",
+                            entry.getKey(), value)));
 
     return Streams.concat(includeMetadata, excludeMetadata);
   }

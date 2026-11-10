@@ -237,19 +237,18 @@ public class AndroidAflagsDecorator extends LifecycleDecorator
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream, UTF_8))) {
       return reader
           .lines()
-          .map(
-              line -> {
-                try {
-                  return new AFlagsFeatureFlag(line);
-                } catch (MobileHarnessException ex) {
-                  testInfo
-                      .log()
-                      .atWarning()
-                      .alsoTo(logger)
-                      .log("Could not parse flag line %s: %s", line, ex.getMessage());
-                  return null;
-                }
-              })
+          .map(line -> {
+            try {
+              return new AFlagsFeatureFlag(line);
+            } catch (MobileHarnessException ex) {
+              testInfo
+                  .log()
+                  .atWarning()
+                  .alsoTo(logger)
+                  .log("Could not parse flag line %s: %s", line, ex.getMessage());
+              return null;
+            }
+          })
           .filter(Objects::nonNull)
           .collect(toImmutableMap(AFlagsFeatureFlag::getFlagName, v -> v, (v1, v2) -> v1));
     } catch (IOException e) {

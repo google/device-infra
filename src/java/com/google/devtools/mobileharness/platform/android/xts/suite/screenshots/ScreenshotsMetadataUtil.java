@@ -130,14 +130,13 @@ public class ScreenshotsMetadataUtil {
     List<String> screenshotsInRoot = new ArrayList<>();
     localFileUtil
         .listFilesOrDirs(screenshotsDir, path -> true)
-        .forEach(
-            fileOrDir -> {
-              if (localFileUtil.isDirExist(fileOrDir)) {
-                moduleNameWithAbis.add(fileOrDir.getFileName().toString());
-              } else if (isScreenshotFile(fileOrDir)) {
-                screenshotsInRoot.add(fileOrDir.getFileName().toString());
-              }
-            });
+        .forEach(fileOrDir -> {
+          if (localFileUtil.isDirExist(fileOrDir)) {
+            moduleNameWithAbis.add(fileOrDir.getFileName().toString());
+          } else if (isScreenshotFile(fileOrDir)) {
+            screenshotsInRoot.add(fileOrDir.getFileName().toString());
+          }
+        });
 
     // To keep module names in the metadata XML sorted.
     Collections.sort(moduleNameWithAbis);
@@ -149,12 +148,11 @@ public class ScreenshotsMetadataUtil {
       localFileUtil
           .listFilePaths(screenshotsDir.resolve(moduleNameWithAbi), /* recursively= */ false)
           .stream()
-          .forEach(
-              file -> {
-                if (isScreenshotFile(file)) {
-                  screenshotsOfModule.add(file.getFileName().toString());
-                }
-              });
+          .forEach(file -> {
+            if (isScreenshotFile(file)) {
+              screenshotsOfModule.add(file.getFileName().toString());
+            }
+          });
       addScreenshotTags(serializer, screenshotsOfModule);
 
       serializer.endTag(NS, MODULE_TAG);

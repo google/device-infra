@@ -304,14 +304,13 @@ public class SessionDetailHolder {
       splitter
           .splitToStream(path)
           .findFirst()
-          .ifPresent(
-              sessionOutputFieldName -> {
-                FieldDescriptor field =
-                    SessionOutput.getDescriptor().findFieldByName(sessionOutputFieldName);
-                if (field != null) {
-                  result.add(field.getNumber());
-                }
-              });
+          .ifPresent(sessionOutputFieldName -> {
+            FieldDescriptor field =
+                SessionOutput.getDescriptor().findFieldByName(sessionOutputFieldName);
+            if (field != null) {
+              result.add(field.getNumber());
+            }
+          });
     }
     return Optional.of(result.build());
   }

@@ -96,9 +96,8 @@ public class NativeCrashDetector implements LineProcessor {
       return;
     }
     detectedCrashEvents.put(crashedProcess.get(), line.pid());
-    executorService.execute(
-        () ->
-            crashDialogDetector.scan(testInfo, device, monitoringConfig.reportAsFailurePackages()));
+    executorService.execute(() ->
+        crashDialogDetector.scan(testInfo, device, monitoringConfig.reportAsFailurePackages()));
   }
 
   private Optional<CrashedProcess> processDebugLines(List<String> lines) {
@@ -123,12 +122,11 @@ public class NativeCrashDetector implements LineProcessor {
   @Override
   public ImmutableList<LogcatEvent> getEvents() {
     return detectedCrashEvents.entrySet().stream()
-        .map(
-            crashEvent ->
-                new CrashEvent(
-                    crashEvent.getKey(),
-                    Joiner.on(System.lineSeparator())
-                        .join(debugTagLinesToPid.get(crashEvent.getValue()))))
+        .map(crashEvent ->
+            new CrashEvent(
+                crashEvent.getKey(),
+                Joiner.on(System.lineSeparator())
+                    .join(debugTagLinesToPid.get(crashEvent.getValue()))))
         .collect(toImmutableList());
   }
 }

@@ -53,33 +53,29 @@ public final class ConditionedDeviceConfigUtil {
   public static boolean matchesConditionedDeviceConfig(
       ConditionedDeviceConfig conditionedDeviceConfig, Device device) {
     return conditionedDeviceConfig.getConditionsList().stream()
-        .allMatch(
-            condition -> {
-              String conditionKey = condition.getKey();
-              Pattern conditionValuePattern;
-              try {
-                conditionValuePattern = Pattern.compile(condition.getValueRegex());
-              } catch (PatternSyntaxException e) {
-                logger.atWarning().withCause(e).log(
-                    "Invalid condition value regex [%s]", condition.getValueRegex());
-                return false;
-              }
+        .allMatch(condition -> {
+          String conditionKey = condition.getKey();
+          Pattern conditionValuePattern;
+          try {
+            conditionValuePattern = Pattern.compile(condition.getValueRegex());
+          } catch (PatternSyntaxException e) {
+            logger.atWarning().withCause(e).log(
+                "Invalid condition value regex [%s]", condition.getValueRegex());
+            return false;
+          }
 
-              if (conditionKey.equals("type_device")) {
-                return device.getDeviceTypes().stream()
-                    .anyMatch(deviceType -> conditionValuePattern.matcher(deviceType).matches());
-              }
-              if (conditionKey.startsWith("dimension_")) {
-                return device.getDimensions().stream()
-                    .anyMatch(
-                        dimension ->
-                            dimension
-                                    .getName()
-                                    .equals(conditionKey.substring("dimension_".length()))
-                                && conditionValuePattern.matcher(dimension.getValue()).matches());
-              }
-              return false;
-            });
+          if (conditionKey.equals("type_device")) {
+            return device.getDeviceTypes().stream()
+                .anyMatch(deviceType -> conditionValuePattern.matcher(deviceType).matches());
+          }
+          if (conditionKey.startsWith("dimension_")) {
+            return device.getDimensions().stream()
+                .anyMatch(dimension ->
+                    dimension.getName().equals(conditionKey.substring("dimension_".length()))
+                        && conditionValuePattern.matcher(dimension.getValue()).matches());
+          }
+          return false;
+        });
   }
 
   /**

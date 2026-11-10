@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.shared.util.runfiles;
 
-
 /** Utility for getting runfiles paths in oss/non-oss. */
 public class RunfilesUtil {
 

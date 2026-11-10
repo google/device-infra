@@ -42,9 +42,8 @@ final class SubDeviceSpecsConverter {
         timing,
         params,
         subDeviceSpecsProto.getSubDeviceSpecProtoList().stream()
-            .map(
-                subDeviceSpecProto ->
-                    SubDeviceSpecConverter.fromProto(params, timing, subDeviceSpecProto))
+            .map(subDeviceSpecProto ->
+                SubDeviceSpecConverter.fromProto(params, timing, subDeviceSpecProto))
             .collect(toImmutableList()),
         subDeviceSpecsProto);
   }

@@ -45,11 +45,10 @@ public enum Command {
   /** Gets the command of {@code name}. */
   public static Command of(String name) throws DeviceActionException {
     return Optional.ofNullable(CMD_MAP.get(name))
-        .orElseThrow(
-            () ->
-                new DeviceActionException(
-                    "INVALID_CMD",
-                    ErrorType.CUSTOMER_ISSUE,
-                    String.format("The command %s is not supported.", name)));
+        .orElseThrow(() ->
+            new DeviceActionException(
+                "INVALID_CMD",
+                ErrorType.CUSTOMER_ISSUE,
+                String.format("The command %s is not supported.", name)));
   }
 }

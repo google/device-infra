@@ -83,12 +83,11 @@ public final class HealthAndActivityBuilder {
 
     ImmutableList<DeviceType> feDeviceTypes =
         types.stream()
-            .map(
-                type ->
-                    DeviceType.newBuilder()
-                        .setType(type)
-                        .setIsAbnormal(DeviceHealth.isTypeAbnormal(type))
-                        .build())
+            .map(type ->
+                DeviceType.newBuilder()
+                    .setType(type)
+                    .setIsAbnormal(DeviceHealth.isTypeAbnormal(type))
+                    .build())
             .collect(toImmutableList());
     builder.addAllDeviceTypes(feDeviceTypes);
     boolean hasAbnormalTypes = feDeviceTypes.stream().anyMatch(DeviceType::getIsAbnormal);

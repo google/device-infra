@@ -127,9 +127,8 @@ public class GcsFileResolver extends AbstractFileResolver {
     GcsUtil gcsUtil = getGcsUtil(parseResult.gcsKey());
     return gcsUtil
         .getCrc32cBytes(Path.of(parseResult.objectPath()))
-        .map(
-            crc32c ->
-                Checksum.newBuilder().setAlgorithm(Algorithm.GCS_CRC32C).setData(crc32c).build());
+        .map(crc32c ->
+            Checksum.newBuilder().setAlgorithm(Algorithm.GCS_CRC32C).setData(crc32c).build());
   }
 
   private ParseResult parseGcsPath(ResolveSource resolveSource) throws MobileHarnessException {

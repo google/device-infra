@@ -78,10 +78,9 @@ public class DetectionResults implements Cloneable {
   public synchronized ImmutableList<DetectionResult> getByTypeAndDetail(
       DetectionType detectionType, @Nullable Object detail) {
     return results.values().stream()
-        .filter(
-            detectorResult ->
-                detectorResult.detectionType().equals(detectionType)
-                    && detectorResult.detectionDetail().equals(Optional.ofNullable(detail)))
+        .filter(detectorResult ->
+            detectorResult.detectionType().equals(detectionType)
+                && detectorResult.detectionDetail().equals(Optional.ofNullable(detail)))
         .collect(toImmutableList());
   }
 

@@ -323,20 +323,19 @@ public class CrosLsNexusDecoratorTest {
     CommandResult downloadResult = mock(CommandResult.class);
     when(downloadResult.stdout()).thenReturn("install success");
     when(commandExecutor.exec(any(Command.class)))
-        .thenAnswer(
-            invocation -> {
-              Command cmd = invocation.getArgument(0);
-              ImmutableList<String> cmdArgs = cmd.getCommand();
-              int rootIdx = cmdArgs.indexOf("-root");
-              if (rootIdx != -1 && rootIdx + 1 < cmdArgs.size()) {
-                Path rootPath = Path.of(cmdArgs.get(rootIdx + 1));
-                Path bin = rootPath.resolve("lsnexus");
-                if (!Files.exists(bin)) {
-                  Files.createFile(bin);
-                }
-              }
-              return downloadResult;
-            });
+        .thenAnswer(invocation -> {
+          Command cmd = invocation.getArgument(0);
+          ImmutableList<String> cmdArgs = cmd.getCommand();
+          int rootIdx = cmdArgs.indexOf("-root");
+          if (rootIdx != -1 && rootIdx + 1 < cmdArgs.size()) {
+            Path rootPath = Path.of(cmdArgs.get(rootIdx + 1));
+            Path bin = rootPath.resolve("lsnexus");
+            if (!Files.exists(bin)) {
+              Files.createFile(bin);
+            }
+          }
+          return downloadResult;
+        });
   }
 
   @Test

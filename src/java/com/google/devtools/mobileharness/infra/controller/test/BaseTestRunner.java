@@ -171,14 +171,12 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
     scopedEventBus.add(EventScope.INTERNAL_PLUGIN, new EventBus(internalPluginExceptionHandler));
     setting
         .internalPluginSubscribers()
-        .ifPresent(
-            subscribers ->
-                subscribers.forEach(
-                    subscriber -> {
-                      scopedEventBus.inScope(EventScope.INTERNAL_PLUGIN).register(subscriber);
-                      initialPluginItemsBuilder.add(
-                          PluginItem.create(subscriber, EventScope.INTERNAL_PLUGIN));
-                    }));
+        .ifPresent(subscribers ->
+            subscribers.forEach(subscriber -> {
+              scopedEventBus.inScope(EventScope.INTERNAL_PLUGIN).register(subscriber);
+              initialPluginItemsBuilder.add(
+                  PluginItem.create(subscriber, EventScope.INTERNAL_PLUGIN));
+            }));
 
     // Now user provided plugins via MH Java Client API are also using this handler. But considered
     // there are only a few users doing this, set the isUserPlugin=false here. Further breaking down
@@ -188,28 +186,22 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
     scopedEventBus.add(EventScope.API_PLUGIN, new EventBus(apiPluginExceptionHandler));
     setting
         .apiPluginSubscribers()
-        .ifPresent(
-            subscribers ->
-                subscribers.forEach(
-                    subscriber -> {
-                      scopedEventBus.inScope(EventScope.API_PLUGIN).register(subscriber);
-                      initialPluginItemsBuilder.add(
-                          PluginItem.create(subscriber, EventScope.API_PLUGIN));
-                    }));
+        .ifPresent(subscribers ->
+            subscribers.forEach(subscriber -> {
+              scopedEventBus.inScope(EventScope.API_PLUGIN).register(subscriber);
+              initialPluginItemsBuilder.add(PluginItem.create(subscriber, EventScope.API_PLUGIN));
+            }));
 
     jarPluginExceptionHandler =
         new SubscriberExceptionLoggingHandler(/* saveException= */ true, /* isUserPlugin= */ true);
     scopedEventBus.add(EventScope.JAR_PLUGIN, new EventBus(jarPluginExceptionHandler));
     setting
         .jarPluginSubscribers()
-        .ifPresent(
-            subscribers ->
-                subscribers.forEach(
-                    subscriber -> {
-                      scopedEventBus.inScope(EventScope.JAR_PLUGIN).register(subscriber);
-                      initialPluginItemsBuilder.add(
-                          PluginItem.create(subscriber, EventScope.JAR_PLUGIN));
-                    }));
+        .ifPresent(subscribers ->
+            subscribers.forEach(subscriber -> {
+              scopedEventBus.inScope(EventScope.JAR_PLUGIN).register(subscriber);
+              initialPluginItemsBuilder.add(PluginItem.create(subscriber, EventScope.JAR_PLUGIN));
+            }));
 
     initialPluginItems = initialPluginItemsBuilder.build();
     scopedEventBus.add(EventScope.TEST_MESSAGE);
@@ -536,12 +528,11 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
             .collect(toImmutableList());
     this.deviceInfos =
         newDeviceInfos.stream()
-            .map(
-                newDeviceInfo ->
-                    DeviceInfoUtil.getDeviceInfoForCurrentTest(
-                        newDeviceInfo.getDeviceLocator().getId(),
-                        newDeviceInfo.getDeviceFeature(),
-                        testInfo))
+            .map(newDeviceInfo ->
+                DeviceInfoUtil.getDeviceInfoForCurrentTest(
+                    newDeviceInfo.getDeviceLocator().getId(),
+                    newDeviceInfo.getDeviceFeature(),
+                    testInfo))
             .collect(toImmutableList());
     this.allocation =
         new Allocation(

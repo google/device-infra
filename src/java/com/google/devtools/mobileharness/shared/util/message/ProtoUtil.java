@@ -71,12 +71,11 @@ public final class ProtoUtil {
   public static void convert(Message source, Message.Builder target, List<String> ignoredFields) {
     Map<FieldDescriptor, Object> sourceFields = source.getAllFields();
     Map<String, FieldDescriptorAndField> sourceFieldsByName = new HashMap<>();
-    sourceFields.forEach(
-        (key, value) -> {
-          if (!ignoredFields.contains(key.getName())) {
-            sourceFieldsByName.put(key.getName(), FieldDescriptorAndField.of(key, value));
-          }
-        });
+    sourceFields.forEach((key, value) -> {
+      if (!ignoredFields.contains(key.getName())) {
+        sourceFieldsByName.put(key.getName(), FieldDescriptorAndField.of(key, value));
+      }
+    });
     for (FieldDescriptor targetField : target.getDescriptorForType().getFields()) {
       String targetFieldName = targetField.getName();
       if (sourceFieldsByName.containsKey(targetFieldName)) {
@@ -114,16 +113,13 @@ public final class ProtoUtil {
             } else {
               if (sourceField.fieldDescriptor().isRepeated()) {
                 ((List<EnumValueDescriptor>) sourceField.field())
-                    .forEach(
-                        enumValueDescriptor -> {
-                          EnumValueDescriptor targetEnumValue =
-                              targetField
-                                  .getEnumType()
-                                  .findValueByName(enumValueDescriptor.getName());
-                          if (targetEnumValue != null) {
-                            target.addRepeatedField(targetField, targetEnumValue);
-                          }
-                        });
+                    .forEach(enumValueDescriptor -> {
+                      EnumValueDescriptor targetEnumValue =
+                          targetField.getEnumType().findValueByName(enumValueDescriptor.getName());
+                      if (targetEnumValue != null) {
+                        target.addRepeatedField(targetField, targetEnumValue);
+                      }
+                    });
 
               } else {
                 EnumValueDescriptor targetEnumValue =
@@ -370,12 +366,11 @@ public final class ProtoUtil {
     Set<FieldNameAndShouldSelect> fieldFilterRuleSet = new HashSet<>();
     selectedFields.forEach(
         field -> fieldFilterRuleSet.add(FieldNameAndShouldSelect.of(field, true)));
-    ignoredFields.forEach(
-        field -> {
-          if (!fieldFilterRuleSet.contains(FieldNameAndShouldSelect.of(field, true))) {
-            fieldFilterRuleSet.add(FieldNameAndShouldSelect.of(field, false));
-          }
-        });
+    ignoredFields.forEach(field -> {
+      if (!fieldFilterRuleSet.contains(FieldNameAndShouldSelect.of(field, true))) {
+        fieldFilterRuleSet.add(FieldNameAndShouldSelect.of(field, false));
+      }
+    });
     List<FieldNameAndShouldSelect> filterFilterRuleList =
         fieldFilterRuleSet.stream()
             .sorted(

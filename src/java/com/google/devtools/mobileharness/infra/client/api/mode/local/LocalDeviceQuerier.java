@@ -84,84 +84,79 @@ class LocalDeviceQuerier implements DeviceQuerier {
     return DeviceQueryResult.newBuilder()
         .addAllDeviceInfo(
             deviceManager.getAllDeviceStatus(/* realtimeDispatch= */ false).entrySet().stream()
-                .map(
-                    deviceEntry -> {
-                      DeviceQuery.DeviceInfo.Builder builder =
-                          DeviceQuery.DeviceInfo.newBuilder()
-                              .setId(deviceEntry.getKey().getDeviceId())
-                              .setStatus(
-                                  Ascii.toLowerCase(
-                                      deviceEntry
-                                          .getValue()
-                                          .getDeviceStatusWithTimestamp()
-                                          .getStatus()
-                                          .name()))
-                              .addAllOwner(deviceEntry.getKey().getOwners())
-                              .addAllExecutor(deviceEntry.getKey().getExecutors())
-                              .addAllType(deviceEntry.getKey().getDeviceTypes())
-                              .addAllDriver(deviceEntry.getKey().getDriverTypes())
-                              .addAllDecorator(deviceEntry.getKey().getDecoratorTypes())
-                              .addAllDimension(
-                                  StrPairUtil.convertCollectionToMultimap(
-                                          deviceEntry.getKey().getDimensions())
-                                      .entries()
-                                      .stream()
-                                      .map(
-                                          dimension ->
-                                              Dimension.newBuilder()
-                                                  .setName(dimension.getKey())
-                                                  .setValue(dimension.getValue())
-                                                  .setRequired(false)
-                                                  .build())
-                                      .collect(toImmutableList()))
-                              .addAllDimension(
-                                  StrPairUtil.convertCollectionToMultimap(
-                                          deviceEntry.getKey().getRequiredDimensions())
-                                      .entries()
-                                      .stream()
-                                      .map(
-                                          dimension ->
+                .map(deviceEntry -> {
+                  DeviceQuery.DeviceInfo.Builder builder =
+                      DeviceQuery.DeviceInfo.newBuilder()
+                          .setId(deviceEntry.getKey().getDeviceId())
+                          .setStatus(
+                              Ascii.toLowerCase(
+                                  deviceEntry
+                                      .getValue()
+                                      .getDeviceStatusWithTimestamp()
+                                      .getStatus()
+                                      .name()))
+                          .addAllOwner(deviceEntry.getKey().getOwners())
+                          .addAllExecutor(deviceEntry.getKey().getExecutors())
+                          .addAllType(deviceEntry.getKey().getDeviceTypes())
+                          .addAllDriver(deviceEntry.getKey().getDriverTypes())
+                          .addAllDecorator(deviceEntry.getKey().getDecoratorTypes())
+                          .addAllDimension(
+                              StrPairUtil.convertCollectionToMultimap(
+                                      deviceEntry.getKey().getDimensions())
+                                  .entries()
+                                  .stream()
+                                  .map(dimension ->
+                                      Dimension.newBuilder()
+                                          .setName(dimension.getKey())
+                                          .setValue(dimension.getValue())
+                                          .setRequired(false)
+                                          .build())
+                                  .collect(toImmutableList()))
+                          .addAllDimension(
+                              StrPairUtil.convertCollectionToMultimap(
+                                      deviceEntry.getKey().getRequiredDimensions())
+                                  .entries()
+                                  .stream()
+                                  .map(dimension ->
+                                      Dimension.newBuilder()
+                                          .setName(dimension.getKey())
+                                          .setValue(dimension.getValue())
+                                          .setRequired(true)
+                                          .build())
+                                  .collect(toImmutableList()))
+                          .addAllDimension(
+                              deviceTempRequiredDimensionManager
+                                  .getDimensions(
+                                      new DeviceKey(
+                                          LabLocator.LOCALHOST.hostName(),
+                                          deviceEntry.getKey().getDeviceUuid()))
+                                  .map(tempRequiredDimensions ->
+                                      tempRequiredDimensions.dimensions().entries().stream()
+                                          .map(dimension ->
                                               Dimension.newBuilder()
                                                   .setName(dimension.getKey())
                                                   .setValue(dimension.getValue())
                                                   .setRequired(true)
                                                   .build())
-                                      .collect(toImmutableList()))
-                              .addAllDimension(
-                                  deviceTempRequiredDimensionManager
-                                      .getDimensions(
-                                          new DeviceKey(
-                                              LabLocator.LOCALHOST.hostName(),
-                                              deviceEntry.getKey().getDeviceUuid()))
-                                      .map(
-                                          tempRequiredDimensions ->
-                                              tempRequiredDimensions.dimensions().entries().stream()
-                                                  .map(
-                                                      dimension ->
-                                                          Dimension.newBuilder()
-                                                              .setName(dimension.getKey())
-                                                              .setValue(dimension.getValue())
-                                                              .setRequired(true)
-                                                              .build())
-                                                  .collect(toImmutableList()))
-                                      .orElse(ImmutableList.of()))
-                              .addDimension(
-                                  Dimension.newBuilder()
-                                      .setName(Ascii.toLowerCase(Name.HOST_NAME.name()))
-                                      .setValue(LocalHost.getHostName())
-                                      .build());
-                      try {
-                        String ipAddress = InetAddresses.toAddrString(LocalHost.getAddress());
-                        builder.addDimension(
-                            Dimension.newBuilder()
-                                .setName(Ascii.toLowerCase(Name.HOST_IP.name()))
-                                .setValue(ipAddress)
-                                .build());
-                      } catch (UnknownHostException e) {
-                        // This should not stop us from returning device results
-                      }
-                      return builder.build();
-                    })
+                                          .collect(toImmutableList()))
+                                  .orElse(ImmutableList.of()))
+                          .addDimension(
+                              Dimension.newBuilder()
+                                  .setName(Ascii.toLowerCase(Name.HOST_NAME.name()))
+                                  .setValue(LocalHost.getHostName())
+                                  .build());
+                  try {
+                    String ipAddress = InetAddresses.toAddrString(LocalHost.getAddress());
+                    builder.addDimension(
+                        Dimension.newBuilder()
+                            .setName(Ascii.toLowerCase(Name.HOST_IP.name()))
+                            .setValue(ipAddress)
+                            .build());
+                  } catch (UnknownHostException e) {
+                    // This should not stop us from returning device results
+                  }
+                  return builder.build();
+                })
                 .filter(new DeviceInfoFilter(deviceQueryFilter))
                 .collect(toImmutableList()))
         .build();

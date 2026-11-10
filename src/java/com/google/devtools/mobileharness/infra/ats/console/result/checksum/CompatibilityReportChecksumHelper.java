@@ -157,12 +157,11 @@ public class CompatibilityReportChecksumHelper {
     AtomicInteger count = new AtomicInteger(0);
     module.getTestCaseList().stream()
         .flatMap(testCase -> testCase.getTestList().stream())
-        .forEach(
-            test -> {
-              if (Objects.equals(test.getResult(), "fail")) {
-                count.getAndIncrement();
-              }
-            });
+        .forEach(test -> {
+          if (Objects.equals(test.getResult(), "fail")) {
+            count.getAndIncrement();
+          }
+        });
     return count.get();
   }
 

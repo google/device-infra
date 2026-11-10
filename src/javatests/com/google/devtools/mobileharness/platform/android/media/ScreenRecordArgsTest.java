@@ -57,11 +57,10 @@ public final class ScreenRecordArgsTest {
       for (Object[] parameters : data) {
         TestParametersValues.Builder builder = TestParametersValues.builder();
         IntStream.range(0, parameterNames.length)
-            .forEach(
-                i ->
-                    builder
-                        .name(stream(parameters).map(String::valueOf).collect(joining(",")))
-                        .addParameter(parameterNames[i], parameters[i]));
+            .forEach(i ->
+                builder
+                    .name(stream(parameters).map(String::valueOf).collect(joining(",")))
+                    .addParameter(parameterNames[i], parameters[i]));
         cases.add(builder.build());
       }
 

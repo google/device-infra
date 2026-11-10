@@ -85,25 +85,21 @@ public class SubPlanHelper {
           // the current run when the module is not done.
           if (!prevResultIncludeFilters.isEmpty()) {
             prevResultIncludeFilters.stream()
-                .filter(
-                    filter ->
-                        filter.matchModule(
-                            module.getName(), module.getAbi(), /* moduleParameter= */ null))
-                .forEach(
-                    prevResultIncludeFilter ->
-                        addIncludeFilter(
-                            subPlan, prevResultIncludeFilter.filterString(), isNonTfModule));
+                .filter(filter ->
+                    filter.matchModule(
+                        module.getName(), module.getAbi(), /* moduleParameter= */ null))
+                .forEach(prevResultIncludeFilter ->
+                    addIncludeFilter(
+                        subPlan, prevResultIncludeFilter.filterString(), isNonTfModule));
           }
           if (!prevResultExcludeFilters.isEmpty()) {
             prevResultExcludeFilters.stream()
-                .filter(
-                    filter ->
-                        filter.matchModule(
-                            module.getName(), module.getAbi(), /* moduleParameter= */ null))
-                .forEach(
-                    prevResultExcludeFilter ->
-                        addExcludeFilter(
-                            subPlan, prevResultExcludeFilter.filterString(), isNonTfModule));
+                .filter(filter ->
+                    filter.matchModule(
+                        module.getName(), module.getAbi(), /* moduleParameter= */ null))
+                .forEach(prevResultExcludeFilter ->
+                    addExcludeFilter(
+                        subPlan, prevResultExcludeFilter.filterString(), isNonTfModule));
           }
           // Exclude tests that should not be run
           for (TestCase testCase : module.getTestCaseList()) {
@@ -163,17 +159,16 @@ public class SubPlanHelper {
         previousResult.getAttributeList().stream()
             .filter(attribute -> attribute.getKey().equals(XmlConstants.COMMAND_LINE_ARGS))
             .findFirst();
-    commandLineArgs.ifPresent(
-        args -> {
-          subPlan.setPreviousSessionCommandLineArgs(args.getValue());
-          subPlan.setPreviousSessionXtsTestPlan(
-              Splitter.on(' ')
-                  .trimResults()
-                  .omitEmptyStrings()
-                  .splitToStream(args.getValue())
-                  .findFirst()
-                  .orElse(""));
-        });
+    commandLineArgs.ifPresent(args -> {
+      subPlan.setPreviousSessionCommandLineArgs(args.getValue());
+      subPlan.setPreviousSessionXtsTestPlan(
+          Splitter.on(' ')
+              .trimResults()
+              .omitEmptyStrings()
+              .splitToStream(args.getValue())
+              .findFirst()
+              .orElse(""));
+    });
     if (previousResult.hasBuild()) {
       subPlan.setPreviousSessionDeviceBuildFingerprint(
           previousResult.getBuild().getBuildFingerprint());

@@ -235,26 +235,25 @@ public class AtsSessionStub {
       GetAllSessionsRequest getAllSessionsRequest) throws MobileHarnessException {
     GetAllSessionsResponse getAllSessionsResponse = getAllSessionsByRequest(getAllSessionsRequest);
     return getAllSessionsResponse.getSessionDetailList().stream()
-        .flatMap(
-            sessionDetail -> {
-              try {
-                AtsSessionPluginConfig sessionPluginConfig = getSessionPluginConfig(sessionDetail);
-                Optional<AtsSessionPluginOutput> sessionPluginOutput =
-                    getSessionPluginOutputIfAny(sessionDetail);
-                return Stream.of(
-                    AtsSessionPluginConfigOutput.of(
-                        sessionPluginConfig, sessionPluginOutput.orElse(null)));
-              } catch (MobileHarnessException | RuntimeException e) {
-                logger
-                    .atWarning()
-                    .with(IMPORTANCE, IMPORTANT)
-                    .withCause(e)
-                    .log(
-                        "Failed to get session plugin config/output, session=[%s]",
-                        shortDebugStringWithPrinter(sessionDetail, PRINTER));
-                return Stream.empty();
-              }
-            })
+        .flatMap(sessionDetail -> {
+          try {
+            AtsSessionPluginConfig sessionPluginConfig = getSessionPluginConfig(sessionDetail);
+            Optional<AtsSessionPluginOutput> sessionPluginOutput =
+                getSessionPluginOutputIfAny(sessionDetail);
+            return Stream.of(
+                AtsSessionPluginConfigOutput.of(
+                    sessionPluginConfig, sessionPluginOutput.orElse(null)));
+          } catch (MobileHarnessException | RuntimeException e) {
+            logger
+                .atWarning()
+                .with(IMPORTANCE, IMPORTANT)
+                .withCause(e)
+                .log(
+                    "Failed to get session plugin config/output, session=[%s]",
+                    shortDebugStringWithPrinter(sessionDetail, PRINTER));
+            return Stream.empty();
+          }
+        })
         .collect(toImmutableList());
   }
 
@@ -456,20 +455,18 @@ public class AtsSessionStub {
         .getSessionPluginConfigs()
         .getSessionPluginConfigList()
         .stream()
-        .filter(
-            sessionPluginConfig ->
-                sessionPluginConfig.getExplicitLabel().getLabel().equals(SESSION_PLUGIN_LABEL))
-        .map(
-            sessionPluginConfig -> {
-              try {
-                return sessionPluginConfig
-                    .getExecutionConfig()
-                    .getConfig()
-                    .unpack(AtsSessionPluginConfig.class);
-              } catch (InvalidProtocolBufferException e) {
-                throw new IllegalStateException(e);
-              }
-            })
+        .filter(sessionPluginConfig ->
+            sessionPluginConfig.getExplicitLabel().getLabel().equals(SESSION_PLUGIN_LABEL))
+        .map(sessionPluginConfig -> {
+          try {
+            return sessionPluginConfig
+                .getExecutionConfig()
+                .getConfig()
+                .unpack(AtsSessionPluginConfig.class);
+          } catch (InvalidProtocolBufferException e) {
+            throw new IllegalStateException(e);
+          }
+        })
         .findFirst()
         .orElseThrow();
   }
@@ -481,20 +478,18 @@ public class AtsSessionStub {
             .filter(pluginOutput -> pluginOutput.getResultCase() != ResultCase.RESULT_NOT_SET);
     Optional<MobileHarnessException> sessionError = getSessionError(sessionDetail);
     if (result.isPresent()) {
-      sessionError.ifPresent(
-          e ->
-              logger
-                  .atWarning()
-                  .with(IMPORTANCE, IMPORTANT)
-                  .withCause(e)
-                  .log("Warning of session %s:", sessionDetail.getSessionId().getId()));
+      sessionError.ifPresent(e ->
+          logger
+              .atWarning()
+              .with(IMPORTANCE, IMPORTANT)
+              .withCause(e)
+              .log("Warning of session %s:", sessionDetail.getSessionId().getId()));
       return result.get();
     } else {
-      throw sessionError.orElseGet(
-          () ->
-              new MobileHarnessException(
-                  InfraErrorId.ATSC_SESSION_STUB_ATS_SESSION_PLUGIN_NO_OUTPUT_ERROR,
-                  "ATS session plugin didn't set output"));
+      throw sessionError.orElseGet(() ->
+          new MobileHarnessException(
+              InfraErrorId.ATSC_SESSION_STUB_ATS_SESSION_PLUGIN_NO_OUTPUT_ERROR,
+              "ATS session plugin didn't set output"));
     }
   }
 
@@ -547,28 +542,24 @@ public class AtsSessionStub {
                     error -> error.getPluginLabel().getLabel().equals(SESSION_PLUGIN_LABEL)));
     ImmutableList<MobileHarnessException> atsSessionPluginErrors =
         sessionPluginErrorsPartitionedByLabel.get(true).stream()
-            .map(
-                atsSessionPluginError ->
-                    MobileHarnessExceptionFactory.createUserFacingException(
-                        InfraErrorId.ATSC_SESSION_STUB_ATS_SESSION_PLUGIN_ERROR,
-                        String.format(
-                            "ATS session error, method=[%s]",
-                            atsSessionPluginError.getMethodName()),
-                        ErrorModelConverter.toDeserializedException(
-                            atsSessionPluginError.getError())))
+            .map(atsSessionPluginError ->
+                MobileHarnessExceptionFactory.createUserFacingException(
+                    InfraErrorId.ATSC_SESSION_STUB_ATS_SESSION_PLUGIN_ERROR,
+                    String.format(
+                        "ATS session error, method=[%s]", atsSessionPluginError.getMethodName()),
+                    ErrorModelConverter.toDeserializedException(atsSessionPluginError.getError())))
             .collect(toImmutableList());
     ImmutableList<MobileHarnessException> otherSessionPluginErrors =
         sessionPluginErrorsPartitionedByLabel.get(false).stream()
-            .map(
-                otherSessionPluginError ->
-                    new MobileHarnessException(
-                        InfraErrorId.ATSC_SESSION_STUB_OTHER_SESSION_PLUGIN_ERROR,
-                        String.format(
-                            "Session plugin error, class=[%s], method=[%s]",
-                            otherSessionPluginError.getPluginClassName(),
-                            otherSessionPluginError.getMethodName()),
-                        ErrorModelConverter.toDeserializedException(
-                            otherSessionPluginError.getError())))
+            .map(otherSessionPluginError ->
+                new MobileHarnessException(
+                    InfraErrorId.ATSC_SESSION_STUB_OTHER_SESSION_PLUGIN_ERROR,
+                    String.format(
+                        "Session plugin error, class=[%s], method=[%s]",
+                        otherSessionPluginError.getPluginClassName(),
+                        otherSessionPluginError.getMethodName()),
+                    ErrorModelConverter.toDeserializedException(
+                        otherSessionPluginError.getError())))
             .collect(toImmutableList());
 
     // Sorts session errors.

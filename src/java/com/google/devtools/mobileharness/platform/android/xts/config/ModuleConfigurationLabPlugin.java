@@ -72,18 +72,16 @@ public class ModuleConfigurationLabPlugin {
             .jobInfo()
             .params()
             .getOptional(MODULE_NAME)
-            .map(
-                s ->
-                    configs.values().stream()
-                        .filter(config -> config.getMetadata().getXtsModule().equals(s))
-                        .findFirst())
+            .map(s ->
+                configs.values().stream()
+                    .filter(config -> config.getMetadata().getXtsModule().equals(s))
+                    .findFirst())
             .orElseGet(() -> configs.values().stream().findFirst())
-            .orElseThrow(
-                () ->
-                    SkipTestException.create(
-                        String.format("Module configuration not found in %s", testPackage),
-                        DesiredTestResult.ERROR,
-                        BasicErrorId.LOCAL_FILE_OR_DIR_NOT_FOUND));
+            .orElseThrow(() ->
+                SkipTestException.create(
+                    String.format("Module configuration not found in %s", testPackage),
+                    DesiredTestResult.ERROR,
+                    BasicErrorId.LOCAL_FILE_OR_DIR_NOT_FOUND));
 
     moduleConfigurationHelper.updateJobInfo(
         testInfo.jobInfo(),

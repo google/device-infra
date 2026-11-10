@@ -280,16 +280,15 @@ public class ProxyDeviceManager {
           "Releasing all proxied devices of job [%s] with tests %s", jobLocator, tests.keySet());
       ImmutableList<ListenableFuture<?>> testDevicesReleasers =
           tests.values().stream()
-              .map(
-                  test ->
-                      logFailure(
-                          threadPool.submit(
-                              threadRenaming(
-                                  test::releaseDevices,
-                                  () -> "test-devices-releaser-" + test.testLocator)),
-                          Level.WARNING,
-                          "Failed to release proxied devices of test [%s]",
-                          test.testLocator))
+              .map(test ->
+                  logFailure(
+                      threadPool.submit(
+                          threadRenaming(
+                              test::releaseDevices,
+                              () -> "test-devices-releaser-" + test.testLocator)),
+                      Level.WARNING,
+                      "Failed to release proxied devices of test [%s]",
+                      test.testLocator))
               .collect(toImmutableList());
       try {
         getUnchecked(whenAllComplete(testDevicesReleasers).run(() -> {}, threadPool));
@@ -348,16 +347,15 @@ public class ProxyDeviceManager {
       logger.atInfo().log("Releasing all proxied devices of test [%s]", testLocator);
       ImmutableList<ListenableFuture<?>> deviceReleasers =
           subDevices.values().stream()
-              .map(
-                  proxiedDevice ->
-                      logFailure(
-                          threadPool.submit(
-                              threadRenaming(
-                                  proxiedDevice::releaseDevice,
-                                  () -> proxiedDevice.deviceReleaserThreadName)),
-                          Level.WARNING,
-                          "Failed to release %s",
-                          proxiedDevice.formattedDeviceLocator))
+              .map(proxiedDevice ->
+                  logFailure(
+                      threadPool.submit(
+                          threadRenaming(
+                              proxiedDevice::releaseDevice,
+                              () -> proxiedDevice.deviceReleaserThreadName)),
+                      Level.WARNING,
+                      "Failed to release %s",
+                      proxiedDevice.formattedDeviceLocator))
               .collect(toImmutableList());
       try {
         getUnchecked(whenAllComplete(deviceReleasers).run(() -> {}, threadPool));

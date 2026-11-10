@@ -116,7 +116,7 @@ public class ConfigurationUtil {
    */
   public Set<File> getConfigFilesFromDirsByExt(List<File> dirs, List<String> configFileExtensions) {
     FileFilter configFileFilter =
-        (file) ->
+        file ->
             configFileExtensions.stream().anyMatch(extension -> file.getName().endsWith(extension));
 
     return getConfigFilesFromDirs(dirs, configFileFilter);
@@ -184,7 +184,7 @@ public class ConfigurationUtil {
    * will return the first one found. If no file is found, will return an empty Optional.
    */
   public Optional<File> getFileInDir(String fileName, File dir) throws MobileHarnessException {
-    FileFilter fileFilter = (file) -> file.isFile() && file.getName().equals(fileName);
+    FileFilter fileFilter = file -> file.isFile() && file.getName().equals(fileName);
 
     List<File> files =
         localFileUtil.listFiles(dir.getAbsolutePath(), /* recursively= */ true, fileFilter);

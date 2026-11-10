@@ -61,30 +61,28 @@ public class LabDirectTestRunnerUtil {
       TestManager<ProxyTestRunner> testManager, String testId, String moduleName) {
     return testManager
         .getTestRunner(testId)
-        .filter(
-            testRunner -> {
-              if (!testRunner.isContainerMode()) {
-                return true;
-              } else {
-                logger.atWarning().log(
-                    "Failed to get %s of test [%s]" + " because the test is container mode",
-                    moduleName, testId);
-                return false;
-              }
-            })
+        .filter(testRunner -> {
+          if (!testRunner.isContainerMode()) {
+            return true;
+          } else {
+            logger.atWarning().log(
+                "Failed to get %s of test [%s]" + " because the test is container mode",
+                moduleName, testId);
+            return false;
+          }
+        })
         .map(testRunner -> (ProxyToDirectTestRunner) testRunner)
-        .flatMap(
-            testRunner -> {
-              Optional<DirectTestRunner> proxiedDirectTestRunner =
-                  testRunner.getProxiedDirectTestRunner();
-              if (proxiedDirectTestRunner.isEmpty()) {
-                logger.atWarning().log(
-                    "Failed to get %s of test [%s]"
-                        + " because the proxied direct test runner has not been connected",
-                    moduleName, testId);
-              }
-              return proxiedDirectTestRunner;
-            });
+        .flatMap(testRunner -> {
+          Optional<DirectTestRunner> proxiedDirectTestRunner =
+              testRunner.getProxiedDirectTestRunner();
+          if (proxiedDirectTestRunner.isEmpty()) {
+            logger.atWarning().log(
+                "Failed to get %s of test [%s]"
+                    + " because the proxied direct test runner has not been connected",
+                moduleName, testId);
+          }
+          return proxiedDirectTestRunner;
+        });
   }
 
   private LabDirectTestRunnerUtil() {}

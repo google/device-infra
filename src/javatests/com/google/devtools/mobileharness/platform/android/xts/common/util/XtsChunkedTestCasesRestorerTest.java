@@ -119,10 +119,9 @@ public final class XtsChunkedTestCasesRestorerTest {
     MobileHarnessException restoreException =
         new MobileHarnessException(BasicErrorId.COMMAND_EXEC_FAIL, "restore failed");
     when(commandExecutor.run(EXPECTED_COMMAND))
-        .thenAnswer(
-            invocation -> {
-              throw restoreException;
-            });
+        .thenAnswer(invocation -> {
+          throw restoreException;
+        });
 
     MobileHarnessException exception =
         assertThrows(

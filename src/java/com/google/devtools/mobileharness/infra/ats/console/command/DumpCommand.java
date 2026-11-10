@@ -155,14 +155,13 @@ class DumpCommand implements Callable<Integer> {
           .with(IMPORTANCE, IMPORTANT)
           .log("No Tradefed process found. Skip dumping Tradefed stack trace.");
     } else {
-      tradefedPids.forEach(
-          tradefedPid -> {
-            String tradefedStackTraceFilePath =
-                PathUtil.join(
-                    bugreportDirPath,
-                    String.format("tradefed_stack_trace_%s_pid_%s.txt", fileSuffix, tradefedPid));
-            createTradefedStackTraceFile(tradefedStackTraceFilePath, tradefedPid);
-          });
+      tradefedPids.forEach(tradefedPid -> {
+        String tradefedStackTraceFilePath =
+            PathUtil.join(
+                bugreportDirPath,
+                String.format("tradefed_stack_trace_%s_pid_%s.txt", fileSuffix, tradefedPid));
+        createTradefedStackTraceFile(tradefedStackTraceFilePath, tradefedPid);
+      });
     }
 
     // Zips files.

@@ -140,9 +140,8 @@ public class ProxyTestManager extends TestManager<ProxyTestRunner>
         getTestRunners().stream()
             .filter(runner -> runner instanceof ProxyToDirectTestRunner)
             .map(runner -> (ProxyToDirectTestRunner) runner)
-            .filter(
-                runner ->
-                    runner.getDevices().stream().anyMatch(d -> d.getDeviceId().equals(deviceId)))
+            .filter(runner ->
+                runner.getDevices().stream().anyMatch(d -> d.getDeviceId().equals(deviceId)))
             .findFirst();
 
     if (runnerOptional.isEmpty()) {
@@ -209,10 +208,9 @@ public class ProxyTestManager extends TestManager<ProxyTestRunner>
   public DirectTestRunner getProxiedDirectTestRunner(String testId) throws MobileHarnessException {
     return getProxyToDirectTestRunner(testId)
         .getProxiedDirectTestRunner()
-        .orElseThrow(
-            () ->
-                new MobileHarnessException(
-                    InfraErrorId.TM_TEST_NOT_KICKED_OFF,
-                    String.format("Test [%s] has not been kicked off", testId)));
+        .orElseThrow(() ->
+            new MobileHarnessException(
+                InfraErrorId.TM_TEST_NOT_KICKED_OFF,
+                String.format("Test [%s] has not been kicked off", testId)));
   }
 }

@@ -565,23 +565,21 @@ public class OlcServerIntegrationTest {
                             "--tmp_dir_root=" + tmpFolder.newFolder("olc_server_tmp_dir")),
                         ImmutableList.of()))
             .onStdout(
-                does(
-                    stdout -> {
-                      System.out.printf("olc_server_stdout %s\n", stdout);
-                      olcServerStdout.append(stdout).append('\n');
-                    }))
+                does(stdout -> {
+                  System.out.printf("olc_server_stdout %s\n", stdout);
+                  olcServerStdout.append(stdout).append('\n');
+                }))
             .onStderr(
-                does(
-                    stderr -> {
-                      System.err.printf("olc_server_stderr %s\n", stderr);
-                      olcServerStderr.append(stderr).append('\n');
+                does(stderr -> {
+                  System.err.printf("olc_server_stderr %s\n", stderr);
+                  olcServerStderr.append(stderr).append('\n');
 
-                      if (stderr.contains("New device NoOpDevice-")) {
-                        findAllDeviceIds(stderr).forEach(olcServerUndetectedLocalDevices::remove);
-                      } else if (stderr.contains("Sign up lab") && stderr.contains("NoOpDevice-")) {
-                        findAllDeviceIds(stderr).forEach(olcServerUnreportedRemoteDevices::remove);
-                      }
-                    }))
+                  if (stderr.contains("New device NoOpDevice-")) {
+                    findAllDeviceIds(stderr).forEach(olcServerUndetectedLocalDevices::remove);
+                  } else if (stderr.contains("Sign up lab") && stderr.contains("NoOpDevice-")) {
+                    findAllDeviceIds(stderr).forEach(olcServerUnreportedRemoteDevices::remove);
+                  }
+                }))
             .successfulStartCondition(line -> line.contains(SERVER_STARTED_SIGNAL))
             .redirectStderr(false)
             .needStdoutInResult(false)
@@ -635,21 +633,19 @@ public class OlcServerIntegrationTest {
                           ImmutableList.of(
                               "-D" + BuiltinFlags.ATS_LAB_SERVER_TYPE_PROPERTY_KEY + "=on-prem")))
               .onStdout(
-                  does(
-                      stdout -> {
-                        System.out.printf("lab_server_stdout %s\n", stdout);
-                        labServerStdout.append(stdout).append('\n');
-                      }))
+                  does(stdout -> {
+                    System.out.printf("lab_server_stdout %s\n", stdout);
+                    labServerStdout.append(stdout).append('\n');
+                  }))
               .onStderr(
-                  does(
-                      stderr -> {
-                        System.err.printf("lab_server_stderr %s\n", stderr);
-                        labServerStderr.append(stderr).append('\n');
+                  does(stderr -> {
+                    System.err.printf("lab_server_stderr %s\n", stderr);
+                    labServerStderr.append(stderr).append('\n');
 
-                        if (stderr.contains("New device NoOpDevice-")) {
-                          findAllDeviceIds(stderr).forEach(labServerUndetectedLocalDevices::remove);
-                        }
-                      }))
+                    if (stderr.contains("New device NoOpDevice-")) {
+                      findAllDeviceIds(stderr).forEach(labServerUndetectedLocalDevices::remove);
+                    }
+                  }))
               .successfulStartCondition(line -> line.contains("Lab server successfully started"))
               .redirectStderr(false)
               .needStdoutInResult(false)
@@ -866,17 +862,15 @@ public class OlcServerIntegrationTest {
 
       boolean isAllocatedDevice =
           supportedDimensions.stream()
-              .anyMatch(
-                  dimension ->
-                      dimension.getName().equals("id")
-                          && dimension.getValue().equals(allocatedDeviceControlId));
+              .anyMatch(dimension ->
+                  dimension.getName().equals("id")
+                      && dimension.getValue().equals(allocatedDeviceControlId));
 
       boolean hasTempRequiredDimension =
           requiredDimensions.stream()
-              .anyMatch(
-                  dimension ->
-                      dimension.getName().equals("allocation_key")
-                          && dimension.getValue().equals("fake_allocation_key"));
+              .anyMatch(dimension ->
+                  dimension.getName().equals("allocation_key")
+                      && dimension.getValue().equals("fake_allocation_key"));
 
       String deviceUuid = deviceInfo.getDeviceLocator().getId();
 

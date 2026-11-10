@@ -116,14 +116,13 @@ public class TestInfoCreator {
 
     deviceRequirements.stream()
         .skip(1L)
-        .forEach(
-            deviceRequirement ->
-                jobInfo
-                    .subDeviceSpecs()
-                    .addSubDevice(
-                        deviceRequirement.getDeviceType(),
-                        deviceRequirement.getDimensionsMap(),
-                        deviceRequirement.getDecoratorList()));
+        .forEach(deviceRequirement ->
+            jobInfo
+                .subDeviceSpecs()
+                .addSubDevice(
+                    deviceRequirement.getDeviceType(),
+                    deviceRequirement.getDimensionsMap(),
+                    deviceRequirement.getDecoratorList()));
 
     List<String> jsonSpecs = req.getJob().getDeviceScopedSpecsJsonList();
     for (int i = 0; i < jsonSpecs.size(); i++) {

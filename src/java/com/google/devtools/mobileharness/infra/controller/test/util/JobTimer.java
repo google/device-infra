@@ -41,12 +41,11 @@ public abstract class JobTimer implements CountDownTimer {
   public Instant expireTime() throws MobileHarnessException {
     return jobTiming()
         .getStartTime()
-        .orElseThrow(
-            () ->
-                new MobileHarnessException(
-                    BasicErrorId.JOB_GET_EXPIRE_TIME_ERROR_BEFORE_START,
-                    "Failed to calculate the job expire time because job has not started. "
-                        + "Please set the job status from NEW to any other status."))
+        .orElseThrow(() ->
+            new MobileHarnessException(
+                BasicErrorId.JOB_GET_EXPIRE_TIME_ERROR_BEFORE_START,
+                "Failed to calculate the job expire time because job has not started. "
+                    + "Please set the job status from NEW to any other status."))
         .plus(jobTimeout().jobTimeout());
   }
 

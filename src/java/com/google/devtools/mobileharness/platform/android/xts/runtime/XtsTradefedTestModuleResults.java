@@ -87,11 +87,10 @@ public class XtsTradefedTestModuleResults {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder("XtsTradefedTestModuleResults{\n");
-    runningModules.forEach(
-        (moduleId, module) -> {
-          sb.append(String.format("  moduleId=%s:\n", moduleId));
-          sb.append("    ").append(module).append("\n");
-        });
+    runningModules.forEach((moduleId, module) -> {
+      sb.append(String.format("  moduleId=%s:\n", moduleId));
+      sb.append("    ").append(module).append("\n");
+    });
     sb.append("}");
     return sb.toString();
   }

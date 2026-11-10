@@ -16,7 +16,6 @@
 
 package com.google.wireless.qa.mobileharness.shared.comm.filetransfer;
 
-
 /** Receiver of file transferring. */
 public interface FileTransferService {
 

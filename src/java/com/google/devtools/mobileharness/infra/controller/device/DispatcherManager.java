@@ -92,9 +92,8 @@ public final class DispatcherManager {
    */
   public void addDependencies(
       String dispatcherSimpleName, List<String> dependDispatcherSimpleNames) {
-    dependDispatcherSimpleNames.forEach(
-        dependDispatcherSimpleName ->
-            addDependency(dispatcherSimpleName, dependDispatcherSimpleName));
+    dependDispatcherSimpleNames.forEach(dependDispatcherSimpleName ->
+        addDependency(dispatcherSimpleName, dependDispatcherSimpleName));
   }
 
   /**
@@ -167,13 +166,12 @@ public final class DispatcherManager {
     for (InternalElement internalElement : internalElements) {
       graphs
           .predecessors(internalElement.element)
-          .forEach(
-              predecessor -> {
-                if (internalElementsByValue.containsKey(predecessor)) {
-                  internalElementsByValue.get(predecessor).successors.add(internalElement);
-                  internalElement.predecessorCount++;
-                }
-              });
+          .forEach(predecessor -> {
+            if (internalElementsByValue.containsKey(predecessor)) {
+              internalElementsByValue.get(predecessor).successors.add(internalElement);
+              internalElement.predecessorCount++;
+            }
+          });
     }
     return internalElements;
   }

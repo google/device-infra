@@ -187,10 +187,8 @@ public class ApiConfigV5 implements ApiConfig {
     List<StrPair> deviceExtraDimensions = new ArrayList<>();
     List<String> labels = Flags.extraDeviceLabels.getNonNull();
     if (!labels.isEmpty()) {
-      labels.forEach(
-          label ->
-              deviceExtraDimensions.add(
-                  StrPair.newBuilder().setName("label").setValue(label).build()));
+      labels.forEach(label ->
+          deviceExtraDimensions.add(StrPair.newBuilder().setName("label").setValue(label).build()));
     }
     if (deviceId.isPresent() && getMonitoredDeviceUuids().contains(deviceId.get().uuid())) {
       deviceExtraDimensions.add(StrPair.newBuilder().setName("monitored").setValue("true").build());

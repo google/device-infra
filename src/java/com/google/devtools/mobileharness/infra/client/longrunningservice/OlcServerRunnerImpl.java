@@ -138,9 +138,8 @@ class OlcServerRunnerImpl implements OlcServerRunner {
         "OLC version: lab-%s%s",
         Version.LAB_VERSION,
         VersionUtil.getBuildVersion()
-            .map(
-                buildVersion ->
-                    String.format(" %s", ProtoTextFormat.shortDebugString(buildVersion)))
+            .map(buildVersion ->
+                String.format(" %s", ProtoTextFormat.shortDebugString(buildVersion)))
             .orElse(""));
 
     // Initializes ClientApi.

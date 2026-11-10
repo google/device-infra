@@ -99,18 +99,16 @@ public final class RetryTestsGrouper {
           ImmutableList<TestInfo> testsFromSameFlakyAttempt =
               flakyAttemptIndexToTestInfoListEntry.getValue();
           findLastPassOrFailRun(testsFromSameFlakyAttempt)
-              .ifPresent(
-                  passOrFailTest ->
-                      flakyAttemptIndexToUserVisibleTest.put(flakyAttemptIndex, passOrFailTest));
+              .ifPresent(passOrFailTest ->
+                  flakyAttemptIndexToUserVisibleTest.put(flakyAttemptIndex, passOrFailTest));
         }
       } else {
         findLastRun(testRunsForShard)
-            .ifPresent(
-                lastRun ->
-                    flakyAttemptIndexToUserVisibleTest.put(
-                        getAttemptIndexProperty(
-                            lastRun, FlakyTestRetryConstants.TEST_PROP_FLAKY_ATTEMPT_INDEX),
-                        lastRun));
+            .ifPresent(lastRun ->
+                flakyAttemptIndexToUserVisibleTest.put(
+                    getAttemptIndexProperty(
+                        lastRun, FlakyTestRetryConstants.TEST_PROP_FLAKY_ATTEMPT_INDEX),
+                    lastRun));
       }
       groupedTestsByShard.put(
           shardIndex, new ShardTestRuns(flakyAttemptIndexToUserVisibleTest.buildOrThrow()));
@@ -123,23 +121,19 @@ public final class RetryTestsGrouper {
     return attempts.stream()
         .filter(RetryTestsGrouper::isPassOrFail)
         .max(
-            Comparator.comparingInt(
-                t ->
-                    getAttemptIndexProperty(
-                        t, FlakyTestRetryConstants.TEST_PROP_ERROR_ATTEMPT_INDEX)));
+            Comparator.comparingInt(t ->
+                getAttemptIndexProperty(t, FlakyTestRetryConstants.TEST_PROP_ERROR_ATTEMPT_INDEX)));
   }
 
   private static Optional<TestInfo> findLastRun(List<TestInfo> attempts) {
     return attempts.stream()
         .max(
-            Comparator.comparingInt(
-                    (TestInfo t) ->
-                        getAttemptIndexProperty(
-                            t, FlakyTestRetryConstants.TEST_PROP_FLAKY_ATTEMPT_INDEX))
-                .thenComparingInt(
-                    t ->
-                        getAttemptIndexProperty(
-                            t, FlakyTestRetryConstants.TEST_PROP_ERROR_ATTEMPT_INDEX)));
+            Comparator.comparingInt((TestInfo t) ->
+                    getAttemptIndexProperty(
+                        t, FlakyTestRetryConstants.TEST_PROP_FLAKY_ATTEMPT_INDEX))
+                .thenComparingInt(t ->
+                    getAttemptIndexProperty(
+                        t, FlakyTestRetryConstants.TEST_PROP_ERROR_ATTEMPT_INDEX)));
   }
 
   private static boolean isPassOrFail(TestInfo testInfo) {

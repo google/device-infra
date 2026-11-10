@@ -56,16 +56,15 @@ public class Log implements LogCollector<Api> {
               + message
               + (!message.isEmpty() && cause.isPresent() ? ": " : "")
               + cause
-                  .map(
-                      c ->
-                          data.getWithCauseStack()
-                              ? Throwables.getStackTraceAsString(c)
-                              : (c instanceof MobileHarnessException
-                                  ? ((MobileHarnessException) c).getErrorId().name()
-                                      + ": "
-                                      + c.getMessage()
-                                  : c.getClass().getSimpleName()
-                                      + (c.getMessage() == null ? "" : ": " + c.getMessage())))
+                  .map(c ->
+                      data.getWithCauseStack()
+                          ? Throwables.getStackTraceAsString(c)
+                          : (c instanceof MobileHarnessException
+                              ? ((MobileHarnessException) c).getErrorId().name()
+                                  + ": "
+                                  + c.getMessage()
+                              : c.getClass().getSimpleName()
+                                  + (c.getMessage() == null ? "" : ": " + c.getMessage())))
                   .orElse("")
               + "\n");
     }

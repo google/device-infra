@@ -322,9 +322,8 @@ public class DeviceInfoCollectorSetupOnlyDecorator extends SetupOnlyDecorator
     TestSuiteResult result = testSuiteResultBuilder.build();
     ImmutableList<TestResult> failedTests =
         result.getTestResultList().stream()
-            .filter(
-                r ->
-                    r.getTestStatus() == TestStatus.FAILED || r.getTestStatus() == TestStatus.ERROR)
+            .filter(r ->
+                r.getTestStatus() == TestStatus.FAILED || r.getTestStatus() == TestStatus.ERROR)
             .collect(toImmutableList());
 
     if (!failedTests.isEmpty()) {

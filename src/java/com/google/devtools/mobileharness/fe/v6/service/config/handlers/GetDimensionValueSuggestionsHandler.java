@@ -143,14 +143,13 @@ public final class GetDimensionValueSuggestionsHandler {
                                 DeviceConfig::getUuid, cfg -> cfg, (first, second) -> second));
                 ImmutableList<ImmutableList<String>> perDeviceValueSets =
                     deviceIds.stream()
-                        .map(
-                            id ->
-                                configByDeviceId.containsKey(id)
-                                    ? BatchDeviceConfigUtil.getDimensionValues(
-                                        configByDeviceId.get(id).getBasicConfig(),
-                                        dimensionName,
-                                        dimensionList)
-                                    : ImmutableList.<String>of())
+                        .map(id ->
+                            configByDeviceId.containsKey(id)
+                                ? BatchDeviceConfigUtil.getDimensionValues(
+                                    configByDeviceId.get(id).getBasicConfig(),
+                                    dimensionName,
+                                    dimensionList)
+                                : ImmutableList.<String>of())
                         .collect(toImmutableList());
                 return aggregateValueSets(perDeviceValueSets);
               },
@@ -198,12 +197,11 @@ public final class GetDimensionValueSuggestionsHandler {
           ImmutableList<ImmutableList<String>> perDeviceValueSets =
               response.getLabQueryResult().getLabView().getLabDataList().stream()
                   .flatMap(labData -> labData.getDeviceList().getDeviceInfoList().stream())
-                  .map(
-                      deviceInfo ->
-                          BatchDeviceConfigUtil.getDimensionValues(
-                              deviceInfo.getDeviceFeature().getCompositeDimension(),
-                              dimensionName,
-                              dimensionList))
+                  .map(deviceInfo ->
+                      BatchDeviceConfigUtil.getDimensionValues(
+                          deviceInfo.getDeviceFeature().getCompositeDimension(),
+                          dimensionName,
+                          dimensionList))
                   .collect(toImmutableList());
           return aggregateValueSets(perDeviceValueSets);
         },
@@ -248,12 +246,11 @@ public final class GetDimensionValueSuggestionsHandler {
 
     ImmutableList<CandidateDimensionValue> candidates =
         countsByCanon.entrySet().stream()
-            .map(
-                entry ->
-                    CandidateDimensionValue.newBuilder()
-                        .addAllValues(displayByCanon.get(entry.getKey()))
-                        .setDeviceCount(entry.getValue())
-                        .build())
+            .map(entry ->
+                CandidateDimensionValue.newBuilder()
+                    .addAllValues(displayByCanon.get(entry.getKey()))
+                    .setDeviceCount(entry.getValue())
+                    .build())
             .sorted(
                 comparingInt(CandidateDimensionValue::getDeviceCount)
                     .reversed()

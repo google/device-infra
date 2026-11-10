@@ -870,20 +870,18 @@ public final class XtsPackageUnzipCacheTest {
     ExecutorService executor = Executors.newFixedThreadPool(2);
     try {
       Future<?> future1 =
-          executor.submit(
-              () -> {
-                cache.acquire("session_1", ZIP_PATH_1, session1Dir, "", dir -> "cts");
-                return null;
-              });
+          executor.submit(() -> {
+            cache.acquire("session_1", ZIP_PATH_1, session1Dir, "", dir -> "cts");
+            return null;
+          });
       if (!unzipStarted.await(5, SECONDS)) {
         throw new AssertionError("Timed out waiting for unzipStarted");
       }
       Future<?> future2 =
-          executor.submit(
-              () -> {
-                cache.acquire("session_2", ZIP_PATH_1, session2Dir, "", dir -> "cts");
-                return null;
-              });
+          executor.submit(() -> {
+            cache.acquire("session_2", ZIP_PATH_1, session2Dir, "", dir -> "cts");
+            return null;
+          });
       allowUnzipFinish.countDown();
       future1.get(5, SECONDS);
       future2.get(5, SECONDS);
@@ -901,26 +899,25 @@ public final class XtsPackageUnzipCacheTest {
       for (int t = 0; t < numThreads; t++) {
         final int threadIdx = t;
         futures.add(
-            executor.submit(
-                () -> {
-                  if (!startGate.await(5, SECONDS)) {
-                    throw new AssertionError("Timed out waiting for startGate");
-                  }
-                  for (int i = 0; i < iterationsPerThread; i++) {
-                    String sessionId = "stress_session_" + threadIdx + "_" + i;
-                    String targetDir = DirUtil.getPublicGenDir() + "/" + sessionId + "/cts";
-                    String zip = zips[(threadIdx + i) % zips.length];
-                    cache.acquire(sessionId, zip, targetDir, "", dir -> "cts");
-                    if (!Files.isSymbolicLink(Path.of(targetDir))) {
-                      throw new AssertionError("Expected targetDir symlink: " + targetDir);
-                    }
-                    cache.release(sessionId, targetDir);
-                    if (Files.exists(Path.of(targetDir), LinkOption.NOFOLLOW_LINKS)) {
-                      throw new AssertionError("Expected targetDir symlink removed: " + targetDir);
-                    }
-                  }
-                  return null;
-                }));
+            executor.submit(() -> {
+              if (!startGate.await(5, SECONDS)) {
+                throw new AssertionError("Timed out waiting for startGate");
+              }
+              for (int i = 0; i < iterationsPerThread; i++) {
+                String sessionId = "stress_session_" + threadIdx + "_" + i;
+                String targetDir = DirUtil.getPublicGenDir() + "/" + sessionId + "/cts";
+                String zip = zips[(threadIdx + i) % zips.length];
+                cache.acquire(sessionId, zip, targetDir, "", dir -> "cts");
+                if (!Files.isSymbolicLink(Path.of(targetDir))) {
+                  throw new AssertionError("Expected targetDir symlink: " + targetDir);
+                }
+                cache.release(sessionId, targetDir);
+                if (Files.exists(Path.of(targetDir), LinkOption.NOFOLLOW_LINKS)) {
+                  throw new AssertionError("Expected targetDir symlink removed: " + targetDir);
+                }
+              }
+              return null;
+            }));
       }
       startGate.countDown();
       for (Future<?> future : futures) {

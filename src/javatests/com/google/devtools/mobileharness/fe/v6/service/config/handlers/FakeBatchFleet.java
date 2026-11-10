@@ -202,15 +202,14 @@ public final class FakeBatchFleet {
     DeviceList.Builder devices = DeviceList.newBuilder();
     labDevices.stream()
         .filter(entry -> requestedSet.contains(entry.deviceId()))
-        .forEach(
-            entry ->
-                devices.addDeviceInfo(
-                    DeviceInfo.newBuilder()
-                        .setDeviceLocator(
-                            DeviceLocator.newBuilder()
-                                .setId(entry.deviceId())
-                                .setLabLocator(
-                                    LabLocator.newBuilder().setHostName(entry.hostName())))));
+        .forEach(entry ->
+            devices.addDeviceInfo(
+                DeviceInfo.newBuilder()
+                    .setDeviceLocator(
+                        DeviceLocator.newBuilder()
+                            .setId(entry.deviceId())
+                            .setLabLocator(
+                                LabLocator.newBuilder().setHostName(entry.hostName())))));
     return immediateFuture(
         GetLabInfoResponse.newBuilder()
             .setLabQueryResult(

@@ -488,13 +488,12 @@ public final class AndroidUserUtilTest {
             startsWith(AndroidUserUtil.ADB_SHELL_PM_CREATE_USER),
             any(Duration.class),
             any(LineCallback.class)))
-        .thenAnswer(
-            invocation -> {
-              LineCallback callback = (LineCallback) invocation.getArguments()[3];
-              callback.onLine(output);
-              throw new MobileHarnessException(
-                  AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_ERROR, "Failed to execute command");
-            });
+        .thenAnswer(invocation -> {
+          LineCallback callback = (LineCallback) invocation.getArguments()[3];
+          callback.onLine(output);
+          throw new MobileHarnessException(
+              AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_ERROR, "Failed to execute command");
+        });
   }
 
   private void mockListUser(String... userIds) throws Exception {

@@ -89,12 +89,11 @@ public class SubDeviceInfoListFactory {
     // Convert dimensions
     subDeviceInfoBuilder.addAllDimensions(
         subDevice.getDeviceDimensionList().stream()
-            .map(
-                strPair ->
-                    DeviceDimension.newBuilder()
-                        .setName(strPair.getName())
-                        .setValue(strPair.getValue())
-                        .build())
+            .map(strPair ->
+                DeviceDimension.newBuilder()
+                    .setName(strPair.getName())
+                    .setValue(strPair.getValue())
+                    .build())
             .sorted(
                 Comparator.comparing(DeviceDimension::getName)
                     .thenComparing(DeviceDimension::getValue))
@@ -104,13 +103,12 @@ public class SubDeviceInfoListFactory {
     subDeviceInfoBuilder.addAllTypes(
         subDevice.getDeviceDimensionList().stream()
             .filter(strPair -> strPair.getName().equals(TestbedDeviceSpec.MH_DEVICE_TYPE_KEY))
-            .map(
-                strPair ->
-                    DeviceType.newBuilder()
-                        .setType(strPair.getValue())
-                        .setIsAbnormal(
-                            ABNORMAL_TYPE_KEYWORDS.stream().anyMatch(strPair.getValue()::contains))
-                        .build())
+            .map(strPair ->
+                DeviceType.newBuilder()
+                    .setType(strPair.getValue())
+                    .setIsAbnormal(
+                        ABNORMAL_TYPE_KEYWORDS.stream().anyMatch(strPair.getValue()::contains))
+                    .build())
             .collect(toImmutableList()));
 
     ImmutableMap<String, String> dimensionMap =

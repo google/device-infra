@@ -265,12 +265,11 @@ public final class SkipInformationHandler {
                 skipInfos.skipReason().context().subscriberObject().getClass().getSimpleName(),
                 skipInfos.skipReason().context().exception()),
             skipInfos.otherSkipReasons().stream()
-                .map(
-                    exception ->
-                        String.format(
-                            pattern,
-                            exception.context().subscriberObject().getClass().getSimpleName(),
-                            exception.context().exception()))
+                .map(exception ->
+                    String.format(
+                        pattern,
+                        exception.context().subscriberObject().getClass().getSimpleName(),
+                        exception.context().exception()))
                 .collect(toImmutableList()));
   }
 

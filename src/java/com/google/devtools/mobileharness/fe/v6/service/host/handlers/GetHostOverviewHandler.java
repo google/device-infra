@@ -235,25 +235,23 @@ public final class GetHostOverviewHandler {
 
     ImmutableMap<String, String> properties =
         labInfoOpt
-            .map(
-                labInfo ->
-                    labInfo.getLabServerFeature().getHostProperties().getHostPropertyList().stream()
-                        .sorted(Comparator.comparing(HostProperty::getKey))
-                        .collect(
-                            toImmutableMap(
-                                HostProperty::getKey, HostProperty::getValue, (v1, v2) -> v1)))
+            .map(labInfo ->
+                labInfo.getLabServerFeature().getHostProperties().getHostPropertyList().stream()
+                    .sorted(Comparator.comparing(HostProperty::getKey))
+                    .collect(
+                        toImmutableMap(
+                            HostProperty::getKey, HostProperty::getValue, (v1, v2) -> v1)))
             .orElse(ImmutableMap.of());
     builder.putAllProperties(properties);
 
-    labInfoOpt.ifPresent(
-        labInfo -> {
-          String ip = labInfo.getLabLocator().getIp();
-          // If the IP is not set, fallback to use the master detected IP.
-          if (ip.isEmpty() && labInfo.getLabLocator().hasMasterDetectedIp()) {
-            ip = labInfo.getLabLocator().getMasterDetectedIp();
-          }
-          builder.setIp(ip);
-        });
+    labInfoOpt.ifPresent(labInfo -> {
+      String ip = labInfo.getLabLocator().getIp();
+      // If the IP is not set, fallback to use the master detected IP.
+      if (ip.isEmpty() && labInfo.getLabLocator().hasMasterDetectedIp()) {
+        ip = labInfo.getLabLocator().getMasterDetectedIp();
+      }
+      builder.setIp(ip);
+    });
 
     builder.setOs(properties.getOrDefault("host_os", "Unknown")).setCanUpgrade(canUpgrade);
 

@@ -72,10 +72,9 @@ public interface FleetDataSource {
     return Futures.transform(
         Futures.allAsList(
             dimensionKeys.stream()
-                .map(
-                    key ->
-                        Futures.transform(
-                            pullDimension(key), raw -> Map.entry(key.id(), raw), directExecutor()))
+                .map(key ->
+                    Futures.transform(
+                        pullDimension(key), raw -> Map.entry(key.id(), raw), directExecutor()))
                 .collect(toImmutableList())),
         entries ->
             ImmutableMap.<String, DimensionOverlayRaw>builder().putAll(entries).buildKeepingLast(),

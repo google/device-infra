@@ -136,32 +136,29 @@ public final class ApkPreconditionCheckDecoratorTest {
             any(AndroidInstrumentationSetting.class),
             any(Duration.class),
             callbackCaptor.capture()))
-        .thenAnswer(
-            invocation -> {
-              Supplier<LineCallback> supplier = callbackCaptor.getValue();
-              LineCallback callback = supplier.get();
-              // Simulate some instrumentation output that AmInstrumentationParser expects
-              // We need to simulate a successful run.
-              // AmInstrumentationParser parses lines like:
-              // "INSTRUMENTATION_STATUS: class=com.android.preconditions.cts.SomeTest"
-              // "INSTRUMENTATION_STATUS: test=testMethod"
-              // "INSTRUMENTATION_STATUS_CODE: 1" (start)
-              // "INSTRUMENTATION_STATUS: class=com.android.preconditions.cts.SomeTest"
-              // "INSTRUMENTATION_STATUS: test=testMethod"
-              // "INSTRUMENTATION_STATUS_CODE: 0" (success)
-              // "INSTRUMENTATION_RESULT: stream="
-              // "INSTRUMENTATION_CODE: -1" (success)
-              callback.onLine(
-                  "INSTRUMENTATION_STATUS: class=com.android.preconditions.cts.SomeTest");
-              callback.onLine("INSTRUMENTATION_STATUS: test=testMethod");
-              callback.onLine("INSTRUMENTATION_STATUS_CODE: 1");
-              callback.onLine(
-                  "INSTRUMENTATION_STATUS: class=com.android.preconditions.cts.SomeTest");
-              callback.onLine("INSTRUMENTATION_STATUS: test=testMethod");
-              callback.onLine("INSTRUMENTATION_STATUS_CODE: 0");
-              callback.onLine("INSTRUMENTATION_CODE: -1");
-              return "instrumentation output";
-            });
+        .thenAnswer(invocation -> {
+          Supplier<LineCallback> supplier = callbackCaptor.getValue();
+          LineCallback callback = supplier.get();
+          // Simulate some instrumentation output that AmInstrumentationParser expects
+          // We need to simulate a successful run.
+          // AmInstrumentationParser parses lines like:
+          // "INSTRUMENTATION_STATUS: class=com.android.preconditions.cts.SomeTest"
+          // "INSTRUMENTATION_STATUS: test=testMethod"
+          // "INSTRUMENTATION_STATUS_CODE: 1" (start)
+          // "INSTRUMENTATION_STATUS: class=com.android.preconditions.cts.SomeTest"
+          // "INSTRUMENTATION_STATUS: test=testMethod"
+          // "INSTRUMENTATION_STATUS_CODE: 0" (success)
+          // "INSTRUMENTATION_RESULT: stream="
+          // "INSTRUMENTATION_CODE: -1" (success)
+          callback.onLine("INSTRUMENTATION_STATUS: class=com.android.preconditions.cts.SomeTest");
+          callback.onLine("INSTRUMENTATION_STATUS: test=testMethod");
+          callback.onLine("INSTRUMENTATION_STATUS_CODE: 1");
+          callback.onLine("INSTRUMENTATION_STATUS: class=com.android.preconditions.cts.SomeTest");
+          callback.onLine("INSTRUMENTATION_STATUS: test=testMethod");
+          callback.onLine("INSTRUMENTATION_STATUS_CODE: 0");
+          callback.onLine("INSTRUMENTATION_CODE: -1");
+          return "instrumentation output";
+        });
 
     decorator.setUp(SetupContext.create(testInfo));
 
@@ -252,13 +249,12 @@ public final class ApkPreconditionCheckDecoratorTest {
             any(AndroidInstrumentationSetting.class),
             any(Duration.class),
             callbackCaptor.capture()))
-        .thenAnswer(
-            invocation -> {
-              Supplier<LineCallback> supplier = callbackCaptor.getValue();
-              LineCallback callback = supplier.get();
-              callback.onLine("INSTRUMENTATION_CODE: -1");
-              return "instrumentation output";
-            });
+        .thenAnswer(invocation -> {
+          Supplier<LineCallback> supplier = callbackCaptor.getValue();
+          LineCallback callback = supplier.get();
+          callback.onLine("INSTRUMENTATION_CODE: -1");
+          return "instrumentation output";
+        });
 
     decorator.setUp(SetupContext.create(testInfo));
 
@@ -283,24 +279,20 @@ public final class ApkPreconditionCheckDecoratorTest {
             any(AndroidInstrumentationSetting.class),
             any(Duration.class),
             callbackCaptor.capture()))
-        .thenAnswer(
-            invocation -> {
-              Supplier<LineCallback> supplier = callbackCaptor.getValue();
-              LineCallback callback = supplier.get();
-              // Simulate a failed test.
-              callback.onLine(
-                  "INSTRUMENTATION_STATUS: class=com.android.preconditions.cts.SomeTest");
-              callback.onLine("INSTRUMENTATION_STATUS: test=testMethod");
-              callback.onLine("INSTRUMENTATION_STATUS_CODE: 1");
-              callback.onLine(
-                  "INSTRUMENTATION_STATUS: class=com.android.preconditions.cts.SomeTest");
-              callback.onLine("INSTRUMENTATION_STATUS: test=testMethod");
-              callback.onLine(
-                  "INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: expected...");
-              callback.onLine("INSTRUMENTATION_STATUS_CODE: -2"); // FAILURE
-              callback.onLine("INSTRUMENTATION_CODE: -1");
-              return "instrumentation output";
-            });
+        .thenAnswer(invocation -> {
+          Supplier<LineCallback> supplier = callbackCaptor.getValue();
+          LineCallback callback = supplier.get();
+          // Simulate a failed test.
+          callback.onLine("INSTRUMENTATION_STATUS: class=com.android.preconditions.cts.SomeTest");
+          callback.onLine("INSTRUMENTATION_STATUS: test=testMethod");
+          callback.onLine("INSTRUMENTATION_STATUS_CODE: 1");
+          callback.onLine("INSTRUMENTATION_STATUS: class=com.android.preconditions.cts.SomeTest");
+          callback.onLine("INSTRUMENTATION_STATUS: test=testMethod");
+          callback.onLine("INSTRUMENTATION_STATUS: stack=java.lang.AssertionError: expected...");
+          callback.onLine("INSTRUMENTATION_STATUS_CODE: -2"); // FAILURE
+          callback.onLine("INSTRUMENTATION_CODE: -1");
+          return "instrumentation output";
+        });
 
     MobileHarnessException exception =
         assertThrows(
@@ -328,17 +320,16 @@ public final class ApkPreconditionCheckDecoratorTest {
             any(AndroidInstrumentationSetting.class),
             any(Duration.class),
             callbackCaptor.capture()))
-        .thenAnswer(
-            invocation -> {
-              Supplier<LineCallback> supplier = callbackCaptor.getValue();
-              LineCallback callback = supplier.get();
-              // Simulate a crash (e.g. process crashed during run).
-              // AmInstrumentationParser detects crash if we don't get INSTRUMENTATION_CODE
-              // or if we get some error line.
-              callback.onLine("INSTRUMENTATION_RESULT: shortMsg=Process crashed.");
-              callback.onLine("INSTRUMENTATION_CODE: 0"); // usually 0 or non-zero for crash
-              return "instrumentation output";
-            });
+        .thenAnswer(invocation -> {
+          Supplier<LineCallback> supplier = callbackCaptor.getValue();
+          LineCallback callback = supplier.get();
+          // Simulate a crash (e.g. process crashed during run).
+          // AmInstrumentationParser detects crash if we don't get INSTRUMENTATION_CODE
+          // or if we get some error line.
+          callback.onLine("INSTRUMENTATION_RESULT: shortMsg=Process crashed.");
+          callback.onLine("INSTRUMENTATION_CODE: 0"); // usually 0 or non-zero for crash
+          return "instrumentation output";
+        });
 
     MobileHarnessException exception =
         assertThrows(

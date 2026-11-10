@@ -436,14 +436,12 @@ public abstract class XtsJobCreator {
     Set<String> includeFilters = subPlan.getIncludeFiltersMultimap().keySet();
     Set<String> excludeFilters = subPlan.getExcludeFiltersMultimap().keySet();
     return tfModules.stream()
-        .filter(
-            module ->
-                includeFilters.isEmpty()
-                    || includeFilters.stream()
-                        .anyMatch(includeFilter -> includeFilter.contains(module)))
-        .filter(
-            module ->
-                excludeFilters.stream().noneMatch(excludeFilter -> excludeFilter.contains(module)))
+        .filter(module ->
+            includeFilters.isEmpty()
+                || includeFilters.stream()
+                    .anyMatch(includeFilter -> includeFilter.contains(module)))
+        .filter(module ->
+            excludeFilters.stream().noneMatch(excludeFilter -> excludeFilter.contains(module)))
         .collect(joining(","));
   }
 
@@ -735,20 +733,16 @@ public abstract class XtsJobCreator {
         sessionRequestHandlerUtil
             .getSessionSubDeviceSpecList(sessionRequestInfo, /* forMultiDeviceJob= */ true)
             .stream()
-            .map(
-                spec ->
-                    spec.toBuilder()
-                        .setDecorators(
-                            spec.getDecorators().toBuilder()
-                                .addAllContent(
-                                    decorators.stream()
-                                        .map(
-                                            d ->
-                                                Driver.newBuilder()
-                                                    .setName(d.getDecoratorName())
-                                                    .build())
-                                        .collect(toImmutableList())))
-                        .build())
+            .map(spec ->
+                spec.toBuilder()
+                    .setDecorators(
+                        spec.getDecorators().toBuilder()
+                            .addAllContent(
+                                decorators.stream()
+                                    .map(d ->
+                                        Driver.newBuilder().setName(d.getDecoratorName()).build())
+                                    .collect(toImmutableList())))
+                    .build())
             .collect(toImmutableList());
 
     // Dynamic MCTS downloads large artifacts, requiring standard Tradefed timeouts.
@@ -808,14 +802,12 @@ public abstract class XtsJobCreator {
     jobInfo
         .subDeviceSpecs()
         .getAllSubDevices()
-        .forEach(
-            subDevice ->
-                decorators.stream()
-                    .filter(d -> d.getSpecName().isPresent() && d.getSpecJson().isPresent())
-                    .forEach(
-                        d -> {
-                          subDevice.scopedSpecs().add(d.getSpecName().get(), d.getSpecJson().get());
-                        }));
+        .forEach(subDevice ->
+            decorators.stream()
+                .filter(d -> d.getSpecName().isPresent() && d.getSpecJson().isPresent())
+                .forEach(d -> {
+                  subDevice.scopedSpecs().add(d.getSpecName().get(), d.getSpecJson().get());
+                }));
 
     jobInfo.properties().add(SessionHandlerHelper.XTS_MODULE_NAME_PROP, name);
     jobInfo.properties().add(Job.IS_XTS_NON_TF_JOB, "true");
@@ -858,10 +850,8 @@ public abstract class XtsJobCreator {
     try (JarFile jarFile = new JarFile(tradefedJar.toFile())) {
       Optional<JarEntry> entryOpt =
           jarFile.stream()
-              .filter(
-                  e ->
-                      e.getName().equals(configFileName)
-                          || e.getName().endsWith("/" + configFileName))
+              .filter(e ->
+                  e.getName().equals(configFileName) || e.getName().endsWith("/" + configFileName))
               .findFirst();
       if (entryOpt.isEmpty()) {
         logger.atWarning().log(

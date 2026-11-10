@@ -488,17 +488,15 @@ public class AndroidConnectivityUtil {
   public ImmutableList<String> getExternallyVisibleIpAddresses(String serial)
       throws MobileHarnessException, InterruptedException {
     return getNetworkLinkAddress(serial).stream()
-        .map(
-            address -> {
-              // Link address might be RFC 1519 CIDR IP address.
-              int slash = address.indexOf('/');
-              return InetAddresses.forString((slash < 0) ? address : address.substring(0, slash));
-            })
-        .filter(
-            address ->
-                !address.isLinkLocalAddress()
-                    && !address.isLoopbackAddress()
-                    && !address.isMulticastAddress())
+        .map(address -> {
+          // Link address might be RFC 1519 CIDR IP address.
+          int slash = address.indexOf('/');
+          return InetAddresses.forString((slash < 0) ? address : address.substring(0, slash));
+        })
+        .filter(address ->
+            !address.isLinkLocalAddress()
+                && !address.isLoopbackAddress()
+                && !address.isMulticastAddress())
         .map(InetAddress::getHostAddress)
         .collect(toImmutableList());
   }

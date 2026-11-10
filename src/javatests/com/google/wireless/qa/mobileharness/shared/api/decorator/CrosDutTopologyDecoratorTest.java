@@ -354,20 +354,19 @@ public class CrosDutTopologyDecoratorTest {
   private void mockCipdDownload() throws Exception {
     when(commandResult.stdout()).thenReturn("-c /tmp/mobly_config.yaml\n--param1 val1");
     when(commandExecutor.exec(any(Command.class)))
-        .thenAnswer(
-            invocation -> {
-              Command cmd = invocation.getArgument(0);
-              ImmutableList<String> cmdArgs = cmd.getCommand();
-              int rootIdx = cmdArgs.indexOf("-root");
-              if (rootIdx != -1 && rootIdx + 1 < cmdArgs.size()) {
-                Path rootPath = Path.of(cmdArgs.get(rootIdx + 1));
-                Path bin = rootPath.resolve("dt-converter");
-                if (!Files.exists(bin)) {
-                  Files.createFile(bin);
-                }
-              }
-              return commandResult;
-            });
+        .thenAnswer(invocation -> {
+          Command cmd = invocation.getArgument(0);
+          ImmutableList<String> cmdArgs = cmd.getCommand();
+          int rootIdx = cmdArgs.indexOf("-root");
+          if (rootIdx != -1 && rootIdx + 1 < cmdArgs.size()) {
+            Path rootPath = Path.of(cmdArgs.get(rootIdx + 1));
+            Path bin = rootPath.resolve("dt-converter");
+            if (!Files.exists(bin)) {
+              Files.createFile(bin);
+            }
+          }
+          return commandResult;
+        });
   }
 
   @Test

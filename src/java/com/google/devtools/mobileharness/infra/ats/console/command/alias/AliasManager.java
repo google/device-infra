@@ -116,23 +116,22 @@ public class AliasManager {
 
     Splitter.on('\n')
         .splitToStream(aliases)
-        .forEach(
-            alias -> {
-              Matcher matcher = ALIAS_DEFINITION_PATTERN.matcher(alias);
-              if (matcher.matches()) {
-                String aliasName = matcher.group(1).trim();
-                String aliasValue = matcher.group(2).trim();
-                addAlias(aliasName, aliasValue);
-                logger
-                    .atInfo()
-                    .with(IMPORTANCE, IMPORTANT)
-                    .log("Alias '%s' loaded, value: [%s].", aliasName, aliasValue);
-              } else {
-                logger
-                    .atWarning()
-                    .with(IMPORTANCE, IMPORTANT)
-                    .log("Invalid alias definition [%s] ignored.", alias);
-              }
-            });
+        .forEach(alias -> {
+          Matcher matcher = ALIAS_DEFINITION_PATTERN.matcher(alias);
+          if (matcher.matches()) {
+            String aliasName = matcher.group(1).trim();
+            String aliasValue = matcher.group(2).trim();
+            addAlias(aliasName, aliasValue);
+            logger
+                .atInfo()
+                .with(IMPORTANCE, IMPORTANT)
+                .log("Alias '%s' loaded, value: [%s].", aliasName, aliasValue);
+          } else {
+            logger
+                .atWarning()
+                .with(IMPORTANCE, IMPORTANT)
+                .log("Invalid alias definition [%s] ignored.", alias);
+          }
+        });
   }
 }

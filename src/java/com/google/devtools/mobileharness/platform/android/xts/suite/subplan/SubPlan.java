@@ -398,14 +398,13 @@ public class SubPlan extends AbstractXmlParser {
     ImmutableList<Entry<String, Set<String>>> listOfSetFilters =
         Multimaps.asMap(filtersMultimap).entrySet().stream()
             .sorted(comparingByKey()) // Sort by the module ID first
-            .map(
-                entry -> {
-                  Set<String> valueSet =
-                      sortFiltersByNaturalOrder
-                          ? entry.getValue().stream().sorted().collect(toImmutableSet())
-                          : entry.getValue();
-                  return new AbstractMap.SimpleEntry<>(entry.getKey(), valueSet);
-                })
+            .map(entry -> {
+              Set<String> valueSet =
+                  sortFiltersByNaturalOrder
+                      ? entry.getValue().stream().sorted().collect(toImmutableSet())
+                      : entry.getValue();
+              return new AbstractMap.SimpleEntry<>(entry.getKey(), valueSet);
+            })
             .collect(toImmutableList());
 
     for (Entry<String, Set<String>> entry : listOfSetFilters) {

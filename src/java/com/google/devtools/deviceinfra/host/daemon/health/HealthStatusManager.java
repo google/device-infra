@@ -106,44 +106,42 @@ public class HealthStatusManager {
     // Setting the drain timeout to the shorter one from request or value from flag.
     Duration drainTimeout = calculateTimeout(timeoutOpt);
     drainFuture =
-        threadPool.submit(
-            () -> {
-              try {
-                // First to notify all handler to drain.
-                notifyAllHandlersToDrain();
+        threadPool.submit(() -> {
+          try {
+            // First to notify all handler to drain.
+            notifyAllHandlersToDrain();
 
-                // Then start to check if drained or timeout.
-                Instant start = clock.instant();
-                while (!Thread.currentThread().isInterrupted()) {
-                  // First check if it is already timeout according to request or flag.
-                  if (drainTimeout.compareTo(Duration.between(start, clock.instant())) <= 0) {
-                    logger.atInfo().log("=============== Server Timeout to Drain ===============");
-                    forceCleanup();
-                    break;
-                  }
-
-                  sleeper.sleep(CHECK_INTERVAL);
-                  if (allHandlersHasDrained()) {
-                    logger.atInfo().log(
-                        "=============== Server Successfully Drained ===============");
-                    break;
-                  }
-
-                  if (anyHandlerHasExpired()) {
-                    logger.atInfo().log(
-                        "=============== Server Components Drain Timeout ===============");
-                    forceCleanup();
-                    break;
-                  }
-                }
-              } catch (InterruptedException | RuntimeException e) {
-                logger.atWarning().withCause(e).log(
-                    "Error waiting for drain finished (ignored): %s", e.getMessage());
-              } finally {
-                // Set the server status to DRAINED once we are exiting drain thread.
-                servingStatus.set(ServingStatus.DRAINED);
+            // Then start to check if drained or timeout.
+            Instant start = clock.instant();
+            while (!Thread.currentThread().isInterrupted()) {
+              // First check if it is already timeout according to request or flag.
+              if (drainTimeout.compareTo(Duration.between(start, clock.instant())) <= 0) {
+                logger.atInfo().log("=============== Server Timeout to Drain ===============");
+                forceCleanup();
+                break;
               }
-            });
+
+              sleeper.sleep(CHECK_INTERVAL);
+              if (allHandlersHasDrained()) {
+                logger.atInfo().log("=============== Server Successfully Drained ===============");
+                break;
+              }
+
+              if (anyHandlerHasExpired()) {
+                logger.atInfo().log(
+                    "=============== Server Components Drain Timeout ===============");
+                forceCleanup();
+                break;
+              }
+            }
+          } catch (InterruptedException | RuntimeException e) {
+            logger.atWarning().withCause(e).log(
+                "Error waiting for drain finished (ignored): %s", e.getMessage());
+          } finally {
+            // Set the server status to DRAINED once we are exiting drain thread.
+            servingStatus.set(ServingStatus.DRAINED);
+          }
+        });
   }
 
   @Nullable

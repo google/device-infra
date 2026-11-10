@@ -194,14 +194,13 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
     jobScheduleUnit.subDeviceSpecs().getSubDevice(0).dimensions().addAll(primaryDeviceDimensions);
     deviceRequirements.getDeviceRequirementList().stream()
         .skip(1L)
-        .forEach(
-            secondaryDeviceRequirement ->
-                jobScheduleUnit
-                    .subDeviceSpecs()
-                    .addSubDevice(
-                        secondaryDeviceRequirement.getDeviceType(),
-                        secondaryDeviceRequirement.getDimensionsMap(),
-                        secondaryDeviceRequirement.getDecoratorList()));
+        .forEach(secondaryDeviceRequirement ->
+            jobScheduleUnit
+                .subDeviceSpecs()
+                .addSubDevice(
+                    secondaryDeviceRequirement.getDeviceType(),
+                    secondaryDeviceRequirement.getDimensionsMap(),
+                    secondaryDeviceRequirement.getDecoratorList()));
     jobScheduleUnit
         .subDeviceSpecs()
         .addSharedDimensionNames(deviceRequirements.getSharedDimensionList());
@@ -209,11 +208,10 @@ class JobSyncService extends JobSyncServiceGrpc.JobSyncServiceImplBase {
     // Creates TestScheduleUnit.
     ImmutableList<TestScheduleUnit> testScheduleUnits =
         request.getTestList().stream()
-            .map(
-                testIdName ->
-                    new TestScheduleUnit(
-                        new TestLocator(testIdName.getId(), testIdName.getName(), jobLocator),
-                        masterTiming))
+            .map(testIdName ->
+                new TestScheduleUnit(
+                    new TestLocator(testIdName.getId(), testIdName.getName(), jobLocator),
+                    masterTiming))
             .collect(toImmutableList());
 
     // Adds job and tests to scheduler if they don't exist.

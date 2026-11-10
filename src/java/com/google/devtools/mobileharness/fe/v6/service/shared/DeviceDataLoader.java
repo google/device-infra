@@ -240,10 +240,9 @@ public class DeviceDataLoader {
                 .getDeviceInfoList()
                 .stream()
                 .findFirst()
-                .orElseThrow(
-                    () ->
-                        new RuntimeException(
-                            "Device not found: " + deviceId + " in universe: " + universe)),
+                .orElseThrow(() ->
+                    new RuntimeException(
+                        "Device not found: " + deviceId + " in universe: " + universe)),
         executor);
   }
 

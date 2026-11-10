@@ -119,27 +119,23 @@ public class Allocation implements Cloneable {
                 allocationProto.getTestLocator()));
     this.devices =
         allocationProto.getDeviceLocatorList().stream()
-            .map(
-                deviceLocator ->
-                    new DeviceLocator(
-                        com.google.devtools.mobileharness.api.model.lab.DeviceLocator.of(
-                            deviceLocator)))
+            .map(deviceLocator ->
+                new DeviceLocator(
+                    com.google.devtools.mobileharness.api.model.lab.DeviceLocator.of(
+                        deviceLocator)))
             .collect(toImmutableList());
     ImmutableList.Builder<Multimap<String, String>> dimensionsListBuilder =
         new ImmutableList.Builder<>();
     allocationProto
         .getDimensionMultiMapList()
-        .forEach(
-            dimensionMultiMapProto -> {
-              SetMultimap<String, String> dimensionMultiMap = HashMultimap.create();
-              dimensionMultiMapProto
-                  .getDimensionEntryList()
-                  .forEach(
-                      dimensionEntry ->
-                          dimensionMultiMap.putAll(
-                              dimensionEntry.getKey(), dimensionEntry.getValueList()));
-              dimensionsListBuilder.add(ImmutableSetMultimap.copyOf(dimensionMultiMap));
-            });
+        .forEach(dimensionMultiMapProto -> {
+          SetMultimap<String, String> dimensionMultiMap = HashMultimap.create();
+          dimensionMultiMapProto
+              .getDimensionEntryList()
+              .forEach(dimensionEntry ->
+                  dimensionMultiMap.putAll(dimensionEntry.getKey(), dimensionEntry.getValueList()));
+          dimensionsListBuilder.add(ImmutableSetMultimap.copyOf(dimensionMultiMap));
+        });
     this.dimensionsList = dimensionsListBuilder.build();
     this.deviceFeatures = ImmutableList.of();
   }

@@ -112,16 +112,13 @@ public class CommandHistoryRenderer {
         "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s",
         commandSequenceNumber,
         commandStarted
-            .map(
-                started ->
-                    Long.toString(
-                        started.getCommandStartedEvent().getInvocationInfo().getThreadId()))
+            .map(started ->
+                Long.toString(started.getCommandStartedEvent().getInvocationInfo().getThreadId()))
             .orElse("na"),
         commandStarted
             .filter(started -> started.getCommandStartedEvent().hasStartSuccess())
-            .map(
-                started ->
-                    Long.toString(started.getCommandStartedEvent().getStartSuccess().getPid()))
+            .map(started ->
+                Long.toString(started.getCommandStartedEvent().getStartSuccess().getPid()))
             .orElse("na"),
         startTime.map(CommandHistoryRenderer::formatTime).orElse("na"),
         endTime.map(CommandHistoryRenderer::formatTime).orElse("na"),
@@ -130,12 +127,11 @@ public class CommandHistoryRenderer {
             .map(ended -> Integer.toString(ended.getCommandEndedEvent().getExitCode()))
             .orElse("na"),
         commandStarted
-            .map(
-                started ->
-                    formatCommand(
-                        started.getCommandStartedEvent().getCommandList(),
-                        commandShorteners,
-                        commandShorteningHistory))
+            .map(started ->
+                formatCommand(
+                    started.getCommandStartedEvent().getCommandList(),
+                    commandShorteners,
+                    commandShorteningHistory))
             .orElse("na"));
   }
 
@@ -150,10 +146,8 @@ public class CommandHistoryRenderer {
       Set<CommandShorteningNote> commandShorteningHistory) {
     // Applies each command shortener to each command argument.
     return command.stream()
-        .map(
-            commandArgument ->
-                shortenCommandArgument(
-                    commandArgument, commandShorteners, commandShorteningHistory))
+        .map(commandArgument ->
+            shortenCommandArgument(commandArgument, commandShorteners, commandShorteningHistory))
         .collect(joining(" "));
   }
 
@@ -177,11 +171,9 @@ public class CommandHistoryRenderer {
     return commandShorteningHistory.stream()
         .sorted(
             comparing(CommandShorteningNote::toPart).thenComparing(CommandShorteningNote::fromPart))
-        .map(
-            commandShorteningResult ->
-                String.format(
-                    "# %s=%s",
-                    commandShorteningResult.toPart(), commandShorteningResult.fromPart()))
+        .map(commandShorteningResult ->
+            String.format(
+                "# %s=%s", commandShorteningResult.toPart(), commandShorteningResult.fromPart()))
         .collect(joining("\n", "# notes:\n", "\n\n"));
   }
 }

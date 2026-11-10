@@ -246,9 +246,8 @@ public class Findings {
   /** Returns the findings with the given error ID. */
   public List<Finding> get(ErrorId errorId) {
     return findings.stream()
-        .filter(
-            finding ->
-                ErrorIdComparator.equal(finding.getDetail().getSummary().getErrorId(), errorId))
+        .filter(finding ->
+            ErrorIdComparator.equal(finding.getDetail().getSummary().getErrorId(), errorId))
         .collect(toImmutableList());
   }
 

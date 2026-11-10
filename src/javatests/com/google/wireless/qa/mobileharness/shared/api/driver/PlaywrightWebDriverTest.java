@@ -161,11 +161,10 @@ public class PlaywrightWebDriverTest {
 
     // Setup command execution to write output XML file
     when(cmdExecutor.run(any(Command.class)))
-        .thenAnswer(
-            invocation -> {
-              writeDummyJUnitXml(genFileDir, "company.spec.ts", "basic test", /* failed= */ false);
-              return "Playwright logs";
-            });
+        .thenAnswer(invocation -> {
+          writeDummyJUnitXml(genFileDir, "company.spec.ts", "basic test", /* failed= */ false);
+          return "Playwright logs";
+        });
 
     driver.run(testInfo);
 
@@ -232,11 +231,10 @@ public class PlaywrightWebDriverTest {
     // Setup CommandExecutor to throw CommandException, but write a failed XML file
     CommandException commandException = Mockito.mock(CommandException.class);
     when(cmdExecutor.run(any(Command.class)))
-        .thenAnswer(
-            invocation -> {
-              writeDummyJUnitXml(genFileDir, "company.spec.ts", "failed test", /* failed= */ true);
-              throw commandException;
-            });
+        .thenAnswer(invocation -> {
+          writeDummyJUnitXml(genFileDir, "company.spec.ts", "failed test", /* failed= */ true);
+          throw commandException;
+        });
 
     driver.run(testInfo);
 
@@ -268,12 +266,10 @@ public class PlaywrightWebDriverTest {
     // Setup CommandExecutor to throw InterruptedException, but write a partial XML file before
     // exiting
     when(cmdExecutor.run(any(Command.class)))
-        .thenAnswer(
-            invocation -> {
-              writeDummyJUnitXml(
-                  genFileDir, "company.spec.ts", "partial test", /* failed= */ false);
-              throw new InterruptedException("Thread interrupted!");
-            });
+        .thenAnswer(invocation -> {
+          writeDummyJUnitXml(genFileDir, "company.spec.ts", "partial test", /* failed= */ false);
+          throw new InterruptedException("Thread interrupted!");
+        });
 
     assertThrows(InterruptedException.class, () -> driver.run(testInfo));
 
@@ -381,15 +377,12 @@ public class PlaywrightWebDriverTest {
 
     // Setup command execution to write corrupted XML output
     when(cmdExecutor.run(any(Command.class)))
-        .thenAnswer(
-            invocation -> {
-              Path resultsPath =
-                  Path.of(genFileDir.getAbsolutePath(), "test-results", "results.xml");
-              java.nio.file.Files.createDirectories(resultsPath.getParent());
-              java.nio.file.Files.writeString(
-                  resultsPath, "<corrupt-invalid-xml-without-closing-tags");
-              return "Playwright logs";
-            });
+        .thenAnswer(invocation -> {
+          Path resultsPath = Path.of(genFileDir.getAbsolutePath(), "test-results", "results.xml");
+          java.nio.file.Files.createDirectories(resultsPath.getParent());
+          java.nio.file.Files.writeString(resultsPath, "<corrupt-invalid-xml-without-closing-tags");
+          return "Playwright logs";
+        });
 
     Mockito.doThrow(
             new MobileHarnessException(BasicErrorId.SPONGE_PARSE_XML_ERROR, "Failed to parse XML"))

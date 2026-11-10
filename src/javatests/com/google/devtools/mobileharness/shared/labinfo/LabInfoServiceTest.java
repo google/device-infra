@@ -208,10 +208,8 @@ public class LabInfoServiceTest {
     when(labInfoProvider.getLabInfos(any(Filter.class))).thenReturn(labView);
     when(labInfoProvider.getLabInfos(
             any(Filter.class), any(CompiledLabInfoMask.class), any(CompiledDeviceInfoMask.class)))
-        .thenAnswer(
-            invocation ->
-                MaskUtils.trimLabView(
-                    labView, invocation.getArgument(1), invocation.getArgument(2)));
+        .thenAnswer(invocation ->
+            MaskUtils.trimLabView(labView, invocation.getArgument(1), invocation.getArgument(2)));
   }
 
   @Test

@@ -131,9 +131,8 @@ public class CompositeDeviceQuerier implements DeviceQuerier {
 
   private DeviceQueryResult mergeDeviceQueryResults(List<DeviceQueryResult> deviceQueryResults) {
     DeviceQueryResult.Builder mergedDeviceQueryResult = DeviceQueryResult.newBuilder();
-    deviceQueryResults.forEach(
-        deviceQueryResult ->
-            mergedDeviceQueryResult.addAllDeviceInfo(deviceQueryResult.getDeviceInfoList()));
+    deviceQueryResults.forEach(deviceQueryResult ->
+        mergedDeviceQueryResult.addAllDeviceInfo(deviceQueryResult.getDeviceInfoList()));
     return mergedDeviceQueryResult.build();
   }
 }

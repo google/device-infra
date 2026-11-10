@@ -90,9 +90,8 @@ public final class BatchGetDeviceDimensionConfigsHandler {
         evaluations -> {
           ImmutableList<DeviceDimensionConfigEntry> entries =
               evaluations.stream()
-                  .map(
-                      evaluation ->
-                          buildEntry(evaluation, dimensionName, dimensionList, targetCanon))
+                  .map(evaluation ->
+                      buildEntry(evaluation, dimensionName, dimensionList, targetCanon))
                   .collect(toImmutableList());
           return BatchGetDeviceDimensionConfigsResponse.newBuilder().addAllEntries(entries).build();
         },

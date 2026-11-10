@@ -211,10 +211,9 @@ public final class DeviceConditionUtil {
     if (types.contains(CLOUD_TF_AVD_DEVICE_TYPE)
         || types.contains(ANDROID_LOCAL_EMULATOR_TYPE)
         || getDeviceDimension(deviceDao, Name.DEVICE_CLASS_NAME.lowerCaseName())
-            .filter(
-                deviceClassName ->
-                    deviceClassName.equals(CLOUD_TF_AVD_DEVICE_TYPE)
-                        || deviceClassName.equals(ANDROID_LOCAL_EMULATOR_TYPE))
+            .filter(deviceClassName ->
+                deviceClassName.equals(CLOUD_TF_AVD_DEVICE_TYPE)
+                    || deviceClassName.equals(ANDROID_LOCAL_EMULATOR_TYPE))
             .isPresent()) {
       return timestamp
           .plus(Flags.ephemeralRemovalThreshold.get())

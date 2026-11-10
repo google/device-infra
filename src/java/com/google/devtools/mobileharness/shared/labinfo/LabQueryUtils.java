@@ -489,18 +489,15 @@ public class LabQueryUtils {
                                 DeviceGroupKey.newBuilder()
                                     .setHasDimensionValue(
                                         dimensionValue
-                                            .map(
-                                                value ->
-                                                    HasDimensionValue.newBuilder()
-                                                        .setDimensionName(dimensionName)
-                                                        .setDimensionValue(value))
-                                            .orElseGet(
-                                                () ->
-                                                    HasDimensionValue.newBuilder()
-                                                        .setDimensionName(dimensionName)
-                                                        .setNoDimensionValue(
-                                                            NoDimensionValue
-                                                                .getDefaultInstance()))))));
+                                            .map(value ->
+                                                HasDimensionValue.newBuilder()
+                                                    .setDimensionName(dimensionName)
+                                                    .setDimensionValue(value))
+                                            .orElseGet(() ->
+                                                HasDimensionValue.newBuilder()
+                                                    .setDimensionName(dimensionName)
+                                                    .setNoDimensionValue(
+                                                        NoDimensionValue.getDefaultInstance()))))));
     int deviceGroupTotalCount = allDeviceGroupsByDimensionValue.size();
 
     // Handles group limit.
@@ -526,20 +523,18 @@ public class LabQueryUtils {
 
       Stream.concat(
               dimensionValues.stream()
-                  .flatMap(
-                      dimensionValue ->
-                          Stream.ofNullable(
-                              deviceGroupsByDimensionValue.get(Optional.of(dimensionValue)))),
+                  .flatMap(dimensionValue ->
+                      Stream.ofNullable(
+                          deviceGroupsByDimensionValue.get(Optional.of(dimensionValue)))),
               // If the device doesn't have the dimension, adds it to the "no dimension" group.
               dimensionValues.isEmpty()
                   ? Stream.ofNullable(deviceGroupsByDimensionValue.get(Optional.<String>empty()))
                   : Stream.empty())
-          .forEach(
-              deviceGroupBuilder ->
-                  deviceGroupBuilder
-                      .getGroupedDevicesBuilder()
-                      .getDeviceListBuilder()
-                      .addDeviceInfo(deviceInfo));
+          .forEach(deviceGroupBuilder ->
+              deviceGroupBuilder
+                  .getGroupedDevicesBuilder()
+                  .getDeviceListBuilder()
+                  .addDeviceInfo(deviceInfo));
     }
 
     // Sets device total count.

@@ -357,12 +357,11 @@ class GCSUtil {
               GoogleNetHttpTransport.newTrustedTransport(),
               GsonFactory.getDefaultInstance(),
               credential)
-          .setHttpRequestInitializer(
-              request -> {
-                credential.initialize(request);
-                request.setConnectTimeout((int) HTTP_CONNECT_TIMEOUT.toMillis());
-                request.setReadTimeout((int) HTTP_READ_TIMEOUT.toMillis());
-              })
+          .setHttpRequestInitializer(request -> {
+            credential.initialize(request);
+            request.setConnectTimeout((int) HTTP_CONNECT_TIMEOUT.toMillis());
+            request.setReadTimeout((int) HTTP_READ_TIMEOUT.toMillis());
+          })
           .setApplicationName(project)
           .build();
     } catch (GeneralSecurityException e) {

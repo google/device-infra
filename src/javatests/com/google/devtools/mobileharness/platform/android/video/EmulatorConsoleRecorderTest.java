@@ -65,12 +65,11 @@ public final class EmulatorConsoleRecorderTest {
   public void setUp() {
     when(executorService.scheduleAtFixedRate(
             any(Runnable.class), anyLong(), anyLong(), any(TimeUnit.class)))
-        .thenAnswer(
-            invocation -> {
-              Runnable runnable = invocation.getArgument(0);
-              runnable.run();
-              return new FakeScheduledFuture<>();
-            });
+        .thenAnswer(invocation -> {
+          Runnable runnable = invocation.getArgument(0);
+          runnable.run();
+          return new FakeScheduledFuture<>();
+        });
     recorder = new EmulatorConsoleRecorder(adb, sleeper, executorService);
   }
 

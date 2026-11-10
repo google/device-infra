@@ -350,12 +350,11 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
         .properties()
         .getOptional(PropertyName.Job.SESSION_ID)
         .filter(id -> !id.isEmpty())
-        .orElseThrow(
-            () ->
-                new MobileHarnessException(
-                    AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_PROPERTY_NOT_FOUND,
-                    String.format(
-                        "Job property %s is not set or empty.", PropertyName.Job.SESSION_ID)));
+        .orElseThrow(() ->
+            new MobileHarnessException(
+                AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_PROPERTY_NOT_FOUND,
+                String.format(
+                    "Job property %s is not set or empty.", PropertyName.Job.SESSION_ID)));
   }
 
   @Subscribe
@@ -452,33 +451,31 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
               dynamicDownloadRootDir.toString(), dir -> dir.getName().startsWith("ats_session_"));
       Instant now = Instant.now();
       Arrays.stream(sessionDirs)
-          .filter(
-              sessionDir -> {
-                try {
-                  return fileUtil
-                      .getFileLastModifiedTime(sessionDir.toPath())
-                      .plus(STALE_SESSION_DIR_EXPIRATION_TIME)
-                      .isBefore(now);
-                } catch (MobileHarnessException e) {
-                  logger.atWarning().withCause(e).log(
-                      "Failed to get last modified time for MCTS dynamic download session dir: %s",
-                      sessionDir.getAbsolutePath());
-                  return false;
-                }
-              })
-          .forEach(
-              sessionDir -> {
-                try {
-                  logger.atInfo().log(
-                      "Cleaning up stale MCTS dynamic download session dir: %s",
-                      sessionDir.getAbsolutePath());
-                  fileUtil.removeFileOrDir(sessionDir.toPath());
-                } catch (MobileHarnessException | InterruptedException e) {
-                  logger.atWarning().withCause(e).log(
-                      "Failed to clean up stale MCTS dynamic download session dir: %s",
-                      sessionDir.getAbsolutePath());
-                }
-              });
+          .filter(sessionDir -> {
+            try {
+              return fileUtil
+                  .getFileLastModifiedTime(sessionDir.toPath())
+                  .plus(STALE_SESSION_DIR_EXPIRATION_TIME)
+                  .isBefore(now);
+            } catch (MobileHarnessException e) {
+              logger.atWarning().withCause(e).log(
+                  "Failed to get last modified time for MCTS dynamic download session dir: %s",
+                  sessionDir.getAbsolutePath());
+              return false;
+            }
+          })
+          .forEach(sessionDir -> {
+            try {
+              logger.atInfo().log(
+                  "Cleaning up stale MCTS dynamic download session dir: %s",
+                  sessionDir.getAbsolutePath());
+              fileUtil.removeFileOrDir(sessionDir.toPath());
+            } catch (MobileHarnessException | InterruptedException e) {
+              logger.atWarning().withCause(e).log(
+                  "Failed to clean up stale MCTS dynamic download session dir: %s",
+                  sessionDir.getAbsolutePath());
+            }
+          });
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log(
           "Failed to list MCTS dynamic download root dir: %s", dynamicDownloadRootDir);
@@ -496,11 +493,10 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
         .map(DeviceLocator::getSerial)
         .filter(onlineDeviceSerials::contains)
         .findFirst()
-        .orElseThrow(
-            () ->
-                new MobileHarnessException(
-                    AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE,
-                    "No online device found for the current job."));
+        .orElseThrow(() ->
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE,
+                "No online device found for the current job."));
   }
 
   private ImmutableSet<String> getPreloadedMainlineModules(String deviceId)

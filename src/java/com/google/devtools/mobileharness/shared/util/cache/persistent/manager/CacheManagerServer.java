@@ -110,20 +110,19 @@ public final class CacheManagerServer {
     // Add a shutdown hook to gracefully stop the server
     Runtime.getRuntime()
         .addShutdownHook(
-            new Thread(
-                () -> {
-                  logger.atInfo().log("Shutdown hook activated. Stopping CacheManagerServer...");
-                  server.stop();
-                  evictorExecutor.shutdownNow();
-                  try {
-                    if (!evictorExecutor.awaitTermination(5, SECONDS)) {
-                      logger.atWarning().log("Evictor executor did not terminate in time.");
-                    }
-                  } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                  }
-                  logger.atInfo().log("CacheManagerServer stopped.");
-                }));
+            new Thread(() -> {
+              logger.atInfo().log("Shutdown hook activated. Stopping CacheManagerServer...");
+              server.stop();
+              evictorExecutor.shutdownNow();
+              try {
+                if (!evictorExecutor.awaitTermination(5, SECONDS)) {
+                  logger.atWarning().log("Evictor executor did not terminate in time.");
+                }
+              } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+              }
+              logger.atInfo().log("CacheManagerServer stopped.");
+            }));
 
     // Start the server and wait for other threads to terminate.
     server.start();

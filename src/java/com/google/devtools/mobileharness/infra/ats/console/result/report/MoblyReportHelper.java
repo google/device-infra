@@ -210,17 +210,16 @@ public class MoblyReportHelper {
         .trimResults()
         .omitEmptyStrings()
         .splitToStream(allProps)
-        .forEach(
-            line -> {
-              Matcher matcher = PROP_NAME_TO_VALUE_PATTERN.matcher(line);
-              if (matcher.find()) {
-                String propName = matcher.group("propname");
-                String propValue = matcher.group("propvalue");
-                if (targetProps.contains(propName)) {
-                  propNameToValueMap.put(propName, propValue);
-                }
-              }
-            });
+        .forEach(line -> {
+          Matcher matcher = PROP_NAME_TO_VALUE_PATTERN.matcher(line);
+          if (matcher.find()) {
+            String propName = matcher.group("propname");
+            String propValue = matcher.group("propvalue");
+            if (targetProps.contains(propName)) {
+              propNameToValueMap.put(propName, propValue);
+            }
+          }
+        });
 
     ImmutableMap.Builder<String, String> buildAttributesMap = ImmutableMap.builder();
     for (DeviceBuildInfo deviceBuildInfo : DeviceBuildInfo.values()) {

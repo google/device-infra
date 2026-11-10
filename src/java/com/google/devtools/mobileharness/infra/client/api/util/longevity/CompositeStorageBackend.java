@@ -48,14 +48,13 @@ class CompositeStorageBackend implements StorageBackend {
   @Override
   public void write(String key, String content) throws MobileHarnessException {
     findBackend(key)
-        .orElseThrow(
-            () ->
-                new MobileHarnessException(
-                    InfraErrorId.CLIENT_LONGEVITY_STORAGE_BACKEND_NOT_FOUND,
-                    String.format(
-                        "Failed to save content because longevity storage backend for key [%s] is"
-                            + " not found, content=[%s]",
-                        key, content)))
+        .orElseThrow(() ->
+            new MobileHarnessException(
+                InfraErrorId.CLIENT_LONGEVITY_STORAGE_BACKEND_NOT_FOUND,
+                String.format(
+                    "Failed to save content because longevity storage backend for key [%s] is"
+                        + " not found, content=[%s]",
+                    key, content)))
         .write(key, content);
   }
 

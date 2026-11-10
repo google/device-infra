@@ -109,27 +109,26 @@ public class LogManagerTest {
 
     verify(logRecordsConsumer, timeout(Duration.ofSeconds(2L).toMillis()))
         .consumeLogRecords(
-            argThat(
-                logRecords -> {
-                  try {
-                    assertThat(logRecords)
-                        .withPartialScope(IGNORING_FORMATTED_LOG_RECORD)
-                        .isEqualTo(
-                            LogRecords.newBuilder()
-                                .addLogRecord(
-                                    LogProto.LogRecord.newBuilder()
-                                        .setSourceType(SourceType.SELF)
-                                        .setClientId("fake_client_id")
-                                        .setImportance(Importance.NORMAL.value()))
-                                .build());
-                    return logRecords
-                        .getLogRecord(0)
-                        .getFormattedLogRecord()
-                        .contains("Foo {test_id=fake_test_id, olc_client_id=fake_client_id}");
-                  } catch (RuntimeException | Error e) {
-                    return false;
-                  }
-                }));
+            argThat(logRecords -> {
+              try {
+                assertThat(logRecords)
+                    .withPartialScope(IGNORING_FORMATTED_LOG_RECORD)
+                    .isEqualTo(
+                        LogRecords.newBuilder()
+                            .addLogRecord(
+                                LogProto.LogRecord.newBuilder()
+                                    .setSourceType(SourceType.SELF)
+                                    .setClientId("fake_client_id")
+                                    .setImportance(Importance.NORMAL.value()))
+                            .build());
+                return logRecords
+                    .getLogRecord(0)
+                    .getFormattedLogRecord()
+                    .contains("Foo {test_id=fake_test_id, olc_client_id=fake_client_id}");
+              } catch (RuntimeException | Error e) {
+                return false;
+              }
+            }));
 
     try (LogImportanceScope ignored =
         new LogImportanceScope(Importance.IMPORTANT, record -> true)) {
@@ -138,22 +137,21 @@ public class LogManagerTest {
 
     verify(logRecordsConsumer, timeout(Duration.ofSeconds(2L).toMillis()))
         .consumeLogRecords(
-            argThat(
-                logRecords -> {
-                  try {
-                    assertThat(logRecords)
-                        .withPartialScope(IGNORING_FORMATTED_LOG_RECORD)
-                        .isEqualTo(
-                            LogRecords.newBuilder()
-                                .addLogRecord(
-                                    LogProto.LogRecord.newBuilder()
-                                        .setSourceType(SourceType.SELF)
-                                        .setImportance(Importance.IMPORTANT.value()))
-                                .build());
-                    return logRecords.getLogRecord(0).getFormattedLogRecord().contains("Goo");
-                  } catch (RuntimeException | Error e) {
-                    return false;
-                  }
-                }));
+            argThat(logRecords -> {
+              try {
+                assertThat(logRecords)
+                    .withPartialScope(IGNORING_FORMATTED_LOG_RECORD)
+                    .isEqualTo(
+                        LogRecords.newBuilder()
+                            .addLogRecord(
+                                LogProto.LogRecord.newBuilder()
+                                    .setSourceType(SourceType.SELF)
+                                    .setImportance(Importance.IMPORTANT.value()))
+                            .build());
+                return logRecords.getLogRecord(0).getFormattedLogRecord().contains("Goo");
+              } catch (RuntimeException | Error e) {
+                return false;
+              }
+            }));
   }
 }

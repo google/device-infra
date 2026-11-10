@@ -86,11 +86,10 @@ public class AtsLocalRunnerIntegrationTest {
                                 "-DDEVICE_INFRA_SERVICE_FLAGS=%s",
                                 Joiner.on(" ").join(deviceInfraServiceFlags)))))
             .onStdout(
-                does(
-                    stdout -> {
-                      System.out.printf("server_stdout %s\n", stdout);
-                      stdoutBuilder.append(stdout);
-                    }))
+                does(stdout -> {
+                  System.out.printf("server_stdout %s\n", stdout);
+                  stdoutBuilder.append(stdout);
+                }))
             .onStderr(does(stderr -> System.err.printf("server_stderr %s\n", stderr)))
             .redirectStderr(false)
             .showFullResultInException(true);

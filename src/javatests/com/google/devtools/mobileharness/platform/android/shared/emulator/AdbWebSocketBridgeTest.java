@@ -154,17 +154,15 @@ public class AdbWebSocketBridgeTest {
 
     // Trigger connection
     Thread connectThread =
-        new Thread(
-            () -> {
-              try (Socket clientSocket =
-                  new Socket(InetAddress.getByName("127.0.0.1"), bridgePort)) {
-                Thread.sleep(10000);
-              } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-              } catch (Exception ignored) {
-                // Exception ignored intentionally
-              }
-            });
+        new Thread(() -> {
+          try (Socket clientSocket = new Socket(InetAddress.getByName("127.0.0.1"), bridgePort)) {
+            Thread.sleep(10000);
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          } catch (Exception ignored) {
+            // Exception ignored intentionally
+          }
+        });
     connectThread.start();
 
     // Wait a moment for retry loop to begin

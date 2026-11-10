@@ -245,17 +245,14 @@ public class FlakyTestRetryStrategy implements RetryStrategy {
       TestInfo currentTestInfo, int currentFlakyAttemptsIndex) {
     return (int)
         currentTestInfo.jobInfo().tests().getByName(currentTestInfo.locator().getName()).stream()
-            .filter(
-                testInfo ->
-                    TEST_RESULTS_OF_ERROR_ATTEMPTS.contains(
-                        testInfo.resultWithCause().get().type()))
-            .filter(
-                testInfo ->
-                    testInfo
-                            .properties()
-                            .getInt(FlakyTestRetryConstants.TEST_PROP_FLAKY_ATTEMPT_INDEX)
-                            .orElse(-1)
-                        == currentFlakyAttemptsIndex)
+            .filter(testInfo ->
+                TEST_RESULTS_OF_ERROR_ATTEMPTS.contains(testInfo.resultWithCause().get().type()))
+            .filter(testInfo ->
+                testInfo
+                        .properties()
+                        .getInt(FlakyTestRetryConstants.TEST_PROP_FLAKY_ATTEMPT_INDEX)
+                        .orElse(-1)
+                    == currentFlakyAttemptsIndex)
             .count();
   }
 }

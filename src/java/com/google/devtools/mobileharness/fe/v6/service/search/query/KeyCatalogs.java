@@ -132,18 +132,16 @@ final class KeyCatalogs {
       deviceCounts = indexedCounts;
     } else {
       Map<String, Integer> merged = new HashMap<>(indexedCounts);
-      catalogCounts.forEach(
-          (name, count) ->
-              corpus
-                  .deviceKeyRegistry()
-                  .dimensionKey(name)
-                  .ifPresent(
-                      desc -> {
-                        catalogDimensions.add(desc);
-                        if (count > 0) {
-                          merged.putIfAbsent(desc.id(), count);
-                        }
-                      }));
+      catalogCounts.forEach((name, count) ->
+          corpus
+              .deviceKeyRegistry()
+              .dimensionKey(name)
+              .ifPresent(desc -> {
+                catalogDimensions.add(desc);
+                if (count > 0) {
+                  merged.putIfAbsent(desc.id(), count);
+                }
+              }));
       deviceCounts = ImmutableMap.copyOf(merged);
     }
 

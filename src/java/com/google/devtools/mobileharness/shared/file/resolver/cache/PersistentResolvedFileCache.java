@@ -72,7 +72,7 @@ public class PersistentResolvedFileCache {
     Optional<CacheResult> cachedResult =
         persistentCache.get(cacheKey, Path.of(resolveSource.targetDir()), /* isTargetDir= */ true);
     logger.atInfo().log("Get cache result: %s for resolve source: %s", cachedResult, resolveSource);
-    return cachedResult.map((r) -> createResolveResult(r, resolveSource));
+    return cachedResult.map(r -> createResolveResult(r, resolveSource));
   }
 
   public static boolean usePersistentCache(ResolveSource resolveSource) {

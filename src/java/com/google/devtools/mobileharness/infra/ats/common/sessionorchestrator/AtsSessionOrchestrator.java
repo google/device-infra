@@ -521,15 +521,11 @@ public class AtsSessionOrchestrator {
    */
   private static ImmutableSet<String> extractDynamicMctsModules(JobInfo setupJob) {
     return setupJob.tests().getAll().values().stream()
-        .map(
-            testInfo ->
-                testInfo
-                    .properties()
-                    .get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_TEST_MODULES_PROPERTY_KEY))
+        .map(testInfo ->
+            testInfo.properties().get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_TEST_MODULES_PROPERTY_KEY))
         .filter(Objects::nonNull)
-        .flatMap(
-            modulesStr ->
-                Splitter.on(',').omitEmptyStrings().trimResults().splitToStream(modulesStr))
+        .flatMap(modulesStr ->
+            Splitter.on(',').omitEmptyStrings().trimResults().splitToStream(modulesStr))
         .collect(toImmutableSet());
   }
 
@@ -544,16 +540,15 @@ public class AtsSessionOrchestrator {
    */
   private static boolean extractHasPreloadedMainlineModules(JobInfo setupJob) {
     return setupJob.tests().getAll().values().stream()
-        .anyMatch(
-            testInfo -> {
-              String value =
-                  testInfo
-                      .properties()
-                      .get(
-                          XtsConstants
-                              .XTS_DYNAMIC_DOWNLOAD_HAS_PRELOADED_MAINLINE_MODULES_PROPERTY_KEY);
-              return value == null || Boolean.parseBoolean(value);
-            });
+        .anyMatch(testInfo -> {
+          String value =
+              testInfo
+                  .properties()
+                  .get(
+                      XtsConstants
+                          .XTS_DYNAMIC_DOWNLOAD_HAS_PRELOADED_MAINLINE_MODULES_PROPERTY_KEY);
+          return value == null || Boolean.parseBoolean(value);
+        });
   }
 
   /**
@@ -660,15 +655,13 @@ public class AtsSessionOrchestrator {
       if (setupJob != null) {
         setupJob.tests().getAll().values().stream()
             .findFirst()
-            .ifPresent(
-                setupTest ->
-                    teardownJob
-                        .tests()
-                        .getAll()
-                        .values()
-                        .forEach(
-                            teardownTest ->
-                                PhaseSkippableDecoratorUtil.relayStates(setupTest, teardownTest)));
+            .ifPresent(setupTest ->
+                teardownJob
+                    .tests()
+                    .getAll()
+                    .values()
+                    .forEach(teardownTest ->
+                        PhaseSkippableDecoratorUtil.relayStates(setupTest, teardownTest)));
       }
       logger.atInfo().log("Adding teardown job [%s].", teardownJob.locator().getId());
       ImmutableList<String> jobIds = addJobsToSession(ImmutableList.of(teardownJob));

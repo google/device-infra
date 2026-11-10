@@ -197,12 +197,11 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
         unsatisfiedDimensions.clear();
       } else {
         SetMultimap<String, String> intersection = HashMultimap.create();
-        unsatisfiedDimensions.forEach(
-            (key, value) -> {
-              if (newUnsatisfiedDimensions.containsEntry(key, value)) {
-                intersection.put(key, value);
-              }
-            });
+        unsatisfiedDimensions.forEach((key, value) -> {
+          if (newUnsatisfiedDimensions.containsEntry(key, value)) {
+            intersection.put(key, value);
+          }
+        });
         unsatisfiedDimensions = intersection;
       }
     }

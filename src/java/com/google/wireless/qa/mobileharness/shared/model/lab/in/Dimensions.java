@@ -169,12 +169,11 @@ public class Dimensions {
         MultimapBuilder.hashKeys().arrayListValues().build(dimensions);
     dimensions
         .asMap()
-        .forEach(
-            (name, values) -> {
-              if (ignoredNames.contains(name)) {
-                filteredDimensions.removeAll(name);
-              }
-            });
+        .forEach((name, values) -> {
+          if (ignoredNames.contains(name)) {
+            filteredDimensions.removeAll(name);
+          }
+        });
     return filteredDimensions;
   }
 }

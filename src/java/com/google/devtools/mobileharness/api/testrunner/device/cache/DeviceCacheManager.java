@@ -215,22 +215,20 @@ public class DeviceCacheManager {
     if (caches != null) {
       caches
           .entrySet()
-          .removeIf(
-              entry ->
-                  clock
-                      .instant()
-                      .isAfter(
-                          Instant.ofEpochSecond(
-                              entry.getValue().expireTimestamp().getSeconds(),
-                              entry.getValue().expireTimestamp().getNanos())));
-      caches.forEach(
-          (key, value) -> {
-            if (deviceType == null
-                || value.deviceType().isEmpty()
-                || value.deviceType().get().equals(deviceType)) {
-              cachedIds.add(key);
-            }
-          });
+          .removeIf(entry ->
+              clock
+                  .instant()
+                  .isAfter(
+                      Instant.ofEpochSecond(
+                          entry.getValue().expireTimestamp().getSeconds(),
+                          entry.getValue().expireTimestamp().getNanos())));
+      caches.forEach((key, value) -> {
+        if (deviceType == null
+            || value.deviceType().isEmpty()
+            || value.deviceType().get().equals(deviceType)) {
+          cachedIds.add(key);
+        }
+      });
     }
     return cachedIds;
   }
@@ -263,10 +261,9 @@ public class DeviceCacheManager {
   static String getDeviceType(DeviceInfoManager deviceInfoManager, String deviceControlId) {
     return deviceInfoManager
         .get(deviceControlId)
-        .flatMap(
-            deviceInfo ->
-                deviceInfo.dimensions().supported().get(Dimension.Name.DEVICE_CLASS_NAME).stream()
-                    .findFirst())
+        .flatMap(deviceInfo ->
+            deviceInfo.dimensions().supported().get(Dimension.Name.DEVICE_CLASS_NAME).stream()
+                .findFirst())
         .orElse(null);
   }
 }

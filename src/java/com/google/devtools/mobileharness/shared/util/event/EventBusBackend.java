@@ -139,46 +139,42 @@ public class EventBusBackend {
 
     // Traverses all declared methods of the class.
     stream(clazz.getDeclaredMethods())
-        .forEach(
-            method -> {
-              // Filters methods without @Subscribe annotation.
-              if (!method.isAnnotationPresent(Subscribe.class)) {
-                return;
-              }
+        .forEach(method -> {
+          // Filters methods without @Subscribe annotation.
+          if (!method.isAnnotationPresent(Subscribe.class)) {
+            return;
+          }
 
-              // Filters synthetic methods.
-              if (method.isSynthetic()) {
-                // See https://github.com/google/guava/issues/1549
-                return;
-              }
+          // Filters synthetic methods.
+          if (method.isSynthetic()) {
+            // See https://github.com/google/guava/issues/1549
+            return;
+          }
 
-              // Filters methods with zero or multiple parameters.
-              Class<?>[] parameters = method.getParameterTypes();
-              if (parameters.length != 1) {
-                invalidSubscriberMethods.add(
-                    InvalidSubscriberMethod.of(
-                        clazz, method, "Subscriber method should have exactly one parameter"));
-                return;
-              }
+          // Filters methods with zero or multiple parameters.
+          Class<?>[] parameters = method.getParameterTypes();
+          if (parameters.length != 1) {
+            invalidSubscriberMethods.add(
+                InvalidSubscriberMethod.of(
+                    clazz, method, "Subscriber method should have exactly one parameter"));
+            return;
+          }
 
-              // Filters methods with primitive type parameter.
-              Class<?> parameter = parameters[0];
-              if (parameter.isPrimitive()) {
-                // See https://github.com/google/guava/issues/3992
-                invalidSubscriberMethods.add(
-                    InvalidSubscriberMethod.of(
-                        clazz,
-                        method,
-                        "Subscriber method should have a non-primitive type parameter"));
-                return;
-              }
+          // Filters methods with primitive type parameter.
+          Class<?> parameter = parameters[0];
+          if (parameter.isPrimitive()) {
+            // See https://github.com/google/guava/issues/3992
+            invalidSubscriberMethods.add(
+                InvalidSubscriberMethod.of(
+                    clazz, method, "Subscriber method should have a non-primitive type parameter"));
+            return;
+          }
 
-              // Makes the method accessible.
-              method.setAccessible(true);
+          // Makes the method accessible.
+          method.setAccessible(true);
 
-              subscriberMethods.add(
-                  SubscriberMethod.of(subscriberObject, clazz, method, parameter));
-            });
+          subscriberMethods.add(SubscriberMethod.of(subscriberObject, clazz, method, parameter));
+        });
     return Subscriber.of(
         subscriberObject, subscriberMethods.build(), invalidSubscriberMethods.build());
   }

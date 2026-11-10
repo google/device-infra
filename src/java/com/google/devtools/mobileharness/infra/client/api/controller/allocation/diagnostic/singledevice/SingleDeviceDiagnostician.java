@@ -161,28 +161,26 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
             .collect(toImmutableList());
     candidates =
         candidates.stream()
-            .filter(
-                deviceInfo -> {
-                  boolean deviceHasSimCardInfoDimension =
-                      deviceInfo.dimensions().supported().get(Name.SIM_CARD_INFO).stream()
-                          .anyMatch(value -> !value.equals(Value.NO_SIM));
-                  boolean jobHasSimCardInfoDimension =
-                      job.dimensions().get(Name.SIM_CARD_INFO) != null;
-                  if (!jobHasSimCardInfoDimension && deviceHasSimCardInfoDimension) {
-                    return false;
-                  }
+            .filter(deviceInfo -> {
+              boolean deviceHasSimCardInfoDimension =
+                  deviceInfo.dimensions().supported().get(Name.SIM_CARD_INFO).stream()
+                      .anyMatch(value -> !value.equals(Value.NO_SIM));
+              boolean jobHasSimCardInfoDimension = job.dimensions().get(Name.SIM_CARD_INFO) != null;
+              if (!jobHasSimCardInfoDimension && deviceHasSimCardInfoDimension) {
+                return false;
+              }
 
-                  boolean deviceHasNonDefaultPoolNameDimension =
-                      deviceInfo.dimensions().supported().get(Name.POOL_NAME).stream()
-                          .anyMatch(value -> !Value.DEFAULT_POOL_NAME.equals(value));
-                  boolean jobHasNonDefaultPoolNameDimension =
-                      job.dimensions().get(Name.POOL_NAME) != null
-                          && !Value.DEFAULT_POOL_NAME.equals(job.dimensions().get(Name.POOL_NAME));
-                  if (!jobHasNonDefaultPoolNameDimension && deviceHasNonDefaultPoolNameDimension) {
-                    return false;
-                  }
-                  return true;
-                })
+              boolean deviceHasNonDefaultPoolNameDimension =
+                  deviceInfo.dimensions().supported().get(Name.POOL_NAME).stream()
+                      .anyMatch(value -> !Value.DEFAULT_POOL_NAME.equals(value));
+              boolean jobHasNonDefaultPoolNameDimension =
+                  job.dimensions().get(Name.POOL_NAME) != null
+                      && !Value.DEFAULT_POOL_NAME.equals(job.dimensions().get(Name.POOL_NAME));
+              if (!jobHasNonDefaultPoolNameDimension && deviceHasNonDefaultPoolNameDimension) {
+                return false;
+              }
+              return true;
+            })
             .collect(toImmutableList());
     return candidates;
   }
@@ -197,15 +195,14 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
     if (lastReport != null) {
       ImmutableList<String> devices =
           lastReport.getPerfectMatchDevices().stream()
-              .map(
-                  deviceUniversalId -> {
-                    int splitterIndex = deviceUniversalId.indexOf('@');
-                    if (splitterIndex > 0) {
-                      return deviceUniversalId.substring(0, splitterIndex);
-                    } else {
-                      return deviceUniversalId;
-                    }
-                  })
+              .map(deviceUniversalId -> {
+                int splitterIndex = deviceUniversalId.indexOf('@');
+                if (splitterIndex > 0) {
+                  return deviceUniversalId.substring(0, splitterIndex);
+                } else {
+                  return deviceUniversalId;
+                }
+              })
               .collect(toImmutableList());
       if (devices.size() < MAX_QUERY_DEVICE_COUNT) {
         String value = String.join("|", devices);

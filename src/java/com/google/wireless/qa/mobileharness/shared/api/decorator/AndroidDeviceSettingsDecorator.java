@@ -1276,27 +1276,26 @@ public class AndroidDeviceSettingsDecorator extends LifecycleDecorator
         androidPackageManagerUtil.listPackages(getDevice().getDeviceId(), PackageType.ALL);
     ImmutableList<String> filteredCommands =
         commands.get().stream()
-            .filter(
-                command -> {
-                  Matcher matcher = COMMAND_PATTERN.matcher(command);
-                  if (matcher.find()) {
-                    String packageName = matcher.group(2);
-                    if (availablePackages.contains(packageName)) {
-                      return true;
-                    } else {
-                      testInfo
-                          .log()
-                          .atInfo()
-                          .alsoTo(logger)
-                          .log(
-                              "Skipping command [%s], since the target package [%s] is not"
-                                  + " available anyway.",
-                              command, packageName);
-                      return false;
-                    }
-                  }
+            .filter(command -> {
+              Matcher matcher = COMMAND_PATTERN.matcher(command);
+              if (matcher.find()) {
+                String packageName = matcher.group(2);
+                if (availablePackages.contains(packageName)) {
                   return true;
-                })
+                } else {
+                  testInfo
+                      .log()
+                      .atInfo()
+                      .alsoTo(logger)
+                      .log(
+                          "Skipping command [%s], since the target package [%s] is not"
+                              + " available anyway.",
+                          command, packageName);
+                  return false;
+                }
+              }
+              return true;
+            })
             .collect(toImmutableList());
     for (String command : filteredCommands) {
       try {

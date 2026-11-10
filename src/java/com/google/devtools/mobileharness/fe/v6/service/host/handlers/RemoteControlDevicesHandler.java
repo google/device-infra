@@ -112,12 +112,11 @@ public final class RemoteControlDevicesHandler {
     return remoteControlUrlBuilder
         .generateRemoteControlUrl(deviceInfo, config, request, username)
         .map(url -> SessionResult.newBuilder().setDeviceId(deviceId).setSessionUrl(url).build())
-        .orElseGet(
-            () ->
-                SessionResult.newBuilder()
-                    .setDeviceId(deviceId)
-                    .setErrorMessage("Remote control is not supported for device: " + deviceId)
-                    .build());
+        .orElseGet(() ->
+            SessionResult.newBuilder()
+                .setDeviceId(deviceId)
+                .setErrorMessage("Remote control is not supported for device: " + deviceId)
+                .build());
   }
 
   private static GetLabInfoRequest createGetLabInfoRequest(String hostName) {

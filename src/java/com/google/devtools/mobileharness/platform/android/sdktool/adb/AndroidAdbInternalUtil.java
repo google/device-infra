@@ -429,14 +429,13 @@ public class AndroidAdbInternalUtil {
     }
     return Splitters.LINE_SPLITTER
         .splitToStream(output)
-        .filter(
-            line ->
-                !StrUtil.isEmptyOrWhitespace(line)
-                    && !line.startsWith(OUTPUT_DEVICE_LIST_STARTER)
-                    // Ignore "* daemon" lines.  The MTaaS docker container's sandboxed adb
-                    // always prints these lines after the starter line, presumably because
-                    // "adb_sandbox.cc" alters the stdout buffering.
-                    && !line.startsWith(OUTPUT_DEVICE_LIST_DAEMON))
+        .filter(line ->
+            !StrUtil.isEmptyOrWhitespace(line)
+                && !line.startsWith(OUTPUT_DEVICE_LIST_STARTER)
+                // Ignore "* daemon" lines.  The MTaaS docker container's sandboxed adb
+                // always prints these lines after the starter line, presumably because
+                // "adb_sandbox.cc" alters the stdout buffering.
+                && !line.startsWith(OUTPUT_DEVICE_LIST_DAEMON))
         .collect(toImmutableList());
   }
 

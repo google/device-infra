@@ -211,15 +211,11 @@ class ModuleShardingArgsGenerator {
                         ? Stream.of(String.format("-m %s", moduleName))
                         : Stream.empty(),
                     includeFilters.stream()
-                        .map(
-                            includeFilter ->
-                                String.format(
-                                    "--include-filter \"%s\"", includeFilter.filterString())),
+                        .map(includeFilter ->
+                            String.format("--include-filter \"%s\"", includeFilter.filterString())),
                     excludeFilters.stream()
-                        .map(
-                            excludeFilter ->
-                                String.format(
-                                    "--exclude-filter \"%s\"", excludeFilter.filterString())),
+                        .map(excludeFilter ->
+                            String.format("--exclude-filter \"%s\"", excludeFilter.filterString())),
                     shardCount > 1
                         ? Stream.concat(
                             Stream.of(String.format("--shard-count %s", shardCount)),

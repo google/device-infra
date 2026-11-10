@@ -419,24 +419,23 @@ public class LabRpcProtoConverter {
           .alsoTo(logger)
           .log("Lab Server side finding count: %d", resp.getFindingCount());
       resp.getFindingList()
-          .forEach(
-              finding -> {
-                String errorMessage = finding.getDetail().getSummary().getMessage();
-                if (errorMessage.isEmpty()) {
-                  testInfo.findings().add(finding);
-                } else {
-                  testInfo
-                      .findings()
-                      .add(
-                          finding.toBuilder()
-                              .setDetail(
-                                  finding.getDetail().toBuilder()
-                                      .setSummary(
-                                          finding.getDetail().getSummary().toBuilder()
-                                              .setMessage("(L)" + errorMessage)))
-                              .build());
-                }
-              });
+          .forEach(finding -> {
+            String errorMessage = finding.getDetail().getSummary().getMessage();
+            if (errorMessage.isEmpty()) {
+              testInfo.findings().add(finding);
+            } else {
+              testInfo
+                  .findings()
+                  .add(
+                      finding.toBuilder()
+                          .setDetail(
+                              finding.getDetail().toBuilder()
+                                  .setSummary(
+                                      finding.getDetail().getSummary().toBuilder()
+                                          .setMessage("(L)" + errorMessage)))
+                          .build());
+            }
+          });
     } else if (resp.getTestWarningExceptionDetailCount() > 0) {
       // For Lab Server with version < 4.385, it doesn't support findings, so we will use the
       // test warning field.
@@ -446,20 +445,19 @@ public class LabRpcProtoConverter {
           .alsoTo(logger)
           .log("Lab Server side test warning count: %d", resp.getTestWarningExceptionDetailCount());
       resp.getTestWarningExceptionDetailList()
-          .forEach(
-              exceptionDetail -> {
-                String errorMessage = exceptionDetail.getSummary().getMessage();
-                testInfo
-                    .findings()
-                    .add(
-                        Severity.WARNING,
-                        exceptionDetail.toBuilder()
-                            .setSummary(
-                                exceptionDetail.getSummary().toBuilder()
-                                    .setMessage("(L)" + errorMessage)
-                                    .build())
-                            .build());
-              });
+          .forEach(exceptionDetail -> {
+            String errorMessage = exceptionDetail.getSummary().getMessage();
+            testInfo
+                .findings()
+                .add(
+                    Severity.WARNING,
+                    exceptionDetail.toBuilder()
+                        .setSummary(
+                            exceptionDetail.getSummary().toBuilder()
+                                .setMessage("(L)" + errorMessage)
+                                .build())
+                        .build());
+          });
     } else {
       testInfo
           .getRootTest()

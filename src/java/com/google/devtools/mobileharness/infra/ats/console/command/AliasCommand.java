@@ -60,9 +60,8 @@ class AliasCommand implements Callable<Integer> {
     if (aliasDefinition == null) {
       aliasManager
           .getAll()
-          .forEach(
-              (aliasName, aliasValue) ->
-                  consoleUtil.printlnStdout("alias %s='%s'", aliasName, aliasValue));
+          .forEach((aliasName, aliasValue) ->
+              consoleUtil.printlnStdout("alias %s='%s'", aliasName, aliasValue));
       return ExitCode.OK;
     }
 

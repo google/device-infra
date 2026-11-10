@@ -66,11 +66,10 @@ public class CommandResult {
     this.isStopped = isStopped;
 
     toStringSupplier =
-        Suppliers.memoize(
-                () ->
-                    String.format(
-                        "code=%d, out=[%s], err=[%s]",
-                        exitCode(), truncateOutput(stdout()), truncateOutput(stderr())))
+        Suppliers.memoize(() ->
+            String.format(
+                "code=%d, out=[%s], err=[%s]",
+                exitCode(), truncateOutput(stdout()), truncateOutput(stderr())))
             ::get;
     toStringWithoutTruncationSupplier =
         Suppliers.memoize(

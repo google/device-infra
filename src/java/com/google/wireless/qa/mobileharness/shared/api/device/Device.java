@@ -502,33 +502,30 @@ public interface Device {
             DeviceCompositeDimension.newBuilder()
                 .addAllSupportedDimension(
                     getDimensions().stream()
-                        .map(
-                            dimension ->
-                                DeviceDimension.newBuilder()
-                                    .setName(dimension.getName())
-                                    .setValue(dimension.getValue())
-                                    .build())
+                        .map(dimension ->
+                            DeviceDimension.newBuilder()
+                                .setName(dimension.getName())
+                                .setValue(dimension.getValue())
+                                .build())
                         .collect(toImmutableList()))
                 .addAllRequiredDimension(
                     getRequiredDimensions().stream()
-                        .map(
-                            dimension ->
-                                DeviceDimension.newBuilder()
-                                    .setName(dimension.getName())
-                                    .setValue(dimension.getValue())
-                                    .build())
+                        .map(dimension ->
+                            DeviceDimension.newBuilder()
+                                .setName(dimension.getName())
+                                .setValue(dimension.getValue())
+                                .build())
                         .collect(toImmutableList()))
                 .build())
         .setProperties(
             DeviceProperties.newBuilder()
                 .addAllProperty(
                     getProperties().entrySet().stream()
-                        .map(
-                            entry ->
-                                DeviceProperty.newBuilder()
-                                    .setName(entry.getKey())
-                                    .setValue(entry.getValue())
-                                    .build())
+                        .map(entry ->
+                            DeviceProperty.newBuilder()
+                                .setName(entry.getKey())
+                                .setValue(entry.getValue())
+                                .build())
                         .collect(toImmutableList()))
                 .build())
         .build();

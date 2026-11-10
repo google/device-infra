@@ -82,13 +82,12 @@ public final class GetHostDebugInfoHandler {
             GetHostDebugInfoResponse.newBuilder()
                 .addAllResults(
                     labResponse.getDeviceDebugInfoList().stream()
-                        .map(
-                            result ->
-                                CommandResult.newBuilder()
-                                    .setCommand(result.getCommand())
-                                    .setStdout(result.getStdout())
-                                    .setStderr(result.getStderr())
-                                    .build())
+                        .map(result ->
+                            CommandResult.newBuilder()
+                                .setCommand(result.getCommand())
+                                .setStdout(result.getStdout())
+                                .setStderr(result.getStderr())
+                                .build())
                         .collect(toImmutableList()))
                 .setTimestamp(Timestamps.fromMillis(instantSource.millis()))
                 .build(),

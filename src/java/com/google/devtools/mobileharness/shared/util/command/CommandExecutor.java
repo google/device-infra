@@ -373,12 +373,11 @@ public class CommandExecutor {
               command.getStdoutLineCallback().orElse(null),
               startTimeoutTaskFuture));
       threadPool.execute(
-          new TestContextRunnable(
-              () ->
-                  readOutput(
-                      (LineReader) stdoutSink.streamSupplier(),
-                      stdoutCollector,
-                      commandProcess.command())));
+          new TestContextRunnable(() ->
+              readOutput(
+                  (LineReader) stdoutSink.streamSupplier(),
+                  stdoutCollector,
+                  commandProcess.command())));
     }
 
     // Sets line consumers and starts reading stderr only if necessary.
@@ -392,20 +391,18 @@ public class CommandExecutor {
       // thread to scan stderr lines.
       if (!(redirectStderr && stdoutCollector == null)) {
         threadPool.execute(
-            new TestContextRunnable(
-                () ->
-                    readOutput(
-                        (LineReader) stderrSink.streamSupplier(),
-                        redirectStderr ? stdoutCollector : stderrCollector,
-                        commandProcess.command())));
+            new TestContextRunnable(() ->
+                readOutput(
+                    (LineReader) stderrSink.streamSupplier(),
+                    redirectStderr ? stdoutCollector : stderrCollector,
+                    commandProcess.command())));
       }
     }
 
     // Schedules post run task.
     threadPool.execute(
-        new TestContextRunnable(
-            () ->
-                postRun(commandProcess, timeoutTaskFuture, startTimeoutTaskFuture, commandRecord)));
+        new TestContextRunnable(() ->
+            postRun(commandProcess, timeoutTaskFuture, startTimeoutTaskFuture, commandRecord)));
 
     return commandProcess;
   }

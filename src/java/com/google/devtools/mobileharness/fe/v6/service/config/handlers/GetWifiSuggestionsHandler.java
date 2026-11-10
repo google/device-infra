@@ -149,13 +149,12 @@ public final class GetWifiSuggestionsHandler {
             .filter(config -> config.getBasicConfig().hasDefaultWifi())
             .map(config -> config.getBasicConfig().getDefaultWifi())
             .filter(wifi -> !wifi.getSsid().isEmpty())
-            .map(
-                wifi ->
-                    DeviceWifi.newBuilder()
-                        .setSsid(wifi.getSsid())
-                        .setPsk(wifi.getPsk())
-                        .setScanSsid(wifi.getScanSsid())
-                        .build())
+            .map(wifi ->
+                DeviceWifi.newBuilder()
+                    .setSsid(wifi.getSsid())
+                    .setPsk(wifi.getPsk())
+                    .setScanSsid(wifi.getScanSsid())
+                    .build())
             .collect(groupingBy(identity(), counting()));
 
     Comparator<CandidateWifi> comparator =
@@ -167,15 +166,13 @@ public final class GetWifiSuggestionsHandler {
 
     ImmutableList<CandidateWifi> candidateWifis =
         counts.entrySet().stream()
-            .map(
-                entry ->
-                    CandidateWifi.newBuilder()
-                        .setWifi(entry.getKey())
-                        .setFleetInUse(
-                            FleetWifiInUse.newBuilder()
-                                .setDeviceCount(
-                                    (int) Math.min(entry.getValue(), Integer.MAX_VALUE)))
-                        .build())
+            .map(entry ->
+                CandidateWifi.newBuilder()
+                    .setWifi(entry.getKey())
+                    .setFleetInUse(
+                        FleetWifiInUse.newBuilder()
+                            .setDeviceCount((int) Math.min(entry.getValue(), Integer.MAX_VALUE)))
+                    .build())
             .sorted(comparator)
             .collect(toImmutableList());
 

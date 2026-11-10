@@ -174,15 +174,14 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
               path ->
                   path.getFileName().toString().endsWith(".jar")
                       && !EXCLUDED_JAR_FILES.contains(path.getFileName().toString()))
-          .forEach(
-              jar -> {
-                Path newJarPath = replacePathPrefix(jar, linkXtsToolsDirRealPath, linkXtsToolsDir);
-                if (leadingJarsSet.contains(jar.getFileName().toString())) {
-                  foundLeadingJars.put(jar.getFileName().toString(), newJarPath);
-                } else {
-                  restOfJars.add(newJarPath);
-                }
-              });
+          .forEach(jar -> {
+            Path newJarPath = replacePathPrefix(jar, linkXtsToolsDirRealPath, linkXtsToolsDir);
+            if (leadingJarsSet.contains(jar.getFileName().toString())) {
+              foundLeadingJars.put(jar.getFileName().toString(), newJarPath);
+            } else {
+              restOfJars.add(newJarPath);
+            }
+          });
       // In setUpWorkDir, it created symlinks for files and directories directly under the
       // "testcases" folder.
       // Currently we cannot list files within a symlinked sub-directory, so we handle sub-files and
@@ -195,14 +194,13 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
                       && fileOrDir.getFileName().toString().endsWith(".jar")
                       && isJarFileIncluded(
                           fileOrDir.getFileName().toString(), excludedJarFilePatterns))
-          .forEach(
-              jar -> {
-                if (leadingJarsSet.contains(jar.getFileName().toString())) {
-                  foundLeadingJars.put(jar.getFileName().toString(), jar);
-                } else {
-                  restOfJars.add(jar);
-                }
-              });
+          .forEach(jar -> {
+            if (leadingJarsSet.contains(jar.getFileName().toString())) {
+              foundLeadingJars.put(jar.getFileName().toString(), jar);
+            } else {
+              restOfJars.add(jar);
+            }
+          });
 
       List<Path> linkXtsTestcasesSubDirPaths = localFileUtil.listDirs(linkXtsTestcasesDirRealPath);
       for (Path linkXtsTestcasesSubDirPath : linkXtsTestcasesSubDirPaths) {
@@ -215,17 +213,16 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
                     path.getFileName().toString().endsWith(".jar")
                         && isJarFileIncluded(
                             path.getFileName().toString(), excludedJarFilePatterns))
-            .forEach(
-                jar -> {
-                  Path newJarPath =
-                      replacePathPrefix(
-                          jar, linkXtsTestcasesSubDirRealPath.getParent(), linkXtsTestcasesDir);
-                  if (leadingJarsSet.contains(jar.getFileName().toString())) {
-                    foundLeadingJars.put(jar.getFileName().toString(), newJarPath);
-                  } else {
-                    restOfJars.add(newJarPath);
-                  }
-                });
+            .forEach(jar -> {
+              Path newJarPath =
+                  replacePathPrefix(
+                      jar, linkXtsTestcasesSubDirRealPath.getParent(), linkXtsTestcasesDir);
+              if (leadingJarsSet.contains(jar.getFileName().toString())) {
+                foundLeadingJars.put(jar.getFileName().toString(), newJarPath);
+              } else {
+                restOfJars.add(newJarPath);
+              }
+            });
       }
 
       ImmutableList.Builder<Path> result = ImmutableList.builder();
@@ -410,11 +407,10 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
                 .properties()
                 .getOptional(Job.SESSION_ID)
                 .filter(id -> !id.isEmpty())
-                .orElseThrow(
-                    () ->
-                        new MobileHarnessException(
-                            AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_PROPERTY_NOT_FOUND,
-                            String.format("Job property %s is not set or empty.", Job.SESSION_ID)))
+                .orElseThrow(() ->
+                    new MobileHarnessException(
+                        AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_PROPERTY_NOT_FOUND,
+                        String.format("Job property %s is not set or empty.", Job.SESSION_ID)))
             : null;
 
     if (Flags.xtsJdkDir.getNonNull().isEmpty()) {
@@ -735,9 +731,8 @@ public final class XtsRunStrategy implements TradefedRunStrategy {
         configs.entrySet().stream()
             // Filter out non-TradeFed modules (config v2 is used by Mobly modules).
             .filter(entry -> !entry.getValue().getMetadata().getIsConfigV2())
-            .filter(
-                entry ->
-                    filteredTradefedModules.contains(entry.getValue().getMetadata().getXtsModule()))
+            .filter(entry ->
+                filteredTradefedModules.contains(entry.getValue().getMetadata().getXtsModule()))
             .map(Entry::getKey)
             .collect(joining(","));
 
