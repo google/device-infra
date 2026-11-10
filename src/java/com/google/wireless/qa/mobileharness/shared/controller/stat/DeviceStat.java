@@ -131,7 +131,7 @@ public class DeviceStat {
   public synchronized void addFinishedTest(TestResult testResult) {
     ++totalHistoricalTestNum;
     consecutiveFinishedFail =
-        TestResult.PASS.equals(testResult) || TestResult.SKIP.equals(testResult)
+        testResult == TestResult.PASS || testResult == TestResult.SKIP
             ? 0
             : consecutiveFinishedFail + 1;
     testResultCounterBuilder.setTotal(testResultCounterBuilder.getTotal() + 1);

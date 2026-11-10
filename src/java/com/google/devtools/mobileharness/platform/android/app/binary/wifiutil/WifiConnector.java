@@ -153,7 +153,7 @@ public class WifiConnector {
     }
 
     networkId = mWifiManager.addNetwork(config);
-    if (-1 == networkId) {
+    if (networkId == -1) {
       throw new WifiException("failed to add network");
     }
 
@@ -190,7 +190,7 @@ public class WifiConnector {
           failCount++;
         }
       }
-      if (0 < failCount && throwIfFail) {
+      if (failCount > 0 && throwIfFail) {
         throw new WifiException("failed to remove all networks.");
       }
     }
@@ -326,7 +326,7 @@ public class WifiConnector {
               @Override
               public Boolean call() throws Exception {
                 final SupplicantState state = mWifiManager.getConnectionInfo().getSupplicantState();
-                return SupplicantState.COMPLETED == state;
+                return state == SupplicantState.COMPLETED;
               }
             },
             String.format("associating to network (ssid: %s)", ssid),
@@ -339,7 +339,7 @@ public class WifiConnector {
               @Override
               public Boolean call() throws Exception {
                 final WifiInfo info = mWifiManager.getConnectionInfo();
-                return 0 != info.getIpAddress();
+                return info.getIpAddress() != 0;
               }
             },
             String.format("dhcp assignment (ssid: %s)", ssid),

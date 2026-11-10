@@ -37,14 +37,14 @@ public class DeviceRebootUtil {
       TestExecutionResult testExecutionResult)
       throws InterruptedException {
     if (device.canReboot()) {
-      if (PostTestDeviceOp.REBOOT.equals(testExecutionResult.postTestDeviceOp())) {
+      if (testExecutionResult.postTestDeviceOp() == PostTestDeviceOp.REBOOT) {
         logger.atInfo().log(
             "Will reboot the device %s according to the PostRunTest result", device.getDeviceId());
         return true;
-      } else if (TestResult.TIMEOUT.equals(testExecutionResult.testResult())) {
+      } else if (testExecutionResult.testResult() == TestResult.TIMEOUT) {
         logger.atInfo().log("Will reboot device %s because test TIMEOUT", device.getDeviceId());
         return true;
-      } else if (TestResult.UNKNOWN.equals(testExecutionResult.testResult())) {
+      } else if (testExecutionResult.testResult() == TestResult.UNKNOWN) {
         // If a device runner is held by ProxyTestRunner but the test is closed before kicked off.
         logger.atInfo().log(
             "Do not reboot device %s for an unknown test result and an non-reboot post "
@@ -55,7 +55,7 @@ public class DeviceRebootUtil {
         return needRebootUponTestHistory(device, deviceStat, apiConfig, testExecutionResult);
       }
     } else {
-      if (PostTestDeviceOp.REBOOT.equals(testExecutionResult.postTestDeviceOp())) {
+      if (testExecutionResult.postTestDeviceOp() == PostTestDeviceOp.REBOOT) {
         logger.atInfo().log(
             "Ignored the reboot request from the PostRunTest ops "
                 + "because the device %s doesn't support reboot",

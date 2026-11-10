@@ -68,7 +68,7 @@ public class DaemonService extends Service {
   @Override
   public void onDestroy() {
     // Releases wake lock.
-    if (null != mWakeLock) {
+    if (mWakeLock != null) {
       mWakeLock.release();
     }
 

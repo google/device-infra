@@ -74,7 +74,7 @@ public class DaemonJobIntentService extends JobIntentService {
   @Override
   public void onDestroy() {
     // Releases wake lock.
-    if (null != mWakeLock) {
+    if (mWakeLock != null) {
       mWakeLock.release();
     }
     super.onDestroy();

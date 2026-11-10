@@ -277,6 +277,6 @@ public class SubscriberExceptionLoggingHandler
   }
 
   private static boolean shouldPrintDetailForSkipException(TestResult desiredResult) {
-    return !(TestResult.PASS.equals(desiredResult) || TestResult.SKIP.equals(desiredResult));
+    return !(desiredResult == TestResult.PASS || desiredResult == TestResult.SKIP);
   }
 }

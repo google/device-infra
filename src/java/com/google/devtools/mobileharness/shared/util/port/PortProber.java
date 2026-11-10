@@ -78,7 +78,7 @@ public class PortProber {
     String pidStringSetting = null;
 
     String portServerPortString = System.getenv(PORT_SERVER_PORT_ENV_VAR);
-    if (null != portServerPortString) {
+    if (portServerPortString != null) {
       try {
         int port = Integer.parseInt(portServerPortString);
         if (port > 0 && port < 65536) {

@@ -166,7 +166,7 @@ public class MoblyTest extends BaseDriver implements MoblyTestSpec {
       CompositeDeviceUtil.uncacheTestbed(getDevice());
     }
 
-    if (!passed && TestResult.TIMEOUT.equals(testInfo.resultWithCause().get().type())) {
+    if (!passed && testInfo.resultWithCause().get().type() == TestResult.TIMEOUT) {
       // If we timed out there is a chance that the "latest" dir will not have been created so
       // handleOutput will throw a NoSuchFileException. Return early so users don't have to deal
       // with noise from infra issues. All test outputs will still be uploaded but there may be
