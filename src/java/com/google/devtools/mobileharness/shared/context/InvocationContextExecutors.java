@@ -125,8 +125,7 @@ public class InvocationContextExecutors {
     }
 
     private static Object decorateListenableFuture(Object object) {
-      if (object instanceof ListenableFuture<?>) {
-        ListenableFuture<?> future = (ListenableFuture<?>) object;
+      if (object instanceof ListenableFuture<?> future) {
         var interfaceType =
             future instanceof ListenableScheduledFuture<?>
                 ? ListenableScheduledFuture.class

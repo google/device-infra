@@ -33,16 +33,16 @@ public class LogDataExtractor {
    */
   @Nullable
   public static <T> T getSingleMetadataValue(LogRecord record, MetadataKey<T> key) {
-    if (record instanceof AbstractLogRecord) {
-      return ((AbstractLogRecord) record).getMetadataProcessor().getSingleValue(key);
+    if (record instanceof AbstractLogRecord abstractLogRecord) {
+      return abstractLogRecord.getMetadataProcessor().getSingleValue(key);
     }
     return null;
   }
 
   /** See {@link com.google.common.flogger.backend.system.LogDataExtractor#getLogSite}. */
   public static LogSite getLogSite(LogRecord record) {
-    if (record instanceof AbstractLogRecord) {
-      return ((AbstractLogRecord) record).getLogData().getLogSite();
+    if (record instanceof AbstractLogRecord abstractLogRecord) {
+      return abstractLogRecord.getLogData().getLogSite();
     }
     // In theory the class and/or method name in a log record can be null...
     if (record.getSourceClassName() != null && record.getSourceMethodName() != null) {
@@ -62,9 +62,8 @@ public class LogDataExtractor {
   // directly from the scoped logging context (not via the Metadata API at all). At that point
   // LogContext.Key.TAGS can be deleted and this method switched access tags directly.
   public static Tags getTags(LogRecord record) {
-    if (record instanceof AbstractLogRecord) {
-      Tags tags =
-          ((AbstractLogRecord) record).getMetadataProcessor().getSingleValue(LogContext.Key.TAGS);
+    if (record instanceof AbstractLogRecord abstractLogRecord) {
+      Tags tags = abstractLogRecord.getMetadataProcessor().getSingleValue(LogContext.Key.TAGS);
       if (tags != null) {
         return tags;
       }

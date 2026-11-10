@@ -221,12 +221,10 @@ public final class ClassUtil {
       } while (clazz != null);
 
       // Handles the decorated driver if any.
-      if (object instanceof Decorator) {
-        getObjectsWithDecoratedAndAllSteps(((Decorator) object).getDecorated(), result);
+      if (object instanceof Decorator decorator) {
+        getObjectsWithDecoratedAndAllSteps(decorator.getDecorated(), result);
       }
-      if (object instanceof PhaseSkippableDecorator) {
-        PhaseSkippableDecorator<?, ?> phaseSkippableDecorator =
-            (PhaseSkippableDecorator<?, ?>) object;
+      if (object instanceof PhaseSkippableDecorator<?, ?> phaseSkippableDecorator) {
         if (phaseSkippableDecorator.getSetupDecorator().isPresent()) {
           getObjectsWithDecoratedAndAllSteps(
               phaseSkippableDecorator.getSetupDecorator().get(), result);

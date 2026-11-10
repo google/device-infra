@@ -271,8 +271,8 @@ public class AdbDetector implements Detector {
       MobileHarnessException mhe) {
     Throwable throwable = mhe;
     while (throwable != null) {
-      if (throwable instanceof CommandFailureException) {
-        return Optional.of((CommandFailureException) throwable);
+      if (throwable instanceof CommandFailureException commandFailureException) {
+        return Optional.of(commandFailureException);
       }
       throwable = throwable.getCause();
     }

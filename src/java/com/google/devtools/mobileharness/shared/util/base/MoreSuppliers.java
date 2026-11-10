@@ -57,8 +57,7 @@ public class MoreSuppliers {
    */
   public static <T> ThrowingSupplier<T> memoize(
       ThrowingSupplier<T> delegate, boolean refreshIfLastRetrievalFailed) {
-    if (delegate instanceof MemoizingThrowingSupplier) {
-      MemoizingThrowingSupplier<?> memoized = (MemoizingThrowingSupplier<?>) delegate;
+    if (delegate instanceof MemoizingThrowingSupplier<?> memoized) {
       if (memoized.refreshIfLastRetrievalFailed == refreshIfLastRetrievalFailed) {
         return delegate;
       }

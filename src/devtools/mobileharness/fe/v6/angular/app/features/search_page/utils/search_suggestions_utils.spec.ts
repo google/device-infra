@@ -9,6 +9,10 @@ describe('search_suggestions_utils', () => {
     window.localStorage.clear();
   });
 
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
   describe('auto-collapse after apply persistence', () => {
     it('returns null when no stored auto-collapse preference exists', () => {
       expect(getStoredAutoCollapseAfterApply('devices', 'internal')).toBeNull();

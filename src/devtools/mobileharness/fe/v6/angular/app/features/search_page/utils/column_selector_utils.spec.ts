@@ -10,6 +10,10 @@ describe('column_selector_utils', () => {
     window.localStorage.clear();
   });
 
+  afterEach(() => {
+    window.localStorage.clear();
+  });
+
   describe('visible columns persistence', () => {
     it('returns null when no stored visible columns exist', () => {
       expect(getStoredVisibleColumns('devices', 'internal')).toBeNull();
@@ -53,7 +57,11 @@ describe('column_selector_utils', () => {
       expect(
         getUnknownColumnKeyFromError({
           status: 500,
-          error: {code: 13, message: 'Unknown device key: field::uuid', details: []},
+          error: {
+            code: 13,
+            message: 'Unknown device key: field::uuid',
+            details: [],
+          },
         }),
       ).toBe('field::uuid');
     });
@@ -62,7 +70,9 @@ describe('column_selector_utils', () => {
       expect(
         getUnknownColumnKeyFromError({
           status: 500,
-          error: {error: {code: 500, message: 'Unknown host key: field::host_name'}},
+          error: {
+            error: {code: 500, message: 'Unknown host key: field::host_name'},
+          },
         }),
       ).toBe('field::host_name');
     });
@@ -74,7 +84,9 @@ describe('column_selector_utils', () => {
           error: {code: 13, message: 'Unknown filter key: foo'},
         }),
       ).toBeNull();
-      expect(getUnknownColumnKeyFromError(new Error('network down'))).toBeNull();
+      expect(
+        getUnknownColumnKeyFromError(new Error('network down')),
+      ).toBeNull();
       expect(getUnknownColumnKeyFromError(null)).toBeNull();
     });
   });

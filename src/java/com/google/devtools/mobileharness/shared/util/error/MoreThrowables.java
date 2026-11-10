@@ -321,10 +321,10 @@ public class MoreThrowables {
       if (primaryException != null) {
         addSuppressed(primaryException, t);
       } else {
-        if (t instanceof RuntimeException) {
-          throw (RuntimeException) t;
-        } else if (t instanceof Error) {
-          throw (Error) t;
+        if (t instanceof RuntimeException runtimeException) {
+          throw runtimeException;
+        } else if (t instanceof Error error) {
+          throw error;
         } else {
           throw new RuntimeException(t);
         }

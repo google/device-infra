@@ -118,6 +118,7 @@ describe('SearchPage (OSS build integration)', () => {
   }
 
   beforeEach(() => {
+    window.localStorage.clear();
     landingEnabled = false;
     queryParams$ = new Subject();
     activatedRouteStub = {
@@ -178,6 +179,10 @@ describe('SearchPage (OSS build integration)', () => {
       ],
     });
     router = TestBed.inject(Router);
+  });
+
+  afterEach(() => {
+    window.localStorage.clear();
   });
 
   /** Lets the reactive resources (config -> search) settle and re-renders. */

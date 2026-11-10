@@ -692,14 +692,12 @@ public class CloudFileTransferClient extends WatchableFileTransferClient {
 
   private static Optional<Status> lookForRpcStatus(Throwable cause) {
     while (cause != null) {
-      if (cause instanceof StatusException) {
-        return Optional.of(((StatusException) cause).getStatus());
-      } else if (cause instanceof RpcExceptionWithErrorId
-          && ((RpcExceptionWithErrorId) cause).getUnderlyingRpcException()
-              instanceof StatusRuntimeException) {
-        return Optional.of(
-            ((StatusRuntimeException) ((RpcExceptionWithErrorId) cause).getUnderlyingRpcException())
-                .getStatus());
+      if (cause instanceof StatusException statusException) {
+        return Optional.of(statusException.getStatus());
+      } else if (cause instanceof RpcExceptionWithErrorId rpcExceptionWithErrorId
+          && rpcExceptionWithErrorId.getUnderlyingRpcException()
+              instanceof StatusRuntimeException statusRuntimeException) {
+        return Optional.of(statusRuntimeException.getStatus());
       } else {
         cause = cause.getCause();
       }
