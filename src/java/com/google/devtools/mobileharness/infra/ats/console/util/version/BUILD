@@ -26,13 +26,10 @@ java_library(
     deps = [
         ":version_parser",
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
-        "//src/devtools/mobileharness/shared/version/proto:version_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_info_provider",
-        "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/java/com/google/devtools/mobileharness/shared/version:version_util",
-        "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
 )
