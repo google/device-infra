@@ -66,7 +66,7 @@ const OVERVIEW: DeviceOverview = {
   properties: {},
   subDevices: [
     {
-      id: 'Q5AJ-5ZEW-BHN8',
+      id: 'Q2XX-MOCK-AP01',
       types: [
         {type: 'MiscDevice', isAbnormal: false},
         {type: 'MiscTestbedSubDevice', isAbnormal: false},
@@ -74,7 +74,7 @@ const OVERVIEW: DeviceOverview = {
       dimensions: [
         {name: 'mh_device_type', value: 'MiscDevice'},
         {name: 'mh_device_type', value: 'MiscTestbedSubDevice'},
-        {name: 'host_ip', value: '100.95.189.25'},
+        {name: 'host_ip', value: '192.168.100.25'},
         {name: 'host_os', value: 'Linux'},
         {name: 'lab_type', value: 'satellite'},
         {name: 'supports_adhoc', value: 'true'},
@@ -98,7 +98,7 @@ const OVERVIEW: DeviceOverview = {
       dimensions: [
         {name: 'mh_device_type', value: 'MiscDevice'},
         {name: 'mh_device_type', value: 'MiscTestbedSubDevice'},
-        {name: 'host_ip', value: '100.107.0.8'},
+        {name: 'host_ip', value: '192.168.100.8'},
       ],
     },
     {
@@ -133,7 +133,7 @@ const OVERVIEW: DeviceOverview = {
 
 /** Mock testbed config for TESTBED-EVEN-002. */
 export const MOCK_TESTBED_CONFIG_TESTBED_DEVICE: TestbedConfig = {
-  yamlContent: `- name: FiOndemandVCNTestbed-1
+  yamlContent: `- name: MockTestbed-1
   devices:
     - id: 'R4880120031'
       type: MiscTestbedSubDevice
@@ -143,28 +143,28 @@ export const MOCK_TESTBED_CONFIG_TESTBED_DEVICE: TestbedConfig = {
           channel_count: 8
       dimensions:
           mobly_type: AdauraController
-    - id: 'Q5AJ-5ZEW-BHN8'
+    - id: 'Q2XX-MOCK-AP01'
       type: MiscTestbedSubDevice
       properties:
-          serial: 'Q5AJ-5ZEW-BHN8'
-          network_id: 'N_636133447366094612'
-          api_key: '49a103315741d3da7296a9a80fbbcd2175184b19'
+          serial: 'Q2XX-MOCK-AP01'
+          network_id: 'N_000000000000000000'
+          api_key: '<REDACTED_MERAKI_API_KEY>'
       dimensions:
           mobly_type: MerakiApController
     - id: 'Slowpoke_sp1'
       type: MiscTestbedSubDevice
       properties:
           version: 'v2'
-          hostname: '100.107.0.12'
-          username: 'orion'
-          password: 'orionw1f1'
+          hostname: '192.168.100.12'
+          username: 'mock_user'
+          password: '<REDACTED_PASSWORD>'
       dimensions:
           mobly_type: SlowpokeController
     - id: 'R3CW808Q66R'
       type: AndroidRealDevice
       dimensions:
-          pool: ondemand-vpn-mobly-attenuator`,
-  codeSearchLink: `configs/devtools/deviceinfra/service/deviceconfig/testbed/prod/pixel-bluetooth/pqm-bt-rangne-test-2-lab/sunfish_conductive_bds.yaml`,
+          pool: mock-testbed-pool`,
+  codeSearchLink: `configs/devtools/deviceinfra/service/deviceconfig/testbed/prod/example-team/example_testbed.yaml`,
 };
 
 /** Mock device scenario for TESTBED-EVEN-002. */
