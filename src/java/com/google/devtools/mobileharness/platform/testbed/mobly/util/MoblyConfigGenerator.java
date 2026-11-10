@@ -74,8 +74,7 @@ public class MoblyConfigGenerator {
    * @throws MobileHarnessException If there are issues identifying subdevice type
    */
   public static JSONObject getLocalMoblyConfig(Device device) throws MobileHarnessException {
-    if (device instanceof TestbedDevice) {
-      TestbedDevice testbedDevice = (TestbedDevice) device;
+    if (device instanceof TestbedDevice testbedDevice) {
       JSONObject moblyConfig =
           buildLocalMoblyConfig(testbedDevice.getDeviceId(), testbedDevice.getConfig());
       // AdhocTestbedConfig is created using the sub device objects and already has the sub device

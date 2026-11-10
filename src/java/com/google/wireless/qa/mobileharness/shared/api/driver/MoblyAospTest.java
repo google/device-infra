@@ -83,14 +83,14 @@ public class MoblyAospTest extends MoblyTest implements MoblyAospTestSpec {
       String key = keys.next();
       String newKey = key.replaceFirst("^" + MOBLY_CONFIG_KEY_PREFIX_MH, "");
       Object value = moblyJson.get(key);
-      if (value instanceof JSONObject) {
-        JSONObject newJsonObject = convertMoblyConfig((JSONObject) value);
+      if (value instanceof JSONObject jsonObject) {
+        JSONObject newJsonObject = convertMoblyConfig(jsonObject);
         newMoblyJson.put(newKey, newJsonObject);
-      } else if (value instanceof JSONArray) {
+      } else if (value instanceof JSONArray jsonArray) {
         JSONArray newJsonArray = new JSONArray();
-        for (Object element : (JSONArray) value) {
-          if (element instanceof JSONObject) {
-            JSONObject newJsonObject = convertMoblyConfig((JSONObject) element);
+        for (Object element : jsonArray) {
+          if (element instanceof JSONObject elementJsonObject) {
+            JSONObject newJsonObject = convertMoblyConfig(elementJsonObject);
             newJsonArray.put(newJsonObject);
           } else {
             newJsonArray.put(element);

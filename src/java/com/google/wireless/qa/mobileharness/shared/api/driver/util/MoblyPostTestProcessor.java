@@ -218,10 +218,9 @@ public class MoblyPostTestProcessor {
   }
 
   private ImmutableList<String> getDeviceIds(Device device) {
-    if (!(device instanceof CompositeDevice)) {
+    if (!(device instanceof CompositeDevice compositeDevice)) {
       return ImmutableList.of(device.getDeviceId());
     }
-    CompositeDevice compositeDevice = (CompositeDevice) device;
     return compositeDevice.getManagedDevices().stream()
         .map(Device::getDeviceId)
         .collect(toImmutableList());

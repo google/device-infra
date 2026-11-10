@@ -674,9 +674,8 @@ public class AndroidAccountDecorator extends LifecycleDecorator
     Device device = getDevice();
 
     // To save one extra adb transfer, check isRooted instead of AndroidUtil.isProductionBuild.
-    if (device instanceof AndroidDevice) {
+    if (device instanceof AndroidDevice androidDevice) {
       boolean deviceIsRooted = false;
-      AndroidDevice androidDevice = ((AndroidDevice) device);
       try {
         deviceIsRooted = androidDevice.isRooted();
       } catch (MobileHarnessException e) {
