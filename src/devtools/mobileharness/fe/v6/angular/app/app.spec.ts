@@ -23,6 +23,8 @@ describe('App Component', () => {
   const appData: AppData = {
     adbVersion: '1.0',
     mttVersion: '1.0',
+    email: 'tianch@google.com',
+    userDisplayName: 'Chen Tian',
   };
 
   beforeEach(async () => {
@@ -320,11 +322,5 @@ describe('App Component', () => {
       const params = component.getPreservedQueryParams();
       expect(params['enable_assistant']).toBeUndefined();
     });
-  });
-
-  it('should call logout without error', () => {
-    expect(() => {
-      component.logout();
-    }).not.toThrow();
   });
 });

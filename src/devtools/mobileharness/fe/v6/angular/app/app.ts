@@ -264,11 +264,6 @@ export class App implements OnDestroy {
     this.cdr.markForCheck();
   }
 
-  logout() {
-    // TODO: Implement this.
-    console.log('logout');
-  }
-
   ngOnDestroy() {
     this.destroy.next();
     this.destroy.complete();
